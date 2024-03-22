@@ -1,11 +1,14 @@
 #include "update_grid.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#include <memory>
 #include <vector>
 
 #include "artisoptions.h"
@@ -16,32 +19,28 @@
 #include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
-#include "macroatom.h"
-#include "rpkt.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
+#include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"
 #include "vpkt.h"
 
-static std::vector<std::vector<double>> threads_bfheatingcoeffs;
-
 static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer,
-                                     const struct heatingcoolingrates *heatingcoolingrates) {
+                                     const HeatingCoolingRates *heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
 
   if (grid::get_numassociatedcells(mgi) < 1) {
-    // modelgrid cells which are not represented in the simulation grid
+    // modelgrid cells that are not represented in the simulation grid
     fprintf(estimators_file, "timestep %d modelgridindex %d EMPTYCELL\n\n", timestep, mgi);
     fflush(estimators_file);
     return;
   }
+
+  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
 
   const auto sys_time_start_write_estimators = std::time(nullptr);
 
@@ -133,7 +132,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
     assume_lte = false;
 
-    if constexpr (TRACK_ION_STATS && TRACK_ION_MASTATS) {
+    if constexpr (TRACK_ION_STATS) {
       fprintf(estimators_file, "MA_IN_RADEXC       Z=%2d", get_atomicnumber(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
         fprintf(estimators_file, "              ");
@@ -412,23 +411,6 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
     // }
     // fprintf(estimators_file, "\n");
 
-    // if (timestep % 20 == 0)
-    // {
-    //   fprintf(estimators_file, "chi_bf(nuedge)   Z=%2d", get_atomicnumber(element));
-    //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-    //     fprintf(estimators_file, "              ");
-    //   for (int ion = 0; ion < nions - 1; ion++)
-    //   {
-    //     double nu_edge = (epsilon(element, ion + 1, 0) - epsilon(element, ion, 0)) / H;
-    //     double chi_bf = calculate_chi_bf_gammacontr(mgi, nu_edge, false);
-    //
-    //     fprintf(estimators_file, "  %d: %9.3e",
-    //             get_ionstage(element, ion),
-    //             chi_bf);
-    //   }
-    //   fprintf(estimators_file, "\n");
-    // }
-
     // {
     //   fprintf(estimators_file, "gamma_R            Z=%2d", get_atomicnumber(element));
     //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
@@ -649,7 +631,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
         if (groundcontindex >= 0) {
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                  globals::corrphotoionrenorm[get_ionestimindex(mgi, element, ion)]);
+                  globals::corrphotoionrenorm[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)]);
         }
       }
       fprintf(estimators_file, "\n");
@@ -658,7 +640,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
         if (groundcontindex >= 0) {
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                  globals::gammaestimator[get_ionestimindex(mgi, element, ion)]);
+                  globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)]);
         }
       }
       fprintf(estimators_file, "\n");
@@ -678,7 +660,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
   const auto write_estim_duration = std::time(nullptr) - sys_time_start_write_estimators;
   if (write_estim_duration >= 1) {
-    printout("writing estimators for timestep %d cell %d took %d seconds\n", timestep, mgi, write_estim_duration);
+    printout("writing estimators for timestep %d cell %d took %ld seconds\n", timestep, mgi, write_estim_duration);
   }
 }
 
@@ -691,17 +673,9 @@ void cellcache_change_cell(const int modelgridindex) {
     return;
   }
 
-  // force rpkt opacities to be recalculated next time they are accessed
-  for (int itid = 0; itid < get_max_threads(); itid++) {
-    globals::chi_rpkt_cont[itid].recalculate_required = true;
-  }
-
   globals::cellcache[cellcacheslotid].cellnumber = modelgridindex;
-
   globals::cellcache[cellcacheslotid].chi_ff_nnionpart = -1.;
 
-  //  int nlevels_with_processrates = 0;
-  // const double T_e = modelgridindex >= 0 ? grid ::get_Te(modelgridindex) : 0.;
   const int nelements = get_nelements();
   for (int element = 0; element < nelements; element++) {
     const int nions = get_nions(element);
@@ -753,22 +727,21 @@ void cellcache_change_cell(const int modelgridindex) {
   }
 
   if (modelgridindex >= 0) {
-    const int nbfcont = globals::nbfcontinua;
-    std::fill_n(globals::cellcache[cellcacheslotid].ch_allcont_departureratios, nbfcont, -1);
+    std::fill_n(globals::cellcache[cellcacheslotid].ch_allcont_departureratios, globals::nbfcontinua, -1);
   }
-  // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
 }
 
-static void solve_Te_nltepops(const int n, const int nts, const int titer,
-                              struct heatingcoolingrates *heatingcoolingrates, std::vector<double> &bfheatingcoeffs)
-// n is the modelgridindex (TODO: rename to mgi)
+static void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, const int titer,
+                              HeatingCoolingRates *heatingcoolingrates)
 // nts is the timestep number
 {
   // bfheating coefficients are needed for the T_e solver, but
   // they only depend on the radiation field, which is fixed during the iterations below
-  printout("calculate_bfheatingcoeffs for timestep %d cell %d...", nts, n);
+  printout("calculate_bfheatingcoeffs for timestep %d cell %d...", nts, mgi);
   const auto sys_time_start_calculate_bfheatingcoeffs = std::time(nullptr);
-  calculate_bfheatingcoeffs(n, bfheatingcoeffs);
+  thread_local static auto bfheatingcoeffs = std::vector<double>(get_includedlevels());
+
+  calculate_bfheatingcoeffs(mgi, bfheatingcoeffs);
   printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calculate_bfheatingcoeffs);
 
   const double covergence_tolerance = 0.04;
@@ -776,71 +749,73 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
     const auto sys_time_start_spencerfano = std::time(nullptr);
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
       // SF solution depends on the ionization balance, and weakly on nne
-      nonthermal::solve_spencerfano(n, nts, nlte_iter);
+      nonthermal::solve_spencerfano(mgi, nts, nlte_iter);
     }
     const int duration_solve_spencerfano = std::time(nullptr) - sys_time_start_spencerfano;
 
     const auto sys_time_start_partfuncs_or_gamma = std::time(nullptr);
     for (int element = 0; element < get_nelements(); element++) {
       if (!elem_has_nlte_levels(element)) {
-        calculate_cellpartfuncts(n, element);
+        calculate_cellpartfuncts(mgi, element);
       } else if (USE_LUT_PHOTOION && (nlte_iter != 0)) {
         // recalculate the Gammas using the current population estimates
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions - 1; ion++) {
-          globals::gammaestimator[get_ionestimindex(n, element, ion)] = calculate_iongamma_per_gspop(n, element, ion);
+          globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] =
+              calculate_iongamma_per_gspop(mgi, element, ion);
         }
       }
     }
     const int duration_solve_partfuncs_or_gamma = std::time(nullptr) - sys_time_start_partfuncs_or_gamma;
 
-    const double prev_T_e = grid::get_Te(n);
+    const double prev_T_e = grid::get_Te(mgi);
     const auto sys_time_start_Te = std::time(nullptr);
     const int nts_for_te = (titer == 0) ? nts - 1 : nts;
 
     /// Find T_e as solution for thermal balance
-    call_T_e_finder(n, nts, globals::timesteps[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates, bfheatingcoeffs);
+    call_T_e_finder(mgi, nts, globals::timesteps[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates,
+                    bfheatingcoeffs);
 
     const int duration_solve_T_e = std::time(nullptr) - sys_time_start_Te;
 
     if (globals::total_nlte_levels == 0) {
       const auto sys_time_start_pops = std::time(nullptr);
-      calculate_ion_balance_nne(n);
+      calculate_ion_balance_nne(mgi);
       const int duration_solve_pops = std::time(nullptr) - sys_time_start_pops;
 
       printout(
           "Grid solver cell %d timestep %d: time spent on: Spencer-Fano %ds, partfuncs/gamma "
           "%ds, T_e %ds, populations %ds\n",
-          n, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
+          mgi, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
           duration_solve_pops);
       break;  // no iteration is needed without nlte pops
     }
 
     if (globals::total_nlte_levels > 0) {
-      const double fracdiff_T_e = fabs((grid::get_Te(n) / prev_T_e) - 1);
+      const double fracdiff_T_e = fabs((grid::get_Te(mgi) / prev_T_e) - 1);
       const auto sys_time_start_nltepops = std::time(nullptr);
       // fractional difference between previous and current iteration's (nne or max(ground state
       // population change))
       double fracdiff_nne = 0.;
       for (int element = 0; element < get_nelements(); element++) {
         if (get_nions(element) > 0) {
-          solve_nlte_pops_element(element, n, nts, nlte_iter);
-          calculate_cellpartfuncts(n, element);
+          solve_nlte_pops_element(element, mgi, nts, nlte_iter);
+          calculate_cellpartfuncts(mgi, element);
         }
       }
       const int duration_solve_nltepops = std::time(nullptr) - sys_time_start_nltepops;
 
-      const double nne_prev = grid::get_nne(n);
-      calculate_ion_balance_nne(n);  // sets nne
-      fracdiff_nne = fabs((grid::get_nne(n) / nne_prev) - 1);
+      const double nne_prev = grid::get_nne(mgi);
+      calculate_ion_balance_nne(mgi);  // sets nne
+      fracdiff_nne = fabs((grid::get_nne(mgi) / nne_prev) - 1);
       printout(
           "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e "
           "%ds, NLTE populations %ds\n",
-          n, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
+          mgi, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
       printout(
           "NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: prev_iter nne "
           "%g, new nne is %g, fracdiff %g, prev T_e %g new T_e %g fracdiff %g\n",
-          n, nts, nlte_iter, nne_prev, grid::get_nne(n), fracdiff_nne, prev_T_e, grid::get_Te(n), fracdiff_T_e);
+          mgi, nts, nlte_iter, nne_prev, grid::get_nne(mgi), fracdiff_nne, prev_T_e, grid::get_Te(mgi), fracdiff_T_e);
 
       if (fracdiff_nne <= covergence_tolerance && fracdiff_T_e <= covergence_tolerance) {
         printout(
@@ -963,17 +938,8 @@ static void titer_average_estimators(const int nonemptymgi) {
 }
 #endif
 
-static void zero_gammaestimator(const int modelgridindex) {
-  assert_always(USE_LUT_PHOTOION);
-  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  std::fill_n(&globals::gammaestimator[nonemptymgi * globals::nbfcontinua_ground], globals::nbfcontinua_ground, 0.);
-}
-
 static void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
-                             const double deltat, struct heatingcoolingrates *heatingcoolingrates,
-                             std::vector<double> &bfheatingcoeffs)
-// n is the modelgrid index
-{
+                             const double deltat, HeatingCoolingRates *heatingcoolingrates) {
   const int assoc_cells = grid::get_numassociatedcells(mgi);
   if (assoc_cells < 1) {
     /// For modelgrid cells that are not represented in the simulation grid,
@@ -1038,7 +1004,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       grid::modelgrid[mgi].thick = 1;
     }
 
-    printout("lte_iteration %d\n", globals::lte_iteration);
+    printout("lte_iteration %d\n", globals::lte_iteration ? 1 : 0);
     printout("mgi %d modelgrid.thick: %d (during grid update)\n", mgi, grid::modelgrid[mgi].thick);
 
     for (int element = 0; element < get_nelements(); element++) {
@@ -1059,9 +1025,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     const auto sys_time_start_temperature_corrections = std::time(nullptr);
 
     radfield::normalise_J(mgi, estimator_normfactor_over4pi);  // this applies normalisation to the fullspec J
-    radfield::set_J_normfactor(mgi,
-                               estimator_normfactor_over4pi);  // this stores the factor that will be applied
-                                                               // later for the J bins but not fullspec J
+    // this stores the factor that will be applied later for the J bins but not fullspec J
+    radfield::set_J_normfactor(nonemptymgi, estimator_normfactor_over4pi);
 
 #ifdef DO_TITER
     radfield::titer_J(mgi);
@@ -1116,7 +1081,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         radfield::normalise_bf_estimators(mgi, estimator_normfactor / H);
       }
 
-      solve_Te_nltepops(mgi, nts, titer, heatingcoolingrates, bfheatingcoeffs);
+      solve_Te_nltepops(mgi, nonemptymgi, nts, titer, heatingcoolingrates);
     }
     printout("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", mgi, nts,
              std::time(nullptr) - sys_time_start_temperature_corrections);
@@ -1187,7 +1152,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
   const int update_grid_cell_seconds = std::time(nullptr) - sys_time_start_update_cell;
   if (update_grid_cell_seconds > 0) {
-    printout("update_grid_cell for cell %d timestep %d took %ld seconds\n", mgi, nts, update_grid_cell_seconds);
+    printout("update_grid_cell for cell %d timestep %d took %d seconds\n", mgi, nts, update_grid_cell_seconds);
   }
 }
 
@@ -1215,14 +1180,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // printout("[debug] update_grid: starting update for timestep %d...\n",m);
   const double tratmid = globals::timesteps[nts].mid / globals::tmin;
 
-  /// Thread private substitution of max_path_step. Its minimum is
-  /// assigned to max_path_step after the parallel update_grid finished.
-  auto mps = std::make_unique<double[]>(get_max_threads());
-
-  for (int i = 0; i < get_max_threads(); i++) {
-    mps[i] = 1.e35;
-  }
-
   /// Calculate the critical opacity at which opacity_case 3 switches from a
   /// regime proportional to the density to a regime independent of the density
   /// This is done by solving for tau_sobolev == 1
@@ -1241,7 +1198,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
   cellcache_change_cell(-99);
 
-  threads_bfheatingcoeffs.resize(get_max_threads());
   /// Do not use values which are saved in the cellcache within update_grid
   use_cellcache = false;
 
@@ -1249,35 +1205,22 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #pragma omp parallel
 #endif
   {
-    threads_bfheatingcoeffs[tid].reserve(get_includedlevels());
-
 /// Updating cell information
 #ifdef _OPENMP
 #pragma omp for schedule(dynamic)
 #endif
 
-    for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
+    for (int mgi = nstart; mgi < nstart + ndo; mgi++) {
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
-      if (mgi >= nstart && mgi < nstart + ndo) {
-        struct heatingcoolingrates heatingcoolingrates {};
-        update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates,
-                         threads_bfheatingcoeffs[tid]);
+      HeatingCoolingRates heatingcoolingrates{};
+      update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates);
 
-        // maybe want to add omp ordered here if the modelgrid cells should be output in order
+      // maybe want to add omp ordered here if the modelgrid cells should be output in order
 #ifdef _OPENMP
 #pragma omp critical(estimators_file)
 #endif
-        { write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates); }
-
-      } else if (grid::get_numassociatedcells(mgi) > 0) {
-        /// else, only reset gammaestimator to zero. This allows us to do a global MPI
-        /// communication after update_grid to synchronize gammaestimator
-        /// and write a contiguous restart file with grid properties
-        if constexpr (USE_LUT_PHOTOION) {
-          zero_gammaestimator(mgi);
-        }
-      }
+      { write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates); }
     }  /// end parallel for loop over all modelgrid cells
 
   }  /// end OpenMP parallel section
@@ -1293,15 +1236,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // }
   // #endif
 
-  /// Assign the minimum of thread private mps to the global variable max_path_step
-  globals::max_path_step = mps[0];
-  for (int i = 1; i < get_max_threads(); i++) {
-    if (mps[i] < globals::max_path_step) {
-      globals::max_path_step = mps[i];
-    }
-  }
-
-  globals::max_path_step = std::min(globals::max_path_step, globals::rmax / 10.);
+  globals::max_path_step = std::min(1.e35, globals::rmax / 10.);
   printout("max_path_step %g\n", globals::max_path_step);
 
   const auto time_update_grid_end_thisrank = std::time(nullptr);

@@ -1,8 +1,12 @@
 #include "stats.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <array>
-#include <atomic>
 #include <cmath>
+#include <cstddef>
 #include <cstdlib>
 #include <vector>
 
@@ -12,38 +16,23 @@
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
-#include "packet.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "nonthermal.h"
+#include "packet.h"
 #include "sn3d.h"
 
 namespace stats {
 
-static double *ionstats = nullptr;
-static std::vector<std::array<int64_t, COUNTER_COUNT>> eventstats;
+static std::vector<double> ionstats;
+static std::array<ptrdiff_t, COUNTER_COUNT> eventstats{};
 
 void init() {
-  eventstats.resize(get_max_threads(), {0});
-
   if constexpr (TRACK_ION_STATS) {
-    ionstats =
-        static_cast<double *>(malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double)));
-  }
-}
-
-void cleanup() {
-  if constexpr (TRACK_ION_STATS) {
-    free(ionstats);
+    ionstats.resize(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT, 0.);
   }
 }
 
 void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype,
                          const double increment) {
-  if constexpr (!TRACK_ION_MASTATS) {
-    return;
-  }
   if (ionstattype >= 18) {
     return;
   }
@@ -52,18 +41,17 @@ void increment_ion_stats(const int modelgridindex, const int element, const int 
   assert_testmodeonly(ionstattype < ION_STAT_COUNT);
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  safeadd(
+  atomicadd(
       ionstats[modelgridindex * get_includedions() * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype],
       increment);
 }
 
-void increment_ion_stats_contabsorption(const struct packet *const pkt_ptr, const int modelgridindex, const int element,
-                                        const int ion) {
-  const double n_photons_absorbed = pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
+void increment_ion_stats_contabsorption(const Packet &pkt, const int modelgridindex, const int element, const int ion) {
+  const double n_photons_absorbed = pkt.e_cmf / H / pkt.nu_cmf;
 
   stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION, n_photons_absorbed);
 
-  const int et = pkt_ptr->emissiontype;
+  const int et = pkt.emissiontype;
   if (et >= 0)  // r-packet is from bound-bound emission
   {
     stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUND, n_photons_absorbed);
@@ -120,8 +108,8 @@ void increment_ion_stats_contabsorption(const struct packet *const pkt_ptr, cons
   }
 }
 
-auto get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype)
-    -> double {
+auto get_ion_stats(const int modelgridindex, const int element, const int ion,
+                   enum ionstattypes ionstattype) -> double {
   assert_always(ion < get_nions(element));
   assert_always(ionstattype < ION_STAT_COUNT);
   const int uniqueionindex = get_uniqueionindex(element, ion);
@@ -170,25 +158,22 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
 void increment(enum eventcounters i) {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < COUNTER_COUNT);
-  eventstats[tid][i]++;
+  atomicadd(eventstats[i], static_cast<ptrdiff_t>(1));
 }
 
 void pkt_action_counters_reset() {
   for (int i = 0; i < COUNTER_COUNT; i++) {
-    eventstats[tid][i] = 0;
+    eventstats[i] = 0;
   }
 
   nonthermal::nt_reset_stats();
   globals::nesc = 0;
 }
 
-auto get_counter(enum eventcounters i) -> int64_t {
-  assert_always(i < COUNTER_COUNT);
-  int64_t count = 0;
-  for (int t = 0; t < get_num_threads(); t++) {
-    count += eventstats[t][i];
-  }
-  return count;
+auto get_counter(enum eventcounters i) -> ptrdiff_t {
+  assert_testmodeonly(i >= 0);
+  assert_testmodeonly(i < COUNTER_COUNT);
+  return eventstats[i];
 }
 
 void pkt_action_counters_printout(const int nts) {
@@ -202,52 +187,52 @@ void pkt_action_counters_printout(const int nts) {
   }
 
   /// Printout packet statistics
-  printout("timestep %d: ma_stat_activation_collexc = %d\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_COLLEXC));
-  printout("timestep %d: ma_stat_activation_collion = %d\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_COLLION));
-  printout("timestep %d: ma_stat_activation_ntcollexc = %d\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC));
-  printout("timestep %d: ma_stat_activation_ntcollion = %d\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_NTCOLLION));
-  printout("timestep %d: ma_stat_activation_bb = %d\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_BB));
-  printout("timestep %d: ma_stat_activation_bf = %d\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_BF));
-  printout("timestep %d: ma_stat_activation_fb = %d\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_FB));
-  printout("timestep %d: ma_stat_deactivation_colldeexc = %d\n", nts,
+  printout("timestep %d: ma_stat_activation_collexc = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_COLLEXC));
+  printout("timestep %d: ma_stat_activation_collion = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_COLLION));
+  printout("timestep %d: ma_stat_activation_ntcollexc = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC));
+  printout("timestep %d: ma_stat_activation_ntcollion = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_NTCOLLION));
+  printout("timestep %d: ma_stat_activation_bb = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_BB));
+  printout("timestep %d: ma_stat_activation_bf = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_BF));
+  printout("timestep %d: ma_stat_activation_fb = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_FB));
+  printout("timestep %d: ma_stat_deactivation_colldeexc = %td\n", nts,
            get_counter(COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC));
-  printout("timestep %d: ma_stat_deactivation_collrecomb = %d\n", nts,
+  printout("timestep %d: ma_stat_deactivation_collrecomb = %td\n", nts,
            get_counter(COUNTER_MA_STAT_DEACTIVATION_COLLRECOMB));
-  printout("timestep %d: ma_stat_deactivation_bb = %d\n", nts, get_counter(COUNTER_MA_STAT_DEACTIVATION_BB));
-  printout("timestep %d: ma_stat_deactivation_fb = %d\n", nts, get_counter(COUNTER_MA_STAT_DEACTIVATION_FB));
-  printout("timestep %d: ma_stat_internaluphigher = %d\n", nts, get_counter(COUNTER_MA_STAT_INTERNALUPHIGHER));
-  printout("timestep %d: ma_stat_internaluphighernt = %d\n", nts, get_counter(COUNTER_MA_STAT_INTERNALUPHIGHERNT));
-  printout("timestep %d: ma_stat_internaldownlower = %d\n", nts, get_counter(COUNTER_MA_STAT_INTERNALDOWNLOWER));
+  printout("timestep %d: ma_stat_deactivation_bb = %td\n", nts, get_counter(COUNTER_MA_STAT_DEACTIVATION_BB));
+  printout("timestep %d: ma_stat_deactivation_fb = %td\n", nts, get_counter(COUNTER_MA_STAT_DEACTIVATION_FB));
+  printout("timestep %d: ma_stat_internaluphigher = %td\n", nts, get_counter(COUNTER_MA_STAT_INTERNALUPHIGHER));
+  printout("timestep %d: ma_stat_internaluphighernt = %td\n", nts, get_counter(COUNTER_MA_STAT_INTERNALUPHIGHERNT));
+  printout("timestep %d: ma_stat_internaldownlower = %td\n", nts, get_counter(COUNTER_MA_STAT_INTERNALDOWNLOWER));
 
-  printout("timestep %d: k_stat_to_ma_collexc = %d\n", nts, get_counter(COUNTER_K_STAT_TO_MA_COLLEXC));
-  printout("timestep %d: k_stat_to_ma_collion = %d\n", nts, get_counter(COUNTER_K_STAT_TO_MA_COLLION));
-  printout("timestep %d: k_stat_to_r_ff = %d\n", nts, get_counter(COUNTER_K_STAT_TO_R_FF));
-  printout("timestep %d: k_stat_to_r_fb = %d\n", nts, get_counter(COUNTER_K_STAT_TO_R_FB));
-  printout("timestep %d: k_stat_to_r_bb = %d\n", nts, get_counter(COUNTER_K_STAT_TO_R_BB));
-  printout("timestep %d: k_stat_from_ff = %d\n", nts, get_counter(COUNTER_K_STAT_FROM_FF));
-  printout("timestep %d: k_stat_from_bf = %d\n", nts, get_counter(COUNTER_K_STAT_FROM_BF));
-  printout("timestep %d: k_stat_from_earlierdecay = %d\n", nts, get_counter(COUNTER_K_STAT_FROM_EARLIERDECAY));
+  printout("timestep %d: k_stat_to_ma_collexc = %td\n", nts, get_counter(COUNTER_K_STAT_TO_MA_COLLEXC));
+  printout("timestep %d: k_stat_to_ma_collion = %td\n", nts, get_counter(COUNTER_K_STAT_TO_MA_COLLION));
+  printout("timestep %d: k_stat_to_r_ff = %td\n", nts, get_counter(COUNTER_K_STAT_TO_R_FF));
+  printout("timestep %d: k_stat_to_r_fb = %td\n", nts, get_counter(COUNTER_K_STAT_TO_R_FB));
+  printout("timestep %d: k_stat_to_r_bb = %td\n", nts, get_counter(COUNTER_K_STAT_TO_R_BB));
+  printout("timestep %d: k_stat_from_ff = %td\n", nts, get_counter(COUNTER_K_STAT_FROM_FF));
+  printout("timestep %d: k_stat_from_bf = %td\n", nts, get_counter(COUNTER_K_STAT_FROM_BF));
+  printout("timestep %d: k_stat_from_earlierdecay = %td\n", nts, get_counter(COUNTER_K_STAT_FROM_EARLIERDECAY));
 
-  printout("timestep %d: nt_stat_from_gamma = %d\n", nts, get_counter(COUNTER_NT_STAT_FROM_GAMMA));
-  printout("timestep %d: nt_stat_to_ionization = %d\n", nts, get_counter(COUNTER_NT_STAT_TO_IONIZATION));
-  printout("timestep %d: nt_stat_to_excitation = %d\n", nts, get_counter(COUNTER_NT_STAT_TO_EXCITATION));
-  printout("timestep %d: nt_stat_to_kpkt = %d\n", nts, get_counter(COUNTER_NT_STAT_TO_KPKT));
+  printout("timestep %d: nt_stat_from_gamma = %td\n", nts, get_counter(COUNTER_NT_STAT_FROM_GAMMA));
+  printout("timestep %d: nt_stat_to_ionization = %td\n", nts, get_counter(COUNTER_NT_STAT_TO_IONIZATION));
+  printout("timestep %d: nt_stat_to_excitation = %td\n", nts, get_counter(COUNTER_NT_STAT_TO_EXCITATION));
+  printout("timestep %d: nt_stat_to_kpkt = %td\n", nts, get_counter(COUNTER_NT_STAT_TO_KPKT));
   nonthermal::nt_print_stats(modelvolume, deltat);
 
-  printout("timestep %d: escounter = %d\n", nts, get_counter(COUNTER_ESCOUNTER));
-  printout("timestep %d: cellcrossing  = %d\n", nts, get_counter(COUNTER_CELLCROSSINGS));
-  printout("timestep %d: updatecellcounter  = %d\n", nts, get_counter(COUNTER_UPDATECELL));
-  printout("timestep %d: coolingratecalccounter = %d\n", nts, get_counter(COUNTER_COOLINGRATECALCCOUNTER));
-  printout("timestep %d: resonancescatterings  = %d\n", nts, get_counter(COUNTER_RESONANCESCATTERINGS));
+  printout("timestep %d: escounter = %td\n", nts, get_counter(COUNTER_ESCOUNTER));
+  printout("timestep %d: cellcrossing  = %td\n", nts, get_counter(COUNTER_CELLCROSSINGS));
+  printout("timestep %d: updatecellcounter  = %td\n", nts, get_counter(COUNTER_UPDATECELL));
+  printout("timestep %d: resonancescatterings  = %td\n", nts, get_counter(COUNTER_RESONANCESCATTERINGS));
 
-  printout("timestep %d: upscatterings  = %d\n", nts, get_counter(COUNTER_UPSCATTER));
-  printout("timestep %d: downscatterings  = %d\n", nts, get_counter(COUNTER_DOWNSCATTER));
+  printout("timestep %d: upscatterings  = %td\n", nts, get_counter(COUNTER_UPSCATTER));
+  printout("timestep %d: downscatterings  = %td\n", nts, get_counter(COUNTER_DOWNSCATTER));
 }
 
 void reduce_estimators() {
 #ifdef MPI_ON
-  MPI_Allreduce(MPI_IN_PLACE, stats::ionstats, grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT,
-                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, stats::ionstats.data(),
+                grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT, MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD);
 #endif
 }
 }  // namespace stats

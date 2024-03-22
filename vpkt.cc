@@ -28,13 +28,13 @@ struct stokeparams {
   double u = 0.;
 };
 
-struct vspecpol {
-  struct stokeparams flux[VMNUBINS];
+struct VSpecPol {
+  stokeparams flux[VMNUBINS];
   float lower_time{NAN};
   float delta_t{NAN};
 };
 
-struct vspecpol **vspecpol = nullptr;
+VSpecPol **vspecpol = nullptr;
 
 float lower_freq_vspec[VMNUBINS];
 float delta_freq_vspec[VMNUBINS];
@@ -60,7 +60,7 @@ std::vector<int> exclude;  // vector of opacity contribution setups:
                            // +ve: exclude element with atomic number's contribution to bound-bound opacity
 std::vector<double> tau_vpkt;
 
-// --------- Vstruct packet GRID -----------
+// --------- VPacket GRID -----------
 
 struct vgrid {
   std::vector<std::vector<double>> flux;
@@ -99,7 +99,7 @@ static auto all_taus_past_taumax(std::vector<double> &tau, const double tau_max)
 }
 
 // Routine to add a packet to the outcoming spectrum.
-static void add_to_vspecpol(const struct packet &vpkt, const int obsbin, const int ind, const double t_arrive) {
+static void add_to_vspecpol(const Packet &vpkt, const int obsbin, const int ind, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
   const int ind_comb = Nspectra * obsbin + ind;
@@ -112,16 +112,16 @@ static void add_to_vspecpol(const struct packet &vpkt, const int obsbin, const i
       const double pktcontrib = vpkt.e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI /
                                 PARSEC / PARSEC / globals::nprocs * 4 * PI;
 
-      safeadd(vspecpol[nt][ind_comb].flux[nnu].i, vpkt.stokes[0] * pktcontrib);
-      safeadd(vspecpol[nt][ind_comb].flux[nnu].q, vpkt.stokes[1] * pktcontrib);
-      safeadd(vspecpol[nt][ind_comb].flux[nnu].u, vpkt.stokes[2] * pktcontrib);
+      atomicadd(vspecpol[nt][ind_comb].flux[nnu].i, vpkt.stokes[0] * pktcontrib);
+      atomicadd(vspecpol[nt][ind_comb].flux[nnu].q, vpkt.stokes[1] * pktcontrib);
+      atomicadd(vspecpol[nt][ind_comb].flux[nnu].u, vpkt.stokes[2] * pktcontrib);
     }
   }
 }
 
 // Routine to add a packet to the outcoming spectrum.
-static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 3> vel, const int wlbin,
-                             const int obsbin, std::span<const double, 3> obs) {
+static void add_to_vpkt_grid(const Packet &vpkt, std::span<const double, 3> vel, const int wlbin, const int obsbin,
+                             std::span<const double, 3> obs) {
   double vref1{NAN};
   double vref2{NAN};
 
@@ -162,17 +162,17 @@ static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 
 
   // Add contribution
   if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {
-    safeadd(vgrid_i[ny][nz].flux[wlbin][obsbin], vpkt.stokes[0] * vpkt.e_rf);
-    safeadd(vgrid_q[ny][nz].flux[wlbin][obsbin], vpkt.stokes[1] * vpkt.e_rf);
-    safeadd(vgrid_u[ny][nz].flux[wlbin][obsbin], vpkt.stokes[2] * vpkt.e_rf);
+    atomicadd(vgrid_i[ny][nz].flux[wlbin][obsbin], vpkt.stokes[0] * vpkt.e_rf);
+    atomicadd(vgrid_q[ny][nz].flux[wlbin][obsbin], vpkt.stokes[1] * vpkt.e_rf);
+    atomicadd(vgrid_u[ny][nz].flux[wlbin][obsbin], vpkt.stokes[2] * vpkt.e_rf);
   }
 }
 
-static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int obsbin,
-                           std::span<double, 3> obsdir, const enum packet_type type_before_rpkt) {
+static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin, std::span<double, 3> obsdir,
+                           const enum packet_type type_before_rpkt) {
   int mgi = 0;
 
-  struct packet vpkt = *pkt_ptr;
+  Packet vpkt = pkt;
 
   bool end_packet = false;
   double ldist = 0;
@@ -187,9 +187,9 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   vpkt.dir[2] = obsdir[2];
   vpkt.last_cross = BOUNDARY_NONE;
 
-  safeincrement(nvpkt);  // increment the number of virtual packet in the given timestep
+  atomicadd(nvpkt, 1);  // increment the number of virtual packet in the given timestep
 
-  const auto vel_vec = get_velocity(pkt_ptr->pos, t_current);
+  const auto vel_vec = get_velocity(pkt.pos, t_current);
 
   // rf frequency and energy
   const double dopplerfactor = doppler_nucmf_on_nurf(vpkt.dir, vel_vec);
@@ -208,7 +208,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
 
-    auto old_dir_cmf = frame_transform(pkt_ptr->dir, &Qi, &Ui, vel_vec);
+    auto old_dir_cmf = frame_transform(pkt.dir, &Qi, &Ui, vel_vec);
 
     // Need to rotate Stokes Parameters in the scattering plane
 
@@ -273,7 +273,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   // compute the optical depth to boundary
 
   mgi = grid::get_cell_modelgridindex(vpkt.where);
-  struct rpkt_continuum_absorptioncoeffs chi_vpkt_cont {};
+  thread_local static struct Rpkt_continuum_absorptioncoeffs chi_vpkt_cont {};
 
   while (!end_packet) {
     // distance to the next cell
@@ -284,7 +284,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     if (mgi == grid::get_npts_model()) {
       vpkt.next_trans = -1;
     } else {
-      calculate_chi_rpkt_cont(vpkt.nu_cmf, chi_vpkt_cont, mgi, false);
+      calculate_chi_rpkt_cont(vpkt.nu_cmf, chi_vpkt_cont, nullptr, mgi);
 
       const double chi_cont = chi_vpkt_cont.total;
 
@@ -308,8 +308,8 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
         return;
       }
 
-      struct packet dummypkt_abort = vpkt;
-      move_pkt_withtime(&dummypkt_abort, sdist);
+      Packet dummypkt_abort = vpkt;
+      move_pkt_withtime(dummypkt_abort, sdist);
       const double nu_cmf_abort = dummypkt_abort.nu_cmf;
       assert_testmodeonly(nu_cmf_abort <= vpkt.nu_cmf);
       const double d_nu_on_d_l = (nu_cmf_abort - vpkt.nu_cmf) / sdist;
@@ -372,20 +372,15 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     // virtual packet is still at the starting position
     // move it to cell boundary and go to next cell
-    // printf("I'm changing cell. I'm going from nu_cmf = %.e ",dummy_ptr->nu_cmf);
 
     t_future += (sdist / CLIGHT_PROP);
-    move_pkt_withtime(&vpkt, sdist);
+    move_pkt_withtime(vpkt, sdist);
     vpkt.prop_time = t_future;
 
-    grid::change_cell(&vpkt, snext);
+    grid::change_cell(vpkt, snext);
     end_packet = (vpkt.type == TYPE_ESCAPE);
 
     mgi = grid::get_cell_modelgridindex(vpkt.where);
-    // break if you reach an empty cell
-    if (mgi == grid::get_npts_model()) {
-      break;
-    }
 
     // kill vpkt with pass through a thick cell
     if (grid::modelgrid[mgi].thick != 0) {
@@ -395,14 +390,14 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   // increment the number of escaped virtual packet in the given timestep
   if (type_before_rpkt == TYPE_RPKT) {
-    safeincrement(nvpkt_esc1);
+    atomicadd(nvpkt_esc1, 1);
   } else if (type_before_rpkt == TYPE_KPKT) {
-    safeincrement(nvpkt_esc2);
+    atomicadd(nvpkt_esc2, 1);
   } else if (type_before_rpkt == TYPE_MA) {
-    safeincrement(nvpkt_esc3);
+    atomicadd(nvpkt_esc3, 1);
   }
 
-  const double t_arrive = t_current - (dot(pkt_ptr->pos, vpkt.dir) / CLIGHT_PROP);
+  const double t_arrive = get_arrive_time(vpkt);
   // -------------- final stokes vector ---------------
 
   for (int ind = 0; ind < Nspectra; ind++) {
@@ -444,11 +439,11 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 }
 
 static void init_vspecpol() {
-  vspecpol = static_cast<struct vspecpol **>(malloc(VMTBINS * sizeof(struct vspecpol *)));
+  vspecpol = static_cast<VSpecPol **>(malloc(VMTBINS * sizeof(VSpecPol *)));
 
   const int indexmax = Nspectra * Nobs;
   for (int p = 0; p < VMTBINS; p++) {
-    vspecpol[p] = static_cast<struct vspecpol *>(malloc(indexmax * sizeof(struct vspecpol)));
+    vspecpol[p] = static_cast<VSpecPol *>(malloc(indexmax * sizeof(VSpecPol)));
   }
 
   dlogt_vspec = (log(VSPEC_TIMEMAX) - log(VSPEC_TIMEMIN)) / VMTBINS;
@@ -831,16 +826,16 @@ void read_parameterfile_vpkt() {
   fclose(input_file);
 }
 
-void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
-                         const bool is_final) {  // write specpol of the virtual packets
+void vpkt_write_timestep(const int nts, const int my_rank, const bool is_final) {
   if constexpr (!VPKT_ON) {
     return;
   }
 
+  // write specpol of the virtual packets
   char filename[MAXFILENAMELENGTH];
 
   if (is_final) {
-    snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d-%d.out", my_rank, tid);
+    snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d-%d.out", my_rank, 0);
   } else {
     snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_ts%d.tmp", 0, my_rank, nts);
   }
@@ -852,7 +847,7 @@ void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
 
   if (vgrid_on) {
     if (is_final) {
-      snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d-%d.out", my_rank, tid);
+      snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d-%d.out", my_rank, 0);
     } else {
       snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_ts%d.tmp", 0, my_rank, nts);
     }
@@ -864,7 +859,7 @@ void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
   }
 }
 
-void vpkt_init(const int nts, const int my_rank, const int /*tid*/, const bool continued_from_saved) {
+void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved) {
   if constexpr (!VPKT_ON) {
     return;
   }
@@ -885,27 +880,27 @@ void vpkt_init(const int nts, const int my_rank, const int /*tid*/, const bool c
   }
 }
 
-auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type type_before_rpkt) -> void {
+auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) -> void {
   if constexpr (!VPKT_ON) {
     return;
   }
 
   // Cut on vpkts
-  const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+  const int mgi = grid::get_cell_modelgridindex(pkt.where);
 
   if (grid::modelgrid[mgi].thick != 0) {
     return;
   }
 
-  const double t_current = pkt_ptr->prop_time;
+  const double t_current = pkt.prop_time;
 
-  const auto vel_vec = get_velocity(pkt_ptr->pos, pkt_ptr->prop_time);
+  const auto vel_vec = get_velocity(pkt.pos, pkt.prop_time);
 
   // this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer)
-  if (pkt_ptr->next_trans == 0) {
-    const int lineindex = closest_transition(pkt_ptr->nu_cmf, pkt_ptr->next_trans);  /// returns negative
+  if (pkt.next_trans == 0) {
+    const int lineindex = closest_transition(pkt.nu_cmf, pkt.next_trans);  /// returns negative
     if (lineindex < 0) {
-      pkt_ptr->next_trans = lineindex + 1;
+      pkt.next_trans = lineindex + 1;
     }
   }
 
@@ -915,12 +910,12 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type type_be
     double obsdir[3] = {sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * cos(phiobs[obsbin]),
                         sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * sin(phiobs[obsbin]), nz_obs_vpkt[obsbin]};
 
-    const double t_arrive = t_current - (dot(pkt_ptr->pos, obsdir) / CLIGHT_PROP);
+    const double t_arrive = t_current - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
 
     if (t_arrive >= VSPEC_TIMEMIN_input && t_arrive <= VSPEC_TIMEMAX_input) {
       // time selection
 
-      const double nu_rf = pkt_ptr->nu_cmf / doppler_nucmf_on_nurf(obsdir, vel_vec);
+      const double nu_rf = pkt.nu_cmf / doppler_nucmf_on_nurf(obsdir, vel_vec);
 
       for (int i = 0; i < Nrange; i++) {
         // Loop over frequency ranges
@@ -928,7 +923,7 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type type_be
         if (nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) {
           // frequency selection
 
-          rlc_emiss_vpkt(pkt_ptr, t_current, obsbin, obsdir, type_before_rpkt);
+          rlc_emiss_vpkt(pkt, t_current, obsbin, obsdir, type_before_rpkt);
         }
       }
     }
@@ -993,8 +988,8 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type type_be
   return ref2;
 }
 
-static auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v)
-    -> std::array<double, 3> {
+static auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf,
+                    std::span<const double, 3> v) -> std::array<double, 3> {
   // Use Lorentz transformations to get e_cmf from e_rf
 
   const auto beta = std::array<const double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
@@ -1026,8 +1021,8 @@ static auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> 
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
-auto frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v)
-    -> std::array<double, 3> {
+auto frame_transform(std::span<const double, 3> n_rf, double *Q, double *U,
+                     std::span<const double, 3> v) -> std::array<double, 3> {
   auto ref1 = std::array<double, 3>{NAN, NAN, NAN};
 
   // Meridian frame in the RF

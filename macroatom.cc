@@ -27,12 +27,12 @@
 #include "vpkt.h"
 
 // save to the macroatom_*.out file
-constexpr bool LOG_MACROATOM = false;
+static constexpr bool LOG_MACROATOM = false;
 
 static FILE *macroatom_file = nullptr;
 
 static void calculate_macroatom_transitionrates(const int modelgridindex, const int element, const int ion,
-                                                const int level, const double t_mid, struct chlevels &chlevel) {
+                                                const int level, const double t_mid, CellCacheLevels &chlevel) {
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
   auto &processrates = chlevel.processrates;
   const auto T_e = grid::get_Te(modelgridindex);
@@ -174,7 +174,7 @@ static auto do_macroatom_internal_down_same(int element, int ion, int level) -> 
   return lower;
 }
 
-static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int element, const int ion, const int level,
+static void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion, const int level,
                                          const int activatingline) {
   /// radiative deexcitation of MA: emitt rpkt
   /// randomly select which line transitions occurs
@@ -198,19 +198,19 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
   }
 
   if constexpr (RECORD_LINESTAT) {
-    safeincrement(globals::ecounter[selecteddowntrans.lineindex]);
+    atomicadd(globals::ecounter[selecteddowntrans.lineindex], 1);
   }
 
   const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, selecteddowntrans.targetlevelindex);
 
   double oldnucmf{NAN};
-  if (pkt_ptr->last_event == 1) {
-    oldnucmf = pkt_ptr->nu_cmf;
+  if (pkt.last_event == 1) {
+    oldnucmf = pkt.nu_cmf;
   }
-  pkt_ptr->nu_cmf = epsilon_trans / H;
+  pkt.nu_cmf = epsilon_trans / H;
 
-  if (pkt_ptr->last_event == 1) {
-    if (oldnucmf < pkt_ptr->nu_cmf) {
+  if (pkt.last_event == 1) {
+    if (oldnucmf < pkt.nu_cmf) {
       stats::increment(stats::COUNTER_UPSCATTER);
     } else {
       stats::increment(stats::COUNTER_DOWNSCATTER);
@@ -219,23 +219,23 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
 
   stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_BB);
   stats::increment(stats::COUNTER_INTERACTIONS);
-  pkt_ptr->last_event = 0;
+  pkt.last_event = 0;
 
   // emit the rpkt in a random direction
-  emit_rpkt(pkt_ptr);
+  emit_rpkt(pkt);
 
   // the r-pkt can only interact with lines redder than the current one
-  pkt_ptr->next_trans = selecteddowntrans.lineindex + 1;
-  pkt_ptr->emissiontype = selecteddowntrans.lineindex;
-  pkt_ptr->em_pos = pkt_ptr->pos;
-  pkt_ptr->em_time = pkt_ptr->prop_time;
-  pkt_ptr->nscatterings = 0;
+  pkt.next_trans = selecteddowntrans.lineindex + 1;
+  pkt.emissiontype = selecteddowntrans.lineindex;
+  pkt.em_pos = pkt.pos;
+  pkt.em_time = pkt.prop_time;
+  pkt.nscatterings = 0;
 
-  vpkt_call_estimators(pkt_ptr, TYPE_MA);
+  vpkt_call_estimators(pkt, TYPE_MA);
 }
 
-static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridindex, const int element, int *ion,
-                                   int *level, const double rad_recomb) {
+static void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int element, int *ion, int *level,
+                                   const double rad_recomb) {
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, *ion, *level);
@@ -273,35 +273,35 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
   *ion = upperion - 1;
   *level = lower;
 
-  pkt_ptr->nu_cmf = select_continuum_nu(element, upperion - 1, lower, upperionlevel, T_e);
+  pkt.nu_cmf = select_continuum_nu(element, upperion - 1, lower, upperionlevel, T_e);
 
   // printout("%s: From Z=%d ionstage %d, recombining to ionstage %d level %d\n",
   //          __func__, get_atomicnumber(element), get_ionstage(element, *ion + 1), get_ionstage(element, *ion), lower);
-  // printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
+  // printout("[debug] do_ma:   pkt.nu_cmf %g\n",pkt.nu_cmf);
 
-  if (!std::isfinite(pkt_ptr->nu_cmf)) {
+  if (!std::isfinite(pkt.nu_cmf)) {
     printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
     std::abort();
   }
   stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_FB);
   stats::increment(stats::COUNTER_INTERACTIONS);
-  pkt_ptr->last_event = 2;
+  pkt.last_event = 2;
 
   /// Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
-  emit_rpkt(pkt_ptr);
+  emit_rpkt(pkt);
 
   if constexpr (TRACK_ION_STATS) {
     stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_RADRECOMB_MACROATOM,
-                               pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
+                               pkt.e_cmf / H / pkt.nu_cmf);
   }
 
-  pkt_ptr->next_trans = 0;  /// continuum transition, no restrictions for further line interactions
-  pkt_ptr->emissiontype = get_continuumindex(element, *ion, lower, upperionlevel);
-  pkt_ptr->em_pos = pkt_ptr->pos;
-  pkt_ptr->em_time = pkt_ptr->prop_time;
-  pkt_ptr->nscatterings = 0;
+  pkt.next_trans = 0;  /// continuum transition, no restrictions for further line interactions
+  pkt.emissiontype = get_continuumindex(element, *ion, lower, upperionlevel);
+  pkt.em_pos = pkt.pos;
+  pkt.em_time = pkt.prop_time;
+  pkt.nscatterings = 0;
 
-  vpkt_call_estimators(pkt_ptr, TYPE_MA);
+  vpkt_call_estimators(pkt, TYPE_MA);
 }
 
 static void do_macroatom_ionisation(const int modelgridindex, const int element, int *ion, int *level,
@@ -339,10 +339,10 @@ static void do_macroatom_ionisation(const int modelgridindex, const int element,
   *level = upper;
 }
 
-void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
+void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
 /// Material for handling activated macro atoms.
 {
-  const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
+  const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
   const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   assert_testmodeonly(nonemptymgi >= 0);
   const auto T_e = grid::get_Te(modelgridindex);
@@ -366,18 +366,18 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
   int level = pktmastate.level;
 
   const int activatingline = pktmastate.activatingline;
-  if (pkt_ptr->absorptiontype > 0 && activatingline > 0 && activatingline != pkt_ptr->absorptiontype) {
+  if (pkt.absorptiontype > 0 && activatingline > 0 && activatingline != pkt.absorptiontype) {
     printout("error: mismatched absorptiontype %d != activatingline = %d pkt last_event %d emissiontype %d\n",
-             pkt_ptr->absorptiontype, activatingline, pkt_ptr->last_event, pkt_ptr->emissiontype);
+             pkt.absorptiontype, activatingline, pkt.last_event, pkt.emissiontype);
   }
 
   const int ion_in = ion;
   const int level_in = level;
-  const double nu_cmf_in = pkt_ptr->nu_cmf;
-  const double nu_rf_in = pkt_ptr->nu_rf;
+  const double nu_cmf_in = pkt.nu_cmf;
+  const double nu_rf_in = pkt.nu_rf;
 
   if constexpr (TRACK_ION_STATS) {
-    stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_TOTAL, pkt_ptr->e_cmf);
+    stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_TOTAL, pkt.e_cmf);
   }
 
   int jumps = 0;
@@ -437,8 +437,9 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
     const double randomrate = rng_uniform() * cumulative_transitions[MA_ACTION_COUNT - 1];
 
     // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
-    const auto *upperval = std::upper_bound(cumulative_transitions.begin(), cumulative_transitions.end(), randomrate);
-    const auto selected_action = static_cast<enum ma_action>(std::distance(cumulative_transitions.cbegin(), upperval));
+    const auto selected_action =
+        std::distance(cumulative_transitions.cbegin(),
+                      std::upper_bound(cumulative_transitions.cbegin(), cumulative_transitions.cend(), randomrate));
 
     assert_always(selected_action < MA_ACTION_COUNT);
     assert_always(cumulative_transitions[selected_action] > randomrate);
@@ -448,24 +449,22 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
         // printout("[debug] do_ma:   radiative deexcitation\n");
         // printout("[debug] do_ma:   jumps = %d\n", jumps);
 
-        do_macroatom_raddeexcitation(pkt_ptr, element, ion, level, activatingline);
+        do_macroatom_raddeexcitation(pkt, element, ion, level, activatingline);
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC,
-                                     pkt_ptr->e_cmf);
+          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC, pkt.e_cmf);
 
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_BOUNDBOUND_MACROATOM,
-                                     pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
+                                     pkt.e_cmf / H / pkt.nu_cmf);
 
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL,
-                                     pkt_ptr->e_cmf);
+          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
         }
 
         if constexpr (LOG_MACROATOM) {
           fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %9d %11.5e %11.5e %11.5e %11.5e %9d\n",
                   globals::timestep, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion_in),
-                  get_ionstage(element, ion), level_in, level, activatingline, nu_cmf_in, pkt_ptr->nu_cmf, nu_rf_in,
-                  pkt_ptr->nu_rf, jumps);
+                  get_ionstage(element, ion), level_in, level, activatingline, nu_cmf_in, pkt.nu_cmf, nu_rf_in,
+                  pkt.nu_rf, jumps);
         }
 
         end_packet = true;
@@ -479,18 +478,16 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
 
         stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC);
         stats::increment(stats::COUNTER_INTERACTIONS);
-        pkt_ptr->last_event = 10;
+        pkt.last_event = 10;
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLDEEXC,
-                                     pkt_ptr->e_cmf);
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL,
-                                     pkt_ptr->e_cmf);
+          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLDEEXC, pkt.e_cmf);
+          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
         }
 
-        pkt_ptr->type = TYPE_KPKT;
+        pkt.type = TYPE_KPKT;
         end_packet = true;
-        safeadd(globals::colheatingestimator[nonemptymgi], pkt_ptr->e_cmf);
+        atomicadd(globals::colheatingestimator[nonemptymgi], pkt.e_cmf);
         break;
       }
 
@@ -510,11 +507,11 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
 
         if constexpr (TRACK_ION_STATS) {
           // stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADRECOMB,
-          // pkt_ptr->e_cmf); stats::increment_ion_stats(modelgridindex, element, ion,
-          // stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
+          // pkt.e_cmf); stats::increment_ion_stats(modelgridindex, element, ion,
+          // stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
         }
 
-        do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB]);
+        do_macroatom_radrecomb(pkt, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB]);
         end_packet = true;
         break;
       }
@@ -525,18 +522,17 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
         // printout("[debug] do_ma: jumps = %d\n",jumps);
         stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLRECOMB);
         stats::increment(stats::COUNTER_INTERACTIONS);
-        pkt_ptr->last_event = 11;
+        pkt.last_event = 11;
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLRECOMB,
-                                     pkt_ptr->e_cmf);
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL,
-                                     pkt_ptr->e_cmf);
+                                     pkt.e_cmf);
+          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
         }
 
-        pkt_ptr->type = TYPE_KPKT;
+        pkt.type = TYPE_KPKT;
         end_packet = true;
-        safeadd(globals::colheatingestimator[nonemptymgi], pkt_ptr->e_cmf);
+        atomicadd(globals::colheatingestimator[nonemptymgi], pkt.e_cmf);
         break;
       }
 
@@ -569,16 +565,14 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
         /// and set the macroatom's new state
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL,
-                                     pkt_ptr->e_cmf);
+          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
         }
 
         ion -= 1;
         level = lower;
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL,
-                                     pkt_ptr->e_cmf);
+          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
         }
 
         if (lower >= nlevels) {
@@ -628,16 +622,14 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
         stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHER);
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL,
-                                     pkt_ptr->e_cmf);
+          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
         }
 
         do_macroatom_ionisation(modelgridindex, element, &ion, &level, epsilon_current,
                                 processrates[MA_ACTION_INTERNALUPHIGHER]);
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL,
-                                     pkt_ptr->e_cmf);
+          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
         }
 
         break;
@@ -647,8 +639,7 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
         stats::increment(stats::COUNTER_INTERACTIONS);
         // ion += 1;
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL,
-                                     pkt_ptr->e_cmf);
+          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
         }
 
         ion = nonthermal::nt_random_upperion(modelgridindex, element, ion, false);
@@ -656,11 +647,8 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
         stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHERNT);
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL,
-                                     pkt_ptr->e_cmf);
+          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
         }
-        // printout("Macroatom non-thermal ionisation to Z=%d ionstage %d level %d\n", get_atomicnumber(element), ion,
-        // level);
         break;
       }
 
@@ -668,16 +656,17 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
         printout("ERROR: Problem selecting MA_ACTION\n");
         std::abort();
       }
-    }
-  }  /// endwhile
 
-  if (pkt_ptr->trueemissiontype == EMTYPE_NOTSET) {
-    pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
-    pkt_ptr->trueemissionvelocity = vec_len(pkt_ptr->em_pos) / pkt_ptr->em_time;
-    pkt_ptr->trueem_time = pkt_ptr->em_time;
+      default:
+        assert_testmodeonly(false);
+    }
   }
 
-  /// procedure ends only after a change to r or k packets has taken place
+  if (pkt.trueemissiontype == EMTYPE_NOTSET) {
+    pkt.trueemissiontype = pkt.emissiontype;
+    pkt.trueemissionvelocity = vec_len(pkt.em_pos) / pkt.em_time;
+    pkt.trueem_time = pkt.em_time;
+  }
 }
 
 /// Calculation of radiative rates ///////////////////////////////////////////////////////
@@ -749,8 +738,8 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
 }
 
 auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
-                              const int uptransindex, const double epsilon_trans, int lineindex, const double t_current)
-    -> double
+                              const int uptransindex, const double epsilon_trans, int lineindex,
+                              const double t_current) -> double
 /// radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
 {
@@ -915,7 +904,7 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 }
 
 auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, int element, int ion,
-                                int upper, const struct level_transition &downtransition) -> double
+                                int upper, const LevelTransition &downtransition) -> double
 // multiply by upper level population to get a rate per second
 {
   const int lower = downtransition.targetlevelindex;
@@ -941,12 +930,12 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
       // test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
       /// crude approximation to the already crude Van-Regemorter formula
 
-      // double test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+      // double test = 0.276 * exp(fac1) * (-EULERGAMMA - log(fac1));
       // double Gamma = (g_bar > test) ? g_bar : test;
 
       // optimisation
       const double gauntfac =
-          (eoverkt > 0.33421) ? g_bar : 0.276 * std::exp(eoverkt) * (-0.5772156649 - std::log(eoverkt));
+          (eoverkt > 0.33421) ? g_bar : 0.276 * std::exp(eoverkt) * (-EULERGAMMA - std::log(eoverkt));
 
       const double g_ratio = lowerstatweight / upperstatweight;
 
@@ -993,7 +982,7 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, int element, int
       /// crude approximation to the already crude Van-Regemorter formula
       const double exp_eoverkt = exp(eoverkt);
 
-      const double test = 0.276 * exp_eoverkt * (-0.5772156649 - std::log(eoverkt));
+      const double test = 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt));
       const double Gamma = g_bar > test ? g_bar : test;
       C = C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow(H_ionpot / epsilon_trans, 2) * eoverkt /
           exp_eoverkt * Gamma;

@@ -71,7 +71,6 @@ constexpr bool POL_ON;
 constexpr bool VPKT_ON;
 
 constexpr bool TRACK_ION_STATS;
-constexpr bool TRACK_ION_MASTATS;
 
 constexpr double MINPOP;
 

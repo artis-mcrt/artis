@@ -7,7 +7,7 @@
 #include <compare>
 #include <cstdio>
 
-enum packet_type {
+enum packet_type : int {
   TYPE_ESCAPE = 32,
   TYPE_RADIOACTIVE_PELLET = 100,
   TYPE_GAMMA = 10,
@@ -22,14 +22,14 @@ enum packet_type {
 constexpr int EMTYPE_NOTSET = -9999000;
 constexpr int EMTYPE_FREEFREE = -9999999;
 
-struct mastate {
+struct MacroAtomState {
   int element;         /// macro atom of type element (this is an element index)
   int ion;             /// in ionstage ion (this is an ion index)
   int level;           /// and level=level (this is a level index)
   int activatingline;  /// Linelistindex of the activating line for bb activated MAs, -99 else.
 };
 
-enum cell_boundary {
+enum cell_boundary : int {
   COORD0_MIN = 101,
   COORD0_MAX = 102,
   COORD1_MIN = 103,
@@ -39,7 +39,7 @@ enum cell_boundary {
   BOUNDARY_NONE = 107,
 };
 
-struct packet {
+struct Packet {
   enum packet_type type {};  // type of packet (k-, r-, etc.)
   double prop_time{-1.};     // internal clock to track how far in time the packet has been propagated
   int where{-1};             // The propagation grid cell that the packet is in.
@@ -80,7 +80,7 @@ struct packet {
   int pellet_nucindex{-1};                       // nuclide index of the decaying species
   float trueemissionvelocity{-1};
 
-  inline auto operator==(const packet &rhs) -> bool {
+  inline auto operator==(const Packet &rhs) -> bool {
     return (number == rhs.number && type == rhs.type &&
             (em_pos[0] == rhs.em_pos[0] && em_pos[1] == rhs.em_pos[1] && em_pos[2] == rhs.em_pos[2]) &&
             nu_cmf == rhs.nu_cmf && where == rhs.where && prop_time == rhs.prop_time && tdecay == rhs.tdecay &&
@@ -96,10 +96,10 @@ enum last_event_type {
   LASTEVENT_ELECTRONSCATTERING = 12,
 };
 
-void packet_init(struct packet *pkt);
-void write_packets(const char filename[], const struct packet *pkt);
-void read_packets(const char filename[], struct packet *pkt);
-void read_temp_packetsfile(int timestep, int my_rank, struct packet *pkt);
-[[nodiscard]] auto verify_temp_packetsfile(int timestep, int my_rank, const struct packet *pkt) -> bool;
+void packet_init(Packet *pkt);
+void write_packets(const char filename[], const Packet *pkt);
+void read_packets(const char filename[], Packet *pkt);
+void read_temp_packetsfile(int timestep, int my_rank, Packet *pkt);
+[[nodiscard]] auto verify_temp_packetsfile(int timestep, int my_rank, const Packet *pkt) -> bool;
 
 #endif  // PACKET_H

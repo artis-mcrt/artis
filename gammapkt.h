@@ -6,8 +6,8 @@
 
 namespace gammapkt {
 void init_gamma_data();
-void pellet_gamma_decay(struct packet *pkt_ptr);
-void do_gamma(struct packet *pkt_ptr, double t2);
+void pellet_gamma_decay(Packet &pkt);
+void do_gamma(Packet &pkt, double t2);
 void normalise(int nts);
 
 }  // namespace gammapkt

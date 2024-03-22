@@ -3,21 +3,38 @@
 #define RPKT_H
 
 #include <ctime>
+#include <vector>
+
+struct Rpkt_continuum_absorptioncoeffs {
+  double nu{-1.};  // frequency at which opacity was calculated
+  double total{0.};
+  double ffescat{0.};
+  double ffheat{0.};
+  double bf{0.};
+  double ffheating{0.};
+  // double bfheating;
+  int modelgridindex{-1};
+  int timestep{-1};
+};
+
+struct Phixslist {
+  std::vector<double> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
+  std::vector<double> chi_bf_sum;
+  std::vector<double> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
+  int allcontend{-1};
+  int allcontbegin{0};
+};
 
 #include "artisoptions.h"
-#include "constants.h"
-#include "globals.h"
 #include "grid.h"
-#include "radfield.h"
 #include "sn3d.h"
 
-void do_rpkt(struct packet *pkt_ptr, double t2, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont);
-void emit_rpkt(struct packet *pkt_ptr);
+void do_rpkt(Packet &pkt, double t2);
+void emit_rpkt(Packet &pkt);
 [[nodiscard]] auto closest_transition(double nu_cmf, int next_trans) -> int;
-[[nodiscard]] auto calculate_chi_bf_gammacontr(int modelgridindex, double nu) -> double;
-void calculate_chi_rpkt_cont(double nu_cmf, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, int modelgridindex,
-                             bool usecellhistupdatephixslist);
-auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
+void calculate_chi_rpkt_cont(double nu_cmf, Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, Phixslist *phixslist,
+                             int modelgridindex);
+[[nodiscard]] auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
 void allocate_expansionopacities();
 void calculate_binned_opacities(int modelgridindex);
 void MPI_Bcast_binned_opacities(int modelgridindex, int root_node_id);
@@ -42,17 +59,13 @@ void MPI_Bcast_binned_opacities(int modelgridindex, int root_node_id);
   return CLIGHT * prop_time * (nu_cmf / nu_trans - 1);
 }
 
-[[nodiscard]] inline auto get_ionestimindex_nonemptymgi(const int nonemptymgi, const int element, const int ion)
-    -> int {
+[[nodiscard]] inline auto get_ionestimindex_nonemptymgi(const int nonemptymgi, const int element,
+                                                        const int ion) -> int {
   assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element) - 1);
   const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
   assert_always(groundcontindex >= 0);
   return nonemptymgi * globals::nbfcontinua_ground + groundcontindex;
-}
-
-[[nodiscard]] inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
-  return get_ionestimindex_nonemptymgi(grid::get_modelcell_nonemptymgi(mgi), element, ion);
 }
 
 #endif  // RPKT_H

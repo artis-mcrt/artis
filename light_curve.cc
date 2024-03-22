@@ -11,6 +11,7 @@
 #include "constants.h"
 #include "exspec.h"
 #include "globals.h"
+#include "packet.h"
 #include "sn3d.h"
 #include "vectors.h"
 
@@ -49,38 +50,38 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
   }
 }
 
-void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, std::vector<double> &light_curve_lum,
+void add_to_lc_res(const Packet &pkt, int current_abin, std::vector<double> &light_curve_lum,
                    std::vector<double> &light_curve_lumcmf)
 // add a packet to the outgoing light-curve.
 {
   if (current_abin == -1) {
     /// Put this into the time grid
-    const double arrive_time = get_arrive_time(pkt_ptr);
+    const double arrive_time = get_arrive_time(pkt);
     if (arrive_time > globals::tmin && arrive_time < globals::tmax) {
       const int nt = get_timestep(arrive_time);
-      safeadd(light_curve_lum[nt], pkt_ptr->e_rf / globals::timesteps[nt].width / globals::nprocs_exspec);
+      atomicadd(light_curve_lum[nt], pkt.e_rf / globals::timesteps[nt].width / globals::nprocs_exspec);
     }
 
     const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
 
     /// Now do the cmf light curve.
-    // t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
-    const double arrive_time_cmf = pkt_ptr->escape_time * inverse_gamma;
+    // t_arrive = pkt.escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
+    const double arrive_time_cmf = pkt.escape_time * inverse_gamma;
 
     if (arrive_time_cmf > globals::tmin && arrive_time_cmf < globals::tmax) {
       const int nt = get_timestep(arrive_time_cmf);
-      safeadd(light_curve_lumcmf[nt],
-              pkt_ptr->e_cmf / globals::timesteps[nt].width / globals::nprocs_exspec / inverse_gamma);
+      atomicadd(light_curve_lumcmf[nt],
+                pkt.e_cmf / globals::timesteps[nt].width / globals::nprocs_exspec / inverse_gamma);
     }
 
     return;
   }
-  if (get_escapedirectionbin(pkt_ptr->dir, globals::syn_dir) == current_abin) {
+  if (get_escapedirectionbin(pkt.dir, globals::syn_dir) == current_abin) {
     // Add only packets which escape to the current angle bin
-    const double t_arrive = get_arrive_time(pkt_ptr);
+    const double t_arrive = get_arrive_time(pkt);
     if (t_arrive > globals::tmin && t_arrive < globals::tmax) {
       const int nt = get_timestep(t_arrive);
-      safeadd(light_curve_lum[nt], pkt_ptr->e_rf / globals::timesteps[nt].width * MABINS / globals::nprocs_exspec);
+      atomicadd(light_curve_lum[nt], pkt.e_rf / globals::timesteps[nt].width * MABINS / globals::nprocs_exspec);
     }
   }
 }

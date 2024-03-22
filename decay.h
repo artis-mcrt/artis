@@ -29,7 +29,7 @@ void init_nuclides(const std::vector<int> &zlist, const std::vector<int> &alist)
 [[nodiscard]] auto get_nucstring_z(const std::string &strnuc) -> int;
 [[nodiscard]] auto get_nucstring_a(const std::string &strnuc) -> int;
 [[nodiscard]] auto get_num_nuclides() -> int;
-[[nodiscard]] auto get_elname(int z) -> const char *;
+[[nodiscard]] auto get_elname(int z) -> std::string;
 [[nodiscard]] auto get_nuc_z(int nucindex) -> int;
 [[nodiscard]] auto get_nuc_a(int nucindex) -> int;
 [[nodiscard]] auto get_nucindex(int z, int a) -> int;
@@ -46,7 +46,7 @@ void free_decaypath_energy_per_mass();
 [[nodiscard]] auto get_particle_injection_rate(int modelgridindex, double t, int decaytype) -> double;
 [[nodiscard]] auto get_global_etot_t0_tinf() -> double;
 void fprint_nuc_abundances(FILE *estimators_file, int modelgridindex, double t_current, int element);
-void setup_radioactive_pellet(double e0, int mgi, struct packet *pkt_ptr);
+void setup_radioactive_pellet(double e0, int mgi, Packet &pkt);
 void cleanup();
 
 [[nodiscard]] auto constexpr nucmass(int /*z*/, int a) -> double { return a * MH; }

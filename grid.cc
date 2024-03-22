@@ -1,5 +1,9 @@
 #include "grid.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -26,61 +30,63 @@
 #include "decay.h"
 #include "globals.h"
 #include "input.h"
-#include "rpkt.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "packet.h"
 #include "radfield.h"
+#include "rpkt.h"
 #include "sn3d.h"
-#include "stats.h"
 #include "vectors.h"
 
 namespace grid {
 
-struct modelgrid_t *modelgrid = nullptr;
+struct ModelGridCell *modelgrid = nullptr;
 
-int ncoordgrid[3];  /// propagation grid dimensions
+static char coordlabel[3];
+
+static int ncoordgrid[3];  /// propagation grid dimensions
 int ngrid;
-char coordlabel[3];
 
-enum gridtypes model_type = GRID_SPHERICAL1D;
-size_t npts_model = 0;           // number of model grid cells
-size_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
+static enum gridtypes model_type = GRID_SPHERICAL1D;
+static size_t npts_model = 0;           // number of model grid cells
+static size_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
-double t_model = -1.;  // time at which densities in input model are correct.
-double *vout_model = nullptr;
-int ncoord_model[3];  // the model.txt input grid dimensions
+static double t_model = -1.;  // time at which densities in input model are correct.
+static double *vout_model = nullptr;
+static int ncoord_model[3];  // the model.txt input grid dimensions
 
-double min_den;  // minimum model density
+static double min_den;  // minimum model density
 
-double mtot_input;
-double mfeg;  /// Total mass of Fe group elements in ejecta
+static double mtot_input;
+static double mfeg;  /// Total mass of Fe group elements in ejecta
 
-int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
+static int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
 
-struct gridcell *cell = nullptr;
+struct PropGridCell {
+  double pos_min[3];  // Initial co-ordinates of inner most corner of cell.
+  int modelgridindex;
+};
+
+struct PropGridCell *cell = nullptr;
 
 static std::vector<int> mg_associated_cells;
 static std::vector<int> nonemptymgi_of_mgi;
 static std::vector<int> mgi_of_nonemptymgi;
 
-double *totmassradionuclide = nullptr;  /// total mass of each radionuclide in the ejecta
+static double *totmassradionuclide = nullptr;  /// total mass of each radionuclide in the ejecta
 
 #ifdef MPI_ON
-MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
-MPI_Win win_initradioabund_allcells = MPI_WIN_NULL;
-MPI_Win win_corrphotoionrenorm = MPI_WIN_NULL;
+static MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
+static MPI_Win win_initradioabund_allcells = MPI_WIN_NULL;
+static MPI_Win win_corrphotoionrenorm = MPI_WIN_NULL;
 #endif
 
-float *initradioabund_allcells = nullptr;
+static float *initradioabund_allcells = nullptr;
 
-std::vector<int> ranks_nstart;
-std::vector<int> ranks_ndo;
-std::vector<int> ranks_ndo_nonempty;
-int maxndo = -1;
+static std::vector<int> ranks_nstart;
+static std::vector<int> ranks_ndo;
+static std::vector<int> ranks_ndo_nonempty;
+static int maxndo = -1;
 
 auto wid_init(const int cellindex, const int axis) -> double
 // for a uniform grid this is the extent along the x,y,z coordinate (x_2 - x_1, etc.)
@@ -355,14 +361,14 @@ void set_model_type(enum gridtypes model_type_value) { model_type = model_type_v
 auto get_npts_model() -> int
 // number of model grid cells
 {
-  assert_always(npts_model > 0);
+  assert_testmodeonly(npts_model > 0);
   return npts_model;
 }
 
 auto get_nonempty_npts_model() -> int
 // number of model grid cells
 {
-  assert_always(nonempty_npts_model > 0);
+  assert_testmodeonly(nonempty_npts_model > 0);
   return nonempty_npts_model;
 }
 
@@ -370,10 +376,10 @@ static void set_npts_model(int new_npts_model) {
   npts_model = new_npts_model;
 
   assert_always(modelgrid == nullptr);
-  modelgrid = static_cast<struct modelgrid_t *>(calloc(npts_model + 1, sizeof(struct modelgrid_t)));
+  modelgrid = static_cast<ModelGridCell *>(calloc(npts_model + 1, sizeof(ModelGridCell)));
   assert_always(modelgrid != nullptr);
-  mg_associated_cells.resize(npts_model + 1);
-  nonemptymgi_of_mgi.resize(npts_model + 1);
+  mg_associated_cells.resize(npts_model + 1, 0);
+  nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 }
 
 static void allocate_initradiobund() {
@@ -399,8 +405,9 @@ static void allocate_initradiobund() {
 #else
   initradioabund_allcells = static_cast<float *>(malloc(totalradioabundsize));
 #endif
-  printout("[info] mem_usage: radioabundance data for %d nuclides for %d cells occupies %.3f MB (node shared memory)\n",
-           num_nuclides, npts_model, static_cast<double>(totalradioabundsize) / 1024. / 1024.);
+  printout(
+      "[info] mem_usage: radioabundance data for %zu nuclides for %zu cells occupies %.3f MB (node shared memory)\n",
+      num_nuclides, npts_model, static_cast<double>(totalradioabundsize) / 1024. / 1024.);
 
 #ifdef MPI_ON
   MPI_Barrier(globals::mpi_comm_node);
@@ -491,7 +498,7 @@ static void set_modelinitradioabund(const int modelgridindex, const int nucindex
   // initradioabund array is in node shared memory
   assert_always(nucindex >= 0);
   if (!(abund >= 0.)) {
-    printout("WARNING: nuclear mass fraction for nucindex %d = %g is negative in cell %d\n", abund, nucindex,
+    printout("WARNING: nuclear mass fraction for nucindex %d = %g is negative in cell %d\n", nucindex, abund,
              modelgridindex);
     assert_always(abund > -1e-6);
     abund = 0.;
@@ -821,7 +828,7 @@ static void allocate_nonemptycells_composition_cooling()
     assert_always(modelgrid[modelgridindex].elements_uppermost_ion != nullptr);
 
     modelgrid[modelgridindex].composition =
-        static_cast<struct compositionlist_entry *>(malloc(get_nelements() * sizeof(struct compositionlist_entry)));
+        static_cast<ModelCellElement *>(malloc(get_nelements() * sizeof(ModelCellElement)));
 
     if (modelgrid[modelgridindex].composition == nullptr) {
       printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n", modelgridindex);
@@ -1021,7 +1028,7 @@ static void allocate_nonemptymodelcells() {
   printout("[info] mem_usage: the modelgrid array occupies %.3f MB\n",
            (get_npts_model() + 1) * sizeof(modelgrid[0]) / 1024. / 1024.);
 
-  printout("There are %d modelgrid cells with associated propagation cells\n", nonempty_npts_model);
+  printout("There are %zu modelgrid cells with associated propagation cells\n", nonempty_npts_model);
 
   printout(
       "[info] mem_usage: NLTE populations for all allocated cells occupy a total of %.3f MB (node shared memory)\n",
@@ -1292,16 +1299,16 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
     // add a default header for unlabelled columns
     switch (model_type) {
       case GRID_SPHERICAL1D:
-        headerline = "#inputcellid vel_r_max_kmps logrho";
+        headerline = std::string("#inputcellid vel_r_max_kmps logrho");
         break;
       case GRID_CYLINDRICAL2D:
-        headerline = "#inputcellid pos_rcyl_mid pos_z_mid rho";
+        headerline = std::string("#inputcellid pos_rcyl_mid pos_z_mid rho");
         break;
       case GRID_CARTESIAN3D:
-        headerline = "#inputcellid pos_x_min pos_y_min pos_z_min rho";
+        headerline = std::string("#inputcellid pos_x_min pos_y_min pos_z_min rho");
         break;
     }
-    headerline += " X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48";
+    headerline += std::string(" X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48");
   }
 
   int colcount = get_token_count(line);
@@ -1736,10 +1743,6 @@ static void read_grid_restart_data(const int timestep) {
   assert_always(fscanf(gridsave_file, "%d ", &nprocs_in) == 1);
   assert_always(nprocs_in == globals::nprocs);
 
-  int nthreads_in = -1;
-  assert_always(fscanf(gridsave_file, "%d ", &nthreads_in) == 1);
-  assert_always(nthreads_in == get_num_threads());
-
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
     int pellet_decays = 0.;
     assert_always(fscanf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
@@ -1817,7 +1820,6 @@ void write_grid_restart_data(const int timestep) {
 
   fprintf(gridsave_file, "%d ", globals::ntimesteps);
   fprintf(gridsave_file, "%d ", globals::nprocs);
-  fprintf(gridsave_file, "%d ", get_num_threads());
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
     fprintf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
@@ -1828,7 +1830,7 @@ void write_grid_restart_data(const int timestep) {
             globals::timesteps[nts].alpha_emission, globals::timesteps[nts].eps_alpha_ana_power,
             globals::timesteps[nts].qdot_betaminus, globals::timesteps[nts].qdot_alpha,
             globals::timesteps[nts].qdot_total, globals::timesteps[nts].gamma_emission, globals::timesteps[nts].cmf_lum,
-            globals::timesteps[nts].pellet_decays.load());
+            globals::timesteps[nts].pellet_decays);
   }
 
   fprintf(gridsave_file, "%d ", timestep);
@@ -2040,7 +2042,7 @@ static void setup_grid_cartesian_3d()
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell = static_cast<struct gridcell *>(malloc(ngrid * sizeof(struct gridcell)));
+  cell = static_cast<PropGridCell *>(malloc(ngrid * sizeof(PropGridCell)));
 
   coordlabel[0] = 'X';
   coordlabel[1] = 'Y';
@@ -2078,7 +2080,7 @@ static void setup_grid_spherical1d() {
   ncoordgrid[2] = 1;
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell = static_cast<struct gridcell *>(malloc(ngrid * sizeof(struct gridcell)));
+  cell = static_cast<PropGridCell *>(malloc(ngrid * sizeof(PropGridCell)));
 
   // direct mapping, cellindex and modelgridindex are the same
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
@@ -2106,7 +2108,7 @@ static void setup_grid_cylindrical_2d() {
   ncoordgrid[2] = ncoord_model[2];
 
   ngrid = ncoordgrid[0] * ncoordgrid[1];
-  cell = static_cast<struct gridcell *>(malloc(ngrid * sizeof(struct gridcell)));
+  cell = static_cast<PropGridCell *>(malloc(ngrid * sizeof(PropGridCell)));
 
   // direct mapping, cellindex and modelgridindex are the same
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
@@ -2453,8 +2455,8 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
 }
 
 [[nodiscard]] auto boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos,
-                                     const double tstart, int cellindex, enum cell_boundary *pkt_last_cross)
-    -> std::tuple<double, int>
+                                     const double tstart, const int cellindex,
+                                     enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>
 /// Basic routine to compute distance to a cell boundary.
 {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
@@ -2555,7 +2557,7 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
     }
   }
 
-  // printout("pkt_ptr->number %d\n", pkt_ptr->number);
+  // printout("pkt.number %d\n", pkt.number);
   // printout("delta1x %g delta2x %g\n",  (initpos[0] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 0),
   // cellcoordmax[0] - (initpos[0] * globals::tmin/tstart)); printout("delta1y %g delta2y %g\n",  (initpos[1] *
   // globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 1), cellcoordmax[1] - (initpos[1] *
@@ -2669,28 +2671,6 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   }
 
   return {distance, snext};
-}
-
-void change_cell(struct packet *pkt_ptr, int snext)
-/// Routine to take a packet across a boundary.
-{
-  // const int cellindex = pkt_ptr->where;
-  // printout("[debug] cellnumber %d nne %g\n", cellindex, grid::get_nne(grid::get_cell_modelgridindex(cellindex)));
-  // printout("[debug] snext %d\n", snext);
-
-  if (snext == -99) {
-    // Then the packet is exiting the grid. We need to record
-    // where and at what time it leaves the grid.
-    pkt_ptr->escape_type = pkt_ptr->type;
-    pkt_ptr->escape_time = pkt_ptr->prop_time;
-    pkt_ptr->type = TYPE_ESCAPE;
-    globals::nesc++;
-  } else {
-    // Just need to update "where".
-    pkt_ptr->where = snext;
-
-    stats::increment(stats::COUNTER_CELLCROSSINGS);
-  }
 }
 
 }  // namespace grid

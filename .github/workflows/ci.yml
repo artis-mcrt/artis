@@ -48,15 +48,25 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: install dependencies
-              if: matrix.os != 'selfhosted'
+            - name: apt update
               run: |
-                  git status
-                  sudo apt update
-                  sudo apt install -y gcc-13 g++-13
+                  sudo add-apt-repository main
+                  sudo add-apt-repository universe
+                  sudo add-apt-repository restricted
+                  sudo add-apt-repository multiverse
+                  sudo apt-get update
+
+            - name: Install gcc-13
+              if: always()
+              uses: fortran-lang/setup-fortran@v1
+              with:
+                  compiler: gcc
+                  version: 13
+
+            - name: install gsl and openmpi
+              run: |
                   sudo apt install -y libgsl-dev
                   sudo apt install -y openmpi-bin libopenmpi-dev
-                  echo "OMPI_CXX=g++-13" >> $GITHUB_ENV
 
             - name: CPU type and core count
               id: cpu-count
@@ -103,8 +113,6 @@ jobs:
 
             - name: Compile
               run: |
-                  mpicxx --version
-                  mpicxx --showme:version
                   make TESTMODE=${{ matrix.testmode }} MPI=ON FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
                   cp sn3d tests/${{ matrix.testname }}_testrun/
                   cp exspec tests/${{ matrix.testname }}_testrun/
@@ -135,7 +143,7 @@ jobs:
               run: cat job0/output_0-0.txt
 
             - name: Checksum job0 output files
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+              if: always() && matrix.testmode == 'OFF'
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   md5sum *.out job0/*.out | tee ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
@@ -187,14 +195,14 @@ jobs:
                   cat exspec.txt
 
             - name: Checksum job1 output files
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+              if: always() && matrix.testmode == 'OFF'
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   md5sum *.out job1/*.out | tee ../${{ matrix.testname }}_inputfiles/results_md5_final.txt
                   if [ -f results_md5_final.txt ]; then md5sum -c results_md5_final.txt; else echo "results_md5_final.txt not found"; fi
 
             - name: Prepare for next steps
-              if: always() && matrix.os != 'selfhosted'
+              if: always()
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   touch requirements.txt
@@ -202,20 +210,20 @@ jobs:
 
             - name: Upload output files
               uses: actions/upload-artifact@v4
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+              if: always() && matrix.testmode == 'OFF'
               with:
                   name: test-${{ matrix.testname }}-output
                   path: tests/${{ matrix.testname }}_testrun
 
             - name: Upload checksum files
               uses: actions/upload-artifact@v4
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+              if: always() && matrix.testmode == 'OFF'
               with:
                   name: ${{ matrix.testname }}_inputfiles
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
 
             - name: Set up Python
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+              if: always() && matrix.testmode == 'OFF'
               uses: actions/setup-python@v5
               with:
                   python-version: '3.12'
@@ -259,7 +267,7 @@ jobs:
                   at plotspectra --frompackets -t 2 ${{ matrix.testname }}_testrun
 
             - name: Upload plot files
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+              if: always() && matrix.testmode == 'OFF'
               uses: actions/upload-artifact@v4
               with:
                   name: test-${{ matrix.testname }}-output-pdf

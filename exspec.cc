@@ -7,6 +7,10 @@
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
+#include <fstream>
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
 #include <random>
 #include <vector>
 
@@ -15,29 +19,19 @@
 #include "decay.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_integration.h"
 #include "input.h"
 #include "light_curve.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "packet.h"
 #include "sn3d.h"
 #include "spectrum.h"
 #include "version.h"
 
-// threadprivate variables
-std::ofstream output_file;
-#ifdef _OPENMP
-int tid = 0;
-#endif
-bool use_cellcache = false;
-std::mt19937 stdrng(std::random_device{}());
-gsl_integration_workspace *gslworkspace = nullptr;
+std::mt19937 stdrng{std::random_device{}()};
 
-static void do_angle_bin(const int a, packet *pkts, bool load_allrank_packets, struct spec &rpkt_spectra,
-                         struct spec &stokes_i, struct spec &stokes_q, struct spec &stokes_u,
-                         struct spec &gamma_spectra) {
+std::ofstream output_file;
+
+static void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra &rpkt_spectra, Spectra &stokes_i,
+                         Spectra &stokes_q, Spectra &stokes_u, Spectra &gamma_spectra) {
   std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
   std::vector<double> rpkt_light_curve_lumcmf(globals::ntimesteps, 0.);
   std::vector<double> gamma_light_curve_lum(globals::ntimesteps, 0.);
@@ -57,7 +51,7 @@ static void do_angle_bin(const int a, packet *pkts, bool load_allrank_packets, s
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
 
   for (int p = 0; p < globals::nprocs_exspec; p++) {
-    struct packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
+    Packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
 
     if (a == -1 || !load_allrank_packets) {
       char pktfilename[MAXFILENAMELENGTH];
@@ -91,14 +85,14 @@ static void do_angle_bin(const int a, packet *pkts, bool load_allrank_packets, s
         nesc_tot++;
         if (pkts_start[ii].escape_type == TYPE_RPKT) {
           nesc_rpkt++;
-          add_to_lc_res(&pkts_start[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-          add_to_spec_res(&pkts_start[ii], a, rpkt_spectra, POL_ON ? &stokes_i : nullptr, POL_ON ? &stokes_q : nullptr,
+          add_to_lc_res(pkts_start[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+          add_to_spec_res(pkts_start[ii], a, rpkt_spectra, POL_ON ? &stokes_i : nullptr, POL_ON ? &stokes_q : nullptr,
                           POL_ON ? &stokes_u : nullptr);
         } else if (pkts_start[ii].escape_type == TYPE_GAMMA) {
           nesc_gamma++;
           if (a == -1) {
-            add_to_lc_res(&pkts_start[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-            add_to_spec_res(&pkts_start[ii], a, gamma_spectra, nullptr, nullptr, nullptr);
+            add_to_lc_res(pkts_start[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+            add_to_spec_res(pkts_start[ii], a, gamma_spectra, nullptr, nullptr, nullptr);
           }
         }
       }
@@ -164,7 +158,7 @@ static void do_angle_bin(const int a, packet *pkts, bool load_allrank_packets, s
   }
 }
 
-auto main(int argc, char *argv[]) -> int {
+auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
   const auto sys_time_start = std::time(nullptr);
 
 #ifdef MPI_ON
@@ -173,15 +167,7 @@ auto main(int argc, char *argv[]) -> int {
 
   globals::setup_mpi_vars();
 
-  globals::startofline = std::vector<bool>(get_max_threads());
-  if (globals::rank_global == 0) {
-    check_already_running();
-  }
-
-  // make sure rank 0 checked for a pid file before we proceed
-#ifdef MPI_ON
-  MPI_Barrier(MPI_COMM_WORLD);
-#endif
+  check_already_running();
 
   char filename[MAXFILENAMELENGTH];
   if (globals::rank_global == 0) {
@@ -196,7 +182,6 @@ auto main(int argc, char *argv[]) -> int {
 
   printout("git status %s\n", GIT_STATUS);
 
-  // printout("Hash of most recent commit: %s\n",GIT_HASH);
   printout("exspec compiled at %s on %s\n", __TIME__, __DATE__);
 
 #if defined TESTMODE && TESTMODE
@@ -207,9 +192,8 @@ auto main(int argc, char *argv[]) -> int {
   printout("process id (pid): %d\n", getpid());
   printout("MPI enabled:\n");
   printout("  rank %d of [0..%d] in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs - 1);
-  printout("  node %d of [0..%d]\n", globals::node_id, globals::node_count - 1);
-  printout("  rank %d of [0..%d] within this node (MPI_COMM_WORLD_SHARED)\n", globals::rank_in_node,
-           globals::node_nprocs - 1);
+  printout("  rank %d of [0..%d] in MPI_COMM_WORLD_SHARED on node %d of [0..%d]\n", globals::rank_in_node,
+           globals::node_nprocs - 1, globals::node_id, globals::node_count - 1);
 #else
   printout("MPI is disabled in this build\n");
 #endif
@@ -228,31 +212,31 @@ auto main(int argc, char *argv[]) -> int {
   // nprocs_exspec is the number of rank output files to process with expec
   // however, we might be running exspec with 1 or just a few ranks
 
-  auto *pkts = static_cast<struct packet *>(malloc(globals::nprocs_exspec * globals::npkts * sizeof(struct packet)));
+  auto *pkts = static_cast<Packet *>(malloc(globals::nprocs_exspec * globals::npkts * sizeof(Packet)));
   const bool load_allrank_packets = (pkts != nullptr);
   if (load_allrank_packets) {
     printout("mem_usage: loading %d packets from each %d processes simultaneously (total %d packets, %.1f MB memory)\n",
              globals::npkts, globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
-             globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024.);
+             globals::nprocs_exspec * globals::npkts * sizeof(Packet) / 1024. / 1024.);
   } else {
     printout("mem_usage: malloc failed to allocate memory for all packets\n");
     printout(
         "mem_usage: loading %d packets from each of %d processes sequentially (total %d packets, %.1f MB memory)\n",
         globals::npkts, globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
-        globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024.);
-    pkts = static_cast<struct packet *>(malloc(globals::npkts * sizeof(struct packet)));
+        globals::nprocs_exspec * globals::npkts * sizeof(Packet) / 1024. / 1024.);
+    pkts = static_cast<Packet *>(malloc(globals::npkts * sizeof(Packet)));
     assert_always(pkts != nullptr);
   }
 
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
 
-  struct spec rpkt_spectra;
+  Spectra rpkt_spectra;
 
-  struct spec stokes_i;
-  struct spec stokes_q;
-  struct spec stokes_u;
+  Spectra stokes_i;
+  Spectra stokes_q;
+  Spectra stokes_u;
 
-  struct spec gamma_spectra;
+  Spectra gamma_spectra;
 
   time_init();
 
@@ -265,10 +249,6 @@ auto main(int argc, char *argv[]) -> int {
   free(pkts);
   decay::cleanup();
   printout("exspec finished at %ld (tstart + %ld seconds)\n", std::time(nullptr), std::time(nullptr) - sys_time_start);
-
-  if (output_file) {
-    output_file.close();
-  }
 
 #ifdef MPI_ON
   MPI_Finalize();

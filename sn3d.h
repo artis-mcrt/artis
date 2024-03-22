@@ -17,8 +17,18 @@
 #endif
 
 #define EXEC_PAR_UNSEQ std::execution::par_unseq,
+#define EXEC_PAR std::execution::par,
 #else
 #define EXEC_PAR_UNSEQ
+#define EXEC_PAR
+#endif
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+#ifdef MPI_ON
+#include <mpi.h>
 #endif
 
 #include <cassert>
@@ -29,36 +39,59 @@
 #include <fstream>
 #include <iostream>
 #include <random>
+#include <string_view>
 
-#include "artisoptions.h"
-#include "atomic.h"
-#include "globals.h"
+#include "constants.h"
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
-
-extern std::ofstream output_file;
-#ifdef _OPENMP
-extern int tid;
-// extern int cellcacheslotid;
-#else
-constexpr int tid = 0;
-#endif
-constexpr int cellcacheslotid = 0;
-extern bool use_cellcache;
+inline constexpr int cellcacheslotid = 0;
+inline bool use_cellcache = false;
 
 extern std::mt19937 stdrng;
 
-extern gsl_integration_workspace *gslworkspace;
+extern std::ofstream output_file;
+
+inline char outputlinebuf[1024] = "";
+inline bool outputstartofline = true;
+inline struct tm timebuf {};
+
+// if not set, force Simpson integrator on GPU mode (since gsl doesn't work there!)
+#ifndef USE_SIMPSON_INTEGRATOR
+#define USE_SIMPSON_INTEGRATOR false
+#endif
+
+inline void nop(gsl_integration_workspace *w) {};
+
+inline thread_local auto gslworkspace =
+    std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace *)>{
+        USE_SIMPSON_INTEGRATOR ? nullptr : gsl_integration_workspace_alloc(GSLWSIZE),
+        USE_SIMPSON_INTEGRATOR ? nop : gsl_integration_workspace_free};
 
 #ifdef _OPENMP
-#pragma omp threadprivate(tid, cellcacheslotid, stdrng, gslworkspace, output_file)
+
+#ifdef GPU_ON
+#pragma omp requires unified_shared_memory
+#else
+#pragma omp threadprivate(stdrng, output_file, outputlinebuf, outputstartofline, timebuf)
 #endif
+
+#endif
+
+inline void print_line_start() {
+  if (outputstartofline) {
+    const time_t now_time = time(nullptr);
+    strftime(outputlinebuf, 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
+    output_file << outputlinebuf << " ";
+  }
+}
+
+#define printout(...)                                                       \
+  {                                                                         \
+    print_line_start();                                                     \
+    snprintf(outputlinebuf, 1024, __VA_ARGS__);                             \
+    outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n'); \
+    output_file << outputlinebuf;                                           \
+    output_file.flush();                                                    \
+  }
 
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
@@ -91,43 +124,8 @@ extern gsl_integration_workspace *gslworkspace;
   }
 #endif
 
-#include "artisoptions.h"
-#include "globals.h"
-
-// #define printout(...) fprintf(output_file, __VA_ARGS__)
-
-static auto printout(const char *const str) {
-  if (globals::startofline[tid]) {
-    const time_t now_time = time(nullptr);
-    char s[32] = "";
-    struct tm buf {};
-    strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
-    output_file << s << " ";
-  }
-  globals::startofline[tid] = (str[strlen(str) - 1] == '\n');
-  output_file << str;
-  output_file.flush();
-}
-
-template <typename... Args>
-static auto printout(const char *const format, Args... args) {
-  char s[1024] = "";
-  snprintf(s, 1024, format, args...);
-  printout(s);
-}
-
-[[nodiscard]] static inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
-                                                const int phixstargetindex) -> int {
-  const int contindex = -1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
-
-  const int bflutindex = tempindex * globals::nbfcontinua + contindex;
-  assert_testmodeonly(bflutindex >= 0);
-  assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
-  return bflutindex;
-}
-
 template <typename T>
-inline void safeadd(T &var, T val) {
+inline void atomicadd(T &var, const T &val) {
 #ifdef _OPENMP
 #pragma omp atomic update
   var += val;
@@ -146,11 +144,7 @@ inline void safeadd(T &var, T val) {
 #endif
 }
 
-#define safeincrement(var) safeadd((var), 1)
-
-// #define DO_TITER
-
-static inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
+inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
   if (gsl_errno != 18)  // roundoff error
   {
     printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
@@ -158,7 +152,7 @@ static inline void gsl_error_handler_printout(const char *reason, const char *fi
   }
 }
 
-static auto fopen_required(const std::string &filename, const char *mode) -> FILE * {
+[[nodiscard]] inline auto fopen_required(const std::string &filename, const char *mode) -> FILE * {
   // look in the data folder first
   const std::string datafolderfilename = "data/" + filename;
   if (mode[0] == 'r' && std::filesystem::exists(datafolderfilename)) {
@@ -174,7 +168,7 @@ static auto fopen_required(const std::string &filename, const char *mode) -> FIL
   return file;
 }
 
-static auto fstream_required(const std::string &filename, std::ios_base::openmode mode) -> std::fstream {
+[[nodiscard]] inline auto fstream_required(const std::string &filename, std::ios_base::openmode mode) -> std::fstream {
   const std::string datafolderfilename = "data/" + filename;
   if (mode == std::ios::in && std::filesystem::exists(datafolderfilename)) {
     return fstream_required(datafolderfilename, mode);
@@ -186,8 +180,18 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
   }
   return file;
 }
+#include "globals.h"
 
-[[nodiscard]] static auto get_timestep(const double time) -> int {
+[[nodiscard]] inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
+                                         const int phixstargetindex) -> int {
+  const int contindex = -1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
+
+  const int bflutindex = tempindex * globals::nbfcontinua + contindex;
+  assert_testmodeonly(bflutindex >= 0);
+  assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
+  return bflutindex;
+}
+[[nodiscard]] inline auto get_timestep(const double time) -> int {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
@@ -209,14 +213,6 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
 #endif
 }
 
-[[nodiscard]] inline auto get_num_threads() -> int {
-#if defined _OPENMP
-  return omp_get_num_threads();
-#else
-  return 1;
-#endif
-}
-
 [[nodiscard]] inline auto get_thread_num() -> int {
 #if defined _OPENMP
   return omp_get_thread_num();
@@ -225,7 +221,7 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
 #endif
 }
 
-inline auto rng_uniform(void) -> float {
+inline auto rng_uniform() -> float {
   while (true) {
     const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
     if (zrand != 1.) {
@@ -234,18 +230,13 @@ inline auto rng_uniform(void) -> float {
   }
 }
 
-inline auto rng_uniform_pos(void) -> float {
+inline auto rng_uniform_pos() -> float {
   while (true) {
     const auto zrand = rng_uniform();
     if (zrand > 0) {
       return zrand;
     }
   }
-}
-
-inline void rng_init(const uint64_t zseed) {
-  printout("rng is a std::mt19937 generator\n");
-  stdrng.seed(zseed);
 }
 
 [[nodiscard]] inline auto is_pid_running(pid_t pid) -> bool {
@@ -257,26 +248,32 @@ inline void rng_init(const uint64_t zseed) {
 }
 
 inline void check_already_running() {
-  const pid_t artispid = getpid();
+  if (globals::rank_global == 0) {
+    const pid_t artispid = getpid();
 
-  if (std::filesystem::exists("artis.pid")) {
-    auto pidfile = std::fstream("artis.pid", std::ios::in);
-    pid_t artispid_in = 0;
-    pidfile >> artispid_in;
-    pidfile.close();
-    if (is_pid_running(artispid_in)) {
-      fprintf(stderr,
-              "\nERROR: artis or exspec is already running in this folder with existing pid %d. Refusing to start. "
-              "(delete "
-              "artis.pid if you are sure this is incorrect)\n",
-              artispid_in);
-      std::abort();
+    if (std::filesystem::exists("artis.pid")) {
+      auto pidfile = std::fstream("artis.pid", std::ios::in);
+      pid_t artispid_in = 0;
+      pidfile >> artispid_in;
+      pidfile.close();
+      if (is_pid_running(artispid_in)) {
+        fprintf(stderr,
+                "\nERROR: artis or exspec is already running in this folder with existing pid %d. Refusing to start. "
+                "(delete artis.pid if you are sure this is incorrect)\n",
+                artispid_in);
+        std::abort();
+      }
     }
+
+    auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);
+    pidfile << artispid;
+    pidfile.close();
   }
 
-  auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);
-  pidfile << artispid;
-  pidfile.close();
+// make sure rank 0 checked for a pid file before we proceed
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 }
 
 constexpr auto get_range_chunk(int size, int nchunks, int nchunk) -> std::tuple<int, int> {

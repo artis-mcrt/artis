@@ -1,8 +1,11 @@
 #include "nltepop.h"
 
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_cblas.h>
+#include <gsl/gsl_errno.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_matrix_double.h>
+#include <gsl/gsl_permutation.h>
 #include <gsl/gsl_vector_double.h>
 
 #include <algorithm>
@@ -10,7 +13,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#include <memory>
 #include <vector>
 
 #include "artisoptions.h"
@@ -18,9 +20,6 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_cblas.h"
-#include "gsl/gsl_errno.h"
-#include "gsl/gsl_permutation.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
@@ -30,7 +29,7 @@
 static FILE *nlte_file = nullptr;
 
 // can save memory by using a combined rate matrix at the cost of diagnostic information
-constexpr bool individual_process_matricies = true;
+static constexpr bool individual_process_matricies = true;
 
 static inline auto get_nlte_vector_index(const int element, const int ion, const int level) -> int
 // this is the index for the NLTE solver that is handling all ions of a single element
@@ -127,8 +126,8 @@ static void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_v
 }
 
 static auto get_total_rate(const int index_selected, const gsl_matrix *rate_matrix, const gsl_vector *popvec,
-                           const bool into_level, const bool only_levels_below, const bool only_levels_above)
-    -> double {
+                           const bool into_level, const bool only_levels_below,
+                           const bool only_levels_above) -> double {
   double total_rate = 0.;
   assert_always(!only_levels_below || !only_levels_above);
 
@@ -182,8 +181,8 @@ static auto get_total_rate_in(const int index_to, const gsl_matrix *rate_matrix,
   return get_total_rate(index_to, rate_matrix, popvec, true, false, false);
 }
 
-static auto get_total_rate_out(const int index_from, const gsl_matrix *rate_matrix, const gsl_vector *popvec)
-    -> double {
+static auto get_total_rate_out(const int index_from, const gsl_matrix *rate_matrix,
+                               const gsl_vector *popvec) -> double {
   return get_total_rate(index_from, rate_matrix, popvec, false, false, false);
 }
 
@@ -483,7 +482,7 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
     const int nuptrans = get_nuptrans(element, ion, level);
     for (int i = 0; i < nuptrans; i++) {
       const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-      const struct linelist_entry *line = &globals::linelist[lineindex];
+      const TransitionLine *line = &globals::linelist[lineindex];
       const int upper = line->upperlevelindex;
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
 
@@ -540,11 +539,10 @@ static void nltepop_matrix_add_ionisation(const int modelgridindex, const int el
   const int maxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
 
   for (int level = 0; level < nionisinglevels; level++) {
-    const int level_index = get_nlte_vector_index(element, ion, level);
+    const int lower_index = get_nlte_vector_index(element, ion, level);
 
     // thermal collisional ionization, photoionisation and recombination processes
     const double epsilon_current = epsilon(element, ion, level);
-    const int lower_index = level_index;
 
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
@@ -788,7 +786,7 @@ static auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matri
 
       if (gsl_vector_get(popvec, row) < 0.0) {
         printout(
-            "  WARNING: NLTE solver gave negative population to index %ud (Z=%d ionstage %d level %d), pop = %g. "
+            "  WARNING: NLTE solver gave negative population to index %zud (Z=%d ionstage %d level %d), pop = %g. "
             "Replacing with LTE pop of %g\n",
             row, get_atomicnumber(element), get_ionstage(element, ion), level,
             gsl_vector_get(x, row) * gsl_vector_get(pop_normfactor_vec, row), gsl_vector_get(pop_normfactor_vec, row));

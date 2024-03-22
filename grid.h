@@ -12,24 +12,19 @@
 #include "globals.h"
 #include "packet.h"
 #include "sn3d.h"
+#include "stats.h"
 #include "vectors.h"
 
 namespace grid {
 
-struct compositionlist_entry {
+struct ModelCellElement {
   float abundance;        /// Abundance of the element (by mass!).
   float *groundlevelpop;  /// Pointer to an array of floats which contains the groundlevel populations
                           /// of all included ionisation stages for the element.
   float *partfunct;       /// Pointer to an array of floats which contains the partition functions
                           /// of all included ionisation stages for the element.
 };
-
-struct gridcell {
-  double pos_min[3];  // Initial co-ordinates of inner most corner of cell.
-  int modelgridindex;
-};
-
-struct modelgrid_t {
+struct ModelGridCell {
   float Te = -1.;
   float TR = -1.;
   float TJ = -1.;
@@ -50,13 +45,13 @@ struct modelgrid_t {
   float grey_depth = 0.;  /// Grey optical depth to surface of the modelgridcell
                           /// This is only stored to print it outside the OpenMP loop in update_grid to the
                           /// estimatorsfile so there is no need to communicate it via MPI so far!
-  int *elements_uppermost_ion = nullptr;  /// Highest ionisation stage which has a decent population for a particular
-                                          /// element in a given cell.
-  compositionlist_entry *composition = nullptr;  /// Pointer to an array which contains the time dependent abundances
-                                                 /// of all included elements and all the groundlevel
-                                                 /// populations and partition functions for their ions
-  double *nlte_pops = nullptr;                   /// Pointer to an array that contains the nlte-level
-                                                 /// populations for this cell
+  int *elements_uppermost_ion = nullptr;    /// Highest ionisation stage which has a decent population for a particular
+                                            /// element in a given cell.
+  ModelCellElement *composition = nullptr;  /// Pointer to an array which contains the time dependent
+                                            /// abundances of all included elements and all the groundlevel
+                                            /// populations and partition functions for their ions
+  double *nlte_pops = nullptr;              /// Pointer to an array that contains the nlte-level
+                                            /// populations for this cell
 
   double totalcooling = -1;
   double **cooling_contrib_ion = nullptr;
@@ -76,11 +71,9 @@ constexpr auto get_ngriddimensions() -> int {
   }
 }
 
-extern struct modelgrid_t *modelgrid;
+extern ModelGridCell *modelgrid;
 
-extern int ncoordgrid[3];
 extern int ngrid;
-extern char coordlabel[3];
 
 [[nodiscard]] auto get_elements_uppermost_ion(int modelgridindex, int element) -> int;
 void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
@@ -138,12 +131,29 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_totmassradionuclide(int z, int a) -> double;
 [[nodiscard]] auto boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos, double tstart,
                                      int cellindex, enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>;
-void change_cell(struct packet *pkt_ptr, int snext);
 
 [[nodiscard]] static inline auto get_elem_abundance(int modelgridindex, int element) -> float
 // mass fraction of an element (all isotopes combined)
 {
   return modelgrid[modelgridindex].composition[element].abundance;
+}
+
+inline void change_cell(Packet &pkt, const int snext)
+/// Routine to take a packet across a boundary.
+{
+  if (snext >= 0) {
+    // Just need to update "where".
+    pkt.where = snext;
+  } else {
+    // Then the packet is exiting the grid. We need to record
+    // where and at what time it leaves the grid.
+    pkt.escape_type = pkt.type;
+    pkt.escape_time = pkt.prop_time;
+    pkt.type = TYPE_ESCAPE;
+    atomicadd(globals::nesc, 1);
+
+    stats::increment(stats::COUNTER_CELLCROSSINGS);
+  }
 }
 
 }  // namespace grid

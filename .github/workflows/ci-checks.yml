@@ -40,7 +40,7 @@ jobs:
             - name: Run clang-format style check
               uses: jidicula/clang-format-action@v4.11.0
               with:
-                  clang-format-version: '16'
+                  clang-format-version: '18'
                   check-path: .
 
     clang-tidy:
@@ -62,9 +62,6 @@ jobs:
               run: |
                   brew install llvm || true
                   echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
-
-                  echo "CXX=clang++" >> $GITHUB_ENV
-                  echo "OMPI_CXX=clang++" >> $GITHUB_ENV
 
                   echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib" >> $GITHUB_ENV
                   echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
@@ -111,15 +108,13 @@ jobs:
                         {name: gcc, ver: 12},
                         {name: gcc, ver: 13},
                         # {name: gcc, ver: 14},
-                        {name: nvc++, ver: '24.1'},
+                        {name: nvc++, ver: '24.3'},
                     ]
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
                 stdpar: [ON, OFF]
                 exclude:
                     - openmp: ON
-                      stdpar: ON
-                    - compiler: {name: nvc++, ver: '24.1'}
                       stdpar: ON
             fail-fast: false
 
@@ -131,20 +126,12 @@ jobs:
               id: cpu-count
               run: |
                   g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
-                  # echo "count=$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')" >> $GITHUB_OUTPUT
+                  python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
-
-            - name: apt update
-              run: |
-                  sudo add-apt-repository main
-                  sudo add-apt-repository universe
-                  sudo add-apt-repository restricted
-                  sudo add-apt-repository multiverse
-                  sudo apt-get update
 
             - name: Install gcc
               if: matrix.compiler.name == 'gcc'
-              uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
+              uses: fortran-lang/setup-fortran@v1
               #   continue-on-error: true
               with:
                   compiler: gcc
@@ -152,7 +139,7 @@ jobs:
 
             - name: Install gcc for nvc++
               if: matrix.compiler.name == 'nvc++'
-              uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
+              uses: fortran-lang/setup-fortran@v1
               continue-on-error: true
               with:
                   compiler: gcc
@@ -160,11 +147,17 @@ jobs:
 
             - name: Install nvc++
               if: matrix.compiler.name == 'nvc++'
-              uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
+              uses: fortran-lang/setup-fortran@v1
               #   continue-on-error: true
               with:
                   compiler: nvidia-hpc
                   version: ${{ matrix.compiler.ver }}
+
+            - name: Set nvc++ as compiler
+              if: matrix.compiler.name == 'nvc++'
+              run: |
+                  echo "CXX=nvc++" >> $GITHUB_ENV
+                  echo "OMPI_CXX=nvc++" >> $GITHUB_ENV
 
             - name: install gsl
               run: |
@@ -179,27 +172,23 @@ jobs:
               if: matrix.mpi == 'ON'
               run: |
                   sudo apt install -y openmpi-bin libopenmpi-dev
-                  echo "OMPI_CXX=$CXX" >> $GITHUB_ENV
-                  echo "CXX=mpicxx" >> $GITHUB_ENV
-                  mpicxx --showme:version
 
             - name: install OpenMP
               if: matrix.openmp == 'ON'
               run: |
                   sudo apt-get install -y libomp5-14 libomp-dev
 
-            - name: Show compiler version and CPU type
-              run: |
-                  ${{ env.CXX }} --version
-
             - name: Compile classic mode
               run: |
+                  $CXX -v
                   cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
                   make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} ${{ matrix.stdpar == 'ON' && ' STDPAR=ON' || ''}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
                   make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} ${{ matrix.stdpar == 'ON' && ' STDPAR=ON' || ''}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
     mac-llvm:
@@ -241,9 +230,6 @@ jobs:
                   brew install llvm@17 || true
                   echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
 
-                  echo "CXX=clang++" >> $GITHUB_ENV
-                  echo "OMPI_CXX=clang++" >> $GITHUB_ENV
-
             - name: install OpenMP
               if: matrix.openmp == 'ON'
               run: |
@@ -258,10 +244,6 @@ jobs:
               run: |
                   brew install openmpi || true
 
-                  echo "OMPI_CXX=$CXX" >> $GITHUB_ENV
-                  echo "CXX=mpicxx" >> $GITHUB_ENV
-                  mpicxx --showme:version
-
             - name: install onedpl and tbb
               if: matrix.stdpar == 'ON'
               run: |
@@ -271,16 +253,14 @@ jobs:
                   echo "LD_LIBRARY_PATH=$HOMEBREW_PREFIX/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
                   echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
 
-            - name: Show compiler version and CPU type
-              run: |
-                  ${{ env.CXX }} --version
-
             - name: Compile classic mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
                   make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} ${{ matrix.stdpar == 'ON' && ' STDPAR=ON' || ''}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
                   make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} ${{ matrix.stdpar == 'ON' && ' STDPAR=ON' || ''}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec

@@ -18,18 +18,18 @@
 double last_phixs_nuovernuedge = -1;
 
 // highest number of ions for any element
-int maxnions = 0;
+static int maxnions = 0;
 
 // number of ions of any element
-int includedions = 0;
+static int includedions = 0;
 
 // total number of levels of any element
-int includedlevels = 0;
+static int includedlevels = 0;
 
 std::array<bool, 3> phixs_file_version_exists;
 
-auto get_continuumindex_phixstargetindex(const int element, const int ion, const int level, const int phixstargetindex)
-    -> int
+auto get_continuumindex_phixstargetindex(const int element, const int ion, const int level,
+                                         const int phixstargetindex) -> int
 /// Returns the index of the continuum associated to the given level.
 {
   return globals::elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
@@ -99,8 +99,8 @@ auto level_isinsuperlevel(const int element, const int ion, const int level) -> 
   return (!is_nlte(element, ion, level) && level != 0 && (get_nlevels_nlte(element, ion) > 0));
 }
 
-auto photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge, const double nu)
-    -> double
+auto photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge,
+                                            const double nu) -> double
 /// Calculates the photoionisation cross-section at frequency nu out of the atomic data.
 /// Input: - edge frequency nu_edge of the desired bf-continuum
 ///        - nu
@@ -187,7 +187,7 @@ auto get_elementindex(const int Z) -> int
 /// a negative value is returned to flag this event.
 {
   const auto elem =
-      std::ranges::find_if(globals::elements, [Z](const elementlist_entry &element) { return element.anumber == Z; });
+      std::ranges::find_if(globals::elements, [Z](const Element &element) { return element.anumber == Z; });
   if (elem != globals::elements.end()) {
     return std::distance(globals::elements.begin(), elem);
   }

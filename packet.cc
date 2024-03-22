@@ -1,5 +1,9 @@
 #include "packet.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -8,6 +12,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -18,22 +23,18 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "sn3d.h"
 #include "vectors.h"
 
-static void place_pellet(const double e0, const int cellindex, const int pktnumber, struct packet *pkt_ptr)
+static void place_pellet(const double e0, const int cellindex, const int pktnumber, Packet &pkt)
 /// This subroutine places pellet n with energy e0 in cell m
 {
   /// First choose a position for the pellet. In the cell.
-  /// n is the index of the packet. m is the index for the grid cell.
-  pkt_ptr->where = cellindex;
-  pkt_ptr->number = pktnumber;  /// record the packets number for debugging
-  pkt_ptr->prop_time = globals::tmin;
-  // pkt_ptr->last_cross = BOUNDARY_NONE;
-  pkt_ptr->originated_from_particlenotgamma = false;
+  pkt.where = cellindex;
+  pkt.number = pktnumber;  /// record the packets number for debugging
+  pkt.prop_time = globals::tmin;
+  // pkt.last_cross = BOUNDARY_NONE;
+  pkt.originated_from_particlenotgamma = false;
 
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
     const double zrand = rng_uniform();
@@ -44,8 +45,8 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // assert_always(radius >= r_inner);
     // assert_always(radius <= r_outer);
 
-    pkt_ptr->pos = get_rand_isotropic_unitvec();
-    vec_scale(pkt_ptr->pos, radius);
+    pkt.pos = get_rand_isotropic_unitvec();
+    vec_scale(pkt.pos, radius);
 
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
     const double zrand = rng_uniform_pos();
@@ -54,39 +55,38 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // use equal area probability distribution to select radius
     const double rcyl_rand = std::sqrt(zrand * std::pow(rcyl_inner, 2) + (1. - zrand) * std::pow(rcyl_outer, 2));
     const double theta_rand = rng_uniform() * 2 * PI;
-    pkt_ptr->pos[0] = std::cos(theta_rand) * rcyl_rand;
-    pkt_ptr->pos[1] = std::sin(theta_rand) * rcyl_rand;
+    pkt.pos[0] = std::cos(theta_rand) * rcyl_rand;
+    pkt.pos[1] = std::sin(theta_rand) * rcyl_rand;
 
-    pkt_ptr->pos[2] = grid::get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * grid::wid_init(cellindex, 1));
+    pkt.pos[2] = grid::get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * grid::wid_init(cellindex, 1));
 
   } else if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     for (int axis = 0; axis < 3; axis++) {
-      pkt_ptr->pos[axis] =
-          grid::get_cellcoordmin(cellindex, axis) + (rng_uniform_pos() * grid::wid_init(cellindex, axis));
+      pkt.pos[axis] = grid::get_cellcoordmin(cellindex, axis) + (rng_uniform_pos() * grid::wid_init(cellindex, axis));
     }
   } else {
     assert_always(false);
   }
 
   // ensure that the random position was inside the cell we selected
-  assert_always(grid::get_cellindex_from_pos(pkt_ptr->pos, pkt_ptr->prop_time) == cellindex);
+  assert_always(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == cellindex);
 
   const int mgi = grid::get_cell_modelgridindex(cellindex);
 
-  decay::setup_radioactive_pellet(e0, mgi, pkt_ptr);
+  decay::setup_radioactive_pellet(e0, mgi, pkt);
 
   // initial e_rf is probably never needed (e_rf is set at pellet decay time), but we
   // might as well give it a correct value since this code is fast and runs only once
 
   // pellet packet is moving with the homologous flow, so dir is proportional to pos
-  pkt_ptr->dir = vec_norm(pkt_ptr->pos);  // assign dir = pos / vec_len(pos)
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
-  pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
+  pkt.dir = vec_norm(pkt.pos);  // assign dir = pos / vec_len(pos)
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
-  pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
+  pkt.trueemissiontype = EMTYPE_NOTSET;
 }
 
-void packet_init(struct packet *pkt)
+void packet_init(Packet *pkt)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
 #ifdef MPI_ON
@@ -140,16 +140,17 @@ void packet_init(struct packet *pkt)
   }
 
   printout("Placing pellets...\n");
-  for (int n = 0; n < globals::npkts; n++) {
+  auto allpkts = std::ranges::iota_view{0, globals::npkts};
+  std::for_each(allpkts.begin(), allpkts.end(), [&, norm, e0](const int n) {
     const double targetval = rng_uniform() * norm;
 
-    // first en_cumulative[i] such that en_cumulative[i] > targetval
-    auto upperval = std::upper_bound(en_cumulative.cbegin(), en_cumulative.cend(), targetval);
-    assert_always(upperval != en_cumulative.end());
-    const ptrdiff_t cellindex = std::distance(en_cumulative.cbegin(), upperval);
+    // first i such that en_cumulative[i] > targetval
+    const int cellindex = std::distance(en_cumulative.cbegin(),
+                                        std::upper_bound(en_cumulative.cbegin(), en_cumulative.cend(), targetval));
+    assert_always(cellindex < grid::ngrid);
 
-    place_pellet(e0, cellindex, n, &pkt[n]);
-  }
+    place_pellet(e0, cellindex, n, pkt[n]);
+  });
 
   decay::free_decaypath_energy_per_mass();  // will no longer be needed after packets are set up
 
@@ -168,7 +169,7 @@ void packet_init(struct packet *pkt)
   printout("total energy that will be freed during simulation time: %g erg\n", e_cmf_total);
 }
 
-void write_packets(const char filename[], const struct packet *const pkt) {
+void write_packets(const char filename[], const Packet *const pkt) {
   // write packets text file
   FILE *packets_file = fopen_required(filename, "w");
   fprintf(packets_file,
@@ -180,16 +181,16 @@ void write_packets(const char filename[], const struct packet *const pkt) {
   for (int i = 0; i < globals::npkts; i++) {
     fprintf(packets_file, "%d ", pkt[i].number);
     fprintf(packets_file, "%d ", pkt[i].where);
-    fprintf(packets_file, "%d ", pkt[i].type);
+    fprintf(packets_file, "%d ", static_cast<int>(pkt[i].type));
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].pos[0], pkt[i].pos[1], pkt[i].pos[2]);
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].dir[0], pkt[i].dir[1], pkt[i].dir[2]);
-    fprintf(packets_file, "%d ", pkt[i].last_cross);
+    fprintf(packets_file, "%d ", static_cast<int>(pkt[i].last_cross));
     fprintf(packets_file, "%g ", pkt[i].tdecay);
     fprintf(packets_file, "%g ", pkt[i].e_cmf);
     fprintf(packets_file, "%g ", pkt[i].e_rf);
     fprintf(packets_file, "%g ", pkt[i].nu_cmf);
     fprintf(packets_file, "%g ", pkt[i].nu_rf);
-    fprintf(packets_file, "%d ", pkt[i].escape_type);
+    fprintf(packets_file, "%d ", static_cast<int>(pkt[i].escape_type));
     fprintf(packets_file, "%g ", pkt[i].escape_time);
     fprintf(packets_file, "%d ", pkt[i].next_trans);
     fprintf(packets_file, "%d ", pkt[i].last_event);
@@ -212,20 +213,20 @@ void write_packets(const char filename[], const struct packet *const pkt) {
   fclose(packets_file);
 }
 
-void read_temp_packetsfile(const int timestep, const int my_rank, struct packet *const pkt) {
+void read_temp_packetsfile(const int timestep, const int my_rank, Packet *pkt) {
   // read packets binary file
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Reading %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
-  assert_always(std::fread(pkt, sizeof(struct packet), globals::npkts, packets_file) == (size_t)globals::npkts);
+  assert_always(std::fread(pkt, sizeof(Packet), globals::npkts, packets_file) == (size_t)globals::npkts);
   // read_packets(packets_file);
   fclose(packets_file);
   printout("done\n");
 }
 
-auto verify_temp_packetsfile(const int timestep, const int my_rank, const struct packet *const pkt) -> bool {
+auto verify_temp_packetsfile(const int timestep, const int my_rank, const Packet *const pkt) -> bool {
   // return true if verification is good, otherwise return false
 
   // read packets binary file
@@ -234,13 +235,13 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, const struct
 
   printout("Verifying file %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
-  struct packet pkt_in;
+  Packet pkt_in;
   bool readback_passed = true;
   for (int n = 0; n < globals::npkts; n++) {
-    assert_always(std::fread(&pkt_in, sizeof(struct packet), 1, packets_file) == 1);
+    assert_always(std::fread(&pkt_in, sizeof(Packet), 1, packets_file) == 1);
     if (pkt_in != pkt[n]) {
       printout("failed on packet %d\n", n);
-      printout(" compare number %ld %ld\n", pkt_in.number, pkt[n].number);
+      printout(" compare number %d %d\n", pkt_in.number, pkt[n].number);
       printout(" compare nu_cmf %lg %lg\n", pkt_in.nu_cmf, pkt[n].nu_cmf);
       printout(" compare e_rf %lg %lg\n", pkt_in.e_rf, pkt[n].e_rf);
       readback_passed = false;
@@ -255,7 +256,7 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, const struct
   return readback_passed;
 }
 
-void read_packets(const char filename[], struct packet *pkt) {
+void read_packets(const char filename[], Packet *pkt) {
   // read packets*.out text format file
   std::ifstream packets_file(filename);
   assert_always(packets_file.is_open());
@@ -335,6 +336,4 @@ void read_packets(const char filename[], struct packet *pkt) {
         packets_read, globals::npkts);
     std::abort();
   }
-
-  packets_file.close();
 }

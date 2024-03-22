@@ -25,23 +25,24 @@
 namespace kpkt {
 
 enum coolingtype {
-  COOLINGTYPE_FF = 880,
-  COOLINGTYPE_FB = 881,
-  COOLINGTYPE_COLLEXC = 882,
-  COOLINGTYPE_COLLION = 883,
+  COOLINGTYPE_FF = 0,
+  COOLINGTYPE_FB = 1,
+  COOLINGTYPE_COLLEXC = 2,
+  COOLINGTYPE_COLLION = 3,
 };
 
-struct cellcachecoolinglist {
+struct CellCachecoolinglist {
   enum coolingtype type;
   int level;
   int upperlevel;
 };
 
-int ncoolingterms;
+int ncoolingterms{0};
 
-static struct cellcachecoolinglist *coolinglist;
+static CellCachecoolinglist *coolinglist;
 
-auto get_ncoolingterms() -> int { return ncoolingterms; }
+static int n_kpktdiffusion_timesteps{0};
+static float kpktdiffusion_timescale{0.};
 
 template <bool update_cooling_contrib_list>
 static auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion,
@@ -174,7 +175,7 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
   return C_ion;
 }
 
-void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrates *heatingcoolingrates)
+void calculate_cooling_rates(const int modelgridindex, HeatingCoolingRates *heatingcoolingrates)
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 {
@@ -207,6 +208,13 @@ void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrate
     heatingcoolingrates->cooling_fb = C_fb_all;
     heatingcoolingrates->cooling_ff = C_ff_all;
   }
+}
+
+void set_kpktdiffusion(float kpktdiffusion_timescale_in, int n_kpktdiffusion_timesteps_in) {
+  kpktdiffusion_timescale = kpktdiffusion_timescale_in;
+  n_kpktdiffusion_timesteps = n_kpktdiffusion_timesteps_in;
+  printout("input: kpkts diffuse %g of a time step's length for the first %d time steps\n", kpktdiffusion_timescale,
+           n_kpktdiffusion_timesteps);
 }
 
 static void set_ncoolingterms() {
@@ -250,8 +258,8 @@ void setup_coolinglist() {
   /// \sum_{elements,ions}get_nlevels(element,ion) and free-free which is \sum_{elements} get_nions(element)-1
 
   set_ncoolingterms();
-  const size_t mem_usage_coolinglist = ncoolingterms * sizeof(struct cellcachecoolinglist);
-  coolinglist = static_cast<struct cellcachecoolinglist *>(malloc(ncoolingterms * sizeof(struct cellcachecoolinglist)));
+  const size_t mem_usage_coolinglist = ncoolingterms * sizeof(CellCachecoolinglist);
+  coolinglist = static_cast<CellCachecoolinglist *>(malloc(ncoolingterms * sizeof(CellCachecoolinglist)));
   printout("[info] mem_usage: coolinglist occupies %.3f MB\n", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0;  // cooling list index
@@ -370,61 +378,60 @@ static auto sample_planck_montecarlo(const double T) -> double
   }
 }
 
-void do_kpkt_blackbody(struct packet *pkt_ptr)
+void do_kpkt_blackbody(Packet &pkt)
 /// handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 {
-  const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
+  const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
 
   if (EXPANSIONOPACITIES_ON && EXPANSION_OPAC_SAMPLE_KAPPAPLANCK && grid::modelgrid[modelgridindex].thick != 1) {
     const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-    pkt_ptr->nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
+    pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
   } else {
-    pkt_ptr->nu_cmf = sample_planck_montecarlo(grid::get_Te(modelgridindex));
+    pkt.nu_cmf = sample_planck_montecarlo(grid::get_Te(modelgridindex));
     // TODO: is this alternative method faster or more accurate or neither?
-    // pkt_ptr->nu_cmf = sample_planck_analytic(grid::get_Te(modelgridindex));
+    // pkt.nu_cmf = sample_planck_analytic(grid::get_Te(modelgridindex));
   }
 
-  assert_always(std::isfinite(pkt_ptr->nu_cmf));
+  assert_always(std::isfinite(pkt.nu_cmf));
   /// and then emit the packet randomly in the comoving frame
-  emit_rpkt(pkt_ptr);
+  emit_rpkt(pkt);
   // printout("[debug] calculate_chi_rpkt after kpkt to rpkt by ff\n");
-  pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
+  pkt.next_trans = 0;  /// FLAG: transition history here not important, cont. process
   // if (tid == 0) k_stat_to_r_bb++;
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
   stats::increment(stats::COUNTER_INTERACTIONS);
-  pkt_ptr->last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
-  pkt_ptr->emissiontype = EMTYPE_FREEFREE;
-  pkt_ptr->em_pos = pkt_ptr->pos;
-  pkt_ptr->em_time = pkt_ptr->prop_time;
-  pkt_ptr->nscatterings = 0;
+  pkt.last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
+  pkt.emissiontype = EMTYPE_FREEFREE;
+  pkt.em_pos = pkt.pos;
+  pkt.em_time = pkt.prop_time;
+  pkt.nscatterings = 0;
 }
 
-void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
+void do_kpkt(Packet &pkt, double t2, int nts)
 /// handle a k-packet (kinetic energy of the free electrons)
 {
-  const double t1 = pkt_ptr->prop_time;
-  const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
+  const double t1 = pkt.prop_time;
+  const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
 
   /// don't calculate cooling rates after each cell crossings any longer
   /// but only if we really get a kpkt and they hadn't been calculated already
 
   // printout("[debug] do_kpkt: propagate k-pkt\n");
 
-  const double deltat = (nts < globals::n_kpktdiffusion_timesteps)
-                            ? globals::kpktdiffusion_timescale * globals::timesteps[nts].width
-                            : 0.;
+  const double deltat =
+      (nts < n_kpktdiffusion_timesteps) ? kpktdiffusion_timescale * globals::timesteps[nts].width : 0.;
 
   const double t_current = t1 + deltat;
 
   if (t_current > t2) {
-    vec_scale(pkt_ptr->pos, t2 / t1);
-    pkt_ptr->prop_time = t2;
+    vec_scale(pkt.pos, t2 / t1);
+    pkt.prop_time = t2;
     return;
   }
   stats::increment(stats::COUNTER_INTERACTIONS);
 
-  vec_scale(pkt_ptr->pos, t_current / t1);
-  pkt_ptr->prop_time = t_current;
+  vec_scale(pkt.pos, t_current / t1);
+  pkt.prop_time = t_current;
 
   assert_always(grid::modelgrid[modelgridindex].totalcooling > 0.);
   const double rndcool_ion = rng_uniform() * grid::modelgrid[modelgridindex].totalcooling;
@@ -453,7 +460,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     printout("do_kpkt: modelgridindex %d element %d ion %d\n", modelgridindex, element, ion);
     printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool_ion %g\n", grid::modelgrid[modelgridindex].totalcooling,
              coolingsum, rndcool_ion);
-    printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n", modelgridindex, pkt_ptr->where,
+    printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n", modelgridindex, pkt.where,
              grid::get_nne(modelgridindex));
     for (element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -489,7 +496,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
   const ptrdiff_t i = selectedvalue - globals::cellcache[cellcacheslotid].cooling_contrib;
 
   if (i > ihigh) {
-    printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %d, rndcool %g\n", ilow,
+    printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %td, rndcool %g\n", ilow,
              ihigh, i, rndcool_ion_process);
     printout("element %d, ion %d, offset %d, terms %d, coolingsum %g\n", element, ion,
              get_coolinglistoffset(element, ion), get_ncoolingterms_ion(element, ion), coolingsum);
@@ -519,26 +526,24 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     /// Sample the packets comoving frame frequency according to paperII 5.4.3 eq.41
 
     const double zrand = rng_uniform_pos();  /// delivers zrand in ]0,1[
-    pkt_ptr->nu_cmf = -KB * T_e / H * log(zrand);
+    pkt.nu_cmf = -KB * T_e / H * log(zrand);
 
-    assert_always(std::isfinite(pkt_ptr->nu_cmf));
+    assert_always(std::isfinite(pkt.nu_cmf));
 
     /// and then emit the packet randomly in the comoving frame
-    emit_rpkt(pkt_ptr);
-    pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
+    emit_rpkt(pkt);
+    pkt.next_trans = 0;  /// FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FF);
 
-    pkt_ptr->last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
-    pkt_ptr->emissiontype = EMTYPE_FREEFREE;
-    pkt_ptr->em_pos = pkt_ptr->pos;
-    pkt_ptr->em_time = pkt_ptr->prop_time;
-    pkt_ptr->nscatterings = 0;
+    pkt.last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
+    pkt.emissiontype = EMTYPE_FREEFREE;
+    pkt.em_pos = pkt.pos;
+    pkt.em_time = pkt.prop_time;
+    pkt.nscatterings = 0;
 
-    vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
-    return;
-  }
+    vpkt_call_estimators(pkt, TYPE_KPKT);
 
-  if (rndcoolingtype == COOLINGTYPE_FB) {
+  } else if (rndcoolingtype == COOLINGTYPE_FB) {
     /// The k-packet converts directly into a r-packet by free-bound-emission.
     /// Need to select the r-packets frequency and a random direction in the
     /// co-moving frame.
@@ -552,35 +557,31 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     // Sample the packets comoving frame frequency according to paperII 4.2.2
     // const double zrand = rng_uniform();
     // if (zrand < 0.5) {
-    pkt_ptr->nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, upper, T_e);
+    pkt.nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, upper, T_e);
     // } else {
     //   // Emit like a BB
-    //   pkt_ptr->nu_cmf = sample_planck(T_e);
+    //   pkt.nu_cmf = sample_planck(T_e);
     // }
 
     // and then emitt the packet randomly in the comoving frame
-    emit_rpkt(pkt_ptr);
+    emit_rpkt(pkt);
 
     if constexpr (TRACK_ION_STATS) {
       stats::increment_ion_stats(modelgridindex, element, lowerion + 1, stats::ION_RADRECOMB_KPKT,
-                                 pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
+                                 pkt.e_cmf / H / pkt.nu_cmf);
     }
 
-    pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
+    pkt.next_trans = 0;  /// FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FB);
-    pkt_ptr->last_event = LASTEVENT_KPKT_TO_RPKT_FB;
-    pkt_ptr->emissiontype = get_continuumindex(element, lowerion, lowerlevel, upper);
-    pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
-    pkt_ptr->em_pos = pkt_ptr->pos;
-    pkt_ptr->em_time = pkt_ptr->prop_time;
-    pkt_ptr->nscatterings = 0;
+    pkt.last_event = LASTEVENT_KPKT_TO_RPKT_FB;
+    pkt.emissiontype = get_continuumindex(element, lowerion, lowerlevel, upper);
+    pkt.trueemissiontype = pkt.emissiontype;
+    pkt.em_pos = pkt.pos;
+    pkt.em_time = pkt.prop_time;
+    pkt.nscatterings = 0;
 
-    vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
-
-    return;
-  }
-
-  if (rndcoolingtype == COOLINGTYPE_COLLEXC) {
+    vpkt_call_estimators(pkt, TYPE_KPKT);
+  } else if (rndcoolingtype == COOLINGTYPE_COLLEXC) {
     /// the k-packet activates a macro-atom due to collisional excitation
     // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
     const float nne = grid::get_nne(modelgridindex);
@@ -614,7 +615,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
     if (upper < 0) {
       printout(
-          "WARNING: Could not select an upper level. modelgridindex %d i %d element %d ion %d level %d rndcool "
+          "WARNING: Could not select an upper level. modelgridindex %d i %td element %d ion %d level %d rndcool "
           "%g "
           "contrib_low %g contrib %g (should match %g) upper %d nuptrans %d\n",
           modelgridindex, i, element, ion, level, rndcool_ion_process, contrib_low, contrib,
@@ -624,22 +625,19 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     assert_always(upper >= 0);
 
     if constexpr (TRACK_ION_STATS) {
-      stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC, pkt_ptr->e_cmf);
+      stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC, pkt.e_cmf);
     }
 
-    pkt_ptr->type = TYPE_MA;
+    pkt.type = TYPE_MA;
     stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLEXC);
     stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLEXC);
 
-    pkt_ptr->last_event = 8;
-    pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
-    pkt_ptr->trueemissionvelocity = -1;
+    pkt.last_event = 8;
+    pkt.trueemissiontype = EMTYPE_NOTSET;
+    pkt.trueemissionvelocity = -1;
 
-    do_macroatom(pkt_ptr, {element, ion, upper, -99});
-    return;
-  }
-
-  if (rndcoolingtype == COOLINGTYPE_COLLION) {
+    do_macroatom(pkt, {element, ion, upper, -99});
+  } else if (rndcoolingtype == COOLINGTYPE_COLLION) {
     /// the k-packet activates a macro-atom due to collisional ionisation
     // printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
 
@@ -647,19 +645,18 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     const int upper = coolinglist[i].upperlevel;
 
     if constexpr (TRACK_ION_STATS) {
-      stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_MACROATOM_ENERGYIN_COLLION,
-                                 pkt_ptr->e_cmf);
+      stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_MACROATOM_ENERGYIN_COLLION, pkt.e_cmf);
     }
 
-    pkt_ptr->type = TYPE_MA;
+    pkt.type = TYPE_MA;
     stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLION);
     stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLION);
 
-    pkt_ptr->last_event = 9;
-    pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
-    pkt_ptr->trueemissionvelocity = -1;
+    pkt.last_event = 9;
+    pkt.trueemissiontype = EMTYPE_NOTSET;
+    pkt.trueemissionvelocity = -1;
 
-    do_macroatom(pkt_ptr, {element, upperion, upper, -99});
+    do_macroatom(pkt, {element, upperion, upper, -99});
   } else {
     assert_testmodeonly(false);
   }

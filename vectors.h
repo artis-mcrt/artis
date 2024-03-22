@@ -36,15 +36,15 @@
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(std::span<const double, 3> x, const double t)
-    -> std::array<double, 3>
+[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(std::span<const double, 3> x,
+                                                        const double t) -> std::array<double, 3>
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
   return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
 }
 
-[[nodiscard]] constexpr auto cross_prod(std::span<const double, 3> vec1, std::span<const double, 3> vec2)
-    -> std::array<double, 3> {
+[[nodiscard]] constexpr auto cross_prod(std::span<const double, 3> vec1,
+                                        std::span<const double, 3> vec2) -> std::array<double, 3> {
   std::array<double, 3> vecout = {(vec1[1] * vec2[2]) - (vec2[1] * vec1[2]), (vec1[2] * vec2[0]) - (vec2[2] * vec1[0]),
                                   (vec1[0] * vec2[1]) - (vec2[0] * vec1[1])};
   return vecout;
@@ -56,8 +56,8 @@ constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
   vec[2] *= scalefactor;
 }
 
-[[nodiscard]] constexpr auto angle_ab(std::span<const double, 3> dir1, std::span<const double, 3> vel)
-    -> std::array<double, 3>
+[[nodiscard]] constexpr auto angle_ab(std::span<const double, 3> dir1,
+                                      std::span<const double, 3> vel) -> std::array<double, 3>
 // aberation of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
@@ -171,17 +171,16 @@ constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, std::span<const do
   return dopplerfactor;
 }
 
-constexpr auto move_pkt_withtime(struct packet *pkt_ptr, const double distance) -> double {
-  return move_pkt_withtime(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time, pkt_ptr->nu_rf, pkt_ptr->nu_cmf,
-                           pkt_ptr->e_rf, pkt_ptr->e_cmf, distance);
+constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
+  return move_pkt_withtime(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, pkt.nu_cmf, pkt.e_rf, pkt.e_cmf, distance);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto get_arrive_time(const struct packet *const pkt_ptr) -> double
+[[nodiscard]] [[gnu::pure]] constexpr auto get_arrive_time(const Packet &pkt) -> double
 /// We know that a packet escaped at "escape_time". However, we have
 /// to allow for travel time. Use the formula in Leon's paper. The extra
 /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
 {
-  return pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
+  return pkt.escape_time - (dot(pkt.pos, pkt.dir) / CLIGHT_PROP);
 }
 
 [[nodiscard]] constexpr auto get_escapedirectionbin(std::span<const double, 3> dir_in,

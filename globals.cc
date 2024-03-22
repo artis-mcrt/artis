@@ -1,24 +1,21 @@
 #include "globals.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <array>
-#include <atomic>
-#include <ctime>
 #include <deque>
-#include <memory>
 #include <mutex>
 #include <vector>
 
 #include "artisoptions.h"
 
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
-
 namespace globals {
 
 std::array<double, 3> syn_dir{};  // vector pointing from origin to observer
 
-std::unique_ptr<struct time[]> timesteps = nullptr;
+std::vector<TimeStep> timesteps;
 
 std::vector<double> dep_estimator_gamma{};  /// Volume estimator for the rpkt emissivity
 
@@ -44,8 +41,6 @@ int *acounter = nullptr;
 int nprocs_exspec = 1;
 bool do_emission_res = true;
 
-std::vector<bool> startofline;
-
 double gamma_kappagrey;  // set to -ve for proper treatment. If possitive, then
                          // gamma_rays are treated as grey with this opacity.
 
@@ -59,30 +54,27 @@ int opacity_case;  // 0 normally, 1 for Fe-grp dependence.
 /// ATOMIC DATA
 
 int nlines = -1;
-std::vector<struct elementlist_entry> elements;
-const struct linelist_entry *linelist = nullptr;
-struct bflist_t *bflist = nullptr;
+std::vector<Element> elements;
+const TransitionLine *linelist = nullptr;
+std::vector<BFListEntry> bflist;
 
 // for USE_LUT_BFHEATING = true
 double *bfheating_coeff = nullptr;
 
-struct rpkt_continuum_absorptioncoeffs *chi_rpkt_cont = nullptr;
-
 /// PHIXSLIST
 
-double *allcont_nu_edge = nullptr;
-const struct fullphixslist *allcont = nullptr;
+std::vector<double> allcont_nu_edge;
+const FullPhotoionTransition *allcont = nullptr;
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-struct groundphixslist *groundcont = nullptr;
+GroundPhotoion *groundcont = nullptr;
 
-struct phixslist *phixslist = nullptr;
 int nbfcontinua = -1;
 int nbfcontinua_ground = -1;  /// number of bf-continua
 int NPHIXSPOINTS = -1;
 double NPHIXSNUINCREMENT = -1;
 
-struct cellcache *cellcache = nullptr;
+CellCache *cellcache = nullptr;
 
 std::deque<std::mutex> mutex_cellcachemacroatom;
 
@@ -101,7 +93,7 @@ int node_count = -1;  // number of MPI nodes
 int node_id = -1;     // unique number for each node
 
 constexpr int npkts = MPKTS;
-std::atomic<int> nesc = 0;  // number of packets that escape during current timestep
+int nesc = 0;  // number of packets that escape during current timestep
 
 double vmax;
 double rmax;        /// Total mass and outer velocity/radius
@@ -127,8 +119,6 @@ double cell_is_optically_thick;
 int num_grey_timesteps;
 int n_titer;
 bool lte_iteration;
-int n_kpktdiffusion_timesteps;
-float kpktdiffusion_timescale;
 
 void setup_mpi_vars() {
 #ifdef MPI_ON

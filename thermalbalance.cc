@@ -2,6 +2,7 @@
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 
 #include <cmath>
@@ -12,7 +13,6 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_math.h"
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
@@ -24,7 +24,7 @@
 struct Te_solution_paras {
   double t_current;
   int modelgridindex;
-  struct heatingcoolingrates *heatingcoolingrates;
+  HeatingCoolingRates *heatingcoolingrates;
   const std::vector<double> *bfheatingcoeffs;
 };
 
@@ -62,8 +62,7 @@ auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetinde
 static auto integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas) -> double
 /// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
-  const struct gsl_integral_paras_bfheating *const params =
-      static_cast<struct gsl_integral_paras_bfheating *>(voidparas);
+  const auto *const params = static_cast<const gsl_integral_paras_bfheating *>(voidparas);
 
   const int modelgridindex = params->modelgridindex;
   const double nu_edge = params->nu_edge;
@@ -79,8 +78,8 @@ static auto integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas)
   return sigma_bf * (1 - nu_edge / nu) * radfield::radfield(nu, modelgridindex) * (1 - exp(-HOVERKB * nu / T_R));
 }
 
-static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
-    -> double {
+static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
+                                     int modelgridindex) -> double {
   double error = 0.;
   const double epsrel = 1e-3;
   const double epsrelwarning = 1e-1;
@@ -98,7 +97,7 @@ static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixst
   // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
 
-  struct gsl_integral_paras_bfheating intparas = {
+  const gsl_integral_paras_bfheating intparas = {
       .nu_edge = nu_threshold,
       .modelgridindex = modelgridindex,
       .T_R = grid::get_TR(modelgridindex),
@@ -107,18 +106,11 @@ static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixst
   // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
 
   double bfheating = 0.;
-  const gsl_function F_bfheating = {.function = &integrand_bfheatingcoeff_custom_radfield, .params = &intparas};
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
-  const int status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE,
-                                         GSL_INTEG_GAUSS61, gslworkspace, &bfheating, &error);
-  // const int status = gsl_integration_qags(
-  //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
-  //   GSLWSIZE, workspace_bfheating, &bfheating, &error);
-  // const int status = radfield_integrate(
-  //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
-  //    GSLWSIZE, GSL_INTEG_GAUSS61, workspace_bfheating, &bfheating, &error);
+  const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(
+      intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &bfheating, &error);
 
   if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning)) {
     printout(
@@ -210,7 +202,7 @@ static auto get_heating_ion_coll_deexc(const int modelgridindex, const int eleme
 }
 
 static void calculate_heating_rates(const int modelgridindex, const double T_e, const double nne,
-                                    struct heatingcoolingrates *heatingcoolingrates,
+                                    HeatingCoolingRates *heatingcoolingrates,
                                     const std::vector<double> &bfheatingcoeffs)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the heatingrates data structure.
@@ -228,57 +220,9 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
         C_deexc += get_heating_ion_coll_deexc(modelgridindex, element, ion, T_e, nne);
       }
     }
-    //
-    //         /// Collisional heating: recombination to lower ionization stage
-    //         /// ------------------------------------------------------------
-    //         /// For the moment we deal only with ionisations to the next ions groundlevel.
-    //         /// For speed issues (reduced number of calls to epsilon) this is checked here
-    //         /// instead of the more general way to check in col_recomb!
-    //         if (ion > 0 && level == 0) /// Check whether lower ionisation stage available
-    //         {
-    //           for (lower = 0; lower < nlevels_lowerion; lower++)
-    //           {
-    //             epsilon_trans = epsilon_current - epsilon(element,ion-1,lower);
-    //             C = col_recombination(pkt_ptr,lower,epsilon_trans)*epsilon_trans;
-    //             C_recomb += C;
-    //           }
-    //         }
-    //
-    //
-    //         /*
-    //         /// Bound-free heating (analytical calculation)
-    //         /// -------------------------------------------
-    //         /// We allow bound free-transitions only if there is a higher ionisation stage
-    //         /// left in the model atom to match the bound-free absorption in the rpkt routine.
-    //         /// There this condition is needed as we can only ionise to existing ionisation
-    //         /// stage even if there would be further ionisation stages in nature which
-    //         /// are not included in the model atom.
-    //         if (ion < nions-1)
-    //         {
-    //           epsilon_trans = epsilon(element,ion+1,0) - epsilon_current;
-    //           /// NB: W comes from the fact, that the W coming from the radiation field was factored
-    //           /// out in the precalculation of the bf-heating coefficient (this is justified by the
-    //           /// linear dependence on W).
-    //           /// The rate coefficient is calculated under the assumption T_e=T_R because its direct
-    //           /// T_e dependence is very weak. This means we have to pass T_R as the temperature
-    //           /// even if we are iterating here on T_e. (Otherwise we would allow a large temperature
-    //           /// range for T_R which changes the coefficient strongly).
-    //           //C = interpolate_bfheatingcoeff(element,ion,level,T_R)*W*nnlevel;
-    //           C = nnlevel * (W*interpolate_bfheatingcoeff_below(element,ion,level,T_R));// +
-    //           W_D*interpolate_bfheatingcoeff_above(element,ion,level,T_D));
-    //
-    //           /// Exact calculation of the bf-heating coefficients using integrators.
-    //           /// This makes things SLOW!!!
-    //           //bfheatingparas.nu_edge = epsilon_trans/H;
-    //           //F_bfheating.params = &bfheatingparas;
-    //           /// Discuss about the upper frequency limit (here 1e16 Hz) which we should choose
-    //           //gsl_integration_qag(&F_bfheating, bfheatingparas.nu_edge, 10*bfheatingparas.nu_edge, 0, intaccuracy,
-    //           1024, 6, wspace, &bfhelper, &error);
-    //           //C = bfhelper * FOURPI * nnlevel;
-    //           bfheating += C;
-    //         }
-    //         */
-    //       }
+
+    /// Collisional heating: recombination to lower ionization stage (not included)
+    /// ------------------------------------------------------------
 
     /// Bound-free heating (renormalised analytical calculation)
     /// --------------------------------------------------------
@@ -297,31 +241,10 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
     }
   }
 
-  /// Free-free heating
-  /// -----------------
-  /// From estimators
+  /// Free-free heating (from estimators)
 
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   ffheating = globals::ffheatingestimator[nonemptymgi];
-
-  /// Analytical calculation using T, and populations
-  /// This is always taken as an additional process to the other importantheatingterms
-  /// because its not done per ion but overall ions.
-  /*
-  gsl_function F_ffheating;
-  F_ffheating.function = &ffheating_integrand_gsl;
-
-  gslintegration_ffheatingparas intparas;
-  intparas.T_e = T_e;
-  intparas.cellnumber = cellnumber;
-  F_ffheating.params = &intparas;
-
-  /// Discuss about the upper frequency limit (here 1e16 Hz) which we should choose
-  gsl_integration_qag(&F_ffheating, 0, 1e16, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wspace, &ffheating, &error);
-  /// or this integrator
-  //gsl_integration_qng(&F_ffheating, 0, 1e16, 0, intaccuracy, &ffheating, &error, &neval);
-  ffheating *= FOURPI;
-  */
 
   if constexpr (DIRECT_COL_HEAT) {
     heatingcoolingrates->heating_collisional = C_deexc;
@@ -337,7 +260,7 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
 static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double
 /// Thermal balance equation on which we have to iterate to get T_e
 {
-  const struct Te_solution_paras *const params = static_cast<struct Te_solution_paras *>(paras);
+  const Te_solution_paras *const params = static_cast<Te_solution_paras *>(paras);
 
   const int modelgridindex = params->modelgridindex;
   const double t_current = params->t_current;
@@ -375,22 +298,21 @@ static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> doub
 }
 
 void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min,
-                     const double T_max, struct heatingcoolingrates *heatingcoolingrates,
+                     const double T_max, HeatingCoolingRates *heatingcoolingrates,
                      const std::vector<double> &bfheatingcoeffs) {
   const double T_e_old = grid::get_Te(modelgridindex);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, timestep);
 
-  struct Te_solution_paras paras = {.t_current = t_current,
-                                    .modelgridindex = modelgridindex,
-                                    .heatingcoolingrates = heatingcoolingrates,
-                                    .bfheatingcoeffs = &bfheatingcoeffs};
+  Te_solution_paras paras = {.t_current = t_current,
+                             .modelgridindex = modelgridindex,
+                             .heatingcoolingrates = heatingcoolingrates,
+                             .bfheatingcoeffs = &bfheatingcoeffs};
 
   gsl_function find_T_e_f = {.function = &T_e_eqn_heating_minus_cooling, .params = &paras};
 
   double thermalmin = T_e_eqn_heating_minus_cooling(T_min, find_T_e_f.params);
   double thermalmax = T_e_eqn_heating_minus_cooling(T_max, find_T_e_f.params);
 
-  // printout("(heating - cooling) at T_min: %g, at T_max: %g\n", thermalmin, thermalmax);
   if (!std::isfinite(thermalmin) || !std::isfinite(thermalmax)) {
     printout(
         "[abort request] call_T_e_finder: non-finite results in modelcell %d (T_R=%g, W=%g). T_e forced to be "

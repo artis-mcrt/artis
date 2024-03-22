@@ -4,27 +4,34 @@
 BUILD_DIR = build/$(shell uname -m)
 
 ifeq ($(MPI),)
-	# MPI option not specified. set to true by default
-	MPI := ON
+	# MPI option not specified. set to true if mpicxx exists
+	ifneq (, $(shell command -v mpicxx 2> /dev/null))
+		MPI := ON
+	else
+		MPI := OFF
+	endif
 endif
+
 ifeq ($(MPI),ON)
-	CXX = mpicxx
+	CXX := mpicxx
 	CXXFLAGS += -DMPI_ON=true
 	BUILD_DIR := $(BUILD_DIR)_mpi
+$(info $(shell mpicxx --showme:version 2> /dev/null))
 else ifeq ($(MPI),OFF)
 else
-	$(error bad value for MPI option. Should be ON or OFF)
+  $(error bad value for MPI option. Should be ON or OFF)
 endif
 
 ifeq ($(TESTMODE),ON)
 else ifeq ($(TESTMODE),OFF)
 else ifeq ($(TESTMODE),)
 else
-$(error bad value for testmode option. Should be ON or OFF)
+  $(error bad value for testmode option. Should be ON or OFF)
 endif
 
-COMPILER_VERSION := $(shell $(CXX) --version)
 
+COMPILER_VERSION := $(shell $(CXX) --version)
+$(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
   COMPILER_NAME := CLANG
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
@@ -41,45 +48,65 @@ $(info detected compiler is $(COMPILER_NAME))
 ifeq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -std=c++20
 else
-	CXXFLAGS += -std=c++23 -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
+	CXXFLAGS += -std=c++20 -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
 	# add -ftrivial-auto-var-init=zero when we drop gcc 11 support
 endif
 
 
 CXXFLAGS += -fstrict-aliasing
 
+# profile-guided optimisation
+# generate profile:
+# CXXFLAGS += -fprofile-generate="profdataraw"
+# for clang, run this to convert the raw data to profdata
+# llvm-profdata merge -output=profdata profdataraw/*
+# compile with PGO:
+# CXXFLAGS += -fprofile-use="profdataraw"
+
+ifeq ($(GPU),ON)
+	CXXFLAGS += -DGPU_ON=true -DUSE_SIMPSON_INTEGRATOR=true
+	BUILD_DIR := $(BUILD_DIR)_gpu
+else ifeq ($(GPU),OFF)
+else ifeq ($(GPU),)
+else
+    $(error bad value for GPU option. Should be ON or OFF)
+endif
 
 ifeq ($(OPENMP),ON)
+  ifeq ($(STDPAR),ON)
+    $(error cannot combine OPENMP and STDPAR)
+  endif
   BUILD_DIR := $(BUILD_DIR)_openmp
 
-  ifeq ($(COMPILER_NAME),CLANG)
-    CXXFLAGS += -Xpreprocessor -fopenmp
-    LDFLAGS += -lomp
-  else
-    CXXFLAGS += -fopenmp
-  endif
+	ifeq ($(COMPILER_NAME),NVHPC)
+	  CXXFLAGS += -mp=gpu -gpu=unified
+	else ifeq ($(COMPILER_NAME),CLANG)
+		CXXFLAGS += -Xpreprocessor -fopenmp
+		LDFLAGS += -lomp
+	else ifeq ($(COMPILER_NAME),GCC)
+		CXXFLAGS += -fopenmp
+	endif
+
 else ifeq ($(OPENMP),OFF)
 else ifeq ($(OPENMP),)
 else
-  $(error bad value for openmp option. Should be ON or OFF)
+    $(error bad value for OPENMP option. Should be ON or OFF)
 endif
 
 ifeq ($(STDPAR),ON)
-  ifeq ($(OPENMP),ON)
-    $(error cannot combine OPENMP and STDPAR)
-  endif
-
   CXXFLAGS += -DSTDPAR_ON=true
   BUILD_DIR := $(BUILD_DIR)_stdpar
 
   ifeq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -stdpar=gpu -⁠gpu=unified
-  else ifeq ($(COMPILER_NAME),GCC)
-    LDFLAGS += -ltbb
+		CXXFLAGS += -stdpar=gpu -gpu=unified
   else ifeq ($(COMPILER_NAME),CLANG)
-    LDFLAGS += -ltbb
-	# LDFLAGS += -Xlinker -debug_snapshot
+		# CXXFLAGS += -fexperimental-library
+		LDFLAGS += -ltbb
+		# LDFLAGS += -Xlinker -debug_snapshot
+  else ifeq ($(COMPILER_NAME),GCC)
+		LDFLAGS += -ltbb
   endif
+
 else ifeq ($(STDPAR),OFF)
 else ifeq ($(STDPAR),)
 else
@@ -96,7 +123,7 @@ ifeq ($(shell uname -s),Darwin)
 
 	ifeq ($(COMPILER_NAME),GCC)
 #		fixes linking on macOS with gcc
-		LDFLAGS += -Wl,-ld_classic
+		LDFLAGS += -Xlinker -ld_classic
 	endif
 
 	ifeq ($(shell uname -m),arm64)
@@ -164,7 +191,7 @@ ifeq ($(TESTMODE),ON)
 	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
 	CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG
 
-	CXXFLAGS += -fsanitize=address,undefined
+	CXXFLAGS += -fsanitize=undefined,address
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
@@ -237,7 +264,6 @@ exspec: $(exspec_objects) artisoptions.h Makefile
 
 version.h:
 	@echo "constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";" > version.h
-	@echo "constexpr const char* GIT_HASH = \"$(shell git rev-parse HEAD)\";" >> version.h
 # requires git > 2.22
 # @echo "constexpr const char* GIT_BRANCH = \"$(shell git branch --show)\";" >> version.h
 	@echo "constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";" >> version.h
