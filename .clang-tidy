@@ -60,7 +60,7 @@ CheckOptions:
     - key: modernize-use-std-print.FprintfLikeFunctions
       value: fprintf; absl::FPrintF
     - key: cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes
-      value: size_t;ptrdiff_t;size_t;difference_type;time_t;MPI_Aint
+      value: size_t;ptrdiff_t;size_type;difference_type;time_t;MPI_Aint
     - key: cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
       value: 'false'
     - key: cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
