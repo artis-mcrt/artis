@@ -125,7 +125,7 @@ inline void print_line_start() {
 #endif
 
 template <typename T>
-inline void atomicadd(T &var, T val) {
+inline void atomicadd(T &var, const T &val) {
 #ifdef _OPENMP
 #pragma omp atomic update
   var += val;
