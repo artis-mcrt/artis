@@ -47,7 +47,7 @@ extern double T_step_log;
 
 template <double func_integrand(double, void *)>
 constexpr auto simpson_integrator(auto &params, double a, double b, int samplecount) -> double {
-  assert_always(samplecount % 2 == 1);
+  assert_testmodeonly(samplecount % 2 == 1);
 
   const double deltax = (b - a) / samplecount;
 
