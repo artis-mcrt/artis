@@ -445,23 +445,21 @@ auto get_Jb_lu_contribcount(const int modelgridindex, const int jblueindex) -> i
 static auto get_bin_J(int modelgridindex, int binindex) -> double
 // get the normalised J_nu
 {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
-  const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
-  return radfieldbins[mgibinindex].J_raw * J_normfactor[nonemptymgi];
+  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].J_raw * J_normfactor[nonemptymgi];
 }
 
 static auto get_bin_nuJ(int modelgridindex, int binindex) -> double {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
-  const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
-  return radfieldbins[mgibinindex].nuJ_raw * J_normfactor[nonemptymgi];
+  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].nuJ_raw * J_normfactor[nonemptymgi];
 }
 
 static inline auto get_bin_nu_bar(int modelgridindex, int binindex) -> double
@@ -473,13 +471,13 @@ static inline auto get_bin_nu_bar(int modelgridindex, int binindex) -> double
 }
 
 static inline auto get_bin_contribcount(int modelgridindex, int binindex) -> int {
-  const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
-  return radfieldbins[mgibinindex].contribcount;
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].contribcount;
 }
 
 static inline auto get_bin_W(int modelgridindex, int binindex) -> float {
-  const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
-  return radfieldbin_solutions[mgibinindex].W;
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  return radfieldbin_solutions[nonemptymgi * RADFIELDBINCOUNT + binindex].W;
 }
 
 static inline auto get_bin_T_R(int modelgridindex, int binindex) -> float {
