@@ -1034,10 +1034,10 @@ void normalise_J(const int modelgridindex, const double estimator_normfactor_ove
   }
 }
 
-void normalise_bf_estimators(const int modelgridindex, const double estimator_normfactor_over_H) {
+void normalise_bf_estimators(const int modelgridindex, const int nonemptymgi,
+                             const double estimator_normfactor_over_H) {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
-    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     assert_always(nonemptymgi >= 0);
     for (int i = 0; i < globals::nbfcontinua; i++) {
       const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;

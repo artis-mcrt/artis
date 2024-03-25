@@ -1078,7 +1078,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       radfield::fit_parameters(mgi, nts);
 
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-        radfield::normalise_bf_estimators(mgi, estimator_normfactor / H);
+        radfield::normalise_bf_estimators(mgi, nonemptymgi, estimator_normfactor / H);
       }
 
       solve_Te_nltepops(mgi, nonemptymgi, nts, titer, heatingcoolingrates);
