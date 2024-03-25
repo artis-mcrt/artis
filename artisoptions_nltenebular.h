@@ -6,7 +6,7 @@
 
 #include "constants.h"
 
-constexpr int MPKTS = 750000;
+constexpr int MPKTS = 1000000;
 
 constexpr int GRID_TYPE = GRID_CARTESIAN3D;
 constexpr int CUBOID_NCOORDGRID_X = 50;
