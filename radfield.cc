@@ -7,9 +7,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <ctime>
 
 #include "atomic.h"
+#include "globals.h"
 #include "grid.h"
 #include "sn3d.h"
 #include "vectors.h"
@@ -354,7 +356,7 @@ void init(int my_rank, int ndo_nonempty)
       if (globals::rank_in_node == 0) {
         my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
       }
-      auto size = static_cast<MPI_Aint>(my_rank_cells * globals::nbfcontinua * sizeof(float));
+      auto size = static_cast<MPI_Aint>(my_rank_cells * globals::bfestimcount * sizeof(float));
       int disp_unit = sizeof(float);
       MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed,
                               &win_prev_bfrate_normed);
@@ -362,11 +364,11 @@ void init(int my_rank, int ndo_nonempty)
     }
 #else
     {
-      prev_bfrate_normed = static_cast<float *>(malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(float)));
+      prev_bfrate_normed = static_cast<float *>(malloc(nonempty_npts_model * globals::bfestimcount * sizeof(float)));
     }
 #endif
     printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
-             nonempty_npts_model * globals::nbfcontinua * sizeof(float) / 1024. / 1024.);
+             nonempty_npts_model * globals::bfestimcount * sizeof(float) / 1024. / 1024.);
 
     bfrate_raw = static_cast<double *>(malloc(nonempty_npts_model * globals::bfestimcount * sizeof(double)));
 
@@ -1164,17 +1166,11 @@ void normalise_J(const int modelgridindex, const double estimator_normfactor_ove
 void normalise_bf_estimators(const int modelgridindex, const double estimator_normfactor_over_H) {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
-    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+    const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     assert_always(nonemptymgi >= 0);
-    for (int i = 0; i < globals::nbfcontinua; i++) {
-      const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
-      const auto bfestimindex = globals::allcont[i].bfestimindex;
-      if (bfestimindex >= 0) {
-        const int detailed_mgibfindex = nonemptymgi * globals::bfestimcount + bfestimindex;
-        prev_bfrate_normed[mgibfindex] = bfrate_raw[detailed_mgibfindex] * estimator_normfactor_over_H;
-      } else {
-        prev_bfrate_normed[mgibfindex] = 0;
-      }
+    for (int i = 0; i < globals::bfestimcount; i++) {
+      const auto detailed_mgibfindex = static_cast<ptrdiff_t>(nonemptymgi) * globals::bfestimcount + i;
+      prev_bfrate_normed[detailed_mgibfindex] = bfrate_raw[detailed_mgibfindex] * estimator_normfactor_over_H;
     }
   }
 }
@@ -1204,7 +1200,8 @@ auto get_bfrate_estimator(const int element, const int lowerion, const int lower
     const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {
-      return prev_bfrate_normed[nonemptymgi * globals::nbfcontinua + allcontindex];
+      const int bfestimindex = globals::allcont[allcontindex].bfestimindex;
+      return (bfestimindex >= 0) ? prev_bfrate_normed[nonemptymgi * globals::bfestimcount + bfestimindex] : 0.;
     }
 
     printout("no bf rate for element Z=%d ion_stage %d lower %d phixstargetindex %d\n", get_atomicnumber(element),
@@ -1335,8 +1332,8 @@ void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     if (globals::rank_in_node == 0) {
-      MPI_Bcast(&prev_bfrate_normed[nonemptymgi * globals::nbfcontinua], globals::nbfcontinua, MPI_FLOAT, root_node_id,
-                globals::mpi_comm_internode);
+      MPI_Bcast(&prev_bfrate_normed[nonemptymgi * globals::bfestimcount], globals::bfestimcount, MPI_FLOAT,
+                root_node_id, globals::mpi_comm_internode);
     }
   }
 
@@ -1369,12 +1366,15 @@ void write_restart_data(FILE *gridsave_file) {
     const int nbfcontinua = globals::nbfcontinua;
     fprintf(gridsave_file, "%d\n", nbfcontinua);
 
+    const int bfestimcount = globals::bfestimcount;
+    fprintf(gridsave_file, "%d\n", bfestimcount);
+
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
       if (grid::get_numassociatedcells(modelgridindex) > 0) {
         const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         fprintf(gridsave_file, "%d\n", modelgridindex);
-        for (int i = 0; i < nbfcontinua; i++) {
-          fprintf(gridsave_file, "%a ", prev_bfrate_normed[nonemptymgi * nbfcontinua + i]);
+        for (int i = 0; i < bfestimcount; i++) {
+          fprintf(gridsave_file, "%a ", prev_bfrate_normed[nonemptymgi * bfestimcount + i]);
         }
       }
     }
@@ -1467,17 +1467,21 @@ void read_restart_data(FILE *gridsave_file) {
     assert_always(fscanf(gridsave_file, "%d\n", &gridsave_nbf_in) == 1);
     assert_always(gridsave_nbf_in == globals::nbfcontinua);
 
+    int gridsave_nbfestim_in = 0;
+    assert_always(fscanf(gridsave_file, "%d\n", &gridsave_nbfestim_in) == 1);
+    assert_always(gridsave_nbfestim_in == globals::bfestimcount);
+
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
       if (grid::get_numassociatedcells(modelgridindex) > 0) {
         const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         int mgi_in = 0;
         assert_always(fscanf(gridsave_file, "%d\n", &mgi_in) == 1);
         assert_always(mgi_in == modelgridindex);
-        for (int i = 0; i < globals::nbfcontinua; i++) {
+        for (int i = 0; i < globals::bfestimcount; i++) {
           float bfrate_normed = 0;
           assert_always(fscanf(gridsave_file, "%a ", &bfrate_normed) == 1);
 
-          const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
+          const int mgibfindex = nonemptymgi * globals::bfestimcount + i;
 #ifdef MPI_ON
           if (globals::rank_in_node == 0)
 #endif
