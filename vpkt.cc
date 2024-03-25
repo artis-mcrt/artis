@@ -351,12 +351,9 @@ static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int 
           const auto n_l = calculate_levelpop(mgi, element, ion, lower);
           const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
 
-          // Check on the element to exclude
-          // NB: ldist before need to be computed anyway (I want to move the packets to the
-          // line interaction point even if I don't interact)
+          // Check on the element to exclude (or -1 for no line opacity)
           const int anumber = get_atomicnumber(element);
           for (int ind = 0; ind < Nspectra; ind++) {
-            // If exclude[ind]==-1, I do not include line opacity
             if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
               tau_vpkt[ind] += tau_line;
             }

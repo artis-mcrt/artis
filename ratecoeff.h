@@ -80,7 +80,7 @@ auto integrator(auto params, double a, double b, double epsabs, double epsrel, i
                 double *abserr) {
   if constexpr (USE_SIMPSON_INTEGRATOR) {
     // need an odd number for Simpson rule
-    const int samplecount = std::max(1, static_cast<int>((b / a) / globals::NPHIXSNUINCREMENT)) * 32 + 1;
+    const int samplecount = std::max(1, static_cast<int>((b / a) / globals::NPHIXSNUINCREMENT)) * 4 + 1;
 
     *result = simpson_integrator<func_integrand>(params, a, b, samplecount);
     *abserr = 0.;
