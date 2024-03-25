@@ -368,10 +368,10 @@ void init(int my_rank, int ndo_nonempty)
     printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
              nonempty_npts_model * globals::nbfcontinua * sizeof(float) / 1024. / 1024.);
 
-    bfrate_raw = static_cast<double *>(malloc(nonempty_npts_model * globals::BFCounter * sizeof(double)));
+    bfrate_raw = static_cast<double *>(malloc(nonempty_npts_model * globals::bfestimcount * sizeof(double)));
 
     printout("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy %.3f MB\n",
-             nonempty_npts_model * globals::BFCounter * sizeof(double) / 1024. / 1024.);
+             nonempty_npts_model * globals::bfestimcount * sizeof(double) / 1024. / 1024.);
   }
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
@@ -655,8 +655,8 @@ void zero_estimators(int modelgridindex)
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     assert_always(bfrate_raw != nullptr);
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      for (int i = 0; i < globals::BFCounter; i++) {
-        bfrate_raw[nonemptymgi * globals::BFCounter + i] = 0.;
+      for (int i = 0; i < globals::bfestimcount; i++) {
+        bfrate_raw[nonemptymgi * globals::bfestimcount + i] = 0.;
       }
     }
   }
@@ -710,9 +710,9 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
     if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs) {
       int bf_estimator = globals::allcont[allcontindex].bfestimindex;
       if (bf_estimator >= 0) {
-        assert_testmodeonly(bf_estimator < globals::BFCounter);
+        assert_testmodeonly(bf_estimator < globals::bfestimcount);
 
-        safeadd(bfrate_raw[nonemptymgi * globals::BFCounter + bf_estimator],
+        safeadd(bfrate_raw[nonemptymgi * globals::bfestimcount + bf_estimator],
                 globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
       }
 
@@ -1170,7 +1170,7 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
       const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
       const auto bfestimindex = globals::allcont[i].bfestimindex;
       if (bfestimindex >= 0) {
-        const int detailed_mgibfindex = nonemptymgi * globals::BFCounter + bfestimindex;
+        const int detailed_mgibfindex = nonemptymgi * globals::bfestimcount + bfestimindex;
         prev_bfrate_normed[mgibfindex] = bfrate_raw[detailed_mgibfindex] * estimator_normfactor_over_H;
       } else {
         prev_bfrate_normed[mgibfindex] = 0;
@@ -1268,8 +1268,8 @@ void reduce_estimators()
   MPI_Allreduce(MPI_IN_PLACE, nuJ.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, grid::get_nonempty_npts_model() * globals::BFCounter, MPI_DOUBLE, MPI_SUM,
-                  MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, grid::get_nonempty_npts_model() * globals::bfestimcount, MPI_DOUBLE,
+                  MPI_SUM, MPI_COMM_WORLD);
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {

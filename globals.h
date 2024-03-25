@@ -210,7 +210,7 @@ extern std::unique_ptr<struct time[]> timesteps;
 
 extern double *rpkt_emiss;
 
-extern int BFCounter;
+extern int bfestimcount;
 
 // for USE_LUT_PHOTOION = true
 extern double *corrphotoionrenorm;

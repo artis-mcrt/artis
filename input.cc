@@ -1456,8 +1456,7 @@ static void setup_phixs_list() {
            globals::nbfcontinua * (sizeof(fullphixslist)) / 1024. / 1024.);
   size_t nbftables = 0;
   int allcontindex = 0;
-  int bound_free_levels_counter = 0;
-  int nonbound_free_levels_counter = 0;
+  globals::bfestimcount = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions - 1; ion++) {
@@ -1485,12 +1484,11 @@ static void setup_phixs_list() {
           nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
           if (LEVEL_HAS_BFEST(get_atomicnumber(element), get_ionstage(element, ion), level)) {
-            nonconstallcont[allcontindex].bfestimindex = bound_free_levels_counter;
-
+            nonconstallcont[allcontindex].bfestimindex = globals::bfestimcount;
+            globals::bfestimcount++;
           } else {
             nonconstallcont[allcontindex].bfestimindex = -1;
           }
-          bound_free_levels_counter += 1;
 
           if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
             int index_in_groundlevelcontestimator = 0;
@@ -1505,12 +1503,7 @@ static void setup_phixs_list() {
       }
     }
   }
-  int total_bound_free = nonbound_free_levels_counter + bound_free_levels_counter;
-  printout("[info] Bf estimator flag passed through:    \t%d\n", total_bound_free);
-  printout("[info] Bf estimator flag activated for:     \t%d\n", bound_free_levels_counter);
-  printout("[info] Bf estimator flag not activated for: \t%d\n", nonbound_free_levels_counter);
-  globals::BFCounter = bound_free_levels_counter;
-  printout("[info] Set the BFCounter to:\t%d\n", bound_free_levels_counter);
+  printout("[info] BF estimators activated for %d photoionisation transitions\n", globals::bfestimcount);
 
   assert_always(allcontindex == globals::nbfcontinua);
   assert_always(globals::nbfcontinua >= 0);  // was initialised as -1 before startup
