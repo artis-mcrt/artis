@@ -38,7 +38,7 @@ sed -i'' -e 's/constexpr bool SF_AUGER_CONTRIBUTION_ON.*/constexpr bool SF_AUGER
 
 sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' artisoptions.h
 
-sed -i'' -e 's/  // return LEVEL_IS_NLTE.*/return LEVEL_IS_NLTE(element_z, ionstage, level);/g' artisoptions.h
+sed -i'' -e 's/  \/\/ return LEVEL_IS_NLTE.*/return LEVEL_IS_NLTE(element_z, ionstage, level);/g' artisoptions.h
 
 cd -
 
