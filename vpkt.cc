@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
 #include <vector>
 
 #include "artisoptions.h"
@@ -60,6 +61,8 @@ std::vector<int> exclude;  // vector of opacity contribution setups:
                            // +ve: exclude element with atomic number's contribution to bound-bound opacity
 std::vector<double> tau_vpkt;
 
+std::ofstream vpkt_contrib_file;
+
 // --------- VPacket GRID -----------
 
 struct vgrid {
@@ -96,10 +99,10 @@ void add_to_vspecpol(const Packet &vpkt, const int obsbin, const int ind, const 
 
   const int ind_comb = Nspectra * obsbin + ind;
 
-  /// Put this into the time grid.
-  if (t_arrive > VSPEC_TIMEMIN && t_arrive < VSPEC_TIMEMAX) {
-    const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
-    if (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX) {
+  if (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX) {
+    /// Put this into the time grid.
+    if (t_arrive > VSPEC_TIMEMIN && t_arrive < VSPEC_TIMEMAX) {
+      const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
       const int nnu = static_cast<int>((log(vpkt.nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
       const double pktcontrib = vpkt.e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI /
                                 PARSEC / PARSEC / globals::nprocs * 4 * PI;
@@ -385,6 +388,13 @@ void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
   const double t_arrive = get_arrive_time(vpkt);
   // -------------- final stokes vector ---------------
 
+  if constexpr (VPKT_WRITE_CONTRIBS) {
+    if (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX) {
+      vpkt_contrib_file << obsbin << " " << t_arrive << " " << vpkt.nu_rf << " " << vpkt.emissiontype << " "
+                        << vpkt.trueemissiontype << " " << vpkt.absorptiontype;
+    }
+  }
+
   for (int ind = 0; ind < Nspectra; ind++) {
     // printout("obsbin %d spectrum %d tau_vpkt %g\n", obsbin, ind, tau_vpkt[ind]);
     const double prob = pn * exp(-tau_vpkt[ind]);
@@ -400,8 +410,18 @@ void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
     }
 
     // bin on fly and produce file with spectrum
-
     add_to_vspecpol(vpkt, obsbin, ind, t_arrive);
+
+    if constexpr (VPKT_WRITE_CONTRIBS) {
+      if (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX) {
+        vpkt_contrib_file << " " << vpkt.e_rf * prob;
+      }
+    }
+  }
+
+  if constexpr (VPKT_WRITE_CONTRIBS) {
+    vpkt_contrib_file << "\n";
+    vpkt_contrib_file.flush();
   }
 
   // vpkt grid
@@ -856,6 +876,22 @@ void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved
     init_vpkt_grid();
   }
 
+  if constexpr (VPKT_WRITE_CONTRIBS) {
+    char filename[MAXFILENAMELENGTH];
+    snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d.out", my_rank);
+    if (std::filesystem::exists(filename) && !continued_from_saved) {
+      std::remove(filename);
+    }
+    vpkt_contrib_file = std::ofstream(filename, std::ios::app);
+
+    vpkt_contrib_file << "#obsdirindex t_arrive nu_rf emissiontype trueemissiontype absorptiontype";
+    for (int ind = 0; ind < Nspectra; ind++) {
+      vpkt_contrib_file << " e_rf_" << ind;
+    }
+    vpkt_contrib_file << "\n";
+    vpkt_contrib_file.flush();
+  }
+
   if (continued_from_saved) {
     // Continue simulation: read into temporary files
 
@@ -883,7 +919,8 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
 
   const auto vel_vec = get_velocity(pkt.pos, pkt.prop_time);
 
-  // this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer)
+  // this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each
+  // observer)
   if (pkt.next_trans == 0) {
     const int lineindex = closest_transition(pkt.nu_cmf, pkt.next_trans);  /// returns negative
     if (lineindex < 0) {
