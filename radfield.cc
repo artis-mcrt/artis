@@ -1195,9 +1195,6 @@ void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
         MPI_Bcast(&radfieldbin_solutions[mgibinindex].W, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
         MPI_Bcast(&radfieldbin_solutions[mgibinindex].T_R, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
       }
-      MPI_Bcast(&radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-      MPI_Bcast(&radfieldbins[mgibinindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-      MPI_Bcast(&radfieldbins[mgibinindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
     }
   }
 
