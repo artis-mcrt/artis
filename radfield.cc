@@ -1147,7 +1147,7 @@ void reduce_estimators()
 
     for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-        const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+        const ptrdiff_t mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -1200,8 +1200,8 @@ void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     if (globals::rank_in_node == 0) {
-      MPI_Bcast(&prev_bfrate_normed[nonemptymgi * globals::nbfcontinua], globals::nbfcontinua, MPI_FLOAT, root_node_id,
-                globals::mpi_comm_internode);
+      MPI_Bcast(&prev_bfrate_normed[nonemptymgi * globals::bfestimcount], globals::bfestimcount, MPI_FLOAT,
+                root_node_id, globals::mpi_comm_internode);
     }
   }
 
@@ -1258,13 +1258,13 @@ void write_restart_data(FILE *gridsave_file) {
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+      const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
       assert_testmodeonly(nonemptymgi >= 0);
       fprintf(gridsave_file, "%d %la\n", modelgridindex, J_normfactor[nonemptymgi]);
 
       if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-          const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+          const ptrdiff_t mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
           fprintf(gridsave_file, "%la %la %a %a %d\n", radfieldbins[mgibinindex].J_raw,
                   radfieldbins[mgibinindex].nuJ_raw, radfieldbin_solutions[mgibinindex].W,
                   radfieldbin_solutions[mgibinindex].T_R, radfieldbins[mgibinindex].contribcount);
@@ -1386,7 +1386,7 @@ void read_restart_data(FILE *gridsave_file) {
 
       if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-          const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+          const ptrdiff_t mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
           float W = 0;
           float T_R = 0;
           assert_always(fscanf(gridsave_file, "%la %la %a %a %d\n", &radfieldbins[mgibinindex].J_raw,
