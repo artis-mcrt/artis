@@ -81,17 +81,7 @@ constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
 
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
 
-constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) {
-  bool custom_bf_estimator = false;
-  if (custom_bf_estimator == true) {
-    if (element_z == 26 && ionstage == 2) {
-      return (level <= 197);
-    }
-    return (level <= 80);
-  } else {
-    return true;  // Always treat (element, ion, level) with bf estimator
-  }
-}
+constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return true; }
 
 constexpr bool USE_LUT_PHOTOION = false;
 
