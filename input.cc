@@ -1118,8 +1118,8 @@ static void read_atomicdata_files() {
   printout("cont_index %d\n", cont_index);
 }
 
-static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator, int el, int in, int ll)
-    -> int
+static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator, int el, int in,
+                                   int ll) -> int
 /// Return the closest ground level continuum index to the given edge
 /// frequency. If the given edge frequency is redder than the reddest
 /// continuum return -1.
@@ -1492,13 +1492,12 @@ static void setup_phixs_list() {
           nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
           if (is_bfest(element, ion, level)) {
-            nonconstallcont[allcontindex].has_bf_estimator = true;
-            bound_free_levels_counter += 1;
+            nonconstallcont[allcontindex].bfestimindex = bound_free_levels_counter;
 
           } else {
-            nonconstallcont[allcontindex].has_bf_estimator = false;
-            nonbound_free_levels_counter += 1;
+            nonconstallcont[allcontindex].bfestimindex = -1;
           }
+          bound_free_levels_counter += 1;
 
           if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
             int index_in_groundlevelcontestimator = 0;

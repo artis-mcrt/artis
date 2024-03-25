@@ -703,41 +703,22 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
   const int tid = get_thread_num();
   const double distance_e_cmf_over_nu =
       distance_e_cmf / nu_cmf * dopplerfactor;  // TODO: Luke: why did I put a doppler factor here?
-  int detailed_counter = 0;
   for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++) {
     const double nu_edge = globals::allcont_nu_edge[allcontindex];
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
     if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs) {
-      if (globals::allcont[allcontindex].has_bf_estimator == true) {
-        if (detailed_counter == globals::BFCounter) {
-          printout("detailed_counter %d\n", detailed_counter);
-          printout("globals::BFCounter \n", globals::BFCounter);
-          printout("allcontindex %d\n", allcontindex);
-        }
-        assert_always(detailed_counter < globals::BFCounter);
+      int bf_estimator = globals::allcont[allcontindex].bfestimindex;
+      if (bf_estimator >= 0) {
+        assert_testmodeonly(bf_estimator < globals::BFCounter);
 
-        if (nonemptymgi * globals::BFCounter + detailed_counter >=
-            grid::get_nonempty_npts_model() * globals::BFCounter) {
-          printout("detailed_counter %d\n", detailed_counter);
-          printout("globals::BFCounter %d\n", globals::BFCounter);
-          printout("grid::get_nonempty_npts_model() %d\n", grid::get_nonempty_npts_model());
-          printout("nonemptymgi %d\n", nonemptymgi);
-        }
-        assert_always(nonemptymgi * globals::BFCounter + detailed_counter <
-                      grid::get_nonempty_npts_model() * globals::BFCounter)
-
-            safeadd(bfrate_raw[nonemptymgi * globals::BFCounter + detailed_counter],
-                    globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
+        safeadd(bfrate_raw[nonemptymgi * globals::BFCounter + bf_estimator],
+                globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
       }
 
     } else if (nu_cmf < nu_edge) {
       // list is sorted by nu_edge, so all remaining will have nu_cmf < nu_edge
       break;
-    }
-
-    if (globals::allcont[allcontindex].has_bf_estimator == true) {
-      detailed_counter += 1;
     }
   }
 }
@@ -1185,14 +1166,13 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
     printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
     const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     assert_always(nonemptymgi >= 0);
-    int detailed_counter = 0;
     for (int i = 0; i < globals::nbfcontinua; i++) {
       const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
-      const int detailed_mgibfindex = nonemptymgi * globals::BFCounter + detailed_counter;
-      if (globals::allcont[i].has_bf_estimator == true) {
+      const auto bfestimindex = globals::allcont[i].bfestimindex;
+      if (bfestimindex >= 0) {
+        const int detailed_mgibfindex = nonemptymgi * globals::BFCounter + bfestimindex;
         prev_bfrate_normed[mgibfindex] = bfrate_raw[detailed_mgibfindex] * estimator_normfactor_over_H;
-        detailed_counter += 1;
-      } else if (globals::allcont[i].has_bf_estimator == false) {
+      } else {
         prev_bfrate_normed[mgibfindex] = 0;
       }
     }

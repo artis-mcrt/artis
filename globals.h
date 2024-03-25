@@ -50,7 +50,7 @@ struct fullphixslist {
   float *photoion_xs;
   double probability;
   int index_in_groundphixslist;
-  bool has_bf_estimator;
+  int bfestimindex;
 };
 
 struct groundphixslist {
