@@ -212,6 +212,8 @@ extern std::vector<TimeStep> timesteps;
 
 extern std::vector<double> dep_estimator_gamma;
 
+extern int bfestimcount;
+
 // for USE_LUT_PHOTOION = true
 extern double *corrphotoionrenorm;
 extern double *gammaestimator;

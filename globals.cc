@@ -19,6 +19,8 @@ std::vector<TimeStep> timesteps;
 
 std::vector<double> dep_estimator_gamma{};  /// Volume estimator for the rpkt emissivity
 
+int bfestimcount;
+
 // for USE_LUT_PHOTOION = true
 double *corrphotoionrenorm = nullptr;
 double *gammaestimator = nullptr;
