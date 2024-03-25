@@ -56,6 +56,7 @@ struct FullPhotoionTransition {
   float *photoion_xs;
   double probability;
   int index_in_groundphixslist;
+  int bfestimindex;
 };
 
 struct GroundPhotoion {

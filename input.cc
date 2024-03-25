@@ -1381,6 +1381,7 @@ static void setup_phixs_list() {
            globals::nbfcontinua * (sizeof(FullPhotoionTransition)) / 1024. / 1024.);
   size_t nbftables = 0;
   int allcontindex = 0;
+  globals::bfestimcount = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions - 1; ion++) {
@@ -1414,6 +1415,13 @@ static void setup_phixs_list() {
           nonconstallcont[allcontindex].probability = get_phixsprobability(element, ion, level, phixstargetindex);
           nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
+          if (LEVEL_HAS_BFEST(get_atomicnumber(element), get_ionstage(element, ion), level)) {
+            nonconstallcont[allcontindex].bfestimindex = globals::bfestimcount;
+            globals::bfestimcount++;
+          } else {
+            nonconstallcont[allcontindex].bfestimindex = -1;
+          }
+
           if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
             const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
             const auto groundcontindex = search_groundphixslist(nu_edge_target0, element, ion, level);
@@ -1426,6 +1434,7 @@ static void setup_phixs_list() {
       }
     }
   }
+  printout("[info] BF estimators activated for %d photoionisation transitions\n", globals::bfestimcount);
 
   assert_always(allcontindex == globals::nbfcontinua);
   assert_always(globals::nbfcontinua >= 0);  // was initialised as -1 before startup
