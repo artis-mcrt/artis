@@ -1344,10 +1344,7 @@ void read_restart_data(FILE *gridsave_file) {
           assert_always(fscanf(gridsave_file, "%a ", &bfrate_normed) == 1);
 
           const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
-#ifdef MPI_ON
-          if (globals::rank_in_node == 0)
-#endif
-          {
+          if (globals::rank_in_node == 0) {
             prev_bfrate_normed[mgibfindex] = bfrate_normed;
           }
         }
