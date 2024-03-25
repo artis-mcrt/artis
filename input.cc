@@ -1356,13 +1356,6 @@ static void write_bflist_file(int includedphotoiontransitions) {
   }
 }
 
-auto is_bfest(const int element, const int ion, const int level) -> bool
-// Returns true if (element,ion,level) is to be treated with a bf estimator.
-{
-  return LEVEL_HAS_BFEST(get_atomicnumber(element), get_ionstage(element, ion),
-                         level);  // defined in artisoptions.h
-}
-
 static void setup_phixs_list() {
   // set up the photoionisation transition lists
   // and temporary gamma/kappa lists for each thread
@@ -1491,7 +1484,7 @@ static void setup_phixs_list() {
           nonconstallcont[allcontindex].probability = get_phixsprobability(element, ion, level, phixstargetindex);
           nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-          if (is_bfest(element, ion, level)) {
+          if (LEVEL_HAS_BFEST(get_atomicnumber(element), get_ionstage(element, ion), level)) {
             nonconstallcont[allcontindex].bfestimindex = bound_free_levels_counter;
 
           } else {
