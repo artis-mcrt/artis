@@ -40,8 +40,8 @@ auto rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lowe
                               double epsilon_trans, int lineindex, double t_current) -> double;
 auto rad_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upperionlevel, int lowerionlevel,
                                  int modelgridindex) -> double;
-auto stim_recombination_ratecoeff(float nne, int element, int upperion, int upper, int lower, int modelgridindex)
-    -> double;
+auto stim_recombination_ratecoeff(float nne, int element, int upperion, int upper, int lower,
+                                  int modelgridindex) -> double;
 
 auto col_recombination_ratecoeff(int modelgridindex, int element, int upperion, int upper, int lower,
                                  double epsilon_trans) -> double;

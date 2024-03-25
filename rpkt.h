@@ -33,8 +33,8 @@ constexpr auto get_linedistance(const double prop_time, const double nu_cmf, con
   return CLIGHT * prop_time * (nu_cmf / nu_trans - 1);
 }
 
-[[nodiscard]] inline auto get_ionestimindex_nonemptymgi(const int nonemptymgi, const int element, const int ion)
-    -> int {
+[[nodiscard]] inline auto get_ionestimindex_nonemptymgi(const int nonemptymgi, const int element,
+                                                        const int ion) -> int {
   assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element) - 1);
   return nonemptymgi * get_includedions() + get_uniqueionindex(element, ion);

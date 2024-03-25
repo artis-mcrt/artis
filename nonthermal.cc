@@ -1551,8 +1551,8 @@ auto nt_ionisation_maxupperion(const int element, const int lowerion) -> int {
   return maxupper;
 }
 
-auto nt_random_upperion(const int modelgridindex, const int element, const int lowerion, const bool energyweighted)
-    -> int {
+auto nt_random_upperion(const int modelgridindex, const int element, const int lowerion,
+                        const bool energyweighted) -> int {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
     while (true) {
@@ -1610,8 +1610,8 @@ auto nt_ionization_ratecoeff(const int modelgridindex, const int element, const 
 
 static auto calculate_nt_excitation_ratecoeff_perdeposition(const int modelgridindex, const int element, const int ion,
                                                             const int lower, const int uptransindex,
-                                                            const double statweight_lower, const double epsilon_trans)
-    -> double
+                                                            const double statweight_lower,
+                                                            const double epsilon_trans) -> double
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
 {
   if (nt_solution[modelgridindex].yfunc == nullptr) {
@@ -1962,8 +1962,8 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
               (excitationindex)++;
             }
           }  // NT_EXCITATION_ON
-        }    // for t
-      }      // for lower
+        }  // for t
+      }  // for lower
 
       printout("    frac_excitation: %g\n", frac_excitation_ion);
       if (frac_excitation_ion > 1. || !std::isfinite(frac_excitation_ion)) {

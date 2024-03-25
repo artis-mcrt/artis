@@ -751,8 +751,8 @@ static auto sample_decaytime(const int decaypathindex, const double tdecaymin, c
 }
 
 static constexpr auto calculate_decaychain(const double firstinitabund, const std::vector<double> &lambdas,
-                                           const int num_nuclides, const double timediff, const bool useexpansionfactor)
-    -> double {
+                                           const int num_nuclides, const double timediff,
+                                           const bool useexpansionfactor) -> double {
   // calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
   // the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
   // are assumed to start with zero abundance)
@@ -912,8 +912,8 @@ static auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex,
 }
 
 auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const int modelgridindex,
-                                                                         const int decaypathindex, const double tstart)
-    -> double
+                                                                         const int decaypathindex,
+                                                                         const double tstart) -> double
 // just here as as check on the analytic result from get_endecay_per_ejectamass_t0_to_time_withexpansion()
 // this version does an Euler integration
 {
@@ -979,8 +979,8 @@ auto get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridinde
   return tot_endecay;
 }
 
-static auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypathindex, double tlow, double thigh)
-    -> double
+static auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypathindex, double tlow,
+                                                     double thigh) -> double
 // get decay energy per mass [erg/g] released by a decaypath between times tlow [s] and thigh [s]
 {
   assert_always(tlow <= thigh);
@@ -1016,8 +1016,8 @@ static auto get_simtime_endecay_per_ejectamass(const int mgi, const int decaypat
   return chainendecay;
 }
 
-static auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int modelgridindex, const double time)
-    -> double
+static auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int modelgridindex,
+                                               const double time) -> double
 // total decay power per mass [erg/s/g] for a given decaypath
 {
   // only decays at the end of the chain contributed from the initial abundance of the top of the chain are counted

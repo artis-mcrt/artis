@@ -21,8 +21,8 @@ int includedions = 0;
 int includedions_excludehighest = 0;
 std::array<bool, 3> phixs_file_version_exists;
 
-auto get_continuumindex_phixstargetindex(const int element, const int ion, const int level, const int phixstargetindex)
-    -> int
+auto get_continuumindex_phixstargetindex(const int element, const int ion, const int level,
+                                         const int phixstargetindex) -> int
 /// Returns the index of the continuum associated to the given level.
 {
   return globals::elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
@@ -90,8 +90,8 @@ auto level_isinsuperlevel(const int element, const int ion, const int level) -> 
   return (!is_nlte(element, ion, level) && level != 0 && (get_nlevels_nlte(element, ion) > 0));
 }
 
-auto photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge, const double nu)
-    -> double
+auto photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge,
+                                            const double nu) -> double
 /// Calculates the photoionisation cross-section at frequency nu out of the atomic data.
 /// Input: - edge frequency nu_edge of the desired bf-continuum
 ///        - nu
