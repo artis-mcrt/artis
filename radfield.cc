@@ -594,26 +594,26 @@ void zero_estimators()
   std::ranges::fill(nuJ, 0.0);
   std::ranges::fill(bfrate_raw, 0.0);
 
-  if constexpr (DETAILED_LINE_ESTIMATORS_ON || MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+    assert_always(radfieldbins != nullptr);
     for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-      if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-        const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-        assert_always(Jb_lu_raw != nullptr);
-        assert_always(Jb_lu_raw[modelgridindex] != nullptr);
-        for (int i = 0; i < detailed_linecount; i++) {
-          Jb_lu_raw[modelgridindex][i].value = 0.;
-          Jb_lu_raw[modelgridindex][i].contribcount = 0.;
-        }
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
+        const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+        radfieldbins[mgibinindex].J_raw = 0.;
+        radfieldbins[mgibinindex].nuJ_raw = 0.;
+        radfieldbins[mgibinindex].contribcount = 0;
       }
+    }
+  }
 
-      if (MULTIBIN_RADFIELD_MODEL_ON) {
-        assert_always(radfieldbins != nullptr);
-        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-          const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
-          radfieldbins[mgibinindex].J_raw = 0.;
-          radfieldbins[mgibinindex].nuJ_raw = 0.;
-          radfieldbins[mgibinindex].contribcount = 0;
-        }
+  if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+    for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+      const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+      assert_always(Jb_lu_raw != nullptr);
+      assert_always(Jb_lu_raw[modelgridindex] != nullptr);
+      for (int i = 0; i < detailed_linecount; i++) {
+        Jb_lu_raw[modelgridindex][i].value = 0.;
+        Jb_lu_raw[modelgridindex][i].contribcount = 0.;
       }
     }
   }
