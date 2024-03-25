@@ -481,13 +481,13 @@ static inline auto get_bin_W(int modelgridindex, int binindex) -> float {
 }
 
 static inline auto get_bin_T_R(int modelgridindex, int binindex) -> float {
-  const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
-  return radfieldbin_solutions[mgibinindex].T_R;
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  return radfieldbin_solutions[nonemptymgi * RADFIELDBINCOUNT + binindex].T_R;
 }
 
 void write_to_file(int modelgridindex, int timestep) {
   assert_always(MULTIBIN_RADFIELD_MODEL_ON);
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 #ifdef _OPENMP
 #pragma omp critical(out_file)
   {
