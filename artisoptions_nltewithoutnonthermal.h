@@ -78,6 +78,8 @@ constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
 
+constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return true; }
+
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
 
 constexpr bool USE_LUT_PHOTOION = false;
