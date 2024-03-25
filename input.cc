@@ -1118,8 +1118,8 @@ static void read_atomicdata_files() {
   printout("cont_index %d\n", cont_index);
 }
 
-static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator, int el, int in, int ll)
-    -> int
+static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator, int el, int in,
+                                   int ll) -> int
 /// Return the closest ground level continuum index to the given edge
 /// frequency. If the given edge frequency is redder than the reddest
 /// continuum return -1.
@@ -1456,6 +1456,7 @@ static void setup_phixs_list() {
            globals::nbfcontinua * (sizeof(fullphixslist)) / 1024. / 1024.);
   size_t nbftables = 0;
   int allcontindex = 0;
+  globals::bfestimcount = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions - 1; ion++) {
@@ -1482,6 +1483,13 @@ static void setup_phixs_list() {
           nonconstallcont[allcontindex].probability = get_phixsprobability(element, ion, level, phixstargetindex);
           nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
+          if (LEVEL_HAS_BFEST(get_atomicnumber(element), get_ionstage(element, ion), level)) {
+            nonconstallcont[allcontindex].bfestimindex = globals::bfestimcount;
+            globals::bfestimcount++;
+          } else {
+            nonconstallcont[allcontindex].bfestimindex = -1;
+          }
+
           if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
             int index_in_groundlevelcontestimator = 0;
             nonconstallcont[allcontindex].index_in_groundphixslist =
@@ -1495,6 +1503,7 @@ static void setup_phixs_list() {
       }
     }
   }
+  printout("[info] BF estimators activated for %d photoionisation transitions\n", globals::bfestimcount);
 
   assert_always(allcontindex == globals::nbfcontinua);
   assert_always(globals::nbfcontinua >= 0);  // was initialised as -1 before startup

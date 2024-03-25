@@ -50,6 +50,7 @@ struct fullphixslist {
   float *photoion_xs;
   double probability;
   int index_in_groundphixslist;
+  int bfestimindex;
 };
 
 struct groundphixslist {
@@ -208,6 +209,8 @@ extern double syn_dir[3];  // vector pointing from origin to observer
 extern std::unique_ptr<struct time[]> timesteps;
 
 extern double *rpkt_emiss;
+
+extern int bfestimcount;
 
 // for USE_LUT_PHOTOION = true
 extern double *corrphotoionrenorm;

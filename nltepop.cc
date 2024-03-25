@@ -119,8 +119,8 @@ static void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_v
 }
 
 static auto get_total_rate(const int index_selected, const gsl_matrix *rate_matrix, const gsl_vector *popvec,
-                           const bool into_level, const bool only_levels_below, const bool only_levels_above)
-    -> double {
+                           const bool into_level, const bool only_levels_below,
+                           const bool only_levels_above) -> double {
   double total_rate = 0.;
   assert_always(!only_levels_below || !only_levels_above);
 
@@ -174,8 +174,8 @@ static auto get_total_rate_in(const int index_to, const gsl_matrix *rate_matrix,
   return get_total_rate(index_to, rate_matrix, popvec, true, false, false);
 }
 
-static auto get_total_rate_out(const int index_from, const gsl_matrix *rate_matrix, const gsl_vector *popvec)
-    -> double {
+static auto get_total_rate_out(const int index_from, const gsl_matrix *rate_matrix,
+                               const gsl_vector *popvec) -> double {
   return get_total_rate(index_from, rate_matrix, popvec, false, false, false);
 }
 
@@ -393,7 +393,7 @@ static void nltepop_reset_element(const int modelgridindex, const int element) {
   for (int ion = 0; ion < nions; ion++) {
     const int nlte_start = globals::elements[element].ions[ion].first_nlte;
     const int nlevels_nlte = get_nlevels_nlte(element, ion);
-    for (int level = 1; level < nlevels_nlte; level++) {
+    for (int level = 1; level <= nlevels_nlte; level++) {
       grid::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = -1.0;  // flag to indicate no useful data
     }
 
