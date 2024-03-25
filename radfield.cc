@@ -594,26 +594,26 @@ void zero_estimators()
   std::ranges::fill(nuJ, 0.0);
   std::ranges::fill(bfrate_raw, 0.0);
 
-  if constexpr (DETAILED_LINE_ESTIMATORS_ON || MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+    assert_always(radfieldbins != nullptr);
     for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-      if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-        const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-        assert_always(Jb_lu_raw != nullptr);
-        assert_always(Jb_lu_raw[modelgridindex] != nullptr);
-        for (int i = 0; i < detailed_linecount; i++) {
-          Jb_lu_raw[modelgridindex][i].value = 0.;
-          Jb_lu_raw[modelgridindex][i].contribcount = 0.;
-        }
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
+        const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+        radfieldbins[mgibinindex].J_raw = 0.;
+        radfieldbins[mgibinindex].nuJ_raw = 0.;
+        radfieldbins[mgibinindex].contribcount = 0;
       }
+    }
+  }
 
-      if (MULTIBIN_RADFIELD_MODEL_ON) {
-        assert_always(radfieldbins != nullptr);
-        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-          const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
-          radfieldbins[mgibinindex].J_raw = 0.;
-          radfieldbins[mgibinindex].nuJ_raw = 0.;
-          radfieldbins[mgibinindex].contribcount = 0;
-        }
+  if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+    for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+      const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+      assert_always(Jb_lu_raw != nullptr);
+      assert_always(Jb_lu_raw[modelgridindex] != nullptr);
+      for (int i = 0; i < detailed_linecount; i++) {
+        Jb_lu_raw[modelgridindex][i].value = 0.;
+        Jb_lu_raw[modelgridindex][i].contribcount = 0.;
       }
     }
   }
@@ -622,8 +622,6 @@ void zero_estimators()
 static void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
                                 const double doppler_nucmf_on_nurf, const Phixslist &phixslist) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
-
-  const int nbfcontinua = globals::nbfcontinua;
 
   const double distance_e_cmf_over_nu =
       distance_e_cmf / nu_cmf * doppler_nucmf_on_nurf;  // TODO: Luke: why did I put a doppler factor here?
@@ -642,6 +640,7 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
                                                             return nu_edge * last_phixs_nuovernuedge < nu_cmf;
                                                           }));
 
+  const int nbfcontinua = globals::nbfcontinua;
   for (int allcontindex = allcontbegin; allcontindex < allcontend; allcontindex++) {
     atomicadd(bfrate_raw[nonemptymgi * nbfcontinua + allcontindex],
               phixslist.gamma_contr[allcontindex] * distance_e_cmf_over_nu);
@@ -1035,10 +1034,10 @@ void normalise_J(const int modelgridindex, const double estimator_normfactor_ove
   }
 }
 
-void normalise_bf_estimators(const int modelgridindex, const double estimator_normfactor_over_H) {
+void normalise_bf_estimators(const int modelgridindex, const int nonemptymgi,
+                             const double estimator_normfactor_over_H) {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
-    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     assert_always(nonemptymgi >= 0);
     for (int i = 0; i < globals::nbfcontinua; i++) {
       const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
@@ -1195,9 +1194,6 @@ void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
         MPI_Bcast(&radfieldbin_solutions[mgibinindex].W, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
         MPI_Bcast(&radfieldbin_solutions[mgibinindex].T_R, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
       }
-      MPI_Bcast(&radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-      MPI_Bcast(&radfieldbins[mgibinindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-      MPI_Bcast(&radfieldbins[mgibinindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
     }
   }
 
@@ -1347,10 +1343,7 @@ void read_restart_data(FILE *gridsave_file) {
           assert_always(fscanf(gridsave_file, "%a ", &bfrate_normed) == 1);
 
           const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
-#ifdef MPI_ON
-          if (globals::rank_in_node == 0)
-#endif
-          {
+          if (globals::rank_in_node == 0) {
             prev_bfrate_normed[mgibfindex] = bfrate_normed;
           }
         }

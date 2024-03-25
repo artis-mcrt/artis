@@ -168,8 +168,8 @@ static void add_to_vpkt_grid(const Packet &vpkt, std::span<const double, 3> vel,
   }
 }
 
-static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin, std::span<double, 3> obsdir,
-                           const enum packet_type type_before_rpkt) {
+static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
+                           std::span<const double, 3> obsdir, const enum packet_type type_before_rpkt) {
   int mgi = 0;
 
   Packet vpkt = pkt;
@@ -907,8 +907,9 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
   for (int obsbin = 0; obsbin < Nobs; obsbin++) {
     // loop over different observer directions
 
-    double obsdir[3] = {sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * cos(phiobs[obsbin]),
-                        sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * sin(phiobs[obsbin]), nz_obs_vpkt[obsbin]};
+    const double obsdir[3] = {sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * cos(phiobs[obsbin]),
+                              sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * sin(phiobs[obsbin]),
+                              nz_obs_vpkt[obsbin]};
 
     const double t_arrive = t_current - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
 
