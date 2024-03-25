@@ -1185,12 +1185,12 @@ void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
     return;
   }
 
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   MPI_Bcast(&J_normfactor[nonemptymgi], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+      const ptrdiff_t mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
       if (globals::rank_in_node == 0) {
         MPI_Bcast(&radfieldbin_solutions[mgibinindex].W, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
         MPI_Bcast(&radfieldbin_solutions[mgibinindex].T_R, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
@@ -1234,9 +1234,12 @@ void write_restart_data(FILE *gridsave_file) {
     const int nbfcontinua = globals::nbfcontinua;
     fprintf(gridsave_file, "%d\n", nbfcontinua);
 
+    const int bfestimcount = globals::bfestimcount;
+    fprintf(gridsave_file, "%d\n", bfestimcount);
+
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
       if (grid::get_numassociatedcells(modelgridindex) > 0) {
-        const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+        const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         fprintf(gridsave_file, "%d\n", modelgridindex);
         for (int i = 0; i < nbfcontinua; i++) {
           fprintf(gridsave_file, "%a ", prev_bfrate_normed[nonemptymgi * nbfcontinua + i]);
@@ -1333,9 +1336,13 @@ void read_restart_data(FILE *gridsave_file) {
     assert_always(fscanf(gridsave_file, "%d\n", &gridsave_nbf_in) == 1);
     assert_always(gridsave_nbf_in == globals::nbfcontinua);
 
+    int gridsave_nbfestim_in = 0;
+    assert_always(fscanf(gridsave_file, "%d\n", &gridsave_nbfestim_in) == 1);
+    assert_always(gridsave_nbfestim_in == globals::bfestimcount);
+
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
       if (grid::get_numassociatedcells(modelgridindex) > 0) {
-        const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+        const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         int mgi_in = 0;
         assert_always(fscanf(gridsave_file, "%d\n", &mgi_in) == 1);
         assert_always(mgi_in == modelgridindex);
