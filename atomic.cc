@@ -28,13 +28,6 @@ static int includedlevels = 0;
 
 std::array<bool, 3> phixs_file_version_exists;
 
-auto get_continuumindex_phixstargetindex(const int element, const int ion, const int level,
-                                         const int phixstargetindex) -> int
-/// Returns the index of the continuum associated to the given level.
-{
-  return globals::elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
-}
-
 auto get_phixtargetindex(const int element, const int ion, const int level, const int upperionlevel) -> int {
   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
     if (upperionlevel == get_phixsupperlevel(element, ion, level, phixstargetindex)) {
@@ -47,10 +40,11 @@ auto get_phixtargetindex(const int element, const int ion, const int level, cons
 }
 
 auto get_continuumindex(const int element, const int ion, const int level, const int upperionlevel) -> int
-/// Returns the index of the continuum associated to the given level.
+// Returns the emissiontype index of the continuum associated to the given level. Will be negative and ordered by
+// element/ion/level/phixstargetindex
 {
   const int phixstargetindex = get_phixtargetindex(element, ion, level, upperionlevel);
-  return get_continuumindex_phixstargetindex(element, ion, level, phixstargetindex);
+  return globals::elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
 }
 
 auto get_tau_sobolev(const int modelgridindex, const int lineindex, const double t_current, bool sub_updown) -> double {

@@ -191,6 +191,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
   return bflutindex;
 }
+
 [[nodiscard]] inline auto get_timestep(const double time) -> int {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);
