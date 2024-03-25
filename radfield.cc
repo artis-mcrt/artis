@@ -1068,10 +1068,11 @@ auto get_bfrate_estimator(const int element, const int lowerion, const int lower
   if constexpr (!DETAILED_BF_ESTIMATORS_ON) {
     return -1;
   } else {
-    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {
-      return prev_bfrate_normed[nonemptymgi * globals::nbfcontinua + allcontindex];
+      const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+      const int bfestimindex = globals::allcont[allcontindex].bfestimindex;
+      return (bfestimindex >= 0) ? prev_bfrate_normed[nonemptymgi * globals::bfestimcount + bfestimindex] : 0.;
     }
 
     printout("no bf rate for element Z=%d ionstage %d lower %d phixstargetindex %d\n", get_atomicnumber(element),
