@@ -623,8 +623,6 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
                                 const double doppler_nucmf_on_nurf, const Phixslist &phixslist) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
 
-  const int nbfcontinua = globals::nbfcontinua;
-
   const double distance_e_cmf_over_nu =
       distance_e_cmf / nu_cmf * doppler_nucmf_on_nurf;  // TODO: Luke: why did I put a doppler factor here?
 
@@ -642,6 +640,7 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
                                                             return nu_edge * last_phixs_nuovernuedge < nu_cmf;
                                                           }));
 
+  const int nbfcontinua = globals::nbfcontinua;
   for (int allcontindex = allcontbegin; allcontindex < allcontend; allcontindex++) {
     atomicadd(bfrate_raw[nonemptymgi * nbfcontinua + allcontindex],
               phixslist.gamma_contr[allcontindex] * distance_e_cmf_over_nu);
