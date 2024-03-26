@@ -741,7 +741,8 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
   static thread_local struct Phixslist phixslist {
     .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
     .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
-    .gamma_contr = std::vector<double>(globals::bfestimcount, 0.), .allcontend = 1, .allcontbegin = 0
+    .gamma_contr = std::vector<double>(globals::bfestimcount, 0.), .allcontend = 1, .allcontbegin = 0, .bfestimend = 1,
+    .bfestimbegin = 0,
   };
 
   static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
@@ -1030,6 +1031,16 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     phixslist->allcontbegin = allcontbegin;
     phixslist->allcontend = allcontend;
+
+    phixslist->bfestimend =
+        std::distance(globals::bfestim_nu_edge.cbegin(),
+                      std::upper_bound(globals::bfestim_nu_edge.cbegin(), globals::bfestim_nu_edge.cend(), nu));
+
+    phixslist->bfestimbegin = std::distance(
+        globals::bfestim_nu_edge.data(),
+        std::lower_bound(
+            globals::bfestim_nu_edge.data(), globals::bfestim_nu_edge.data() + phixslist->bfestimend, nu,
+            [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }));
   }
 
   for (i = allcontbegin; i < allcontend; i++) {

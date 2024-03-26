@@ -23,6 +23,8 @@ struct Phixslist {
   std::vector<double> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
   int allcontend{-1};
   int allcontbegin{0};
+  int bfestimend{-1};
+  int bfestimbegin{0};
 };
 
 #include "artisoptions.h"
