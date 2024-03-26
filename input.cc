@@ -1580,7 +1580,7 @@ static void read_atomicdata() {
           if (is_nlte(element, ion, level)) {
             fullnlteexcitedlevelcount++;
             globals::total_nlte_levels++;
-            assert_always(found_lte_only_level = false);  // NLTE levels must be consecutive
+            assert_always(found_lte_only_level == false);  // NLTE levels must be consecutive
           } else {
             found_lte_only_level = true;
           }
