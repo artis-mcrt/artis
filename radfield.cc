@@ -1068,9 +1068,10 @@ auto get_bfrate_estimator(const int element, const int lowerion, const int lower
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {
-      if (globals::allcont[allcontindex].bfestimindex >= 0) {
+      const auto bfestimindex = globals::allcont[allcontindex].bfestimindex;
+      if (bfestimindex >= 0) {
         const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-        return prev_bfrate_normed[nonemptymgi * globals::bfestimcount + allcontindex];
+        return prev_bfrate_normed[nonemptymgi * globals::bfestimcount + bfestimindex];
       }
     }
   }
