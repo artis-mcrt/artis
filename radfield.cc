@@ -197,7 +197,7 @@ static void add_detailed_line(const int lineindex)
 void init(int my_rank, int ndo_nonempty)
 // this should be called only after the atomic data is in memory
 {
-  const int nonempty_npts_model = grid::get_nonempty_npts_model();
+  const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
   J_normfactor.resize(nonempty_npts_model + 1);
   J.resize(nonempty_npts_model + 1);
@@ -334,7 +334,7 @@ void init(int my_rank, int ndo_nonempty)
       if (globals::rank_in_node == 0) {
         my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
       }
-      auto size = static_cast<MPI_Aint>(my_rank_cells * globals::nbfcontinua * sizeof(float));
+      auto size = static_cast<MPI_Aint>(my_rank_cells * globals::bfestimcount * sizeof(float));
       int disp_unit = sizeof(float);
       MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed,
                               &win_prev_bfrate_normed);
@@ -342,16 +342,16 @@ void init(int my_rank, int ndo_nonempty)
     }
 #else
     {
-      prev_bfrate_normed = static_cast<float *>(malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(float)));
+      prev_bfrate_normed = static_cast<float *>(malloc(nonempty_npts_model * globals::bfestimcount * sizeof(float)));
     }
 #endif
     printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
-             nonempty_npts_model * globals::nbfcontinua * sizeof(float) / 1024. / 1024.);
+             nonempty_npts_model * globals::bfestimcount * sizeof(float) / 1024. / 1024.);
 
-    bfrate_raw.resize(nonempty_npts_model * globals::nbfcontinua);
+    bfrate_raw.resize(nonempty_npts_model * globals::bfestimcount);
 
     printout("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy %.3f MB\n",
-             nonempty_npts_model * globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
+             nonempty_npts_model * globals::bfestimcount * sizeof(double) / 1024. / 1024.);
   }
 
   zero_estimators();
@@ -640,9 +640,9 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
                                                             return nu_edge * last_phixs_nuovernuedge < nu_cmf;
                                                           }));
 
-  const int nbfcontinua = globals::nbfcontinua;
+  const auto bfestimcount = globals::bfestimcount;
   for (int allcontindex = allcontbegin; allcontindex < allcontend; allcontindex++) {
-    atomicadd(bfrate_raw[nonemptymgi * nbfcontinua + allcontindex],
+    atomicadd(bfrate_raw[nonemptymgi * bfestimcount + allcontindex],
               phixslist.gamma_contr[allcontindex] * distance_e_cmf_over_nu);
   }
 }
@@ -1040,7 +1040,7 @@ void normalise_bf_estimators(const int modelgridindex, const int nonemptymgi,
     printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
     assert_always(nonemptymgi >= 0);
     for (int i = 0; i < globals::nbfcontinua; i++) {
-      const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
+      const int mgibfindex = nonemptymgi * globals::bfestimcount + i;
       prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * estimator_normfactor_over_H;
     }
   }
