@@ -1453,7 +1453,7 @@ static void setup_phixs_list() {
     globals::bfestim_nu_edge.shrink_to_fit();
     assert_always(globals::bfestimcount == std::ssize(globals::bfestim_nu_edge));
   }
-  printout("[info] BF estimators activated for %d photoionisation transitions\n", globals::bfestimcount);
+  printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
 
   if (globals::nbfcontinua > 0) {
 // copy the photoionisation tables into one contiguous block of memory
