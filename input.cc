@@ -1416,7 +1416,7 @@ static void setup_phixs_list() {
           nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
           if (LEVEL_HAS_BFEST(get_atomicnumber(element), get_ionstage(element, ion), level)) {
-            nonconstallcont[allcontindex].bfestimindex = globals::bfestimcount;
+            nonconstallcont[allcontindex].bfestimindex = allcontindex;
             globals::bfestimcount++;
           } else {
             nonconstallcont[allcontindex].bfestimindex = -1;
