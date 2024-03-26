@@ -1036,7 +1036,7 @@ void normalise_J(const int modelgridindex, const double estimator_normfactor_ove
   }
 }
 
-void normalise_bf_estimators(const int modelgridindex, const int nonemptymgi,
+void normalise_bf_estimators(const int modelgridindex, const ptrdiff_t nonemptymgi,
                              const double estimator_normfactor_over_H) {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
