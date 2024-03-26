@@ -132,7 +132,7 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos, double tstart,
                                      int cellindex, enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>;
 
-[[nodiscard]] static inline auto get_elem_abundance(int modelgridindex, int element) -> float
+[[nodiscard]] inline auto get_elem_abundance(int modelgridindex, int element) -> float
 // mass fraction of an element (all isotopes combined)
 {
   return modelgrid[modelgridindex].composition[element].abundance;

@@ -464,7 +464,7 @@ static auto get_bin_nuJ(int modelgridindex, int binindex) -> double {
   return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].nuJ_raw * J_normfactor[nonemptymgi];
 }
 
-static inline auto get_bin_nu_bar(int modelgridindex, int binindex) -> double
+static auto get_bin_nu_bar(int modelgridindex, int binindex) -> double
 // importantly, this is average beween the current and previous timestep
 {
   const double nuJ_sum = get_bin_nuJ(modelgridindex, binindex);
@@ -472,17 +472,17 @@ static inline auto get_bin_nu_bar(int modelgridindex, int binindex) -> double
   return nuJ_sum / J_sum;
 }
 
-static inline auto get_bin_contribcount(int modelgridindex, int binindex) -> int {
+static auto get_bin_contribcount(int modelgridindex, int binindex) -> int {
   const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].contribcount;
 }
 
-static inline auto get_bin_W(int modelgridindex, int binindex) -> float {
+static auto get_bin_W(int modelgridindex, int binindex) -> float {
   const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   return radfieldbin_solutions[nonemptymgi * RADFIELDBINCOUNT + binindex].W;
 }
 
-static inline auto get_bin_T_R(int modelgridindex, int binindex) -> float {
+static auto get_bin_T_R(int modelgridindex, int binindex) -> float {
   const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   return radfieldbin_solutions[nonemptymgi * RADFIELDBINCOUNT + binindex].T_R;
 }
