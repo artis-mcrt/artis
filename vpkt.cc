@@ -34,31 +34,31 @@ struct VSpecPol {
   float delta_t{NAN};
 };
 
-VSpecPol **vspecpol = nullptr;
+static VSpecPol **vspecpol = nullptr;
 
-float lower_freq_vspec[VMNUBINS];
-float delta_freq_vspec[VMNUBINS];
+static float lower_freq_vspec[VMNUBINS];
+static float delta_freq_vspec[VMNUBINS];
 
 // --------- INPUT PARAMETERS -----------
 
-int Nobs;      // Number of observer directions
-int Nspectra;  // Number of virtual packet spectra per observer direction (total + elements switched off)
-std::vector<double> nz_obs_vpkt;
-std::vector<double> phiobs;
-double VSPEC_TIMEMIN_input;
-double VSPEC_TIMEMAX_input;
-int Nrange;  // Number of wavelength ranges
+static int Nobs;      // Number of observer directions
+static int Nspectra;  // Number of virtual packet spectra per observer direction (total + elements switched off)
+static std::vector<double> nz_obs_vpkt;
+static std::vector<double> phiobs;
+static double VSPEC_TIMEMIN_input;
+static double VSPEC_TIMEMAX_input;
+static int Nrange;  // Number of wavelength ranges
 
-std::vector<double> VSPEC_NUMIN_input;
-std::vector<double> VSPEC_NUMAX_input;
+static std::vector<double> VSPEC_NUMIN_input;
+static std::vector<double> VSPEC_NUMAX_input;
 double cell_is_optically_thick_vpkt;
-double tau_max_vpkt;
+static double tau_max_vpkt;
 
-std::vector<int> exclude;  // vector of opacity contribution setups:
-                           // 0: full opacity
-                           // -1: no line opacity; -2: no bf opacity; -3: no ff opacity; -4: no es opacity,
-                           // +ve: exclude element with atomic number's contribution to bound-bound opacity
-std::vector<double> tau_vpkt;
+static std::vector<int> exclude;  // vector of opacity contribution setups:
+                                  // 0: full opacity
+                                  // -1: no line opacity; -2: no bf opacity; -3: no ff opacity; -4: no es opacity,
+                                  // +ve: exclude element with atomic number's contribution to bound-bound opacity
+static std::vector<double> tau_vpkt;
 
 // --------- VPacket GRID -----------
 
@@ -68,19 +68,19 @@ struct vgrid {
   double zvel{NAN};
 };
 
-struct vgrid vgrid_i[VGRID_NY][VGRID_NZ];
-struct vgrid vgrid_q[VGRID_NY][VGRID_NZ];
-struct vgrid vgrid_u[VGRID_NY][VGRID_NZ];
+static struct vgrid vgrid_i[VGRID_NY][VGRID_NZ];
+static struct vgrid vgrid_q[VGRID_NY][VGRID_NZ];
+static struct vgrid vgrid_u[VGRID_NY][VGRID_NZ];
 
-int Nrange_grid;
-double tmin_grid;
-double tmax_grid;
-std::vector<double> nu_grid_min;
-std::vector<double> nu_grid_max;
-bool vgrid_on;
+static int Nrange_grid;
+static double tmin_grid;
+static double tmax_grid;
+static std::vector<double> nu_grid_min;
+static std::vector<double> nu_grid_max;
+static bool vgrid_on;
 
-double dlogt_vspec{NAN};
-double dlognu_vspec{NAN};
+static double dlogt_vspec{NAN};
+static double dlognu_vspec{NAN};
 
 // number of virtual packets in a given timestep
 int nvpkt;

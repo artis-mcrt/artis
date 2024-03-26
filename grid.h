@@ -24,6 +24,7 @@ struct ModelCellElement {
   float *partfunct;       /// Pointer to an array of floats which contains the partition functions
                           /// of all included ionisation stages for the element.
 };
+
 struct ModelGridCell {
   float Te = -1.;
   float TR = -1.;
