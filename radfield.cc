@@ -1069,7 +1069,7 @@ auto get_bfrate_estimator(const int element, const int lowerion, const int lower
     const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {
       const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-      return prev_bfrate_normed[nonemptymgi * globals::nbfcontinua + allcontindex];
+      return prev_bfrate_normed[nonemptymgi * globals::bfestimcount + allcontindex];
     }
   }
 
@@ -1237,7 +1237,7 @@ void write_restart_data(FILE *gridsave_file) {
         const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         fprintf(gridsave_file, "%d\n", modelgridindex);
         for (int i = 0; i < nbfcontinua; i++) {
-          fprintf(gridsave_file, "%a ", prev_bfrate_normed[nonemptymgi * nbfcontinua + i]);
+          fprintf(gridsave_file, "%a ", prev_bfrate_normed[nonemptymgi * bfestimcount + i]);
         }
       }
     }
@@ -1341,13 +1341,12 @@ void read_restart_data(FILE *gridsave_file) {
         int mgi_in = 0;
         assert_always(fscanf(gridsave_file, "%d\n", &mgi_in) == 1);
         assert_always(mgi_in == modelgridindex);
-        for (int i = 0; i < globals::nbfcontinua; i++) {
+        for (int i = 0; i < globals::bfestimcount; i++) {
           float bfrate_normed = 0;
           assert_always(fscanf(gridsave_file, "%a ", &bfrate_normed) == 1);
 
-          const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
           if (globals::rank_in_node == 0) {
-            prev_bfrate_normed[mgibfindex] = bfrate_normed;
+            prev_bfrate_normed[nonemptymgi * globals::bfestimcount + i] = bfrate_normed;
           }
         }
       }
