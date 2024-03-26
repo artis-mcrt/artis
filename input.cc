@@ -1438,7 +1438,8 @@ static void setup_phixs_list() {
 
     for (int i = 0; i < globals::nbfcontinua; i++) {
       auto &cont = nonconstallcont[i];
-      if (LEVEL_HAS_BFEST(get_atomicnumber(cont.element), get_ionstage(cont.element, cont.ion), cont.level)) {
+      if (DETAILED_BF_ESTIMATORS_ON &&
+          LEVEL_HAS_BFEST(get_atomicnumber(cont.element), get_ionstage(cont.element, cont.ion), cont.level)) {
         cont.bfestimindex = globals::bfestimcount;
         globals::bfestimcount++;
       } else {

@@ -741,8 +741,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
   static thread_local struct Phixslist phixslist {
     .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
     .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
-    .gamma_contr = std::vector<double>(DETAILED_BF_ESTIMATORS_ON ? globals::nbfcontinua : 0, 0.), .allcontend = 1,
-    .allcontbegin = 0
+    .gamma_contr = std::vector<double>(globals::bfestimcount, 0.), .allcontend = 1, .allcontbegin = 0
   };
 
   static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
@@ -1037,6 +1036,7 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
     const int element = globals::allcont[i].element;
     const int ion = globals::allcont[i].ion;
     const int level = globals::allcont[i].level;
+    const auto bfestimindex = globals::allcont[i].bfestimindex;
     /// The bf process happens only if the current cell contains
     /// the involved atomic species
 
@@ -1078,7 +1078,9 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
         }
 
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) {
-          phixslist->gamma_contr[i] = sigma_contr;
+          if (bfestimindex >= 0) {
+            phixslist->gamma_contr[bfestimindex] = sigma_contr;
+          }
         }
 
         chi_bf_sum += nnlevel * sigma_contr;
@@ -1089,14 +1091,18 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
         // ignore this particular process
         phixslist->chi_bf_sum[i] = chi_bf_sum;
         if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-          phixslist->gamma_contr[i] = 0.;
+          if (bfestimindex >= 0) {
+            phixslist->gamma_contr[bfestimindex] = 0.;
+          }
         }
       }
     } else if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
       // no element present or not an important level
       phixslist->chi_bf_sum[i] = chi_bf_sum;
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-        phixslist->gamma_contr[i] = 0.;
+        if (bfestimindex >= 0) {
+          phixslist->gamma_contr[bfestimindex] = 0.;
+        }
       }
     }
   }

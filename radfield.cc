@@ -641,12 +641,11 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
                                                           }));
 
   const auto bfestimcount = globals::bfestimcount;
-  for (int allcontindex = allcontbegin; allcontindex < allcontend; allcontindex++) {
-    const auto bfestimindex = globals::allcont[allcontindex].bfestimindex;
-    if (bfestimindex >= 0) {
-      atomicadd(bfrate_raw[nonemptymgi * bfestimcount + bfestimindex],
-                phixslist.gamma_contr[allcontindex] * distance_e_cmf_over_nu);
-    }
+  const auto bfestimbegin = globals::allcont[allcontbegin].bfestimindex;
+  const auto bfestimend = globals::allcont[allcontend].bfestimindex;
+  for (int bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
+    atomicadd(bfrate_raw[nonemptymgi * bfestimcount + bfestimindex],
+              phixslist.gamma_contr[bfestimindex] * distance_e_cmf_over_nu);
   }
 }
 
