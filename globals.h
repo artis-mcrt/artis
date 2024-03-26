@@ -254,6 +254,7 @@ extern std::vector<BFListEntry> bflist;
 // for USE_LUT_BFHEATING = true
 extern double *bfheating_coeff;
 
+extern std::vector<double> bfestim_nu_edge;
 extern std::vector<double> allcont_nu_edge;
 extern const FullPhotoionTransition *allcont;
 

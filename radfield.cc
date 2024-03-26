@@ -626,23 +626,17 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
   const double distance_e_cmf_over_nu =
       distance_e_cmf / nu_cmf * doppler_nucmf_on_nurf;  // TODO: Luke: why did I put a doppler factor here?
 
-  // I think the nu_cmf slightly differs from when the phixslist was calculated
-  // so the nu condition on this nu_cmf can truncate the phixslist
-  const int allcontend =
-      std::distance(globals::allcont_nu_edge.data(),
-                    std::upper_bound(globals::allcont_nu_edge.data(),
-                                     globals::allcont_nu_edge.data() + phixslist.allcontend, nu_cmf));
-
-  const int allcontbegin = std::distance(globals::allcont_nu_edge.data(),
-                                         std::lower_bound(globals::allcont_nu_edge.data() + phixslist.allcontbegin,
-                                                          globals::allcont_nu_edge.data() + allcontend, nu_cmf,
-                                                          [](const double nu_edge, const double nu_cmf) {
-                                                            return nu_edge * last_phixs_nuovernuedge < nu_cmf;
-                                                          }));
-
   const auto bfestimcount = globals::bfestimcount;
-  const auto bfestimbegin = globals::allcont[allcontbegin].bfestimindex;
-  const auto bfestimend = globals::allcont[allcontend].bfestimindex;
+  const int bfestimend = std::distance(
+      globals::bfestim_nu_edge.data(),
+      std::upper_bound(globals::bfestim_nu_edge.data(), globals::bfestim_nu_edge.data() + bfestimcount, nu_cmf));
+
+  const int bfestimbegin = std::distance(
+      globals::bfestim_nu_edge.data(),
+      std::lower_bound(
+          globals::bfestim_nu_edge.data(), globals::bfestim_nu_edge.data() + bfestimend, nu_cmf,
+          [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }));
+
   for (int bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
     atomicadd(bfrate_raw[nonemptymgi * bfestimcount + bfestimindex],
               phixslist.gamma_contr[bfestimindex] * distance_e_cmf_over_nu);

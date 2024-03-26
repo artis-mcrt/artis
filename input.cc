@@ -1436,11 +1436,13 @@ static void setup_phixs_list() {
     std::sort(nonconstallcont, nonconstallcont + globals::nbfcontinua,
               [](const auto &a, const auto &b) { return static_cast<bool>(a.nu_edge < b.nu_edge); });
 
+    globals::bfestim_nu_edge.clear();
     for (int i = 0; i < globals::nbfcontinua; i++) {
       auto &cont = nonconstallcont[i];
       if (DETAILED_BF_ESTIMATORS_ON &&
           LEVEL_HAS_BFEST(get_atomicnumber(cont.element), get_ionstage(cont.element, cont.ion), cont.level)) {
         cont.bfestimindex = globals::bfestimcount;
+        globals::bfestim_nu_edge.push_back(cont.nu_edge);
         globals::bfestimcount++;
       } else {
         cont.bfestimindex = -1;
@@ -1448,6 +1450,8 @@ static void setup_phixs_list() {
     }
 
     globals::allcont_nu_edge.resize(globals::nbfcontinua, 0.);
+    globals::bfestim_nu_edge.shrink_to_fit();
+    assert_always(globals::bfestimcount == std::ssize(globals::bfestim_nu_edge));
   }
   printout("[info] BF estimators activated for %d photoionisation transitions\n", globals::bfestimcount);
 

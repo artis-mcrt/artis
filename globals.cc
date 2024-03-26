@@ -65,6 +65,7 @@ double *bfheating_coeff = nullptr;
 
 /// PHIXSLIST
 
+std::vector<double> bfestim_nu_edge;
 std::vector<double> allcont_nu_edge;
 const FullPhotoionTransition *allcont = nullptr;
 
