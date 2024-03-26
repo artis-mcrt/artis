@@ -1198,27 +1198,21 @@ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
-  double gammacorr = -1;
-
-  if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {
-    gammacorr = radfield::get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
-    // gammacorr will be -1 if no estimators available
-    if (gammacorr > 0) {
-      return gammacorr;
-    }
-  }
-
-  if (use_cellcache) {
-    gammacorr = globals::cellcache[cellcacheslotid]
-                    .chelements[element]
-                    .chions[ion]
-                    .chlevels[level]
-                    .chphixstargets[phixstargetindex]
-                    .corrphotoioncoeff;
-  }
+  double gammacorr = (use_cellcache) ? globals::cellcache[cellcacheslotid]
+                                           .chelements[element]
+                                           .chions[ion]
+                                           .chlevels[level]
+                                           .chphixstargets[phixstargetindex]
+                                           .corrphotoioncoeff
+                                     : -1;
 
   if (!use_cellcache || gammacorr < 0) {
-    {
+    if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {
+      gammacorr = radfield::get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
+      // gammacorr will be -1 if no estimators available
+    }
+
+    if (!DETAILED_BF_ESTIMATORS_ON || gammacorr < 0) {
       if constexpr (!USE_LUT_PHOTOION) {
         gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
       } else {
