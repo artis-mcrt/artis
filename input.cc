@@ -1575,10 +1575,14 @@ static void read_atomicdata() {
         globals::elements[element].ions[ion].first_nlte = globals::total_nlte_levels;
         const int nlevels = get_nlevels(element, ion);
         int fullnlteexcitedlevelcount = 0;
+        bool found_lte_only_level = false;
         for (int level = 1; level < nlevels; level++) {
           if (is_nlte(element, ion, level)) {
             fullnlteexcitedlevelcount++;
             globals::total_nlte_levels++;
+            assert_always(found_lte_only_level = false);  // NLTE levels must be consecutive
+          } else {
+            found_lte_only_level = true;
           }
         }
         globals::elements[element].ions[ion].nlevels_nlte = fullnlteexcitedlevelcount;
