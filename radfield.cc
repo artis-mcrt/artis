@@ -1063,17 +1063,14 @@ static auto get_bfcontindex(const int element, const int lowerion, const int low
 
 auto get_bfrate_estimator(const int element, const int lowerion, const int lower, const int phixstargetindex,
                           const int modelgridindex) -> double {
-  if constexpr (!DETAILED_BF_ESTIMATORS_ON) {
-    return -1;
-  }
-  const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
-  if (allcontindex >= 0) {
-    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-    return prev_bfrate_normed[nonemptymgi * globals::nbfcontinua + allcontindex];
+  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+    const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
+    if (allcontindex >= 0) {
+      const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+      return prev_bfrate_normed[nonemptymgi * globals::nbfcontinua + allcontindex];
+    }
   }
 
-  printout("no bf rate for element Z=%d ionstage %d lower %d phixstargetindex %d\n", get_atomicnumber(element),
-           get_ionstage(element, lowerion), lower, phixstargetindex);
   return -1.;
 }
 
