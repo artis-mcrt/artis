@@ -1243,7 +1243,7 @@ void write_restart_data(FILE *gridsave_file) {
         const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         fprintf(gridsave_file, "%d\n", modelgridindex);
         for (int i = 0; i < bfestimcount; i++) {
-          fprintf(gridsave_file, "%a ", prev_bfrate_normed[nonemptymgi * bfestimcount + bfestimcount]);
+          fprintf(gridsave_file, "%a ", prev_bfrate_normed[nonemptymgi * bfestimcount + i]);
         }
       }
     }
