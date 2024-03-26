@@ -1070,7 +1070,7 @@ auto get_bfrate_estimator(const int element, const int lowerion, const int lower
       const auto bfestimindex = globals::allcont[allcontindex].bfestimindex;
       if (bfestimindex >= 0) {
         const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-        return prev_bfrate_normed[nonemptymgi * globals::bfestimcount + allcontindex];
+        return prev_bfrate_normed[nonemptymgi * globals::bfestimcount + bfestimindex];
       }
     }
   }
