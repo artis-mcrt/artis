@@ -1069,7 +1069,6 @@ auto get_bfrate_estimator(const int element, const int lowerion, const int lower
     if (allcontindex >= 0) {
       const auto bfestimindex = globals::allcont[allcontindex].bfestimindex;
       if (bfestimindex >= 0) {
-        assert_always(allcontindex == globals::allcont[allcontindex].bfestimindex);
         const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         return prev_bfrate_normed[nonemptymgi * globals::bfestimcount + allcontindex];
       }
