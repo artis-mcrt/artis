@@ -1041,8 +1041,8 @@ void normalise_bf_estimators(const int modelgridindex, const int nonemptymgi,
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
     assert_always(nonemptymgi >= 0);
-    for (int i = 0; i < globals::nbfcontinua; i++) {
-      const int mgibfindex = nonemptymgi * globals::bfestimcount + i;
+    for (int i = 0; i < globals::bfestimcount; i++) {
+      const auto mgibfindex = nonemptymgi * globals::bfestimcount + i;
       prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * estimator_normfactor_over_H;
     }
   }
@@ -1242,8 +1242,8 @@ void write_restart_data(FILE *gridsave_file) {
       if (grid::get_numassociatedcells(modelgridindex) > 0) {
         const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         fprintf(gridsave_file, "%d\n", modelgridindex);
-        for (int i = 0; i < nbfcontinua; i++) {
-          fprintf(gridsave_file, "%a ", prev_bfrate_normed[nonemptymgi * bfestimcount + i]);
+        for (int i = 0; i < bfestimcount; i++) {
+          fprintf(gridsave_file, "%a ", prev_bfrate_normed[nonemptymgi * bfestimcount + bfestimcount]);
         }
       }
     }
