@@ -144,7 +144,7 @@ ifeq ($(shell uname -s),Darwin)
 	# add -lprofiler for gperftools
 	# LDFLAGS += $(LIB)
 	# LDFLAGS += -lprofiler
-	CXXFLAGS += $(shell pkg-config --cflags ompi)
+	# CXXFLAGS += $(shell pkg-config --cflags ompi)
 
 else
 	# sometimes the login nodes have slighty different CPUs
