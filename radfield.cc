@@ -627,26 +627,15 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
       distance_e_cmf / nu_cmf * doppler_nucmf_on_nurf;  // TODO: Luke: why did I put a doppler factor here?
 
   const auto bfestimcount = globals::bfestimcount;
-
-  auto nu_min = nu_cmf * last_phixs_nuovernuedge;
-  if (phixslist.allcontbegin > 0 && phixslist.allcontbegin < globals::nbfcontinua) {
-    nu_min = std::max(nu_min, globals::allcont_nu_edge[phixslist.allcontbegin] / last_phixs_nuovernuedge);
-  }
-
-  auto nu_max = nu_cmf;
-  if (phixslist.allcontend < globals::nbfcontinua) {
-    nu_max = std::min(nu_max, globals::allcont_nu_edge[phixslist.allcontend - 1]);
-  }
-
   const int bfestimend = std::distance(
       globals::bfestim_nu_edge.data(),
-      std::upper_bound(globals::bfestim_nu_edge.data(), globals::bfestim_nu_edge.data() + bfestimcount, nu_max));
+      std::upper_bound(globals::bfestim_nu_edge.data(), globals::bfestim_nu_edge.data() + bfestimcount, nu_cmf));
 
   const int bfestimbegin = std::distance(
       globals::bfestim_nu_edge.data(),
       std::lower_bound(
-          globals::bfestim_nu_edge.data(), globals::bfestim_nu_edge.data() + bfestimend, nu_min,
-          [](const double nu_edge, const double nu_min) { return nu_edge * last_phixs_nuovernuedge < nu_min; }));
+          globals::bfestim_nu_edge.data(), globals::bfestim_nu_edge.data() + bfestimend, nu_cmf,
+          [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }));
 
   for (int bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
     atomicadd(bfrate_raw[nonemptymgi * bfestimcount + bfestimindex],
