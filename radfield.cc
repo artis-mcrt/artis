@@ -1,5 +1,7 @@
 #include "radfield.h"
 
+#include <cstddef>
+
 #ifdef MPI_ON
 #include <mpi.h>
 #endif
@@ -1066,7 +1068,7 @@ auto get_bfrate_estimator(const int element, const int lowerion, const int lower
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {
-      const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+      const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
       return prev_bfrate_normed[nonemptymgi * globals::nbfcontinua + allcontindex];
     }
   }
