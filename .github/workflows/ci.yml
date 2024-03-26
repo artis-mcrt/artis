@@ -33,6 +33,7 @@ jobs:
                         kilonova_2d_2dgrid_xcomgammaphotoion,
                         kilonova_2d_3dgrid,
                         nebularonezone_1d_3dgrid,
+                        nebularonezone_1d_3dgrid_limitbfest,
                     ]
                 exclude:
                     - os: self-hosted
