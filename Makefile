@@ -180,6 +180,8 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 # Use GSL inline functions
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
+LDFLAGS += -fwhole-program
+
 ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0
 
