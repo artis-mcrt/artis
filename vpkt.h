@@ -11,9 +11,6 @@
 #include "sn3d.h"
 #include "vectors.h"
 
-auto frame_transform(std::span<const double, 3> n_rf, double *Q, double *U,
-                     std::span<const double, 3> v) -> std::array<double, 3>;
-
 void read_parameterfile_vpkt();
 void vpkt_init(int nts, int my_rank, bool continued_from_saved);
 void vpkt_call_estimators(Packet &pkt, enum packet_type type_before_rpkt);
@@ -99,6 +96,131 @@ inline double cell_is_optically_thick_vpkt;
   // for ref_2 use vector product of n_cmf with ref1
   const auto ref2 = cross_prod(ref1, n);
   return ref2;
+}
+
+[[nodiscard]] constexpr auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf,
+                                     std::span<const double, 3> v) -> std::array<double, 3> {
+  // Use Lorentz transformations to get e_cmf from e_rf
+
+  const auto beta = std::array<const double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
+  const double vsqr = dot(beta, beta);
+
+  const double gamma_rel = 1. / (sqrt(1 - vsqr));
+
+  const auto e_par = std::array<const double, 3>{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
+                                                 dot(e_rf, beta) * beta[2] / (vsqr)};
+
+  const auto e_perp = std::array<const double, 3>{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
+
+  const auto b_rf = cross_prod(n_rf, e_rf);
+
+  // const double b_par[3] = {dot(b_rf, beta) * beta[0] / (vsqr), dot(b_rf, beta) * beta[1] / (vsqr),
+  //                          dot(b_rf, beta) * beta[2] / (vsqr)};
+
+  // const double b_perp[3] = {b_rf[0] - b_par[0], b_rf[1] - b_par[1], b_rf[2] - b_par[2]};
+
+  const auto v_cr_b = cross_prod(beta, b_rf);
+
+  // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
+  //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
+
+  auto e_cmf = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
+                                     e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
+                                     e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
+  return vec_norm(e_cmf);
+}
+
+// Routine to transform the Stokes Parameters from RF to CMF
+constexpr auto frame_transform(std::span<const double, 3> n_rf, double *Q, double *U,
+                               std::span<const double, 3> v) -> std::array<double, 3> {
+  auto ref1 = std::array<double, 3>{NAN, NAN, NAN};
+
+  // Meridian frame in the RF
+  auto ref2 = meridian(n_rf, ref1);
+
+  const double Q0 = *Q;
+  const double U0 = *U;
+
+  // Compute polarisation (which is invariant)
+  const double p = sqrt(Q0 * Q0 + U0 * U0);
+
+  // We want to compute the angle between ref1 and the electric field
+  double rot_angle = 0;
+
+  if (p > 0) {
+    const double cos2rot_angle = Q0 / p;
+    const double sin2rot_angle = U0 / p;
+
+    if ((cos2rot_angle > 0) && (sin2rot_angle > 0)) {
+      rot_angle = acos(Q0 / p) / 2.;
+    } else if ((cos2rot_angle < 0) && (sin2rot_angle > 0)) {
+      rot_angle = (PI - acos(fabs(cos2rot_angle))) / 2.;
+    } else if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) {
+      rot_angle = (PI + acos(fabs(cos2rot_angle))) / 2.;
+    } else if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) {
+      rot_angle = (2. * PI - acos(fabs(cos2rot_angle))) / 2.;
+    } else if (cos2rot_angle == 0) {
+      rot_angle = 0.25 * PI;
+      if (U0 < 0) {
+        rot_angle = 0.75 * PI;
+      }
+    }
+    if (sin2rot_angle == 0) {
+      rot_angle = 0.;
+      if (Q0 < 0) {
+        rot_angle = 0.5 * PI;
+      }
+    }
+  }
+
+  // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
+
+  const auto elec_rf = std::array<double, 3>{cos(rot_angle) * ref1[0] - sin(rot_angle) * ref2[0],
+                                             cos(rot_angle) * ref1[1] - sin(rot_angle) * ref2[1],
+                                             cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
+
+  // Aberration
+  auto n_cmf = angle_ab(n_rf, v);
+
+  // Lorentz transformation of E
+  auto elec_cmf = lorentz(elec_rf, n_rf, v);
+
+  // Meridian frame in the CMF
+  ref2 = meridian(n_cmf, ref1);
+
+  // Projection of E onto ref1 and ref2
+  const double cosine_elec_ref1 = dot(elec_cmf, ref1);
+  const double cosine_elec_ref2 = dot(elec_cmf, ref2);
+
+  // Compute the angle between ref1 and the electric field
+  double theta_rot = 0.;
+  if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 < 0)) {
+    theta_rot = acos(cosine_elec_ref1);
+  } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 > 0)) {
+    theta_rot = PI + acos(fabs(cosine_elec_ref1));
+  } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 < 0)) {
+    theta_rot = PI - acos(fabs(cosine_elec_ref1));
+  } else if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 > 0)) {
+    theta_rot = 2 * PI - acos(cosine_elec_ref1);
+  }
+  if (cosine_elec_ref1 == 0) {
+    theta_rot = PI / 2.;
+  }
+  if (cosine_elec_ref2 == 0) {
+    theta_rot = 0.;
+  }
+  if (cosine_elec_ref1 > 1) {
+    theta_rot = 0.;
+  }
+  if (cosine_elec_ref1 < -1) {
+    theta_rot = PI;
+  }
+
+  // Compute Stokes Parameters in the CMF
+  *Q = cos(2 * theta_rot) * p;
+  *U = sin(2 * theta_rot) * p;
+
+  return n_cmf;
 }
 
 #endif  // VPKT_H
