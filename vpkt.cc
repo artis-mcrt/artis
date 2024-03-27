@@ -955,19 +955,6 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
   }
 }
 
-// Routine to compute the meridian frame axes ref1 and ref2
-[[nodiscard]] auto meridian(std::span<const double, 3> n, std::span<double, 3> ref1) -> std::array<double, 3> {
-  // for ref_1 use (from triple product rule)
-  const double n_xylen = sqrt(n[0] * n[0] + n[1] * n[1]);
-  ref1[0] = -1. * n[0] * n[2] / n_xylen;
-  ref1[1] = -1. * n[1] * n[2] / n_xylen;
-  ref1[2] = (1 - (n[2] * n[2])) / n_xylen;
-
-  // for ref_2 use vector product of n_cmf with ref1
-  const auto ref2 = cross_prod(ref1, n);
-  return ref2;
-}
-
 // Routine to transform the Stokes Parameters from RF to CMF
 auto frame_transform(std::span<const double, 3> n_rf, double *Q, double *U,
                      std::span<const double, 3> v) -> std::array<double, 3> {
