@@ -451,7 +451,7 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   int uppermost_ion = 0;
 
   uppermost_ion = nions - 1;
-  if (!force_lte) {
+  if (!use_lte) {
     for (int ion = 0; ion < nions - 1; ion++) {
       if (iongamma_is_zero(nonemptymgi, element, ion) &&
           (!NT_ON || ((globals::dep_estimator_gamma[nonemptymgi] == 0.) &&
@@ -504,8 +504,10 @@ void set_groundlevelpops(const int modelgridindex, const int element, const floa
   /// calculate number density of the current element (abundances are given by mass)
   const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
 
+  const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
+
   const auto ionfractions =
-      (nnelement > 0) ? calculate_ionfractions(element, modelgridindex, nne, force_lte) : std::vector<double>();
+      (nnelement > 0) ? calculate_ionfractions(element, modelgridindex, nne, use_phi_lte) : std::vector<double>();
 
   const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
 

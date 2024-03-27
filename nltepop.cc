@@ -1108,6 +1108,9 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
   //         timestep, n, grid::get_TR(n), grid::get_Te(n), grid::get_W(n), grid::get_TJ(n), grid::get_nne(n));
 
   for (int element = 0; element < get_nelements(); element++) {
+    if (!elem_has_nlte_levels(element)) {
+      continue;
+    }
     const int nions = get_nions(element);
     const int atomic_number = get_atomicnumber(element);
 
