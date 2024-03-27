@@ -118,10 +118,7 @@ inline void print_line_start() {
 #if defined TESTMODE && TESTMODE
 #define assert_testmodeonly(e) __artis_assert(e)
 #else
-#define assert_testmodeonly(e) \
-  if (!(e)) {                  \
-    __builtin_unreachable();   \
-  }
+#define assert_testmodeonly(e) (void)0
 #endif
 
 template <typename T>
