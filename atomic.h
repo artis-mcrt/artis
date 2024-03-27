@@ -85,11 +85,10 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
 /// Returns the number of target states for photoionization of (element,ion,level).
 {
   assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
   const int nions = get_nions(element);
-  const int nionisinglevels = get_ionisinglevels(element, ion);
-  if ((ion < nions - 1) && (level < nionisinglevels)) {
+  assert_testmodeonly(ion < nions);
+  if ((ion < nions - 1) && (level < get_ionisinglevels(element, ion))) {
     return globals::elements[element].ions[ion].levels[level].nphixstargets;
   }
   return 0;
