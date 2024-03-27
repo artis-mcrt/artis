@@ -311,7 +311,8 @@ static auto calculate_decaypath_branchproduct(const DecayPath &decaypath) -> dou
   // return the product of all branching factors in the decay path
 
   double branchprod = 1.;
-  for (int i = 0; i < get_decaypathlength(decaypath); i++) {
+  const auto decaypathlength = get_decaypathlength(decaypath);
+  for (int i = 0; i < decaypathlength; i++) {
     branchprod = branchprod * get_nuc_decaybranchprob(decaypath.nucindex[i], decaypath.decaytypes[i]);
   }
   return branchprod;
@@ -756,7 +757,8 @@ static auto sample_decaytime(const int decaypathindex, const double tdecaymin, c
   while (tdecay <= tdecaymin || tdecay >= tdecaymax) {
     tdecay = t_model;  // can't decay before initial model snapshot time
 
-    for (int i = 0; i < get_decaypathlength(decaypathindex); i++) {
+    const auto decaypathlength = get_decaypathlength(decaypathindex);
+    for (int i = 0; i < decaypathlength; i++) {
       const int nucindex = decaypaths[decaypathindex].nucindex[i];
       const double zrand = rng_uniform_pos();
       tdecay += -get_meanlife(nucindex) * log(zrand);
