@@ -1217,7 +1217,8 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
     // the mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays for the current element
     double isomassfracsum = 0.;
     double isomassfrac_on_nucmass_sum = 0.;
-    for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
+    const auto num_nuclides = get_num_nuclides();
+    for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
       const int nuc_z = get_nuc_z(nucindex);
       const int a = get_nuc_a(nucindex);
       if (nuc_z == atomic_number) {
@@ -1271,7 +1272,8 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 
   // total number of electrons in grid cell which are possible targets for compton scattering of gamma rays
   double nnetot = 0.;
-  for (int element = 0; element < get_nelements(); element++) {
+  const auto nelements = get_nelements();
+  for (int element = 0; element < nelements; element++) {
     const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
     nnetot += nnelement * get_atomicnumber(element);
   }
@@ -1318,7 +1320,8 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
 
   const int atomic_number = get_atomicnumber(element);
   std::set<int> a_isotopes;  // ensure we don't repeat isotopes
-  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
+  const auto num_nuclides = get_num_nuclides();
+  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const int nuc_z = get_nuc_z(nucindex);
     const int nuc_a = get_nuc_a(nucindex);
     if (nuc_z == atomic_number) {  // isotope of this element is on the network
