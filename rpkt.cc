@@ -30,21 +30,25 @@
 #include "vectors.h"
 #include "vpkt.h"
 
-static constexpr float expopac_lambdamin = 534.5;
-static constexpr float expopac_lambdamax = 35000.;
-static constexpr float expopac_deltalambda = 35.5;
-static constexpr auto expopac_nbins =
+namespace {
+
+constexpr float expopac_lambdamin = 534.5;
+constexpr float expopac_lambdamax = 35000.;
+constexpr float expopac_deltalambda = 35.5;
+constexpr auto expopac_nbins =
     static_cast<std::ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
 // kappa in cm^2/g for each bin of each non-empty cell
-static std::span<float> expansionopacities{};
+std::span<float> expansionopacities{};
 
 // kappa times Planck function for each bin of each non-empty cell
-static std::span<double> expansionopacity_planck_cumulative{};
+std::span<double> expansionopacity_planck_cumulative{};
 #ifdef MPI_ON
-static MPI_Win win_expansionopacities = MPI_WIN_NULL;
-static MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
+MPI_Win win_expansionopacities = MPI_WIN_NULL;
+MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
 #endif
+
+}  // anonymous namespace
 
 void allocate_expansionopacities() {
   if constexpr (!EXPANSIONOPACITIES_ON) {

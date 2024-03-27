@@ -29,12 +29,14 @@
 #include "rpkt.h"
 #include "sn3d.h"
 
-static double *spontrecombcoeffs = nullptr;
+namespace {
+
+double *spontrecombcoeffs = nullptr;
 
 // for USE_LUT_PHOTOION = true
-static double *corrphotoioncoeffs = nullptr;
+double *corrphotoioncoeffs = nullptr;
 
-static double *bfcooling_coeffs = nullptr;
+double *bfcooling_coeffs = nullptr;
 
 using gsl_integral_paras_gammacorr = struct {
   double nu_edge;
@@ -44,9 +46,11 @@ using gsl_integral_paras_gammacorr = struct {
   int modelgridindex;
 };
 
-static char adatafile_hash[33];
-static char compositionfile_hash[33];
-static std::array<char[33], 3> phixsfile_hash;
+char adatafile_hash[33];
+char compositionfile_hash[33];
+std::array<char[33], 3> phixsfile_hash;
+
+}  // anonymous namespace
 
 void setup_photoion_luts() {
   size_t mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);

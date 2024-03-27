@@ -22,6 +22,8 @@
 #include "sn3d.h"
 #include "vectors.h"
 
+namespace {
+
 struct stokeparams {
   double i = 0.;
   double q = 0.;
@@ -34,30 +36,30 @@ struct VSpecPol {
   float delta_t{NAN};
 };
 
-static VSpecPol **vspecpol = nullptr;
+VSpecPol **vspecpol = nullptr;
 
-static float lower_freq_vspec[VMNUBINS];
-static float delta_freq_vspec[VMNUBINS];
+float lower_freq_vspec[VMNUBINS];
+float delta_freq_vspec[VMNUBINS];
 
 // --------- INPUT PARAMETERS -----------
 
-static int Nobs;      // Number of observer directions
-static int Nspectra;  // Number of virtual packet spectra per observer direction (total + elements switched off)
-static std::vector<double> nz_obs_vpkt;
-static std::vector<double> phiobs;
-static double VSPEC_TIMEMIN_input;
-static double VSPEC_TIMEMAX_input;
-static int Nrange;  // Number of wavelength ranges
+int Nobs;      // Number of observer directions
+int Nspectra;  // Number of virtual packet spectra per observer direction (total + elements switched off)
+std::vector<double> nz_obs_vpkt;
+std::vector<double> phiobs;
+double VSPEC_TIMEMIN_input;
+double VSPEC_TIMEMAX_input;
+int Nrange;  // Number of wavelength ranges
 
-static std::vector<double> VSPEC_NUMIN_input;
-static std::vector<double> VSPEC_NUMAX_input;
-static double tau_max_vpkt;
+std::vector<double> VSPEC_NUMIN_input;
+std::vector<double> VSPEC_NUMAX_input;
+double tau_max_vpkt;
 
-static std::vector<int> exclude;  // vector of opacity contribution setups:
-                                  // 0: full opacity
-                                  // -1: no line opacity; -2: no bf opacity; -3: no ff opacity; -4: no es opacity,
-                                  // +ve: exclude element with atomic number's contribution to bound-bound opacity
-static std::vector<double> tau_vpkt;
+std::vector<int> exclude;  // vector of opacity contribution setups:
+                           // 0: full opacity
+                           // -1: no line opacity; -2: no bf opacity; -3: no ff opacity; -4: no es opacity,
+                           // +ve: exclude element with atomic number's contribution to bound-bound opacity
+std::vector<double> tau_vpkt;
 
 // --------- VPacket GRID -----------
 
@@ -67,30 +69,30 @@ struct vgrid {
   double zvel{NAN};
 };
 
-static struct vgrid vgrid_i[VGRID_NY][VGRID_NZ];
-static struct vgrid vgrid_q[VGRID_NY][VGRID_NZ];
-static struct vgrid vgrid_u[VGRID_NY][VGRID_NZ];
+struct vgrid vgrid_i[VGRID_NY][VGRID_NZ];
+struct vgrid vgrid_q[VGRID_NY][VGRID_NZ];
+struct vgrid vgrid_u[VGRID_NY][VGRID_NZ];
 
-static int Nrange_grid;
-static double tmin_grid;
-static double tmax_grid;
-static std::vector<double> nu_grid_min;
-static std::vector<double> nu_grid_max;
-static bool vgrid_on;
+int Nrange_grid;
+double tmin_grid;
+double tmax_grid;
+std::vector<double> nu_grid_min;
+std::vector<double> nu_grid_max;
+bool vgrid_on;
 
-static double dlogt_vspec{NAN};
-static double dlognu_vspec{NAN};
+double dlogt_vspec{NAN};
+double dlognu_vspec{NAN};
 
 // Virtual packet is killed when tau reaches tau_max_vpkt for ALL the different setups
 // E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt
 // because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could
 // thus contribute to the spectrum.
-static auto all_taus_past_taumax(std::vector<double> &tau, const double tau_max) -> bool {
+auto all_taus_past_taumax(std::vector<double> &tau, const double tau_max) -> bool {
   return std::ranges::all_of(tau, [tau_max](const double tau_i) { return tau_i > tau_max; });
 }
 
 // Routine to add a packet to the outcoming spectrum.
-static void add_to_vspecpol(const Packet &vpkt, const int obsbin, const int ind, const double t_arrive) {
+void add_to_vspecpol(const Packet &vpkt, const int obsbin, const int ind, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
   const int ind_comb = Nspectra * obsbin + ind;
@@ -111,8 +113,8 @@ static void add_to_vspecpol(const Packet &vpkt, const int obsbin, const int ind,
 }
 
 // Routine to add a packet to the outcoming spectrum.
-static void add_to_vpkt_grid(const Packet &vpkt, std::span<const double, 3> vel, const int wlbin, const int obsbin,
-                             std::span<const double, 3> obs) {
+void add_to_vpkt_grid(const Packet &vpkt, std::span<const double, 3> vel, const int wlbin, const int obsbin,
+                      std::span<const double, 3> obs) {
   double vref1{NAN};
   double vref2{NAN};
 
@@ -159,8 +161,8 @@ static void add_to_vpkt_grid(const Packet &vpkt, std::span<const double, 3> vel,
   }
 }
 
-static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
-                           std::span<const double, 3> obsdir, const enum packet_type type_before_rpkt) {
+void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin, std::span<const double, 3> obsdir,
+                    const enum packet_type type_before_rpkt) {
   int mgi = 0;
 
   Packet vpkt = pkt;
@@ -426,7 +428,7 @@ static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int 
   }
 }
 
-static void init_vspecpol() {
+void init_vspecpol() {
   vspecpol = static_cast<VSpecPol **>(malloc(VMTBINS * sizeof(VSpecPol *)));
 
   const int indexmax = Nspectra * Nobs;
@@ -460,7 +462,7 @@ static void init_vspecpol() {
   }
 }
 
-static void write_vspecpol(FILE *specpol_file) {
+void write_vspecpol(FILE *specpol_file) {
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
     fprintf(specpol_file, "%g ", 0.);
 
@@ -495,7 +497,7 @@ static void write_vspecpol(FILE *specpol_file) {
   }
 }
 
-static void read_vspecpol(int my_rank, int nts) {
+void read_vspecpol(int my_rank, int nts) {
   char filename[MAXFILENAMELENGTH];
 
   snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_ts%d.tmp", 0, my_rank, nts);
@@ -544,7 +546,7 @@ static void read_vspecpol(int my_rank, int nts) {
   fclose(vspecpol_file);
 }
 
-static void init_vpkt_grid() {
+void init_vpkt_grid() {
   const double ybin = 2 * globals::vmax / VGRID_NY;
   const double zbin = 2 * globals::vmax / VGRID_NZ;
 
@@ -574,7 +576,7 @@ static void init_vpkt_grid() {
   }
 }
 
-static void write_vpkt_grid(FILE *vpkt_grid_file) {
+void write_vpkt_grid(FILE *vpkt_grid_file) {
   for (int obsbin = 0; obsbin < Nobs; obsbin++) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
@@ -593,7 +595,7 @@ static void write_vpkt_grid(FILE *vpkt_grid_file) {
   }
 }
 
-static void read_vpkt_grid(const int my_rank, const int nts) {
+void read_vpkt_grid(const int my_rank, const int nts) {
   if (!vgrid_on) {
     return;
   }
@@ -622,6 +624,40 @@ static void read_vpkt_grid(const int my_rank, const int nts) {
 
   fclose(vpkt_grid_file);
 }
+
+constexpr auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf,
+                       std::span<const double, 3> v) -> std::array<double, 3> {
+  // Use Lorentz transformations to get e_cmf from e_rf
+
+  const auto beta = std::array<const double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
+  const double vsqr = dot(beta, beta);
+
+  const double gamma_rel = 1. / (sqrt(1 - vsqr));
+
+  const auto e_par = std::array<const double, 3>{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
+                                                 dot(e_rf, beta) * beta[2] / (vsqr)};
+
+  const auto e_perp = std::array<const double, 3>{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
+
+  const auto b_rf = cross_prod(n_rf, e_rf);
+
+  // const double b_par[3] = {dot(b_rf, beta) * beta[0] / (vsqr), dot(b_rf, beta) * beta[1] / (vsqr),
+  //                          dot(b_rf, beta) * beta[2] / (vsqr)};
+
+  // const double b_perp[3] = {b_rf[0] - b_par[0], b_rf[1] - b_par[1], b_rf[2] - b_par[2]};
+
+  const auto v_cr_b = cross_prod(beta, b_rf);
+
+  // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
+  //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
+
+  auto e_cmf = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
+                                     e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
+                                     e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
+  return vec_norm(e_cmf);
+}
+
+}  // anonymous namespace
 
 void vpkt_remove_temp_file(const int nts, const int my_rank) {
   char filenames[2][MAXFILENAMELENGTH];
@@ -975,38 +1011,6 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
   // for ref_2 use vector product of n_cmf with ref1
   const auto ref2 = cross_prod(ref1, n);
   return ref2;
-}
-
-static auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf,
-                    std::span<const double, 3> v) -> std::array<double, 3> {
-  // Use Lorentz transformations to get e_cmf from e_rf
-
-  const auto beta = std::array<const double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
-  const double vsqr = dot(beta, beta);
-
-  const double gamma_rel = 1. / (sqrt(1 - vsqr));
-
-  const auto e_par = std::array<const double, 3>{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
-                                                 dot(e_rf, beta) * beta[2] / (vsqr)};
-
-  const auto e_perp = std::array<const double, 3>{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
-
-  const auto b_rf = cross_prod(n_rf, e_rf);
-
-  // const double b_par[3] = {dot(b_rf, beta) * beta[0] / (vsqr), dot(b_rf, beta) * beta[1] / (vsqr),
-  //                          dot(b_rf, beta) * beta[2] / (vsqr)};
-
-  // const double b_perp[3] = {b_rf[0] - b_par[0], b_rf[1] - b_par[1], b_rf[2] - b_par[2]};
-
-  const auto v_cr_b = cross_prod(beta, b_rf);
-
-  // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
-  //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
-
-  auto e_cmf = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
-                                     e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
-                                     e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
-  return vec_norm(e_cmf);
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF

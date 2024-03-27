@@ -31,7 +31,9 @@
 
 namespace radfield {
 
-static std::vector<double> J_normfactor;
+namespace {
+
+std::vector<double> J_normfactor;
 
 struct RadFieldBinSolution {
   // these two parameters are used in the current timestep, but were calculated
@@ -46,15 +48,15 @@ struct RadFieldBin {
   int contribcount;
 };
 
-static constexpr double radfieldbins_delta_nu =
+constexpr double radfieldbins_delta_nu =
     (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
 
-static struct RadFieldBin *radfieldbins = nullptr;
-static struct RadFieldBinSolution *radfieldbin_solutions = nullptr;
+struct RadFieldBin *radfieldbins = nullptr;
+struct RadFieldBinSolution *radfieldbin_solutions = nullptr;
 
 #ifdef MPI_ON
-static MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
-static MPI_Win win_prev_bfrate_normed = MPI_WIN_NULL;
+MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
+MPI_Win win_prev_bfrate_normed = MPI_WIN_NULL;
 #endif
 
 // ** Detailed lines - Jblue_lu estimators for selected lines
@@ -65,32 +67,32 @@ struct Jb_lu_estimator {
 };
 
 // reallocate the detailed line arrays in units of BLOCKSIZEJBLUE
-static constexpr int BLOCKSIZEJBLUE = 128;
-static int detailed_linecount = 0;
+constexpr int BLOCKSIZEJBLUE = 128;
+int detailed_linecount = 0;
 
 // array of indicies into the linelist[] array for selected lines
-static int *detailed_lineindicies;
+int *detailed_lineindicies;
 
-static struct Jb_lu_estimator **prev_Jb_lu_normed = nullptr;  // value from the previous timestep
-static struct Jb_lu_estimator **Jb_lu_raw = nullptr;          // unnormalised estimator for the current timestep
+struct Jb_lu_estimator **prev_Jb_lu_normed = nullptr;  // value from the previous timestep
+struct Jb_lu_estimator **Jb_lu_raw = nullptr;          // unnormalised estimator for the current timestep
 
 // ** end detailed lines
 
-static float *prev_bfrate_normed = nullptr;  // values from the previous timestep
-static std::vector<double> bfrate_raw;       // unnormalised estimators for the current timestep
+float *prev_bfrate_normed = nullptr;  // values from the previous timestep
+std::vector<double> bfrate_raw;       // unnormalised estimators for the current timestep
 
 // expensive debugging mode to track the contributions to each bound-free rate estimator
 
-static std::vector<double> J;  // after normalisation: [ergs/s/sr/cm2/Hz]
+std::vector<double> J;  // after normalisation: [ergs/s/sr/cm2/Hz]
 #ifdef DO_TITER
-static std::vector<double> J_reduced_save;
+std::vector<double> J_reduced_save;
 #endif
 
 // J and nuJ are accumulated and then normalised in-place
 // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
-static std::vector<double> nuJ;
+std::vector<double> nuJ;
 #ifdef DO_TITER
-static std::vector<double> nuJ_reduced_save;
+std::vector<double> nuJ_reduced_save;
 #endif
 
 struct gsl_planck_integral_paras {
@@ -103,9 +105,9 @@ struct gsl_T_R_solver_paras {
   int binindex;
 };
 
-static FILE *radfieldfile = nullptr;
+FILE *radfieldfile = nullptr;
 
-static constexpr auto get_bin_nu_upper(int binindex) -> double {
+constexpr auto get_bin_nu_upper(int binindex) -> double {
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
   if (binindex == RADFIELDBINCOUNT - 1) {
     return nu_upper_superbin;
@@ -113,14 +115,14 @@ static constexpr auto get_bin_nu_upper(int binindex) -> double {
   return nu_lower_first_initial + (binindex + 1) * radfieldbins_delta_nu;
 }
 
-static constexpr auto get_bin_nu_lower(int binindex) -> double {
+constexpr auto get_bin_nu_lower(int binindex) -> double {
   if (binindex > 0) {
     return get_bin_nu_upper(binindex - 1);
   }
   return nu_lower_first_initial;
 }
 
-static constexpr auto select_bin(const double nu) -> int {
+constexpr auto select_bin(const double nu) -> int {
   // find the left-closed bin [nu_lower, nu_upper) that nu belongs to
 
   if (nu < nu_lower_first_initial) {
@@ -145,7 +147,7 @@ static constexpr auto select_bin(const double nu) -> int {
   return binindex;
 }
 
-static void realloc_detailed_lines(const int new_size) {
+void realloc_detailed_lines(const int new_size) {
   auto *newptr = static_cast<int *>(realloc(detailed_lineindicies, new_size * sizeof(int)));
   if (newptr == nullptr) {
     printout("ERROR: Not enough memory to reallocate detailed Jblue estimator line list\n");
@@ -170,7 +172,7 @@ static void realloc_detailed_lines(const int new_size) {
   }
 }
 
-static void add_detailed_line(const int lineindex)
+void add_detailed_line(const int lineindex)
 // associate a Jb_lu estimator with a particular lineindex to be used
 // instead of the general radiation field model
 {
@@ -193,6 +195,51 @@ static void add_detailed_line(const int lineindex)
   detailed_linecount++;
   // printout("Added Jblue estimator for lineindex %d count %d\n", lineindex, detailed_linecount);
 }
+
+auto get_bin_J(int modelgridindex, int binindex) -> double
+// get the normalised J_nu
+{
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
+  assert_testmodeonly(modelgridindex < grid::get_npts_model());
+  assert_testmodeonly(binindex >= 0);
+  assert_testmodeonly(binindex < RADFIELDBINCOUNT);
+  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].J_raw * J_normfactor[nonemptymgi];
+}
+
+auto get_bin_nuJ(int modelgridindex, int binindex) -> double {
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
+  assert_testmodeonly(modelgridindex < grid::get_npts_model());
+  assert_testmodeonly(binindex >= 0);
+  assert_testmodeonly(binindex < RADFIELDBINCOUNT);
+  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].nuJ_raw * J_normfactor[nonemptymgi];
+}
+
+auto get_bin_nu_bar(int modelgridindex, int binindex) -> double
+// importantly, this is average beween the current and previous timestep
+{
+  const double nuJ_sum = get_bin_nuJ(modelgridindex, binindex);
+  const double J_sum = get_bin_J(modelgridindex, binindex);
+  return nuJ_sum / J_sum;
+}
+
+auto get_bin_contribcount(int modelgridindex, int binindex) -> int {
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].contribcount;
+}
+
+auto get_bin_W(int modelgridindex, int binindex) -> float {
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  return radfieldbin_solutions[nonemptymgi * RADFIELDBINCOUNT + binindex].W;
+}
+
+auto get_bin_T_R(int modelgridindex, int binindex) -> float {
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  return radfieldbin_solutions[nonemptymgi * RADFIELDBINCOUNT + binindex].T_R;
+}
+
+}  // anonymous namespace
 
 void init(int my_rank, int ndo_nonempty)
 // this should be called only after the atomic data is in memory
@@ -442,49 +489,6 @@ auto get_Jb_lu_contribcount(const int modelgridindex, const int jblueindex) -> i
   assert_always(jblueindex >= 0);
   assert_always(jblueindex < detailed_linecount);
   return prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount;
-}
-
-static auto get_bin_J(int modelgridindex, int binindex) -> double
-// get the normalised J_nu
-{
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
-  assert_testmodeonly(binindex >= 0);
-  assert_testmodeonly(binindex < RADFIELDBINCOUNT);
-  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].J_raw * J_normfactor[nonemptymgi];
-}
-
-static auto get_bin_nuJ(int modelgridindex, int binindex) -> double {
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
-  assert_testmodeonly(binindex >= 0);
-  assert_testmodeonly(binindex < RADFIELDBINCOUNT);
-  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].nuJ_raw * J_normfactor[nonemptymgi];
-}
-
-static auto get_bin_nu_bar(int modelgridindex, int binindex) -> double
-// importantly, this is average beween the current and previous timestep
-{
-  const double nuJ_sum = get_bin_nuJ(modelgridindex, binindex);
-  const double J_sum = get_bin_J(modelgridindex, binindex);
-  return nuJ_sum / J_sum;
-}
-
-static auto get_bin_contribcount(int modelgridindex, int binindex) -> int {
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].contribcount;
-}
-
-static auto get_bin_W(int modelgridindex, int binindex) -> float {
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  return radfieldbin_solutions[nonemptymgi * RADFIELDBINCOUNT + binindex].W;
-}
-
-static auto get_bin_T_R(int modelgridindex, int binindex) -> float {
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  return radfieldbin_solutions[nonemptymgi * RADFIELDBINCOUNT + binindex].T_R;
 }
 
 void write_to_file(int modelgridindex, int timestep) {

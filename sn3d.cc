@@ -61,17 +61,19 @@ std::mt19937 stdrng{std::random_device{}()};
 
 std::ofstream output_file;
 
-static FILE *linestat_file = nullptr;
-static auto real_time_start = -1;
-static auto time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
-static FILE *estimators_file = nullptr;
+namespace {
+
+FILE *linestat_file = nullptr;
+auto real_time_start = -1;
+auto time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
+FILE *estimators_file = nullptr;
 
 #ifdef MPI_ON
-static size_t mpi_grid_buffer_size = 0;
-static char *mpi_grid_buffer = nullptr;
+size_t mpi_grid_buffer_size = 0;
+char *mpi_grid_buffer = nullptr;
 #endif
 
-static void initialise_linestat_file() {
+void initialise_linestat_file() {
   if (globals::simulation_continued_from_saved && !RECORD_LINESTAT) {
     // only write linestat.out on the first run, unless it contains statistics for each timestep
     return;
@@ -107,7 +109,7 @@ static void initialise_linestat_file() {
   fflush(linestat_file);
 }
 
-static void write_deposition_file(const int nts, const int my_rank, const int nstart, const int ndo) {
+void write_deposition_file(const int nts, const int my_rank, const int nstart, const int ndo) {
   printout("Calculating deposition rates...\n");
   auto const time_write_deposition_file_start = std::time(nullptr);
   double mtot = 0.;
@@ -213,8 +215,8 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
 }
 
 #ifdef MPI_ON
-static void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart, const int ndo,
-                                            char *mpi_grid_buffer, const size_t mpi_grid_buffer_size) {
+void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart, const int ndo,
+                                     char *mpi_grid_buffer, const size_t mpi_grid_buffer_size) {
   int position = 0;
   for (int root = 0; root < nprocs; root++) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -357,7 +359,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-static void mpi_reduce_estimators(int nts) {
+void mpi_reduce_estimators(int nts) {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
   radfield::reduce_estimators();
   MPI_Barrier(MPI_COMM_WORLD);
@@ -420,7 +422,7 @@ static void mpi_reduce_estimators(int nts) {
 }
 #endif
 
-static void write_temp_packetsfile(const int timestep, const int my_rank, const Packet *pkt) {
+void write_temp_packetsfile(const int timestep, const int my_rank, const Packet *pkt) {
   // write packets binary file (and retry if the write fails)
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
@@ -448,7 +450,7 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, const 
   }
 }
 
-static void remove_temp_packetsfile(const int timestep, const int my_rank) {
+void remove_temp_packetsfile(const int timestep, const int my_rank) {
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
@@ -458,7 +460,7 @@ static void remove_temp_packetsfile(const int timestep, const int my_rank) {
   }
 }
 
-static void remove_grid_restart_data(const int timestep) {
+void remove_grid_restart_data(const int timestep) {
   char prevfilename[MAXFILENAMELENGTH];
   snprintf(prevfilename, MAXFILENAMELENGTH, "gridsave_ts%d.tmp", timestep);
 
@@ -468,7 +470,7 @@ static void remove_grid_restart_data(const int timestep) {
   }
 }
 
-static auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) -> bool {
+auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) -> bool {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -502,7 +504,7 @@ static auto walltime_sufficient_to_continue(const int nts, const int nts_prev, c
   return do_this_full_loop;
 }
 
-static void save_grid_and_packets(const int nts, const int my_rank, Packet *packets) {
+void save_grid_and_packets(const int nts, const int my_rank, Packet *packets) {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -567,7 +569,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, Packet *pack
   }
 }
 
-static void zero_estimators() {
+void zero_estimators() {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -596,8 +598,8 @@ static void zero_estimators() {
 #endif
 }
 
-static auto do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo,
-                        Packet *packets, const int walltimelimitseconds) -> bool {
+auto do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo, Packet *packets,
+                 const int walltimelimitseconds) -> bool {
   bool do_this_full_loop = true;
 
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
@@ -734,6 +736,8 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
   }
   return !do_this_full_loop;
 }
+
+}  // anonymous namespace
 
 auto main(int argc, char *argv[]) -> int {
   real_time_start = std::time(nullptr);
