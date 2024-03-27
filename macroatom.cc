@@ -189,8 +189,8 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   const double targetval = rng_uniform() * sum_epstrans_rad_deexc[ndowntrans - 1];
 
   // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
-  const auto *upperval = std::upper_bound(sum_epstrans_rad_deexc, sum_epstrans_rad_deexc + ndowntrans, targetval);
-  auto downtransindex = std::distance(sum_epstrans_rad_deexc, upperval);
+  const auto downtransindex = std::distance(
+      sum_epstrans_rad_deexc, std::upper_bound(sum_epstrans_rad_deexc, sum_epstrans_rad_deexc + ndowntrans, targetval));
 
   assert_always(downtransindex < ndowntrans);
 
@@ -302,12 +302,12 @@ void do_macroatom_ionisation(const int modelgridindex, const int element, int *i
   const double targetrate = rng_uniform() * internal_up_higher;
   double rate = 0.;
   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, *ion, *level); phixstargetindex++) {
+    upper = get_phixsupperlevel(element, *ion, *level, phixstargetindex);
     const double epsilon_trans = get_phixs_threshold(element, *ion, *level, phixstargetindex);
     const double R = get_corrphotoioncoeff(element, *ion, *level, phixstargetindex, modelgridindex);
     const double C = col_ionization_ratecoeff(T_e, nne, element, *ion, *level, phixstargetindex, epsilon_trans);
     rate += (R + C) * epsilon_current;
     if (targetrate < rate) {
-      upper = get_phixsupperlevel(element, *ion, *level, phixstargetindex);
       break;
     }
   }
