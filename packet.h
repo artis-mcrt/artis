@@ -19,8 +19,8 @@ enum packet_type : int {
   TYPE_PRE_KPKT = 120,
 };
 
-constexpr int EMTYPE_NOTSET = -9999000;
-constexpr int EMTYPE_FREEFREE = -9999999;
+constexpr int EMTYPE_NOTSET{-9999000};
+constexpr int EMTYPE_FREEFREE{-9999999};
 
 struct MacroAtomState {
   int element;         /// macro atom of type element (this is an element index)

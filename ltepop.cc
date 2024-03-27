@@ -179,7 +179,7 @@ static auto nne_solution_f(double nne_assumed, void *voidparas) -> double
 // assume a value for nne and then calculate the resulting nne
 // the difference between the assumed and calculated nne is returned
 {
-  const auto *paras = reinterpret_cast<nne_solution_paras *>(voidparas);
+  const auto *paras = static_cast<nne_solution_paras *>(voidparas);
   const int modelgridindex = paras->modelgridindex;
   const bool force_lte = paras->force_lte;
 
