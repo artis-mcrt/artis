@@ -1312,7 +1312,8 @@ void write_bflist_file() {
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels = get_ionisinglevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
-        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
+        const auto nphixstargets = get_nphixstargets(element, ion, level);
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
           const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
           globals::bflist[i].elementindex = element;
           globals::bflist[i].ionindex = ion;

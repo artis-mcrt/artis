@@ -24,7 +24,8 @@ static int includedions = 0;
 static int includedlevels = 0;
 
 auto get_phixtargetindex(const int element, const int ion, const int level, const int upperionlevel) -> int {
-  for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
+  const auto nphixstargets = get_nphixstargets(element, ion, level);
+  for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (upperionlevel == get_phixsupperlevel(element, ion, level, phixstargetindex)) {
       return phixstargetindex;
     }
@@ -415,18 +416,6 @@ auto get_nphixstargets(const int element, const int ion, const int level) -> int
     return globals::elements[element].ions[ion].levels[level].nphixstargets;
   }
   return 0;
-}
-
-auto get_phixsupperlevel(const int element, const int ion, const int level, const int phixstargetindex) -> int
-/// Returns the level index of a target state for photoionization of (element,ion,level).
-{
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  assert_testmodeonly(phixstargetindex >= 0);
-  assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
-
-  return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].levelindex;
 }
 
 auto get_phixs_threshold(const int element, const int ion, const int level, const int phixstargetindex) -> double

@@ -36,14 +36,12 @@ auto get_uniqueionindex(int element, int ion) -> int;
 [[nodiscard]] auto get_ionfromuniqueionindex(int allionsindex) -> std::tuple<int, int>;
 auto get_uniquelevelindex(int element, int ion, int level) -> int;
 [[nodiscard]] auto get_levelfromuniquelevelindex(int alllevelsindex) -> std::tuple<int, int, int>;
-auto epsilon(int element, int ion, int level) -> double;
 auto stat_weight(int element, int ion, int level) -> double;
 auto get_maxrecombininglevel(int element, int ion) -> int;
 auto ion_has_superlevel(int element, int ion) -> bool;
 auto get_ndowntrans(int element, int ion, int level) -> int;
 auto get_nuptrans(int element, int ion, int level) -> int;
 auto get_nphixstargets(int element, int ion, int level) -> int;
-auto get_phixsupperlevel(int element, int ion, int level, int phixstargetindex) -> int;
 auto get_phixsprobability(int element, int ion, int level, int phixstargetindex) -> double;
 void set_ndowntrans(int element, int ion, int level, int ndowntrans);
 void set_nuptrans(int element, int ion, int level, int nuptrans);
@@ -62,6 +60,18 @@ inline auto epsilon(const int element, const int ion, const int level) -> double
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
   return globals::elements[element].ions[ion].levels[level].epsilon;
+}
+
+inline auto get_phixsupperlevel(const int element, const int ion, const int level, const int phixstargetindex) -> int
+/// Returns the level index of a target state for photoionization of (element,ion,level).
+{
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  assert_testmodeonly(phixstargetindex >= 0);
+  assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
+
+  return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].levelindex;
 }
 
 #endif  // ATOMIC_H

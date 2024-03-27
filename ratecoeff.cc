@@ -307,7 +307,8 @@ static void write_ratecoeff_dat() {
       const int nlevels = get_ionisinglevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         /// Loop over the phixs targets
-        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
+        const auto nphixstargets = get_nphixstargets(element, ion, level);
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
           /// Loop over the temperature grid
           for (int iter = 0; iter < TABLESIZE; iter++) {
             const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
@@ -899,8 +900,8 @@ static void precalculate_ion_alpha_sp() {
         const int nlevels = get_ionisinglevels(element, ion);
         double zeta = 0.;
         for (int level = 0; level < nlevels; level++) {
-          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level);
-               phixstargetindex++) {
+          const auto nphixstargets = get_nphixstargets(element, ion, level);
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const double zeta_level = get_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
             zeta += zeta_level;
           }

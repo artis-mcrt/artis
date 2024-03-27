@@ -147,8 +147,8 @@ void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatin
       for (int level = 0; level < nlevels; level++) {
         double bfheatingcoeff = 0.;
         if (grid::get_elem_abundance(modelgridindex, element) > minelfrac || USE_LUT_BFHEATING) {
-          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level);
-               phixstargetindex++) {
+          const auto nphixstargets = get_nphixstargets(element, ion, level);
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             if constexpr (!USE_LUT_BFHEATING) {
               bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
             } else {

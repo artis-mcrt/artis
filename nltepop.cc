@@ -544,7 +544,8 @@ static void nltepop_matrix_add_ionisation(const int modelgridindex, const int el
     // thermal collisional ionization, photoionisation and recombination processes
     const double epsilon_current = epsilon(element, ion, level);
 
-    for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
+    const auto nphixstargets = get_nphixstargets(element, ion, level);
+    for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
       const int upper_index = get_nlte_vector_index(element, ion + 1, upper);
       const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
