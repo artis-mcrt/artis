@@ -26,13 +26,15 @@
 #include "vectors.h"
 #include "vpkt.h"
 
+namespace {
+
 // save to the macroatom_*.out file
-static constexpr bool LOG_MACROATOM = false;
+constexpr bool LOG_MACROATOM = false;
 
-static FILE *macroatom_file = nullptr;
+FILE *macroatom_file = nullptr;
 
-static void calculate_macroatom_transitionrates(const int modelgridindex, const int element, const int ion,
-                                                const int level, const double t_mid, CellCacheLevels &chlevel) {
+void calculate_macroatom_transitionrates(const int modelgridindex, const int element, const int ion, const int level,
+                                         const double t_mid, CellCacheLevels &chlevel) {
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
   auto &processrates = chlevel.processrates;
   const auto T_e = grid::get_Te(modelgridindex);
@@ -152,7 +154,7 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
   processrates[MA_ACTION_INTERNALUPHIGHER] = sum_up_higher;
 }
 
-static auto do_macroatom_internal_down_same(int element, int ion, int level) -> int {
+auto do_macroatom_internal_down_same(int element, int ion, int level) -> int {
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
   // printout("[debug] do_ma:   internal downward jump within current ionstage\n");
@@ -174,8 +176,8 @@ static auto do_macroatom_internal_down_same(int element, int ion, int level) -> 
   return lower;
 }
 
-static void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion, const int level,
-                                         const int activatingline) {
+void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion, const int level,
+                                  const int activatingline) {
   /// radiative deexcitation of MA: emitt rpkt
   /// randomly select which line transitions occurs
   const int ndowntrans = get_ndowntrans(element, ion, level);
@@ -234,8 +236,8 @@ static void do_macroatom_raddeexcitation(Packet &pkt, const int element, const i
   vpkt_call_estimators(pkt, TYPE_MA);
 }
 
-static void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int element, int *ion, int *level,
-                                   const double rad_recomb) {
+void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int element, int *ion, int *level,
+                            const double rad_recomb) {
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, *ion, *level);
@@ -304,8 +306,8 @@ static void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const 
   vpkt_call_estimators(pkt, TYPE_MA);
 }
 
-static void do_macroatom_ionisation(const int modelgridindex, const int element, int *ion, int *level,
-                                    const double epsilon_current, const double internal_up_higher) {
+void do_macroatom_ionisation(const int modelgridindex, const int element, int *ion, int *level,
+                             const double epsilon_current, const double internal_up_higher) {
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
 
@@ -338,6 +340,8 @@ static void do_macroatom_ionisation(const int modelgridindex, const int element,
   *ion += 1;
   *level = upper;
 }
+
+}  // anonymous namespace
 
 void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
 /// Material for handling activated macro atoms.
