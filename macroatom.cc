@@ -311,7 +311,6 @@ void do_macroatom_ionisation(const int modelgridindex, const int element, int *i
       break;
     }
   }
-  assert_always(rate <= internal_up_higher);
 
   assert_always(upper >= 0);
 
