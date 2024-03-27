@@ -834,8 +834,10 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
       double fracdiff_nne = 0.;
       for (int element = 0; element < get_nelements(); element++) {
         if (get_nions(element) > 0) {
-          solve_nlte_pops_element(element, n, nts, nlte_iter);
-          calculate_cellpartfuncts(n, element);
+          if (elem_has_nlte_levels(element)) {
+            solve_nlte_pops_element(element, n, nts, nlte_iter);
+            calculate_cellpartfuncts(n, element);
+          }
         }
       }
       const int duration_solve_nltepops = time(nullptr) - sys_time_start_nltepops;

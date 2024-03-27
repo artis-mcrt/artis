@@ -1110,6 +1110,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
   //         timestep, n, grid::get_TR(n), grid::get_Te(n), grid::get_W(n), grid::get_TJ(n), grid::get_nne(n));
 
   for (int element = 0; element < get_nelements(); element++) {
+    if (elem_has_nlte_levels(element)) {
     const int nions = get_nions(element);
     const int atomic_number = get_atomicnumber(element);
 
@@ -1158,6 +1159,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
 
         const double ion_popfrac = nnlevelnlte / get_nnion(modelgridindex, element, ion);
         fprintf(nlte_file, "%11.5e %11.5e %11.5e\n", nnlevellte, nnlevelnlte, ion_popfrac);
+      }
       }
     }
   }
