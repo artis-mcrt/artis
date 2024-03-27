@@ -1018,7 +1018,6 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
   // break the list into nu >= nu_edge and the remainder (nu < nu_edge)
 
   int i = 0;
-  const int nbfcontinua = globals::nbfcontinua;
   const int allcontend =
       std::distance(globals::allcont_nu_edge.cbegin(),
                     std::upper_bound(globals::allcont_nu_edge.cbegin(), globals::allcont_nu_edge.cend(), nu));
@@ -1030,7 +1029,7 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
           [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }));
 
   assert_testmodeonly(allcontbegin >= 0);
-  assert_testmodeonly(allcontend <= nbfcontinua);
+  assert_testmodeonly(allcontend <= globals::nbfcontinua);
   assert_testmodeonly(allcontbegin <= allcontend);
 
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
