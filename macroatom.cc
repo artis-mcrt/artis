@@ -210,7 +210,11 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   pkt.nu_cmf = epsilon_trans / H;
 
   if (pkt.last_event == 1) {
-    stats::increment((oldnucmf < pkt.nu_cmf) ? stats::COUNTER_UPSCATTER : stats::COUNTER_DOWNSCATTER);
+    if (oldnucmf < pkt.nu_cmf) {
+      stats::increment(stats::COUNTER_UPSCATTER);
+    } else {
+      stats::increment(stats::COUNTER_DOWNSCATTER);
+    }
   }
 
   stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_BB);
