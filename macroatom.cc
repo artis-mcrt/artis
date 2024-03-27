@@ -206,18 +206,11 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
 
   const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, selecteddowntrans.targetlevelindex);
 
-  double oldnucmf{NAN};
-  if (pkt.last_event == 1) {
-    oldnucmf = pkt.nu_cmf;
-  }
+  const double oldnucmf = pkt.nu_cmf;
   pkt.nu_cmf = epsilon_trans / H;
 
   if (pkt.last_event == 1) {
-    if (oldnucmf < pkt.nu_cmf) {
-      stats::increment(stats::COUNTER_UPSCATTER);
-    } else {
-      stats::increment(stats::COUNTER_DOWNSCATTER);
-    }
+    stats::increment((oldnucmf < pkt.nu_cmf) ? stats::COUNTER_UPSCATTER : stats::COUNTER_DOWNSCATTER);
   }
 
   stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_BB);
@@ -255,10 +248,6 @@ void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int ele
 
     rate += R * epsilon_trans;
 
-    // printout("[debug] do_ma:   R %g, deltae %g\n",R,(epsilon(element, upperion, upperionlevel) - epsilon(element,
-    // upperion - 1, lower))); printout("[debug] do_ma:   rate to level %d of ion %d = %g\n", lower, upperion - 1,
-    // rate); printout("[debug] do_ma:   zrand*rad_recomb = %g\n", zrand * rad_recomb);
-
     if (targetval < rate) {
       break;
     }
@@ -277,10 +266,6 @@ void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int ele
   *level = lower;
 
   pkt.nu_cmf = select_continuum_nu(element, upperion - 1, lower, upperionlevel, T_e);
-
-  // printout("%s: From Z=%d ionstage %d, recombining to ionstage %d level %d\n",
-  //          __func__, get_atomicnumber(element), get_ionstage(element, *ion + 1), get_ionstage(element, *ion), lower);
-  // printout("[debug] do_ma:   pkt.nu_cmf %g\n",pkt.nu_cmf);
 
   if (!std::isfinite(pkt.nu_cmf)) {
     printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
@@ -317,8 +302,6 @@ void do_macroatom_ionisation(const int modelgridindex, const int element, int *i
   const double targetrate = rng_uniform() * internal_up_higher;
   double rate = 0.;
   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, *ion, *level); phixstargetindex++) {
-    upper = get_phixsupperlevel(element, *ion, *level, phixstargetindex);
-    // const double epsilon_trans = epsilon(element, *ion + 1, upper) - epsilon_current;
     const double epsilon_trans = get_phixs_threshold(element, *ion, *level, phixstargetindex);
     const double R = get_corrphotoioncoeff(element, *ion, *level, phixstargetindex, modelgridindex);
     const double C = col_ionization_ratecoeff(T_e, nne, element, *ion, *level, phixstargetindex, epsilon_trans);
