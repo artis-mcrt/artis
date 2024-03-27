@@ -1147,7 +1147,8 @@ auto get_particle_injection_rate(const int modelgridindex, const double t, const
 // energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in [erg/s/g]
 {
   double dep_sum = 0.;
-  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
+  const auto num_nuclides = get_num_nuclides();
+  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const int z = get_nuc_z(nucindex);
     const int a = get_nuc_a(nucindex);
     const double meanlife = get_meanlife(nucindex);
@@ -1172,7 +1173,8 @@ auto get_qdot_modelcell(const int modelgridindex, const double t, const int deca
 // energy release rate [erg/s/g] including everything (even neutrinos that are ignored elsewhere)
 {
   double qdot = 0.;
-  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
+  const auto num_nuclides = get_num_nuclides();
+  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const int z = get_nuc_z(nucindex);
     const int a = get_nuc_a(nucindex);
     const double meanlife = get_meanlife(nucindex);
@@ -1193,7 +1195,8 @@ auto get_qdot_modelcell(const int modelgridindex, const double t, const int deca
 
 auto get_global_etot_t0_tinf() -> double {
   double etot_tinf = 0.;
-  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
+  const auto num_decaypaths = get_num_decaypaths();
+  for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
     const int z_top = decaypaths[decaypathindex].z[0];
     const int a_top = decaypaths[decaypathindex].a[0];
 
