@@ -46,6 +46,7 @@ endif
 $(info detected compiler is $(COMPILER_NAME))
 
 CXXFLAGS += -std=c++20 -fstrict-aliasing
+# CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
 
 ifneq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -flto=auto -ftree-vectorize -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
