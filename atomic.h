@@ -23,13 +23,17 @@ inline std::array<bool, 3> phixs_file_version_exists;  // first value in this ar
                                                        // indexes match those of the phixsdata_filenames array
 constexpr std::array<const char *, 3> phixsdata_filenames = {"version0ignore", "phixsdata.txt", "phixsdata_v2.txt"};
 
-inline auto epsilon(const int element, const int ion, const int level) -> double
-/// Returns the energy of (element,ion,level).
+[[nodiscard]] inline auto get_nelements() -> int { return static_cast<int>(globals::elements.size()); }
+
+inline auto get_nnion_tot(int modelgridindex) -> double
+// total density of nuclei
 {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  return globals::elements[element].ions[ion].levels[level].epsilon;
+  double nntot = 0.;
+  for (int element = 0; element < get_nelements(); element++) {
+    nntot += grid::get_elem_numberdens(modelgridindex, element);
+  }
+
+  return nntot;
 }
 
 inline auto get_nions(const int element) -> int
@@ -38,15 +42,6 @@ inline auto get_nions(const int element) -> int
 {
   assert_testmodeonly(element < get_nelements());
   return globals::elements[element].nions;
-}
-
-inline auto get_ionstage(const int element, const int ion) -> int
-/// Returns the ionisation stage of an ion specified by its elementindex and
-/// ionindex.
-{
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  return globals::elements[element].ions[ion].ionstage;
 }
 
 inline auto get_nlevels(const int element, const int ion) -> int
@@ -58,7 +53,49 @@ inline auto get_nlevels(const int element, const int ion) -> int
   return globals::elements[element].ions[ion].nlevels;
 }
 
-inline auto get_phixsupperlevel(const int element, const int ion, const int level, const int phixstargetindex) -> int
+[[nodiscard]] inline auto epsilon(const int element, const int ion, const int level) -> double
+/// Returns the energy of (element,ion,level).
+{
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  return globals::elements[element].ions[ion].levels[level].epsilon;
+}
+
+[[nodiscard]] inline auto get_ionstage(const int element, const int ion) -> int
+/// Returns the ionisation stage of an ion specified by its elementindex and
+/// ionindex.
+{
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  return globals::elements[element].ions[ion].ionstage;
+}
+
+[[nodiscard]] inline auto get_ionisinglevels(const int element, const int ion) -> int
+/// Returns the number of levels associated with an ion that
+/// have energies below the ionisation threshold.
+{
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  return globals::elements[element].ions[ion].ionisinglevels;
+}
+
+inline auto get_nphixstargets(const int element, const int ion, const int level) -> int
+/// Returns the number of target states for photoionization of (element,ion,level).
+{
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  const int nions = get_nions(element);
+  const int nionisinglevels = get_ionisinglevels(element, ion);
+  if ((ion < nions - 1) && (level < nionisinglevels)) {
+    return globals::elements[element].ions[ion].levels[level].nphixstargets;
+  }
+  return 0;
+}
+
+[[nodiscard]] inline auto get_phixsupperlevel(const int element, const int ion, const int level,
+                                              const int phixstargetindex) -> int
 /// Returns the level index of a target state for photoionization of (element,ion,level).
 {
   assert_testmodeonly(element < get_nelements());
@@ -209,19 +246,6 @@ inline auto get_phixsupperlevel(const int element, const int ion, const int leve
   return B_lu * n_l * HCLIGHTOVERFOURPI * t_current;
 }
 
-[[nodiscard]] inline auto get_nelements() -> int { return static_cast<int>(globals::elements.size()); }
-
-inline auto get_nnion_tot(int modelgridindex) -> double
-// total density of nuclei
-{
-  double nntot = 0.;
-  for (int element = 0; element < get_nelements(); element++) {
-    nntot += grid::get_elem_numberdens(modelgridindex, element);
-  }
-
-  return nntot;
-}
-
 inline void set_nelements(const int nelements_in) { globals::elements.resize(nelements_in); }
 
 inline auto get_atomicnumber(const int element) -> int
@@ -324,15 +348,6 @@ inline auto get_includedlevels() -> int
   return globals::elements[element].ions[ion].nlevels_groundterm;
 }
 
-[[nodiscard]] inline auto get_ionisinglevels(const int element, const int ion) -> int
-/// Returns the number of levels associated with an ion that
-/// have energies below the ionisation threshold.
-{
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  return globals::elements[element].ions[ion].ionisinglevels;
-}
-
 [[nodiscard]] inline auto get_uniqueionindex(const int element, const int ion) -> int
 // Get an index for an ionstage of an element that is unique for every ion of every element
 {
@@ -432,20 +447,6 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
   globals::elements[element].ions[ion].levels[level].nuptrans = nuptrans;
-}
-
-inline auto get_nphixstargets(const int element, const int ion, const int level) -> int
-/// Returns the number of target states for photoionization of (element,ion,level).
-{
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  const int nions = get_nions(element);
-  const int nionisinglevels = get_ionisinglevels(element, ion);
-  if ((ion < nions - 1) && (level < nionisinglevels)) {
-    return globals::elements[element].ions[ion].levels[level].nphixstargets;
-  }
-  return 0;
 }
 
 [[nodiscard]] inline auto get_phixtargetindex(const int element, const int ion, const int level,

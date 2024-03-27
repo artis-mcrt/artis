@@ -28,6 +28,7 @@ struct Phixslist {
 };
 
 #include "artisoptions.h"
+#include "atomic.h"
 #include "grid.h"
 #include "sn3d.h"
 
