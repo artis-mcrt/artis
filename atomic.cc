@@ -14,9 +14,6 @@
 #include "ltepop.h"
 #include "sn3d.h"
 
-// last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
-double last_phixs_nuovernuedge = -1;
-
 // highest number of ions for any element
 static int maxnions = 0;
 
@@ -25,8 +22,6 @@ static int includedions = 0;
 
 // total number of levels of any element
 static int includedlevels = 0;
-
-std::array<bool, 3> phixs_file_version_exists;
 
 auto get_phixtargetindex(const int element, const int ion, const int level, const int upperionlevel) -> int {
   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {

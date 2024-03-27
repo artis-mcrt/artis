@@ -43,7 +43,7 @@ void setup_photoion_luts();
                                             bool collisional_not_radiative, bool printdebug, bool lower_superlevel_only,
                                             bool per_groundmultipletpop, bool stimonly) -> double;
 
-extern double T_step_log;
+inline double T_step_log{};
 
 template <double func_integrand(double, void *)>
 constexpr auto simpson_integrator(auto &params, double a, double b, int samplecount) -> double {

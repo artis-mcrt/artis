@@ -4,11 +4,11 @@
 
 #include <array>
 
-extern double
+inline double
     last_phixs_nuovernuedge;  // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
-constexpr std::array<const char *, 3> phixsdata_filenames = {"version0ignore", "phixsdata.txt", "phixsdata_v2.txt"};
-extern std::array<bool, 3> phixs_file_version_exists;  // first value in this array is not used but exists so the
+inline std::array<bool, 3> phixs_file_version_exists;  // first value in this array is not used but exists so the
                                                        // indexes match those of the phixsdata_filenames array
+constexpr std::array<const char *, 3> phixsdata_filenames = {"version0ignore", "phixsdata.txt", "phixsdata_v2.txt"};
 
 auto get_continuumindex_phixstargetindex(int element, int ion, int level, int phixstargetindex) -> int;
 auto get_continuumindex(int element, int ion, int level, int upperionlevel) -> int;

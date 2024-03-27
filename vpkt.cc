@@ -51,7 +51,6 @@ static int Nrange;  // Number of wavelength ranges
 
 static std::vector<double> VSPEC_NUMIN_input;
 static std::vector<double> VSPEC_NUMAX_input;
-double cell_is_optically_thick_vpkt;
 static double tau_max_vpkt;
 
 static std::vector<int> exclude;  // vector of opacity contribution setups:
@@ -81,14 +80,6 @@ static bool vgrid_on;
 
 static double dlogt_vspec{NAN};
 static double dlognu_vspec{NAN};
-
-// number of virtual packets in a given timestep
-int nvpkt;
-
-// number of escaped virtual packet in a given timestep (with tau < tau_max)
-int nvpkt_esc1;  // electron scattering event
-int nvpkt_esc2;  // kpkt deactivation
-int nvpkt_esc3;  // macroatom deactivation
 
 // Virtual packet is killed when tau reaches tau_max_vpkt for ALL the different setups
 // E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt

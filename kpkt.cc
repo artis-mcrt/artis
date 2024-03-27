@@ -37,8 +37,6 @@ struct CellCachecoolinglist {
   int upperlevel;
 };
 
-int ncoolingterms{0};
-
 static CellCachecoolinglist *coolinglist;
 
 static int n_kpktdiffusion_timesteps{0};

@@ -29,8 +29,6 @@
 #include "rpkt.h"
 #include "sn3d.h"
 
-double T_step_log;
-
 static double *spontrecombcoeffs = nullptr;
 
 // for USE_LUT_PHOTOION = true

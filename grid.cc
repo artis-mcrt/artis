@@ -40,12 +40,9 @@
 
 namespace grid {
 
-struct ModelGridCell *modelgrid = nullptr;
-
 static char coordlabel[3];
 
 static int ncoordgrid[3];  /// propagation grid dimensions
-int ngrid;
 
 static enum gridtypes model_type = GRID_SPHERICAL1D;
 static size_t npts_model = 0;           // number of model grid cells

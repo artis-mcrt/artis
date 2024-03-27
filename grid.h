@@ -72,9 +72,9 @@ constexpr auto get_ngriddimensions() -> int {
   }
 }
 
-extern ModelGridCell *modelgrid;
+inline ModelGridCell *modelgrid{};
 
-extern int ngrid;
+inline int ngrid{0};
 
 [[nodiscard]] auto get_elements_uppermost_ion(int modelgridindex, int element) -> int;
 void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
