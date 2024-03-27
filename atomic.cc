@@ -344,15 +344,6 @@ auto get_levelfromuniquelevelindex(const int alllevelsindex) -> std::tuple<int, 
   assert_always(false);  // alllevelsindex too high to be valid
 }
 
-auto epsilon(const int element, const int ion, const int level) -> double
-/// Returns the energy of (element,ion,level).
-{
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  return globals::elements[element].ions[ion].levels[level].epsilon;
-}
-
 auto stat_weight(const int element, const int ion, const int level) -> double
 /// Returns the statistical weight of (element,ion,level).
 {

@@ -53,4 +53,15 @@ auto get_phixs_threshold(int element, int ion, int level, int phixstargetindex) 
 auto elem_has_nlte_levels(int element) -> bool;
 auto elem_has_nlte_levels_search(int element) -> bool;
 
+#include "sn3d.h"
+
+inline auto epsilon(const int element, const int ion, const int level) -> double
+/// Returns the energy of (element,ion,level).
+{
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  return globals::elements[element].ions[ion].levels[level].epsilon;
+}
+
 #endif  // ATOMIC_H

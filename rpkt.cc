@@ -958,7 +958,8 @@ static auto calculate_chi_ffheat_nnionpart(const int modelgridindex) -> double {
   double chi_ff_nnionpart = 0.;
   const int nelements = get_nelements();
   for (int element = 0; element < nelements; element++) {
-    for (int ion = 0; ion < get_nions(element); ion++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
       const double nnion = get_nnion(modelgridindex, element, ion);
       const int ioncharge = get_ionstage(element, ion) - 1;
       chi_ff_nnionpart += ioncharge * ioncharge * g_ff * nnion;

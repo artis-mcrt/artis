@@ -1670,7 +1670,8 @@ static auto ion_ntion_energyrate(int modelgridindex, int element, int lowerion) 
   // returns the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
   const double nnlowerion = get_nnion(modelgridindex, element, lowerion);
   double enrate = 0.;
-  for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
+  const auto maxupperion = nt_ionisation_maxupperion(element, lowerion);
+  for (int upperion = lowerion + 1; upperion <= maxupperion; upperion++) {
     const double upperionprobfrac =
         nt_ionization_upperion_probability(modelgridindex, element, lowerion, upperion, false);
     // for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
