@@ -45,10 +45,10 @@ endif
 
 $(info detected compiler is $(COMPILER_NAME))
 
-CXXFLAGS += -std=c++20 -flto -fstrict-aliasing
+CXXFLAGS += -std=c++20 -fstrict-aliasing
 
 ifneq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -ftree-vectorize -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
+	CXXFLAGS += -flto -ftree-vectorize -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
 	# add -ftrivial-auto-var-init=zero when we drop gcc 11 support
 endif
 
