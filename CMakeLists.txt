@@ -19,7 +19,6 @@ set(SN3D_SOURCES sn3d.cc
 atomic.cc
 decay.cc
 gammapkt.cc
-globals.cc
 grid.cc
 input.cc
 kpkt.cc
@@ -46,7 +45,6 @@ set(EXSPEC_SOURCES exspec.cc
 atomic.cc
 decay.cc
 gammapkt.cc
-globals.cc
 grid.cc
 input.cc
 kpkt.cc
