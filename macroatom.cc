@@ -311,16 +311,11 @@ void do_macroatom_ionisation(const int modelgridindex, const int element, int *i
     const double C = col_ionization_ratecoeff(T_e, nne, element, *ion, *level, phixstargetindex, epsilon_trans);
     rate += (R + C) * epsilon_current;
     if (targetrate < rate) {
+      upper = get_phixsupperlevel(element, *ion, *level, phixstargetindex);
       break;
     }
   }
-  if (targetrate >= rate) {
-    printout(
-        "%s: From Z=%d ionstage %d level %d, could not select upper level to ionise to. internal_up_higher "
-        "%g >= targetrate %g\n",
-        __func__, get_atomicnumber(element), get_ionstage(element, *ion), *level, internal_up_higher, targetrate);
-    std::abort();
-  }
+  assert_always(rate <= internal_up_higher);
 
   assert_always(upper >= 0);
 
