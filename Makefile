@@ -45,15 +45,12 @@ endif
 
 $(info detected compiler is $(COMPILER_NAME))
 
-ifeq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -std=c++20
-else
-	CXXFLAGS += -std=c++20 -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
+CXXFLAGS += -std=c++20 -flto -fstrict-aliasing
+
+ifneq ($(COMPILER_NAME),NVHPC)
+	CXXFLAGS += -ftree-vectorize -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
 	# add -ftrivial-auto-var-init=zero when we drop gcc 11 support
 endif
-
-
-CXXFLAGS += -fstrict-aliasing
 
 # profile-guided optimisation
 # generate profile:
@@ -179,8 +176,6 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 
 # Use GSL inline functions
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
-
-LDFLAGS += -fwhole-program
 
 ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0
