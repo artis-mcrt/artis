@@ -261,6 +261,7 @@ void setup_coolinglist() {
 
   set_ncoolingterms();
   const size_t mem_usage_coolinglist = ncoolingterms * sizeof(CellCachecoolinglist);
+  assert_always(ncoolingterms > 0);
   coolinglist = static_cast<CellCachecoolinglist *>(malloc(ncoolingterms * sizeof(CellCachecoolinglist)));
   printout("[info] mem_usage: coolinglist occupies %.3f MB\n", mem_usage_coolinglist / 1024. / 1024.);
 

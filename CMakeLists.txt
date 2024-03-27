@@ -16,7 +16,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 #set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 set(SN3D_SOURCES sn3d.cc
-atomic.cc
 decay.cc
 gammapkt.cc
 grid.cc
@@ -42,7 +41,6 @@ vpkt.cc)
 add_executable(sn3d ${SN3D_SOURCES})
 
 set(EXSPEC_SOURCES exspec.cc
-atomic.cc
 decay.cc
 gammapkt.cc
 grid.cc

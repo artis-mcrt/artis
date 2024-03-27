@@ -81,6 +81,8 @@ MPI_Win win_corrphotoionrenorm = MPI_WIN_NULL;
 #endif
 
 float *initradioabund_allcells = nullptr;
+float *initmassfracstable_allcells = nullptr;
+float *elem_meanweight_allcells = nullptr;
 
 std::vector<int> ranks_nstart;
 std::vector<int> ranks_ndo;
@@ -775,9 +777,6 @@ static void allocate_nonemptycells_composition_cooling()
     my_rank_cells_nonempty += nonempty_npts_model - (my_rank_cells_nonempty * globals::node_nprocs);
   }
 #endif
-
-  float *initmassfracstable_allcells = nullptr;
-  float *elem_meanweight_allcells = nullptr;
 
 #ifdef MPI_ON
   {

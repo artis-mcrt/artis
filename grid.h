@@ -7,7 +7,6 @@
 #include <span>
 
 #include "artisoptions.h"
-#include "atomic.h"
 #include "constants.h"
 #include "globals.h"
 #include "packet.h"
