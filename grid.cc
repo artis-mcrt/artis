@@ -40,24 +40,26 @@
 
 namespace grid {
 
-static char coordlabel[3];
+namespace {
 
-static int ncoordgrid[3];  /// propagation grid dimensions
+char coordlabel[3];
 
-static enum gridtypes model_type = GRID_SPHERICAL1D;
-static size_t npts_model = 0;           // number of model grid cells
-static size_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
+int ncoordgrid[3];  /// propagation grid dimensions
 
-static double t_model = -1.;  // time at which densities in input model are correct.
-static double *vout_model = nullptr;
-static int ncoord_model[3];  // the model.txt input grid dimensions
+enum gridtypes model_type = GRID_SPHERICAL1D;
+size_t npts_model = 0;           // number of model grid cells
+size_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
-static double min_den;  // minimum model density
+double t_model = -1.;  // time at which densities in input model are correct.
+double *vout_model = nullptr;
+int ncoord_model[3];  // the model.txt input grid dimensions
 
-static double mtot_input;
-static double mfeg;  /// Total mass of Fe group elements in ejecta
+double min_den;  // minimum model density
 
-static int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
+double mtot_input;
+double mfeg;  /// Total mass of Fe group elements in ejecta
+
+int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
 
 struct PropGridCell {
   double pos_min[3];  // Initial co-ordinates of inner most corner of cell.
@@ -66,24 +68,26 @@ struct PropGridCell {
 
 struct PropGridCell *cell = nullptr;
 
-static std::vector<int> mg_associated_cells;
-static std::vector<int> nonemptymgi_of_mgi;
-static std::vector<int> mgi_of_nonemptymgi;
+std::vector<int> mg_associated_cells;
+std::vector<int> nonemptymgi_of_mgi;
+std::vector<int> mgi_of_nonemptymgi;
 
-static double *totmassradionuclide = nullptr;  /// total mass of each radionuclide in the ejecta
+double *totmassradionuclide = nullptr;  /// total mass of each radionuclide in the ejecta
 
 #ifdef MPI_ON
-static MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
-static MPI_Win win_initradioabund_allcells = MPI_WIN_NULL;
-static MPI_Win win_corrphotoionrenorm = MPI_WIN_NULL;
+MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
+MPI_Win win_initradioabund_allcells = MPI_WIN_NULL;
+MPI_Win win_corrphotoionrenorm = MPI_WIN_NULL;
 #endif
 
-static float *initradioabund_allcells = nullptr;
+float *initradioabund_allcells = nullptr;
 
-static std::vector<int> ranks_nstart;
-static std::vector<int> ranks_ndo;
-static std::vector<int> ranks_ndo_nonempty;
-static int maxndo = -1;
+std::vector<int> ranks_nstart;
+std::vector<int> ranks_ndo;
+std::vector<int> ranks_ndo_nonempty;
+int maxndo = -1;
+
+}  // anonymous namespace
 
 auto wid_init(const int cellindex, const int axis) -> double
 // for a uniform grid this is the extent along the x,y,z coordinate (x_2 - x_1, etc.)
