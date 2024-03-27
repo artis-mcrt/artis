@@ -40,7 +40,7 @@ struct el_photoion_data {
   double sigma_xcom;  // cross section in barns/atom
 };
 
-constexpr int numb_xcom_elements = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
+static constexpr int numb_xcom_elements = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
 
 static std::array<std::vector<struct el_photoion_data>, numb_xcom_elements> photoion_data;
 

@@ -43,7 +43,7 @@
 
 #include "constants.h"
 
-inline constexpr int cellcacheslotid = 0;
+constexpr int cellcacheslotid = 0;
 inline bool use_cellcache = false;
 
 extern std::mt19937 stdrng;
