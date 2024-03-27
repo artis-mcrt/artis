@@ -29,8 +29,10 @@
 #include "thermalbalance.h"
 #include "vpkt.h"
 
-static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer,
-                                     const HeatingCoolingRates *heatingcoolingrates) {
+namespace {
+
+void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer,
+                              const HeatingCoolingRates *heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
 
   if (grid::get_numassociatedcells(mgi) < 1) {
@@ -664,75 +666,8 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
   }
 }
 
-void cellcache_change_cell(const int modelgridindex) {
-  /// All entries of the cellcache stack must be flagged as empty at the
-  /// onset of the new timestep. Also, boundary crossing?
-  /// Calculate the level populations for this cell, and flag the other entries
-  /// as empty.
-  if (modelgridindex == globals::cellcache[cellcacheslotid].cellnumber) {
-    return;
-  }
-
-  globals::cellcache[cellcacheslotid].cellnumber = modelgridindex;
-  globals::cellcache[cellcacheslotid].chi_ff_nnionpart = -1.;
-
-  const int nelements = get_nelements();
-  for (int element = 0; element < nelements; element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      globals::cellcache[cellcacheslotid]
-          .cooling_contrib[kpkt::get_coolinglistoffset(element, ion) + kpkt::get_ncoolingterms_ion(element, ion) - 1] =
-          COOLING_UNDEFINED;
-
-      if (modelgridindex >= 0) {
-        const int nlevels = get_nlevels(element, ion);
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-        for (int level = 0; level < nlevels; level++) {
-          globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].population =
-              calculate_levelpop(modelgridindex, element, ion, level);
-        }
-      }
-    }
-
-    for (int ion = 0; ion < nions; ion++) {
-      const int nlevels = get_nlevels(element, ion);
-      for (int level = 0; level < nlevels; level++) {
-        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
-          globals::cellcache[cellcacheslotid]
-              .chelements[element]
-              .chions[ion]
-              .chlevels[level]
-              .chphixstargets[phixstargetindex]
-              .corrphotoioncoeff = -99.;
-
-#if (SEPARATE_STIMRECOMB)
-          globals::cellcache[cellcacheslotid]
-              .chelements[element]
-              .chions[ion]
-              .chlevels[level]
-              .chphixstargets[phixstargetindex]
-              .stimrecombcoeff = -99.;
-#endif
-        }
-
-        globals::cellcache[cellcacheslotid]
-            .chelements[element]
-            .chions[ion]
-            .chlevels[level]
-            .processrates[MA_ACTION_INTERNALUPHIGHER] = -99.;
-      }
-    }
-  }
-
-  if (modelgridindex >= 0) {
-    std::fill_n(globals::cellcache[cellcacheslotid].ch_allcont_departureratios, globals::nbfcontinua, -1);
-  }
-}
-
-static void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, const int titer,
-                              HeatingCoolingRates *heatingcoolingrates)
+void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, const int titer,
+                       HeatingCoolingRates *heatingcoolingrates)
 // nts is the timestep number
 {
   // bfheating coefficients are needed for the T_e solver, but
@@ -834,7 +769,7 @@ static void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nt
   }
 }
 
-static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const double estimator_normfactor) {
+void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const double estimator_normfactor) {
   assert_always(USE_LUT_PHOTOION || USE_LUT_BFHEATING);
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
   if constexpr (USE_LUT_PHOTOION) {
@@ -938,8 +873,8 @@ static void titer_average_estimators(const int nonemptymgi) {
 }
 #endif
 
-static void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
-                             const double deltat, HeatingCoolingRates *heatingcoolingrates) {
+void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
+                      const double deltat, HeatingCoolingRates *heatingcoolingrates) {
   const int assoc_cells = grid::get_numassociatedcells(mgi);
   if (assoc_cells < 1) {
     /// For modelgrid cells that are not represented in the simulation grid,
@@ -1156,6 +1091,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
   }
 }
 
+}  // anonymous namespace
+
 void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int nstart,
                  const int ndo, const int titer, const std::time_t real_time_start)
 // Subroutine to update the matter quantities in the grid cells at the start
@@ -1250,4 +1187,71 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       "%lds, total %lds)\n",
       nts, std::time(nullptr), my_rank, time_update_grid_end_thisrank - sys_time_start_update_grid,
       std::time(nullptr) - time_update_grid_end_thisrank, std::time(nullptr) - sys_time_start_update_grid);
+}
+
+void cellcache_change_cell(const int modelgridindex) {
+  /// All entries of the cellcache stack must be flagged as empty at the
+  /// onset of the new timestep. Also, boundary crossing?
+  /// Calculate the level populations for this cell, and flag the other entries
+  /// as empty.
+  if (modelgridindex == globals::cellcache[cellcacheslotid].cellnumber) {
+    return;
+  }
+
+  globals::cellcache[cellcacheslotid].cellnumber = modelgridindex;
+  globals::cellcache[cellcacheslotid].chi_ff_nnionpart = -1.;
+
+  const int nelements = get_nelements();
+  for (int element = 0; element < nelements; element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      globals::cellcache[cellcacheslotid]
+          .cooling_contrib[kpkt::get_coolinglistoffset(element, ion) + kpkt::get_ncoolingterms_ion(element, ion) - 1] =
+          COOLING_UNDEFINED;
+
+      if (modelgridindex >= 0) {
+        const int nlevels = get_nlevels(element, ion);
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (int level = 0; level < nlevels; level++) {
+          globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].population =
+              calculate_levelpop(modelgridindex, element, ion, level);
+        }
+      }
+    }
+
+    for (int ion = 0; ion < nions; ion++) {
+      const int nlevels = get_nlevels(element, ion);
+      for (int level = 0; level < nlevels; level++) {
+        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
+          globals::cellcache[cellcacheslotid]
+              .chelements[element]
+              .chions[ion]
+              .chlevels[level]
+              .chphixstargets[phixstargetindex]
+              .corrphotoioncoeff = -99.;
+
+#if (SEPARATE_STIMRECOMB)
+          globals::cellcache[cellcacheslotid]
+              .chelements[element]
+              .chions[ion]
+              .chlevels[level]
+              .chphixstargets[phixstargetindex]
+              .stimrecombcoeff = -99.;
+#endif
+        }
+
+        globals::cellcache[cellcacheslotid]
+            .chelements[element]
+            .chions[ion]
+            .chlevels[level]
+            .processrates[MA_ACTION_INTERNALUPHIGHER] = -99.;
+      }
+    }
+  }
+
+  if (modelgridindex >= 0) {
+    std::fill_n(globals::cellcache[cellcacheslotid].ch_allcont_departureratios, globals::nbfcontinua, -1);
+  }
 }

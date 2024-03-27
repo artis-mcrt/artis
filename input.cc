@@ -38,8 +38,10 @@
 #include "sn3d.h"
 #include "vpkt.h"
 
-static const int groundstate_index_in = 1;  // starting level index in the input files
-static int phixs_file_version = -1;
+namespace {
+
+const int groundstate_index_in = 1;  // starting level index in the input files
+int phixs_file_version = -1;
 
 struct Transitions {
   int *to;
@@ -82,11 +84,11 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     "23: kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y "
     "time steps"};
 
-static CellCachePhixsTargets *chphixstargetsblock = nullptr;
+CellCachePhixsTargets *chphixstargetsblock = nullptr;
 
-static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
-                                  const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
-                                  size_t *mem_usage_phixs) {
+void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
+                           const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
+                           size_t *mem_usage_phixs) {
   if (upperlevel_in >= 0)  // file gives photoionisation to a single target state only
   {
     int upperlevel = upperlevel_in - groundstate_index_in;
@@ -240,7 +242,7 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
   }
 }
 
-static void read_phixs_data(const int phixs_file_version) {
+void read_phixs_data(const int phixs_file_version) {
   size_t mem_usage_phixs = 0;
 
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
@@ -344,8 +346,8 @@ static void read_phixs_data(const int phixs_file_version) {
   printout("[info] mem_usage: photoionisation tables occupy %.3f MB\n", mem_usage_phixs / 1024. / 1024.);
 }
 
-static void read_ion_levels(std::fstream &adata, const int element, const int ion, const int nions, const int nlevels,
-                            int nlevelsmax, const double energyoffset, const double ionpot, Transitions *transitions) {
+void read_ion_levels(std::fstream &adata, const int element, const int ion, const int nions, const int nlevels,
+                     int nlevelsmax, const double energyoffset, const double ionpot, Transitions *transitions) {
   const ptrdiff_t nlevels_used = std::min(nlevels, nlevelsmax);
   // each level contains 0..level elements. seriess sum of 1 + 2 + 3 + 4 + ... + nlevels_used is used here
   const ptrdiff_t transitblocksize = nlevels_used * (nlevels_used + 1) / 2;
@@ -398,9 +400,9 @@ static void read_ion_levels(std::fstream &adata, const int element, const int io
   }
 }
 
-static void read_ion_transitions(std::fstream &ftransitiondata, const int tottransitions_in_file, int *tottransitions,
-                                 std::vector<Transition> &transitiontable, const int nlevels_requiretransitions,
-                                 const int nlevels_requiretransitions_upperlevels) {
+void read_ion_transitions(std::fstream &ftransitiondata, const int tottransitions_in_file, int *tottransitions,
+                          std::vector<Transition> &transitiontable, const int nlevels_requiretransitions,
+                          const int nlevels_requiretransitions_upperlevels) {
   transitiontable.reserve(*tottransitions);
   transitiontable.clear();
 
@@ -487,10 +489,9 @@ static void read_ion_transitions(std::fstream &ftransitiondata, const int tottra
   }
 }
 
-static void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
-                                                 const std::vector<Transition> &transitiontable,
-                                                 Transitions *transitions, int *lineindex,
-                                                 std::vector<TransitionLine> &temp_linelist) {
+void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
+                                          const std::vector<Transition> &transitiontable, Transitions *transitions,
+                                          int *lineindex, std::vector<TransitionLine> &temp_linelist) {
   const int lineindex_initial = *lineindex;
   size_t totupdowntrans = 0;
   // pass 0 to get transition counts of each level
@@ -652,7 +653,7 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
 #endif
 }
 
-static auto calculate_nlevels_groundterm(int element, int ion) -> int {
+auto calculate_nlevels_groundterm(int element, int ion) -> int {
   const int nlevels = get_nlevels(element, ion);
   if (nlevels == 1) {
     return 1;
@@ -693,7 +694,7 @@ static auto calculate_nlevels_groundterm(int element, int ion) -> int {
   return nlevels_groundterm;
 }
 
-static void read_atomicdata_files() {
+void read_atomicdata_files() {
   int totaluptrans = 0;
   int totaldowntrans = 0;
 
@@ -1121,7 +1122,7 @@ static void read_atomicdata_files() {
   update_includedionslevels_maxnions();
 }
 
-static auto search_groundphixslist(double nu_edge, int el, int in, int ll) -> int
+auto search_groundphixslist(double nu_edge, int el, int in, int ll) -> int
 /// Return the closest ground level continuum index to the given edge
 /// frequency. If the given edge frequency is redder than the reddest
 /// continuum return -1.
@@ -1179,7 +1180,7 @@ static auto search_groundphixslist(double nu_edge, int el, int in, int ll) -> in
   return index;
 }
 
-static void setup_cellcache() {
+void setup_cellcache() {
   globals::mutex_cellcachemacroatom.resize(get_includedlevels());
 
   // const int num_cellcache_slots = get_max_threads();
@@ -1297,7 +1298,7 @@ static void setup_cellcache() {
   }
 }
 
-static void write_bflist_file() {
+void write_bflist_file() {
   globals::bflist.resize(globals::nbfcontinua);
 
   FILE *bflist_file = nullptr;
@@ -1341,7 +1342,7 @@ static void write_bflist_file() {
   }
 }
 
-static void setup_phixs_list() {
+void setup_phixs_list() {
   // set up the photoionisation transition lists
   // and temporary gamma/kappa lists for each thread
 
@@ -1513,7 +1514,7 @@ static void setup_phixs_list() {
   setup_photoion_luts();
 }
 
-static void read_atomicdata() {
+void read_atomicdata() {
   read_atomicdata_files();
 
   /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
@@ -1617,6 +1618,8 @@ static void read_atomicdata() {
 
   printout("[input] Total NLTE levels: %d, of which %d are superlevels\n", globals::total_nlte_levels, n_super_levels);
 }
+
+}  // anonymous namespace
 
 void input(int rank)
 /// To govern the input. For now hardwire everything.

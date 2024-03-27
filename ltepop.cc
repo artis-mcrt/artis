@@ -21,12 +21,14 @@
 #include "rpkt.h"
 #include "sn3d.h"
 
+namespace {
+
 struct nne_solution_paras {
   int modelgridindex;
   bool force_lte;
 };
 
-static auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T) -> double {
+auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_always(T >= MINTEMP);
@@ -44,7 +46,7 @@ static auto interpolate_ions_spontrecombcoeff(const int element, const int ion, 
   return globals::elements[element].ions[ion].Alpha_sp[TABLESIZE - 1];
 }
 
-static auto phi_lte(const int element, const int ion, const int modelgridindex) -> double {
+auto phi_lte(const int element, const int ion, const int modelgridindex) -> double {
   // use Saha equation for LTE ionization balance
   auto partfunc_ion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
   auto partfunc_upperion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion + 1];
@@ -55,7 +57,7 @@ static auto phi_lte(const int element, const int ion, const int modelgridindex) 
   return partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
 }
 
-static auto phi_ion_equilib(const int element, const int ion, const int modelgridindex, const int nonemptymgi) -> double
+auto phi_ion_equilib(const int element, const int ion, const int modelgridindex, const int nonemptymgi) -> double
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
 {
@@ -118,6 +120,8 @@ static auto phi_ion_equilib(const int element, const int ion, const int modelgri
 
   return phi;
 }
+
+}  // anonymous namespace
 
 [[nodiscard]] auto calculate_ionfractions(const int element, const int modelgridindex, const double nne,
                                           const bool use_phi_lte) -> std::vector<double>

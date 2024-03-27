@@ -25,7 +25,9 @@
 #include "update_grid.h"
 #include "vectors.h"
 
-static void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
+namespace {
+
+void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   double en_deposited = pkt.e_cmf;
 
   if constexpr (INSTANT_PARTICLE_DEPOSITION) {
@@ -83,7 +85,7 @@ static void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2
   }
 }
 
-static void update_pellet(Packet &pkt, const int nts, const double t2) {
+void update_pellet(Packet &pkt, const int nts, const double t2) {
   // Handle inactive pellets. Need to do two things (a) check if it
   // decays in this time step and if it does handle that. (b) if it doesn't decay in
   // this time step then just move the packet along with the matter for the
@@ -148,7 +150,7 @@ static void update_pellet(Packet &pkt, const int nts, const double t2) {
   }
 }
 
-static void do_packet(Packet &pkt, const double t2, const int nts)
+void do_packet(Packet &pkt, const double t2, const int nts)
 // update a packet no further than time t2
 {
   switch (pkt.type) {
@@ -207,7 +209,7 @@ static void do_packet(Packet &pkt, const double t2, const int nts)
   }
 }
 
-static auto std_compare_packets_bymodelgriddensity(const Packet &p1, const Packet &p2) -> bool {
+auto std_compare_packets_bymodelgriddensity(const Packet &p1, const Packet &p2) -> bool {
   // return true if packet p1 goes before p2
 
   // move escaped packets to the end of the list for better performance
@@ -260,7 +262,7 @@ static auto std_compare_packets_bymodelgriddensity(const Packet &p1, const Packe
   return false;
 }
 
-static void do_cell_packet_updates(std::span<Packet> packets, const int nts, const double ts_end) {
+void do_cell_packet_updates(std::span<Packet> packets, const int nts, const double ts_end) {
   auto update_packet = [ts_end, nts](auto &pkt) {
     const int mgi = grid::get_cell_modelgridindex(pkt.where);
     int newmgi = mgi;
@@ -283,6 +285,8 @@ static void do_cell_packet_updates(std::span<Packet> packets, const int nts, con
   }
 #endif
 }
+
+}  // anonymous namespace
 
 void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
 // Subroutine to move and update packets during the current timestep (nts)

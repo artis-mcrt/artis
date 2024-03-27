@@ -22,8 +22,12 @@
 
 namespace stats {
 
-static std::vector<double> ionstats;
-static std::array<ptrdiff_t, COUNTER_COUNT> eventstats{};
+namespace {
+
+std::vector<double> ionstats;
+std::array<ptrdiff_t, COUNTER_COUNT> eventstats{};
+
+}  // anonymous namespace
 
 void init() {
   if constexpr (TRACK_ION_STATS) {

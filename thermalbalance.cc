@@ -21,6 +21,8 @@
 #include "ratecoeff.h"
 #include "sn3d.h"
 
+namespace {
+
 struct Te_solution_paras {
   double t_current;
   int modelgridindex;
@@ -35,31 +37,7 @@ struct gsl_integral_paras_bfheating {
   float *photoion_xs;
 };
 
-auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T_R, double W) -> double {
-  /// The correction factor for stimulated emission in gammacorr is set to its
-  /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  /// correction may be evaluated at T_R!
-  assert_always(USE_LUT_BFHEATING);
-  double bfheatingcoeff = 0.;
-
-  const int lowerindex = floor(log(T_R / MINTEMP) / T_step_log);
-  if (lowerindex < TABLESIZE - 1) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
-
-    const double f_upper = globals::bfheating_coeff[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
-    const double f_lower = globals::bfheating_coeff[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
-
-    bfheatingcoeff = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_R - T_lower));
-  } else {
-    bfheatingcoeff = globals::bfheating_coeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
-  }
-
-  return W * bfheatingcoeff;
-}
-
-static auto integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas) -> double
+auto integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas) -> double
 /// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
   const auto *const params = static_cast<const gsl_integral_paras_bfheating *>(voidparas);
@@ -78,8 +56,7 @@ static auto integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas)
   return sigma_bf * (1 - nu_edge / nu) * radfield::radfield(nu, modelgridindex) * (1 - exp(-HOVERKB * nu / T_R));
 }
 
-static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
-                                     int modelgridindex) -> double {
+auto calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex) -> double {
   double error = 0.;
   const double epsrel = 1e-3;
   const double epsrelwarning = 1e-1;
@@ -124,6 +101,32 @@ static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixst
   bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
 
   return bfheating;
+}
+
+}  // anonymous namespace
+
+auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T_R, double W) -> double {
+  /// The correction factor for stimulated emission in gammacorr is set to its
+  /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
+  /// correction may be evaluated at T_R!
+  assert_always(USE_LUT_BFHEATING);
+  double bfheatingcoeff = 0.;
+
+  const int lowerindex = floor(log(T_R / MINTEMP) / T_step_log);
+  if (lowerindex < TABLESIZE - 1) {
+    const int upperindex = lowerindex + 1;
+    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
+    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
+
+    const double f_upper = globals::bfheating_coeff[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
+    const double f_lower = globals::bfheating_coeff[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
+
+    bfheatingcoeff = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_R - T_lower));
+  } else {
+    bfheatingcoeff = globals::bfheating_coeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
+  }
+
+  return W * bfheatingcoeff;
 }
 
 void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatingcoeffs) {

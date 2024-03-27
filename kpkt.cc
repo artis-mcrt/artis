@@ -24,6 +24,8 @@
 
 namespace kpkt {
 
+namespace {
+
 enum coolingtype {
   COOLINGTYPE_FF = 0,
   COOLINGTYPE_FB = 1,
@@ -37,15 +39,15 @@ struct CellCachecoolinglist {
   int upperlevel;
 };
 
-static CellCachecoolinglist *coolinglist;
+CellCachecoolinglist *coolinglist;
 
-static int n_kpktdiffusion_timesteps{0};
-static float kpktdiffusion_timescale{0.};
+int n_kpktdiffusion_timesteps{0};
+float kpktdiffusion_timescale{0.};
 
 template <bool update_cooling_contrib_list>
-static auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion,
-                                        const int indexionstart, const int cellcacheslotid, double *C_ff, double *C_fb,
-                                        double *C_exc, double *C_ionization) -> double
+auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion, const int indexionstart,
+                                 const int cellcacheslotid, double *C_ff, double *C_fb, double *C_exc,
+                                 double *C_ionization) -> double
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
 {
@@ -172,6 +174,8 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
 
   return C_ion;
 }
+
+}  // anonymous namespace
 
 void calculate_cooling_rates(const int modelgridindex, HeatingCoolingRates *heatingcoolingrates)
 // Calculate the cooling rates for a given cell and store them for each ion
