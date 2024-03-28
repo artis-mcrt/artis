@@ -206,7 +206,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
 
   const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, selecteddowntrans.targetlevelindex);
 
-  const double oldnucmf = pkt.nu_cmf;
+  const double oldnucmf{(pkt.last_event == 1) ? pkt.nu_cmf : NAN};
   pkt.nu_cmf = epsilon_trans / H;
 
   if (pkt.last_event == 1) {
