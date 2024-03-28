@@ -360,25 +360,17 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
     stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_TOTAL, pkt.e_cmf);
   }
 
-  int jumps = 0;
-
   bool end_packet = false;
   while (!end_packet) {
-    // ionisinglevels = get_ionisinglevels(element,ion);
-
     /// Set this here to 1 to overcome problems in cells which have zero population
     /// in some ionisation stage. This is possible because the dependence on the
     /// originating levels population cancels out in the macroatom transition probabilities
     /// which are based on detailed balance.
 
-    // printout("[debug] %s Z=%d ionstage %d level %d, jumps %d\n", __func__, get_atomicnumber(element),
-    // get_ionstage(element,ion), level, jumps);
-
     assert_testmodeonly(ion >= 0);
     assert_testmodeonly(ion < get_nions(element));
 
     const double epsilon_current = epsilon(element, ion, level);
-    // const int ndowntrans = get_ndowntrans(element, ion, level);
     const int nuptrans = get_nuptrans(element, ion, level);
 
     auto &chlevel = globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level];
@@ -427,7 +419,6 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
         // printout("[debug] do_ma:   radiative deexcitation\n");
-        // printout("[debug] do_ma:   jumps = %d\n", jumps);
 
         do_macroatom_raddeexcitation(pkt, element, ion, level, activatingline);
 
@@ -441,10 +432,9 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
         }
 
         if constexpr (LOG_MACROATOM) {
-          fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %9d %11.5e %11.5e %11.5e %11.5e %9d\n",
-                  globals::timestep, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion_in),
-                  get_ionstage(element, ion), level_in, level, activatingline, nu_cmf_in, pkt.nu_cmf, nu_rf_in,
-                  pkt.nu_rf, jumps);
+          fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %9d %11.5e %11.5e %11.5e %11.5e\n", globals::timestep,
+                  modelgridindex, get_atomicnumber(element), get_ionstage(element, ion_in), get_ionstage(element, ion),
+                  level_in, level, activatingline, nu_cmf_in, pkt.nu_cmf, nu_rf_in, pkt.nu_rf);
         }
 
         end_packet = true;
@@ -454,7 +444,6 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
       case MA_ACTION_COLDEEXC: {
         /// collisional deexcitation of macro atom => convert the packet into a k-packet
         // printout("[debug] do_ma:   collisional deexcitation\n");
-        // printout("[debug] do_ma: jumps = %d\n", jumps);
 
         stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC);
         stats::increment(stats::COUNTER_INTERACTIONS);
@@ -473,7 +462,6 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
 
       case MA_ACTION_INTERNALDOWNSAME: {
         stats::increment(stats::COUNTER_INTERACTIONS);
-        jumps++;
         level = do_macroatom_internal_down_same(element, ion, level);
 
         break;
@@ -482,7 +470,6 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
       case MA_ACTION_RADRECOMB: {
         /// Radiative recombination of MA: emitt a continuum-rpkt
         // printout("[debug] do_ma:   radiative recombination\n");
-        // printout("[debug] do_ma:   jumps = %d\n", jumps);
         // printout("[debug] do_ma:   element %d, ion %d, level %d\n", element, ion, level);
 
         if constexpr (TRACK_ION_STATS) {
@@ -499,7 +486,6 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
       case MA_ACTION_COLRECOMB: {
         /// collisional recombination of macro atom => convert the packet into a k-packet
         // printout("[debug] do_ma:   collisonal recombination\n");
-        // printout("[debug] do_ma: jumps = %d\n",jumps);
         stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLRECOMB);
         stats::increment(stats::COUNTER_INTERACTIONS);
         pkt.last_event = 11;
@@ -519,7 +505,6 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
       case MA_ACTION_INTERNALDOWNLOWER: {
         // printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
         stats::increment(stats::COUNTER_INTERACTIONS);
-        jumps++;
 
         stats::increment(stats::COUNTER_MA_STAT_INTERNALDOWNLOWER);
 
@@ -574,7 +559,6 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
       case MA_ACTION_INTERNALUPSAME: {
         // printout("[debug] do_ma:   internal upward jump within current ionstage\n");
         stats::increment(stats::COUNTER_INTERACTIONS);
-        jumps++;
 
         /// randomly select the occuring transition
         const double *sum_internal_up_same =
@@ -597,7 +581,6 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
       case MA_ACTION_INTERNALUPHIGHER: {
         // printout("[debug] do_ma:   internal upward jump to next ionstage\n");
         stats::increment(stats::COUNTER_INTERACTIONS);
-        jumps++;
 
         stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHER);
 
@@ -664,9 +647,9 @@ void macroatom_open_file(const int my_rank) {
   snprintf(filename, MAXFILENAMELENGTH, "macroatom_%.4d.out", my_rank);
   assert_always(macroatom_file == nullptr);
   macroatom_file = fopen_required(filename, "w");
-  fprintf(macroatom_file, "%8s %14s %2s %12s %12s %9s %9s %9s %11s %11s %11s %11s %9s\n", "timestep", "modelgridindex",
-          "Z", "ionstage_in", "ionstage_out", "level_in", "level_out", "activline", "nu_cmf_in", "nu_cmf_out",
-          "nu_rf_in", "nu_rf_out", "jumps");
+  fprintf(macroatom_file, "%8s %14s %2s %12s %12s %9s %9s %9s %11s %11s %11s %11s\n", "timestep", "modelgridindex", "Z",
+          "ionstage_in", "ionstage_out", "level_in", "level_out", "activline", "nu_cmf_in", "nu_cmf_out", "nu_rf_in",
+          "nu_rf_out");
 }
 
 void macroatom_close_file() {
