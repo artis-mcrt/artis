@@ -53,15 +53,8 @@ inline double cell_is_optically_thick_vpkt;
   auto ref1_sc = std::array<double, 3>{n1[0] * n1_dot_n2 - n2[0], n1[1] * n1_dot_n2 - n2[1], n1[2] * n1_dot_n2 - n2[2]};
   ref1_sc = vec_norm(ref1_sc);
 
-  double cos_stokes_rot_1 = dot(ref1_sc, ref1);
+  const double cos_stokes_rot_1 = std::clamp(dot(ref1_sc, ref1), -1., 1.);
   const double cos_stokes_rot_2 = dot(ref1_sc, ref2);
-
-  if (cos_stokes_rot_1 < -1) {
-    cos_stokes_rot_1 = -1;
-  }
-  if (cos_stokes_rot_1 > 1) {
-    cos_stokes_rot_1 = 1;
-  }
 
   double i = 0;
   if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 > 0)) {
