@@ -89,8 +89,8 @@ inline double cell_is_optically_thick_vpkt;
   return {ref1, ref2};
 }
 
-[[nodiscard]] constexpr auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf,
-                                     std::span<const double, 3> v) -> std::array<double, 3> {
+[[nodiscard]] [[gnu::const]] constexpr auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf,
+                                                    std::span<const double, 3> v) -> std::array<double, 3> {
   // Use Lorentz transformations to get e_cmf from e_rf
 
   const auto beta = std::array<const double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
