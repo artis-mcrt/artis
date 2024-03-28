@@ -2412,15 +2412,15 @@ constexpr static auto get_gridcoords_from_xyz(std::span<const double, 3> pos_xyz
   return -1.;
 }
 
-static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3> pkt_pos,
-                                                      std::span<const double, 3> pkt_dir,
-                                                      std::span<const double, 3> pktposgridcoord,
-                                                      std::span<const double, 3> pktvelgridcoord, int cellindex,
-                                                      const double tstart, std::span<const double, 3> cellcoordmax,
-                                                      std::span<double, 3> d_coordminboundary,
-                                                      std::span<double, 3> d_coordmaxboundary) -> void {
+static auto get_coordboundary_distances_cylindrical2d(
+    std::span<const double, 3> pkt_pos, std::span<const double, 3> pkt_dir, std::span<const double, 3> pktposgridcoord,
+    std::span<const double, 3> pktvelgridcoord, int cellindex, const double tstart,
+    std::span<const double, 3> cellcoordmax) -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // to get the cylindrical intersection, get the spherical intersection with Z components set to zero, and the
   // propagation speed set to the xy component of the 3-velocity
+
+  std::array<double, 3> d_coordminboundary{};
+  std::array<double, 3> d_coordmaxboundary{};
 
   const double posnoz[2] = {pkt_pos[0], pkt_pos[1]};
 
@@ -2462,6 +2462,8 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
                                       ((cellcoordmax[1]) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
                                      tstart;
   d_coordmaxboundary[1] = CLIGHT_PROP * t_zcoordmaxboundary;
+
+  return {d_coordminboundary, d_coordmaxboundary};
 }
 
 [[nodiscard]] auto boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos,
@@ -2596,8 +2598,8 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
           BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
     }
 
-    get_coordboundary_distances_cylindrical2d(pos, dir, pktposgridcoord, pktvelgridcoord, cellindex, tstart,
-                                              cellcoordmax, d_coordminboundary, d_coordmaxboundary);
+    std::tie(d_coordminboundary, d_coordmaxboundary) = get_coordboundary_distances_cylindrical2d(
+        pos, dir, pktposgridcoord, pktvelgridcoord, cellindex, tstart, cellcoordmax);
 
   } else if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     // There are six possible boundary crossings. Each of the three
