@@ -297,27 +297,24 @@ void do_macroatom_ionisation(const int modelgridindex, const int element, int *i
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
 
-  int upper = -1;
-  /// Randomly select the occuring transition
+  // Randomly select the occuring transition
   const double targetrate = rng_uniform() * internal_up_higher;
   double rate = 0.;
   const int nphixstargets = get_nphixstargets(element, *ion, *level);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-    upper = get_phixsupperlevel(element, *ion, *level, phixstargetindex);
     const double epsilon_trans = get_phixs_threshold(element, *ion, *level, phixstargetindex);
     const double R = get_corrphotoioncoeff(element, *ion, *level, phixstargetindex, modelgridindex);
     const double C = col_ionization_ratecoeff(T_e, nne, element, *ion, *level, phixstargetindex, epsilon_trans);
     rate += (R + C) * epsilon_current;
-    if (targetrate < rate) {
-      break;
+    if (rate > targetrate) {
+      // set the macroatom's new state
+      *ion += 1;
+      *level = get_phixsupperlevel(element, *ion, *level, phixstargetindex);
+      return;
     }
   }
 
-  assert_always(upper >= 0);
-
-  /// and set the macroatom's new state
-  *ion += 1;
-  *level = upper;
+  assert_always(false);
 }
 
 }  // anonymous namespace
