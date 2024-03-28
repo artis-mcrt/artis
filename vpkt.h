@@ -82,17 +82,16 @@ inline double cell_is_optically_thick_vpkt;
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
-[[nodiscard]] constexpr auto meridian(std::span<const double, 3> n,
-                                      std::span<double, 3> ref1) -> std::array<double, 3> {
+[[nodiscard]] constexpr auto meridian(std::span<const double, 3> n)
+    -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // for ref_1 use (from triple product rule)
   const double n_xylen = std::sqrt(n[0] * n[0] + n[1] * n[1]);
-  ref1[0] = -1. * n[0] * n[2] / n_xylen;
-  ref1[1] = -1. * n[1] * n[2] / n_xylen;
-  ref1[2] = (1 - (n[2] * n[2])) / n_xylen;
+  const auto ref1 =
+      std::array<double, 3>{-1. * n[0] * n[2] / n_xylen, -1. * n[1] * n[2] / n_xylen, (1 - (n[2] * n[2])) / n_xylen};
 
   // for ref_2 use vector product of n_cmf with ref1
   const auto ref2 = cross_prod(ref1, n);
-  return ref2;
+  return {ref1, ref2};
 }
 
 [[nodiscard]] constexpr auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf,
@@ -130,10 +129,8 @@ inline double cell_is_optically_thick_vpkt;
 // Routine to transform the Stokes Parameters from RF to CMF
 constexpr auto frame_transform(std::span<const double, 3> n_rf, double *Q, double *U,
                                std::span<const double, 3> v) -> std::array<double, 3> {
-  auto ref1 = std::array<double, 3>{NAN, NAN, NAN};
-
   // Meridian frame in the RF
-  auto ref2 = meridian(n_rf, ref1);
+  const auto [ref1_rf, ref2_rf] = meridian(n_rf);
 
   const double Q0 = *Q;
   const double U0 = *U;
@@ -172,9 +169,9 @@ constexpr auto frame_transform(std::span<const double, 3> n_rf, double *Q, doubl
 
   // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
 
-  const auto elec_rf = std::array<double, 3>{cos(rot_angle) * ref1[0] - sin(rot_angle) * ref2[0],
-                                             cos(rot_angle) * ref1[1] - sin(rot_angle) * ref2[1],
-                                             cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
+  const auto elec_rf = std::array<double, 3>{cos(rot_angle) * ref1_rf[0] - sin(rot_angle) * ref2_rf[0],
+                                             cos(rot_angle) * ref1_rf[1] - sin(rot_angle) * ref2_rf[1],
+                                             cos(rot_angle) * ref1_rf[2] - sin(rot_angle) * ref2_rf[2]};
 
   // Aberration
   const auto n_cmf = angle_ab(n_rf, v);
@@ -183,11 +180,11 @@ constexpr auto frame_transform(std::span<const double, 3> n_rf, double *Q, doubl
   const auto elec_cmf = lorentz(elec_rf, n_rf, v);
 
   // Meridian frame in the CMF
-  ref2 = meridian(n_cmf, ref1);
+  const auto [ref1_cmf, ref2_cmf] = meridian(n_cmf);
 
   // Projection of E onto ref1 and ref2
-  const double cosine_elec_ref1 = dot(elec_cmf, ref1);
-  const double cosine_elec_ref2 = dot(elec_cmf, ref2);
+  const double cosine_elec_ref1 = dot(elec_cmf, ref1_cmf);
+  const double cosine_elec_ref2 = dot(elec_cmf, ref2_cmf);
 
   // Compute the angle between ref1 and the electric field
   double theta_rot = 0.;

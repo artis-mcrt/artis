@@ -207,8 +207,7 @@ void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
 
     auto obs_cmf = angle_ab(vpkt.dir, vel_vec);
 
-    auto ref1_old = std::array<double, 3>{};
-    auto ref2_old = meridian(old_dir_cmf, ref1_old);
+    auto [ref1_old, ref2_old] = meridian(old_dir_cmf);
 
     // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
     // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
@@ -236,8 +235,7 @@ void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
 
     // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame
 
-    auto ref1 = std::array<double, 3>{};
-    auto ref2 = meridian(obs_cmf, ref1);
+    auto [ref1, ref2] = meridian(obs_cmf);
 
     // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
     // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
