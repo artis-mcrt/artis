@@ -13,7 +13,7 @@
 #include "sn3d.h"
 
 template <size_t VECDIM>
-[[nodiscard]] [[gnu::pure]] constexpr auto vec_len(const std::array<double, VECDIM> vec) -> double
+[[nodiscard]] [[gnu::const]] constexpr auto vec_len(const std::array<double, VECDIM> vec) -> double
 // return the the magnitude of a vector
 {
   const double squaredlen = std::accumulate(vec.begin(), vec.end(), 0., [](auto a, auto b) { return a + b * b; });
@@ -21,7 +21,7 @@ template <size_t VECDIM>
   return std::sqrt(squaredlen);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto vec_norm(const std::array<double, 3> vec_in)
+[[nodiscard]] [[gnu::const]] constexpr auto vec_norm(const std::array<double, 3> vec_in)
 // get a normalized copy of vec_in
 {
   const double magnitude = vec_len(vec_in);
