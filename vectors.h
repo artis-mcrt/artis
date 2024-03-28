@@ -70,10 +70,8 @@ constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
   const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
-  std::array<double, 3> dir2{};
-  for (int d = 0; d < 3; d++) {
-    dir2[d] = (dir1[d] - (vel[d] * fact2)) / fact1;
-  }
+  std::array<double, 3> dir2{(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
+                             (dir1[2] - (vel[2] * fact2)) / fact1};
 
   dir2 = vec_norm(dir2);
 
