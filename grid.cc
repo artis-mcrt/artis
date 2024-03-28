@@ -2662,24 +2662,28 @@ static auto get_coordboundary_distances_cylindrical2d(
   }
 
   if (choice == BOUNDARY_NONE) {
-    printout("Something wrong in boundary crossing - didn't find anything.\n");
-    printout("packet cell %d\n", cellindex);
-    printout("choice %d\n", choice);
-    printout("globals::tmin %g tstart %g\n", globals::tmin, tstart);
-    printout("last_cross %d\n", last_cross);
-    for (int d2 = 0; d2 < 3; d2++) {
-      printout("coord %d: initpos %g dir %g\n", d2, pos[d2], dir[d2]);
-    }
-    printout("|initpos| %g |dir| %g |pos.dir| %g\n", vec_len(pos), vec_len(dir), dot(pos, dir));
-    for (int d2 = 0; d2 < ndim; d2++) {
-      printout("coord %d: dist_posmax %g dist_posmin %g \n", d2, d_coordmaxboundary[d2], d_coordminboundary[d2]);
-      printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2,
-               grid::get_cellcoordmin(cellindex, d2) * tstart / globals::tmin,
-               cellcoordmax[d2] * tstart / globals::tmin);
-    }
-    printout("tstart %g\n", tstart);
+    if constexpr (TESTMODE) {
+      printout("Something wrong in boundary crossing - didn't find anything.\n");
+      printout("packet cell %d\n", cellindex);
+      printout("choice %d\n", choice);
+      printout("globals::tmin %g tstart %g\n", globals::tmin, tstart);
+      printout("last_cross %d\n", last_cross);
+      for (int d2 = 0; d2 < 3; d2++) {
+        printout("coord %d: initpos %g dir %g\n", d2, pos[d2], dir[d2]);
+      }
+      printout("|initpos| %g |dir| %g |pos.dir| %g\n", vec_len(pos), vec_len(dir), dot(pos, dir));
+      for (int d2 = 0; d2 < ndim; d2++) {
+        printout("coord %d: dist_posmax %g dist_posmin %g \n", d2, d_coordmaxboundary[d2], d_coordminboundary[d2]);
+        printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2,
+                 grid::get_cellcoordmin(cellindex, d2) * tstart / globals::tmin,
+                 cellcoordmax[d2] * tstart / globals::tmin);
+      }
+      printout("tstart %g\n", tstart);
 
-    assert_always(false);
+      assert_always(false);
+    } else {
+      __builtin_unreachable();
+    }
   }
 
   return {distance, snext};
