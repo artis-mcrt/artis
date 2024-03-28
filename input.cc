@@ -1770,7 +1770,7 @@ void read_parameterfile(int rank)
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> globals::gamma_kappagrey;  // use grey opacity for gammas?
 
-  float syn_dir_in[3];
+  std::array<float, 3> syn_dir_in{-1.};
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> syn_dir_in[0] >> syn_dir_in[1] >> syn_dir_in[2];  // components of syn_dir
 
