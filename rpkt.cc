@@ -56,8 +56,8 @@ void allocate_expansionopacities() {
   }
 
   const auto npts_nonempty = grid::get_nonempty_npts_model();
-  float *expansionopacities_data = nullptr;
-  double *expansionopacity_planck_cumulative_data = nullptr;
+  float *expansionopacities_data{};
+  double *expansionopacity_planck_cumulative_data{};
 #ifdef MPI_ON
   int my_rank_nonemptycells = npts_nonempty / globals::node_nprocs;
   // rank_in_node 0 gets any remainder

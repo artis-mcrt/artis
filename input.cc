@@ -84,7 +84,7 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     "23: kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y "
     "time steps"};
 
-CellCachePhixsTargets *chphixstargetsblock = nullptr;
+CellCachePhixsTargets *chphixstargetsblock{};
 
 void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
@@ -500,7 +500,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
     *lineindex = lineindex_initial;
     if (pass == 1) {
       int alltransindex = 0;
-      LevelTransition *alltransblock = nullptr;
+      LevelTransition *alltransblock{};
 
 #ifdef MPI_ON
       MPI_Barrier(MPI_COMM_WORLD);
@@ -960,7 +960,7 @@ void read_atomicdata_files() {
   }
 
   // create a linelist shared on node and then copy data across, freeing the local copy
-  TransitionLine *nonconstlinelist = nullptr;
+  TransitionLine *nonconstlinelist{};
 #ifdef MPI_ON
   MPI_Win win = MPI_WIN_NULL;
 
@@ -1301,7 +1301,7 @@ void setup_cellcache() {
 void write_bflist_file() {
   globals::bflist.resize(globals::nbfcontinua);
 
-  FILE *bflist_file = nullptr;
+  FILE *bflist_file{};
   if (globals::rank_global == 0) {
     bflist_file = fopen_required("bflist.out", "w");
     fprintf(bflist_file, "%d\n", globals::nbfcontinua);
@@ -1460,7 +1460,7 @@ void setup_phixs_list() {
   if (globals::nbfcontinua > 0) {
 // copy the photoionisation tables into one contiguous block of memory
 #ifdef MPI_ON
-    float *allphixsblock = nullptr;
+    float *allphixsblock{};
     MPI_Win win_allphixsblock = MPI_WIN_NULL;
     auto size =
         static_cast<MPI_Aint>((globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0);

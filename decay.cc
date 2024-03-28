@@ -135,9 +135,9 @@ std::vector<DecayPath> decaypaths;
 // decaypath_energy_per_mass points to an array of length npts_model * num_decaypaths
 // the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
 // during the simulation time range
-double *decaypath_energy_per_mass = nullptr;
+double *decaypath_energy_per_mass{};
 #ifdef MPI_ON
-MPI_Win win_decaypath_energy_per_mass = MPI_WIN_NULL;
+MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
 #endif
 
 auto get_num_nuclides() -> int { return static_cast<int>(nuclides.size()); }

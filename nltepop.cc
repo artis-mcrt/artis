@@ -26,7 +26,7 @@
 #include "ratecoeff.h"
 #include "sn3d.h"
 
-static FILE *nlte_file = nullptr;
+static FILE *nlte_file{};
 
 // can save memory by using a combined rate matrix at the cost of diagnostic information
 static constexpr bool individual_process_matricies = true;
@@ -838,12 +838,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
   gsl_matrix *rate_matrix = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-  gsl_matrix *rate_matrix_rad_bb = nullptr;
-  gsl_matrix *rate_matrix_coll_bb = nullptr;
-  gsl_matrix *rate_matrix_ntcoll_bb = nullptr;
-  gsl_matrix *rate_matrix_rad_bf = nullptr;
-  gsl_matrix *rate_matrix_coll_bf = nullptr;
-  gsl_matrix *rate_matrix_ntcoll_bf = nullptr;
+  gsl_matrix *rate_matrix_rad_bb{};
+  gsl_matrix *rate_matrix_coll_bb{};
+  gsl_matrix *rate_matrix_ntcoll_bb{};
+  gsl_matrix *rate_matrix_rad_bf{};
+  gsl_matrix *rate_matrix_coll_bf{};
+  gsl_matrix *rate_matrix_ntcoll_bf{};
   if (individual_process_matricies) {
     rate_matrix_rad_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
     rate_matrix_coll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);

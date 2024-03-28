@@ -197,10 +197,10 @@ struct CellCacheElements {
 };
 
 struct CellCache {
-  double *cooling_contrib = nullptr;  /// Cooling contributions by the different processes.
-  CellCacheElements *chelements = nullptr;
-  CellCacheLevels *ch_all_levels = nullptr;
-  double *ch_allcont_departureratios = nullptr;
+  double *cooling_contrib{};  /// Cooling contributions by the different processes.
+  CellCacheElements *chelements{};
+  CellCacheLevels *ch_all_levels{};
+  double *ch_allcont_departureratios{};
   double chi_ff_nnionpart{-1};
   int cellnumber{-1};  /// Identifies the cell the data is valid for.
 };

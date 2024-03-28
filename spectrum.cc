@@ -318,9 +318,9 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
                     const Spectra &spectra, int numtimesteps) {
   FILE *spec_file = fopen_required(spec_filename, "w");
 
-  FILE *emission_file = nullptr;
-  FILE *trueemission_file = nullptr;
-  FILE *absorption_file = nullptr;
+  FILE *emission_file{};
+  FILE *trueemission_file{};
+  FILE *absorption_file{};
 
   const bool do_emission_res = spectra.do_emission_res;
 
@@ -388,8 +388,8 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
                    const std::string &absorption_filename, const Spectra *stokes_i, const Spectra *stokes_q,
                    const Spectra *stokes_u) {
   FILE *specpol_file = fopen_required(specpol_filename, "w");
-  FILE *emissionpol_file = nullptr;
-  FILE *absorptionpol_file = nullptr;
+  FILE *emissionpol_file{};
+  FILE *absorptionpol_file{};
 
   const bool do_emission_res = stokes_i->do_emission_res;
 

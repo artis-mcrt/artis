@@ -50,7 +50,7 @@ size_t npts_model = 0;           // number of model grid cells
 size_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
 double t_model = -1.;  // time at which densities in input model are correct.
-double *vout_model = nullptr;
+double *vout_model{};
 std::array<int, 3> ncoord_model{0};  // the model.txt input grid dimensions
 
 double min_den;  // minimum model density
@@ -65,13 +65,13 @@ struct PropGridCell {
   int modelgridindex{-1};
 };
 
-struct PropGridCell *cell = nullptr;
+struct PropGridCell *cell{};
 
 std::vector<int> mg_associated_cells;
 std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
 
-double *totmassradionuclide = nullptr;  /// total mass of each radionuclide in the ejecta
+double *totmassradionuclide{};  /// total mass of each radionuclide in the ejecta
 
 #ifdef MPI_ON
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
@@ -79,9 +79,9 @@ MPI_Win win_initradioabund_allcells = MPI_WIN_NULL;
 MPI_Win win_corrphotoionrenorm = MPI_WIN_NULL;
 #endif
 
-float *initradioabund_allcells = nullptr;
-float *initmassfracstable_allcells = nullptr;
-float *elem_meanweight_allcells = nullptr;
+float *initradioabund_allcells{};
+float *initmassfracstable_allcells{};
+float *elem_meanweight_allcells{};
 
 std::vector<int> ranks_nstart;
 std::vector<int> ranks_ndo;
@@ -808,7 +808,7 @@ static void allocate_nonemptycells_composition_cooling()
   elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
 #endif
 
-  double *nltepops_allcells = nullptr;
+  double *nltepops_allcells{};
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
     auto size = static_cast<MPI_Aint>(my_rank_nonemptycells * globals::total_nlte_levels * sizeof(double));

@@ -31,7 +31,7 @@ namespace {
 // save to the macroatom_*.out file
 constexpr bool LOG_MACROATOM = false;
 
-FILE *macroatom_file = nullptr;
+FILE *macroatom_file{};
 
 void calculate_macroatom_transitionrates(const int modelgridindex, const int element, const int ion, const int level,
                                          const double t_mid, CellCacheLevels &chlevel) {

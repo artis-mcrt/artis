@@ -31,12 +31,12 @@
 
 namespace {
 
-double *spontrecombcoeffs = nullptr;
+double *spontrecombcoeffs{};
 
 // for USE_LUT_PHOTOION = true
-double *corrphotoioncoeffs = nullptr;
+double *corrphotoioncoeffs{};
 
-double *bfcooling_coeffs = nullptr;
+double *bfcooling_coeffs{};
 
 using gsl_integral_paras_gammacorr = struct {
   double nu_edge;

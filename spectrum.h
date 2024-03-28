@@ -8,10 +8,10 @@
 #include "packet.h"
 
 struct TimeStepstepspec {
-  double *flux = nullptr;
-  double *absorption = nullptr;
-  double *emission = nullptr;
-  double *trueemission = nullptr;
+  double *flux{};
+  double *absorption{};
+  double *emission{};
+  double *trueemission{};
 };
 
 struct Spectra {

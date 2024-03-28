@@ -104,7 +104,7 @@ struct collionrow {
 
 static std::vector<collionrow> colliondata;
 
-static FILE *nonthermalfile = nullptr;
+static FILE *nonthermalfile{};
 static bool nonthermal_initialized = false;
 
 static gsl_vector *envec;      // energy grid on which solution is sampled
@@ -126,23 +126,23 @@ struct nt_excitation_struct {
 };
 
 struct nt_solution_struct {
-  double *yfunc = nullptr;  // Samples of the Spencer-Fano solution function. Multiply by energy to get non-thermal
-                            // electron number flux. y(E) * dE is the flux of electrons with energy in the range (E, E +
-                            // dE) y has units of particles / cm2 / s / eV
+  double *yfunc{};  // Samples of the Spencer-Fano solution function. Multiply by energy to get non-thermal
+                    // electron number flux. y(E) * dE is the flux of electrons with energy in the range (E, E +
+                    // dE) y has units of particles / cm2 / s / eV
 
   float frac_heating = 1.;     // energy fractions should add up to 1.0 if the solution is good
   float frac_ionization = 0.;  // fraction of deposition energy going to ionization
   float frac_excitation = 0.;  // fraction of deposition energy going to excitation
 
   // these points arrays of length includedions
-  float *eff_ionpot = nullptr;  // these are used to calculate the non-thermal ionization rate
+  float *eff_ionpot{};  // these are used to calculate the non-thermal ionization rate
   double *fracdep_ionization_ion =
       nullptr;  // the fraction of the non-thermal deposition energy going to ionizing this ion
 
   // these  point to arrays of length includedions * (NT_MAX_AUGER_ELECTRONS + 1)
-  float *prob_num_auger = nullptr;       // probability that one ionisation of this ion will produce n Auger electrons.
-                                         // elements sum to 1.0 for a given ion
-  float *ionenfrac_num_auger = nullptr;  // like above, but energy weighted. elements sum to 1.0 for an ion
+  float *prob_num_auger{};       // probability that one ionisation of this ion will produce n Auger electrons.
+                                 // elements sum to 1.0 for a given ion
+  float *ionenfrac_num_auger{};  // like above, but energy weighted. elements sum to 1.0 for an ion
 
   std::vector<nt_excitation_struct> frac_excitations_list;
 

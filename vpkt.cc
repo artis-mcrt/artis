@@ -35,7 +35,7 @@ struct VSpecPol {
   float delta_t{NAN};
 };
 
-VSpecPol **vspecpol = nullptr;
+VSpecPol **vspecpol{};
 
 float lower_freq_vspec[VMNUBINS];
 float delta_freq_vspec[VMNUBINS];

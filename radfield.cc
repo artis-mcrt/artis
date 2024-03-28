@@ -51,8 +51,8 @@ struct RadFieldBin {
 constexpr double radfieldbins_delta_nu =
     (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
 
-struct RadFieldBin *radfieldbins = nullptr;
-struct RadFieldBinSolution *radfieldbin_solutions = nullptr;
+struct RadFieldBin *radfieldbins{};
+struct RadFieldBinSolution *radfieldbin_solutions{};
 
 #ifdef MPI_ON
 MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
@@ -73,13 +73,13 @@ int detailed_linecount = 0;
 // array of indicies into the linelist[] array for selected lines
 int *detailed_lineindicies;
 
-struct Jb_lu_estimator **prev_Jb_lu_normed = nullptr;  // value from the previous timestep
-struct Jb_lu_estimator **Jb_lu_raw = nullptr;          // unnormalised estimator for the current timestep
+struct Jb_lu_estimator **prev_Jb_lu_normed{};  // value from the previous timestep
+struct Jb_lu_estimator **Jb_lu_raw{};          // unnormalised estimator for the current timestep
 
 // ** end detailed lines
 
-float *prev_bfrate_normed = nullptr;  // values from the previous timestep
-std::vector<double> bfrate_raw;       // unnormalised estimators for the current timestep
+float *prev_bfrate_normed{};     // values from the previous timestep
+std::vector<double> bfrate_raw;  // unnormalised estimators for the current timestep
 
 // expensive debugging mode to track the contributions to each bound-free rate estimator
 
@@ -105,7 +105,7 @@ struct gsl_T_R_solver_paras {
   int binindex;
 };
 
-FILE *radfieldfile = nullptr;
+FILE *radfieldfile{};
 
 constexpr auto get_bin_nu_upper(int binindex) -> double {
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);

@@ -63,14 +63,14 @@ std::ofstream output_file;
 
 namespace {
 
-FILE *linestat_file = nullptr;
+FILE *linestat_file{};
 auto real_time_start = -1;
 auto time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
-FILE *estimators_file = nullptr;
+FILE *estimators_file{};
 
 #ifdef MPI_ON
 size_t mpi_grid_buffer_size = 0;
-char *mpi_grid_buffer = nullptr;
+char *mpi_grid_buffer{};
 #endif
 
 void initialise_linestat_file() {

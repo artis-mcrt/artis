@@ -35,26 +35,26 @@ struct ModelGridCell {
   float rho = -1.;
   // modelgrid nn_tot
   float nnetot = -1.;  // total electron density (free + bound).
-  float *initradioabund = nullptr;
-  float *initmassfracstable = nullptr;
-  float *elem_meanweight = nullptr;
+  float *initradioabund{};
+  float *initmassfracstable{};
+  float *elem_meanweight{};
   float initelectronfrac = -1;  // Ye: electrons (or protons) per nucleon
   float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
   float ffegrp = 0.;
   float kappagrey = 0.;
-  float grey_depth = 0.;  /// Grey optical depth to surface of the modelgridcell
-                          /// This is only stored to print it outside the OpenMP loop in update_grid to the
-                          /// estimatorsfile so there is no need to communicate it via MPI so far!
-  int *elements_uppermost_ion = nullptr;    /// Highest ionisation stage which has a decent population for a particular
-                                            /// element in a given cell.
-  ModelCellElement *composition = nullptr;  /// Pointer to an array which contains the time dependent
-                                            /// abundances of all included elements and all the groundlevel
-                                            /// populations and partition functions for their ions
-  double *nlte_pops = nullptr;              /// Pointer to an array that contains the nlte-level
-                                            /// populations for this cell
+  float grey_depth = 0.;            /// Grey optical depth to surface of the modelgridcell
+                                    /// This is only stored to print it outside the OpenMP loop in update_grid to the
+                                    /// estimatorsfile so there is no need to communicate it via MPI so far!
+  int *elements_uppermost_ion{};    /// Highest ionisation stage which has a decent population for a particular
+                                    /// element in a given cell.
+  ModelCellElement *composition{};  /// Pointer to an array which contains the time dependent
+                                    /// abundances of all included elements and all the groundlevel
+                                    /// populations and partition functions for their ions
+  double *nlte_pops{};              /// Pointer to an array that contains the nlte-level
+                                    /// populations for this cell
 
   double totalcooling = -1;
-  double **cooling_contrib_ion = nullptr;
+  double **cooling_contrib_ion{};
   uint_fast8_t thick = 0;
 };
 
@@ -121,7 +121,7 @@ void set_model_type(enum gridtypes model_type_value);
 [[nodiscard]] auto get_nonempty_npts_model() -> int;
 [[nodiscard]] auto get_t_model() -> double;
 [[nodiscard]] auto get_cell_modelgridindex(int cellindex) -> int;
-[[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> pos, double time) -> int;
+[[nodiscard]] auto get_cellindex_from_pos(std::array<double, 3> pos, double time) -> int;
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_maxndo() -> int;
@@ -129,8 +129,8 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_ndo(int rank) -> int;
 [[nodiscard]] auto get_ndo_nonempty(int rank) -> int;
 [[nodiscard]] auto get_totmassradionuclide(int z, int a) -> double;
-[[nodiscard]] auto boundary_distance(const std::array<double, 3> dir, const std::array<double, 3> pos, double tstart,
-                                     int cellindex, enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>;
+[[nodiscard]] auto boundary_distance(std::array<double, 3> dir, std::array<double, 3> pos, double tstart, int cellindex,
+                                     enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>;
 
 [[nodiscard]] inline auto get_elem_abundance(int modelgridindex, int element) -> float
 // mass fraction of an element (all isotopes combined)
