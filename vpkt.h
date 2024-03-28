@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #ifndef VPKT_H
 #define VPKT_H
 
@@ -40,8 +41,9 @@ inline int nvpkt_esc3{0};  // macroatom deactivation
 
 inline double cell_is_optically_thick_vpkt;
 
-[[nodiscard]] constexpr auto rot_angle(std::span<const double, 3> n1, std::span<const double, 3> n2,
-                                       std::span<double, 3> ref1, std::span<double, 3> ref2) -> double {
+[[nodiscard]] [[gnu::const]] constexpr auto rot_angle(std::span<const double, 3> n1, std::span<const double, 3> n2,
+                                                      std::span<const double, 3> ref1,
+                                                      std::span<const double, 3> ref2) -> double {
   // Rotation angle from the scattering plane
   // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
   // the meridian frame such that Q=1 is in the scattering plane and along ref1
@@ -82,7 +84,7 @@ inline double cell_is_optically_thick_vpkt;
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
-[[nodiscard]] constexpr auto meridian(std::span<const double, 3> n)
+[[nodiscard]] [[gnu::const]] constexpr auto meridian(std::span<const double, 3> n)
     -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // for ref_1 use (from triple product rule)
   const double n_xylen = std::sqrt(n[0] * n[0] + n[1] * n[1]);
