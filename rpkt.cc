@@ -386,7 +386,7 @@ static void electron_scatter_rpkt(Packet &pkt) {
   double Qi = pkt.stokes[1];
   double Ui = pkt.stokes[2];
 
-  auto old_dir_cmf = frame_transform(pkt.dir, &Qi, &Ui, vel_vec);
+  const auto old_dir_cmf = frame_transform(pkt.dir, &Qi, &Ui, vel_vec);
 
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
   // Whitlock 2008)
