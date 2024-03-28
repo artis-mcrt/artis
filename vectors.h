@@ -32,21 +32,22 @@ template <size_t VECDIM>
 }
 
 template <size_t S1, size_t S2>
-[[nodiscard]] [[gnu::pure]] constexpr auto dot(const std::array<double, S1> x, const std::array<double, S2> y) -> double
+[[nodiscard]] [[gnu::const]] constexpr auto dot(const std::array<double, S1> x,
+                                                const std::array<double, S2> y) -> double
 // vector dot product
 {
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(std::span<const double, 3> x,
-                                                        const double t) -> std::array<double, 3>
+[[nodiscard]] [[gnu::const]] constexpr auto get_velocity(std::span<const double, 3> x,
+                                                         const double t) -> std::array<double, 3>
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
   return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto cross_prod(const std::array<double, 3> vec_a,
-                                                      const std::array<double, 3> vec_b) -> std::array<double, 3> {
+[[nodiscard]] [[gnu::const]] constexpr auto cross_prod(const std::array<double, 3> vec_a,
+                                                       const std::array<double, 3> vec_b) -> std::array<double, 3> {
   std::array<double, 3> vecout = {(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]),
                                   (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
                                   (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
