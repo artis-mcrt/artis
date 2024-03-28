@@ -177,10 +177,10 @@ constexpr auto frame_transform(std::span<const double, 3> n_rf, double *Q, doubl
                                              cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
 
   // Aberration
-  auto n_cmf = angle_ab(n_rf, v);
+  const auto n_cmf = angle_ab(n_rf, v);
 
   // Lorentz transformation of E
-  auto elec_cmf = lorentz(elec_rf, n_rf, v);
+  const auto elec_cmf = lorentz(elec_rf, n_rf, v);
 
   // Meridian frame in the CMF
   ref2 = meridian(n_cmf, ref1);
