@@ -308,8 +308,8 @@ void do_macroatom_ionisation(const int modelgridindex, const int element, int *i
     rate += (R + C) * epsilon_current;
     if (rate > targetrate) {
       // set the macroatom's new state
-      *ion += 1;
       *level = get_phixsupperlevel(element, *ion, *level, phixstargetindex);
+      *ion += 1;
       return;
     }
   }
