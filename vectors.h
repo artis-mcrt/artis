@@ -38,7 +38,7 @@ template <size_t S1, size_t S2>
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(const std::array<double, 3> x,
+[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(std::span<const double, 3> x,
                                                         const double t) -> std::array<double, 3>
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
@@ -108,7 +108,7 @@ constexpr void vec_scale(std::array<double, 3> &vec, const double scalefactor) {
   return dopplerfactor;
 }
 
-[[gnu::pure]] [[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(const std::array<double, 3> pos_rf,
+[[gnu::pure]] [[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(std::span<const double, 3> pos_rf,
                                                                          const std::array<double, 3> dir_rf,
                                                                          const double prop_time) -> double
 // Doppler factor squared, either to first order v/c or fully relativisitic
@@ -137,13 +137,13 @@ constexpr void vec_scale(std::array<double, 3> &vec, const double scalefactor) {
   return dopplerfactorsq;
 }
 
-[[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(const std::array<double, 3> pos_rf,
+[[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(std::span<const double, 3> pos_rf,
                                                                         const std::array<double, 3> dir_rf,
                                                                         const double prop_time) -> double {
   return doppler_nucmf_on_nurf(dir_rf, get_velocity(pos_rf, prop_time));
 }
 
-constexpr auto move_pkt_withtime(std::array<double, 3> &pos_rf, const std::array<double, 3> dir_rf, double &prop_time,
+constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, const std::array<double, 3> dir_rf, double &prop_time,
                                  const double nu_rf, double &nu_cmf, const double e_rf, double &e_cmf,
                                  const double distance) -> double
 /// Subroutine to move a packet along a straight line (specified by current
@@ -184,8 +184,8 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   return pkt.escape_time - (dot(pkt.pos, pkt.dir) / CLIGHT_PROP);
 }
 
-[[nodiscard]] constexpr auto get_escapedirectionbin(const std::array<double, 3> dir_in,
-                                                    const std::array<double, 3> syn_dir) -> int {
+[[nodiscard]] [[gnu::pure]] constexpr auto get_escapedirectionbin(const std::array<double, 3> dir_in,
+                                                                  const std::array<double, 3> syn_dir) -> int {
   constexpr auto xhat = std::array<double, 3>{1.0, 0.0, 0.0};
 
   // sometimes dir vectors aren't accurately normalised
