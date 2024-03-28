@@ -212,9 +212,12 @@ auto get_coordcellindexincrement(const int axis) -> int
       return ncoordgrid[0] * ncoordgrid[1];
 
     default:
-      printout("invalid coordinate index %d", axis);
-      std::abort();
-      return -1;
+      if constexpr (TESTMODE) {
+        printout("invalid coordinate index %d", axis);
+        assert_testmodeonly(false);
+      } else {
+        __builtin_unreachable();
+      }
   }
 }
 
@@ -235,9 +238,12 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int
         return (cellindex / (ncoordgrid[0] * ncoordgrid[1])) % ncoordgrid[2];
 
       default:
-        printout("invalid coordinate index %d", axis);
-        std::abort();
-        return -1;
+        if constexpr (TESTMODE) {
+          printout("invalid coordinate index %d", axis);
+          assert_testmodeonly(false);
+        } else {
+          __builtin_unreachable();
+        }
     }
   }
 
@@ -1711,8 +1717,12 @@ void read_ejecta_model() {
     }
 
     default: {
-      printout("Unknown model type. Abort.\n");
-      std::abort();
+      if constexpr (TESTMODE) {
+        printout("ERROR: Unknown model type %d\n", get_model_type());
+        assert_testmodeonly(false);
+      } else {
+        __builtin_unreachable();
+      }
     }
   }
 
