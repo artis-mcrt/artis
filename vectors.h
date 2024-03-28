@@ -2,6 +2,7 @@
 #ifndef VECTORS_H
 #define VECTORS_H
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <numeric>
