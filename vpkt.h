@@ -8,7 +8,6 @@
 #include "artisoptions.h"
 #include "constants.h"
 #include "packet.h"
-#include "sn3d.h"
 #include "vectors.h"
 
 void read_parameterfile_vpkt();
@@ -78,8 +77,6 @@ inline double cell_is_optically_thick_vpkt;
   if (cos_stokes_rot_2 == 0) {
     i = 0.;
   }
-
-  assert_always(std::isfinite(i));
 
   return i;
 }
