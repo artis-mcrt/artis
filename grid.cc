@@ -41,9 +41,9 @@ namespace grid {
 
 namespace {
 
-char coordlabel[3];
+std::array<char, 3> coordlabel{'?', '?', '?'};
 
-int ncoordgrid[3];  /// propagation grid dimensions
+std::array<int, 3> ncoordgrid{0};  /// propagation grid dimensions
 
 enum gridtypes model_type = GRID_SPHERICAL1D;
 size_t npts_model = 0;           // number of model grid cells
@@ -51,7 +51,7 @@ size_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cel
 
 double t_model = -1.;  // time at which densities in input model are correct.
 double *vout_model = nullptr;
-int ncoord_model[3];  // the model.txt input grid dimensions
+std::array<int, 3> ncoord_model{0};  // the model.txt input grid dimensions
 
 double min_den;  // minimum model density
 
@@ -61,8 +61,8 @@ double mfeg;  /// Total mass of Fe group elements in ejecta
 int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
 
 struct PropGridCell {
-  double pos_min[3];  // Initial co-ordinates of inner most corner of cell.
-  int modelgridindex;
+  std::array<double, 3> pos_min{};  // Initial co-ordinates of inner most corner of cell.
+  int modelgridindex{-1};
 };
 
 struct PropGridCell *cell = nullptr;
