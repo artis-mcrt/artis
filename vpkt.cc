@@ -174,9 +174,7 @@ void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
     tau_vpkt[ind] = 0;
   }
 
-  vpkt.dir[0] = obsdir[0];
-  vpkt.dir[1] = obsdir[1];
-  vpkt.dir[2] = obsdir[2];
+  vpkt.dir = obsdir;
   vpkt.last_cross = BOUNDARY_NONE;
 
   atomicadd(nvpkt, 1);  // increment the number of virtual packet in the given timestep
