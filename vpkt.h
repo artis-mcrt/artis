@@ -41,9 +41,9 @@ inline int nvpkt_esc3{0};  // macroatom deactivation
 
 inline double cell_is_optically_thick_vpkt;
 
-[[nodiscard]] [[gnu::const]] constexpr auto rot_angle(std::span<const double, 3> n1, std::span<const double, 3> n2,
-                                                      std::span<const double, 3> ref1,
-                                                      std::span<const double, 3> ref2) -> double {
+[[nodiscard]] [[gnu::pure]] constexpr auto rot_angle(const std::array<double, 3> n1, const std::array<double, 3> n2,
+                                                     const std::array<double, 3> ref1,
+                                                     const std::array<double, 3> ref2) -> double {
   // Rotation angle from the scattering plane
   // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
   // the meridian frame such that Q=1 is in the scattering plane and along ref1
@@ -77,7 +77,7 @@ inline double cell_is_optically_thick_vpkt;
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
-[[nodiscard]] [[gnu::const]] constexpr auto meridian(std::span<const double, 3> n)
+[[nodiscard]] [[gnu::pure]] constexpr auto meridian(const std::array<double, 3> n)
     -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // for ref_1 use (from triple product rule)
   const double n_xylen = std::sqrt(n[0] * n[0] + n[1] * n[1]);
@@ -89,19 +89,19 @@ inline double cell_is_optically_thick_vpkt;
   return {ref1, ref2};
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf,
-                                                    std::span<const double, 3> v) -> std::array<double, 3> {
+[[nodiscard]] [[gnu::pure]] constexpr auto lorentz(const std::array<double, 3> e_rf, const std::array<double, 3> n_rf,
+                                                   const std::array<double, 3> v) -> std::array<double, 3> {
   // Use Lorentz transformations to get e_cmf from e_rf
 
-  const auto beta = std::array<const double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
+  const auto beta = std::array<double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
   const double vsqr = dot(beta, beta);
 
   const double gamma_rel = 1. / (sqrt(1 - vsqr));
 
-  const auto e_par = std::array<const double, 3>{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
-                                                 dot(e_rf, beta) * beta[2] / (vsqr)};
+  const std::array<double, 3> e_par{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
+                                    dot(e_rf, beta) * beta[2] / (vsqr)};
 
-  const auto e_perp = std::array<const double, 3>{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
+  const std::array<double, 3> e_perp{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
 
   const auto b_rf = cross_prod(n_rf, e_rf);
 
@@ -122,8 +122,8 @@ inline double cell_is_optically_thick_vpkt;
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
-constexpr auto frame_transform(std::span<const double, 3> n_rf, double *Q, double *U,
-                               std::span<const double, 3> v) -> std::array<double, 3> {
+constexpr auto frame_transform(const std::array<double, 3> n_rf, double *Q, double *U,
+                               const std::array<double, 3> v) -> std::array<double, 3> {
   // Meridian frame in the RF
   const auto [ref1_rf, ref2_rf] = meridian(n_rf);
 

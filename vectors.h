@@ -12,7 +12,8 @@
 #include "packet.h"
 #include "sn3d.h"
 
-[[nodiscard]] [[gnu::pure]] constexpr auto vec_len(std::span<const double> vec) -> double
+template <size_t VECDIM>
+[[nodiscard]] [[gnu::pure]] constexpr auto vec_len(const std::array<double, VECDIM> vec) -> double
 // return the the magnitude of a vector
 {
   const double squaredlen = std::accumulate(vec.begin(), vec.end(), 0., [](auto a, auto b) { return a + b * b; });
@@ -20,7 +21,7 @@
   return std::sqrt(squaredlen);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto vec_norm(std::span<const double, 3> vec_in)
+[[nodiscard]] [[gnu::pure]] constexpr auto vec_norm(const std::array<double, 3> vec_in)
 // get a normalized copy of vec_in
 {
   const double magnitude = vec_len(vec_in);
@@ -30,34 +31,36 @@
   return vec_out;
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto dot(std::span<const double> x, std::span<const double> y) -> double
+template <size_t S1, size_t S2>
+[[nodiscard]] [[gnu::pure]] constexpr auto dot(const std::array<double, S1> x, const std::array<double, S2> y) -> double
 // vector dot product
 {
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(std::span<const double, 3> x,
+[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(const std::array<double, 3> x,
                                                         const double t) -> std::array<double, 3>
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
   return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto cross_prod(std::span<const double, 3> vec1,
-                                                      std::span<const double, 3> vec2) -> std::array<double, 3> {
-  std::array<double, 3> vecout = {(vec1[1] * vec2[2]) - (vec2[1] * vec1[2]), (vec1[2] * vec2[0]) - (vec2[2] * vec1[0]),
-                                  (vec1[0] * vec2[1]) - (vec2[0] * vec1[1])};
+[[nodiscard]] [[gnu::pure]] constexpr auto cross_prod(const std::array<double, 3> vec_a,
+                                                      const std::array<double, 3> vec_b) -> std::array<double, 3> {
+  std::array<double, 3> vecout = {(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]),
+                                  (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
+                                  (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
   return vecout;
 }
 
-constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
+constexpr void vec_scale(std::array<double, 3> &vec, const double scalefactor) {
   vec[0] *= scalefactor;
   vec[1] *= scalefactor;
   vec[2] *= scalefactor;
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto angle_ab(std::span<const double, 3> dir1,
-                                                    std::span<const double, 3> vel) -> std::array<double, 3>
+[[nodiscard]] [[gnu::pure]] constexpr auto angle_ab(const std::array<double, 3> dir1,
+                                                    const std::array<double, 3> vel) -> std::array<double, 3>
 // aberation of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
@@ -78,8 +81,8 @@ constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
   return dir2;
 }
 
-[[gnu::pure]] [[nodiscard]] constexpr auto doppler_nucmf_on_nurf(std::span<const double, 3> dir_rf,
-                                                                 std::span<const double, 3> vel_rf) -> double
+[[gnu::pure]] [[nodiscard]] constexpr auto doppler_nucmf_on_nurf(const std::array<double, 3> dir_rf,
+                                                                 const std::array<double, 3> vel_rf) -> double
 // Doppler factor
 // arguments:
 //   dir_rf: the rest frame direction (unit vector) of light propagation
@@ -105,8 +108,8 @@ constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
   return dopplerfactor;
 }
 
-[[gnu::pure]] [[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(std::span<const double, 3> pos_rf,
-                                                                         std::span<const double, 3> dir_rf,
+[[gnu::pure]] [[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(const std::array<double, 3> pos_rf,
+                                                                         const std::array<double, 3> dir_rf,
                                                                          const double prop_time) -> double
 // Doppler factor squared, either to first order v/c or fully relativisitic
 // depending on USE_RELATIVISTIC_DOPPLER_SHIFT
@@ -134,13 +137,13 @@ constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
   return dopplerfactorsq;
 }
 
-[[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(std::span<const double, 3> pos_rf,
-                                                                        std::span<const double, 3> dir_rf,
+[[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(const std::array<double, 3> pos_rf,
+                                                                        const std::array<double, 3> dir_rf,
                                                                         const double prop_time) -> double {
   return doppler_nucmf_on_nurf(dir_rf, get_velocity(pos_rf, prop_time));
 }
 
-constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, std::span<const double, 3> dir_rf, double &prop_time,
+constexpr auto move_pkt_withtime(std::array<double, 3> &pos_rf, const std::array<double, 3> dir_rf, double &prop_time,
                                  const double nu_rf, double &nu_cmf, const double e_rf, double &e_cmf,
                                  const double distance) -> double
 /// Subroutine to move a packet along a straight line (specified by current
@@ -181,13 +184,13 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   return pkt.escape_time - (dot(pkt.pos, pkt.dir) / CLIGHT_PROP);
 }
 
-[[nodiscard]] constexpr auto get_escapedirectionbin(std::span<const double, 3> dir_in,
-                                                    std::span<const double, 3> syn_dir) -> int {
+[[nodiscard]] constexpr auto get_escapedirectionbin(const std::array<double, 3> dir_in,
+                                                    const std::array<double, 3> syn_dir) -> int {
   constexpr auto xhat = std::array<double, 3>{1.0, 0.0, 0.0};
 
   // sometimes dir vectors aren't accurately normalised
   const double dirmag = vec_len(dir_in);
-  const auto dir = std::array<const double, 3>{dir_in[0] / dirmag, dir_in[1] / dirmag, dir_in[2] / dirmag};
+  const auto dir = std::array<double, 3>{dir_in[0] / dirmag, dir_in[1] / dirmag, dir_in[2] / dirmag};
 
   /// Angle resolved case: need to work out the correct angle bin
   const double costheta = dot(dir, syn_dir);

@@ -17,7 +17,6 @@
 #include <iostream>
 #include <iterator>
 #include <limits>
-#include <span>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -2281,7 +2280,7 @@ static auto get_poscoordpointnum(const double pos, const double time, const int 
   }
 }
 
-constexpr static auto get_gridcoords_from_xyz(std::span<const double, 3> pos_xyz) -> std::array<double, 3> {
+constexpr static auto get_gridcoords_from_xyz(const std::array<double, 3> pos_xyz) -> std::array<double, 3> {
   auto posgridcoord = std::array<double, 3>{};
   if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     posgridcoord[0] = pos_xyz[0];
@@ -2299,7 +2298,7 @@ constexpr static auto get_gridcoords_from_xyz(std::span<const double, 3> pos_xyz
   return posgridcoord;
 }
 
-[[nodiscard]] auto get_cellindex_from_pos(std::span<const double, 3> pos, const double time) -> int
+[[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> pos, const double time) -> int
 /// identify the cell index from an (x,y,z) position and a time.
 {
   auto posgridcoords = get_gridcoords_from_xyz(pos);
@@ -2317,9 +2316,10 @@ constexpr static auto get_gridcoords_from_xyz(std::span<const double, 3> pos_xyz
   return cellindex;
 }
 
+template <size_t S1>
 [[nodiscard]] [[gnu::pure]] static constexpr auto expanding_shell_intersection(
-    std::span<const double> pos, std::span<const double> dir, const double speed, const double shellradiuststart,
-    const bool isinnerboundary, const double tstart) -> double
+    const std::array<double, S1> pos, const std::array<double, S1> dir, const double speed,
+    const double shellradiuststart, const bool isinnerboundary, const double tstart) -> double
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
 // 3-vectors) or expanding circle (2D vectors)
 // returns -1 if there are no forward intersections (or if the intersection
@@ -2413,22 +2413,23 @@ constexpr static auto get_gridcoords_from_xyz(std::span<const double, 3> pos_xyz
 }
 
 static auto get_coordboundary_distances_cylindrical2d(
-    std::span<const double, 3> pkt_pos, std::span<const double, 3> pkt_dir, std::span<const double, 3> pktposgridcoord,
-    std::span<const double, 3> pktvelgridcoord, int cellindex, const double tstart,
-    std::span<const double, 3> cellcoordmax) -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
+    const std::array<double, 3> pkt_pos, const std::array<double, 3> pkt_dir,
+    const std::array<double, 3> pktposgridcoord, const std::array<double, 3> pktvelgridcoord, int cellindex,
+    const double tstart,
+    const std::array<double, 3> cellcoordmax) -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // to get the cylindrical intersection, get the spherical intersection with Z components set to zero, and the
   // propagation speed set to the xy component of the 3-velocity
 
   std::array<double, 3> d_coordminboundary{};
   std::array<double, 3> d_coordmaxboundary{};
 
-  const double posnoz[2] = {pkt_pos[0], pkt_pos[1]};
+  const std::array<double, 2> posnoz = {pkt_pos[0], pkt_pos[1]};
 
   const double dirxylen = std::sqrt((pkt_dir[0] * pkt_dir[0]) + (pkt_dir[1] * pkt_dir[1]));
   const double xyspeed = dirxylen * CLIGHT_PROP;  // r_cyl component of velocity
 
   // make a normalised direction vector in the xy plane
-  const double dirnoz[2] = {pkt_dir[0] / dirxylen, pkt_dir[1] / dirxylen};
+  const std::array<double, 2> dirnoz = {pkt_dir[0] / dirxylen, pkt_dir[1] / dirxylen};
 
   const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
   d_coordminboundary[0] = -1;
@@ -2466,7 +2467,7 @@ static auto get_coordboundary_distances_cylindrical2d(
   return {d_coordminboundary, d_coordmaxboundary};
 }
 
-[[nodiscard]] auto boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos,
+[[nodiscard]] auto boundary_distance(const std::array<double, 3> dir, const std::array<double, 3> pos,
                                      const double tstart, const int cellindex,
                                      enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>
 /// Basic routine to compute distance to a cell boundary.

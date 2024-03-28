@@ -127,14 +127,14 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
   return matchindex;
 }
 
-static auto get_nu_cmf_abort(std::span<const double, 3> pos, std::span<const double, 3> dir, const double prop_time,
+static auto get_nu_cmf_abort(const std::array<double, 3> pos, const std::array<double, 3> dir, const double prop_time,
                              const double nu_rf, const double abort_dist) -> double {
   // get the frequency change per distance travelled assuming linear change to the abort distance
   // this is done is two parts to get identical results to do_rpkt_step()
   const auto half_abort_dist = abort_dist / 2.;
   const auto abort_time = prop_time + half_abort_dist / CLIGHT_PROP + half_abort_dist / CLIGHT_PROP;
 
-  std::array<const double, 3> abort_pos = {pos[0] + (dir[0] * half_abort_dist) + (dir[0] * half_abort_dist),
+  const std::array<double, 3> abort_pos = {pos[0] + (dir[0] * half_abort_dist) + (dir[0] * half_abort_dist),
                                            pos[1] + (dir[1] * half_abort_dist) + (dir[1] * half_abort_dist),
                                            pos[2] + (dir[2] * half_abort_dist) + (dir[2] * half_abort_dist)};
 
@@ -426,7 +426,7 @@ static void electron_scatter_rpkt(Packet &pkt) {
   }
 
   const double tsc = acos(M);
-  double new_dir_cmf[3];
+  std::array<double, 3> new_dir_cmf{};
 
   if (fabs(old_dir_cmf[2]) < 0.99999) {
     new_dir_cmf[0] = sin(tsc) / sqrt(1. - pow(old_dir_cmf[2], 2.)) *
