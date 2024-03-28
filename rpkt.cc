@@ -134,9 +134,9 @@ static auto get_nu_cmf_abort(const std::array<double, 3> pos, const std::array<d
   const auto half_abort_dist = abort_dist / 2.;
   const auto abort_time = prop_time + half_abort_dist / CLIGHT_PROP + half_abort_dist / CLIGHT_PROP;
 
-  const std::array<double, 3> abort_pos = {pos[0] + (dir[0] * half_abort_dist) + (dir[0] * half_abort_dist),
-                                           pos[1] + (dir[1] * half_abort_dist) + (dir[1] * half_abort_dist),
-                                           pos[2] + (dir[2] * half_abort_dist) + (dir[2] * half_abort_dist)};
+  const std::array<double, 3> abort_pos{pos[0] + (dir[0] * half_abort_dist) + (dir[0] * half_abort_dist),
+                                        pos[1] + (dir[1] * half_abort_dist) + (dir[1] * half_abort_dist),
+                                        pos[2] + (dir[2] * half_abort_dist) + (dir[2] * half_abort_dist)};
 
   const double nu_cmf_abort = nu_rf * doppler_packet_nucmf_on_nurf(abort_pos, dir, abort_time);
 
