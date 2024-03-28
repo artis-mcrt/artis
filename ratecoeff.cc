@@ -591,7 +591,8 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
 
   gsl_set_error_handler(previous_handler);
 
-  const double nuoffset = (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu;
+  const double nuoffset =
+      (alpha_sp != alpha_sp_old) ? (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu : 0.;
   const double nu_lower = nu_threshold + (i - 1) * deltanu + nuoffset;
 
   assert_testmodeonly(std::isfinite(nu_lower));

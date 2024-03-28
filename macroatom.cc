@@ -420,7 +420,7 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
     const double randomrate = rng_uniform() * cumulative_transitions[MA_ACTION_COUNT - 1];
 
     // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
-    const auto selected_action =
+    const int selected_action =
         std::distance(cumulative_transitions.cbegin(),
                       std::upper_bound(cumulative_transitions.cbegin(), cumulative_transitions.cend(), randomrate));
 
@@ -641,7 +641,12 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
       }
 
       default:
-        assert_testmodeonly(false);
+        if constexpr (TESTMODE) {
+          printout("ERROR: Unknown macroatom selected_action type %d\n", selected_action);
+          assert_testmodeonly(false);
+        } else {
+          __builtin_unreachable();
+        }
     }
   }
 

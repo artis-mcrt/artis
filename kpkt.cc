@@ -660,8 +660,11 @@ void do_kpkt(Packet &pkt, double t2, int nts)
     pkt.trueemissionvelocity = -1;
 
     do_macroatom(pkt, {element, upperion, upper, -99});
-  } else {
+  } else if constexpr (TESTMODE) {
+    printout("ERROR: Unknown rndcoolingtype type %d\n", rndcoolingtype);
     assert_testmodeonly(false);
+  } else {
+    __builtin_unreachable();
   }
 }
 

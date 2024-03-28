@@ -143,10 +143,11 @@ void update_pellet(Packet &pkt, const int nts, const double t2) {
 
     // printout("already decayed packets and propagation by packet_prop\n");
     pkt.prop_time = globals::tmin;
-  } else {
-    printout("ERROR: Something gone wrong with decaying pellets. tdecay %g ts %g (ts + tw) %g\n", tdecay, ts, t2);
+  } else if constexpr (TESTMODE) {
+    printout("ERROR: Something wrong with decaying pellets. tdecay %g ts %g (ts + tw) %g\n", tdecay, ts, t2);
     assert_testmodeonly(false);
-    std::abort();
+  } else {
+    __builtin_unreachable();
   }
 }
 
@@ -202,9 +203,12 @@ void do_packet(Packet &pkt, const double t2, const int nts)
     }
 
     default: {
-      printout("packet_prop: Unknown packet type %d. Abort.\n", pkt.type);
-      assert_testmodeonly(false);
-      std::abort();
+      if constexpr (TESTMODE) {
+        printout("ERROR: Unknown packet type %d\n", pkt.type);
+        assert_testmodeonly(false);
+      } else {
+        __builtin_unreachable();
+      }
     }
   }
 }

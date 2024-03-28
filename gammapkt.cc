@@ -255,7 +255,7 @@ void normalise(int nts) {
         globals::dep_estimator_gamma[nonemptymgi] * ONEOVER4PI / dV / dt / globals::nprocs;
 
     assert_testmodeonly(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
-    assert_testmodeonly(isfinite(globals::dep_estimator_gamma[nonemptymgi]));
+    assert_testmodeonly(std::isfinite(globals::dep_estimator_gamma[nonemptymgi]));
   }
 }
 
@@ -776,7 +776,7 @@ static void update_gamma_dep(const Packet &pkt, const double dist, const int mgi
   //  3) divided by 4 pi sr
   //  This will all be done later
   assert_testmodeonly(heating_cont >= 0.);
-  assert_testmodeonly(isfinite(heating_cont));
+  assert_testmodeonly(std::isfinite(heating_cont));
   atomicadd(globals::dep_estimator_gamma[nonemptymgi], heating_cont);
 }
 
