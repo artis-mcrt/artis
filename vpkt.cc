@@ -307,50 +307,51 @@ void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
         const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans);
 
         if (lineindex < 0) {
+          // no more lines below the current frequency
           vpkt.next_trans = globals::nlines + 1;
-        } else {
-          const double nutrans = globals::linelist[lineindex].nu;
+          break;
+        }
+        const double nutrans = globals::linelist[lineindex].nu;
 
-          vpkt.next_trans = lineindex + 1;
+        vpkt.next_trans = lineindex + 1;
 
-          ldist = get_linedistance(t_current, vpkt.nu_cmf, nutrans, d_nu_on_d_l);
+        ldist = get_linedistance(t_current, vpkt.nu_cmf, nutrans, d_nu_on_d_l);
 
-          if (ldist > sdist) {
-            // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
-            // the excluded line
+        if (ldist > sdist) {
+          // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
+          // the excluded line
 
-            vpkt.next_trans -= 1;
-            // printout("ldist > sdist : line in the next cell\n");
-            break;
+          vpkt.next_trans -= 1;
+          // printout("ldist > sdist : line in the next cell\n");
+          break;
+        }
+
+        const double t_line = t_current + ldist / CLIGHT;
+
+        const int element = globals::linelist[lineindex].elementindex;
+        const int ion = globals::linelist[lineindex].ionindex;
+        const int upper = globals::linelist[lineindex].upperlevelindex;
+        const int lower = globals::linelist[lineindex].lowerlevelindex;
+        const auto A_ul = globals::linelist[lineindex].einstein_A;
+
+        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
+        const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+
+        const auto n_u = calculate_levelpop(mgi, element, ion, upper);
+        const auto n_l = calculate_levelpop(mgi, element, ion, lower);
+        const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
+
+        // Check on the element to exclude (or -1 for no line opacity)
+        const int anumber = get_atomicnumber(element);
+        for (int ind = 0; ind < Nspectra; ind++) {
+          if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
+            tau_vpkt[ind] += tau_line;
           }
+        }
 
-          const double t_line = t_current + ldist / CLIGHT;
-
-          const int element = globals::linelist[lineindex].elementindex;
-          const int ion = globals::linelist[lineindex].ionindex;
-          const int upper = globals::linelist[lineindex].upperlevelindex;
-          const int lower = globals::linelist[lineindex].lowerlevelindex;
-          const auto A_ul = globals::linelist[lineindex].einstein_A;
-
-          const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
-          const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
-
-          const auto n_u = calculate_levelpop(mgi, element, ion, upper);
-          const auto n_l = calculate_levelpop(mgi, element, ion, lower);
-          const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
-
-          // Check on the element to exclude (or -1 for no line opacity)
-          const int anumber = get_atomicnumber(element);
-          for (int ind = 0; ind < Nspectra; ind++) {
-            if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
-              tau_vpkt[ind] += tau_line;
-            }
-          }
-
-          // kill vpkt with high optical depth
-          if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
-            return;
-          }
+        // kill vpkt with high optical depth
+        if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
+          return;
         }
       }
     }
