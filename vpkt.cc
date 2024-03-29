@@ -888,7 +888,7 @@ void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved
     }
     vpkt_contrib_file = std::ofstream(filename, std::ios::app);
 
-    vpkt_contrib_file << "#obsdirindex t_arrive_d nu_rf emissiontype trueemissiontype absorptiontype absorptionfreq";
+    vpkt_contrib_file << "#obsdirindex t_arrive_d nu_rf emissiontype trueemissiontype absorption_type absorption_freq";
     for (int ind = 0; ind < Nspectra; ind++) {
       vpkt_contrib_file << " e_rf_" << ind;
     }
