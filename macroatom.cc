@@ -226,8 +226,6 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   pkt.em_pos = pkt.pos;
   pkt.em_time = pkt.prop_time;
   pkt.nscatterings = 0;
-
-  vpkt_call_estimators(pkt, TYPE_MA);
 }
 
 void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int element, int *ion, int *level,
@@ -288,8 +286,6 @@ void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int ele
   pkt.em_pos = pkt.pos;
   pkt.em_time = pkt.prop_time;
   pkt.nscatterings = 0;
-
-  vpkt_call_estimators(pkt, TYPE_MA);
 }
 
 void do_macroatom_ionisation(const int modelgridindex, const int element, int *ion, int *level,
@@ -634,6 +630,10 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
     pkt.trueemissiontype = pkt.emissiontype;
     pkt.trueemissionvelocity = vec_len(pkt.em_pos) / pkt.em_time;
     pkt.trueem_time = pkt.em_time;
+  }
+
+  if (pkt.type == TYPE_RPKT) {
+    vpkt_call_estimators(pkt, TYPE_MA);
   }
 }
 
