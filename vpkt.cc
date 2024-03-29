@@ -8,7 +8,9 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
+#include <ios>
 #include <vector>
 
 #include "artisoptions.h"

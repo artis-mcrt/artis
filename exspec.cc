@@ -20,10 +20,9 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
-#include "light_curve.h"
 #include "packet.h"
 #include "sn3d.h"
-#include "spectrum.h"
+#include "spectrum_lightcurve.h"
 #include "version.h"
 
 std::mt19937 stdrng{std::random_device{}()};

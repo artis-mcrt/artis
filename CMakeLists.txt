@@ -21,7 +21,6 @@ gammapkt.cc
 grid.cc
 input.cc
 kpkt.cc
-light_curve.cc
 ltepop.cc
 macroatom.cc
 md5.cc
@@ -31,7 +30,7 @@ packet.cc
 radfield.cc
 ratecoeff.cc
 rpkt.cc
-spectrum.cc
+spectrum_lightcurve.cc
 stats.cc
 thermalbalance.cc
 update_grid.cc
@@ -46,7 +45,6 @@ gammapkt.cc
 grid.cc
 input.cc
 kpkt.cc
-light_curve.cc
 ltepop.cc
 macroatom.cc
 md5.cc
@@ -56,7 +54,7 @@ packet.cc
 radfield.cc
 ratecoeff.cc
 rpkt.cc
-spectrum.cc
+spectrum_lightcurve.cc
 stats.cc
 thermalbalance.cc
 update_grid.cc

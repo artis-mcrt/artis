@@ -50,7 +50,7 @@
 #include "packet.h"
 #include "radfield.h"
 #include "ratecoeff.h"
-#include "spectrum.h"
+#include "spectrum_lightcurve.h"
 #include "stats.h"
 #include "update_grid.h"
 #include "update_packets.h"
