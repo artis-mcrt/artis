@@ -462,8 +462,8 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
   return -1;
 }
 
-[[nodiscard]] inline auto get_continuumindex(const int element, const int ion, const int level,
-                                             const int upperionlevel) -> int
+[[nodiscard]] inline auto get_emtype_continuum(const int element, const int ion, const int level,
+                                               const int upperionlevel) -> int
 // Returns the emissiontype index of the continuum associated to the given level. Will be negative and ordered by
 // element/ion/level/phixstargetindex
 {

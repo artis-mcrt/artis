@@ -1326,7 +1326,7 @@ void write_bflist_file() {
 
           const int et = -1 - i;
 
-          assert_always(et == get_continuumindex(element, ion, level, upperionlevel));
+          assert_always(et == get_emtype_continuum(element, ion, level, upperionlevel));
 
           // check the we don't overload the same packet emission type numbers
           // as the special values for free-free scattering and not set

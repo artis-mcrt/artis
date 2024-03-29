@@ -682,7 +682,6 @@ static void rpkt_event_thickcell(Packet &pkt)
 
   emit_rpkt(pkt);
   /// Electron scattering does not modify the last emission flag
-  // pkt.emissiontype = get_continuumindex(element,ion-1,lower);
   /// but it updates the last emission position
   pkt.em_pos = pkt.pos;
   pkt.em_time = pkt.prop_time;

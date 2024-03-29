@@ -577,7 +577,7 @@ void do_kpkt(Packet &pkt, double t2, int nts)
     pkt.next_trans = 0;  /// FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FB);
     pkt.last_event = LASTEVENT_KPKT_TO_RPKT_FB;
-    pkt.emissiontype = get_continuumindex(element, lowerion, lowerlevel, upper);
+    pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerlevel, upper);
     pkt.trueemissiontype = pkt.emissiontype;
     pkt.em_pos = pkt.pos;
     pkt.em_time = pkt.prop_time;

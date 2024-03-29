@@ -282,7 +282,7 @@ void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int ele
   }
 
   pkt.next_trans = 0;  /// continuum transition, no restrictions for further line interactions
-  pkt.emissiontype = get_continuumindex(element, *ion, lower, upperionlevel);
+  pkt.emissiontype = get_emtype_continuum(element, *ion, lower, upperionlevel);
   pkt.em_pos = pkt.pos;
   pkt.em_time = pkt.prop_time;
   pkt.nscatterings = 0;
@@ -626,6 +626,9 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
     }
   }
 
+  // TODO Luke: we should probably only do this if the packet has become a r-packet, otherwise we should set
+  // trueemissiontype to EM_TYPE_NOTSET, but this method has already been published. If the difference is small for
+  // nebular Type Ias then just fix it.
   if (pkt.trueemissiontype == EMTYPE_NOTSET) {
     pkt.trueemissiontype = pkt.emissiontype;
     pkt.trueemissionvelocity = vec_len(pkt.em_pos) / pkt.em_time;
