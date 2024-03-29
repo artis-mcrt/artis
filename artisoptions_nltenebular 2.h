@@ -7,12 +7,12 @@
 
 #include "constants.h"
 
-constexpr int MPKTS = 10000;
+constexpr int MPKTS = 5000000;
 
 constexpr int GRID_TYPE = GRID_CARTESIAN3D;
-constexpr int CUBOID_NCOORDGRID_X = 100;
-constexpr int CUBOID_NCOORDGRID_Y = 100;
-constexpr int CUBOID_NCOORDGRID_Z = 100;
+constexpr int CUBOID_NCOORDGRID_X = 50;
+constexpr int CUBOID_NCOORDGRID_Y = 50;
+constexpr int CUBOID_NCOORDGRID_Z = 50;
 constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
 
 constexpr int NLTEITER = 30;
@@ -28,48 +28,52 @@ constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
 
 constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }
 
-constexpr bool single_level_top_ion = true;
+constexpr bool single_level_top_ion = false;
 
-constexpr bool single_ground_level = true;
+constexpr bool single_ground_level = false;
 
-constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return 0; }
+constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
+  return ((Z == 26 || Z == 28) && ionstage >= 1) ? 80 : 0;
+}
 
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
 constexpr bool DIRECT_COL_HEAT = true;
-constexpr bool INITIAL_PACKETS_ON = true;
-constexpr bool RECORD_LINESTAT = true;
+constexpr bool INITIAL_PACKETS_ON = false;
+constexpr bool RECORD_LINESTAT = false;
 
 constexpr bool USE_MODEL_INITIAL_ENERGY = true;
 
-constexpr int TABLESIZE = 200;
-constexpr double MINTEMP = 4000.;
-constexpr double MAXTEMP = 140000.;
+constexpr int TABLESIZE = 100;
+constexpr double MINTEMP = 1000.;
+constexpr double MAXTEMP = 30000.;
 
-constexpr double RECOMBCALIBRATION_T_ELEC = 15000.;
+constexpr double RECOMBCALIBRATION_T_ELEC = 6000.;
 
-constexpr bool DIPOLE = true;
-constexpr bool POL_ON = true;
+constexpr bool DIPOLE = false;
+constexpr bool POL_ON = false;
 
-constexpr bool VPKT_ON = false;
-constexpr bool VPKT_WRITE_CONTRIBS = false;
+constexpr bool VPKT_ON = true;
+constexpr bool VPKT_WRITE_CONTRIBS = true;
 
 constexpr bool TRACK_ION_STATS = false;
 
 constexpr double MINPOP = 1e-40;
 
-constexpr double NU_MIN_R = 1e14;
+constexpr double NU_MIN_R = 1e13;
 
-constexpr double NU_MAX_R = 5e16;
+constexpr double NU_MAX_R = 5e15;
 
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON = true;
 
-constexpr int RADFIELDBINCOUNT = 512;
+constexpr int RADFIELDBINCOUNT = 256;
 
 constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
 
 constexpr double nu_lower_first_initial = (CLIGHT / (40000e-8));
-constexpr double nu_upper_last_initial = (CLIGHT / (100e-8));
+
+constexpr double nu_upper_last_initial = (CLIGHT / (1085e-8));
+
 constexpr double nu_upper_superbin = (CLIGHT / (10e-8));
 
 constexpr double T_R_min = 500;
@@ -79,7 +83,11 @@ constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
 
-constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return true; }
+constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) {
+  // To only BF estimators for NLTE levels:
+  // return LEVEL_IS_NLTE(element_z, ionstage, level);
+  return true;
+}
 
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
 
@@ -108,7 +116,7 @@ constexpr int NTEXCITATION_MAXNLEVELS_UPPER = 250;
 
 constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
 
-constexpr bool NT_EXCITATION_ON = false;
+constexpr bool NT_EXCITATION_ON = true;
 
 constexpr bool NT_USE_VALENCE_IONPOTENTIAL = false;
 
@@ -118,13 +126,13 @@ constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
 
 constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
 
-constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-2;
+constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3;
 
-constexpr double CONTINUUM_NU_INTEGRAL_ACCURACY = 1e-2;
+constexpr double CONTINUUM_NU_INTEGRAL_ACCURACY = 1e-3;
 
-constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-2;
+constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 
-constexpr double IONGAMMA_POPFRAC_LEVELS_INCLUDED = 1.;
+constexpr double IONGAMMA_POPFRAC_LEVELS_INCLUDED = 0.999;
 
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
 
@@ -136,13 +144,13 @@ constexpr bool INSTANT_PARTICLE_DEPOSITION = true;
 
 constexpr enum timestepsizemethods TIMESTEP_SIZE_METHOD = TIMESTEP_SIZES_LOGARITHMIC;
 
-constexpr double FIXED_TIMESTEP_WIDTH = 0.1;
+constexpr double FIXED_TIMESTEP_WIDTH = -1.;
 
-constexpr double TIMESTEP_TRANSITION_TIME = 5;
+constexpr double TIMESTEP_TRANSITION_TIME = -1.;
 
 constexpr bool KEEP_ALL_RESTART_FILES = false;
 
-constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = true;
+constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 
 constexpr bool EXPANSIONOPACITIES_ON = false;
 

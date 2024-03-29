@@ -34,6 +34,7 @@ COMPILER_VERSION := $(shell $(CXX) --version)
 $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
   COMPILER_NAME := CLANG
+  LDFLAGS += -fuse-ld=lld
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
   COMPILER_NAME := GCC
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'

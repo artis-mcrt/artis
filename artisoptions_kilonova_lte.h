@@ -49,6 +49,7 @@ constexpr bool DIPOLE = false;
 constexpr bool POL_ON = false;
 
 constexpr bool VPKT_ON = false;
+constexpr bool VPKT_WRITE_CONTRIBS = false;
 
 constexpr bool TRACK_ION_STATS = false;
 
