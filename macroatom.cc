@@ -342,10 +342,7 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
   int level = pktmastate.level;
 
   const int activatingline = pktmastate.activatingline;
-  if (pkt.absorptiontype > 0 && activatingline > 0 && activatingline != pkt.absorptiontype) {
-    printout("error: mismatched absorptiontype %d != activatingline = %d pkt last_event %d emissiontype %d\n",
-             pkt.absorptiontype, activatingline, pkt.last_event, pkt.emissiontype);
-  }
+  assert_testmodeonly(pkt.absorptiontype < 0 || activatingline < 0 || activatingline == pkt.absorptiontype);
 
   const int ion_in = ion;
   const int level_in = level;
