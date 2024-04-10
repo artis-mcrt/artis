@@ -435,7 +435,7 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
       }
     }
   }
-  return in_nu_range;
+  return in_nu_range;  // true if we added columns to vpkt_contrib_row
 }
 
 void init_vspecpol() {
