@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <ios>
+#include <sstream>
 #include <vector>
 
 #include "artisoptions.h"
@@ -165,8 +166,8 @@ void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> vel, const
   }
 }
 
-void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin, const std::array<double, 3> obsdir,
-                    const enum packet_type type_before_rpkt) {
+bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin, const std::array<double, 3> obsdir,
+                    const enum packet_type type_before_rpkt, std::stringstream &vpkt_contrib_row) {
   int mgi = 0;
 
   Packet vpkt = pkt;
@@ -298,7 +299,7 @@ void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
 
       // kill vpkt with high optical depth
       if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
-        return;
+        return false;
       }
 
       Packet dummypkt_abort = vpkt;
@@ -356,7 +357,7 @@ void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
 
         // kill vpkt with high optical depth
         if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
-          return;
+          return false;
         }
       }
     }
@@ -375,7 +376,7 @@ void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
 
     // kill vpkt with pass through a thick cell
     if (grid::modelgrid[mgi].thick != 0) {
-      return;
+      return false;
     }
   }
 
@@ -394,14 +395,12 @@ void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
 
   if constexpr (VPKT_WRITE_CONTRIBS) {
     if (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX) {
-      vpkt_contrib_file << obsbin << " " << t_arrive_d << " " << vpkt.nu_rf << " " << vpkt.emissiontype << " "
-                        << vpkt.trueemissiontype << " " << vpkt.absorptiontype << " " << vpkt.absorptionfreq;
+      vpkt_contrib_row << " " << t_arrive_d << " " << vpkt.nu_rf;
     }
   }
 
   for (int ind = 0; ind < Nspectra; ind++) {
-    // printout("obsbin %d spectrum %d tau_vpkt %g\n", obsbin, ind, tau_vpkt[ind]);
-    const double prob = pn * exp(-tau_vpkt[ind]);
+    const double prob = pn * std::exp(-tau_vpkt[ind]);
 
     assert_always(std::isfinite(prob));
 
@@ -418,14 +417,9 @@ void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
 
     if constexpr (VPKT_WRITE_CONTRIBS) {
       if (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX) {
-        vpkt_contrib_file << " " << vpkt.e_rf * prob;
+        vpkt_contrib_row << " " << vpkt.e_rf * prob;
       }
     }
-  }
-
-  if constexpr (VPKT_WRITE_CONTRIBS) {
-    vpkt_contrib_file << "\n";
-    vpkt_contrib_file.flush();
   }
 
   // vpkt grid
@@ -445,6 +439,7 @@ void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
       }
     }
   }
+  return true;
 }
 
 void init_vspecpol() {
@@ -888,10 +883,15 @@ void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved
     }
     vpkt_contrib_file = std::ofstream(filename, std::ios::app);
 
-    vpkt_contrib_file << "#obsdirindex t_arrive_d nu_rf emissiontype trueemissiontype absorptiontype absorptionfreq";
-    for (int ind = 0; ind < Nspectra; ind++) {
-      vpkt_contrib_file << " e_rf_" << ind;
+    vpkt_contrib_file << "#emissiontype trueemissiontype absorption_type absorption_freq";
+
+    for (int obsbin = 0; obsbin < Nobs; obsbin++) {
+      vpkt_contrib_file << " dir" << obsbin << "_t_arrive_d dir" << obsbin << "_nu_rf";
+      for (int ind = 0; ind < Nspectra; ind++) {
+        vpkt_contrib_file << " dir" << obsbin << "_e_rf_" << ind;
+      }
     }
+
     vpkt_contrib_file << "\n";
     vpkt_contrib_file.flush();
   }
@@ -932,6 +932,9 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
     }
   }
 
+  std::stringstream vpkt_contrib_row;
+
+  bool any_escaped = false;
   for (int obsbin = 0; obsbin < Nobs; obsbin++) {
     // loop over different observer directions
 
@@ -951,10 +954,23 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
 
         if (nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) {
           // frequency selection
-
-          rlc_emiss_vpkt(pkt, t_current, obsbin, obsdir, type_before_rpkt);
+          const bool dir_escaped = rlc_emiss_vpkt(pkt, t_current, obsbin, obsdir, type_before_rpkt, vpkt_contrib_row);
+          if (dir_escaped) {
+            any_escaped = true;
+          } else {
+            vpkt_contrib_row << " -1. -1.";  // t_arrive_d nu_rf
+            for (int ind = 0; ind < Nspectra; ind++) {
+              vpkt_contrib_row << " 0.";  // e_rf_diri_j
+            }
+          }
         }
       }
     }
+  }
+  if (VPKT_WRITE_CONTRIBS && any_escaped) {
+    vpkt_contrib_file << pkt.emissiontype << " " << pkt.trueemissiontype << " " << pkt.absorptiontype << " "
+                      << pkt.absorptionfreq;
+    vpkt_contrib_file << vpkt_contrib_row.rdbuf() << "\n";
+    vpkt_contrib_file.flush();
   }
 }
