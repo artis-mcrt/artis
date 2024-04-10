@@ -34,9 +34,10 @@ COMPILER_VERSION := $(shell $(CXX) --version)
 $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
   COMPILER_NAME := CLANG
-  LDFLAGS += -fuse-ld=lld
+  CXXFLAGS += -flto=thin
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
   COMPILER_NAME := GCC
+  CXXFLAGS += -flto=auto
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
   COMPILER_NAME := NVHPC
 else
@@ -50,7 +51,7 @@ CXXFLAGS += -std=c++20 -fstrict-aliasing
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
 
 ifneq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -flto=auto -ftree-vectorize -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
+	CXXFLAGS += -ftree-vectorize -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
 	# add -ftrivial-auto-var-init=zero when we drop gcc 11 support
 endif
 
@@ -133,7 +134,7 @@ ifeq ($(shell uname -s),Darwin)
 		CXXFLAGS += -march=native
 	endif
 
-	CXXFLAGS += -fno-omit-frame-pointer
+	CXXFLAGS += -fno-omit-frame-pointer -g
 #	CXXFLAGS += -Rpass=loop-vectorize
 #	CXXFLAGS += -Rpass-missed=loop-vectorize
 #	CXXFLAGS += -Rpass-analysis=loop-vectorize
