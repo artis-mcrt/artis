@@ -101,20 +101,14 @@ void add_to_vspecpol(const Packet &vpkt, const int obsbin, const int ind, const 
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
   const int ind_comb = Nspectra * obsbin + ind;
+  const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
+  const int nnu = static_cast<int>((log(vpkt.nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
+  const double pktcontrib = vpkt.e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /
+                            PARSEC / globals::nprocs * 4 * PI;
 
-  if (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX) {
-    /// Put this into the time grid.
-    if (t_arrive > VSPEC_TIMEMIN && t_arrive < VSPEC_TIMEMAX) {
-      const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
-      const int nnu = static_cast<int>((log(vpkt.nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
-      const double pktcontrib = vpkt.e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI /
-                                PARSEC / PARSEC / globals::nprocs * 4 * PI;
-
-      atomicadd(vspecpol[nt][ind_comb].flux[nnu].i, vpkt.stokes[0] * pktcontrib);
-      atomicadd(vspecpol[nt][ind_comb].flux[nnu].q, vpkt.stokes[1] * pktcontrib);
-      atomicadd(vspecpol[nt][ind_comb].flux[nnu].u, vpkt.stokes[2] * pktcontrib);
-    }
-  }
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].i, vpkt.stokes[0] * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].q, vpkt.stokes[1] * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].u, vpkt.stokes[2] * pktcontrib);
 }
 
 // Routine to add a packet to the outcoming spectrum.
@@ -393,8 +387,10 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
   const double t_arrive_d = t_arrive / DAY;
   // -------------- final stokes vector ---------------
 
+  const bool in_nu_range = (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX);
+
   if constexpr (VPKT_WRITE_CONTRIBS) {
-    if (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX) {
+    if (in_nu_range) {
       vpkt_contrib_row << " " << t_arrive_d << " " << vpkt.nu_rf;
     }
   }
@@ -412,11 +408,12 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
       assert_always(std::isfinite(stokeval));
     }
 
-    // bin on fly and produce file with spectrum
-    add_to_vspecpol(vpkt, obsbin, ind, t_arrive);
+    if (in_nu_range) {
+      if (t_arrive > VSPEC_TIMEMIN && t_arrive < VSPEC_TIMEMAX) {
+        add_to_vspecpol(vpkt, obsbin, ind, t_arrive);
+      }
 
-    if constexpr (VPKT_WRITE_CONTRIBS) {
-      if (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX) {
+      if constexpr (VPKT_WRITE_CONTRIBS) {
         vpkt_contrib_row << " " << vpkt.e_rf * prob;
       }
     }
@@ -439,7 +436,7 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
       }
     }
   }
-  return true;
+  return in_nu_range;
 }
 
 void init_vspecpol() {
