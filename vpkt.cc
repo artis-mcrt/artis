@@ -388,11 +388,10 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
   // -------------- final stokes vector ---------------
 
   const bool in_nu_range = (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX);
+  const bool in_time_range = (t_arrive > VSPEC_TIMEMIN && t_arrive < VSPEC_TIMEMAX);
 
-  if constexpr (VPKT_WRITE_CONTRIBS) {
-    if (in_nu_range) {
-      vpkt_contrib_row << " " << t_arrive_d << " " << vpkt.nu_rf;
-    }
+  if (VPKT_WRITE_CONTRIBS && in_nu_range) {
+    vpkt_contrib_row << " " << t_arrive_d << " " << vpkt.nu_rf;
   }
 
   for (int ind = 0; ind < Nspectra; ind++) {
@@ -409,7 +408,7 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
     }
 
     if (in_nu_range) {
-      if (t_arrive > VSPEC_TIMEMIN && t_arrive < VSPEC_TIMEMAX) {
+      if (in_time_range) {
         add_to_vspecpol(vpkt, obsbin, ind, t_arrive);
       }
 
