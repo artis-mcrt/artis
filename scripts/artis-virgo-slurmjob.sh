@@ -4,7 +4,7 @@
 
 cd $SLURM_SUBMIT_DIR
 
-eval `spack load --sh gsl%gcc arch=linux-debian10-x86_64`
+eval `spack load --sh gsl%gcc arch=linux-debian11-x86_64`
 
 export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
 
