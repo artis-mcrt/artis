@@ -245,10 +245,10 @@ jobs:
                   echo "LDFLAGS=-L/opt/homebrew/opt/libomp/lib" >> $GITHUB_ENV
                   echo "CPPFLAGS=-I/opt/homebrew/opt/libomp/include" >> $GITHUB_ENV
 
-            - name: install OpenMPI
+            - name: install mpich
               if: matrix.mpi == 'ON'
               run: |
-                  brew install openmpi || true
+                  brew install mpich || true
 
             - name: install onedpl and tbb
               if: matrix.stdpar == 'ON'
