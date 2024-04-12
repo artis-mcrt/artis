@@ -47,7 +47,7 @@ endif
 
 $(info detected compiler is $(COMPILER_NAME))
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing -funroll-loops
+CXXFLAGS += -std=c++20 -fstrict-aliasing
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
 
 ifneq ($(COMPILER_NAME),NVHPC)
