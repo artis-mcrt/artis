@@ -160,12 +160,16 @@ void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> vel, const
   }
 }
 
-bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_arrive, const int obsbin,
-                    const std::array<double, 3> obsdir, const enum packet_type type_before_rpkt,
-                    std::stringstream &vpkt_contrib_row) {
+bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_arrive, const double nu_rf,
+                    const double e_rf, const int obsbin, const std::array<double, 3> obsdir,
+                    const enum packet_type type_before_rpkt, std::stringstream &vpkt_contrib_row) {
   int mgi = 0;
 
   Packet vpkt = pkt;
+  vpkt.nu_rf = nu_rf;
+  vpkt.e_rf = e_rf;
+  vpkt.dir = obsdir;
+  vpkt.last_cross = BOUNDARY_NONE;
 
   bool end_packet = false;
   double ldist = 0;
@@ -175,18 +179,9 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     tau_vpkt[opacindex] = 0;
   }
 
-  vpkt.dir = obsdir;
-  vpkt.last_cross = BOUNDARY_NONE;
-
   atomicadd(nvpkt, 1);  // increment the number of virtual packet in the given timestep
 
   const auto vel_vec = get_velocity(pkt.pos, t_current);
-
-  // rf frequency and energy
-  const double dopplerfactor = doppler_nucmf_on_nurf(vpkt.dir, vel_vec);
-  vpkt.nu_rf = vpkt.nu_cmf / dopplerfactor;
-  vpkt.e_rf = vpkt.e_cmf / dopplerfactor;
-
   double Qi = vpkt.stokes[1];
   double Ui = vpkt.stokes[2];
 
@@ -386,10 +381,7 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
   // -------------- final stokes vector ---------------
 
-  const bool in_nu_range = (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX);
-  const bool in_time_range = (t_arrive > VSPEC_TIMEMIN && t_arrive < VSPEC_TIMEMAX);
-
-  if (VPKT_WRITE_CONTRIBS && in_nu_range) {
+  if (VPKT_WRITE_CONTRIBS) {
     vpkt_contrib_row << " " << t_arrive / DAY << " " << vpkt.nu_rf;
   }
 
@@ -406,14 +398,10 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
       assert_always(std::isfinite(stokeval));
     }
 
-    if (in_nu_range) {
-      if (in_time_range) {
-        add_to_vspecpol(vpkt, obsbin, ind, t_arrive);
-      }
+    add_to_vspecpol(vpkt, obsbin, ind, t_arrive);
 
-      if constexpr (VPKT_WRITE_CONTRIBS) {
-        vpkt_contrib_row << " " << vpkt.e_rf * prob;
-      }
+    if constexpr (VPKT_WRITE_CONTRIBS) {
+      vpkt_contrib_row << " " << vpkt.e_rf * prob;
     }
   }
 
@@ -434,7 +422,7 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
       }
     }
   }
-  return in_nu_range;  // true if we added columns to vpkt_contrib_row
+  return true;  // true if we added columns to vpkt_contrib_row
 }
 
 void init_vspecpol() {
@@ -943,14 +931,17 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
     if (t_arrive >= VSPEC_TIMEMIN_input && t_arrive <= VSPEC_TIMEMAX_input) {
       // time selection
 
-      const double nu_rf = pkt.nu_cmf / doppler_nucmf_on_nurf(obsdir, vel_vec);
+      const double doppler = doppler_nucmf_on_nurf(obsdir, vel_vec);
+      const double nu_rf = pkt.nu_cmf / doppler;
+      const double e_rf = pkt.e_cmf / doppler;
 
       for (int i = 0; i < Nrange; i++) {
         // Loop over frequency ranges
 
         if (nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) {
           // frequency selection
-          dir_escaped = rlc_emiss_vpkt(pkt, t_current, t_arrive, obsbin, obsdir, type_before_rpkt, vpkt_contrib_row);
+          dir_escaped =
+              rlc_emiss_vpkt(pkt, t_current, t_arrive, nu_rf, e_rf, obsbin, obsdir, type_before_rpkt, vpkt_contrib_row);
           break;  // assume that the frequency ranges do not overlap
         }
       }
