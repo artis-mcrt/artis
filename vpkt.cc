@@ -165,16 +165,11 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
                     const enum packet_type type_before_rpkt, std::stringstream &vpkt_contrib_row) {
   int mgi = 0;
 
-  Packet vpkt = {.type = TYPE_RPKT,
-                 .prop_time = t_current,
-                 .where = pkt.where,
-                 .last_cross = BOUNDARY_NONE,
-                 .pos = pkt.pos,
-                 .dir = obsdir,
-                 .e_rf = e_rf,
-                 .nu_rf = nu_rf,
-                 .next_trans = pkt.next_trans,
-                 .stokes = pkt.stokes};
+  Packet vpkt = pkt;
+  vpkt.nu_rf = nu_rf;
+  vpkt.e_rf = e_rf;
+  vpkt.dir = obsdir;
+  vpkt.last_cross = BOUNDARY_NONE;
 
   bool end_packet = false;
   double ldist = 0;
