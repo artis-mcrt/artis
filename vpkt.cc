@@ -929,7 +929,7 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
 
   std::stringstream vpkt_contrib_row;
 
-  bool any_escaped = false;
+  bool any_dir_escaped = false;
   for (int obsbin = 0; obsbin < Nobs; obsbin++) {
     // loop over different observer directions
 
@@ -939,6 +939,7 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
 
     const double t_arrive = t_current - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
 
+    bool dir_escaped = false;
     if (t_arrive >= VSPEC_TIMEMIN_input && t_arrive <= VSPEC_TIMEMAX_input) {
       // time selection
 
@@ -949,21 +950,22 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
 
         if (nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) {
           // frequency selection
-          const bool dir_escaped =
-              rlc_emiss_vpkt(pkt, t_current, t_arrive, obsbin, obsdir, type_before_rpkt, vpkt_contrib_row);
-          if (dir_escaped) {
-            any_escaped = true;
-          } else {
-            vpkt_contrib_row << " -1. -1.";  // t_arrive_d nu_rf
-            for (int ind = 0; ind < Nspectra; ind++) {
-              vpkt_contrib_row << " 0.";  // e_rf_diri_j
-            }
-          }
+          dir_escaped = rlc_emiss_vpkt(pkt, t_current, t_arrive, obsbin, obsdir, type_before_rpkt, vpkt_contrib_row);
+          break;  // assume that the frequency ranges do not overlap
         }
       }
     }
+
+    if (dir_escaped) {
+      any_dir_escaped = true;
+    } else {
+      vpkt_contrib_row << " -1. -1.";  // t_arrive_d nu_rf
+      for (int ind = 0; ind < Nspectra; ind++) {
+        vpkt_contrib_row << " 0.";  // e_rf_diri_j
+      }
+    }
   }
-  if (VPKT_WRITE_CONTRIBS && any_escaped) {
+  if (VPKT_WRITE_CONTRIBS && any_dir_escaped) {
     vpkt_contrib_file << pkt.emissiontype << " " << pkt.trueemissiontype << " " << pkt.absorptiontype << " "
                       << pkt.absorptionfreq;
     vpkt_contrib_file << vpkt_contrib_row.rdbuf() << "\n";
