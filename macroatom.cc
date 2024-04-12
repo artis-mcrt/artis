@@ -281,7 +281,7 @@ void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int ele
                                pkt.e_cmf / H / pkt.nu_cmf);
   }
 
-  pkt.next_trans = 0;  /// continuum transition, no restrictions for further line interactions
+  pkt.next_trans = -1;  /// continuum transition, no restrictions for further line interactions
   pkt.emissiontype = get_emtype_continuum(element, *ion, lower, upperionlevel);
   pkt.em_pos = pkt.pos;
   pkt.em_time = pkt.prop_time;

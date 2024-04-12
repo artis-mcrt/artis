@@ -399,7 +399,7 @@ void do_kpkt_blackbody(Packet &pkt)
   /// and then emit the packet randomly in the comoving frame
   emit_rpkt(pkt);
   // printout("[debug] calculate_chi_rpkt after kpkt to rpkt by ff\n");
-  pkt.next_trans = 0;  /// FLAG: transition history here not important, cont. process
+  pkt.next_trans = -1;  /// FLAG: transition history here not important, cont. process
   // if (tid == 0) k_stat_to_r_bb++;
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
   stats::increment(stats::COUNTER_INTERACTIONS);
@@ -535,7 +535,7 @@ void do_kpkt(Packet &pkt, double t2, int nts)
 
     /// and then emit the packet randomly in the comoving frame
     emit_rpkt(pkt);
-    pkt.next_trans = 0;  /// FLAG: transition history here not important, cont. process
+    pkt.next_trans = -1;  /// FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FF);
 
     pkt.last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
@@ -574,7 +574,7 @@ void do_kpkt(Packet &pkt, double t2, int nts)
                                  pkt.e_cmf / H / pkt.nu_cmf);
     }
 
-    pkt.next_trans = 0;  /// FLAG: transition history here not important, cont. process
+    pkt.next_trans = -1;  /// FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FB);
     pkt.last_event = LASTEVENT_KPKT_TO_RPKT_FB;
     pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerlevel, upper);
