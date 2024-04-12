@@ -745,6 +745,9 @@ void read_parameterfile_vpkt() {
 
       VSPEC_NUMIN_input[i] = CLIGHT / (lmax_vspec_input * 1e-8);
       VSPEC_NUMAX_input[i] = CLIGHT / (lmin_vspec_input * 1e-8);
+
+      assert_always(VSPEC_NUMIN_input[i] >= VSPEC_NUMIN);
+      assert_always(VSPEC_NUMAX_input[i] <= VSPEC_NUMAX);
     }
   } else {
     Nrange = 1;
