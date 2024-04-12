@@ -909,15 +909,6 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
 
   const auto vel_vec = get_velocity(pkt.pos, pkt.prop_time);
 
-  // this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each
-  // observer)
-  if (pkt.next_trans == 0) {
-    const int lineindex = closest_transition(pkt.nu_cmf, pkt.next_trans);  /// returns negative
-    if (lineindex < 0) {
-      pkt.next_trans = lineindex + 1;
-    }
-  }
-
   std::stringstream vpkt_contrib_row;
 
   bool any_dir_escaped = false;
