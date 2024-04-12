@@ -160,8 +160,9 @@ void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> vel, const
   }
 }
 
-bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin, const std::array<double, 3> obsdir,
-                    const enum packet_type type_before_rpkt, std::stringstream &vpkt_contrib_row) {
+bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_arrive, const int obsbin,
+                    const std::array<double, 3> obsdir, const enum packet_type type_before_rpkt,
+                    std::stringstream &vpkt_contrib_row) {
   int mgi = 0;
 
   Packet vpkt = pkt;
@@ -170,8 +171,8 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
   double ldist = 0;
   double t_future = t_current;
 
-  for (int ind = 0; ind < Nspectra; ind++) {
-    tau_vpkt[ind] = 0;
+  for (int opacindex = 0; opacindex < Nspectra; opacindex++) {
+    tau_vpkt[opacindex] = 0;
   }
 
   vpkt.dir = obsdir;
@@ -383,15 +384,13 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin,
     atomicadd(nvpkt_esc3, 1);
   }
 
-  const double t_arrive = get_arrive_time(vpkt);
-  const double t_arrive_d = t_arrive / DAY;
   // -------------- final stokes vector ---------------
 
   const bool in_nu_range = (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX);
   const bool in_time_range = (t_arrive > VSPEC_TIMEMIN && t_arrive < VSPEC_TIMEMAX);
 
   if (VPKT_WRITE_CONTRIBS && in_nu_range) {
-    vpkt_contrib_row << " " << t_arrive_d << " " << vpkt.nu_rf;
+    vpkt_contrib_row << " " << t_arrive / DAY << " " << vpkt.nu_rf;
   }
 
   for (int ind = 0; ind < Nspectra; ind++) {
@@ -950,7 +949,8 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
 
         if (nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) {
           // frequency selection
-          const bool dir_escaped = rlc_emiss_vpkt(pkt, t_current, obsbin, obsdir, type_before_rpkt, vpkt_contrib_row);
+          const bool dir_escaped =
+              rlc_emiss_vpkt(pkt, t_current, t_arrive, obsbin, obsdir, type_before_rpkt, vpkt_contrib_row);
           if (dir_escaped) {
             any_escaped = true;
           } else {
