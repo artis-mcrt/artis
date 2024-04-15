@@ -407,15 +407,13 @@ static auto get_element_superlevelpartfuncs(const int modelgridindex, const int 
   const int nions = get_nions(element);
   auto superlevel_partfuncs = std::vector<double>(nions);
   for (int ion = 0; ion < nions; ion++) {
+    superlevel_partfuncs[ion] = 0.;
     if (ion_has_superlevel(element, ion)) {
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
       const int nlevels = get_nlevels(element, ion);
-      superlevel_partfuncs[ion] = 0.;
       for (int level = nlevels_nlte + 1; level < nlevels; level++) {
         superlevel_partfuncs[ion] += superlevel_boltzmann(modelgridindex, element, ion, level);
       }
-    } else {
-      superlevel_partfuncs[ion] = 0.;
     }
   }
 
