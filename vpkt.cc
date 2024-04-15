@@ -869,17 +869,19 @@ void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved
     }
     vpkt_contrib_file = std::ofstream(filename, std::ios::app);
 
-    vpkt_contrib_file << "#emissiontype trueemissiontype absorption_type absorption_freq";
+    if (!continued_from_saved) {
+      vpkt_contrib_file << "#emissiontype trueemissiontype absorption_type absorption_freq";
 
-    for (int obsbin = 0; obsbin < Nobs; obsbin++) {
-      vpkt_contrib_file << " dir" << obsbin << "_t_arrive_d dir" << obsbin << "_nu_rf";
-      for (int ind = 0; ind < Nspectra; ind++) {
-        vpkt_contrib_file << " dir" << obsbin << "_e_rf_" << ind;
+      for (int obsbin = 0; obsbin < Nobs; obsbin++) {
+        vpkt_contrib_file << " dir" << obsbin << "_t_arrive_d dir" << obsbin << "_nu_rf";
+        for (int ind = 0; ind < Nspectra; ind++) {
+          vpkt_contrib_file << " dir" << obsbin << "_e_rf_" << ind;
+        }
       }
-    }
 
-    vpkt_contrib_file << "\n";
-    vpkt_contrib_file.flush();
+      vpkt_contrib_file << "\n";
+      vpkt_contrib_file.flush();
+    }
   }
 
   if (continued_from_saved) {
