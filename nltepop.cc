@@ -405,11 +405,12 @@ static void nltepop_reset_element(const int modelgridindex, const int element) {
 
 static auto get_element_superlevelpartfuncs(const int modelgridindex, const int element) -> std::vector<double> {
   const int nions = get_nions(element);
-  std::vector<double> superlevel_partfuncs(nions, 0.);
+  auto superlevel_partfuncs = std::vector<double>(nions);
   for (int ion = 0; ion < nions; ion++) {
     if (ion_has_superlevel(element, ion)) {
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
       const int nlevels = get_nlevels(element, ion);
+      superlevel_partfuncs[ion] = 0.;
       for (int level = nlevels_nlte + 1; level < nlevels; level++) {
         superlevel_partfuncs[ion] += superlevel_boltzmann(modelgridindex, element, ion, level);
       }
