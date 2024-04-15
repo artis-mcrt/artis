@@ -1936,11 +1936,9 @@ static void setup_nstart_ndo() {
   ranks_ndo_nonempty.resize(nprocesses);
 
   // begin with no cell assignments
-  for (int r = 0; r < nprocesses; r++) {
-    ranks_nstart[r] = 0;
-    ranks_ndo[r] = 0;
-    ranks_ndo_nonempty[r] = 0;
-  }
+  std::ranges::fill(ranks_nstart, 0);
+  std::ranges::fill(ranks_ndo, 0);
+  std::ranges::fill(ranks_ndo_nonempty, 0);
 
   if (nprocesses >= get_npts_model()) {
     // for convenience, rank == mgi when there is at least one rank per cell
