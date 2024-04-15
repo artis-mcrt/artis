@@ -405,9 +405,8 @@ static void nltepop_reset_element(const int modelgridindex, const int element) {
 
 static auto get_element_superlevelpartfuncs(const int modelgridindex, const int element) -> std::vector<double> {
   const int nions = get_nions(element);
-  auto superlevel_partfuncs = std::vector<double>(nions);
+  auto superlevel_partfuncs = std::vector<double>(nions, 0.);
   for (int ion = 0; ion < nions; ion++) {
-    superlevel_partfuncs[ion] = 0.;
     if (ion_has_superlevel(element, ion)) {
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
       const int nlevels = get_nlevels(element, ion);
