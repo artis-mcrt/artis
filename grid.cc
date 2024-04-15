@@ -1931,9 +1931,9 @@ static void setup_nstart_ndo() {
   const int n_remainder = npts_nonempty % nprocesses;
   maxndo = 0;
 
-  ranks_nstart = std::vector<int>(nprocesses);
-  ranks_ndo = std::vector<int>(nprocesses);
-  ranks_ndo_nonempty = std::vector<int>(nprocesses);
+  ranks_nstart.resize(nprocesses);
+  ranks_ndo.resize(nprocesses);
+  ranks_ndo_nonempty.resize(nprocesses);
 
   // begin with no cell assignments
   for (int r = 0; r < nprocesses; r++) {
