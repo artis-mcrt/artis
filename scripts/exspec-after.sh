@@ -33,5 +33,17 @@ if [ -f emission.out* ]; then
 
   ./artis/scripts/tar_rm_logs.sh
 
+  mkdir -p speclc_angle_res
+  mv *_res_*.out* speclc_angle_res/ || true
+
+  # convert packets to parquet for fast reading
+  artistools lc --frompackets || true
+
+  # convert virtual packets to parquet
+  artistools lc --frompackets -plotvspecpol 0 || true
+
+  # convert estimators to parquet
+  python3 -c 'import artistools as at; at.estimators.scan_estimators()' || true
+
 fi
 
