@@ -15,6 +15,11 @@ if [ -f emission.out* ]; then
   mkdir -p packets
   mv packets*.out* packets/ || true
 
+  if [ -f vpackets*.out* ]; then
+    mkdir -p vpackets
+    mv vpackets*.out* vpackets/ || true
+  fi
+
   # 3D kilonova model.txt and abundances.txt can be huge, so compress txt files
   # do maxdepth 1 first in case job gets killed during run folder compression
   find . -maxdepth 1 -name '*.txt' ! -name "output_0-0.txt" -size +2M -exec $cmdcompress {} \;

@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdio>
 #include <ctime>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -663,7 +664,8 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
 
   std::ofstream lc_file(lc_filename);
   if (!lc_file) {
-    throw std::system_error(errno, std::system_category(), "failed to open " + lc_filename);
+    printout("failed to open %s\n", lc_filename.c_str());
+    std::abort();
   }
 
   printout("Writing %s\n", lc_filename.c_str());

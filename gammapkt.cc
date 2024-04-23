@@ -544,12 +544,7 @@ static void compton_scatter(Packet &pkt)
 
     // Now convert back again.
 
-    // get_velocity(pkt.pos, vel_vec, (-1 * pkt.prop_time));
-    vec_scale(vel_vec, -1.);
-
-    auto final_dir = angle_ab(new_dir, vel_vec);
-
-    pkt.dir = final_dir;
+    pkt.dir = angle_ab(new_dir, vec_scale(vel_vec, -1.));
 
     assert_testmodeonly(std::fabs(vec_len(pkt.dir) - 1.) < 1e-10);
 

@@ -619,7 +619,7 @@ static void rpkt_event_boundbound(Packet &pkt, MacroAtomState &pktmastate, const
   pkt.last_event = 1;
 
   pkt.absorptiontype = pktmastate.activatingline;
-  pkt.absorptionfreq = pkt.nu_rf;  // pkt.nu_cmf;
+  pkt.absorptionfreq = pkt.nu_rf;
   pkt.absorptiondir[0] = pkt.dir[0];
   pkt.absorptiondir[1] = pkt.dir[1];
   pkt.absorptiondir[2] = pkt.dir[2];

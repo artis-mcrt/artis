@@ -48,17 +48,14 @@ template <size_t S1, size_t S2>
 }
 
 [[nodiscard]] [[gnu::const]] constexpr auto cross_prod(const std::array<double, 3> vec_a,
-                                                       const std::array<double, 3> vec_b) -> std::array<double, 3> {
-  std::array<double, 3> vecout = {(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]),
-                                  (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
-                                  (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
-  return vecout;
+                                                       const std::array<double, 3> vec_b) {
+  return std::array<double, 3>{(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]),
+                               (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
+                               (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
 }
 
-constexpr void vec_scale(std::array<double, 3> &vec, const double scalefactor) {
-  vec[0] *= scalefactor;
-  vec[1] *= scalefactor;
-  vec[2] *= scalefactor;
+[[nodiscard]] [[gnu::const]] constexpr auto vec_scale(const std::array<double, 3> vec, const double scalefactor) {
+  return std::array<double, 3>{vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
 }
 
 [[nodiscard]] [[gnu::const]] constexpr auto angle_ab(const std::array<double, 3> dir1,
@@ -78,9 +75,7 @@ constexpr void vec_scale(std::array<double, 3> &vec, const double scalefactor) {
   std::array<double, 3> dir2{(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
                              (dir1[2] - (vel[2] * fact2)) / fact1};
 
-  dir2 = vec_norm(dir2);
-
-  return dir2;
+  return vec_norm(dir2);
 }
 
 [[gnu::const]] [[nodiscard]] constexpr auto doppler_nucmf_on_nurf(const std::array<double, 3> dir_rf,

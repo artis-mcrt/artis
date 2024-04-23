@@ -427,13 +427,13 @@ void do_kpkt(Packet &pkt, double t2, int nts)
   const double t_current = t1 + deltat;
 
   if (t_current > t2) {
-    vec_scale(pkt.pos, t2 / t1);
+    pkt.pos = vec_scale(pkt.pos, t2 / t1);
     pkt.prop_time = t2;
     return;
   }
   stats::increment(stats::COUNTER_INTERACTIONS);
 
-  vec_scale(pkt.pos, t_current / t1);
+  pkt.pos = vec_scale(pkt.pos, t_current / t1);
   pkt.prop_time = t_current;
 
   assert_always(grid::modelgrid[modelgridindex].totalcooling > 0.);

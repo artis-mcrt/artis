@@ -72,7 +72,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
       pkt.nu_cmf = (particle_en - endot * (t_new - ts)) / H;
     }
 
-    vec_scale(pkt.pos, t_new / ts);
+    pkt.pos = vec_scale(pkt.pos, t_new / ts);
     pkt.prop_time = t_new;
   }
 
@@ -96,7 +96,7 @@ void update_pellet(Packet &pkt, const int nts, const double t2) {
   const double tdecay = pkt.tdecay;  // after packet_init(), this value never changes
   if (tdecay > t2) {
     // It won't decay in this timestep, so just need to move it on with the flow.
-    vec_scale(pkt.pos, t2 / ts);
+    pkt.pos = vec_scale(pkt.pos, t2 / ts);
     pkt.prop_time = t2;
 
     // That's all that needs to be done for the inactive pellet.
@@ -105,7 +105,7 @@ void update_pellet(Packet &pkt, const int nts, const double t2) {
     atomicadd(globals::timesteps[nts].pellet_decays, 1);
 
     pkt.prop_time = tdecay;
-    vec_scale(pkt.pos, tdecay / ts);
+    pkt.pos = vec_scale(pkt.pos, tdecay / ts);
 
     if (pkt.originated_from_particlenotgamma)  // will decay to non-thermal particle
     {

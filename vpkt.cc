@@ -97,12 +97,16 @@ constexpr auto all_taus_past_taumax(std::vector<double> &tau, const double tau_m
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vspecpol(const Packet &vpkt, const int obsbin, const int ind, const double t_arrive) {
+void add_to_vspecpol(const Packet &vpkt, const int obsdirindex, const int opachoiceindex, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
-  const int ind_comb = Nspectra * obsbin + ind;
   const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
   const int nnu = static_cast<int>((log(vpkt.nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
+  if (nt < 0 || nt >= VMTBINS || nnu < 0 || nnu >= VMNUBINS) {
+    return;
+  }
+
+  const int ind_comb = Nspectra * obsdirindex + opachoiceindex;
   const double pktcontrib = vpkt.e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /
                             PARSEC / globals::nprocs * 4 * PI;
 
@@ -112,7 +116,7 @@ void add_to_vspecpol(const Packet &vpkt, const int obsbin, const int ind, const 
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> vel, const int wlbin, const int obsbin,
+void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> vel, const int wlbin, const int obsdirindex,
                       const std::array<double, 3> obs) {
   double vref1{NAN};
   double vref2{NAN};
@@ -154,15 +158,15 @@ void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> vel, const
 
   // Add contribution
   if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {
-    atomicadd(vgrid_i[ny][nz].flux[wlbin][obsbin], vpkt.stokes[0] * vpkt.e_rf);
-    atomicadd(vgrid_q[ny][nz].flux[wlbin][obsbin], vpkt.stokes[1] * vpkt.e_rf);
-    atomicadd(vgrid_u[ny][nz].flux[wlbin][obsbin], vpkt.stokes[2] * vpkt.e_rf);
+    atomicadd(vgrid_i[ny][nz].flux[wlbin][obsdirindex], vpkt.stokes[0] * vpkt.e_rf);
+    atomicadd(vgrid_q[ny][nz].flux[wlbin][obsdirindex], vpkt.stokes[1] * vpkt.e_rf);
+    atomicadd(vgrid_u[ny][nz].flux[wlbin][obsdirindex], vpkt.stokes[2] * vpkt.e_rf);
   }
 }
 
-bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_arrive, const double nu_rf,
-                    const double e_rf, const int obsbin, const std::array<double, 3> obsdir,
-                    const enum packet_type type_before_rpkt, std::stringstream &vpkt_contrib_row) {
+auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_arrive, const double nu_rf,
+                    const double e_rf, const int obsdirindex, const std::array<double, 3> obsdir,
+                    const enum packet_type type_before_rpkt, std::stringstream &vpkt_contrib_row) -> bool {
   int mgi = 0;
 
   Packet vpkt = pkt;
@@ -398,7 +402,7 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
       assert_always(std::isfinite(stokeval));
     }
 
-    add_to_vspecpol(vpkt, obsbin, ind, t_arrive);
+    add_to_vspecpol(vpkt, obsdirindex, ind, t_arrive);
 
     if constexpr (VPKT_WRITE_CONTRIBS) {
       vpkt_contrib_row << " " << vpkt.e_rf * prob;
@@ -417,7 +421,7 @@ bool rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
         if (t_arrive > tmin_grid && t_arrive < tmax_grid) {                      // Time selection
-          add_to_vpkt_grid(vpkt, vel_vec, wlbin, obsbin, obsdir);
+          add_to_vpkt_grid(vpkt, vel_vec, wlbin, obsdirindex, obsdir);
         }
       }
     }
@@ -574,16 +578,16 @@ void init_vpkt_grid() {
 }
 
 void write_vpkt_grid(FILE *vpkt_grid_file) {
-  for (int obsbin = 0; obsbin < Nobs; obsbin++) {
+  for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
           fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].yvel);
           fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].zvel);
 
-          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].flux[wlbin][obsbin]);
-          fprintf(vpkt_grid_file, "%g ", vgrid_q[n][m].flux[wlbin][obsbin]);
-          fprintf(vpkt_grid_file, "%g ", vgrid_u[n][m].flux[wlbin][obsbin]);
+          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].flux[wlbin][obsdirindex]);
+          fprintf(vpkt_grid_file, "%g ", vgrid_q[n][m].flux[wlbin][obsdirindex]);
+          fprintf(vpkt_grid_file, "%g ", vgrid_u[n][m].flux[wlbin][obsdirindex]);
 
           fprintf(vpkt_grid_file, "\n");
         }
@@ -602,16 +606,16 @@ void read_vpkt_grid(const int my_rank, const int nts) {
   printout("Reading vpkt grid file %s\n", filename);
   FILE *vpkt_grid_file = fopen_required(filename, "r");
 
-  for (int obsbin = 0; obsbin < Nobs; obsbin++) {
+  for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
           assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].yvel) == 1);
           assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].zvel) == 1);
 
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].flux[wlbin][obsbin]) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_q[n][m].flux[wlbin][obsbin]) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_u[n][m].flux[wlbin][obsbin]) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].flux[wlbin][obsdirindex]) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_q[n][m].flux[wlbin][obsdirindex]) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_u[n][m].flux[wlbin][obsdirindex]) == 1);
 
           assert_always(fscanf(vpkt_grid_file, "\n") == 0);
         }
@@ -872,10 +876,10 @@ void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved
     if (!continued_from_saved) {
       vpkt_contrib_file << "#emissiontype trueemissiontype absorption_type absorption_freq";
 
-      for (int obsbin = 0; obsbin < Nobs; obsbin++) {
-        vpkt_contrib_file << " dir" << obsbin << "_t_arrive_d dir" << obsbin << "_nu_rf";
+      for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
+        vpkt_contrib_file << " dir" << obsdirindex << "_t_arrive_d dir" << obsdirindex << "_nu_rf";
         for (int ind = 0; ind < Nspectra; ind++) {
-          vpkt_contrib_file << " dir" << obsbin << "_e_rf_" << ind;
+          vpkt_contrib_file << " dir" << obsdirindex << "_e_rf_" << ind;
         }
       }
 
@@ -914,12 +918,13 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
   std::stringstream vpkt_contrib_row;
 
   bool any_dir_escaped = false;
-  for (int obsbin = 0; obsbin < Nobs; obsbin++) {
+  for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
     // loop over different observer directions
 
-    const std::array<double, 3> obsdir{sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * cos(phiobs[obsbin]),
-                                       sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * sin(phiobs[obsbin]),
-                                       nz_obs_vpkt[obsbin]};
+    const std::array<double, 3> obsdir{
+        sqrt(1 - nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex]) * cos(phiobs[obsdirindex]),
+        sqrt(1 - nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex]) * sin(phiobs[obsdirindex]),
+        nz_obs_vpkt[obsdirindex]};
 
     const double t_arrive = t_current - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
 
@@ -934,10 +939,11 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
       for (int i = 0; i < Nrange; i++) {
         // Loop over frequency ranges
 
-        if (nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) {
+        if ((nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) ||
+            (pkt.absorptionfreq > VSPEC_NUMIN_input[i] && pkt.absorptionfreq < VSPEC_NUMAX_input[i])) {
           // frequency selection
-          dir_escaped =
-              rlc_emiss_vpkt(pkt, t_current, t_arrive, nu_rf, e_rf, obsbin, obsdir, type_before_rpkt, vpkt_contrib_row);
+          dir_escaped = rlc_emiss_vpkt(pkt, t_current, t_arrive, nu_rf, e_rf, obsdirindex, obsdir, type_before_rpkt,
+                                       vpkt_contrib_row);
           break;  // assume that the frequency ranges do not overlap
         }
       }

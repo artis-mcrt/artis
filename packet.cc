@@ -45,8 +45,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // assert_always(radius >= r_inner);
     // assert_always(radius <= r_outer);
 
-    pkt.pos = get_rand_isotropic_unitvec();
-    vec_scale(pkt.pos, radius);
+    pkt.pos = vec_scale(get_rand_isotropic_unitvec(), radius);
 
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
     const double zrand = rng_uniform_pos();

@@ -25,12 +25,12 @@ jobs:
             - name: run cppcheck and check for errors
               run: |
                   cppcheck --version
-                  cppcheck --force --error-exitcode=1 --language=c++ --std=c++20 --enable=warning,performance,portability  --suppress=memleak .
+                  cppcheck --force --error-exitcode=1 --language=c++ --std=c++20 --enable=warning,performance,portability  --suppress=memleak --check-level=exhaustive .
 
             - name: show cppcheck style suggestions
               run: |
                   cppcheck --version
-                  cppcheck --force --language=c++ --std=c++20 --enable=style --suppress=knownConditionTrueFalse .
+                  cppcheck --force --language=c++ --std=c++20 --enable=style --suppress=knownConditionTrueFalse --check-level=exhaustive .
 
     clang-format:
         runs-on: ubuntu-22.04
@@ -66,7 +66,6 @@ jobs:
                   echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib" >> $GITHUB_ENV
                   echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
 
-                  echo "LDFLAGS=-L/opt/homebrew/opt/libomp/lib" >> $GITHUB_ENV
                   echo "CXXFLAGS=-I/opt/homebrew/opt/libomp/include" >> $GITHUB_ENV
 
                   echo "LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
@@ -211,7 +210,7 @@ jobs:
                       stdpar: ON
             fail-fast: false
 
-        name: macOS clang 17 ${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}${{ matrix.stdpar == 'ON' && ' stdpar' || ''}}
+        name: macOS brew clang ${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}${{ matrix.stdpar == 'ON' && ' stdpar' || ''}}
 
         steps:
             - uses: actions/checkout@v4
@@ -233,8 +232,10 @@ jobs:
 
             - name: install llvm
               run: |
-                  brew install llvm@17 || true
+                  brew install llvm || true
                   echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
+                  echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm/lib/c++ $LDFLAGS" >> $GITHUB_ENV
+                  echo "CXX=clang++" >> $GITHUB_ENV
 
             - name: install OpenMP
               if: matrix.openmp == 'ON'
@@ -242,8 +243,8 @@ jobs:
                   brew install libomp || true
                   brew link --force libomp
 
-                  echo "LDFLAGS=-L/opt/homebrew/opt/libomp/lib" >> $GITHUB_ENV
-                  echo "CPPFLAGS=-I/opt/homebrew/opt/libomp/include" >> $GITHUB_ENV
+                  echo "LDFLAGS=-L/opt/homebrew/opt/libomp/lib $LDFLAGS" >> $GITHUB_ENV
+                  echo "CXXFLAGS=-I/opt/homebrew/opt/libomp/include $CXXFLAGS" >> $GITHUB_ENV
 
             - name: install OpenMPI
               if: matrix.mpi == 'ON'
