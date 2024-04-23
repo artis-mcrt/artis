@@ -15,7 +15,7 @@ if [ -f emission.out* ]; then
   mkdir -p packets
   mv packets*.out* packets/ || true
 
-  if [ -f vpackets*.out* ]; then
+  if [[ -f vpackets*.out* ]]; then
     mkdir -p vpackets
     mv vpackets*.out* vpackets/ || true
   fi
