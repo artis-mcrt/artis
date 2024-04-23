@@ -63,7 +63,5 @@ CheckOptions:
       value: 'false'
     - key: cppcoreguidelines-pro-type-member-init.IgnoreArrays
       value: 'true'
-    - key: readability-identifier-naming.FunctionCase
-      value: lower_case
     - key: readability-identifier-naming.NamespaceCase
       value: lower_case
