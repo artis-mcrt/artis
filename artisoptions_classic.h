@@ -1,3 +1,4 @@
+#pragma once
 #ifndef ARTISOPTIONS_H  // NOLINT(llvm-header-guard)
 #define ARTISOPTIONS_H
 // NOLINTBEGIN(modernize*,misc-unused-parameters)
@@ -46,9 +47,9 @@ constexpr bool DIPOLE = true;
 constexpr bool POL_ON = true;
 
 constexpr bool VPKT_ON = false;
+constexpr bool VPKT_WRITE_CONTRIBS = false;
 
 constexpr bool TRACK_ION_STATS = false;
-constexpr bool TRACK_ION_MASTATS = false;
 
 constexpr double MINPOP = 1e-30;
 
@@ -139,6 +140,12 @@ constexpr double TIMESTEP_TRANSITION_TIME = -1.;
 constexpr bool KEEP_ALL_RESTART_FILES = false;
 
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
+
+constexpr bool EXPANSIONOPACITIES_ON = false;
+
+constexpr bool EXPANSION_OPAC_SAMPLE_KAPPAPLANCK = false;
+
+constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H

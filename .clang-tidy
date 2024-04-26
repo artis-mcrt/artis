@@ -17,7 +17,6 @@ Checks: >
     -cert-err34-c,
     -cert-err58-cpp,
     -clang-analyzer-deadcode.DeadStores,
-    -clang-diagnostic-unused-macros,
     -cppcoreguidelines-avoid-magic-numbers,
     -cppcoreguidelines-avoid-non-const-global-variables,
     -cppcoreguidelines-macro-usage,
@@ -27,7 +26,6 @@ Checks: >
     -cppcoreguidelines-pro-bounds-constant-array-index,
     -cppcoreguidelines-pro-bounds-pointer-arithmetic,
     -cppcoreguidelines-pro-type-cstyle-cast,
-    -cppcoreguidelines-pro-type-reinterpret-cast,
     -cppcoreguidelines-pro-type-vararg,
     -fuchsia-*,
     -google-objc*,
@@ -37,7 +35,6 @@ Checks: >
     -hicpp-no-array-decay,
     -hicpp-no-malloc,
     -hicpp-signed-bitwise,
-    -llvm-header-guard,
     -misc-use-anonymous-namespace,
     -misc-no-recursion,
     -misc-non-private-member-variables-in-classes,
@@ -54,11 +51,17 @@ CheckOptions:
       value: google
     - key: cppcoreguidelines-init-variables.MathHeader
       value: <cmath>
+    - key: modernize-use-std-print.PrintfLikeFunctions # replace printout macro with a function when we want to autofix to use std::format gcc >=13
+      value: printf; absl::PrintF; printout
+    - key: modernize-use-std-print.FprintfLikeFunctions
+      value: fprintf; absl::FPrintF
     - key: cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes
-      value: size_t;ptrdiff_t;size_t;difference_type;time_t;MPI_Aint
+      value: size_t;ptrdiff_t;size_type;difference_type;time_t;MPI_Aint
     - key: cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
       value: 'false'
     - key: cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
       value: 'false'
     - key: cppcoreguidelines-pro-type-member-init.IgnoreArrays
       value: 'true'
+    - key: readability-identifier-naming.NamespaceCase
+      value: lower_case

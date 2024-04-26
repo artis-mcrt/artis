@@ -1,45 +1,49 @@
+#pragma once
+#include <cstddef>
 #ifndef STATS_H
 #define STATS_H
+
+#include <cstdint>
 
 #include "packet.h"
 
 namespace stats {
 // number of ion stats counters that should be divided by the ion populations
-#define nstatcounters_ratecoeff 18
+constexpr int nstatcounters_ratecoeff = 18;
 
 // one counter per ion per cell
 enum ionstattypes {
   ION_RADRECOMB_MACROATOM = 0,
   ION_RADRECOMB_KPKT = 1,
   ION_RADRECOMB_ABSORBED = 2,
-  ION_BOUNDBOUND_MACROATOM = 4,
-  ION_BOUNDBOUND_ABSORBED = 5,
-  ION_NTION = 6,
-  ION_PHOTOION = 7,
-  ION_PHOTOION_FROMBOUNDFREE = 8,
-  ION_PHOTOION_FROMBFSAMEELEMENT = 9,
-  ION_PHOTOION_FROMBFIONPLUSONE = 10,
-  ION_PHOTOION_FROMBFIONPLUSTWO = 11,
-  ION_PHOTOION_FROMBFIONPLUSTHREE = 12,
-  ION_PHOTOION_FROMBFLOWERSUPERLEVEL = 13,
-  ION_PHOTOION_FROMBOUNDBOUND = 14,
-  ION_PHOTOION_FROMBOUNDBOUNDIONPLUSONE = 15,
-  ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO = 16,
-  ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE = 17,
-  ION_MACROATOM_ENERGYOUT_RADDEEXC = 18,
-  ION_MACROATOM_ENERGYOUT_RADRECOMB = 19,
-  ION_MACROATOM_ENERGYOUT_COLLDEEXC = 20,
-  ION_MACROATOM_ENERGYOUT_COLLRECOMB = 21,
-  ION_MACROATOM_ENERGYIN_RADEXC = 22,
-  ION_MACROATOM_ENERGYIN_PHOTOION = 23,
-  ION_MACROATOM_ENERGYIN_COLLEXC = 24,
-  ION_MACROATOM_ENERGYIN_COLLION = 25,
-  ION_MACROATOM_ENERGYIN_NTCOLLION = 27,
-  ION_MACROATOM_ENERGYIN_TOTAL = 28,
-  ION_MACROATOM_ENERGYOUT_TOTAL = 29,
-  ION_MACROATOM_ENERGYIN_INTERNAL = 30,
-  ION_MACROATOM_ENERGYOUT_INTERNAL = 31,
-  ION_STAT_COUNT = 32,
+  ION_BOUNDBOUND_MACROATOM = 3,
+  ION_BOUNDBOUND_ABSORBED = 4,
+  ION_NTION = 5,
+  ION_PHOTOION = 6,
+  ION_PHOTOION_FROMBOUNDFREE = 7,
+  ION_PHOTOION_FROMBFSAMEELEMENT = 8,
+  ION_PHOTOION_FROMBFIONPLUSONE = 9,
+  ION_PHOTOION_FROMBFIONPLUSTWO = 10,
+  ION_PHOTOION_FROMBFIONPLUSTHREE = 11,
+  ION_PHOTOION_FROMBFLOWERSUPERLEVEL = 12,
+  ION_PHOTOION_FROMBOUNDBOUND = 13,
+  ION_PHOTOION_FROMBOUNDBOUNDIONPLUSONE = 14,
+  ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO = 15,
+  ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE = 16,
+  ION_MACROATOM_ENERGYOUT_RADDEEXC = 17,
+  ION_MACROATOM_ENERGYOUT_RADRECOMB = 18,
+  ION_MACROATOM_ENERGYOUT_COLLDEEXC = 19,
+  ION_MACROATOM_ENERGYOUT_COLLRECOMB = 20,
+  ION_MACROATOM_ENERGYIN_RADEXC = 21,
+  ION_MACROATOM_ENERGYIN_PHOTOION = 22,
+  ION_MACROATOM_ENERGYIN_COLLEXC = 23,
+  ION_MACROATOM_ENERGYIN_COLLION = 24,
+  ION_MACROATOM_ENERGYIN_NTCOLLION = 26,
+  ION_MACROATOM_ENERGYIN_TOTAL = 27,
+  ION_MACROATOM_ENERGYOUT_TOTAL = 28,
+  ION_MACROATOM_ENERGYIN_INTERNAL = 29,
+  ION_MACROATOM_ENERGYOUT_INTERNAL = 30,
+  ION_STAT_COUNT = 31,
 };
 
 // global statistics (all cells combined)
@@ -70,26 +74,23 @@ enum eventcounters {
   COUNTER_NT_STAT_TO_EXCITATION = 23,
   COUNTER_NT_STAT_TO_KPKT = 24,
   COUNTER_K_STAT_FROM_EARLIERDECAY = 25,
-  COUNTER_ESCOUNTER = 26,
-  COUNTER_RESONANCESCATTERINGS = 27,
-  COUNTER_CELLCROSSINGS = 28,
-  COUNTER_UPSCATTER = 29,
-  COUNTER_DOWNSCATTER = 30,
-  COUNTER_UPDATECELL = 31,
-  COUNTER_COOLINGRATECALCCOUNTER = 32,
-  COUNTER_NESC = 33,
-  COUNTER_COUNT = 34,
+  COUNTER_INTERACTIONS = 26,
+  COUNTER_ESCOUNTER = 27,
+  COUNTER_RESONANCESCATTERINGS = 28,
+  COUNTER_CELLCROSSINGS = 29,
+  COUNTER_UPSCATTER = 30,
+  COUNTER_DOWNSCATTER = 31,
+  COUNTER_UPDATECELL = 32,
+  COUNTER_COUNT = 33,
 };
 
 void init();
 
-void cleanup();
-
 void increment_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype, double increment);
 
-void increment_ion_stats_contabsorption(const struct packet *pkt_ptr, int modelgridindex, int element, int ion);
+void increment_ion_stats_contabsorption(const Packet &pkt, int modelgridindex, int element, int ion);
 
-auto get_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype) -> double;
+[[nodiscard]] auto get_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype) -> double;
 
 void set_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype, double newvalue);
 
@@ -101,9 +102,9 @@ void increment(enum eventcounters);
 
 void pkt_action_counters_reset();
 
-auto get_counter(enum eventcounters i) -> int;
+[[nodiscard]] auto get_counter(enum eventcounters i) -> ptrdiff_t;
 
-void pkt_action_counters_printout(const struct packet *pkt, int nts);
+void pkt_action_counters_printout(int nts);
 
 void reduce_estimators();
 }  // namespace stats

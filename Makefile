@@ -3,82 +3,128 @@
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto -Wno-error=unknown-pragmas
-
 ifeq ($(MPI),)
-	# MPI option not specified. set to true by default
-	MPI := ON
+	# MPI option not specified. set to true if mpicxx exists
+	ifneq (, $(shell command -v mpicxx 2> /dev/null))
+		MPI := ON
+	else
+		MPI := OFF
+	endif
 endif
+
 ifeq ($(MPI),ON)
-	CXX = mpicxx
+	CXX := mpicxx
 	CXXFLAGS += -DMPI_ON=true
 	BUILD_DIR := $(BUILD_DIR)_mpi
+$(info $(shell mpicxx --showme:version 2> /dev/null))
 else ifeq ($(MPI),OFF)
 else
-$(error bad value for MPI option. Should be ON or OFF)
+  $(error bad value for MPI option. Should be ON or OFF)
 endif
 
 ifeq ($(TESTMODE),ON)
 else ifeq ($(TESTMODE),OFF)
 else ifeq ($(TESTMODE),)
 else
-$(error bad value for testmode option. Should be ON or OFF)
+  $(error bad value for testmode option. Should be ON or OFF)
 endif
 
-COMPILER_VERSION := $(shell $(CXX) --version)
 
+COMPILER_VERSION := $(shell $(CXX) --version)
+$(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
-  COMPILER_IS_CLANG := TRUE
+  COMPILER_NAME := CLANG
+  CXXFLAGS += -flto=thin
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
-  COMPILER_IS_CLANG := FALSE
+  COMPILER_NAME := GCC
+  CXXFLAGS += -flto=auto
+else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
+  COMPILER_NAME := NVHPC
 else
   $(warning Unknown compiler)
-  COMPILER_IS_CLANG := FALSE
+  COMPILER_NAME := unknown
+endif
+
+$(info detected compiler is $(COMPILER_NAME))
+
+CXXFLAGS += -std=c++20 -fstrict-aliasing
+# CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
+
+ifneq ($(COMPILER_NAME),NVHPC)
+	CXXFLAGS += -ftree-vectorize -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
+	# add -ftrivial-auto-var-init=zero when we drop gcc 11 support
+endif
+
+# profile-guided optimisation
+# generate profile:
+# CXXFLAGS += -fprofile-generate="profdataraw"
+# for clang, run this to convert the raw data to profdata
+# llvm-profdata merge -output=profdata profdataraw/*
+# compile with PGO:
+# CXXFLAGS += -fprofile-use="profdataraw"
+
+ifeq ($(GPU),ON)
+	CXXFLAGS += -DGPU_ON=true -DUSE_SIMPSON_INTEGRATOR=true
+	BUILD_DIR := $(BUILD_DIR)_gpu
+else ifeq ($(GPU),OFF)
+else ifeq ($(GPU),)
+else
+    $(error bad value for GPU option. Should be ON or OFF)
 endif
 
 ifeq ($(OPENMP),ON)
+  ifeq ($(STDPAR),ON)
+    $(error cannot combine OPENMP and STDPAR)
+  endif
   BUILD_DIR := $(BUILD_DIR)_openmp
 
-  ifeq ($(COMPILER_IS_CLANG),TRUE)
-    CXXFLAGS += -Xpreprocessor -fopenmp
-    LDFLAGS += -lomp
-  else
-    CXXFLAGS += -fopenmp
-  endif
+	ifeq ($(COMPILER_NAME),NVHPC)
+	  CXXFLAGS += -mp=gpu -gpu=unified
+	else ifeq ($(COMPILER_NAME),CLANG)
+		CXXFLAGS += -Xpreprocessor -fopenmp
+		LDFLAGS += -lomp
+	else ifeq ($(COMPILER_NAME),GCC)
+		CXXFLAGS += -fopenmp
+	endif
 
 else ifeq ($(OPENMP),OFF)
 else ifeq ($(OPENMP),)
 else
-  $(error bad value for openmp option. Should be ON or OFF)
+    $(error bad value for OPENMP option. Should be ON or OFF)
 endif
 
 ifeq ($(STDPAR),ON)
-  ifeq ($(OPENMP),ON)
-    $(error cannot combine OPENMP and STDPAR)
-  endif
-
   CXXFLAGS += -DSTDPAR_ON=true
   BUILD_DIR := $(BUILD_DIR)_stdpar
 
-  ifeq ($(COMPILER_IS_CLANG),TRUE)
-  else
-    # CXXFLAGS += -Xlinker -debug_snapshot
-    LDFLAGS += -ltbb
+  ifeq ($(COMPILER_NAME),NVHPC)
+		CXXFLAGS += -stdpar=gpu -gpu=unified
+  else ifeq ($(COMPILER_NAME),CLANG)
+		# CXXFLAGS += -fexperimental-library
+		LDFLAGS += -ltbb
+		# LDFLAGS += -Xlinker -debug_snapshot
+  else ifeq ($(COMPILER_NAME),GCC)
+		LDFLAGS += -ltbb
   endif
+
 else ifeq ($(STDPAR),OFF)
 else ifeq ($(STDPAR),)
 else
   $(error bad value for STDPAR option. Should be ON or OFF)
 endif
 
+ifneq ($(STDPAR),ON)
+	# triggers errors for the onedpl headers
+	CXXFLAGS += -Wundef
+endif
 
 ifeq ($(shell uname -s),Darwin)
 # 	macOS
 
-    ifeq ($(COMPILER_IS_CLANG),FALSE)
-    #   fixes linking on macOS with gcc
-	  LDFLAGS += -Wl,-ld_classic
-    endif
+	ifeq ($(COMPILER_NAME),GCC)
+#		fixes linking on macOS with gcc
+		LDFLAGS += -Xlinker -ld_classic
+	endif
 
 	ifeq ($(shell uname -m),arm64)
 #	 	On Arm, -mcpu combines -march and -mtune
@@ -88,29 +134,16 @@ ifeq ($(shell uname -s),Darwin)
 		CXXFLAGS += -march=native
 	endif
 
-	CXXFLAGS += -fno-omit-frame-pointer
+	CXXFLAGS += -fno-omit-frame-pointer -g
 #	CXXFLAGS += -Rpass=loop-vectorize
 #	CXXFLAGS += -Rpass-missed=loop-vectorize
 #	CXXFLAGS += -Rpass-analysis=loop-vectorize
 
 	# CXXFLAGS += -fopenmp-simd
 
-	# enable OpenMP for Clang
-	# CXXFLAGS += -Xpreprocessor -fopenmp -lomp
-
 	# add -lprofiler for gperftools
 	# LDFLAGS += $(LIB)
 	# LDFLAGS += -lprofiler
-	CXXFLAGS += $(shell pkg-config --cflags ompi)
-
-else ifeq ($(USER),localadmin_ccollins)
-	# CXX = c++
-	LDFLAGS= -lgsl -lgslcblas -lm -I/home/localadmin_ccollins/gsl/include
-	INCLUDE = /home/localadmin_ccollins/gsl/include
-	LIB = /home/localadmin_ccollins/gsl/lib
-	CXXFLAGS += -g -I$(INCLUDE)
-	LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
-	CXXFLAGS += -std=c++17 -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
 
 else
 	# sometimes the login nodes have slighty different CPUs
@@ -122,14 +155,15 @@ else
 
 	# to get the current CPU architecture, run this:
 	# g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
-	ifneq (,$(findstring juwels,$(HOSTNAME)))
-		CXXFLAGS += -march=skylake-avx512
-	else ifneq (,$(findstring lxbk,$(HOSTNAME)))
-		# virgo has some AMD nodes (znver1 arch) and some Intel
-		CXXFLAGS += -march=cascadelake
-	else ifneq (,$(findstring login-q,$(HOSTNAME)))
-		# Cambridge icelake nodes
-		CXXFLAGS += -march=icelake-server
+	ifneq (,$(shell hostname -A | grep gsi.de))
+		# virgo has some AMD nodes and some Intel.
+		# As of Feb 2024, the login nodes are zen3, and we select the same arch for jobs
+		CXXFLAGS += -march=native
+	else
+		# for GitHub actions, checksums must match with different assigned CPUs, so avoid -march=native (use lowest common denominator)
+		# update: all zenver3 now?
+
+		CXXFLAGS += -march=native
 	endif
 
 endif
@@ -146,16 +180,17 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -DLIBCXX_ENABLE_DEBUG_MODE
-	# makes GitHub actions classic test run forever?
-	# CXXFLAGS += -D_GLIBCXX_DEBUG=1
+	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0
+
+	CXXFLAGS += -D_GLIBCXX_ASSERTIONS
+	# CXXFLAGS += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_BACKTRACE=1
+
 	CXXFLAGS +=  -fno-omit-frame-pointer
 
-	ifeq ($(COMPILER_IS_CLANG),TRUE)
-	CXXFLAGS += -fsanitize=address,undefined,integer
-	else
-	CXXFLAGS += -fsanitize=address,undefined
-	endif
+	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
+	CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG
+
+	CXXFLAGS += -fsanitize=undefined,address
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
@@ -167,15 +202,25 @@ ifeq ($(OPTIMIZE),OFF)
 	BUILD_DIR := $(BUILD_DIR)_optimizeoff
 	CXXFLAGS += -O0
 else
-	ifeq ($(FASTMATH),ON)
-		BUILD_DIR := $(BUILD_DIR)_fastmath
-		CXXFLAGS += -Ofast -ffast-math -funsafe-math-optimizations -fno-finite-math-only
-	else
-		CXXFLAGS += -O3
-	endif
+	# ifeq ($(TESTMODE),ON)
+	# 	CXXFLAGS += -Og
+	# else
+		ifeq ($(FASTMATH),OFF)
+			CXXFLAGS += -O3
+			BUILD_DIR := $(BUILD_DIR)_nofastmath
+		else
+			CXXFLAGS += -Ofast
+
+			ifeq ($(COMPILER_NAME),NVHPC)
+				CXXFLAGS += -fast
+			else
+				CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only
+			endif
+		endif
+	# endif
 endif
 
-CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wunused-macros -Wno-inline -Wsign-compare
+CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare
 
 
 ### use pg when you want to use gprof profiler
@@ -196,7 +241,7 @@ all: sn3d exspec
 
 $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) -MD -MP -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h artisoptions.h Makefile
 
@@ -218,7 +263,6 @@ exspec: $(exspec_objects) artisoptions.h Makefile
 
 version.h:
 	@echo "constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";" > version.h
-	@echo "constexpr const char* GIT_HASH = \"$(shell git rev-parse HEAD)\";" >> version.h
 # requires git > 2.22
 # @echo "constexpr const char* GIT_BRANCH = \"$(shell git branch --show)\";" >> version.h
 	@echo "constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";" >> version.h

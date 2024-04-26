@@ -1,6 +1,8 @@
+#pragma once
 #ifndef VECTORS_H
 #define VECTORS_H
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <numeric>
@@ -11,10 +13,8 @@
 #include "packet.h"
 #include "sn3d.h"
 
-void scatter_dir(std::span<const double, 3> dir_in, double cos_theta, std::span<double, 3> dir_out);
-void get_rand_isotropic_unitvec(std::span<double, 3> vecout);
-
-[[nodiscard]] [[gnu::pure]] constexpr auto vec_len(std::span<const double> vec) -> double
+template <size_t VECDIM>
+[[nodiscard]] [[gnu::const]] constexpr auto vec_len(const std::array<double, VECDIM> vec) -> double
 // return the the magnitude of a vector
 {
   const double squaredlen = std::accumulate(vec.begin(), vec.end(), 0., [](auto a, auto b) { return a + b * b; });
@@ -22,52 +22,44 @@ void get_rand_isotropic_unitvec(std::span<double, 3> vecout);
   return std::sqrt(squaredlen);
 }
 
-constexpr void vec_norm(std::span<const double, 3> vec_in, std::span<double, 3> vec_out)
-// normalizing a copy of vec_in and save it to vec_out
+[[nodiscard]] [[gnu::const]] constexpr auto vec_norm(const std::array<double, 3> vec_in)
+// get a normalized copy of vec_in
 {
   const double magnitude = vec_len(vec_in);
-
-  vec_out[0] = vec_in[0] / magnitude;
-  vec_out[1] = vec_in[1] / magnitude;
-  vec_out[2] = vec_in[2] / magnitude;
+  const auto vec_out = std::array<double, 3>{vec_in[0] / magnitude, vec_in[1] / magnitude, vec_in[2] / magnitude};
 
   assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
+  return vec_out;
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto dot(std::span<const double> x, std::span<const double> y) -> double
+template <size_t S1, size_t S2>
+[[nodiscard]] [[gnu::const]] constexpr auto dot(const std::array<double, S1> x,
+                                                const std::array<double, S2> y) -> double
 // vector dot product
 {
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
-constexpr void get_velocity(std::span<const double, 3> x, std::span<double, 3> y, const double t)
+[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(std::span<const double, 3> x,
+                                                        const double t) -> std::array<double, 3>
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
-  y[0] = x[0] / t;
-  y[1] = x[1] / t;
-  y[2] = x[2] / t;
+  return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
 }
 
-constexpr void cross_prod(std::span<const double, 3> vec1, std::span<const double, 3> vec2,
-                          std::span<double, 3> vecout) {
-  vecout[0] = (vec1[1] * vec2[2]) - (vec2[1] * vec1[2]);
-  vecout[1] = (vec1[2] * vec2[0]) - (vec2[2] * vec1[0]);
-  vecout[2] = (vec1[0] * vec2[1]) - (vec2[0] * vec1[1]);
+[[nodiscard]] [[gnu::const]] constexpr auto cross_prod(const std::array<double, 3> vec_a,
+                                                       const std::array<double, 3> vec_b) {
+  return std::array<double, 3>{(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]),
+                               (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
+                               (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
 }
 
-constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
-  vec[0] *= scalefactor;
-  vec[1] *= scalefactor;
-  vec[2] *= scalefactor;
+[[nodiscard]] [[gnu::const]] constexpr auto vec_scale(const std::array<double, 3> vec, const double scalefactor) {
+  return std::array<double, 3>{vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
 }
 
-constexpr void vec_copy(std::span<double, 3> destination, std::span<const double, 3> source) {
-  destination[0] = source[0];
-  destination[1] = source[1];
-  destination[2] = source[2];
-}
-
-constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double, 3> vel, std::span<double, 3> dir2)
+[[nodiscard]] [[gnu::const]] constexpr auto angle_ab(const std::array<double, 3> dir1,
+                                                     const std::array<double, 3> vel) -> std::array<double, 3>
 // aberation of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
@@ -80,15 +72,14 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
   const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
-  for (int d = 0; d < 3; d++) {
-    dir2[d] = (dir1[d] - (vel[d] * fact2)) / fact1;
-  }
+  std::array<double, 3> dir2{(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
+                             (dir1[2] - (vel[2] * fact2)) / fact1};
 
-  vec_norm(dir2, dir2);
+  return vec_norm(dir2);
 }
 
-[[gnu::pure]] [[nodiscard]] constexpr double doppler_nucmf_on_nurf(std::span<const double, 3> dir_rf,
-                                                                   std::span<const double, 3> vel_rf)
+[[gnu::const]] [[nodiscard]] constexpr auto doppler_nucmf_on_nurf(const std::array<double, 3> dir_rf,
+                                                                  const std::array<double, 3> vel_rf) -> double
 // Doppler factor
 // arguments:
 //   dir_rf: the rest frame direction (unit vector) of light propagation
@@ -114,9 +105,9 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
   return dopplerfactor;
 }
 
-[[gnu::pure]] [[nodiscard]] constexpr double doppler_squared_nucmf_on_nurf(std::span<const double, 3> pos_rf,
-                                                                           std::span<const double, 3> dir_rf,
-                                                                           const double prop_time)
+[[gnu::const]] [[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(const std::array<double, 3> &pos_rf,
+                                                                          const std::array<double, 3> dir_rf,
+                                                                          const double prop_time) -> double
 // Doppler factor squared, either to first order v/c or fully relativisitic
 // depending on USE_RELATIVISTIC_DOPPLER_SHIFT
 //
@@ -127,23 +118,15 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
 // returns: the ratio f = (nu_cmf / nu_rf) ^ 2
 {
   // velocity of the comoving frame relative to the rest frame
-  std::array<double, 3> vel_rf = {0, 0, 0};  // homologous flow velocity
-  get_velocity(pos_rf, vel_rf, prop_time);
+  const auto vel_rf = get_velocity(pos_rf, prop_time);
 
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
 
-  const double ndotv = dot(dir_rf, vel_rf);
-  double dopplerfactorsq = 1.;
-
-  if (USE_RELATIVISTIC_DOPPLER_SHIFT) {
-    const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
-    assert_testmodeonly(betasq >= 0.);  // v < c
-    assert_testmodeonly(betasq < 1.);   // v < c
-    dopplerfactorsq = std::pow(1. - (ndotv / CLIGHT), 2) / (1 - betasq);
-  } else {
-    dopplerfactorsq = 1. - 2 * (ndotv / CLIGHT);
-  }
+  const double ndotv_on_c = dot(dir_rf, vel_rf) / CLIGHT;
+  double dopplerfactorsq = USE_RELATIVISTIC_DOPPLER_SHIFT
+                               ? std::pow(1. - ndotv_on_c, 2) / (1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED))
+                               : (1. - 2 * ndotv_on_c);
 
   assert_testmodeonly(std::isfinite(dopplerfactorsq));
   assert_testmodeonly(dopplerfactorsq > 0);
@@ -151,91 +134,267 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
   return dopplerfactorsq;
 }
 
-[[gnu::pure]] [[nodiscard]] constexpr double doppler_packet_nucmf_on_nurf(std::span<const double, 3> pos_rf,
-                                                                          std::span<const double, 3> dir_rf,
-                                                                          const double prop_time) {
-  double flow_velocity[3] = {0, 0, 0};  // homologous flow velocity
-  get_velocity(pos_rf, flow_velocity, prop_time);
-  return doppler_nucmf_on_nurf(dir_rf, flow_velocity);
+[[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(std::span<const double, 3> pos_rf,
+                                                                        const std::array<double, 3> dir_rf,
+                                                                        const double prop_time) -> double {
+  return doppler_nucmf_on_nurf(dir_rf, get_velocity(pos_rf, prop_time));
 }
 
-constexpr void move_pkt(struct packet *pkt_ptr, const double distance)
+constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, const std::array<double, 3> dir_rf, double &prop_time,
+                                 const double nu_rf, double &nu_cmf, const double e_rf, double &e_cmf,
+                                 const double distance) -> double
 /// Subroutine to move a packet along a straight line (specified by current
 /// dir vector). The distance moved is in the rest frame.
 {
-  /// First update pos.
   assert_always(distance >= 0);
 
-  pkt_ptr->pos[0] += (pkt_ptr->dir[0] * distance);
-  pkt_ptr->pos[1] += (pkt_ptr->dir[1] * distance);
-  pkt_ptr->pos[2] += (pkt_ptr->dir[2] * distance);
+  const double nu_cmf_old = nu_cmf;
+  prop_time += distance / CLIGHT_PROP;
+
+  pos_rf[0] += (dir_rf[0] * distance);
+  pos_rf[1] += (dir_rf[1] * distance);
+  pos_rf[2] += (dir_rf[2] * distance);
 
   /// During motion, rest frame energy and frequency are conserved.
   /// But need to update the co-moving ones.
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
-  pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
-  pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
-}
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pos_rf, dir_rf, prop_time);
 
-constexpr void move_pkt_withtime(struct packet *pkt_ptr, const double distance)
-/// Subroutine to move a packet along a straight line (specified by current
-/// dir vector). The distance moved is in the rest frame.
-{
-  const double nu_cmf_old = pkt_ptr->nu_cmf;
-  pkt_ptr->prop_time += distance / CLIGHT_PROP;
-  move_pkt(pkt_ptr, distance);
+  nu_cmf = nu_rf * dopplerfactor;
+  e_cmf = e_rf * dopplerfactor;
 
   // frequency should only over decrease due to packet movement
   // enforce this to overcome numerical error
-  pkt_ptr->nu_cmf = std::min(pkt_ptr->nu_cmf, nu_cmf_old);
+  nu_cmf = std::min(nu_cmf, nu_cmf_old);
+
+  return dopplerfactor;
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto get_arrive_time(const struct packet *const pkt_ptr) -> double
+constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
+  return move_pkt_withtime(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, pkt.nu_cmf, pkt.e_rf, pkt.e_cmf, distance);
+}
+
+[[nodiscard]] [[gnu::const]] constexpr auto get_arrive_time(const Packet &pkt) -> double
 /// We know that a packet escaped at "escape_time". However, we have
 /// to allow for travel time. Use the formula in Leon's paper. The extra
 /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
 {
-  return pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
+  return pkt.escape_time - (dot(pkt.pos, pkt.dir) / CLIGHT_PROP);
 }
 
-inline auto get_arrive_time_cmf(const struct packet *pkt_ptr) -> double {
-  return pkt_ptr->escape_time * std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
-}
-
-constexpr int get_escapedirectionbin(std::span<const double, 3> dir_in, std::span<const double, 3> syn_dir) {
-  constexpr double xhat[3] = {1.0, 0.0, 0.0};
+[[nodiscard]] [[gnu::const]] constexpr auto get_escapedirectionbin(const std::array<double, 3> dir_in,
+                                                                   const std::array<double, 3> syn_dir) -> int {
+  constexpr auto xhat = std::array<double, 3>{1.0, 0.0, 0.0};
 
   // sometimes dir vectors aren't accurately normalised
   const double dirmag = vec_len(dir_in);
-  std::array<const double, 3> dir = {dir_in[0] / dirmag, dir_in[1] / dirmag, dir_in[2] / dirmag};
+  const auto dir = std::array<double, 3>{dir_in[0] / dirmag, dir_in[1] / dirmag, dir_in[2] / dirmag};
 
   /// Angle resolved case: need to work out the correct angle bin
   const double costheta = dot(dir, syn_dir);
   const int costhetabin = static_cast<int>((costheta + 1.0) * NPHIBINS / 2.0);
   assert_testmodeonly(costhetabin < NCOSTHETABINS);
 
-  std::array<double, 3> vec1 = {0};
-  cross_prod(dir, syn_dir, vec1);
+  const auto vec1 = cross_prod(dir, syn_dir);
 
-  std::array<double, 3> vec2 = {0};
-  cross_prod(xhat, syn_dir, vec2);
+  const auto vec2 = cross_prod(xhat, syn_dir);
   const double cosphi = dot(vec1, vec2) / vec_len(vec1) / vec_len(vec2);
 
-  std::array<double, 3> vec3 = {0};
-  cross_prod(vec2, syn_dir, vec3);
+  const auto vec3 = cross_prod(vec2, syn_dir);
   const double testphi = dot(vec1, vec3);
 
-  int phibin = 0;
-  if (testphi >= 0) {
-    phibin = static_cast<int>(acos(cosphi) / 2. / PI * NPHIBINS);
-  } else {
-    phibin = static_cast<int>((acos(cosphi) + PI) / 2. / PI * NPHIBINS);
-  }
+  // with phi defined according to y = cos(theta) * sin(phi), the
+  // phibins are in decreasing phi order (i.e. the upper side of bin zero 0 is 2pi)
+  const int phibin = static_cast<int>((testphi >= 0 ? acos(cosphi) : acos(cosphi) + PI) / 2. / PI * NPHIBINS);
+
+  assert_testmodeonly(phibin >= 0);
   assert_testmodeonly(phibin < NPHIBINS);
   const int na = static_cast<int>((costhetabin * NPHIBINS) + phibin);
   assert_always(na < MABINS);
 
   return na;
+}
+
+[[nodiscard]] inline auto get_rand_isotropic_unitvec() -> std::array<double, 3>
+// Assuming isotropic distribution, get a random direction vector
+{
+  const double costheta = -1 + (2. * rng_uniform());
+
+  const double phi = rng_uniform() * 2 * PI;
+
+  const double sintheta = std::sqrt(1. - (costheta * costheta));
+
+  return std::array<double, 3>{sintheta * std::cos(phi), sintheta * std::sin(phi), costheta};
+}
+
+[[nodiscard]] [[gnu::const]] constexpr auto rot_angle(const std::array<double, 3> n1, const std::array<double, 3> n2,
+                                                      const std::array<double, 3> ref1,
+                                                      const std::array<double, 3> ref2) -> double {
+  // Rotation angle from the scattering plane
+  // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
+  // the meridian frame such that Q=1 is in the scattering plane and along ref1
+
+  // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
+  const double n1_dot_n2 = dot(n1, n2);
+  auto ref1_sc = std::array<double, 3>{n1[0] * n1_dot_n2 - n2[0], n1[1] * n1_dot_n2 - n2[1], n1[2] * n1_dot_n2 - n2[2]};
+  ref1_sc = vec_norm(ref1_sc);
+
+  const double cos_stokes_rot_1 = std::clamp(dot(ref1_sc, ref1), -1., 1.);
+  const double cos_stokes_rot_2 = dot(ref1_sc, ref2);
+
+  double i = 0;
+  if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 > 0)) {
+    i = acos(cos_stokes_rot_1);
+  } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 > 0)) {
+    i = PI - acos(fabs(cos_stokes_rot_1));
+  } else if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 < 0)) {
+    i = 2 * PI - acos(cos_stokes_rot_1);
+  } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 < 0)) {
+    i = PI + acos(fabs(cos_stokes_rot_1));
+  }
+  if (cos_stokes_rot_1 == 0) {
+    i = PI / 2.;
+  }
+  if (cos_stokes_rot_2 == 0) {
+    i = 0.;
+  }
+
+  return i;
+}
+
+// Routine to compute the meridian frame axes ref1 and ref2
+[[nodiscard]] [[gnu::const]] constexpr auto meridian(const std::array<double, 3> n)
+    -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
+  // for ref_1 use (from triple product rule)
+  const double n_xylen = std::sqrt(n[0] * n[0] + n[1] * n[1]);
+  const auto ref1 =
+      std::array<double, 3>{-1. * n[0] * n[2] / n_xylen, -1. * n[1] * n[2] / n_xylen, (1 - (n[2] * n[2])) / n_xylen};
+
+  // for ref_2 use vector product of n_cmf with ref1
+  const auto ref2 = cross_prod(ref1, n);
+  return {ref1, ref2};
+}
+
+[[nodiscard]] [[gnu::const]] constexpr auto lorentz(const std::array<double, 3> e_rf, const std::array<double, 3> n_rf,
+                                                    const std::array<double, 3> v) -> std::array<double, 3> {
+  // Use Lorentz transformations to get e_cmf from e_rf
+
+  const auto beta = std::array<double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
+  const double vsqr = dot(beta, beta);
+
+  const double gamma_rel = 1. / (sqrt(1 - vsqr));
+
+  const std::array<double, 3> e_par{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
+                                    dot(e_rf, beta) * beta[2] / (vsqr)};
+
+  const std::array<double, 3> e_perp{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
+
+  const auto b_rf = cross_prod(n_rf, e_rf);
+
+  // const double b_par[3] = {dot(b_rf, beta) * beta[0] / (vsqr), dot(b_rf, beta) * beta[1] / (vsqr),
+  //                          dot(b_rf, beta) * beta[2] / (vsqr)};
+
+  // const double b_perp[3] = {b_rf[0] - b_par[0], b_rf[1] - b_par[1], b_rf[2] - b_par[2]};
+
+  const auto v_cr_b = cross_prod(beta, b_rf);
+
+  // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
+  //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
+
+  auto e_cmf = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
+                                     e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
+                                     e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
+  return vec_norm(e_cmf);
+}
+
+// Routine to transform the Stokes Parameters from RF to CMF
+constexpr auto frame_transform(const std::array<double, 3> n_rf, double *Q, double *U,
+                               const std::array<double, 3> v) -> std::array<double, 3> {
+  // Meridian frame in the RF
+  const auto [ref1_rf, ref2_rf] = meridian(n_rf);
+
+  const double Q0 = *Q;
+  const double U0 = *U;
+
+  // Compute polarisation (which is invariant)
+  const double p = sqrt(Q0 * Q0 + U0 * U0);
+
+  // We want to compute the angle between ref1 and the electric field
+  double rot_angle = 0;
+
+  if (p > 0) {
+    const double cos2rot_angle = Q0 / p;
+    const double sin2rot_angle = U0 / p;
+
+    if ((cos2rot_angle > 0) && (sin2rot_angle > 0)) {
+      rot_angle = acos(Q0 / p) / 2.;
+    } else if ((cos2rot_angle < 0) && (sin2rot_angle > 0)) {
+      rot_angle = (PI - acos(fabs(cos2rot_angle))) / 2.;
+    } else if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) {
+      rot_angle = (PI + acos(fabs(cos2rot_angle))) / 2.;
+    } else if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) {
+      rot_angle = (2. * PI - acos(fabs(cos2rot_angle))) / 2.;
+    } else if (cos2rot_angle == 0) {
+      rot_angle = 0.25 * PI;
+      if (U0 < 0) {
+        rot_angle = 0.75 * PI;
+      }
+    }
+    if (sin2rot_angle == 0) {
+      rot_angle = 0.;
+      if (Q0 < 0) {
+        rot_angle = 0.5 * PI;
+      }
+    }
+  }
+
+  // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
+
+  const auto elec_rf = std::array<double, 3>{cos(rot_angle) * ref1_rf[0] - sin(rot_angle) * ref2_rf[0],
+                                             cos(rot_angle) * ref1_rf[1] - sin(rot_angle) * ref2_rf[1],
+                                             cos(rot_angle) * ref1_rf[2] - sin(rot_angle) * ref2_rf[2]};
+
+  // Aberration
+  const auto n_cmf = angle_ab(n_rf, v);
+
+  // Lorentz transformation of E
+  const auto elec_cmf = lorentz(elec_rf, n_rf, v);
+
+  // Meridian frame in the CMF
+  const auto [ref1_cmf, ref2_cmf] = meridian(n_cmf);
+
+  // Projection of E onto ref1 and ref2
+  const double cosine_elec_ref1 = dot(elec_cmf, ref1_cmf);
+  const double cosine_elec_ref2 = dot(elec_cmf, ref2_cmf);
+
+  // Compute the angle between ref1 and the electric field
+  double theta_rot = 0.;
+  if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 < 0)) {
+    theta_rot = acos(cosine_elec_ref1);
+  } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 > 0)) {
+    theta_rot = PI + acos(fabs(cosine_elec_ref1));
+  } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 < 0)) {
+    theta_rot = PI - acos(fabs(cosine_elec_ref1));
+  } else if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 > 0)) {
+    theta_rot = 2 * PI - acos(cosine_elec_ref1);
+  }
+  if (cosine_elec_ref1 == 0) {
+    theta_rot = PI / 2.;
+  }
+  if (cosine_elec_ref2 == 0) {
+    theta_rot = 0.;
+  }
+  if (cosine_elec_ref1 > 1) {
+    theta_rot = 0.;
+  }
+  if (cosine_elec_ref1 < -1) {
+    theta_rot = PI;
+  }
+
+  // Compute Stokes Parameters in the CMF
+  *Q = cos(2 * theta_rot) * p;
+  *U = sin(2 * theta_rot) * p;
+
+  return n_cmf;
 }
 
 #endif  // VECTORS_H

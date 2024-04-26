@@ -1,3 +1,4 @@
+#pragma once
 #ifndef INPUT_H
 #define INPUT_H
 
@@ -12,14 +13,14 @@ void time_init();
 void write_timestep_file();
 auto get_noncommentline(std::fstream &input, std::string &line) -> bool;
 
-static inline auto lineiscommentonly(const std::string &line) -> bool
+[[nodiscard]] constexpr auto lineiscommentonly(const std::string_view line) -> bool
 // return true for whitepace-only lines, and lines that are exclusively whitepace up to a '#' character
 {
-  for (size_t i = 0; i < line.length(); i++) {
-    if (line[i] == '#') {  // anything to the right of a # character doesn't count
+  for (char const i : line) {
+    if (i == '#') {  // anything to the right of a # character doesn't count
       return true;
     }
-    if (line[i] != ' ') {
+    if (i != ' ') {
       return false;
     }
   }

@@ -1,7 +1,10 @@
+#pragma once
 #ifndef THERMALBALANCE_H
 #define THERMALBALANCE_H
 
-struct heatingcoolingrates {
+#include <vector>
+
+struct HeatingCoolingRates {
   double cooling_collisional;
   double cooling_fb;
   double cooling_ff;
@@ -14,8 +17,9 @@ struct heatingcoolingrates {
 };
 
 void call_T_e_finder(int modelgridindex, int timestep, double t_current, double T_min, double T_max,
-                     struct heatingcoolingrates *heatingcoolingrates);
-auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T, double W) -> double;
-void calculate_bfheatingcoeffs(int modelgridindex);
+                     HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs);
+[[nodiscard]] auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T_R,
+                                          double W) -> double;
+void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatingcoeffs);
 
 #endif  // THERMALBALANCE_H

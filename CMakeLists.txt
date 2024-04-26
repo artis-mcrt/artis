@@ -15,10 +15,51 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 #set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
-set(SN3D_SOURCES sn3d.cc atomic.cc boundary.cc gammapkt.cc globals.cc grid.cc input.cc kpkt.cc light_curve.cc ltepop.cc macroatom.cc nltepop.cc nonthermal.cc decay.cc packet.cc radfield.cc ratecoeff.cc rpkt.cc spectrum.cc stats.cc thermalbalance.cc update_grid.cc update_packets.cc vectors.cc vpkt.cc md5.cc)
+set(SN3D_SOURCES sn3d.cc
+decay.cc
+gammapkt.cc
+grid.cc
+input.cc
+kpkt.cc
+ltepop.cc
+macroatom.cc
+md5.cc
+nltepop.cc
+nonthermal.cc
+packet.cc
+radfield.cc
+ratecoeff.cc
+rpkt.cc
+spectrum_lightcurve.cc
+stats.cc
+thermalbalance.cc
+update_grid.cc
+update_packets.cc
+vpkt.cc)
+
 add_executable(sn3d ${SN3D_SOURCES})
 
-set(EXSPEC_SOURCES exspec.cc grid.cc globals.cc input.cc vectors.cc packet.cc update_grid.cc update_packets.cc gammapkt.cc boundary.cc macroatom.cc decay.cc rpkt.cc kpkt.cc ltepop.cc atomic.cc ratecoeff.cc thermalbalance.cc light_curve.cc spectrum.cc nltepop.cc nonthermal.cc radfield.cc stats.cc vpkt.cc md5.cc)
+set(EXSPEC_SOURCES exspec.cc
+decay.cc
+gammapkt.cc
+grid.cc
+input.cc
+kpkt.cc
+ltepop.cc
+macroatom.cc
+md5.cc
+nltepop.cc
+nonthermal.cc
+packet.cc
+radfield.cc
+ratecoeff.cc
+rpkt.cc
+spectrum_lightcurve.cc
+stats.cc
+thermalbalance.cc
+update_grid.cc
+update_packets.cc
+vpkt.cc)
 
 add_executable(exspec ${EXSPEC_SOURCES})
 

@@ -4,7 +4,9 @@
 
 cd $SLURM_SUBMIT_DIR
 
-#spack load gsl%gcc target=$(spack arch -t)
+eval `spack load --sh gsl%gcc arch=linux-debian11-x86_64`
+
+export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 

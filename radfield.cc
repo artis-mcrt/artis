@@ -1,48 +1,58 @@
 #include "radfield.h"
 
+#include <cstddef>
+
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_sf_debye.h>
 
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
 #include <ctime>
+#include <iterator>
+#include <vector>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
 #include "globals.h"
 #include "grid.h"
+#include "ratecoeff.h"
+#include "rpkt.h"
 #include "sn3d.h"
-#include "vectors.h"
 
 namespace radfield {
 
-static std::vector<double> J_normfactor;
+namespace {
 
-// typedef enum
-// {
-//   FIT_DILUTE_BLACKBODY = 0,
-//   FIT_CONSTANT = 1,
-// } enum_bin_fit_type;
+std::vector<double> J_normfactor;
 
-struct radfieldbin_solution {
+struct RadFieldBinSolution {
   // these two parameters are used in the current timestep, but were calculated
   // from the values of J and nuJ in the previous timestep
   float W;    // dilution (scaling) factor
   float T_R;  // radiation temperature
-  // enum_bin_fit_type fit_type;
 };
 
-struct radfieldbin {
+struct RadFieldBin {
   double J_raw;  // value needs to be multipled by J_normfactor to get the true value
   double nuJ_raw;
   int contribcount;
 };
 
-static double radfieldbin_nu_upper[RADFIELDBINCOUNT];  // array of upper frequency boundaries of bins
-static struct radfieldbin *radfieldbins = nullptr;
-static struct radfieldbin_solution *radfieldbin_solutions = nullptr;
+constexpr double radfieldbins_delta_nu =
+    (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
+
+struct RadFieldBin *radfieldbins{};
+struct RadFieldBinSolution *radfieldbin_solutions{};
 
 #ifdef MPI_ON
 MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
@@ -58,135 +68,111 @@ struct Jb_lu_estimator {
 
 // reallocate the detailed line arrays in units of BLOCKSIZEJBLUE
 constexpr int BLOCKSIZEJBLUE = 128;
-static int detailed_linecount = 0;
+int detailed_linecount = 0;
 
 // array of indicies into the linelist[] array for selected lines
-static int *detailed_lineindicies;
+int *detailed_lineindicies;
 
-static struct Jb_lu_estimator **prev_Jb_lu_normed = nullptr;  // value from the previous timestep
-static struct Jb_lu_estimator **Jb_lu_raw = nullptr;          // unnormalised estimator for the current timestep
+struct Jb_lu_estimator **prev_Jb_lu_normed{};  // value from the previous timestep
+struct Jb_lu_estimator **Jb_lu_raw{};          // unnormalised estimator for the current timestep
 
 // ** end detailed lines
 
-static float *prev_bfrate_normed = nullptr;  // values from the previous timestep
-static double *bfrate_raw = nullptr;         // unnormalised estimators for the current timestep
+float *prev_bfrate_normed{};     // values from the previous timestep
+std::vector<double> bfrate_raw;  // unnormalised estimators for the current timestep
 
 // expensive debugging mode to track the contributions to each bound-free rate estimator
 
-static std::vector<double> J;  // after normalisation: [ergs/s/sr/cm2/Hz]
+std::vector<double> J;  // after normalisation: [ergs/s/sr/cm2/Hz]
 #ifdef DO_TITER
-static std::vector<double> J_reduced_save;
+std::vector<double> J_reduced_save;
 #endif
 
 // J and nuJ are accumulated and then normalised in-place
 // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
-static std::vector<double> nuJ;
+std::vector<double> nuJ;
 #ifdef DO_TITER
-static std::vector<double> nuJ_reduced_save;
+std::vector<double> nuJ_reduced_save;
 #endif
 
-using enum_prefactor = enum {
-  ONE = 0,
-  TIMES_NU = 1,
-};
-
-using gsl_planck_integral_paras = struct {
+struct gsl_planck_integral_paras {
   double T_R;
-  enum_prefactor prefactor;
+  bool times_nu;
 };
 
-using gsl_T_R_solver_paras = struct {
+struct gsl_T_R_solver_paras {
   int modelgridindex;
   int binindex;
 };
 
-static FILE *radfieldfile = nullptr;
+FILE *radfieldfile{};
 
-static inline auto get_bin_nu_upper(int binindex) -> double { return radfieldbin_nu_upper[binindex]; }
-
-static void setup_bin_boundaries() {
-  // double prev_nu_upper = nu_lower_first_initial;
-
-  // choose between equally spaced in energy/frequency or wavelength (before bf edges shift boundaries around)
-  const double delta_nu =
-      (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
-  // const double lambda_lower_first_initial = 1e8 * CLIGHT / nu_lower_first_initial;
-  // const double lambda_upper_last_initial = 1e8 * CLIGHT / nu_upper_last_initial;
-  // const double delta_lambda = (lambda_upper_last_initial - lambda_lower_first_initial) / RADFIELDBINCOUNT;
-
-  for (int binindex = 0; binindex < RADFIELDBINCOUNT - 1; binindex++) {
-    // radfieldbin_nu_upper[binindex] = 1e8 * CLIGHT / (lambda_lower_first_initial + (binindex + 1) * delta_lambda);
-    radfieldbin_nu_upper[binindex] = nu_lower_first_initial + (binindex + 1) * delta_nu;
-
-    // Align the bin edges with bound-free edges, except for the last one
-    // if (binindex < RADFIELDBINCOUNT - 1)
-    // {
-    //   for (int i = 0; i < globals::nbfcontinua_ground; i++)
-    //   {
-    //     const double nu_edge = globals::groundcont[i].nu_edge;
-    //     const double eV_edge = H * nu_edge / EV;
-    //     const double angstrom_edge = 1e8 * CLIGHT / nu_edge;
-    //     const int element = globals::groundcont[i].element;
-    //     const int ion = globals::groundcont[i].ion;
-    //     const int level = globals::groundcont[i].level;
-    //     const int phixstargetindex = globals::groundcont[i].phixstargetindex;
-    //
-    //     const int Z = get_atomicnumber(element);
-    //     const int ion_stage = get_ionstage(element, ion);
-    //     const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-    //
-    //     //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
-    //
-    //     // this is compares the highest and lowest bins to the bound-free list, only do it once, i.e. binindex == 0
-    //     if (binindex == 0 && ((nu_edge < nu_lower_first_initial) || (nu_edge > nu_upper_last_initial)))
-    //     {
-    //       printout("Missed bf edge at %12.5e Hz (%6.2f eV, %6.1f A), nu_lower_first %11.5e Hz, nu_upper_last %11.5e
-    //       Hz, Z=%d ion_stage %d level %d upperionlevel %d\n",
-    //                nu_edge, eV_edge, angstrom_edge, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage,
-    //                level, upperionlevel);
-    //     }
-    //
-    //     const double bin_nu_upper = get_bin_nu_upper(binindex);
-    //     if ((nu_edge > prev_nu_upper) && (nu_edge < bin_nu_upper))
-    //     {
-    //       printout("Shifting bin %d nu_upper from %12.5e Hz to bf edge at %12.5e Hz (%6.2f eV, %6.1f A) for Z=%d
-    //       ion_stage %d level %d upperionlevel %d\n",
-    //                binindex, bin_nu_upper, nu_edge, eV_edge, angstrom_edge, Z, ion_stage, level, upperionlevel);
-    //       radfieldbin_nu_upper[binindex] = nu_edge;
-    //     }
-    //   }
-    // }
-    // prev_nu_upper = get_bin_nu_upper(binindex);
+constexpr auto get_bin_nu_upper(int binindex) -> double {
+  assert_testmodeonly(binindex < RADFIELDBINCOUNT);
+  if (binindex == RADFIELDBINCOUNT - 1) {
+    return nu_upper_superbin;
   }
-  radfieldbin_nu_upper[RADFIELDBINCOUNT - 1] = nu_upper_superbin;  // very top end super bin
+  return nu_lower_first_initial + (binindex + 1) * radfieldbins_delta_nu;
 }
 
-static void realloc_detailed_lines(const int new_size) {
+constexpr auto get_bin_nu_lower(int binindex) -> double {
+  if (binindex > 0) {
+    return get_bin_nu_upper(binindex - 1);
+  }
+  return nu_lower_first_initial;
+}
+
+constexpr auto select_bin(const double nu) -> int {
+  // find the left-closed bin [nu_lower, nu_upper) that nu belongs to
+
+  if (nu < nu_lower_first_initial) {
+    return -2;  // out of range, nu lower than lowest bin's lower boundary
+  }
+  if (nu >= nu_upper_superbin) {
+    // out of range, nu higher than highest bin's upper boundary
+    return -1;
+  }
+  if (nu >= nu_upper_last_initial) {
+    // in the superbin. separate case because the delta_nu is different to the other bins
+    return RADFIELDBINCOUNT - 1;
+  }
+
+  const int binindex = static_cast<int>((nu - nu_lower_first_initial) / radfieldbins_delta_nu);
+
+  if (nu == get_bin_nu_upper(binindex)) {
+    // exactly on the upper boundary of the bin, so add 1 to ensure we get the left-closed bin
+    return binindex + 1;
+  }
+
+  return binindex;
+}
+
+void realloc_detailed_lines(const int new_size) {
   auto *newptr = static_cast<int *>(realloc(detailed_lineindicies, new_size * sizeof(int)));
   if (newptr == nullptr) {
     printout("ERROR: Not enough memory to reallocate detailed Jblue estimator line list\n");
-    abort();
+    std::abort();
   }
   assert_always(newptr != nullptr);
   detailed_lineindicies = newptr;
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      prev_Jb_lu_normed[modelgridindex] = static_cast<struct Jb_lu_estimator *>(
-          realloc(prev_Jb_lu_normed[modelgridindex], new_size * sizeof(struct Jb_lu_estimator)));
+      prev_Jb_lu_normed[modelgridindex] = static_cast<Jb_lu_estimator *>(
+          realloc(prev_Jb_lu_normed[modelgridindex], new_size * sizeof(Jb_lu_estimator)));
 
-      Jb_lu_raw[modelgridindex] = static_cast<struct Jb_lu_estimator *>(
-          realloc(Jb_lu_raw[modelgridindex], new_size * sizeof(struct Jb_lu_estimator)));
+      Jb_lu_raw[modelgridindex] =
+          static_cast<Jb_lu_estimator *>(realloc(Jb_lu_raw[modelgridindex], new_size * sizeof(Jb_lu_estimator)));
 
       if (prev_Jb_lu_normed[modelgridindex] == nullptr || Jb_lu_raw[modelgridindex] == nullptr) {
         printout("ERROR: Not enough memory to reallocate detailed Jblue estimator list for cell %d.\n", modelgridindex);
-        abort();
+        std::abort();
       }
     }
   }
 }
 
-static void add_detailed_line(const int lineindex)
+void add_detailed_line(const int lineindex)
 // associate a Jb_lu estimator with a particular lineindex to be used
 // instead of the general radiation field model
 {
@@ -210,10 +196,55 @@ static void add_detailed_line(const int lineindex)
   // printout("Added Jblue estimator for lineindex %d count %d\n", lineindex, detailed_linecount);
 }
 
+auto get_bin_J(int modelgridindex, int binindex) -> double
+// get the normalised J_nu
+{
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
+  assert_testmodeonly(modelgridindex < grid::get_npts_model());
+  assert_testmodeonly(binindex >= 0);
+  assert_testmodeonly(binindex < RADFIELDBINCOUNT);
+  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].J_raw * J_normfactor[nonemptymgi];
+}
+
+auto get_bin_nuJ(int modelgridindex, int binindex) -> double {
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
+  assert_testmodeonly(modelgridindex < grid::get_npts_model());
+  assert_testmodeonly(binindex >= 0);
+  assert_testmodeonly(binindex < RADFIELDBINCOUNT);
+  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].nuJ_raw * J_normfactor[nonemptymgi];
+}
+
+auto get_bin_nu_bar(int modelgridindex, int binindex) -> double
+// importantly, this is average beween the current and previous timestep
+{
+  const double nuJ_sum = get_bin_nuJ(modelgridindex, binindex);
+  const double J_sum = get_bin_J(modelgridindex, binindex);
+  return nuJ_sum / J_sum;
+}
+
+auto get_bin_contribcount(int modelgridindex, int binindex) -> int {
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].contribcount;
+}
+
+auto get_bin_W(int modelgridindex, int binindex) -> float {
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  return radfieldbin_solutions[nonemptymgi * RADFIELDBINCOUNT + binindex].W;
+}
+
+auto get_bin_T_R(int modelgridindex, int binindex) -> float {
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  return radfieldbin_solutions[nonemptymgi * RADFIELDBINCOUNT + binindex].T_R;
+}
+
+}  // anonymous namespace
+
 void init(int my_rank, int ndo_nonempty)
 // this should be called only after the atomic data is in memory
 {
-  const int nonempty_npts_model = grid::get_nonempty_npts_model();
+  const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
   J_normfactor.resize(nonempty_npts_model + 1);
   J.resize(nonempty_npts_model + 1);
@@ -229,10 +260,8 @@ void init(int my_rank, int ndo_nonempty)
   nuJ.resize(nonempty_npts_model + 1);
 #endif
 
-  prev_Jb_lu_normed =
-      static_cast<struct Jb_lu_estimator **>(malloc((grid::get_npts_model() + 1) * sizeof(struct Jb_lu_estimator *)));
-  Jb_lu_raw =
-      static_cast<struct Jb_lu_estimator **>(malloc((grid::get_npts_model() + 1) * sizeof(struct Jb_lu_estimator *)));
+  prev_Jb_lu_normed = static_cast<Jb_lu_estimator **>(malloc((grid::get_npts_model() + 1) * sizeof(Jb_lu_estimator *)));
+  Jb_lu_raw = static_cast<Jb_lu_estimator **>(malloc((grid::get_npts_model() + 1) * sizeof(Jb_lu_estimator *)));
 
   detailed_linecount = 0;
 
@@ -305,18 +334,14 @@ void init(int my_rank, int ndo_nonempty)
       snprintf(filename, MAXFILENAMELENGTH, "radfield_%.4d.out", my_rank);
       assert_always(radfieldfile == nullptr);
       radfieldfile = fopen_required(filename, "w");
-      fprintf(radfieldfile, "%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %12s\n", "timestep", "modelgridindex",
-              "bin_num", "nu_lower", "nu_upper", "nuJ", "J", "J_nu_avg", "ncontrib", "T_R", "W");
+      fprintf(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W\n");
       fflush(radfieldfile);
     }
 
-    setup_bin_boundaries();
+    const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBin);
+    radfieldbins = static_cast<RadFieldBin *>(malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBin)));
 
-    const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin);
-    radfieldbins =
-        static_cast<struct radfieldbin *>(malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin)));
-
-    const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution);
+    const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
 
 #ifdef MPI_ON
     {
@@ -325,8 +350,8 @@ void init(int my_rank, int ndo_nonempty)
       if (globals::rank_in_node == 0) {
         my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
       }
-      auto size = static_cast<MPI_Aint>(my_rank_cells * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution));
-      int disp_unit = sizeof(struct radfieldbin_solution);
+      auto size = static_cast<MPI_Aint>(my_rank_cells * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution));
+      int disp_unit = sizeof(RadFieldBinSolution);
       MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions,
                               &win_radfieldbin_solutions);
 
@@ -334,8 +359,8 @@ void init(int my_rank, int ndo_nonempty)
     }
 #else
     {
-      radfieldbin_solutions = static_cast<struct radfieldbin_solution *>(
-          malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution)));
+      radfieldbin_solutions = static_cast<RadFieldBinSolution *>(
+          malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution)));
     }
 #endif
 
@@ -370,27 +395,30 @@ void init(int my_rank, int ndo_nonempty)
     printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
              nonempty_npts_model * globals::bfestimcount * sizeof(float) / 1024. / 1024.);
 
-    bfrate_raw = static_cast<double *>(malloc(nonempty_npts_model * globals::bfestimcount * sizeof(double)));
+    bfrate_raw.resize(nonempty_npts_model * globals::bfestimcount);
 
     printout("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy %.3f MB\n",
              nonempty_npts_model * globals::bfestimcount * sizeof(double) / 1024. / 1024.);
   }
 
-  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-    if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      zero_estimators(modelgridindex);
+  zero_estimators();
 
-      if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-        if (globals::rank_in_node == 0) {
-          const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-          for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-            const ptrdiff_t mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
-            radfieldbin_solutions[mgibinindex].W = -1.;
-            radfieldbin_solutions[mgibinindex].T_R = -1.;
-          }
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+#ifdef MPI_ON
+    MPI_Barrier(globals::mpi_comm_node);
+#endif
+    if (globals::rank_in_node == 0) {
+      for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
+          const auto mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+          radfieldbin_solutions[mgibinindex].W = -1.;
+          radfieldbin_solutions[mgibinindex].T_R = -1.;
         }
       }
     }
+#ifdef MPI_ON
+    MPI_Barrier(globals::mpi_comm_node);
+#endif
   }
 }
 
@@ -398,22 +426,20 @@ void init(int my_rank, int ndo_nonempty)
 /// fluctuations over timestep iterations if DO_TITER is defined) to -1.
 void initialise_prev_titer_photoionestimators() {
 #ifdef DO_TITER
-  for (int nonemptymgi = 0; n < grid::get_npts_model(); n++) {
-    globals::ffheatingestimator_save[n] = -1.;
-    globals::colheatingestimator_save[n] = -1.;
-    if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-      J_reduced_save[nonemptymgi] = -1.;
-      nuJ_reduced_save[nonemptymgi] = -1.;
-      for (int element = 0; element < get_nelements(); element++) {
-        const int nions = get_nions(element);
-        for (int ion = 0; ion < nions - 1; ion++) {
-          if constexpr (USE_LUT_PHOTOION) {
-            globals::gammaestimator_save[get_ionestimindex(n, element, ion)] = -1.;
-          }
-          if constexpr (USE_LUT_BFHEATING) {
-            globals::bfheatingestimator_save[get_ionestimindex(n, element, ion)] = -1.;
-          }
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+    globals::ffheatingestimator_save[nonemptymgi] = -1.;
+    globals::colheatingestimator_save[nonemptymgi] = -1.;
+    J_reduced_save[nonemptymgi] = -1.;
+    nuJ_reduced_save[nonemptymgi] = -1.;
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions - 1; ion++) {
+        if constexpr (USE_LUT_PHOTOION) {
+          globals::gammaestimator_save[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] = -1.;
+        }
+        if constexpr (USE_LUT_BFHEATING) {
+          globals::bfheatingestimator_save[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] = -1.;
         }
       }
     }
@@ -424,13 +450,6 @@ void initialise_prev_titer_photoionestimators() {
 auto get_Jblueindex(const int lineindex) -> int
 // returns -1 if the line does not have a Jblue estimator
 {
-  // slow linear search
-  // for (int i = 0; i < detailed_linecount; i++)
-  // {
-  //   if (detailed_lineindicies[i] == lineindex)
-  //     return i;
-  // }
-
   if constexpr (!DETAILED_LINE_ESTIMATORS_ON) {
     return -1;
   }
@@ -472,72 +491,6 @@ auto get_Jb_lu_contribcount(const int modelgridindex, const int jblueindex) -> i
   return prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount;
 }
 
-static auto get_bin_J(int modelgridindex, int binindex) -> double
-// get the normalised J_nu
-{
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
-  assert_testmodeonly(binindex >= 0);
-  assert_testmodeonly(binindex < RADFIELDBINCOUNT);
-  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].J_raw * J_normfactor[nonemptymgi];
-}
-
-static auto get_bin_nuJ(int modelgridindex, int binindex) -> double {
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
-  assert_testmodeonly(binindex >= 0);
-  assert_testmodeonly(binindex < RADFIELDBINCOUNT);
-  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].nuJ_raw * J_normfactor[nonemptymgi];
-}
-
-static inline auto get_bin_nu_bar(int modelgridindex, int binindex) -> double
-// importantly, this is average beween the current and previous timestep
-{
-  const double nuJ_sum = get_bin_nuJ(modelgridindex, binindex);
-  const double J_sum = get_bin_J(modelgridindex, binindex);
-  return nuJ_sum / J_sum;
-}
-
-static inline auto get_bin_nu_lower(int binindex) -> double {
-  if (binindex > 0) {
-    return radfieldbin_nu_upper[binindex - 1];
-  }
-  return nu_lower_first_initial;
-}
-
-static inline auto get_bin_contribcount(int modelgridindex, int binindex) -> int {
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  return radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].contribcount;
-}
-
-static inline auto get_bin_W(int modelgridindex, int binindex) -> float {
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  return radfieldbin_solutions[nonemptymgi * RADFIELDBINCOUNT + binindex].W;
-}
-
-static inline auto get_bin_T_R(int modelgridindex, int binindex) -> float {
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  return radfieldbin_solutions[nonemptymgi * RADFIELDBINCOUNT + binindex].T_R;
-}
-
-static inline auto select_bin(double nu) -> int {
-  if (nu < get_bin_nu_lower(0)) {
-    return -2;  // out of range, nu lower than lowest bin's lower boundary
-  }
-
-  // find the lowest frequency bin with radfieldbin_nu_upper > nu
-  auto *bin = std::upper_bound(&radfieldbin_nu_upper[0], &radfieldbin_nu_upper[RADFIELDBINCOUNT], nu);
-  const int binindex = std::distance(&radfieldbin_nu_upper[0], bin);
-  if (binindex >= RADFIELDBINCOUNT) {
-    // out of range, nu higher than highest bin's upper boundary
-    return -1;
-  }
-
-  return binindex;
-}
-
 void write_to_file(int modelgridindex, int timestep) {
   assert_always(MULTIBIN_RADFIELD_MODEL_ON);
   const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
@@ -552,13 +505,13 @@ void write_to_file(int modelgridindex, int timestep) {
     }
 
     for (int binindex = -1 - detailed_linecount; binindex < RADFIELDBINCOUNT; binindex++) {
-      double nu_lower = 0.0;
-      double nu_upper = 0.0;
-      double nuJ_out = 0.0;
-      double J_out = 0.0;
-      float T_R = 0.0;
-      float W = 0.0;
-      double J_nu_bar = 0.0;
+      double nu_lower = 0.;
+      double nu_upper = 0.;
+      double nuJ_out = 0.;
+      double J_out = 0.;
+      float T_R = 0.;
+      float W = 0.;
+      double J_nu_bar = 0.;
       int contribcount = 0;
 
       const bool skipoutput = false;
@@ -591,16 +544,11 @@ void write_to_file(int modelgridindex, int timestep) {
         W = -1.;
         J_nu_bar = prev_Jb_lu_normed[modelgridindex][jblueindex].value,
         contribcount = prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount;
-
-        // if (J_nu_bar <= 0.)
-        // {
-        //   skipoutput = true;
-        // }
       }
 
       if (!skipoutput) {
-        fprintf(radfieldfile, "%d %d %d %11.5e %11.5e %9.3e %9.3e %9.3e %d %9.1f %12.5e\n", timestep, modelgridindex,
-                binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, contribcount, T_R, W);
+        fprintf(radfieldfile, "%d %d %d %.5e %.5e %.3e %.3e %.3e %d %.1f %.5e\n", timestep, modelgridindex, binindex,
+                nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, contribcount, T_R, W);
       }
     }
     fflush(radfieldfile);
@@ -629,7 +577,6 @@ void close_file() {
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    free(bfrate_raw);
 #ifdef MPI_ON
     if (win_radfieldbin_solutions != MPI_WIN_NULL) {
       MPI_Win_free(&win_prev_bfrate_normed);
@@ -642,94 +589,85 @@ void close_file() {
   }
 }
 
-void zero_estimators(int modelgridindex)
+void zero_estimators()
 // set up the new bins and clear the estimators in preparation
 // for a timestep
 {
-  if (grid::get_numassociatedcells(modelgridindex) == 0) {
-    return;
-  }
+  std::ranges::fill(J_normfactor, -1.0);
+  std::ranges::fill(J, 0.0);
+  std::ranges::fill(nuJ, 0.0);
+  std::ranges::fill(bfrate_raw, 0.0);
 
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    assert_always(bfrate_raw != nullptr);
-    if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      for (int i = 0; i < globals::bfestimcount; i++) {
-        bfrate_raw[nonemptymgi * globals::bfestimcount + i] = 0.;
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+    assert_always(radfieldbins != nullptr);
+    for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
+        const auto mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+        radfieldbins[mgibinindex].J_raw = 0.;
+        radfieldbins[mgibinindex].nuJ_raw = 0.;
+        radfieldbins[mgibinindex].contribcount = 0;
       }
     }
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-    assert_always(Jb_lu_raw != nullptr);
-    assert_always(Jb_lu_raw[modelgridindex] != nullptr);
-    for (int i = 0; i < detailed_linecount; i++) {
-      Jb_lu_raw[modelgridindex][i].value = 0.;
-      Jb_lu_raw[modelgridindex][i].contribcount = 0.;
+    for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+      const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+      assert_always(Jb_lu_raw != nullptr);
+      assert_always(Jb_lu_raw[modelgridindex] != nullptr);
+      for (int i = 0; i < detailed_linecount; i++) {
+        Jb_lu_raw[modelgridindex][i].value = 0.;
+        Jb_lu_raw[modelgridindex][i].contribcount = 0.;
+      }
     }
   }
-
-  J[nonemptymgi] = 0.;  // this is required even if FORCE_LTE is on
-  nuJ[nonemptymgi] = 0.;
-
-  if (MULTIBIN_RADFIELD_MODEL_ON) {
-    // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
-
-    assert_always(radfieldbins != nullptr);
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      const ptrdiff_t mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
-      radfieldbins[mgibinindex].J_raw = 0.0;
-      radfieldbins[mgibinindex].nuJ_raw = 0.0;
-      radfieldbins[mgibinindex].contribcount = 0;
-    }
-  }
-  set_J_normfactor(modelgridindex, -1.0);
 }
 
 static void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                                const struct packet *const pkt_ptr) {
+                                const double doppler_nucmf_on_nurf, const Phixslist &phixslist) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
-  assert_always(bfrate_raw != nullptr);
 
-  if (distance_e_cmf == 0) {
-    return;
-  }
-
-  const int nbfcontinua = globals::nbfcontinua;
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
-  // const double dopplerfactor = 1.;
-
-  const int tid = get_thread_num();
   const double distance_e_cmf_over_nu =
-      distance_e_cmf / nu_cmf * dopplerfactor;  // TODO: Luke: why did I put a doppler factor here?
-  for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++) {
-    const double nu_edge = globals::allcont_nu_edge[allcontindex];
-    const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
+      distance_e_cmf / nu_cmf * doppler_nucmf_on_nurf;  // TODO: Luke: why did I put a doppler factor here?
 
-    if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs) {
-      int bf_estimator = globals::allcont[allcontindex].bfestimindex;
-      if (bf_estimator >= 0) {
-        assert_testmodeonly(bf_estimator < globals::bfestimcount);
+  // I think the nu_cmf slightly differs from when the phixslist was calculated
+  // so the nu condition on this nu_cmf can truncate the list further compared to what was used in the calculation
+  // of phixslist.gamma_contr
 
-        safeadd(bfrate_raw[nonemptymgi * globals::bfestimcount + bf_estimator],
-                globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
-      }
+  const int bfestimend =
+      std::distance(globals::bfestim_nu_edge.data(),
+                    std::upper_bound(globals::bfestim_nu_edge.data(),
+                                     globals::bfestim_nu_edge.data() + phixslist.bfestimend, nu_cmf));
 
-    } else if (nu_cmf < nu_edge) {
-      // list is sorted by nu_edge, so all remaining will have nu_cmf < nu_edge
-      break;
-    }
+  const int bfestimbegin = std::distance(globals::bfestim_nu_edge.data(),
+                                         std::lower_bound(globals::bfestim_nu_edge.data() + phixslist.bfestimbegin,
+                                                          globals::bfestim_nu_edge.data() + bfestimend, nu_cmf,
+                                                          [](const double nu_edge, const double nu_cmf) {
+                                                            return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                                          }));
+
+  const auto bfestimcount = globals::bfestimcount;
+  for (int bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
+    atomicadd(bfrate_raw[nonemptymgi * bfestimcount + bfestimindex],
+              phixslist.gamma_contr[bfestimindex] * distance_e_cmf_over_nu);
   }
 }
 
 void update_estimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                       const struct packet *const pkt_ptr) {
-  safeadd(J[nonemptymgi], distance_e_cmf);
-  safeadd(nuJ[nonemptymgi], distance_e_cmf * nu_cmf);
+                       const double doppler_nucmf_on_nurf, const Phixslist &phixslist, const bool thickcell) {
+  if (distance_e_cmf == 0) {
+    return;
+  }
+
+  atomicadd(J[nonemptymgi], distance_e_cmf);
+  atomicadd(nuJ[nonemptymgi], distance_e_cmf * nu_cmf);
+
+  if (thickcell) {
+    return;
+  }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    update_bfestimators(nonemptymgi, distance_e_cmf, nu_cmf, pkt_ptr);
+    update_bfestimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf, phixslist);
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -737,17 +675,10 @@ void update_estimators(const int nonemptymgi, const double distance_e_cmf, const
 
     if (binindex >= 0) {
       const ptrdiff_t mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
-      safeadd(radfieldbins[mgibinindex].J_raw, distance_e_cmf);
-      safeadd(radfieldbins[mgibinindex].nuJ_raw, distance_e_cmf * nu_cmf);
-      safeincrement(radfieldbins[mgibinindex].contribcount);
+      atomicadd(radfieldbins[mgibinindex].J_raw, distance_e_cmf);
+      atomicadd(radfieldbins[mgibinindex].nuJ_raw, distance_e_cmf * nu_cmf);
+      atomicadd(radfieldbins[mgibinindex].contribcount, 1);
     }
-    // else
-    // {
-    //   printout("WARNING: radfield::update_estimators dropping packet contribution for nu_cmf %g\n",
-    //            nu_cmf);
-    //   printout("           modelgridindex %d binindex %d nu_lower_first %g nu_upper_last %g \n",
-    //            modelgridindex, binindex, nu_lower_first, get_bin_nu_upper(modelgridindex,RADFIELDBINCOUNT - 1));
-    // }
   }
 }
 
@@ -760,10 +691,6 @@ void update_lineestimator(const int modelgridindex, const int lineindex, const d
   if (jblueindex >= 0) {
     Jb_lu_raw[modelgridindex][jblueindex].value += increment;
     Jb_lu_raw[modelgridindex][jblueindex].contribcount += 1;
-    // const int lineindex = detailed_lineindicies[jblueindex];
-    // printout(" increment cell %d lineindex %d Jb_lu_raw %g prev_Jb_lu_normed %g radfield(nu_trans) %g\n",
-    //       modelgridindex, lineindex, Jb_lu_raw[modelgridindex][jblueindex],
-    //       prev_Jb_lu_normed[modelgridindex][jblueindex].value, radfield(linelist[lineindex].nu, modelgridindex));
   }
 }
 
@@ -774,23 +701,12 @@ auto radfield(double nu, int modelgridindex) -> double
     if (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP) {
       const int binindex = select_bin(nu);
       if (binindex >= 0) {
-        const ptrdiff_t mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
-        const struct radfieldbin_solution *const bin = &radfieldbin_solutions[mgibinindex];
-        if (bin->W >= 0.) {
-          const double J_nu = dbb(nu, bin->T_R, bin->W);
+        const auto &bin =
+            radfieldbin_solutions[grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex];
+        if (bin.W >= 0.) {
+          const double J_nu = dbb(nu, bin.T_R, bin.W);
           return J_nu;
         }
-      } else {  // binindex < 0
-        // if (nu > get_bin_nu_upper(RADFIELDBINCOUNT - 1))
-        // {
-        //   // undiluted LTE blueward of the bins
-        //   const double J_nu_LTE = dbb(nu, grid::get_Te(modelgridindex), 1.0);
-        //   return J_nu_LTE;
-        // }
-        // else
-        //   return 0; // no radfield redwards of the bins
-        // printout("WARNING: Radfield modelgridindex %d binindex %d nu %g nu_lower_first %g nu_upper_last %g \n",
-        //         modelgridindex, binindex, nu, nu_lower_first, nu_upper_last);
       }
       return 0.;
     }
@@ -802,33 +718,32 @@ auto radfield(double nu, int modelgridindex) -> double
   return J_nu_fullspec;
 }
 
-constexpr auto gsl_integrand_planck(const double nu, void *paras) -> double {
-  const double T_R = (static_cast<gsl_planck_integral_paras *>(paras))->T_R;
-  const enum_prefactor prefactor = (static_cast<gsl_planck_integral_paras *>(paras))->prefactor;
+constexpr auto gsl_integrand_planck(const double nu, void *voidparas) -> double {
+  const auto *paras = static_cast<gsl_planck_integral_paras *>(voidparas);
+  const auto T_R = paras->T_R;
 
   double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
 
-  if (prefactor == TIMES_NU) {
+  if (paras->times_nu) {
     integrand *= nu;
   }
 
   return integrand;
 }
 
-static auto planck_integral(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor) -> double {
+static auto planck_integral(double T_R, double nu_lower, double nu_upper, const bool times_nu) -> double {
   double integral = 0.;
 
   double error = 0.;
   const double epsrel = 1e-10;
   const double epsabs = 0.;
 
-  gsl_planck_integral_paras intparas = {.T_R = T_R, .prefactor = prefactor};
-
-  const gsl_function F_planck = {.function = &gsl_integrand_planck, .params = &intparas};
+  const gsl_planck_integral_paras intparas = {.T_R = T_R, .times_nu = times_nu};
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-  const int status = gsl_integration_qag(&F_planck, nu_lower, nu_upper, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61,
-                                         gslworkspace, &integral, &error);
+
+  const int status = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsabs, epsrel, GSL_INTEG_GAUSS61,
+                                                      &integral, &error);
   if (status != 0) {
     printout("planck_integral integrator status %d, GSL_FAILURE= %d. Integral value %g, setting to zero.\n", status,
              GSL_FAILURE, integral);
@@ -839,10 +754,13 @@ static auto planck_integral(double T_R, double nu_lower, double nu_upper, enum_p
   return integral;
 }
 
-static auto planck_integral_analytic(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor) -> double {
+auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper,
+                              const bool times_nu) -> double {
+  // return the integral of nu^3 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
+  // or if times_nu is true, the integral of nu^4 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
   double integral = 0.;
 
-  if (prefactor == TIMES_NU) {
+  if (times_nu) {
     const double debye_upper = gsl_sf_debye_4(HOVERKB * nu_upper / T_R) * pow(nu_upper, 4);
     const double debye_lower = gsl_sf_debye_4(HOVERKB * nu_lower / T_R) * pow(nu_lower, 4);
     integral = TWOHOVERCLIGHTSQUARED * (debye_upper - debye_lower) * T_R / HOVERKB / 4.;
@@ -878,33 +796,34 @@ static auto delta_nu_bar(double T_R, void *paras) -> double
 // difference between the average nu and the average nu of a Planck function
 // at temperature T_R, in the frequency range corresponding to a bin
 {
-  const int modelgridindex = (static_cast<gsl_T_R_solver_paras *>(paras))->modelgridindex;
-  const int binindex = (static_cast<gsl_T_R_solver_paras *>(paras))->binindex;
+  const auto *params = static_cast<const gsl_T_R_solver_paras *>(paras);
+  const int modelgridindex = params->modelgridindex;
+  const int binindex = params->binindex;
 
   const double nu_lower = get_bin_nu_lower(binindex);
   const double nu_upper = get_bin_nu_upper(binindex);
 
   const double nu_bar_estimator = get_bin_nu_bar(modelgridindex, binindex);
 
-  const double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, TIMES_NU);
-  const double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, ONE);
+  const double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
+  const double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
   const double nu_bar_planck_T_R = nu_times_planck_numerical / planck_integral_numerical;
 
-  /*double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, TIMES_NU);
-  double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, ONE);
-  double nu_bar_planck = nu_times_planck_integral / planck_integral_result;
+  // double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, true);
+  // double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, false);
+  // double nu_bar_planck = nu_times_planck_integral / planck_integral_result;
 
-  //printout("nu_bar %g nu_bar_planck(T=%g) %g\n",nu_bar,T_R,nu_bar_planck);
+  // // printout("nu_bar %g nu_bar_planck(T=%g) %g\n",nu_bar,T_R,nu_bar_planck);
 
-  if (!std::isfinite(nu_bar_planck))
-  {
-    double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, TIMES_NU);
-    double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, ONE);
-    double nu_bar_planck_numerical = nu_times_planck_numerical / planck_integral_numerical;
+  // if (!std::isfinite(nu_bar_planck)) {
+  //   double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
+  //   double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
+  //   double nu_bar_planck_numerical = nu_times_planck_numerical / planck_integral_numerical;
 
-    printout("planck_integral_analytic is %g. Replacing with numerical result of
-  %g.\n",nu_bar_planck,nu_bar_planck_numerical); nu_bar_planck = nu_bar_planck_numerical;
-  }*/
+  //   printout("planck_integral_analytic is %g. Replacing with numerical result of %g.\n", nu_bar_planck,
+  //            nu_bar_planck_numerical);
+  //   nu_bar_planck = nu_bar_planck_numerical;
+  // }
 
   const double delta_nu_bar = nu_bar_planck_T_R - nu_bar_estimator;
 
@@ -919,9 +838,9 @@ static auto delta_nu_bar(double T_R, void *paras) -> double
 }
 
 static auto find_T_R(int modelgridindex, int binindex) -> float {
-  double T_R = 0.0;
+  double T_R = 0.;
 
-  gsl_T_R_solver_paras paras;
+  gsl_T_R_solver_paras paras{};
   paras.modelgridindex = modelgridindex;
   paras.binindex = binindex;
 
@@ -943,9 +862,7 @@ static auto find_T_R(int modelgridindex, int binindex) -> float {
     const double epsabs = 0.;
     const int maxit = 100;
 
-    gsl_function find_T_R_f;
-    find_T_R_f.function = &delta_nu_bar;
-    find_T_R_f.params = &paras;
+    gsl_function find_T_R_f = {.function = &delta_nu_bar, .params = &paras};
 
     /// one dimensional gsl root solver, bracketing type
     gsl_root_fsolver *T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
@@ -985,7 +902,7 @@ static auto find_T_R(int modelgridindex, int binindex) -> float {
   }
 
   return T_R;
-}
+}  // namespace radfield
 
 static void set_params_fullspec(const int modelgridindex, const int timestep) {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
@@ -1033,13 +950,13 @@ void fit_parameters(int modelgridindex, int timestep)
 {
   set_params_fullspec(modelgridindex, timestep);
 
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (J_normfactor[nonemptymgi] <= 0) {
       printout("radfield: FATAL J_normfactor = %g in cell %d at call to fit_parameters", J_normfactor[nonemptymgi],
                modelgridindex);
-      abort();
+      std::abort();
     }
 
     double J_bin_sum = 0.;
@@ -1060,13 +977,11 @@ void fit_parameters(int modelgridindex, int timestep)
       const double nu_lower = get_bin_nu_lower(binindex);
       const double nu_upper = get_bin_nu_upper(binindex);
       const double J_bin = get_bin_J(modelgridindex, binindex);
-      float T_R_bin = -1.0;
-      double W_bin = -1.0;
+      float T_R_bin = -1.;
+      double W_bin = -1.;
       const int contribcount = get_bin_contribcount(modelgridindex, binindex);
 
       if (contribcount > 0) {
-        // // enum_bin_fit_type bin_fit_type = radfieldbin_solutions[modelgridindex][binindex].fit_type;
-        // if (bin_fit_type == FIT_DILUTE_BLACKBODY)
         {
           T_R_bin = find_T_R(modelgridindex, binindex);
 
@@ -1077,7 +992,7 @@ void fit_parameters(int modelgridindex, int timestep)
             T_R_bin = T_e;
           }
 
-          double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, ONE);
+          double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, false);
           //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower,
           //          nu_upper, planck_integral_result);
 
@@ -1087,11 +1002,11 @@ void fit_parameters(int modelgridindex, int timestep)
             //            printout("T_R_bin %g, nu_lower %g, nu_upper %g\n", T_R_bin, nu_lower, nu_upper);
             printout("W %g too high, trying setting T_R of bin %d to %g. J_bin %g planck_integral %g\n", W_bin,
                      binindex, T_R_max, J_bin, planck_integral_result);
-            planck_integral_result = planck_integral(T_R_max, nu_lower, nu_upper, ONE);
+            planck_integral_result = planck_integral(T_R_max, nu_lower, nu_upper, false);
             W_bin = J_bin / planck_integral_result;
             if (W_bin > 1e4) {
               printout("W still very high, W=%g. Zeroing bin...\n", W_bin);
-              T_R_bin = -99.0;
+              T_R_bin = -99.;
               W_bin = 0.;
             } else {
               printout("new W is %g. Continuing with this value\n", W_bin);
@@ -1099,57 +1014,21 @@ void fit_parameters(int modelgridindex, int timestep)
             }
           }
         }
-        // else if (bin_fit_type == FIT_CONSTANT)
-        // {
-        //   T_R_bin = -1.;
-        //   W_bin = J_bin / (nu_upper - nu_lower);
-        // }
-        // else
-        // {
-        //   printout("fit_parameters: unknown fit type %d for bin %d\n", bin_fit_type, binindex);
-        //   T_R_bin = -1.;
-        //   W_bin = -1.;
-        // }
       } else {
         T_R_bin = 0.;
         W_bin = 0.;
       }
-      // else
-      // {
-      //   T_R_bin = -1;
-      //   W_bin = -1;
-      // }
-      const ptrdiff_t mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+
+      const auto mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
       radfieldbin_solutions[mgibinindex].T_R = T_R_bin;
       radfieldbin_solutions[mgibinindex].W = W_bin;
     }
-
-    // double prev_nu_upper = nu_lower_first_initial;
-    // for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-    // {
-    //   const double J_bin = get_bin_J(modelgridindex,binindex);
-    //   const double T_R_bin = get_bin_T_R(modelgridindex,binindex);
-    //   const double W_bin = get_bin_W(modelgridindex,binindex);
-    //   const int contribcount = get_bin_contribcount(modelgridindex, binindex);
-    //   const double bin_nu_upper = get_bin_nu_upper(binindex);
-    //   const double nubar = get_bin_nu_bar(modelgridindex, binindex);
-    //
-    //   printout("bin %4d (lambda %7.1f Å to %7.1f Å): contribcount %5d J %7.1e T_R %8.1f W %12.5e lambdabar %7.1f
-    //   Å\n",
-    //          binindex, 1e8 * CLIGHT / prev_nu_upper, 1e8 * CLIGHT / bin_nu_upper, contribcount, J_bin, T_R_bin,
-    //          W_bin, 1e8 * CLIGHT / nubar);
-    //
-    //  prev_nu_upper = get_bin_nu_upper(binindex);
-    // }
 
     write_to_file(modelgridindex, timestep);
   }
 }
 
-void set_J_normfactor(int modelgridindex, double normfactor) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  J_normfactor[nonemptymgi] = normfactor;
-}
+void set_J_normfactor(const int nonemptymgi, const double normfactor) { J_normfactor[nonemptymgi] = normfactor; }
 
 void normalise_J(const int modelgridindex, const double estimator_normfactor_over4pi) {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
@@ -1161,14 +1040,14 @@ void normalise_J(const int modelgridindex, const double estimator_normfactor_ove
   }
 }
 
-void normalise_bf_estimators(const int modelgridindex, const double estimator_normfactor_over_H) {
+void normalise_bf_estimators(const int modelgridindex, const ptrdiff_t nonemptymgi,
+                             const double estimator_normfactor_over_H) {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
-    const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     assert_always(nonemptymgi >= 0);
     for (int i = 0; i < globals::bfestimcount; i++) {
-      const auto detailed_mgibfindex = nonemptymgi * globals::bfestimcount + i;
-      prev_bfrate_normed[detailed_mgibfindex] = bfrate_raw[detailed_mgibfindex] * estimator_normfactor_over_H;
+      const auto mgibfindex = nonemptymgi * globals::bfestimcount + i;
+      prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * estimator_normfactor_over_H;
     }
   }
 }
@@ -1176,12 +1055,11 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
 static auto get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
   // simple linear search seems to be faster than the binary search
   // possibly because lower frequency transitions near start of list are more likely to be called?
-  const auto &matchbf = std::find_if(globals::allcont, globals::allcont + globals::nbfcontinua, [=](const auto &bf) {
-    return (bf.element == element) && (bf.ion == lowerion) && (bf.level == lower) &&
-           (bf.phixstargetindex == phixstargetindex);
-  });
-
-  const int bfcontindex = std::distance(globals::allcont, matchbf);
+  const auto bfcontindex = std::distance(
+      globals::allcont, std::find_if(globals::allcont, globals::allcont + globals::nbfcontinua, [=](const auto &bf) {
+        return (bf.element == element) && (bf.ion == lowerion) && (bf.level == lower) &&
+               (bf.phixstargetindex == phixstargetindex);
+      }));
 
   if (bfcontindex < globals::nbfcontinua) {
     return bfcontindex;
@@ -1192,20 +1070,18 @@ static auto get_bfcontindex(const int element, const int lowerion, const int low
 
 auto get_bfrate_estimator(const int element, const int lowerion, const int lower, const int phixstargetindex,
                           const int modelgridindex) -> double {
-  if constexpr (!DETAILED_BF_ESTIMATORS_ON) {
-    return -1;
-  } else {
+  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {
-      const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-      const int bfestimindex = globals::allcont[allcontindex].bfestimindex;
-      return (bfestimindex >= 0) ? prev_bfrate_normed[nonemptymgi * globals::bfestimcount + bfestimindex] : 0.;
+      const auto bfestimindex = globals::allcont[allcontindex].bfestimindex;
+      if (bfestimindex >= 0) {
+        const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+        return prev_bfrate_normed[nonemptymgi * globals::bfestimcount + bfestimindex];
+      }
     }
-
-    printout("no bf rate for element Z=%d ion_stage %d lower %d phixstargetindex %d\n", get_atomicnumber(element),
-             get_ionstage(element, lowerion), lower, phixstargetindex);
-    return -1.;
   }
+
+  return -1.;
 }
 
 void normalise_nuJ(const int modelgridindex, const double estimator_normfactor_over4pi) {
@@ -1257,35 +1133,37 @@ void titer_nuJ(const int modelgridindex) {
 void reduce_estimators()
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
-  const int nonempty_npts_model = grid::get_nonempty_npts_model();
+  const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
   MPI_Allreduce(MPI_IN_PLACE, J.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, nuJ.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, grid::get_nonempty_npts_model() * globals::bfestimcount, MPI_DOUBLE,
-                  MPI_SUM, MPI_COMM_WORLD);
+    for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
+      MPI_Allreduce(MPI_IN_PLACE, &bfrate_raw[nonemptymgi * globals::bfestimcount], globals::bfestimcount, MPI_DOUBLE,
+                    MPI_SUM, MPI_COMM_WORLD);
+    }
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    const time_t sys_time_start_reduction = time(nullptr);
+    const auto sys_time_start_reduction = std::time(nullptr);
     printout("Reducing binned radiation field estimators");
     assert_always(radfieldbins != nullptr);
 
-    for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
+    for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-        const ptrdiff_t mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+        const auto mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
       }
     }
-    const int duration_reduction = time(nullptr) - sys_time_start_reduction;
+    const int duration_reduction = std::time(nullptr) - sys_time_start_reduction;
     printout(" (took %d s)\n", duration_reduction);
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-    const time_t sys_time_start_reduction = time(nullptr);
+    const auto sys_time_start_reduction = std::time(nullptr);
     printout("Reducing detailed line estimators");
 
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
@@ -1298,7 +1176,7 @@ void reduce_estimators()
         }
       }
     }
-    const int duration_reduction = time(nullptr) - sys_time_start_reduction;
+    const int duration_reduction = std::time(nullptr) - sys_time_start_reduction;
     printout(" (took %d s)\n", duration_reduction);
   }
   MPI_Barrier(MPI_COMM_WORLD);
@@ -1317,14 +1195,11 @@ void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      const ptrdiff_t mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+      const auto mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
       if (globals::rank_in_node == 0) {
         MPI_Bcast(&radfieldbin_solutions[mgibinindex].W, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
         MPI_Bcast(&radfieldbin_solutions[mgibinindex].T_R, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
       }
-      MPI_Bcast(&radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-      MPI_Bcast(&radfieldbins[mgibinindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-      MPI_Bcast(&radfieldbins[mgibinindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
     }
   }
 
@@ -1356,7 +1231,7 @@ void write_restart_data(FILE *gridsave_file) {
             T_R_min, T_R_max);
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      fprintf(gridsave_file, "%d %la\n", binindex, radfieldbin_nu_upper[binindex]);
+      fprintf(gridsave_file, "%d %la\n", binindex, get_bin_nu_upper(binindex));
     }
   }
 
@@ -1394,11 +1269,10 @@ void write_restart_data(FILE *gridsave_file) {
 
       if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-          const ptrdiff_t mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+          const auto mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
           fprintf(gridsave_file, "%la %la %a %a %d\n", radfieldbins[mgibinindex].J_raw,
                   radfieldbins[mgibinindex].nuJ_raw, radfieldbin_solutions[mgibinindex].W,
                   radfieldbin_solutions[mgibinindex].T_R, radfieldbins[mgibinindex].contribcount);
-          // radfieldbins[mgibinindex].fit_type
         }
       }
 
@@ -1420,14 +1294,14 @@ void read_restart_data(FILE *gridsave_file) {
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
   if (code_check != 30490824) {
     printout("ERROR: Beginning of radfield restart data not found! Found %d instead of 30490824\n", code_check);
-    abort();
+    std::abort();
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    double T_R_min_in = NAN;
-    double T_R_max_in = NAN;
-    double nu_lower_first_initial_in = NAN;
-    double nu_upper_last_initial_in = NAN;
+    double T_R_min_in{NAN};
+    double T_R_max_in{NAN};
+    double nu_lower_first_initial_in{NAN};
+    double nu_upper_last_initial_in{NAN};
     int bincount_in = 0;
     assert_always(fscanf(gridsave_file, "%d %la %la %la %la\n", &bincount_in, &nu_lower_first_initial_in,
                          &nu_upper_last_initial_in, &T_R_min_in, &T_R_max_in) == 5);
@@ -1450,13 +1324,15 @@ void read_restart_data(FILE *gridsave_file) {
           bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
       printout("require %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
                RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, T_R_min, T_R_max);
-      abort();
+      std::abort();
     }
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       int binindex_in = 0;
-      assert_always(fscanf(gridsave_file, "%d %la\n", &binindex_in, &radfieldbin_nu_upper[binindex]) == 2);
+      double nu_upper_in = NAN;
+      assert_always(fscanf(gridsave_file, "%d %la\n", &binindex_in, &nu_upper_in) == 2);
       assert_always(binindex_in == binindex);
+      assert_always(nu_upper_in == get_bin_nu_upper(binindex));
     }
   }
 
@@ -1479,12 +1355,8 @@ void read_restart_data(FILE *gridsave_file) {
           float bfrate_normed = 0;
           assert_always(fscanf(gridsave_file, "%a ", &bfrate_normed) == 1);
 
-          const auto mgibfindex = nonemptymgi * globals::bfestimcount + i;
-#ifdef MPI_ON
-          if (globals::rank_in_node == 0)
-#endif
-          {
-            prev_bfrate_normed[mgibfindex] = bfrate_normed;
+          if (globals::rank_in_node == 0) {
+            prev_bfrate_normed[nonemptymgi * globals::bfestimcount + i] = bfrate_normed;
           }
         }
       }
@@ -1498,7 +1370,7 @@ void read_restart_data(FILE *gridsave_file) {
     if (detailed_linecount_in != detailed_linecount) {
       printout("ERROR: gridsave file specifies %d detailed lines but this simulation has %d.\n", detailed_linecount_in,
                detailed_linecount);
-      abort();
+      std::abort();
     }
 
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
@@ -1508,17 +1380,17 @@ void read_restart_data(FILE *gridsave_file) {
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+      const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
       int mgi_in = 0;
       assert_always(fscanf(gridsave_file, "%d %la\n", &mgi_in, &J_normfactor[nonemptymgi]) == 2);
       if (mgi_in != modelgridindex) {
         printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
-        abort();
+        std::abort();
       }
 
       if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-          const ptrdiff_t mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+          const auto mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
           float W = 0;
           float T_R = 0;
           assert_always(fscanf(gridsave_file, "%la %la %a %a %d\n", &radfieldbins[mgibinindex].J_raw,
@@ -1545,49 +1417,8 @@ void read_restart_data(FILE *gridsave_file) {
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
   if (code_check != 42809403) {
     printout("ERROR: End of radfield restart data not found! Found %d instead of 42809403\n", code_check);
-    abort();
+    std::abort();
   }
-}
-
-// not in use, but could potential improve speed and accuracy of integrating
-// across the binned radiation field which is discontinuous at the bin boundaries
-inline auto integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit,
-                      int key, gsl_integration_workspace *workspace, double *result, double *abserr) -> int {
-  if (MULTIBIN_RADFIELD_MODEL_ON && (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP)) {
-    auto *pts = static_cast<double *>(malloc((RADFIELDBINCOUNT + 3) * sizeof(double)));
-    int binindex_a = select_bin(nu_a);
-    const int binindex_b = select_bin(nu_b);
-    int npts = 0;
-    pts[npts++] = nu_a;
-    if (binindex_a == binindex_b)  // both higher, both lower, or match the same bin
-    {
-      // region doesn't contain any bins
-      pts[npts++] = nu_b;
-    } else {
-      if (binindex_a < 0)  // a is below the first bin
-      {
-        binindex_a = 0;
-        pts[npts++] = get_bin_nu_lower(0);
-      }
-
-      const int maxbinplusone = (binindex_b < 0) ? RADFIELDBINCOUNT : binindex_b;
-
-      for (int binindex = binindex_a; binindex < maxbinplusone; binindex++) {
-        pts[npts++] = get_bin_nu_upper(binindex);
-      }
-
-      pts[npts++] = nu_b;
-    }
-    // for (int e = 0; e < npts; e++)
-    // {
-    //   printout("radfield::integrate singular point number %d at nu %g, (nu_a %g, nu_b %g), low %g high %g\n",
-    //            e, pts[e], nu_a, nu_b, radfield(pts[e] * 0.9999, 0), radfield(pts[e] * 1.0001, 0));
-    // }
-    const int status = gsl_integration_qagp(f, pts, npts, epsabs, epsrel, limit, workspace, result, abserr);
-    free(pts);
-    return status;
-  }
-  return gsl_integration_qag(f, nu_a, nu_b, epsabs, epsrel, limit, key, workspace, result, abserr);
 }
 
 }  // namespace radfield

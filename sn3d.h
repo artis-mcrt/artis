@@ -1,3 +1,4 @@
+#pragma once
 #ifndef SN3D_H
 #define SN3D_H
 
@@ -5,6 +6,30 @@
 #include <gsl/gsl_integration.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#ifdef STDPAR_ON
+#include <execution>
+
+#ifndef __cpp_lib_execution
+// homebrew llvm doesn't support execution policy yet, so brew install onedpl tbb
+#include <oneapi/dpl/algorithm>
+#include <oneapi/dpl/execution>
+#endif
+
+#define EXEC_PAR_UNSEQ std::execution::par_unseq,
+#define EXEC_PAR std::execution::par,
+#else
+#define EXEC_PAR_UNSEQ
+#define EXEC_PAR
+#endif
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
 
 #include <cassert>
 #include <csignal>
@@ -14,39 +39,72 @@
 #include <fstream>
 #include <iostream>
 #include <random>
+#include <string_view>
 
-// #define _OPENMP
-#ifdef _OPENMP
-#include <omp.h>
-#endif
+#include "constants.h"
 
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
-
-extern FILE *output_file;
-extern int tid;
-extern bool use_cellhist;
+constexpr int cellcacheslotid = 0;
+inline bool use_cellcache = false;
 
 extern std::mt19937 stdrng;
 
-extern gsl_integration_workspace *gslworkspace;
+extern std::ofstream output_file;
+
+inline char outputlinebuf[1024] = "";
+inline bool outputstartofline = true;
+inline struct tm timebuf {};
+
+// if not set, force Simpson integrator on GPU mode (since gsl doesn't work there!)
+#ifndef USE_SIMPSON_INTEGRATOR
+#define USE_SIMPSON_INTEGRATOR false
+#endif
+
+inline void nop(gsl_integration_workspace *w) {};
+
+inline thread_local auto gslworkspace =
+    std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace *)>{
+        USE_SIMPSON_INTEGRATOR ? nullptr : gsl_integration_workspace_alloc(GSLWSIZE),
+        USE_SIMPSON_INTEGRATOR ? nop : gsl_integration_workspace_free};
 
 #ifdef _OPENMP
-#pragma omp threadprivate(tid, use_cellhist, stdrng, gslworkspace, output_file)
+
+#ifdef GPU_ON
+#pragma omp requires unified_shared_memory
+#else
+#pragma omp threadprivate(stdrng, output_file, outputlinebuf, outputstartofline, timebuf)
 #endif
+
+#endif
+
+inline void print_line_start() {
+  if (outputstartofline) {
+    const time_t now_time = time(nullptr);
+    strftime(outputlinebuf, 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
+    output_file << outputlinebuf << " ";
+  }
+}
+
+#define printout(...)                                                       \
+  {                                                                         \
+    print_line_start();                                                     \
+    snprintf(outputlinebuf, 1024, __VA_ARGS__);                             \
+    outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n'); \
+    output_file << outputlinebuf;                                           \
+    output_file.flush();                                                    \
+  }
 
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
     const bool pass = static_cast<bool>(e);                                                                            \
     if (!pass) {                                                                                                       \
-      if (output_file != nullptr) {                                                                                    \
-        (void)fprintf(output_file, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global,    \
-                      __FILE__, __LINE__, #e, __PRETTY_FUNCTION__);                                                    \
+      if (output_file) {                                                                                               \
+        output_file << "\n[rank " << globals::rank_global << "] " << __FILE__ << ":" << __LINE__                       \
+                    << ": failed assertion `" << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                \
+        output_file.flush();                                                                                           \
       }                                                                                                                \
-      (void)fprintf(stderr, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, \
-                    __LINE__, #e, __PRETTY_FUNCTION__);                                                                \
-      abort();                                                                                                         \
+      std::cerr << "\n[rank " << globals::rank_global << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
+                << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                                              \
+      std::abort();                                                                                                    \
     }                                                                                                                  \
     assert(pass);                                                                                                      \
   }
@@ -60,53 +118,11 @@ extern gsl_integration_workspace *gslworkspace;
 #if defined TESTMODE && TESTMODE
 #define assert_testmodeonly(e) __artis_assert(e)
 #else
-#define assert_testmodeonly(e) \
-  if (!(e)) {                  \
-    __builtin_unreachable();   \
-  }
+#define assert_testmodeonly(e) (void)0
 #endif
 
-#include "artisoptions.h"
-#include "globals.h"
-
-// #define printout(...) fprintf(output_file, __VA_ARGS__)
-
-template <typename... Args>
-static auto printout(const char *format, Args... args) -> int {
-  if (globals::startofline[tid]) {
-    const time_t now_time = time(nullptr);
-    char s[32] = "";
-    struct tm buf {};
-    strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
-    fprintf(output_file, "%s ", s);
-  }
-  globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
-  return fprintf(output_file, format, args...);
-}
-
-static auto printout(const char *format) -> int {
-  if (globals::startofline[tid]) {
-    const time_t now_time = time(nullptr);
-    char s[32] = "";
-    struct tm buf {};
-    strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
-    fprintf(output_file, "%s ", s);
-  }
-  globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
-  return fprintf(output_file, "%s", format);
-}
-
-static inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
-                                  const int phixstargetindex) -> int {
-  const int contindex = -1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
-
-  const int bflutindex = tempindex * globals::nbfcontinua + contindex;
-  assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
-  return bflutindex;
-}
-
 template <typename T>
-inline void safeadd(T &var, T val) {
+inline void atomicadd(T &var, const T &val) {
 #ifdef _OPENMP
 #pragma omp atomic update
   var += val;
@@ -125,11 +141,7 @@ inline void safeadd(T &var, T val) {
 #endif
 }
 
-#define safeincrement(var) safeadd((var), 1)
-
-// #define DO_TITER
-
-static inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
+inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
   if (gsl_errno != 18)  // roundoff error
   {
     printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
@@ -137,7 +149,7 @@ static inline void gsl_error_handler_printout(const char *reason, const char *fi
   }
 }
 
-static auto fopen_required(const std::string &filename, const char *mode) -> FILE * {
+[[nodiscard]] inline auto fopen_required(const std::string &filename, const char *mode) -> FILE * {
   // look in the data folder first
   const std::string datafolderfilename = "data/" + filename;
   if (mode[0] == 'r' && std::filesystem::exists(datafolderfilename)) {
@@ -147,13 +159,13 @@ static auto fopen_required(const std::string &filename, const char *mode) -> FIL
   FILE *file = std::fopen(filename.c_str(), mode);
   if (file == nullptr) {
     printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename.c_str(), mode);
-    abort();
+    std::abort();
   }
 
   return file;
 }
 
-static auto fstream_required(const std::string &filename, std::ios_base::openmode mode) -> std::fstream {
+[[nodiscard]] inline auto fstream_required(const std::string &filename, std::ios_base::openmode mode) -> std::fstream {
   const std::string datafolderfilename = "data/" + filename;
   if (mode == std::ios::in && std::filesystem::exists(datafolderfilename)) {
     return fstream_required(datafolderfilename, mode);
@@ -161,12 +173,23 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
   auto file = std::fstream(filename, mode);
   if (!file.is_open()) {
     printout("ERROR: Could not open file '%s'\n", filename.c_str());
-    abort();
+    std::abort();
   }
   return file;
 }
+#include "globals.h"
 
-static auto get_timestep(const double time) -> int {
+[[nodiscard]] inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
+                                         const int phixstargetindex) -> int {
+  const int contindex = -1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
+
+  const int bflutindex = tempindex * globals::nbfcontinua + contindex;
+  assert_testmodeonly(bflutindex >= 0);
+  assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
+  return bflutindex;
+}
+
+[[nodiscard]] inline auto get_timestep(const double time) -> int {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
@@ -180,7 +203,7 @@ static auto get_timestep(const double time) -> int {
   return -1;
 }
 
-inline auto get_max_threads() -> int {
+[[nodiscard]] inline auto get_max_threads() -> int {
 #if defined _OPENMP
   return omp_get_max_threads();
 #else
@@ -188,15 +211,7 @@ inline auto get_max_threads() -> int {
 #endif
 }
 
-inline auto get_num_threads() -> int {
-#if defined _OPENMP
-  return omp_get_num_threads();
-#else
-  return 1;
-#endif
-}
-
-inline auto get_thread_num() -> int {
+[[nodiscard]] inline auto get_thread_num() -> int {
 #if defined _OPENMP
   return omp_get_thread_num();
 #else
@@ -205,55 +220,67 @@ inline auto get_thread_num() -> int {
 }
 
 inline auto rng_uniform() -> float {
-  const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
-  if (zrand == 1.) {
-    return rng_uniform();
+  while (true) {
+    const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
+    if (zrand != 1.) {
+      return zrand;
+    }
   }
-  return zrand;
 }
 
 inline auto rng_uniform_pos() -> float {
-  const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
-  if (zrand <= 0.) {
-    return rng_uniform_pos();
+  while (true) {
+    const auto zrand = rng_uniform();
+    if (zrand > 0) {
+      return zrand;
+    }
   }
-  return zrand;
 }
 
-inline void rng_init(const uint_fast64_t zseed) {
-  printout("rng is a std::mt19937 generator\n");
-  stdrng.seed(zseed);
-}
-
-inline auto is_pid_running(pid_t pid) -> bool {
+[[nodiscard]] inline auto is_pid_running(pid_t pid) -> bool {
   while (waitpid(-1, nullptr, WNOHANG) > 0) {
     // Wait for defunct....
   }
 
-  return (0 == kill(pid, 0));
+  return (kill(pid, 0) == 0);
 }
 
 inline void check_already_running() {
-  pid_t artispid = getpid();
+  if (globals::rank_global == 0) {
+    const pid_t artispid = getpid();
 
-  if (std::filesystem::exists("artis.pid")) {
-    auto pidfile = std::fstream("artis.pid", std::ios::in);
-    pid_t artispid_in = 0;
-    pidfile >> artispid_in;
-    pidfile.close();
-    if (is_pid_running(artispid_in)) {
-      fprintf(
-          stderr,
-          "\nERROR: artis or exspec is already running in this folder with existing pid %d. Refusing to start. (delete "
-          "artis.pid if you are sure this is incorrect)\n",
-          artispid_in);
-      abort();
+    if (std::filesystem::exists("artis.pid")) {
+      auto pidfile = std::fstream("artis.pid", std::ios::in);
+      pid_t artispid_in = 0;
+      pidfile >> artispid_in;
+      pidfile.close();
+      if (is_pid_running(artispid_in)) {
+        fprintf(stderr,
+                "\nERROR: artis or exspec is already running in this folder with existing pid %d. Refusing to start. "
+                "(delete artis.pid if you are sure this is incorrect)\n",
+                artispid_in);
+        std::abort();
+      }
     }
+
+    auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);
+    pidfile << artispid;
+    pidfile.close();
   }
 
-  auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);
-  pidfile << artispid;
-  pidfile.close();
+// make sure rank 0 checked for a pid file before we proceed
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+}
+
+constexpr auto get_range_chunk(int size, int nchunks, int nchunk) -> std::tuple<int, int> {
+  const int minchunksize = size / nchunks;  // integer division, minimum non-empty cells per process
+  const int n_remainder = size % nchunks;
+  const auto nstart =
+      (minchunksize + 1) * std::min(n_remainder, nchunk) + minchunksize * std::max(0, nchunk - n_remainder);
+  const auto nsize = (nchunk < n_remainder) ? minchunksize + 1 : minchunksize;
+  return {nstart, nsize};
 }
 
 #endif  // SN3D_H

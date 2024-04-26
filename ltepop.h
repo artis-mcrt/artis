@@ -1,16 +1,13 @@
+#pragma once
 #ifndef LTEPOP_H
 #define LTEPOP_H
 
-#include <memory>
 #include <vector>
 
-#include "atomic.h"
-#include "sn3d.h"
-
-auto get_groundlevelpop(int modelgridindex, int element, int ion) -> double;
-auto calculate_levelpop(int modelgridindex, int element, int ion, int level) -> double;
-auto calculate_levelpop_lte(int modelgridindex, int element, int ion, int level) -> double;
-auto get_levelpop(int modelgridindex, int element, int ion, int level) -> double;
+[[nodiscard]] auto get_groundlevelpop(int modelgridindex, int element, int ion) -> double;
+[[nodiscard]] auto calculate_levelpop(int modelgridindex, int element, int ion, int level) -> double;
+[[nodiscard]] auto calculate_levelpop_lte(int modelgridindex, int element, int ion, int level) -> double;
+[[nodiscard]] auto get_levelpop(int modelgridindex, int element, int ion, int level) -> double;
 [[nodiscard]] auto calculate_sahafact(int element, int ion, int level, int upperionlevel, double T,
                                       double E_threshold) -> double;
 [[nodiscard]] auto get_nnion(int modelgridindex, int element, int ion) -> double;

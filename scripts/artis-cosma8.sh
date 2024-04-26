@@ -41,7 +41,7 @@ mkdir ${SLURM_JOB_ID}.slurm
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
-    sbatch ./artis-cosma8.sh
+    sbatch ./artis/scripts/artis-cosma8.sh
     # sbatch $SLURM_JOB_NAME
 fi
 

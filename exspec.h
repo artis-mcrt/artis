@@ -1,3 +1,4 @@
+#pragma once
 #ifndef EXSPEC_H
 #define EXSPEC_H
 

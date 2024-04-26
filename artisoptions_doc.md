@@ -71,7 +71,6 @@ constexpr bool POL_ON;
 constexpr bool VPKT_ON;
 
 constexpr bool TRACK_ION_STATS;
-constexpr bool TRACK_ION_MASTATS;
 
 constexpr double MINPOP;
 
@@ -134,7 +133,7 @@ constexpr double SF_EMAX;
 constexpr double SF_EMIN;
 
 // trigger a Spencer-Fano solution at least once every n timesteps
-// 0 can only use solutions from previous NLTE iterations on the current timestep
+// 0 can only re-use solutions from previous NLTE iterations of the current timestep
 // <=-1 will always solve the SF equation for every iteration of every timestep
 constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS;
 
@@ -220,5 +219,7 @@ constexpr bool KEEP_ALL_RESTART_FILES;
 // multiply bound-free cooling coefficient by upper level population instead of the upper ion target level population
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 
+// Use XCOM data for gamma photoionisation instead of Si+Fe Equation 2 of Ambwani & Sutherland (1988), Veigele (1973)
+constexpr bool USE_XCOM_GAMMAPHOTOION;
 
 ```

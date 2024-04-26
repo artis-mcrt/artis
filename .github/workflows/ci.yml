@@ -29,6 +29,8 @@ jobs:
                         kilonova_1d_1dgrid,
                         kilonova_1d_3dgrid,
                         kilonova_2d_2dgrid,
+                        kilonova_2d_2dgrid_expansionopac,
+                        kilonova_2d_2dgrid_xcomgammaphotoion,
                         kilonova_2d_3dgrid,
                         nebularonezone_1d_3dgrid,
                         nebularonezone_1d_3dgrid_limitbfest,
@@ -47,26 +49,37 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: install dependencies
-              if: matrix.os != 'selfhosted'
+            - name: apt update
               run: |
-                  git status
-                  sudo apt update
-                  sudo apt install -y gcc-13 g++-13
+                  #   sudo add-apt-repository main
+                  #   sudo add-apt-repository universe
+                  #   sudo add-apt-repository restricted
+                  #   sudo add-apt-repository multiverse
+                    sudo apt-get update
+
+            - name: Install gcc-13
+              if: always()
+              uses: fortran-lang/setup-fortran@v1
+              with:
+                  compiler: gcc
+                  version: 13
+
+            - name: install gsl and openmpi
+              run: |
                   sudo apt install -y libgsl-dev
                   sudo apt install -y openmpi-bin libopenmpi-dev
-                  echo "OMPI_CXX=g++-13" >> $GITHUB_ENV
 
             - name: CPU type and core count
               id: cpu-count
               run: |
                   g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
+                  python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
             # cache this for classic options because the super low integration tolerance makes generation of the file very slow
             - name: Cache ratecoeff.dat
-              if: matrix.testname == 'classicmode_1d_3dgrid' || matrix.testname == 'classicmode_3d'
-              uses: actions/cache@v3
+              if: ${{ startsWith(matrix.testname, 'classicmode') }}
+              uses: actions/cache@v4
               with:
                   path: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
                   key: tests/${{ matrix.testname }}_testrun/ratecoeff.dat-${{ github.sha }}
@@ -74,16 +87,16 @@ jobs:
                       tests/${{ matrix.testname }}_testrun/ratecoeff.dat-
 
             - name: Cache test atomic data
-              if: ${{ !startsWith(matrix.testname, 'classicmode_1d') }}
-              uses: actions/cache@v3
+              if: ${{ !startsWith(matrix.testname, 'classicmode') }}
+              uses: actions/cache@v4
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
                   key: tests/atomicdata_feconi.tar.xz
 
             - name: Cache test atomic data classic
-              if: ${{ startsWith(matrix.testname, 'classicmode_1d') }}
-              uses: actions/cache@v3
+              if: ${{ startsWith(matrix.testname, 'classicmode') }}
+              uses: actions/cache@v4
               id: cache-testatomicdata-classic
               with:
                   path: tests/atomicdata_classic.tar.xz
@@ -101,9 +114,7 @@ jobs:
 
             - name: Compile
               run: |
-                  mpicxx --version
-                  mpicxx --showme:version
-                  make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+                  make TESTMODE=${{ matrix.testmode }} MPI=ON FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
                   cp sn3d tests/${{ matrix.testname }}_testrun/
                   cp exspec tests/${{ matrix.testname }}_testrun/
 
@@ -133,7 +144,7 @@ jobs:
               run: cat job0/output_0-0.txt
 
             - name: Checksum job0 output files
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+              if: always() && matrix.testmode == 'OFF'
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   md5sum *.out job0/*.out | tee ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
@@ -185,70 +196,80 @@ jobs:
                   cat exspec.txt
 
             - name: Checksum job1 output files
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+              if: always() && matrix.testmode == 'OFF'
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   md5sum *.out job1/*.out | tee ../${{ matrix.testname }}_inputfiles/results_md5_final.txt
                   if [ -f results_md5_final.txt ]; then md5sum -c results_md5_final.txt; else echo "results_md5_final.txt not found"; fi
 
             - name: Prepare for next steps
-              if: always() && matrix.os != 'selfhosted'
+              if: always()
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   touch requirements.txt
                   find . -name "*_res_*.out" -exec zstd -v -T0 --rm -f {} \;
 
             - name: Upload output files
-              uses: actions/upload-artifact@v3
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+              uses: actions/upload-artifact@v4
+              if: always() && matrix.testmode == 'OFF'
               with:
                   name: test-${{ matrix.testname }}-output
                   path: tests/${{ matrix.testname }}_testrun
 
             - name: Upload checksum files
-              uses: actions/upload-artifact@v3
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+              uses: actions/upload-artifact@v4
+              if: always() && matrix.testmode == 'OFF'
               with:
                   name: ${{ matrix.testname }}_inputfiles
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
 
             - name: Set up Python
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
-              uses: actions/setup-python@v4
+              if: always() && matrix.testmode == 'OFF'
+              uses: actions/setup-python@v5
               with:
-                  python-version: '3.11'
+                  python-version: '3.12'
                   cache: pip
 
             - name: Install artistools
               if: always() && matrix.testmode == 'OFF'
               run: |
-                  python3 -m pip install --upgrade pip
-                  python3 -m pip install artistools
-
-                  # upgrade all installed packages to their latest versions
-                  # python3 -m pip list freeze --outdated | tail -n +3 | cut -w -f1 | xargs -n1 python3 -m pip install --upgrade
+                  python3 -m pip install --upgrade pip uv
+                  uv pip install --system artistools
 
             - name: Plot light curve
               if: always() && matrix.testmode == 'OFF'
               working-directory: tests/
               run: |
                   at plotlightcurves ${{ matrix.testname }}_testrun
+                  at plotlightcurves --frompackets ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum nebularonezone
-              if: always() && matrix.testname == 'nebularonezone' && matrix.testmode == 'OFF'
+              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'nebularonezone')
               working-directory: tests/
               run: |
-                  at plotspectra -ts 8 ${{ matrix.testname }}_testrun
+                  at plotspectra --frompackets -ts 8 ${{ matrix.testname }}_testrun
 
-            - name: Plot spectrum classicmode
-              if: always() && matrix.testname == 'classicmode' && matrix.testmode == 'OFF'
+            - name: Plot spectrum classicmode_1d
+              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_1d')
               working-directory: tests/
               run: |
-                  at plotspectra -t 18-22 ${{ matrix.testname }}_testrun
+                  at plotspectra --frompackets -t 18-22 ${{ matrix.testname }}_testrun
+
+            - name: Plot spectrum classicmode_3d
+              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_3d')
+              working-directory: tests/
+              run: |
+                  at plotspectra --frompackets -t 4-6 ${{ matrix.testname }}_testrun
+
+            - name: Plot spectrum kilonova
+              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'kilonova')
+              working-directory: tests/
+              run: |
+                  at plotspectra --frompackets -t 2 ${{ matrix.testname }}_testrun
 
             - name: Upload plot files
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
-              uses: actions/upload-artifact@v3
+              if: always() && matrix.testmode == 'OFF'
+              uses: actions/upload-artifact@v4
               with:
                   name: test-${{ matrix.testname }}-output-pdf
                   path: tests/*.pdf
@@ -279,14 +300,14 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Download test output
-              uses: actions/download-artifact@v3
+              uses: actions/download-artifact@v4
 
             - name: List all files
               if: always()
               run: find .
 
             - name: Upload bundled checksum files
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: checksums
                   path: '*_inputfiles/results_md5*.txt'

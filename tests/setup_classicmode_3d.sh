@@ -6,9 +6,9 @@ runfolder=classicmode_3d_testrun
 
 mkdir -p $runfolder
 
-if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_feconi.tar.xz; fi
+if [ ! -f atomicdata_classic.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_classic.tar.xz; fi
 
-tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
+tar -xf atomicdata_classic.tar.xz --directory $runfolder/
 
 rsync -av classicmode_3d_inputfiles/ $runfolder/
 

@@ -1,21 +1,18 @@
+#pragma once
+#include <algorithm>
 #ifndef VPKT_H
 #define VPKT_H
 
+#include <cmath>
 #include <span>
 
-#include "artisoptions.h"
+#include "constants.h"
 #include "packet.h"
 
-double rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1,
-                 std::span<double, 3> ref2);
-void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span<double, 3> ref2);
-void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
-                     std::span<double, 3> n_cmf);
-
 void read_parameterfile_vpkt();
-void vpkt_init(int nts, int my_rank, int tid, bool continued_from_saved);
-void vpkt_call_estimators(struct packet *pkt_ptr, enum packet_type);
-void vpkt_write_timestep(int nts, int my_rank, int tid, bool is_final);
+void vpkt_init(int nts, int my_rank, bool continued_from_saved);
+void vpkt_call_estimators(Packet &pkt, enum packet_type type_before_rpkt);
+void vpkt_write_timestep(int nts, int my_rank, bool is_final);
 
 void vpkt_remove_temp_file(int nts, int my_rank);
 
@@ -34,11 +31,12 @@ constexpr double VSPEC_TIMEMIN = 10 * DAY;
 constexpr double VSPEC_TIMEMAX = 30 * DAY;
 constexpr int VMTBINS = 30;
 
-extern int nvpkt;
-extern int nvpkt_esc1;  // electron scattering event
-extern int nvpkt_esc2;  // kpkt deactivation
-extern int nvpkt_esc3;  // macroatom deactivation
+// number of virtual packets in a given timestep
+inline int nvpkt{0};
+inline int nvpkt_esc1{0};  // electron scattering event
+inline int nvpkt_esc2{0};  // kpkt deactivation
+inline int nvpkt_esc3{0};  // macroatom deactivation
 
-extern double cell_is_optically_thick_vpkt;
+inline double cell_is_optically_thick_vpkt;
 
 #endif  // VPKT_H
