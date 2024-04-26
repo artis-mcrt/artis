@@ -724,6 +724,8 @@ void read_parameterfile_vpkt() {
 
   assert_always(VSPEC_TIMEMIN_input >= VSPEC_TIMEMIN);
   assert_always(VSPEC_TIMEMAX_input <= VSPEC_TIMEMAX);
+  assert_always(VSPEC_TIMEMIN_input >= globals::tmin);
+  assert_always(VSPEC_TIMEMAX_input <= globals::tmax);
 
   // frequency window. dum4 restrict vpkt to a frequency range, dum5 indicates the number of ranges,
   // followed by a list of ranges (dum6,dum7)
