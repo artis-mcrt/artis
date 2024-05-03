@@ -1012,9 +1012,9 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       // full-spectrum and binned J and nuJ estimators
       radfield::fit_parameters(mgi, nts);
 
-      if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-        radfield::normalise_bf_estimators(mgi, nonemptymgi, estimator_normfactor / H);
-      }
+      // if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+      //   radfield::normalise_bf_estimators(mgi, nonemptymgi, estimator_normfactor / H);
+      // }
 
       solve_Te_nltepops(mgi, nonemptymgi, nts, titer, heatingcoolingrates);
     }
@@ -1146,6 +1146,23 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #ifdef _OPENMP
 #pragma omp for schedule(dynamic)
 #endif
+
+    if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+      if (!(nts == globals::timestep_initial && titer == 0)) {
+        for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
+          const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+          if (!(globals::lte_iteration || grid::modelgrid[mgi].thick == 1)) {
+            int assoc_cells = grid::get_numassociatedcells(mgi);
+            if (assoc_cells > 0) {
+              double deltaV =
+                  grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
+              double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
+              radfield::normalise_bf_estimators(mgi, nonemptymgi, estimator_normfactor / H);
+            }
+          }
+        }
+      }
+    }
 
     for (int mgi = nstart; mgi < nstart + ndo; mgi++) {
       /// Check if this task should work on the current model grid cell.

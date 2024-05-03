@@ -126,8 +126,8 @@ static void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_v
 }
 
 static auto get_total_rate(const int index_selected, const gsl_matrix *rate_matrix, const gsl_vector *popvec,
-                           const bool into_level, const bool only_levels_below,
-                           const bool only_levels_above) -> double {
+                           const bool into_level, const bool only_levels_below, const bool only_levels_above)
+    -> double {
   double total_rate = 0.;
   assert_always(!only_levels_below || !only_levels_above);
 
@@ -181,8 +181,8 @@ static auto get_total_rate_in(const int index_to, const gsl_matrix *rate_matrix,
   return get_total_rate(index_to, rate_matrix, popvec, true, false, false);
 }
 
-static auto get_total_rate_out(const int index_from, const gsl_matrix *rate_matrix,
-                               const gsl_vector *popvec) -> double {
+static auto get_total_rate_out(const int index_from, const gsl_matrix *rate_matrix, const gsl_vector *popvec)
+    -> double {
   return get_total_rate(index_from, rate_matrix, popvec, false, false, false);
 }
 
@@ -805,6 +805,16 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
              modelgridindex, timestep, atomic_number);
 
     nltepop_reset_element(modelgridindex, element);
+    return;
+  }
+
+  double cell_Te = grid::get_Te(modelgridindex);
+
+  if (cell_Te < 1001.) {
+    printout(
+        "Not solving for NLTE populations in cell %d at timestep %d for element Z=%d due to low temperature Te=%g\n",
+        modelgridindex, timestep, atomic_number, cell_Te);
+    set_element_pops_lte(modelgridindex, element);
     return;
   }
 
