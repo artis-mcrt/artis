@@ -754,8 +754,8 @@ static auto planck_integral(double T_R, double nu_lower, double nu_upper, const 
   return integral;
 }
 
-auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper,
-                              const bool times_nu) -> double {
+auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
+    -> double {
   // return the integral of nu^3 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
   // or if times_nu is true, the integral of nu^4 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
   double integral = 0.;
@@ -1043,7 +1043,7 @@ void normalise_J(const int modelgridindex, const double estimator_normfactor_ove
 void normalise_bf_estimators(const int modelgridindex, const ptrdiff_t nonemptymgi,
                              const double estimator_normfactor_over_H) {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
+    // printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
     assert_always(nonemptymgi >= 0);
     for (int i = 0; i < globals::bfestimcount; i++) {
       const auto mgibfindex = nonemptymgi * globals::bfestimcount + i;
@@ -1138,11 +1138,26 @@ void reduce_estimators()
   MPI_Allreduce(MPI_IN_PLACE, J.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, nuJ.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
+  // if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+  //   for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
+  //     MPI_Allreduce(MPI_IN_PLACE, &bfrate_raw[nonemptymgi * globals::bfestimcount], globals::bfestimcount,
+  //     MPI_DOUBLE,
+  //                   MPI_SUM, MPI_COMM_WORLD);
+  //   }
+  // }
+
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-      MPI_Allreduce(MPI_IN_PLACE, &bfrate_raw[nonemptymgi * globals::bfestimcount], globals::bfestimcount, MPI_DOUBLE,
-                    MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE,
+                    &bfrate_raw[static_cast<size_t>(nonemptymgi) * static_cast<size_t>(globals::bfestimcount)],
+                    globals::bfestimcount, MPI_DOUBLE, MPI_SUM, globals::mpi_comm_node);
     }
+
+    if (globals::rank_in_node == 0) {
+      MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, nonempty_npts_model * globals::bfestimcount, MPI_DOUBLE, MPI_SUM,
+                    globals::mpi_comm_internode);
+    }
+    MPI_Bcast(bfrate_raw, nonempty_npts_model * globals::bfestimcount, MPI_DOUBLE, 0, globals::mpi_comm_node);
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -1203,12 +1218,12 @@ void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
     }
   }
 
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    if (globals::rank_in_node == 0) {
-      MPI_Bcast(&prev_bfrate_normed[nonemptymgi * globals::bfestimcount], globals::bfestimcount, MPI_FLOAT,
-                root_node_id, globals::mpi_comm_internode);
-    }
-  }
+  // if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+  //  if (globals::rank_in_node == 0) {
+  //     MPI_Bcast(&prev_bfrate_normed[nonemptymgi * globals::bfestimcount], globals::bfestimcount, MPI_FLOAT,
+  //               root_node_id, globals::mpi_comm_internode);
+  //   }
+  // }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
