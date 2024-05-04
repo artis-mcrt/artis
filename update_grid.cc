@@ -1138,6 +1138,23 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   /// Do not use values which are saved in the cellcache within update_grid
   use_cellcache = false;
 
+  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+    if (!(nts == globals::timestep_initial && titer == 0)) {
+      for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
+        const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+        if (!(globals::lte_iteration || grid::modelgrid[mgi].thick == 1)) {
+          int assoc_cells = grid::get_numassociatedcells(mgi);
+          if (assoc_cells > 0) {
+            double deltaV =
+                grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
+            double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
+            radfield::normalise_bf_estimators(mgi, nonemptymgi, estimator_normfactor / H);
+          }
+        }
+      }
+    }
+  }
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1146,23 +1163,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #ifdef _OPENMP
 #pragma omp for schedule(dynamic)
 #endif
-
-    if (!(nts == globals::timestep_initial && titer == 0)) {
-      if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-        for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
-          const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
-          if (!(globals::lte_iteration || grid::modelgrid[mgi].thick == 1)) {
-            int assoc_cells = grid::get_numassociatedcells(mgi);
-            if (assoc_cells > 0) {
-              double deltaV =
-                  grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
-              double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
-              radfield::normalise_bf_estimators(mgi, nonemptymgi, estimator_normfactor / H);
-            }
-          }
-        }
-      }
-    }
 
     for (int mgi = nstart; mgi < nstart + ndo; mgi++) {
       /// Check if this task should work on the current model grid cell.
