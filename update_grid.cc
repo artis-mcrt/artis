@@ -1147,8 +1147,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #pragma omp for schedule(dynamic)
 #endif
 
-    if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-      if (!(nts == globals::timestep_initial && titer == 0)) {
+    if (!(nts == globals::timestep_initial && titer == 0)) {
+      if constexpr (DETAILED_BF_ESTIMATORS_ON) {
         for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
           const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
           if (!(globals::lte_iteration || grid::modelgrid[mgi].thick == 1)) {
