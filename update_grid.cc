@@ -1138,6 +1138,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   /// Do not use values which are saved in the cellcache within update_grid
   use_cellcache = false;
 
+  /// Normalise the bf estimators across all modelgrid cells
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     if (!(nts == globals::timestep_initial && titer == 0)) {
       for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
