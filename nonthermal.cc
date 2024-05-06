@@ -1537,8 +1537,8 @@ auto nt_ionisation_maxupperion(const int element, const int lowerion) -> int {
   return maxupper;
 }
 
-auto nt_random_upperion(const int modelgridindex, const int element, const int lowerion,
-                        const bool energyweighted) -> int {
+auto nt_random_upperion(const int modelgridindex, const int element, const int lowerion, const bool energyweighted)
+    -> int {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
     while (true) {
@@ -1596,8 +1596,8 @@ auto nt_ionization_ratecoeff(const int modelgridindex, const int element, const 
 
 static auto calculate_nt_excitation_ratecoeff_perdeposition(const int modelgridindex, const int element, const int ion,
                                                             const int lower, const int uptransindex,
-                                                            const double statweight_lower,
-                                                            const double epsilon_trans) -> double
+                                                            const double statweight_lower, const double epsilon_trans)
+    -> double
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
 {
   if (nt_solution[modelgridindex].yfunc == nullptr) {
@@ -1940,8 +1940,8 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
               (excitationindex)++;
             }
           }  // NT_EXCITATION_ON
-        }  // for t
-      }  // for lower
+        }    // for t
+      }      // for lower
 
       printout("    frac_excitation: %g\n", frac_excitation_ion);
       if (frac_excitation_ion > 1. || !std::isfinite(frac_excitation_ion)) {
@@ -2692,9 +2692,23 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
     }
 
     const auto frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
+
     for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
+      MPI_Reduce(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
+                 root, globals::mpi_comm_node);
+
+      if (globals::rank_in_node == 0) {
+        MPI_Reduce(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
+                   root, globals::mpi_comm_internode);
+      }
+
       MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
-                root, MPI_COMM_WORLD);
+                root, globals::mpi_comm_node);
+    }
+
+    for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
+      // MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
+      //           root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
                 MPI_DOUBLE, root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, root,
