@@ -602,7 +602,7 @@ void read_vpkt_grid(const int my_rank, const int nts) {
   }
 
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_ts%d.tmp", my_rank, nts);
+  snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
   printout("Reading vpkt grid file %s\n", filename);
   FILE *vpkt_grid_file = fopen_required(filename, "r");
 
