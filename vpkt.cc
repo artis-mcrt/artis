@@ -859,15 +859,21 @@ void vpkt_write_timestep(const int nts, const int my_rank, const bool is_final) 
   }
 
   if constexpr (VPKT_WRITE_CONTRIBS) {
+    vpkt_contrib_file.close();
     char filename_prev[MAXFILENAMELENGTH];
     snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts - 1);
     char filename[MAXFILENAMELENGTH];
-    snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
+    if (is_final) {
+      snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d.out", my_rank);
+    } else {
+      snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
+    }
     std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
     printout("Copying %s to %s\n", filename_prev, filename);
 
-    vpkt_contrib_file.close();
-    vpkt_contrib_file = std::ofstream(filename, std::ios::app);
+    if (!is_final) {
+      vpkt_contrib_file = std::ofstream(filename, std::ios::app);
+    }
   }
 }
 
