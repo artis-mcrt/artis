@@ -2726,8 +2726,8 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
       //           root, MPI_COMM_WORLD);
       // MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
       //          MPI_DOUBLE, root, MPI_COMM_WORLD);
-      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, root,
-                MPI_COMM_WORLD);
+      // MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, root,
+      //          MPI_COMM_WORLD);
     }
 
     if (STORE_NT_SPECTRUM) {
