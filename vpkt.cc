@@ -648,6 +648,7 @@ void vpkt_remove_temp_file(const int nts, const int my_rank) {
     std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
     printout("Copying %s to %s\n", filename_prev, filename);
 
+    vpkt_contrib_file.close();
     vpkt_contrib_file = std::ofstream(filename, std::ios::app);
 
     char filename_prev_prev[MAXFILENAMELENGTH];
