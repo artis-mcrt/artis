@@ -2698,32 +2698,52 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
     for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
       MPI_Allreduce(MPI_IN_PLACE, &nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition,
                     1, MPI_DOUBLE, MPI_SUM, globals::mpi_comm_node);
+
+      MPI_Allreduce(MPI_IN_PLACE,
+                    &nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
+                    MPI_DOUBLE, MPI_SUM, globals::mpi_comm_node);
+
+      MPI_Allreduce(MPI_IN_PLACE, &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1,
+                    MPI_INT, MPI_SUM, globals::mpi_comm_node);
+
       if (globals::rank_in_node == 0) {
         MPI_Allreduce(MPI_IN_PLACE, &nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition,
                       1, MPI_DOUBLE, MPI_SUM, globals::mpi_comm_internode);
+
+        MPI_Allreduce(MPI_IN_PLACE,
+                      &nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
+                      MPI_DOUBLE, MPI_SUM, globals::mpi_comm_internode);
+
+        MPI_Allreduce(MPI_IN_PLACE, &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1,
+                      MPI_INT, MPI_SUM, globals::mpi_comm_internode);
       }
+
       MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE, 0,
+                globals::mpi_comm_node);
+      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
+                MPI_DOUBLE, 0, globals::mpi_comm_node);
+      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, 0,
                 globals::mpi_comm_node);
     }
 
-    for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
-      // MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
-      //           root, MPI_COMM_WORLD);
-      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
-                MPI_DOUBLE, root, MPI_COMM_WORLD);
-      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, root,
-                MPI_COMM_WORLD);
-    }
-
-    if (STORE_NT_SPECTRUM) {
-      assert_always(nt_solution[modelgridindex].yfunc != nullptr);
-      MPI_Bcast(nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    check_auger_probabilities(modelgridindex);
+    // for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
+    //  MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
+    //            root, MPI_COMM_WORLD);
+    //  MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
+    //            MPI_DOUBLE, root, MPI_COMM_WORLD);
+    //  MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, root,
+    //            MPI_COMM_WORLD);
   }
+
+  if (STORE_NT_SPECTRUM) {
+    assert_always(nt_solution[modelgridindex].yfunc != nullptr);
+    MPI_Bcast(nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  check_auger_probabilities(modelgridindex);
+}
 }
 #endif
 
