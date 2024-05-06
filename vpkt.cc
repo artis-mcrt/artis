@@ -869,6 +869,7 @@ void vpkt_write_timestep(const int nts, const int my_rank, const bool is_final) 
       snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
       snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
     }
+
     std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
     printout("Copying %s to %s\n", filename_prev, filename);
 
