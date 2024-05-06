@@ -2725,11 +2725,11 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
 
     for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
       MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
-                root, globals::mpi_comm_internode);
+                root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
-                MPI_DOUBLE, root, globals::mpi_comm_internode);
+                MPI_DOUBLE, root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, root,
-                globals::mpi_comm_internode);
+                MPI_COMM_WORLD);
     }
 
     if (STORE_NT_SPECTRUM) {
