@@ -501,7 +501,7 @@ void write_vspecpol(FILE *specpol_file) {
 void read_vspecpol(int my_rank, int nts) {
   char filename[MAXFILENAMELENGTH];
 
-  snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%.4d_ts%d.tmp", 0, my_rank, nts);
+  snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
   printout("Reading %s\n", filename);
 
   FILE *vspecpol_file = fopen_required(filename, "r");
@@ -602,7 +602,7 @@ void read_vpkt_grid(const int my_rank, const int nts) {
   }
 
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_ts%d.tmp", 0, my_rank, nts);
+  snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_ts%d.tmp", my_rank, nts);
   printout("Reading vpkt grid file %s\n", filename);
   FILE *vpkt_grid_file = fopen_required(filename, "r");
 
@@ -629,33 +629,15 @@ void read_vpkt_grid(const int my_rank, const int nts) {
 }  // anonymous namespace
 
 void vpkt_remove_temp_file(const int nts, const int my_rank) {
-  char filenames[2][MAXFILENAMELENGTH];
-  snprintf(filenames[0], MAXFILENAMELENGTH, "vspecpol_%d_%.4d_ts%d.tmp", 0, my_rank, nts);
-  snprintf(filenames[1], MAXFILENAMELENGTH, "vpkt_grid_%d_%.4d_ts%d.tmp", 0, my_rank, nts);
+  char filenames[3][MAXFILENAMELENGTH];
+  snprintf(filenames[0], MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
+  snprintf(filenames[1], MAXFILENAMELENGTH, "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
+  snprintf(filenames[2], MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts - 1);
 
   for (auto &filename : filenames) {
-    if (access(filename, F_OK) == 0) {
+    if (std::filesystem::exists(filename)) {
       std::remove(filename);
       printout("Deleted %s\n", filename);
-    }
-  }
-
-  if constexpr (VPKT_WRITE_CONTRIBS) {
-    char filename_prev[MAXFILENAMELENGTH];
-    snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
-    char filename[MAXFILENAMELENGTH];
-    snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
-    std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
-    printout("Copying %s to %s\n", filename_prev, filename);
-
-    vpkt_contrib_file.close();
-    vpkt_contrib_file = std::ofstream(filename, std::ios::app);
-
-    char filename_prev_prev[MAXFILENAMELENGTH];
-    snprintf(filename_prev_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts - 1);
-    if (std::filesystem::exists(filename_prev_prev)) {
-      std::remove(filename_prev_prev);
-      printout("Deleted %s\n", filename_prev_prev);
     }
   }
 }
@@ -852,9 +834,9 @@ void vpkt_write_timestep(const int nts, const int my_rank, const bool is_final) 
   char filename_vspecpol[MAXFILENAMELENGTH];
 
   if (is_final) {
-    snprintf(filename_vspecpol, MAXFILENAMELENGTH, "vspecpol_%d-%.4d.out", my_rank, 0);
+    snprintf(filename_vspecpol, MAXFILENAMELENGTH, "vspecpol_%.4d.out", my_rank);
   } else {
-    snprintf(filename_vspecpol, MAXFILENAMELENGTH, "vspecpol_%d_%.4d_ts%d.tmp", 0, my_rank, nts);
+    snprintf(filename_vspecpol, MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
   }
 
   printout("Writing %s\n", filename_vspecpol);
@@ -865,15 +847,27 @@ void vpkt_write_timestep(const int nts, const int my_rank, const bool is_final) 
   if (vgrid_on) {
     char filename_vpktgrid[MAXFILENAMELENGTH];
     if (is_final) {
-      snprintf(filename_vpktgrid, MAXFILENAMELENGTH, "vpkt_grid_%.4d-%d.out", my_rank, 0);
+      snprintf(filename_vpktgrid, MAXFILENAMELENGTH, "vpkt_grid_%.4d.out", my_rank);
     } else {
-      snprintf(filename_vpktgrid, MAXFILENAMELENGTH, "vpkt_grid_%d_%.4d_ts%d.tmp", 0, my_rank, nts);
+      snprintf(filename_vpktgrid, MAXFILENAMELENGTH, "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
     }
 
     printout("Writing vpkt grid file %s\n", filename_vpktgrid);
     FILE *vpkt_grid_file = fopen_required(filename_vpktgrid, "w");
     write_vpkt_grid(vpkt_grid_file);
     fclose(vpkt_grid_file);
+  }
+
+  if constexpr (VPKT_WRITE_CONTRIBS) {
+    char filename_prev[MAXFILENAMELENGTH];
+    snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts - 1);
+    char filename[MAXFILENAMELENGTH];
+    snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
+    std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
+    printout("Copying %s to %s\n", filename_prev, filename);
+
+    vpkt_contrib_file.close();
+    vpkt_contrib_file = std::ofstream(filename, std::ios::app);
   }
 }
 
@@ -896,21 +890,10 @@ void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved
       snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts - 1);
       std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
       printout("Copying %s to %s\n", filename_prev, filename);
+    } else {
+      // Create new file with header line
+      vpkt_contrib_file = std::ofstream(filename, std::ios::trunc);
 
-      char filename_prev_prev[MAXFILENAMELENGTH];
-      snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts - 2);
-      if (std::filesystem::exists(filename_prev_prev)) {
-        std::remove(filename_prev_prev);
-        printout("Deleted %s\n", filename_prev_prev);
-      }
-    }
-
-    if (std::filesystem::exists(filename) && !continued_from_saved) {
-      std::remove(filename);
-    }
-    vpkt_contrib_file = std::ofstream(filename, std::ios::app);
-
-    if (!continued_from_saved) {
       vpkt_contrib_file << "#emissiontype trueemissiontype absorption_type absorption_freq";
 
       for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
@@ -922,7 +905,10 @@ void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved
 
       vpkt_contrib_file << "\n";
       vpkt_contrib_file.flush();
+      vpkt_contrib_file.close();
     }
+
+    vpkt_contrib_file = std::ofstream(filename, std::ios::app);
   }
 
   if (continued_from_saved) {
