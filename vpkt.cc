@@ -632,7 +632,7 @@ void vpkt_remove_temp_file(const int nts, const int my_rank) {
   char filenames[3][MAXFILENAMELENGTH];
   snprintf(filenames[0], MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
   snprintf(filenames[1], MAXFILENAMELENGTH, "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
-  snprintf(filenames[2], MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts - 1);
+  snprintf(filenames[2], MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
 
   for (auto &filename : filenames) {
     if (std::filesystem::exists(filename)) {
@@ -861,12 +861,12 @@ void vpkt_write_timestep(const int nts, const int my_rank, const bool is_final) 
   if constexpr (VPKT_WRITE_CONTRIBS) {
     vpkt_contrib_file.close();
     char filename_prev[MAXFILENAMELENGTH];
-    snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts - 1);
+    snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
     char filename[MAXFILENAMELENGTH];
     if (is_final) {
       snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d.out", my_rank);
     } else {
-      snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
+      snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
     }
     std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
     printout("Copying %s to %s\n", filename_prev, filename);
@@ -889,11 +889,11 @@ void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved
 
   if constexpr (VPKT_WRITE_CONTRIBS) {
     char filename[MAXFILENAMELENGTH];
-    snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
+    snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
 
     if (continued_from_saved) {
       char filename_prev[MAXFILENAMELENGTH];
-      snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts - 1);
+      snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
       std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
       printout("Copying %s to %s\n", filename_prev, filename);
     } else {
