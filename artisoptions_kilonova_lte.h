@@ -146,7 +146,7 @@ constexpr bool EXPANSION_OPAC_SAMPLE_KAPPAPLANCK = false;
 
 constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 
-constexpr int GAMMA_THERMALIZATION_SCHEME = 1;
+constexpr enum THERMALIZATION_SCHEME { DETAILED , BARNES_GLOBAL , BARNES_LOCAL };
 
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
