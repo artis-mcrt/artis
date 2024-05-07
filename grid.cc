@@ -2472,7 +2472,6 @@ static auto get_coordboundary_distances_cylindrical2d(
 [[nodiscard]] auto boundary_distance(const std::array<double, 3> dir, const std::array<double, 3> pos,
                                      const double tstart, const int cellindex,
                                      enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>
-
 /// Basic routine to compute distance to a cell boundary.
 {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
