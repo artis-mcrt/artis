@@ -1,5 +1,9 @@
 #include "ratecoeff.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <gsl/gsl_integration.h>
 
 #include <array>
@@ -18,95 +22,21 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_math.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "md5.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "radfield.h"
 #include "rpkt.h"
 #include "sn3d.h"
 
-#ifdef STDPAR_ON
+namespace {
 
-// future: use a template for the integrand function to avoid function pointers
-// template <double func_integrand(double, void *), typename T>
-// constexpr auto calculate_integral_simpson(T &intparas, double xlow, double xhigh) -> double {
-//   const int samplecount = globals::NPHIXSPOINTS * 16 + 1;  // need an odd number for Simpson rule
-//   assert_always(samplecount % 2 == 1);
-
-//   const double deltax = (xhigh - xlow) / samplecount;
-//   double integral = 0.;
-
-//   for (int i = 0; i < samplecount; i++) {
-//     // Simpson's rule integral (will later be divided by 3)
-//     // n must be odd
-//     // integral = (xn - x0) / 3 * {f(x_0) + 4 * f(x_1) + 2 * f(x_2) + ... + 4 * f(x_1) + f(x_n-1)}
-//     // weights e.g., 1,4,2,4,2,4,1
-//     double weight{1.};
-//     if (i == 0 || i == (samplecount - 1)) {
-//       weight = 1.;
-//     } else if (i % 2 == 0) {
-//       weight = 2.;
-//     } else {
-//       weight = 4.;
-//     }
-
-//     const double x = xlow + deltax * i;
-
-//     integral += weight * func_integrand(x, &intparas) * deltax;
-//   }
-
-//   return integral / 3;
-// }
-
-int my_integrator(const gsl_function *f, double a, double b, double epsabs, double epsrel, size_t limit, int key,
-                  gsl_integration_workspace *workspace, double *result, double *abserr) {
-  const int samplecount = globals::NPHIXSPOINTS * 16 + 1;  // need an odd number for Simpson rule
-  assert_always(samplecount % 2 == 1);
-
-  const double deltax = (b - a) / samplecount;
-  double integral = 0.;
-
-  for (int i = 0; i < samplecount; i++) {
-    // Simpson's rule integral (will later be divided by 3)
-    // n must be odd
-    // integral = (xn - x0) / 3 * {f(x_0) + 4 * f(x_1) + 2 * f(x_2) + ... + 4 * f(x_1) + f(x_n-1)}
-    // weights e.g., 1,4,2,4,2,4,1
-    double weight{1.};
-    if (i == 0 || i == (samplecount - 1)) {
-      weight = 1.;
-    } else if (i % 2 == 0) {
-      weight = 2.;
-    } else {
-      weight = 4.;
-    }
-
-    const double x = a + deltax * i;
-
-    integral += weight * GSL_FN_EVAL(f, x) * deltax;
-  }
-  integral /= 3.;
-
-  *result = integral;
-  *abserr = 0.;
-  return 0;
-}
-#define integrator(...) my_integrator(__VA_ARGS__)
-#else
-#define integrator(...) gsl_integration_qag(__VA_ARGS__)
-#endif
-
-double T_step_log;
-
-static double *spontrecombcoeffs = nullptr;
+double *spontrecombcoeffs{};
 
 // for USE_LUT_PHOTOION = true
-static double *corrphotoioncoeffs = nullptr;
+double *corrphotoioncoeffs{};
 
-static double *bfcooling_coeffs = nullptr;
+double *bfcooling_coeffs{};
 
 using gsl_integral_paras_gammacorr = struct {
   double nu_edge;
@@ -116,9 +46,11 @@ using gsl_integral_paras_gammacorr = struct {
   int modelgridindex;
 };
 
-static char adatafile_hash[33];
-static char compositionfile_hash[33];
-static std::array<char[33], 3> phixsfile_hash;
+char adatafile_hash[33];
+char compositionfile_hash[33];
+std::array<char[33], 3> phixsfile_hash;
+
+}  // anonymous namespace
 
 void setup_photoion_luts() {
   size_t mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
@@ -375,7 +307,8 @@ static void write_ratecoeff_dat() {
       const int nlevels = get_ionisinglevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         /// Loop over the phixs targets
-        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
+        const auto nphixstargets = get_nphixstargets(element, ion, level);
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
           /// Loop over the temperature grid
           for (int iter = 0; iter < TABLESIZE; iter++) {
             const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
@@ -395,7 +328,7 @@ static auto alpha_sp_integrand_gsl(const double nu, void *const voidparas) -> do
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
+  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 2) * exp(-HOVERKB * nu / params->T);
@@ -410,7 +343,7 @@ static auto alpha_sp_E_integrand_gsl(const double nu, void *const voidparas) -> 
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
+  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -428,7 +361,7 @@ static auto gammacorr_integrand_gsl(const double nu, void *const voidparas) -> d
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
+  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -447,7 +380,7 @@ static auto approx_bfheating_integrand_gsl(const double nu, void *const voidpara
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
+  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -466,7 +399,7 @@ static auto bfcooling_integrand_gsl(const double nu, void *const voidparas) -> d
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
+  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -510,9 +443,6 @@ static void precalculate_rate_coefficient_integrals() {
           const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
           const double phixstargetprobability = get_phixsprobability(element, ion, level, phixstargetindex);
 
-          // printout("element %d, ion %d, level %d, upperlevel %d, epsilon %g, continuum %g, nlevels
-          // %d\n",element,ion,level,upperlevel,epsilon(element,ion,level),epsilon(element,ion+1,upperlevel),nlevels);
-
           // const double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
           const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
           const double nu_threshold = E_threshold / H;
@@ -526,32 +456,20 @@ static void precalculate_rate_coefficient_integrals() {
             const float T_e = MINTEMP * exp(iter * T_step_log);
 
             const double sfac = calculate_sahafact(element, ion, level, upperlevel, T_e, E_threshold);
-            // printout("%d %g\n",iter,T_e);
 
             assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != nullptr);
             // the threshold of the first target gives nu of the first phixstable point
-            GSLIntegrationParas intparas = {
+            const GSLIntegrationParas intparas = {
                 .nu_edge = nu_threshold,
                 .T = T_e,
                 .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs};
 
-            // gsl_function F_gamma;
-            // F_gamma.function = &gamma_integrand_gsl;
-            // F_gamma.params = &intparas;
-            // gsl_function F_alpha_sp_E;
-            // F_alpha_sp_E.function = &alpha_sp_E_integrand_gsl;
-            // F_alpha_sp_E.params = &intparas;
-            // F_stimulated_bfcooling.function = &stimulated_bfcooling_integrand_gsl;
-            // F_stimulated_bfcooling.params = &intparas;
-            // F_stimulated_recomb.function = &stimulated_recomb_integrand_gsl;
-            // F_stimulated_recomb.params = &intparas;
-
             /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
             double alpha_sp = 0.;
-            const gsl_function F_alpha_sp = {.function = &alpha_sp_integrand_gsl, .params = &intparas};
 
-            status = integrator(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY, GSLWSIZE,
-                                GSL_INTEG_GAUSS61, gslworkspace, &alpha_sp, &error);
+            status =
+                integrator<alpha_sp_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
+                                                   GSL_INTEG_GAUSS61, &alpha_sp, &error);
             if (status != 0 && (status != 18 || (error / alpha_sp) > epsrelwarning)) {
               printout("alpha_sp integrator status %d. Integral value %9.3e +/- %9.3e\n", status, alpha_sp, error);
             }
@@ -560,25 +478,18 @@ static void precalculate_rate_coefficient_integrals() {
             if (!std::isfinite(alpha_sp) || alpha_sp < 0) {
               printout(
                   "WARNING: alpha_sp was negative or non-finite for level %d Te %g. alpha_sp %g sfac %g "
-                  "phixstargetindex %d "
-                  "phixstargetprobability %g\n",
+                  "phixstargetindex %d phixstargetprobability %g\n",
                   level, T_e, alpha_sp, sfac, phixstargetindex, phixstargetprobability);
               alpha_sp = 0;
             }
-            // assert_always(alpha_sp >= 0);
             spontrecombcoeffs[bflutindex] = alpha_sp;
-
-            // if (iter == 0)
-            //   printout("alpha_sp: element %d ion %d level %d upper level %d at temperature %g, alpha_sp is %g
-            //   (integral %g, sahafac %g)\n", element, ion, level, upperlevel, T_e, alpha_sp, alpha_sp/(FOURPI * sfac *
-            //   phixstargetprobability),sfac);
 
             if constexpr (USE_LUT_PHOTOION) {
               double gammacorr = 0.;
-              const gsl_function F_gammacorr = {.function = &gammacorr_integrand_gsl, .params = &intparas};
 
-              status = integrator(&F_gammacorr, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY, GSLWSIZE,
-                                  GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
+              status = integrator<gammacorr_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0,
+                                                           RATECOEFF_INTEGRAL_ACCURACY, GSL_INTEG_GAUSS61, &gammacorr,
+                                                           &error);
               if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
                 printout("gammacorr integrator status %d. Integral value %9.3e +/- %9.3e\n", status, gammacorr, error);
               }
@@ -593,10 +504,10 @@ static void precalculate_rate_coefficient_integrals() {
 
             if constexpr (USE_LUT_BFHEATING) {
               double this_bfheating_coeff = 0.;
-              const gsl_function F_bfheating = {.function = &approx_bfheating_integrand_gsl, .params = &intparas};
 
-              status = integrator(&F_bfheating, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY, GSLWSIZE,
-                                  GSL_INTEG_GAUSS61, gslworkspace, &this_bfheating_coeff, &error);
+              status = integrator<approx_bfheating_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0,
+                                                                  RATECOEFF_INTEGRAL_ACCURACY, GSL_INTEG_GAUSS61,
+                                                                  &this_bfheating_coeff, &error);
 
               if (status != 0 && (status != 18 || (error / this_bfheating_coeff) > epsrelwarning)) {
                 printout("bfheating_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n", status,
@@ -611,10 +522,10 @@ static void precalculate_rate_coefficient_integrals() {
             }
 
             double this_bfcooling_coeff = 0.;
-            const gsl_function F_bfcooling = {.function = &bfcooling_integrand_gsl, .params = &intparas};
 
-            status = integrator(&F_bfcooling, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY, GSLWSIZE,
-                                GSL_INTEG_GAUSS61, gslworkspace, &this_bfcooling_coeff, &error);
+            status = integrator<bfcooling_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0,
+                                                         RATECOEFF_INTEGRAL_ACCURACY, GSL_INTEG_GAUSS61,
+                                                         &this_bfcooling_coeff, &error);
             if (status != 0 && (status != 18 || (error / this_bfcooling_coeff) > epsrelwarning)) {
               printout("bfcooling_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n", status,
                        this_bfcooling_coeff, error);
@@ -645,11 +556,10 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
 
   const int npieces = globals::NPHIXSPOINTS;
 
-  GSLIntegrationParas intparas = {.nu_edge = nu_threshold,
-                                  .T = T_e,
-                                  .photoion_xs = globals::elements[element].ions[lowerion].levels[lower].photoion_xs};
-
-  const gsl_function F_alpha_sp = {.function = &alpha_sp_E_integrand_gsl, .params = &intparas};
+  const GSLIntegrationParas intparas = {
+      .nu_edge = nu_threshold,
+      .T = T_e,
+      .photoion_xs = globals::elements[element].ions[lowerion].levels[lower].photoion_xs};
 
   const double zrand = 1. - rng_uniform();  // Make sure that 0 < zrand <= 1
 
@@ -659,8 +569,8 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
   double total_alpha_sp = 0.;
-  integrator(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY, GSLWSIZE, GSL_INTEG_GAUSS31,
-             gslworkspace, &total_alpha_sp, &error);
+  integrator<alpha_sp_E_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY,
+                                       GSL_INTEG_GAUSS31, &total_alpha_sp, &error);
 
   double alpha_sp_old = total_alpha_sp;
   double alpha_sp = total_alpha_sp;
@@ -671,8 +581,8 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
     const double xlow = nu_threshold + i * deltanu;
 
     // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-    integrator(&F_alpha_sp, xlow, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY, GSLWSIZE, GSL_INTEG_GAUSS31,
-               gslworkspace, &alpha_sp, &error);
+    integrator<alpha_sp_E_integrand_gsl>(intparas, xlow, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY,
+                                         GSL_INTEG_GAUSS31, &alpha_sp, &error);
 
     if (zrand >= alpha_sp / total_alpha_sp) {
       break;
@@ -681,7 +591,8 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
 
   gsl_set_error_handler(previous_handler);
 
-  const double nuoffset = (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu;
+  const double nuoffset =
+      (alpha_sp != alpha_sp_old) ? (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu : 0.;
   const double nu_lower = nu_threshold + (i - 1) * deltanu + nuoffset;
 
   assert_testmodeonly(std::isfinite(nu_lower));
@@ -990,8 +901,8 @@ static void precalculate_ion_alpha_sp() {
         const int nlevels = get_ionisinglevels(element, ion);
         double zeta = 0.;
         for (int level = 0; level < nlevels; level++) {
-          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level);
-               phixstargetindex++) {
+          const auto nphixstargets = get_nphixstargets(element, ion, level);
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const double zeta_level = get_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
             zeta += zeta_level;
           }
@@ -1116,7 +1027,7 @@ static auto calculate_stimrecombcoeff_integral(int element, int lowerion, int le
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
   const auto T_e = grid::get_Te(modelgridindex);
-  gsl_integral_paras_gammacorr intparas = {
+  const auto intparas = gsl_integral_paras_gammacorr{
       .nu_edge = nu_threshold,
       .photoion_xs = globals::elements[element].ions[lowerion].levels[level].photoion_xs,
       .T_e = T_e,
@@ -1126,15 +1037,14 @@ static auto calculate_stimrecombcoeff_integral(int element, int lowerion, int le
   const int upperionlevel = get_phixsupperlevel(element, lowerion, level, phixstargetindex);
   const double sf = calculate_sahafact(element, lowerion, level, upperionlevel, T_e, H * nu_threshold);
 
-  const gsl_function F_stimrecomb = {.function = &integrand_stimrecombination_custom_radfield, .params = &intparas};
   double error = 0.;
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
   double stimrecombcoeff = 0.;
 
   // const int status =
-  integrator(&F_stimrecomb, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace,
-             &stimrecombcoeff, &error);
+  integrator<integrand_stimrecombination_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsabs, epsrel,
+                                                          GSL_INTEG_GAUSS61, &stimrecombcoeff, &error);
 
   gsl_set_error_handler(previous_handler);
 
@@ -1143,10 +1053,10 @@ static auto calculate_stimrecombcoeff_integral(int element, int lowerion, int le
   // if (status != 0)
   // {
   //   error *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
-  //   printout("stimrecombcoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex
-  //   %d gamma %g error %g\n",
-  //            status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level, phixstargetindex,
-  //            gammacorr, error);
+  //   printout("stimrecombcoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d
+  //   phixstargetindex %d gamma %g error %g\n",
+  //            status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level,
+  //            phixstargetindex, gammacorr, error);
   // }
 
   return stimrecombcoeff;
@@ -1252,7 +1162,7 @@ static auto calculate_corrphotoioncoeff_integral(int element, int ion, int level
     departure_ratio = 0.;
   }
 #endif
-  gsl_integral_paras_gammacorr intparas = {
+  const auto intparas = gsl_integral_paras_gammacorr{
       .nu_edge = nu_threshold,
       .departure_ratio = departure_ratio,
       .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs,
@@ -1260,14 +1170,13 @@ static auto calculate_corrphotoioncoeff_integral(int element, int ion, int level
       .modelgridindex = modelgridindex,
   };
 
-  const gsl_function F_gammacorr = {.function = &integrand_corrphotoioncoeff_custom_radfield, .params = &intparas};
   double error = 0.;
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
   double gammacorr = 0.;
-  const int status = integrator(&F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61,
-                                gslworkspace, &gammacorr, &error);
+  const int status = integrator<integrand_corrphotoioncoeff_custom_radfield>(
+      intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &gammacorr, &error);
 
   gsl_set_error_handler(previous_handler);
 
@@ -1293,27 +1202,21 @@ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
-  double gammacorr = -1;
-
-  if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {
-    gammacorr = radfield::get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
-    // gammacorr will be -1 if no estimators available
-    if (gammacorr > 0) {
-      return gammacorr;
-    }
-  }
-
-  if (use_cellcache) {
-    gammacorr = globals::cellcache[cellcacheslotid]
-                    .chelements[element]
-                    .chions[ion]
-                    .chlevels[level]
-                    .chphixstargets[phixstargetindex]
-                    .corrphotoioncoeff;
-  }
+  double gammacorr = (use_cellcache) ? globals::cellcache[cellcacheslotid]
+                                           .chelements[element]
+                                           .chions[ion]
+                                           .chlevels[level]
+                                           .chphixstargets[phixstargetindex]
+                                           .corrphotoioncoeff
+                                     : -1;
 
   if (!use_cellcache || gammacorr < 0) {
-    {
+    if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {
+      gammacorr = radfield::get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
+      // gammacorr will be -1 if no estimators available
+    }
+
+    if (!DETAILED_BF_ESTIMATORS_ON || gammacorr < 0) {
       if constexpr (!USE_LUT_PHOTOION) {
         gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
       } else {

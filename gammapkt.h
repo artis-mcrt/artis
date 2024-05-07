@@ -5,7 +5,7 @@
 #include "packet.h"
 
 namespace gammapkt {
-void init_gamma_linelist();
+void init_gamma_data();
 void pellet_gamma_decay(Packet &pkt);
 void treat_gamma_packet(Packet &pkt, double t2);
 void normalise(int nts);

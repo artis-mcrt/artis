@@ -81,14 +81,10 @@ enum eventcounters {
   COUNTER_UPSCATTER = 30,
   COUNTER_DOWNSCATTER = 31,
   COUNTER_UPDATECELL = 32,
-  COUNTER_COOLINGRATECALCCOUNTER = 33,
-  COUNTER_NESC = 34,
-  COUNTER_COUNT = 35,
+  COUNTER_COUNT = 33,
 };
 
 void init();
-
-void cleanup();
 
 void increment_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype, double increment);
 

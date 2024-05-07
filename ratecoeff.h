@@ -2,6 +2,16 @@
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
 
+#include <algorithm>
+
+#include "sn3d.h"
+#if !USE_SIMPSON_INTEGRATOR
+#include <gsl/gsl_integration.h>
+#include <gsl/gsl_math.h>
+
+#include "constants.h"
+#endif
+
 void ratecoefficients_init();
 
 void setup_photoion_luts();
@@ -33,103 +43,52 @@ void setup_photoion_luts();
                                             bool collisional_not_radiative, bool printdebug, bool lower_superlevel_only,
                                             bool per_groundmultipletpop, bool stimonly) -> double;
 
-// CUDA integration. might be worth revisting for SYCL support
-// template <double func_integrand(double, void *)>
-// __global__ void kernel_simpson_integral(void *intparas, double xlow, double deltax, int samplecount, double
-// *integral)
-// /// Integrand to calculate the rate coefficient for photoionization
-// /// using gsl integrators. Corrected for stimulated recombination.
-// {
-//   extern __shared__ double threadcontrib[];
+inline double T_step_log{};
 
-//   const int i = blockIdx.x * blockDim.x + threadIdx.x;
+template <double func_integrand(double, void *)>
+constexpr auto simpson_integrator(auto &params, double a, double b, int samplecount) -> double {
+  assert_testmodeonly(samplecount % 2 == 1);
 
-//   if (i < samplecount) {
-//     // Simpson's rule integral (will later be divided by 3)
-//     // n must be odd
-//     // integral = (xn - x0) / 3 * {f(x_0) + 4 * f(x_1) + 2 * f(x_2) + ... + 4 * f(x_1) + f(x_n-1)}
-//     // weights e.g., 1,4,2,4,2,4,1
-//     double weight;
-//     if (i == 0 || i == (samplecount - 1)) {
-//       weight = 1.;
-//     } else if (i % 2 == 0) {
-//       weight = 2.;
-//     } else {
-//       weight = 4.;
-//     }
+  const double deltax = (b - a) / samplecount;
 
-//     const double x = xlow + deltax * i;
+  double integral = 0.;
+  for (int i = 0; i < samplecount; i++) {
+    // Simpson's rule integral (will later be divided by 3)
+    // n must be odd
+    // integral = (xn - x0) / 3 * {f(x_0) + 4 * f(x_1) + 2 * f(x_2) + ... + 4 * f(x_1) + f(x_n-1)}
+    // weights e.g., 1,4,2,4,2,4,1
+    double weight{1.};
+    if (i == 0 || i == (samplecount - 1)) {
+      weight = 1.;
+    } else if (i % 2 == 0) {
+      weight = 2.;
+    } else {
+      weight = 4.;
+    }
 
-//     threadcontrib[threadIdx.x] = weight * func_integrand(x, intparas) * deltax;
-//   } else {
-//     threadcontrib[threadIdx.x] = 0.;
-//   }
+    const double x = a + deltax * i;
 
-//   __syncthreads();
+    integral += weight * func_integrand(x, &params) * deltax;
+  }
+  integral /= 3.;
 
-//   if (threadIdx.x == 0) {
-//     double blockcontrib = threadcontrib[0];
-//     for (int x = 1; x < blockDim.x; x++) {
-//       blockcontrib += threadcontrib[x];
-//     }
-//     atomicAdd(integral, blockcontrib / 3.);  // divided by 3 for Simpson rule
-//   }
-// }
+  return integral;
+}
 
-// template <double func_integrand(double, void *), typename T>
-// double calculate_integral_gpu(T intparas, double xlow, double xhigh) {
-//   T *dev_intparas;
-//   checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(T)));
+template <double func_integrand(double, void *)>
+auto integrator(auto params, double a, double b, double epsabs, double epsrel, int key, double *result,
+                double *abserr) {
+  if constexpr (USE_SIMPSON_INTEGRATOR) {
+    // need an odd number for Simpson rule
+    const int samplecount = std::max(1, static_cast<int>((b / a) / globals::NPHIXSNUINCREMENT)) * 4 + 1;
 
-// #ifdef __CUDA_ARCH__
-//   memcpy(dev_intparas, &intparas, sizeof(T));
-// // *dev_intparas = intparas;
-// #else
-//   checkCudaErrors(cudaMemcpy(dev_intparas, &intparas, sizeof(T), cudaMemcpyHostToDevice));
-// #endif
-
-//   double *dev_integral;
-//   cudaMalloc(&dev_integral, sizeof(double));
-
-// #ifdef __CUDA_ARCH__
-//   *dev_integral = 0.;
-// #else
-//   cudaMemset(dev_integral, 0, sizeof(double));
-// #endif
-
-//   checkCudaErrors(cudaDeviceSynchronize());
-
-//   const int samplecount = globals::NPHIXSPOINTS * 16 + 1;  // need an odd number for Simpson rule
-//   assert_always(samplecount % 2 == 1);
-
-//   dim3 threadsPerBlock(32, 1, 1);
-//   dim3 numBlocks((samplecount + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
-//   size_t sharedsize = sizeof(double) * threadsPerBlock.x;
-
-//   const double deltax = (xhigh - xlow) / samplecount;
-
-//   kernel_simpson_integral<func_integrand>
-//       <<<numBlocks, threadsPerBlock, sharedsize>>>((void *)dev_intparas, xlow, deltax, samplecount, dev_integral);
-
-//   // Check for any errors launching the kernel
-//   checkCudaErrors(cudaGetLastError());
-
-//   // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
-//   checkCudaErrors(cudaDeviceSynchronize());
-
-// #ifdef __CUDA_ARCH__
-//   const double result = *dev_integral;
-// #else
-//   double result = 0.;
-//   checkCudaErrors(cudaMemcpy(&result, dev_integral, sizeof(double), cudaMemcpyDeviceToHost));
-// #endif
-
-//   cudaFree(dev_integral);
-//   cudaFree(dev_intparas);
-
-//   return result;
-// }
-
-extern double T_step_log;
+    *result = simpson_integrator<func_integrand>(params, a, b, samplecount);
+    *abserr = 0.;
+    return 0;
+  } else {
+    const gsl_function F = {.function = (func_integrand), .params = &(params)};
+    return gsl_integration_qag(&F, a, b, epsabs, epsrel, GSLWSIZE, key, gslworkspace.get(), result, abserr);
+  }
+}
 
 #endif  // RATECOEFF_H

@@ -1,5 +1,9 @@
 #include "update_packets.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <algorithm>
 #include <cstdlib>
 #include <ctime>
@@ -13,9 +17,6 @@
 #include "globals.h"
 #include "grid.h"
 #include "kpkt.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "nonthermal.h"
 #include "packet.h"
 #include "rpkt.h"
@@ -24,7 +25,9 @@
 #include "update_grid.h"
 #include "vectors.h"
 
-static void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
+namespace {
+
+void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   double en_deposited = pkt.e_cmf;
 
   if constexpr (INSTANT_PARTICLE_DEPOSITION) {
@@ -69,20 +72,20 @@ static void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2
       pkt.nu_cmf = (particle_en - endot * (t_new - ts)) / H;
     }
 
-    vec_scale(pkt.pos, t_new / ts);
+    pkt.pos = vec_scale(pkt.pos, t_new / ts);
     pkt.prop_time = t_new;
   }
 
   if (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) {
-    safeadd(globals::timesteps[nts].alpha_dep, en_deposited);
+    atomicadd(globals::timesteps[nts].alpha_dep, en_deposited);
   } else if (pkt.pellet_decaytype == decay::DECAYTYPE_BETAMINUS) {
-    safeadd(globals::timesteps[nts].electron_dep, en_deposited);
+    atomicadd(globals::timesteps[nts].electron_dep, en_deposited);
   } else if (pkt.pellet_decaytype == decay::DECAYTYPE_BETAPLUS) {
-    safeadd(globals::timesteps[nts].positron_dep, en_deposited);
+    atomicadd(globals::timesteps[nts].positron_dep, en_deposited);
   }
 }
 
-static void update_pellet(Packet &pkt, const int nts, const double t2) {
+void update_pellet(Packet &pkt, const int nts, const double t2) {
   // Handle inactive pellets. Need to do two things (a) check if it
   // decays in this time step and if it does handle that. (b) if it doesn't decay in
   // this time step then just move the packet along with the matter for the
@@ -93,36 +96,36 @@ static void update_pellet(Packet &pkt, const int nts, const double t2) {
   const double tdecay = pkt.tdecay;  // after packet_init(), this value never changes
   if (tdecay > t2) {
     // It won't decay in this timestep, so just need to move it on with the flow.
-    vec_scale(pkt.pos, t2 / ts);
+    pkt.pos = vec_scale(pkt.pos, t2 / ts);
     pkt.prop_time = t2;
 
     // That's all that needs to be done for the inactive pellet.
   } else if (tdecay > ts) {
     // The packet decays in the current timestep.
-    globals::timesteps[nts].pellet_decays++;
+    atomicadd(globals::timesteps[nts].pellet_decays, 1);
 
     pkt.prop_time = tdecay;
-    vec_scale(pkt.pos, tdecay / ts);
+    pkt.pos = vec_scale(pkt.pos, tdecay / ts);
 
     if (pkt.originated_from_particlenotgamma)  // will decay to non-thermal particle
     {
       if (pkt.pellet_decaytype == decay::DECAYTYPE_BETAPLUS) {
-        safeadd(globals::timesteps[nts].positron_dep, pkt.e_cmf);
+        atomicadd(globals::timesteps[nts].positron_dep, pkt.e_cmf);
         pkt.type = TYPE_NTLEPTON;
         pkt.absorptiontype = -10;
       } else if (pkt.pellet_decaytype == decay::DECAYTYPE_BETAMINUS) {
-        safeadd(globals::timesteps[nts].electron_emission, pkt.e_cmf);
+        atomicadd(globals::timesteps[nts].electron_emission, pkt.e_cmf);
         pkt.em_time = pkt.prop_time;
         pkt.type = TYPE_NONTHERMAL_PREDEPOSIT;
         pkt.absorptiontype = -10;
       } else if (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) {
-        safeadd(globals::timesteps[nts].alpha_emission, pkt.e_cmf);
+        atomicadd(globals::timesteps[nts].alpha_emission, pkt.e_cmf);
         pkt.em_time = pkt.prop_time;
         pkt.type = TYPE_NONTHERMAL_PREDEPOSIT;
         pkt.absorptiontype = -10;
       }
     } else {
-      safeadd(globals::timesteps[nts].gamma_emission, pkt.e_cmf);
+      atomicadd(globals::timesteps[nts].gamma_emission, pkt.e_cmf);
       // decay to gamma-ray, kpkt, or ntlepton
       gammapkt::pellet_gamma_decay(pkt);
     }
@@ -140,14 +143,15 @@ static void update_pellet(Packet &pkt, const int nts, const double t2) {
 
     // printout("already decayed packets and propagation by packet_prop\n");
     pkt.prop_time = globals::tmin;
-  } else {
-    printout("ERROR: Something gone wrong with decaying pellets. tdecay %g ts %g (ts + tw) %g\n", tdecay, ts, t2);
+  } else if constexpr (TESTMODE) {
+    printout("ERROR: Something wrong with decaying pellets. tdecay %g ts %g (ts + tw) %g\n", tdecay, ts, t2);
     assert_testmodeonly(false);
-    std::abort();
+  } else {
+    __builtin_unreachable();
   }
 }
 
-static void do_packet(Packet &pkt, const double t2, const int nts)
+void do_packet(Packet &pkt, const double t2, const int nts)
 // update a packet no further than time t2
 {
   switch (pkt.type) {
@@ -160,7 +164,7 @@ static void do_packet(Packet &pkt, const double t2, const int nts)
       gammapkt::treat_gamma_packet(pkt, t2);
 
       if (pkt.type != TYPE_GAMMA && pkt.type != TYPE_ESCAPE) {
-        safeadd(globals::timesteps[nts].gamma_dep, pkt.e_cmf);
+        atomicadd(globals::timesteps[nts].gamma_dep, pkt.e_cmf);
       }
       break;
     }
@@ -169,7 +173,7 @@ static void do_packet(Packet &pkt, const double t2, const int nts)
       do_rpkt(pkt, t2);
 
       if (pkt.type == TYPE_ESCAPE) {
-        safeadd(globals::timesteps[nts].cmf_lum, pkt.e_cmf);
+        atomicadd(globals::timesteps[nts].cmf_lum, pkt.e_cmf);
       }
       break;
     }
@@ -199,14 +203,17 @@ static void do_packet(Packet &pkt, const double t2, const int nts)
     }
 
     default: {
-      printout("packet_prop: Unknown packet type %d. Abort.\n", pkt.type);
-      assert_testmodeonly(false);
-      std::abort();
+      if constexpr (TESTMODE) {
+        printout("ERROR: Unknown packet type %d\n", pkt.type);
+        assert_testmodeonly(false);
+      } else {
+        __builtin_unreachable();
+      }
     }
   }
 }
 
-static auto std_compare_packets_bymodelgriddensity(const Packet &p1, const Packet &p2) -> bool {
+auto std_compare_packets_bymodelgriddensity(const Packet &p1, const Packet &p2) -> bool {
   // return true if packet p1 goes before p2
 
   // move escaped packets to the end of the list for better performance
@@ -259,7 +266,7 @@ static auto std_compare_packets_bymodelgriddensity(const Packet &p1, const Packe
   return false;
 }
 
-static void do_cell_packet_updates(std::span<Packet> packets, const int nts, const double ts_end) {
+void do_cell_packet_updates(std::span<Packet> packets, const int nts, const double ts_end) {
   auto update_packet = [ts_end, nts](auto &pkt) {
     const int mgi = grid::get_cell_modelgridindex(pkt.where);
     int newmgi = mgi;
@@ -282,6 +289,8 @@ static void do_cell_packet_updates(std::span<Packet> packets, const int nts, con
   }
 #endif
 }
+
+}  // anonymous namespace
 
 void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
 // Subroutine to move and update packets during the current timestep (nts)

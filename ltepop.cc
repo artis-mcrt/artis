@@ -1,6 +1,7 @@
 #include "ltepop.h"
 
 #include <gsl/gsl_errno.h>
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 
 #include <algorithm>
@@ -14,19 +15,20 @@
 #include "decay.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_math.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
 #include "sn3d.h"
 
+namespace {
+
 struct nne_solution_paras {
   int modelgridindex;
   bool force_lte;
 };
 
-static auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T) -> double {
+auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_always(T >= MINTEMP);
@@ -44,7 +46,7 @@ static auto interpolate_ions_spontrecombcoeff(const int element, const int ion, 
   return globals::elements[element].ions[ion].Alpha_sp[TABLESIZE - 1];
 }
 
-static auto phi_lte(const int element, const int ion, const int modelgridindex) -> double {
+auto phi_lte(const int element, const int ion, const int modelgridindex) -> double {
   // use Saha equation for LTE ionization balance
   auto partfunc_ion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
   auto partfunc_upperion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion + 1];
@@ -55,7 +57,7 @@ static auto phi_lte(const int element, const int ion, const int modelgridindex) 
   return partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
 }
 
-static auto phi_ion_equilib(const int element, const int ion, const int modelgridindex, const int nonemptymgi) -> double
+auto phi_ion_equilib(const int element, const int ion, const int modelgridindex, const int nonemptymgi) -> double
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
 {
@@ -119,6 +121,8 @@ static auto phi_ion_equilib(const int element, const int ion, const int modelgri
   return phi;
 }
 
+}  // anonymous namespace
+
 [[nodiscard]] auto calculate_ionfractions(const int element, const int modelgridindex, const double nne,
                                           const bool use_phi_lte) -> std::vector<double>
 // Calculate the fractions of an element's population in each ionization stage based on Saha LTE or ionisation
@@ -179,7 +183,7 @@ static auto nne_solution_f(double nne_assumed, void *voidparas) -> double
 // assume a value for nne and then calculate the resulting nne
 // the difference between the assumed and calculated nne is returned
 {
-  const auto *paras = reinterpret_cast<nne_solution_paras *>(voidparas);
+  const auto *paras = static_cast<nne_solution_paras *>(voidparas);
   const int modelgridindex = paras->modelgridindex;
   const bool force_lte = paras->force_lte;
 
@@ -447,7 +451,7 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   int uppermost_ion = 0;
 
   uppermost_ion = nions - 1;
-  if (!force_lte) {
+  if (!use_lte) {
     for (int ion = 0; ion < nions - 1; ion++) {
       if (iongamma_is_zero(nonemptymgi, element, ion) &&
           (!NT_ON || ((globals::dep_estimator_gamma[nonemptymgi] == 0.) &&
@@ -500,8 +504,10 @@ void set_groundlevelpops(const int modelgridindex, const int element, const floa
   /// calculate number density of the current element (abundances are given by mass)
   const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
 
+  const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
+
   const auto ionfractions =
-      (nnelement > 0) ? calculate_ionfractions(element, modelgridindex, nne, force_lte) : std::vector<double>();
+      (nnelement > 0) ? calculate_ionfractions(element, modelgridindex, nne, use_phi_lte) : std::vector<double>();
 
   const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
 

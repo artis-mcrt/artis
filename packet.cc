@@ -1,5 +1,9 @@
 #include "packet.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -19,9 +23,6 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "sn3d.h"
 #include "vectors.h"
 
@@ -44,8 +45,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // assert_always(radius >= r_inner);
     // assert_always(radius <= r_outer);
 
-    pkt.pos = get_rand_isotropic_unitvec();
-    vec_scale(pkt.pos, radius);
+    pkt.pos = vec_scale(get_rand_isotropic_unitvec(), radius);
 
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
     const double zrand = rng_uniform_pos();
@@ -143,10 +143,10 @@ void packet_init(Packet *pkt)
   std::for_each(allpkts.begin(), allpkts.end(), [&, norm, e0](const int n) {
     const double targetval = rng_uniform() * norm;
 
-    // first en_cumulative[i] such that en_cumulative[i] > targetval
-    auto upperval = std::upper_bound(en_cumulative.cbegin(), en_cumulative.cend(), targetval);
-    assert_always(upperval != en_cumulative.end());
-    const ptrdiff_t cellindex = std::distance(en_cumulative.cbegin(), upperval);
+    // first i such that en_cumulative[i] > targetval
+    const int cellindex = std::distance(en_cumulative.cbegin(),
+                                        std::upper_bound(en_cumulative.cbegin(), en_cumulative.cend(), targetval));
+    assert_always(cellindex < grid::ngrid);
 
     place_pellet(e0, cellindex, n, pkt[n]);
   });
@@ -335,6 +335,4 @@ void read_packets(const char filename[], Packet *pkt) {
         packets_read, globals::npkts);
     std::abort();
   }
-
-  packets_file.close();
 }

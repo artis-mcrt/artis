@@ -1,5 +1,9 @@
 #include "decay.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -10,7 +14,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
-#include <memory>
+#include <iterator>
 #include <numbers>
 #include <numeric>
 #include <set>
@@ -26,16 +30,15 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "nonthermal.h"
 #include "packet.h"
 #include "sn3d.h"
 
 namespace decay {
 
-static constexpr std::array<const std::string_view, 119> elsymbols{
+namespace {
+
+constexpr std::array<const std::string_view, 119> elsymbols{
     "n",  "H",  "He", "Li", "Be", "B",  "C",  "N",  "O",  "F",  "Ne", "Na",  "Mg", "Al",  "Si", "P",   "S",
     "Cl", "Ar", "K",  "Ca", "Sc", "Ti", "V",  "Cr", "Mn", "Fe", "Co", "Ni",  "Cu", "Zn",  "Ga", "Ge",  "As",
     "Se", "Br", "Kr", "Rb", "Sr", "Y",  "Zr", "Nb", "Mo", "Tc", "Ru", "Rh",  "Pd", "Ag",  "Cd", "In",  "Sn",
@@ -43,7 +46,7 @@ static constexpr std::array<const std::string_view, 119> elsymbols{
     "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W",  "Re", "Os", "Ir", "Pt", "Au",  "Hg", "Tl",  "Pb", "Bi",  "Po",
     "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U",  "Np", "Pu", "Am", "Cm",  "Bk", "Cf",  "Es", "Fm",  "Md",
     "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"};
-static constexpr int Z_MAX = elsymbols.size() - 1;
+constexpr int Z_MAX = elsymbols.size() - 1;
 
 struct Nuclide {
   int z{-1};                    // atomic number
@@ -58,7 +61,9 @@ struct Nuclide {
   std::array<double, decaytypes::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
 };
 
-static std::vector<Nuclide> nuclides;
+std::vector<Nuclide> nuclides;
+
+}  // anonymous namespace
 
 constexpr auto decay_daughter_z(const int z_parent, const int /*a_parent*/, const int decaytype) -> int
 // check if (z_parent, a_parent) is a parent of (z, a)
@@ -130,9 +135,9 @@ std::vector<DecayPath> decaypaths;
 // decaypath_energy_per_mass points to an array of length npts_model * num_decaypaths
 // the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
 // during the simulation time range
-double *decaypath_energy_per_mass = nullptr;
+double *decaypath_energy_per_mass{};
 #ifdef MPI_ON
-MPI_Win win_decaypath_energy_per_mass = MPI_WIN_NULL;
+MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
 #endif
 
 auto get_num_nuclides() -> int { return static_cast<int>(nuclides.size()); }
@@ -306,7 +311,8 @@ static auto calculate_decaypath_branchproduct(const DecayPath &decaypath) -> dou
   // return the product of all branching factors in the decay path
 
   double branchprod = 1.;
-  for (int i = 0; i < get_decaypathlength(decaypath); i++) {
+  const auto decaypathlength = get_decaypathlength(decaypath);
+  for (int i = 0; i < decaypathlength; i++) {
     branchprod = branchprod * get_nuc_decaybranchprob(decaypath.nucindex[i], decaypath.decaytypes[i]);
   }
   return branchprod;
@@ -731,7 +737,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   printout("Number of decay paths: %d (max length %d)\n", get_num_decaypaths(), maxdecaypathlength);
 
   /// Read in data for gamma ray lines and make a list of them in energy order.
-  gammapkt::init_gamma_linelist();
+  gammapkt::init_gamma_data();
 
   // TODO: generalise this to all included nuclides
   printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",
@@ -751,7 +757,8 @@ static auto sample_decaytime(const int decaypathindex, const double tdecaymin, c
   while (tdecay <= tdecaymin || tdecay >= tdecaymax) {
     tdecay = t_model;  // can't decay before initial model snapshot time
 
-    for (int i = 0; i < get_decaypathlength(decaypathindex); i++) {
+    const auto decaypathlength = get_decaypathlength(decaypathindex);
+    for (int i = 0; i < decaypathlength; i++) {
       const int nucindex = decaypaths[decaypathindex].nucindex[i];
       const double zrand = rng_uniform_pos();
       tdecay += -get_meanlife(nucindex) * log(zrand);
@@ -1140,7 +1147,8 @@ auto get_particle_injection_rate(const int modelgridindex, const double t, const
 // energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in [erg/s/g]
 {
   double dep_sum = 0.;
-  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
+  const auto num_nuclides = get_num_nuclides();
+  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const int z = get_nuc_z(nucindex);
     const int a = get_nuc_a(nucindex);
     const double meanlife = get_meanlife(nucindex);
@@ -1165,7 +1173,8 @@ auto get_qdot_modelcell(const int modelgridindex, const double t, const int deca
 // energy release rate [erg/s/g] including everything (even neutrinos that are ignored elsewhere)
 {
   double qdot = 0.;
-  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
+  const auto num_nuclides = get_num_nuclides();
+  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const int z = get_nuc_z(nucindex);
     const int a = get_nuc_a(nucindex);
     const double meanlife = get_meanlife(nucindex);
@@ -1186,7 +1195,8 @@ auto get_qdot_modelcell(const int modelgridindex, const double t, const int deca
 
 auto get_global_etot_t0_tinf() -> double {
   double etot_tinf = 0.;
-  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
+  const auto num_decaypaths = get_num_decaypaths();
+  for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
     const int z_top = decaypaths[decaypathindex].z[0];
     const int a_top = decaypaths[decaypathindex].a[0];
 
@@ -1210,7 +1220,8 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
     // the mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays for the current element
     double isomassfracsum = 0.;
     double isomassfrac_on_nucmass_sum = 0.;
-    for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
+    const auto num_nuclides = get_num_nuclides();
+    for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
       const int nuc_z = get_nuc_z(nucindex);
       const int a = get_nuc_a(nucindex);
       if (nuc_z == atomic_number) {
@@ -1264,7 +1275,8 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 
   // total number of electrons in grid cell which are possible targets for compton scattering of gamma rays
   double nnetot = 0.;
-  for (int element = 0; element < get_nelements(); element++) {
+  const auto nelements = get_nelements();
+  for (int element = 0; element < nelements; element++) {
     const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
     nnetot += nnelement * get_atomicnumber(element);
   }
@@ -1311,7 +1323,8 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
 
   const int atomic_number = get_atomicnumber(element);
   std::set<int> a_isotopes;  // ensure we don't repeat isotopes
-  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
+  const auto num_nuclides = get_num_nuclides();
+  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const int nuc_z = get_nuc_z(nucindex);
     const int nuc_a = get_nuc_a(nucindex);
     if (nuc_z == atomic_number) {  // isotope of this element is on the network
@@ -1361,7 +1374,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
   // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel
   const int num_decaychannels = num_decaypaths + ((INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? 1 : 0);
 
-  auto cumulative_en_sum = std::make_unique<double[]>(num_decaychannels);
+  auto cumulative_en_sum = std::vector<double>(num_decaychannels, 0.);
   double energysum = 0.;
 
   // add the radioactive decay paths
@@ -1381,10 +1394,9 @@ void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
 
   const double zrand_en = rng_uniform() * cumulative_en_sum[num_decaychannels - 1];
 
-  // first cumulative_en_sum[i] such that cumulative_en_sum[i] > zrand_en
-  const double *const upperval =
-      std::upper_bound(&cumulative_en_sum[0], &cumulative_en_sum[num_decaychannels], zrand_en);
-  const ptrdiff_t decaychannelindex = upperval - &cumulative_en_sum[0];
+  // first decaychannelindex such that cumulative_en_sum[decaychannelindex] > zrand_en
+  const int decaychannelindex = std::distance(
+      cumulative_en_sum.cbegin(), std::upper_bound(cumulative_en_sum.cbegin(), cumulative_en_sum.cend(), zrand_en));
 
   assert_always(decaychannelindex >= 0);
   assert_always(decaychannelindex < num_decaychannels);

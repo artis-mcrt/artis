@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #ifndef RADFIELD_H
 #define RADFIELD_H
 
@@ -33,7 +34,7 @@ void reduce_estimators();
 void do_MPI_Bcast(int modelgridindex, int root, int root_node_id);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);
-void normalise_bf_estimators(int modelgridindex, double estimator_normfactor_over_H);
+void normalise_bf_estimators(int modelgridindex, ptrdiff_t nonemptymgi, double estimator_normfactor_over_H);
 [[nodiscard]] auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex,
                                         int modelgridindex) -> double;
 void print_bfrate_contributions(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex,

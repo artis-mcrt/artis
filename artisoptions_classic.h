@@ -47,9 +47,9 @@ constexpr bool DIPOLE = true;
 constexpr bool POL_ON = true;
 
 constexpr bool VPKT_ON = false;
+constexpr bool VPKT_WRITE_CONTRIBS = false;
 
 constexpr bool TRACK_ION_STATS = false;
-constexpr bool TRACK_ION_MASTATS = false;
 
 constexpr double MINPOP = 1e-30;
 
@@ -75,6 +75,8 @@ constexpr double T_R_max = 250000;
 constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 constexpr bool DETAILED_BF_ESTIMATORS_ON = false;
+
+constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return false; }
 
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
 
@@ -142,6 +144,8 @@ constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 constexpr bool EXPANSIONOPACITIES_ON = false;
 
 constexpr bool EXPANSION_OPAC_SAMPLE_KAPPAPLANCK = false;
+
+constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H

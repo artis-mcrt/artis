@@ -11,9 +11,11 @@
 #include <fstream>
 #include <limits>
 #include <span>
+#include <string>
 #include <vector>
 
 #include "artisoptions.h"
+#include "atomic.h"
 #include "constants.h"
 #include "decay.h"
 #include "globals.h"
@@ -32,6 +34,15 @@ struct GammaLine {
 };
 
 static std::vector<std::vector<GammaLine>> gamma_spectra;
+
+struct el_photoion_data {
+  double energy;      // energy in MeV
+  double sigma_xcom;  // cross section in barns/atom
+};
+
+static constexpr int numb_xcom_elements = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
+
+static std::array<std::vector<struct el_photoion_data>, numb_xcom_elements> photoion_data;
 
 struct gammaline {
   int nucindex;       // is it a Ni56, Co56, a fake line, etc
@@ -155,7 +166,7 @@ static void read_decaydata() {
 }
 
 // construct an energy ordered gamma ray line list.
-void init_gamma_linelist() {
+static void init_gamma_linelist() {
   read_decaydata();
 
   // Now do the sorting.
@@ -193,6 +204,43 @@ void init_gamma_linelist() {
   fclose(line_list);
 }
 
+static void init_xcom_photoion_data() {
+  // read the file
+  printout("reading XCOM photoionization data...\n");
+  // reserve memory
+  for (int Z = 0; Z < numb_xcom_elements; Z++) {
+    photoion_data[Z].reserve(100);
+  }
+  std::string filepath{"xcom_photoion_data.txt"};
+  if (!std::filesystem::exists(filepath)) {
+    filepath = "data/xcom_photoion_data.txt";
+  }
+  assert_always(std::filesystem::exists(filepath));
+
+  std::ifstream data_fs(filepath);
+  std::string line_str;
+  // now read the file a second time to store the data
+  while (getline(data_fs, line_str)) {
+    if (line_str[0] != '#') {
+      int Z = 0;
+      double E = 0;
+      double sigma = 0;
+      if (3 == std::sscanf(line_str.c_str(), "%d %lg %lg", &Z, &E, &sigma)) {
+        assert_always(Z > 0);
+        assert_always(Z <= numb_xcom_elements);
+        photoion_data[Z - 1].push_back({.energy = E, .sigma_xcom = sigma});
+      }
+    }
+  }
+}
+
+void init_gamma_data() {
+  init_gamma_linelist();
+  if constexpr (USE_XCOM_GAMMAPHOTOION) {
+    init_xcom_photoion_data();
+  }
+}
+
 void normalise(int nts) {
   const double dt = globals::timesteps[nts].width;
   globals::timesteps[nts].gamma_dep_pathint = 0.;
@@ -207,7 +255,7 @@ void normalise(int nts) {
         globals::dep_estimator_gamma[nonemptymgi] * ONEOVER4PI / dV / dt / globals::nprocs;
 
     assert_testmodeonly(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
-    assert_testmodeonly(isfinite(globals::dep_estimator_gamma[nonemptymgi]));
+    assert_testmodeonly(std::isfinite(globals::dep_estimator_gamma[nonemptymgi]));
   }
 }
 
@@ -378,8 +426,10 @@ static auto thomson_angle() -> double {
   return mu;
 }
 
-[[nodiscard]] static auto scatter_dir(std::span<const double, 3> dir_in, const double cos_theta)
-    -> std::array<double, 3>
+
+[[nodiscard]] static auto scatter_dir(const std::array<double, 3> dir_in,
+                                      const double cos_theta) -> std::array<double, 3>
+
 // Routine for scattering a direction through angle theta.
 {
   // begin with setting the direction in coordinates where original direction
@@ -496,12 +546,7 @@ static void compton_scatter(Packet &pkt)
 
     // Now convert back again.
 
-    // get_velocity(pkt.pos, vel_vec, (-1 * pkt.prop_time));
-    vec_scale(vel_vec, -1.);
-
-    auto final_dir = angle_ab(new_dir, vel_vec);
-
-    pkt.dir = final_dir;
+    pkt.dir = angle_ab(new_dir, vec_scale(vel_vec, -1.));
 
     assert_testmodeonly(std::fabs(vec_len(pkt.dir) - 1.) < 1e-10);
 
@@ -527,31 +572,87 @@ static auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
   // Start by working out the x-section in the co-moving frame.
 
   const int mgi = grid::get_cell_modelgridindex(pkt.where);
+
+  if (mgi >= grid::get_npts_model()) {
+    // empty cell
+    return 0.;
+  }
+
   const double rho = grid::get_rho(mgi);
 
   if (globals::gamma_kappagrey < 0) {
-    // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
+    chi_cmf = 0.;
+    if (!USE_XCOM_GAMMAPHOTOION) {
+      // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
 
-    // 2.41326e19 Hz = 100 keV / H
-    const double hnu_over_100kev = pkt.nu_cmf / 2.41326e+19;
+      // 2.41326e19 Hz = 100 keV / H
+      const double hnu_over_100kev = pkt.nu_cmf / 2.41326e+19;
 
-    // double sigma_cmf_cno = 0.0448e-24 * pow(hnu_over_100kev, -3.2);
+      // double sigma_cmf_cno = 0.0448e-24 * pow(hnu_over_100kev, -3.2);
 
-    const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
+      const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
 
-    const double sigma_cmf_fe = 25.7e-24 * pow(hnu_over_100kev, -3.0);
+      const double sigma_cmf_fe = 25.7e-24 * pow(hnu_over_100kev, -3.0);
 
-    // Now need to multiply by the particle number density.
+      // Now need to multiply by the particle number density.
 
-    const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
-    // Assumes Z = 14. So mass = 28.
+      const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
+      // Assumes Z = 14. So mass = 28.
 
-    const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
-    // Assumes Z = 28. So mass = 56.
+      const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
+      // Assumes Z = 28. So mass = 56.
 
-    const double f_fe = grid::get_ffegrp(mgi);
+      const double f_fe = grid::get_ffegrp(mgi);
 
-    chi_cmf = (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
+      chi_cmf = (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
+    } else {
+      const double hnu_over_1MeV = pkt.nu_cmf / 2.41326e+20;
+      const double log10_hnu_over_1MeV = log10(hnu_over_1MeV);
+      for (int i = 0; i < get_nelements(); i++) {
+        // determine charge number:
+        const int Z = get_atomicnumber(i);
+        auto numb_energies = std::ssize(photoion_data[Z - 1]);
+        if (numb_energies == 0) {
+          continue;
+        }
+        const double n_i = grid::get_elem_numberdens(mgi, i);  // number density in the current cell
+        if (n_i == 0) {
+          continue;
+        }
+        // get indices of lower and upper boundary
+        int E_gtr_idx = -1;
+
+        for (int j = 0; j < numb_energies; j++) {
+          if (photoion_data[Z - 1][j].energy > hnu_over_1MeV) {
+            E_gtr_idx = j;
+            break;
+          }
+        }
+        if (E_gtr_idx == 0) {  // packet energy smaller than all tabulated values
+          chi_cmf += photoion_data[Z - 1][0].sigma_xcom * n_i;
+          continue;
+        }
+        if (E_gtr_idx == -1) {  // packet energy greater than all tabulated values
+          chi_cmf += photoion_data[Z - 1][numb_energies - 1].sigma_xcom * n_i;
+          continue;
+        }
+        assert_always(E_gtr_idx > 0);
+        assert_always(E_gtr_idx < numb_energies);
+        const int E_smaller_idx = E_gtr_idx - 1;
+        assert_always(E_smaller_idx >= 0);
+        const double log10_E = log10_hnu_over_1MeV;
+        const double log10_E_gtr = log10(photoion_data[Z - 1][E_gtr_idx].energy);
+        const double log10_E_smaller = log10(photoion_data[Z - 1][E_smaller_idx].energy);
+        const double log10_sigma_lower = log10(photoion_data[Z - 1][E_smaller_idx].sigma_xcom);
+        const double log10_sigma_gtr = log10(photoion_data[Z - 1][E_gtr_idx].sigma_xcom);
+        // interpolate or extrapolate, both linear in log10-log10 space
+        const double log10_intpol = log10_E_smaller + (log10_sigma_gtr - log10_sigma_lower) /
+                                                          (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller);
+        const double sigma_intpol = pow(10., log10_intpol) * 1.0e-24;  // now in cm^2
+        const double chi_cmf_contrib = sigma_intpol * n_i;
+        chi_cmf += chi_cmf_contrib;
+      }
+    }
   } else {
     chi_cmf = globals::gamma_kappagrey * rho;
   }
@@ -672,8 +773,8 @@ static void update_gamma_dep(const Packet &pkt, const double dist, const int mgi
   //  3) divided by 4 pi sr
   //  This will all be done later
   assert_testmodeonly(heating_cont >= 0.);
-  assert_testmodeonly(isfinite(heating_cont));
-  safeadd(globals::dep_estimator_gamma[nonemptymgi], heating_cont);
+  assert_testmodeonly(std::isfinite(heating_cont));
+  atomicadd(globals::dep_estimator_gamma[nonemptymgi], heating_cont);
 }
 
 void pair_prod(Packet &pkt) {

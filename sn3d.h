@@ -23,6 +23,14 @@
 #define EXEC_PAR
 #endif
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <cassert>
 #include <csignal>
 #include <cstdio>
@@ -33,32 +41,39 @@
 #include <random>
 #include <string_view>
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
+#include "constants.h"
 
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
-
-inline constexpr int cellcacheslotid = 0;
+constexpr int cellcacheslotid = 0;
 inline bool use_cellcache = false;
 
 extern std::mt19937 stdrng;
 
 extern std::ofstream output_file;
 
-inline gsl_integration_workspace *gslworkspace = nullptr;
 inline char outputlinebuf[1024] = "";
 inline bool outputstartofline = true;
 inline struct tm timebuf {};
 
-#ifdef _OPENMP
-#ifdef GPU_ON
-// #pragma omp requires unified_shared_memory
-#else
-#pragma omp threadprivate(cellcacheslotid, stdrng, gslworkspace, output_file, outputlinebuf, outputstartofline, timebuf)
+// if not set, force Simpson integrator on GPU mode (since gsl doesn't work there!)
+#ifndef USE_SIMPSON_INTEGRATOR
+#define USE_SIMPSON_INTEGRATOR false
 #endif
+
+inline void nop(gsl_integration_workspace *w) {};
+
+inline thread_local auto gslworkspace =
+    std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace *)>{
+        USE_SIMPSON_INTEGRATOR ? nullptr : gsl_integration_workspace_alloc(GSLWSIZE),
+        USE_SIMPSON_INTEGRATOR ? nop : gsl_integration_workspace_free};
+
+#ifdef _OPENMP
+
+#ifdef GPU_ON
+#pragma omp requires unified_shared_memory
+#else
+#pragma omp threadprivate(stdrng, output_file, outputlinebuf, outputstartofline, timebuf)
+#endif
+
 #endif
 
 inline void print_line_start() {
@@ -103,14 +118,11 @@ inline void print_line_start() {
 #if defined TESTMODE && TESTMODE
 #define assert_testmodeonly(e) __artis_assert(e)
 #else
-#define assert_testmodeonly(e) \
-  if (!(e)) {                  \
-    __builtin_unreachable();   \
-  }
+#define assert_testmodeonly(e) (void)0
 #endif
 
 template <typename T>
-inline void safeadd(T &var, T val) {
+inline void atomicadd(T &var, const T &val) {
 #ifdef _OPENMP
 #pragma omp atomic update
   var += val;
@@ -128,8 +140,6 @@ inline void safeadd(T &var, T val) {
 #endif
 #endif
 }
-
-#define safeincrement(var) safeadd((var), 1)
 
 inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
   if (gsl_errno != 18)  // roundoff error
@@ -178,6 +188,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
   return bflutindex;
 }
+
 [[nodiscard]] inline auto get_timestep(const double time) -> int {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);

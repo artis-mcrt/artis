@@ -1,7 +1,10 @@
 #include "stats.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <array>
-#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
@@ -13,37 +16,27 @@
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
-#include "packet.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "nonthermal.h"
+#include "packet.h"
 #include "sn3d.h"
 
 namespace stats {
 
-static double *ionstats = nullptr;
-static std::array<std::atomic<ptrdiff_t>, COUNTER_COUNT> eventstats{};
+namespace {
+
+std::vector<double> ionstats;
+std::array<ptrdiff_t, COUNTER_COUNT> eventstats{};
+
+}  // anonymous namespace
 
 void init() {
-  assert_always(eventstats[0].is_lock_free());
   if constexpr (TRACK_ION_STATS) {
-    ionstats =
-        static_cast<double *>(malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double)));
-  }
-}
-
-void cleanup() {
-  if constexpr (TRACK_ION_STATS) {
-    free(ionstats);
+    ionstats.resize(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT, 0.);
   }
 }
 
 void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype,
                          const double increment) {
-  if constexpr (!TRACK_ION_MASTATS) {
-    return;
-  }
   if (ionstattype >= 18) {
     return;
   }
@@ -52,7 +45,7 @@ void increment_ion_stats(const int modelgridindex, const int element, const int 
   assert_testmodeonly(ionstattype < ION_STAT_COUNT);
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  safeadd(
+  atomicadd(
       ionstats[modelgridindex * get_includedions() * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype],
       increment);
 }
@@ -169,7 +162,7 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
 void increment(enum eventcounters i) {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < COUNTER_COUNT);
-  eventstats[i]++;
+  atomicadd(eventstats[i], static_cast<ptrdiff_t>(1));
 }
 
 void pkt_action_counters_reset() {
@@ -233,7 +226,6 @@ void pkt_action_counters_printout(const int nts) {
   printout("timestep %d: escounter = %td\n", nts, get_counter(COUNTER_ESCOUNTER));
   printout("timestep %d: cellcrossing  = %td\n", nts, get_counter(COUNTER_CELLCROSSINGS));
   printout("timestep %d: updatecellcounter  = %td\n", nts, get_counter(COUNTER_UPDATECELL));
-  printout("timestep %d: coolingratecalccounter = %td\n", nts, get_counter(COUNTER_COOLINGRATECALCCOUNTER));
   printout("timestep %d: resonancescatterings  = %td\n", nts, get_counter(COUNTER_RESONANCESCATTERINGS));
 
   printout("timestep %d: upscatterings  = %td\n", nts, get_counter(COUNTER_UPSCATTER));
@@ -242,8 +234,9 @@ void pkt_action_counters_printout(const int nts) {
 
 void reduce_estimators() {
 #ifdef MPI_ON
-  MPI_Allreduce(MPI_IN_PLACE, stats::ionstats, grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT,
-                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, stats::ionstats.data(),
+                grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT, MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD);
 #endif
 }
 }  // namespace stats

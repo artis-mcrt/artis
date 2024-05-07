@@ -1,8 +1,14 @@
 #include "nonthermal.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_cblas.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_matrix_double.h>
+#include <gsl/gsl_permutation.h>
 #include <gsl/gsl_vector_double.h>
 
 #include <algorithm>
@@ -20,13 +26,8 @@
 #include "decay.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_cblas.h"
-#include "gsl/gsl_permutation.h"
 #include "ltepop.h"
 #include "macroatom.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "packet.h"
 #include "sn3d.h"
 #include "stats.h"
@@ -103,7 +104,7 @@ struct collionrow {
 
 static std::vector<collionrow> colliondata;
 
-static FILE *nonthermalfile = nullptr;
+static FILE *nonthermalfile{};
 static bool nonthermal_initialized = false;
 
 static gsl_vector *envec;      // energy grid on which solution is sampled
@@ -125,23 +126,23 @@ struct nt_excitation_struct {
 };
 
 struct nt_solution_struct {
-  double *yfunc = nullptr;  // Samples of the Spencer-Fano solution function. Multiply by energy to get non-thermal
-                            // electron number flux. y(E) * dE is the flux of electrons with energy in the range (E, E +
-                            // dE) y has units of particles / cm2 / s / eV
+  double *yfunc{};  // Samples of the Spencer-Fano solution function. Multiply by energy to get non-thermal
+                    // electron number flux. y(E) * dE is the flux of electrons with energy in the range (E, E +
+                    // dE) y has units of particles / cm2 / s / eV
 
   float frac_heating = 1.;     // energy fractions should add up to 1.0 if the solution is good
   float frac_ionization = 0.;  // fraction of deposition energy going to ionization
   float frac_excitation = 0.;  // fraction of deposition energy going to excitation
 
   // these points arrays of length includedions
-  float *eff_ionpot = nullptr;  // these are used to calculate the non-thermal ionization rate
+  float *eff_ionpot{};  // these are used to calculate the non-thermal ionization rate
   double *fracdep_ionization_ion =
       nullptr;  // the fraction of the non-thermal deposition energy going to ionizing this ion
 
   // these  point to arrays of length includedions * (NT_MAX_AUGER_ELECTRONS + 1)
-  float *prob_num_auger = nullptr;       // probability that one ionisation of this ion will produce n Auger electrons.
-                                         // elements sum to 1.0 for a given ion
-  float *ionenfrac_num_auger = nullptr;  // like above, but energy weighted. elements sum to 1.0 for an ion
+  float *prob_num_auger{};       // probability that one ionisation of this ion will produce n Auger electrons.
+                                 // elements sum to 1.0 for a given ion
+  float *ionenfrac_num_auger{};  // like above, but energy weighted. elements sum to 1.0 for an ion
 
   std::vector<nt_excitation_struct> frac_excitations_list;
 
@@ -758,8 +759,7 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
     return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(2 * energy / zetae);
   }
   const double v = sqrt(2 * energy / ME);
-  const double eulergamma = 0.577215664901532;
-  return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(ME * pow(v, 3) / (eulergamma * pow(QE, 2) * omegap));
+  return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(ME * pow(v, 3) / (EULERGAMMA * pow(QE, 2) * omegap));
 }
 
 constexpr auto xs_excitation(const int element, const int ion, const int lower, const int uptransindex,
@@ -1239,7 +1239,7 @@ static auto get_oneoverw(const int element, const int ion, const int modelgridin
 
   const double Aconst = 1.33e-14 * EV * EV;
   const double binding = get_mean_binding_energy(element, ion);
-  const double oneoverW = Aconst * binding / Zbar / (2 * 3.14159 * pow(QE, 4));
+  const double oneoverW = Aconst * binding / Zbar / (2 * PI * pow(QE, 4));
   // printout("For element %d ion %d I got W of %g (eV)\n", element, ion, 1./oneoverW/EV);
 
   return oneoverW;
@@ -1430,11 +1430,11 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
     }
     nt_solution[modelgridindex].eff_ionpot[get_uniqueionindex(element, ion)] = eff_ionpot;
   } else {
+    printout("WARNING! No matching subshells in NT impact ionisation cross section data for Z=%d ionstage %d.\n",
+             get_atomicnumber(element), get_ionstage(element, ion));
     printout(
-        "WARNING! No matching subshells in NT impact ionisation cross section data for Z=%d ionstage %d.\n "
-        "-> Defaulting to work function approximation and ionisation energy is not accounted for in "
-        "Spencer-Fano solution.\n",
-        get_atomicnumber(element), get_ionstage(element, ion));
+        "-> Defaulting to work function approximation and ionisation energy is not accounted for in Spencer-Fano "
+        "solution.\n");
 
     nt_solution[modelgridindex].eff_ionpot[get_uniqueionindex(element, ion)] =
         1. / get_oneoverw(element, ion, modelgridindex);
@@ -1670,7 +1670,8 @@ static auto ion_ntion_energyrate(int modelgridindex, int element, int lowerion) 
   // returns the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
   const double nnlowerion = get_nnion(modelgridindex, element, lowerion);
   double enrate = 0.;
-  for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
+  const auto maxupperion = nt_ionisation_maxupperion(element, lowerion);
+  for (int upperion = lowerion + 1; upperion <= maxupperion; upperion++) {
     const double upperionprobfrac =
         nt_ionization_upperion_probability(modelgridindex, element, lowerion, upperion, false);
     // for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
@@ -1735,7 +1736,7 @@ static auto select_nt_ionization(int modelgridindex) -> std::tuple<int, int> {
 }
 
 void do_ntlepton(Packet &pkt) {
-  safeadd(nt_energy_deposited, pkt.e_cmf);
+  atomicadd(nt_energy_deposited, pkt.e_cmf);
 
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
 

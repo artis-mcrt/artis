@@ -19,14 +19,14 @@ ifeq ($(MPI),ON)
 $(info $(shell mpicxx --showme:version 2> /dev/null))
 else ifeq ($(MPI),OFF)
 else
-$(error bad value for MPI option. Should be ON or OFF)
+  $(error bad value for MPI option. Should be ON or OFF)
 endif
 
 ifeq ($(TESTMODE),ON)
 else ifeq ($(TESTMODE),OFF)
 else ifeq ($(TESTMODE),)
 else
-$(error bad value for testmode option. Should be ON or OFF)
+  $(error bad value for testmode option. Should be ON or OFF)
 endif
 
 
@@ -34,8 +34,10 @@ COMPILER_VERSION := $(shell $(CXX) --version)
 $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
   COMPILER_NAME := CLANG
+  CXXFLAGS += -flto=thin
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
   COMPILER_NAME := GCC
+  CXXFLAGS += -flto=auto
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
   COMPILER_NAME := NVHPC
 else
@@ -45,25 +47,29 @@ endif
 
 $(info detected compiler is $(COMPILER_NAME))
 
-ifeq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -std=c++20
-	GPU := ON
-else
-	CXXFLAGS += -std=c++20 -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
+CXXFLAGS += -std=c++20 -fstrict-aliasing
+# CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
+
+ifneq ($(COMPILER_NAME),NVHPC)
+	CXXFLAGS += -ftree-vectorize -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
 	# add -ftrivial-auto-var-init=zero when we drop gcc 11 support
 endif
 
-
-CXXFLAGS += -fstrict-aliasing
-
+# profile-guided optimisation
+# generate profile:
+# CXXFLAGS += -fprofile-generate="profdataraw"
+# for clang, run this to convert the raw data to profdata
+# llvm-profdata merge -output=profdata profdataraw/*
+# compile with PGO:
+# CXXFLAGS += -fprofile-use="profdataraw"
 
 ifeq ($(GPU),ON)
-	CXXFLAGS += -DGPU_ON=true
+	CXXFLAGS += -DGPU_ON=true -DUSE_SIMPSON_INTEGRATOR=true
 	BUILD_DIR := $(BUILD_DIR)_gpu
 else ifeq ($(GPU),OFF)
 else ifeq ($(GPU),)
 else
-$(error bad value for GPU option. Should be ON or OFF)
+    $(error bad value for GPU option. Should be ON or OFF)
 endif
 
 ifeq ($(OPENMP),ON)
@@ -72,18 +78,19 @@ ifeq ($(OPENMP),ON)
   endif
   BUILD_DIR := $(BUILD_DIR)_openmp
 
-  ifeq ($(COMPILER_NAME),NVHPC)
-    CXXFLAGS += -mp=gpu -gpu=unified
-  else ifeq ($(COMPILER_NAME),CLANG)
-    CXXFLAGS += -Xpreprocessor -fopenmp
-    LDFLAGS += -lomp
-  else
-    CXXFLAGS += -fopenmp
-  endif
+	ifeq ($(COMPILER_NAME),NVHPC)
+	  CXXFLAGS += -mp=gpu -gpu=unified
+	else ifeq ($(COMPILER_NAME),CLANG)
+		CXXFLAGS += -Xpreprocessor -fopenmp
+		LDFLAGS += -lomp
+	else ifeq ($(COMPILER_NAME),GCC)
+		CXXFLAGS += -fopenmp
+	endif
+
 else ifeq ($(OPENMP),OFF)
 else ifeq ($(OPENMP),)
 else
-  $(error bad value for OPENMP option. Should be ON or OFF)
+    $(error bad value for OPENMP option. Should be ON or OFF)
 endif
 
 ifeq ($(STDPAR),ON)
@@ -91,14 +98,15 @@ ifeq ($(STDPAR),ON)
   BUILD_DIR := $(BUILD_DIR)_stdpar
 
   ifeq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -stdpar=gpu -gpu=unified
-  else ifeq ($(COMPILER_NAME),GCC)
-    LDFLAGS += -ltbb
+		CXXFLAGS += -stdpar=gpu -gpu=unified
   else ifeq ($(COMPILER_NAME),CLANG)
-	# CXXFLAGS += -fexperimental-library
-    LDFLAGS += -ltbb
-	# LDFLAGS += -Xlinker -debug_snapshot
+		# CXXFLAGS += -fexperimental-library
+		LDFLAGS += -ltbb
+		# LDFLAGS += -Xlinker -debug_snapshot
+  else ifeq ($(COMPILER_NAME),GCC)
+		LDFLAGS += -ltbb
   endif
+
 else ifeq ($(STDPAR),OFF)
 else ifeq ($(STDPAR),)
 else
@@ -115,7 +123,7 @@ ifeq ($(shell uname -s),Darwin)
 
 	ifeq ($(COMPILER_NAME),GCC)
 #		fixes linking on macOS with gcc
-		LDFLAGS += -Wl,-ld_classic
+		LDFLAGS += -Xlinker -ld_classic
 	endif
 
 	ifeq ($(shell uname -m),arm64)
@@ -126,7 +134,7 @@ ifeq ($(shell uname -s),Darwin)
 		CXXFLAGS += -march=native
 	endif
 
-	CXXFLAGS += -fno-omit-frame-pointer
+	CXXFLAGS += -fno-omit-frame-pointer -g
 #	CXXFLAGS += -Rpass=loop-vectorize
 #	CXXFLAGS += -Rpass-missed=loop-vectorize
 #	CXXFLAGS += -Rpass-analysis=loop-vectorize
@@ -136,7 +144,6 @@ ifeq ($(shell uname -s),Darwin)
 	# add -lprofiler for gperftools
 	# LDFLAGS += $(LIB)
 	# LDFLAGS += -lprofiler
-	CXXFLAGS += $(shell pkg-config --cflags ompi)
 
 else
 	# sometimes the login nodes have slighty different CPUs
@@ -183,8 +190,7 @@ ifeq ($(TESTMODE),ON)
 	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
 	CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG
 
-	# TODO: re-enable -fsanitize=address when GitHub actions stops failing on it
-	CXXFLAGS += -fsanitize=undefined
+	CXXFLAGS += -fsanitize=undefined,address
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else

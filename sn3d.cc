@@ -12,6 +12,10 @@
 
 #include "sn3d.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <getopt.h>
 #include <sys/unistd.h>
 #include <unistd.h>
@@ -23,8 +27,11 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
-#include <memory>
+#include <random>
 #include <span>
+#ifdef STDPAR_ON
+#include <thread>
+#endif
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -33,11 +40,9 @@
 #include "gammapkt.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_integration.h"
 #include "input.h"
 #include "macroatom.h"
 #ifdef MPI_ON
-#include "mpi.h"
 #include "rpkt.h"
 #endif
 #include "nltepop.h"
@@ -45,7 +50,7 @@
 #include "packet.h"
 #include "radfield.h"
 #include "ratecoeff.h"
-#include "spectrum.h"
+#include "spectrum_lightcurve.h"
 #include "stats.h"
 #include "update_grid.h"
 #include "update_packets.h"
@@ -56,17 +61,19 @@ std::mt19937 stdrng{std::random_device{}()};
 
 std::ofstream output_file;
 
-static FILE *linestat_file = nullptr;
-static auto real_time_start = -1;
-static auto time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
-static FILE *estimators_file = nullptr;
+namespace {
+
+FILE *linestat_file{};
+auto real_time_start = -1;
+auto time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
+FILE *estimators_file{};
 
 #ifdef MPI_ON
-static size_t mpi_grid_buffer_size = 0;
-static char *mpi_grid_buffer = nullptr;
+size_t mpi_grid_buffer_size = 0;
+char *mpi_grid_buffer{};
 #endif
 
-static void initialise_linestat_file() {
+void initialise_linestat_file() {
   if (globals::simulation_continued_from_saved && !RECORD_LINESTAT) {
     // only write linestat.out on the first run, unless it contains statistics for each timestep
     return;
@@ -100,10 +107,9 @@ static void initialise_linestat_file() {
   fprintf(linestat_file, "\n");
 
   fflush(linestat_file);
-  // setvbuf(linestat_file,nullptr, _IOLBF, 1); // flush after every line makes it slow!
 }
 
-static void write_deposition_file(const int nts, const int my_rank, const int nstart, const int ndo) {
+void write_deposition_file(const int nts, const int my_rank, const int nstart, const int ndo) {
   printout("Calculating deposition rates...\n");
   auto const time_write_deposition_file_start = std::time(nullptr);
   double mtot = 0.;
@@ -209,8 +215,8 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
 }
 
 #ifdef MPI_ON
-static void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart, const int ndo,
-                                            char *mpi_grid_buffer, const size_t mpi_grid_buffer_size) {
+void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart, const int ndo,
+                                     char *mpi_grid_buffer, const size_t mpi_grid_buffer_size) {
   int position = 0;
   for (int root = 0; root < nprocs; root++) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -353,7 +359,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-static void mpi_reduce_estimators(int nts) {
+void mpi_reduce_estimators(int nts) {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
   radfield::reduce_estimators();
   MPI_Barrier(MPI_COMM_WORLD);
@@ -416,7 +422,7 @@ static void mpi_reduce_estimators(int nts) {
 }
 #endif
 
-static void write_temp_packetsfile(const int timestep, const int my_rank, const Packet *pkt) {
+void write_temp_packetsfile(const int timestep, const int my_rank, const Packet *pkt) {
   // write packets binary file (and retry if the write fails)
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
@@ -444,7 +450,7 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, const 
   }
 }
 
-static void remove_temp_packetsfile(const int timestep, const int my_rank) {
+void remove_temp_packetsfile(const int timestep, const int my_rank) {
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
@@ -454,7 +460,7 @@ static void remove_temp_packetsfile(const int timestep, const int my_rank) {
   }
 }
 
-static void remove_grid_restart_data(const int timestep) {
+void remove_grid_restart_data(const int timestep) {
   char prevfilename[MAXFILENAMELENGTH];
   snprintf(prevfilename, MAXFILENAMELENGTH, "gridsave_ts%d.tmp", timestep);
 
@@ -464,7 +470,7 @@ static void remove_grid_restart_data(const int timestep) {
   }
 }
 
-static auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) -> bool {
+auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) -> bool {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -498,7 +504,7 @@ static auto walltime_sufficient_to_continue(const int nts, const int nts_prev, c
   return do_this_full_loop;
 }
 
-static void save_grid_and_packets(const int nts, const int my_rank, Packet *packets) {
+void save_grid_and_packets(const int nts, const int my_rank, Packet *packets) {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -563,7 +569,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, Packet *pack
   }
 }
 
-static void zero_estimators() {
+void zero_estimators() {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -592,8 +598,8 @@ static void zero_estimators() {
 #endif
 }
 
-static auto do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo,
-                        Packet *packets, const int walltimelimitseconds) -> bool {
+auto do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo, Packet *packets,
+                 const int walltimelimitseconds) -> bool {
   bool do_this_full_loop = true;
 
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
@@ -677,7 +683,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
 #endif
 
     printout("During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (t=%gd)\n", nts, my_rank,
-             globals::timesteps[nts].pellet_decays.load(), globals::nesc.load(), globals::timesteps[nts].mid / DAY);
+             globals::timesteps[nts].pellet_decays, globals::nesc, globals::timesteps[nts].mid / DAY);
 
     if (VPKT_ON) {
       printout("During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n", nts,
@@ -731,6 +737,8 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
   return !do_this_full_loop;
 }
 
+}  // anonymous namespace
+
 auto main(int argc, char *argv[]) -> int {
   real_time_start = std::time(nullptr);
   char filename[MAXFILENAMELENGTH];
@@ -758,7 +766,6 @@ auto main(int argc, char *argv[]) -> int {
 #if defined(_OPENMP) && !defined(GPU_ON)
   // Explicitly turn off dynamic threads because we use the threadprivate directive!!!
   omp_set_dynamic(0);
-
 #pragma omp parallel private(filename)
 #endif
   {
@@ -772,12 +779,11 @@ auto main(int argc, char *argv[]) -> int {
 #else
     printout("OpenMP parallelisation is not enabled in this build (this is normal)\n");
 #endif
-
-    gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
   }
 
 #ifdef STDPAR_ON
-  printout("C++ standard parallelism (stdpar) is enabled\n");
+  printout("C++ standard parallelism (stdpar) is enabled with %d hardware threads\n",
+           std::thread::hardware_concurrency());
 #endif
 
 #ifdef GPU_ON
@@ -785,6 +791,8 @@ auto main(int argc, char *argv[]) -> int {
 #endif
 
   printout("time at start %d\n", real_time_start);
+
+  printout("integration method is %s\n", USE_SIMPSON_INTEGRATOR ? "Simpson rule" : "GSL qag");
 
 #ifdef WALLTIMELIMITSECONDS
   int walltimelimitseconds = WALLTIMELIMITSECONDS;
@@ -1003,25 +1011,7 @@ auto main(int argc, char *argv[]) -> int {
   radfield::close_file();
   nonthermal::close_file();
 
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-  {
-    if (output_file) {
-      output_file.close();
-    }
-  }
-
-#ifdef _OPENMP
-  omp_set_dynamic(0);
-#pragma omp parallel
-#endif
-  { gsl_integration_workspace_free(gslworkspace); }
-
   free(packets);
-  if constexpr (TRACK_ION_STATS) {
-    stats::cleanup();
-  }
 
   decay::cleanup();
 

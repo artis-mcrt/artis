@@ -2,6 +2,7 @@
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 
 #include <cmath>
@@ -12,7 +13,6 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_math.h"
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
@@ -20,6 +20,8 @@
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "sn3d.h"
+
+namespace {
 
 struct Te_solution_paras {
   double t_current;
@@ -34,6 +36,74 @@ struct gsl_integral_paras_bfheating {
   float T_R;
   float *photoion_xs;
 };
+
+auto integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas) -> double
+/// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
+{
+  const auto *const params = static_cast<const gsl_integral_paras_bfheating *>(voidparas);
+
+  const int modelgridindex = params->modelgridindex;
+  const double nu_edge = params->nu_edge;
+  const float T_R = params->T_R;
+  // const double Te_TR_factor = params->Te_TR_factor; // = sqrt(T_e/T_R) * sahafac(Te) / sahafac(TR)
+
+  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
+
+  // const auto T_e = grid::get_Te(modelgridindex);
+  // return sigma_bf * (1 - nu_edge/nu) * radfield::radfield(nu,modelgridindex) * (1 - Te_TR_factor * exp(-HOVERKB * nu
+  // / T_e));
+
+  return sigma_bf * (1 - nu_edge / nu) * radfield::radfield(nu, modelgridindex) * (1 - exp(-HOVERKB * nu / T_R));
+}
+
+auto calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex) -> double {
+  double error = 0.;
+  const double epsrel = 1e-3;
+  const double epsrelwarning = 1e-1;
+  const double epsabs = 0.;
+
+  // const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+  // const double E_threshold = epsilon(element, ion + 1, upperionlevel) - epsilon(element, ion, level);
+  const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+
+  const double nu_threshold = ONEOVERH * E_threshold;
+  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
+
+  // const auto T_e = grid::get_Te(modelgridindex);
+  // const double T_R = grid::get_TR(modelgridindex);
+  // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
+  // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
+
+  const gsl_integral_paras_bfheating intparas = {
+      .nu_edge = nu_threshold,
+      .modelgridindex = modelgridindex,
+      .T_R = grid::get_TR(modelgridindex),
+      .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs};
+
+  // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
+
+  double bfheating = 0.;
+
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+
+  const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(
+      intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &bfheating, &error);
+
+  if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning)) {
+    printout(
+        "bf_heating integrator gsl warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d "
+        "integral %g error %g\n",
+        status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level, phixstargetindex,
+        bfheating, error);
+  }
+  gsl_set_error_handler(previous_handler);
+
+  bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+
+  return bfheating;
+}
+
+}  // anonymous namespace
 
 auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T_R, double W) -> double {
   /// The correction factor for stimulated emission in gammacorr is set to its
@@ -59,80 +129,6 @@ auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetinde
   return W * bfheatingcoeff;
 }
 
-static auto integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas) -> double
-/// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
-{
-  const gsl_integral_paras_bfheating *const params = static_cast<gsl_integral_paras_bfheating *>(voidparas);
-
-  const int modelgridindex = params->modelgridindex;
-  const double nu_edge = params->nu_edge;
-  const float T_R = params->T_R;
-  // const double Te_TR_factor = params->Te_TR_factor; // = sqrt(T_e/T_R) * sahafac(Te) / sahafac(TR)
-
-  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
-
-  // const auto T_e = grid::get_Te(modelgridindex);
-  // return sigma_bf * (1 - nu_edge/nu) * radfield::radfield(nu,modelgridindex) * (1 - Te_TR_factor * exp(-HOVERKB * nu
-  // / T_e));
-
-  return sigma_bf * (1 - nu_edge / nu) * radfield::radfield(nu, modelgridindex) * (1 - exp(-HOVERKB * nu / T_R));
-}
-
-static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
-                                     int modelgridindex) -> double {
-  double error = 0.;
-  const double epsrel = 1e-3;
-  const double epsrelwarning = 1e-1;
-  const double epsabs = 0.;
-
-  // const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-  // const double E_threshold = epsilon(element, ion + 1, upperionlevel) - epsilon(element, ion, level);
-  const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
-
-  const double nu_threshold = ONEOVERH * E_threshold;
-  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
-
-  // const auto T_e = grid::get_Te(modelgridindex);
-  // const double T_R = grid::get_TR(modelgridindex);
-  // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
-  // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
-
-  gsl_integral_paras_bfheating intparas = {
-      .nu_edge = nu_threshold,
-      .modelgridindex = modelgridindex,
-      .T_R = grid::get_TR(modelgridindex),
-      .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs};
-
-  // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
-
-  double bfheating = 0.;
-  const gsl_function F_bfheating = {.function = &integrand_bfheatingcoeff_custom_radfield, .params = &intparas};
-
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-
-  const int status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE,
-                                         GSL_INTEG_GAUSS61, gslworkspace, &bfheating, &error);
-  // const int status = gsl_integration_qags(
-  //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
-  //   GSLWSIZE, workspace_bfheating, &bfheating, &error);
-  // const int status = radfield_integrate(
-  //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
-  //    GSLWSIZE, GSL_INTEG_GAUSS61, workspace_bfheating, &bfheating, &error);
-
-  if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning)) {
-    printout(
-        "bf_heating integrator gsl warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d "
-        "integral %g error %g\n",
-        status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level, phixstargetindex,
-        bfheating, error);
-  }
-  gsl_set_error_handler(previous_handler);
-
-  bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
-
-  return bfheating;
-}
-
 void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatingcoeffs) {
   // depends only the radiation field
   // no dependence on T_e or populations
@@ -151,8 +147,8 @@ void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatin
       for (int level = 0; level < nlevels; level++) {
         double bfheatingcoeff = 0.;
         if (grid::get_elem_abundance(modelgridindex, element) > minelfrac || USE_LUT_BFHEATING) {
-          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level);
-               phixstargetindex++) {
+          const auto nphixstargets = get_nphixstargets(element, ion, level);
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             if constexpr (!USE_LUT_BFHEATING) {
               bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
             } else {
@@ -227,57 +223,9 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
         C_deexc += get_heating_ion_coll_deexc(modelgridindex, element, ion, T_e, nne);
       }
     }
-    //
-    //         /// Collisional heating: recombination to lower ionization stage
-    //         /// ------------------------------------------------------------
-    //         /// For the moment we deal only with ionisations to the next ions groundlevel.
-    //         /// For speed issues (reduced number of calls to epsilon) this is checked here
-    //         /// instead of the more general way to check in col_recomb!
-    //         if (ion > 0 && level == 0) /// Check whether lower ionisation stage available
-    //         {
-    //           for (lower = 0; lower < nlevels_lowerion; lower++)
-    //           {
-    //             epsilon_trans = epsilon_current - epsilon(element,ion-1,lower);
-    //             C = col_recombination(pkt,lower,epsilon_trans)*epsilon_trans;
-    //             C_recomb += C;
-    //           }
-    //         }
-    //
-    //
-    //         /*
-    //         /// Bound-free heating (analytical calculation)
-    //         /// -------------------------------------------
-    //         /// We allow bound free-transitions only if there is a higher ionisation stage
-    //         /// left in the model atom to match the bound-free absorption in the rpkt routine.
-    //         /// There this condition is needed as we can only ionise to existing ionisation
-    //         /// stage even if there would be further ionisation stages in nature which
-    //         /// are not included in the model atom.
-    //         if (ion < nions-1)
-    //         {
-    //           epsilon_trans = epsilon(element,ion+1,0) - epsilon_current;
-    //           /// NB: W comes from the fact, that the W coming from the radiation field was factored
-    //           /// out in the precalculation of the bf-heating coefficient (this is justified by the
-    //           /// linear dependence on W).
-    //           /// The rate coefficient is calculated under the assumption T_e=T_R because its direct
-    //           /// T_e dependence is very weak. This means we have to pass T_R as the temperature
-    //           /// even if we are iterating here on T_e. (Otherwise we would allow a large temperature
-    //           /// range for T_R which changes the coefficient strongly).
-    //           //C = interpolate_bfheatingcoeff(element,ion,level,T_R)*W*nnlevel;
-    //           C = nnlevel * (W*interpolate_bfheatingcoeff_below(element,ion,level,T_R));// +
-    //           W_D*interpolate_bfheatingcoeff_above(element,ion,level,T_D));
-    //
-    //           /// Exact calculation of the bf-heating coefficients using integrators.
-    //           /// This makes things SLOW!!!
-    //           //bfheatingparas.nu_edge = epsilon_trans/H;
-    //           //F_bfheating.params = &bfheatingparas;
-    //           /// Discuss about the upper frequency limit (here 1e16 Hz) which we should choose
-    //           //gsl_integration_qag(&F_bfheating, bfheatingparas.nu_edge, 10*bfheatingparas.nu_edge, 0, intaccuracy,
-    //           1024, 6, wspace, &bfhelper, &error);
-    //           //C = bfhelper * FOURPI * nnlevel;
-    //           bfheating += C;
-    //         }
-    //         */
-    //       }
+
+    /// Collisional heating: recombination to lower ionization stage (not included)
+    /// ------------------------------------------------------------
 
     /// Bound-free heating (renormalised analytical calculation)
     /// --------------------------------------------------------
@@ -296,31 +244,10 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
     }
   }
 
-  /// Free-free heating
-  /// -----------------
-  /// From estimators
+  /// Free-free heating (from estimators)
 
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   ffheating = globals::ffheatingestimator[nonemptymgi];
-
-  /// Analytical calculation using T, and populations
-  /// This is always taken as an additional process to the other importantheatingterms
-  /// because its not done per ion but overall ions.
-  /*
-  gsl_function F_ffheating;
-  F_ffheating.function = &ffheating_integrand_gsl;
-
-  gslintegration_ffheatingparas intparas;
-  intparas.T_e = T_e;
-  intparas.cellnumber = cellnumber;
-  F_ffheating.params = &intparas;
-
-  /// Discuss about the upper frequency limit (here 1e16 Hz) which we should choose
-  gsl_integration_qag(&F_ffheating, 0, 1e16, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wspace, &ffheating, &error);
-  /// or this integrator
-  //gsl_integration_qng(&F_ffheating, 0, 1e16, 0, intaccuracy, &ffheating, &error, &neval);
-  ffheating *= FOURPI;
-  */
 
   if constexpr (DIRECT_COL_HEAT) {
     heatingcoolingrates->heating_collisional = C_deexc;

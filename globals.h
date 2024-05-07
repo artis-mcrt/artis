@@ -2,6 +2,10 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -11,32 +15,28 @@
 #include <mutex>
 #include <vector>
 
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
-
 #include "artisoptions.h"
 
 struct TimeStep {
-  double start;                    // time at start of this timestep. [s]
-  double width;                    // Width of timestep. [s]
-  double mid;                      // Mid time in step - computed logarithmically. [s]
-  double gamma_dep;                // cmf gamma ray energy deposition from absorption events [erg]
-  double gamma_dep_pathint;        // cmf gamma ray energy deposition from packet trajectories [erg]
-  double positron_dep;             // cmf positron energy deposition [erg]
-  double eps_positron_ana_power;   // cmf positron KE energy generation rate analytical [erg/s]
-  double electron_dep;             // cmf electron energy deposition [erg]
-  double electron_emission;        // cmf electron KE energy generation [erg]
-  double eps_electron_ana_power;   // cmf electron KE energy generation rate analytical [erg/s]
-  double alpha_dep;                // cmf alpha energy deposition [erg]
-  double alpha_emission;           // cmf alpha KE energy generation [erg]
-  double eps_alpha_ana_power;      // cmf alpha KE energy generation rate analytical [erg/s]
-  double gamma_emission;           // gamma decay energy generation in this timestep [erg]
-  double qdot_betaminus;           // energy generation from beta-minus decays (including neutrinos) [erg/s/g]
-  double qdot_alpha;               // energy generation from alpha decays (including neutrinos) [erg/s/g]
-  double qdot_total;               // energy generation from all decays (including neutrinos) [erg/s/g]
-  double cmf_lum;                  // cmf luminosity light curve [erg]
-  std::atomic<int> pellet_decays;  // Number of pellets that decay in this time step.
+  double start;                   // time at start of this timestep. [s]
+  double width;                   // Width of timestep. [s]
+  double mid;                     // Mid time in step - computed logarithmically. [s]
+  double gamma_dep;               // cmf gamma ray energy deposition from absorption events [erg]
+  double gamma_dep_pathint;       // cmf gamma ray energy deposition from packet trajectories [erg]
+  double positron_dep;            // cmf positron energy deposition [erg]
+  double eps_positron_ana_power;  // cmf positron KE energy generation rate analytical [erg/s]
+  double electron_dep;            // cmf electron energy deposition [erg]
+  double electron_emission;       // cmf electron KE energy generation [erg]
+  double eps_electron_ana_power;  // cmf electron KE energy generation rate analytical [erg/s]
+  double alpha_dep;               // cmf alpha energy deposition [erg]
+  double alpha_emission;          // cmf alpha KE energy generation [erg]
+  double eps_alpha_ana_power;     // cmf alpha KE energy generation rate analytical [erg/s]
+  double gamma_emission;          // gamma decay energy generation in this timestep [erg]
+  double qdot_betaminus;          // energy generation from beta-minus decays (including neutrinos) [erg/s/g]
+  double qdot_alpha;              // energy generation from alpha decays (including neutrinos) [erg/s/g]
+  double qdot_total;              // energy generation from all decays (including neutrinos) [erg/s/g]
+  double cmf_lum;                 // cmf luminosity light curve [erg]
+  int pellet_decays;              // Number of pellets that decay in this time step.
 };
 
 struct BFListEntry {
@@ -56,6 +56,7 @@ struct FullPhotoionTransition {
   float *photoion_xs;
   double probability;
   int index_in_groundphixslist;
+  int bfestimindex;
 };
 
 struct GroundPhotoion {
@@ -79,15 +80,15 @@ struct LevelTransition {
 };
 
 struct EnergyLevel {
-  double epsilon{-1};                   /// Excitation energy of this level relative to the neutral ground level.
-  LevelTransition *uptrans{nullptr};    /// Allowed upward transitions from this level
-  LevelTransition *downtrans{nullptr};  /// Allowed downward transitions from this level
+  double epsilon{-1};            /// Excitation energy of this level relative to the neutral ground level.
+  LevelTransition *uptrans{};    /// Allowed upward transitions from this level
+  LevelTransition *downtrans{};  /// Allowed downward transitions from this level
   int nuptrans{0};
   int ndowntrans{0};
-  PhotoionTarget *phixstargets{nullptr};  /// pointer to table of target states and probabilities
-  float *photoion_xs{nullptr};  /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
-  int nphixstargets{0};         /// length of phixstargets array:
-  float stat_weight{0};         /// Statistical weight of this level.
+  PhotoionTarget *phixstargets{};  /// pointer to table of target states and probabilities
+  float *photoion_xs{};  /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
+  int nphixstargets{0};  /// length of phixstargets array:
+  float stat_weight{0};  /// Statistical weight of this level.
 
   int cont_index{-1};  /// Index of the continuum associated to this level. Negative number.
   int closestgroundlevelcont{-1};
@@ -114,9 +115,9 @@ struct Ion {
 };
 
 struct Element {
-  Ion *ions{nullptr};  /// Carries information for each ion: 0,1,...,nions-1
-  int nions{0};        /// Number of ions for the current element
-  int anumber{-1};     /// Atomic number
+  Ion *ions{};      /// Carries information for each ion: 0,1,...,nions-1
+  int nions{0};     /// Number of ions for the current element
+  int anumber{-1};  /// Atomic number
   //  int uppermost_ion;                       /// Highest ionisation stage which has a decent population for a given
   //  cell
   /// Be aware that this must not be used outside of the update_grid routine
@@ -196,118 +197,161 @@ struct CellCacheElements {
 };
 
 struct CellCache {
-  double *cooling_contrib = nullptr;  /// Cooling contributions by the different processes.
-  CellCacheElements *chelements = nullptr;
-  CellCacheLevels *ch_all_levels = nullptr;
-  double *ch_allcont_departureratios = nullptr;
+  double *cooling_contrib{};  /// Cooling contributions by the different processes.
+  CellCacheElements *chelements{};
+  CellCacheLevels *ch_all_levels{};
+  double *ch_allcont_departureratios{};
   double chi_ff_nnionpart{-1};
   int cellnumber{-1};  /// Identifies the cell the data is valid for.
 };
 
 namespace globals {
 
-extern std::array<double, 3> syn_dir;  // vector pointing from origin to observer
+inline std::array<double, 3> syn_dir{};  // vector pointing from origin to observer
 
-extern std::unique_ptr<TimeStep[]> timesteps;
+inline std::vector<TimeStep> timesteps;
 
-extern std::vector<double> dep_estimator_gamma;
+inline std::vector<double> dep_estimator_gamma;
+
+inline int bfestimcount{0};
 
 // for USE_LUT_PHOTOION = true
-extern double *corrphotoionrenorm;
-extern double *gammaestimator;
+inline double *corrphotoionrenorm{};
+inline double *gammaestimator{};
 
 // for USE_LUT_BFHEATING = true
-extern double *bfheatingestimator;
+inline double *bfheatingestimator{};
 
-extern double *ffheatingestimator;
-extern double *colheatingestimator;
+inline double *ffheatingestimator{};
+inline double *colheatingestimator{};
 #ifdef DO_TITER
-extern double *gammaestimator_save;
-extern double *bfheatingestimator_save;
-extern double *ffheatingestimator_save;
-extern double *colheatingestimator_save;
+inline double *gammaestimator_save{};
+inline double *bfheatingestimator_save{};
+inline double *ffheatingestimator_save{};
+inline double *colheatingestimator_save{};
 #endif
 
-extern int *ecounter;
-extern int *acounter;
+inline int *ecounter{};
+inline int *acounter{};
 
-extern int nprocs_exspec;
-extern bool do_emission_res;
+inline int nprocs_exspec{1};
+inline bool do_emission_res{true};
 
-extern double gamma_kappagrey;
+inline double gamma_kappagrey{};  // set to -ve for proper treatment. If positive, then
+                                  // gamma_rays are treated as grey with this opacity.
 
 constexpr double GREY_OP = 0.1;
 
-extern double max_path_step;
+inline double max_path_step;
 
-extern int opacity_case;
+inline int opacity_case{};  // 0 grey, 1 for Fe-grp dependence.
+                            // MK: 2 for Fe-grp dependence and proportional to 1/rho
+                            // MK: 3 combination of 1 & 2 depending on a rho_crit
+                            // MK: 4 non-grey treatment
 
-extern int nlines;
-extern std::vector<Element> elements;
+/// ATOMIC DATA
 
-extern const TransitionLine *linelist;
-extern std::vector<BFListEntry> bflist;
+inline int nlines{-1};
+inline std::vector<Element> elements;
 
-// for USE_LUT_BFHEATING = true
-extern double *bfheating_coeff;
+inline const TransitionLine *linelist{};
+inline std::vector<BFListEntry> bflist;
 
-extern std::vector<double> allcont_nu_edge;
-extern const FullPhotoionTransition *allcont;
+inline double *bfheating_coeff{};  // for USE_LUT_BFHEATING = true
+
+inline std::vector<double> bfestim_nu_edge;
+inline std::vector<double> allcont_nu_edge;
+inline const FullPhotoionTransition *allcont{};
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-extern GroundPhotoion *groundcont;
+inline GroundPhotoion *groundcont{};
 
-extern int nbfcontinua;
-extern int nbfcontinua_ground;
-extern int NPHIXSPOINTS;
-extern double NPHIXSNUINCREMENT;
+inline int nbfcontinua{-1};         // number of bf-continua
+inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels
 
-extern CellCache *cellcache;
+inline int NPHIXSPOINTS{-1};
+inline double NPHIXSNUINCREMENT{-1};
+
+inline CellCache *cellcache{};
 
 #ifdef MPI_ON
-extern MPI_Comm mpi_comm_node;
-extern MPI_Comm mpi_comm_internode;
+inline MPI_Comm mpi_comm_node{MPI_COMM_NULL};
+inline MPI_Comm mpi_comm_internode{MPI_COMM_NULL};
 #endif
 
-extern int nprocs;
-extern int rank_global;
+inline int nprocs{-1};
+inline int rank_global{-1};
 
-extern int node_nprocs;
-extern int rank_in_node;
+inline int node_nprocs{-1};
+inline int rank_in_node{-1};
 
-extern int node_count;
-extern int node_id;
+inline int node_count{-1};
+inline int node_id{-1};
 
-extern const int npkts;
-extern std::atomic<int> nesc;
+inline constexpr int npkts = MPKTS;
+inline int nesc{0};
 
-extern double vmax;
-extern double rmax;
-extern double tmax;
-extern double tmin;
+inline double vmax;
+inline double rmax;
+inline double tmax{-1};
+inline double tmin{-1};
 
-extern int ntimesteps;
-extern int timestep_initial;
-extern int timestep_finish;
-extern int timestep;
+inline int ntimesteps{-1};
+inline int timestep_initial{-1};
+inline int timestep_finish{-1};
+inline int timestep{-1};  // Current time step during the simulation
 
-extern double opcase3_normal;
-extern double rho_crit_para;
-extern double rho_crit;
+inline double opcase3_normal;  // MK: normalisation factor for opacity_case 3
+inline double rho_crit_para;   // MK: free parameter for the selection of the critical opacity in opacity_case 3
+inline double rho_crit;        // MK: critical opacity in opacity_case 3 (could now be declared locally)
 
-extern int total_nlte_levels;
+inline int total_nlte_levels;
 
-extern bool simulation_continued_from_saved;
-extern double nu_rfcut;
-extern int num_lte_timesteps;
-extern double cell_is_optically_thick;
-extern int num_grey_timesteps;
-extern int n_titer;
-extern bool lte_iteration;
+inline bool simulation_continued_from_saved;
+inline double nu_rfcut;
+inline int num_lte_timesteps;
+inline double cell_is_optically_thick;
+inline int num_grey_timesteps;
+inline int n_titer;
+inline bool lte_iteration;
 
-extern std::deque<std::mutex> mutex_cellcachemacroatom;
+inline std::deque<std::mutex> mutex_cellcachemacroatom;
 
-void setup_mpi_vars();
+inline void setup_mpi_vars() {
+#ifdef MPI_ON
+  MPI_Comm_rank(MPI_COMM_WORLD, &globals::rank_global);
+  MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
+
+  // make an intra-node communicator (group ranks that can share memory)
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, globals::rank_global, MPI_INFO_NULL,
+                      &globals::mpi_comm_node);
+  // get the local rank within this node
+  MPI_Comm_rank(globals::mpi_comm_node, &globals::rank_in_node);
+  // get the number of ranks on the node
+  MPI_Comm_size(globals::mpi_comm_node, &globals::node_nprocs);
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // make an inter-node communicator (using local rank as the key for group membership)
+  MPI_Comm_split(MPI_COMM_WORLD, globals::rank_in_node, globals::rank_global, &globals::mpi_comm_internode);
+
+  // take the node id from the local rank 0 (node master) and broadcast it
+  if (globals::rank_in_node == 0) {
+    MPI_Comm_rank(globals::mpi_comm_internode, &globals::node_id);
+    MPI_Comm_size(globals::mpi_comm_internode, &globals::node_count);
+  }
+
+  MPI_Bcast(&globals::node_id, 1, MPI_INT, 0, globals::mpi_comm_node);
+  MPI_Bcast(&globals::node_count, 1, MPI_INT, 0, globals::mpi_comm_node);
+
+#else
+  globals::rank_global = 0;
+  globals::nprocs = 1;
+  globals::rank_in_node = 0;
+  globals::node_nprocs = 1;
+  globals::node_id = 0;
+  globals::node_count = 0;
+#endif
+}
 
 }  // namespace globals
 

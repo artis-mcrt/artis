@@ -8,7 +8,10 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
-#include <span>
+#include <filesystem>
+#include <fstream>
+#include <ios>
+#include <sstream>
 #include <vector>
 
 #include "artisoptions.h"
@@ -22,6 +25,8 @@
 #include "sn3d.h"
 #include "vectors.h"
 
+namespace {
+
 struct stokeparams {
   double i = 0.;
   double q = 0.;
@@ -34,7 +39,7 @@ struct VSpecPol {
   float delta_t{NAN};
 };
 
-VSpecPol **vspecpol = nullptr;
+VSpecPol **vspecpol{};
 
 float lower_freq_vspec[VMNUBINS];
 float delta_freq_vspec[VMNUBINS];
@@ -51,7 +56,6 @@ int Nrange;  // Number of wavelength ranges
 
 std::vector<double> VSPEC_NUMIN_input;
 std::vector<double> VSPEC_NUMAX_input;
-double cell_is_optically_thick_vpkt;
 double tau_max_vpkt;
 
 std::vector<int> exclude;  // vector of opacity contribution setups:
@@ -59,6 +63,8 @@ std::vector<int> exclude;  // vector of opacity contribution setups:
                            // -1: no line opacity; -2: no bf opacity; -3: no ff opacity; -4: no es opacity,
                            // +ve: exclude element with atomic number's contribution to bound-bound opacity
 std::vector<double> tau_vpkt;
+
+std::ofstream vpkt_contrib_file;
 
 // --------- VPacket GRID -----------
 
@@ -82,46 +88,36 @@ bool vgrid_on;
 double dlogt_vspec{NAN};
 double dlognu_vspec{NAN};
 
-// number of virtual packets in a given timestep
-int nvpkt;
-
-// number of escaped virtual packet in a given timestep (with tau < tau_max)
-int nvpkt_esc1;  // electron scattering event
-int nvpkt_esc2;  // kpkt deactivation
-int nvpkt_esc3;  // macroatom deactivation
-
 // Virtual packet is killed when tau reaches tau_max_vpkt for ALL the different setups
 // E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt
 // because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could
 // thus contribute to the spectrum.
-static auto all_taus_past_taumax(std::vector<double> &tau, const double tau_max) -> bool {
+constexpr auto all_taus_past_taumax(std::vector<double> &tau, const double tau_max) -> bool {
   return std::ranges::all_of(tau, [tau_max](const double tau_i) { return tau_i > tau_max; });
 }
 
 // Routine to add a packet to the outcoming spectrum.
-static void add_to_vspecpol(const Packet &vpkt, const int obsbin, const int ind, const double t_arrive) {
+void add_to_vspecpol(const Packet &vpkt, const int obsdirindex, const int opachoiceindex, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
-  const int ind_comb = Nspectra * obsbin + ind;
-
-  /// Put this into the time grid.
-  if (t_arrive > VSPEC_TIMEMIN && t_arrive < VSPEC_TIMEMAX) {
-    const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
-    if (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX) {
-      const int nnu = static_cast<int>((log(vpkt.nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
-      const double pktcontrib = vpkt.e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI /
-                                PARSEC / PARSEC / globals::nprocs * 4 * PI;
-
-      safeadd(vspecpol[nt][ind_comb].flux[nnu].i, vpkt.stokes[0] * pktcontrib);
-      safeadd(vspecpol[nt][ind_comb].flux[nnu].q, vpkt.stokes[1] * pktcontrib);
-      safeadd(vspecpol[nt][ind_comb].flux[nnu].u, vpkt.stokes[2] * pktcontrib);
-    }
+  const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
+  const int nnu = static_cast<int>((log(vpkt.nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
+  if (nt < 0 || nt >= VMTBINS || nnu < 0 || nnu >= VMNUBINS) {
+    return;
   }
+
+  const int ind_comb = Nspectra * obsdirindex + opachoiceindex;
+  const double pktcontrib = vpkt.e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /
+                            PARSEC / globals::nprocs * 4 * PI;
+
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].i, vpkt.stokes[0] * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].q, vpkt.stokes[1] * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].u, vpkt.stokes[2] * pktcontrib);
 }
 
 // Routine to add a packet to the outcoming spectrum.
-static void add_to_vpkt_grid(const Packet &vpkt, std::span<const double, 3> vel, const int wlbin, const int obsbin,
-                             std::span<const double, 3> obs) {
+void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> vel, const int wlbin, const int obsdirindex,
+                      const std::array<double, 3> obs) {
   double vref1{NAN};
   double vref2{NAN};
 
@@ -162,40 +158,34 @@ static void add_to_vpkt_grid(const Packet &vpkt, std::span<const double, 3> vel,
 
   // Add contribution
   if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {
-    safeadd(vgrid_i[ny][nz].flux[wlbin][obsbin], vpkt.stokes[0] * vpkt.e_rf);
-    safeadd(vgrid_q[ny][nz].flux[wlbin][obsbin], vpkt.stokes[1] * vpkt.e_rf);
-    safeadd(vgrid_u[ny][nz].flux[wlbin][obsbin], vpkt.stokes[2] * vpkt.e_rf);
+    atomicadd(vgrid_i[ny][nz].flux[wlbin][obsdirindex], vpkt.stokes[0] * vpkt.e_rf);
+    atomicadd(vgrid_q[ny][nz].flux[wlbin][obsdirindex], vpkt.stokes[1] * vpkt.e_rf);
+    atomicadd(vgrid_u[ny][nz].flux[wlbin][obsdirindex], vpkt.stokes[2] * vpkt.e_rf);
   }
 }
 
-static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin, std::span<double, 3> obsdir,
-                           const enum packet_type type_before_rpkt) {
+auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_arrive, const double nu_rf,
+                    const double e_rf, const int obsdirindex, const std::array<double, 3> obsdir,
+                    const enum packet_type type_before_rpkt, std::stringstream &vpkt_contrib_row) -> bool {
   int mgi = 0;
 
   Packet vpkt = pkt;
+  vpkt.nu_rf = nu_rf;
+  vpkt.e_rf = e_rf;
+  vpkt.dir = obsdir;
+  vpkt.last_cross = BOUNDARY_NONE;
 
   bool end_packet = false;
   double ldist = 0;
   double t_future = t_current;
 
-  for (int ind = 0; ind < Nspectra; ind++) {
-    tau_vpkt[ind] = 0;
+  for (int opacindex = 0; opacindex < Nspectra; opacindex++) {
+    tau_vpkt[opacindex] = 0;
   }
 
-  vpkt.dir[0] = obsdir[0];
-  vpkt.dir[1] = obsdir[1];
-  vpkt.dir[2] = obsdir[2];
-  vpkt.last_cross = BOUNDARY_NONE;
-
-  safeincrement(nvpkt);  // increment the number of virtual packet in the given timestep
+  atomicadd(nvpkt, 1);  // increment the number of virtual packet in the given timestep
 
   const auto vel_vec = get_velocity(pkt.pos, t_current);
-
-  // rf frequency and energy
-  const double dopplerfactor = doppler_nucmf_on_nurf(vpkt.dir, vel_vec);
-  vpkt.nu_rf = vpkt.nu_cmf / dopplerfactor;
-  vpkt.e_rf = vpkt.e_cmf / dopplerfactor;
-
   double Qi = vpkt.stokes[1];
   double Ui = vpkt.stokes[2];
 
@@ -214,8 +204,7 @@ static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int 
 
     auto obs_cmf = angle_ab(vpkt.dir, vel_vec);
 
-    auto ref1_old = std::array<double, 3>{};
-    auto ref2_old = meridian(old_dir_cmf, ref1_old);
+    auto [ref1_old, ref2_old] = meridian(old_dir_cmf);
 
     // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
     // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
@@ -243,8 +232,7 @@ static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int 
 
     // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame
 
-    auto ref1 = std::array<double, 3>{};
-    auto ref2 = meridian(obs_cmf, ref1);
+    auto [ref1, ref2] = meridian(obs_cmf);
 
     // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
     // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
@@ -258,7 +246,7 @@ static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int 
 
     // Transform Stokes Parameters from the CMF to the RF
 
-    const double vel_rev[3] = {-vel_vec[0], -vel_vec[1], -vel_vec[2]};
+    const std::array<double, 3> vel_rev{-vel_vec[0], -vel_vec[1], -vel_vec[2]};
 
     frame_transform(obs_cmf, &Q, &U, vel_rev);
 
@@ -305,7 +293,7 @@ static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int 
 
       // kill vpkt with high optical depth
       if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
-        return;
+        return false;
       }
 
       Packet dummypkt_abort = vpkt;
@@ -319,53 +307,51 @@ static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int 
         const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans);
 
         if (lineindex < 0) {
+          // no more lines below the current frequency
           vpkt.next_trans = globals::nlines + 1;
-        } else {
-          const double nutrans = globals::linelist[lineindex].nu;
+          break;
+        }
+        const double nutrans = globals::linelist[lineindex].nu;
 
-          vpkt.next_trans = lineindex + 1;
+        vpkt.next_trans = lineindex + 1;
 
-          ldist = get_linedistance(t_current, vpkt.nu_cmf, nutrans, d_nu_on_d_l);
+        ldist = get_linedistance(vpkt.prop_time, vpkt.nu_cmf, nutrans, d_nu_on_d_l);
 
-          if (ldist > sdist) {
-            // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
-            // the excluded line
+        if (ldist > sdist) {
+          // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
+          // the excluded line
 
-            vpkt.next_trans -= 1;
-            // printout("ldist > sdist : line in the next cell\n");
-            break;
+          vpkt.next_trans -= 1;
+          // printout("ldist > sdist : line in the next cell\n");
+          break;
+        }
+
+        const double t_line = vpkt.prop_time + ldist / CLIGHT;
+
+        const int element = globals::linelist[lineindex].elementindex;
+        const int ion = globals::linelist[lineindex].ionindex;
+        const int upper = globals::linelist[lineindex].upperlevelindex;
+        const int lower = globals::linelist[lineindex].lowerlevelindex;
+        const auto A_ul = globals::linelist[lineindex].einstein_A;
+
+        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
+        const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+
+        const auto n_u = calculate_levelpop(mgi, element, ion, upper);
+        const auto n_l = calculate_levelpop(mgi, element, ion, lower);
+        const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
+
+        // Check on the element to exclude (or -1 for no line opacity)
+        const int anumber = get_atomicnumber(element);
+        for (int ind = 0; ind < Nspectra; ind++) {
+          if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
+            tau_vpkt[ind] += tau_line;
           }
+        }
 
-          const double t_line = t_current + ldist / CLIGHT;
-
-          const int element = globals::linelist[lineindex].elementindex;
-          const int ion = globals::linelist[lineindex].ionindex;
-          const int upper = globals::linelist[lineindex].upperlevelindex;
-          const int lower = globals::linelist[lineindex].lowerlevelindex;
-          const auto A_ul = globals::linelist[lineindex].einstein_A;
-
-          const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
-          const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
-
-          const auto n_u = calculate_levelpop(mgi, element, ion, upper);
-          const auto n_l = calculate_levelpop(mgi, element, ion, lower);
-          const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
-
-          // Check on the element to exclude
-          // NB: ldist before need to be computed anyway (I want to move the packets to the
-          // line interaction point even if I don't interact)
-          const int anumber = get_atomicnumber(element);
-          for (int ind = 0; ind < Nspectra; ind++) {
-            // If exclude[ind]==-1, I do not include line opacity
-            if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
-              tau_vpkt[ind] += tau_line;
-            }
-          }
-
-          // kill vpkt with high optical depth
-          if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
-            return;
-          }
+        // kill vpkt with high optical depth
+        if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
+          return false;
         }
       }
     }
@@ -384,25 +370,27 @@ static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int 
 
     // kill vpkt with pass through a thick cell
     if (grid::modelgrid[mgi].thick != 0) {
-      return;
+      return false;
     }
   }
 
   // increment the number of escaped virtual packet in the given timestep
   if (type_before_rpkt == TYPE_RPKT) {
-    safeincrement(nvpkt_esc1);
+    atomicadd(nvpkt_esc1, 1);
   } else if (type_before_rpkt == TYPE_KPKT) {
-    safeincrement(nvpkt_esc2);
+    atomicadd(nvpkt_esc2, 1);
   } else if (type_before_rpkt == TYPE_MA) {
-    safeincrement(nvpkt_esc3);
+    atomicadd(nvpkt_esc3, 1);
   }
 
-  const double t_arrive = get_arrive_time(vpkt);
   // -------------- final stokes vector ---------------
 
+  if (VPKT_WRITE_CONTRIBS) {
+    vpkt_contrib_row << " " << t_arrive / DAY << " " << vpkt.nu_rf;
+  }
+
   for (int ind = 0; ind < Nspectra; ind++) {
-    // printout("obsbin %d spectrum %d tau_vpkt %g\n", obsbin, ind, tau_vpkt[ind]);
-    const double prob = pn * exp(-tau_vpkt[ind]);
+    const double prob = pn * std::exp(-tau_vpkt[ind]);
 
     assert_always(std::isfinite(prob));
 
@@ -414,9 +402,11 @@ static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int 
       assert_always(std::isfinite(stokeval));
     }
 
-    // bin on fly and produce file with spectrum
+    add_to_vspecpol(vpkt, obsdirindex, ind, t_arrive);
 
-    add_to_vspecpol(vpkt, obsbin, ind, t_arrive);
+    if constexpr (VPKT_WRITE_CONTRIBS) {
+      vpkt_contrib_row << " " << vpkt.e_rf * prob;
+    }
   }
 
   // vpkt grid
@@ -431,14 +421,15 @@ static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int 
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
         if (t_arrive > tmin_grid && t_arrive < tmax_grid) {                      // Time selection
-          add_to_vpkt_grid(vpkt, vel_vec, wlbin, obsbin, obsdir);
+          add_to_vpkt_grid(vpkt, vel_vec, wlbin, obsdirindex, obsdir);
         }
       }
     }
   }
+  return true;  // true if we added columns to vpkt_contrib_row
 }
 
-static void init_vspecpol() {
+void init_vspecpol() {
   vspecpol = static_cast<VSpecPol **>(malloc(VMTBINS * sizeof(VSpecPol *)));
 
   const int indexmax = Nspectra * Nobs;
@@ -472,7 +463,7 @@ static void init_vspecpol() {
   }
 }
 
-static void write_vspecpol(FILE *specpol_file) {
+void write_vspecpol(FILE *specpol_file) {
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
     fprintf(specpol_file, "%g ", 0.);
 
@@ -507,11 +498,11 @@ static void write_vspecpol(FILE *specpol_file) {
   }
 }
 
-static void read_vspecpol(int my_rank, int nts) {
+void read_vspecpol(int my_rank, int nts) {
   char filename[MAXFILENAMELENGTH];
 
-  snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_ts%d.tmp", 0, my_rank, nts);
-  printout("Reading vspecpol file %s\n", filename);
+  snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
+  printout("Reading %s\n", filename);
 
   FILE *vspecpol_file = fopen_required(filename, "r");
 
@@ -556,7 +547,7 @@ static void read_vspecpol(int my_rank, int nts) {
   fclose(vspecpol_file);
 }
 
-static void init_vpkt_grid() {
+void init_vpkt_grid() {
   const double ybin = 2 * globals::vmax / VGRID_NY;
   const double zbin = 2 * globals::vmax / VGRID_NZ;
 
@@ -586,17 +577,17 @@ static void init_vpkt_grid() {
   }
 }
 
-static void write_vpkt_grid(FILE *vpkt_grid_file) {
-  for (int obsbin = 0; obsbin < Nobs; obsbin++) {
+void write_vpkt_grid(FILE *vpkt_grid_file) {
+  for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
           fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].yvel);
           fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].zvel);
 
-          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].flux[wlbin][obsbin]);
-          fprintf(vpkt_grid_file, "%g ", vgrid_q[n][m].flux[wlbin][obsbin]);
-          fprintf(vpkt_grid_file, "%g ", vgrid_u[n][m].flux[wlbin][obsbin]);
+          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].flux[wlbin][obsdirindex]);
+          fprintf(vpkt_grid_file, "%g ", vgrid_q[n][m].flux[wlbin][obsdirindex]);
+          fprintf(vpkt_grid_file, "%g ", vgrid_u[n][m].flux[wlbin][obsdirindex]);
 
           fprintf(vpkt_grid_file, "\n");
         }
@@ -605,26 +596,26 @@ static void write_vpkt_grid(FILE *vpkt_grid_file) {
   }
 }
 
-static void read_vpkt_grid(const int my_rank, const int nts) {
+void read_vpkt_grid(const int my_rank, const int nts) {
   if (!vgrid_on) {
     return;
   }
 
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_ts%d.tmp", 0, my_rank, nts);
+  snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
   printout("Reading vpkt grid file %s\n", filename);
   FILE *vpkt_grid_file = fopen_required(filename, "r");
 
-  for (int obsbin = 0; obsbin < Nobs; obsbin++) {
+  for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
           assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].yvel) == 1);
           assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].zvel) == 1);
 
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].flux[wlbin][obsbin]) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_q[n][m].flux[wlbin][obsbin]) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_u[n][m].flux[wlbin][obsbin]) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].flux[wlbin][obsdirindex]) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_q[n][m].flux[wlbin][obsdirindex]) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_u[n][m].flux[wlbin][obsdirindex]) == 1);
 
           assert_always(fscanf(vpkt_grid_file, "\n") == 0);
         }
@@ -635,13 +626,16 @@ static void read_vpkt_grid(const int my_rank, const int nts) {
   fclose(vpkt_grid_file);
 }
 
+}  // anonymous namespace
+
 void vpkt_remove_temp_file(const int nts, const int my_rank) {
-  char filenames[2][MAXFILENAMELENGTH];
-  snprintf(filenames[0], MAXFILENAMELENGTH, "vspecpol_%d_%d_ts%d.tmp", 0, my_rank, nts);
-  snprintf(filenames[1], MAXFILENAMELENGTH, "vpkt_grid_%d_%d_ts%d.tmp", 0, my_rank, nts);
+  char filenames[3][MAXFILENAMELENGTH];
+  snprintf(filenames[0], MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
+  snprintf(filenames[1], MAXFILENAMELENGTH, "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
+  snprintf(filenames[2], MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
 
   for (auto &filename : filenames) {
-    if (access(filename, F_OK) == 0) {
+    if (std::filesystem::exists(filename)) {
       std::remove(filename);
       printout("Deleted %s\n", filename);
     }
@@ -731,6 +725,8 @@ void read_parameterfile_vpkt() {
 
   assert_always(VSPEC_TIMEMIN_input >= VSPEC_TIMEMIN);
   assert_always(VSPEC_TIMEMAX_input <= VSPEC_TIMEMAX);
+  assert_always(VSPEC_TIMEMIN_input >= globals::tmin);
+  assert_always(VSPEC_TIMEMAX_input <= globals::tmax);
 
   // frequency window. dum4 restrict vpkt to a frequency range, dum5 indicates the number of ranges,
   // followed by a list of ranges (dum6,dum7)
@@ -756,6 +752,9 @@ void read_parameterfile_vpkt() {
 
       VSPEC_NUMIN_input[i] = CLIGHT / (lmax_vspec_input * 1e-8);
       VSPEC_NUMAX_input[i] = CLIGHT / (lmin_vspec_input * 1e-8);
+
+      assert_always(VSPEC_NUMIN_input[i] >= VSPEC_NUMIN);
+      assert_always(VSPEC_NUMAX_input[i] <= VSPEC_NUMAX);
     }
   } else {
     Nrange = 1;
@@ -832,30 +831,51 @@ void vpkt_write_timestep(const int nts, const int my_rank, const bool is_final) 
   }
 
   // write specpol of the virtual packets
-  char filename[MAXFILENAMELENGTH];
+  char filename_vspecpol[MAXFILENAMELENGTH];
 
   if (is_final) {
-    snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d-%d.out", my_rank, 0);
+    snprintf(filename_vspecpol, MAXFILENAMELENGTH, "vspecpol_%.4d.out", my_rank);
   } else {
-    snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_ts%d.tmp", 0, my_rank, nts);
+    snprintf(filename_vspecpol, MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
   }
 
-  printout("Writing vspecpol file %s\n", filename);
-  FILE *vspecpol_file = fopen_required(filename, "w");
+  printout("Writing %s\n", filename_vspecpol);
+  FILE *vspecpol_file = fopen_required(filename_vspecpol, "w");
   write_vspecpol(vspecpol_file);
   fclose(vspecpol_file);
 
   if (vgrid_on) {
+    char filename_vpktgrid[MAXFILENAMELENGTH];
     if (is_final) {
-      snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d-%d.out", my_rank, 0);
+      snprintf(filename_vpktgrid, MAXFILENAMELENGTH, "vpkt_grid_%.4d.out", my_rank);
     } else {
-      snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_ts%d.tmp", 0, my_rank, nts);
+      snprintf(filename_vpktgrid, MAXFILENAMELENGTH, "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
     }
 
-    printout("Writing vpkt grid file %s\n", filename);
-    FILE *vpkt_grid_file = fopen_required(filename, "w");
+    printout("Writing vpkt grid file %s\n", filename_vpktgrid);
+    FILE *vpkt_grid_file = fopen_required(filename_vpktgrid, "w");
     write_vpkt_grid(vpkt_grid_file);
     fclose(vpkt_grid_file);
+  }
+
+  if constexpr (VPKT_WRITE_CONTRIBS) {
+    vpkt_contrib_file.close();
+    char filename_prev[MAXFILENAMELENGTH];
+    char filename[MAXFILENAMELENGTH];
+    if (is_final) {
+      snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
+      snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d.out", my_rank);
+    } else {
+      snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
+      snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
+    }
+
+    std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
+    printout("Copying %s to %s\n", filename_prev, filename);
+
+    if (!is_final) {
+      vpkt_contrib_file = std::ofstream(filename, std::ios::app);
+    }
   }
 }
 
@@ -867,6 +887,36 @@ void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved
   init_vspecpol();
   if (vgrid_on) {
     init_vpkt_grid();
+  }
+
+  if constexpr (VPKT_WRITE_CONTRIBS) {
+    char filename[MAXFILENAMELENGTH];
+    snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
+
+    if (continued_from_saved) {
+      char filename_prev[MAXFILENAMELENGTH];
+      snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
+      std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
+      printout("Copying %s to %s\n", filename_prev, filename);
+    } else {
+      // Create new file with header line
+      vpkt_contrib_file = std::ofstream(filename, std::ios::trunc);
+
+      vpkt_contrib_file << "#emissiontype trueemissiontype absorption_type absorption_freq";
+
+      for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
+        vpkt_contrib_file << " dir" << obsdirindex << "_t_arrive_d dir" << obsdirindex << "_nu_rf";
+        for (int ind = 0; ind < Nspectra; ind++) {
+          vpkt_contrib_file << " dir" << obsdirindex << "_e_rf_" << ind;
+        }
+      }
+
+      vpkt_contrib_file << "\n";
+      vpkt_contrib_file.flush();
+      vpkt_contrib_file.close();
+    }
+
+    vpkt_contrib_file = std::ofstream(filename, std::ios::app);
   }
 
   if (continued_from_saved) {
@@ -896,219 +946,53 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
 
   const auto vel_vec = get_velocity(pkt.pos, pkt.prop_time);
 
-  // this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer)
-  if (pkt.next_trans == 0) {
-    const int lineindex = closest_transition(pkt.nu_cmf, pkt.next_trans);  /// returns negative
-    if (lineindex < 0) {
-      pkt.next_trans = lineindex + 1;
-    }
-  }
+  std::stringstream vpkt_contrib_row;
 
-  for (int obsbin = 0; obsbin < Nobs; obsbin++) {
+  bool any_dir_escaped = false;
+  for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
     // loop over different observer directions
 
-    double obsdir[3] = {sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * cos(phiobs[obsbin]),
-                        sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * sin(phiobs[obsbin]), nz_obs_vpkt[obsbin]};
+    const std::array<double, 3> obsdir{
+        sqrt(1 - nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex]) * cos(phiobs[obsdirindex]),
+        sqrt(1 - nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex]) * sin(phiobs[obsdirindex]),
+        nz_obs_vpkt[obsdirindex]};
 
     const double t_arrive = t_current - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
 
+    bool dir_escaped = false;
     if (t_arrive >= VSPEC_TIMEMIN_input && t_arrive <= VSPEC_TIMEMAX_input) {
       // time selection
 
-      const double nu_rf = pkt.nu_cmf / doppler_nucmf_on_nurf(obsdir, vel_vec);
+      const double doppler = doppler_nucmf_on_nurf(obsdir, vel_vec);
+      const double nu_rf = pkt.nu_cmf / doppler;
+      const double e_rf = pkt.e_cmf / doppler;
 
       for (int i = 0; i < Nrange; i++) {
         // Loop over frequency ranges
 
-        if (nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) {
+        if ((nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) ||
+            (pkt.absorptionfreq > VSPEC_NUMIN_input[i] && pkt.absorptionfreq < VSPEC_NUMAX_input[i])) {
           // frequency selection
-
-          rlc_emiss_vpkt(pkt, t_current, obsbin, obsdir, type_before_rpkt);
+          dir_escaped = rlc_emiss_vpkt(pkt, t_current, t_arrive, nu_rf, e_rf, obsdirindex, obsdir, type_before_rpkt,
+                                       vpkt_contrib_row);
+          break;  // assume that the frequency ranges do not overlap
         }
       }
     }
-  }
-}
 
-[[nodiscard]] auto rot_angle(std::span<const double, 3> n1, std::span<const double, 3> n2, std::span<double, 3> ref1,
-                             std::span<double, 3> ref2) -> double {
-  // Rotation angle from the scattering plane
-  // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
-  // the meridian frame such that Q=1 is in the scattering plane and along ref1
-
-  // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
-  const double n1_dot_n2 = dot(n1, n2);
-  auto ref1_sc = std::array<double, 3>{n1[0] * n1_dot_n2 - n2[0], n1[1] * n1_dot_n2 - n2[1], n1[2] * n1_dot_n2 - n2[2]};
-  ref1_sc = vec_norm(ref1_sc);
-
-  double cos_stokes_rot_1 = dot(ref1_sc, ref1);
-  const double cos_stokes_rot_2 = dot(ref1_sc, ref2);
-
-  if (cos_stokes_rot_1 < -1) {
-    cos_stokes_rot_1 = -1;
-  }
-  if (cos_stokes_rot_1 > 1) {
-    cos_stokes_rot_1 = 1;
-  }
-
-  double i = 0;
-  if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 > 0)) {
-    i = acos(cos_stokes_rot_1);
-  } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 > 0)) {
-    i = PI - acos(fabs(cos_stokes_rot_1));
-  } else if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 < 0)) {
-    i = 2 * PI - acos(cos_stokes_rot_1);
-  } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 < 0)) {
-    i = PI + acos(fabs(cos_stokes_rot_1));
-  }
-  if (cos_stokes_rot_1 == 0) {
-    i = PI / 2.;
-  }
-  if (cos_stokes_rot_2 == 0) {
-    i = 0.;
-  }
-
-  if (!std::isfinite(i)) {
-    printout("Warning NaN: %3.6f \t %3.6f \t %3.6f \n", cos_stokes_rot_1, cos_stokes_rot_2, acos(cos_stokes_rot_1));
-  }
-
-  return i;
-}
-
-// Routine to compute the meridian frame axes ref1 and ref2
-[[nodiscard]] auto meridian(std::span<const double, 3> n, std::span<double, 3> ref1) -> std::array<double, 3> {
-  // for ref_1 use (from triple product rule)
-  const double n_xylen = sqrt(n[0] * n[0] + n[1] * n[1]);
-  ref1[0] = -1. * n[0] * n[2] / n_xylen;
-  ref1[1] = -1. * n[1] * n[2] / n_xylen;
-  ref1[2] = (1 - (n[2] * n[2])) / n_xylen;
-
-  // for ref_2 use vector product of n_cmf with ref1
-  const auto ref2 = cross_prod(ref1, n);
-  return ref2;
-}
-
-static auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf,
-                    std::span<const double, 3> v) -> std::array<double, 3> {
-  // Use Lorentz transformations to get e_cmf from e_rf
-
-  const auto beta = std::array<const double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
-  const double vsqr = dot(beta, beta);
-
-  const double gamma_rel = 1. / (sqrt(1 - vsqr));
-
-  const auto e_par = std::array<const double, 3>{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
-                                                 dot(e_rf, beta) * beta[2] / (vsqr)};
-
-  const auto e_perp = std::array<const double, 3>{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
-
-  const auto b_rf = cross_prod(n_rf, e_rf);
-
-  // const double b_par[3] = {dot(b_rf, beta) * beta[0] / (vsqr), dot(b_rf, beta) * beta[1] / (vsqr),
-  //                          dot(b_rf, beta) * beta[2] / (vsqr)};
-
-  // const double b_perp[3] = {b_rf[0] - b_par[0], b_rf[1] - b_par[1], b_rf[2] - b_par[2]};
-
-  const auto v_cr_b = cross_prod(beta, b_rf);
-
-  // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
-  //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
-
-  auto e_cmf = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
-                                     e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
-                                     e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
-  return vec_norm(e_cmf);
-}
-
-// Routine to transform the Stokes Parameters from RF to CMF
-auto frame_transform(std::span<const double, 3> n_rf, double *Q, double *U,
-                     std::span<const double, 3> v) -> std::array<double, 3> {
-  auto ref1 = std::array<double, 3>{NAN, NAN, NAN};
-
-  // Meridian frame in the RF
-  auto ref2 = meridian(n_rf, ref1);
-
-  const double Q0 = *Q;
-  const double U0 = *U;
-
-  // Compute polarisation (which is invariant)
-  const double p = sqrt(Q0 * Q0 + U0 * U0);
-
-  // We want to compute the angle between ref1 and the electric field
-  double rot_angle = 0;
-
-  if (p > 0) {
-    const double cos2rot_angle = Q0 / p;
-    const double sin2rot_angle = U0 / p;
-
-    if ((cos2rot_angle > 0) && (sin2rot_angle > 0)) {
-      rot_angle = acos(Q0 / p) / 2.;
-    } else if ((cos2rot_angle < 0) && (sin2rot_angle > 0)) {
-      rot_angle = (PI - acos(fabs(cos2rot_angle))) / 2.;
-    } else if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) {
-      rot_angle = (PI + acos(fabs(cos2rot_angle))) / 2.;
-    } else if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) {
-      rot_angle = (2. * PI - acos(fabs(cos2rot_angle))) / 2.;
-    } else if (cos2rot_angle == 0) {
-      rot_angle = 0.25 * PI;
-      if (U0 < 0) {
-        rot_angle = 0.75 * PI;
-      }
-    }
-    if (sin2rot_angle == 0) {
-      rot_angle = 0.;
-      if (Q0 < 0) {
-        rot_angle = 0.5 * PI;
+    if (dir_escaped) {
+      any_dir_escaped = true;
+    } else {
+      vpkt_contrib_row << " -1. -1.";  // t_arrive_d nu_rf
+      for (int ind = 0; ind < Nspectra; ind++) {
+        vpkt_contrib_row << " 0.";  // e_rf_diri_j
       }
     }
   }
-
-  // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
-
-  const auto elec_rf = std::array<double, 3>{cos(rot_angle) * ref1[0] - sin(rot_angle) * ref2[0],
-                                             cos(rot_angle) * ref1[1] - sin(rot_angle) * ref2[1],
-                                             cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
-
-  // Aberration
-  auto n_cmf = angle_ab(n_rf, v);
-
-  // Lorentz transformation of E
-  auto elec_cmf = lorentz(elec_rf, n_rf, v);
-
-  // Meridian frame in the CMF
-  ref2 = meridian(n_cmf, ref1);
-
-  // Projection of E onto ref1 and ref2
-  const double cosine_elec_ref1 = dot(elec_cmf, ref1);
-  const double cosine_elec_ref2 = dot(elec_cmf, ref2);
-
-  // Compute the angle between ref1 and the electric field
-  double theta_rot = 0.;
-  if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 < 0)) {
-    theta_rot = acos(cosine_elec_ref1);
-  } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 > 0)) {
-    theta_rot = PI + acos(fabs(cosine_elec_ref1));
-  } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 < 0)) {
-    theta_rot = PI - acos(fabs(cosine_elec_ref1));
-  } else if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 > 0)) {
-    theta_rot = 2 * PI - acos(cosine_elec_ref1);
+  if (VPKT_WRITE_CONTRIBS && any_dir_escaped) {
+    vpkt_contrib_file << pkt.emissiontype << " " << pkt.trueemissiontype << " " << pkt.absorptiontype << " "
+                      << pkt.absorptionfreq;
+    vpkt_contrib_file << vpkt_contrib_row.rdbuf() << "\n";
+    vpkt_contrib_file.flush();
   }
-  if (cosine_elec_ref1 == 0) {
-    theta_rot = PI / 2.;
-  }
-  if (cosine_elec_ref2 == 0) {
-    theta_rot = 0.;
-  }
-  if (cosine_elec_ref1 > 1) {
-    theta_rot = 0.;
-  }
-  if (cosine_elec_ref1 < -1) {
-    theta_rot = PI;
-  }
-
-  // Compute Stokes Parameters in the CMF
-  *Q = cos(2 * theta_rot) * p;
-  *U = sin(2 * theta_rot) * p;
-
-  return n_cmf;
 }

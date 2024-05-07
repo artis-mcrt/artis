@@ -10,7 +10,7 @@ constexpr double COOLING_UNDEFINED = -99;
 
 namespace kpkt {
 
-extern int ncoolingterms;
+inline int ncoolingterms{0};
 
 auto get_ncoolingterms() -> int;
 void setup_coolinglist();

@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-spack load gsl target=$(spack arch -t)
+eval `spack load --sh gsl%gcc arch=linux-debian11-x86_64`
 
 cd $SLURM_SUBMIT_DIR
 

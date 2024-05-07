@@ -30,8 +30,10 @@ jobs:
                         kilonova_1d_3dgrid,
                         kilonova_2d_2dgrid,
                         kilonova_2d_2dgrid_expansionopac,
+                        kilonova_2d_2dgrid_xcomgammaphotoion,
                         kilonova_2d_3dgrid,
                         nebularonezone_1d_3dgrid,
+                        nebularonezone_1d_3dgrid_limitbfest,
                     ]
                 exclude:
                     - os: self-hosted
@@ -49,11 +51,11 @@ jobs:
 
             - name: apt update
               run: |
-                  sudo add-apt-repository main
-                  sudo add-apt-repository universe
-                  sudo add-apt-repository restricted
-                  sudo add-apt-repository multiverse
-                  sudo apt-get update
+                  #   sudo add-apt-repository main
+                  #   sudo add-apt-repository universe
+                  #   sudo add-apt-repository restricted
+                  #   sudo add-apt-repository multiverse
+                    sudo apt-get update
 
             - name: Install gcc-13
               if: always()

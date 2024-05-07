@@ -3,6 +3,7 @@
 #define THERMALBALANCE_H
 
 #include <vector>
+
 struct HeatingCoolingRates {
   double cooling_collisional;
   double cooling_fb;

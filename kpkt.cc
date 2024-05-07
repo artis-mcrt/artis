@@ -24,11 +24,13 @@
 
 namespace kpkt {
 
+namespace {
+
 enum coolingtype {
-  COOLINGTYPE_FF = 880,
-  COOLINGTYPE_FB = 881,
-  COOLINGTYPE_COLLEXC = 882,
-  COOLINGTYPE_COLLION = 883,
+  COOLINGTYPE_FF = 0,
+  COOLINGTYPE_FB = 1,
+  COOLINGTYPE_COLLEXC = 2,
+  COOLINGTYPE_COLLION = 3,
 };
 
 struct CellCachecoolinglist {
@@ -37,17 +39,15 @@ struct CellCachecoolinglist {
   int upperlevel;
 };
 
-int ncoolingterms{0};
+CellCachecoolinglist *coolinglist;
 
-static CellCachecoolinglist *coolinglist;
-
-static int n_kpktdiffusion_timesteps{0};
-static float kpktdiffusion_timescale{0.};
+int n_kpktdiffusion_timesteps{0};
+float kpktdiffusion_timescale{0.};
 
 template <bool update_cooling_contrib_list>
-static auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion,
-                                        const int indexionstart, const int cellcacheslotid, double *C_ff, double *C_fb,
-                                        double *C_exc, double *C_ionization) -> double
+auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion, const int indexionstart,
+                                 const int cellcacheslotid, double *C_ff, double *C_fb, double *C_exc,
+                                 double *C_ionization) -> double
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
 {
@@ -175,6 +175,8 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
   return C_ion;
 }
 
+}  // anonymous namespace
+
 void calculate_cooling_rates(const int modelgridindex, HeatingCoolingRates *heatingcoolingrates)
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
@@ -259,6 +261,7 @@ void setup_coolinglist() {
 
   set_ncoolingterms();
   const size_t mem_usage_coolinglist = ncoolingterms * sizeof(CellCachecoolinglist);
+  assert_always(ncoolingterms > 0);
   coolinglist = static_cast<CellCachecoolinglist *>(malloc(ncoolingterms * sizeof(CellCachecoolinglist)));
   printout("[info] mem_usage: coolinglist occupies %.3f MB\n", mem_usage_coolinglist / 1024. / 1024.);
 
@@ -396,7 +399,7 @@ void do_kpkt_blackbody(Packet &pkt)
   /// and then emit the packet randomly in the comoving frame
   emit_rpkt(pkt);
   // printout("[debug] calculate_chi_rpkt after kpkt to rpkt by ff\n");
-  pkt.next_trans = 0;  /// FLAG: transition history here not important, cont. process
+  pkt.next_trans = -1;  /// FLAG: transition history here not important, cont. process
   // if (tid == 0) k_stat_to_r_bb++;
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
   stats::increment(stats::COUNTER_INTERACTIONS);
@@ -424,13 +427,13 @@ void do_kpkt(Packet &pkt, double t2, int nts)
   const double t_current = t1 + deltat;
 
   if (t_current > t2) {
-    vec_scale(pkt.pos, t2 / t1);
+    pkt.pos = vec_scale(pkt.pos, t2 / t1);
     pkt.prop_time = t2;
     return;
   }
   stats::increment(stats::COUNTER_INTERACTIONS);
 
-  vec_scale(pkt.pos, t_current / t1);
+  pkt.pos = vec_scale(pkt.pos, t_current / t1);
   pkt.prop_time = t_current;
 
   assert_always(grid::modelgrid[modelgridindex].totalcooling > 0.);
@@ -532,7 +535,7 @@ void do_kpkt(Packet &pkt, double t2, int nts)
 
     /// and then emit the packet randomly in the comoving frame
     emit_rpkt(pkt);
-    pkt.next_trans = 0;  /// FLAG: transition history here not important, cont. process
+    pkt.next_trans = -1;  /// FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FF);
 
     pkt.last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
@@ -571,10 +574,10 @@ void do_kpkt(Packet &pkt, double t2, int nts)
                                  pkt.e_cmf / H / pkt.nu_cmf);
     }
 
-    pkt.next_trans = 0;  /// FLAG: transition history here not important, cont. process
+    pkt.next_trans = -1;  /// FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FB);
     pkt.last_event = LASTEVENT_KPKT_TO_RPKT_FB;
-    pkt.emissiontype = get_continuumindex(element, lowerion, lowerlevel, upper);
+    pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerlevel, upper);
     pkt.trueemissiontype = pkt.emissiontype;
     pkt.em_pos = pkt.pos;
     pkt.em_time = pkt.prop_time;
@@ -657,8 +660,11 @@ void do_kpkt(Packet &pkt, double t2, int nts)
     pkt.trueemissionvelocity = -1;
 
     do_macroatom(pkt, {element, upperion, upper, -99});
-  } else {
+  } else if constexpr (TESTMODE) {
+    printout("ERROR: Unknown rndcoolingtype type %d\n", rndcoolingtype);
     assert_testmodeonly(false);
+  } else {
+    __builtin_unreachable();
   }
 }
 

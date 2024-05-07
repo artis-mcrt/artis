@@ -2,11 +2,7 @@
 #ifndef LTEPOP_H
 #define LTEPOP_H
 
-#include <memory>
 #include <vector>
-
-#include "atomic.h"
-#include "sn3d.h"
 
 [[nodiscard]] auto get_groundlevelpop(int modelgridindex, int element, int ion) -> double;
 [[nodiscard]] auto calculate_levelpop(int modelgridindex, int element, int ion, int level) -> double;

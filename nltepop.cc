@@ -1,8 +1,11 @@
 #include "nltepop.h"
 
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_cblas.h>
+#include <gsl/gsl_errno.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_matrix_double.h>
+#include <gsl/gsl_permutation.h>
 #include <gsl/gsl_vector_double.h>
 
 #include <algorithm>
@@ -10,7 +13,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#include <memory>
 #include <vector>
 
 #include "artisoptions.h"
@@ -18,21 +20,18 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_cblas.h"
-#include "gsl/gsl_errno.h"
-#include "gsl/gsl_permutation.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
 #include "ratecoeff.h"
 #include "sn3d.h"
 
-static FILE *nlte_file = nullptr;
+static FILE *nlte_file{};
 
 // can save memory by using a combined rate matrix at the cost of diagnostic information
 static constexpr bool individual_process_matricies = true;
 
-static inline auto get_nlte_vector_index(const int element, const int ion, const int level) -> int
+static auto get_nlte_vector_index(const int element, const int ion, const int level) -> int
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
 {
@@ -406,7 +405,7 @@ static void nltepop_reset_element(const int modelgridindex, const int element) {
 
 static auto get_element_superlevelpartfuncs(const int modelgridindex, const int element) -> std::vector<double> {
   const int nions = get_nions(element);
-  std::vector<double> superlevel_partfuncs(nions, 0.);
+  auto superlevel_partfuncs = std::vector<double>(nions, 0.);
   for (int ion = 0; ion < nions; ion++) {
     if (ion_has_superlevel(element, ion)) {
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
@@ -414,8 +413,6 @@ static auto get_element_superlevelpartfuncs(const int modelgridindex, const int 
       for (int level = nlevels_nlte + 1; level < nlevels; level++) {
         superlevel_partfuncs[ion] += superlevel_boltzmann(modelgridindex, element, ion, level);
       }
-    } else {
-      superlevel_partfuncs[ion] = 0.;
     }
   }
 
@@ -502,17 +499,6 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
           nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, lineindex) *
           s_renorm[level];
 
-      // if ((Z == 26) && (ionstage == 1) && (level == 0) && (upper <= 5))
-      // {
-      //   const double tau_sobolev = get_tau_sobolev(modelgridindex, lineindex, t_mid);
-      //   const double nu_trans = epsilon_trans / H;
-      //   const double lambda = 1e8 * CLIGHT / nu_trans; // should be in Angstroms
-      //   printout("Z=%d ionstage %d lower %d upper %d lambda %6.1fÅ tau_sobolev=%g einstein_A %g osc_strength %g
-      //   coll_str %g\n",
-      //            Z, ionstage, level, upper, lambda, tau_sobolev,
-      //            linelist[lineindex].einstein_A, linelist[lineindex].osc_strength, linelist[lineindex].coll_str);
-      // }
-
       const int lower_index = level_index;
       const int upper_index = get_nlte_vector_index(element, ion, upper);
 
@@ -545,7 +531,8 @@ static void nltepop_matrix_add_ionisation(const int modelgridindex, const int el
     // thermal collisional ionization, photoionisation and recombination processes
     const double epsilon_current = epsilon(element, ion, level);
 
-    for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
+    const auto nphixstargets = get_nphixstargets(element, ion, level);
+    for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
       const int upper_index = get_nlte_vector_index(element, ion + 1, upper);
       const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
@@ -838,12 +825,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
   gsl_matrix *rate_matrix = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-  gsl_matrix *rate_matrix_rad_bb = nullptr;
-  gsl_matrix *rate_matrix_coll_bb = nullptr;
-  gsl_matrix *rate_matrix_ntcoll_bb = nullptr;
-  gsl_matrix *rate_matrix_rad_bf = nullptr;
-  gsl_matrix *rate_matrix_coll_bf = nullptr;
-  gsl_matrix *rate_matrix_ntcoll_bf = nullptr;
+  gsl_matrix *rate_matrix_rad_bb{};
+  gsl_matrix *rate_matrix_coll_bb{};
+  gsl_matrix *rate_matrix_ntcoll_bb{};
+  gsl_matrix *rate_matrix_rad_bf{};
+  gsl_matrix *rate_matrix_coll_bf{};
+  gsl_matrix *rate_matrix_ntcoll_bf{};
   if (individual_process_matricies) {
     rate_matrix_rad_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
     rate_matrix_coll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
@@ -1109,6 +1096,9 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
   //         timestep, n, grid::get_TR(n), grid::get_Te(n), grid::get_W(n), grid::get_TJ(n), grid::get_nne(n));
 
   for (int element = 0; element < get_nelements(); element++) {
+    if (!elem_has_nlte_levels(element)) {
+      continue;
+    }
     const int nions = get_nions(element);
     const int atomic_number = get_atomicnumber(element);
 

@@ -1,5 +1,9 @@
 #include "rpkt.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -12,18 +16,13 @@
 #include <tuple>
 #include <vector>
 
-#include "macroatom.h"
-
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
-
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
+#include "macroatom.h"
 #include "packet.h"
 #include "radfield.h"
 #include "sn3d.h"
@@ -31,21 +30,25 @@
 #include "vectors.h"
 #include "vpkt.h"
 
-static constexpr float expopac_lambdamin = 534.5;
-static constexpr float expopac_lambdamax = 35000.;
-static constexpr float expopac_deltalambda = 35.5;
-static constexpr auto expopac_nbins =
+namespace {
+
+constexpr float expopac_lambdamin = 534.5;
+constexpr float expopac_lambdamax = 35000.;
+constexpr float expopac_deltalambda = 35.5;
+constexpr auto expopac_nbins =
     static_cast<std::ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
 // kappa in cm^2/g for each bin of each non-empty cell
-static std::span<float> expansionopacities{};
+std::span<float> expansionopacities{};
 
 // kappa times Planck function for each bin of each non-empty cell
-static std::span<double> expansionopacity_planck_cumulative{};
+std::span<double> expansionopacity_planck_cumulative{};
 #ifdef MPI_ON
-static MPI_Win win_expansionopacities = MPI_WIN_NULL;
-static MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
+MPI_Win win_expansionopacities = MPI_WIN_NULL;
+MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
 #endif
+
+}  // anonymous namespace
 
 void allocate_expansionopacities() {
   if constexpr (!EXPANSIONOPACITIES_ON) {
@@ -53,8 +56,8 @@ void allocate_expansionopacities() {
   }
 
   const auto npts_nonempty = grid::get_nonempty_npts_model();
-  float *expansionopacities_data = nullptr;
-  double *expansionopacity_planck_cumulative_data = nullptr;
+  float *expansionopacities_data{};
+  double *expansionopacity_planck_cumulative_data{};
 #ifdef MPI_ON
   int my_rank_nonemptycells = npts_nonempty / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
@@ -124,16 +127,16 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
   return matchindex;
 }
 
-static auto get_nu_cmf_abort(std::span<const double, 3> pos, std::span<const double, 3> dir, const double prop_time,
+static auto get_nu_cmf_abort(const std::array<double, 3> pos, const std::array<double, 3> dir, const double prop_time,
                              const double nu_rf, const double abort_dist) -> double {
   // get the frequency change per distance travelled assuming linear change to the abort distance
   // this is done is two parts to get identical results to do_rpkt_step()
   const auto half_abort_dist = abort_dist / 2.;
   const auto abort_time = prop_time + half_abort_dist / CLIGHT_PROP + half_abort_dist / CLIGHT_PROP;
 
-  std::array<const double, 3> abort_pos = {pos[0] + (dir[0] * half_abort_dist) + (dir[0] * half_abort_dist),
-                                           pos[1] + (dir[1] * half_abort_dist) + (dir[1] * half_abort_dist),
-                                           pos[2] + (dir[2] * half_abort_dist) + (dir[2] * half_abort_dist)};
+  const std::array<double, 3> abort_pos{pos[0] + (dir[0] * half_abort_dist) + (dir[0] * half_abort_dist),
+                                        pos[1] + (dir[1] * half_abort_dist) + (dir[1] * half_abort_dist),
+                                        pos[2] + (dir[2] * half_abort_dist) + (dir[2] * half_abort_dist)};
 
   const double nu_cmf_abort = nu_rf * doppler_packet_nucmf_on_nurf(abort_pos, dir, abort_time);
 
@@ -383,7 +386,7 @@ static void electron_scatter_rpkt(Packet &pkt) {
   double Qi = pkt.stokes[1];
   double Ui = pkt.stokes[2];
 
-  auto old_dir_cmf = frame_transform(pkt.dir, &Qi, &Ui, vel_vec);
+  const auto old_dir_cmf = frame_transform(pkt.dir, &Qi, &Ui, vel_vec);
 
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
   // Whitlock 2008)
@@ -423,7 +426,7 @@ static void electron_scatter_rpkt(Packet &pkt) {
   }
 
   const double tsc = acos(M);
-  double new_dir_cmf[3];
+  std::array<double, 3> new_dir_cmf{};
 
   if (fabs(old_dir_cmf[2]) < 0.99999) {
     new_dir_cmf[0] = sin(tsc) / sqrt(1. - pow(old_dir_cmf[2], 2.)) *
@@ -445,14 +448,13 @@ static void electron_scatter_rpkt(Packet &pkt) {
 
   // Need to rotate Stokes Parameters in the scattering plane
 
-  std::array<double, 3> ref1{};
-  auto ref2 = meridian(old_dir_cmf, ref1);
+  auto [ref1_olddir, ref2_olddir] = meridian(old_dir_cmf);
 
   // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
   // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
   // ref1_sc and ref2_sc in the scattering plane. It is the supplementary angle of the
   // scatt angle phisc chosen in the rejection technique above (phisc+i1=180 or phisc+i1=540)
-  const double i1 = rot_angle(old_dir_cmf, new_dir_cmf, ref1, ref2);
+  const double i1 = rot_angle(old_dir_cmf, new_dir_cmf, ref1_olddir, ref2_olddir);
   const double cos2i1 = cos(2 * i1);
   const double sin2i1 = sin(2 * i1);
 
@@ -469,7 +471,7 @@ static void electron_scatter_rpkt(Packet &pkt) {
 
   // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
 
-  ref2 = meridian(new_dir_cmf, ref1);
+  auto [ref1, ref2] = meridian(new_dir_cmf);
 
   // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
   // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
@@ -617,7 +619,7 @@ static void rpkt_event_boundbound(Packet &pkt, MacroAtomState &pktmastate, const
   pkt.last_event = 1;
 
   pkt.absorptiontype = pktmastate.activatingline;
-  pkt.absorptionfreq = pkt.nu_rf;  // pkt.nu_cmf;
+  pkt.absorptionfreq = pkt.nu_rf;
   pkt.absorptiondir[0] = pkt.dir[0];
   pkt.absorptiondir[1] = pkt.dir[1];
   pkt.absorptiondir[2] = pkt.dir[2];
@@ -638,7 +640,7 @@ static void rpkt_event_boundbound(Packet &pkt, MacroAtomState &pktmastate, const
   }
 
   if constexpr (RECORD_LINESTAT) {
-    safeincrement(globals::acounter[pkt.next_trans - 1]);
+    atomicadd(globals::acounter[pkt.next_trans - 1], 1);
   }
 
   do_macroatom(pkt, pktmastate);
@@ -680,7 +682,6 @@ static void rpkt_event_thickcell(Packet &pkt)
 
   emit_rpkt(pkt);
   /// Electron scattering does not modify the last emission flag
-  // pkt.emissiontype = get_continuumindex(element,ion-1,lower);
   /// but it updates the last emission position
   pkt.em_pos = pkt.pos;
   pkt.em_time = pkt.prop_time;
@@ -706,7 +707,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   }
 
   /// ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
-  safeadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.ffheating);
+  atomicadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.ffheating);
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
@@ -718,13 +719,13 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
       const int ionestimindex = nonemptymgi * globals::nbfcontinua_ground + i;
 
       if constexpr (USE_LUT_PHOTOION) {
-        safeadd(globals::gammaestimator[ionestimindex],
-                phixslist.groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
+        atomicadd(globals::gammaestimator[ionestimindex],
+                  phixslist.groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
       }
 
       if constexpr (USE_LUT_BFHEATING) {
-        safeadd(globals::bfheatingestimator[ionestimindex],
-                phixslist.groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
+        atomicadd(globals::bfheatingestimator[ionestimindex],
+                  phixslist.groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
       }
     }
   }
@@ -742,8 +743,8 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
   static thread_local struct Phixslist phixslist {
     .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
     .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
-    .gamma_contr = std::vector<double>(DETAILED_BF_ESTIMATORS_ON ? globals::nbfcontinua : 0, 0.), .allcontend = 1,
-    .allcontbegin = 0
+    .gamma_contr = std::vector<double>(globals::bfestimcount, 0.), .allcontend = 1, .allcontbegin = 0, .bfestimend = 1,
+    .bfestimbegin = 0,
   };
 
   static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
@@ -955,7 +956,8 @@ static auto calculate_chi_ffheat_nnionpart(const int modelgridindex) -> double {
   double chi_ff_nnionpart = 0.;
   const int nelements = get_nelements();
   for (int element = 0; element < nelements; element++) {
-    for (int ion = 0; ion < get_nions(element); ion++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
       const double nnion = get_nnion(modelgridindex, element, ion);
       const int ioncharge = get_ionstage(element, ion) - 1;
       chi_ff_nnionpart += ioncharge * ioncharge * g_ff * nnion;
@@ -1014,7 +1016,6 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
   // break the list into nu >= nu_edge and the remainder (nu < nu_edge)
 
   int i = 0;
-  const int nbfcontinua = globals::nbfcontinua;
   const int allcontend =
       std::distance(globals::allcont_nu_edge.cbegin(),
                     std::upper_bound(globals::allcont_nu_edge.cbegin(), globals::allcont_nu_edge.cend(), nu));
@@ -1026,18 +1027,29 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
           [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }));
 
   assert_testmodeonly(allcontbegin >= 0);
-  assert_testmodeonly(allcontend <= nbfcontinua);
+  assert_testmodeonly(allcontend <= globals::nbfcontinua);
   assert_testmodeonly(allcontbegin <= allcontend);
 
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     phixslist->allcontbegin = allcontbegin;
     phixslist->allcontend = allcontend;
+
+    phixslist->bfestimend =
+        std::distance(globals::bfestim_nu_edge.cbegin(),
+                      std::upper_bound(globals::bfestim_nu_edge.cbegin(), globals::bfestim_nu_edge.cend(), nu));
+
+    phixslist->bfestimbegin = std::distance(
+        globals::bfestim_nu_edge.data(),
+        std::lower_bound(
+            globals::bfestim_nu_edge.data(), globals::bfestim_nu_edge.data() + phixslist->bfestimend, nu,
+            [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }));
   }
 
   for (i = allcontbegin; i < allcontend; i++) {
     const int element = globals::allcont[i].element;
     const int ion = globals::allcont[i].ion;
     const int level = globals::allcont[i].level;
+    const auto bfestimindex = globals::allcont[i].bfestimindex;
     /// The bf process happens only if the current cell contains
     /// the involved atomic species
 
@@ -1079,7 +1091,9 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
         }
 
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) {
-          phixslist->gamma_contr[i] = sigma_contr;
+          if (bfestimindex >= 0) {
+            phixslist->gamma_contr[bfestimindex] = sigma_contr;
+          }
         }
 
         chi_bf_sum += nnlevel * sigma_contr;
@@ -1090,14 +1104,18 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
         // ignore this particular process
         phixslist->chi_bf_sum[i] = chi_bf_sum;
         if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-          phixslist->gamma_contr[i] = 0.;
+          if (bfestimindex >= 0) {
+            phixslist->gamma_contr[bfestimindex] = 0.;
+          }
         }
       }
     } else if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
       // no element present or not an important level
       phixslist->chi_bf_sum[i] = chi_bf_sum;
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-        phixslist->gamma_contr[i] = 0.;
+        if (bfestimindex >= 0) {
+          phixslist->gamma_contr[bfestimindex] = 0.;
+        }
       }
     }
   }
