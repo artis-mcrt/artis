@@ -58,7 +58,6 @@ double min_den;  // minimum model density
 double mtot_input;
 double mfeg;  /// Total mass of Fe group elements in ejecta
 
-
 int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
 
 struct PropGridCell {
@@ -90,6 +89,10 @@ std::vector<int> ranks_ndo_nonempty;
 int maxndo = -1;
 
 }  // anonymous namespace
+
+auto get_ejecta_mass() -> double {
+  return mtot_input;
+}
 
 auto wid_init(const int cellindex, const int axis) -> double
 // for a uniform grid this is the extent along the x,y,z coordinate (x_2 - x_1, etc.)
