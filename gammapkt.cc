@@ -426,10 +426,8 @@ static auto thomson_angle() -> double {
   return mu;
 }
 
-
 [[nodiscard]] static auto scatter_dir(const std::array<double, 3> dir_in,
                                       const double cos_theta) -> std::array<double, 3>
-
 // Routine for scattering a direction through angle theta.
 {
   // begin with setting the direction in coordinates where original direction
@@ -825,7 +823,7 @@ void pair_prod(Packet &pkt) {
   }
 }
 
-void do_gamma_transport(Packet &pkt, double t2)
+void do_gamma(Packet &pkt, double t2)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.
@@ -988,7 +986,7 @@ void barnes_thermalization(Packet &pkt, bool local)
   }
   double rho_0 = 0.;
   if (!local) {
-    rho_0 = grid::mtot_input / V_0;
+    rho_0 = grid::get_ejecta_mass() / V_0;
   } else {
     rho_0 = grid::get_rho_tmin(pkt.where);
   }
@@ -1017,12 +1015,12 @@ void barnes_thermalization(Packet &pkt, bool local)
 }
 
 void treat_gamma_packet(Packet &pkt, double t2) {
-  switch (GAMMA_THERMALIZATION_SCHEME) {
-    case 0:
+  switch (THERMALIZATION_SCHEME) {
+    case DETAILED:
       do_gamma_transport(pkt, t2);
-    case 1:
+    case BARNES_GLOBAL:
       barnes_thermalization(pkt, false);
-    case 2:
+    case BARNES_LOCAL:
       barnes_thermalization(pkt, true);
     default:
       // thermalization scheme not implemented yet, abort the run and print error
