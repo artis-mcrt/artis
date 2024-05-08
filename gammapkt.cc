@@ -986,7 +986,7 @@ void barnes_thermalization(Packet &pkt, bool local)
   }
   double rho_0 = 0.;
   if (!local) {
-    rho_0 = grid::get_ejecta_mass() / V_0;
+    rho_0 = grid::mtot_input / V_0;
   } else {
     rho_0 = grid::get_rho_tmin(pkt.where);
   }
