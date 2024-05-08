@@ -75,6 +75,8 @@ inline ModelGridCell *modelgrid{};
 
 inline int ngrid{0};
 
+inline double mtot_input;
+
 [[nodiscard]] auto get_elements_uppermost_ion(int modelgridindex, int element) -> int;
 void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
 [[nodiscard]] auto wid_init(int cellindex, int axis) -> double;
@@ -137,7 +139,6 @@ void write_grid_restart_data(int timestep);
 {
   return modelgrid[modelgridindex].composition[element].abundance;
 }
-[[nodiscard]] auto get_ejecta_mass() -> double;
 
 inline void change_cell(Packet &pkt, const int snext)
 /// Routine to take a packet across a boundary.
