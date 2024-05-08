@@ -1018,10 +1018,13 @@ void treat_gamma_packet(Packet &pkt, double t2) {
   switch (THERMALIZATION_SCHEME) {
     case DETAILED:
       do_gamma(pkt, t2);
+      break;
     case BARNES_GLOBAL:
       barnes_thermalization(pkt, false);
+      break;
     case BARNES_LOCAL:
       barnes_thermalization(pkt, true);
+      break;
     default:
       // thermalization scheme not implemented yet, abort the run and print error
       printout("Gamma thermalization scheme from artisoptions.h not implemented yet. Abort. \n");
