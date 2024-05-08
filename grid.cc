@@ -90,7 +90,8 @@ int maxndo = -1;
 
 }  // anonymous namespace
 
-auto get_ejecta_mass() -> double {
+auto get_ejecta_mass() -> double 
+{
   return mtot_input;
 }
 
