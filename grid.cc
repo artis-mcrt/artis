@@ -90,10 +90,7 @@ int maxndo = -1;
 
 }  // anonymous namespace
 
-auto get_ejecta_mass() -> double 
-{
-  return mtot_input;
-}
+auto get_ejecta_mass() -> double { return mtot_input; }
 
 auto wid_init(const int cellindex, const int axis) -> double
 // for a uniform grid this is the extent along the x,y,z coordinate (x_2 - x_1, etc.)
