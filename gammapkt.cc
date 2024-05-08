@@ -1017,7 +1017,7 @@ void barnes_thermalization(Packet &pkt, bool local)
 void treat_gamma_packet(Packet &pkt, double t2) {
   switch (THERMALIZATION_SCHEME) {
     case DETAILED:
-      do_gamma_transport(pkt, t2);
+      do_gamma(pkt, t2);
     case BARNES_GLOBAL:
       barnes_thermalization(pkt, false);
     case BARNES_LOCAL:
