@@ -810,7 +810,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   double cell_Te = grid::get_Te(modelgridindex);
 
-  if (cell_Te == 1000) {
+  if (cell_Te == MINTEMP) {
     printout(
         "Not solving for NLTE populations in cell %d at timestep %d for element Z=%d due to low temperature Te=%g\n",
         modelgridindex, timestep, atomic_number, cell_Te);
