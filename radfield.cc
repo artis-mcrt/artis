@@ -1040,14 +1040,23 @@ void normalise_J(const int modelgridindex, const double estimator_normfactor_ove
   }
 }
 
-void normalise_bf_estimators(const int modelgridindex, const ptrdiff_t nonemptymgi,
-                             const double estimator_normfactor_over_H) {
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    // printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
-    assert_always(nonemptymgi >= 0);
-    for (int i = 0; i < globals::bfestimcount; i++) {
-      const auto mgibfindex = nonemptymgi * globals::bfestimcount + i;
-      prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * estimator_normfactor_over_H;
+void normalise_bf_estimators(const int nts, const int nts_prev, const int titer, double deltat) {
+  if (!(nts == globals::timestep_initial && titer == 0)) {
+    for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
+      const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+      if (!(globals::lte_iteration || grid::modelgrid[mgi].thick == 1)) {
+        int assoc_cells = grid::get_numassociatedcells(mgi);
+        if (assoc_cells > 0) {
+          double deltaV =
+              grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
+          double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
+          assert_always(nonemptymgi >= 0);
+          for (int i = 0; i < globals::bfestimcount; i++) {
+            const auto mgibfindex = nonemptymgi * globals::bfestimcount + i;
+            prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * (estimator_normfactor / H);
+          }
+        }
+      }
     }
   }
 }
@@ -1319,7 +1328,8 @@ void read_restart_data(FILE *gridsave_file) {
     if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != T_R_min || T_R_max_in != T_R_max ||
         nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999) {
       printout(
-          "ERROR: gridsave file specifies %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg "
+          "ERROR: gridsave file specifies %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min "
+          "%lg "
           "T_R_max %lg\n",
           bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
       printout("require %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
