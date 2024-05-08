@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <limits>
 #include <span>
 #include <string>
@@ -986,7 +987,9 @@ void barnes_thermalization(Packet &pkt, bool local)
   }
   double rho_0 = 0.;
   if (!local) {
+    std::cout << "Before getting mtot_input" << std::endl;
     rho_0 = grid::mtot_input / V_0;
+    std::cout << "After getting mtot_input" << std::endl;
   } else {
     rho_0 = grid::get_rho_tmin(pkt.where);
   }
