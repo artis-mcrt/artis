@@ -1164,9 +1164,18 @@ void reduce_estimators()
     const auto sys_time_start_reduction = std::time(nullptr);
     printout("Reducing binned radiation field estimators");
     assert_always(radfieldbins != nullptr);
-
+    printout("After assert\n");
     for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
+      printout("Reducing binned radiation field estimators for modelgridindex %zd\n", nonemptymgi);
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
+        printout("Reducing bin %d\n", binindex);
+        printout("Radfield[nonemptymgi=%zd][binindex=%d].J_raw = %g\n", nonemptymgi, binindex,
+                 radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].J_raw);
+        printout("Radfield[nonemptymgi=%zd][binindex=%d].nuJ_raw = %g\n", nonemptymgi, binindex,
+                 radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].nuJ_raw);
+        printout("Radfield[nonemptymgi=%zd][binindex=%d].contribcount = %d\n", nonemptymgi, binindex,
+                 radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].contribcount);
+
         const auto mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
