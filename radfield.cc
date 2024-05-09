@@ -1175,6 +1175,7 @@ void reduce_estimators()
                  radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].nuJ_raw);
         printout("Radfield[nonemptymgi=%zd][binindex=%d].contribcount = %d\n", nonemptymgi, binindex,
                  radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].contribcount);
+        /// test line
 
         const auto mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
