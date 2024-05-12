@@ -224,11 +224,11 @@ CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wno-unused-parameter -W
 # sn3d.cc and exspec.cc have main() defined
 common_files := $(filter-out sn3d.cc exspec.cc, $(wildcard *.cc))
 
-sn3d_files = sn3d.cc $(common_files)
+sn3d_files = $(common_files) sn3d.cc
 sn3d_objects = $(addprefix $(BUILD_DIR)/,$(sn3d_files:.cc=.o))
 sn3d_dep = $(sn3d_objects:%.o=%.d)
 
-exspec_files = exspec.cc $(common_files)
+exspec_files = $(common_files) exspec.cc
 exspec_objects = $(addprefix $(BUILD_DIR)/,$(exspec_files:.cc=.o))
 exspec_dep = $(exspec_objects:%.o=%.d)
 
@@ -243,14 +243,14 @@ $(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h artisoptions.h Makefile
 check: $(sn3d_files)
 	run-clang-tidy $(sn3d_files)
 
-sn3d: $(sn3d_objects) artisoptions.h Makefile
+sn3d: artisoptions.h Makefile $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 -include $(sn3d_dep)
 
 sn3dwhole: version.h artisoptions.h Makefile
 	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o sn3d
 
-exspec: $(exspec_objects) artisoptions.h Makefile
+exspec: artisoptions.h Makefile $(exspec_objects)
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
 -include $(exspec_dep)
 
