@@ -55,7 +55,6 @@ std::array<int, 3> ncoord_model{0};  // the model.txt input grid dimensions
 
 double min_den;  // minimum model density
 
-double mtot_input;
 double mfeg;  /// Total mass of Fe group elements in ejecta
 
 int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
