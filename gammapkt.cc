@@ -991,19 +991,16 @@ void barnes_thermalization(Packet &pkt, bool local)
     rho_0 = grid::get_rho_tmin(grid::get_cell_modelgridindex(pkt.where));
   }
 
-  double R_0 = pow(3 * V_0 / (4 * PI), 1 / 3.);
-  double t_0 = grid::get_t_model();
-  double tau_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
+  const double R_0 = pow(3 * V_0 / (4 * PI), 1 / 3.);
+  const double t_0 = grid::get_t_model();
+  const double tau_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
   // get current time
-  double t = t_0 + pkt.prop_time;
-  double tau = pow(tau_ineff / t, 2.);
-  double f_gamma = 1. - exp(-tau);
+  const double t = t_0 + pkt.prop_time;
+  const double tau = pow(tau_ineff / t, 2.);
+  const double f_gamma = 1. - exp(-tau);
 
-  // choose random number in [0,1)
-  double z = rng_uniform();
-
-  // either absorp packet or let it escape
-  if (z < f_gamma) {
+  // either absorb packet or let it escape
+  if (rng_uniform() < f_gamma) {
     // packet is absorbed and contributes to the heating as a k-packet
     pkt.type = TYPE_NTLEPTON;
     pkt.absorptiontype = -4;
