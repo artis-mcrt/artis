@@ -161,7 +161,7 @@ void do_packet(Packet &pkt, const double t2, const int nts)
     }
 
     case TYPE_GAMMA: {
-      gammapkt::treat_gamma_packet(pkt, t2);
+      gammapkt::do_gamma(pkt, t2);
 
       if (pkt.type != TYPE_GAMMA && pkt.type != TYPE_ESCAPE) {
         atomicadd(globals::timesteps[nts].gamma_dep, pkt.e_cmf);
