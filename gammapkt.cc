@@ -1015,20 +1015,14 @@ void barnes_thermalization(Packet &pkt, bool local)
 }
 
 void do_gamma(Packet &pkt, double t2) {
-  switch (THERMALIZATION_SCHEME) {
-    case DETAILED:
-      transport_gamma(pkt, t2);
-      break;
-    case BARNES_GLOBAL:
-      barnes_thermalization(pkt, false);
-      break;
-    case BARNES_LOCAL:
-      barnes_thermalization(pkt, true);
-      break;
-    default:
-      // thermalization scheme not implemented yet, abort the run and print error
-      printout("Gamma thermalization scheme from artisoptions.h not implemented yet. Abort. \n");
-      std::abort();
+  if constexpr (THERMALIZATION_SCHEME == DETAILED) {
+    transport_gamma(pkt, t2);
+  } else if constexpr (THERMALIZATION_SCHEME == BARNES_GLOBAL) {
+    barnes_thermalization(pkt, false);
+  } else if constexpr (THERMALIZATION_SCHEME == BARNES_LOCAL) {
+    barnes_thermalization(pkt, true);
+  } else {
+    __builtin_unreachable();
   }
 }
 
