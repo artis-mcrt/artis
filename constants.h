@@ -67,10 +67,6 @@ enum timestepsizemethods {
   TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC = 3,
 };
 
-enum thermalizationscheme {
-  DETAILED = 0,
-  BARNES_GLOBAL = 1,
-  BARNES_LOCAL = 2,
-};
+enum class ThermalisationScheme { DETAILED, BARNES_GLOBAL, BARNES_LOCAL };
 
 #endif

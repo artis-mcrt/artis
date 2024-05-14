@@ -1015,11 +1015,11 @@ void barnes_thermalization(Packet &pkt, bool local)
 }
 
 void do_gamma(Packet &pkt, double t2) {
-  if constexpr (THERMALIZATION_SCHEME == DETAILED) {
+  if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
-  } else if constexpr (THERMALIZATION_SCHEME == BARNES_GLOBAL) {
+  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_GLOBAL) {
     barnes_thermalization(pkt, false);
-  } else if constexpr (THERMALIZATION_SCHEME == BARNES_LOCAL) {
+  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_LOCAL) {
     barnes_thermalization(pkt, true);
   } else {
     __builtin_unreachable();
