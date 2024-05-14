@@ -823,7 +823,7 @@ void pair_prod(Packet &pkt) {
   }
 }
 
-void do_gamma(Packet &pkt, double t2)
+void transport_gamma(Packet &pkt, double t2)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.
@@ -1014,10 +1014,10 @@ void barnes_thermalization(Packet &pkt, bool local)
   }
 }
 
-void treat_gamma_packet(Packet &pkt, double t2) {
+void do_gamma(Packet &pkt, double t2) {
   switch (THERMALIZATION_SCHEME) {
     case DETAILED:
-      do_gamma(pkt, t2);
+      transport_gamma(pkt, t2);
       break;
     case BARNES_GLOBAL:
       barnes_thermalization(pkt, false);
