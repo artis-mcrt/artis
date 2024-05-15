@@ -19,6 +19,7 @@ jobs:
     testmodels:
         strategy:
             matrix:
+                # os: ['ubuntu-latest', 'self-hosted']
                 os: [ubuntu-22.04]
                 testmode: [OFF, ON]
                 testname:
@@ -34,6 +35,9 @@ jobs:
                         nebularonezone_1d_3dgrid,
                         nebularonezone_1d_3dgrid_limitbfest,
                     ]
+                exclude:
+                    - os: self-hosted
+                      testmode: ON
             fail-fast: false
 
         runs-on: ${{ matrix.os }}
@@ -293,7 +297,7 @@ jobs:
     combine_checksums:
         needs: testmodels
         if: always()
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-latest
         steps:
             - name: Download test output
               uses: actions/download-artifact@v4
