@@ -150,7 +150,5 @@ constexpr bool EXPANSION_OPAC_SAMPLE_KAPPAPLANCK = false;
 
 constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 
-constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
-
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H

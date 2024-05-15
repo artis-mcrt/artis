@@ -823,7 +823,7 @@ void pair_prod(Packet &pkt) {
   }
 }
 
-void transport_gamma(Packet &pkt, double t2)
+void do_gamma(Packet &pkt, double t2)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.
@@ -966,60 +966,6 @@ void transport_gamma(Packet &pkt, double t2)
   } else {
     printout("Failed to identify event. Gamma (2). edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
     std::abort();
-  }
-}
-
-void barnes_thermalization(Packet &pkt, bool local)
-// Barnes treatment: packet is either getting absorbed immediately and locally
-// creating a k-packet or it escapes. The absorption probability matches the
-// Barnes thermalization efficiency, for expressions see the original paper:
-// https://ui.adsabs.harvard.edu/abs/2016ApJ...829..110B
-{
-  // compute thermalization efficiency (= absorption probability)
-  constexpr double mean_gamma_opac = 0.1;
-
-  // determine average initial density
-  double V_0 = 0.;
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    V_0 += grid::get_modelcell_assocvolume_tmin(mgi);
-  }
-  double rho_0 = 0.;
-  if (!local) {
-    rho_0 = grid::mtot_input / V_0;
-  } else {
-    rho_0 = grid::get_rho_tmin(grid::get_cell_modelgridindex(pkt.where));
-  }
-
-  const double R_0 = pow(3 * V_0 / (4 * PI), 1 / 3.);
-  const double t_0 = grid::get_t_model();
-  const double tau_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
-  // get current time
-  const double t = t_0 + pkt.prop_time;
-  const double tau = pow(tau_ineff / t, 2.);
-  const double f_gamma = 1. - exp(-tau);
-
-  // either absorb packet or let it escape
-  if (rng_uniform() < f_gamma) {
-    // packet is absorbed and contributes to the heating as a k-packet
-    pkt.type = TYPE_NTLEPTON;
-    pkt.absorptiontype = -4;
-  } else {
-    // let packet escape, i.e. make it inactive
-    pkt.type = TYPE_ESCAPE;
-    grid::change_cell(pkt, -99);
-  }
-}
-
-void do_gamma(Packet &pkt, double t2) {
-  if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
-    transport_gamma(pkt, t2);
-  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_GLOBAL) {
-    barnes_thermalization(pkt, false);
-  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_LOCAL) {
-    barnes_thermalization(pkt, true);
-  } else {
-    __builtin_unreachable();
   }
 }
 

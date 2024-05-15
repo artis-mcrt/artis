@@ -55,6 +55,7 @@ std::array<int, 3> ncoord_model{0};  // the model.txt input grid dimensions
 
 double min_den;  // minimum model density
 
+double mtot_input;
 double mfeg;  /// Total mass of Fe group elements in ejecta
 
 int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
@@ -2024,9 +2025,7 @@ static void setup_grid_cartesian_3d()
   // have a higher expansion velocity than the sides
   const double vmax_corner = sqrt(3 * pow(globals::vmax, 2));
   printout("corner vmax %g [cm/s] (%.2fc)\n", vmax_corner, vmax_corner / CLIGHT);
-  if (!FORCE_SPHERICAL_ESCAPE_SURFACE) {
-    assert_always(vmax_corner < CLIGHT);
-  }
+  assert_always(vmax_corner < CLIGHT);
 
   /// Set grid size for uniform xyz grid
   if (get_model_type() == GRID_CARTESIAN3D) {

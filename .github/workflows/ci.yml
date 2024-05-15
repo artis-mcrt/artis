@@ -19,7 +19,8 @@ jobs:
     testmodels:
         strategy:
             matrix:
-                os: [ubuntu-24.04]
+                # os: ['ubuntu-latest', 'self-hosted']
+                os: [ubuntu-22.04]
                 testmode: [OFF, ON]
                 testname:
                     [
@@ -56,12 +57,12 @@ jobs:
                   #   sudo add-apt-repository multiverse
                     sudo apt-get update
 
-            - name: Install gcc-14
+            - name: Install gcc-13
               if: always()
               uses: fortran-lang/setup-fortran@v1
               with:
                   compiler: gcc
-                  version: 14
+                  version: 13
 
             - name: install gsl and openmpi
               run: |
@@ -296,7 +297,7 @@ jobs:
     combine_checksums:
         needs: testmodels
         if: always()
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-latest
         steps:
             - name: Download test output
               uses: actions/download-artifact@v4

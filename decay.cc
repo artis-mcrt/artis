@@ -669,6 +669,8 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
       nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = q_mev * MEV;
       nuclides.back().endecay_electron = e_elec_mev * MEV;
       nuclides.back().endecay_gamma = e_gamma_mev * MEV;
+      // printout("betaminus file: Adding (Z=%d)%s%d endecay_electron %g endecay_gamma %g tau_s %g\n",
+      //          z, get_elname(z), a, e_elec_mev, e_gamma_mev, tau_sec);
       assert_always(e_elec_mev >= 0.);
     }
 

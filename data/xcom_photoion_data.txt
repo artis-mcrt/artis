@@ -1,4 +1,4 @@
-# Photoionization data from the XCOM database by NIST (https://www.nist.gov/pml/xcom-photon-cross-sections-database, Berger et al. 2010)
+# Photoionization data from the XCOM database by NIST (https://www.nist.gov/pml/xcom-photon-cross-sections-database, Berger et al. 2010)  
   1 1.000000000000E-03 1.141000000000E+01
   1 1.500000000000E-03 2.932000000000E+00
   1 2.000000000000E-03 1.111000000000E+00
