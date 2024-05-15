@@ -2024,7 +2024,7 @@ static void setup_grid_cartesian_3d()
   // have a higher expansion velocity than the sides
   const double vmax_corner = sqrt(3 * pow(globals::vmax, 2));
   printout("corner vmax %g [cm/s] (%.2fc)\n", vmax_corner, vmax_corner / CLIGHT);
-  if (!FORCE_SPHERICAL_ESCAPE_SURFACE){
+  if (!FORCE_SPHERICAL_ESCAPE_SURFACE) {
     assert_always(vmax_corner < CLIGHT);
   }
 
