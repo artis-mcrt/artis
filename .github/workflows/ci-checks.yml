@@ -33,7 +33,7 @@ jobs:
                   cppcheck --force --language=c++ --std=c++20 --enable=style --suppress=knownConditionTrueFalse --check-level=exhaustive .
 
     clang-format:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         steps:
             - uses: actions/checkout@v4
 
@@ -97,7 +97,7 @@ jobs:
                   run-clang-tidy
 
     compile:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         env:
             CXX: g++
         strategy:
@@ -181,7 +181,7 @@ jobs:
             - name: install OpenMP
               if: matrix.openmp == 'ON'
               run: |
-                  sudo apt-get install -y libomp5-14 libomp-dev
+                  sudo apt-get install -y libomp5 libomp-dev
 
             - name: Compile classic mode
               run: |
