@@ -33,7 +33,7 @@ jobs:
                   cppcheck --force --language=c++ --std=c++20 --enable=style --suppress=knownConditionTrueFalse --check-level=exhaustive .
 
     clang-format:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         steps:
             - uses: actions/checkout@v4
 
@@ -97,17 +97,17 @@ jobs:
                   run-clang-tidy
 
     compile:
-        runs-on: ubuntu-22.04
         env:
             CXX: g++
         strategy:
             matrix:
-                compiler: [
-                        {name: gcc, ver: 11},
-                        {name: gcc, ver: 12},
-                        {name: gcc, ver: 13},
-                        # {name: gcc, ver: 14},
-                        {name: nvc++, ver: '24.3'},
+                compiler:
+                    [
+                        {os: ubuntu-24.04, name: gcc, ver: 11},
+                        {os: ubuntu-24.04, name: gcc, ver: 12},
+                        {os: ubuntu-24.04, name: gcc, ver: 13},
+                        {os: ubuntu-24.04, name: gcc, ver: 14},
+                        {os: ubuntu-22.04, name: nvc++, ver: '24.3'},
                     ]
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
@@ -117,6 +117,7 @@ jobs:
                       stdpar: ON
             fail-fast: false
 
+        runs-on: ${{ matrix.compiler.os }}
         name: ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}${{ matrix.stdpar == 'ON' && ' stdpar' || ''}}
         steps:
             - uses: actions/checkout@v4
@@ -181,7 +182,7 @@ jobs:
             - name: install OpenMP
               if: matrix.openmp == 'ON'
               run: |
-                  sudo apt-get install -y libomp5-14 libomp-dev
+                  sudo apt-get install -y libomp5 libomp-dev
 
             - name: Compile classic mode
               run: |
