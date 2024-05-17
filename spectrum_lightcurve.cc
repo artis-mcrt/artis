@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdio>
 #include <ctime>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -661,7 +662,11 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
                        const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
 
-  auto lc_file = fstream_required(lc_filename, std::ios_base::out | std::ios_base::trunc);
+  std::ofstream lc_file(lc_filename);
+  if (!lc_file) {
+    printout("failed to open %s\n", lc_filename.c_str());
+    std::abort();
+  }
 
   printout("Writing %s\n", lc_filename.c_str());
 
