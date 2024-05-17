@@ -77,10 +77,10 @@ static constexpr double MINDEPRATE = 0.;
 static constexpr double A_naught_squared = 2.800285203e-17;
 
 // specifies max number of shells for which data is known for computing mean binding energies
-static constexpr int M_NT_SHELLS = 28;
+static constexpr int M_NT_SHELLS = 10;
 
 // maximum number of elements for which binding energy tables are to be used
-static constexpr int MAX_Z_BINDING = 108;
+static constexpr int MAX_Z_BINDING = 30;
 
 static std::array<std::array<double, M_NT_SHELLS>, MAX_Z_BINDING> electron_binding;
 //static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
