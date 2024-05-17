@@ -2,10 +2,6 @@
 #ifndef MACROATOM_H
 #define MACROATOM_H
 
-#include <cmath>
-
-#include "atomic.h"
-#include "constants.h"
 #include "globals.h"
 #include "packet.h"
 
