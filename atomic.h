@@ -3,7 +3,6 @@
 #define ATOMIC_H
 
 #include <array>
-#include <ranges>
 
 #include "grid.h"
 #include "ltepop.h"
