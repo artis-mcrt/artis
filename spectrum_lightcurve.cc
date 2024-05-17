@@ -661,7 +661,7 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
                        const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
 
-  auto lc_file = fstream_required(lc_filename, std::ios_base::out | std::ios_base::trunc);
+  auto lc_file = fstream_required(lc_filename, std::ios::out | std::ios::trunc);
 
   printout("Writing %s\n", lc_filename.c_str());
 
