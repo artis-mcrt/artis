@@ -2,17 +2,12 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
-#include <cinttypes>
-#include <cmath>
-#include <span>
-
 #include "artisoptions.h"
 #include "constants.h"
 #include "globals.h"
 #include "packet.h"
 #include "sn3d.h"
 #include "stats.h"
-#include "vectors.h"
 
 namespace grid {
 
