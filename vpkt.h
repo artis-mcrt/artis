@@ -1,10 +1,6 @@
 #pragma once
-#include <algorithm>
 #ifndef VPKT_H
 #define VPKT_H
-
-#include <cmath>
-#include <span>
 
 #include "constants.h"
 #include "packet.h"

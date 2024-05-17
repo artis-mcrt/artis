@@ -4,8 +4,6 @@
 
 #include <array>
 #include <cmath>
-#include <compare>
-#include <cstdio>
 
 enum packet_type : int {
   TYPE_ESCAPE = 32,

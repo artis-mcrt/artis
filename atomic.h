@@ -2,8 +2,8 @@
 #ifndef ATOMIC_H
 #define ATOMIC_H
 
+#include <algorithm>
 #include <array>
-#include <ranges>
 
 #include "grid.h"
 #include "ltepop.h"
