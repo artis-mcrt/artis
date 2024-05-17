@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdio>
 #include <ctime>
+#include <ios>
 #include <string>
 #include <vector>
 
