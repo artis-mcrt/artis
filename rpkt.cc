@@ -158,8 +158,7 @@ static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double 
 static auto get_event_expansion_opacity(
     const int modelgridindex, const int nonemptymgi, const Packet &pkt,
     Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
-    Phixslist &phixslist, const double tau_rnd, const double abort_dist) -> std::tuple<double, int, bool> {
-  calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, &phixslist, modelgridindex);
+    const double tau_rnd, const double abort_dist) -> std::tuple<double, int, bool> {
   const auto doppler = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
   const auto nu_cmf_abort = get_nu_cmf_abort(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, abort_dist);
@@ -832,14 +831,16 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
 
     edist = tau_next / chi_grey;
     pkt.next_trans = -1;
-  } else if constexpr (EXPANSIONOPACITIES_ON) {
-    std::tie(edist, pkt.next_trans, event_is_boundbound) =
-        get_event_expansion_opacity(mgi, nonemptymgi, pkt, chi_rpkt_cont, phixslist, tau_next, abort_dist);
   } else {
     calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, &phixslist, mgi);
 
-    std::tie(edist, pkt.next_trans, event_is_boundbound) =
-        get_event(mgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist);
+    if constexpr (EXPANSIONOPACITIES_ON) {
+      std::tie(edist, pkt.next_trans, event_is_boundbound) =
+          get_event_expansion_opacity(mgi, nonemptymgi, pkt, chi_rpkt_cont, tau_next, abort_dist);
+    } else {
+      std::tie(edist, pkt.next_trans, event_is_boundbound) =
+          get_event(mgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist);
+    }
   }
   assert_always(edist >= 0);
 
