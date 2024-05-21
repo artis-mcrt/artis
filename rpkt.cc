@@ -358,8 +358,7 @@ static auto get_event_expansion_opacity(
         //          dist, edist_after_bin, binedgedist, binindex);
 
         // assert_always(edist_after_bin <= 1.1 * binedgedist);
-        // this is a hack. why does get_event see less opacity than the expansion opacity ?
-        dist = dist + std::min(edist_after_bin, binedgedist);
+        dist = dist + edist_after_bin;
 
         return {dist, next_trans, event_is_boundbound};
       }
