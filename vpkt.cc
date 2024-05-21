@@ -336,7 +336,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
         const auto n_u = calculate_levelpop(mgi, element, ion, upper);
         const auto n_l = calculate_levelpop(mgi, element, ion, lower);
-        const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
+        const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line);
 
         // Check on the element to exclude (or -1 for no line opacity)
         const int anumber = get_atomicnumber(element);
