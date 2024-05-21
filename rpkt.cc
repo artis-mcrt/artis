@@ -1230,7 +1230,7 @@ void MPI_Bcast_binned_opacities(const int modelgridindex, const int root_node_id
       MPI_Bcast(&expansionopacities[nonemptymgi * expopac_nbins], expopac_nbins, MPI_FLOAT, root_node_id,
                 globals::mpi_comm_internode);
 
-      if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
+      if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
         MPI_Bcast(&expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins], expopac_nbins, MPI_DOUBLE,
                   root_node_id, globals::mpi_comm_internode);
       }
