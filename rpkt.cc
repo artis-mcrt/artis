@@ -71,7 +71,7 @@ void allocate_expansionopacities() {
   assert_always(MPI_Win_shared_query(win_expansionopacities, 0, &size, &disp_unit, &expansionopacities_data) ==
                 MPI_SUCCESS);
 
-  if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
+  if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
     MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
@@ -83,7 +83,7 @@ void allocate_expansionopacities() {
 
 #else
   expansionopacities_data = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
-  if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
+  if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
     expansionopacity_planck_cumulative_data =
         static_cast<double *>(malloc(npts_nonempty * expopac_nbins * sizeof(double)));
   }
@@ -871,13 +871,18 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
     if (thickcell) {
       rpkt_event_thickcell(pkt);
     } else if (event_is_boundbound) {
-      if constexpr (EXPANSIONOPACITIES_ON) {
-        if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
+      if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY < 0.) {
+        rpkt_event_boundbound(pkt, pktmastate, mgi);
+      } else {
+        static_assert(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY <= 0. || EXPANSIONOPACITIES_ON,
+                      "Expansion opacities must be enabled for thermalisation distribution to be calculated.");
+        // Probability based thermalisation (i.e. redistibution of the packet frequency) or scattering
+        if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 1. ||
+            rng_uniform() < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY) {
           pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
+          // When thermalised, we do not associate the packet with a specific line emission
         }
         rpkt_event_thickcell(pkt);
-      } else {
-        rpkt_event_boundbound(pkt, pktmastate, mgi);
       }
     } else {
       rpkt_event_continuum(pkt, chi_rpkt_cont, phixslist, mgi);
@@ -1201,7 +1206,7 @@ void MPI_Bcast_binned_opacities(const int modelgridindex, const int root_node_id
       MPI_Bcast(&expansionopacities[nonemptymgi * expopac_nbins], expopac_nbins, MPI_FLOAT, root_node_id,
                 globals::mpi_comm_internode);
 
-      if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
+      if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
         MPI_Bcast(&expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins], expopac_nbins, MPI_DOUBLE,
                   root_node_id, globals::mpi_comm_internode);
       }
@@ -1250,7 +1255,7 @@ void calculate_binned_opacities(const int modelgridindex) {
     assert_always(std::isfinite(bin_kappa_bb));
     expansionopacities[nonemptymgi * expopac_nbins + binindex] = bin_kappa_bb;
 
-    if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
+    if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
       // static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
       //   .nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN, .modelgridindex = -1, .timestep = -1
       // };

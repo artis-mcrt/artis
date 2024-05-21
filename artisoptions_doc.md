@@ -219,6 +219,9 @@ constexpr bool KEEP_ALL_RESTART_FILES;
 // multiply bound-free cooling coefficient by upper level population instead of the upper ion target level population
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 
+// thermalisation probability (1 - P is probabiltiy of scattering) or set < 0 to use the macroatom
+constexpr float RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
+
 // Use XCOM data for gamma photoionisation instead of Si+Fe Equation 2 of Ambwani & Sutherland (1988), Veigele (1973)
 constexpr bool USE_XCOM_GAMMAPHOTOION;
 

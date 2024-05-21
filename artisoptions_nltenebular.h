@@ -154,7 +154,7 @@ constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 
 constexpr bool EXPANSIONOPACITIES_ON = false;
 
-constexpr bool EXPANSION_OPAC_SAMPLE_KAPPAPLANCK = false;
+constexpr float RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY = -1.;
 
 constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 
