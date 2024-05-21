@@ -352,7 +352,14 @@ static auto get_event_expansion_opacity(
         return {edist, next_trans, event_is_boundbound};
       } else {
         // re-trace this bin line-by-line
-        return get_event(modelgridindex, pkt, chi_rpkt_cont, mastate, tau_rnd - tau, abort_dist);
+        auto future_pkt = pkt;
+        future_pkt.pos = pos;
+        future_pkt.nu_rf = nu_rf;
+        future_pkt.nu_cmf = nu_cmf;
+        future_pkt.e_rf = e_rf;
+        future_pkt.e_cmf = e_cmf;
+        future_pkt.prop_time = prop_time;
+        return get_event(modelgridindex, future_pkt, chi_rpkt_cont, mastate, tau_rnd - tau, abort_dist);
       }
     }
 
