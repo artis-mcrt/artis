@@ -241,9 +241,9 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
 
   if (sub_updown) {
     const double n_u = get_levelpop(modelgridindex, element, ion, upper);
-    return (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
+    return std::max((B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current, 0.);
   }
-  return B_lu * n_l * HCLIGHTOVERFOURPI * t_current;
+  return std::max(B_lu * n_l * HCLIGHTOVERFOURPI * t_current, 0.);
 }
 
 inline void set_nelements(const int nelements_in) { globals::elements.resize(nelements_in); }
