@@ -158,7 +158,7 @@ static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double 
 static auto get_event_expansion_opacity(
     const int modelgridindex, const int nonemptymgi, const Packet &pkt,
     Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
-    Phixslist &phixslist, const double tau_rnd, const double abort_dist) -> std::tuple<double, bool> {
+    Phixslist &phixslist, const double tau_rnd, const double abort_dist) -> std::tuple<double, int, bool> {
   calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, &phixslist, modelgridindex);
   const auto doppler = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
@@ -174,6 +174,10 @@ static auto get_event_expansion_opacity(
   auto e_rf = pkt.e_rf;
   auto e_cmf = pkt.e_cmf;
   auto prop_time = pkt.prop_time;
+
+  // with thermalisation, we don't keep track of line interactions
+  auto next_trans = RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0. ? -1 : pkt.next_trans;
+
   assert_always(globals::cellcache[cellcacheslotid].cellnumber == modelgridindex);
   double dist = 0.;
   double tau = 0.;
@@ -202,7 +206,7 @@ static auto get_event_expansion_opacity(
       // event occurs
       const auto edist = std::max(dist + (tau_rnd - tau) / chi_tot, 0.);
       const bool event_is_boundbound = rng_uniform() <= chi_bb_expansionopac / chi_tot;
-      return {edist, event_is_boundbound};
+      return {edist, next_trans, event_is_boundbound};
     }
 
     tau += chi_tot * binedgedist;
@@ -224,11 +228,12 @@ static auto get_event_expansion_opacity(
 
     if (nu_cmf <= nu_cmf_abort) {
       // hit edge of cell or timestep limit
-      return {std::numeric_limits<double>::max(), false};
+      return {std::numeric_limits<double>::max(), next_trans, false};
     }
   }
+
   // no more bins, so no opacity and no chance of further interaction below this frequency
-  return {std::numeric_limits<double>::max(), false};
+  return {std::numeric_limits<double>::max(), next_trans, false};
 }
 
 static auto get_event(const int modelgridindex,
@@ -828,9 +833,8 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
     edist = tau_next / chi_grey;
     pkt.next_trans = -1;
   } else if constexpr (EXPANSIONOPACITIES_ON) {
-    std::tie(edist, event_is_boundbound) =
+    std::tie(edist, pkt.next_trans, event_is_boundbound) =
         get_event_expansion_opacity(mgi, nonemptymgi, pkt, chi_rpkt_cont, phixslist, tau_next, abort_dist);
-    pkt.next_trans = -1;
   } else {
     calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, &phixslist, mgi);
 
