@@ -158,19 +158,14 @@ static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double 
 static auto get_event(const int modelgridindex,
                       const Packet &pkt,  // pointer to packet object
                       const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, MacroAtomState &mastate,
-                      const double tau_rnd,    // random optical depth until which the packet travels
-                      const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
-                      ) -> std::tuple<double, int, bool>
+                      const double tau_rnd,     // random optical depth until which the packet travels
+                      const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
+                      const double nu_cmf_abort, const double d_nu_on_d_l,
+                      const double doppler) -> std::tuple<double, int, bool>
 // returns edist, the distance to the next physical event (continuum or bound-bound) and is_boundbound_event, a
 // boolean BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
 {
-  assert_testmodeonly(!EXPANSIONOPACITIES_ON);
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
-  // printout("get_event()\n");
-  /// initialize loop variables
-
-  const auto nu_cmf_abort = get_nu_cmf_abort(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, abort_dist);
-  const auto d_nu_on_d_l = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
 
   auto pos = pkt.pos;
   auto nu_rf = pkt.nu_rf;
@@ -180,7 +175,7 @@ static auto get_event(const int modelgridindex,
   auto prop_time = pkt.prop_time;
   int next_trans = pkt.next_trans;
 
-  const double chi_cont = chi_rpkt_cont.total * doppler_packet_nucmf_on_nurf(pos, pkt.dir, prop_time);
+  const double chi_cont = chi_rpkt_cont.total * doppler;
   double tau = 0.;   // optical depth along path
   double dist = 0.;  // position on path
   while (true) {
@@ -301,15 +296,8 @@ static auto get_event(const int modelgridindex,
 static auto get_event_expansion_opacity(
     const int modelgridindex, const int nonemptymgi, const Packet &pkt,
     Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
-    MacroAtomState &mastate, const double tau_rnd, const double abort_dist) -> std::tuple<double, int, bool> {
-  const auto doppler = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-
-  const auto nu_cmf_abort = get_nu_cmf_abort(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, abort_dist);
-
-  // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
-  // the frequency change from start to abort (cell boundary/timestep end)
-  const auto d_nu_on_d_l = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
-
+    MacroAtomState &mastate, const double tau_rnd, const double abort_dist, const double nu_cmf_abort,
+    const double d_nu_on_d_l, const double doppler) -> std::tuple<double, int, bool> {
   auto pos = pkt.pos;
   auto nu_rf = pkt.nu_rf;
   auto nu_cmf = pkt.nu_cmf;
@@ -352,14 +340,28 @@ static auto get_event_expansion_opacity(
         return {edist, next_trans, event_is_boundbound};
       } else {
         // re-trace this bin line-by-line
-        auto future_pkt = pkt;
-        future_pkt.pos = pos;
-        future_pkt.nu_rf = nu_rf;
-        future_pkt.nu_cmf = nu_cmf;
-        future_pkt.e_rf = e_rf;
-        future_pkt.e_cmf = e_cmf;
-        future_pkt.prop_time = prop_time;
-        return get_event(modelgridindex, future_pkt, chi_rpkt_cont, mastate, tau_rnd - tau, abort_dist);
+        auto pkt_bin_start = pkt;
+        pkt_bin_start.pos = pos;
+        pkt_bin_start.nu_rf = nu_rf;
+        pkt_bin_start.nu_cmf = nu_cmf;
+        pkt_bin_start.e_rf = e_rf;
+        pkt_bin_start.e_cmf = e_cmf;
+        pkt_bin_start.prop_time = prop_time;
+        pkt_bin_start.next_trans = -1;
+        double edist_after_bin = 0.;
+        bool event_is_boundbound = false;
+        std::tie(edist_after_bin, next_trans, event_is_boundbound) =
+            get_event(modelgridindex, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
+                      std::numeric_limits<double>::max(), 0., d_nu_on_d_l, doppler);
+        // printout("[debug] get_event_expansion_opacity: dist_before %g edist_after_bin %g binedgedist %g binindex
+        // %td\n",
+        //          dist, edist_after_bin, binedgedist, binindex);
+
+        // assert_always(edist_after_bin <= 1.1 * binedgedist);
+        // this is a hack. why does get_event see less opacity than the expansion opacity ?
+        dist = dist + std::min(edist_after_bin, binedgedist);
+
+        return {dist, next_trans, event_is_boundbound};
       }
     }
 
@@ -844,14 +846,20 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
     edist = tau_next / chi_grey;
     pkt.next_trans = -1;
   } else {
-    calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, &phixslist, mgi);
+    calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, &phixslist,
+                            mgi);  // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
+                                   // the frequency change from start to abort (cell boundary/timestep end)
+
+    const auto nu_cmf_abort = get_nu_cmf_abort(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, abort_dist);
+    const auto d_nu_on_d_l = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
+    const auto doppler = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
     if constexpr (EXPANSIONOPACITIES_ON) {
-      std::tie(edist, pkt.next_trans, event_is_boundbound) =
-          get_event_expansion_opacity(mgi, nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist);
+      std::tie(edist, pkt.next_trans, event_is_boundbound) = get_event_expansion_opacity(
+          mgi, nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l, doppler);
     } else {
       std::tie(edist, pkt.next_trans, event_is_boundbound) =
-          get_event(mgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist);
+          get_event(mgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l, doppler);
     }
   }
   assert_always(edist >= 0);
