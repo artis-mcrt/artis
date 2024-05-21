@@ -71,7 +71,7 @@ void allocate_expansionopacities() {
   assert_always(MPI_Win_shared_query(win_expansionopacities, 0, &size, &disp_unit, &expansionopacities_data) ==
                 MPI_SUCCESS);
 
-  if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
+  if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
     MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
@@ -83,7 +83,7 @@ void allocate_expansionopacities() {
 
 #else
   expansionopacities_data = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
-  if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
+  if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
     expansionopacity_planck_cumulative_data =
         static_cast<double *>(malloc(npts_nonempty * expopac_nbins * sizeof(double)));
   }
@@ -667,7 +667,7 @@ static void rpkt_event_boundbound(Packet &pkt, MacroAtomState &pktmastate, const
 auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double
 // returns a randomly chosen frequency with a distribution of Planck function times the expansion opacity
 {
-  assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.);
+  assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.);
 
   const auto *kappa_planck_bins = &expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins];
 
@@ -1280,7 +1280,7 @@ void calculate_binned_opacities(const int modelgridindex) {
     assert_always(std::isfinite(bin_kappa_bb));
     expansionopacities[nonemptymgi * expopac_nbins + binindex] = bin_kappa_bb;
 
-    if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
+    if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
       // static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
       //   .nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN, .modelgridindex = -1, .timestep = -1
       // };
