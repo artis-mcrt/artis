@@ -649,7 +649,7 @@ static void rpkt_event_boundbound(Packet &pkt, MacroAtomState &pktmastate, const
 auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double
 // returns a randomly chosen frequency with a distribution of Planck function times the expansion opacity
 {
-  assert_testmodeonly(EXPANSION_OPAC_SAMPLE_KAPPAPLANCK);
+  assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.);
 
   const auto *kappa_planck_bins = &expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins];
 
