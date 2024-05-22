@@ -51,10 +51,6 @@ MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
 }  // anonymous namespace
 
 void allocate_expansionopacities() {
-  if constexpr (!EXPANSIONOPACITIES_ON) {
-    return;
-  }
-
   const auto npts_nonempty = grid::get_nonempty_npts_model();
   float *expansionopacities_data{};
   double *expansionopacity_planck_cumulative_data{};
@@ -894,8 +890,6 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
       if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY < 0.) {
         rpkt_event_boundbound(pkt, pktmastate, mgi);
       } else {
-        static_assert(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY <= 0. || EXPANSIONOPACITIES_ON,
-                      "Expansion opacities must be enabled for thermalisation distribution to be calculated.");
         // Probability based thermalisation (i.e. redistibution of the packet frequency) or scattering
         if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 1. ||
             rng_uniform() < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY) {
