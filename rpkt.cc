@@ -313,7 +313,7 @@ static auto get_event_expansion_opacity(
   double tau = 0.;
   auto binindex_start = static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
   if (binindex_start < 0) {
-    binindex_start = 0;
+    binindex_start = -1;
   }
 
   for (ptrdiff_t binindex = binindex_start; binindex < expopac_nbins; binindex++) {
