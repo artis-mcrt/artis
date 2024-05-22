@@ -295,7 +295,7 @@ static auto get_event(const int modelgridindex,
 
 static auto get_event_expansion_opacity(
     const int modelgridindex, const int nonemptymgi, const Packet &pkt,
-    Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
+    const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
     MacroAtomState &mastate, const double tau_rnd, const double nu_cmf_abort, const double d_nu_on_d_l,
     const double doppler) -> std::tuple<double, int, bool> {
   auto pos = pkt.pos;
@@ -619,7 +619,7 @@ static void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoe
   }
 }
 
-static void rpkt_event_boundbound(Packet &pkt, MacroAtomState &pktmastate, const int mgi) {
+static void rpkt_event_boundbound(Packet &pkt, const MacroAtomState &pktmastate, const int mgi) {
   /// bound-bound transition occured
   /// activate macro-atom in corresponding upper-level. Actually all the information
   /// about the macro atoms state has already been set by closest_transition, so
