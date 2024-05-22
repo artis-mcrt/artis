@@ -296,8 +296,8 @@ static auto get_event(const int modelgridindex,
 static auto get_event_expansion_opacity(
     const int modelgridindex, const int nonemptymgi, const Packet &pkt,
     Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
-    MacroAtomState &mastate, const double tau_rnd, const double abort_dist, const double nu_cmf_abort,
-    const double d_nu_on_d_l, const double doppler) -> std::tuple<double, int, bool> {
+    MacroAtomState &mastate, const double tau_rnd, const double nu_cmf_abort, const double d_nu_on_d_l,
+    const double doppler) -> std::tuple<double, int, bool> {
   auto pos = pkt.pos;
   auto nu_rf = pkt.nu_rf;
   auto nu_cmf = pkt.nu_cmf;
@@ -353,10 +353,6 @@ static auto get_event_expansion_opacity(
         std::tie(edist_after_bin, next_trans, event_is_boundbound) =
             get_event(modelgridindex, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
                       std::numeric_limits<double>::max(), 0., d_nu_on_d_l, doppler);
-        // printout("[debug] get_event_expansion_opacity: dist_before %g edist_after_bin %g binedgedist %g binindex
-        // %td\n",
-        //          dist, edist_after_bin, binedgedist, binindex);
-
         // assert_always(edist_after_bin <= 1.1 * binedgedist);
         dist = dist + edist_after_bin;
 
@@ -855,7 +851,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
 
     if constexpr (EXPANSIONOPACITIES_ON) {
       std::tie(edist, pkt.next_trans, event_is_boundbound) = get_event_expansion_opacity(
-          mgi, nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l, doppler);
+          mgi, nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, nu_cmf_abort, d_nu_on_d_l, doppler);
     } else {
       std::tie(edist, pkt.next_trans, event_is_boundbound) =
           get_event(mgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l, doppler);
