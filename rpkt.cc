@@ -840,9 +840,10 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
     edist = tau_next / chi_grey;
     pkt.next_trans = -1;
   } else {
-    calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, &phixslist,
-                            mgi);  // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
-                                   // the frequency change from start to abort (cell boundary/timestep end)
+    calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, &phixslist, mgi);
+
+    // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
+    // the frequency change from start to abort (cell boundary/timestep end)
 
     const auto nu_cmf_abort = get_nu_cmf_abort(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, abort_dist);
     const auto d_nu_on_d_l = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
