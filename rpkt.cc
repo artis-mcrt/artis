@@ -325,8 +325,6 @@ static auto get_event_expansion_opacity(
     double chi_bb_expansionopac = 0.;
     if (binindex >= 0) {
       const auto kappa = expansionopacities[nonemptymgi * expopac_nbins + binindex];
-      // const auto doppler = doppler_packet_nucmf_on_nurf(dummypkt.pos, dummypkt.dir, dummypkt.prop_time);
-      // const auto doppler = (pkt.nu_cmf + d_nu_on_d_l * dist) / pkt.nu_rf;
       chi_bb_expansionopac = kappa * grid::get_rho(modelgridindex) * doppler;
     }
 
