@@ -588,7 +588,7 @@ void add_to_spec_res(const Packet &pkt, int current_abin, Spectra &spectra, cons
   }
 }
 
-void write_partial_lightcurve_spectra(int my_rank, int nts, Packet *pkts) {
+void write_partial_lightcurve_spectra(int my_rank, int nts, const Packet *pkts) {
   const auto time_func_start = std::time(nullptr);
 
   std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
