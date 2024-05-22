@@ -344,7 +344,8 @@ static auto get_event_expansion_opacity(
         pkt_bin_start.nu_cmf = nu_cmf;
         pkt_bin_start.e_rf = e_rf;
         pkt_bin_start.e_cmf = e_cmf;
-        pkt_bin_start.prop_time = prop_time;
+        // expansion opacity was calculated at t_mid, so match it
+        pkt_bin_start.prop_time = globals::timesteps[globals::timestep].mid;
         pkt_bin_start.next_trans = -1;
         double edist_after_bin = 0.;
         bool event_is_boundbound = false;
