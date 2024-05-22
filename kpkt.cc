@@ -386,8 +386,7 @@ void do_kpkt_blackbody(Packet &pkt)
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
 
-  if (EXPANSIONOPACITIES_ON && RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0. &&
-      grid::modelgrid[modelgridindex].thick != 1) {
+  if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0. && grid::modelgrid[modelgridindex].thick != 1) {
     const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
   } else {
