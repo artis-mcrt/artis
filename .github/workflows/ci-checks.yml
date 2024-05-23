@@ -110,9 +110,6 @@ jobs:
                     ]
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
-                exclude:
-                    - openmp: ON
-                      stdpar: ON
             fail-fast: false
 
         runs-on: ubuntu-24.04
@@ -174,6 +171,7 @@ jobs:
                   make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile classic mode STDPAR=ON
+              if: matrix.openmp != 'ON'
               run: |
                   $CXX -v
                   cp -v -p artisoptions_classic.h artisoptions.h
@@ -187,6 +185,7 @@ jobs:
                   make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
+              if: matrix.openmp != 'ON'
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
@@ -200,9 +199,6 @@ jobs:
             matrix:
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
-                exclude:
-                    - openmp: ON
-                      stdpar: ON
             fail-fast: false
 
         name: macOS brew clang ${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
