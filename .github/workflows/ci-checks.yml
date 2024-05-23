@@ -102,22 +102,21 @@ jobs:
             matrix:
                 compiler:
                     [
-                        {os: ubuntu-24.04, name: gcc, ver: 11},
-                        {os: ubuntu-24.04, name: gcc, ver: 12},
-                        {os: ubuntu-24.04, name: gcc, ver: 13},
-                        {os: ubuntu-24.04, name: gcc, ver: 14},
-                        {os: ubuntu-24.04, name: nvc++, ver: '24.5'},
+                        {name: gcc, ver: 11},
+                        {name: gcc, ver: 12},
+                        {name: gcc, ver: 13},
+                        {name: gcc, ver: 14},
+                        {name: nvc++, ver: '24.5'},
                     ]
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
-                stdpar: [ON, OFF]
                 exclude:
                     - openmp: ON
                       stdpar: ON
             fail-fast: false
 
-        runs-on: ${{ matrix.compiler.os }}
-        name: ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}${{ matrix.stdpar == 'ON' && ' stdpar' || ''}}
+        runs-on: ubuntu-24.04
+        name: ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
         steps:
             - uses: actions/checkout@v4
 
@@ -153,7 +152,7 @@ jobs:
                   sudo apt install libgsl-dev
 
             - name: install tbb
-              if: matrix.compiler.name == 'gcc' && matrix.stdpar == 'ON'
+              if: matrix.compiler.name == 'gcc'
               run: |
                   sudo apt install libtbb-dev
 
@@ -172,13 +171,26 @@ jobs:
                   $CXX -v
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} ${{ matrix.stdpar == 'ON' && ' STDPAR=ON' || ''}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile classic mode STDPAR=ON
+              run: |
+                  $CXX -v
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} ${{ matrix.stdpar == 'ON' && ' STDPAR=ON' || ''}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode STDPAR=ON
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
     mac-llvm:
         runs-on: macos-14
@@ -188,13 +200,12 @@ jobs:
             matrix:
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
-                stdpar: [ON, OFF]
                 exclude:
                     - openmp: ON
                       stdpar: ON
             fail-fast: false
 
-        name: macOS brew clang ${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}${{ matrix.stdpar == 'ON' && ' stdpar' || ''}}
+        name: macOS brew clang ${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
 
         steps:
             - uses: actions/checkout@v4
@@ -236,7 +247,6 @@ jobs:
                   brew install openmpi || true
 
             - name: install onedpl and tbb
-              if: matrix.stdpar == 'ON'
               run: |
                   brew install onedpl tbb
 
@@ -246,12 +256,26 @@ jobs:
 
             - name: Compile classic mode
               run: |
+                  $CXX -v
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} ${{ matrix.stdpar == 'ON' && ' STDPAR=ON' || ''}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile classic mode STDPAR=ON
+              run: |
+                  $CXX -v
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} ${{ matrix.stdpar == 'ON' && ' STDPAR=ON' || ''}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode STDPAR=ON
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
