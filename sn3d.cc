@@ -116,8 +116,8 @@ void write_deposition_file(const int nts, const int my_rank, const int nstart, c
 
   // calculate analytical decay rates
   // for (int i = 0; i <= nts; i++)
-  const int i = nts;
   {
+    const int i = nts;
     const double t_mid = globals::timesteps[i].mid;
 
     // power in [erg/s]
@@ -504,7 +504,7 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
   return do_this_full_loop;
 }
 
-void save_grid_and_packets(const int nts, const int my_rank, Packet *packets) {
+void save_grid_and_packets(const int nts, const int my_rank, const Packet *packets) {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif

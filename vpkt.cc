@@ -631,7 +631,7 @@ void vpkt_remove_temp_file(const int nts, const int my_rank) {
   snprintf(filenames[1], MAXFILENAMELENGTH, "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
   snprintf(filenames[2], MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
 
-  for (auto &filename : filenames) {
+  for (const auto &filename : filenames) {
     if (std::filesystem::exists(filename)) {
       std::remove(filename);
       printout("Deleted %s\n", filename);

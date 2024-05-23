@@ -194,7 +194,8 @@ void do_packet(Packet &pkt, const double t2, const int nts)
     }
 
     case TYPE_KPKT: {
-      if (grid::modelgrid[grid::get_cell_modelgridindex(pkt.where)].thick == 1 || EXPANSIONOPACITIES_ON) {
+      if (grid::modelgrid[grid::get_cell_modelgridindex(pkt.where)].thick == 1 ||
+          (EXPANSIONOPACITIES_ON && RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.)) {
         kpkt::do_kpkt_blackbody(pkt);
       } else {
         kpkt::do_kpkt(pkt, t2, nts);
