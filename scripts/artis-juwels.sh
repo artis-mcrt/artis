@@ -5,10 +5,11 @@
 #SBATCH --time=24:00:00
 #SBATCH --partition=batch
 ##SBATCH --partition=mem192
-##SBATCH --account=rtsn22
-#SBATCH --account=knrt23
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
+
+## make sure to set your account in your ~/.bash_profile with, e.g.,
+## export SBATCH_ACCOUNT=rtsn22
 
 module load Stages/2024 GCC ParaStationMPI GSL
 module load UCX-settings/plain
