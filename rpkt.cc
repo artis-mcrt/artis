@@ -106,16 +106,26 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
   }
 
   if (next_trans > 0) [[likely]] {
-    /// if left = pkt.next_trans > 0 we know the next line we should interact with, independent of the packets
+    /// if next_trans > 0 we know the next line we should interact with, independent of the packets
     /// current nu_cmf which might be smaller than globals::linelist[left].nu due to propagation errors
     return next_trans;
   }
+  if (nu_cmf >= globals::linelist[0].nu) {
+    /// if nu_cmf is larger than the highest frequency in the the linelist,
+    /// interaction with the first line occurs - no search
+    return 0;
+  }
+  /// otherwise go through the list until nu_cmf is located between two
+  /// entries in the line list and get the index of the closest line
+  /// to lower frequencies
+
   // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
   // lower_bound matches the first element where the comparison function is false
-  const auto *matchline =
-      std::lower_bound(globals::linelist, globals::linelist + globals::nlines, nu_cmf,
-                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
-  const int matchindex = std::distance(globals::linelist, matchline);
+  const int matchindex =
+      std::distance(globals::linelist,
+                    std::lower_bound(globals::linelist, globals::linelist + globals::nlines, nu_cmf,
+                                     [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; }));
+
   if (matchindex >= globals::nlines) [[unlikely]] {
     return -1;
   }
@@ -747,17 +757,17 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
   const int mgi = grid::get_cell_modelgridindex(cellindex);
   const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
 
-  static thread_local struct MacroAtomState pktmastate {};
-  static thread_local struct Phixslist phixslist {
+  MacroAtomState pktmastate{};
+
+  thread_local struct Phixslist phixslist {
     .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
     .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
     .gamma_contr = std::vector<double>(globals::bfestimcount, 0.), .allcontend = 1, .allcontbegin = 0, .bfestimend = 1,
     .bfestimbegin = 0,
   };
 
-  static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
-    .nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN, .modelgridindex = -1, .timestep = -1
-  };
+  thread_local Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
+      .nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN, .modelgridindex = -1, .timestep = -1};
 
   // Assign optical depth to next physical event
   const double zrand = rng_uniform_pos();
