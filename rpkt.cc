@@ -758,15 +758,17 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
   const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
 
   MacroAtomState pktmastate{};
-
-  thread_local struct Phixslist phixslist {
-    .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
-    .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
-    .gamma_contr = std::vector<double>(globals::bfestimcount, 0.), .allcontend = 1, .allcontbegin = 0, .bfestimend = 1,
-    .bfestimbegin = 0,
+  Phixslist phixslist{
+      .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
+      .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
+      .gamma_contr = std::vector<double>(globals::bfestimcount, 0.),
+      .allcontend = 1,
+      .allcontbegin = 0,
+      .bfestimend = 1,
+      .bfestimbegin = 0,
   };
 
-  thread_local Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
+  Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
       .nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN, .modelgridindex = -1, .timestep = -1};
 
   // Assign optical depth to next physical event
