@@ -2694,59 +2694,14 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
     }
 
     const auto frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
-
-    // Allocate memory for the packed data
-    // Get the size of the packed data
-
-    int double_size = sizeof(double);
-    int int_size = sizeof(int);
-
-    int size_of_frac_deposition = double_size * frac_excitations_list_size;
-    int size_of_ratecoeffperdeposition = double_size * frac_excitations_list_size;
-    int size_of_lineindex = int_size * frac_excitations_list_size;
-
-    int packed_data_size = size_of_frac_deposition + size_of_ratecoeffperdeposition + size_of_lineindex;
-
-    // Allocate memory for the packed data
-
-    char *packed_data = (char *)malloc(packed_data_size);
-
-    // Pack the data
-
-    int position = 0;
-
     for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
-      MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
-               packed_data, packed_data_size, &position, MPI_COMM_WORLD);
-      MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
-               MPI_DOUBLE, packed_data, packed_data_size, &position, MPI_COMM_WORLD);
-      MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, packed_data,
-               packed_data_size, &position, MPI_COMM_WORLD);
+      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
+                root, MPI_COMM_WORLD);
+      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
+                MPI_DOUBLE, root, MPI_COMM_WORLD);
+      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, root,
+                MPI_COMM_WORLD);
     }
-
-    // Broadcast the packed data
-
-    MPI_Bcast(packed_data, packed_data_size, MPI_PACKED, root, MPI_COMM_WORLD);
-
-    // Unpack the data
-
-    position = 0;
-
-    for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
-      MPI_Unpack(packed_data, packed_data_size, &position,
-                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
-                 MPI_COMM_WORLD);
-      MPI_Unpack(packed_data, packed_data_size, &position,
-                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
-                 MPI_DOUBLE, MPI_COMM_WORLD);
-      MPI_Unpack(packed_data, packed_data_size, &position,
-                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT,
-                 MPI_COMM_WORLD);
-    }
-
-    // Free the packed data
-
-    free(packed_data);
 
     if (STORE_NT_SPECTRUM) {
       assert_always(nt_solution[modelgridindex].yfunc != nullptr);
