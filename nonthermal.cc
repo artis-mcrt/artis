@@ -2695,20 +2695,13 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
 
     const auto frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
 
-    // Allocate memory for the packed data
-    // Get the size of the packed data
-
+    // determine size of needed buffer
     int double_size = sizeof(double);
     int int_size = sizeof(int);
-
     int size_of_frac_deposition = double_size * frac_excitations_list_size;
     int size_of_ratecoeffperdeposition = double_size * frac_excitations_list_size;
     int size_of_lineindex = int_size * frac_excitations_list_size;
-
     int packed_data_size = size_of_frac_deposition + size_of_ratecoeffperdeposition + size_of_lineindex;
-
-    // Allocate memory for the packed data
-
     char *packed_data = (char *)malloc(packed_data_size);
 
     // Pack the data
