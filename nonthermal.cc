@@ -1,7 +1,5 @@
 #include "nonthermal.h"
 
-#include <sys/_types/_size_t.h>
-
 #include "rpkt.h"
 
 #ifdef MPI_ON
