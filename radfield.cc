@@ -1152,30 +1152,15 @@ void reduce_estimators()
       MPI_Allreduce(MPI_IN_PLACE, &bfrate_raw[nonemptymgi * globals::bfestimcount], globals::bfestimcount, MPI_DOUBLE,
                     MPI_SUM, MPI_COMM_WORLD);
     }
-
-    if (globals::rank_in_node == 0) {
-      MPI_Allreduce(MPI_IN_PLACE, bfrate_raw.data(), nonempty_npts_model * globals::bfestimcount, MPI_DOUBLE, MPI_SUM,
-                    globals::mpi_comm_internode);
-    }
-    MPI_Bcast(bfrate_raw.data(), nonempty_npts_model * globals::bfestimcount, MPI_DOUBLE, 0, globals::mpi_comm_node);
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     const auto sys_time_start_reduction = std::time(nullptr);
     printout("Reducing binned radiation field estimators");
     assert_always(radfieldbins != nullptr);
-    printout("After assert\n");
-    for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-      printout("Reducing binned radiation field estimators for modelgridindex %zd\n", (ssize_t)nonemptymgi);
-      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-        printout("Reducing bin %d\n", binindex);
-        printout("Radfield[nonemptymgi=%zd][binindex=%d].J_raw = %g\n", (ssize_t)nonemptymgi, binindex,
-                 radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].J_raw);
-        printout("Radfield[nonemptymgi=%zd][binindex=%d].nuJ_raw = %g\n", (ssize_t)nonemptymgi, binindex,
-                 radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].nuJ_raw);
-        printout("Radfield[nonemptymgi=%zd][binindex=%d].contribcount = %d\n", (ssize_t)nonemptymgi, binindex,
-                 radfieldbins[nonemptymgi * RADFIELDBINCOUNT + binindex].contribcount);
 
+    for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
         const auto mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
