@@ -1012,10 +1012,6 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       // full-spectrum and binned J and nuJ estimators
       radfield::fit_parameters(mgi, nts);
 
-      // if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-      //   radfield::normalise_bf_estimators(mgi, nonemptymgi, estimator_normfactor / H);
-      // }
-
       solve_Te_nltepops(mgi, nonemptymgi, nts, titer, heatingcoolingrates);
     }
     printout("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", mgi, nts,
