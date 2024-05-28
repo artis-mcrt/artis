@@ -328,8 +328,8 @@ void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
       if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
         const int mgi = grid::get_cell_modelgridindex(pkt.where);
         const bool cellcache_change_cell_required =
-            (mgi != grid::get_npts_model() && globals::cellcache[cellcacheslotid].cellnumber != mgi &&
-             grid::modelgrid[mgi].thick != 1);
+            (mgi != grid::get_npts_model() && globals::cellcache[cellcacheslotid].cellnumber != mgi);
+        // also (grid::modelgrid[mgi].thick != 1) ? removed out of caution to fix classic mode
 
         if (cellcache_change_cell_required) {
           if (packetgroupstart != &pkt) {
