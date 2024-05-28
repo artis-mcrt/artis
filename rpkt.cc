@@ -768,8 +768,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
       .bfestimbegin = 0,
   };
 
-  Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
-      .nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN, .modelgridindex = -1, .timestep = -1};
+  Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{.nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN};
 
   // Assign optical depth to next physical event
   const double zrand = rng_uniform_pos();
@@ -1161,13 +1160,6 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   assert_testmodeonly(modelgridindex != grid::get_npts_model());
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
 
-  // if ((modelgridindex == chi_rpkt_cont.modelgridindex) && (globals::timestep ==
-  // chi_rpkt_cont.timestep) &&
-  //     (fabs(chi_rpkt_cont.nu / nu_cmf - 1.0) < 1e-4)) {
-  //   // calculated values are a match already
-  //   return;
-  // }
-
   const auto nne = grid::get_nne(modelgridindex);
 
   double chi_escat = 0.;
@@ -1200,14 +1192,11 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   }
 
   chi_rpkt_cont.nu = nu_cmf;
-  chi_rpkt_cont.modelgridindex = modelgridindex;
-  chi_rpkt_cont.timestep = globals::timestep;
   chi_rpkt_cont.total = chi_escat + chi_bf + chi_ff;
   chi_rpkt_cont.ffescat = chi_escat;
   chi_rpkt_cont.ffheat = chi_ff;
   chi_rpkt_cont.bf = chi_bf;
   chi_rpkt_cont.ffheating = chi_ffheating;
-  // chi_rpkt_cont_thisthread.bfheating = chi_bfheating;
 
   if (!std::isfinite(chi_rpkt_cont.total)) {
     printout("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
