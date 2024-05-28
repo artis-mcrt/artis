@@ -51,7 +51,7 @@ extern std::ofstream output_file;
 
 inline char outputlinebuf[1024] = "";
 inline bool outputstartofline = true;
-inline struct tm timebuf {};
+inline tm timebuf{};
 
 // if not set, force Simpson integrator on GPU mode (since gsl doesn't work there!)
 #ifndef USE_SIMPSON_INTEGRATOR

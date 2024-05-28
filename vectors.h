@@ -14,7 +14,7 @@
 #include "sn3d.h"
 
 template <size_t VECDIM>
-[[nodiscard]] [[gnu::const]] constexpr auto vec_len(const std::array<double, VECDIM> vec) -> double
+[[nodiscard]] constexpr auto vec_len(const std::array<double, VECDIM> vec) -> double
 // return the the magnitude of a vector
 {
   const double squaredlen = std::accumulate(vec.begin(), vec.end(), 0., [](auto a, auto b) { return a + b * b; });
@@ -22,7 +22,7 @@ template <size_t VECDIM>
   return std::sqrt(squaredlen);
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto vec_norm(const std::array<double, 3> vec_in)
+[[nodiscard]] constexpr auto vec_norm(const std::array<double, 3> vec_in)
 // get a normalized copy of vec_in
 {
   const double magnitude = vec_len(vec_in);
@@ -33,33 +33,30 @@ template <size_t VECDIM>
 }
 
 template <size_t S1, size_t S2>
-[[nodiscard]] [[gnu::const]] constexpr auto dot(const std::array<double, S1> x,
-                                                const std::array<double, S2> y) -> double
+[[nodiscard]] constexpr auto dot(const std::array<double, S1> x, const std::array<double, S2> y) -> double
 // vector dot product
 {
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(std::span<const double, 3> x,
-                                                        const double t) -> std::array<double, 3>
+[[nodiscard]] constexpr auto get_velocity(std::span<const double, 3> x, const double t) -> std::array<double, 3>
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
   return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto cross_prod(const std::array<double, 3> vec_a,
-                                                       const std::array<double, 3> vec_b) {
+[[nodiscard]] constexpr auto cross_prod(const std::array<double, 3> vec_a, const std::array<double, 3> vec_b) {
   return std::array<double, 3>{(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]),
                                (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
                                (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto vec_scale(const std::array<double, 3> vec, const double scalefactor) {
+[[nodiscard]] constexpr auto vec_scale(const std::array<double, 3> vec, const double scalefactor) {
   return std::array<double, 3>{vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto angle_ab(const std::array<double, 3> dir1,
-                                                     const std::array<double, 3> vel) -> std::array<double, 3>
+[[nodiscard]] constexpr auto angle_ab(const std::array<double, 3> dir1,
+                                      const std::array<double, 3> vel) -> std::array<double, 3>
 // aberation of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
@@ -78,8 +75,8 @@ template <size_t S1, size_t S2>
   return vec_norm(dir2);
 }
 
-[[gnu::const]] [[nodiscard]] constexpr auto doppler_nucmf_on_nurf(const std::array<double, 3> dir_rf,
-                                                                  const std::array<double, 3> vel_rf) -> double
+[[nodiscard]] constexpr auto doppler_nucmf_on_nurf(const std::array<double, 3> dir_rf,
+                                                   const std::array<double, 3> vel_rf) -> double
 // Doppler factor
 // arguments:
 //   dir_rf: the rest frame direction (unit vector) of light propagation
@@ -105,9 +102,9 @@ template <size_t S1, size_t S2>
   return dopplerfactor;
 }
 
-[[gnu::const]] [[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(const std::array<double, 3> &pos_rf,
-                                                                          const std::array<double, 3> dir_rf,
-                                                                          const double prop_time) -> double
+[[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(const std::array<double, 3> &pos_rf,
+                                                           const std::array<double, 3> dir_rf,
+                                                           const double prop_time) -> double
 // Doppler factor squared, either to first order v/c or fully relativisitic
 // depending on USE_RELATIVISTIC_DOPPLER_SHIFT
 //
@@ -134,9 +131,9 @@ template <size_t S1, size_t S2>
   return dopplerfactorsq;
 }
 
-[[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(std::span<const double, 3> pos_rf,
-                                                                        const std::array<double, 3> dir_rf,
-                                                                        const double prop_time) -> double {
+[[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(std::span<const double, 3> pos_rf,
+                                                          const std::array<double, 3> dir_rf,
+                                                          const double prop_time) -> double {
   return doppler_nucmf_on_nurf(dir_rf, get_velocity(pos_rf, prop_time));
 }
 
@@ -173,7 +170,7 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   return move_pkt_withtime(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, pkt.nu_cmf, pkt.e_rf, pkt.e_cmf, distance);
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto get_arrive_time(const Packet &pkt) -> double
+[[nodiscard]] constexpr auto get_arrive_time(const Packet &pkt) -> double
 /// We know that a packet escaped at "escape_time". However, we have
 /// to allow for travel time. Use the formula in Leon's paper. The extra
 /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
@@ -181,8 +178,8 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   return pkt.escape_time - (dot(pkt.pos, pkt.dir) / CLIGHT_PROP);
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto get_escapedirectionbin(const std::array<double, 3> dir_in,
-                                                                   const std::array<double, 3> syn_dir) -> int {
+[[nodiscard]] constexpr auto get_escapedirectionbin(const std::array<double, 3> dir_in,
+                                                    const std::array<double, 3> syn_dir) -> int {
   constexpr auto xhat = std::array<double, 3>{1.0, 0.0, 0.0};
 
   // sometimes dir vectors aren't accurately normalised
@@ -226,9 +223,8 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   return std::array<double, 3>{sintheta * std::cos(phi), sintheta * std::sin(phi), costheta};
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto rot_angle(const std::array<double, 3> n1, const std::array<double, 3> n2,
-                                                      const std::array<double, 3> ref1,
-                                                      const std::array<double, 3> ref2) -> double {
+[[nodiscard]] constexpr auto rot_angle(const std::array<double, 3> n1, const std::array<double, 3> n2,
+                                       const std::array<double, 3> ref1, const std::array<double, 3> ref2) -> double {
   // Rotation angle from the scattering plane
   // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
   // the meridian frame such that Q=1 is in the scattering plane and along ref1
@@ -262,7 +258,7 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
-[[nodiscard]] [[gnu::const]] constexpr auto meridian(const std::array<double, 3> n)
+[[nodiscard]] constexpr auto meridian(const std::array<double, 3> n)
     -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // for ref_1 use (from triple product rule)
   const double n_xylen = std::sqrt(n[0] * n[0] + n[1] * n[1]);
@@ -274,8 +270,8 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   return {ref1, ref2};
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto lorentz(const std::array<double, 3> e_rf, const std::array<double, 3> n_rf,
-                                                    const std::array<double, 3> v) -> std::array<double, 3> {
+[[nodiscard]] constexpr auto lorentz(const std::array<double, 3> e_rf, const std::array<double, 3> n_rf,
+                                     const std::array<double, 3> v) -> std::array<double, 3> {
   // Use Lorentz transformations to get e_cmf from e_rf
 
   const auto beta = std::array<double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};

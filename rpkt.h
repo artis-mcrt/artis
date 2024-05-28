@@ -12,9 +12,6 @@ struct Rpkt_continuum_absorptioncoeffs {
   double ffheat{0.};
   double bf{0.};
   double ffheating{0.};
-  // double bfheating;
-  int modelgridindex{-1};
-  int timestep{-1};
 };
 
 struct Phixslist {

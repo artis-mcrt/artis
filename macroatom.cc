@@ -7,7 +7,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iterator>
+#if defined(STDPAR_ON) || defined(_OPENMP_ON)
 #include <mutex>
+#endif
 #include <numeric>
 
 #include "artisoptions.h"
@@ -369,8 +371,10 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
     auto &chlevel = globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level];
 
     {
+#if defined(STDPAR_ON) || defined(_OPENMP_ON)
       const auto lock =
           std::lock_guard<std::mutex>(globals::mutex_cellcachemacroatom[get_uniquelevelindex(element, ion, level)]);
+#endif
 
       assert_testmodeonly(globals::cellcache[cellcacheslotid].cellnumber == modelgridindex);
 
