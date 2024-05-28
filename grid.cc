@@ -741,6 +741,35 @@ static void calculate_kappagrey() {
         } else {
           kappa = 0.96;
         }
+      } else if (globals::opacity_case == 6) {
+        // grey opacity used in Just+2022, https://ui.adsabs.harvard.edu/abs/2022MNRAS.510.2820J/abstract
+        // kappa is a simple analytic function of temperature and lanthanide mass fraction
+        // adapted to best fit lightcurves from Kasen+2017 in ALCAR simulations
+        const double T_rad = get_TR(mgi);
+        double X_lan = 0.;
+        for (int element = 0; element < get_nelements(); element++) {
+          const int z = get_atomicnumber(element);
+          if (z >= 57 && z <= 71) {
+            X_lan += get_elem_abundance(mgi, element);
+          }
+        }
+        // first step: temperature-independent factor
+        if (X_lan < 1e-3) {
+          kappa = 3 * pow(X_lan / 1e-3, 0.3);
+        } else if (X_lan < 1e-1) {
+          kappa = 3 * pow(X_lan / 1e-3, 0.5);
+        } else {
+          kappa = 30 * pow(X_lan / 1e-1, 0.1);
+        }
+        // second step: multiply temperature-dependent factor
+        if (T_rad < 2000.) {
+          kappa = 0.;
+        } else if ((T_rad >= 2000.) && (T_rad < 1e10)) {
+          kappa *= pow(T_rad / 2000., 5.);
+        } else {
+          printout("Temperature outside ALCAR opacity parameterization range. Abort.\n");
+          abort();
+        }
       } else {
         printout("Unknown opacity case. Abort.\n");
         std::abort();
