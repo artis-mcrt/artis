@@ -42,7 +42,7 @@ struct el_photoion_data {
 
 static constexpr int numb_xcom_elements = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
 
-static std::array<std::vector<struct el_photoion_data>, numb_xcom_elements> photoion_data;
+static std::array<std::vector<el_photoion_data>, numb_xcom_elements> photoion_data;
 
 struct gammaline {
   int nucindex;       // is it a Ni56, Co56, a fake line, etc

@@ -32,7 +32,7 @@ constexpr double traceemissabs_nuupper = (1.e8 * CLIGHT / traceemissabs_lambdami
 constexpr double traceemissabs_timemin = (320. * DAY);
 constexpr double traceemissabs_timemax = (340. * DAY);
 
-using emissionabsorptioncontrib = struct emissionabsorptioncontrib {
+struct emissionabsorptioncontrib {
   double energyemitted;
   double emission_weightedvelocity_sum;
   double energyabsorbed;

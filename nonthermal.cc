@@ -150,7 +150,7 @@ struct nt_solution_struct {
   float nneperion_when_solved{NAN};  // the nne when the solver was last run
 };
 
-static struct nt_solution_struct *nt_solution;
+static nt_solution_struct *nt_solution;
 
 static double *deposition_rate_density;
 static int *deposition_rate_density_timestep;

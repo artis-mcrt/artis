@@ -51,8 +51,8 @@ struct RadFieldBin {
 constexpr double radfieldbins_delta_nu =
     (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
 
-struct RadFieldBin *radfieldbins{};
-struct RadFieldBinSolution *radfieldbin_solutions{};
+RadFieldBin *radfieldbins{};
+RadFieldBinSolution *radfieldbin_solutions{};
 
 #ifdef MPI_ON
 MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
@@ -73,8 +73,8 @@ int detailed_linecount = 0;
 // array of indicies into the linelist[] array for selected lines
 int *detailed_lineindicies;
 
-struct Jb_lu_estimator **prev_Jb_lu_normed{};  // value from the previous timestep
-struct Jb_lu_estimator **Jb_lu_raw{};          // unnormalised estimator for the current timestep
+Jb_lu_estimator **prev_Jb_lu_normed{};  // value from the previous timestep
+Jb_lu_estimator **Jb_lu_raw{};          // unnormalised estimator for the current timestep
 
 // ** end detailed lines
 

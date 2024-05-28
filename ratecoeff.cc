@@ -38,7 +38,7 @@ double *corrphotoioncoeffs{};
 
 double *bfcooling_coeffs{};
 
-using gsl_integral_paras_gammacorr = struct {
+struct gsl_integral_paras_gammacorr {
   double nu_edge;
   double departure_ratio;
   float *photoion_xs;
