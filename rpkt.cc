@@ -1161,10 +1161,6 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   assert_testmodeonly(modelgridindex != grid::get_npts_model());
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
 
-  // Luke: This shortcut was causing weird behaviour and performance for Fionntan's r10_d4.0_Z deflagration models in
-  // classic mode v2024.05 (but somehow it worked fine in v2023.5! possibly fastmath related?). Be sure to test that
-  // model again if considering some kind of re-use of previously calculated opacities for similar nu_cmf values.
-  //
   // if ((modelgridindex == chi_rpkt_cont.modelgridindex) && (globals::timestep ==
   // chi_rpkt_cont.timestep) &&
   //     (fabs(chi_rpkt_cont.nu / nu_cmf - 1.0) < 1e-4)) {
