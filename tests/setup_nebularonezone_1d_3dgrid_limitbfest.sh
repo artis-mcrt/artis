@@ -6,7 +6,7 @@ runfolder=nebularonezone_1d_3dgrid_limitbfest_testrun
 
 rsync -av nebularonezone_1d_3dgrid_inputfiles/ nebularonezone_1d_3dgrid_limitbfest_testrun/
 
-rsync -av nebularonezone_1d_3dgrid_limitbfest_inputfiles/ nebularonezone_1d_3dgrid_limitbfest_testrun/
+rsync --ignore-times -av nebularonezone_1d_3dgrid_limitbfest_inputfiles/ nebularonezone_1d_3dgrid_limitbfest_testrun/
 
 if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_feconi.tar.xz; fi
 
