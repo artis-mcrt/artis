@@ -758,10 +758,13 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
   const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
 
   MacroAtomState pktmastate{};
+
+  // TODO: these should be re-used to avoid allocations during packet prop
+  // but make sure r10_d4.0_Z in classic mode is not affected!
   Phixslist phixslist{
-      .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
-      .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
-      .gamma_contr = std::vector<double>(globals::bfestimcount, 0.),
+      .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground),
+      .chi_bf_sum = std::vector<double>(globals::nbfcontinua),
+      .gamma_contr = std::vector<double>(globals::bfestimcount),
       .allcontend = 1,
       .allcontbegin = 0,
       .bfestimend = 1,
