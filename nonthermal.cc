@@ -2691,6 +2691,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
       nt_solution[modelgridindex].frac_excitations_list.resize(frac_excitations_list_size_new);
     }
 
+    const auto frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
     // Lets Use MPI_Pack and MPI_Unpack for Fractional Excitations
     // lets set the size of the buffer
 
@@ -2699,7 +2700,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
 
     // we have 2 doubles and 1 int in the struct
 
-    int buffer_size = 2 * double_size + int_size;
+    int buffer_size = (2 * double_size + int_size) * frac_excitations_list_size;
 
     // lets create a buffer
 
@@ -2709,7 +2710,8 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
 
     int position = 0;
 
-    const auto frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
+    MPI_Barrier(MPI_COMM_WORLD);
+
     for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
       MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
                buffer, buffer_size, &position, MPI_COMM_WORLD);
@@ -2738,6 +2740,8 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
                  &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT,
                  MPI_COMM_WORLD);
     }
+
+    MPI_Barrier(MPI_COMM_WORLD);
 
     // lets free the buffer
 
