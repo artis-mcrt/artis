@@ -259,10 +259,7 @@ static auto get_event(const int modelgridindex,
           /// bound-bound process occurs
           // printout("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
 
-          mastate.element = element;
-          mastate.ion = ion;
-          mastate.level = upper;  /// if the MA will be activated it must be in the transitions upper level
-          mastate.activatingline = lineindex;
+          mastate = {.element = element, .ion = ion, .level = upper, .activatingline = lineindex};
 
           if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
             move_pkt_withtime(pos, pkt.dir, prop_time, nu_rf, nu_cmf, e_rf, e_cmf, ldist);
@@ -519,7 +516,7 @@ static void electron_scatter_rpkt(Packet &pkt) {
 }
 
 static void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                                 const Phixslist &phixslist, const int modelgridindex) {
+                                 const int modelgridindex) {
   const double nu = pkt.nu_cmf;
 
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
@@ -568,6 +565,8 @@ static void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoe
   } else if (chi_rnd < chi_escatter + chi_ff + chi_bf) {
     /// bf: transform to k-pkt or activate macroatom corresponding to probabilities
     // printout("[debug] rpkt_event:   bound-free transition\n");
+
+    const auto &phixslist = *chi_rpkt_cont.phixslist;
 
     pkt.absorptiontype = -2;
 
@@ -707,8 +706,7 @@ static void rpkt_event_thickcell(Packet &pkt)
 
 static void update_estimators(const double e_cmf, const double nu_cmf, const double distance,
                               const double doppler_nucmf_on_nurf, const int nonemptymgi,
-                              const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const Phixslist &phixslist,
-                              const bool thickcell)
+                              const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const bool thickcell)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
@@ -717,7 +715,8 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   assert_testmodeonly(nonemptymgi >= 0);
   const double distance_e_cmf = distance * e_cmf;
 
-  radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf, phixslist, thickcell);
+  radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf, *chi_rpkt_cont.phixslist,
+                              thickcell);
 
   if (thickcell) {
     // chi_rpkt_cont and phixslist are not known for thick cells
@@ -725,7 +724,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   }
 
   /// ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
-  atomicadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.ffheating);
+  atomicadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.ffheat);
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
@@ -738,12 +737,12 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
 
       if constexpr (USE_LUT_PHOTOION) {
         atomicadd(globals::gammaestimator[ionestimindex],
-                  phixslist.groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
+                  chi_rpkt_cont.phixslist->groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
       }
 
       if constexpr (USE_LUT_BFHEATING) {
         atomicadd(globals::bfheatingestimator[ionestimindex],
-                  phixslist.groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
+                  chi_rpkt_cont.phixslist->groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
       }
     }
   }
@@ -760,7 +759,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
   MacroAtomState pktmastate{};
 
   // TODO: these should be re-used to avoid allocations during packet prop
-  // but make sure r10_d4.0_Z in classic mode is not affected!
+  // but make sure r10_d2.6_Z in classic mode is not affected!
   Phixslist phixslist{
       .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
       .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
@@ -770,8 +769,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
       .bfestimend = 1,
       .bfestimbegin = 0,
   };
-
-  Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{.nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN};
+  Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{.phixslist = &phixslist};
 
   // Assign optical depth to next physical event
   const double zrand = rng_uniform_pos();
@@ -850,7 +848,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
     edist = tau_next / chi_grey;
     pkt.next_trans = -1;
   } else {
-    calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, &phixslist, mgi);
+    calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, mgi);
 
     // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
     // the frequency change from start to abort (cell boundary/timestep end)
@@ -873,8 +871,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
     // Move it into the new cell.
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt, sdist / 2.);
     if (nonemptymgi >= 0) {
-      update_estimators(pkt.e_cmf, pkt.nu_cmf, sdist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont, phixslist,
-                        thickcell);
+      update_estimators(pkt.e_cmf, pkt.nu_cmf, sdist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont, thickcell);
     }
     move_pkt_withtime(pkt, sdist / 2.);
 
@@ -893,8 +890,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
   if ((edist <= sdist) && (edist <= tdist)) [[likely]] {
     // bound-bound or continuum event
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt, edist / 2.);
-    update_estimators(pkt.e_cmf, pkt.nu_cmf, edist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont, phixslist,
-                      thickcell);
+    update_estimators(pkt.e_cmf, pkt.nu_cmf, edist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont, thickcell);
     move_pkt_withtime(pkt, edist / 2.);
 
     // The previously selected and in pkt stored event occurs. Handling is done by rpkt_event
@@ -913,7 +909,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
         rpkt_event_thickcell(pkt);
       }
     } else {
-      rpkt_event_continuum(pkt, chi_rpkt_cont, phixslist, mgi);
+      rpkt_event_continuum(pkt, chi_rpkt_cont, mgi);
     }
 
     return (pkt.type == TYPE_RPKT);
@@ -923,8 +919,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
     // reaches end of timestep before cell boundary or interaction
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt, tdist / 2.);
     if (nonemptymgi >= 0) {
-      update_estimators(pkt.e_cmf, pkt.nu_cmf, tdist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont, phixslist,
-                        thickcell);
+      update_estimators(pkt.e_cmf, pkt.nu_cmf, tdist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont, thickcell);
     }
     move_pkt_withtime(pkt, tdist / 2.);
     pkt.prop_time = t2;
@@ -1158,7 +1153,7 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
   return chi_bf_sum;
 }
 
-void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, Phixslist *phixslist,
+void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
                              const int modelgridindex) {
   assert_testmodeonly(modelgridindex != grid::get_npts_model());
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
@@ -1169,17 +1164,15 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   /// free-free absorption
   const double chi_ff = calculate_chi_ffheating(modelgridindex, nu_cmf);
   double chi_bf = 0.;
-  double chi_ffheating = 0.;
 
   if (globals::opacity_case >= 4) {
     /// First contribution: Thomson scattering on free electrons
     chi_escat = SIGMA_T * nne;
 
-    chi_ffheating = chi_ff;
-
     /// Third contribution: bound-free absorption
-    chi_bf = (phixslist != nullptr) ? calculate_chi_bf_gammacontr<true>(modelgridindex, nu_cmf, phixslist)
-                                    : calculate_chi_bf_gammacontr<false>(modelgridindex, nu_cmf, phixslist);
+    chi_bf = chi_rpkt_cont.phixslist != nullptr
+                 ? calculate_chi_bf_gammacontr<true>(modelgridindex, nu_cmf, chi_rpkt_cont.phixslist)
+                 : calculate_chi_bf_gammacontr<false>(modelgridindex, nu_cmf, nullptr);
 
   } else {
     /// in the other cases chi_grey is an mass absorption coefficient
@@ -1195,11 +1188,10 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   }
 
   chi_rpkt_cont.nu = nu_cmf;
-  chi_rpkt_cont.total = chi_escat + chi_bf + chi_ff;
   chi_rpkt_cont.ffescat = chi_escat;
-  chi_rpkt_cont.ffheat = chi_ff;
   chi_rpkt_cont.bf = chi_bf;
-  chi_rpkt_cont.ffheating = chi_ffheating;
+  chi_rpkt_cont.ffheat = chi_ff;
+  chi_rpkt_cont.total = chi_rpkt_cont.ffescat + chi_rpkt_cont.bf + chi_rpkt_cont.ffheat;
 
   if (!std::isfinite(chi_rpkt_cont.total)) {
     printout("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
@@ -1276,9 +1268,7 @@ void calculate_expansion_opacities(const int modelgridindex) {
     expansionopacities[nonemptymgi * expopac_nbins + binindex] = bin_kappa_bb;
 
     if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
-      // static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
-      //   .nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN, .modelgridindex = -1, .timestep = -1
-      // };
+      // static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
       // calculate_chi_rpkt_cont(nu_mid, chi_rpkt_cont, nullptr, modelgridindex);
       // const auto bin_kappa_cont = chi_rpkt_cont.total / rho;
       const auto bin_kappa_cont = calculate_chi_ffheating(modelgridindex, nu_mid) / rho;

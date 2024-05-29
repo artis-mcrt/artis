@@ -5,15 +5,6 @@
 #include <ctime>
 #include <vector>
 
-struct Rpkt_continuum_absorptioncoeffs {
-  double nu{-1.};  // frequency at which opacity was calculated
-  double total{0.};
-  double ffescat{0.};
-  double ffheat{0.};
-  double bf{0.};
-  double ffheating{0.};
-};
-
 struct Phixslist {
   std::vector<double> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
   std::vector<double> chi_bf_sum;
@@ -24,6 +15,15 @@ struct Phixslist {
   int bfestimbegin{0};
 };
 
+struct Rpkt_continuum_absorptioncoeffs {
+  double nu{-1.};  // frequency at which opacity was calculated
+  double total{0.};
+  double ffescat{0.};
+  double ffheat{0.};
+  double bf{0.};
+  Phixslist *phixslist{nullptr};
+};
+
 #include "artisoptions.h"
 #include "atomic.h"
 #include "sn3d.h"
@@ -31,8 +31,7 @@ struct Phixslist {
 void do_rpkt(Packet &pkt, double t2);
 void emit_rpkt(Packet &pkt);
 [[nodiscard]] auto closest_transition(double nu_cmf, int next_trans) -> int;
-void calculate_chi_rpkt_cont(double nu_cmf, Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, Phixslist *phixslist,
-                             int modelgridindex);
+void calculate_chi_rpkt_cont(double nu_cmf, Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, int modelgridindex);
 [[nodiscard]] auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
 void allocate_expansionopacities();
 void calculate_expansion_opacities(int modelgridindex);
