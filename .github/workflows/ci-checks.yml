@@ -102,17 +102,17 @@ jobs:
             matrix:
                 compiler:
                     [
-                        {name: gcc, ver: 11},
-                        {name: gcc, ver: 12},
-                        {name: gcc, ver: 13},
-                        {name: gcc, ver: 14},
-                        {name: nvc++, ver: '24.5'},
+                        {os: ubuntu-latest, name: gcc, ver: 11},
+                        {os: ubuntu-latest, name: gcc, ver: 12},
+                        {os: ubuntu-latest, name: gcc, ver: 13},
+                        {os: ubuntu-24.04, name: gcc, ver: 14},
+                        {os: ubuntu-latest, name: nvc++, ver: '24.5'},
                     ]
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
             fail-fast: false
 
-        runs-on: ubuntu-latest
+        runs-on: ${{ matrix.compiler.os }}
         name: ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
         steps:
             - uses: actions/checkout@v4

@@ -56,12 +56,12 @@ jobs:
                   #   sudo add-apt-repository multiverse
                     sudo apt-get update
 
-            - name: Install gcc-14
+            - name: Install gcc-13
               if: always()
               uses: fortran-lang/setup-fortran@v1
               with:
                   compiler: gcc
-                  version: 14
+                  version: 13
 
             - name: install gsl and openmpi
               run: |
