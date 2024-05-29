@@ -78,14 +78,8 @@ static constexpr double MINDEPRATE = 0.;
 // Bohr radius squared in cm^2
 static constexpr double A_naught_squared = 2.800285203e-17;
 
-// specifies max number of shells for which data is known for computing mean binding energies
-static constexpr int M_NT_SHELLS = 28;
-
-// maximum number of elements for which binding energy tables are to be used
-static constexpr int MAX_Z_BINDING = 108;
-
 static std::vector<std::vector<double>> electron_binding;
-static int shells_q[MAX_Z_BINDING][M_NT_SHELLS];
+static std::vector<std::vector<int>> shells_q;
 
 struct collionrow {
   int Z;
@@ -169,10 +163,10 @@ static void read_shell_configs() {
   std::istringstream(line) >> nshells >> n_z_binding;
   printout("Reading shells.txt with %d elements and %d shells\n", n_z_binding, nshells);
 
-  if ((nshells > M_NT_SHELLS) || (n_z_binding > MAX_Z_BINDING)) {
-    printout("Wrong size for the shell config tables!\n");
-    std::abort();
-  }
+  shells_q.resize(n_z_binding, std::vector<int>(nshells, 0.));
+
+  assert_always(shells_q.size() == electron_binding.size());
+  assert_always(shells_q[0].size() == electron_binding[0].size());
 
   int elementcounter = 0;
   while (get_noncommentline(shells_file, line)) {
@@ -1172,8 +1166,8 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
     return 0.;
   }
 
-  std::array<int, M_NT_SHELLS> q{};
-  std::fill(q.begin(), q.end(), 0);
+  const int num_shells = electron_binding[get_atomicnumber(element) - 1].size();
+  auto q = std::vector<int>(num_shells, 0);
 
   bool use_shells_file = std::filesystem::exists("shells.txt") || std::filesystem::exists("data/shells.txt");
   if (!use_shells_file) {
@@ -1249,7 +1243,7 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
   // electron_binding[get_atomicnumber(element)-1][2],electron_binding[get_atomicnumber(element)-1][3],electron_binding[get_atomicnumber(element)-1][4],electron_binding[get_atomicnumber(element)-1][5],electron_binding[get_atomicnumber(element)-1][6],electron_binding[get_atomicnumber(element)-1][7],electron_binding[get_atomicnumber(element)-1][8],electron_binding[get_atomicnumber(element)-1][9]);
 
   double total = 0.;
-  for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++) {
+  for (int electron_loop = 0; electron_loop < num_shells; electron_loop++) {
     double electronsinshell = 0.;
     if (use_shells_file) {
       electronsinshell = shells_q[get_atomicnumber(element) - 1][electron_loop];
