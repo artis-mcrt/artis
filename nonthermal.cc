@@ -1,7 +1,5 @@
 #include "nonthermal.h"
 
-#include <fstream>
-
 #ifdef MPI_ON
 #include <mpi.h>
 #endif
@@ -86,7 +84,7 @@ static constexpr int M_NT_SHELLS = 28;
 // maximum number of elements for which binding energy tables are to be used
 static constexpr int MAX_Z_BINDING = 108;
 
-static std::array<std::array<double, M_NT_SHELLS>, MAX_Z_BINDING> electron_binding;
+static std::vector<std::vector<double>> electron_binding;
 static int shells_q[MAX_Z_BINDING][M_NT_SHELLS];
 
 struct collionrow {
@@ -161,15 +159,7 @@ static double *deposition_rate_density;
 static int *deposition_rate_density_timestep;
 
 static void read_shell_configs() {
-  const std::string filename{"shells.txt"};
-  auto shells_file = std::fstream(filename, std::ios::in);
-  if (!shells_file.is_open()) {
-    shells_file = std::fstream("data/" + filename, std::ios::in);
-    if (!shells_file.is_open()) {
-      printout("WARNING: Could not open file '%s'\n", filename.c_str());
-      return;
-    }
-  }
+  auto shells_file = fstream_required("shells.txt", std::ios::in);
 
   int nshells = 0;      // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in file
@@ -180,7 +170,7 @@ static void read_shell_configs() {
   printout("Reading shells.txt with %d elements and %d shells\n", n_z_binding, nshells);
 
   if ((nshells > M_NT_SHELLS) || (n_z_binding > MAX_Z_BINDING)) {
-    printout("Wrong size for the binding energy tables!\n");
+    printout("Wrong size for the shell config tables!\n");
     std::abort();
   }
 
@@ -205,64 +195,37 @@ static void read_shell_configs() {
 static void read_binding_energies() {
   bool use_new_format = std::filesystem::exists("bindingenergies_lotz_tab1and2.txt") ||
                         std::filesystem::exists("data/bindingenergies_lotz_tab1and2.txt");
-  if (use_new_format) {
-    auto binding_energies_file = fstream_required("bindingenergies_lotz_tab1and2.txt", std::ios::in);
 
-    int nshells = 0;      // number of shell in binding energy file
-    int n_z_binding = 0;  // number of elements in binding energy file
+  int nshells = 0;      // number of shell in binding energy file
+  int n_z_binding = 0;  // number of elements in binding energy file
 
-    std::string line;
+  const auto *filename = use_new_format ? "bindingenergies_lotz_tab1and2.txt" : "binding_energies.txt";
+  auto binding_energies_file = fstream_required(filename, std::ios::in);
+
+  std::string line;
+  assert_always(get_noncommentline(binding_energies_file, line));
+  std::istringstream(line) >> nshells >> n_z_binding;
+  printout("Reading binding energies file '%s' with %d elements and %d shells\n", filename, n_z_binding, nshells);
+
+  electron_binding.resize(n_z_binding, std::vector<double>(nshells, 0.));
+
+  for (int elemindex = 0; elemindex < n_z_binding; elemindex++) {
     assert_always(get_noncommentline(binding_energies_file, line));
-    std::istringstream(line) >> nshells >> n_z_binding;
-    printout("Reading binding energies file with %d elements and %d shells\n", n_z_binding, nshells);
-
-    if ((nshells > M_NT_SHELLS) || (n_z_binding > MAX_Z_BINDING)) {
-      printout("Wrong size for the binding energy tables!\n");
-      std::abort();
+    std::istringstream ssline(line);
+    int z_element = elemindex + 1;
+    /// new file as an atomic number column
+    if (use_new_format) {
+      ssline >> z_element;
     }
-
-    int elementcounter = 0;
-    while (get_noncommentline(binding_energies_file, line)) {
-      std::istringstream ssline(line);
-
-      int z_element = 0;
-      assert_always(ssline >> z_element);
-      printout("Reading binding energy Z=%d\n", z_element);
-
-      for (int shell = 0; shell < nshells; shell++) {
-        float bindingenergy = 0.;
-        assert_always(ssline >> bindingenergy);
-        //      printout("Binding energy of %g in shell %d element number %d Z=%d\n", bindingenergy, shell,
-        //      elementcounter, z_element);
-        electron_binding[elementcounter][shell] = bindingenergy * EV;
-      }
-      elementcounter++;
+    for (int shell = 0; shell < nshells; shell++) {
+      float bindingenergy = 0.;
+      assert_always(ssline >> bindingenergy);
+      electron_binding[elemindex][shell] = bindingenergy * EV;
     }
+  }
+
+  if (use_new_format) {
     read_shell_configs();
-  } else {
-    /// Old version -- new file version should contain same as old file but should keep functionality to use old file:
-    /// Old version doesn't have Z column
-    FILE *binding = fopen_required("binding_energies.txt", "r");
-
-    int dum1 = 0;
-    int dum2 = 0;
-    assert_always(fscanf(binding, "%d %d", &dum1, &dum2) == 2);  // dimensions of the table
-    if ((dum1 > M_NT_SHELLS) || (dum2 > MAX_Z_BINDING)) {
-      printout("Wrong size for the binding energy tables!\n");
-      std::abort();
-    }
-
-    for (int index1 = 0; index1 < dum2; index1++) {
-      float dum[10];
-      assert_always(fscanf(binding, "%g %g %g %g %g %g %g %g %g %g", &dum[0], &dum[1], &dum[2], &dum[3], &dum[4],
-                           &dum[5], &dum[6], &dum[7], &dum[8], &dum[9]) == 10);
-
-      for (int index2 = 0; index2 < 10; index2++) {
-        electron_binding[index1][index2] = dum[index2] * EV;
-      }
-    }
-
-    fclose(binding);
   }
 }
 
