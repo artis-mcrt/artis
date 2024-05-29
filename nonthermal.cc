@@ -1243,23 +1243,23 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
   // electron_binding[get_atomicnumber(element)-1][2],electron_binding[get_atomicnumber(element)-1][3],electron_binding[get_atomicnumber(element)-1][4],electron_binding[get_atomicnumber(element)-1][5],electron_binding[get_atomicnumber(element)-1][6],electron_binding[get_atomicnumber(element)-1][7],electron_binding[get_atomicnumber(element)-1][8],electron_binding[get_atomicnumber(element)-1][9]);
 
   double total = 0.;
-  for (int electron_loop = 0; electron_loop < num_shells; electron_loop++) {
+  for (int shellindex = 0; shellindex < num_shells; shellindex++) {
     double electronsinshell = 0.;
     if (use_shells_file) {
-      electronsinshell = shells_q[get_atomicnumber(element) - 1][electron_loop];
+      electronsinshell = shells_q[get_atomicnumber(element) - 1][shellindex];
     } else {
-      electronsinshell = q[electron_loop];
+      electronsinshell = q[shellindex];
     }
     if (electronsinshell <= 0) {
       continue;
     }
-    double enbinding = electron_binding[get_atomicnumber(element) - 1][electron_loop];
+    double enbinding = electron_binding[get_atomicnumber(element) - 1][shellindex];
     const double ionpot = globals::elements[element].ions[ion].ionpot;
     if (enbinding <= 0) {
-      enbinding = electron_binding[get_atomicnumber(element) - 1][electron_loop - 1];
+      enbinding = electron_binding[get_atomicnumber(element) - 1][shellindex - 1];
       //  to get total += electronsinshell/electron_binding[get_atomicnumber(element)-1][electron_loop-1];
       //  set use3 = 0.
-      if (electron_loop != 8) {
+      if (shellindex != 8) {
         // For some reason in the Lotz data, this is no energy for the M5 shell before Ni. So if the complaint
         // is for 8 (corresponding to that shell) then just use the M4 value
         printout("Huh? I'm trying to use a binding energy when I have no data. element %d ion %d\n", element, ion);
