@@ -54,6 +54,10 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
   const auto nne = grid::get_nne(modelgridindex);
   const auto T_e = grid::get_Te(modelgridindex);
 
+  if constexpr (update_cooling_contrib_list) {
+    assert_always(indexionstart >= 0)
+  }
+
   double C_ion = 0.;
   int i = indexionstart;  // NOLINT(misc-const-correctness)
 
@@ -485,18 +489,18 @@ void do_kpkt(Packet &pkt, double t2, int nts)
     //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
     C_ion_procsum = calculate_cooling_rates_ion<true>(modelgridindex, element, ion, ilow, cellcacheslotid, nullptr,
                                                       nullptr, nullptr, nullptr);
-    assert_testmodeonly(
-        (C_ion_procsum - grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]) / C_ion_procsum < 1e-3);
+    assert_testmodeonly((std::fabs(C_ion_procsum - grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]) /
+                         C_ion_procsum) < 1e-3);
   }
 
   // with the ion selected, we now select a level and transition type
 
   const double rndcool_ion_process = rng_uniform() * C_ion_procsum;
 
-  auto *const selectedvalue =
+  const auto i = std::distance(
+      globals::cellcache[cellcacheslotid].cooling_contrib,
       std::upper_bound(globals::cellcache[cellcacheslotid].cooling_contrib + ilow,
-                       globals::cellcache[cellcacheslotid].cooling_contrib + ihigh + 1, rndcool_ion_process);
-  const ptrdiff_t i = selectedvalue - globals::cellcache[cellcacheslotid].cooling_contrib;
+                       globals::cellcache[cellcacheslotid].cooling_contrib + ihigh + 1, rndcool_ion_process));
 
   if (i > ihigh) {
     printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %td, rndcool %g\n", ilow,

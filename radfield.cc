@@ -1045,11 +1045,11 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
     for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
       const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
       if (!globals::lte_iteration && grid::modelgrid[mgi].thick != 1) {
-        int assoc_cells = grid::get_numassociatedcells(mgi);
+        const int assoc_cells = grid::get_numassociatedcells(mgi);
         if (assoc_cells > 0) {
-          double deltaV =
+          const double deltaV =
               grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
-          double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
+          const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
           assert_always(nonemptymgi >= 0);
           for (int i = 0; i < globals::bfestimcount; i++) {
             const auto mgibfindex = nonemptymgi * globals::bfestimcount + i;
