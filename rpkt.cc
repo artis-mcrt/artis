@@ -760,7 +760,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
   MacroAtomState pktmastate{};
 
   // TODO: these should be re-used to avoid allocations during packet prop
-  // but make sure r10_d4.0_Z in classic mode is not affected!
+  // but make sure r10_d2.6_Z in classic mode is not affected!
   Phixslist phixslist{
       .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
       .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
