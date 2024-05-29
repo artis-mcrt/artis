@@ -883,10 +883,11 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
   }
 
   const int num_shells = electron_binding[get_atomicnumber(element) - 1].size();
-  auto q = std::vector<int>(num_shells, 0);
+  const bool use_shells_file = !shells_q.empty();
+  std::vector<int> q(0);
 
-  bool use_shells_file = std::filesystem::exists("shells.txt") || std::filesystem::exists("data/shells.txt");
   if (!use_shells_file) {
+    q.resize(num_shells, 0);
     for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
       if (q[0] < 2)  // K 1s
       {
