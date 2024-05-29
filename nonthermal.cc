@@ -2691,15 +2691,57 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
       nt_solution[modelgridindex].frac_excitations_list.resize(frac_excitations_list_size_new);
     }
 
+    // Lets Use MPI_Pack and MPI_Unpack for Fractional Excitations
+    // lets set the size of the buffer
+
+    int double_size = sizeof(double);
+    int int_size = sizeof(int);
+
+    // we have 2 doubles and 1 int in the struct
+
+    int buffer_size = 2 * double_size + int_size;
+
+    // lets create a buffer
+
+    char *buffer = (char *)malloc(buffer_size);
+
+    // lets pack the data
+
+    int position = 0;
+
     const auto frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
     for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
-      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
-                root, MPI_COMM_WORLD);
-      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
-                MPI_DOUBLE, root, MPI_COMM_WORLD);
-      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, root,
-                MPI_COMM_WORLD);
+      MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
+               buffer, buffer_size, &position, MPI_COMM_WORLD);
+      MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
+               MPI_DOUBLE, buffer, buffer_size, &position, MPI_COMM_WORLD);
+      MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, buffer,
+               buffer_size, &position, MPI_COMM_WORLD);
     }
+
+    // lets broadcast the buffer
+
+    MPI_Bcast(buffer, buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
+
+    // lets unpack the data
+
+    position = 0;
+
+    for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
+      MPI_Unpack(buffer, buffer_size, &position,
+                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
+                 MPI_COMM_WORLD);
+      MPI_Unpack(buffer, buffer_size, &position,
+                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
+                 MPI_DOUBLE, MPI_COMM_WORLD);
+      MPI_Unpack(buffer, buffer_size, &position,
+                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT,
+                 MPI_COMM_WORLD);
+    }
+
+    // lets free the buffer
+
+    free(buffer);
 
     if (STORE_NT_SPECTRUM) {
       assert_always(nt_solution[modelgridindex].yfunc != nullptr);
