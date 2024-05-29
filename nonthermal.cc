@@ -85,7 +85,6 @@ static constexpr int M_NT_SHELLS = 28;
 static constexpr int MAX_Z_BINDING = 108;
 
 static std::array<std::array<double, M_NT_SHELLS>, MAX_Z_BINDING> electron_binding;
-// static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
 static int shells_q[MAX_Z_BINDING][M_NT_SHELLS];
 
 struct collionrow {
