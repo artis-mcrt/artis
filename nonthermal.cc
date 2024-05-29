@@ -191,13 +191,13 @@ void read_shell_configs() {
 }
 
 void read_binding_energies() {
-  bool use_new_format = std::filesystem::exists("bindingenergies_lotz_tab1and2.txt") ||
-                        std::filesystem::exists("data/bindingenergies_lotz_tab1and2.txt");
+  bool use_new_format = std::filesystem::exists("binding_energies_lotz_tab1and2.txt") ||
+                        std::filesystem::exists("data/binding_energies_lotz_tab1and2.txt");
 
   int nshells = 0;      // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in binding energy file
 
-  const auto *filename = use_new_format ? "bindingenergies_lotz_tab1and2.txt" : "binding_energies.txt";
+  const auto *filename = use_new_format ? "binding_energies_lotz_tab1and2.txt" : "binding_energies.txt";
   auto binding_energies_file = fstream_required(filename, std::ios::in);
 
   std::string line;
