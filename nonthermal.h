@@ -5,7 +5,6 @@
 #include <cstdio>
 
 #include "packet.h"
-#include "input.h"
 
 namespace nonthermal {
 void init(int my_rank, int ndo_nonempty);

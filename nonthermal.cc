@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <sstream>
 #include <tuple>
 #include <vector>
 
@@ -26,6 +27,7 @@
 #include "decay.h"
 #include "globals.h"
 #include "grid.h"
+#include "input.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "packet.h"
@@ -175,14 +177,14 @@ static void read_shell_configs() {
 
   int elementcounter = 0;
   while (get_noncommentline(shells_file, line)) {
-    int q;
-    int z_element;
     std::istringstream ssline(line);
 
+    int z_element = 0;
     assert_always(ssline >> z_element);
     printout("Reading shells Z=%d\n", z_element);
 
     for (int shell = 0; shell < nshells; shell++) {
+      int q = 0;
       assert_always(ssline >> q);
       printout("q of %d in shell %d element number %d Z=%d\n", q, shell, elementcounter, z_element);
       shells_q[elementcounter][shell] = q;
@@ -191,17 +193,8 @@ static void read_shell_configs() {
   }
 }
 
-inline bool exists_test(const std::string &name) {
-  if (FILE *file = fopen(name.c_str(), "r")) {
-    fclose(file);
-    return true;
-  } else {
-    return false;
-  }
-}
-
 static void read_binding_energies() {
-  bool use_new_format = exists_test("bindingenergies_Lotz_tab1and2.txt");
+  bool use_new_format = std::filesystem::exists("bindingenergies_Lotz_tab1and2.txt");
   if (use_new_format) {
     auto binding_energies_file = fstream_required("bindingenergies_Lotz_tab1and2.txt", std::ios::in);
 
@@ -220,14 +213,14 @@ static void read_binding_energies() {
 
     int elementcounter = 0;
     while (get_noncommentline(binding_energies_file, line)) {
-      float bindingenergy;
-      int z_element;
       std::istringstream ssline(line);
 
+      int z_element = 0;
       assert_always(ssline >> z_element);
       printout("Reading binding energy Z=%d\n", z_element);
 
       for (int shell = 0; shell < nshells; shell++) {
+        float bindingenergy = 0.;
         assert_always(ssline >> bindingenergy);
         //      printout("Binding energy of %g in shell %d element number %d Z=%d\n", bindingenergy, shell,
         //      elementcounter, z_element);
@@ -1209,7 +1202,7 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
   std::array<int, M_NT_SHELLS> q{};
   std::fill(q.begin(), q.end(), 0);
 
-  bool use_shells_file = exists_test("shells.txt");
+  bool use_shells_file = std::filesystem::exists("shells.txt");
   if (!use_shells_file) {
     for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
       if (q[0] < 2)  // K 1s
@@ -1283,8 +1276,8 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
   // electron_binding[get_atomicnumber(element)-1][2],electron_binding[get_atomicnumber(element)-1][3],electron_binding[get_atomicnumber(element)-1][4],electron_binding[get_atomicnumber(element)-1][5],electron_binding[get_atomicnumber(element)-1][6],electron_binding[get_atomicnumber(element)-1][7],electron_binding[get_atomicnumber(element)-1][8],electron_binding[get_atomicnumber(element)-1][9]);
 
   double total = 0.;
-  double electronsinshell;
   for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++) {
+    double electronsinshell = 0.;
     if (use_shells_file) {
       electronsinshell = shells_q[get_atomicnumber(element) - 1][electron_loop];
     } else {
@@ -1629,8 +1622,8 @@ auto nt_ionisation_maxupperion(const int element, const int lowerion) -> int {
   return maxupper;
 }
 
-auto nt_random_upperion(const int modelgridindex, const int element, const int lowerion, const bool energyweighted)
-    -> int {
+auto nt_random_upperion(const int modelgridindex, const int element, const int lowerion,
+                        const bool energyweighted) -> int {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
     while (true) {
@@ -1688,8 +1681,8 @@ auto nt_ionization_ratecoeff(const int modelgridindex, const int element, const 
 
 static auto calculate_nt_excitation_ratecoeff_perdeposition(const int modelgridindex, const int element, const int ion,
                                                             const int lower, const int uptransindex,
-                                                            const double statweight_lower, const double epsilon_trans)
-    -> double
+                                                            const double statweight_lower,
+                                                            const double epsilon_trans) -> double
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
 {
   if (nt_solution[modelgridindex].yfunc == nullptr) {
@@ -2032,8 +2025,8 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
               (excitationindex)++;
             }
           }  // NT_EXCITATION_ON
-        }    // for t
-      }      // for lower
+        }  // for t
+      }  // for lower
 
       printout("    frac_excitation: %g\n", frac_excitation_ion);
       if (frac_excitation_ion > 1. || !std::isfinite(frac_excitation_ion)) {
