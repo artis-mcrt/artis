@@ -259,10 +259,7 @@ static auto get_event(const int modelgridindex,
           /// bound-bound process occurs
           // printout("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
 
-          mastate.element = element;
-          mastate.ion = ion;
-          mastate.level = upper;  /// if the MA will be activated it must be in the transitions upper level
-          mastate.activatingline = lineindex;
+          mastate = {.element = element, .ion = ion, .level = upper, .activatingline = lineindex};
 
           if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
             move_pkt_withtime(pos, pkt.dir, prop_time, nu_rf, nu_cmf, e_rf, e_cmf, ldist);
@@ -760,7 +757,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
   MacroAtomState pktmastate{};
 
   // TODO: these should be re-used to avoid allocations during packet prop
-  // but make sure r10_d4.0_Z in classic mode is not affected!
+  // but make sure r10_d2.6_Z in classic mode is not affected!
   Phixslist phixslist{
       .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
       .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
