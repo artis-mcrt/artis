@@ -43,8 +43,10 @@ if [ -f emission.out* ]; then
   # convert packets to parquet for fast reading
   artistools lc --frompackets || true
 
-  # convert virtual packets to parquet
-  artistools lc --frompackets -plotvspecpol 0 || true
+  if [ -f vpkt.txt ]; then
+    # convert virtual packets to parquet
+    artistools lc --frompackets -plotvspecpol 0 || true
+  fi
 
   # convert estimators to parquet. commented because python multiprocessing hangs on JUWELS
   #python3 -c 'import artistools as at; at.estimators.scan_estimators()' || true
