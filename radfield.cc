@@ -1041,10 +1041,10 @@ void normalise_J(const int modelgridindex, const double estimator_normfactor_ove
 }
 
 void normalise_bf_estimators(const int nts, const int nts_prev, const int titer, double deltat) {
-  if (!(nts == globals::timestep_initial && titer == 0)) {
+  if (nts != globals::timestep_initial || titer != 0) {
     for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
       const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
-      if (!(globals::lte_iteration || grid::modelgrid[mgi].thick == 1)) {
+      if (!globals::lte_iteration && grid::modelgrid[mgi].thick != 1) {
         int assoc_cells = grid::get_numassociatedcells(mgi);
         if (assoc_cells > 0) {
           double deltaV =
