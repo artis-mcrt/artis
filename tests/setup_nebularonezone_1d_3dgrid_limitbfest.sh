@@ -14,6 +14,8 @@ tar -xf atomicdata_feconi.tar.xz --directory nebularonezone_1d_3dgrid_limitbfest
 
 cp ../data/* nebularonezone_1d_3dgrid_limitbfest_testrun/
 
+rm nebularonezone_1d_3dgrid_testrun/electron_shell_occupancy.txt
+
 cp ../artisoptions_nltenebular.h nebularonezone_1d_3dgrid_limitbfest_testrun/artisoptions.h
 
 cd nebularonezone_1d_3dgrid_limitbfest_testrun

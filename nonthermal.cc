@@ -1,5 +1,7 @@
 #include "nonthermal.h"
 
+#include <filesystem>
+
 #ifdef MPI_ON
 #include <mpi.h>
 #endif
@@ -220,7 +222,8 @@ void read_binding_energies() {
     }
   }
 
-  if (use_new_format) {
+  if (use_new_format && (std::filesystem::exists("electron_shell_occupancy.txt") ||
+                         std::filesystem::exists("data/electron_shell_occupancy.txt"))) {
     read_shell_configs();
   }
 }
