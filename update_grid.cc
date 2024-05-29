@@ -1012,10 +1012,6 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       // full-spectrum and binned J and nuJ estimators
       radfield::fit_parameters(mgi, nts);
 
-      if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-        radfield::normalise_bf_estimators(mgi, nonemptymgi, estimator_normfactor / H);
-      }
-
       solve_Te_nltepops(mgi, nonemptymgi, nts, titer, heatingcoolingrates);
     }
     printout("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", mgi, nts,
@@ -1137,6 +1133,10 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
   /// Do not use values which are saved in the cellcache within update_grid
   use_cellcache = false;
+
+  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+    radfield::normalise_bf_estimators(nts, nts_prev, titer, deltat);
+  }
 
 #ifdef _OPENMP
 #pragma omp parallel

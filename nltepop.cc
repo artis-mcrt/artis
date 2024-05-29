@@ -808,6 +808,16 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     return;
   }
 
+  double cell_Te = grid::get_Te(modelgridindex);
+
+  if (cell_Te == MINTEMP) {
+    printout(
+        "Not solving for NLTE populations in cell %d at timestep %d for element Z=%d due to low temperature Te=%g\n",
+        modelgridindex, timestep, atomic_number, cell_Te);
+    set_element_pops_lte(modelgridindex, element);
+    return;
+  }
+
   const auto sys_time_start_nltesolver = std::time(nullptr);
 
   const double t_mid = globals::timesteps[timestep].mid;
@@ -921,6 +931,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   // calculate the normalisation factors and apply them to the matrix
   // columns and balance vector elements
   gsl_vector *pop_norm_factor_vec = gsl_vector_calloc(nlte_dimension);
+  // gsl_vector_set_all(pop_norm_factor_vec, 1.0);
   nltepop_matrix_normalise(modelgridindex, element, rate_matrix, pop_norm_factor_vec);
 
   // printout("Rate matrix | balance vector:\n");
