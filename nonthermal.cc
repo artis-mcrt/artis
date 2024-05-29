@@ -1297,7 +1297,7 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
         // is for 8 (corresponding to that shell) then just use the M4 value
         printout("Huh? I'm trying to use a binding energy when I have no data. element %d ion %d\n", element, ion);
         printout("Z = %d, ionstage = %d\n", get_atomicnumber(element), get_ionstage(element, ion));
-        //        std::abort();
+        std::abort();
       }
     }
     total += electronsinshell / std::max(ionpot, enbinding);
