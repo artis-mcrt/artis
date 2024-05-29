@@ -172,7 +172,7 @@ static void read_shell_configs() {
 
   if ((nshells > M_NT_SHELLS) || (n_z_binding > MAX_Z_BINDING)) {
     printout("Wrong size for the binding energy tables!\n");
-    abort();
+    std::abort();
   }
 
   int elementcounter = 0;
@@ -239,7 +239,7 @@ static void read_binding_energies() {
     assert_always(fscanf(binding, "%d %d", &dum1, &dum2) == 2);  // dimensions of the table
     if ((dum1 > M_NT_SHELLS) || (dum2 > MAX_Z_BINDING)) {
       printout("Wrong size for the binding energy tables!\n");
-      abort();
+      std::abort();
     }
 
     for (int index1 = 0; index1 < dum2; index1++) {
