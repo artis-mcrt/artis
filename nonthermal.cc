@@ -155,7 +155,7 @@ double *deposition_rate_density;
 int *deposition_rate_density_timestep;
 
 void read_shell_configs() {
-  auto shells_file = fstream_required("shells.txt", std::ios::in);
+  auto shells_file = fstream_required("electron_shell_occupancy.txt", std::ios::in);
 
   int nshells = 0;      // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in file
@@ -163,7 +163,7 @@ void read_shell_configs() {
   std::string line;
   assert_always(get_noncommentline(shells_file, line));
   std::istringstream(line) >> nshells >> n_z_binding;
-  printout("Reading shells.txt with %d elements and %d shells\n", n_z_binding, nshells);
+  printout("Reading electron_shell_occupancy.txt with %d elements and %d shells\n", n_z_binding, nshells);
 
   shells_q.resize(n_z_binding, std::vector<int>(nshells, 0.));
 
