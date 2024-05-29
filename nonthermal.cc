@@ -1,5 +1,7 @@
 #include "nonthermal.h"
 
+#include <fstream>
+
 #ifdef MPI_ON
 #include <mpi.h>
 #endif
@@ -159,7 +161,15 @@ static double *deposition_rate_density;
 static int *deposition_rate_density_timestep;
 
 static void read_shell_configs() {
-  auto shells_file = fstream_required("shells.txt", std::ios::in);
+  const std::string filename{"shells.txt"};
+  auto shells_file = std::fstream(filename, std::ios::in);
+  if (!shells_file.is_open()) {
+    shells_file = std::fstream("data/" + filename, std::ios::in);
+    if (!shells_file.is_open()) {
+      printout("WARNING: Could not open file '%s'\n", filename.c_str());
+      return;
+    }
+  }
 
   int nshells = 0;      // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in file
@@ -193,9 +203,10 @@ static void read_shell_configs() {
 }
 
 static void read_binding_energies() {
-  bool use_new_format = std::filesystem::exists("bindingenergies_Lotz_tab1and2.txt");
+  bool use_new_format = std::filesystem::exists("bindingenergies_lotz_tab1and2.txt") ||
+                        std::filesystem::exists("data/bindingenergies_lotz_tab1and2.txt");
   if (use_new_format) {
-    auto binding_energies_file = fstream_required("bindingenergies_Lotz_tab1and2.txt", std::ios::in);
+    auto binding_energies_file = fstream_required("bindingenergies_lotz_tab1and2.txt", std::ios::in);
 
     int nshells = 0;      // number of shell in binding energy file
     int n_z_binding = 0;  // number of elements in binding energy file
@@ -1201,7 +1212,7 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
   std::array<int, M_NT_SHELLS> q{};
   std::fill(q.begin(), q.end(), 0);
 
-  bool use_shells_file = std::filesystem::exists("shells.txt");
+  bool use_shells_file = std::filesystem::exists("shells.txt") || std::filesystem::exists("data/shells.txt");
   if (!use_shells_file) {
     for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
       if (q[0] < 2)  // K 1s
