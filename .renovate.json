@@ -3,5 +3,9 @@
   "extends": [
     "config:recommended"
   ],
-  "baseBranches": ["develop"]
+  "baseBranches": ["develop"],
+  "bumpVersion": "minor",
+  "pre-commit": {
+    "enabled": true
+  }
 }
