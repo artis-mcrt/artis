@@ -726,45 +726,43 @@ void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, cons
       break;  // no iteration is needed without nlte pops
     }
 
-    if (globals::total_nlte_levels > 0) {
-      const double fracdiff_T_e = fabs((grid::get_Te(mgi) / prev_T_e) - 1);
-      const auto sys_time_start_nltepops = std::time(nullptr);
-      // fractional difference between previous and current iteration's (nne or max(ground state
-      // population change))
-      double fracdiff_nne = 0.;
-      for (int element = 0; element < get_nelements(); element++) {
-        if (get_nions(element) > 0 && elem_has_nlte_levels(element)) {
-          solve_nlte_pops_element(element, mgi, nts, nlte_iter);
-          calculate_cellpartfuncts(mgi, element);
-        }
+    const double fracdiff_T_e = fabs((grid::get_Te(mgi) / prev_T_e) - 1);
+    const auto sys_time_start_nltepops = std::time(nullptr);
+    // fractional difference between previous and current iteration's (nne or max(ground state
+    // population change))
+    double fracdiff_nne = 0.;
+    for (int element = 0; element < get_nelements(); element++) {
+      if (get_nions(element) > 0 && elem_has_nlte_levels(element)) {
+        solve_nlte_pops_element(element, mgi, nts, nlte_iter);
+        calculate_cellpartfuncts(mgi, element);
       }
-      const int duration_solve_nltepops = std::time(nullptr) - sys_time_start_nltepops;
+    }
+    const int duration_solve_nltepops = std::time(nullptr) - sys_time_start_nltepops;
 
-      const double nne_prev = grid::get_nne(mgi);
-      calculate_ion_balance_nne(mgi);  // sets nne
-      fracdiff_nne = fabs((grid::get_nne(mgi) / nne_prev) - 1);
-      printout(
-          "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e "
-          "%ds, NLTE populations %ds\n",
-          mgi, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
-      printout(
-          "NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: prev_iter nne "
-          "%g, new nne is %g, fracdiff %g, prev T_e %g new T_e %g fracdiff %g\n",
-          mgi, nts, nlte_iter, nne_prev, grid::get_nne(mgi), fracdiff_nne, prev_T_e, grid::get_Te(mgi), fracdiff_T_e);
+    const double nne_prev = grid::get_nne(mgi);
+    calculate_ion_balance_nne(mgi);  // sets nne
+    fracdiff_nne = fabs((grid::get_nne(mgi) / nne_prev) - 1);
+    printout(
+        "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e "
+        "%ds, NLTE populations %ds\n",
+        mgi, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
+    printout(
+        "NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: prev_iter nne "
+        "%g, new nne is %g, fracdiff %g, prev T_e %g new T_e %g fracdiff %g\n",
+        mgi, nts, nlte_iter, nne_prev, grid::get_nne(mgi), fracdiff_nne, prev_T_e, grid::get_Te(mgi), fracdiff_T_e);
 
-      if (fracdiff_nne <= covergence_tolerance && fracdiff_T_e <= covergence_tolerance) {
-        printout(
-            "NLTE (Spencer-Fano/Te/pops) solver nne converged to tolerance %g <= %g and T_e to "
-            "tolerance %g <= %g after %d iterations.\n",
-            fracdiff_nne, covergence_tolerance, fracdiff_T_e, covergence_tolerance, nlte_iter + 1);
-        break;
-      }
-      if (nlte_iter == NLTEITER) {
-        printout(
-            "WARNING: NLTE solver failed to converge after %d iterations. Keeping solution from "
-            "last iteration\n",
-            nlte_iter + 1);
-      }
+    if (fracdiff_nne <= covergence_tolerance && fracdiff_T_e <= covergence_tolerance) {
+      printout(
+          "NLTE (Spencer-Fano/Te/pops) solver nne converged to tolerance %g <= %g and T_e to "
+          "tolerance %g <= %g after %d iterations.\n",
+          fracdiff_nne, covergence_tolerance, fracdiff_T_e, covergence_tolerance, nlte_iter + 1);
+      break;
+    }
+    if (nlte_iter == NLTEITER) {
+      printout(
+          "WARNING: NLTE solver failed to converge after %d iterations. Keeping solution from "
+          "last iteration\n",
+          nlte_iter + 1);
     }
   }
 }
