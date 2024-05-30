@@ -2720,13 +2720,13 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
       MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, buffer,
                buffer_size, &position, MPI_COMM_WORLD);
     }
-
+    MPI_Barrier(MPI_COMM_WORLD);
     // lets broadcast the buffer
 
     MPI_Bcast(buffer, buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
 
     // lets unpack the data
-
+    MPI_Barrier(MPI_COMM_WORLD);
     position = 0;
 
     for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
