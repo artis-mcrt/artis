@@ -29,10 +29,39 @@ namespace {
 
 void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   double en_deposited = pkt.e_cmf;
+  const double ts = pkt.prop_time;
 
-  if constexpr (INSTANT_PARTICLE_DEPOSITION) {
+  if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
     // absorption happens
     pkt.type = TYPE_NTLEPTON;
+  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_GLOBAL ||
+             PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_LOCAL) {
+    const double t_0 = grid::get_t_model();
+    double rho_0 = 0.;
+    const double endot_per_rho = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 5.e11 * MEV : 4.e10 * MEV;
+    if (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_GLOBAL) {
+      double V_0 = 0.;
+      for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+        const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+        V_0 += grid::get_modelcell_assocvolume_tmin(mgi);
+      }
+      rho_0 = grid::mtot_input / V_0;
+    } else {
+      rho_0 = grid::get_rho_tmin(grid::get_cell_modelgridindex(pkt.where));
+    }
+    const double C = endot_per_rho * rho_0 * pow(t_0, 3);
+    const double E_0 = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 6.0 * MEV : 0.5 * MEV;
+    const double tau_ineff = sqrt(C / E_0);
+    const double f_p = log(1 + 2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
+    assert_always(f_p >= 0.);
+    assert_always(f_p <= 1.);
+    if (rng_uniform() < f_p) {
+      pkt.type = TYPE_NTLEPTON;
+    } else {
+      en_deposited = 0.;
+      pkt.type = TYPE_ESCAPE;
+      grid::change_cell(pkt, -99);
+    }
   } else {
     const double rho = grid::get_rho(grid::get_cell_modelgridindex(pkt.where));
 
