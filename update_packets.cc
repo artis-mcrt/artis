@@ -34,8 +34,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
     // absorption happens
     pkt.type = TYPE_NTLEPTON;
-  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_GLOBAL ||
-             PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_LOCAL) {
+  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_GLOBAL || PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_LOCAL) {
     const double t_0 = grid::get_t_model();
     double rho_0 = 0.;
     const double endot_per_rho = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 5.e11 * MEV : 4.e10 * MEV;
