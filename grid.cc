@@ -581,7 +581,7 @@ void read_possible_yefile() {
     double initelecfrac = 0.;
     assert_always(fscanf(filein, "%d %lg", &mgiplusone, &initelecfrac) == 2);
     const int mgi = mgiplusone - 1;
-    if (mgi >= 0 and mgi < get_npts_model()) {
+    if (mgi >= 0 && mgi < get_npts_model()) {
       set_initelectronfrac(mgi, initelecfrac);
       // printout("Ye.txt: setting mgi %d init_ye %g\n", mgi, initelecfrac);
     } else {
@@ -2161,27 +2161,38 @@ static void setup_grid_cylindrical_2d() {
   }
 }
 
+constexpr auto get_grid_type_name() -> std::string {
+  switch (GRID_TYPE) {
+    case GRID_SPHERICAL1D:
+      return "spherical";
+    case GRID_CYLINDRICAL2D:
+      return "cylindrical";
+    case GRID_CARTESIAN3D:
+      return "uniform cuboidal";
+    default: {
+      return "unknown";
+    }
+  }
+}
+
 void grid_init(const int my_rank)
 /// Initialises the propagation grid cells and associates them with modelgrid cells
 {
   /// The cells will be ordered by x then y, then z. Call a routine that
   /// sets up the initial positions and widths of the cells.
-  char grid_type_name[256] = "";
+
   if (GRID_TYPE == GRID_CARTESIAN3D) {
     setup_grid_cartesian_3d();
-    strcpy(grid_type_name, "uniform cuboidal");
-  } else if (GRID_TYPE == GRID_SPHERICAL1D) {
-    setup_grid_spherical1d();
-    strcpy(grid_type_name, "spherical");
   } else if (GRID_TYPE == GRID_CYLINDRICAL2D) {
     setup_grid_cylindrical_2d();
-    strcpy(grid_type_name, "cylindrical");
+  } else if (GRID_TYPE == GRID_SPHERICAL1D) {
+    setup_grid_spherical1d();
   } else {
     printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
     std::abort();
   }
 
-  printout("propagation grid: %d-dimensional %s\n", get_ngriddimensions(), grid_type_name);
+  printout("propagation grid: %d-dimensional %s\n", get_ngriddimensions(), get_grid_type_name().c_str());
 
   for (int d = 0; d < get_ngriddimensions(); d++) {
     printout("    coordinate %d '%c': cells have %d position values\n", d, coordlabel[d], ncoordgrid[d]);
