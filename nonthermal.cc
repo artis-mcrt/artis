@@ -2697,9 +2697,6 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
 
     int double_size = sizeof(double);
     int int_size = sizeof(int);
-
-    // we have 2 doubles and 1 int in the struct
-
     int buffer_size = (2 * double_size + int_size) * frac_excitations_list_size;
 
     // lets create a buffer
