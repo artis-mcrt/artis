@@ -269,7 +269,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     if (mgi == grid::get_npts_model()) {
       vpkt.next_trans = -1;
     } else {
-      calculate_chi_rpkt_cont(vpkt.nu_cmf, chi_vpkt_cont, nullptr, mgi);
+      calculate_chi_rpkt_cont(vpkt.nu_cmf, chi_vpkt_cont, mgi);
 
       const double chi_cont = chi_vpkt_cont.total;
 
