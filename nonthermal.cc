@@ -2653,7 +2653,7 @@ void read_restart_data(FILE *gridsave_file) {
 }
 
 #ifdef MPI_ON
-void nt_MPI_Bcast(const int modelgridindex, const int root, const int my_rank, const int root_node_id) {
+void nt_MPI_Bcast(const int modelgridindex, const int root, const int my_rank) {
   if (grid::get_numassociatedcells(modelgridindex) == 0) {
     return;
   }
