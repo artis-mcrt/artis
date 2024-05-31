@@ -566,7 +566,7 @@ static void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoe
     /// bf: transform to k-pkt or activate macroatom corresponding to probabilities
     // printout("[debug] rpkt_event:   bound-free transition\n");
 
-    const Phixslist &phixslist = chi_rpkt_cont.phixslist.value();
+    const auto &phixslist = chi_rpkt_cont.phixslist.value();
 
     pkt.absorptiontype = -2;
 
@@ -1173,7 +1173,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
     /// Third contribution: bound-free absorption
     chi_bf = chi_rpkt_cont.phixslist.has_value()
                  ? calculate_chi_bf_gammacontr<true>(modelgridindex, nu_cmf, &chi_rpkt_cont.phixslist.value())
-                 : calculate_chi_bf_gammacontr<false>(modelgridindex, nu_cmf, &chi_rpkt_cont.phixslist.value());
+                 : calculate_chi_bf_gammacontr<false>(modelgridindex, nu_cmf, nullptr);
 
   } else {
     /// in the other cases chi_grey is an mass absorption coefficient
