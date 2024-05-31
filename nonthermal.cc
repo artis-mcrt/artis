@@ -2708,14 +2708,15 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
     int position = 0;
 
     MPI_Barrier(MPI_COMM_WORLD);
-
-    for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
-      MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
-               buffer, buffer_size, &position, MPI_COMM_WORLD);
-      MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
-               MPI_DOUBLE, buffer, buffer_size, &position, MPI_COMM_WORLD);
-      MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, buffer,
-               buffer_size, &position, MPI_COMM_WORLD);
+    if (root == my_rank) {
+      for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
+        MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
+                 buffer, buffer_size, &position, MPI_COMM_WORLD);
+        MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
+                 MPI_DOUBLE, buffer, buffer_size, &position, MPI_COMM_WORLD);
+        MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, buffer,
+                 buffer_size, &position, MPI_COMM_WORLD);
+      }
     }
     MPI_Barrier(MPI_COMM_WORLD);
     // lets broadcast the buffer
@@ -2724,6 +2725,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
 
     // lets unpack the data
     MPI_Barrier(MPI_COMM_WORLD);
+
     position = 0;
 
     for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
