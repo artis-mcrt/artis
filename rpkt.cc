@@ -566,7 +566,7 @@ static void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoe
     /// bf: transform to k-pkt or activate macroatom corresponding to probabilities
     // printout("[debug] rpkt_event:   bound-free transition\n");
 
-    const auto &phixslist = chi_rpkt_cont.phixslist.value();
+    const auto &phixslist = *chi_rpkt_cont.phixslist;
 
     pkt.absorptiontype = -2;
 
@@ -715,8 +715,8 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   assert_testmodeonly(nonemptymgi >= 0);
   const double distance_e_cmf = distance * e_cmf;
 
-  radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf,
-                              chi_rpkt_cont.phixslist.value(), thickcell);
+  radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf, *chi_rpkt_cont.phixslist,
+                              thickcell);
 
   if (thickcell) {
     // chi_rpkt_cont and phixslist are not known for thick cells
@@ -737,12 +737,12 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
 
       if constexpr (USE_LUT_PHOTOION) {
         atomicadd(globals::gammaestimator[ionestimindex],
-                  chi_rpkt_cont.phixslist.value().groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
+                  chi_rpkt_cont.phixslist->groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
       }
 
       if constexpr (USE_LUT_BFHEATING) {
         atomicadd(globals::bfheatingestimator[ionestimindex],
-                  chi_rpkt_cont.phixslist.value().groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
+                  chi_rpkt_cont.phixslist->groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
       }
     }
   }
@@ -760,17 +760,16 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
 
   // TODO: these should be re-used to avoid allocations during packet prop
   // but make sure r10_d2.6_Z in classic mode is not affected!
-
-  Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
-      .phixslist = Phixslist{
-          .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
-          .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
-          .gamma_contr = std::vector<double>(globals::bfestimcount, 0.),
-          .allcontend = 1,
-          .allcontbegin = 0,
-          .bfestimend = 1,
-          .bfestimbegin = 0,
-      }};
+  auto phixslist = Phixslist{
+      .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
+      .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
+      .gamma_contr = std::vector<double>(globals::bfestimcount, 0.),
+      .allcontend = 1,
+      .allcontbegin = 0,
+      .bfestimend = 1,
+      .bfestimbegin = 0,
+  };
+  Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{.phixslist = &phixslist};
 
   // Assign optical depth to next physical event
   const double zrand = rng_uniform_pos();
@@ -1171,8 +1170,8 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
     chi_escat = SIGMA_T * nne;
 
     /// Third contribution: bound-free absorption
-    chi_bf = chi_rpkt_cont.phixslist.has_value()
-                 ? calculate_chi_bf_gammacontr<true>(modelgridindex, nu_cmf, &chi_rpkt_cont.phixslist.value())
+    chi_bf = chi_rpkt_cont.phixslist != nullptr
+                 ? calculate_chi_bf_gammacontr<true>(modelgridindex, nu_cmf, chi_rpkt_cont.phixslist)
                  : calculate_chi_bf_gammacontr<false>(modelgridindex, nu_cmf, nullptr);
 
   } else {

@@ -3,7 +3,6 @@
 #define RPKT_H
 
 #include <ctime>
-#include <optional>
 #include <vector>
 
 struct Phixslist {
@@ -22,7 +21,7 @@ struct Rpkt_continuum_absorptioncoeffs {
   double ffescat{0.};
   double ffheat{0.};
   double bf{0.};
-  std::optional<Phixslist> phixslist;
+  Phixslist *phixslist{nullptr};
 };
 
 #include "artisoptions.h"
