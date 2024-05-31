@@ -722,7 +722,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   }
 
   /// ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
-  atomicadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.ffheating);
+  atomicadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.ffheat);
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
@@ -768,7 +768,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
       .bfestimbegin = 0,
   };
 
-  Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{.nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN};
+  Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{};
 
   // Assign optical depth to next physical event
   const double zrand = rng_uniform_pos();
@@ -1166,13 +1166,10 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   /// free-free absorption
   const double chi_ff = calculate_chi_ffheating(modelgridindex, nu_cmf);
   double chi_bf = 0.;
-  double chi_ffheating = 0.;
 
   if (globals::opacity_case >= 4) {
     /// First contribution: Thomson scattering on free electrons
     chi_escat = SIGMA_T * nne;
-
-    chi_ffheating = chi_ff;
 
     /// Third contribution: bound-free absorption
     chi_bf = (phixslist != nullptr) ? calculate_chi_bf_gammacontr<true>(modelgridindex, nu_cmf, phixslist)
@@ -1192,11 +1189,10 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   }
 
   chi_rpkt_cont.nu = nu_cmf;
-  chi_rpkt_cont.total = chi_escat + chi_bf + chi_ff;
   chi_rpkt_cont.ffescat = chi_escat;
-  chi_rpkt_cont.ffheat = chi_ff;
   chi_rpkt_cont.bf = chi_bf;
-  chi_rpkt_cont.ffheating = chi_ffheating;
+  chi_rpkt_cont.ffheat = chi_ff;
+  chi_rpkt_cont.total = chi_rpkt_cont.ffescat + chi_rpkt_cont.bf + chi_rpkt_cont.ffheat;
 
   if (!std::isfinite(chi_rpkt_cont.total)) {
     printout("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
@@ -1273,9 +1269,7 @@ void calculate_expansion_opacities(const int modelgridindex) {
     expansionopacities[nonemptymgi * expopac_nbins + binindex] = bin_kappa_bb;
 
     if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
-      // static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
-      //   .nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN, .modelgridindex = -1, .timestep = -1
-      // };
+      // static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
       // calculate_chi_rpkt_cont(nu_mid, chi_rpkt_cont, nullptr, modelgridindex);
       // const auto bin_kappa_cont = chi_rpkt_cont.total / rho;
       const auto bin_kappa_cont = calculate_chi_ffheating(modelgridindex, nu_mid) / rho;
