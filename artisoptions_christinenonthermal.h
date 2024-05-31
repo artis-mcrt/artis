@@ -133,8 +133,6 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = false;
 
 constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = false;
 
-constexpr bool INSTANT_PARTICLE_DEPOSITION = true;
-
 constexpr enum timestepsizemethods TIMESTEP_SIZE_METHOD = TIMESTEP_SIZES_LOGARITHMIC;
 
 constexpr double FIXED_TIMESTEP_WIDTH = -1.;
