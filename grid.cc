@@ -768,7 +768,7 @@ static void calculate_kappagrey() {
           kappa *= pow(T_rad / 2000., 5.);
         } else {
           printout("Temperature outside ALCAR opacity parameterization range. Abort.\n");
-          abort();
+          std::abort();
         }
       } else {
         printout("Unknown opacity case. Abort.\n");
