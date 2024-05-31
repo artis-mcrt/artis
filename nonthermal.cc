@@ -2653,7 +2653,7 @@ void read_restart_data(FILE *gridsave_file) {
 }
 
 #ifdef MPI_ON
-void nt_MPI_Bcast(const int modelgridindex, const int root) {
+void nt_MPI_Bcast(const int modelgridindex, const int root, const int my_rank, const int root_node_id) {
   if (grid::get_numassociatedcells(modelgridindex) == 0) {
     return;
   }
@@ -2702,6 +2702,10 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
     // lets create a buffer
 
     char *buffer = (char *)malloc(buffer_size);
+
+    // add printout of buffer size
+
+    printout("Buffer size for fractional excitations is %g Mb\n", buffer_size / 1024. / 1024.);
 
     // lets pack the data
 
