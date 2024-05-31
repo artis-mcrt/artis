@@ -23,7 +23,7 @@ void calculate_deposition_rate_density(int modelgridindex, int timestep);
 void do_ntlepton(Packet &pkt);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);
-void nt_MPI_Bcast(int modelgridindex, int root);
+void nt_MPI_Bcast(int modelgridindex, int root, int my_rank);
 void nt_reset_stats();
 void nt_print_stats(double modelvolume, double deltat);
 }  // namespace nonthermal
