@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <tuple>
 
 #include "grid.h"
 #include "ltepop.h"
