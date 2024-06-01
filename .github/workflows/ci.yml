@@ -248,14 +248,8 @@ jobs:
               run: |
                   at plotspectra --frompackets -ts 8 ${{ matrix.testname }}_testrun
 
-            - name: Plot spectrum classicmode_1d
-              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_1d')
-              working-directory: tests/
-              run: |
-                  at plotspectra --frompackets -t 18-22 ${{ matrix.testname }}_testrun
-
-            - name: Plot spectrum classicmode_3d
-              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_3d')
+            - name: Plot spectrum classicmode
+              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_')
               working-directory: tests/
               run: |
                   at plotspectra --frompackets -t 4-6 ${{ matrix.testname }}_testrun
