@@ -808,6 +808,9 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
       /// corrphotoionrenorm in frequency space which can lead to zero contributions to the total
       /// photoionsation rate!
     }
+#if MPI_ON
+    MPI_Win_flush_all(globals::win_corrphotoionrenorm);
+#endif
   }
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     for (int element = 0; element < get_nelements(); element++) {
@@ -922,8 +925,11 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
     if (USE_LUT_PHOTOION && !globals::simulation_continued_from_saved) {
       /// Determine renormalisation factor for corrected photoionization cross-sections
-      std::fill_n(&globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua_ground], globals::nbfcontinua_ground,
-                  1.);
+      std::fill_n(globals::corrphotoionrenorm + (nonemptymgi * globals::nbfcontinua_ground),
+                  globals::nbfcontinua_ground, 1.);
+#if MPI_ON
+      MPI_Win_flush_all(globals::win_corrphotoionrenorm);
+#endif
     }
 
     /// W == 1 indicates that this modelgrid cell was treated grey in the
@@ -982,6 +988,9 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       if constexpr (USE_LUT_PHOTOION) {
         std::fill_n(&globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua_ground],
                     globals::nbfcontinua_ground, 1.);
+#if MPI_ON
+        MPI_Win_flush_all(globals::win_corrphotoionrenorm);
+#endif
       }
 
       for (int element = 0; element < get_nelements(); element++) {
