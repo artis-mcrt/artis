@@ -213,14 +213,14 @@ void write_packets(const char filename[], const Packet *const pkt) {
 }
 
 void read_temp_packetsfile(const int timestep, const int my_rank, Packet *pkt) {
-  // read packets binary file
+  // read binary packets file
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Reading %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
-  assert_always(std::fread(pkt, sizeof(Packet), globals::npkts, packets_file) == (size_t)globals::npkts);
-  // read_packets(packets_file);
+  assert_always(std::fread(pkt, sizeof(Packet), globals::npkts, packets_file) == static_cast<size_t>(globals::npkts));
+
   fclose(packets_file);
   printout("done\n");
 }
@@ -228,7 +228,7 @@ void read_temp_packetsfile(const int timestep, const int my_rank, Packet *pkt) {
 auto verify_temp_packetsfile(const int timestep, const int my_rank, const Packet *const pkt) -> bool {
   // return true if verification is good, otherwise return false
 
-  // read packets binary file
+  // read binary packets file
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
