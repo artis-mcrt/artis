@@ -2,6 +2,8 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
+#include <tuple>
+
 #include "artisoptions.h"
 #include "constants.h"
 #include "globals.h"

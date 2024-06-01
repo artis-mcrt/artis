@@ -1934,12 +1934,12 @@ void update_parameterfile(int nts)
       if (nts >= 0) {
         if (noncomment_linenum == 2) {
           /// Number of start and end time step
-          snprintf(c_line, 1024, "%d %d", nts, globals::timestep_finish);
+          snprintf(c_line, sizeof(c_line), "%d %d", nts, globals::timestep_finish);
           // line.assign(c_line);
           line.replace(line.begin(), line.end(), c_line);
         } else if (noncomment_linenum == 16) {
           /// resume from gridsave file
-          snprintf(c_line, 1024, "%d", 1);  /// Force continuation
+          snprintf(c_line, sizeof(c_line), "%d", 1);  /// Force continuation
           line.assign(c_line);
         }
       }
@@ -1947,7 +1947,7 @@ void update_parameterfile(int nts)
       if (noncomment_linenum == 21) {
         /// by default, exspec should use all available packet files
         globals::nprocs_exspec = globals::nprocs;
-        snprintf(c_line, 1024, "%d", globals::nprocs_exspec);
+        snprintf(c_line, sizeof(c_line), "%d", globals::nprocs_exspec);
         line.assign(c_line);
       }
 

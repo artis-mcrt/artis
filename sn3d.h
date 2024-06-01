@@ -7,6 +7,12 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <limits>
+#include <memory>
+#include <string>
+#include <tuple>
+
 #ifdef STDPAR_ON
 #include <execution>
 
@@ -86,7 +92,7 @@ inline void print_line_start() {
 #define printout(...)                                                       \
   {                                                                         \
     print_line_start();                                                     \
-    snprintf(outputlinebuf, 1024, __VA_ARGS__);                             \
+    snprintf(outputlinebuf, sizeof(outputlinebuf), __VA_ARGS__);            \
     outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n'); \
     output_file << outputlinebuf;                                           \
     output_file.flush();                                                    \
