@@ -273,26 +273,6 @@ jobs:
                   name: test-${{ matrix.testname }}-output-pdf
                   path: tests/*.pdf
 
-    # - name: Compile previous commit
-    #   if: matrix.testmode == 'OFF'
-    #   continue-on-error: true
-    #   run: |
-    #       git checkout HEAD~1
-    #       git log -n 1
-    #       cp tests/${{ matrix.testname }}_testrun/artisoptions.h .
-    #       make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-    #       cp sn3d tests/${{ matrix.testname }}_testrun/
-    #       cp exspec tests/${{ matrix.testname }}_testrun/
-
-    # - name: Run previous commit job0 start
-    #   if: matrix.testmode == 'OFF'
-    #   continue-on-error: true
-    #   working-directory: tests/${{ matrix.testname }}_testrun/
-    #   run: |
-    #       cp input-newrun.txt input.txt
-    #       touch output_0-0.txt
-    #       time mpirun -np 2 ./sn3d
-
     combine_checksums:
         needs: testmodels
         if: always()
