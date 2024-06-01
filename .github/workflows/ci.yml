@@ -123,7 +123,7 @@ jobs:
               run: |
                   cp input-newrun.txt input.txt
                   touch output_0-0.txt
-                  time mpirun -np 2 ./sn3d
+                  time mpirun -np 4 --oversubscribe ./sn3d
 
             - name: Move job0 files
               if: always()
@@ -154,7 +154,7 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   cp input-resume.txt input.txt
-                  time mpirun -np 2 ./sn3d
+                  time mpirun -np 4 --oversubscribe ./sn3d
 
             - name: Move job1 files
               if: always()
