@@ -31,8 +31,8 @@ jobs:
                         kilonova_2d_2dgrid_expansionopac,
                         kilonova_2d_2dgrid_xcomgammaphotoion,
                         kilonova_2d_3dgrid,
-                        nebularonezone_1d_3dgrid,
-                        nebularonezone_1d_3dgrid_limitbfest,
+                        nebular_1d_3dgrid,
+                        nebular_1d_3dgrid_limitbfest,
                     ]
                 exclude:
                     - os: self-hosted
@@ -242,8 +242,8 @@ jobs:
                   at plotlightcurves ${{ matrix.testname }}_testrun
                   at plotlightcurves --frompackets ${{ matrix.testname }}_testrun
 
-            - name: Plot spectrum nebularonezone
-              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'nebularonezone')
+            - name: Plot spectrum nebular
+              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'nebular')
               working-directory: tests/
               run: |
                   at plotspectra --frompackets -ts 8 ${{ matrix.testname }}_testrun
