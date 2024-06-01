@@ -8,5 +8,8 @@
     },
     "[yaml]": {
         "editor.tabSize": 4
-    }
+    },
+    "files.eol": "\n",
+    "files.trimFinalNewlines": true,
+    "files.insertFinalNewline": true
 }
