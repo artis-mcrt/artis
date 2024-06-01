@@ -833,8 +833,14 @@ auto main(int argc, char *argv[]) -> int {
   printout("process id (pid): %d\n", getpid());
   printout("MPI enabled:\n");
   printout("  rank %d of [0..%d] in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs - 1);
-  printout("  rank %d of [0..%d] in MPI_COMM_WORLD_SHARED on node %d of [0..%d]\n", globals::rank_in_node,
-           globals::node_nprocs - 1, globals::node_id, globals::node_count - 1);
+  printout("  rank %d of [0..%d] in node %d of [0..%d]\n", globals::rank_in_node, globals::node_nprocs - 1,
+           globals::node_id, globals::node_count - 1);
+#ifdef MAX_NODE_SIZE
+  printout(
+      "WARNING: Compiled with MAX_NODE_SIZE %d, which may mean mean that there are more nodes reported than physically "
+      "present\n",
+      MAX_NODE_SIZE);
+#endif
 #else
   printout("MPI is disabled in this build\n");
 #endif

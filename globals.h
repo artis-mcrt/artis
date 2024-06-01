@@ -322,11 +322,27 @@ inline void setup_mpi_vars() {
   // make an intra-node communicator (group ranks that can share memory)
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, globals::rank_global, MPI_INFO_NULL,
                       &globals::mpi_comm_node);
+
   // get the local rank within this node
   MPI_Comm_rank(globals::mpi_comm_node, &globals::rank_in_node);
+
   // get the number of ranks on the node
   MPI_Comm_size(globals::mpi_comm_node, &globals::node_nprocs);
+
   MPI_Barrier(MPI_COMM_WORLD);
+
+#ifdef MAX_NODE_SIZE
+  if (MAX_NODE_SIZE > 0 && globals::node_nprocs > MAX_NODE_SIZE) {
+    // limit the number of ranks that can share memory
+    MPI_Comm_split(globals::mpi_comm_node, globals::rank_in_node / MAX_NODE_SIZE, globals::rank_global,
+                   &globals::mpi_comm_node);
+
+    MPI_Comm_rank(globals::mpi_comm_node, &globals::rank_in_node);
+    MPI_Comm_size(globals::mpi_comm_node, &globals::node_nprocs);
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
   // make an inter-node communicator (using local rank as the key for group membership)
   MPI_Comm_split(MPI_COMM_WORLD, globals::rank_in_node, globals::rank_global, &globals::mpi_comm_internode);
