@@ -28,6 +28,6 @@ b06e5fd9ef8ec982e53d4b02be1783a9  vspecpol_0000.out
 ed86a63f87f51718b4144f3f2fae3563  vspecpol_0002.out
 9fb9cf751121b1e82e78f9da9b9a230b  vspecpol_0003.out
 cfd2a23941004f2e8734cdb0877b8a4e  job0/estimators_0000.out
-31471a5c9b950ac94d3db6cb48a63417  job0/estimators_0001.out
-971ef6e1003e29c0c7d68c40b3f31a9e  job0/estimators_0002.out
+f3577e876f8802abb15b8f7613d08d61  job0/estimators_0001.out
+cf2922434537bbb7c00dc38fc66315a6  job0/estimators_0002.out
 3f0286ee7880dd4d5b9116660210ac69  job0/estimators_0003.out
