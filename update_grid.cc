@@ -980,7 +980,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       grid::set_W(mgi, 1);
 
       if constexpr (USE_LUT_PHOTOION) {
-        std::fill_n(&globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua_ground],
+        std::fill_n(globals::corrphotoionrenorm + (nonemptymgi * globals::nbfcontinua_ground),
                     globals::nbfcontinua_ground, 1.);
       }
 
