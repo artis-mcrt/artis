@@ -214,7 +214,9 @@ inline int bfestimcount{0};
 
 // for USE_LUT_PHOTOION = true
 inline double *corrphotoionrenorm{};
+#ifdef MPI_ON
 inline MPI_Win win_corrphotoionrenorm{MPI_WIN_NULL};
+#endif
 
 inline double *gammaestimator{};
 
