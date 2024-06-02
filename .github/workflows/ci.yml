@@ -48,14 +48,6 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: apt update
-              run: |
-                  #   sudo add-apt-repository main
-                  #   sudo add-apt-repository universe
-                  #   sudo add-apt-repository restricted
-                  #   sudo add-apt-repository multiverse
-                    sudo apt-get update
-
             - name: Install gcc-14
               if: always()
               uses: fortran-lang/setup-fortran@v1
@@ -65,6 +57,7 @@ jobs:
 
             - name: install gsl and openmpi
               run: |
+                  sudo apt-get update
                   sudo apt install -y libgsl-dev
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
