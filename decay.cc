@@ -1120,6 +1120,7 @@ void setup_decaypath_energy_per_mass() {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Win_flush_all(win_decaypath_energy_per_mass);
+  MPI_Win_fence(0, win_decaypath_energy_per_mass);
 #endif
 }
 
