@@ -125,6 +125,7 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
       std::distance(globals::linelist,
                     std::lower_bound(globals::linelist, globals::linelist + globals::nlines, nu_cmf,
                                      [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; }));
+
   if (matchindex >= globals::nlines) [[unlikely]] {
     return -1;
   }
