@@ -218,7 +218,6 @@ void write_deposition_file(const int nts, const int my_rank, const int nstart, c
 void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart, const int ndo,
                                      char *mpi_grid_buffer, const size_t mpi_grid_buffer_size) {
 #if MPI_ON
-  MPI_Win_flush_all(globals::win_corrphotoionrenorm);
   MPI_Win_fence(0, globals::win_corrphotoionrenorm);
 #endif
   int position = 0;
