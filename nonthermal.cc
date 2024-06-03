@@ -2692,10 +2692,11 @@ void nt_MPI_Bcast(const int modelgridindex, const int root, const int my_rank) {
     }
 
     const auto frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
-    char *buffer = (char *)malloc((2 * sizeof(double) + sizeof(int)) * frac_excitations_list_size);
+    int buffer_size = (2 * sizeof(double) + sizeof(int)) * frac_excitations_list_size;
+    char *buffer = (char *)malloc(buffer_size);
     int position = 0;
 
-    printout("Size of frac_excitations_list: %d\n", frac_excitations_list_size);
+    printout("Size of frac_excitations_list: %ld\n", frac_excitations_list_size);
     printout("Buffer size allocated for fractional excitations is %g Mb\n", buffer_size / 1024. / 1024.);
 
     MPI_Barrier(MPI_COMM_WORLD);
