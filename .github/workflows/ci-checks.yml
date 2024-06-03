@@ -208,10 +208,9 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: CPU type and core count
+            - name: CPU core count
               id: cpu-count
               run: |
-                  g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
                   python3 -m pip install psutil
                   python3 -c 'import psutil; print(f"CPU count (physical only): {int(psutil.cpu_count(logical=False))}")'
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
