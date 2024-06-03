@@ -65,6 +65,7 @@ jobs:
               id: cpu-count
               run: |
                   g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
+                  python3 -m pip install psutil
                   python3 -c 'import psutil; print(f"CPU count (physical only): {int(psutil.cpu_count(logical=False))}")'
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
