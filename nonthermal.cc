@@ -2710,6 +2710,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root, const int my_rank) {
                  buffer_size, &position, MPI_COMM_WORLD);
       }
     }
+
     MPI_Barrier(MPI_COMM_WORLD);
 
     MPI_Bcast(buffer, buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
