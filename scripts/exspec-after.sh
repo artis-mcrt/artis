@@ -52,4 +52,3 @@ if [ -f emission.out* ]; then
   python3 -c 'import artistools as at; at.estimators.scan_estimators()' || true
 
 fi
-

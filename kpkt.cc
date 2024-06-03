@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
+#include <iterator>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -21,7 +22,6 @@
 #include "thermalbalance.h"
 #include "vectors.h"
 #include "vpkt.h"
-
 namespace kpkt {
 
 namespace {
