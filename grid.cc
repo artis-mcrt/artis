@@ -2356,11 +2356,9 @@ constexpr static auto get_gridcoords_from_xyz(const std::array<double, 3> pos_xy
 }
 
 template <size_t S1>
-[[nodiscard]] static constexpr auto expanding_shell_intersection(const std::array<double, S1> pos,
-                                                                 const std::array<double, S1> dir, const double speed,
-                                                                 const double shellradiuststart,
-                                                                 const bool isinnerboundary,
-                                                                 const double tstart) -> double
+[[nodiscard]] [[gnu::pure]] static constexpr auto expanding_shell_intersection(
+    const std::array<double, S1> pos, const std::array<double, S1> dir, const double speed,
+    const double shellradiuststart, const bool isinnerboundary, const double tstart) -> double
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
 // 3-vectors) or expanding circle (2D vectors)
 // returns -1 if there are no forward intersections (or if the intersection

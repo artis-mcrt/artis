@@ -761,7 +761,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
 
   // TODO: these should be re-used to avoid allocations during packet prop
   // but make sure r10_d2.6_Z in classic mode is not affected!
-  Phixslist phixslist{
+  static thread_local Phixslist phixslist{
       .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
       .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
       .gamma_contr = std::vector<double>(globals::bfestimcount, 0.),
@@ -770,7 +770,11 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
       .bfestimend = 1,
       .bfestimbegin = 0,
   };
-  Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{.phixslist = &phixslist};
+
+  static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
+    .nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN, .modelgridindex = -1, .timestep = -1,
+    .phixslist = &phixslist
+  };
 
   // Assign optical depth to next physical event
   const double zrand = rng_uniform_pos();
@@ -1159,6 +1163,11 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
                              const int modelgridindex) {
   assert_testmodeonly(modelgridindex != grid::get_npts_model());
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
+  if ((modelgridindex == chi_rpkt_cont.modelgridindex) && (globals::timestep == chi_rpkt_cont.timestep) &&
+      (fabs(chi_rpkt_cont.nu / nu_cmf - 1.0) < 1e-4)) {
+    // calculated values are a match already
+    return;
+  }
 
   const auto nne = grid::get_nne(modelgridindex);
 
@@ -1189,6 +1198,8 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
     chi_bf = 0.;
   }
 
+  chi_rpkt_cont.modelgridindex = modelgridindex;
+  chi_rpkt_cont.timestep = globals::timestep;
   chi_rpkt_cont.nu = nu_cmf;
   chi_rpkt_cont.ffescat = chi_escat;
   chi_rpkt_cont.bf = chi_bf;
