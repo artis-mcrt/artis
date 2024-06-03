@@ -23,9 +23,9 @@ constexpr int VMNUBINS = 2500;
 
 // TIME
 // dlogt = (log(globals::tmin) - log(globals::tmax)) / VMTBINS ~ 3.69e-2 (111 over 2-120 d)
-constexpr double VSPEC_TIMEMIN = 10 * DAY;
-constexpr double VSPEC_TIMEMAX = 30 * DAY;
-constexpr int VMTBINS = 30;
+constexpr double VSPEC_TIMEMIN = 3 * DAY;
+constexpr double VSPEC_TIMEMAX = 8 * DAY;
+constexpr int VMTBINS = 5;
 
 // number of virtual packets in a given timestep
 inline int nvpkt{0};
