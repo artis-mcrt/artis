@@ -247,6 +247,12 @@ jobs:
               run: |
                   at plotspectra --frompackets -t 4-6 ${{ matrix.testname }}_testrun
 
+            - name: Plot virtual packet spectrum classicmode_1d
+              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_1d')
+              working-directory: tests/
+              run: |
+                  at plotspectra --frompackets -t 4-6 -plotvspecpol 0 1 2 3 12 13 14 ${{ matrix.testname }}_testrun
+
             - name: Plot spectrum kilonova
               if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'kilonova')
               working-directory: tests/
