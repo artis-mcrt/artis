@@ -22,4 +22,3 @@ if [ 0 -lt $(ls $paths 2>/dev/null | wc -w) ]; then
 else
   echo "No ARTIS run files to delete"
 fi
-
