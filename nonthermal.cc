@@ -2692,24 +2692,11 @@ void nt_MPI_Bcast(const int modelgridindex, const int root, const int my_rank) {
     }
 
     const auto frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
-    // Lets Use MPI_Pack and MPI_Unpack for Fractional Excitations
-    // lets set the size of the buffer
-
-    int double_size = sizeof(double);
-    int int_size = sizeof(int);
-    int buffer_size = (2 * double_size + int_size) * frac_excitations_list_size;
-
-    // lets create a buffer
-
-    char *buffer = (char *)malloc(buffer_size);
-
-    // add printout of buffer size
-
-    printout("Buffer size for fractional excitations is %g Mb\n", buffer_size / 1024. / 1024.);
-
-    // lets pack the data
-
+    char *buffer = (char *)malloc((2 * sizeof(double) + sizeof(int)) * frac_excitations_list_size);
     int position = 0;
+
+    printout("Size of frac_excitations_list: %d\n", frac_excitations_list_size);
+    printout("Buffer size allocated for fractional excitations is %g Mb\n", buffer_size / 1024. / 1024.);
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (root == my_rank) {
@@ -2723,11 +2710,9 @@ void nt_MPI_Bcast(const int modelgridindex, const int root, const int my_rank) {
       }
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    // lets broadcast the buffer
 
     MPI_Bcast(buffer, buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
 
-    // lets unpack the data
     MPI_Barrier(MPI_COMM_WORLD);
 
     position = 0;
@@ -2745,8 +2730,6 @@ void nt_MPI_Bcast(const int modelgridindex, const int root, const int my_rank) {
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-
-    // lets free the buffer
 
     free(buffer);
 
