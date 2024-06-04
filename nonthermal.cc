@@ -2653,7 +2653,7 @@ void read_restart_data(FILE *gridsave_file) {
 }
 
 #ifdef MPI_ON
-void nt_MPI_Bcast(const int modelgridindex, const int root) {
+void nt_MPI_Bcast(const int modelgridindex, const int root, const int my_rank) {
   if (grid::get_numassociatedcells(modelgridindex) == 0) {
     return;
   }
@@ -2692,14 +2692,48 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
     }
 
     const auto frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
-    for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
-      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
-                root, MPI_COMM_WORLD);
-      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
-                MPI_DOUBLE, root, MPI_COMM_WORLD);
-      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, root,
-                MPI_COMM_WORLD);
+    int buffer_size = (2 * sizeof(double) + sizeof(int)) * frac_excitations_list_size;
+    char *buffer = static_cast<char *>(malloc(buffer_size));
+    int position = 0;
+
+    printout("Size of frac_excitations_list: %zu\n", frac_excitations_list_size);
+    printout("Buffer size allocated for fractional excitations is %g MB\n", buffer_size / 1024. / 1024.);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (root == my_rank) {
+      for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
+        MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
+                 buffer, buffer_size, &position, MPI_COMM_WORLD);
+        MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
+                 MPI_DOUBLE, buffer, buffer_size, &position, MPI_COMM_WORLD);
+        MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, buffer,
+                 buffer_size, &position, MPI_COMM_WORLD);
+      }
     }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    MPI_Bcast(buffer, buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    position = 0;
+
+    for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
+      MPI_Unpack(buffer, buffer_size, &position,
+                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
+                 MPI_COMM_WORLD);
+      MPI_Unpack(buffer, buffer_size, &position,
+                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
+                 MPI_DOUBLE, MPI_COMM_WORLD);
+      MPI_Unpack(buffer, buffer_size, &position,
+                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT,
+                 MPI_COMM_WORLD);
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    free(buffer);
 
     if (STORE_NT_SPECTRUM) {
       assert_always(nt_solution[modelgridindex].yfunc != nullptr);
