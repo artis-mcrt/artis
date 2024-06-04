@@ -1149,9 +1149,15 @@ void reduce_estimators()
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-      MPI_Allreduce(MPI_IN_PLACE, &bfrate_raw[nonemptymgi * globals::bfestimcount], globals::bfestimcount, MPI_DOUBLE,
-                    MPI_SUM, MPI_COMM_WORLD);
+      MPI_Reduce(globals::rank_in_node == 0 ? MPI_IN_PLACE : &bfrate_raw[nonemptymgi * globals::bfestimcount],
+                 &bfrate_raw[nonemptymgi * globals::bfestimcount], globals::bfestimcount, MPI_DOUBLE, MPI_SUM, 0,
+                 globals::mpi_comm_node);
     }
+    if (globals::rank_in_node == 0) {
+      MPI_Allreduce(MPI_IN_PLACE, bfrate_raw.data(), nonempty_npts_model * globals::bfestimcount, MPI_DOUBLE, MPI_SUM,
+                    globals::mpi_comm_internode);
+    }
+    MPI_Bcast(bfrate_raw.data(), nonempty_npts_model * globals::bfestimcount, MPI_DOUBLE, 0, globals::mpi_comm_node);
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {

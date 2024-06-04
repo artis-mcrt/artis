@@ -234,7 +234,7 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
 
       radfield::do_MPI_Bcast(modelgridindex, root, root_node_id);
 
-      nonthermal::nt_MPI_Bcast(modelgridindex, root);
+      nonthermal::nt_MPI_Bcast(modelgridindex, root, my_rank);
 
       if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
         MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root_node_id,
