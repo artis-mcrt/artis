@@ -191,13 +191,13 @@ void read_shell_configs() {
 }
 
 void read_binding_energies() {
-  bool use_new_format = std::filesystem::exists("binding_energies_lotz_tab1and2.txt") ||
-                        std::filesystem::exists("data/binding_energies_lotz_tab1and2.txt");
+  bool binding_en_newformat = std::filesystem::exists("binding_energies_lotz_tab1and2.txt") ||
+                              std::filesystem::exists("data/binding_energies_lotz_tab1and2.txt");
 
   int nshells = 0;      // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in binding energy file
 
-  const auto *filename = use_new_format ? "binding_energies_lotz_tab1and2.txt" : "binding_energies.txt";
+  const auto *filename = binding_en_newformat ? "binding_energies_lotz_tab1and2.txt" : "binding_energies.txt";
   auto binding_energies_file = fstream_required(filename, std::ios::in);
 
   std::string line;
@@ -212,7 +212,7 @@ void read_binding_energies() {
     std::istringstream ssline(line);
     int z_element = elemindex + 1;
     /// new file as an atomic number column
-    if (use_new_format) {
+    if (binding_en_newformat) {
       ssline >> z_element;
     }
     for (int shell = 0; shell < nshells; shell++) {
@@ -222,8 +222,8 @@ void read_binding_energies() {
     }
   }
 
-  if (use_new_format && (std::filesystem::exists("electron_shell_occupancy.txt") ||
-                         std::filesystem::exists("data/electron_shell_occupancy.txt"))) {
+  if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
+    assert_always(binding_en_newformat);
     read_shell_configs();
   }
 }
