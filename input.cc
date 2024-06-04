@@ -504,15 +504,16 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
 #ifdef MPI_ON
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Win win = MPI_WIN_NULL;
+      MPI_Win win_alltransblock = MPI_WIN_NULL;
 
       auto [_, my_rank_trans] = get_range_chunk(totupdowntrans, globals::node_nprocs, globals::rank_in_node);
 
       auto size = static_cast<MPI_Aint>(my_rank_trans * sizeof(TransitionLine));
       int disp_unit = sizeof(TransitionLine);
-      MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &alltransblock, &win);
+      MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &alltransblock,
+                              &win_alltransblock);
 
-      MPI_Win_shared_query(win, 0, &size, &disp_unit, &alltransblock);
+      MPI_Win_shared_query(win_alltransblock, 0, &size, &disp_unit, &alltransblock);
 #else
       alltransblock = static_cast<LevelTransition *>(malloc(totupdowntrans * sizeof(LevelTransition)));
 #endif
@@ -962,7 +963,7 @@ void read_atomicdata_files() {
   // create a linelist shared on node and then copy data across, freeing the local copy
   TransitionLine *nonconstlinelist{};
 #ifdef MPI_ON
-  MPI_Win win = MPI_WIN_NULL;
+  MPI_Win win_nonconstlinelist = MPI_WIN_NULL;
 
   size_t my_rank_lines = globals::nlines / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
@@ -972,9 +973,10 @@ void read_atomicdata_files() {
 
   MPI_Aint size = my_rank_lines * static_cast<MPI_Aint>(sizeof(TransitionLine));
   int disp_unit = sizeof(TransitionLine);
-  MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nonconstlinelist, &win);
+  MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nonconstlinelist,
+                          &win_nonconstlinelist);
 
-  MPI_Win_shared_query(win, 0, &size, &disp_unit, &nonconstlinelist);
+  MPI_Win_shared_query(win_nonconstlinelist, 0, &size, &disp_unit, &nonconstlinelist);
 #else
   nonconstlinelist = static_cast<TransitionLine *>(malloc(globals::nlines * sizeof(TransitionLine)));
 #endif
@@ -1934,12 +1936,12 @@ void update_parameterfile(int nts)
       if (nts >= 0) {
         if (noncomment_linenum == 2) {
           /// Number of start and end time step
-          snprintf(c_line, 1024, "%d %d", nts, globals::timestep_finish);
+          snprintf(c_line, sizeof(c_line), "%d %d", nts, globals::timestep_finish);
           // line.assign(c_line);
           line.replace(line.begin(), line.end(), c_line);
         } else if (noncomment_linenum == 16) {
           /// resume from gridsave file
-          snprintf(c_line, 1024, "%d", 1);  /// Force continuation
+          snprintf(c_line, sizeof(c_line), "%d", 1);  /// Force continuation
           line.assign(c_line);
         }
       }
@@ -1947,7 +1949,7 @@ void update_parameterfile(int nts)
       if (noncomment_linenum == 21) {
         /// by default, exspec should use all available packet files
         globals::nprocs_exspec = globals::nprocs;
-        snprintf(c_line, 1024, "%d", globals::nprocs_exspec);
+        snprintf(c_line, sizeof(c_line), "%d", globals::nprocs_exspec);
         line.assign(c_line);
       }
 

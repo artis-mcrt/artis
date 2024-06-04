@@ -19,7 +19,7 @@ jobs:
     testmodels:
         strategy:
             matrix:
-                os: [ubuntu-latest]
+                os: [ubuntu-24.04]
                 testmode: [OFF, ON]
                 testname:
                     [
@@ -31,8 +31,8 @@ jobs:
                         kilonova_2d_2dgrid_expansionopac,
                         kilonova_2d_2dgrid_xcomgammaphotoion,
                         kilonova_2d_3dgrid,
-                        nebularonezone_1d_3dgrid,
-                        nebularonezone_1d_3dgrid_limitbfest,
+                        nebular_1d_3dgrid,
+                        nebular_1d_3dgrid_limitbfest,
                     ]
                 exclude:
                     - os: self-hosted
@@ -40,7 +40,7 @@ jobs:
             fail-fast: false
 
         runs-on: ${{ matrix.os }}
-        timeout-minutes: 45
+        timeout-minutes: 120
         name: ${{ matrix.testname }}${{ matrix.testmode == 'ON' && ' testmode ON' || ''}}
 
         steps:
@@ -48,23 +48,16 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: apt update
-              run: |
-                  #   sudo add-apt-repository main
-                  #   sudo add-apt-repository universe
-                  #   sudo add-apt-repository restricted
-                  #   sudo add-apt-repository multiverse
-                    sudo apt-get update
-
-            - name: Install gcc-13
+            - name: Install gcc-14
               if: always()
               uses: fortran-lang/setup-fortran@v1
               with:
                   compiler: gcc
-                  version: 13
+                  version: 14
 
             - name: install gsl and openmpi
               run: |
+                  sudo apt-get update
                   sudo apt install -y libgsl-dev
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
@@ -72,6 +65,8 @@ jobs:
               id: cpu-count
               run: |
                   g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
+                  #python3 -m pip install psutil
+                  #python3 -c 'import psutil; print(f"CPU count (physical only): {int(psutil.cpu_count(logical=False))}")'
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
@@ -113,7 +108,7 @@ jobs:
 
             - name: Compile
               run: |
-                  make TESTMODE=${{ matrix.testmode }} MPI=ON FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+                  make TESTMODE=${{ matrix.testmode }} MPI=ON MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
                   cp sn3d tests/${{ matrix.testname }}_testrun/
                   cp exspec tests/${{ matrix.testname }}_testrun/
 
@@ -123,7 +118,7 @@ jobs:
               run: |
                   cp input-newrun.txt input.txt
                   touch output_0-0.txt
-                  time mpirun -np 2 ./sn3d
+                  time mpirun -np 4 --oversubscribe --mca mpi_yield_when_idle 1 ./sn3d
 
             - name: Move job0 files
               if: always()
@@ -154,7 +149,7 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   cp input-resume.txt input.txt
-                  time mpirun -np 2 ./sn3d
+                  time mpirun -np 4 --oversubscribe --mca mpi_yield_when_idle 1 ./sn3d
 
             - name: Move job1 files
               if: always()
@@ -242,23 +237,23 @@ jobs:
                   at plotlightcurves ${{ matrix.testname }}_testrun
                   at plotlightcurves --frompackets ${{ matrix.testname }}_testrun
 
-            - name: Plot spectrum nebularonezone
-              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'nebularonezone')
+            - name: Plot spectrum nebular
+              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'nebular')
               working-directory: tests/
               run: |
                   at plotspectra --frompackets -ts 8 ${{ matrix.testname }}_testrun
 
-            - name: Plot spectrum classicmode_1d
-              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_1d')
-              working-directory: tests/
-              run: |
-                  at plotspectra --frompackets -t 18-22 ${{ matrix.testname }}_testrun
-
-            - name: Plot spectrum classicmode_3d
-              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_3d')
+            - name: Plot spectrum classicmode
+              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_')
               working-directory: tests/
               run: |
                   at plotspectra --frompackets -t 4-6 ${{ matrix.testname }}_testrun
+
+            - name: Plot virtual packet spectrum classicmode_1d
+              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_1d')
+              working-directory: tests/
+              run: |
+                  at plotspectra -t 4-6 -plotvspecpol 0 1 2 3 12 13 14 --frompackets ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum kilonova
               if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'kilonova')
@@ -273,30 +268,10 @@ jobs:
                   name: test-${{ matrix.testname }}-output-pdf
                   path: tests/*.pdf
 
-    # - name: Compile previous commit
-    #   if: matrix.testmode == 'OFF'
-    #   continue-on-error: true
-    #   run: |
-    #       git checkout HEAD~1
-    #       git log -n 1
-    #       cp tests/${{ matrix.testname }}_testrun/artisoptions.h .
-    #       make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-    #       cp sn3d tests/${{ matrix.testname }}_testrun/
-    #       cp exspec tests/${{ matrix.testname }}_testrun/
-
-    # - name: Run previous commit job0 start
-    #   if: matrix.testmode == 'OFF'
-    #   continue-on-error: true
-    #   working-directory: tests/${{ matrix.testname }}_testrun/
-    #   run: |
-    #       cp input-newrun.txt input.txt
-    #       touch output_0-0.txt
-    #       time mpirun -np 2 ./sn3d
-
     combine_checksums:
         needs: testmodels
         if: always()
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         steps:
             - name: Download test output
               uses: actions/download-artifact@v4

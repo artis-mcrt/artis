@@ -2,23 +2,19 @@
 
 set -x
 
-runfolder=nebularonezone_1d_3dgrid_limitbfest_testrun
+runfolder=nebular_1d_3dgrid_testrun
 
-rsync -av nebularonezone_1d_3dgrid_inputfiles/ nebularonezone_1d_3dgrid_limitbfest_testrun/
-
-rsync --ignore-times -av nebularonezone_1d_3dgrid_limitbfest_inputfiles/ nebularonezone_1d_3dgrid_limitbfest_testrun/
+rsync -av nebular_1d_3dgrid_inputfiles/ nebular_1d_3dgrid_testrun/
 
 if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_feconi.tar.xz; fi
 
-tar -xf atomicdata_feconi.tar.xz --directory nebularonezone_1d_3dgrid_limitbfest_testrun/
+tar -xf atomicdata_feconi.tar.xz --directory nebular_1d_3dgrid_testrun/
 
-cp ../data/* nebularonezone_1d_3dgrid_limitbfest_testrun/
+cp ../data/* nebular_1d_3dgrid_testrun/
 
-rm nebularonezone_1d_3dgrid_limitbfest_testrun/electron_shell_occupancy.txt
+cp ../artisoptions_nltenebular.h nebular_1d_3dgrid_testrun/artisoptions.h
 
-cp ../artisoptions_nltenebular.h nebularonezone_1d_3dgrid_limitbfest_testrun/artisoptions.h
-
-cd nebularonezone_1d_3dgrid_limitbfest_testrun
+cd nebular_1d_3dgrid_testrun
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 1000000;/g' artisoptions.h
 
@@ -36,11 +32,7 @@ sed -i'' -e 's/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*/constexpr int FIRST_
 
 sed -i'' -e 's/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 7;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr bool SF_AUGER_CONTRIBUTION_ON.*/constexpr bool SF_AUGER_CONTRIBUTION_ON = false;/g' artisoptions.h
-
 sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' artisoptions.h
-
-sed -i'' -e 's/  \/\/ return LEVEL_IS_NLTE.*/return LEVEL_IS_NLTE(element_z, ionstage, level);/g' artisoptions.h
 
 cd -
 

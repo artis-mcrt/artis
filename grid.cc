@@ -75,7 +75,6 @@ double *totmassradionuclide{};  /// total mass of each radionuclide in the eject
 #ifdef MPI_ON
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
 MPI_Win win_initradioabund_allcells = MPI_WIN_NULL;
-MPI_Win win_corrphotoionrenorm = MPI_WIN_NULL;
 #endif
 
 float *initradioabund_allcells{};
@@ -581,7 +580,7 @@ void read_possible_yefile() {
     double initelecfrac = 0.;
     assert_always(fscanf(filein, "%d %lg", &mgiplusone, &initelecfrac) == 2);
     const int mgi = mgiplusone - 1;
-    if (mgi >= 0 and mgi < get_npts_model()) {
+    if (mgi >= 0 && mgi < get_npts_model()) {
       set_initelectronfrac(mgi, initelecfrac);
       // printout("Ye.txt: setting mgi %d init_ye %g\n", mgi, initelecfrac);
     } else {
@@ -768,7 +767,7 @@ static void calculate_kappagrey() {
           kappa *= pow(T_rad / 2000., 5.);
         } else {
           printout("Temperature outside ALCAR opacity parameterization range. Abort.\n");
-          abort();
+          std::abort();
         }
       } else {
         printout("Unknown opacity case. Abort.\n");
@@ -1021,9 +1020,10 @@ static void allocate_nonemptymodelcells() {
     auto size = static_cast<MPI_Aint>(my_rank_cells * globals::nbfcontinua_ground * sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &globals::corrphotoionrenorm, &win_corrphotoionrenorm) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win_corrphotoionrenorm, 0, &size, &disp_unit, &globals::corrphotoionrenorm) ==
-                  MPI_SUCCESS);
+                                          &globals::corrphotoionrenorm,
+                                          &globals::win_corrphotoionrenorm) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(globals::win_corrphotoionrenorm, 0, &size, &disp_unit,
+                                       &globals::corrphotoionrenorm) == MPI_SUCCESS);
   }
 #else
   if constexpr (USE_LUT_PHOTOION) {
@@ -2161,27 +2161,38 @@ static void setup_grid_cylindrical_2d() {
   }
 }
 
+auto get_grid_type_name() -> std::string {
+  switch (GRID_TYPE) {
+    case GRID_SPHERICAL1D:
+      return "spherical";
+    case GRID_CYLINDRICAL2D:
+      return "cylindrical";
+    case GRID_CARTESIAN3D:
+      return "uniform cuboidal";
+    default: {
+      return "unknown";
+    }
+  }
+}
+
 void grid_init(const int my_rank)
 /// Initialises the propagation grid cells and associates them with modelgrid cells
 {
   /// The cells will be ordered by x then y, then z. Call a routine that
   /// sets up the initial positions and widths of the cells.
-  char grid_type_name[256] = "";
+
   if (GRID_TYPE == GRID_CARTESIAN3D) {
     setup_grid_cartesian_3d();
-    strcpy(grid_type_name, "uniform cuboidal");
-  } else if (GRID_TYPE == GRID_SPHERICAL1D) {
-    setup_grid_spherical1d();
-    strcpy(grid_type_name, "spherical");
   } else if (GRID_TYPE == GRID_CYLINDRICAL2D) {
     setup_grid_cylindrical_2d();
-    strcpy(grid_type_name, "cylindrical");
+  } else if (GRID_TYPE == GRID_SPHERICAL1D) {
+    setup_grid_spherical1d();
   } else {
     printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
     std::abort();
   }
 
-  printout("propagation grid: %d-dimensional %s\n", get_ngriddimensions(), grid_type_name);
+  printout("propagation grid: %d-dimensional %s\n", get_ngriddimensions(), get_grid_type_name().c_str());
 
   for (int d = 0; d < get_ngriddimensions(); d++) {
     printout("    coordinate %d '%c': cells have %d position values\n", d, coordlabel[d], ncoordgrid[d]);
@@ -2345,11 +2356,9 @@ constexpr static auto get_gridcoords_from_xyz(const std::array<double, 3> pos_xy
 }
 
 template <size_t S1>
-[[nodiscard]] static constexpr auto expanding_shell_intersection(const std::array<double, S1> pos,
-                                                                 const std::array<double, S1> dir, const double speed,
-                                                                 const double shellradiuststart,
-                                                                 const bool isinnerboundary,
-                                                                 const double tstart) -> double
+[[nodiscard]] [[gnu::pure]] static constexpr auto expanding_shell_intersection(
+    const std::array<double, S1> pos, const std::array<double, S1> dir, const double speed,
+    const double shellradiuststart, const bool isinnerboundary, const double tstart) -> double
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
 // 3-vectors) or expanding circle (2D vectors)
 // returns -1 if there are no forward intersections (or if the intersection

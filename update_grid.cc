@@ -922,8 +922,8 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
     if (USE_LUT_PHOTOION && !globals::simulation_continued_from_saved) {
       /// Determine renormalisation factor for corrected photoionization cross-sections
-      std::fill_n(&globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua_ground], globals::nbfcontinua_ground,
-                  1.);
+      std::fill_n(globals::corrphotoionrenorm + (nonemptymgi * globals::nbfcontinua_ground),
+                  globals::nbfcontinua_ground, 1.);
     }
 
     /// W == 1 indicates that this modelgrid cell was treated grey in the
@@ -980,7 +980,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       grid::set_W(mgi, 1);
 
       if constexpr (USE_LUT_PHOTOION) {
-        std::fill_n(&globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua_ground],
+        std::fill_n(globals::corrphotoionrenorm + (nonemptymgi * globals::nbfcontinua_ground),
                     globals::nbfcontinua_ground, 1.);
       }
 
@@ -1097,16 +1097,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   printout("\n");
   printout("timestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g days\n", nts,
            sys_time_start_update_grid, sys_time_start_update_grid - real_time_start, globals::timesteps[nts].mid / DAY);
-
-  if constexpr (USE_LUT_PHOTOION) {
-    /// Initialise globals::corrphotoionrenorm[i] to zero before update_grid is called
-    /// unless they have been read from file
-    if ((!globals::simulation_continued_from_saved) || (nts - globals::timestep_initial != 0) || (titer != 0)) {
-      printout("nts %d, titer %d: reset corr photoionrenorm\n", nts, titer);
-      std::fill_n(globals::corrphotoionrenorm, grid::get_nonempty_npts_model() * globals::nbfcontinua_ground, 0.);
-      printout("after nts %d, titer %d: reset corr photoionrenorm\n", nts, titer);
-    }
-  }
 
   // printout("[debug] update_grid: starting update for timestep %d...\n",m);
   const double tratmid = globals::timesteps[nts].mid / globals::tmin;

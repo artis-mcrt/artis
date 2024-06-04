@@ -525,14 +525,11 @@ static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const s
                            if (decaypath.z[i] == nuc.z && decaypath.a[i] == nuc.a) {
                              // nuc is in the decay path
                              return true;
-                           };
-                         };
-                         if (decaypath.final_daughter_z() == nuc.z && decaypath.final_daughter_a() == nuc.a) {
-                           // nuc is the final daughter of a decay path
-                           return true;
-                         };
+                           }
+                         }
 
-                         return false;
+                         // return true if nuc is the final daughter of a decay path
+                         return (decaypath.final_daughter_z() == nuc.z && decaypath.final_daughter_a() == nuc.a);
                        });
 
                        if (in_any_decaypath) {
@@ -935,7 +932,7 @@ auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const i
   double min_meanlife = -1;
   for (int i = 0; i < get_decaypathlength(decaypathindex); i++) {
     const double meanlife = get_meanlife(decaypaths[decaypathindex].nucindex[i]);
-    if (min_meanlife < 0. or meanlife < min_meanlife) {
+    if (min_meanlife < 0. || meanlife < min_meanlife) {
       min_meanlife = meanlife;
     }
   }

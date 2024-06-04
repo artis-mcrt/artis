@@ -174,6 +174,10 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 # Use GSL inline functions
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
+ifneq ($(MAX_NODE_SIZE),)
+	CXXFLAGS += -DMAX_NODE_SIZE=$(MAX_NODE_SIZE)
+endif
+
 ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0
 

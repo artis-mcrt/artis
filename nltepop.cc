@@ -808,7 +808,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     return;
   }
 
-  double cell_Te = grid::get_Te(modelgridindex);
+  const double cell_Te = grid::get_Te(modelgridindex);
 
   if (cell_Te == MINTEMP) {
     printout(

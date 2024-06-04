@@ -124,19 +124,19 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
     // line-of-sight dependent spectra and light curves
 
     char lc_filename[MAXFILENAMELENGTH] = "";
-    snprintf(lc_filename, MAXFILENAMELENGTH, "light_curve_res_%.2d.out", a);
+    snprintf(lc_filename, sizeof(lc_filename), "light_curve_res_%.2d.out", a);
 
     char spec_filename[MAXFILENAMELENGTH] = "";
-    snprintf(spec_filename, MAXFILENAMELENGTH, "spec_res_%.2d.out", a);
+    snprintf(spec_filename, sizeof(spec_filename), "spec_res_%.2d.out", a);
 
     char emission_filename[MAXFILENAMELENGTH] = "";
-    snprintf(emission_filename, MAXFILENAMELENGTH, "emission_res_%.2d.out", a);
+    snprintf(emission_filename, sizeof(emission_filename), "emission_res_%.2d.out", a);
 
     char trueemission_filename[MAXFILENAMELENGTH] = "";
-    snprintf(trueemission_filename, MAXFILENAMELENGTH, "emissiontrue_res_%.2d.out", a);
+    snprintf(trueemission_filename, sizeof(trueemission_filename), "emissiontrue_res_%.2d.out", a);
 
     char absorption_filename[MAXFILENAMELENGTH] = "";
-    snprintf(absorption_filename, MAXFILENAMELENGTH, "absorption_res_%.2d.out", a);
+    snprintf(absorption_filename, sizeof(absorption_filename), "absorption_res_%.2d.out", a);
 
     write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
     write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra,
@@ -144,13 +144,13 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
 
     if constexpr (POL_ON) {
       char specpol_filename[MAXFILENAMELENGTH] = "";
-      snprintf(specpol_filename, MAXFILENAMELENGTH, "specpol_res_%.2d.out", a);
+      snprintf(specpol_filename, sizeof(specpol_filename), "specpol_res_%.2d.out", a);
 
       char emissionpol_filename[MAXFILENAMELENGTH] = "";
-      snprintf(emissionpol_filename, MAXFILENAMELENGTH, "emissionpol_res_%.2d.out", a);
+      snprintf(emissionpol_filename, sizeof(emissionpol_filename), "emissionpol_res_%.2d.out", a);
 
       char absorptionpol_filename[MAXFILENAMELENGTH] = "";
-      snprintf(absorptionpol_filename, MAXFILENAMELENGTH, "absorptionpol_res_%.2d.out", a);
+      snprintf(absorptionpol_filename, sizeof(absorptionpol_filename), "absorptionpol_res_%.2d.out", a);
 
       write_specpol(specpol_filename, emissionpol_filename, absorptionpol_filename, &stokes_i, &stokes_q, &stokes_u);
     }
@@ -194,9 +194,9 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
 #ifdef MPI_ON
   printout("process id (pid): %d\n", getpid());
   printout("MPI enabled:\n");
-  printout("  rank %d of [0..%d] in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs - 1);
-  printout("  rank %d of [0..%d] in MPI_COMM_WORLD_SHARED on node %d of [0..%d]\n", globals::rank_in_node,
-           globals::node_nprocs - 1, globals::node_id, globals::node_count - 1);
+  printout("  rank_global %d of [0..%d] in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs - 1);
+  printout("  rank_in_node %d of [0..%d] in node %d of [0..%d]\n", globals::rank_in_node, globals::node_nprocs - 1,
+           globals::node_id, globals::node_count - 1);
 #else
   printout("MPI is disabled in this build\n");
 #endif

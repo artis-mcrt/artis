@@ -48,8 +48,7 @@ if [ -f emission.out* ]; then
     artistools lc --frompackets -plotvspecpol 0 || true
   fi
 
-  # convert estimators to parquet. commented because python multiprocessing hangs on JUWELS
-  #python3 -c 'import artistools as at; at.estimators.scan_estimators()' || true
+  # convert estimators to parquet. On JUWELS, you might need to limit the number of processes to 16 in artistools/artistools/configuration.py
+  python3 -c 'import artistools as at; at.estimators.scan_estimators()' || true
 
 fi
-
