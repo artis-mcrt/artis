@@ -40,12 +40,16 @@ if [ -f emission.out* ]; then
   mkdir -p speclc_angle_res
   mv *_res_*.out* speclc_angle_res/ || true
 
+  python3 -m ensurepip
+
+  python3 -m pip install artistools
+
   # convert packets to parquet for fast reading
-  artistools lc --frompackets || true
+  python3 -m artistools lc --frompackets || true
 
   if [ -f vpkt.txt ]; then
     # convert virtual packets to parquet
-    artistools lc --frompackets -plotvspecpol 0 || true
+    python3 -m artistools lc --frompackets -plotvspecpol 0 || true
   fi
 
   # convert estimators to parquet. On JUWELS, you might need to limit the number of processes to 16 in artistools/artistools/configuration.py
