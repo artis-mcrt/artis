@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <ios>
 #include <sstream>
 #include <tuple>
 #include <vector>
@@ -191,8 +192,8 @@ void read_shell_configs() {
 }
 
 void read_binding_energies() {
-  bool binding_en_newformat = std::filesystem::exists("binding_energies_lotz_tab1and2.txt") ||
-                              std::filesystem::exists("data/binding_energies_lotz_tab1and2.txt");
+  const bool binding_en_newformat = std::filesystem::exists("binding_energies_lotz_tab1and2.txt") ||
+                                    std::filesystem::exists("data/binding_energies_lotz_tab1and2.txt");
 
   int nshells = 0;      // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in binding energy file
@@ -964,7 +965,7 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
 
   double total = 0.;
   for (int shellindex = 0; shellindex < num_shells; shellindex++) {
-    double electronsinshell = (use_shells_file ? shells_q[get_atomicnumber(element) - 1] : q)[shellindex];
+    const double electronsinshell = (use_shells_file ? shells_q[get_atomicnumber(element) - 1] : q)[shellindex];
 
     if (electronsinshell <= 0) {
       continue;

@@ -28,7 +28,7 @@ struct Rpkt_continuum_absorptioncoeffs {
 
 #include "artisoptions.h"
 #include "atomic.h"
-#include "sn3d.h"
+#include "constants.h"
 
 void do_rpkt(Packet &pkt, double t2);
 void emit_rpkt(Packet &pkt);
