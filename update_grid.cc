@@ -897,6 +897,9 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
   /// Update elemental abundances with radioactive decays
   decay::update_abundances(mgi, nts, globals::timesteps[nts].mid);
+  if (globals::opacity_case == 6) {
+    grid::calculate_kappagrey();
+  }
 
   const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
   const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
