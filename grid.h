@@ -136,6 +136,7 @@ void write_grid_restart_data(int timestep);
 {
   return modelgrid[modelgridindex].composition[element].abundance;
 }
+void calculate_kappagrey();
 
 inline void change_cell(Packet &pkt, const int snext)
 /// Routine to take a packet across a boundary.

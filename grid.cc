@@ -661,7 +661,7 @@ void set_elements_uppermost_ion(const int modelgridindex, const int element, con
   modelgrid[modelgridindex].elements_uppermost_ion[element] = newvalue;
 }
 
-static void calculate_kappagrey() {
+void calculate_kappagrey() {
   double rho_sum = 0.;
   double fe_sum = 0.;
   double opcase3_sum = 0.;
@@ -689,17 +689,6 @@ static void calculate_kappagrey() {
       }
       opcase3_sum += get_kappagrey(mgi) * get_rho_tmin(mgi);
     }
-  }
-
-  if (globals::rank_global == 0) {
-    FILE *grid_file = fopen_required("grid.out", "w");
-    for (int n = 0; n < ngrid; n++) {
-      const int mgi = get_cell_modelgridindex(n);
-      if (mgi != get_npts_model()) {
-        fprintf(grid_file, "%d %d\n", n, mgi);  /// write only non-empty cells to grid file
-      }
-    }
-    fclose(grid_file);
   }
 
   /// Second pass through allows calculation of normalized chi_grey
@@ -753,7 +742,9 @@ static void calculate_kappagrey() {
           }
         }
         // first step: temperature-independent factor
-        if (X_lan < 1e-3) {
+        if (X_lan < 1e-7) {
+          kappa = 0.2;
+        } else if (X_lan < 1e-3) {
           kappa = 3 * pow(X_lan / 1e-3, 0.3);
         } else if (X_lan < 1e-1) {
           kappa = 3 * pow(X_lan / 1e-3, 0.5);
@@ -762,12 +753,7 @@ static void calculate_kappagrey() {
         }
         // second step: multiply temperature-dependent factor
         if (T_rad < 2000.) {
-          kappa = 0.;
-        } else if ((T_rad >= 2000.) && (T_rad < 1e10)) {
           kappa *= pow(T_rad / 2000., 5.);
-        } else {
-          printout("Temperature outside ALCAR opacity parameterization range. Abort.\n");
-          std::abort();
         }
       } else {
         printout("Unknown opacity case. Abort.\n");
@@ -2227,6 +2213,17 @@ void grid_init(const int my_rank)
   } else {
     printout("[fatal] grid_init: Error: Unknown density type. Abort.");
     std::abort();
+  }
+
+  if (globals::rank_global == 0) {
+    FILE *grid_file = fopen_required("grid.out", "w");
+    for (int n = 0; n < ngrid; n++) {
+      const int mgi = get_cell_modelgridindex(n);
+      if (mgi != get_npts_model()) {
+        fprintf(grid_file, "%d %d\n", n, mgi);  /// write only non-empty cells to grid file
+      }
+    }
+    fclose(grid_file);
   }
 
   allocate_nonemptymodelcells();
