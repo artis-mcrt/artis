@@ -2047,18 +2047,21 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   const double tmid = globals::timesteps[timestep].mid;
   const double rho = grid::get_rho(modelgridindex);
 
-  // TODO: calculate thermalisation ratio from the previous timestep either globally (easy) or per cell
-  // f = E_dep / E_rad
-
   // convert from [erg/s/g] to [erg/s/cm3]
   const double positron_deposition =
-      rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAPLUS);
+      INSTANT_PARTICLE_DEPOSITION
+          ? (rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAPLUS))
+          : globals::dep_estimator_positron[nonemptymgi];
 
   const double electron_deposition =
-      rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAMINUS);
+      INSTANT_PARTICLE_DEPOSITION
+          ? (rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAMINUS))
+          : globals::dep_estimator_electron[nonemptymgi];
 
   const double alpha_deposition =
-      rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_ALPHA);
+      INSTANT_PARTICLE_DEPOSITION
+          ? (rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_ALPHA))
+          : globals::dep_estimator_alpha[nonemptymgi];
 
   deposition_rate_density[modelgridindex] =
       (gamma_deposition + positron_deposition + electron_deposition + alpha_deposition);
