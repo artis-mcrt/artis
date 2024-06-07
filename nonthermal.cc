@@ -2293,7 +2293,7 @@ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const 
   return ratecoeffperdeposition * deposition_rate_density;
 }
 
-void do_ntlepton(Packet &pkt) {
+void do_ntlepton_deposit(Packet &pkt) {
   atomicadd(nt_energy_deposited, pkt.e_cmf);
 
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);

@@ -184,7 +184,7 @@ void do_packet(Packet &pkt, const double t2, const int nts)
     }
 
     case TYPE_NTLEPTON: {
-      nonthermal::do_ntlepton(pkt);
+      nonthermal::do_ntlepton_deposit(pkt);
       break;
     }
 
