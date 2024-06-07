@@ -649,6 +649,10 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     }
   }
 
+  // power densities in erg / s / cm^3
+  fprintf(estimators_file, "deposition: gamma %11.5e positron %11.5e electron %11.5e alpha %11.5e\n",
+          globals::dep_estimator_gamma[nonemptymgi], globals::dep_estimator_positron[nonemptymgi],
+          globals::dep_estimator_electron[nonemptymgi], globals::dep_estimator_alpha[nonemptymgi]);
   fprintf(estimators_file, "heating: ff %11.5e bf %11.5e coll %11.5e       dep %11.5e heating_dep/total_dep %.3f\n",
           heatingcoolingrates->heating_ff, heatingcoolingrates->heating_bf, heatingcoolingrates->heating_collisional,
           heatingcoolingrates->heating_dep, heatingcoolingrates->nt_frac_heating);
