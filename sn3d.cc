@@ -391,6 +391,15 @@ void mpi_reduce_estimators(int nts) {
   assert_always(static_cast<int>(globals::dep_estimator_gamma.size()) == nonempty_npts_model);
   MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_gamma.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);
+  assert_always(static_cast<int>(globals::dep_estimator_positron.size()) == nonempty_npts_model);
+  MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_positron.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD);
+  assert_always(static_cast<int>(globals::dep_estimator_electron.size()) == nonempty_npts_model);
+  MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_electron.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD);
+  assert_always(static_cast<int>(globals::dep_estimator_alpha.size()) == nonempty_npts_model);
+  MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_alpha.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
