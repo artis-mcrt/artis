@@ -2039,8 +2039,8 @@ void init(const int my_rank, const int ndo_nonempty) {
 }
 
 void calculate_deposition_rate_density(const int modelgridindex, const int timestep)
-// deposition rate in erg / s / cm^3
-// this should be called after packet propagation is finished for timestep and normalise_deposition_estimators() is done
+// set total non-thermal deposition rate from individual gamma/positron/electron/alpha rates. This should be called
+// after packet propagation is finished for this timestep and normalise_deposition_estimators() has been done
 {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   const double gamma_deposition = globals::dep_estimator_gamma[nonemptymgi];
@@ -2070,19 +2070,13 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   deposition_rate_density[modelgridindex] =
       (gamma_deposition + positron_deposition + electron_deposition + alpha_deposition);
 
-  printout(
-      "deposition rates [eV/s/cm^3] for timestep %d mgi %d: gamma %8.2e (Monte Carlo), positron %8.2e elec %8.2e alpha "
-      "%8.2e (analytic t_mid)\n",
-      timestep, modelgridindex, gamma_deposition / EV, positron_deposition / EV, electron_deposition / EV,
-      alpha_deposition / EV);
-
   deposition_rate_density_timestep[modelgridindex] = timestep;
 }
 
 auto get_deposition_rate_density(const int modelgridindex) -> double
-// should be in erg / s / cm^3
+// get non-thermal deposition rate density in erg / s / cm^3 previously stored by calculate_deposition_rate_density()
 {
-  assert_always(deposition_rate_density_timestep[modelgridindex] == globals::timestep);
+  assert_testmodeonly(deposition_rate_density_timestep[modelgridindex] == globals::timestep);
   assert_always(deposition_rate_density[modelgridindex] >= 0);
   return deposition_rate_density[modelgridindex];
 }
