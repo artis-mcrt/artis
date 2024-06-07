@@ -29,12 +29,14 @@ namespace {
 
 void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   double en_deposited = pkt.e_cmf;
+  const auto mgi = grid::get_cell_modelgridindex(pkt.where);
+  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
 
   if constexpr (INSTANT_PARTICLE_DEPOSITION) {
     // absorption happens
     pkt.type = TYPE_NTLEPTON;
   } else {
-    const double rho = grid::get_rho(grid::get_cell_modelgridindex(pkt.where));
+    const double rho = grid::get_rho(mgi);
 
     // endot is energy loss rate (positive) in [erg/s]
     // endot [erg/s] from Barnes et al. (2016). see their figure 6.
@@ -77,10 +79,13 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   }
 
   if (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) {
+    atomicadd(globals::dep_estimator_alpha[nonemptymgi], en_deposited);
     atomicadd(globals::timesteps[nts].alpha_dep, en_deposited);
   } else if (pkt.pellet_decaytype == decay::DECAYTYPE_BETAMINUS) {
+    atomicadd(globals::dep_estimator_electron[nonemptymgi], en_deposited);
     atomicadd(globals::timesteps[nts].electron_dep, en_deposited);
   } else if (pkt.pellet_decaytype == decay::DECAYTYPE_BETAPLUS) {
+    atomicadd(globals::dep_estimator_positron[nonemptymgi], en_deposited);
     atomicadd(globals::timesteps[nts].positron_dep, en_deposited);
   }
 }
