@@ -2040,6 +2040,7 @@ void init(const int my_rank, const int ndo_nonempty) {
 
 void calculate_deposition_rate_density(const int modelgridindex, const int timestep)
 // deposition rate in erg / s / cm^3
+// this should be called after packet propagation is finished for timestep and normalise_deposition_estimators() is done
 {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   const double gamma_deposition = globals::dep_estimator_gamma[nonemptymgi] * FOURPI;
