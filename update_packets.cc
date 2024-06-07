@@ -140,8 +140,8 @@ void update_pellet(Packet &pkt, const int nts, const double t2) {
       pkt.em_time = pkt.prop_time;
       pkt.absorptiontype = -10;
     } else {
+      // decay to gamma-ray packet
       atomicadd(globals::timesteps[nts].gamma_emission, pkt.e_cmf);
-      // decay to gamma-ray, kpkt, or ntlepton
       gammapkt::pellet_gamma_decay(pkt);
     }
   } else if ((tdecay > 0) && (nts == 0)) {
