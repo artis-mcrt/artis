@@ -27,20 +27,20 @@
 
 namespace {
 
-void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
+void do_nonthermal_predeposit(Packet &pkt, const double t2) {
   double en_deposited = pkt.e_cmf;
   const auto mgi = grid::get_cell_modelgridindex(pkt.where);
   const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
 
   if constexpr (INSTANT_PARTICLE_DEPOSITION) {
     // absorption happens
-    pkt.type = TYPE_NTLEPTON;
+    pkt.type = TYPE_NTLEPTON_DEPOSITED;
   } else {
     const double rho = grid::get_rho(mgi);
 
     // endot is energy loss rate (positive) in [erg/s]
     // endot [erg/s] from Barnes et al. (2016). see their figure 6.
-    const double endot = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
+    const double endot = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
 
     const double ts = pkt.prop_time;
     const double particle_en = H * pkt.nu_cmf;  // energy of the particles in the packet
@@ -69,7 +69,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     const auto t_new = std::min(t_absorb, t2);
 
     if (t_absorb <= t2) {
-      pkt.type = TYPE_NTLEPTON;
+      pkt.type = TYPE_NTLEPTON_DEPOSITED;
     } else {
       pkt.nu_cmf = (particle_en - endot * (t_new - ts)) / H;
     }
@@ -78,15 +78,12 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     pkt.prop_time = t_new;
   }
 
-  if (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) {
+  if (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) {
     atomicadd(globals::dep_estimator_alpha[nonemptymgi], en_deposited);
-    atomicadd(globals::timesteps[nts].alpha_dep, en_deposited);
-  } else if (pkt.pellet_decaytype == decay::DECAYTYPE_BETAMINUS) {
+  } else if (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS) {
     atomicadd(globals::dep_estimator_electron[nonemptymgi], en_deposited);
-    atomicadd(globals::timesteps[nts].electron_dep, en_deposited);
-  } else if (pkt.pellet_decaytype == decay::DECAYTYPE_BETAPLUS) {
+  } else if (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS) {
     atomicadd(globals::dep_estimator_positron[nonemptymgi], en_deposited);
-    atomicadd(globals::timesteps[nts].positron_dep, en_deposited);
   }
 }
 
@@ -116,19 +113,22 @@ void update_pellet(Packet &pkt, const int nts, const double t2) {
     {
       if (pkt.pellet_decaytype == decay::DECAYTYPE_BETAPLUS) {
         atomicadd(globals::timesteps[nts].positron_dep, pkt.e_cmf);
-        pkt.type = TYPE_NTLEPTON;
-        pkt.absorptiontype = -10;
+        pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS;
       } else if (pkt.pellet_decaytype == decay::DECAYTYPE_BETAMINUS) {
+        pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS;
         atomicadd(globals::timesteps[nts].electron_emission, pkt.e_cmf);
-        pkt.em_time = pkt.prop_time;
-        pkt.type = TYPE_NONTHERMAL_PREDEPOSIT;
-        pkt.absorptiontype = -10;
       } else if (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) {
         atomicadd(globals::timesteps[nts].alpha_emission, pkt.e_cmf);
-        pkt.em_time = pkt.prop_time;
-        pkt.type = TYPE_NONTHERMAL_PREDEPOSIT;
-        pkt.absorptiontype = -10;
+        pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_ALPHA;
+      } else if constexpr (TESTMODE) {
+        printout("ERROR: pellet marked as particle emission is for decaytype %d != any of (alpha, beta+, beta-)\n",
+                 pkt.pellet_decaytype);
+        std::abort();
+      } else {
+        __builtin_unreachable();
       }
+      pkt.em_time = pkt.prop_time;
+      pkt.absorptiontype = -10;
     } else {
       atomicadd(globals::timesteps[nts].gamma_emission, pkt.e_cmf);
       // decay to gamma-ray, kpkt, or ntlepton
@@ -179,12 +179,14 @@ void do_packet(Packet &pkt, const double t2, const int nts)
       break;
     }
 
-    case TYPE_NONTHERMAL_PREDEPOSIT: {
-      do_nonthermal_predeposit(pkt, nts, t2);
+    case TYPE_NONTHERMAL_PREDEPOSIT_ALPHA:
+    case TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS:
+    case TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS: {
+      do_nonthermal_predeposit(pkt, t2);
       break;
     }
 
-    case TYPE_NTLEPTON: {
+    case TYPE_NTLEPTON_DEPOSITED: {
       nonthermal::do_ntlepton_deposit(pkt);
       break;
     }
