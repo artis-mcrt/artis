@@ -81,13 +81,19 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
 
   if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS) {
     atomicadd(globals::dep_estimator_electron[nonemptymgi], en_deposited);
-    atomicadd(globals::timesteps[nts].electron_dep_discrete, pkt.e_cmf);
+    if (pkt.type == TYPE_NTLEPTON_DEPOSITED) {
+      atomicadd(globals::timesteps[nts].electron_dep_discrete, pkt.e_cmf);
+    }
   } else if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS) {
     atomicadd(globals::dep_estimator_positron[nonemptymgi], en_deposited);
-    atomicadd(globals::timesteps[nts].positron_dep_discrete, pkt.e_cmf);
+    if (pkt.type == TYPE_NTLEPTON_DEPOSITED) {
+      atomicadd(globals::timesteps[nts].positron_dep_discrete, pkt.e_cmf);
+    }
   } else if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) {
     atomicadd(globals::dep_estimator_alpha[nonemptymgi], en_deposited);
-    atomicadd(globals::timesteps[nts].alpha_dep_discrete, pkt.e_cmf);
+    if (pkt.type == TYPE_NTLEPTON_DEPOSITED) {
+      atomicadd(globals::timesteps[nts].alpha_dep_discrete, pkt.e_cmf);
+    }
   }
 }
 
