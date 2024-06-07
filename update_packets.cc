@@ -27,7 +27,7 @@
 
 namespace {
 
-void do_nonthermal_predeposit(Packet &pkt, const double t2) {
+void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   double en_deposited = pkt.e_cmf;
   const auto mgi = grid::get_cell_modelgridindex(pkt.where);
   const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
@@ -78,12 +78,15 @@ void do_nonthermal_predeposit(Packet &pkt, const double t2) {
     pkt.prop_time = t_new;
   }
 
-  if (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) {
-    atomicadd(globals::dep_estimator_alpha[nonemptymgi], en_deposited);
-  } else if (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS) {
+  if (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS) {
     atomicadd(globals::dep_estimator_electron[nonemptymgi], en_deposited);
+    atomicadd(globals::timesteps[nts].electron_dep_discrete, pkt.e_cmf);
   } else if (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS) {
     atomicadd(globals::dep_estimator_positron[nonemptymgi], en_deposited);
+    atomicadd(globals::timesteps[nts].positron_dep_discrete, pkt.e_cmf);
+  } else if (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) {
+    atomicadd(globals::dep_estimator_alpha[nonemptymgi], en_deposited);
+    atomicadd(globals::timesteps[nts].alpha_dep_discrete, pkt.e_cmf);
   }
 }
 
@@ -182,7 +185,7 @@ void do_packet(Packet &pkt, const double t2, const int nts)
     case TYPE_NONTHERMAL_PREDEPOSIT_ALPHA:
     case TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS:
     case TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS: {
-      do_nonthermal_predeposit(pkt, t2);
+      do_nonthermal_predeposit(pkt, nts, t2);
       break;
     }
 

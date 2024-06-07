@@ -1772,7 +1772,7 @@ static void read_grid_restart_data(const int timestep) {
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
     int pellet_decays = 0.;
     assert_always(fscanf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
-                         &globals::timesteps[nts].gamma_dep, &globals::timesteps[nts].gamma_dep_pathint,
+                         &globals::timesteps[nts].gamma_dep, &globals::timesteps[nts].gamma_dep_discrete,
                          &globals::timesteps[nts].positron_dep, &globals::timesteps[nts].eps_positron_ana_power,
                          &globals::timesteps[nts].electron_dep, &globals::timesteps[nts].electron_emission,
                          &globals::timesteps[nts].eps_electron_ana_power, &globals::timesteps[nts].alpha_dep,
@@ -1849,7 +1849,7 @@ void write_grid_restart_data(const int timestep) {
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
     fprintf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
-            globals::timesteps[nts].gamma_dep, globals::timesteps[nts].gamma_dep_pathint,
+            globals::timesteps[nts].gamma_dep, globals::timesteps[nts].gamma_dep_discrete,
             globals::timesteps[nts].positron_dep, globals::timesteps[nts].eps_positron_ana_power,
             globals::timesteps[nts].electron_dep, globals::timesteps[nts].electron_emission,
             globals::timesteps[nts].eps_electron_ana_power, globals::timesteps[nts].alpha_dep,

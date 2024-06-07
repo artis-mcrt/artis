@@ -1005,7 +1005,7 @@ void do_gamma(Packet &pkt, const int nts, double t2) {
   }
 
   if (pkt.type != TYPE_GAMMA && pkt.type != TYPE_ESCAPE) {
-    atomicadd(globals::timesteps[nts].gamma_dep, pkt.e_cmf);
+    atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
   }
 }
 
