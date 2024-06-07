@@ -617,10 +617,9 @@ void normalise_deposition_estimators(int nts) {
 
     globals::timesteps[nts].gamma_dep_pathint += globals::dep_estimator_gamma[nonemptymgi] / nprocs;
 
-    globals::dep_estimator_gamma[nonemptymgi] =
-        globals::dep_estimator_gamma[nonemptymgi] * ONEOVER4PI / dV / dt / nprocs;
-
     const double estimator_normfactor = 1 / dV / dt / nprocs;
+
+    globals::dep_estimator_gamma[nonemptymgi] *= estimator_normfactor;
 
     globals::dep_estimator_positron[nonemptymgi] *= estimator_normfactor;
 

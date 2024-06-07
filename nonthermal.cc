@@ -2043,7 +2043,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
 // this should be called after packet propagation is finished for timestep and normalise_deposition_estimators() is done
 {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  const double gamma_deposition = globals::dep_estimator_gamma[nonemptymgi] * FOURPI;
+  const double gamma_deposition = globals::dep_estimator_gamma[nonemptymgi];
 
   const double tmid = globals::timesteps[timestep].mid;
   const double rho = grid::get_rho(modelgridindex);
