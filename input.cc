@@ -2121,7 +2121,7 @@ void time_init()
       0.001);
 
   for (int n = 0; n < globals::ntimesteps; n++) {
-    globals::timesteps[n] = TimeStep();
+    globals::timesteps[n] = TimeStep{};
   }
 }
 
