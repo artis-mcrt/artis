@@ -30,7 +30,6 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
-#include "nonthermal.h"
 #include "packet.h"
 #include "sn3d.h"
 
