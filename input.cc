@@ -1990,6 +1990,9 @@ void time_init()
   /// globals::ntimesteps is the number of time steps
 
   globals::timesteps.resize(globals::ntimesteps + 1);
+  for (auto &ts : globals::timesteps) {
+    ts = TimeStep{};
+  }
 
   /// Now set the individual time steps
   switch (TIMESTEP_SIZE_METHOD) {
@@ -2119,10 +2122,6 @@ void time_init()
            globals::tmax) -
           1 <
       0.001);
-
-  for (int n = 0; n < globals::ntimesteps; n++) {
-    globals::timesteps[n] = TimeStep{};
-  }
 }
 
 void write_timestep_file() {
