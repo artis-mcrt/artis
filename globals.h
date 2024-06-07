@@ -208,6 +208,8 @@ inline std::array<double, 3> syn_dir{};  // vector pointing from origin to obser
 
 inline std::vector<TimeStep> timesteps;
 
+// deposition estimators index by non-empty modelgridindex
+// after normalisation factor has been applied, units will be erg/s/cm3
 inline std::vector<double> dep_estimator_gamma;
 inline std::vector<double> dep_estimator_positron;
 inline std::vector<double> dep_estimator_electron;
