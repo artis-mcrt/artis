@@ -2750,8 +2750,10 @@ void nt_MPI_Bcast(const int modelgridindex, const int root, const int my_rank) {
     char *buffer = static_cast<char *>(malloc(buffer_size));
     int position = 0;
 
-    printout("Size of frac_excitations_list: %zu\n", frac_excitations_list_size);
-    printout("Buffer size allocated for fractional excitations is %g MB\n", buffer_size / 1024. / 1024.);
+    if constexpr (TESTMODE) {
+      printout("Size of frac_excitations_list: %zu\n", frac_excitations_list_size);
+      printout("Buffer size allocated for fractional excitations is %g MB\n", buffer_size / 1024. / 1024.);
+    }
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (root == my_rank) {
