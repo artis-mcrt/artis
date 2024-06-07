@@ -612,11 +612,11 @@ void normalise_deposition_estimators(int nts) {
 
     const double estimator_normfactor = 1 / dV / dt / globals::nprocs;
 
-    globals::dep_estimator_positron[nonemptymgi] = globals::dep_estimator_positron[nonemptymgi] * estimator_normfactor;
+    globals::dep_estimator_positron[nonemptymgi] *= estimator_normfactor;
 
-    globals::dep_estimator_electron[nonemptymgi] = globals::dep_estimator_electron[nonemptymgi] * estimator_normfactor;
+    globals::dep_estimator_electron[nonemptymgi] *= estimator_normfactor;
 
-    globals::dep_estimator_alpha[nonemptymgi] = globals::dep_estimator_alpha[nonemptymgi] * estimator_normfactor;
+    globals::dep_estimator_alpha[nonemptymgi] *= estimator_normfactor;
 
     assert_testmodeonly(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
     assert_testmodeonly(std::isfinite(globals::dep_estimator_gamma[nonemptymgi]));
