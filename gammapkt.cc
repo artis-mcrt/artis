@@ -993,7 +993,7 @@ void barnes_thermalization(Packet &pkt, bool local)
   }
 }
 
-void do_gamma(Packet &pkt, double t2) {
+void do_gamma(Packet &pkt, const int nts, double t2) {
   if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_GLOBAL) {
@@ -1002,6 +1002,10 @@ void do_gamma(Packet &pkt, double t2) {
     barnes_thermalization(pkt, true);
   } else {
     __builtin_unreachable();
+  }
+
+  if (pkt.type != TYPE_GAMMA && pkt.type != TYPE_ESCAPE) {
+    atomicadd(globals::timesteps[nts].gamma_dep, pkt.e_cmf);
   }
 }
 

@@ -609,22 +609,29 @@ void zero_estimators() {
 void normalise_deposition_estimators(int nts) {
   const double dt = globals::timesteps[nts].width;
   const auto nprocs = globals::nprocs;
+
   globals::timesteps[nts].gamma_dep_pathint = 0.;
+  globals::timesteps[nts].positron_dep = 0.;
+  globals::timesteps[nts].electron_dep = 0.;
+  globals::timesteps[nts].alpha_dep = 0.;
+
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
     const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
 
+    // contribute the energy deposited (in erg) by each process in this cell to the timestep total
     globals::timesteps[nts].gamma_dep_pathint += globals::dep_estimator_gamma[nonemptymgi] / nprocs;
+    globals::timesteps[nts].positron_dep += globals::dep_estimator_positron[nonemptymgi] / nprocs;
+    globals::timesteps[nts].electron_dep += globals::dep_estimator_electron[nonemptymgi] / nprocs;
+    globals::timesteps[nts].alpha_dep += globals::dep_estimator_alpha[nonemptymgi] / nprocs;
 
+    // normalise the estimators to units of erg/s/cm^3
     const double estimator_normfactor = 1 / dV / dt / nprocs;
 
     globals::dep_estimator_gamma[nonemptymgi] *= estimator_normfactor;
-
     globals::dep_estimator_positron[nonemptymgi] *= estimator_normfactor;
-
     globals::dep_estimator_electron[nonemptymgi] *= estimator_normfactor;
-
     globals::dep_estimator_alpha[nonemptymgi] *= estimator_normfactor;
 
     assert_testmodeonly(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
