@@ -2039,7 +2039,7 @@ void init(const int my_rank, const int ndo_nonempty) {
 }
 
 void calculate_deposition_rate_density(const int modelgridindex, const int timestep)
-// should be in erg / s / cm^3
+// deposition rate in erg / s / cm^3
 {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   const double gamma_deposition = globals::dep_estimator_gamma[nonemptymgi] * FOURPI;
@@ -2047,7 +2047,10 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   const double tmid = globals::timesteps[timestep].mid;
   const double rho = grid::get_rho(modelgridindex);
 
-  // convert from [erg/s/g] to [erg/s/cm3]
+  // if INSTANT_PARTICLE_DEPOSITION, use the analytic rate at t_mid since it will have no Monte Carlo noise (although
+  // strictly, it should be an integral from the timestep start to the end)
+  // with time-dependent deposition, we don't have an analytic rate, so we use the Monte Carlo rate
+
   const double positron_deposition =
       INSTANT_PARTICLE_DEPOSITION
           ? (rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAPLUS))
