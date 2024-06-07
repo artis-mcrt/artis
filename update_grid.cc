@@ -897,6 +897,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
   /// Update elemental abundances with radioactive decays
   decay::update_abundances(mgi, nts, globals::timesteps[nts].mid);
+  nonthermal::calculate_deposition_rate_density(mgi, nts);
   if (globals::opacity_case == 6) {
     grid::calculate_kappagrey();
   }

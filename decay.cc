@@ -1309,8 +1309,6 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   // printout("nucfracsum %g\n", nucfracsum);
 
   // assert_always(fabs(nucfracsum - initnucfracsum) < 0.001); // decays shouldn't change nuclear mass fraction sum
-
-  nonthermal::calculate_deposition_rate_density(modelgridindex, timestep);
 }
 
 void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, const double t_current, const int element) {
