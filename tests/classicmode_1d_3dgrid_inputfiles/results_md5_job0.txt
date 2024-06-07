@@ -1,12 +1,12 @@
 f6f254e9f1381dc7b7f7ef8f8cd12b19  absorption.out
 c0604236aa7df99cda43e5c7bbe7b6f4  bflist.out
-495e4053eb59ea072fa250fd7e0e92eb  deposition.out
+7cc0713c42ac14c772404c12bb297c3e  deposition.out
 618536f8df9ce91e3215ef59cdd1d55e  emission.out
 5c757e01a7473b96512490153df67102  emissiontrue.out
-bfe96e8a4db19cd45dff11ce3d3975d7  gamma_light_curve.out
+5ee5397adc055cb62b922ea98e50245c  gamma_light_curve.out
 057b226c371f3819cba5e04bfea3d114  gammalinelist.out
 20bddb22b6f084a7abc105c210366bfd  grid.out
-8cb02f7c95a34b4a9b5b813e5e24017b  light_curve.out
+ff34c9bfa70483263ed6eccbeb38e93d  light_curve.out
 5740f40190d45653e5fce57ddf577dc8  linestat.out
 41a1c375110d8edbf421edca3fc426e8  modelgridrankassignments.out
 7faaca35800ae2c3ad9d3f4960d48692  packets00_0000.out
@@ -27,7 +27,7 @@ ef9e1f821d4920e44053e909fdc51fe4  vspecpol_0000.out
 abc6598657cda5f5a3be63bcaf519043  vspecpol_0001.out
 d582dafe3ea571fe7473cc4c0be03455  vspecpol_0002.out
 5b7fc753283aa641885d587c2f9518e6  vspecpol_0003.out
-99ddf74f709d9eef3d62429416346220  job0/estimators_0000.out
-68d13c6c4da76d29db65f6ce18a8e161  job0/estimators_0001.out
-01a6901b977aca4d845c3cdafa75921c  job0/estimators_0002.out
-d802e8c65aea8c8005f39485bcc2e7c7  job0/estimators_0003.out
+980fcade8447696f0bb83e8e284b09c1  job0/estimators_0000.out
+f85021d18f9a584f7ba12150c389374e  job0/estimators_0001.out
+7c2ad34e5823246c39c34713bd03aef1  job0/estimators_0002.out
+2f6b99ee98f10de505896f5156df28a8  job0/estimators_0003.out
