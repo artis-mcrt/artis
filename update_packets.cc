@@ -31,6 +31,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   double en_deposited = pkt.e_cmf;
   const auto mgi = grid::get_cell_modelgridindex(pkt.where);
   const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  auto priortype = pkt.type;
 
   if constexpr (INSTANT_PARTICLE_DEPOSITION) {
     // absorption happens
@@ -78,13 +79,13 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     pkt.prop_time = t_new;
   }
 
-  if (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS) {
+  if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS) {
     atomicadd(globals::dep_estimator_electron[nonemptymgi], en_deposited);
     atomicadd(globals::timesteps[nts].electron_dep_discrete, pkt.e_cmf);
-  } else if (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS) {
+  } else if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS) {
     atomicadd(globals::dep_estimator_positron[nonemptymgi], en_deposited);
     atomicadd(globals::timesteps[nts].positron_dep_discrete, pkt.e_cmf);
-  } else if (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) {
+  } else if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) {
     atomicadd(globals::dep_estimator_alpha[nonemptymgi], en_deposited);
     atomicadd(globals::timesteps[nts].alpha_dep_discrete, pkt.e_cmf);
   }
@@ -115,8 +116,8 @@ void update_pellet(Packet &pkt, const int nts, const double t2) {
     if (pkt.originated_from_particlenotgamma)  // will decay to non-thermal particle
     {
       if (pkt.pellet_decaytype == decay::DECAYTYPE_BETAPLUS) {
-        atomicadd(globals::timesteps[nts].positron_dep, pkt.e_cmf);
         pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS;
+        atomicadd(globals::timesteps[nts].positron_emission, pkt.e_cmf);
       } else if (pkt.pellet_decaytype == decay::DECAYTYPE_BETAMINUS) {
         pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS;
         atomicadd(globals::timesteps[nts].electron_emission, pkt.e_cmf);
