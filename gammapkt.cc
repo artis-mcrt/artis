@@ -241,24 +241,6 @@ void init_gamma_data() {
   }
 }
 
-void normalise(int nts) {
-  const double dt = globals::timesteps[nts].width;
-  globals::timesteps[nts].gamma_dep_pathint = 0.;
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-
-    const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
-
-    globals::timesteps[nts].gamma_dep_pathint += globals::dep_estimator_gamma[nonemptymgi] / globals::nprocs;
-
-    globals::dep_estimator_gamma[nonemptymgi] =
-        globals::dep_estimator_gamma[nonemptymgi] * ONEOVER4PI / dV / dt / globals::nprocs;
-
-    assert_testmodeonly(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
-    assert_testmodeonly(std::isfinite(globals::dep_estimator_gamma[nonemptymgi]));
-  }
-}
-
 static auto choose_gamma_ray(const int nucindex) -> double {
   // Routine to choose which gamma ray line it'll be.
 

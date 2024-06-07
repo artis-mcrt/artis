@@ -37,7 +37,6 @@
 #include "atomic.h"
 #include "constants.h"
 #include "decay.h"
-#include "gammapkt.h"
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
@@ -598,6 +597,31 @@ void zero_estimators() {
 #endif
 }
 
+void normalise_deposition_estimators(int nts) {
+  const double dt = globals::timesteps[nts].width;
+  globals::timesteps[nts].gamma_dep_pathint = 0.;
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+
+    const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
+
+    const double estimator_normfactor = 1 / dV / dt / globals::nprocs;
+
+    globals::timesteps[nts].gamma_dep_pathint += globals::dep_estimator_gamma[nonemptymgi] / globals::nprocs;
+
+    globals::dep_estimator_gamma[nonemptymgi] *= ONEOVER4PI / dV / dt / globals::nprocs;
+
+    assert_testmodeonly(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
+    assert_testmodeonly(std::isfinite(globals::dep_estimator_gamma[nonemptymgi]));
+
+    globals::dep_estimator_positron[nonemptymgi] *= estimator_normfactor;
+
+    globals::dep_estimator_electron[nonemptymgi] *= estimator_normfactor;
+
+    globals::dep_estimator_alpha[nonemptymgi] *= estimator_normfactor;
+  }
+}
+
 auto do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo, Packet *packets,
                  const int walltimelimitseconds) -> bool {
   bool do_this_full_loop = true;
@@ -671,7 +695,7 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
     // The estimators have been summed across all proceses and distributed.
     // They will now be normalised independently on all processes
 
-    gammapkt::normalise(nts);
+    normalise_deposition_estimators(nts);
 
     write_deposition_file(nts, my_rank, nstart, ndo);
 

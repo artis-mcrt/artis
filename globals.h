@@ -209,6 +209,9 @@ inline std::array<double, 3> syn_dir{};  // vector pointing from origin to obser
 inline std::vector<TimeStep> timesteps;
 
 inline std::vector<double> dep_estimator_gamma;
+inline std::vector<double> dep_estimator_positron;
+inline std::vector<double> dep_estimator_electron;
+inline std::vector<double> dep_estimator_alpha;
 
 inline int bfestimcount{0};
 

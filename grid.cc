@@ -991,16 +991,19 @@ static void allocate_nonemptymodelcells() {
     allocate_expansionopacities();
   }
 
-  globals::dep_estimator_gamma.resize(get_nonempty_npts_model(), 0.);
+  globals::dep_estimator_gamma.resize(nonempty_npts_model, 0.);
+  globals::dep_estimator_positron.resize(nonempty_npts_model, 0.);
+  globals::dep_estimator_electron.resize(nonempty_npts_model, 0.);
+  globals::dep_estimator_alpha.resize(nonempty_npts_model, 0.);
 
-  auto ionestimsize = get_nonempty_npts_model() * globals::nbfcontinua_ground * sizeof(double);
+  auto ionestimsize = nonempty_npts_model * globals::nbfcontinua_ground * sizeof(double);
 
 #ifdef MPI_ON
   if constexpr (USE_LUT_PHOTOION) {
-    auto my_rank_cells = get_nonempty_npts_model() / globals::node_nprocs;
+    auto my_rank_cells = nonempty_npts_model / globals::node_nprocs;
     // rank_in_node 0 gets any remainder
     if (globals::rank_in_node == 0) {
-      my_rank_cells += get_nonempty_npts_model() - (my_rank_cells * globals::node_nprocs);
+      my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
     }
 
     auto size = static_cast<MPI_Aint>(my_rank_cells * globals::nbfcontinua_ground * sizeof(double));
@@ -1032,11 +1035,11 @@ static void allocate_nonemptymodelcells() {
 #endif
   }
 
-  globals::ffheatingestimator = static_cast<double *>(malloc(get_nonempty_npts_model() * sizeof(double)));
-  globals::colheatingestimator = static_cast<double *>(malloc(get_nonempty_npts_model() * sizeof(double)));
+  globals::ffheatingestimator = static_cast<double *>(malloc(nonempty_npts_model * sizeof(double)));
+  globals::colheatingestimator = static_cast<double *>(malloc(nonempty_npts_model * sizeof(double)));
 #ifdef DO_TITER
-  globals::ffheatingestimator_save = static_cast<double *>(malloc(get_nonempty_npts_model() * sizeof(double)));
-  globals::colheatingestimator_save = static_cast<double *>(malloc(get_nonempty_npts_model() * sizeof(double)));
+  globals::ffheatingestimator_save = static_cast<double *>(malloc(nonempty_npts_model * sizeof(double)));
+  globals::colheatingestimator_save = static_cast<double *>(malloc(nonempty_npts_model * sizeof(double)));
 #endif
 
 #ifdef MPI_ON
