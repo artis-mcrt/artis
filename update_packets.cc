@@ -31,7 +31,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   double en_deposited = pkt.e_cmf;
   const auto mgi = grid::get_cell_modelgridindex(pkt.where);
   const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
-  auto priortype = pkt.type;
+  const auto priortype = pkt.type;
 
   if constexpr (INSTANT_PARTICLE_DEPOSITION) {
     // absorption happens
