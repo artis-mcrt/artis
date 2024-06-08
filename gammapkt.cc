@@ -539,7 +539,7 @@ static void compton_scatter(Packet &pkt)
     pkt.last_cross = BOUNDARY_NONE;  // allow it to re-cross a boundary
   } else {
     // It's converted to an e-minus packet.
-    pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS;
+    pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = -3;
     stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
   }
@@ -776,7 +776,7 @@ void pair_prod(Packet &pkt) {
   if (rng_uniform() > prob_gamma) {
     // Convert it to an e-minus packet - actually it could be positron EK too, but this works
     // for consistency with compton_scatter.
-    pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS;
+    pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = -5;
     stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
   } else {
@@ -926,7 +926,7 @@ void transport_gamma(Packet &pkt, double t2)
       compton_scatter(pkt);
     } else if ((chi_compton + chi_photo_electric) > chi_rnd) {
       // Photo electric effect - makes it a k-packet for sure.
-      pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS;
+      pkt.type = TYPE_NTLEPTON_DEPOSITED;
       pkt.absorptiontype = -4;
       stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
     } else if ((chi_compton + chi_photo_electric + chi_pair_prod) > chi_rnd) {
