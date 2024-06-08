@@ -174,13 +174,12 @@ jobs:
               uses: actions/setup-python@v5
               with:
                   python-version: '3.12'
-                  cache: pip
 
             - name: Install artistools
               if: always() && matrix.testmode == 'OFF'
               run: |
                   python3 -m pip install --upgrade pip uv
-                  uv pip install --system artistools
+                  uv pip install --system -U artistools
 
             - name: show deposition.out
               if: always()
