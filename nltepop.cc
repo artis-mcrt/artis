@@ -988,6 +988,11 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       // double solution_ion_pop = 0.;
       for (int level = 1; level <= nlevels_nlte; level++) {
         const int index = get_nlte_vector_index(element, ion, level);
+        double min_nlte_pop = MINPOP;
+        if (gsl_vector_get(popvec, index) < min_nlte_pop) {
+          // set the population to 1e-30 if it is too low
+          gsl_vector_set(popvec, index, min_nlte_pop);
+        }
         grid::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] =
             gsl_vector_get(popvec, index) / grid::get_rho(modelgridindex);
         // solution_ion_pop += gsl_vector_get(popvec, index);
