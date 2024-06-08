@@ -177,7 +177,7 @@ void write_deposition_file(const int nts, const int my_rank, const int nstart, c
   if (my_rank == 0) {
     FILE *dep_file = fopen_required("deposition.out.tmp", "w");
     fprintf(dep_file,
-            "#ts tmid_days tmid_s total_dep_Lsun gammadep_Lsun gammadep_discrete_Lsun positrondep_Lsun "
+            "#ts tmid_days tmid_s total_dep_Lsun gammadep_discrete_Lsun gammadep_Lsun positrondep_Lsun "
             "eps_positron_ana_Lsun elecdep_Lsun eps_elec_Lsun eps_elec_ana_Lsun alphadep_Lsun eps_alpha_Lsun "
             "eps_alpha_ana_Lsun eps_gamma_Lsun Qdot_betaminus_ana_erg/s/g Qdotalpha_ana_erg/s/g eps_erg/s/g "
             "Qdot_ana_erg/s/g\n");
@@ -193,10 +193,9 @@ void write_deposition_file(const int nts, const int my_rank, const int nstart, c
                                 mtot / t_width;
 
       fprintf(dep_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n", i, t_mid / DAY, t_mid,
-              total_dep / t_width / LSUN, globals::timesteps[i].gamma_dep / t_width / LSUN,
-              globals::timesteps[i].gamma_dep_discrete / t_width / LSUN,
-              globals::timesteps[i].positron_dep / t_width / LSUN, globals::timesteps[i].eps_positron_ana_power / LSUN,
-              globals::timesteps[i].electron_dep / t_width / LSUN,
+              total_dep / t_width / LSUN, globals::timesteps[i].gamma_dep_discrete / t_width / LSUN,
+              globals::timesteps[i].gamma_dep / t_width / LSUN, globals::timesteps[i].positron_dep / t_width / LSUN,
+              globals::timesteps[i].eps_positron_ana_power / LSUN, globals::timesteps[i].electron_dep / t_width / LSUN,
               globals::timesteps[i].electron_emission / t_width / LSUN,
               globals::timesteps[i].eps_electron_ana_power / LSUN, globals::timesteps[i].alpha_dep / t_width / LSUN,
               globals::timesteps[i].alpha_emission / t_width / LSUN, globals::timesteps[i].eps_alpha_ana_power / LSUN,
