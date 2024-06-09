@@ -370,6 +370,9 @@ inline void setup_mpi_vars() {
 #endif
 }
 
+inline double v_ej;
+inline bool v_ej_set = false;
+
 }  // namespace globals
 
 #endif  // GLOBALS_H

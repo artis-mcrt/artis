@@ -969,35 +969,96 @@ void transport_gamma(Packet &pkt, double t2)
   }
 }
 
-void barnes_thermalization(Packet &pkt, bool local)
+void simplified_thermalization(Packet &pkt, int type)
 // Barnes treatment: packet is either getting absorbed immediately and locally
 // creating a k-packet or it escapes. The absorption probability matches the
 // Barnes thermalization efficiency, for expressions see the original paper:
 // https://ui.adsabs.harvard.edu/abs/2016ApJ...829..110B
 {
-  // compute thermalization efficiency (= absorption probability)
-  constexpr double mean_gamma_opac = 0.1;
+  double tau = 0.;
+  if (type == 1 || type == 2) {
+    // type 1 or 2: Barnes global / local
 
-  // determine average initial density
-  double V_0 = 0.;
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    V_0 += grid::get_modelcell_assocvolume_tmin(mgi);
-  }
-  double rho_0 = 0.;
-  if (!local) {
-    rho_0 = grid::mtot_input / V_0;
-  } else {
-    rho_0 = grid::get_rho_tmin(grid::get_cell_modelgridindex(pkt.where));
-  }
+    // compute thermalization efficiency (= absorption probability)
+    // 0.1 is an average value to fit the analytic approximations from the paper.
+    // Alternative: Distinguish between low-E (kappa = 1) or high-E (kappa = 0.05)
+    // packets.
+    // constexpr double mean_gamma_opac = 0.1;
 
-  const double R_0 = pow(3 * V_0 / (4 * PI), 1 / 3.);
-  const double t_0 = grid::get_t_model();
-  const double tau_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
-  // get current time
-  const double t = t_0 + pkt.prop_time;
-  const double tau = pow(tau_ineff / t, 2.);
+    // determine average initial density via kinetic energy
+    double E_kin = 0.;
+    // loop over all non-empty cells
+    for (int n = 0; n < grid::ngrid; n++) {
+      const int mgi = grid::get_cell_modelgridindex(n);
+      double M_cell = grid::get_rho_tmin(mgi) * grid::get_gridcell_volume_tmin(n);
+      if (M_cell > 0) {
+        double arr[] = {0.,0.,0.};
+        std::span<double,3> cell_pos{arr};
+        cell_pos[0] = (grid::get_cellcoordmax(n,0) + grid::get_cellcoordmin(n,0)) / 2.;
+        cell_pos[1] = (grid::get_cellcoordmax(n,1) + grid::get_cellcoordmin(n,1)) / 2.;
+        cell_pos[2] = (grid::get_cellcoordmax(n,2) + grid::get_cellcoordmin(n,2)) / 2.;
+        double v_cell = 0.;
+        v_cell = vec_len(get_velocity(cell_pos, pkt.prop_time));
+        E_kin += 1./2. * M_cell * v_cell * v_cell;
+      }
+    }
+    if (!globals::v_ej_set) {
+      globals::v_ej = sqrt(E_kin * 2 / grid::mtot_input);
+      globals::v_ej_set = true;
+    }
+    const double t_0 = globals::tmin;
+    /*
+    double V_0 = 4. / 3. * PI * pow(v_ej * t_0, 3.);
+    double rho_0 = 0.;
+    // double R_0 = v_ej * t_0;
+    if (!local) {
+      // global scheme
+      rho_0 = grid::mtot_input / V_0;
+    } else {
+      // local scheme
+      rho_0 = grid::get_rho_tmin(grid::get_cell_modelgridindex(pkt.where));
+    }
+    */
+    //const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
+    const double t_ineff = 1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / globals::v_ej);
+    // get current time
+    const double t = t_0 + pkt.prop_time;
+    tau = pow(t_ineff / t, 2.);
+  } else if (type == 3) {
+    // implement Wollaeger gamma thermalisation using calculating the optical depth
+    // for gamma rays using an integral rather than a constant-opacity approximation
+    constexpr double mean_gamma_opac = 0.1;
+    // integration: requires distances within single cells in radial direction and the corresponding densities
+    // need to create a packet copy which is moved during the integration
+    struct Packet pkt_copy = pkt;
+    int mgi = grid::get_cell_modelgridindex(pkt_copy.where);
+    double t_current = pkt.prop_time;
+    double t_future = t_current;
+    bool end_packet = false;
+    while (!end_packet) {
+      // distance to the next cell
+      const auto [sdist, snext] =
+          grid::boundary_distance(vec_norm(pkt_copy.pos), pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where, &pkt_copy.last_cross);
+      const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
+      if (mgi == grid::get_npts_model()) {
+        pkt_copy.next_trans = -1;
+      } else {
+        tau += grid::get_rho(pkt_copy.where) * s_cont * mean_gamma_opac; // contribution to the integral
+      }
+      // move packet copy now
+      t_future += (sdist / CLIGHT_PROP);
+      move_pkt_withtime(pkt_copy, sdist);
+      pkt_copy.prop_time = t_future;
+
+      grid::change_cell(pkt_copy, snext);
+      end_packet = (pkt_copy.type == TYPE_ESCAPE);
+
+      mgi = grid::get_cell_modelgridindex(pkt_copy.where);
+    }
+  }
   const double f_gamma = 1. - exp(-tau);
+  assert_always(f_gamma >= 0.);
+  assert_always(f_gamma <= 1.);
 
   // either absorb packet or let it escape
   if (rng_uniform() < f_gamma) {
@@ -1015,9 +1076,11 @@ void do_gamma(Packet &pkt, double t2) {
   if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_GLOBAL) {
-    barnes_thermalization(pkt, false);
+    simplified_thermalization(pkt, 1);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_LOCAL) {
-    barnes_thermalization(pkt, true);
+    simplified_thermalization(pkt, 2);
+  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::WOLLAEGER) {
+    simplified_thermalization(pkt, 3);
   } else {
     __builtin_unreachable();
   }
