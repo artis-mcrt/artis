@@ -969,61 +969,57 @@ void transport_gamma(Packet &pkt, double t2)
   }
 }
 
-void simplified_thermalization(Packet &pkt, int type)
+void barnes_thermalisation(Packet &pkt)
 // Barnes treatment: packet is either getting absorbed immediately and locally
 // creating a k-packet or it escapes. The absorption probability matches the
 // Barnes thermalization efficiency, for expressions see the original paper:
 // https://ui.adsabs.harvard.edu/abs/2016ApJ...829..110B
 {
   double tau = 0.;
-  if (type == 1 || type == 2) {
-    // type 1 or 2: Barnes global / local
+  // compute thermalization efficiency (= absorption probability)
+  // 0.1 is an average value to fit the analytic approximations from the paper.
+  // Alternative: Distinguish between low-E (kappa = 1) or high-E (kappa = 0.05)
+  // packets.
+  // constexpr double mean_gamma_opac = 0.1;
 
-    // compute thermalization efficiency (= absorption probability)
-    // 0.1 is an average value to fit the analytic approximations from the paper.
-    // Alternative: Distinguish between low-E (kappa = 1) or high-E (kappa = 0.05)
-    // packets.
-    // constexpr double mean_gamma_opac = 0.1;
-
-    // determine average initial density via kinetic energy
-    double E_kin = 0.;
-    // loop over all non-empty cells
-    for (int n = 0; n < grid::ngrid; n++) {
-      const int mgi = grid::get_cell_modelgridindex(n);
-      double M_cell = grid::get_rho_tmin(mgi) * grid::get_gridcell_volume_tmin(n);
-      if (M_cell > 0) {
-        std::array<double, 3> cell_pos{(grid::get_cellcoordmax(n, 0) + grid::get_cellcoordmin(n, 0)) / 2.,
-                                       (grid::get_cellcoordmax(n, 1) + grid::get_cellcoordmin(n, 1)) / 2.,
-                                       (grid::get_cellcoordmax(n, 2) + grid::get_cellcoordmin(n, 2)) / 2.};
-        double v_cell = 0.;
-        v_cell = vec_len(get_velocity(cell_pos, pkt.prop_time));
-        E_kin += 1. / 2. * M_cell * v_cell * v_cell;
-      }
+  // determine average initial density via kinetic energy
+  double E_kin = 0.;
+  // loop over all non-empty cells
+  for (int n = 0; n < grid::ngrid; n++) {
+    const int mgi = grid::get_cell_modelgridindex(n);
+    double M_cell = grid::get_rho_tmin(mgi) * grid::get_gridcell_volume_tmin(n);
+    if (M_cell > 0) {
+      std::array<double, 3> cell_pos{(grid::get_cellcoordmax(n, 0) + grid::get_cellcoordmin(n, 0)) / 2.,
+                                     (grid::get_cellcoordmax(n, 1) + grid::get_cellcoordmin(n, 1)) / 2.,
+                                     (grid::get_cellcoordmax(n, 2) + grid::get_cellcoordmin(n, 2)) / 2.};
+      double v_cell = 0.;
+      v_cell = vec_len(get_velocity(cell_pos, pkt.prop_time));
+      E_kin += 1. / 2. * M_cell * v_cell * v_cell;
     }
-    if (!globals::v_ej_set) {
-      globals::v_ej = sqrt(E_kin * 2 / grid::mtot_input);
-      globals::v_ej_set = true;
-    }
-    const double t_0 = globals::tmin;
-    /*
-    double V_0 = 4. / 3. * PI * pow(v_ej * t_0, 3.);
-    double rho_0 = 0.;
-    // double R_0 = v_ej * t_0;
-    if (!local) {
-      // global scheme
-      rho_0 = grid::mtot_input / V_0;
-    } else {
-      // local scheme
-      rho_0 = grid::get_rho_tmin(grid::get_cell_modelgridindex(pkt.where));
-    }
-    */
-    // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
-    const double t_ineff =
-        1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / globals::v_ej);
-    // get current time
-    const double t = t_0 + pkt.prop_time;
-    tau = pow(t_ineff / t, 2.);
   }
+  if (!globals::v_ej_set) {
+    globals::v_ej = sqrt(E_kin * 2 / grid::mtot_input);
+    globals::v_ej_set = true;
+  }
+  const double t_0 = globals::tmin;
+  /*
+  double V_0 = 4. / 3. * PI * pow(v_ej * t_0, 3.);
+  double rho_0 = 0.;
+  // double R_0 = v_ej * t_0;
+  if (!local) {
+    // global scheme
+    rho_0 = grid::mtot_input / V_0;
+  } else {
+    // local scheme
+    rho_0 = grid::get_rho_tmin(grid::get_cell_modelgridindex(pkt.where));
+  }
+  */
+  // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
+  const double t_ineff =
+      1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / globals::v_ej);
+  // get current time
+  const double t = t_0 + pkt.prop_time;
+  tau = pow(t_ineff / t, 2.);
   const double f_gamma = 1. - exp(-tau);
   assert_always(f_gamma >= 0.);
   assert_always(f_gamma <= 1.);
@@ -1043,10 +1039,8 @@ void simplified_thermalization(Packet &pkt, int type)
 void do_gamma(Packet &pkt, double t2) {
   if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
-  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_GLOBAL) {
-    simplified_thermalization(pkt, 1);
-  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_LOCAL) {
-    simplified_thermalization(pkt, 2);
+  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
+    barnes_thermalisation(pkt);
   } else {
     __builtin_unreachable();
   }

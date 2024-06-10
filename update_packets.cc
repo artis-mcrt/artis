@@ -34,8 +34,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
     // absorption happens
     pkt.type = TYPE_NTLEPTON;
-  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_GLOBAL ||
-                       PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_LOCAL) {
+  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
     double E_kin = 0.;
     // loop over all non-empty cells
     for (int n = 0; n < grid::ngrid; n++) {
