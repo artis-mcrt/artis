@@ -992,11 +992,9 @@ void simplified_thermalization(Packet &pkt, int type)
       const int mgi = grid::get_cell_modelgridindex(n);
       double M_cell = grid::get_rho_tmin(mgi) * grid::get_gridcell_volume_tmin(n);
       if (M_cell > 0) {
-        double arr[] = {0., 0., 0.};
-        std::span<double, 3> cell_pos{arr};
-        cell_pos[0] = (grid::get_cellcoordmax(n, 0) + grid::get_cellcoordmin(n, 0)) / 2.;
-        cell_pos[1] = (grid::get_cellcoordmax(n, 1) + grid::get_cellcoordmin(n, 1)) / 2.;
-        cell_pos[2] = (grid::get_cellcoordmax(n, 2) + grid::get_cellcoordmin(n, 2)) / 2.;
+        std::array<double, 3> cell_pos{(grid::get_cellcoordmax(n, 0) + grid::get_cellcoordmin(n, 0)) / 2.,
+                                       (grid::get_cellcoordmax(n, 1) + grid::get_cellcoordmin(n, 1)) / 2.,
+                                       (grid::get_cellcoordmax(n, 2) + grid::get_cellcoordmin(n, 2)) / 2.};
         double v_cell = 0.;
         v_cell = vec_len(get_velocity(cell_pos, pkt.prop_time));
         E_kin += 1. / 2. * M_cell * v_cell * v_cell;
@@ -1025,37 +1023,6 @@ void simplified_thermalization(Packet &pkt, int type)
     // get current time
     const double t = t_0 + pkt.prop_time;
     tau = pow(t_ineff / t, 2.);
-  } else if (type == 3) {
-    // implement Wollaeger gamma thermalisation using calculating the optical depth
-    // for gamma rays using an integral rather than a constant-opacity approximation
-    constexpr double mean_gamma_opac = 0.1;
-    // integration: requires distances within single cells in radial direction and the corresponding densities
-    // need to create a packet copy which is moved during the integration
-    struct Packet pkt_copy = pkt;
-    int mgi = grid::get_cell_modelgridindex(pkt_copy.where);
-    double t_current = pkt.prop_time;
-    double t_future = t_current;
-    bool end_packet = false;
-    while (!end_packet) {
-      // distance to the next cell
-      const auto [sdist, snext] = grid::boundary_distance(vec_norm(pkt_copy.pos), pkt_copy.pos, pkt_copy.prop_time,
-                                                          pkt_copy.where, &pkt_copy.last_cross);
-      const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
-      if (mgi == grid::get_npts_model()) {
-        pkt_copy.next_trans = -1;
-      } else {
-        tau += grid::get_rho(pkt_copy.where) * s_cont * mean_gamma_opac;  // contribution to the integral
-      }
-      // move packet copy now
-      t_future += (sdist / CLIGHT_PROP);
-      move_pkt_withtime(pkt_copy, sdist);
-      pkt_copy.prop_time = t_future;
-
-      grid::change_cell(pkt_copy, snext);
-      end_packet = (pkt_copy.type == TYPE_ESCAPE);
-
-      mgi = grid::get_cell_modelgridindex(pkt_copy.where);
-    }
   }
   const double f_gamma = 1. - exp(-tau);
   assert_always(f_gamma >= 0.);
