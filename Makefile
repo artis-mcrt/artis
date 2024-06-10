@@ -1,3 +1,5 @@
+# it's recommended that you add the following to your startup script:
+# export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
 .DEFAULT_GOAL := all
 $(shell echo "constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";" > version_tmp.h)
 # requires git > 2.22
