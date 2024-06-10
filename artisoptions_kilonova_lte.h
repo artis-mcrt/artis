@@ -146,9 +146,9 @@ constexpr float RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY = -1.;
 
 constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 
-constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::WOLLAEGER;
+constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
 
-constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::WOLLAEGER;
+constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
 
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H

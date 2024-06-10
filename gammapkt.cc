@@ -992,14 +992,14 @@ void simplified_thermalization(Packet &pkt, int type)
       const int mgi = grid::get_cell_modelgridindex(n);
       double M_cell = grid::get_rho_tmin(mgi) * grid::get_gridcell_volume_tmin(n);
       if (M_cell > 0) {
-        double arr[] = {0.,0.,0.};
-        std::span<double,3> cell_pos{arr};
-        cell_pos[0] = (grid::get_cellcoordmax(n,0) + grid::get_cellcoordmin(n,0)) / 2.;
-        cell_pos[1] = (grid::get_cellcoordmax(n,1) + grid::get_cellcoordmin(n,1)) / 2.;
-        cell_pos[2] = (grid::get_cellcoordmax(n,2) + grid::get_cellcoordmin(n,2)) / 2.;
+        double arr[] = {0., 0., 0.};
+        std::span<double, 3> cell_pos{arr};
+        cell_pos[0] = (grid::get_cellcoordmax(n, 0) + grid::get_cellcoordmin(n, 0)) / 2.;
+        cell_pos[1] = (grid::get_cellcoordmax(n, 1) + grid::get_cellcoordmin(n, 1)) / 2.;
+        cell_pos[2] = (grid::get_cellcoordmax(n, 2) + grid::get_cellcoordmin(n, 2)) / 2.;
         double v_cell = 0.;
         v_cell = vec_len(get_velocity(cell_pos, pkt.prop_time));
-        E_kin += 1./2. * M_cell * v_cell * v_cell;
+        E_kin += 1. / 2. * M_cell * v_cell * v_cell;
       }
     }
     if (!globals::v_ej_set) {
@@ -1019,8 +1019,9 @@ void simplified_thermalization(Packet &pkt, int type)
       rho_0 = grid::get_rho_tmin(grid::get_cell_modelgridindex(pkt.where));
     }
     */
-    //const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
-    const double t_ineff = 1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / globals::v_ej);
+    // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
+    const double t_ineff =
+        1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / globals::v_ej);
     // get current time
     const double t = t_0 + pkt.prop_time;
     tau = pow(t_ineff / t, 2.);
@@ -1037,13 +1038,13 @@ void simplified_thermalization(Packet &pkt, int type)
     bool end_packet = false;
     while (!end_packet) {
       // distance to the next cell
-      const auto [sdist, snext] =
-          grid::boundary_distance(vec_norm(pkt_copy.pos), pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where, &pkt_copy.last_cross);
+      const auto [sdist, snext] = grid::boundary_distance(vec_norm(pkt_copy.pos), pkt_copy.pos, pkt_copy.prop_time,
+                                                          pkt_copy.where, &pkt_copy.last_cross);
       const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
       if (mgi == grid::get_npts_model()) {
         pkt_copy.next_trans = -1;
       } else {
-        tau += grid::get_rho(pkt_copy.where) * s_cont * mean_gamma_opac; // contribution to the integral
+        tau += grid::get_rho(pkt_copy.where) * s_cont * mean_gamma_opac;  // contribution to the integral
       }
       // move packet copy now
       t_future += (sdist / CLIGHT_PROP);
@@ -1079,8 +1080,6 @@ void do_gamma(Packet &pkt, double t2) {
     simplified_thermalization(pkt, 1);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_LOCAL) {
     simplified_thermalization(pkt, 2);
-  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::WOLLAEGER) {
-    simplified_thermalization(pkt, 3);
   } else {
     __builtin_unreachable();
   }
