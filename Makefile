@@ -1,5 +1,4 @@
 .DEFAULT_GOAL := all
-$(shell rm sn3d exspec)
 $(shell echo "constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";" > version_tmp.h)
 # requires git > 2.22
 # @echo "constexpr const char* GIT_BRANCH = \"$(shell git branch --show)\";" >> version.h
@@ -251,7 +250,7 @@ exspec_dep = $(exspec_objects:%.o=%.d)
 all: sn3d exspec
 
 $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
-	@mkdir -p $(@D)
+	mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h artisoptions.h Makefile
@@ -259,18 +258,28 @@ $(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h artisoptions.h Makefile
 check: $(sn3d_files)
 	run-clang-tidy $(sn3d_files)
 
-sn3d: artisoptions.h Makefile $(sn3d_objects)
-	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
+$(BUILD_DIR)/sn3d: artisoptions.h Makefile $(sn3d_objects)
+	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3d
 -include $(sn3d_dep)
 
-sn3dwhole: version.h artisoptions.h Makefile
-	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o sn3d
+sn3d: $(BUILD_DIR)/sn3d
+	ln -sf $(BUILD_DIR)/sn3d sn3d
 
-exspec: artisoptions.h Makefile $(exspec_objects)
-	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
+$(BUILD_DIR)/sn3dwhole: version.h artisoptions.h Makefile
+	ln -sf $(BUILD_DIR)/sn3dwhole sn3d
+	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
+
+sn3dwhole: $(BUILD_DIR)/sn3dwhole
+
+$(BUILD_DIR)/exspec: artisoptions.h Makefile $(exspec_objects)
+	ln -sf $(BUILD_DIR)/exspec exspec
+	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o $(BUILD_DIR)/exspec
 -include $(exspec_dep)
 
-.PHONY: clean sn3d exspec
+exspec: $(BUILD_DIR)/exspec
+	ln -sf $(BUILD_DIR)/exspec exspec
+
+.PHONY: clean sn3d sn3dwhole exspec
 
 clean:
 	rm -rf sn3d exspec build *.o *.d
