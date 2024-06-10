@@ -989,23 +989,18 @@ void barnes_thermalisation(Packet &pkt)
     const int mgi = grid::get_cell_modelgridindex(n);
     double M_cell = grid::get_rho_tmin(mgi) * grid::get_gridcell_volume_tmin(n);
     if (M_cell > 0) {
-      std::array<double, 3> cell_pos{(grid::get_cellcoordmax(n, 0) + grid::get_cellcoordmin(n, 0)) / 2.,
-                                     (grid::get_cellcoordmax(n, 1) + grid::get_cellcoordmin(n, 1)) / 2.,
-                                     (grid::get_cellcoordmax(n, 2) + grid::get_cellcoordmin(n, 2)) / 2.};
-      double v_cell = 0.;
-      v_cell = vec_len(get_velocity(cell_pos, pkt.prop_time));
+      std::array<const double, 3> cell_pos{(grid::get_cellcoordmax(n, 0) + grid::get_cellcoordmin(n, 0)) / 2.,
+                                           (grid::get_cellcoordmax(n, 1) + grid::get_cellcoordmin(n, 1)) / 2.,
+                                           (grid::get_cellcoordmax(n, 2) + grid::get_cellcoordmin(n, 2)) / 2.};
+      const double v_cell = vec_len(get_velocity(cell_pos, pkt.prop_time));
       E_kin += 1. / 2. * M_cell * v_cell * v_cell;
     }
   }
-  if (!globals::v_ej_set) {
-    globals::v_ej = sqrt(E_kin * 2 / grid::mtot_input);
-    globals::v_ej_set = true;
-  }
+  const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
   const double t_0 = globals::tmin;
 
   // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
-  const double t_ineff =
-      1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / globals::v_ej);
+  const double t_ineff = 1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / v_ej);
   // get current time
   const double t = t_0 + pkt.prop_time;
   tau = pow(t_ineff / t, 2.);

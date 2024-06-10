@@ -41,23 +41,18 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
       const int mgi = grid::get_cell_modelgridindex(n);
       double M_cell = grid::get_rho_tmin(mgi) * grid::get_gridcell_volume_tmin(n);
       if (M_cell > 0) {
-        double arr[] = {0., 0., 0.};
-        std::span<double, 3> cell_pos{arr};
-        cell_pos[0] = (grid::get_cellcoordmax(n, 0) + grid::get_cellcoordmin(n, 0)) / 2.;
-        cell_pos[1] = (grid::get_cellcoordmax(n, 1) + grid::get_cellcoordmin(n, 1)) / 2.;
-        cell_pos[2] = (grid::get_cellcoordmax(n, 2) + grid::get_cellcoordmin(n, 2)) / 2.;
-        double v_cell = 0.;
-        v_cell = vec_len(get_velocity(cell_pos, pkt.prop_time));
+        std::array<const double, 3> cell_pos{(grid::get_cellcoordmax(n, 0) + grid::get_cellcoordmin(n, 0)) / 2.,
+                                             (grid::get_cellcoordmax(n, 1) + grid::get_cellcoordmin(n, 1)) / 2.,
+                                             (grid::get_cellcoordmax(n, 2) + grid::get_cellcoordmin(n, 2)) / 2.};
+        const double v_cell = vec_len(get_velocity(cell_pos, pkt.prop_time));
         E_kin += 1. / 2. * M_cell * v_cell * v_cell;
       }
     }
-    if (!globals::v_ej_set) {
-      globals::v_ej = sqrt(E_kin * 2 / grid::mtot_input);
-      globals::v_ej_set = true;
-    }
+    const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
+
     const double prefactor = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 7.74 : 7.4;
-    const double tau_ineff = prefactor * 86400 * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) *
-                             pow((0.2 * 29979200000) / globals::v_ej, 3. / 2.);
+    const double tau_ineff =
+        prefactor * 86400 * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * pow((0.2 * 29979200000) / v_ej, 3. / 2.);
     const double f_p = log(1 + 2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
