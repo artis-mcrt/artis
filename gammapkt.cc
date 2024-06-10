@@ -1002,18 +1002,7 @@ void barnes_thermalisation(Packet &pkt)
     globals::v_ej_set = true;
   }
   const double t_0 = globals::tmin;
-  /*
-  double V_0 = 4. / 3. * PI * pow(v_ej * t_0, 3.);
-  double rho_0 = 0.;
-  // double R_0 = v_ej * t_0;
-  if (!local) {
-    // global scheme
-    rho_0 = grid::mtot_input / V_0;
-  } else {
-    // local scheme
-    rho_0 = grid::get_rho_tmin(grid::get_cell_modelgridindex(pkt.where));
-  }
-  */
+
   // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
   const double t_ineff =
       1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / globals::v_ej);
