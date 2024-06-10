@@ -1,4 +1,16 @@
 .DEFAULT_GOAL := all
+$(shell rm sn3d exspec)
+$(shell echo "constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";" > version_tmp.h)
+# requires git > 2.22
+# @echo "constexpr const char* GIT_BRANCH = \"$(shell git branch --show)\";" >> version.h
+$(shell echo "constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";" >> version_tmp.h)
+$(shell echo "constexpr const char* GIT_STATUS = \"$(shell git status --short)\";" >> version_tmp.h)
+
+ifneq ($(shell cat version.h),$(shell cat version_tmp.h))
+  $(shell mv version_tmp.h version.h)
+else
+  $(shell rm version_tmp.h)
+endif
 
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
@@ -258,14 +270,7 @@ exspec: artisoptions.h Makefile $(exspec_objects)
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
 -include $(exspec_dep)
 
-.PHONY: clean version.h TESTMODE TESTMODEON
-
-version.h:
-	@echo "constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";" > version.h
-# requires git > 2.22
-# @echo "constexpr const char* GIT_BRANCH = \"$(shell git branch --show)\";" >> version.h
-	@echo "constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";" >> version.h
-	@echo "constexpr const char* GIT_STATUS = \"$(shell git status --short)\";" >> version.h
+.PHONY: clean sn3d exspec
 
 clean:
 	rm -rf sn3d exspec build *.o *.d
