@@ -972,6 +972,29 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       assert_always(gsl_vector_get(popvec, index) >= 0.);
     }
 
+    const double MAXPOP_nn = 1e16;  // Allow for external definition of maximum population at some point
+    for (int ion = 0; ion < nions; ion++) {
+      const int nlevels_nlte = get_nlevels_nlte(element, ion);
+      const int index_gs = get_nlte_vector_index(element, ion, 0);
+      const double groundlevelpop = gsl_vector_get(popvec, index_gs);
+
+      for (int level = 1; level <= nlevels_nlte; level++) {
+        const int index = get_nlte_vector_index(element, ion, level);
+        double min_nlte_pop = MINPOP;
+        // we need to add a lower and an upper limit to the population
+        if (gsl_vector_get(popvec, index) < min_nlte_pop) {
+          gsl_vector_set(popvec, index, min_nlte_pop);
+        }
+
+        if ((gsl_vector_get(popvec, index) / groundlevelpop) > MAXPOP_nn) {
+          printout("[Warning] Population of level %d in ion %d of element %d is too high. Setting to %g\n", level, ion,
+                   element, MAXPOP_nn);
+          // either we need to try and set a senisble max pop [or we set to lte]
+          gsl_vector_set(popvec, index, MAXPOP_nn * groundlevelpop);
+        }
+      }
+    }
+
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
       const int index_gs = get_nlte_vector_index(element, ion, 0);
@@ -988,11 +1011,6 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       // double solution_ion_pop = 0.;
       for (int level = 1; level <= nlevels_nlte; level++) {
         const int index = get_nlte_vector_index(element, ion, level);
-        double min_nlte_pop = MINPOP;
-        if (gsl_vector_get(popvec, index) < min_nlte_pop) {
-          // set the population to 1e-30 if it is too low
-          gsl_vector_set(popvec, index, min_nlte_pop);
-        }
         grid::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] =
             gsl_vector_get(popvec, index) / grid::get_rho(modelgridindex);
         // solution_ion_pop += gsl_vector_get(popvec, index);
