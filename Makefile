@@ -1,17 +1,6 @@
 # it's recommended that you add the following to your startup script:
 # export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
 .DEFAULT_GOAL := all
-$(shell echo "constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";" > version_tmp.h)
-# requires git > 2.22
-# @echo "constexpr const char* GIT_BRANCH = \"$(shell git branch --show)\";" >> version.h
-$(shell echo "constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";" >> version_tmp.h)
-$(shell echo "constexpr const char* GIT_STATUS = \"$(shell git status --short)\";" >> version_tmp.h)
-
-ifneq ($(shell cat version.h),$(shell cat version_tmp.h))
-  $(shell mv version_tmp.h version.h)
-else
-  $(shell rm version_tmp.h)
-endif
 
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
@@ -29,7 +18,7 @@ ifeq ($(MPI),ON)
 	CXX := mpicxx
 	CXXFLAGS += -DMPI_ON=true
 	BUILD_DIR := $(BUILD_DIR)_mpi
-$(info $(shell mpicxx --showme:version 2> /dev/null))
+$(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
 else ifeq ($(MPI),OFF)
 else
   $(error bad value for MPI option. Should be ON or OFF)
@@ -234,6 +223,21 @@ endif
 
 CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare
 
+define version_h
+constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";\n
+constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";\n
+constexpr const char* GIT_STATUS = \"$(shell git status --short)\";\n
+constexpr const char* COMPILER_VERSION = \"$(COMPILER_VERSION)\";
+endef
+
+$(shell echo "$(version_h)" > "$(BUILD_DIR)/version_tmp.h")
+$(shell test ! -f "$(BUILD_DIR)/version.h" || touch "$(BUILD_DIR)/version.h")
+
+ifneq ($(shell cat $(BUILD_DIR)/version.h),$(shell cat $(BUILD_DIR)/version_tmp.h))
+  $(info updating $(BUILD_DIR)/version.h)
+  $(shell echo "$(version_h)" > "$(BUILD_DIR)/version.h")
+endif
+
 
 ### use pg when you want to use gprof profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
@@ -255,7 +259,7 @@ $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 	mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h artisoptions.h Makefile
+$(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: $(BUILD_DIR)/version.h artisoptions.h Makefile
 
 check: $(sn3d_files)
 	run-clang-tidy $(sn3d_files)
@@ -267,7 +271,7 @@ $(BUILD_DIR)/sn3d: artisoptions.h Makefile $(sn3d_objects)
 sn3d: $(BUILD_DIR)/sn3d
 	ln -sf $(BUILD_DIR)/sn3d sn3d
 
-$(BUILD_DIR)/sn3dwhole: version.h artisoptions.h Makefile
+$(BUILD_DIR)/sn3dwhole: $(BUILD_DIR)/version.h artisoptions.h Makefile
 	ln -sf $(BUILD_DIR)/sn3dwhole sn3d
 	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
 
