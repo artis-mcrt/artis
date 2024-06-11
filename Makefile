@@ -227,17 +227,20 @@ define version_h
 constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";\n
 constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";\n
 constexpr const char* GIT_STATUS = \"$(shell git status --short)\";\n
-constexpr const char* COMPILER_VERSION = \"$(COMPILER_VERSION)\";
 endef
 
-$(shell echo "$(version_h)" > "$(BUILD_DIR)/version_tmp.h")
-$(shell test ! -f "$(BUILD_DIR)/version.h" || touch "$(BUILD_DIR)/version.h")
+$(shell echo -n "$(version_h)" > version_tmp.h)
+$(shell test -f version.h || touch version.h)
 
-ifneq ($(shell cat $(BUILD_DIR)/version.h),$(shell cat $(BUILD_DIR)/version_tmp.h))
-  $(info updating $(BUILD_DIR)/version.h)
-  $(shell echo "$(version_h)" > "$(BUILD_DIR)/version.h")
+ifneq ($(shell cat version.h),$(shell cat version_tmp.h))
+  $(info updating version.h)
+  $(shell mv version_tmp.h version.h)
+else
+  $(shell rm version_tmp.h)
 endif
 
+
+$(shell echo "$(COMPILER_VERSION)" > .compiler.txt)
 
 ### use pg when you want to use gprof profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
@@ -259,7 +262,7 @@ $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 	mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: $(BUILD_DIR)/version.h artisoptions.h Makefile
+$(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h artisoptions.h Makefile
 
 check: $(sn3d_files)
 	run-clang-tidy $(sn3d_files)
@@ -271,7 +274,7 @@ $(BUILD_DIR)/sn3d: artisoptions.h Makefile $(sn3d_objects)
 sn3d: $(BUILD_DIR)/sn3d
 	ln -sf $(BUILD_DIR)/sn3d sn3d
 
-$(BUILD_DIR)/sn3dwhole: $(BUILD_DIR)/version.h artisoptions.h Makefile
+$(BUILD_DIR)/sn3dwhole: version.h artisoptions.h Makefile
 	ln -sf $(BUILD_DIR)/sn3dwhole sn3d
 	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
 
