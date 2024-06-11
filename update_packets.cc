@@ -35,19 +35,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     // absorption happens
     pkt.type = TYPE_NTLEPTON;
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
-    double E_kin = 0.;
-    // loop over all non-empty cells
-    for (int n = 0; n < grid::ngrid; n++) {
-      const int mgi = grid::get_cell_modelgridindex(n);
-      double M_cell = grid::get_rho_tmin(mgi) * grid::get_gridcell_volume_tmin(n);
-      if (M_cell > 0) {
-        std::array<const double, 3> cell_pos{(grid::get_cellcoordmax(n, 0) + grid::get_cellcoordmin(n, 0)) / 2.,
-                                             (grid::get_cellcoordmax(n, 1) + grid::get_cellcoordmin(n, 1)) / 2.,
-                                             (grid::get_cellcoordmax(n, 2) + grid::get_cellcoordmin(n, 2)) / 2.};
-        const double v_cell = vec_len(get_velocity(cell_pos, pkt.prop_time));
-        E_kin += 1. / 2. * M_cell * v_cell * v_cell;
-      }
-    }
+    const double E_kin = grid::get_ejecta_kinetic_energy();
     const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
 
     const double prefactor = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 7.74 : 7.4;
