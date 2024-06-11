@@ -51,6 +51,21 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
       pkt.type = TYPE_ESCAPE;
       grid::change_cell(pkt, -99);
     }
+  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::WOLLAEGER) {
+    // particle thermalisation from Wollaeger+2018, similar to Barnes but using a slightly different expression
+    const double A = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 1.2 * 1.e-11 : 1.3 * 1.e-11;
+    const int mgi = grid::get_cell_modelgridindex(pkt.where);
+    const double aux_term = 1. + (2 * A)/(ts * grid::get_rho(mgi));
+    const double f_p = log(aux_term) / aux_term;
+    assert_always(f_p >= 0.);
+    assert_always(f_p <= 1.);
+    if (rng_uniform() < f_p) {
+      pkt.type = TYPE_NTLEPTON;
+    } else {
+      en_deposited = 0.;
+      pkt.type = TYPE_ESCAPE;
+      grid::change_cell(pkt, -99);
+    }
   } else {
     // local, detailed absorption following Shingles+2023
     const double rho = grid::get_rho(grid::get_cell_modelgridindex(pkt.where));
