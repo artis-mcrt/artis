@@ -229,7 +229,7 @@ constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/de
 constexpr const char* GIT_STATUS = \"$(shell git status --short)\";\n
 endef
 
-$(shell echo -n "$(version_h)" > version_tmp.h)
+$(shell echo "$(version_h)" > version_tmp.h)
 $(shell test -f version.h || touch version.h)
 
 ifneq ($(shell cat version.h),$(shell cat version_tmp.h))
@@ -239,8 +239,14 @@ else
   $(shell rm version_tmp.h)
 endif
 
-
-$(shell echo "$(COMPILER_VERSION)" > .compiler.txt)
+$(shell echo "$(COMPILER_VERSION)" > $(BUILD_DIR)/compiler_tmp.txt)
+$(shell test -f $(BUILD_DIR)/compiler.txt || touch $(BUILD_DIR)/compiler.txt)
+ifneq ($(shell cat $(BUILD_DIR)/compiler.txt),$(shell cat $(BUILD_DIR)/compiler_tmp.txt))
+  $(info detected compiler change)
+  $(shell mv $(BUILD_DIR)/compiler_tmp.txt $(BUILD_DIR)/compiler.txt)
+else
+  $(shell rm $(BUILD_DIR)/compiler_tmp.txt)
+endif
 
 ### use pg when you want to use gprof profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
@@ -258,29 +264,27 @@ exspec_dep = $(exspec_objects:%.o=%.d)
 
 all: sn3d exspec
 
-$(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
+$(BUILD_DIR)/%.o: %.cc Makefile $(BUILD_DIR)/compiler.txt
 	mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h artisoptions.h Makefile
 
 check: $(sn3d_files)
 	run-clang-tidy $(sn3d_files)
 
-$(BUILD_DIR)/sn3d: artisoptions.h Makefile $(sn3d_objects)
+$(BUILD_DIR)/sn3d: $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3d
 -include $(sn3d_dep)
 
 sn3d: $(BUILD_DIR)/sn3d
 	ln -sf $(BUILD_DIR)/sn3d sn3d
 
-$(BUILD_DIR)/sn3dwhole: version.h artisoptions.h Makefile
+$(BUILD_DIR)/sn3dwhole: $(sn3d_files) version.h artisoptions.h Makefile $(BUILD_DIR)/compiler.txt
 	ln -sf $(BUILD_DIR)/sn3dwhole sn3d
 	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
 
 sn3dwhole: $(BUILD_DIR)/sn3dwhole
 
-$(BUILD_DIR)/exspec: artisoptions.h Makefile $(exspec_objects)
+$(BUILD_DIR)/exspec: $(exspec_objects)
 	ln -sf $(BUILD_DIR)/exspec exspec
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o $(BUILD_DIR)/exspec
 -include $(exspec_dep)
