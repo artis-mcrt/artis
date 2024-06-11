@@ -32,9 +32,9 @@ sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 20;/g' artiso
 sed -i'' -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 1000.;/g' artisoptions.h
 sed -i'' -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 20000.;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr auto PARTICLE_THERMALISATION_SCHEME.*/constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;/g' artisoptions.h
+sed -i'' -e 's/constexpr auto PARTICLE_THERMALISATION_SCHEME.*/constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::BARNES;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr auto GAMMA_THERMALISATION_SCHEME.*/constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;/g' artisoptions.h
+sed -i'' -e 's/constexpr auto GAMMA_THERMALISATION_SCHEME.*/constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::BARNES;/g' artisoptions.h
 
 cd -
 
