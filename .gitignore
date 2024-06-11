@@ -1,12 +1,8 @@
 lib
 old
-version.h
-*.o
-*.exe
+version*.h
 sn3d
 exspec
-exgamma
-*.o-*
 tags
 browse.VC.db
 *.optrpt
@@ -14,10 +10,8 @@ sn3d.dSYM
 .tags*
 .tags_swap
 .vscode/c_cpp_properties.json
-build
 .DS_Store
 artisoptions.h
-*.d
 build
 compile_commands.json
 *.dSYM/
