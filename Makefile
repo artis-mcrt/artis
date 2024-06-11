@@ -239,6 +239,8 @@ else
   $(shell rm version_tmp.h)
 endif
 
+$(shell mkdir -p $(BUILD_DIR))
+
 $(shell echo "$(COMPILER_VERSION)" > $(BUILD_DIR)/compiler_tmp.txt)
 $(shell test -f $(BUILD_DIR)/compiler.txt || touch $(BUILD_DIR)/compiler.txt)
 ifneq ($(shell cat $(BUILD_DIR)/compiler.txt),$(shell cat $(BUILD_DIR)/compiler_tmp.txt))
