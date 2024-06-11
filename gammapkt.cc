@@ -975,7 +975,6 @@ void barnes_thermalisation(Packet &pkt)
 // Barnes thermalization efficiency, for expressions see the original paper:
 // https://ui.adsabs.harvard.edu/abs/2016ApJ...829..110B
 {
-  double tau = 0.;
   // compute thermalization efficiency (= absorption probability)
   // 0.1 is an average value to fit the analytic approximations from the paper.
   // Alternative: Distinguish between low-E (kappa = 1) or high-E (kappa = 0.05)
@@ -991,7 +990,7 @@ void barnes_thermalisation(Packet &pkt)
   const double t_ineff = 1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / v_ej);
   // get current time
   const double t = t_0 + pkt.prop_time;
-  tau = pow(t_ineff / t, 2.);
+  const double tau = pow(t_ineff / t, 2.);
   const double f_gamma = 1. - exp(-tau);
   assert_always(f_gamma >= 0.);
   assert_always(f_gamma <= 1.);
