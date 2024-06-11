@@ -82,6 +82,7 @@ void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
 [[nodiscard]] auto get_cellcoordmax(int cellindex, int axis) -> double;
 [[nodiscard]] auto get_cellcoordmin(int cellindex, int axis) -> double;
 [[nodiscard]] auto get_cellcoordpointnum(int cellindex, int axis) -> int;
+[[nodiscard]] auto get_cellradialposmid(int cellindex) -> double;
 [[nodiscard]] auto get_coordcellindexincrement(int axis) -> int;
 [[nodiscard]] auto get_rho_tmin(int modelgridindex) -> float;
 [[nodiscard]] auto get_rho(int modelgridindex) -> float;
@@ -154,6 +155,19 @@ inline void change_cell(Packet &pkt, const int snext)
 
     stats::increment(stats::COUNTER_CELLCROSSINGS);
   }
+}
+
+inline auto get_ejecta_kinetic_energy() {
+  double E_kin = 0.;
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+    const int assoc_cells = grid::get_numassociatedcells(mgi);
+    double M_cell = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
+    const double radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum / assoc_cells;
+    E_kin += 0.5 * M_cell * std::pow(radial_pos / globals::tmin, 2);
+  }
+
+  return E_kin;
 }
 
 }  // namespace grid

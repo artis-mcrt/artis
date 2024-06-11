@@ -969,35 +969,31 @@ void transport_gamma(Packet &pkt, double t2)
   }
 }
 
-void barnes_thermalization(Packet &pkt, bool local)
+void barnes_thermalisation(Packet &pkt)
 // Barnes treatment: packet is either getting absorbed immediately and locally
 // creating a k-packet or it escapes. The absorption probability matches the
 // Barnes thermalization efficiency, for expressions see the original paper:
 // https://ui.adsabs.harvard.edu/abs/2016ApJ...829..110B
 {
   // compute thermalization efficiency (= absorption probability)
-  constexpr double mean_gamma_opac = 0.1;
+  // 0.1 is an average value to fit the analytic approximations from the paper.
+  // Alternative: Distinguish between low-E (kappa = 1) or high-E (kappa = 0.05)
+  // packets.
+  // constexpr double mean_gamma_opac = 0.1;
 
-  // determine average initial density
-  double V_0 = 0.;
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    V_0 += grid::get_modelcell_assocvolume_tmin(mgi);
-  }
-  double rho_0 = 0.;
-  if (!local) {
-    rho_0 = grid::mtot_input / V_0;
-  } else {
-    rho_0 = grid::get_rho_tmin(grid::get_cell_modelgridindex(pkt.where));
-  }
+  // determine average initial density via kinetic energy
+  const double E_kin = grid::get_ejecta_kinetic_energy();
+  const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
+  const double t_0 = globals::tmin;
 
-  const double R_0 = pow(3 * V_0 / (4 * PI), 1 / 3.);
-  const double t_0 = grid::get_t_model();
-  const double tau_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
+  // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
+  const double t_ineff = 1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / v_ej);
   // get current time
   const double t = t_0 + pkt.prop_time;
-  const double tau = pow(tau_ineff / t, 2.);
+  const double tau = pow(t_ineff / t, 2.);
   const double f_gamma = 1. - exp(-tau);
+  assert_always(f_gamma >= 0.);
+  assert_always(f_gamma <= 1.);
 
   // either absorb packet or let it escape
   if (rng_uniform() < f_gamma) {
@@ -1014,10 +1010,8 @@ void barnes_thermalization(Packet &pkt, bool local)
 void do_gamma(Packet &pkt, double t2) {
   if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
-  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_GLOBAL) {
-    barnes_thermalization(pkt, false);
-  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES_LOCAL) {
-    barnes_thermalization(pkt, true);
+  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
+    barnes_thermalisation(pkt);
   } else {
     __builtin_unreachable();
   }

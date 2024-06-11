@@ -29,11 +29,30 @@ namespace {
 
 void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   double en_deposited = pkt.e_cmf;
+  const double ts = pkt.prop_time;
 
-  if constexpr (INSTANT_PARTICLE_DEPOSITION) {
+  if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
     // absorption happens
     pkt.type = TYPE_NTLEPTON;
+  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
+    const double E_kin = grid::get_ejecta_kinetic_energy();
+    const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
+
+    const double prefactor = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 7.74 : 7.4;
+    const double tau_ineff =
+        prefactor * 86400 * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * pow((0.2 * 29979200000) / v_ej, 3. / 2.);
+    const double f_p = log(1 + 2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
+    assert_always(f_p >= 0.);
+    assert_always(f_p <= 1.);
+    if (rng_uniform() < f_p) {
+      pkt.type = TYPE_NTLEPTON;
+    } else {
+      en_deposited = 0.;
+      pkt.type = TYPE_ESCAPE;
+      grid::change_cell(pkt, -99);
+    }
   } else {
+    // local, detailed absorption following Shingles+2023
     const double rho = grid::get_rho(grid::get_cell_modelgridindex(pkt.where));
 
     // endot is energy loss rate (positive) in [erg/s]
