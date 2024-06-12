@@ -130,8 +130,6 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = true;
 
 constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = false;
 
-constexpr bool INSTANT_PARTICLE_DEPOSITION = false;
-
 constexpr enum timestepsizemethods TIMESTEP_SIZE_METHOD = TIMESTEP_SIZES_LOGARITHMIC;
 
 constexpr double FIXED_TIMESTEP_WIDTH = -1.;
@@ -147,6 +145,8 @@ constexpr bool EXPANSIONOPACITIES_ON = false;
 constexpr float RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY = -1.;
 
 constexpr bool USE_XCOM_GAMMAPHOTOION = false;
+
+constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
 
 constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
 

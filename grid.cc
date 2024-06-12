@@ -626,7 +626,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
   modelgrid[mgi].composition[element].abundance = isofracsum + massfracstable;
 }
 
-static auto get_cellradialposmid(const int cellindex) -> double
+auto get_cellradialposmid(const int cellindex) -> double
 // get the radial distance from the origin to the centre of the cell at time tmin
 {
   if (GRID_TYPE == GRID_SPHERICAL1D) {

@@ -2,7 +2,7 @@ lib
 old
 version*.h
 *.o
-*.exe
+*.d
 sn3d
 exspec
 tags
