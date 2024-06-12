@@ -249,6 +249,8 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
                     globals::nbfcontinua_ground, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
         }
 
+        MPI_Barrier(MPI_COMM_WORLD);
+
         assert_always(globals::gammaestimator != nullptr);
         MPI_Bcast(globals::gammaestimator + (nonemptymgi * globals::nbfcontinua_ground), globals::nbfcontinua_ground,
                   MPI_DOUBLE, root, MPI_COMM_WORLD);
