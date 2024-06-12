@@ -587,12 +587,14 @@ void zero_estimators() {
   std::fill_n(globals::colheatingestimator, grid::get_nonempty_npts_model(), 0.);
   std::ranges::fill(globals::dep_estimator_gamma, 0.);
 
-  if (globals::nbfcontinua_ground > 0) {
-    if constexpr (USE_LUT_PHOTOION) {
+  if constexpr (USE_LUT_PHOTOION) {
+    if (globals::nbfcontinua_ground > 0) {
       std::fill_n(globals::gammaestimator, grid::get_nonempty_npts_model() * globals::nbfcontinua_ground, 0.);
     }
+  }
 
-    if constexpr (USE_LUT_BFHEATING) {
+  if constexpr (USE_LUT_BFHEATING) {
+    if (globals::nbfcontinua_ground > 0) {
       std::fill_n(globals::bfheatingestimator, grid::get_nonempty_npts_model() * globals::nbfcontinua_ground, 0.);
     }
   }
