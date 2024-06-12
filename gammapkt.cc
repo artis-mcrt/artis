@@ -1012,32 +1012,26 @@ void wollaeger_thermalisation(Packet &pkt) {
   // integration: requires distances within single cells in radial direction and the corresponding densities
   // need to create a packet copy which is moved during the integration
   struct Packet pkt_copy = pkt;
-  int mgi = grid::get_cell_modelgridindex(pkt_copy.where);
   double t_current = pkt.prop_time;
-  double t_future = t_current;
   double tau = 0.;
   bool end_packet = false;
   while (!end_packet) {
     // distance to the next cell
-    const auto [sdist, snext] =
-        grid::boundary_distance(vec_norm(pkt_copy.pos), pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where, &pkt_copy.last_cross);
-    const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
-    if (mgi == grid::get_npts_model()) {
-      pkt_copy.next_trans = -1;
-    } else {
-      tau += grid::get_rho(grid::get_cell_modelgridindex(pkt_copy.where)) * s_cont * mean_gamma_opac; // contribution to the integral
+    const int mgi = grid::get_cell_modelgridindex(pkt_copy.where);
+    const auto [sdist, snext] = grid::boundary_distance(vec_norm(pkt_copy.pos), pkt_copy.pos, pkt_copy.prop_time,
+                                                        pkt_copy.where, &pkt_copy.last_cross);
+    const double s_cont = sdist * t_current * t_current * t_current / std::pow(pkt_copy.prop_time, 3);
+    if (mgi != grid::get_npts_model()) {
+      tau += grid::get_rho(grid::get_cell_modelgridindex(pkt_copy.where)) * s_cont *
+             mean_gamma_opac;  // contribution to the integral
     }
     // move packet copy now
-    t_future += (sdist / CLIGHT_PROP);
     move_pkt_withtime(pkt_copy, sdist);
-    pkt_copy.prop_time = t_future;
 
     grid::change_cell(pkt_copy, snext);
     end_packet = (pkt_copy.type == TYPE_ESCAPE);
-
-    mgi = grid::get_cell_modelgridindex(pkt_copy.where);
   }
-  const double f_gamma = 1. - exp(-tau);
+  const double f_gamma = 1. - std::exp(-tau);
   assert_always(f_gamma >= 0.);
   assert_always(f_gamma <= 1.);
 
