@@ -241,7 +241,7 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
                   globals::mpi_comm_internode);
       }
 
-      if constexpr (USE_LUT_PHOTOION) {
+      if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
         const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         assert_always(globals::corrphotoionrenorm != nullptr);
         if (globals::rank_in_node == 0) {
