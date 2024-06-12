@@ -771,9 +771,15 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
       .bfestimbegin = 0,
   };
 
-  static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
-    .nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN, .modelgridindex = -1, .timestep = -1,
-    .phixslist = &phixslist
+  static thread_local Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
+      .nu = NAN,
+      .total = NAN,
+      .ffescat = NAN,
+      .ffheat = NAN,
+      .bf = NAN,
+      .modelgridindex = -1,
+      .timestep = -1,
+      .phixslist = &phixslist,
   };
 
   // Assign optical depth to next physical event
