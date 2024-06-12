@@ -1011,8 +1011,8 @@ void wollaeger_thermalisation(Packet &pkt) {
   constexpr double mean_gamma_opac = 0.1;
   // integration: requires distances within single cells in radial direction and the corresponding densities
   // need to create a packet copy which is moved during the integration
-  struct Packet pkt_copy = pkt;
-  double t_current = pkt.prop_time;
+  Packet pkt_copy = pkt;
+  const double t_current = pkt.prop_time;
   double tau = 0.;
   bool end_packet = false;
   while (!end_packet) {
@@ -1022,8 +1022,7 @@ void wollaeger_thermalisation(Packet &pkt) {
                                                         pkt_copy.where, &pkt_copy.last_cross);
     const double s_cont = sdist * t_current * t_current * t_current / std::pow(pkt_copy.prop_time, 3);
     if (mgi != grid::get_npts_model()) {
-      tau += grid::get_rho(grid::get_cell_modelgridindex(pkt_copy.where)) * s_cont *
-             mean_gamma_opac;  // contribution to the integral
+      tau += grid::get_rho(mgi) * s_cont * mean_gamma_opac;  // contribution to the integral
     }
     // move packet copy now
     move_pkt_withtime(pkt_copy, sdist);
