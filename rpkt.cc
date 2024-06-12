@@ -1287,7 +1287,7 @@ void calculate_expansion_opacities(const int modelgridindex) {
     expansionopacities[nonemptymgi * expopac_nbins + binindex] = bin_kappa_bb;
 
     if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
-      // static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
+      // thread_local Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
       // calculate_chi_rpkt_cont(nu_mid, chi_rpkt_cont, nullptr, modelgridindex);
       // const auto bin_kappa_cont = chi_rpkt_cont.total / rho;
       const auto bin_kappa_cont = calculate_chi_ffheating(modelgridindex, nu_mid) / rho;
