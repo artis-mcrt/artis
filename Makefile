@@ -281,10 +281,11 @@ sn3d: $(BUILD_DIR)/sn3d
 	ln -sf $(BUILD_DIR)/sn3d sn3d
 
 $(BUILD_DIR)/sn3dwhole: $(sn3d_files) version.h artisoptions.h Makefile $(BUILD_DIR)/compiler.txt
-	ln -sf $(BUILD_DIR)/sn3dwhole sn3d
 	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
+-include $(sn3d_dep)
 
 sn3dwhole: $(BUILD_DIR)/sn3dwhole
+	ln -sf $(BUILD_DIR)/sn3dwhole sn3d
 
 $(BUILD_DIR)/exspec: $(exspec_objects)
 	ln -sf $(BUILD_DIR)/exspec exspec
