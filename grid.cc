@@ -995,8 +995,8 @@ static void allocate_nonemptymodelcells() {
 
   auto ionestimsize = get_nonempty_npts_model() * globals::nbfcontinua_ground * sizeof(double);
 
+  if (USE_LUT_PHOTOION && ionestimsize > 0) {
 #ifdef MPI_ON
-  if constexpr (USE_LUT_PHOTOION) {
     auto my_rank_cells = get_nonempty_npts_model() / globals::node_nprocs;
     // rank_in_node 0 gets any remainder
     if (globals::rank_in_node == 0) {
@@ -1010,25 +1010,31 @@ static void allocate_nonemptymodelcells() {
                                           &globals::win_corrphotoionrenorm) == MPI_SUCCESS);
     assert_always(MPI_Win_shared_query(globals::win_corrphotoionrenorm, 0, &size, &disp_unit,
                                        &globals::corrphotoionrenorm) == MPI_SUCCESS);
-  }
 #else
-  if constexpr (USE_LUT_PHOTOION) {
     globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
-  }
 #endif
 
-  if constexpr (USE_LUT_BFHEATING) {
+    globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
+#ifdef DO_TITER
+    globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
+#endif
+  } else {
+    globals::corrphotoionrenorm = nullptr;
+    globals::gammaestimator = nullptr;
+#ifdef DO_TITER
+    globals::gammaestimator_save = nullptr;
+#endif
+  }
+
+  if (USE_LUT_BFHEATING && ionestimsize > 0) {
     globals::bfheatingestimator = static_cast<double *>(malloc(ionestimsize));
 #ifdef DO_TITER
     globals::bfheatingestimator_save = static_cast<double *>(malloc(ionestimsize));
 #endif
-  }
-
-  if constexpr (USE_LUT_PHOTOION) {
-    globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
-
+  } else {
+    globals::bfheatingestimator = nullptr;
 #ifdef DO_TITER
-    globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
+    globals::bfheatingestimator_save = nullptr;
 #endif
   }
 
