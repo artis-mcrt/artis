@@ -242,13 +242,15 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
                   globals::mpi_comm_internode);
       }
 
-      if constexpr (USE_LUT_PHOTOION) {
+      if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
         const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         assert_always(globals::corrphotoionrenorm != nullptr);
         if (globals::rank_in_node == 0) {
           MPI_Bcast(globals::corrphotoionrenorm + (nonemptymgi * globals::nbfcontinua_ground),
                     globals::nbfcontinua_ground, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
         }
+
+        MPI_Barrier(MPI_COMM_WORLD);
 
         assert_always(globals::gammaestimator != nullptr);
         MPI_Bcast(globals::gammaestimator + (nonemptymgi * globals::nbfcontinua_ground), globals::nbfcontinua_ground,
@@ -368,18 +370,20 @@ void mpi_reduce_estimators(int nts) {
   MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator, nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
 
-  if constexpr (USE_LUT_PHOTOION) {
-    MPI_Barrier(MPI_COMM_WORLD);
-    assert_always(globals::gammaestimator != nullptr);
-    MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, nonempty_npts_model * globals::nbfcontinua_ground, MPI_DOUBLE,
-                  MPI_SUM, MPI_COMM_WORLD);
-  }
+  if (globals::nbfcontinua_ground > 0) {
+    if constexpr (USE_LUT_PHOTOION) {
+      MPI_Barrier(MPI_COMM_WORLD);
+      assert_always(globals::gammaestimator != nullptr);
+      MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, nonempty_npts_model * globals::nbfcontinua_ground,
+                    MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
 
-  if constexpr (USE_LUT_BFHEATING) {
-    MPI_Barrier(MPI_COMM_WORLD);
-    assert_always(globals::bfheatingestimator != nullptr);
-    MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, nonempty_npts_model * globals::nbfcontinua_ground,
-                  MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    if constexpr (USE_LUT_BFHEATING) {
+      MPI_Barrier(MPI_COMM_WORLD);
+      assert_always(globals::bfheatingestimator != nullptr);
+      MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, nonempty_npts_model * globals::nbfcontinua_ground,
+                    MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
   }
 
   if constexpr (RECORD_LINESTAT) {
@@ -605,11 +609,15 @@ void zero_estimators() {
   std::ranges::fill(globals::dep_estimator_gamma, 0.);
 
   if constexpr (USE_LUT_PHOTOION) {
-    std::fill_n(globals::gammaestimator, grid::get_nonempty_npts_model() * globals::nbfcontinua_ground, 0.);
+    if (globals::nbfcontinua_ground > 0) {
+      std::fill_n(globals::gammaestimator, grid::get_nonempty_npts_model() * globals::nbfcontinua_ground, 0.);
+    }
   }
 
   if constexpr (USE_LUT_BFHEATING) {
-    std::fill_n(globals::bfheatingestimator, grid::get_nonempty_npts_model() * globals::nbfcontinua_ground, 0.);
+    if (globals::nbfcontinua_ground > 0) {
+      std::fill_n(globals::bfheatingestimator, grid::get_nonempty_npts_model() * globals::nbfcontinua_ground, 0.);
+    }
   }
 
 #ifdef MPI_ON

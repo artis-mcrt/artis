@@ -1,3 +1,5 @@
+# it's recommended that you add the following to your startup script:
+# export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
 .DEFAULT_GOAL := all
 
 # place in architecture folder, e.g. build/arm64
@@ -16,7 +18,7 @@ ifeq ($(MPI),ON)
 	CXX := mpicxx
 	CXXFLAGS += -DMPI_ON=true
 	BUILD_DIR := $(BUILD_DIR)_mpi
-$(info $(shell mpicxx --showme:version 2> /dev/null))
+$(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
 else ifeq ($(MPI),OFF)
 else
   $(error bad value for MPI option. Should be ON or OFF)
@@ -221,6 +223,32 @@ endif
 
 CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare
 
+define version_h
+constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";\n
+constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";\n
+constexpr const char* GIT_STATUS = \"$(shell git status --short)\";\n
+endef
+
+$(shell echo "$(version_h)" > version_tmp.h)
+$(shell test -f version.h || touch version.h)
+
+ifneq ($(shell cat version.h),$(shell cat version_tmp.h))
+  $(info updating version.h)
+  $(shell mv version_tmp.h version.h)
+else
+  $(shell rm version_tmp.h)
+endif
+
+$(shell mkdir -p $(BUILD_DIR))
+
+$(shell echo "$(COMPILER_VERSION)" > $(BUILD_DIR)/compiler_tmp.txt)
+$(shell test -f $(BUILD_DIR)/compiler.txt || touch $(BUILD_DIR)/compiler.txt)
+ifneq ($(shell cat $(BUILD_DIR)/compiler.txt),$(shell cat $(BUILD_DIR)/compiler_tmp.txt))
+  $(info detected compiler change)
+  $(shell mv $(BUILD_DIR)/compiler_tmp.txt $(BUILD_DIR)/compiler.txt)
+else
+  $(shell rm $(BUILD_DIR)/compiler_tmp.txt)
+endif
 
 ### use pg when you want to use gprof profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
@@ -238,34 +266,36 @@ exspec_dep = $(exspec_objects:%.o=%.d)
 
 all: sn3d exspec
 
-$(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
-	@mkdir -p $(@D)
+$(BUILD_DIR)/%.o: %.cc Makefile $(BUILD_DIR)/compiler.txt
+	mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h artisoptions.h Makefile
 
 check: $(sn3d_files)
 	run-clang-tidy $(sn3d_files)
 
-sn3d: artisoptions.h Makefile $(sn3d_objects)
-	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
+$(BUILD_DIR)/sn3d: $(sn3d_objects)
+	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3d
 -include $(sn3d_dep)
 
-sn3dwhole: version.h artisoptions.h Makefile
-	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o sn3d
+sn3d: $(BUILD_DIR)/sn3d
+	ln -sf $(BUILD_DIR)/sn3d sn3d
 
-exspec: artisoptions.h Makefile $(exspec_objects)
-	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
+$(BUILD_DIR)/sn3dwhole: $(sn3d_files) version.h artisoptions.h Makefile $(BUILD_DIR)/compiler.txt
+	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
+-include $(sn3d_dep)
+
+sn3dwhole: $(BUILD_DIR)/sn3dwhole
+	ln -sf $(BUILD_DIR)/sn3dwhole sn3d
+
+$(BUILD_DIR)/exspec: $(exspec_objects)
+	ln -sf $(BUILD_DIR)/exspec exspec
+	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o $(BUILD_DIR)/exspec
 -include $(exspec_dep)
 
-.PHONY: clean version.h TESTMODE TESTMODEON
+exspec: $(BUILD_DIR)/exspec
+	ln -sf $(BUILD_DIR)/exspec exspec
 
-version.h:
-	@echo "constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";" > version.h
-# requires git > 2.22
-# @echo "constexpr const char* GIT_BRANCH = \"$(shell git branch --show)\";" >> version.h
-	@echo "constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";" >> version.h
-	@echo "constexpr const char* GIT_STATUS = \"$(shell git status --short)\";" >> version.h
+.PHONY: clean sn3d sn3dwhole exspec
 
 clean:
 	rm -rf sn3d exspec build *.o *.d

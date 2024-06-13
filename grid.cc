@@ -626,7 +626,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
   modelgrid[mgi].composition[element].abundance = isofracsum + massfracstable;
 }
 
-static auto get_cellradialposmid(const int cellindex) -> double
+auto get_cellradialposmid(const int cellindex) -> double
 // get the radial distance from the origin to the centre of the cell at time tmin
 {
   if (GRID_TYPE == GRID_SPHERICAL1D) {
@@ -998,8 +998,8 @@ static void allocate_nonemptymodelcells() {
 
   auto ionestimsize = nonempty_npts_model * globals::nbfcontinua_ground * sizeof(double);
 
+  if (USE_LUT_PHOTOION && ionestimsize > 0) {
 #ifdef MPI_ON
-  if constexpr (USE_LUT_PHOTOION) {
     auto my_rank_cells = nonempty_npts_model / globals::node_nprocs;
     // rank_in_node 0 gets any remainder
     if (globals::rank_in_node == 0) {
@@ -1013,25 +1013,31 @@ static void allocate_nonemptymodelcells() {
                                           &globals::win_corrphotoionrenorm) == MPI_SUCCESS);
     assert_always(MPI_Win_shared_query(globals::win_corrphotoionrenorm, 0, &size, &disp_unit,
                                        &globals::corrphotoionrenorm) == MPI_SUCCESS);
-  }
 #else
-  if constexpr (USE_LUT_PHOTOION) {
     globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
-  }
 #endif
 
-  if constexpr (USE_LUT_BFHEATING) {
+    globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
+#ifdef DO_TITER
+    globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
+#endif
+  } else {
+    globals::corrphotoionrenorm = nullptr;
+    globals::gammaestimator = nullptr;
+#ifdef DO_TITER
+    globals::gammaestimator_save = nullptr;
+#endif
+  }
+
+  if (USE_LUT_BFHEATING && ionestimsize > 0) {
     globals::bfheatingestimator = static_cast<double *>(malloc(ionestimsize));
 #ifdef DO_TITER
     globals::bfheatingestimator_save = static_cast<double *>(malloc(ionestimsize));
 #endif
-  }
-
-  if constexpr (USE_LUT_PHOTOION) {
-    globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
-
+  } else {
+    globals::bfheatingestimator = nullptr;
 #ifdef DO_TITER
-    globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
+    globals::bfheatingestimator_save = nullptr;
 #endif
   }
 
