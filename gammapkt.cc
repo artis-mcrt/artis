@@ -980,7 +980,7 @@ void barnes_thermalisation(Packet &pkt)
   // either absorb packet or let it escape
   if (rng_uniform() < f_gamma) {
     // packet is absorbed and contributes to the heating as a k-packet
-    pkt.type = TYPE_NTLEPTON;
+    pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = -4;
   } else {
     // let packet escape, i.e. make it inactive

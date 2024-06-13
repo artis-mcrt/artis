@@ -2051,6 +2051,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   const double tmid = globals::timesteps[timestep].mid;
   const double rho = grid::get_rho(modelgridindex);
 
+  constexpr bool INSTANT_PARTICLE_DEPOSITION = (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT);
   // if INSTANT_PARTICLE_DEPOSITION, use the analytic rate at t_mid since it will have no Monte Carlo noise (although
   // strictly, it should be an integral from the timestep start to the end)
   // with time-dependent deposition, we don't have an analytic rate, so we use the Monte Carlo rate
