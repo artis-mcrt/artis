@@ -18,6 +18,10 @@ struct HeatingCoolingRates {
   double dep_positron{0};
   double dep_electron{0};
   double dep_alpha{0};
+  double eps_gamma{0};
+  double eps_positron{0};
+  double eps_electron{0};
+  double eps_alpha{0};
 };
 
 void call_T_e_finder(int modelgridindex, int timestep, double t_current, double T_min, double T_max,

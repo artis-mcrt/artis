@@ -2051,25 +2051,29 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   const double tmid = globals::timesteps[timestep].mid;
   const double rho = grid::get_rho(modelgridindex);
 
-  constexpr bool INSTANT_PARTICLE_DEPOSITION = (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT);
   // if INSTANT_PARTICLE_DEPOSITION, use the analytic rate at t_mid since it will have no Monte Carlo noise (although
   // strictly, it should be an integral from the timestep start to the end)
   // with time-dependent deposition, we don't have an analytic rate, so we use the Monte Carlo rate
   assert_always(heatingcoolingrates != nullptr);
-  heatingcoolingrates->dep_positron =
-      INSTANT_PARTICLE_DEPOSITION
-          ? (rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAPLUS))
-          : globals::dep_estimator_positron[nonemptymgi];
 
-  heatingcoolingrates->dep_electron =
-      INSTANT_PARTICLE_DEPOSITION
-          ? (rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAMINUS))
-          : globals::dep_estimator_electron[nonemptymgi];
+  heatingcoolingrates->eps_positron =
+      rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAPLUS);
 
-  heatingcoolingrates->dep_alpha =
-      INSTANT_PARTICLE_DEPOSITION
-          ? (rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_ALPHA))
-          : globals::dep_estimator_alpha[nonemptymgi];
+  heatingcoolingrates->eps_electron =
+      (rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAMINUS));
+
+  heatingcoolingrates->eps_alpha =
+      rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_ALPHA);
+
+  if (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
+    heatingcoolingrates->dep_positron = heatingcoolingrates->eps_positron;
+    heatingcoolingrates->dep_electron = heatingcoolingrates->eps_electron;
+    heatingcoolingrates->dep_alpha = heatingcoolingrates->eps_alpha;
+  } else {
+    heatingcoolingrates->dep_positron = globals::dep_estimator_positron[nonemptymgi];
+    heatingcoolingrates->dep_electron = globals::dep_estimator_electron[nonemptymgi];
+    heatingcoolingrates->dep_alpha = globals::dep_estimator_alpha[nonemptymgi];
+  }
 
   deposition_rate_density[modelgridindex] = (heatingcoolingrates->dep_gamma + heatingcoolingrates->dep_positron +
                                              heatingcoolingrates->dep_electron + heatingcoolingrates->dep_alpha);
