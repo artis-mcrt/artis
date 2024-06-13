@@ -1,7 +1,5 @@
 #include "input.h"
 
-#include <cstdint>
-
 #ifdef MPI_ON
 #include <mpi.h>
 #endif
