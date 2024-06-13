@@ -1021,6 +1021,7 @@ void wollaeger_thermalisation(Packet &pkt) {
     // packet is absorbed and contributes to the heating as a k-packet
     pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = -4;
+
   } else {
     // let packet escape, i.e. make it inactive
     pkt.type = TYPE_ESCAPE;
@@ -1041,6 +1042,13 @@ void do_gamma(Packet &pkt, const int nts, double t2) {
 
   if (pkt.type != TYPE_GAMMA && pkt.type != TYPE_ESCAPE) {
     atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
+
+    if constexpr (GAMMA_THERMALISATION_SCHEME != ThermalisationScheme::DETAILED) {
+      // no transport, so the path-based gamma deposition estimator won't get updated unless we do it here
+      const int mgi = grid::get_cell_modelgridindex(pkt.where);
+      const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+      atomicadd(globals::dep_estimator_gamma[nonemptymgi], pkt.e_cmf);
+    }
   }
 }
 
