@@ -9,9 +9,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cinttypes>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -1696,14 +1696,14 @@ void read_parameterfile(int rank)
   std::istringstream(line) >> pre_zseed;
 
   if (pre_zseed > 0) {
-    printout("using input.txt specified random number seed of %lld\n", pre_zseed);
+    printout("using input.txt specified random number seed of %" PRId64 "\n", pre_zseed);
   } else {
     pre_zseed = std::random_device{}();
 #ifdef MPI_ON
     // broadcast randomly-generated seed from rank 0 to all ranks
     MPI_Bcast(&pre_zseed, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
 #endif
-    printout("randomly-generated random number seed is %lld\n", pre_zseed);
+    printout("randomly-generated random number seed is %" PRId64 "\n", pre_zseed);
   }
 
 #if defined(_OPENMP) && !defined(GPU_ON)
