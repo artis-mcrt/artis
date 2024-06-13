@@ -2056,19 +2056,19 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   // with time-dependent deposition, we don't have an analytic rate, so we use the Monte Carlo rate
   assert_always(heatingcoolingrates != nullptr);
 
-  heatingcoolingrates->eps_positron =
+  heatingcoolingrates->eps_positron_ana =
       rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAPLUS);
 
-  heatingcoolingrates->eps_electron =
+  heatingcoolingrates->eps_electron_ana =
       (rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAMINUS));
 
-  heatingcoolingrates->eps_alpha =
+  heatingcoolingrates->eps_alpha_ana =
       rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_ALPHA);
 
   if (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
-    heatingcoolingrates->dep_positron = heatingcoolingrates->eps_positron;
-    heatingcoolingrates->dep_electron = heatingcoolingrates->eps_electron;
-    heatingcoolingrates->dep_alpha = heatingcoolingrates->eps_alpha;
+    heatingcoolingrates->dep_positron = heatingcoolingrates->eps_positron_ana;
+    heatingcoolingrates->dep_electron = heatingcoolingrates->eps_electron_ana;
+    heatingcoolingrates->dep_alpha = heatingcoolingrates->eps_alpha_ana;
   } else {
     heatingcoolingrates->dep_positron = globals::dep_estimator_positron[nonemptymgi];
     heatingcoolingrates->dep_electron = globals::dep_estimator_electron[nonemptymgi];
