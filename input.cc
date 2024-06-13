@@ -1716,7 +1716,7 @@ void read_parameterfile(int rank)
     const auto tid = get_thread_num();
     auto rngseed = pre_zseed + static_cast<std::int64_t>(13 * (rank * get_max_threads() + tid));
     stdrng.seed(rngseed);
-    printout("rank %d: thread %d has rngseed %lld\n", rank, tid, rngseed);
+    printout("rank %d: thread %d has rngseed %" PRId64 "\n", rank, tid, rngseed);
     printout("rng is a std::mt19937 generator\n");
 
     // call it a few times
