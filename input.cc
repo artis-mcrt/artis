@@ -1,5 +1,7 @@
 #include "input.h"
 
+#include <cstdint>
+
 #ifdef MPI_ON
 #include <mpi.h>
 #endif
@@ -11,6 +13,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -1691,7 +1694,7 @@ void read_parameterfile(int rank)
 
   assert_always(get_noncommentline(file, line));
 
-  long long int pre_zseed = -1;
+  std::int64_t pre_zseed = -1;
   std::istringstream(line) >> pre_zseed;
 
   if (pre_zseed > 0) {
@@ -1713,7 +1716,7 @@ void read_parameterfile(int rank)
     /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
     /// to the thread-ID tid.
     const auto tid = get_thread_num();
-    auto rngseed = pre_zseed + static_cast<long long int>(13 * (rank * get_max_threads() + tid));
+    auto rngseed = pre_zseed + static_cast<std::int64_t>(13 * (rank * get_max_threads() + tid));
     stdrng.seed(rngseed);
     printout("rank %d: thread %d has rngseed %lld\n", rank, tid, rngseed);
     printout("rng is a std::mt19937 generator\n");
