@@ -666,13 +666,13 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
 
   printout("Writing %s\n", lc_filename.c_str());
 
-  constexpr int maxlen = 1024;
-  char linebuffer[maxlen];
+  char linebuffer[1024];
 
   /// Print out the UVOIR bolometric light curve.
   for (int nts = 0; nts < numtimesteps; nts++) {
     assert_always(snprintf(linebuffer, sizeof(linebuffer), "%g %g %g", globals::timesteps[nts].mid / DAY,
-                           (light_curve_lum[nts] / LSUN), (light_curve_lumcmf[nts] / LSUN)) < maxlen);
+                           (light_curve_lum[nts] / LSUN),
+                           (light_curve_lumcmf[nts] / LSUN)) < static_cast<int>(sizeof(linebuffer)));
     lc_file << linebuffer << '\n';
   }
 
@@ -681,7 +681,8 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
     for (int m = 0; m < numtimesteps; m++) {
       assert_always(snprintf(linebuffer, sizeof(linebuffer), "%g %g %g", globals::timesteps[m].mid / DAY,
                              (globals::timesteps[m].gamma_dep / LSUN / globals::timesteps[m].width),
-                             (globals::timesteps[m].cmf_lum / globals::timesteps[m].width / LSUN)) < maxlen);
+                             (globals::timesteps[m].cmf_lum / globals::timesteps[m].width / LSUN)) <
+                    static_cast<int>(sizeof(linebuffer)));
       lc_file << linebuffer << '\n';
     }
   }

@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cinttypes>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
@@ -1691,18 +1692,18 @@ void read_parameterfile(int rank)
 
   assert_always(get_noncommentline(file, line));
 
-  long long int pre_zseed = -1;
+  std::int64_t pre_zseed = -1;
   std::istringstream(line) >> pre_zseed;
 
   if (pre_zseed > 0) {
-    printout("using input.txt specified random number seed of %lld\n", pre_zseed);
+    printout("using input.txt specified random number seed of %" PRId64 "\n", pre_zseed);
   } else {
     pre_zseed = std::random_device{}();
 #ifdef MPI_ON
     // broadcast randomly-generated seed from rank 0 to all ranks
     MPI_Bcast(&pre_zseed, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
 #endif
-    printout("randomly-generated random number seed is %lld\n", pre_zseed);
+    printout("randomly-generated random number seed is %" PRId64 "\n", pre_zseed);
   }
 
 #if defined(_OPENMP) && !defined(GPU_ON)
@@ -1713,9 +1714,9 @@ void read_parameterfile(int rank)
     /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
     /// to the thread-ID tid.
     const auto tid = get_thread_num();
-    auto rngseed = pre_zseed + static_cast<long long int>(13 * (rank * get_max_threads() + tid));
+    auto rngseed = pre_zseed + static_cast<std::int64_t>(13 * (rank * get_max_threads() + tid));
     stdrng.seed(rngseed);
-    printout("rank %d: thread %d has rngseed %lld\n", rank, tid, rngseed);
+    printout("rank %d: thread %d has rngseed %" PRId64 "\n", rank, tid, rngseed);
     printout("rng is a std::mt19937 generator\n");
 
     // call it a few times
