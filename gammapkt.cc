@@ -426,8 +426,8 @@ static auto thomson_angle() -> double {
   return mu;
 }
 
-[[nodiscard]] static auto scatter_dir(const std::array<double, 3> dir_in, const double cos_theta)
-    -> std::array<double, 3>
+[[nodiscard]] static auto scatter_dir(const std::array<double, 3> dir_in,
+                                      const double cos_theta) -> std::array<double, 3>
 // Routine for scattering a direction through angle theta.
 {
   // begin with setting the direction in coordinates where original direction
