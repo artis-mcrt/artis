@@ -1095,7 +1095,7 @@ void guttman_thermalisation(Packet &pkt) {
     }
   }
   const double avg_column_density =
-      std::accumulate(column_densities.cbegin(), column_densities.cend()) / std::ssize(column_densities);
+      std::accumulate(column_densities.cbegin(), column_densities.cend(), 0.) / std::ssize(column_densities);
   const double t_gamma = sqrt(mean_gamma_opac * avg_column_density * t_0 * t_0);
 
   // compute the (discretized) integral
