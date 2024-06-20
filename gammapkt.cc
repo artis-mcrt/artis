@@ -1065,7 +1065,6 @@ void guttman_thermalisation(Packet &pkt) {
   const int numb_rnd_dirs = 100;
   // calculate all column densities and their average
   auto column_densities = std::array<double, numb_rnd_dirs>{};
-  double avg_column_density = 0.;
   for (int i = 0; i < numb_rnd_dirs; i++) {
     // compute column density by moving an artificial packet outwards and integrating over local density
     // WARNING: This simple implementation relies on a relatively large number of random directions
