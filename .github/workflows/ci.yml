@@ -77,7 +77,7 @@ jobs:
               uses: actions/cache@v4
               with:
                   path: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
-                  key: tests/${{ matrix.testname }}_testrun/ratecoeff.dat-${{ github.sha }}
+                  key: tests/${{ matrix.testname }}_testrun/ratecoeff.dat-${{ github.run_id }}
                   restore-keys: |
                       tests/${{ matrix.testname }}_testrun/ratecoeff.dat-
 
