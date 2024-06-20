@@ -1064,7 +1064,7 @@ void guttman_thermalisation(Packet &pkt) {
   // discretize the two sphere into octants, i.e. four values in phi and two in theta
   const int numb_rnd_dirs = 100;
   // calculate all column densities and their average
-  double column_densities[numb_rnd_dirs] = {};
+  auto column_densities = std::array<double, numb_rnd_dirs>{};
   double avg_column_density = 0.;
   for (int i = 0; i < numb_rnd_dirs; i++) {
     // compute column density by moving an artificial packet outwards and integrating over local density
@@ -1094,9 +1094,8 @@ void guttman_thermalisation(Packet &pkt) {
       grid::change_cell(pkt_copy, snext);
       end_packet = (pkt_copy.type == TYPE_ESCAPE);
     }
-    avg_column_density += column_densities[i];
   }
-  avg_column_density /= numb_rnd_dirs;  // calculate average here
+  const double avg_column_density = std::accumulate(column_densities.cbegin(), column_densities.cend()) / std::ssize(column_densities);
   const double t_gamma = sqrt(mean_gamma_opac * avg_column_density * t_0 * t_0);
 
   // compute the (discretized) integral
