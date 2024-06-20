@@ -223,10 +223,22 @@ endif
 
 CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare
 
+# sn3d.cc and exspec.cc have main() defined
+common_files := $(filter-out sn3d.cc exspec.cc, $(wildcard *.cc))
+
+sn3d_files = $(common_files) sn3d.cc
+sn3d_objects = $(addprefix $(BUILD_DIR)/,$(sn3d_files:.cc=.o))
+sn3d_dep = $(sn3d_objects:%.o=%.d)
+
+exspec_files = $(common_files) exspec.cc
+exspec_objects = $(addprefix $(BUILD_DIR)/,$(exspec_files:.cc=.o))
+exspec_dep = $(exspec_objects:%.o=%.d)
+
+.ONESHELL:
 define version_h
-constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";\n
-constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";\n
-constexpr const char* GIT_STATUS = \"$(shell git status --short)\";\n
+constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";
+constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";
+constexpr const char* GIT_STATUS = \"$(shell git status --short)\";
 endef
 
 $(shell echo "$(version_h)" > version_tmp.h)
@@ -249,20 +261,6 @@ ifneq ($(shell cat $(BUILD_DIR)/compiler.txt),$(shell cat $(BUILD_DIR)/compiler_
 else
   $(shell rm $(BUILD_DIR)/compiler_tmp.txt)
 endif
-
-### use pg when you want to use gprof profiler
-#CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
-
-# sn3d.cc and exspec.cc have main() defined
-common_files := $(filter-out sn3d.cc exspec.cc, $(wildcard *.cc))
-
-sn3d_files = $(common_files) sn3d.cc
-sn3d_objects = $(addprefix $(BUILD_DIR)/,$(sn3d_files:.cc=.o))
-sn3d_dep = $(sn3d_objects:%.o=%.d)
-
-exspec_files = $(common_files) exspec.cc
-exspec_objects = $(addprefix $(BUILD_DIR)/,$(exspec_files:.cc=.o))
-exspec_dep = $(exspec_objects:%.o=%.d)
 
 all: sn3d exspec
 
