@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <numeric>
 #include <span>
 #include <string>
 #include <vector>
@@ -426,8 +427,8 @@ static auto thomson_angle() -> double {
   return mu;
 }
 
-[[nodiscard]] static auto scatter_dir(const std::array<double, 3> dir_in,
-                                      const double cos_theta) -> std::array<double, 3>
+[[nodiscard]] static auto scatter_dir(const std::array<double, 3> dir_in, const double cos_theta)
+    -> std::array<double, 3>
 // Routine for scattering a direction through angle theta.
 {
   // begin with setting the direction in coordinates where original direction
@@ -1062,8 +1063,7 @@ void guttman_thermalisation(Packet &pkt) {
 
   // calculate average optical w.r.t. to emission direction
   // discretize the two sphere into octants, i.e. four values in phi and two in theta
-  const int numb_rnd_dirs = 100;
-  // calculate all column densities and their average
+  constexpr int numb_rnd_dirs = 100;
   auto column_densities = std::array<double, numb_rnd_dirs>{};
   for (int i = 0; i < numb_rnd_dirs; i++) {
     // compute column density by moving an artificial packet outwards and integrating over local density
@@ -1094,7 +1094,8 @@ void guttman_thermalisation(Packet &pkt) {
       end_packet = (pkt_copy.type == TYPE_ESCAPE);
     }
   }
-  const double avg_column_density = std::accumulate(column_densities.cbegin(), column_densities.cend()) / std::ssize(column_densities);
+  const double avg_column_density =
+      std::accumulate(column_densities.cbegin(), column_densities.cend()) / std::ssize(column_densities);
   const double t_gamma = sqrt(mean_gamma_opac * avg_column_density * t_0 * t_0);
 
   // compute the (discretized) integral
