@@ -5,6 +5,7 @@
 #endif
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <ctime>
 #include <iterator>
@@ -39,12 +40,12 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     pkt.type = TYPE_NTLEPTON_DEPOSITED;
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
     const double E_kin = grid::get_ejecta_kinetic_energy();
-    const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
+    const double v_ej = std::sqrt(E_kin * 2 / grid::mtot_input);
 
     const double prefactor = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 7.74 : 7.4;
-    const double tau_ineff =
-        prefactor * 86400 * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * pow((0.2 * 29979200000) / v_ej, 3. / 2.);
-    const double f_p = log(1 + 2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
+    const double tau_ineff = prefactor * 86400 * std::sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) *
+                             std::pow((0.2 * 29979200000) / v_ej, 3. / 2.);
+    const double f_p = std::log(1 + 2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
     if (rng_uniform() < f_p) {
@@ -58,8 +59,10 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     // particle thermalisation from Wollaeger+2018, similar to Barnes but using a slightly different expression
     const double A = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 1.2 * 1.e-11 : 1.3 * 1.e-11;
     const int mgi = grid::get_cell_modelgridindex(pkt.where);
-    const double aux_term = 1. + (2 * A) / (ts * grid::get_rho(mgi));
-    const double f_p = log(aux_term) / aux_term;
+    const double aux_term = 2 * A / (ts * grid::get_rho(mgi));
+    // In Bulla 2023 (arXiv:2211.14348), the following line contains (<-> eq. 7) contains a typo. The way implemented
+    // here is the original from Wollaeger paper without the typo
+    const double f_p = std::log(1. + aux_term) / aux_term;
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
     if (rng_uniform() < f_p) {
