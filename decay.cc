@@ -158,6 +158,12 @@ auto get_nuc_a(int nucindex) -> int {
   return nuclides[nucindex].a;
 }
 
+auto get_nuc_z_a(int nucindex) -> std::pair<int, int> {
+  assert_testmodeonly(nucindex >= 0);
+  assert_testmodeonly(nucindex < get_num_nuclides());
+  return {nuclides[nucindex].z, nuclides[nucindex].a};
+}
+
 static auto get_nucindex_or_neg_one(int z, int a) -> int
 // get the nuclide array index from the atomic number and mass number
 {
@@ -445,8 +451,7 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
                             std::vector<Nuclide> &standard_nuclides) {
   decaypaths.clear();
   for (int startnucindex = 0; startnucindex < get_num_nuclides(); startnucindex++) {
-    const int z = get_nuc_z(startnucindex);
-    const int a = get_nuc_a(startnucindex);
+    const auto [z, a] = get_nuc_z_a(startnucindex);
 
     for (const auto decaytype : all_decaytypes) {
       if (get_nuc_decaybranchprob(startnucindex, decaytype) == 0. || get_meanlife(startnucindex) <= 0.) {
@@ -1143,8 +1148,8 @@ auto get_particle_injection_rate(const int modelgridindex, const double t, const
   double dep_sum = 0.;
   const auto num_nuclides = get_num_nuclides();
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
-    const int z = get_nuc_z(nucindex);
-    const int a = get_nuc_a(nucindex);
+    const auto [z, a] = get_nuc_z_a(nucindex);
+
     const double meanlife = get_meanlife(nucindex);
     if (meanlife < 0.) {
       continue;
@@ -1169,8 +1174,7 @@ auto get_qdot_modelcell(const int modelgridindex, const double t, const int deca
   double qdot = 0.;
   const auto num_nuclides = get_num_nuclides();
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
-    const int z = get_nuc_z(nucindex);
-    const int a = get_nuc_a(nucindex);
+    const auto [z, a] = get_nuc_z_a(nucindex);
     const double meanlife = get_meanlife(nucindex);
     if (meanlife < 0.) {
       continue;
@@ -1216,8 +1220,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
     double isomassfrac_on_nucmass_sum = 0.;
     const auto num_nuclides = get_num_nuclides();
     for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
-      const int nuc_z = get_nuc_z(nucindex);
-      const int a = get_nuc_a(nucindex);
+      const auto [nuc_z, a] = get_nuc_z_a(nucindex);
       if (nuc_z == atomic_number) {
         // this nucleus is an isotope of the element
         if (!a_isotopes.contains(a)) {
@@ -1280,8 +1283,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   // double nucfracsum = 0.;
   // for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   // {
-  //   const int z = get_nuc_z(nucindex);
-  //   const int a = get_nuc_a(nucindex);
+  //   const auto [z, a] = get_nuc_z_a(nucindex);
   //   initnucfracsum += grid::get_modelinitradioabund(modelgridindex, z, a);
   //   nucfracsum += get_nuc_massfrac(modelgridindex, z, a, t_current);
   //
@@ -1317,8 +1319,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
   std::set<int> a_isotopes;  // ensure we don't repeat isotopes
   const auto num_nuclides = get_num_nuclides();
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
-    const int nuc_z = get_nuc_z(nucindex);
-    const int nuc_a = get_nuc_a(nucindex);
+    const auto [nuc_z, nuc_a] = get_nuc_z_a(nucindex);
     if (nuc_z == atomic_number) {  // isotope of this element is on the network
       if (!a_isotopes.contains(nuc_a)) {
         a_isotopes.insert(nuc_a);
