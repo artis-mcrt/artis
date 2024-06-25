@@ -2056,6 +2056,8 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   // with time-dependent deposition, we don't have an analytic rate, so we use the Monte Carlo rate
   assert_always(heatingcoolingrates != nullptr);
 
+  heatingcoolingrates->eps_gamma_ana = rho * decay::get_gamma_emission_rate(modelgridindex, tmid);
+
   heatingcoolingrates->eps_positron_ana =
       rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAPLUS);
 

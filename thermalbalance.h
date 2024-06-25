@@ -18,6 +18,8 @@ struct HeatingCoolingRates {
   double dep_positron{0};
   double dep_electron{0};
   double dep_alpha{0};
+  // analytic rates at the middle of the timestep (t_mid)
+  double eps_gamma_ana{0};
   double eps_positron_ana{0};
   double eps_electron_ana{0};
   double eps_alpha_ana{0};
