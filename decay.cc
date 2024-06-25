@@ -457,7 +457,8 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
                             std::vector<Nuclide> &standard_nuclides) {
   decaypaths.clear();
   for (int startnucindex = 0; startnucindex < get_num_nuclides(); startnucindex++) {
-    const auto [z, a] = get_nuc_z_a(startnucindex);
+    const int z = get_nuc_z(startnucindex);
+    const int a = get_nuc_a(startnucindex);
 
     for (const auto decaytype : all_decaytypes) {
       if (get_nuc_decaybranchprob(startnucindex, decaytype) == 0. || get_meanlife(startnucindex) <= 0.) {
