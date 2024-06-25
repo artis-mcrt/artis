@@ -902,8 +902,6 @@ static auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex,
   const int z_top = decaypaths[decaypathindex].z[0];
   const int a_top = decaypaths[decaypathindex].a[0];
   const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
-  // if it's a single-nuclide decay chain, then contribute the initial abundance, otherwise contribute
-  // all ancestors
 
   const double top_initabund = grid::get_modelinitradioabund(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
   if (top_initabund <= 0.) {
@@ -920,13 +918,6 @@ static auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex,
   const double abund_endplusone =
       calculate_decaychain(top_initabund, decaypaths[decaypathindex].lambdas, decaypathlength + 1, t_afterinit, false);
   const double ndecays_remaining = decaypaths[decaypathindex].branchproduct * (top_initabund - abund_endplusone);
-
-  // // alternative: add up the ancestor abundances that will eventually cause decays at the end of chain
-  // double ndecays_remaining = 0.;
-  // for (int c = 1; c <= decaypathlength; c++)
-  // {
-  //   ndecays_remaining += calculate_decaychain(top_initabund, decaypaths[decaypathindex].lambdas, c, t_afterinit);
-  // }
 
   const double endecay = ndecays_remaining * get_decaypath_lastnucdecayenergy(decaypathindex);
 
