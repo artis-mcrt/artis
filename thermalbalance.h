@@ -5,15 +5,24 @@
 #include <vector>
 
 struct HeatingCoolingRates {
-  double cooling_collisional;
-  double cooling_fb;
-  double cooling_ff;
-  double cooling_adiabatic;
-  double heating_collisional;
-  double heating_bf;
-  double heating_ff;
-  double heating_dep;
-  double nt_frac_heating;
+  double cooling_collisional{0};
+  double cooling_fb{0};
+  double cooling_ff{0};
+  double cooling_adiabatic{0};
+  double heating_collisional{0};
+  double heating_bf{0};
+  double heating_ff{0};
+  double heating_dep{0};
+  double nt_frac_heating{0};
+  double dep_gamma{0};
+  double dep_positron{0};
+  double dep_electron{0};
+  double dep_alpha{0};
+  // analytic rates at the middle of the timestep (t_mid)
+  double eps_gamma_ana{0};
+  double eps_positron_ana{0};
+  double eps_electron_ana{0};
+  double eps_alpha_ana{0};
 };
 
 void call_T_e_finder(int modelgridindex, int timestep, double t_current, double T_min, double T_max,

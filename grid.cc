@@ -991,16 +991,19 @@ static void allocate_nonemptymodelcells() {
     allocate_expansionopacities();
   }
 
-  globals::dep_estimator_gamma.resize(get_nonempty_npts_model(), 0.);
+  globals::dep_estimator_gamma.resize(nonempty_npts_model, 0.);
+  globals::dep_estimator_positron.resize(nonempty_npts_model, 0.);
+  globals::dep_estimator_electron.resize(nonempty_npts_model, 0.);
+  globals::dep_estimator_alpha.resize(nonempty_npts_model, 0.);
 
-  auto ionestimsize = get_nonempty_npts_model() * globals::nbfcontinua_ground * sizeof(double);
+  auto ionestimsize = nonempty_npts_model * globals::nbfcontinua_ground * sizeof(double);
 
   if (USE_LUT_PHOTOION && ionestimsize > 0) {
 #ifdef MPI_ON
-    auto my_rank_cells = get_nonempty_npts_model() / globals::node_nprocs;
+    auto my_rank_cells = nonempty_npts_model / globals::node_nprocs;
     // rank_in_node 0 gets any remainder
     if (globals::rank_in_node == 0) {
-      my_rank_cells += get_nonempty_npts_model() - (my_rank_cells * globals::node_nprocs);
+      my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
     }
 
     auto size = static_cast<MPI_Aint>(my_rank_cells * globals::nbfcontinua_ground * sizeof(double));
@@ -1038,11 +1041,11 @@ static void allocate_nonemptymodelcells() {
 #endif
   }
 
-  globals::ffheatingestimator = static_cast<double *>(malloc(get_nonempty_npts_model() * sizeof(double)));
-  globals::colheatingestimator = static_cast<double *>(malloc(get_nonempty_npts_model() * sizeof(double)));
+  globals::ffheatingestimator = static_cast<double *>(malloc(nonempty_npts_model * sizeof(double)));
+  globals::colheatingestimator = static_cast<double *>(malloc(nonempty_npts_model * sizeof(double)));
 #ifdef DO_TITER
-  globals::ffheatingestimator_save = static_cast<double *>(malloc(get_nonempty_npts_model() * sizeof(double)));
-  globals::colheatingestimator_save = static_cast<double *>(malloc(get_nonempty_npts_model() * sizeof(double)));
+  globals::ffheatingestimator_save = static_cast<double *>(malloc(nonempty_npts_model * sizeof(double)));
+  globals::colheatingestimator_save = static_cast<double *>(malloc(nonempty_npts_model * sizeof(double)));
 #endif
 
 #ifdef MPI_ON
@@ -1774,15 +1777,18 @@ static void read_grid_restart_data(const int timestep) {
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
     int pellet_decays = 0.;
-    assert_always(fscanf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
-                         &globals::timesteps[nts].gamma_dep, &globals::timesteps[nts].gamma_dep_pathint,
-                         &globals::timesteps[nts].positron_dep, &globals::timesteps[nts].eps_positron_ana_power,
-                         &globals::timesteps[nts].electron_dep, &globals::timesteps[nts].electron_emission,
-                         &globals::timesteps[nts].eps_electron_ana_power, &globals::timesteps[nts].alpha_dep,
+    assert_always(fscanf(gridsave_file,
+                         "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
+                         &globals::timesteps[nts].gamma_dep, &globals::timesteps[nts].gamma_dep_discrete,
+                         &globals::timesteps[nts].positron_dep, &globals::timesteps[nts].positron_dep_discrete,
+                         &globals::timesteps[nts].positron_emission, &globals::timesteps[nts].eps_positron_ana_power,
+                         &globals::timesteps[nts].electron_dep, &globals::timesteps[nts].electron_dep_discrete,
+                         &globals::timesteps[nts].electron_emission, &globals::timesteps[nts].eps_electron_ana_power,
+                         &globals::timesteps[nts].alpha_dep, &globals::timesteps[nts].alpha_dep_discrete,
                          &globals::timesteps[nts].alpha_emission, &globals::timesteps[nts].eps_alpha_ana_power,
                          &globals::timesteps[nts].qdot_betaminus, &globals::timesteps[nts].qdot_alpha,
                          &globals::timesteps[nts].qdot_total, &globals::timesteps[nts].gamma_emission,
-                         &globals::timesteps[nts].cmf_lum, &pellet_decays) == 16);
+                         &globals::timesteps[nts].cmf_lum, &pellet_decays) == 20);
     globals::timesteps[nts].pellet_decays = pellet_decays;
   }
 
@@ -1851,11 +1857,13 @@ void write_grid_restart_data(const int timestep) {
   fprintf(gridsave_file, "%d ", globals::nprocs);
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
-    fprintf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
-            globals::timesteps[nts].gamma_dep, globals::timesteps[nts].gamma_dep_pathint,
-            globals::timesteps[nts].positron_dep, globals::timesteps[nts].eps_positron_ana_power,
-            globals::timesteps[nts].electron_dep, globals::timesteps[nts].electron_emission,
-            globals::timesteps[nts].eps_electron_ana_power, globals::timesteps[nts].alpha_dep,
+    fprintf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
+            globals::timesteps[nts].gamma_dep, globals::timesteps[nts].gamma_dep_discrete,
+            globals::timesteps[nts].positron_emission, globals::timesteps[nts].positron_dep,
+            globals::timesteps[nts].positron_dep_discrete, globals::timesteps[nts].eps_positron_ana_power,
+            globals::timesteps[nts].electron_dep, globals::timesteps[nts].electron_dep_discrete,
+            globals::timesteps[nts].electron_emission, globals::timesteps[nts].eps_electron_ana_power,
+            globals::timesteps[nts].alpha_dep, globals::timesteps[nts].alpha_dep_discrete,
             globals::timesteps[nts].alpha_emission, globals::timesteps[nts].eps_alpha_ana_power,
             globals::timesteps[nts].qdot_betaminus, globals::timesteps[nts].qdot_alpha,
             globals::timesteps[nts].qdot_total, globals::timesteps[nts].gamma_emission, globals::timesteps[nts].cmf_lum,

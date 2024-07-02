@@ -203,7 +203,7 @@ jobs:
                 openmp: [ON, OFF]
             fail-fast: false
 
-        name: macOS brew clang ${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
+        name: macOS llvm clang ${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
 
         steps:
             - uses: actions/checkout@v4

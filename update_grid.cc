@@ -649,6 +649,15 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     }
   }
 
+  // power densities in erg / s / cm^3
+  // ana means analytical at t_mid, i.e. the rates calculated from the nuclear abundances and decay data, not from
+  // Monte Carlo
+  fprintf(estimators_file, "emission_ana: gamma %11.5e positron %11.5e electron %11.5e alpha %11.5e\n",
+          heatingcoolingrates->eps_gamma_ana, heatingcoolingrates->eps_positron_ana,
+          heatingcoolingrates->eps_electron_ana, heatingcoolingrates->eps_alpha_ana);
+  fprintf(estimators_file, "deposition: gamma %11.5e positron %11.5e electron %11.5e alpha %11.5e\n",
+          heatingcoolingrates->dep_gamma, heatingcoolingrates->dep_positron, heatingcoolingrates->dep_electron,
+          heatingcoolingrates->dep_alpha);
   fprintf(estimators_file, "heating: ff %11.5e bf %11.5e coll %11.5e       dep %11.5e heating_dep/total_dep %.3f\n",
           heatingcoolingrates->heating_ff, heatingcoolingrates->heating_bf, heatingcoolingrates->heating_collisional,
           heatingcoolingrates->heating_dep, heatingcoolingrates->nt_frac_heating);
@@ -897,6 +906,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
   /// Update elemental abundances with radioactive decays
   decay::update_abundances(mgi, nts, globals::timesteps[nts].mid);
+  nonthermal::calculate_deposition_rate_density(mgi, nts, heatingcoolingrates);
 
   if (globals::opacity_case == 6) {
     grid::calculate_kappagrey();
