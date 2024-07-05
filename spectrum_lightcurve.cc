@@ -598,13 +598,11 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, const Packet *pkts) 
 
   TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 
-  bool do_emission_res = WRITE_PARTIAL_EMISSIONABSORPTIONSPEC ? globals::do_emission_res : false;
+  bool do_emission_res = false;
 
   // the emission resolved spectra are slow to generate, so only allow making them for the final timestep or every n
   if (WRITE_PARTIAL_EMISSIONABSORPTIONSPEC && globals::do_emission_res) {
-    if ((nts >= globals::timestep_finish - 1) || (nts % 5 == 0)) {
-      do_emission_res = true;
-    }
+    do_emission_res = ((nts >= globals::timestep_finish - 1) || (nts % 5 == 0));
   }
 
   init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, do_emission_res);
