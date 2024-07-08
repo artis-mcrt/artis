@@ -17,7 +17,6 @@
 #endif
 
 #include <getopt.h>
-#include <sys/unistd.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -477,7 +476,7 @@ void remove_temp_packetsfile(const int timestep, const int my_rank) {
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
-  if (access(filename, F_OK) == 0) {
+  if (std::filesystem::exists(filename)) {
     std::remove(filename);
     printout("Deleted %s\n", filename);
   }
@@ -487,7 +486,7 @@ void remove_grid_restart_data(const int timestep) {
   char prevfilename[MAXFILENAMELENGTH];
   snprintf(prevfilename, MAXFILENAMELENGTH, "gridsave_ts%d.tmp", timestep);
 
-  if (access(prevfilename, F_OK) == 0) {
+  if (std::filesystem::exists(prevfilename)) {
     std::remove(prevfilename);
     printout("Deleted %s\n", prevfilename);
   }
