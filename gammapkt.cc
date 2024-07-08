@@ -966,13 +966,10 @@ void barnes_thermalisation(Packet &pkt)
   // determine average initial density via kinetic energy
   const double E_kin = grid::get_ejecta_kinetic_energy();
   const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
-  const double t_0 = globals::tmin;
 
   // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
   const double t_ineff = 1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / v_ej);
-  // get current time
-  const double t = t_0 + pkt.prop_time;
-  const double tau = pow(t_ineff / t, 2.);
+  const double tau = pow(t_ineff / pkt.prop_time, 2.);
   const double f_gamma = 1. - exp(-tau);
   assert_always(f_gamma >= 0.);
   assert_always(f_gamma <= 1.);
@@ -994,13 +991,14 @@ void wollaeger_thermalisation(Packet &pkt) {
   // integration: requires distances within single cells in radial direction and the corresponding densities
   // need to create a packet copy which is moved during the integration
   Packet pkt_copy = pkt;
+  pkt.dir = vec_norm(pkt_copy.pos);
   const double t_current = pkt.prop_time;
   double tau = 0.;
   bool end_packet = false;
   while (!end_packet) {
     // distance to the next cell
-    const auto [sdist, snext] = grid::boundary_distance(vec_norm(pkt_copy.pos), pkt_copy.pos, pkt_copy.prop_time,
-                                                        pkt_copy.where, &pkt_copy.last_cross);
+    const auto [sdist, snext] =
+        grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where, &pkt_copy.last_cross);
     const double s_cont = sdist * t_current * t_current * t_current / std::pow(pkt_copy.prop_time, 3);
     const int mgi = grid::get_cell_modelgridindex(pkt_copy.where);
     if (mgi != grid::get_npts_model()) {
