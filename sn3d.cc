@@ -17,10 +17,10 @@
 #endif
 
 #include <getopt.h>
-#include <sys/unistd.h>
 #include <unistd.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -37,7 +37,6 @@
 #include "atomic.h"
 #include "constants.h"
 #include "decay.h"
-#include "gammapkt.h"
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
@@ -176,11 +175,11 @@ void write_deposition_file(const int nts, const int my_rank, const int nstart, c
 
   if (my_rank == 0) {
     FILE *dep_file = fopen_required("deposition.out.tmp", "w");
-    fprintf(
-        dep_file,
-        "#ts tmid_days tmid_s total_dep_Lsun gammadep_Lsun gammadeppathint_Lsun positrondep_Lsun eps_positron_ana_Lsun "
-        "elecdep_Lsun eps_elec_Lsun eps_elec_ana_Lsun alphadep_Lsun eps_alpha_Lsun eps_alpha_ana_Lsun eps_gamma_Lsun "
-        "Qdot_betaminus_ana_erg/s/g Qdotalpha_ana_erg/s/g eps_erg/s/g Qdot_ana_erg/s/g\n");
+    fprintf(dep_file,
+            "#ts tmid_days tmid_s total_dep_Lsun gammadep_discrete_Lsun gammadep_Lsun positrondep_Lsun "
+            "eps_positron_ana_Lsun elecdep_Lsun eps_elec_Lsun eps_elec_ana_Lsun alphadep_Lsun eps_alpha_Lsun "
+            "eps_alpha_ana_Lsun eps_gamma_Lsun Qdot_betaminus_ana_erg/s/g Qdotalpha_ana_erg/s/g eps_erg/s/g "
+            "Qdot_ana_erg/s/g positrondep_discrete_Lsun elecdep_discrete_Lsun alphadep_discrete_Lsun\n");
 
     for (int i = 0; i <= nts; i++) {
       const double t_mid = globals::timesteps[i].mid;
@@ -188,21 +187,22 @@ void write_deposition_file(const int nts, const int my_rank, const int nstart, c
       const double total_dep = (globals::timesteps[i].gamma_dep + globals::timesteps[i].positron_dep +
                                 globals::timesteps[i].electron_dep + globals::timesteps[i].alpha_dep);
 
-      // dep is used here for positrons and alphas because it is the same as the emission rate
-      const double epsilon_mc = (globals::timesteps[i].gamma_emission + globals::timesteps[i].positron_dep +
-                                 globals::timesteps[i].electron_emission + globals::timesteps[i].alpha_emission) /
-                                mtot / t_width;
+      const double epsilon = (globals::timesteps[i].gamma_emission + globals::timesteps[i].positron_emission +
+                              globals::timesteps[i].electron_emission + globals::timesteps[i].alpha_emission) /
+                             mtot / t_width;
 
-      fprintf(dep_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n", i, t_mid / DAY, t_mid,
-              total_dep / t_width / LSUN, globals::timesteps[i].gamma_dep / t_width / LSUN,
-              globals::timesteps[i].gamma_dep_pathint / t_width / LSUN,
-              globals::timesteps[i].positron_dep / t_width / LSUN, globals::timesteps[i].eps_positron_ana_power / LSUN,
-              globals::timesteps[i].electron_dep / t_width / LSUN,
+      fprintf(dep_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n", i, t_mid / DAY, t_mid,
+              total_dep / t_width / LSUN, globals::timesteps[i].gamma_dep_discrete / t_width / LSUN,
+              globals::timesteps[i].gamma_dep / t_width / LSUN, globals::timesteps[i].positron_dep / t_width / LSUN,
+              globals::timesteps[i].eps_positron_ana_power / LSUN, globals::timesteps[i].electron_dep / t_width / LSUN,
               globals::timesteps[i].electron_emission / t_width / LSUN,
               globals::timesteps[i].eps_electron_ana_power / LSUN, globals::timesteps[i].alpha_dep / t_width / LSUN,
               globals::timesteps[i].alpha_emission / t_width / LSUN, globals::timesteps[i].eps_alpha_ana_power / LSUN,
               globals::timesteps[i].gamma_emission / t_width / LSUN, globals::timesteps[i].qdot_betaminus / mtot,
-              globals::timesteps[i].qdot_alpha / mtot, epsilon_mc, globals::timesteps[i].qdot_total / mtot);
+              globals::timesteps[i].qdot_alpha / mtot, epsilon, globals::timesteps[i].qdot_total / mtot,
+              globals::timesteps[i].positron_dep_discrete / t_width / LSUN,
+              globals::timesteps[i].electron_dep_discrete / t_width / LSUN,
+              globals::timesteps[i].alpha_dep_discrete / t_width / LSUN);
     }
     fclose(dep_file);
 
@@ -396,26 +396,44 @@ void mpi_reduce_estimators(int nts) {
   assert_always(static_cast<int>(globals::dep_estimator_gamma.size()) == nonempty_npts_model);
   MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_gamma.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);
+  assert_always(static_cast<int>(globals::dep_estimator_positron.size()) == nonempty_npts_model);
+  MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_positron.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD);
+  assert_always(static_cast<int>(globals::dep_estimator_electron.size()) == nonempty_npts_model);
+  MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_electron.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD);
+  assert_always(static_cast<int>(globals::dep_estimator_alpha.size()) == nonempty_npts_model);
+  MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_alpha.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
   /// Communicate gamma and positron deposition and write to file
   MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].cmf_lum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].electron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].electron_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].alpha_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].alpha_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].gamma_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
   globals::timesteps[nts].cmf_lum /= globals::nprocs;
-  globals::timesteps[nts].gamma_dep /= globals::nprocs;
-  globals::timesteps[nts].positron_dep /= globals::nprocs;
-  globals::timesteps[nts].electron_dep /= globals::nprocs;
+
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].gamma_dep_discrete, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  globals::timesteps[nts].gamma_dep_discrete /= globals::nprocs;
+
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].positron_dep_discrete, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  globals::timesteps[nts].positron_dep_discrete /= globals::nprocs;
+
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].positron_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  globals::timesteps[nts].positron_emission /= globals::nprocs;
+
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].electron_dep_discrete, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  globals::timesteps[nts].electron_dep_discrete /= globals::nprocs;
+
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].electron_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].electron_emission /= globals::nprocs;
-  globals::timesteps[nts].alpha_dep /= globals::nprocs;
+
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].alpha_dep_discrete, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  globals::timesteps[nts].alpha_dep_discrete /= globals::nprocs;
+
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].alpha_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].alpha_emission /= globals::nprocs;
+
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].gamma_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].gamma_emission /= globals::nprocs;
 
   if constexpr (TRACK_ION_STATS) {
@@ -458,7 +476,7 @@ void remove_temp_packetsfile(const int timestep, const int my_rank) {
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
-  if (access(filename, F_OK) == 0) {
+  if (std::filesystem::exists(filename)) {
     std::remove(filename);
     printout("Deleted %s\n", filename);
   }
@@ -468,7 +486,7 @@ void remove_grid_restart_data(const int timestep) {
   char prevfilename[MAXFILENAMELENGTH];
   snprintf(prevfilename, MAXFILENAMELENGTH, "gridsave_ts%d.tmp", timestep);
 
-  if (access(prevfilename, F_OK) == 0) {
+  if (std::filesystem::exists(prevfilename)) {
     std::remove(prevfilename);
     printout("Deleted %s\n", prevfilename);
   }
@@ -606,6 +624,40 @@ void zero_estimators() {
 #endif
 }
 
+void normalise_deposition_estimators(int nts) {
+  const double dt = globals::timesteps[nts].width;
+  const auto nprocs = globals::nprocs;
+
+  globals::timesteps[nts].gamma_dep = 0.;
+  globals::timesteps[nts].positron_dep = 0.;
+  globals::timesteps[nts].electron_dep = 0.;
+  globals::timesteps[nts].alpha_dep = 0.;
+
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+
+    const double dV =
+        grid::get_modelcell_assocvolume_tmin(mgi) * std::pow(globals::timesteps[nts].mid / globals::tmin, 3);
+
+    // contribute the energy deposited (in erg) by each process in this cell to the timestep total
+    globals::timesteps[nts].gamma_dep += globals::dep_estimator_gamma[nonemptymgi] / nprocs;
+    globals::timesteps[nts].positron_dep += globals::dep_estimator_positron[nonemptymgi] / nprocs;
+    globals::timesteps[nts].electron_dep += globals::dep_estimator_electron[nonemptymgi] / nprocs;
+    globals::timesteps[nts].alpha_dep += globals::dep_estimator_alpha[nonemptymgi] / nprocs;
+
+    // normalise the estimators to units of erg/s/cm^3
+    const double estimator_normfactor = 1 / dV / dt / nprocs;
+
+    globals::dep_estimator_gamma[nonemptymgi] *= estimator_normfactor;
+    globals::dep_estimator_positron[nonemptymgi] *= estimator_normfactor;
+    globals::dep_estimator_electron[nonemptymgi] *= estimator_normfactor;
+    globals::dep_estimator_alpha[nonemptymgi] *= estimator_normfactor;
+
+    assert_testmodeonly(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
+    assert_testmodeonly(std::isfinite(globals::dep_estimator_gamma[nonemptymgi]));
+  }
+}
+
 auto do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo, Packet *packets,
                  const int walltimelimitseconds) -> bool {
   bool do_this_full_loop = true;
@@ -676,19 +728,19 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
     mpi_reduce_estimators(nts);
 #endif
 
-    // The estimators have been summed across all proceses and distributed.
-    // They will now be normalised independently on all processes
-
-    gammapkt::normalise(nts);
-
-    write_deposition_file(nts, my_rank, nstart, ndo);
-
-    write_partial_lightcurve_spectra(my_rank, nts, packets);
-
 #ifdef MPI_ON
     printout("timestep %d: time after estimators have been communicated %ld (took %ld seconds)\n", nts,
              std::time(nullptr), std::time(nullptr) - time_communicate_estimators_start);
 #endif
+
+    // The estimators have been summed across all proceses and distributed.
+    // They will now be normalised independently on all processes.
+
+    normalise_deposition_estimators(nts);
+
+    write_deposition_file(nts, my_rank, nstart, ndo);
+
+    write_partial_lightcurve_spectra(my_rank, nts, packets);
 
     printout("During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (t=%gd)\n", nts, my_rank,
              globals::timesteps[nts].pellet_decays, globals::nesc, globals::timesteps[nts].mid / DAY);

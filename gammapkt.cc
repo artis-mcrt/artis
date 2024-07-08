@@ -241,24 +241,6 @@ void init_gamma_data() {
   }
 }
 
-void normalise(int nts) {
-  const double dt = globals::timesteps[nts].width;
-  globals::timesteps[nts].gamma_dep_pathint = 0.;
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-
-    const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
-
-    globals::timesteps[nts].gamma_dep_pathint += globals::dep_estimator_gamma[nonemptymgi] / globals::nprocs;
-
-    globals::dep_estimator_gamma[nonemptymgi] =
-        globals::dep_estimator_gamma[nonemptymgi] * ONEOVER4PI / dV / dt / globals::nprocs;
-
-    assert_testmodeonly(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
-    assert_testmodeonly(std::isfinite(globals::dep_estimator_gamma[nonemptymgi]));
-  }
-}
-
 static auto choose_gamma_ray(const int nucindex) -> double {
   // Routine to choose which gamma ray line it'll be.
 
@@ -557,7 +539,7 @@ static void compton_scatter(Packet &pkt)
     pkt.last_cross = BOUNDARY_NONE;  // allow it to re-cross a boundary
   } else {
     // It's converted to an e-minus packet.
-    pkt.type = TYPE_NTLEPTON;
+    pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = -3;
     stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
   }
@@ -794,7 +776,7 @@ void pair_prod(Packet &pkt) {
   if (rng_uniform() > prob_gamma) {
     // Convert it to an e-minus packet - actually it could be positron EK too, but this works
     // for consistency with compton_scatter.
-    pkt.type = TYPE_NTLEPTON;
+    pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = -5;
     stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
   } else {
@@ -944,7 +926,7 @@ void transport_gamma(Packet &pkt, double t2)
       compton_scatter(pkt);
     } else if ((chi_compton + chi_photo_electric) > chi_rnd) {
       // Photo electric effect - makes it a k-packet for sure.
-      pkt.type = TYPE_NTLEPTON;
+      pkt.type = TYPE_NTLEPTON_DEPOSITED;
       pkt.absorptiontype = -4;
       stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
     } else if ((chi_compton + chi_photo_electric + chi_pair_prod) > chi_rnd) {
@@ -995,7 +977,7 @@ void barnes_thermalisation(Packet &pkt)
   // either absorb packet or let it escape
   if (rng_uniform() < f_gamma) {
     // packet is absorbed and contributes to the heating as a k-packet
-    pkt.type = TYPE_NTLEPTON;
+    pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = -4;
   } else {
     // let packet escape, i.e. make it inactive
@@ -1035,8 +1017,9 @@ void wollaeger_thermalisation(Packet &pkt) {
   // either absorb packet or let it escape
   if (rng_uniform() < f_gamma) {
     // packet is absorbed and contributes to the heating as a k-packet
-    pkt.type = TYPE_NTLEPTON;
+    pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = -4;
+
   } else {
     // let packet escape, i.e. make it inactive
     pkt.type = TYPE_ESCAPE;
@@ -1044,7 +1027,7 @@ void wollaeger_thermalisation(Packet &pkt) {
   }
 }
 
-void do_gamma(Packet &pkt, double t2) {
+void do_gamma(Packet &pkt, const int nts, double t2) {
   if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
@@ -1053,6 +1036,17 @@ void do_gamma(Packet &pkt, double t2) {
     wollaeger_thermalisation(pkt);
   } else {
     __builtin_unreachable();
+  }
+
+  if (pkt.type != TYPE_GAMMA && pkt.type != TYPE_ESCAPE) {
+    atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
+
+    if constexpr (GAMMA_THERMALISATION_SCHEME != ThermalisationScheme::DETAILED) {
+      // no transport, so the path-based gamma deposition estimator won't get updated unless we do it here
+      const int mgi = grid::get_cell_modelgridindex(pkt.where);
+      const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+      atomicadd(globals::dep_estimator_gamma[nonemptymgi], pkt.e_cmf);
+    }
   }
 }
 
