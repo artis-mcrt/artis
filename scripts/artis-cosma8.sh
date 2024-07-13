@@ -14,10 +14,10 @@
 module purge
 #load the modules used to build your program.
 module load cosma
-module load gsl/2.4
-module load gnu_comp/13.1.0
-module load openmpi/4.1.4
-module load python/3.10.12
+module load gsl
+module load gnu_comp
+module load openmpi
+module load python
 
 module list
 
