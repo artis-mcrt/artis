@@ -6,7 +6,9 @@ cd $SLURM_SUBMIT_DIR
 
 export APPTAINER_SHARENS=true
 export APPTAINER_CONFIGDIR=/tmp/$USER
+eval `spack load --sh openmpi%gcc arch=linux-debian11-x86_64`
 eval `spack load --sh gsl%gcc arch=linux-debian11-x86_64`
+eval `spack load --sh gcc arch=linux-debian11-x86_64`
 
 export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
 
