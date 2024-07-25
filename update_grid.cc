@@ -714,11 +714,14 @@ void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, cons
 
     const double prev_T_e = grid::get_Te(mgi);
     const auto sys_time_start_Te = std::time(nullptr);
-    const int nts_for_te = (titer == 0) ? nts - 1 : nts;
 
-    /// Find T_e as solution for thermal balance
-    call_T_e_finder(mgi, nts, globals::timesteps[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates,
-                    bfheatingcoeffs);
+    if (USE_TE_SOLVER) {
+      const int nts_for_te = (titer == 0) ? nts - 1 : nts;
+
+      /// Find T_e as solution for thermal balance
+      call_T_e_finder(mgi, nts, globals::timesteps[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates,
+                      bfheatingcoeffs);
+    }
 
     const int duration_solve_T_e = std::time(nullptr) - sys_time_start_Te;
 
@@ -1023,6 +1026,11 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the
       // full-spectrum and binned J and nuJ estimators
       radfield::fit_parameters(mgi, nts);
+
+      if (!USE_TE_SOLVER){
+        const double T_J = grid::get_TJ(mgi);
+        grid::set_Te(mgi, T_J); // instead of Te from heating/cooling rates
+      }
 
       solve_Te_nltepops(mgi, nonemptymgi, nts, titer, heatingcoolingrates);
     }
