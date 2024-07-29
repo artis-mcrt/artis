@@ -109,11 +109,10 @@ jobs:
                         {name: nvc++, ver: '24.5'},
                     ]
                 mpi: [ON, OFF]
-                openmp: [ON, OFF]
             fail-fast: false
 
         runs-on: ubuntu-24.04
-        name: ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
+        name: ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}
         steps:
             - uses: actions/checkout@v4
 
@@ -161,7 +160,6 @@ jobs:
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
             - name: install OpenMP
-              if: matrix.openmp == 'ON'
               run: |
                   sudo apt-get install -y libomp5 libomp-dev
 
@@ -170,28 +168,52 @@ jobs:
                   $CXX -v
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile classic mode OPENMP=ON
+              run: |
+                  make clean
+                  make MPI=${{matrix.mpi}} OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile classic mode STDPAR=ON
-              if: matrix.openmp != 'ON'
               run: |
                   $CXX -v
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make MPI=${{matrix.mpi}} STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile classic mode STDPAR=ON GPU=ON
+              if: matrix.compiler.name == 'nvc++'
+              run: |
+                  $CXX -v
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make MPI=${{matrix.mpi}} STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: Compile nebular mode STDPAR=ON
-              if: matrix.openmp != 'ON'
+            - name: Compile nebular mode OPENMP=ON
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make MPI=${{matrix.mpi}} OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode STDPAR=ON
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make MPI=${{matrix.mpi}} STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode STDPAR=ON GPU=ON
+              if: matrix.compiler.name == 'nvc++'
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make MPI=${{matrix.mpi}} STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
     mac-llvm:
         runs-on: macos-14
@@ -267,7 +289,7 @@ jobs:
                   $CXX -v
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make MPI=${{matrix.mpi}} STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode
               run: |
@@ -280,4 +302,4 @@ jobs:
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make MPI=${{matrix.mpi}} STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec

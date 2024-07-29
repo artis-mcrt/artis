@@ -1702,7 +1702,7 @@ void read_parameterfile(int rank)
     pre_zseed = std::random_device{}();
 #ifdef MPI_ON
     // broadcast randomly-generated seed from rank 0 to all ranks
-    MPI_Bcast(&pre_zseed, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&pre_zseed, 1, MPI_INT64_T, 0, MPI_COMM_WORLD);
 #endif
     printout("randomly-generated random number seed is %" PRId64 "\n", pre_zseed);
   }
