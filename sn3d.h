@@ -51,7 +51,7 @@
 constexpr int cellcacheslotid = 0;
 inline bool use_cellcache = false;
 
-extern std::mt19937 stdrng;
+extern std::default_random_engine stdrng;
 
 extern std::ofstream output_file;
 

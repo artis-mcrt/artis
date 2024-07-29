@@ -22,7 +22,7 @@
 #include "spectrum_lightcurve.h"
 #include "version.h"
 
-std::mt19937 stdrng{std::random_device{}()};
+std::default_random_engine stdrng{std::random_device{}()};
 
 std::ofstream output_file;
 
