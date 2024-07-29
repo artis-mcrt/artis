@@ -186,7 +186,7 @@ jobs:
                   $CXX -v
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make MPI=${{matrix.mpi}} GPU=ON STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make MPI=${{matrix.mpi}} STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode
               run: |
@@ -199,7 +199,14 @@ jobs:
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make MPI=${{matrix.mpi}} STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode STDPAR=ON GPU=ON
+              if: matrix.openmp != 'ON'
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make MPI=${{matrix.mpi}} STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
     mac-llvm:
         runs-on: macos-14
