@@ -218,11 +218,11 @@ void do_packet(Packet &pkt, const double t2, const int nts)
     }
 
     case TYPE_RPKT: {
-      // do_rpkt(pkt, t2);
+      do_rpkt(pkt, t2);
 
-      // if (pkt.type == TYPE_ESCAPE) {
-      //   atomicadd(globals::timesteps[nts].cmf_lum, pkt.e_cmf);
-      // }
+      if (pkt.type == TYPE_ESCAPE) {
+        atomicadd(globals::timesteps[nts].cmf_lum, pkt.e_cmf);
+      }
       break;
     }
 
