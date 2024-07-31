@@ -139,6 +139,12 @@ jobs:
                   compiler: nvidia-hpc
                   version: ${{ matrix.compiler.ver }}
 
+            - name: Install CUDA Toolkit
+              uses: Jimver/cuda-toolkit@master
+              if: matrix.compiler.name == 'nvc++'
+              with:
+                  log-file-suffix: '${{matrix.compiler.ver}}.txt'
+
             - name: Set nvc++ as compiler
               if: matrix.compiler.name == 'nvc++'
               run: |
