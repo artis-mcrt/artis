@@ -12,6 +12,7 @@
 #include <cinttypes>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -1701,7 +1702,7 @@ void read_parameterfile(int rank)
     pre_zseed = std::random_device{}();
 #ifdef MPI_ON
     // broadcast randomly-generated seed from rank 0 to all ranks
-    MPI_Bcast(&pre_zseed, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&pre_zseed, 1, MPI_INT64_T, 0, MPI_COMM_WORLD);
 #endif
     printout("randomly-generated random number seed is %" PRId64 "\n", pre_zseed);
   }
@@ -1991,6 +1992,9 @@ void time_init()
   /// globals::ntimesteps is the number of time steps
 
   globals::timesteps.resize(globals::ntimesteps + 1);
+  for (auto &ts : globals::timesteps) {
+    ts = TimeStep{};
+  }
 
   /// Now set the individual time steps
   switch (TIMESTEP_SIZE_METHOD) {
@@ -2120,25 +2124,6 @@ void time_init()
            globals::tmax) -
           1 <
       0.001);
-
-  for (int n = 0; n < globals::ntimesteps; n++) {
-    globals::timesteps[n].positron_dep = 0.;
-    globals::timesteps[n].eps_positron_ana_power = 0.;
-    globals::timesteps[n].electron_dep = 0.;
-    globals::timesteps[n].electron_emission = 0.;
-    globals::timesteps[n].eps_electron_ana_power = 0.;
-    globals::timesteps[n].alpha_dep = 0.;
-    globals::timesteps[n].alpha_emission = 0.;
-    globals::timesteps[n].eps_alpha_ana_power = 0.;
-    globals::timesteps[n].gamma_dep = 0.;
-    globals::timesteps[n].gamma_dep_pathint = 0.;
-    globals::timesteps[n].qdot_betaminus = 0.;
-    globals::timesteps[n].qdot_alpha = 0.;
-    globals::timesteps[n].qdot_total = 0.;
-    globals::timesteps[n].gamma_emission = 0.;
-    globals::timesteps[n].cmf_lum = 0.;
-    globals::timesteps[n].pellet_decays = 0;
-  }
 }
 
 void write_timestep_file() {

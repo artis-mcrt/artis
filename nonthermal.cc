@@ -37,6 +37,7 @@
 #include "packet.h"
 #include "sn3d.h"
 #include "stats.h"
+#include "thermalbalance.h"
 
 namespace nonthermal {
 
@@ -2039,44 +2040,53 @@ void init(const int my_rank, const int ndo_nonempty) {
   printout("Finished initializing non-thermal solver\n");
 }
 
-void calculate_deposition_rate_density(const int modelgridindex, const int timestep)
-// should be in erg / s / cm^3
+void calculate_deposition_rate_density(const int modelgridindex, const int timestep,
+                                       HeatingCoolingRates *heatingcoolingrates)
+// set total non-thermal deposition rate from individual gamma/positron/electron/alpha rates. This should be called
+// after packet propagation is finished for this timestep and normalise_deposition_estimators() has been done
 {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  const double gamma_deposition = globals::dep_estimator_gamma[nonemptymgi] * FOURPI;
+  heatingcoolingrates->dep_gamma = globals::dep_estimator_gamma[nonemptymgi];
 
   const double tmid = globals::timesteps[timestep].mid;
   const double rho = grid::get_rho(modelgridindex);
 
-  // TODO: calculate thermalisation ratio from the previous timestep either globally (easy) or per cell
-  // f = E_dep / E_rad
+  // if INSTANT_PARTICLE_DEPOSITION, use the analytic rate at t_mid since it will have no Monte Carlo noise (although
+  // strictly, it should be an integral from the timestep start to the end)
+  // with time-dependent deposition, we don't have an analytic rate, so we use the Monte Carlo rate
+  assert_always(heatingcoolingrates != nullptr);
 
-  // convert from [erg/s/g] to [erg/s/cm3]
-  const double positron_deposition =
+  heatingcoolingrates->eps_gamma_ana = rho * decay::get_gamma_emission_rate(modelgridindex, tmid);
+
+  heatingcoolingrates->eps_positron_ana =
       rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAPLUS);
 
-  const double electron_deposition =
-      rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAMINUS);
+  heatingcoolingrates->eps_electron_ana =
+      (rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAMINUS));
 
-  const double alpha_deposition =
+  heatingcoolingrates->eps_alpha_ana =
       rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_ALPHA);
 
-  deposition_rate_density[modelgridindex] =
-      (gamma_deposition + positron_deposition + electron_deposition + alpha_deposition);
+  if (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
+    heatingcoolingrates->dep_positron = heatingcoolingrates->eps_positron_ana;
+    heatingcoolingrates->dep_electron = heatingcoolingrates->eps_electron_ana;
+    heatingcoolingrates->dep_alpha = heatingcoolingrates->eps_alpha_ana;
+  } else {
+    heatingcoolingrates->dep_positron = globals::dep_estimator_positron[nonemptymgi];
+    heatingcoolingrates->dep_electron = globals::dep_estimator_electron[nonemptymgi];
+    heatingcoolingrates->dep_alpha = globals::dep_estimator_alpha[nonemptymgi];
+  }
 
-  printout(
-      "deposition rates [eV/s/cm^3] for timestep %d mgi %d: gamma %8.2e (Monte Carlo), positron %8.2e elec %8.2e alpha "
-      "%8.2e (analytic t_mid)\n",
-      timestep, modelgridindex, gamma_deposition / EV, positron_deposition / EV, electron_deposition / EV,
-      alpha_deposition / EV);
+  deposition_rate_density[modelgridindex] = (heatingcoolingrates->dep_gamma + heatingcoolingrates->dep_positron +
+                                             heatingcoolingrates->dep_electron + heatingcoolingrates->dep_alpha);
 
   deposition_rate_density_timestep[modelgridindex] = timestep;
 }
 
 auto get_deposition_rate_density(const int modelgridindex) -> double
-// should be in erg / s / cm^3
+// get non-thermal deposition rate density in erg / s / cm^3 previously stored by calculate_deposition_rate_density()
 {
-  assert_always(deposition_rate_density_timestep[modelgridindex] == globals::timestep);
+  assert_testmodeonly(deposition_rate_density_timestep[modelgridindex] == globals::timestep);
   assert_always(deposition_rate_density[modelgridindex] >= 0);
   return deposition_rate_density[modelgridindex];
 }
@@ -2294,7 +2304,7 @@ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const 
   return ratecoeffperdeposition * deposition_rate_density;
 }
 
-void do_ntlepton(Packet &pkt) {
+void do_ntlepton_deposit(Packet &pkt) {
   atomicadd(nt_energy_deposited, pkt.e_cmf);
 
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);

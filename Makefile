@@ -154,8 +154,8 @@ else
 	# g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
 	ifneq (,$(shell hostname -A | grep gsi.de))
 		# virgo has some AMD nodes and some Intel.
-		# As of Feb 2024, the login nodes are zen3, and we select the same arch for jobs
-		CXXFLAGS += -march=native
+		# As of 6th July 2024, the login nodes are cascadelake, and we select zen3 nodes to run on.
+		CXXFLAGS += -march=x86-64-v3 -mtune=znver3
 	else
 		# for GitHub actions, checksums must match with different assigned CPUs, so avoid -march=native (use lowest common denominator)
 		# update: all zenver3 now?
