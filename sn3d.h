@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <string>
@@ -89,13 +90,13 @@ inline void print_line_start() {
   }
 }
 
-#define printout(...)                                                       \
-  {                                                                         \
-    print_line_start();                                                     \
-    snprintf(outputlinebuf, sizeof(outputlinebuf), __VA_ARGS__);            \
-    outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n'); \
-    output_file << outputlinebuf;                                           \
-    output_file.flush();                                                    \
+#define printout(...)                                                            \
+  {                                                                              \
+    print_line_start();                                                          \
+    snprintf(outputlinebuf, sizeof(outputlinebuf), __VA_ARGS__);                 \
+    outputstartofline = (outputlinebuf[std::strlen(outputlinebuf) - 1] == '\n'); \
+    output_file << outputlinebuf;                                                \
+    output_file.flush();                                                         \
   }
 
 #define __artis_assert(e)                                                                                              \
