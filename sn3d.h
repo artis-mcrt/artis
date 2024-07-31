@@ -90,6 +90,9 @@ inline void print_line_start() {
   }
 }
 
+#ifdef __CUDA_ARCH__
+#define printout(...) ;
+#else
 #define printout(...)                                                            \
   {                                                                              \
     print_line_start();                                                          \
@@ -98,6 +101,7 @@ inline void print_line_start() {
     output_file << outputlinebuf;                                                \
     output_file.flush();                                                         \
   }
+#endif
 
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
