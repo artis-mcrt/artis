@@ -106,7 +106,7 @@ jobs:
                         {name: gcc, ver: 12},
                         {name: gcc, ver: 13},
                         {name: gcc, ver: 14},
-                        {name: nvc++, ver: '24.5'},
+                        {name: nvc++, ver: '24.7'},
                     ]
                 mpi: [ON, OFF]
             fail-fast: false
