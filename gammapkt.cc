@@ -256,9 +256,8 @@ __host__ __device__ static auto choose_gamma_ray(const int nucindex) -> double {
     }
   }
 
-  // printout("Failure to choose line (pellet_nucindex %d). Abort. zrand %g runtot %g\n", nucindex, zrand, runtot);
-  // assert_always(false);
-  return 0.;
+  printout("Failure to choose line (pellet_nucindex %d). Abort. zrand %g runtot %g\n", nucindex, zrand, runtot);
+  assert_always(false);
 }
 
 __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
