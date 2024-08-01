@@ -55,7 +55,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
   const auto T_e = grid::get_Te(modelgridindex);
 
   if constexpr (update_cooling_contrib_list) {
-    assert_always(indexionstart >= 0)
+    assert_always(indexionstart >= 0);
   }
 
   double C_ion = 0.;
