@@ -281,7 +281,7 @@ void set_elem_abundance(const int modelgridindex, const int element, const float
   modelgrid[modelgridindex].composition[element].abundance = newabundance;
 }
 
-auto get_elem_numberdens(const int modelgridindex, const int element) -> double
+__host__ __device__ auto get_elem_numberdens(const int modelgridindex, const int element) -> double
 // mass fraction of an element (all isotopes combined)
 {
   const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
@@ -456,7 +456,7 @@ static void set_cell_modelgridindex(const int cellindex, const int new_modelgrid
   cell[cellindex].modelgridindex = new_modelgridindex;
 }
 
-auto get_numassociatedcells(const int modelgridindex) -> int
+__host__ __device__ auto get_numassociatedcells(const int modelgridindex) -> int
 // number of propagation cells associated with each modelgrid cell
 {
   assert_testmodeonly(modelgridindex <= get_npts_model());
@@ -477,7 +477,7 @@ __host__ __device__ auto get_modelcell_nonemptymgi(const int mgi) -> int
   return nonemptymgi;
 }
 
-auto get_mgi_of_nonemptymgi(const int nonemptymgi) -> int
+__host__ __device__ auto get_mgi_of_nonemptymgi(const int nonemptymgi) -> int
 // get the index in the list of non-empty cells for a given model grid cell
 {
   assert_testmodeonly(get_nonempty_npts_model() > 0);

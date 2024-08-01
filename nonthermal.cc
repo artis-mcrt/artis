@@ -880,7 +880,7 @@ auto get_nt_frac_excitation(const int modelgridindex) -> float {
   return frac_excitation;
 }
 
-auto get_mean_binding_energy(const int element, const int ion) -> double {
+__host__ __device__ auto get_mean_binding_energy(const int element, const int ion) -> double {
   const int ioncharge = get_ionstage(element, ion) - 1;
   const int nbound = get_atomicnumber(element) - ioncharge;  // number of bound electrons
 
@@ -994,7 +994,7 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
   return total;
 }
 
-auto get_oneoverw(const int element, const int ion, const int modelgridindex) -> double {
+__host__ __device__ auto get_oneoverw(const int element, const int ion, const int modelgridindex) -> double {
   // Routine to compute the work per ion pair for doing the NT ionization calculation.
   // Makes use of EXTREMELY SIMPLE approximations - high energy limits only
 
@@ -1040,7 +1040,8 @@ auto calculate_nt_frac_ionization_shell(const int modelgridindex, const int elem
   return nnion * ionpot_ev * y_dot_crosssection_de / E_init_ev;
 }
 
-auto nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int element, const int ion) -> double
+__host__ __device__ auto nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int element,
+                                                          const int ion) -> double
 // non-thermal ionization rate coefficient (multiply by population to get rate)
 {
   const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
@@ -1212,7 +1213,7 @@ void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int elemen
   }
 }
 
-auto get_eff_ionpot(const int modelgridindex, const int element, const int ion) -> float
+__host__ __device__ auto get_eff_ionpot(const int modelgridindex, const int element, const int ion) -> float
 // get the effective ion potential from the stored value
 // a value of 0. should be treated as invalid
 {
@@ -1221,7 +1222,8 @@ auto get_eff_ionpot(const int modelgridindex, const int element, const int ion) 
   // return calculate_eff_ionpot(modelgridindex, element, ion);
 }
 
-auto nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, const int ion) -> double
+__host__ __device__ auto nt_ionization_ratecoeff_sf(const int modelgridindex, const int element,
+                                                    const int ion) -> double
 // Kozma & Fransson 1992 equation 13
 {
   if (grid::get_numassociatedcells(modelgridindex) <= 0) {
@@ -2083,7 +2085,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   deposition_rate_density_timestep[modelgridindex] = timestep;
 }
 
-auto get_deposition_rate_density(const int modelgridindex) -> double
+__host__ __device__ auto get_deposition_rate_density(const int modelgridindex) -> double
 // get non-thermal deposition rate density in erg / s / cm^3 previously stored by calculate_deposition_rate_density()
 {
   assert_testmodeonly(deposition_rate_density_timestep[modelgridindex] == globals::timestep);
@@ -2133,8 +2135,9 @@ auto get_nt_frac_heating(const int modelgridindex) -> float {
   return frac_heating;
 }
 
-auto nt_ionization_upperion_probability(const int modelgridindex, const int element, const int lowerion,
-                                        const int upperion, const bool energyweighted) -> double {
+__host__ __device__ auto nt_ionization_upperion_probability(const int modelgridindex, const int element,
+                                                            const int lowerion, const int upperion,
+                                                            const bool energyweighted) -> double {
   assert_always(upperion > lowerion);
   assert_always(upperion < get_nions(element));
   assert_always(upperion <= nt_ionisation_maxupperion(element, lowerion));
@@ -2187,7 +2190,7 @@ auto nt_ionization_upperion_probability(const int modelgridindex, const int elem
   return (upperion == lowerion + 1) ? 1.0 : 0.;
 }
 
-auto nt_ionisation_maxupperion(const int element, const int lowerion) -> int {
+__host__ __device__ auto nt_ionisation_maxupperion(const int element, const int lowerion) -> int {
   const int nions = get_nions(element);
   assert_always(lowerion < nions - 1);
   int maxupper = lowerion + 1;
@@ -2203,8 +2206,8 @@ auto nt_ionisation_maxupperion(const int element, const int lowerion) -> int {
   return maxupper;
 }
 
-auto nt_random_upperion(const int modelgridindex, const int element, const int lowerion,
-                        const bool energyweighted) -> int {
+__host__ __device__ auto nt_random_upperion(const int modelgridindex, const int element, const int lowerion,
+                                            const bool energyweighted) -> int {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
     while (true) {
@@ -2257,7 +2260,14 @@ auto nt_ionization_ratecoeff(const int modelgridindex, const int element, const 
     }
     return Y_nt;
   }
+  //       //     "cell %d. Using WF approx instead = %g\n",
+  //     }
+  //     return Y_nt_wfapprox;
+  //   }
+  //   return Y_nt;
+  // }
   return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
+  return 0.;
 }
 
 __host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const int ion,
@@ -2305,7 +2315,7 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const
   return ratecoeffperdeposition * deposition_rate_density;
 }
 
-__host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
+void do_ntlepton_deposit(Packet &pkt) {
   atomicadd(nt_energy_deposited, pkt.e_cmf);
 
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
