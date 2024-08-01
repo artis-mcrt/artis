@@ -241,7 +241,7 @@ void init_gamma_data() {
   }
 }
 
-static auto choose_gamma_ray(const int nucindex) -> double {
+static double choose_gamma_ray(const int nucindex) {
   // Routine to choose which gamma ray line it'll be.
 
   const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
@@ -255,8 +255,9 @@ static auto choose_gamma_ray(const int nucindex) -> double {
     }
   }
 
-  printout("Failure to choose line (pellet_nucindex %d). Abort. zrand %g runtot %g\n", nucindex, zrand, runtot);
-  assert_always(false);
+  // printout("Failure to choose line (pellet_nucindex %d). Abort. zrand %g runtot %g\n", nucindex, zrand, runtot);
+  // assert_always(false);
+  return 0.;
 }
 
 void pellet_gamma_decay(Packet &pkt) {
@@ -1027,7 +1028,7 @@ void wollaeger_thermalisation(Packet &pkt) {
   }
 }
 
-void do_gamma(Packet &pkt, const int nts, double t2) {
+__host__ __device__ void do_gamma(Packet &pkt, const int nts, double t2) {
   if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {

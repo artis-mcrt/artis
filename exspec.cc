@@ -8,7 +8,9 @@
 #ifdef MPI_ON
 #include <mpi.h>
 #endif
+#ifndef GPU_ON
 #include <random>
+#endif
 #include <vector>
 
 #include "artisoptions.h"

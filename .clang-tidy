@@ -65,3 +65,5 @@ CheckOptions:
       value: 'true'
     - key: readability-identifier-naming.NamespaceCase
       value: lower_case
+    - key: bugprone-reserved-identifier.AllowedIdentifiers
+      value: '__host__;__device__'

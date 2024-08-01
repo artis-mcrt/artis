@@ -1043,7 +1043,10 @@ static auto get_decaypath_power_per_ejectamass(const int decaypathindex, const i
   const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
 
   const double top_initabund = grid::get_modelinitradioabund(modelgridindex, nucindex_top);
-  assert_always(top_initabund >= 0.) if (top_initabund <= 0.) { return 0.; }
+  assert_always(top_initabund >= 0.);
+  if (top_initabund <= 0.) {
+    return 0.;
+  }
 
   const int nucindex_end = decaypaths[decaypathindex].nucindex[get_decaypathlength(decaypathindex) - 1];
 

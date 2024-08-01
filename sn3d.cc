@@ -27,7 +27,9 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#ifndef GPU_ON
 #include <random>
+#endif
 #include <span>
 #ifdef STDPAR_ON
 #include <thread>
@@ -56,7 +58,9 @@
 #include "version.h"
 #include "vpkt.h"
 
+#ifndef GPU_ON
 std::mt19937 stdrng{std::random_device{}()};
+#endif
 
 std::ofstream output_file;
 

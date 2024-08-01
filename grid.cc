@@ -253,7 +253,7 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int
 
 auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid[modelgridindex].rhoinit; }
 
-auto get_rho(const int modelgridindex) -> float { return modelgrid[modelgridindex].rho; }
+__host__ __device__ auto get_rho(const int modelgridindex) -> float { return modelgrid[modelgridindex].rho; }
 
 auto get_nne(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
@@ -364,7 +364,7 @@ auto get_model_type() -> enum gridtypes { return model_type; }
 
 void set_model_type(enum gridtypes model_type_value) { model_type = model_type_value; }
 
-auto get_npts_model() -> int
+__host__ __device__ auto get_npts_model() -> int
 // number of model grid cells
 {
   assert_testmodeonly(npts_model > 0);
@@ -441,7 +441,7 @@ auto get_t_model() -> double
   return t_model;
 }
 
-auto get_cell_modelgridindex(const int cellindex) -> int {
+__host__ __device__ auto get_cell_modelgridindex(const int cellindex) -> int {
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
   const int mgi = cell[cellindex].modelgridindex;

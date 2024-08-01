@@ -30,6 +30,12 @@
 #include "vectors.h"
 #include "vpkt.h"
 
+#ifdef GPU_ON
+#define THREADLOCALONHOST
+#else
+#define THREADLOCALONHOST thread_local
+#endif
+
 namespace {
 
 constexpr float expopac_lambdamin = 534.5;
@@ -761,7 +767,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
 
   // TODO: these should be re-used to avoid allocations during packet prop
   // but make sure r10_d2.6_Z in classic mode is not affected!
-  static thread_local Phixslist phixslist{
+  THREADLOCALONHOST Phixslist phixslist{
       .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
       .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
       .gamma_contr = std::vector<double>(globals::bfestimcount, 0.),
@@ -771,7 +777,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
       .bfestimbegin = 0,
   };
 
-  static thread_local Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
+  THREADLOCALONHOST Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
       .nu = NAN,
       .total = NAN,
       .ffescat = NAN,
@@ -945,7 +951,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
   std::abort();
 }
 
-void do_rpkt(Packet &pkt, const double t2) {
+__host__ __device__ void do_rpkt(Packet &pkt, const double t2) {
   while (do_rpkt_step(pkt, t2)) {
     {
     }

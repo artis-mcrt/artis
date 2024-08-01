@@ -2,6 +2,13 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#ifndef __host__
+#define __host__
+#endif
+#ifndef __device__
+#define __device__
+#endif
+
 #include <getopt.h>
 #include <gsl/gsl_integration.h>
 #include <sys/wait.h>
@@ -19,8 +26,8 @@
 
 #ifndef __cpp_lib_execution
 // homebrew llvm doesn't support execution policy yet, so brew install onedpl tbb
-#include <oneapi/dpl/algorithm>
-#include <oneapi/dpl/execution>
+// #include <oneapi/dpl/algorithm>
+// #include <oneapi/dpl/execution>
 #endif
 
 #define EXEC_PAR_UNSEQ std::execution::par_unseq,
@@ -41,18 +48,21 @@
 #include <cassert>
 #include <csignal>
 #include <cstdio>
-#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#ifndef GPU_ON
 #include <random>
+#endif
 
 #include "constants.h"
 
 constexpr int cellcacheslotid = 0;
 inline bool use_cellcache = false;
 
+#ifndef GPU_ON
 extern std::mt19937 stdrng;
+#endif
 
 extern std::ofstream output_file;
 
@@ -82,6 +92,12 @@ inline thread_local auto gslworkspace =
 
 #endif
 
+#ifdef __NVCOMPILER_CUDA_ARCH__
+#define printout(...) (void)0
+
+#define __artis_assert(e) assert(e)
+
+#else
 inline void print_line_start() {
   if (outputstartofline) {
     const time_t now_time = time(nullptr);
@@ -90,18 +106,14 @@ inline void print_line_start() {
   }
 }
 
-#ifdef __CUDA_ARCH__
-#define printout(...) ;
-#else
-#define printout(...)                                                            \
-  {                                                                              \
-    print_line_start();                                                          \
-    snprintf(outputlinebuf, sizeof(outputlinebuf), __VA_ARGS__);                 \
-    outputstartofline = (outputlinebuf[std::strlen(outputlinebuf) - 1] == '\n'); \
-    output_file << outputlinebuf;                                                \
-    output_file.flush();                                                         \
+#define printout(...)                                                       \
+  {                                                                         \
+    print_line_start();                                                     \
+    snprintf(outputlinebuf, sizeof(outputlinebuf), __VA_ARGS__);            \
+    outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n'); \
+    output_file << outputlinebuf;                                           \
+    output_file.flush();                                                    \
   }
-#endif
 
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
@@ -118,6 +130,7 @@ inline void print_line_start() {
     }                                                                                                                  \
     assert(pass);                                                                                                      \
   }
+#endif
 
 #define assert_always(e) __artis_assert(e)
 
@@ -231,7 +244,11 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
 
 inline auto rng_uniform() -> float {
   while (true) {
+#ifndef GPU_ON
     const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
+#else
+    const auto zrand = 0.5;
+#endif
     if (zrand != 1.) {
       return zrand;
     }
