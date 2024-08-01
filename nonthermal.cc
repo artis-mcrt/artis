@@ -890,10 +890,9 @@ __host__ __device__ auto get_mean_binding_energy(const int element, const int io
 
   const int num_shells = electron_binding[get_atomicnumber(element) - 1].size();
   const bool use_shells_file = !shells_q.empty();
-  std::vector<int> q(0);
+  std::vector<int> q(use_shells_file ? 0 : num_shells);
 
   if (!use_shells_file) {
-    q.resize(num_shells, 0);
     for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
       if (q[0] < 2)  // K 1s
       {
