@@ -889,10 +889,9 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
   }
 
   const int num_shells = electron_binding[get_atomicnumber(element) - 1].size();
-  const bool use_shells_file = !shells_q.empty();
-  std::array<int, 10> q{0};
+  std::array<int, NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE ? 0 : 10> q{0};
 
-  if (!use_shells_file) {
+  if (!NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
     for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
       if (q[0] < 2)  // K 1s
       {
@@ -967,7 +966,7 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
   double total = 0.;
   for (int shellindex = 0; shellindex < num_shells; shellindex++) {
     int electronsinshell = 0;
-    if (use_shells_file) {
+    if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
       electronsinshell = shells_q[get_atomicnumber(element) - 1][shellindex];
     } else if (shellindex < std::ssize(q)) {
       electronsinshell = q[shellindex];
