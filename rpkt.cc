@@ -769,9 +769,9 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
 
   // TODO: these should be re-used to avoid allocations during packet prop
   // but make sure r10_d2.6_Z in classic mode is not affected!
-  auto groundcont_gamma_contr = std::make_unique<double[]>(globals::nbfcontinua_ground);
-  auto chi_bf_sum = std::make_unique<double[]>(globals::nbfcontinua);
-  auto gamma_contr = std::make_unique<double[]>(globals::bfestimcount);
+  THREADLOCALONHOST auto groundcont_gamma_contr = std::make_unique<double[]>(globals::nbfcontinua_ground);
+  THREADLOCALONHOST auto chi_bf_sum = std::make_unique<double[]>(globals::nbfcontinua);
+  THREADLOCALONHOST auto gamma_contr = std::make_unique<double[]>(globals::bfestimcount);
 
   THREADLOCALONHOST Phixslist phixslist{
       .groundcont_gamma_contr = std::span(groundcont_gamma_contr.get(), globals::nbfcontinua_ground),
