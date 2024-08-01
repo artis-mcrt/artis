@@ -550,7 +550,9 @@ static void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoe
     stats::increment(stats::COUNTER_ESCOUNTER);
 
     // generate a virtual packet
-    vpkt_call_estimators(pkt, TYPE_RPKT);
+    if constexpr (VPKT_ON) {
+      vpkt_call_estimators(pkt, TYPE_RPKT);
+    }
 
     // pkt.nu_cmf = 3.7474058e+14;
     electron_scatter_rpkt(pkt);

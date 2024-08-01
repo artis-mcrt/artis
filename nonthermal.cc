@@ -2260,8 +2260,9 @@ auto nt_ionization_ratecoeff(const int modelgridindex, const int element, const 
   return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
 }
 
-auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lowerlevel,
-                             const int uptransindex, const double epsilon_trans, const int lineindex) -> double {
+__host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const int ion,
+                                                 const int lowerlevel, const int uptransindex,
+                                                 const double epsilon_trans, const int lineindex) -> double {
   if constexpr (!NT_EXCITATION_ON) {
     return 0.;
   }
@@ -2304,7 +2305,7 @@ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const 
   return ratecoeffperdeposition * deposition_rate_density;
 }
 
-void do_ntlepton_deposit(Packet &pkt) {
+__host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
   atomicadd(nt_energy_deposited, pkt.e_cmf);
 
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);

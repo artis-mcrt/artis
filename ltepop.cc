@@ -332,7 +332,7 @@ auto calculate_levelpop(int modelgridindex, int element, int ion, int level) -> 
   return nn;
 }
 
-auto get_levelpop(int modelgridindex, int element, int ion, int level) -> double
+__host__ __device__ auto get_levelpop(int modelgridindex, int element, int ion, int level) -> double
 /// Calculates the population of a level from either LTE or NLTE information
 {
   double nn = 0.;
@@ -411,7 +411,8 @@ void calculate_cellpartfuncts(const int modelgridindex, const int element)
   }
 }
 
-auto calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold) -> double
+__host__ __device__ auto calculate_sahafact(int element, int ion, int level, int upperionlevel, double T,
+                                            double E_threshold) -> double
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {
   const double g_lower = stat_weight(element, ion, level);
@@ -429,7 +430,7 @@ auto calculate_sahafact(int element, int ion, int level, int upperionlevel, doub
   return sf;
 }
 
-auto get_nnion(int modelgridindex, int element, int ion) -> double
+[[nodiscard]] __host__ __device__ auto get_nnion(int modelgridindex, int element, int ion) -> double
 /// Use the ground level population and partition function to get an ion population
 {
   return get_groundlevelpop(modelgridindex, element, ion) *

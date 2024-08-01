@@ -255,7 +255,7 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid[modelgri
 
 __host__ __device__ auto get_rho(const int modelgridindex) -> float { return modelgrid[modelgridindex].rho; }
 
-auto get_nne(const int modelgridindex) -> float {
+__host__ __device__ auto get_nne(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
 
@@ -264,7 +264,7 @@ auto get_nne(const int modelgridindex) -> float {
   return nne;
 }
 
-auto get_nnetot(const int modelgridindex) -> float {
+__host__ __device__ auto get_nnetot(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
 
@@ -273,7 +273,7 @@ auto get_nnetot(const int modelgridindex) -> float {
   return nnetot;
 }
 
-auto get_ffegrp(const int modelgridindex) -> float { return modelgrid[modelgridindex].ffegrp; }
+__host__ __device__ auto get_ffegrp(const int modelgridindex) -> float { return modelgrid[modelgridindex].ffegrp; }
 
 void set_elem_abundance(const int modelgridindex, const int element, const float newabundance)
 // mass fraction of an element (all isotopes combined)
@@ -288,31 +288,31 @@ auto get_elem_numberdens(const int modelgridindex, const int element) -> double
   return get_elem_abundance(modelgridindex, element) / elem_meanweight * grid::get_rho(modelgridindex);
 }
 
-auto get_kappagrey(const int modelgridindex) -> float {
+__host__ __device__ auto get_kappagrey(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].kappagrey;
 }
 
-auto get_Te(const int modelgridindex) -> float {
+__host__ __device__ auto get_Te(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].Te;
 }
 
-auto get_TR(const int modelgridindex) -> float {
+__host__ __device__ auto get_TR(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].TR;
 }
 
-auto get_TJ(const int modelgridindex) -> float {
+__host__ __device__ auto get_TJ(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].TJ;
 }
 
-auto get_W(const int modelgridindex) -> float {
+__host__ __device__ auto get_W(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].W;
@@ -463,7 +463,7 @@ auto get_numassociatedcells(const int modelgridindex) -> int
   return mg_associated_cells[modelgridindex];
 }
 
-auto get_modelcell_nonemptymgi(const int mgi) -> int
+__host__ __device__ auto get_modelcell_nonemptymgi(const int mgi) -> int
 // get the index in the list of non-empty cells for a given model grid cell
 {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
@@ -2517,9 +2517,10 @@ static auto get_coordboundary_distances_cylindrical2d(
   return {d_coordminboundary, d_coordmaxboundary};
 }
 
-[[nodiscard]] auto boundary_distance(const std::array<double, 3> dir, const std::array<double, 3> pos,
-                                     const double tstart, const int cellindex,
-                                     enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>
+[[nodiscard]] __host__ __device__ auto boundary_distance(const std::array<double, 3> dir,
+                                                         const std::array<double, 3> pos, const double tstart,
+                                                         const int cellindex,
+                                                         enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>
 /// Basic routine to compute distance to a cell boundary.
 {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {

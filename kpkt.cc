@@ -385,7 +385,7 @@ static auto sample_planck_montecarlo(const double T) -> double
   }
 }
 
-void do_kpkt_blackbody(Packet &pkt)
+__host__ __device__ void do_kpkt_blackbody(Packet &pkt)
 /// handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
@@ -414,7 +414,7 @@ void do_kpkt_blackbody(Packet &pkt)
   pkt.nscatterings = 0;
 }
 
-void do_kpkt(Packet &pkt, double t2, int nts)
+__host__ __device__ void do_kpkt(Packet &pkt, double t2, int nts)
 /// handle a k-packet (kinetic energy of the free electrons)
 {
   const double t1 = pkt.prop_time;
@@ -547,8 +547,9 @@ void do_kpkt(Packet &pkt, double t2, int nts)
     pkt.em_pos = pkt.pos;
     pkt.em_time = pkt.prop_time;
     pkt.nscatterings = 0;
-
-    vpkt_call_estimators(pkt, TYPE_KPKT);
+    if constexpr (VPKT_ON) {
+      vpkt_call_estimators(pkt, TYPE_KPKT);
+    }
 
   } else if (rndcoolingtype == COOLINGTYPE_FB) {
     /// The k-packet converts directly into a r-packet by free-bound-emission.
@@ -587,7 +588,9 @@ void do_kpkt(Packet &pkt, double t2, int nts)
     pkt.em_time = pkt.prop_time;
     pkt.nscatterings = 0;
 
-    vpkt_call_estimators(pkt, TYPE_KPKT);
+    if constexpr (VPKT_ON) {
+      vpkt_call_estimators(pkt, TYPE_KPKT);
+    }
   } else if (rndcoolingtype == COOLINGTYPE_COLLEXC) {
     /// the k-packet activates a macro-atom due to collisional excitation
     // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");

@@ -245,13 +245,15 @@ static void printout_nuclidemeanlife(const int z, const int a) {
   });
 }
 
-[[nodiscard]] auto nucdecayenergygamma(int nucindex) -> double
+[[nodiscard]] __host__ __device__ auto nucdecayenergygamma(int nucindex) -> double
 // average energy per decay in the form of gamma rays [erg]
 {
   return nuclides[nucindex].endecay_gamma;
 }
 
-[[nodiscard]] auto nucdecayenergygamma(int z, int a) -> double { return nucdecayenergygamma(get_nucindex(z, a)); }
+[[nodiscard]] __host__ __device__ auto nucdecayenergygamma(int z, int a) -> double {
+  return nucdecayenergygamma(get_nucindex(z, a));
+}
 
 void set_nucdecayenergygamma(int nucindex, double value)
 // set average energy per decay in the form of gamma rays [erg]

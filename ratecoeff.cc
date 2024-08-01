@@ -4,7 +4,9 @@
 #include <mpi.h>
 #endif
 
+#if !USE_SIMPSON_INTEGRATOR
 #include <gsl/gsl_integration.h>
+#endif
 
 #include <array>
 #include <cmath>
@@ -547,7 +549,8 @@ static void precalculate_rate_coefficient_integrals() {
   }
 }
 
-auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e) -> double {
+__host__ __device__ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel,
+                                             float T_e) -> double {
   const int phixstargetindex = get_phixtargetindex(element, lowerion, lower, upperionlevel);
   const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
   const double nu_threshold = ONEOVERH * E_threshold;
@@ -566,7 +569,9 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
   const double deltanu = (nu_max_phixs - nu_threshold) / npieces;
   double error{NAN};
 
+#if !USE_SIMPSON_INTEGRATOR
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+#endif
 
   double total_alpha_sp = 0.;
   integrator<alpha_sp_E_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY,
@@ -589,7 +594,9 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
     }
   }
 
+#if !USE_SIMPSON_INTEGRATOR
   gsl_set_error_handler(previous_handler);
+#endif
 
   const double nuoffset =
       (alpha_sp != alpha_sp_old) ? (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu : 0.;
@@ -600,7 +607,8 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
   return nu_lower;
 }
 
-auto get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double
+__host__ __device__ auto get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex,
+                                              float T_e) -> double
 /// Returns the rate coefficient for spontaneous recombination.
 {
   double Alpha_sp{NAN};
@@ -1096,7 +1104,8 @@ auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetin
   return stimrecombcoeff;
 }
 
-auto get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double {
+__host__ __device__ auto get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex,
+                                            float T_e) -> double {
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1) {
     const int upperindex = lowerindex + 1;
@@ -1196,7 +1205,8 @@ static auto calculate_corrphotoioncoeff_integral(int element, int ion, int level
   return gammacorr;
 }
 
-auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex) -> double
+__host__ __device__ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex,
+                                               int modelgridindex) -> double
 /// Returns the photoionisation rate coefficient (corrected for stimulated emission)
 {
   /// The correction factor for stimulated emission in gammacorr is set to its

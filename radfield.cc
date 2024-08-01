@@ -653,8 +653,9 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
   }
 }
 
-void update_estimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                       const double doppler_nucmf_on_nurf, const Phixslist &phixslist, const bool thickcell) {
+__host__ __device__ void update_estimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
+                                           const double doppler_nucmf_on_nurf, const Phixslist &phixslist,
+                                           const bool thickcell) {
   if (distance_e_cmf == 0) {
     return;
   }
@@ -682,7 +683,7 @@ void update_estimators(const int nonemptymgi, const double distance_e_cmf, const
   }
 }
 
-void update_lineestimator(const int modelgridindex, const int lineindex, const double increment) {
+__host__ __device__ void update_lineestimator(const int modelgridindex, const int lineindex, const double increment) {
   if constexpr (!DETAILED_LINE_ESTIMATORS_ON) {
     return;
   }
@@ -694,7 +695,7 @@ void update_lineestimator(const int modelgridindex, const int lineindex, const d
   }
 }
 
-auto radfield(double nu, int modelgridindex) -> double
+__host__ __device__ auto radfield(double nu, int modelgridindex) -> double
 // returns mean intensity J_nu [ergs/s/sr/cm2/Hz]
 {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {

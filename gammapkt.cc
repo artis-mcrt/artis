@@ -261,7 +261,7 @@ static double choose_gamma_ray(const int nucindex) {
   return 0.;
 }
 
-void pellet_gamma_decay(Packet &pkt) {
+__host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   // Subroutine to convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
 
   // pkt is a pointer to the packet that is decaying.

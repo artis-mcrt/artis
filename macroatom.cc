@@ -317,7 +317,7 @@ void do_macroatom_ionisation(const int modelgridindex, const int element, int *i
 
 }  // anonymous namespace
 
-void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
+__host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
 /// Material for handling activated macro atoms.
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
@@ -637,7 +637,9 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
   }
 
   if (pkt.type == TYPE_RPKT) {
-    vpkt_call_estimators(pkt, TYPE_MA);
+    if constexpr (VPKT_ON) {
+      vpkt_call_estimators(pkt, TYPE_MA);
+    }
   }
 }
 

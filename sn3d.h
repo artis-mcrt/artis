@@ -26,8 +26,8 @@
 
 #ifndef __cpp_lib_execution
 // homebrew llvm doesn't support execution policy yet, so brew install onedpl tbb
-// #include <oneapi/dpl/algorithm>
-// #include <oneapi/dpl/execution>
+#include <oneapi/dpl/algorithm>
+#include <oneapi/dpl/execution>
 #endif
 
 #define EXEC_PAR_UNSEQ std::execution::par_unseq,
@@ -93,7 +93,7 @@ inline thread_local auto gslworkspace =
 #endif
 
 #ifdef __NVCOMPILER_CUDA_ARCH__
-#define printout(...) (void)0
+#define printout(...) printf(__VA_ARGS__)
 
 #define __artis_assert(e) assert(e)
 
