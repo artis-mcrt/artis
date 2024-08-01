@@ -890,10 +890,9 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
 
   const int num_shells = electron_binding[get_atomicnumber(element) - 1].size();
   const bool use_shells_file = !shells_q.empty();
-
   std::array<int, 10> q{0};
+
   if (!use_shells_file) {
-    std::ranges::fill(q, 0);
     for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
       if (q[0] < 2)  // K 1s
       {
@@ -2307,7 +2306,7 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const
   return ratecoeffperdeposition * deposition_rate_density;
 }
 
-void do_ntlepton_deposit(Packet &pkt) {
+__host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
   atomicadd(nt_energy_deposited, pkt.e_cmf);
 
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
