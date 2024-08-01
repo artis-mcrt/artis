@@ -160,6 +160,7 @@ double *deposition_rate_density;
 int *deposition_rate_density_timestep;
 
 void read_shell_configs() {
+  assert_always(NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE);
   auto shells_file = fstream_required("electron_shell_occupancy.txt", std::ios::in);
 
   int nshells = 0;      // number of shell in binding energy file
