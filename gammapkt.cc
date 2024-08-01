@@ -242,7 +242,7 @@ void init_gamma_data() {
   }
 }
 
-static double choose_gamma_ray(const int nucindex) {
+__host__ __device__ static auto choose_gamma_ray(const int nucindex) -> double {
   // Routine to choose which gamma ray line it'll be.
 
   const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
