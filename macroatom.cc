@@ -372,8 +372,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
     {
 #if defined(STDPAR_ON) || defined(_OPENMP_ON)
-      const auto lock =
-          std::lock_guard<std::mutex>(globals::mutex_cellcachemacroatom[get_uniquelevelindex(element, ion, level)]);
+      // const auto lock =
+      //     std::lock_guard<std::mutex>(globals::mutex_cellcachemacroatom[get_uniquelevelindex(element, ion, level)]);
 #endif
 
       assert_testmodeonly(globals::cellcache[cellcacheslotid].cellnumber == modelgridindex);
