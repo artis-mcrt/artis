@@ -966,8 +966,12 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
 
   double total = 0.;
   for (int shellindex = 0; shellindex < num_shells; shellindex++) {
-    const double electronsinshell =
-        use_shells_file ? shells_q[get_atomicnumber(element) - 1][shellindex] : q[shellindex];
+    int electronsinshell = 0;
+    if (use_shells_file) {
+      electronsinshell = shells_q[get_atomicnumber(element) - 1][shellindex];
+    } else if (shellindex < std::ssize(q)) {
+      electronsinshell = q[shellindex];
+    }
 
     if (electronsinshell <= 0) {
       continue;
