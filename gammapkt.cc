@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <numeric>
 #include <span>
 #include <string>
 #include <vector>
@@ -988,6 +989,8 @@ void barnes_thermalisation(Packet &pkt)
 }
 
 void wollaeger_thermalisation(Packet &pkt) {
+  // corresponds to a local version of the Barnes scheme, i.e. it takes into account the local mass
+  // density rather than a value averaged over the ejecta
   constexpr double mean_gamma_opac = 0.1;
   // integration: requires distances within single cells in radial direction and the corresponding densities
   // need to create a packet copy which is moved during the integration
@@ -1028,6 +1031,82 @@ void wollaeger_thermalisation(Packet &pkt) {
   }
 }
 
+void guttman_thermalisation(Packet &pkt) {
+  // Guttman+2024, arXiv:2403.08769v1
+  // extension of the Wollaeger scheme. Rather than calculating a single optical depth in radial outward
+  // direction, it calculates a spherical average in all possible gamma-ray emission directions.
+
+  // toy value for the mean gamma ray opacity for a start, the paper discuss this some more detail, too
+  constexpr double mean_gamma_opac =
+      0.03;  // mean gamma opacity from section 3.2, taken the lower one due to almost symmetrical matter at late times
+
+  const double t_0 = globals::tmin;
+  const double t = pkt.prop_time;
+
+  // calculate average optical w.r.t. to emission direction
+  // discretize the two sphere into octants, i.e. four values in phi and two in theta
+  constexpr int numb_rnd_dirs = 100;
+  auto column_densities = std::array<double, numb_rnd_dirs>{};
+  for (int i = 0; i < numb_rnd_dirs; i++) {
+    // compute column density by moving an artificial packet outwards and integrating over local density
+    // WARNING: This simple implementation relies on a relatively large number of random directions
+    // as it assumes that the directions are distributed equally which is likely not the case with low statistics.
+
+    // step 1: draw a random direction
+    Packet pkt_copy = pkt;
+    // phi rotation: around z-axis
+    std::array<double, 3> random_dir = get_rand_isotropic_unitvec();
+    pkt_copy.dir = random_dir;  // fix new direction
+
+    // step 2: move packet into the calculated direction and integrate the density
+    bool end_packet = false;
+    while (!end_packet) {
+      // distance to the next cell
+      const auto [sdist, snext] =
+          grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where, &pkt_copy.last_cross);
+      const double s_cont = sdist * std::pow(t, 3.) / std::pow(pkt_copy.prop_time, 3.);
+      const int mgi = grid::get_cell_modelgridindex(pkt_copy.where);
+      if (mgi != grid::get_npts_model()) {
+        column_densities[i] += grid::get_rho_tmin(mgi) * s_cont;  // contribution to the integral
+      }
+      // move packet copy now
+      move_pkt_withtime(pkt_copy, sdist);
+
+      grid::change_cell(pkt_copy, snext);
+      end_packet = (pkt_copy.type == TYPE_ESCAPE);
+    }
+  }
+  const double avg_column_density =
+      std::accumulate(column_densities.cbegin(), column_densities.cend(), 0.) / std::ssize(column_densities);
+  const double t_gamma = sqrt(mean_gamma_opac * avg_column_density * t_0 * t_0);
+
+  // compute the (discretized) integral
+  double f_gamma = 0.;
+  const double width = 4 * PI / numb_rnd_dirs;
+  for (int i = 0; i < numb_rnd_dirs; i++) {
+    double summand =
+        width * (1 - std::exp(-std::pow(t_gamma, 2.) / std::pow(t, 2.) * column_densities[i] / avg_column_density));
+    printout("width: %f t_gamma: %f t: %f column_densities[i]: %f avg_column_density: %f summand: %f", width, t_gamma,
+             t, column_densities[i], avg_column_density, summand);
+    f_gamma += summand;
+  }
+  f_gamma /= (4 * PI);
+
+  assert_always(f_gamma >= 0.);
+  assert_always(f_gamma <= 1.);
+
+  // either absorb packet or let it escape
+  if (rng_uniform() < f_gamma) {
+    // packet is absorbed and contributes to the heating as a k-packet
+    pkt.type = TYPE_NTLEPTON_DEPOSITED;
+    pkt.absorptiontype = -4;
+  } else {
+    // let packet escape, i.e. make it inactive
+    pkt.type = TYPE_ESCAPE;
+    grid::change_cell(pkt, -99);
+  }
+}
+
 __host__ __device__ void do_gamma(Packet &pkt, const int nts, double t2) {
   if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
@@ -1035,6 +1114,8 @@ __host__ __device__ void do_gamma(Packet &pkt, const int nts, double t2) {
     barnes_thermalisation(pkt);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::WOLLAEGER) {
     wollaeger_thermalisation(pkt);
+  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::GUTTMAN) {
+    guttman_thermalisation(pkt);
   } else {
     __builtin_unreachable();
   }
