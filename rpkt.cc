@@ -783,6 +783,10 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
       .bfestimbegin = 0,
   };
 
+  std::ranges::fill(phixslist.groundcont_gamma_contr, 0.);
+  std::ranges::fill(phixslist.chi_bf_sum, 0.);
+  std::ranges::fill(phixslist.gamma_contr, 0.);
+
   THREADLOCALONHOST Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
       .nu = NAN,
       .total = NAN,
