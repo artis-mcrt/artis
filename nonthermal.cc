@@ -2232,7 +2232,7 @@ __host__ __device__ auto nt_random_upperion(const int modelgridindex, const int 
   }
 }
 
-auto nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion) -> double {
+__host__ __device__ auto nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion) -> double {
   assert_always(NT_ON);
   assert_always(grid::get_numassociatedcells(modelgridindex) > 0);
 
