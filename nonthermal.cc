@@ -880,7 +880,7 @@ auto get_nt_frac_excitation(const int modelgridindex) -> float {
   return frac_excitation;
 }
 
-__host__ __device__ auto get_mean_binding_energy(const int element, const int ion) -> double {
+auto get_mean_binding_energy(const int element, const int ion) -> double {
   const int ioncharge = get_ionstage(element, ion) - 1;
   const int nbound = get_atomicnumber(element) - ioncharge;  // number of bound electrons
 
@@ -993,7 +993,7 @@ __host__ __device__ auto get_mean_binding_energy(const int element, const int io
   return total;
 }
 
-__host__ __device__ auto get_oneoverw(const int element, const int ion, const int modelgridindex) -> double {
+auto get_oneoverw(const int element, const int ion, const int modelgridindex) -> double {
   // Routine to compute the work per ion pair for doing the NT ionization calculation.
   // Makes use of EXTREMELY SIMPLE approximations - high energy limits only
 
@@ -1039,8 +1039,7 @@ auto calculate_nt_frac_ionization_shell(const int modelgridindex, const int elem
   return nnion * ionpot_ev * y_dot_crosssection_de / E_init_ev;
 }
 
-__host__ __device__ auto nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int element,
-                                                          const int ion) -> double
+auto nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int element, const int ion) -> double
 // non-thermal ionization rate coefficient (multiply by population to get rate)
 {
   const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
@@ -1212,7 +1211,7 @@ void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int elemen
   }
 }
 
-__host__ __device__ auto get_eff_ionpot(const int modelgridindex, const int element, const int ion) -> float
+auto get_eff_ionpot(const int modelgridindex, const int element, const int ion) -> float
 // get the effective ion potential from the stored value
 // a value of 0. should be treated as invalid
 {
@@ -1221,8 +1220,7 @@ __host__ __device__ auto get_eff_ionpot(const int modelgridindex, const int elem
   // return calculate_eff_ionpot(modelgridindex, element, ion);
 }
 
-__host__ __device__ auto nt_ionization_ratecoeff_sf(const int modelgridindex, const int element,
-                                                    const int ion) -> double
+auto nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, const int ion) -> double
 // Kozma & Fransson 1992 equation 13
 {
   if (grid::get_numassociatedcells(modelgridindex) <= 0) {
@@ -2259,14 +2257,7 @@ __host__ __device__ auto nt_ionization_ratecoeff(const int modelgridindex, const
     }
     return Y_nt;
   }
-  //       //     "cell %d. Using WF approx instead = %g\n",
-  //     }
-  //     return Y_nt_wfapprox;
-  //   }
-  //   return Y_nt;
-  // }
   return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
-  return 0.;
 }
 
 __host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const int ion,
