@@ -100,8 +100,12 @@ ifeq ($(STDPAR),ON)
   BUILD_DIR := $(BUILD_DIR)_stdpar
 
   ifeq ($(COMPILER_NAME),NVHPC)
-		CXXFLAGS += -stdpar=gpu -gpu=unified
-		# CXXFLAGS += -gpu=cc80
+		ifeq ($(GPU),ON)
+			CXXFLAGS += -stdpar=gpu -gpu=unified
+			# CXXFLAGS += -gpu=cc80
+		else
+			CXXFLAGS += -stdpar=multicore
+		endif
   else ifeq ($(COMPILER_NAME),CLANG)
 		# CXXFLAGS += -fexperimental-library
 		LDFLAGS += -ltbb
