@@ -890,7 +890,7 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
   }
 
   const int num_shells = electron_binding[get_atomicnumber(element) - 1].size();
-  std::array<int, NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE ? 0 : 10> q{0};
+  auto q = std::array < int, NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE ? 0 : 10 > {0};
 
   if (!NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
     for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
