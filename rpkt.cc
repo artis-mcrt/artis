@@ -769,23 +769,22 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
 
   // TODO: these should be re-used to avoid allocations during packet prop
   // but make sure r10_d2.6_Z in classic mode is not affected!
-  // THREADLOCALONHOST auto groundcont_gamma_contr = std::make_unique<double[]>(globals::nbfcontinua_ground);
-  // THREADLOCALONHOST auto chi_bf_sum = std::make_unique<double[]>(globals::nbfcontinua);
-  // THREADLOCALONHOST auto gamma_contr = std::make_unique<double[]>(globals::bfestimcount);
+  THREADLOCALONHOST auto groundcont_gamma_contr = std::make_unique<double[]>(globals::nbfcontinua_ground);
+  THREADLOCALONHOST auto chi_bf_sum = std::make_unique<double[]>(globals::nbfcontinua);
+  THREADLOCALONHOST auto gamma_contr = std::make_unique<double[]>(globals::bfestimcount);
 
   THREADLOCALONHOST Phixslist phixslist{
-      .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
-      .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
-      .gamma_contr = std::vector<double>(globals::bfestimcount, 0.),
+      .groundcont_gamma_contr = std::span(groundcont_gamma_contr.get(), globals::nbfcontinua_ground),
+      .chi_bf_sum = std::span(chi_bf_sum.get(), globals::nbfcontinua),
+      .gamma_contr = std::span(gamma_contr.get(), globals::bfestimcount),
+      // .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
+      // .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
+      // .gamma_contr = std::vector<double>(globals::bfestimcount, 0.),
       .allcontend = 1,
       .allcontbegin = 0,
       .bfestimend = 1,
       .bfestimbegin = 0,
   };
-
-  // std::ranges::fill(phixslist.groundcont_gamma_contr, 0.);
-  // std::ranges::fill(phixslist.chi_bf_sum, 0.);
-  // std::ranges::fill(phixslist.gamma_contr, 0.);
 
   THREADLOCALONHOST Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
       .nu = NAN,
