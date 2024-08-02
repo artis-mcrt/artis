@@ -84,9 +84,7 @@ inline thread_local auto gslworkspace =
 
 #ifdef _OPENMP
 
-#ifdef GPU_ON
-#pragma omp requires unified_shared_memory
-#else
+#ifndef GPU_ON
 #pragma omp threadprivate(stdrng, output_file, outputlinebuf, outputstartofline, timebuf)
 #endif
 
