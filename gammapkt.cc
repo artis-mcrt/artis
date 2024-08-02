@@ -1054,7 +1054,7 @@ void guttman_thermalisation(Packet &pkt) {
     // step 1: draw a random direction
     Packet pkt_copy = pkt;
     // phi rotation: around z-axis
-    std::array<double, 3> random_dir = get_rand_isotropic_unitvec();
+    const std::array<double, 3> random_dir = get_rand_isotropic_unitvec();
     pkt_copy.dir = random_dir;  // fix new direction
 
     // step 2: move packet into the calculated direction and integrate the density
@@ -1083,7 +1083,7 @@ void guttman_thermalisation(Packet &pkt) {
   double f_gamma = 0.;
   const double width = 4 * PI / numb_rnd_dirs;
   for (int i = 0; i < numb_rnd_dirs; i++) {
-    double summand =
+    const double summand =
         width * (1 - std::exp(-std::pow(t_gamma, 2.) / std::pow(t, 2.) * column_densities[i] / avg_column_density));
     printout("width: %f t_gamma: %f t: %f column_densities[i]: %f avg_column_density: %f summand: %f", width, t_gamma,
              t, column_densities[i], avg_column_density, summand);

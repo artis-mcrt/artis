@@ -12,6 +12,7 @@
 #include <ctime>
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <span>
 #include <tuple>
 #include <vector>
