@@ -184,6 +184,7 @@ jobs:
                   make MPI=${{matrix.mpi}} OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile classic mode STDPAR=ON
+              if: matrix.compiler.name != 'nvc++'
               run: |
                   $CXX -v
                   cp -v -p artisoptions_classic.h artisoptions.h
@@ -211,6 +212,7 @@ jobs:
                   make MPI=${{matrix.mpi}} OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
+              if: matrix.compiler.name != 'nvc++'
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean

@@ -81,7 +81,11 @@ ifeq ($(OPENMP),ON)
   BUILD_DIR := $(BUILD_DIR)_openmp
 
 	ifeq ($(COMPILER_NAME),NVHPC)
-	  CXXFLAGS += -mp=gpu -gpu=unified
+		ifeq ($(GPU),ON)
+			CXXFLAGS += -mp=gpu -gpu=unified
+		else
+			CXXFLAGS += -mp
+		endif
 	else ifeq ($(COMPILER_NAME),CLANG)
 		CXXFLAGS += -Xpreprocessor -fopenmp
 		LDFLAGS += -lomp
