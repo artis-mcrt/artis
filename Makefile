@@ -215,12 +215,10 @@ else
 	# ifeq ($(TESTMODE),ON)
 	# 	CXXFLAGS += -Og
 	# else
+		CXXFLAGS += -O3
 		ifeq ($(FASTMATH),OFF)
-			CXXFLAGS += -O3
 			BUILD_DIR := $(BUILD_DIR)_nofastmath
 		else
-			CXXFLAGS += -Ofast
-
 			ifeq ($(COMPILER_NAME),NVHPC)
 				CXXFLAGS += -fast
 			else
