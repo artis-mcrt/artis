@@ -1068,9 +1068,9 @@ static void map_1dmodelto3dgrid()
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const double cellvmid = get_cellradialposmid(cellindex) / globals::tmin;
-    const int mgi =
-        std::distance(vout_model, std::find_if_not(vout_model, vout_model + get_npts_model(),
-                                                   [cellvmid](double v_outer) { return v_outer < cellvmid; }));
+    const int mgi = std::find_if_not(vout_model, vout_model + get_npts_model(),
+                                     [cellvmid](double v_outer) { return v_outer < cellvmid; }) -
+                    vout_model;
 
     if (mgi < get_npts_model() && modelgrid[mgi].rhoinit > 0) {
       set_cell_modelgridindex(cellindex, mgi);
