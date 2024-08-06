@@ -144,8 +144,8 @@ void packet_init(Packet *pkt)
     const double targetval = rng_uniform() * norm;
 
     // first i such that en_cumulative[i] > targetval
-    const int cellindex = std::distance(en_cumulative.cbegin(),
-                                        std::upper_bound(en_cumulative.cbegin(), en_cumulative.cend(), targetval));
+    const int cellindex =
+        std::upper_bound(en_cumulative.cbegin(), en_cumulative.cend(), targetval) - en_cumulative.cbegin();
     assert_always(cellindex < grid::ngrid);
 
     place_pellet(e0, cellindex, n, pkt[n]);
