@@ -383,7 +383,7 @@ void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
 
         if (cellcache_change_cell_required) {
           if (packetgroupstart != &pkt) {
-            do_cell_packet_updates(std::span(packetgroupstart, std::distance(packetgroupstart, &pkt)), nts, ts_end);
+            do_cell_packet_updates(std::span(packetgroupstart, &pkt - packetgroupstart), nts, ts_end);
           }
 
 #ifdef _OPENMP
