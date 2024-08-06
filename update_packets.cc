@@ -397,7 +397,7 @@ void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
         }
       }
     }
-    const auto packets_remaining = std::distance(packetgroupstart, packets.data() + packets.size());
+    const auto packets_remaining = packets.data() + packets.size() - packetgroupstart;
     if (packets_remaining > 0) {
       do_cell_packet_updates(std::span(packetgroupstart, packets_remaining), nts, ts_end);
     }
