@@ -1258,10 +1258,10 @@ void calculate_expansion_opacities(const int modelgridindex) {
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
   // find the first line with nu below the upper limit of the first bin
-  const auto *matchline =
+  int lineindex =
       std::lower_bound(&globals::linelist[0], &globals::linelist[globals::nlines], get_expopac_bin_nu_upper(0),
-                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
-  int lineindex = std::distance(globals::linelist, matchline);
+                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; }) -
+      globals::linelist;
 
   double kappa_planck_cumulative = 0.;
 
