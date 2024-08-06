@@ -160,6 +160,7 @@ double *deposition_rate_density;
 int *deposition_rate_density_timestep;
 
 void read_shell_configs() {
+  assert_always(NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE);
   auto shells_file = fstream_required("electron_shell_occupancy.txt", std::ios::in);
 
   int nshells = 0;      // number of shell in binding energy file
@@ -889,11 +890,9 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
   }
 
   const int num_shells = electron_binding[get_atomicnumber(element) - 1].size();
-  const bool use_shells_file = !shells_q.empty();
-  std::vector<int> q(0);
+  auto q = std::array < int, NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE ? 0 : 10 > {0};
 
-  if (!use_shells_file) {
-    q.resize(num_shells, 0);
+  if (!NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
     for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
       if (q[0] < 2)  // K 1s
       {
@@ -967,7 +966,12 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
 
   double total = 0.;
   for (int shellindex = 0; shellindex < num_shells; shellindex++) {
-    const double electronsinshell = (use_shells_file ? shells_q[get_atomicnumber(element) - 1] : q)[shellindex];
+    int electronsinshell = 0;
+    if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
+      electronsinshell = shells_q[get_atomicnumber(element) - 1][shellindex];
+    } else if (shellindex < std::ssize(q)) {
+      electronsinshell = q[shellindex];
+    }
 
     if (electronsinshell <= 0) {
       continue;
