@@ -492,7 +492,7 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
     }
   }
 
-  std::sort(decaypaths.begin(), decaypaths.end());
+  std::stable_sort(decaypaths.begin(), decaypaths.end());
 
   for (auto &decaypath : decaypaths) {
     // all nuclei in the path (except for the last one, which is allowed to be stable) must have a mean life >0
