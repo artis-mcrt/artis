@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <iterator>
 #if defined(STDPAR_ON) || defined(_OPENMP_ON)
 #include <mutex>
 #endif
@@ -407,8 +406,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
     // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
     const int selected_action =
-        std::upper_bound(cumulative_transitions.cbegin(), cumulative_transitions.cend(), randomrate) -
-        cumulative_transitions.cbegin();
+        std::ranges::upper_bound(cumulative_transitions, randomrate) - cumulative_transitions.cbegin();
 
     assert_always(selected_action < MA_ACTION_COUNT);
     assert_always(cumulative_transitions[selected_action] > randomrate);
