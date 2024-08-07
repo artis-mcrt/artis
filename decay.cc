@@ -501,13 +501,12 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
 
     // convert mean lifetimes to decay constants
     decaypath.lambdas.resize(decaypath.nucindex.size());
-    std::transform(decaypath.nucindex.cbegin(), decaypath.nucindex.cend(), decaypath.lambdas.begin(),
-                   [](const auto nucindex) {
-                     const double meanlife = get_meanlife(nucindex);
-                     // last nuclide might be stable (meanlife <= 0.)
-                     const double lambda = (meanlife > 0.) ? 1. / meanlife : 0.;
-                     return lambda;
-                   });
+    std::ranges::transform(decaypath.nucindex, decaypath.lambdas.begin(), [](const auto nucindex) {
+      const double meanlife = get_meanlife(nucindex);
+      // last nuclide might be stable (meanlife <= 0.)
+      const double lambda = (meanlife > 0.) ? 1. / meanlife : 0.;
+      return lambda;
+    });
 
     // the nuclide one past the end of the path is a used as a sink, so treat it as stable (even if it's not)
     decaypath.lambdas.push_back(0.);
