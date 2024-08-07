@@ -34,15 +34,15 @@ template <size_t VECDIM>
 }
 
 template <size_t S1, size_t S2>
-[[nodiscard]] [[gnu::const]] constexpr auto dot(const std::array<double, S1> x,
-                                                const std::array<double, S2> y) -> double
+[[nodiscard]] [[gnu::const]] constexpr auto dot(const std::array<double, S1> x, const std::array<double, S2> y)
+    -> double
 // vector dot product
 {
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(std::span<const double, 3> x,
-                                                        const double t) -> std::array<double, 3>
+[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(std::span<const double, 3> x, const double t)
+    -> std::array<double, 3>
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
   return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
@@ -59,8 +59,8 @@ template <size_t S1, size_t S2>
   return std::array<double, 3>{vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto angle_ab(const std::array<double, 3> dir1,
-                                                     const std::array<double, 3> vel) -> std::array<double, 3>
+[[nodiscard]] [[gnu::const]] constexpr auto angle_ab(const std::array<double, 3> dir1, const std::array<double, 3> vel)
+    -> std::array<double, 3>
 // aberation of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
@@ -143,14 +143,15 @@ template <size_t S1, size_t S2>
 
 constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, const std::array<double, 3> dir_rf, double &prop_time,
                                  const double nu_rf, double &nu_cmf, const double e_rf, double &e_cmf,
-                                 const double distance) -> double
+                                 const double distance, bool neglect_exp = false) -> double
 /// Subroutine to move a packet along a straight line (specified by current
 /// dir vector). The distance moved is in the rest frame.
 {
+  double CLIGHT_PROP_DIST_CALC = (neglect_exp) ? 100 * CLIGHT_PROP : CLIGHT_PROP;
   assert_always(distance >= 0);
 
   const double nu_cmf_old = nu_cmf;
-  prop_time += distance / CLIGHT_PROP;
+  prop_time += distance / CLIGHT_PROP_DIST_CALC;
 
   pos_rf[0] += (dir_rf[0] * distance);
   pos_rf[1] += (dir_rf[1] * distance);
@@ -170,8 +171,9 @@ constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, const std::array<d
   return dopplerfactor;
 }
 
-constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
-  return move_pkt_withtime(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, pkt.nu_cmf, pkt.e_rf, pkt.e_cmf, distance);
+constexpr auto move_pkt_withtime(Packet &pkt, const double distance, bool neglect_exp = false) -> double {
+  return move_pkt_withtime(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, pkt.nu_cmf, pkt.e_rf, pkt.e_cmf, distance,
+                           neglect_exp);
 }
 
 [[nodiscard]] [[gnu::const]] constexpr auto get_arrive_time(const Packet &pkt) -> double
@@ -308,8 +310,8 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
-constexpr auto frame_transform(const std::array<double, 3> n_rf, double *Q, double *U,
-                               const std::array<double, 3> v) -> std::array<double, 3> {
+constexpr auto frame_transform(const std::array<double, 3> n_rf, double *Q, double *U, const std::array<double, 3> v)
+    -> std::array<double, 3> {
   // Meridian frame in the RF
   const auto [ref1_rf, ref2_rf] = meridian(n_rf);
 

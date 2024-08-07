@@ -2462,13 +2462,16 @@ template <size_t S1>
   return -1.;
 }
 
-static auto get_coordboundary_distances_cylindrical2d(
-    const std::array<double, 3> pkt_pos, const std::array<double, 3> pkt_dir,
-    const std::array<double, 3> pktposgridcoord, const std::array<double, 3> pktvelgridcoord, int cellindex,
-    const double tstart,
-    const std::array<double, 3> cellcoordmax) -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
+static auto get_coordboundary_distances_cylindrical2d(const std::array<double, 3> pkt_pos,
+                                                      const std::array<double, 3> pkt_dir,
+                                                      const std::array<double, 3> pktposgridcoord,
+                                                      const std::array<double, 3> pktvelgridcoord, int cellindex,
+                                                      const double tstart, const std::array<double, 3> cellcoordmax,
+                                                      bool neglect_exp)
+    -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // to get the cylindrical intersection, get the spherical intersection with Z components set to zero, and the
   // propagation speed set to the xy component of the 3-velocity
+  double CLIGHT_PROP_DIST_CALC = (neglect_exp) ? 100 * CLIGHT_PROP : CLIGHT_PROP;
 
   std::array<double, 3> d_coordminboundary{};
   std::array<double, 3> d_coordmaxboundary{};
@@ -2476,7 +2479,7 @@ static auto get_coordboundary_distances_cylindrical2d(
   const std::array<double, 2> posnoz = {pkt_pos[0], pkt_pos[1]};
 
   const double dirxylen = std::sqrt((pkt_dir[0] * pkt_dir[0]) + (pkt_dir[1] * pkt_dir[1]));
-  const double xyspeed = dirxylen * CLIGHT_PROP;  // r_cyl component of velocity
+  const double xyspeed = dirxylen * CLIGHT_PROP_DIST_CALC;  // r_cyl component of velocity
 
   // make a normalised direction vector in the xy plane
   const std::array<double, 2> dirnoz = {pkt_dir[0] / dirxylen, pkt_dir[1] / dirxylen};
@@ -2487,7 +2490,7 @@ static auto get_coordboundary_distances_cylindrical2d(
   if (r_inner > 0) {
     const double d_rcyl_coordminboundary = expanding_shell_intersection(posnoz, dirnoz, xyspeed, r_inner, true, tstart);
     if (d_rcyl_coordminboundary >= 0) {
-      const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * pkt_dir[2] * CLIGHT_PROP;
+      const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * pkt_dir[2] * CLIGHT_PROP_DIST_CALC;
       d_coordminboundary[0] =
           std::sqrt(d_rcyl_coordminboundary * d_rcyl_coordminboundary + d_z_coordminboundary * d_z_coordminboundary);
     }
@@ -2497,7 +2500,7 @@ static auto get_coordboundary_distances_cylindrical2d(
   const double d_rcyl_coordmaxboundary = expanding_shell_intersection(posnoz, dirnoz, xyspeed, r_outer, false, tstart);
   d_coordmaxboundary[0] = -1;
   if (d_rcyl_coordmaxboundary >= 0) {
-    const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * pkt_dir[2] * CLIGHT_PROP;
+    const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * pkt_dir[2] * CLIGHT_PROP_DIST_CALC;
     d_coordmaxboundary[0] =
         std::sqrt(d_rcyl_coordmaxboundary * d_rcyl_coordmaxboundary + d_z_coordmaxboundary * d_z_coordmaxboundary);
   }
@@ -2507,21 +2510,23 @@ static auto get_coordboundary_distances_cylindrical2d(
       ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
        ((grid::get_cellcoordmin(cellindex, 1)) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
       tstart;
-  d_coordminboundary[1] = CLIGHT_PROP * t_zcoordminboundary;
+  d_coordminboundary[1] = CLIGHT_PROP_DIST_CALC * t_zcoordminboundary;
 
   const double t_zcoordmaxboundary = ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
                                       ((cellcoordmax[1]) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
                                      tstart;
-  d_coordmaxboundary[1] = CLIGHT_PROP * t_zcoordmaxboundary;
+  d_coordmaxboundary[1] = CLIGHT_PROP_DIST_CALC * t_zcoordmaxboundary;
 
   return {d_coordminboundary, d_coordmaxboundary};
 }
 
 [[nodiscard]] auto boundary_distance(const std::array<double, 3> dir, const std::array<double, 3> pos,
-                                     const double tstart, const int cellindex,
-                                     enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>
+                                     const double tstart, const int cellindex, enum cell_boundary *pkt_last_cross,
+                                     bool neglect_exp) -> std::tuple<double, int>
 /// Basic routine to compute distance to a cell boundary.
 {
+  double CLIGHT_PROP_DIST_CALC = (neglect_exp) ? 100 * CLIGHT_PROP : CLIGHT_PROP;
+
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {
       return {0., -99};
@@ -2545,18 +2550,18 @@ static auto get_coordboundary_distances_cylindrical2d(
   if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     // keep xyz Cartesian coordinates
     for (int d = 0; d < ndim; d++) {
-      pktvelgridcoord[d] = dir[d] * CLIGHT_PROP;
+      pktvelgridcoord[d] = dir[d] * CLIGHT_PROP_DIST_CALC;
     }
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
     // xy plane radial velocity
-    pktvelgridcoord[0] = (pos[0] * dir[0] + pos[1] * dir[1]) / pktposgridcoord[0] * CLIGHT_PROP;
+    pktvelgridcoord[0] = (pos[0] * dir[0] + pos[1] * dir[1]) / pktposgridcoord[0] * CLIGHT_PROP_DIST_CALC;
 
     // second cylindrical coordinate is z
-    pktvelgridcoord[1] = dir[2] * CLIGHT_PROP;
+    pktvelgridcoord[1] = dir[2] * CLIGHT_PROP_DIST_CALC;
 
   } else if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
     // the only coordinate is radius from the origin
-    pktvelgridcoord[0] = dot(pos, dir) / pktposgridcoord[0] * CLIGHT_PROP;  // radial velocity
+    pktvelgridcoord[0] = dot(pos, dir) / pktposgridcoord[0] * CLIGHT_PROP_DIST_CALC;  // radial velocity
   } else {
     assert_always(false);
   }
@@ -2634,7 +2639,7 @@ static auto get_coordboundary_distances_cylindrical2d(
       std::array<double, 3>{-1};  // distance to reach the cell's lower boundary on each coordinate
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
     last_cross = BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
-    const double speed = vec_len(dir) * CLIGHT_PROP;  // just in case dir is not normalised
+    const double speed = vec_len(dir) * CLIGHT_PROP_DIST_CALC;  // just in case dir is not normalised
 
     const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
     d_coordminboundary[0] = (r_inner > 0.) ? expanding_shell_intersection(pos, dir, speed, r_inner, true, tstart) : -1.;
@@ -2650,7 +2655,7 @@ static auto get_coordboundary_distances_cylindrical2d(
     }
 
     std::tie(d_coordminboundary, d_coordmaxboundary) = get_coordboundary_distances_cylindrical2d(
-        pos, dir, pktposgridcoord, pktvelgridcoord, cellindex, tstart, cellcoordmax);
+        pos, dir, pktposgridcoord, pktvelgridcoord, cellindex, tstart, cellcoordmax, neglect_exp);
 
   } else if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     // There are six possible boundary crossings. Each of the three
@@ -2670,13 +2675,13 @@ static auto get_coordboundary_distances_cylindrical2d(
           ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
            (grid::get_cellcoordmin(cellindex, d) - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
           tstart;
-      d_coordminboundary[d] = CLIGHT_PROP * t_coordminboundary;
+      d_coordminboundary[d] = CLIGHT_PROP_DIST_CALC * t_coordminboundary;
 
       const double t_coordmaxboundary = ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
                                          (cellcoordmax[d] - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
                                         tstart;
 
-      d_coordmaxboundary[d] = CLIGHT_PROP * t_coordmaxboundary;
+      d_coordmaxboundary[d] = CLIGHT_PROP_DIST_CALC * t_coordmaxboundary;
     }
   } else {
     assert_always(false);
