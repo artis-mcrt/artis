@@ -14,7 +14,6 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
-#include <iterator>
 #include <numbers>
 #include <numeric>
 #include <set>
@@ -742,7 +741,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
 
   const int maxdecaypathlength = std::accumulate(
       decaypaths.cbegin(), decaypaths.cend(), 0,
-      [](const int maxlen, const auto decaypath) { return std::max(maxlen, get_decaypathlength(decaypath)); });
+      [](const int maxlen, const auto &decaypath) { return std::max(maxlen, get_decaypathlength(decaypath)); });
 
   printout("Number of decay paths: %d (max length %d)\n", get_num_decaypaths(), maxdecaypathlength);
 
