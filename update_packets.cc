@@ -328,7 +328,7 @@ void do_cell_packet_updates(std::span<Packet> packets, const int nts, const doub
   };
 
 #if defined(STDPAR_ON) || !defined(_OPENMP)
-  std::ranges::for_each(EXEC_PAR packets, update_packet);
+  std::for_each(EXEC_PAR packets.begin(), packets.end(), update_packet);
 #else
 #ifdef GPU_ON
 #pragma omp target teams distribute parallel for
