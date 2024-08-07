@@ -174,18 +174,19 @@ static void init_gamma_linelist() {
   }
   allnuc_gamma_line_list.shrink_to_fit();
   assert_always(static_cast<int>(allnuc_gamma_line_list.size()) == total_lines);
-  std::ranges::sort(allnuc_gamma_line_list, [](const NucGammaLine &lhs, const NucGammaLine &rhs) {
-    if (rhs.energy < lhs.energy) {
-      return true;
-    }
-    if (rhs.energy == lhs.energy && rhs.nucindex < lhs.nucindex) {
-      return true;
-    }
-    if (rhs.energy == lhs.energy && rhs.nucindex == lhs.nucindex && rhs.nucgammaindex < lhs.nucgammaindex) {
-      return true;
-    }
-    return false;
-  });
+  std::sort(allnuc_gamma_line_list.begin(), allnuc_gamma_line_list.end(),
+            [](const NucGammaLine &lhs, const NucGammaLine &rhs) {
+              if (rhs.energy < lhs.energy) {
+                return true;
+              }
+              if (rhs.energy == lhs.energy && rhs.nucindex < lhs.nucindex) {
+                return true;
+              }
+              if (rhs.energy == lhs.energy && rhs.nucindex == lhs.nucindex && rhs.nucgammaindex < lhs.nucgammaindex) {
+                return true;
+              }
+              return false;
+            });
 
   FILE *const line_list = fopen_required("gammalinelist.out", "w");
 
