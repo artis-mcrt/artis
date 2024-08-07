@@ -127,8 +127,7 @@ static void read_decaydata() {
     }
 
     auto strelname = decay::get_elname(z);
-    std::transform(strelname.begin(), strelname.end(), strelname.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
+    std::ranges::transform(strelname, strelname.begin(), [](unsigned char c) { return std::tolower(c); });
 
     // look in the current folder
     char filename[MAXFILENAMELENGTH];
