@@ -9,7 +9,6 @@
 #include <cstdio>
 #include <ctime>
 #include <ios>
-#include <ranges>
 #include <string>
 #include <vector>
 
