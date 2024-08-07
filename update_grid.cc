@@ -368,7 +368,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
         const double alpha_r_mc = get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_MACROATOM) +
                                   get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_KPKT);
         const double alpha_r_mc_abs = get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_ABSORBED);
-        fprintf(estimators_file, "  %d: %9.3f", get_ionstage(element, ion), 1. - alpha_r_mc_abs / alpha_r_mc);
+        fprintf(estimators_file, "  %d: %9.3f", get_ionstage(element, ion), 1. - (alpha_r_mc_abs / alpha_r_mc));
       }
       fprintf(estimators_file, "\n");
 
@@ -379,7 +379,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       for (int ion = 0; ion < nions; ion++) {
         const double bb_emitted = get_ion_stats(mgi, element, ion, stats::ION_BOUNDBOUND_MACROATOM);
         const double bb_abs = get_ion_stats(mgi, element, ion, stats::ION_BOUNDBOUND_ABSORBED);
-        fprintf(estimators_file, "  %d: %9.3f", get_ionstage(element, ion), 1. - bb_abs / bb_emitted);
+        fprintf(estimators_file, "  %d: %9.3f", get_ionstage(element, ion), 1. - (bb_abs / bb_emitted));
       }
       fprintf(estimators_file, "\n");
     }
@@ -787,7 +787,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
         if (groundcontindex < 0) {
           continue;
         }
-        const int ionestimindex = nonemptymgi * globals::nbfcontinua_ground + groundcontindex;
+        const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 
         globals::gammaestimator[ionestimindex] *= estimator_normfactor / H;
 #ifdef DO_TITER
@@ -829,7 +829,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
         if (groundcontindex < 0) {
           continue;
         }
-        const int ionestimindex = nonemptymgi * globals::nbfcontinua_ground + groundcontindex;
+        const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 
         if constexpr (USE_LUT_PHOTOION) {
           globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(mgi, element, ion);
@@ -1036,7 +1036,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
   double const radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum * tratmid / assoc_cells;
   const double grey_optical_deptha = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * grid::wid_init(mgi, 0) * tratmid;
   // cube corners will have radial pos > rmax, so clamp to 0.
-  const double dist_to_obs = std::max(0., globals::rmax * tratmid - radial_pos);
+  const double dist_to_obs = std::max(0., (globals::rmax * tratmid) - radial_pos);
   const double grey_optical_depth = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * dist_to_obs;
   printout(
       "modelgridcell %d, compton optical depth (/propgridcell) %g, grey optical depth "

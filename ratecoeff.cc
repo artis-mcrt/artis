@@ -583,7 +583,7 @@ __host__ __device__ auto select_continuum_nu(int element, int lowerion, int lowe
   int i = 1;
   for (i = 1; i < npieces; i++) {
     alpha_sp_old = alpha_sp;
-    const double xlow = nu_threshold + i * deltanu;
+    const double xlow = nu_threshold + (i * deltanu);
 
     // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
     integrator<alpha_sp_E_integrand_gsl>(intparas, xlow, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY,
@@ -600,7 +600,7 @@ __host__ __device__ auto select_continuum_nu(int element, int lowerion, int lowe
 
   const double nuoffset =
       (alpha_sp != alpha_sp_old) ? (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu : 0.;
-  const double nu_lower = nu_threshold + (i - 1) * deltanu + nuoffset;
+  const double nu_lower = nu_threshold + ((i - 1) * deltanu) + nuoffset;
 
   assert_testmodeonly(std::isfinite(nu_lower));
 
@@ -790,8 +790,8 @@ static void read_recombrate_file()
   while (fscanf(recombrate_file, "%d %d %d\n", &atomicnumber, &upperionstage, &tablerows) > 0) {
     // printout("%d %d %d\n", atomicnumber, upperionstage, tablerows);
 
-    RRCRow T_highestbelow = {0, 0, 0};
-    RRCRow T_lowestabove = {0, 0, 0};
+    RRCRow T_highestbelow = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
+    RRCRow T_lowestabove = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
     T_highestbelow.log_Te = -1;
     T_lowestabove.log_Te = -1;
     for (int i = 0; i < tablerows; i++) {
@@ -820,8 +820,8 @@ static void read_recombrate_file()
         const int nlevels = get_ionisinglevels(element, ion - 1);
 
         const double x = (log_Te_estimate - T_highestbelow.log_Te) / (T_lowestabove.log_Te - T_highestbelow.log_Te);
-        const double input_rrc_low_n = x * T_highestbelow.rrc_low_n + (1 - x) * T_lowestabove.rrc_low_n;
-        const double input_rrc_total = x * T_highestbelow.rrc_total + (1 - x) * T_lowestabove.rrc_total;
+        const double input_rrc_low_n = (x * T_highestbelow.rrc_low_n) + ((1 - x) * T_lowestabove.rrc_low_n);
+        const double input_rrc_total = (x * T_highestbelow.rrc_total) + ((1 - x) * T_lowestabove.rrc_total);
 
         const bool assume_lte = true;
         const bool printdebug = false;
@@ -862,7 +862,7 @@ static void read_recombrate_file()
           printout("  rrc(superlevel): %10.3e\n", rrc_superlevel);
 
           if (rrc_superlevel > 0) {
-            const double phixs_multiplier_superlevel = 1.0 + (input_rrc_total - rrc) / rrc_superlevel;
+            const double phixs_multiplier_superlevel = 1.0 + ((input_rrc_total - rrc) / rrc_superlevel);
             printout("    scaling phixs of levels in the superlevel by %.3f\n", phixs_multiplier_superlevel);
             assert_always(phixs_multiplier_superlevel >= 0);
 
@@ -992,7 +992,7 @@ auto interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstar
     const double f_upper = corrphotoioncoeffs[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
     const double f_lower = corrphotoioncoeffs[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
 
-    return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower));
+    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower)));
   }
   return corrphotoioncoeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
 }
@@ -1115,7 +1115,7 @@ __host__ __device__ auto get_bfcoolingcoeff(int element, int ion, int level, int
     const double f_upper = bfcooling_coeffs[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
     const double f_lower = bfcooling_coeffs[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
 
-    return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
+    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower)));
   }
   return bfcooling_coeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
 }
@@ -1131,7 +1131,7 @@ static auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *c
   const double corrfactor = 1.;
 #else
   const float T_e = params->T_e;
-  double corrfactor = 1. - params->departure_ratio * exp(-HOVERKB * nu / T_e);
+  double corrfactor = 1. - (params->departure_ratio * exp(-HOVERKB * nu / T_e));
   if (corrfactor < 0) {
     corrfactor = 0.;
   }
@@ -1238,7 +1238,7 @@ __host__ __device__ auto get_corrphotoioncoeff(int element, int ion, int level, 
         const int index_in_groundlevelcontestimator =
             globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
         if (index_in_groundlevelcontestimator >= 0) {
-          gammacorr *= globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua_ground +
+          gammacorr *= globals::corrphotoionrenorm[(nonemptymgi * globals::nbfcontinua_ground) +
                                                    index_in_groundlevelcontestimator];
         }
       }

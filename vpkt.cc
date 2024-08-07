@@ -103,7 +103,7 @@ void add_to_vspecpol(const Packet &vpkt, const int obsdirindex, const int opacho
     return;
   }
 
-  const int ind_comb = Nspectra * obsdirindex + opachoiceindex;
+  const int ind_comb = (Nspectra * obsdirindex) + opachoiceindex;
   const double pktcontrib = vpkt.e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /
                             PARSEC / globals::nprocs * 4 * PI;
 
@@ -137,8 +137,8 @@ void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> vel, const
   else {
     // Rotate velocity from (x,y,z) to (n_obs,ref1,ref2) so that x correspond to n_obs (see notes)
     vref1 = -obs[1] * vel[0] + (obs[0] + obs[2] * obs[2] / (1 + obs[0])) * vel[1] -
-            obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - obs[0] * obs[0]) * vel[2];
-    vref2 = -obs[2] * vel[0] - obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - obs[0] * obs[0]) * vel[1] +
+            obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[2];
+    vref2 = -obs[2] * vel[0] - obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[1] +
             (obs[0] + obs[1] * obs[1] / (1 + obs[0])) * vel[2];
   }
 
@@ -210,8 +210,8 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     const double cos2i1 = cos(2 * i1);
     const double sin2i1 = sin(2 * i1);
 
-    const double Qold = Qi * cos2i1 - Ui * sin2i1;
-    const double Uold = Qi * sin2i1 + Ui * cos2i1;
+    const double Qold = (Qi * cos2i1) - (Ui * sin2i1);
+    const double Uold = (Qi * sin2i1) + (Ui * cos2i1);
 
     // Scattering
 
@@ -323,7 +323,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
           break;
         }
 
-        const double t_line = vpkt.prop_time + ldist / CLIGHT;
+        const double t_line = vpkt.prop_time + (ldist / CLIGHT);
 
         const int element = globals::linelist[lineindex].elementindex;
         const int ion = globals::linelist[lineindex].ionindex;
@@ -550,8 +550,8 @@ void init_vpkt_grid() {
 
   for (int n = 0; n < VGRID_NY; n++) {
     for (int m = 0; m < VGRID_NZ; m++) {
-      const double yvel = globals::vmax - (n + 0.5) * ybin;
-      const double zvel = globals::vmax - (m + 0.5) * zbin;
+      const double yvel = globals::vmax - ((n + 0.5) * ybin);
+      const double zvel = globals::vmax - ((m + 0.5) * zbin);
 
       vgrid_i[n][m].yvel = yvel;
       vgrid_i[n][m].zvel = zvel;
@@ -950,8 +950,8 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
     // loop over different observer directions
 
     const std::array<double, 3> obsdir{
-        sqrt(1 - nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex]) * cos(phiobs[obsdirindex]),
-        sqrt(1 - nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex]) * sin(phiobs[obsdirindex]),
+        sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * cos(phiobs[obsdirindex]),
+        sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * sin(phiobs[obsdirindex]),
         nz_obs_vpkt[obsdirindex]};
 
     const double t_arrive = t_current - (dot(pkt.pos, obsdir) / CLIGHT_PROP);

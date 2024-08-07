@@ -41,7 +41,7 @@ auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const d
     const double f_upper = globals::elements[element].ions[ion].Alpha_sp[upperindex];
     const double f_lower = globals::elements[element].ions[ion].Alpha_sp[lowerindex];
 
-    return f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower);
+    return f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower));
   }
   return globals::elements[element].ions[ion].Alpha_sp[TABLESIZE - 1];
 }
