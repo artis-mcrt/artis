@@ -1379,8 +1379,8 @@ void setup_phixs_list() {
       }
     }
     assert_always(groundcontindex == globals::nbfcontinua_ground);
-    std::sort(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
-              [](const auto &a, const auto &b) { return static_cast<bool>(a.nu_edge < b.nu_edge); });
+    std::stable_sort(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
+                     [](const auto &a, const auto &b) { return static_cast<bool>(a.nu_edge < b.nu_edge); });
   }
 
   auto *nonconstallcont =
@@ -1441,8 +1441,8 @@ void setup_phixs_list() {
   globals::bfestimcount = 0;
   if (globals::nbfcontinua > 0) {
     // indicies above were temporary only. continum index should be to the sorted list
-    std::sort(nonconstallcont, nonconstallcont + globals::nbfcontinua,
-              [](const auto &a, const auto &b) { return static_cast<bool>(a.nu_edge < b.nu_edge); });
+    std::stable_sort(nonconstallcont, nonconstallcont + globals::nbfcontinua,
+                     [](const auto &a, const auto &b) { return static_cast<bool>(a.nu_edge < b.nu_edge); });
 
     globals::bfestim_nu_edge.clear();
     for (int i = 0; i < globals::nbfcontinua; i++) {
