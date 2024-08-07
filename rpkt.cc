@@ -767,8 +767,6 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
 
   MacroAtomState pktmastate{};
 
-  // TODO: these should be re-used to avoid allocations during packet prop
-  // but make sure r10_d2.6_Z in classic mode is not affected!
   THREADLOCALONHOST auto groundcont_gamma_contr = std::make_unique<double[]>(globals::nbfcontinua_ground);
   THREADLOCALONHOST auto chi_bf_sum = std::make_unique<double[]>(globals::nbfcontinua);
   THREADLOCALONHOST auto gamma_contr = std::make_unique<double[]>(globals::bfestimcount);
