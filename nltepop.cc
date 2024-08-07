@@ -91,17 +91,13 @@ static void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_v
     double row_max = 0.;
     for (int column = 0; column < nlte_dimension; column++) {
       const double element_value = fabs(gsl_matrix_get(rate_matrix, index, column));
-      if (element_value > row_max) {
-        row_max = element_value;
-      }
+      row_max = std::max(element_value, row_max);
     }
     double col_max = 0.;
     for (int row = 1; row < nlte_dimension; row++)  // skip the normalisation row 0
     {
       const double element_value = fabs(gsl_matrix_get(rate_matrix, row, index));
-      if (element_value > col_max) {
-        col_max = element_value;
-      }
+      col_max = std::max(element_value, col_max);
     }
     int ion = -1;
     int level = -1;
