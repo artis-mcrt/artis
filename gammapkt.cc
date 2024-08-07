@@ -188,7 +188,7 @@ static void init_gamma_linelist() {
   }
   allnuc_gamma_line_list.shrink_to_fit();
   assert_always(static_cast<int>(allnuc_gamma_line_list.size()) == total_lines);
-  std::sort(allnuc_gamma_line_list.begin(), allnuc_gamma_line_list.end());
+  std::stable_sort(allnuc_gamma_line_list.begin(), allnuc_gamma_line_list.end());
 
   FILE *const line_list = fopen_required("gammalinelist.out", "w");
 
