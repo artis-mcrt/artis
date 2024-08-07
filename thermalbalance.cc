@@ -5,6 +5,7 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 
+#include <algorithm>
 #include <cmath>
 #include <vector>
 
@@ -166,7 +167,7 @@ void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatin
             const int index_in_groundlevelcontestimator =
                 globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
             if (index_in_groundlevelcontestimator >= 0) {
-              bfheatingcoeff *= globals::bfheatingestimator[nonemptymgi * globals::nbfcontinua_ground +
+              bfheatingcoeff *= globals::bfheatingestimator[(nonemptymgi * globals::nbfcontinua_ground) +
                                                             index_in_groundlevelcontestimator];
             }
           }
@@ -375,15 +376,11 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   if (T_e > 2 * T_e_old) {
     T_e = 2 * T_e_old;
     printout("use T_e damping in cell %d\n", modelgridindex);
-    if (T_e > MAXTEMP) {
-      T_e = MAXTEMP;
-    }
+    T_e = std::min(T_e, MAXTEMP);
   } else if (T_e < 0.5 * T_e_old) {
     T_e = 0.5 * T_e_old;
     printout("use T_e damping in cell %d\n", modelgridindex);
-    if (T_e < MINTEMP) {
-      T_e = MINTEMP;
-    }
+    T_e = std::max(T_e, MINTEMP);
   }
 
   grid::set_Te(modelgridindex, T_e);
