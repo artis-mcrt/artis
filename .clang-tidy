@@ -12,6 +12,7 @@ Checks: >
     -bugprone-exception-escape,
     -bugprone-implicit-widening-of-multiplication-result,
     -bugprone-narrowing-conversions,
+    -boost-use-ranges,
     -llvmlibc-*,
     -cert-err33-c,
     -cert-err34-c,
