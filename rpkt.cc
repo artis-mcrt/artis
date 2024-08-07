@@ -129,9 +129,9 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
   // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
   // lower_bound matches the first element where the comparison function is false
   const int matchindex =
-      std::distance(globals::linelist,
-                    std::lower_bound(globals::linelist, globals::linelist + globals::nlines, nu_cmf,
-                                     [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; }));
+      std::lower_bound(globals::linelist, globals::linelist + globals::nlines, nu_cmf,
+                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; }) -
+      globals::linelist;
 
   if (matchindex >= globals::nlines) [[unlikely]] {
     return -1;
@@ -586,10 +586,9 @@ static void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoe
     const double chi_bf_rand = rng_uniform() * chi_bf_inrest;
 
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
-    const int allcontindex =
-        std::distance(phixslist.chi_bf_sum.data(),
-                      std::upper_bound(phixslist.chi_bf_sum.data() + phixslist.allcontbegin,
-                                       phixslist.chi_bf_sum.data() + phixslist.allcontend - 1, chi_bf_rand));
+    const int allcontindex = std::upper_bound(phixslist.chi_bf_sum.data() + phixslist.allcontbegin,
+                                              phixslist.chi_bf_sum.data() + phixslist.allcontend - 1, chi_bf_rand) -
+                             phixslist.chi_bf_sum.data();
     assert_always(allcontindex < phixslist.allcontend);
 
     const double nu_edge = globals::allcont[allcontindex].nu_edge;
@@ -683,7 +682,7 @@ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double
   const auto rnd_integral = rng_uniform() * kappa_planck_bins[expopac_nbins - 1];
   const auto *selected_partintegral =
       std::upper_bound(kappa_planck_bins, kappa_planck_bins + expopac_nbins, rnd_integral);
-  const auto binindex = std::min(std::distance(kappa_planck_bins, selected_partintegral), expopac_nbins - 1);
+  const auto binindex = std::min(selected_partintegral - kappa_planck_bins, expopac_nbins - 1);
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < expopac_nbins);
 
@@ -1069,15 +1068,14 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
   // break the list into nu >= nu_edge and the remainder (nu < nu_edge)
 
   int i = 0;
-  const int allcontend =
-      std::distance(globals::allcont_nu_edge.cbegin(),
-                    std::upper_bound(globals::allcont_nu_edge.cbegin(), globals::allcont_nu_edge.cend(), nu));
+  const int allcontend = std::upper_bound(globals::allcont_nu_edge.cbegin(), globals::allcont_nu_edge.cend(), nu) -
+                         globals::allcont_nu_edge.cbegin();
 
-  const int allcontbegin = std::distance(
-      globals::allcont_nu_edge.data(),
+  const int allcontbegin =
       std::lower_bound(
           globals::allcont_nu_edge.data(), globals::allcont_nu_edge.data() + allcontend, nu,
-          [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }));
+          [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }) -
+      globals::allcont_nu_edge.data();
 
   assert_testmodeonly(allcontbegin >= 0);
   assert_testmodeonly(allcontend <= globals::nbfcontinua);
@@ -1087,15 +1085,14 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
     phixslist->allcontbegin = allcontbegin;
     phixslist->allcontend = allcontend;
 
-    phixslist->bfestimend =
-        std::distance(globals::bfestim_nu_edge.cbegin(),
-                      std::upper_bound(globals::bfestim_nu_edge.cbegin(), globals::bfestim_nu_edge.cend(), nu));
+    phixslist->bfestimend = std::upper_bound(globals::bfestim_nu_edge.cbegin(), globals::bfestim_nu_edge.cend(), nu) -
+                            globals::bfestim_nu_edge.cbegin();
 
-    phixslist->bfestimbegin = std::distance(
-        globals::bfestim_nu_edge.data(),
+    phixslist->bfestimbegin =
         std::lower_bound(
             globals::bfestim_nu_edge.data(), globals::bfestim_nu_edge.data() + phixslist->bfestimend, nu,
-            [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }));
+            [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }) -
+        globals::bfestim_nu_edge.data();
   }
 
   for (i = allcontbegin; i < allcontend; i++) {
@@ -1271,10 +1268,10 @@ void calculate_expansion_opacities(const int modelgridindex) {
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
   // find the first line with nu below the upper limit of the first bin
-  const auto *matchline =
+  int lineindex =
       std::lower_bound(&globals::linelist[0], &globals::linelist[globals::nlines], get_expopac_bin_nu_upper(0),
-                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
-  int lineindex = std::distance(globals::linelist, matchline);
+                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; }) -
+      globals::linelist;
 
   double kappa_planck_cumulative = 0.;
 
