@@ -163,7 +163,8 @@ static void init_gamma_linelist() {
   }
   printout("total gamma-ray lines %td\n", total_lines);
 
-  allnuc_gamma_line_list = std::vector<NucGammaLine>(total_lines);
+  allnuc_gamma_line_list = std::vector<NucGammaLine>();
+  allnuc_gamma_line_list.reserve(total_lines);
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     for (std::ptrdiff_t j = 0; j < std::ssize(gamma_spectra[nucindex]); j++) {
