@@ -646,19 +646,19 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
   // so the nu condition on this nu_cmf can truncate the list further compared to what was used in the calculation
   // of phixslist.gamma_contr
 
-  const int bfestimend = std::upper_bound(globals::bfestim_nu_edge.data(),
-                                          globals::bfestim_nu_edge.data() + phixslist.bfestimend, nu_cmf) -
-                         globals::bfestim_nu_edge.data();
+  const auto bfestimend = std::upper_bound(globals::bfestim_nu_edge.data(),
+                                           globals::bfestim_nu_edge.data() + phixslist.bfestimend, nu_cmf) -
+                          globals::bfestim_nu_edge.data();
 
-  const int bfestimbegin = std::lower_bound(globals::bfestim_nu_edge.data() + phixslist.bfestimbegin,
-                                            globals::bfestim_nu_edge.data() + bfestimend, nu_cmf,
-                                            [](const double nu_edge, const double nu_cmf) {
-                                              return nu_edge * last_phixs_nuovernuedge < nu_cmf;
-                                            }) -
-                           globals::bfestim_nu_edge.data();
+  const auto bfestimbegin = std::lower_bound(globals::bfestim_nu_edge.data() + phixslist.bfestimbegin,
+                                             globals::bfestim_nu_edge.data() + bfestimend, nu_cmf,
+                                             [](const double nu_edge, const double nu_cmf) {
+                                               return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                             }) -
+                            globals::bfestim_nu_edge.data();
 
   const auto bfestimcount = globals::bfestimcount;
-  for (int bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
+  for (auto bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
     atomicadd(bfrate_raw[(nonemptymgi * bfestimcount) + bfestimindex],
               phixslist.gamma_contr[bfestimindex] * distance_e_cmf_over_nu);
   }

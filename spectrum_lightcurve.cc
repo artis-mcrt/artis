@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <ctime>
 #include <ios>
+#include <ranges>
 #include <string>
 #include <vector>
 
@@ -52,8 +53,8 @@ void printout_tracemission_stats() {
   // mode is 0 for emission and 1 for absorption
   for (int mode = 0; mode < 2; mode++) {
     if (mode == 0) {
-      std::sort(traceemissionabsorption.begin(), traceemissionabsorption.end(),
-                [](const auto &a, const auto &b) { return a.energyemitted > b.energyemitted; });
+      std::ranges::sort(traceemissionabsorption,
+                        [](const auto &a, const auto &b) { return a.energyemitted > b.energyemitted; });
       printout("lambda [%5.1f, %5.1f] nu %g %g\n", traceemissabs_lambdamin, traceemissabs_lambdamax,
                traceemissabs_nulower, traceemissabs_nuupper);
 
@@ -61,8 +62,8 @@ void printout_tracemission_stats() {
                traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY,
                traceemissabs_timemax / DAY, traceemission_totalenergy);
     } else {
-      std::sort(traceemissionabsorption.begin(), traceemissionabsorption.end(),
-                [](const auto &a, const auto &b) { return a.energyabsorbed > b.energyabsorbed; });
+      std::ranges::sort(traceemissionabsorption,
+                        [](const auto &a, const auto &b) { return a.energyabsorbed > b.energyabsorbed; });
       printout("Top line absorption contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
                traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY,
                traceemissabs_timemax / DAY, traceabsorption_totalenergy);

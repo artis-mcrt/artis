@@ -328,7 +328,7 @@ void do_cell_packet_updates(std::span<Packet> packets, const int nts, const doub
   };
 
 #if defined(STDPAR_ON) || !defined(_OPENMP)
-  std::for_each(EXEC_PAR packets.begin(), packets.end(), update_packet);
+  std::ranges::for_each(EXEC_PAR packets, update_packet);
 #else
 #ifdef GPU_ON
 #pragma omp target teams distribute parallel for
@@ -363,7 +363,7 @@ void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
 
     // printout("sorting packets...");
 
-    std::sort(std::begin(packets), std::end(packets), std_compare_packets_bymodelgriddensity);
+    std::ranges::sort(packets, std_compare_packets_bymodelgriddensity);
 
     // printout("took %lds\n", std::time(nullptr) - sys_time_start_pass);
 

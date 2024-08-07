@@ -320,7 +320,7 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   // printout("pkt direction %g, %g, %g\n",pkt.dir[0],pkt.dir[1],pkt.dir[2]);
 }
 
-constexpr auto sigma_compton_partial(const double x, const double f_max) -> double
+constexpr static auto sigma_compton_partial(const double x, const double f_max) -> double
 // Routine to compute the partial cross section for Compton scattering.
 //   xx is the photon energy (in units of electron mass) and f
 //  is the energy loss factor up to which we wish to integrate.
@@ -627,8 +627,8 @@ static auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
         const double log10_sigma_lower = log10(photoion_data[Z - 1][E_smaller_idx].sigma_xcom);
         const double log10_sigma_gtr = log10(photoion_data[Z - 1][E_gtr_idx].sigma_xcom);
         // interpolate or extrapolate, both linear in log10-log10 space
-        const double log10_intpol = log10_E_smaller + (log10_sigma_gtr - log10_sigma_lower) /
-                                                          (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller);
+        const double log10_intpol = log10_E_smaller + ((log10_sigma_gtr - log10_sigma_lower) /
+                                                       (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller));
         const double sigma_intpol = pow(10., log10_intpol) * 1.0e-24;  // now in cm^2
         const double chi_cmf_contrib = sigma_intpol * n_i;
         chi_cmf += chi_cmf_contrib;
@@ -707,7 +707,7 @@ static auto sigma_pair_prod_rf(const Packet &pkt) -> double {
   return chi_rf;
 }
 
-constexpr auto meanf_sigma(const double x) -> double
+constexpr static auto meanf_sigma(const double x) -> double
 // Routine to compute the mean energy converted to non-thermal electrons times
 // the Klein-Nishina cross section.
 {
@@ -758,7 +758,7 @@ static void update_gamma_dep(const Packet &pkt, const double dist, const int mgi
   atomicadd(globals::dep_estimator_gamma[nonemptymgi], heating_cont);
 }
 
-void pair_prod(Packet &pkt) {
+static void pair_prod(Packet &pkt) {
   // Routine to deal with pair production.
 
   //  In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
@@ -806,7 +806,7 @@ void pair_prod(Packet &pkt) {
   }
 }
 
-void transport_gamma(Packet &pkt, double t2)
+static void transport_gamma(Packet &pkt, double t2)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.
@@ -952,7 +952,7 @@ void transport_gamma(Packet &pkt, double t2)
   }
 }
 
-void barnes_thermalisation(Packet &pkt)
+static void barnes_thermalisation(Packet &pkt)
 // Barnes treatment: packet is either getting absorbed immediately and locally
 // creating a k-packet or it escapes. The absorption probability matches the
 // Barnes thermalization efficiency, for expressions see the original paper:
@@ -987,7 +987,7 @@ void barnes_thermalisation(Packet &pkt)
   }
 }
 
-void wollaeger_thermalisation(Packet &pkt) {
+static void wollaeger_thermalisation(Packet &pkt) {
   // corresponds to a local version of the Barnes scheme, i.e. it takes into account the local mass
   // density rather than a value averaged over the ejecta
   constexpr double mean_gamma_opac = 0.1;
@@ -1030,7 +1030,7 @@ void wollaeger_thermalisation(Packet &pkt) {
   }
 }
 
-void guttman_thermalisation(Packet &pkt) {
+static void guttman_thermalisation(Packet &pkt) {
   // Guttman+2024, arXiv:2403.08769v1
   // extension of the Wollaeger scheme. Rather than calculating a single optical depth in radial outward
   // direction, it calculates a spherical average in all possible gamma-ray emission directions.

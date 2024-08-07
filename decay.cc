@@ -65,7 +65,8 @@ std::vector<Nuclide> nuclides;
 
 }  // anonymous namespace
 
-[[nodiscard]] constexpr auto decay_daughter_z(const int z_parent, const int /*a_parent*/, const int decaytype) -> int
+[[nodiscard]] constexpr static auto decay_daughter_z(const int z_parent, const int /*a_parent*/,
+                                                     const int decaytype) -> int
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
   assert_always(decaytype >= 0);
@@ -92,7 +93,8 @@ std::vector<Nuclide> nuclides;
   return -1;  // no daughter
 }
 
-[[nodiscard]] constexpr auto decay_daughter_a(const int /*z_parent*/, const int a_parent, const int decaytype) -> int
+[[nodiscard]] constexpr static auto decay_daughter_a(const int /*z_parent*/, const int a_parent,
+                                                     const int decaytype) -> int
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
   switch (static_cast<enum decaytypes>(decaytype)) {
@@ -130,12 +132,12 @@ struct DecayPath {
   [[nodiscard]] auto final_daughter_z() const -> int { return decay_daughter_z(z.back(), a.back(), decaytypes.back()); }
 };
 
-std::vector<DecayPath> decaypaths;
+static std::vector<DecayPath> decaypaths;
 
 // decaypath_energy_per_mass points to an array of length npts_model * num_decaypaths
 // the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
 // during the simulation time range
-double *decaypath_energy_per_mass{};
+static double *decaypath_energy_per_mass{};
 #ifdef MPI_ON
 MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
 #endif
@@ -159,7 +161,7 @@ MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
   return nuclides[nucindex].a;
 }
 
-[[nodiscard]] auto get_nuc_z_a(int nucindex) -> std::pair<int, int> {
+[[nodiscard]] static auto get_nuc_z_a(int nucindex) -> std::pair<int, int> {
   assert_testmodeonly(nucindex >= 0);
   assert_testmodeonly(nucindex < get_num_nuclides());
   return {nuclides[nucindex].z, nuclides[nucindex].a};
@@ -293,7 +295,7 @@ void set_nucdecayenergygamma(int nucindex, double value)
   const int nucindex = get_nucindex(z, a);
   const auto endecay_particles = std::accumulate(
       all_decaytypes.cbegin(), all_decaytypes.cend(), 0., [nucindex](const double ensum, const auto &decaytype) {
-        return ensum + nucdecayenergyparticle(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype);
+        return ensum + (nucdecayenergyparticle(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype));
       });
 
   return nuclides[nucindex].endecay_gamma + endecay_particles;
@@ -813,7 +815,7 @@ static constexpr auto calculate_decaychain(const double firstinitabund, const st
     } else {
       if (lambdas[j] > 0.) {
         const double sumtermtop =
-            (1 + 1 / lambdas[j] / timediff) * exp(-timediff * lambdas[j]) - 1. / lambdas[j] / timediff;
+            ((1 + 1 / lambdas[j] / timediff) * exp(-timediff * lambdas[j])) - (1. / lambdas[j] / timediff);
         sum += sumtermtop / denominator;
       }
     }
@@ -928,9 +930,9 @@ static auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex,
   return endecay;
 }
 
-auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const int modelgridindex,
-                                                                         const int decaypathindex,
-                                                                         const double tstart) -> double
+static auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const int modelgridindex,
+                                                                                const int decaypathindex,
+                                                                                const double tstart) -> double
 // just here as as check on the analytic result from get_endecay_per_ejectamass_t0_to_time_withexpansion()
 // this version does an Euler integration
 {
@@ -948,7 +950,7 @@ auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const i
   double last_chain_endecay = -1.;
   double last_t = -1.;
   for (int i = 0; i < nsteps; i++) {
-    const double t = grid::get_t_model() + (tstart - grid::get_t_model()) * i / nsteps;
+    const double t = grid::get_t_model() + ((tstart - grid::get_t_model()) * i / nsteps);
     const double chain_endecay_t = get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, t);
     if (last_chain_endecay >= 0) {
       const double chain_step_endecay_diff = last_chain_endecay - chain_endecay_t;
@@ -1027,7 +1029,7 @@ static auto get_simtime_endecay_per_ejectamass(const int mgi, const int decaypat
 // get the decay energy released during the simulation time per unit mass [erg/g]
 {
   const size_t nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
-  const double chainendecay = decaypath_energy_per_mass[nonemptymgi * get_num_decaypaths() + decaypathindex];
+  const double chainendecay = decaypath_energy_per_mass[(nonemptymgi * get_num_decaypaths()) + decaypathindex];
   assert_testmodeonly(chainendecay >= 0.);
   assert_testmodeonly(std::isfinite(chainendecay));
   return chainendecay;
@@ -1118,7 +1120,7 @@ void setup_decaypath_energy_per_mass() {
     if (nonemptymgi % globals::node_nprocs == globals::rank_in_node) {
       const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
       for (size_t decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
-        decaypath_energy_per_mass[nonemptymgi * num_decaypaths + decaypathindex] =
+        decaypath_energy_per_mass[(nonemptymgi * num_decaypaths) + decaypathindex] =
             calculate_simtime_endecay_per_ejectamass(mgi, decaypathindex);
       }
     }
