@@ -191,8 +191,8 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   const double targetval = rng_uniform() * sum_epstrans_rad_deexc[ndowntrans - 1];
 
   // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
-  const auto downtransindex = std::distance(
-      sum_epstrans_rad_deexc, std::upper_bound(sum_epstrans_rad_deexc, sum_epstrans_rad_deexc + ndowntrans, targetval));
+  const auto downtransindex =
+      std::upper_bound(sum_epstrans_rad_deexc, sum_epstrans_rad_deexc + ndowntrans, targetval) - sum_epstrans_rad_deexc;
 
   assert_always(downtransindex < ndowntrans);
 
@@ -407,8 +407,8 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
 
     // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
     const int selected_action =
-        std::distance(cumulative_transitions.cbegin(),
-                      std::upper_bound(cumulative_transitions.cbegin(), cumulative_transitions.cend(), randomrate));
+        std::upper_bound(cumulative_transitions.cbegin(), cumulative_transitions.cend(), randomrate) -
+        cumulative_transitions.cbegin();
 
     assert_always(selected_action < MA_ACTION_COUNT);
     assert_always(cumulative_transitions[selected_action] > randomrate);

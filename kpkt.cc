@@ -497,10 +497,10 @@ void do_kpkt(Packet &pkt, double t2, int nts)
 
   const double rndcool_ion_process = rng_uniform() * C_ion_procsum;
 
-  const auto i = std::distance(
-      globals::cellcache[cellcacheslotid].cooling_contrib,
+  const auto i =
       std::upper_bound(globals::cellcache[cellcacheslotid].cooling_contrib + ilow,
-                       globals::cellcache[cellcacheslotid].cooling_contrib + ihigh + 1, rndcool_ion_process));
+                       globals::cellcache[cellcacheslotid].cooling_contrib + ihigh + 1, rndcool_ion_process) -
+      globals::cellcache[cellcacheslotid].cooling_contrib;
 
   if (i > ihigh) {
     printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %td, rndcool %g\n", ilow,
