@@ -7,7 +7,7 @@
 
 #include "constants.h"
 
-constexpr int MPKTS = 15000;
+constexpr int MPKTS = 150;
 
 constexpr int GRID_TYPE = GRID_CARTESIAN3D;
 constexpr int CUBOID_NCOORDGRID_X = 50;
@@ -146,9 +146,9 @@ constexpr float RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY = -1.;
 
 constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 
-constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
+constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::WOLLAEGER;
 
-constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
+constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::WOLLAEGER;
 
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
