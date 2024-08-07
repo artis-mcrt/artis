@@ -1572,10 +1572,9 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 
   if constexpr (NT_EXCITATION_ON && (MAX_NT_EXCITATIONS_STORED > 0)) {
     // sort by descending frac_deposition
-    std::ranges::sort(
-        EXEC_PAR_UNSEQ nt_solution[modelgridindex].frac_excitations_list,
-
-        [](const auto &a, const auto &b) { return static_cast<bool>(a.frac_deposition > b.frac_deposition); });
+    std::sort(EXEC_PAR_UNSEQ nt_solution[modelgridindex].frac_excitations_list.begin(),
+              nt_solution[modelgridindex].frac_excitations_list.end(),
+              [](const auto &a, const auto &b) { return static_cast<bool>(a.frac_deposition > b.frac_deposition); });
 
     // the excitation list is now sorted by frac_deposition descending
     const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
