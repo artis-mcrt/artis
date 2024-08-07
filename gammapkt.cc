@@ -49,6 +49,20 @@ struct NucGammaLine {
   int nucindex;       // is it a Ni56, Co56, a fake line, etc
   int nucgammaindex;  // which of the lines of that nuclide is it
   double energy;      // in erg
+
+  auto operator<(const NucGammaLine &g2) const -> bool {
+    // true if d1 < d2
+    if (energy < g2.energy) {
+      return true;
+    }
+    if (energy == g2.energy && nucindex < g2.nucindex) {
+      return true;
+    }
+    if (energy == g2.energy && nucindex == g2.nucindex && nucgammaindex < g2.nucgammaindex) {
+      return true;
+    }
+    return false;
+  }
 };
 
 static std::vector<NucGammaLine> allnuc_gamma_line_list;
@@ -174,19 +188,7 @@ static void init_gamma_linelist() {
   }
   allnuc_gamma_line_list.shrink_to_fit();
   assert_always(static_cast<int>(allnuc_gamma_line_list.size()) == total_lines);
-  std::sort(allnuc_gamma_line_list.begin(), allnuc_gamma_line_list.end(),
-            [](const NucGammaLine &lhs, const NucGammaLine &rhs) {
-              if (rhs.energy < lhs.energy) {
-                return true;
-              }
-              if (rhs.energy == lhs.energy && rhs.nucindex < lhs.nucindex) {
-                return true;
-              }
-              if (rhs.energy == lhs.energy && rhs.nucindex == lhs.nucindex && rhs.nucgammaindex < lhs.nucgammaindex) {
-                return true;
-              }
-              return false;
-            });
+  std::sort(allnuc_gamma_line_list.begin(), allnuc_gamma_line_list.end());
 
   FILE *const line_list = fopen_required("gammalinelist.out", "w");
 
