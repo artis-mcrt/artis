@@ -12,6 +12,7 @@ Checks: >
     -bugprone-exception-escape,
     -bugprone-implicit-widening-of-multiplication-result,
     -bugprone-narrowing-conversions,
+    -boost-use-ranges,
     -llvmlibc-*,
     -cert-err33-c,
     -cert-err34-c,
@@ -65,3 +66,5 @@ CheckOptions:
       value: 'true'
     - key: readability-identifier-naming.NamespaceCase
       value: lower_case
+    - key: bugprone-reserved-identifier.AllowedIdentifiers
+      value: '__host__;__device__'

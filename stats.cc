@@ -45,9 +45,9 @@ void increment_ion_stats(const int modelgridindex, const int element, const int 
   assert_testmodeonly(ionstattype < ION_STAT_COUNT);
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  atomicadd(
-      ionstats[modelgridindex * get_includedions() * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype],
-      increment);
+  atomicadd(ionstats[(modelgridindex * get_includedions() * ION_STAT_COUNT) + (uniqueionindex * ION_STAT_COUNT) +
+                     ionstattype],
+            increment);
 }
 
 void increment_ion_stats_contabsorption(const Packet &pkt, const int modelgridindex, const int element, const int ion) {
@@ -81,7 +81,7 @@ void increment_ion_stats_contabsorption(const Packet &pkt, const int modelgridin
   {
     stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBOUNDFREE, n_photons_absorbed);
 
-    const int bfindex = -1 * et - 1;
+    const int bfindex = (-1 * et) - 1;
     assert_always(bfindex >= 0);
     assert_always(bfindex <= globals::nbfcontinua);
     const int emissionelement = globals::bflist[bfindex].elementindex;
@@ -117,7 +117,8 @@ auto get_ion_stats(const int modelgridindex, const int element, const int ion,
   assert_always(ion < get_nions(element));
   assert_always(ionstattype < ION_STAT_COUNT);
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  return ionstats[modelgridindex * get_includedions() * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype];
+  return ionstats[(modelgridindex * get_includedions() * ION_STAT_COUNT) + (uniqueionindex * ION_STAT_COUNT) +
+                  ionstattype];
 }
 
 void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype,
@@ -125,7 +126,7 @@ void set_ion_stats(const int modelgridindex, const int element, const int ion, e
   assert_always(ion < get_nions(element));
   assert_always(ionstattype < ION_STAT_COUNT);
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  ionstats[modelgridindex * get_includedions() * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype] =
+  ionstats[(modelgridindex * get_includedions() * ION_STAT_COUNT) + (uniqueionindex * ION_STAT_COUNT) + ionstattype] =
       newvalue;
 }
 
@@ -159,7 +160,7 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
   }
 }
 
-void increment(enum eventcounters i) {
+__host__ __device__ void increment(enum eventcounters i) {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < COUNTER_COUNT);
   atomicadd(eventstats[i], static_cast<ptrdiff_t>(1));

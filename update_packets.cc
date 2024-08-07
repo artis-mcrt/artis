@@ -45,7 +45,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     const double prefactor = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 7.74 : 7.4;
     const double tau_ineff = prefactor * 86400 * std::sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) *
                              std::pow((0.2 * 29979200000) / v_ej, 3. / 2.);
-    const double f_p = std::log(1 + 2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
+    const double f_p = std::log(1 + (2. * ts * ts / tau_ineff / tau_ineff)) / (2. * ts * ts / tau_ineff / tau_ineff);
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
     if (rng_uniform() < f_p) {
@@ -85,7 +85,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
 
     // for endot independent of energy, the next line is trival (for E dependent endot, an integral would be needed)
 
-    const double t_enzero = ts + particle_en / endot;  // time at which zero energy is reached
+    const double t_enzero = ts + (particle_en / endot);  // time at which zero energy is reached
     if (t_enzero > t2) {
       en_deposited = pkt.e_cmf * (t2 - ts) / (particle_en / endot);
     } else {
@@ -100,7 +100,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     // Choose random en_absorb [0, particle_en]
 
     const double rnd_en_absorb = rng_uniform() * particle_en;
-    const double t_absorb = ts + rnd_en_absorb / endot;
+    const double t_absorb = ts + (rnd_en_absorb / endot);
 
     // if absorption happens beyond the end of the current timestep,
     // just reduce the particle energy up to the end of this timestep
@@ -363,7 +363,7 @@ void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
 
     // printout("sorting packets...");
 
-    std::sort(std::begin(packets), std::end(packets), std_compare_packets_bymodelgriddensity);
+    std::ranges::sort(packets, std_compare_packets_bymodelgriddensity);
 
     // printout("took %lds\n", std::time(nullptr) - sys_time_start_pass);
 

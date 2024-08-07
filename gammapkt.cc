@@ -45,12 +45,12 @@ static constexpr int numb_xcom_elements = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
 
 static std::array<std::vector<el_photoion_data>, numb_xcom_elements> photoion_data;
 
-struct gammaline {
+struct NucGammaLine {
   int nucindex;       // is it a Ni56, Co56, a fake line, etc
   int nucgammaindex;  // which of the lines of that nuclide is it
   double energy;      // in erg
 
-  auto operator<(const gammaline &g2) const -> bool {
+  auto operator<(const NucGammaLine &g2) const -> bool {
     // true if d1 < d2
     if (energy < g2.energy) {
       return true;
@@ -65,7 +65,7 @@ struct gammaline {
   }
 };
 
-static std::vector<gammaline> allnuc_gamma_line_list;
+static std::vector<NucGammaLine> allnuc_gamma_line_list;
 
 static void read_gamma_spectrum(const int nucindex, const char filename[50])
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
@@ -127,8 +127,7 @@ static void read_decaydata() {
     }
 
     auto strelname = decay::get_elname(z);
-    std::transform(strelname.begin(), strelname.end(), strelname.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
+    std::ranges::transform(strelname, strelname.begin(), [](unsigned char c) { return std::tolower(c); });
 
     // look in the current folder
     char filename[MAXFILENAMELENGTH];
@@ -178,7 +177,7 @@ static void init_gamma_linelist() {
   }
   printout("total gamma-ray lines %td\n", total_lines);
 
-  allnuc_gamma_line_list = std::vector<gammaline>();
+  allnuc_gamma_line_list = std::vector<NucGammaLine>();
   allnuc_gamma_line_list.reserve(total_lines);
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
@@ -189,7 +188,7 @@ static void init_gamma_linelist() {
   }
   allnuc_gamma_line_list.shrink_to_fit();
   assert_always(static_cast<int>(allnuc_gamma_line_list.size()) == total_lines);
-  std::sort(allnuc_gamma_line_list.begin(), allnuc_gamma_line_list.end());
+  std::stable_sort(allnuc_gamma_line_list.begin(), allnuc_gamma_line_list.end());
 
   FILE *const line_list = fopen_required("gammalinelist.out", "w");
 
@@ -242,7 +241,7 @@ void init_gamma_data() {
   }
 }
 
-static auto choose_gamma_ray(const int nucindex) -> double {
+__host__ __device__ static auto choose_gamma_ray(const int nucindex) -> double {
   // Routine to choose which gamma ray line it'll be.
 
   const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
@@ -260,7 +259,7 @@ static auto choose_gamma_ray(const int nucindex) -> double {
   assert_always(false);
 }
 
-void pellet_gamma_decay(Packet &pkt) {
+__host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   // Subroutine to convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
 
   // pkt is a pointer to the packet that is decaying.
@@ -320,7 +319,7 @@ void pellet_gamma_decay(Packet &pkt) {
   // printout("pkt direction %g, %g, %g\n",pkt.dir[0],pkt.dir[1],pkt.dir[2]);
 }
 
-constexpr auto sigma_compton_partial(const double x, const double f_max) -> double
+constexpr static auto sigma_compton_partial(const double x, const double f_max) -> double
 // Routine to compute the partial cross section for Compton scattering.
 //   xx is the photon energy (in units of electron mass) and f
 //  is the energy loss factor up to which we wish to integrate.
@@ -627,8 +626,8 @@ static auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
         const double log10_sigma_lower = log10(photoion_data[Z - 1][E_smaller_idx].sigma_xcom);
         const double log10_sigma_gtr = log10(photoion_data[Z - 1][E_gtr_idx].sigma_xcom);
         // interpolate or extrapolate, both linear in log10-log10 space
-        const double log10_intpol = log10_E_smaller + (log10_sigma_gtr - log10_sigma_lower) /
-                                                          (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller);
+        const double log10_intpol = log10_E_smaller + ((log10_sigma_gtr - log10_sigma_lower) /
+                                                       (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller));
         const double sigma_intpol = pow(10., log10_intpol) * 1.0e-24;  // now in cm^2
         const double chi_cmf_contrib = sigma_intpol * n_i;
         chi_cmf += chi_cmf_contrib;
@@ -707,7 +706,7 @@ static auto sigma_pair_prod_rf(const Packet &pkt) -> double {
   return chi_rf;
 }
 
-constexpr auto meanf_sigma(const double x) -> double
+constexpr static auto meanf_sigma(const double x) -> double
 // Routine to compute the mean energy converted to non-thermal electrons times
 // the Klein-Nishina cross section.
 {
@@ -758,7 +757,7 @@ static void update_gamma_dep(const Packet &pkt, const double dist, const int mgi
   atomicadd(globals::dep_estimator_gamma[nonemptymgi], heating_cont);
 }
 
-void pair_prod(Packet &pkt) {
+static void pair_prod(Packet &pkt) {
   // Routine to deal with pair production.
 
   //  In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
@@ -806,7 +805,7 @@ void pair_prod(Packet &pkt) {
   }
 }
 
-void transport_gamma(Packet &pkt, double t2)
+static void transport_gamma(Packet &pkt, double t2)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.
@@ -952,7 +951,7 @@ void transport_gamma(Packet &pkt, double t2)
   }
 }
 
-void barnes_thermalisation(Packet &pkt)
+static void barnes_thermalisation(Packet &pkt)
 // Barnes treatment: packet is either getting absorbed immediately and locally
 // creating a k-packet or it escapes. The absorption probability matches the
 // Barnes thermalization efficiency, for expressions see the original paper:
@@ -987,7 +986,7 @@ void barnes_thermalisation(Packet &pkt)
   }
 }
 
-void wollaeger_thermalisation(Packet &pkt) {
+static void wollaeger_thermalisation(Packet &pkt) {
   // corresponds to a local version of the Barnes scheme, i.e. it takes into account the local mass
   // density rather than a value averaged over the ejecta
   constexpr double mean_gamma_opac = 0.1;
@@ -1030,7 +1029,7 @@ void wollaeger_thermalisation(Packet &pkt) {
   }
 }
 
-void guttman_thermalisation(Packet &pkt) {
+static void guttman_thermalisation(Packet &pkt) {
   // Guttman+2024, arXiv:2403.08769v1
   // extension of the Wollaeger scheme. Rather than calculating a single optical depth in radial outward
   // direction, it calculates a spherical average in all possible gamma-ray emission directions.
@@ -1054,7 +1053,7 @@ void guttman_thermalisation(Packet &pkt) {
     // step 1: draw a random direction
     Packet pkt_copy = pkt;
     // phi rotation: around z-axis
-    std::array<double, 3> random_dir = get_rand_isotropic_unitvec();
+    const std::array<double, 3> random_dir = get_rand_isotropic_unitvec();
     pkt_copy.dir = random_dir;  // fix new direction
 
     // step 2: move packet into the calculated direction and integrate the density
@@ -1083,7 +1082,7 @@ void guttman_thermalisation(Packet &pkt) {
   double f_gamma = 0.;
   const double width = 4 * PI / numb_rnd_dirs;
   for (int i = 0; i < numb_rnd_dirs; i++) {
-    double summand =
+    const double summand =
         width * (1 - std::exp(-std::pow(t_gamma, 2.) / std::pow(t, 2.) * column_densities[i] / avg_column_density));
     printout("width: %f t_gamma: %f t: %f column_densities[i]: %f avg_column_density: %f summand: %f", width, t_gamma,
              t, column_densities[i], avg_column_density, summand);
@@ -1106,7 +1105,7 @@ void guttman_thermalisation(Packet &pkt) {
   }
 }
 
-void do_gamma(Packet &pkt, const int nts, double t2) {
+__host__ __device__ void do_gamma(Packet &pkt, const int nts, double t2) {
   if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {

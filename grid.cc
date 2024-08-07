@@ -15,7 +15,6 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <iterator>
 #include <limits>
 #include <sstream>
 #include <string>
@@ -85,6 +84,37 @@ std::vector<int> ranks_nstart;
 std::vector<int> ranks_ndo;
 std::vector<int> ranks_ndo_nonempty;
 int maxndo = -1;
+
+void set_rho_tmin(const int modelgridindex, const float x) { modelgrid[modelgridindex].rhoinit = x; }
+
+void set_initelectronfrac(const int modelgridindex, const double electronfrac) {
+  modelgrid[modelgridindex].initelectronfrac = electronfrac;
+}
+
+void read_possible_yefile() {
+  if (!std::filesystem::exists("Ye.txt")) {
+    printout("Ye.txt not found\n");
+    return;
+  }
+
+  FILE *filein = fopen_required("Ye.txt", "r");
+  int nlines_in = 0;
+  assert_always(fscanf(filein, "%d", &nlines_in) == 1);
+
+  for (int n = 0; n < nlines_in; n++) {
+    int mgiplusone = -1;
+    double initelecfrac = 0.;
+    assert_always(fscanf(filein, "%d %lg", &mgiplusone, &initelecfrac) == 2);
+    const int mgi = mgiplusone - 1;
+    if (mgi >= 0 && mgi < get_npts_model()) {
+      set_initelectronfrac(mgi, initelecfrac);
+      // printout("Ye.txt: setting mgi %d init_ye %g\n", mgi, initelecfrac);
+    } else {
+      // printout("Ye.txt: ignoring mgi %d init_ye %g\n", mgi, initelecfrac);
+    }
+  }
+  fclose(filein);
+}
 
 }  // anonymous namespace
 
@@ -253,9 +283,9 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int
 
 auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid[modelgridindex].rhoinit; }
 
-auto get_rho(const int modelgridindex) -> float { return modelgrid[modelgridindex].rho; }
+__host__ __device__ auto get_rho(const int modelgridindex) -> float { return modelgrid[modelgridindex].rho; }
 
-auto get_nne(const int modelgridindex) -> float {
+__host__ __device__ auto get_nne(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
 
@@ -264,7 +294,7 @@ auto get_nne(const int modelgridindex) -> float {
   return nne;
 }
 
-auto get_nnetot(const int modelgridindex) -> float {
+__host__ __device__ auto get_nnetot(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
 
@@ -273,7 +303,7 @@ auto get_nnetot(const int modelgridindex) -> float {
   return nnetot;
 }
 
-auto get_ffegrp(const int modelgridindex) -> float { return modelgrid[modelgridindex].ffegrp; }
+__host__ __device__ auto get_ffegrp(const int modelgridindex) -> float { return modelgrid[modelgridindex].ffegrp; }
 
 void set_elem_abundance(const int modelgridindex, const int element, const float newabundance)
 // mass fraction of an element (all isotopes combined)
@@ -281,44 +311,42 @@ void set_elem_abundance(const int modelgridindex, const int element, const float
   modelgrid[modelgridindex].composition[element].abundance = newabundance;
 }
 
-auto get_elem_numberdens(const int modelgridindex, const int element) -> double
+__host__ __device__ auto get_elem_numberdens(const int modelgridindex, const int element) -> double
 // mass fraction of an element (all isotopes combined)
 {
   const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
   return get_elem_abundance(modelgridindex, element) / elem_meanweight * grid::get_rho(modelgridindex);
 }
 
-auto get_kappagrey(const int modelgridindex) -> float {
+__host__ __device__ auto get_kappagrey(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].kappagrey;
 }
 
-auto get_Te(const int modelgridindex) -> float {
+__host__ __device__ auto get_Te(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].Te;
 }
 
-auto get_TR(const int modelgridindex) -> float {
+__host__ __device__ auto get_TR(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].TR;
 }
 
-auto get_TJ(const int modelgridindex) -> float {
+__host__ __device__ auto get_TJ(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].TJ;
 }
 
-auto get_W(const int modelgridindex) -> float {
+__host__ __device__ auto get_W(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].W;
 }
-
-static void set_rho_tmin(const int modelgridindex, const float x) { modelgrid[modelgridindex].rhoinit = x; }
 
 void set_rho(const int modelgridindex, float rho) {
   assert_always(rho >= 0.);
@@ -364,7 +392,7 @@ auto get_model_type() -> enum gridtypes { return model_type; }
 
 void set_model_type(enum gridtypes model_type_value) { model_type = model_type_value; }
 
-auto get_npts_model() -> int
+__host__ __device__ auto get_npts_model() -> int
 // number of model grid cells
 {
   assert_testmodeonly(npts_model > 0);
@@ -441,7 +469,7 @@ auto get_t_model() -> double
   return t_model;
 }
 
-auto get_cell_modelgridindex(const int cellindex) -> int {
+__host__ __device__ auto get_cell_modelgridindex(const int cellindex) -> int {
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
   const int mgi = cell[cellindex].modelgridindex;
@@ -456,14 +484,14 @@ static void set_cell_modelgridindex(const int cellindex, const int new_modelgrid
   cell[cellindex].modelgridindex = new_modelgridindex;
 }
 
-auto get_numassociatedcells(const int modelgridindex) -> int
+__host__ __device__ auto get_numassociatedcells(const int modelgridindex) -> int
 // number of propagation cells associated with each modelgrid cell
 {
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return mg_associated_cells[modelgridindex];
 }
 
-auto get_modelcell_nonemptymgi(const int mgi) -> int
+__host__ __device__ auto get_modelcell_nonemptymgi(const int mgi) -> int
 // get the index in the list of non-empty cells for a given model grid cell
 {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
@@ -477,7 +505,7 @@ auto get_modelcell_nonemptymgi(const int mgi) -> int
   return nonemptymgi;
 }
 
-auto get_mgi_of_nonemptymgi(const int nonemptymgi) -> int
+__host__ __device__ auto get_mgi_of_nonemptymgi(const int nonemptymgi) -> int
 // get the index in the list of non-empty cells for a given model grid cell
 {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
@@ -551,10 +579,6 @@ auto get_electronfrac(const int modelgridindex) -> double {
 
 auto get_initelectronfrac(const int modelgridindex) -> double { return modelgrid[modelgridindex].initelectronfrac; }
 
-static void set_initelectronfrac(const int modelgridindex, const double electronfrac) {
-  modelgrid[modelgridindex].initelectronfrac = electronfrac;
-}
-
 auto get_initenergyq(const int modelgridindex) -> double {
   // q: energy in the model at tmin per gram to use with USE_MODEL_INITIAL_ENERGY option [erg/g]
 
@@ -563,31 +587,6 @@ auto get_initenergyq(const int modelgridindex) -> double {
 
 static void set_initenergyq(const int modelgridindex, const double initenergyq) {
   modelgrid[modelgridindex].initenergyq = initenergyq;
-}
-
-void read_possible_yefile() {
-  if (!std::filesystem::exists("Ye.txt")) {
-    printout("Ye.txt not found\n");
-    return;
-  }
-
-  FILE *filein = fopen_required("Ye.txt", "r");
-  int nlines_in = 0;
-  assert_always(fscanf(filein, "%d", &nlines_in) == 1);
-
-  for (int n = 0; n < nlines_in; n++) {
-    int mgiplusone = -1;
-    double initelecfrac = 0.;
-    assert_always(fscanf(filein, "%d %lg", &mgiplusone, &initelecfrac) == 2);
-    const int mgi = mgiplusone - 1;
-    if (mgi >= 0 && mgi < get_npts_model()) {
-      set_initelectronfrac(mgi, initelecfrac);
-      // printout("Ye.txt: setting mgi %d init_ye %g\n", mgi, initelecfrac);
-    } else {
-      // printout("Ye.txt: ignoring mgi %d init_ye %g\n", mgi, initelecfrac);
-    }
-  }
-  fclose(filein);
 }
 
 static void set_elem_stable_abund_from_total(const int mgi, const int element, const float elemabundance) {
@@ -674,7 +673,7 @@ void calculate_kappagrey() {
 
     if (globals::opacity_case == 3) {
       if (get_rho_tmin(mgi) > 0.) {
-        double kappagrey = (0.9 * get_ffegrp(mgi) + 0.1);
+        double kappagrey = ((0.9 * get_ffegrp(mgi)) + 0.1);
 
         if (get_rho_tmin(mgi) > globals::rho_crit) {
           kappagrey *= globals::rho_crit / get_rho_tmin(mgi);
@@ -1068,9 +1067,9 @@ static void map_1dmodelto3dgrid()
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const double cellvmid = get_cellradialposmid(cellindex) / globals::tmin;
-    const int mgi = std::find_if_not(vout_model, vout_model + get_npts_model(),
-                                     [cellvmid](double v_outer) { return v_outer < cellvmid; }) -
-                    vout_model;
+    const int mgi = static_cast<int>(std::find_if_not(vout_model, vout_model + get_npts_model(),
+                                                      [cellvmid](double v_outer) { return v_outer < cellvmid; }) -
+                                     vout_model);
 
     if (mgi < get_npts_model() && modelgrid[mgi].rhoinit > 0) {
       set_cell_modelgridindex(cellindex, mgi);
@@ -1601,7 +1600,7 @@ static void read_3d_model()
 
     for (int axis = 0; axis < 3; axis++) {
       const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
-      const double cellpos_expected = -xmax_tmodel + cellwidth * get_cellcoordpointnum(mgi, axis);
+      const double cellpos_expected = -xmax_tmodel + (cellwidth * get_cellcoordpointnum(mgi, axis));
       //   printout("mgi %d coord %d expected %g found %g or %g rmax %g get_cellcoordpointnum(mgi, axis) %d ncoordgrid
       //   %d\n",
       //            mgi, axis, cellpos_expected, cellpos_in[axis], cellpos_in[2 - axis], xmax_tmodel,
@@ -1830,7 +1829,7 @@ static void read_grid_restart_data(const int timestep) {
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
-        const int estimindex = nonemptymgi * globals::nbfcontinua_ground + i;
+        const int estimindex = (nonemptymgi * globals::nbfcontinua_ground) + i;
         assert_always(fscanf(gridsave_file, " %la %la", &globals::corrphotoionrenorm[estimindex],
                              &globals::gammaestimator[estimindex]) == 2);
       }
@@ -1881,7 +1880,7 @@ void write_grid_restart_data(const int timestep) {
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
-        const int estimindex = nonemptymgi * globals::nbfcontinua_ground + i;
+        const int estimindex = (nonemptymgi * globals::nbfcontinua_ground) + i;
         fprintf(gridsave_file, " %la %la", globals::corrphotoionrenorm[estimindex],
                 globals::gammaestimator[estimindex]);
       }
@@ -2161,7 +2160,7 @@ static void setup_grid_cylindrical_2d() {
   }
 }
 
-auto get_grid_type_name() -> std::string {
+static auto get_grid_type_name() -> std::string {
   switch (GRID_TYPE) {
     case GRID_SPHERICAL1D:
       return "spherical";
@@ -2383,7 +2382,7 @@ template <size_t S1>
   const double b = 2 * (dot(dir, pos) - pow(shellradiuststart, 2) / tstart / speed);
   const double c = dot(pos, pos) - pow(shellradiuststart, 2);
 
-  const double discriminant = pow(b, 2) - 4 * a * c;
+  const double discriminant = pow(b, 2) - (4 * a * c);
 
   if (discriminant < 0) {
     // no intersection
@@ -2488,8 +2487,8 @@ static auto get_coordboundary_distances_cylindrical2d(
     const double d_rcyl_coordminboundary = expanding_shell_intersection(posnoz, dirnoz, xyspeed, r_inner, true, tstart);
     if (d_rcyl_coordminboundary >= 0) {
       const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * pkt_dir[2] * CLIGHT_PROP;
-      d_coordminboundary[0] =
-          std::sqrt(d_rcyl_coordminboundary * d_rcyl_coordminboundary + d_z_coordminboundary * d_z_coordminboundary);
+      d_coordminboundary[0] = std::sqrt((d_rcyl_coordminboundary * d_rcyl_coordminboundary) +
+                                        (d_z_coordminboundary * d_z_coordminboundary));
     }
   }
 
@@ -2499,7 +2498,7 @@ static auto get_coordboundary_distances_cylindrical2d(
   if (d_rcyl_coordmaxboundary >= 0) {
     const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * pkt_dir[2] * CLIGHT_PROP;
     d_coordmaxboundary[0] =
-        std::sqrt(d_rcyl_coordmaxboundary * d_rcyl_coordmaxboundary + d_z_coordmaxboundary * d_z_coordmaxboundary);
+        std::sqrt((d_rcyl_coordmaxboundary * d_rcyl_coordmaxboundary) + (d_z_coordmaxboundary * d_z_coordmaxboundary));
   }
 
   // z boundaries are the same as Cartesian
@@ -2517,9 +2516,10 @@ static auto get_coordboundary_distances_cylindrical2d(
   return {d_coordminboundary, d_coordmaxboundary};
 }
 
-[[nodiscard]] auto boundary_distance(const std::array<double, 3> dir, const std::array<double, 3> pos,
-                                     const double tstart, const int cellindex,
-                                     enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>
+[[nodiscard]] __host__ __device__ auto boundary_distance(const std::array<double, 3> dir,
+                                                         const std::array<double, 3> pos, const double tstart,
+                                                         const int cellindex,
+                                                         enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>
 /// Basic routine to compute distance to a cell boundary.
 {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {

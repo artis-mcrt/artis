@@ -2,12 +2,21 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#ifndef __host__
+#define __host__
+#endif
+#ifndef __device__
+#define __device__
+#endif
+
 #include <getopt.h>
 #include <gsl/gsl_integration.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include <algorithm>
+#include <atomic>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <string>
@@ -40,18 +49,21 @@
 #include <cassert>
 #include <csignal>
 #include <cstdio>
-#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#ifndef GPU_ON
 #include <random>
+#endif
 
 #include "constants.h"
 
 constexpr int cellcacheslotid = 0;
 inline bool use_cellcache = false;
 
+#ifndef GPU_ON
 extern std::mt19937 stdrng;
+#endif
 
 extern std::ofstream output_file;
 
@@ -73,14 +85,18 @@ inline thread_local auto gslworkspace =
 
 #ifdef _OPENMP
 
-#ifdef GPU_ON
-#pragma omp requires unified_shared_memory
-#else
+#ifndef GPU_ON
 #pragma omp threadprivate(stdrng, output_file, outputlinebuf, outputstartofline, timebuf)
 #endif
 
 #endif
 
+#ifdef __NVCOMPILER_CUDA_ARCH__
+#define printout(...) printf(__VA_ARGS__)
+
+#define __artis_assert(e) assert(e)
+
+#else
 inline void print_line_start() {
   if (outputstartofline) {
     const time_t now_time = time(nullptr);
@@ -113,6 +129,7 @@ inline void print_line_start() {
     }                                                                                                                  \
     assert(pass);                                                                                                      \
   }
+#endif
 
 #define assert_always(e) __artis_assert(e)
 
@@ -226,7 +243,11 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
 
 inline auto rng_uniform() -> float {
   while (true) {
+#ifndef GPU_ON
     const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
+#else
+    const auto zrand = 0.5;
+#endif
     if (zrand != 1.) {
       return zrand;
     }

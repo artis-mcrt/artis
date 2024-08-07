@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
-#include <iterator>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -352,7 +351,7 @@ static auto sample_planck_analytic(const double T) -> double
   double bin_nu_lower = NU_MIN_R;
   for (ptrdiff_t i = 1; i < nubins; i++) {
     bin_nu_lower = NU_MIN_R + (i - 1) * delta_nu;
-    const double nu_upper = NU_MIN_R + i * delta_nu;
+    const double nu_upper = NU_MIN_R + (i * delta_nu);
     prev_partintegral = part_integral;
     part_integral = radfield::planck_integral_analytic(T, NU_MIN_R, nu_upper, false);
     if (rand_partintegral >= part_integral) {
@@ -377,7 +376,7 @@ static auto sample_planck_montecarlo(const double T) -> double
   const double B_peak = radfield::dbb(nu_peak, T, 1);
 
   while (true) {
-    const double nu = NU_MIN_R + rng_uniform() * (NU_MAX_R - NU_MIN_R);
+    const double nu = NU_MIN_R + (rng_uniform() * (NU_MAX_R - NU_MIN_R));
     if (rng_uniform() * B_peak <= radfield::dbb(nu, T, 1)) {
       return nu;
     }
@@ -385,7 +384,7 @@ static auto sample_planck_montecarlo(const double T) -> double
   }
 }
 
-void do_kpkt_blackbody(Packet &pkt)
+__host__ __device__ void do_kpkt_blackbody(Packet &pkt)
 /// handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
@@ -414,7 +413,7 @@ void do_kpkt_blackbody(Packet &pkt)
   pkt.nscatterings = 0;
 }
 
-void do_kpkt(Packet &pkt, double t2, int nts)
+__host__ __device__ void do_kpkt(Packet &pkt, double t2, int nts)
 /// handle a k-packet (kinetic energy of the free electrons)
 {
   const double t1 = pkt.prop_time;
@@ -547,8 +546,9 @@ void do_kpkt(Packet &pkt, double t2, int nts)
     pkt.em_pos = pkt.pos;
     pkt.em_time = pkt.prop_time;
     pkt.nscatterings = 0;
-
-    vpkt_call_estimators(pkt, TYPE_KPKT);
+    if constexpr (VPKT_ON) {
+      vpkt_call_estimators(pkt, TYPE_KPKT);
+    }
 
   } else if (rndcoolingtype == COOLINGTYPE_FB) {
     /// The k-packet converts directly into a r-packet by free-bound-emission.
@@ -587,7 +587,9 @@ void do_kpkt(Packet &pkt, double t2, int nts)
     pkt.em_time = pkt.prop_time;
     pkt.nscatterings = 0;
 
-    vpkt_call_estimators(pkt, TYPE_KPKT);
+    if constexpr (VPKT_ON) {
+      vpkt_call_estimators(pkt, TYPE_KPKT);
+    }
   } else if (rndcoolingtype == COOLINGTYPE_COLLEXC) {
     /// the k-packet activates a macro-atom due to collisional excitation
     // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
@@ -643,7 +645,7 @@ void do_kpkt(Packet &pkt, double t2, int nts)
     pkt.trueemissiontype = EMTYPE_NOTSET;
     pkt.trueemissionvelocity = -1;
 
-    do_macroatom(pkt, {element, ion, upper, -99});
+    do_macroatom(pkt, {.element = element, .ion = ion, .level = upper, .activatingline = -99});
   } else if (rndcoolingtype == COOLINGTYPE_COLLION) {
     /// the k-packet activates a macro-atom due to collisional ionisation
     // printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
@@ -663,7 +665,7 @@ void do_kpkt(Packet &pkt, double t2, int nts)
     pkt.trueemissiontype = EMTYPE_NOTSET;
     pkt.trueemissionvelocity = -1;
 
-    do_macroatom(pkt, {element, upperion, upper, -99});
+    do_macroatom(pkt, {.element = element, .ion = upperion, .level = upper, .activatingline = -99});
   } else if constexpr (TESTMODE) {
     printout("ERROR: Unknown rndcoolingtype type %d\n", rndcoolingtype);
     assert_testmodeonly(false);

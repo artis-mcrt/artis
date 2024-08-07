@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <iterator>
 #if defined(STDPAR_ON) || defined(_OPENMP_ON)
 #include <mutex>
 #endif
@@ -317,7 +316,7 @@ void do_macroatom_ionisation(const int modelgridindex, const int element, int *i
 
 }  // anonymous namespace
 
-void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
+__host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
 /// Material for handling activated macro atoms.
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
@@ -371,7 +370,7 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
     auto &chlevel = globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level];
 
     {
-#if defined(STDPAR_ON) || defined(_OPENMP_ON)
+#if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
       const auto lock =
           std::lock_guard<std::mutex>(globals::mutex_cellcachemacroatom[get_uniquelevelindex(element, ion, level)]);
 #endif
@@ -407,8 +406,7 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
 
     // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
     const int selected_action =
-        std::upper_bound(cumulative_transitions.cbegin(), cumulative_transitions.cend(), randomrate) -
-        cumulative_transitions.cbegin();
+        std::ranges::upper_bound(cumulative_transitions, randomrate) - cumulative_transitions.cbegin();
 
     assert_always(selected_action < MA_ACTION_COUNT);
     assert_always(cumulative_transitions[selected_action] > randomrate);
@@ -637,7 +635,9 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
   }
 
   if (pkt.type == TYPE_RPKT) {
-    vpkt_call_estimators(pkt, TYPE_MA);
+    if constexpr (VPKT_ON) {
+      vpkt_call_estimators(pkt, TYPE_MA);
+    }
   }
 }
 

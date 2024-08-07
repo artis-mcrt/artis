@@ -10,8 +10,8 @@
 #include <cstddef>
 #include <cstdlib>
 #include <ctime>
-#include <iterator>
 #include <limits>
+#include <memory>
 #include <span>
 #include <tuple>
 #include <vector>
@@ -29,6 +29,12 @@
 #include "stats.h"
 #include "vectors.h"
 #include "vpkt.h"
+
+#ifdef GPU_ON
+#define THREADLOCALONHOST
+#else
+#define THREADLOCALONHOST thread_local
+#endif
 
 namespace {
 
@@ -138,7 +144,7 @@ static auto get_nu_cmf_abort(const std::array<double, 3> pos, const std::array<d
   // get the frequency change per distance travelled assuming linear change to the abort distance
   // this is done is two parts to get identical results to do_rpkt_step()
   const auto half_abort_dist = abort_dist / 2.;
-  const auto abort_time = prop_time + half_abort_dist / CLIGHT_PROP + half_abort_dist / CLIGHT_PROP;
+  const auto abort_time = prop_time + (half_abort_dist / CLIGHT_PROP) + (half_abort_dist / CLIGHT_PROP);
 
   const std::array<double, 3> abort_pos{pos[0] + (dir[0] * half_abort_dist) + (dir[0] * half_abort_dist),
                                         pos[1] + (dir[1] * half_abort_dist) + (dir[1] * half_abort_dist),
@@ -152,12 +158,12 @@ static auto get_nu_cmf_abort(const std::array<double, 3> pos, const std::array<d
 // wavelength bins are ordered by ascending wavelength (descending frequency)
 
 static constexpr auto get_expopac_bin_nu_upper(const size_t binindex) -> double {
-  const auto lambda_lower = expopac_lambdamin + binindex * expopac_deltalambda;
+  const auto lambda_lower = expopac_lambdamin + (binindex * expopac_deltalambda);
   return 1e8 * CLIGHT / lambda_lower;
 }
 
 static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double {
-  const auto lambda_upper = expopac_lambdamin + (binindex + 1) * expopac_deltalambda;
+  const auto lambda_upper = expopac_lambdamin + ((binindex + 1) * expopac_deltalambda);
   return 1e8 * CLIGHT / lambda_upper;
 }
 
@@ -275,7 +281,7 @@ static auto get_event(const int modelgridindex,
       } else {
         /// continuum process occurs before reaching the line
 
-        return {dist + (tau_rnd - tau) / chi_cont, next_trans - 1, false};
+        return {dist + ((tau_rnd - tau) / chi_cont), next_trans - 1, false};
       }
     } else [[unlikely]] {
       /// no line interaction possible - check whether continuum process occurs in cell
@@ -288,7 +294,7 @@ static auto get_event(const int modelgridindex,
       }
       /// continuum process occurs at edist
 
-      return {dist + (tau_rnd - tau) / chi_cont, globals::nlines + 1, false};
+      return {dist + ((tau_rnd - tau) / chi_cont), globals::nlines + 1, false};
     }
   }
 
@@ -327,7 +333,7 @@ static auto get_event_expansion_opacity(
     // const auto chi_cont = 0.;
     double chi_bb_expansionopac = 0.;
     if (binindex >= 0) {
-      const auto kappa = expansionopacities[nonemptymgi * expopac_nbins + binindex];
+      const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
       chi_bb_expansionopac = kappa * grid::get_rho(modelgridindex) * doppler;
     }
 
@@ -336,7 +342,7 @@ static auto get_event_expansion_opacity(
     if (chi_tot * binedgedist > tau_rnd - tau) {
       // interaction occurs
       if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
-        const auto edist = std::max(dist + (tau_rnd - tau) / chi_tot, 0.);
+        const auto edist = std::max(dist + ((tau_rnd - tau) / chi_tot), 0.);
         const bool event_is_boundbound = rng_uniform() <= chi_bb_expansionopac / chi_tot;
         return {edist, next_trans, event_is_boundbound};
       } else {
@@ -473,8 +479,8 @@ static void electron_scatter_rpkt(Packet &pkt) {
   const double cos2i1 = cos(2 * i1);
   const double sin2i1 = sin(2 * i1);
 
-  const double Qold = Qi * cos2i1 - Ui * sin2i1;
-  const double Uold = Qi * sin2i1 + Ui * cos2i1;
+  const double Qold = (Qi * cos2i1) - (Ui * sin2i1);
+  const double Uold = (Qi * sin2i1) + (Ui * cos2i1);
 
   // Scattering
 
@@ -495,8 +501,8 @@ static void electron_scatter_rpkt(Packet &pkt) {
   const double cos2i2 = cos(2 * i2);
   const double sin2i2 = sin(2 * i2);
 
-  double Q = Qnew * cos2i2 + Unew * sin2i2;
-  double U = -Qnew * sin2i2 + Unew * cos2i2;
+  double Q = (Qnew * cos2i2) + (Unew * sin2i2);
+  double U = (-Qnew * sin2i2) + (Unew * cos2i2);
 
   // Transform Stokes Parameters from the CMF to the RF
   // Update rest frame direction, frequency and energy
@@ -544,7 +550,9 @@ static void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoe
     stats::increment(stats::COUNTER_ESCOUNTER);
 
     // generate a virtual packet
-    vpkt_call_estimators(pkt, TYPE_RPKT);
+    if constexpr (VPKT_ON) {
+      vpkt_call_estimators(pkt, TYPE_RPKT);
+    }
 
     // pkt.nu_cmf = 3.7474058e+14;
     electron_scatter_rpkt(pkt);
@@ -608,7 +616,7 @@ static void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoe
       pkt.type = TYPE_MA;
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-      do_macroatom(pkt, {element, ion + 1, upper, -99});
+      do_macroatom(pkt, {.element = element, .ion = ion + 1, .level = upper, .activatingline = -99});
     }
     /// or to the thermal pool
     else {
@@ -733,7 +741,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
         // because groundcont is sorted by nu_edge descending, nu < nu_edge for all remaining items
         return;
       }
-      const int ionestimindex = nonemptymgi * globals::nbfcontinua_ground + i;
+      const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + i;
 
       if constexpr (USE_LUT_PHOTOION) {
         atomicadd(globals::gammaestimator[ionestimindex],
@@ -758,19 +766,21 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
 
   MacroAtomState pktmastate{};
 
-  // TODO: these should be re-used to avoid allocations during packet prop
-  // but make sure r10_d2.6_Z in classic mode is not affected!
-  static thread_local Phixslist phixslist{
-      .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
-      .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
-      .gamma_contr = std::vector<double>(globals::bfestimcount, 0.),
+  THREADLOCALONHOST auto groundcont_gamma_contr = std::make_unique<double[]>(globals::nbfcontinua_ground);
+  THREADLOCALONHOST auto chi_bf_sum = std::make_unique<double[]>(globals::nbfcontinua);
+  THREADLOCALONHOST auto gamma_contr = std::make_unique<double[]>(globals::bfestimcount);
+
+  THREADLOCALONHOST Phixslist phixslist{
+      .groundcont_gamma_contr = std::span(groundcont_gamma_contr.get(), globals::nbfcontinua_ground),
+      .chi_bf_sum = std::span(chi_bf_sum.get(), globals::nbfcontinua),
+      .gamma_contr = std::span(gamma_contr.get(), globals::bfestimcount),
       .allcontend = 1,
       .allcontbegin = 0,
       .bfestimend = 1,
       .bfestimbegin = 0,
   };
 
-  static thread_local Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
+  THREADLOCALONHOST Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
       .nu = NAN,
       .total = NAN,
       .ffescat = NAN,
@@ -944,7 +954,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
   std::abort();
 }
 
-void do_rpkt(Packet &pkt, const double t2) {
+__host__ __device__ void do_rpkt(Packet &pkt, const double t2) {
   while (do_rpkt_step(pkt, t2)) {
     {
     }
@@ -1167,7 +1177,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   assert_testmodeonly(modelgridindex != grid::get_npts_model());
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
   if ((modelgridindex == chi_rpkt_cont.modelgridindex) && (globals::timestep == chi_rpkt_cont.timestep) &&
-      (fabs(chi_rpkt_cont.nu / nu_cmf - 1.0) < 1e-4)) {
+      (fabs((chi_rpkt_cont.nu / nu_cmf) - 1.0) < 1e-4)) {
     // calculated values are a match already
     return;
   }
@@ -1281,7 +1291,7 @@ void calculate_expansion_opacities(const int modelgridindex) {
 
     const float bin_kappa_bb = 1. / (CLIGHT * t_mid * rho) * bin_linesum;
     assert_always(std::isfinite(bin_kappa_bb));
-    expansionopacities[nonemptymgi * expopac_nbins + binindex] = bin_kappa_bb;
+    expansionopacities[(nonemptymgi * expopac_nbins) + binindex] = bin_kappa_bb;
 
     if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
       // thread_local Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
@@ -1294,7 +1304,7 @@ void calculate_expansion_opacities(const int modelgridindex) {
 
       kappa_planck_cumulative += kappa_planck * delta_nu;
 
-      expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins + binindex] = kappa_planck_cumulative;
+      expansionopacity_planck_cumulative[(nonemptymgi * expopac_nbins) + binindex] = kappa_planck_cumulative;
     }
   }
   printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calc);

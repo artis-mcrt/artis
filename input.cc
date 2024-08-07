@@ -22,7 +22,9 @@
 #include <ios>
 #include <iterator>
 #include <limits>
+#ifndef GPU_ON
 #include <random>
+#endif
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -939,7 +941,7 @@ void read_atomicdata_files() {
   if (globals::rank_in_node == 0) {
     // sort the lineline in descending frequency
     std::sort(EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(),
-              [](const auto &a, const auto &b) { return static_cast<bool>(a.nu > b.nu); });
+              [](const auto &a, const auto &b) { return a.nu > b.nu; });
 
     for (int i = 0; i < globals::nlines - 1; i++) {
       const double nu = temp_linelist[i].nu;
@@ -1699,7 +1701,9 @@ void read_parameterfile(int rank)
   if (pre_zseed > 0) {
     printout("using input.txt specified random number seed of %" PRId64 "\n", pre_zseed);
   } else {
+#ifndef GPU_ON
     pre_zseed = std::random_device{}();
+#endif
 #ifdef MPI_ON
     // broadcast randomly-generated seed from rank 0 to all ranks
     MPI_Bcast(&pre_zseed, 1, MPI_INT64_T, 0, MPI_COMM_WORLD);
@@ -1716,7 +1720,9 @@ void read_parameterfile(int rank)
     /// to the thread-ID tid.
     const auto tid = get_thread_num();
     auto rngseed = pre_zseed + static_cast<std::int64_t>(13 * (rank * get_max_threads() + tid));
+#ifndef GPU_ON
     stdrng.seed(rngseed);
+#endif
     printout("rank %d: thread %d has rngseed %" PRId64 "\n", rank, tid, rngseed);
     printout("rng is a std::mt19937 generator\n");
 

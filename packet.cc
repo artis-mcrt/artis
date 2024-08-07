@@ -11,7 +11,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <iterator>
 #include <ranges>
 #include <sstream>
 #include <string>
@@ -41,7 +40,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     const double r_inner = grid::get_cellcoordmin(cellindex, 0);
     const double r_outer = grid::get_cellcoordmax(cellindex, 0);
     // use equal volume probability distribution to select radius
-    const double radius = pow(zrand * pow(r_inner, 3) + (1. - zrand) * pow(r_outer, 3), 1 / 3.);
+    const double radius = pow((zrand * pow(r_inner, 3)) + ((1. - zrand) * pow(r_outer, 3)), 1 / 3.);
     // assert_always(radius >= r_inner);
     // assert_always(radius <= r_outer);
 
@@ -52,7 +51,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     const double rcyl_inner = grid::get_cellcoordmin(cellindex, 0);
     const double rcyl_outer = grid::get_cellcoordmax(cellindex, 0);
     // use equal area probability distribution to select radius
-    const double rcyl_rand = std::sqrt(zrand * std::pow(rcyl_inner, 2) + (1. - zrand) * std::pow(rcyl_outer, 2));
+    const double rcyl_rand = std::sqrt((zrand * std::pow(rcyl_inner, 2)) + ((1. - zrand) * std::pow(rcyl_outer, 2)));
     const double theta_rand = rng_uniform() * 2 * PI;
     pkt.pos[0] = std::cos(theta_rand) * rcyl_rand;
     pkt.pos[1] = std::sin(theta_rand) * rcyl_rand;

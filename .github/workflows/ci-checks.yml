@@ -106,7 +106,7 @@ jobs:
                         {name: gcc, ver: 12},
                         {name: gcc, ver: 13},
                         {name: gcc, ver: 14},
-                        {name: nvc++, ver: '24.5'},
+                        {name: nvc++, ver: '24.7'},
                     ]
                 mpi: [ON, OFF]
             fail-fast: false
@@ -138,6 +138,14 @@ jobs:
               with:
                   compiler: nvidia-hpc
                   version: ${{ matrix.compiler.ver }}
+
+            # - name: Install CUDA Toolkit
+            #   uses: Jimver/cuda-toolkit@master
+            #   if: matrix.compiler.name == 'nvc++'
+            #   with:
+            #       log-file-suffix: '${{matrix.compiler.ver}}.txt'
+            #       method: 'network'
+            #       sub-packages: '"nvcc", "cudart"'
 
             - name: Set nvc++ as compiler
               if: matrix.compiler.name == 'nvc++'
@@ -203,6 +211,7 @@ jobs:
                   make MPI=${{matrix.mpi}} OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
+              if: matrix.compiler.name != 'nvc++'
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean

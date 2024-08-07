@@ -3,12 +3,13 @@
 #define RPKT_H
 
 #include <ctime>
+#include <span>
 #include <vector>
 
 struct Phixslist {
-  std::vector<double> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-  std::vector<double> chi_bf_sum;
-  std::vector<double> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
+  std::span<double> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
+  std::span<double> chi_bf_sum;
+  std::span<double> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
   int allcontend{-1};
   int allcontbegin{0};
   int bfestimend{-1};

@@ -52,8 +52,8 @@ void printout_tracemission_stats() {
   // mode is 0 for emission and 1 for absorption
   for (int mode = 0; mode < 2; mode++) {
     if (mode == 0) {
-      std::sort(traceemissionabsorption.begin(), traceemissionabsorption.end(),
-                [](const auto &a, const auto &b) { return a.energyemitted > b.energyemitted; });
+      std::ranges::sort(traceemissionabsorption,
+                        [](const auto &a, const auto &b) { return a.energyemitted > b.energyemitted; });
       printout("lambda [%5.1f, %5.1f] nu %g %g\n", traceemissabs_lambdamin, traceemissabs_lambdamax,
                traceemissabs_nulower, traceemissabs_nuupper);
 
@@ -61,8 +61,8 @@ void printout_tracemission_stats() {
                traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY,
                traceemissabs_timemax / DAY, traceemission_totalenergy);
     } else {
-      std::sort(traceemissionabsorption.begin(), traceemissionabsorption.end(),
-                [](const auto &a, const auto &b) { return a.energyabsorbed > b.energyabsorbed; });
+      std::ranges::sort(traceemissionabsorption,
+                        [](const auto &a, const auto &b) { return a.energyabsorbed > b.energyabsorbed; });
       printout("Top line absorption contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
                traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY,
                traceemissabs_timemax / DAY, traceabsorption_totalenergy);
@@ -136,7 +136,7 @@ void printout_tracemission_stats() {
 auto get_proccount() -> int
 // number of different emission processes (bf and bb for each ion, and free-free)
 {
-  return 2 * get_nelements() * get_max_nions() + 1;
+  return (2 * get_nelements() * get_max_nions()) + 1;
 }
 
 auto columnindex_from_emissiontype(const int et) -> int {
@@ -144,7 +144,7 @@ auto columnindex_from_emissiontype(const int et) -> int {
     /// bb-emission
     const int element = globals::linelist[et].elementindex;
     const int ion = globals::linelist[et].ionindex;
-    return element * get_max_nions() + ion;
+    return (element * get_max_nions()) + ion;
   }
   if (et == EMTYPE_FREEFREE) {
     /// ff-emission
@@ -171,7 +171,7 @@ auto columnindex_from_emissiontype(const int et) -> int {
 
   assert_always(get_emtype_continuum(element, ion, level, upperionlevel) == et);
 
-  return get_nelements() * get_max_nions() + element * get_max_nions() + ion;
+  return (get_nelements() * get_max_nions()) + (element * get_max_nions()) + ion;
 }
 
 void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, const Spectra *stokes_i,
@@ -214,22 +214,22 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, co
       const int truenproc = columnindex_from_emissiontype(pkt.trueemissiontype);
       assert_always(truenproc < proccount);
       if (truenproc >= 0) {
-        spectra.timesteps[nt].trueemission[nnu * proccount + truenproc] += deltaE;
+        spectra.timesteps[nt].trueemission[(nnu * proccount) + truenproc] += deltaE;
       }
 
       const int nproc = columnindex_from_emissiontype(pkt.emissiontype);
       assert_always(nproc < proccount);
       if (nproc >= 0) {  // -1 means not set
-        spectra.timesteps[nt].emission[nnu * proccount + nproc] += deltaE;
+        spectra.timesteps[nt].emission[(nnu * proccount) + nproc] += deltaE;
 
         if (stokes_i != nullptr && stokes_i->do_emission_res) {
-          stokes_i->timesteps[nt].emission[nnu * proccount + nproc] += pkt.stokes[0] * deltaE;
+          stokes_i->timesteps[nt].emission[(nnu * proccount) + nproc] += pkt.stokes[0] * deltaE;
         }
         if (stokes_q != nullptr && stokes_q->do_emission_res) {
-          stokes_q->timesteps[nt].emission[nnu * proccount + nproc] += pkt.stokes[1] * deltaE;
+          stokes_q->timesteps[nt].emission[(nnu * proccount) + nproc] += pkt.stokes[1] * deltaE;
         }
         if (stokes_u != nullptr && stokes_u->do_emission_res) {
-          stokes_u->timesteps[nt].emission[nnu * proccount + nproc] += pkt.stokes[2] * deltaE;
+          stokes_u->timesteps[nt].emission[(nnu * proccount) + nproc] += pkt.stokes[2] * deltaE;
         }
       }
 
@@ -260,18 +260,19 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, co
           /// bb-emission
           const int element = globals::linelist[at].elementindex;
           const int ion = globals::linelist[at].ionindex;
-          spectra.timesteps[nt].absorption[nnu_abs * ioncount + element * get_max_nions() + ion] += deltaE_absorption;
+          spectra.timesteps[nt].absorption[(nnu_abs * ioncount) + (element * get_max_nions()) + ion] +=
+              deltaE_absorption;
 
           if (stokes_i != nullptr && stokes_i->do_emission_res) {
-            stokes_i->timesteps[nt].absorption[nnu_abs * ioncount + element * get_max_nions() + ion] +=
+            stokes_i->timesteps[nt].absorption[(nnu_abs * ioncount) + (element * get_max_nions()) + ion] +=
                 pkt.stokes[0] * deltaE_absorption;
           }
           if (stokes_q != nullptr && stokes_q->do_emission_res) {
-            stokes_q->timesteps[nt].absorption[nnu_abs * ioncount + element * get_max_nions() + ion] +=
+            stokes_q->timesteps[nt].absorption[(nnu_abs * ioncount) + (element * get_max_nions()) + ion] +=
                 pkt.stokes[1] * deltaE_absorption;
           }
           if (stokes_u != nullptr && stokes_u->do_emission_res) {
-            stokes_u->timesteps[nt].absorption[nnu_abs * ioncount + element * get_max_nions() + ion] +=
+            stokes_u->timesteps[nt].absorption[(nnu_abs * ioncount) + (element * get_max_nions()) + ion] +=
                 pkt.stokes[2] * deltaE_absorption;
           }
 
@@ -358,17 +359,17 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
       fprintf(spec_file, "%g ", spectra.timesteps[nts].flux[nnu]);
       if (do_emission_res) {
         for (int i = 0; i < proccount; i++) {
-          fprintf(emission_file, "%g ", spectra.timesteps[nts].emission[nnu * proccount + i]);
+          fprintf(emission_file, "%g ", spectra.timesteps[nts].emission[(nnu * proccount) + i]);
         }
         fprintf(emission_file, "\n");
 
         for (int i = 0; i < proccount; i++) {
-          fprintf(trueemission_file, "%g ", spectra.timesteps[nts].trueemission[nnu * proccount + i]);
+          fprintf(trueemission_file, "%g ", spectra.timesteps[nts].trueemission[(nnu * proccount) + i]);
         }
         fprintf(trueemission_file, "\n");
 
         for (int i = 0; i < ioncount; i++) {
-          fprintf(absorption_file, "%g ", spectra.timesteps[nts].absorption[nnu * ioncount + i]);
+          fprintf(absorption_file, "%g ", spectra.timesteps[nts].absorption[(nnu * ioncount) + i]);
         }
         fprintf(absorption_file, "\n");
       }
@@ -424,12 +425,12 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
 
       if (do_emission_res) {
         for (int i = 0; i < proccount; i++) {
-          fprintf(emissionpol_file, "%g ", stokes_i->timesteps[p].emission[m * proccount + i]);
+          fprintf(emissionpol_file, "%g ", stokes_i->timesteps[p].emission[(m * proccount) + i]);
         }
         fprintf(emissionpol_file, "\n");
 
         for (int i = 0; i < ioncount; i++) {
-          fprintf(absorptionpol_file, "%g ", stokes_i->timesteps[p].absorption[m * ioncount + i]);
+          fprintf(absorptionpol_file, "%g ", stokes_i->timesteps[p].absorption[(m * ioncount) + i]);
         }
         fprintf(absorptionpol_file, "\n");
       }
@@ -441,12 +442,12 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
 
       if (do_emission_res) {
         for (int i = 0; i < proccount; i++) {
-          fprintf(emissionpol_file, "%g ", stokes_q->timesteps[p].emission[m * proccount + i]);
+          fprintf(emissionpol_file, "%g ", stokes_q->timesteps[p].emission[(m * proccount) + i]);
         }
         fprintf(emissionpol_file, "\n");
 
         for (int i = 0; i < ioncount; i++) {
-          fprintf(absorptionpol_file, "%g ", stokes_q->timesteps[p].absorption[m * ioncount + i]);
+          fprintf(absorptionpol_file, "%g ", stokes_q->timesteps[p].absorption[(m * ioncount) + i]);
         }
         fprintf(absorptionpol_file, "\n");
       }
@@ -458,12 +459,12 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
 
       if (do_emission_res) {
         for (int i = 0; i < proccount; i++) {
-          fprintf(emissionpol_file, "%g ", stokes_u->timesteps[p].emission[m * proccount + i]);
+          fprintf(emissionpol_file, "%g ", stokes_u->timesteps[p].emission[(m * proccount) + i]);
         }
         fprintf(emissionpol_file, "\n");
 
         for (int i = 0; i < ioncount; i++) {
-          fprintf(absorptionpol_file, "%g ", stokes_u->timesteps[p].absorption[m * ioncount + i]);
+          fprintf(absorptionpol_file, "%g ", stokes_u->timesteps[p].absorption[(m * ioncount) + i]);
         }
         fprintf(absorptionpol_file, "\n");
       }

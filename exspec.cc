@@ -8,7 +8,9 @@
 #ifdef MPI_ON
 #include <mpi.h>
 #endif
+#ifndef GPU_ON
 #include <random>
+#endif
 #include <vector>
 
 #include "artisoptions.h"
@@ -22,7 +24,9 @@
 #include "spectrum_lightcurve.h"
 #include "version.h"
 
+#ifndef GPU_ON
 std::mt19937 stdrng{std::random_device{}()};
+#endif
 
 std::ofstream output_file;
 
