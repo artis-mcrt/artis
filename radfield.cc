@@ -323,7 +323,7 @@ void init(int my_rank, int ndo_nonempty)
     // these are probably sorted anyway because the previous loop goes in ascending
     // lineindex. But this sorting step is quick and makes sure that the
     // binary searching later will work correctly
-    std::sort(detailed_lineindicies, detailed_lineindicies + detailed_linecount);
+    std::stable_sort(detailed_lineindicies, detailed_lineindicies + detailed_linecount);
   }
 
   printout("There are %d lines with detailed Jblue_lu estimators.\n", detailed_linecount);
