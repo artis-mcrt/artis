@@ -780,7 +780,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
       .bfestimbegin = 0,
   };
 
-  THREADLOCALONHOST static Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
+  THREADLOCALONHOST Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
       .nu = NAN,
       .total = NAN,
       .ffescat = NAN,
