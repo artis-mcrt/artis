@@ -33,7 +33,7 @@
 #ifdef GPU_ON
 #define THREADLOCALONHOST
 #else
-#define THREADLOCALONHOST thread_local
+#define THREADLOCALONHOST thread_local static
 #endif
 
 namespace {
