@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <ranges>
 #if defined(STDPAR_ON) || defined(_OPENMP_ON)
 #include <mutex>
 #endif
