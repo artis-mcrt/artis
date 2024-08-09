@@ -1443,8 +1443,8 @@ void setup_phixs_list() {
   globals::bfestimcount = 0;
   if (globals::nbfcontinua > 0) {
     // indicies above were temporary only. continum index should be to the sorted list
-    std::stable_sort(nonconstallcont, nonconstallcont + globals::nbfcontinua,
-                     [](const auto &a, const auto &b) { return a.nu_edge < b.nu_edge; });
+    std::ranges::stable_sort(std::span(nonconstallcont, globals::nbfcontinua), std::ranges::less{},
+                             &FullPhotoionTransition::nu_edge);
 
     globals::bfestim_nu_edge.clear();
     for (int i = 0; i < globals::nbfcontinua; i++) {
