@@ -139,12 +139,11 @@ void packet_init(Packet *pkt)
 
   printout("Placing pellets...\n");
   auto allpkts = std::ranges::iota_view{0, globals::npkts};
-  std::for_each(allpkts.begin(), allpkts.end(), [&, norm, e0](const int n) {
+  std::ranges::for_each(allpkts, [&, norm, e0](const int n) {
     const double targetval = rng_uniform() * norm;
 
     // first i such that en_cumulative[i] > targetval
-    const int cellindex =
-        std::upper_bound(en_cumulative.cbegin(), en_cumulative.cend(), targetval) - en_cumulative.cbegin();
+    const int cellindex = std::ranges::upper_bound(en_cumulative, targetval) - en_cumulative.cbegin();
     assert_always(cellindex < grid::ngrid);
 
     place_pellet(e0, cellindex, n, pkt[n]);
