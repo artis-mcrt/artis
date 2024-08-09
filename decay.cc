@@ -432,31 +432,6 @@ static void extend_lastdecaypath()
   }
 }
 
-static auto operator<(const DecayPath &d1, const DecayPath &d2) -> bool
-// true if d1 < d2
-// chains are sorted by mass number, then atomic number, then length
-{
-  const int d1_length = get_decaypathlength(d1);
-  const int d2_length = get_decaypathlength(d2);
-  const int smallestpathlength = std::min(d1_length, d2_length);
-  for (int i = 0; i < smallestpathlength; i++) {
-    if (d1.a[i] < d2.a[i]) {
-      return true;
-    }
-    if (d1.a[i] > d2.a[i]) {
-      return false;
-    }
-    if (d1.z[i] < d2.z[i]) {
-      return true;
-    }
-    if (d1.z[i] > d2.z[i]) {
-      return false;
-    }
-  }
-  // one is an extension of the other
-  return d1_length < d2_length;
-}
-
 static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist,
                             std::vector<Nuclide> &standard_nuclides) {
   decaypaths.clear();
@@ -491,7 +466,29 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
     }
   }
 
-  std::stable_sort(decaypaths.begin(), decaypaths.end());
+  std::ranges::stable_sort(decaypaths, [](const DecayPath &d1, const DecayPath &d2) {
+    // true if d1 < d2
+    // chains are sorted by mass number, then atomic number, then length
+    const int d1_length = get_decaypathlength(d1);
+    const int d2_length = get_decaypathlength(d2);
+    const int smallestpathlength = std::min(d1_length, d2_length);
+    for (int i = 0; i < smallestpathlength; i++) {
+      if (d1.a[i] < d2.a[i]) {
+        return true;
+      }
+      if (d1.a[i] > d2.a[i]) {
+        return false;
+      }
+      if (d1.z[i] < d2.z[i]) {
+        return true;
+      }
+      if (d1.z[i] > d2.z[i]) {
+        return false;
+      }
+    }
+    // one is an extension of the other, so place the shorter one first
+    return d1_length < d2_length;
+  });
 
   for (auto &decaypath : decaypaths) {
     // all nuclei in the path (except for the last one, which is allowed to be stable) must have a mean life >0
@@ -1417,8 +1414,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
   const double zrand_en = rng_uniform() * cumulative_en_sum[num_decaychannels - 1];
 
   // first decaychannelindex such that cumulative_en_sum[decaychannelindex] > zrand_en
-  const int decaychannelindex =
-      std::upper_bound(cumulative_en_sum.cbegin(), cumulative_en_sum.cend(), zrand_en) - cumulative_en_sum.cbegin();
+  const int decaychannelindex = std::ranges::upper_bound(cumulative_en_sum, zrand_en) - cumulative_en_sum.cbegin();
 
   assert_always(decaychannelindex >= 0);
   assert_always(decaychannelindex < num_decaychannels);
