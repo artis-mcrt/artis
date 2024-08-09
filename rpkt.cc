@@ -127,10 +127,10 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
 
   // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
   // lower_bound matches the first element where the comparison function is false
-  const int matchindex =
+  const int matchindex = static_cast<int>(
       std::lower_bound(globals::linelist, globals::linelist + globals::nlines, nu_cmf,
                        [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; }) -
-      globals::linelist;
+      globals::linelist);
 
   if (matchindex >= globals::nlines) [[unlikely]] {
     return -1;
@@ -585,9 +585,9 @@ static void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoe
     const double chi_bf_rand = rng_uniform() * chi_bf_inrest;
 
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
-    const int allcontindex = std::upper_bound(phixslist.chi_bf_sum.data() + phixslist.allcontbegin,
-                                              phixslist.chi_bf_sum.data() + phixslist.allcontend - 1, chi_bf_rand) -
-                             phixslist.chi_bf_sum.data();
+    const auto allcontindex = std::upper_bound(phixslist.chi_bf_sum.data() + phixslist.allcontbegin,
+                                               phixslist.chi_bf_sum.data() + phixslist.allcontend - 1, chi_bf_rand) -
+                              phixslist.chi_bf_sum.data();
     assert_always(allcontindex < phixslist.allcontend);
 
     const double nu_edge = globals::allcont[allcontindex].nu_edge;
@@ -1065,7 +1065,8 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
   // break the list into nu >= nu_edge and the remainder (nu < nu_edge)
 
   int i = 0;
-  const int allcontend = std::ranges::upper_bound(globals::allcont_nu_edge, nu) - globals::allcont_nu_edge.cbegin();
+  const int allcontend =
+      static_cast<int>(std::ranges::upper_bound(globals::allcont_nu_edge, nu) - globals::allcont_nu_edge.cbegin());
 
   const int allcontbegin =
       std::lower_bound(
@@ -1081,7 +1082,8 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
     phixslist->allcontbegin = allcontbegin;
     phixslist->allcontend = allcontend;
 
-    phixslist->bfestimend = std::ranges::upper_bound(globals::bfestim_nu_edge, nu) - globals::bfestim_nu_edge.cbegin();
+    phixslist->bfestimend =
+        static_cast<int>(std::ranges::upper_bound(globals::bfestim_nu_edge, nu) - globals::bfestim_nu_edge.cbegin());
 
     phixslist->bfestimbegin =
         std::lower_bound(
@@ -1263,10 +1265,10 @@ void calculate_expansion_opacities(const int modelgridindex) {
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
   // find the first line with nu below the upper limit of the first bin
-  int lineindex =
+  int lineindex = static_cast<int>(
       std::lower_bound(&globals::linelist[0], &globals::linelist[globals::nlines], get_expopac_bin_nu_upper(0),
                        [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; }) -
-      globals::linelist;
+      globals::linelist);
 
   double kappa_planck_cumulative = 0.;
 
