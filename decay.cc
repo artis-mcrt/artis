@@ -515,42 +515,38 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
 static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist,
                                    std::vector<Nuclide> &standard_nuclides) {
   // remove nuclides that are not a standard or custom input-specified nuclide, or connected to these by decays
-  nuclides.erase(
-      std::remove_if(nuclides.begin(), nuclides.end(),
-                     [&](const auto &nuc) {
-                       // keep nucleus if it is in the standard list
-                       if (std::ranges::any_of(standard_nuclides, [&](const auto &stdnuc) {
-                             return (stdnuc.z == nuc.z) && (stdnuc.a == nuc.a);
-                           })) {
-                         return false;
-                       }
-                       // keep nucleus if it is in the custom list
-                       for (size_t i = 0; i < custom_zlist.size(); i++) {
-                         if ((nuc.z == custom_zlist[i]) && (nuc.a == custom_alist[i])) {
-                           return false;
-                         }
-                       }
+  std::erase_if(nuclides, [&](const auto &nuc) {
+    // keep nucleus if it is in the standard list
+    if (std::ranges::any_of(standard_nuclides,
+                            [&](const auto &stdnuc) { return (stdnuc.z == nuc.z) && (stdnuc.a == nuc.a); })) {
+      return false;
+    }
+    // keep nucleus if it is in the custom list
+    for (size_t i = 0; i < custom_zlist.size(); i++) {
+      if ((nuc.z == custom_zlist[i]) && (nuc.a == custom_alist[i])) {
+        return false;
+      }
+    }
 
-                       const bool in_any_decaypath = std::ranges::any_of(decaypaths, [&nuc](const auto &decaypath) {
-                         for (size_t i = 0; i < decaypath.z.size(); i++) {
-                           if (decaypath.z[i] == nuc.z && decaypath.a[i] == nuc.a) {
-                             // nuc is in the decay path
-                             return true;
-                           }
-                         }
+    const bool in_any_decaypath = std::ranges::any_of(decaypaths, [&nuc](const auto &decaypath) {
+      for (size_t i = 0; i < decaypath.z.size(); i++) {
+        if (decaypath.z[i] == nuc.z && decaypath.a[i] == nuc.a) {
+          // nuc is in the decay path
+          return true;
+        }
+      }
 
-                         // return true if nuc is the final daughter of a decay path
-                         return (decaypath.final_daughter_z() == nuc.z && decaypath.final_daughter_a() == nuc.a);
-                       });
+      // return true if nuc is the final daughter of a decay path
+      return (decaypath.final_daughter_z() == nuc.z && decaypath.final_daughter_a() == nuc.a);
+    });
 
-                       if (in_any_decaypath) {
-                         return false;
-                       }
+    if (in_any_decaypath) {
+      return false;
+    }
 
-                       printout("removing unused nuclide (Z=%d)%s%d\n", nuc.z, get_elname(nuc.z).c_str(), nuc.a);
-                       return true;
-                     }),
-      nuclides.end());
+    printout("removing unused nuclide (Z=%d)%s%d\n", nuc.z, get_elname(nuc.z).c_str(), nuc.a);
+    return true;
+  });
   nuclides.shrink_to_fit();
 
   // update the nuclide indicies in the decay paths after we possibly removed some nuclides
