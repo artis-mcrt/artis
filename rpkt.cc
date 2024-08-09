@@ -780,7 +780,7 @@ static auto do_rpkt_step(Packet &pkt, const double t2) -> bool
       .bfestimbegin = 0,
   };
 
-  THREADLOCALONHOST Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
+  THREADLOCALONHOST static Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
       .nu = NAN,
       .total = NAN,
       .ffescat = NAN,
@@ -1065,8 +1065,7 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
   // break the list into nu >= nu_edge and the remainder (nu < nu_edge)
 
   int i = 0;
-  const int allcontend = std::upper_bound(globals::allcont_nu_edge.cbegin(), globals::allcont_nu_edge.cend(), nu) -
-                         globals::allcont_nu_edge.cbegin();
+  const int allcontend = std::ranges::upper_bound(globals::allcont_nu_edge, nu) - globals::allcont_nu_edge.cbegin();
 
   const int allcontbegin =
       std::lower_bound(
@@ -1082,8 +1081,7 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
     phixslist->allcontbegin = allcontbegin;
     phixslist->allcontend = allcontend;
 
-    phixslist->bfestimend = std::upper_bound(globals::bfestim_nu_edge.cbegin(), globals::bfestim_nu_edge.cend(), nu) -
-                            globals::bfestim_nu_edge.cbegin();
+    phixslist->bfestimend = std::ranges::upper_bound(globals::bfestim_nu_edge, nu) - globals::bfestim_nu_edge.cbegin();
 
     phixslist->bfestimbegin =
         std::lower_bound(
