@@ -560,7 +560,7 @@ auto get_nucstring_z(const std::string &strnuc) -> int
 // convert something like Ni56 to integer 28
 {
   std::string elcode = strnuc;
-  elcode.erase(std::remove_if(elcode.begin(), elcode.end(), &isdigit), elcode.end());
+  std::erase_if(elcode, &isdigit);
 
   for (int z = 0; z <= Z_MAX; z++) {
     if (elcode == get_elname(z)) {
