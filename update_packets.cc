@@ -8,7 +8,6 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
-#include <iterator>
 #include <span>
 
 #include "artisoptions.h"
