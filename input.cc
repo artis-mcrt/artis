@@ -25,6 +25,7 @@
 #ifndef GPU_ON
 #include <random>
 #endif
+#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -1379,8 +1380,8 @@ void setup_phixs_list() {
       }
     }
     assert_always(groundcontindex == globals::nbfcontinua_ground);
-    std::stable_sort(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
-                     [](const auto &a, const auto &b) { return a.nu_edge < b.nu_edge; });
+    std::ranges::stable_sort(std::span(globals::groundcont, globals::nbfcontinua_ground), std::ranges::less{},
+                             &GroundPhotoion::nu_edge);
   }
 
   auto *nonconstallcont =
