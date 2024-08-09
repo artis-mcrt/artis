@@ -111,8 +111,8 @@ ifeq ($(STDPAR),ON)
 			CXXFLAGS += -stdpar=multicore
 		endif
   else ifeq ($(COMPILER_NAME),CLANG)
-		# CXXFLAGS += -fexperimental-library
-		LDFLAGS += -ltbb
+		CXXFLAGS += -fexperimental-library
+		# LDFLAGS += -ltbb
 		# LDFLAGS += -Xlinker -debug_snapshot
   else ifeq ($(COMPILER_NAME),GCC)
 		LDFLAGS += -ltbb
