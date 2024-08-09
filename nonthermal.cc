@@ -1572,9 +1572,8 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 
   if constexpr (NT_EXCITATION_ON && (MAX_NT_EXCITATIONS_STORED > 0)) {
     // sort by descending frac_deposition
-    std::stable_sort(nt_solution[modelgridindex].frac_excitations_list.begin(),
-                     nt_solution[modelgridindex].frac_excitations_list.end(),
-                     [](const auto &a, const auto &b) { return a.frac_deposition > b.frac_deposition; });
+    std::ranges::stable_sort(nt_solution[modelgridindex].frac_excitations_list,
+                             [](const auto &a, const auto &b) { return a.frac_deposition > b.frac_deposition; });
 
     // the excitation list is now sorted by frac_deposition descending
     const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
@@ -1631,9 +1630,8 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
     }
 
     // sort the excitation list by ascending lineindex for fast lookup with a binary search
-    std::stable_sort(nt_solution[modelgridindex].frac_excitations_list.begin(),
-                     nt_solution[modelgridindex].frac_excitations_list.end(),
-                     [](const auto &a, const auto &b) { return a.lineindex < b.lineindex; });
+    std::ranges::stable_sort(nt_solution[modelgridindex].frac_excitations_list,
+                             [](const auto &a, const auto &b) { return a.lineindex < b.lineindex; });
 
   }  // NT_EXCITATION_ON
 
@@ -2297,8 +2295,7 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const
 
   // binary search, assuming the excitation list is sorted by lineindex ascending
   auto ntexclist = nt_solution[modelgridindex].frac_excitations_list;
-  auto ntexcitation = std::lower_bound(ntexclist.cbegin(), ntexclist.cend(), lineindex,
-                                       [](const auto &exc, const int lineindex) { return exc.lineindex < lineindex; });
+  auto ntexcitation = std::ranges::lower_bound(ntexclist, lineindex, {}, &nt_excitation_struct::lineindex);
   if (ntexcitation == ntexclist.end() || ntexcitation->lineindex != lineindex) {
     return 0.;
   }
