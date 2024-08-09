@@ -61,8 +61,8 @@ void printout_tracemission_stats() {
                traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY,
                traceemissabs_timemax / DAY, traceemission_totalenergy);
     } else {
-      std::ranges::stable_sort(traceemissionabsorption,
-                               [](const auto &a, const auto &b) { return a.energyabsorbed > b.energyabsorbed; });
+      std::ranges::stable_sort(traceemissionabsorption, std::ranges::greater{},
+                               &emissionabsorptioncontrib::energyabsorbed);
       printout("Top line absorption contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
                traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY,
                traceemissabs_timemax / DAY, traceabsorption_totalenergy);
