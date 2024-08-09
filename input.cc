@@ -940,7 +940,8 @@ void read_atomicdata_files() {
 
   if (globals::rank_in_node == 0) {
     // sort the lineline in descending frequency
-    std::ranges::stable_sort(EXEC_PAR_UNSEQ temp_linelist, [](const auto &a, const auto &b) { return a.nu > b.nu; });
+    std::stable_sort(EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(),
+                     [](const auto &a, const auto &b) { return a.nu > b.nu; });
 
     for (int i = 0; i < globals::nlines - 1; i++) {
       const double nu = temp_linelist[i].nu;
