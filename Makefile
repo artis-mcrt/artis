@@ -82,7 +82,7 @@ ifeq ($(OPENMP),ON)
 
 	ifeq ($(COMPILER_NAME),NVHPC)
 		ifeq ($(GPU),ON)
-			CXXFLAGS += -mp=gpu -gpu=unified
+			CXXFLAGS += -mp=gpu -gpu=mem:unified
 		else
 			CXXFLAGS += -mp
 		endif
@@ -105,7 +105,7 @@ ifeq ($(STDPAR),ON)
 
   ifeq ($(COMPILER_NAME),NVHPC)
 		ifeq ($(GPU),ON)
-			CXXFLAGS += -stdpar=gpu -gpu=unified
+			CXXFLAGS += -stdpar=gpu -gpu=mem:unified
 			# CXXFLAGS += -gpu=cc80
 		else
 			CXXFLAGS += -stdpar=multicore
