@@ -1063,12 +1063,13 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
 static auto get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
   // simple linear search seems to be faster than the binary search
   // possibly because lower frequency transitions near start of list are more likely to be called?
-  const auto bfcontindex = std::find_if(globals::allcont, globals::allcont + globals::nbfcontinua,
-                                        [=](const auto &bf) {
-                                          return (bf.element == element) && (bf.ion == lowerion) &&
-                                                 (bf.level == lower) && (bf.phixstargetindex == phixstargetindex);
-                                        }) -
-                           globals::allcont;
+  const auto bfcontindex = static_cast<int>(std::find_if(globals::allcont, globals::allcont + globals::nbfcontinua,
+                                                         [=](const auto &bf) {
+                                                           return (bf.element == element) && (bf.ion == lowerion) &&
+                                                                  (bf.level == lower) &&
+                                                                  (bf.phixstargetindex == phixstargetindex);
+                                                         }) -
+                                            globals::allcont);
 
   if (bfcontindex < globals::nbfcontinua) {
     return bfcontindex;
