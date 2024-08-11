@@ -2168,7 +2168,7 @@ __host__ __device__ auto nt_ionization_upperion_probability(const int modelgridi
       if (energyweighted) {
         assert_always(fabs(prob_remaining -
                            nt_solution[modelgridindex]
-                               .ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + numaugerelec]) <
+                               .ionenfrac_num_auger[(uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)) + numaugerelec]) <
                       0.001);
       } else {
         if (fabs(prob_remaining -
@@ -2178,7 +2178,7 @@ __host__ __device__ auto nt_ionization_upperion_probability(const int modelgridi
                    get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element, upperion));
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
             printout("  a %d prob %g\n", a,
-                     nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]);
+                     nt_solution[modelgridindex].prob_num_auger[(uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)) + a]);
           }
           std::abort();
         }
@@ -2687,9 +2687,9 @@ void read_restart_data(FILE *gridsave_file) {
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
           assert_always(
               fscanf(gridsave_file, "%a %a ",
-                     &nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a],
+                     &nt_solution[modelgridindex].prob_num_auger[(uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)) + a],
                      &nt_solution[modelgridindex]
-                          .ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]) == 2);
+                          .ionenfrac_num_auger[(uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)) + a]) == 2);
         }
       }
 
