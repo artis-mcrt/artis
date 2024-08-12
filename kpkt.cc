@@ -45,8 +45,8 @@ float kpktdiffusion_timescale{0.};
 
 template <bool update_cooling_contrib_list>
 auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion, const int indexionstart,
-                                 const int cellcacheslotid, double *C_ff, double *C_fb, double *C_exc,
-                                 double *C_ionization) -> double
+                                 const int cellcacheslotid, double *const C_ff, double *const C_fb, double *const C_exc,
+                                 double *const C_ionization) -> double
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
 {
