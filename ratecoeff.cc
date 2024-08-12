@@ -675,6 +675,151 @@ void precalculate_ion_alpha_sp() {
   }
 }
 
+auto integrand_stimrecombination_custom_radfield(const double nu, void *voidparas) -> double {
+  {
+    const gsl_integral_paras_gammacorr *const params = static_cast<gsl_integral_paras_gammacorr *>(voidparas);
+    const int modelgridindex = params->modelgridindex;
+    const float T_e = params->T_e;
+
+    const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
+
+    const double Jnu = radfield::radfield(nu, modelgridindex);
+
+    // TODO: MK thesis page 41, use population ratios and Te?
+    return ONEOVERH * sigma_bf / nu * Jnu * exp(-HOVERKB * nu / T_e);
+  }
+}
+
+auto calculate_stimrecombcoeff_integral(int element, int lowerion, int level, int phixstargetindex,
+                                        int modelgridindex) -> double {
+  const double epsrel = 1e-3;
+  const double epsabs = 0.;
+
+  const double E_threshold = get_phixs_threshold(element, lowerion, level, phixstargetindex);
+  const double nu_threshold = ONEOVERH * E_threshold;
+  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
+
+  const auto T_e = grid::get_Te(modelgridindex);
+  const auto intparas = gsl_integral_paras_gammacorr{
+      .nu_edge = nu_threshold,
+      .photoion_xs = globals::elements[element].ions[lowerion].levels[level].photoion_xs,
+      .T_e = T_e,
+      .modelgridindex = modelgridindex,
+  };
+
+  const int upperionlevel = get_phixsupperlevel(element, lowerion, level, phixstargetindex);
+  const double sf = calculate_sahafact(element, lowerion, level, upperionlevel, T_e, H * nu_threshold);
+
+  double error = 0.;
+
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+  double stimrecombcoeff = 0.;
+
+  // const int status =
+  integrator<integrand_stimrecombination_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsabs, epsrel,
+                                                          GSL_INTEG_GAUSS61, &stimrecombcoeff, &error);
+
+  gsl_set_error_handler(previous_handler);
+
+  stimrecombcoeff *= FOURPI * sf * get_phixsprobability(element, lowerion, level, phixstargetindex);
+
+  // if (status != 0)
+  // {
+  //   error *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+  //   printout("stimrecombcoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d
+  //   phixstargetindex %d gamma %g error %g\n",
+  //            status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level,
+  //            phixstargetindex, gammacorr, error);
+  // }
+
+  return stimrecombcoeff;
+}
+
+auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const voidparas) -> double
+/// Integrand to calculate the rate coefficient for photoionization
+/// using gsl integrators. Corrected for stimulated recombination.
+{
+  const gsl_integral_paras_gammacorr *const params = static_cast<gsl_integral_paras_gammacorr *>(voidparas);
+  const int modelgridindex = params->modelgridindex;
+
+#if (SEPARATE_STIMRECOMB)
+  const double corrfactor = 1.;
+#else
+  const float T_e = params->T_e;
+  double corrfactor = 1. - (params->departure_ratio * exp(-HOVERKB * nu / T_e));
+  if (corrfactor < 0) {
+    corrfactor = 0.;
+  }
+#endif
+
+  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
+
+  const double Jnu = radfield::radfield(nu, modelgridindex);
+
+  // TODO: MK thesis page 41, use population ratios and Te?
+  return ONEOVERH * sigma_bf / nu * Jnu * corrfactor;
+}
+
+auto calculate_corrphotoioncoeff_integral(int element, int ion, int level, int phixstargetindex,
+                                          int modelgridindex) -> double {
+  constexpr double epsrel = 1e-3;
+  constexpr double epsrelwarning = 1e-1;
+  constexpr double epsabs = 0.;
+
+  const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+  const double nu_threshold = ONEOVERH * E_threshold;
+  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
+
+  const auto T_e = grid::get_Te(modelgridindex);
+
+#if SEPARATE_STIMRECOMB
+  const double departure_ratio = 0.;  // zero the stimulated recomb contribution
+#else
+  // stimulated recombination is negative photoionisation
+  const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+  const double nne = grid::get_nne(modelgridindex);
+  const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+  const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
+  const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upperionlevel);
+  double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.;  // put that to phixslist
+  if (!std::isfinite(departure_ratio)) {
+    departure_ratio = 0.;
+  }
+#endif
+  const auto intparas = gsl_integral_paras_gammacorr{
+      .nu_edge = nu_threshold,
+      .departure_ratio = departure_ratio,
+      .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs,
+      .T_e = T_e,
+      .modelgridindex = modelgridindex,
+  };
+
+  double error = 0.;
+
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+
+  double gammacorr = 0.;
+  const int status = integrator<integrand_corrphotoioncoeff_custom_radfield>(
+      intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &gammacorr, &error);
+
+  gsl_set_error_handler(previous_handler);
+
+  if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
+    printout(
+        "corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d "
+        "integral %g error %g\n",
+        status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level, phixstargetindex,
+        gammacorr, error);
+    if (!std::isfinite(gammacorr)) {
+      gammacorr = 0.;
+    }
+  }
+
+  gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+
+  return gammacorr;
+}
+
 }  // anonymous namespace
 
 void setup_photoion_luts() {
@@ -1010,66 +1155,6 @@ auto get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargeti
   return W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
 }
 
-static auto integrand_stimrecombination_custom_radfield(const double nu, void *voidparas) -> double {
-  {
-    const gsl_integral_paras_gammacorr *const params = static_cast<gsl_integral_paras_gammacorr *>(voidparas);
-    const int modelgridindex = params->modelgridindex;
-    const float T_e = params->T_e;
-
-    const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
-
-    const double Jnu = radfield::radfield(nu, modelgridindex);
-
-    // TODO: MK thesis page 41, use population ratios and Te?
-    return ONEOVERH * sigma_bf / nu * Jnu * exp(-HOVERKB * nu / T_e);
-  }
-}
-
-static auto calculate_stimrecombcoeff_integral(int element, int lowerion, int level, int phixstargetindex,
-                                               int modelgridindex) -> double {
-  const double epsrel = 1e-3;
-  const double epsabs = 0.;
-
-  const double E_threshold = get_phixs_threshold(element, lowerion, level, phixstargetindex);
-  const double nu_threshold = ONEOVERH * E_threshold;
-  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
-
-  const auto T_e = grid::get_Te(modelgridindex);
-  const auto intparas = gsl_integral_paras_gammacorr{
-      .nu_edge = nu_threshold,
-      .photoion_xs = globals::elements[element].ions[lowerion].levels[level].photoion_xs,
-      .T_e = T_e,
-      .modelgridindex = modelgridindex,
-  };
-
-  const int upperionlevel = get_phixsupperlevel(element, lowerion, level, phixstargetindex);
-  const double sf = calculate_sahafact(element, lowerion, level, upperionlevel, T_e, H * nu_threshold);
-
-  double error = 0.;
-
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-  double stimrecombcoeff = 0.;
-
-  // const int status =
-  integrator<integrand_stimrecombination_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsabs, epsrel,
-                                                          GSL_INTEG_GAUSS61, &stimrecombcoeff, &error);
-
-  gsl_set_error_handler(previous_handler);
-
-  stimrecombcoeff *= FOURPI * sf * get_phixsprobability(element, lowerion, level, phixstargetindex);
-
-  // if (status != 0)
-  // {
-  //   error *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
-  //   printout("stimrecombcoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d
-  //   phixstargetindex %d gamma %g error %g\n",
-  //            status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level,
-  //            phixstargetindex, gammacorr, error);
-  // }
-
-  return stimrecombcoeff;
-}
-
 auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int modelgridindex) -> double
 /// Returns the stimulated recombination rate coefficient
 // multiple by upper level population and nne to get rate
@@ -1118,91 +1203,6 @@ __host__ __device__ auto get_bfcoolingcoeff(int element, int ion, int level, int
     return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower)));
   }
   return bfcooling_coeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
-}
-
-static auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const voidparas) -> double
-/// Integrand to calculate the rate coefficient for photoionization
-/// using gsl integrators. Corrected for stimulated recombination.
-{
-  const gsl_integral_paras_gammacorr *const params = static_cast<gsl_integral_paras_gammacorr *>(voidparas);
-  const int modelgridindex = params->modelgridindex;
-
-#if (SEPARATE_STIMRECOMB)
-  const double corrfactor = 1.;
-#else
-  const float T_e = params->T_e;
-  double corrfactor = 1. - (params->departure_ratio * exp(-HOVERKB * nu / T_e));
-  if (corrfactor < 0) {
-    corrfactor = 0.;
-  }
-#endif
-
-  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
-
-  const double Jnu = radfield::radfield(nu, modelgridindex);
-
-  // TODO: MK thesis page 41, use population ratios and Te?
-  return ONEOVERH * sigma_bf / nu * Jnu * corrfactor;
-}
-
-static auto calculate_corrphotoioncoeff_integral(int element, int ion, int level, int phixstargetindex,
-                                                 int modelgridindex) -> double {
-  constexpr double epsrel = 1e-3;
-  constexpr double epsrelwarning = 1e-1;
-  constexpr double epsabs = 0.;
-
-  const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
-  const double nu_threshold = ONEOVERH * E_threshold;
-  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
-
-  const auto T_e = grid::get_Te(modelgridindex);
-
-#if SEPARATE_STIMRECOMB
-  const double departure_ratio = 0.;  // zero the stimulated recomb contribution
-#else
-  // stimulated recombination is negative photoionisation
-  const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
-  const double nne = grid::get_nne(modelgridindex);
-  const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-  const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
-  const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upperionlevel);
-  double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.;  // put that to phixslist
-  if (!std::isfinite(departure_ratio)) {
-    departure_ratio = 0.;
-  }
-#endif
-  const auto intparas = gsl_integral_paras_gammacorr{
-      .nu_edge = nu_threshold,
-      .departure_ratio = departure_ratio,
-      .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs,
-      .T_e = T_e,
-      .modelgridindex = modelgridindex,
-  };
-
-  double error = 0.;
-
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-
-  double gammacorr = 0.;
-  const int status = integrator<integrand_corrphotoioncoeff_custom_radfield>(
-      intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &gammacorr, &error);
-
-  gsl_set_error_handler(previous_handler);
-
-  if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
-    printout(
-        "corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d "
-        "integral %g error %g\n",
-        status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level, phixstargetindex,
-        gammacorr, error);
-    if (!std::isfinite(gammacorr)) {
-      gammacorr = 0.;
-    }
-  }
-
-  gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
-
-  return gammacorr;
 }
 
 __host__ __device__ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex,
