@@ -137,11 +137,11 @@ auto get_element_nne_contrib(const int modelgridindex, const int element)
   return nne;
 }
 
-auto nne_solution_f(double nne_assumed, void *voidparas) -> double
+auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double
 // assume a value for nne and then calculate the resulting nne
 // the difference between the assumed and calculated nne is returned
 {
-  const auto *paras = static_cast<nne_solution_paras *>(voidparas);
+  const auto *paras = static_cast<const nne_solution_paras *>(voidparas);
   const int modelgridindex = paras->modelgridindex;
   const bool force_lte = paras->force_lte;
 
@@ -171,7 +171,8 @@ auto nne_solution_f(double nne_assumed, void *voidparas) -> double
   return nne_after - nne_assumed;
 }
 
-auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion, int level, bool *skipminpop) -> double {
+auto calculate_levelpop_nominpop(const int modelgridindex, const int element, const int ion, const int level,
+                                 bool *const skipminpop) -> double {
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
@@ -236,7 +237,7 @@ auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion, int l
   return nn;
 }
 
-auto calculate_partfunct(int element, int ion, int modelgridindex) -> double
+auto calculate_partfunct(const int element, const int ion, const int modelgridindex) -> double
 /// Calculates the partition function for ion=ion of element=element in
 /// cell modelgridindex
 {
@@ -463,7 +464,7 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
   return ionfractions;
 }
 
-auto get_groundlevelpop(int modelgridindex, int element, int ion) -> double
+auto get_groundlevelpop(const int modelgridindex, const int element, const int ion) -> double
 /// Returns the given ions groundlevel population for modelgridindex which was precalculated
 /// during update_grid and stored to the grid.
 {
@@ -481,7 +482,7 @@ auto get_groundlevelpop(int modelgridindex, int element, int ion) -> double
   return nn;
 }
 
-auto calculate_levelpop_lte(int modelgridindex, int element, int ion, int level) -> double
+auto calculate_levelpop_lte(const int modelgridindex, const int element, const int ion, const int level) -> double
 /// Calculates occupation population of a level assuming LTE excitation
 {
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
@@ -502,7 +503,7 @@ auto calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
           exp(-E_aboveground / KB / T_exc));
 }
 
-auto calculate_levelpop(int modelgridindex, int element, int ion, int level) -> double {
+auto calculate_levelpop(const int modelgridindex, const int element, const int ion, const int level) -> double {
   bool skipminpop = false;
   double nn = calculate_levelpop_nominpop(modelgridindex, element, ion, level, &skipminpop);
   if (!skipminpop && nn < MINPOP) {
@@ -516,7 +517,8 @@ auto calculate_levelpop(int modelgridindex, int element, int ion, int level) -> 
   return nn;
 }
 
-__host__ __device__ auto get_levelpop(int modelgridindex, int element, int ion, int level) -> double
+__host__ __device__ auto get_levelpop(const int modelgridindex, const int element, const int ion,
+                                      const int level) -> double
 /// Calculates the population of a level from either LTE or NLTE information
 {
   double nn = 0.;
@@ -548,8 +550,8 @@ void calculate_cellpartfuncts(const int modelgridindex, const int element)
   }
 }
 
-__host__ __device__ auto calculate_sahafact(int element, int ion, int level, int upperionlevel, double T,
-                                            double E_threshold) -> double
+__host__ __device__ auto calculate_sahafact(const int element, const int ion, const int level, const int upperionlevel,
+                                            const double T, const double E_threshold) -> double
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {
   const double g_lower = stat_weight(element, ion, level);
@@ -567,7 +569,7 @@ __host__ __device__ auto calculate_sahafact(int element, int ion, int level, int
   return sf;
 }
 
-[[nodiscard]] __host__ __device__ auto get_nnion(int modelgridindex, int element, int ion) -> double
+[[nodiscard]] __host__ __device__ auto get_nnion(const int modelgridindex, const int element, const int ion) -> double
 /// Use the ground level population and partition function to get an ion population
 {
   return get_groundlevelpop(modelgridindex, element, ion) *
