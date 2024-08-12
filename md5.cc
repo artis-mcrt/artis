@@ -48,7 +48,8 @@
   }
 
 /*********************** FUNCTION DEFINITIONS ***********************/
-static void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
+namespace {
+void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
   WORD a = 0;
   WORD b = 0;
   WORD c = 0;
@@ -142,6 +143,8 @@ static void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
   ctx->state[2] += c;
   ctx->state[3] += d;
 }
+
+}  // anonymous namespace
 
 void md5_init(MD5_CTX *ctx) {
   ctx->datalen = 0;
