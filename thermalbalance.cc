@@ -38,7 +38,7 @@ struct gsl_integral_paras_bfheating {
   float *photoion_xs;
 };
 
-auto integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas) -> double
+auto integrand_bfheatingcoeff_custom_radfield(const double nu, void *const voidparas) -> double
 /// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
   const auto *const params = static_cast<const gsl_integral_paras_bfheating *>(voidparas);
@@ -57,7 +57,8 @@ auto integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas) -> dou
   return sigma_bf * (1 - nu_edge / nu) * radfield::radfield(nu, modelgridindex) * (1 - exp(-HOVERKB * nu / T_R));
 }
 
-auto calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex) -> double {
+auto calculate_bfheatingcoeff(const int element, const int ion, const int level, const int phixstargetindex,
+                              const int modelgridindex) -> double {
   double error = 0.;
   const double epsrel = 1e-3;
   const double epsrelwarning = 1e-1;
@@ -228,7 +229,8 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double
 
 }  // anonymous namespace
 
-auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T_R, double W) -> double {
+auto get_bfheatingcoeff_ana(const int element, const int ion, const int level, const int phixstargetindex,
+                            const double T_R, const double W) -> double {
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
