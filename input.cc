@@ -19,6 +19,7 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <ios>
 #include <iterator>
 #include <limits>
@@ -47,6 +48,7 @@ namespace {
 
 const int groundstate_index_in = 1;  // starting level index in the input files
 int phixs_file_version = -1;
+float *allphixsblock{};
 
 struct Transitions {
   int *to;
@@ -1129,7 +1131,7 @@ void read_atomicdata_files() {
   update_includedionslevels_maxnions();
 }
 
-auto search_groundphixslist(double nu_edge, const int element_in, const int ion_in, const int level_in) -> int
+auto search_groundphixslist(const double nu_edge, const int element_in, const int ion_in, const int level_in) -> int
 /// Return the closest ground level continuum index to the given edge
 /// frequency. If the given edge frequency is redder than the reddest
 /// continuum return -1.
@@ -1462,7 +1464,6 @@ void setup_phixs_list() {
   if (globals::nbfcontinua > 0) {
 // copy the photoionisation tables into one contiguous block of memory
 #ifdef MPI_ON
-    float *allphixsblock{};
     MPI_Win win_allphixsblock = MPI_WIN_NULL;
     auto size =
         static_cast<MPI_Aint>((globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0);
@@ -1473,7 +1474,7 @@ void setup_phixs_list() {
 
     MPI_Barrier(MPI_COMM_WORLD);
 #else
-    auto *allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
+    allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
 #endif
 
     assert_always(allphixsblock != nullptr);
