@@ -233,13 +233,13 @@ void read_binding_energies() {
   }
 }
 
-auto get_auger_probability(int modelgridindex, int element, int ion, int naugerelec) -> double {
+auto get_auger_probability(const int modelgridindex, const int element, const int ion, const int naugerelec) -> double {
   assert_always(naugerelec <= NT_MAX_AUGER_ELECTRONS);
   const int uniqueionindex = get_uniqueionindex(element, ion);
   return nt_solution[modelgridindex].prob_num_auger[(uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)) + naugerelec];
 }
 
-auto get_ion_auger_enfrac(int modelgridindex, int element, int ion, int naugerelec) -> double {
+auto get_ion_auger_enfrac(const int modelgridindex, const int element, const int ion, const int naugerelec) -> double {
   assert_always(naugerelec <= NT_MAX_AUGER_ELECTRONS);
   const int uniqueionindex = get_uniqueionindex(element, ion);
   return nt_solution[modelgridindex].ionenfrac_num_auger[(uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)) + naugerelec];
@@ -1335,7 +1335,7 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const int modelgridindex, c
   return 0.;
 }
 
-auto ion_ntion_energyrate(int modelgridindex, int element, int lowerion) -> double {
+auto ion_ntion_energyrate(const int modelgridindex, const int element, const int lowerion) -> double {
   // returns the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
   const double nnlowerion = get_nnion(modelgridindex, element, lowerion);
   double enrate = 0.;
@@ -1357,7 +1357,7 @@ auto ion_ntion_energyrate(int modelgridindex, int element, int lowerion) -> doub
   return gamma_nt * enrate;
 }
 
-auto get_ntion_energyrate(int modelgridindex) -> double {
+auto get_ntion_energyrate(const int modelgridindex) -> double {
   // returns the energy rate [erg/s] going toward non-thermal ionisation in a modelgrid cell
   double ratetotal = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
@@ -1369,7 +1369,7 @@ auto get_ntion_energyrate(int modelgridindex) -> double {
   return ratetotal;
 }
 
-auto select_nt_ionization(int modelgridindex) -> std::tuple<int, int> {
+auto select_nt_ionization(const int modelgridindex) -> std::tuple<int, int> {
   const double zrand = rng_uniform();
 
   // // select based on stored frac_deposition for each ion
