@@ -49,7 +49,7 @@ size_t npts_model = 0;           // number of model grid cells
 size_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
 double t_model = -1.;  // time at which densities in input model are correct.
-std::span<double> vout_model{};
+std::vector<double> vout_model{};
 std::array<int, 3> ncoord_model{0};  // the model.txt input grid dimensions
 
 double min_den;  // minimum model density
@@ -882,7 +882,7 @@ void read_1d_model()
   set_npts_model(npts_model_in);
   ncoord_model[0] = npts_model_in;
 
-  vout_model = std::span(static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double))), get_npts_model());
+  vout_model.resize(get_npts_model());
 
   // Now read the time (in days) at which the model is specified.
   double t_model_days{NAN};
