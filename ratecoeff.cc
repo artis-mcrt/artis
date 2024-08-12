@@ -690,8 +690,8 @@ auto integrand_stimrecombination_custom_radfield(const double nu, void *voidpara
   }
 }
 
-auto calculate_stimrecombcoeff_integral(int element, int lowerion, int level, int phixstargetindex,
-                                        int modelgridindex) -> double {
+auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, const int level,
+                                        const int phixstargetindex, const int modelgridindex) -> double {
   const double epsrel = 1e-3;
   const double epsabs = 0.;
 
@@ -760,7 +760,7 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const vo
   return ONEOVERH * sigma_bf / nu * Jnu * corrfactor;
 }
 
-auto calculate_corrphotoioncoeff_integral(int element, int ion, int level, int phixstargetindex,
+auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int level, const int phixstargetindex,
                                           int modelgridindex) -> double {
   constexpr double epsrel = 1e-3;
   constexpr double epsrelwarning = 1e-1;
@@ -925,7 +925,7 @@ void setup_photoion_luts() {
       mem_usage_photoionluts / 1024. / 1024.);
 }
 
-__host__ __device__ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel,
+__host__ __device__ auto select_continuum_nu(int element, const int lowerion, const int lower, const int upperionlevel,
                                              float T_e) -> double {
   const int phixstargetindex = get_phixtargetindex(element, lowerion, lower, upperionlevel);
   const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
@@ -983,7 +983,7 @@ __host__ __device__ auto select_continuum_nu(int element, int lowerion, int lowe
   return nu_lower;
 }
 
-__host__ __device__ auto get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex,
+__host__ __device__ auto get_spontrecombcoeff(int element, const int ion, const int level, const int phixstargetindex,
                                               float T_e) -> double
 /// Returns the rate coefficient for spontaneous recombination.
 {
@@ -1167,7 +1167,8 @@ void ratecoefficients_init()
   printout("time after tabulation of rate coefficients %ld\n", std::time(nullptr));
 }
 
-auto interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T) -> double {
+auto interpolate_corrphotoioncoeff(const int element, const int ion, const int level, const int phixstargetindex,
+                                   const double T) -> double {
   assert_always(USE_LUT_PHOTOION);
   const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1) {
@@ -1183,7 +1184,8 @@ auto interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstar
   return corrphotoioncoeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
 }
 
-auto get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex) -> double
+auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex,
+                               const int modelgridindex) -> double
 /// Returns the for stimulated emission corrected photoionisation rate coefficient.
 {
   assert_always(USE_LUT_PHOTOION);
@@ -1196,7 +1198,8 @@ auto get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargeti
   return W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
 }
 
-auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int modelgridindex) -> double
+auto get_stimrecombcoeff(int element, const int lowerion, const int level, const int phixstargetindex,
+                         const int modelgridindex) -> double
 /// Returns the stimulated recombination rate coefficient
 // multiple by upper level population and nne to get rate
 {
@@ -1230,8 +1233,8 @@ auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetin
   return stimrecombcoeff;
 }
 
-__host__ __device__ auto get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex,
-                                            float T_e) -> double {
+__host__ __device__ auto get_bfcoolingcoeff(const int element, const int ion, const int level,
+                                            const int phixstargetindex, const float T_e) -> double {
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1) {
     const int upperindex = lowerindex + 1;
@@ -1246,8 +1249,8 @@ __host__ __device__ auto get_bfcoolingcoeff(int element, int ion, int level, int
   return bfcooling_coeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
 }
 
-__host__ __device__ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex,
-                                               int modelgridindex) -> double
+__host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion, const int level,
+                                               const int phixstargetindex, const int modelgridindex) -> double
 /// Returns the photoionisation rate coefficient (corrected for stimulated emission)
 {
   /// The correction factor for stimulated emission in gammacorr is set to its
