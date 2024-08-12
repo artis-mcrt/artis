@@ -820,6 +820,47 @@ auto calculate_corrphotoioncoeff_integral(int element, int ion, int level, int p
   return gammacorr;
 }
 
+auto get_nlevels_important(const int modelgridindex, const int element, const int ion, const bool assume_lte,
+                           const float T_e) -> std::tuple<int, double>
+// get the number of levels that make up a fraction of the ion population
+// of at least IONGAMMA_POPFRAC_LEVELS_INCLUDED
+{
+  // get the stored ion population for comparison with the cumulative sum of level pops
+  const double nnion_real = get_nnion(modelgridindex, element, ion);
+
+  if (IONGAMMA_POPFRAC_LEVELS_INCLUDED >= 1.) {
+    return {get_nlevels(element, ion), nnion_real};
+  }
+
+  double nnlevelsum = 0.;
+  int nlevels_important = get_ionisinglevels(element, ion);  // levels needed to get majority of ion pop
+
+  // debug: treat all ionising levels as important
+  // *nnlevelsum_out = nnion_real;
+  // return nlevels_important;
+
+  for (int lower = 0;
+       (nnlevelsum / nnion_real < IONGAMMA_POPFRAC_LEVELS_INCLUDED) && (lower < get_ionisinglevels(element, ion));
+       lower++) {
+    double nnlowerlevel{NAN};
+    if (assume_lte) {
+      const double T_exc = T_e;  // remember, other parts of the code in LTE mode use TJ, not T_e
+      const double E_level = epsilon(element, ion, lower);
+      const double E_ground = epsilon(element, ion, 0);
+      const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, ion) : 1.;
+
+      nnlowerlevel = (nnground * stat_weight(element, ion, lower) / stat_weight(element, ion, 0) *
+                      exp(-(E_level - E_ground) / KB / T_exc));
+    } else {
+      nnlowerlevel = get_levelpop(modelgridindex, element, ion, lower);
+    }
+    nnlevelsum += nnlowerlevel;
+    nlevels_important = lower + 1;
+  }
+  assert_always(nlevels_important <= get_nlevels(element, ion));
+  return {nlevels_important, nnlevelsum};
+}
+
 }  // anonymous namespace
 
 void setup_photoion_luts() {
@@ -1254,47 +1295,6 @@ __host__ __device__ auto get_corrphotoioncoeff(int element, int ion, int level, 
   }
 
   return gammacorr;
-}
-
-static auto get_nlevels_important(const int modelgridindex, const int element, const int ion, const bool assume_lte,
-                                  const float T_e) -> std::tuple<int, double>
-// get the number of levels that make up a fraction of the ion population
-// of at least IONGAMMA_POPFRAC_LEVELS_INCLUDED
-{
-  // get the stored ion population for comparison with the cumulative sum of level pops
-  const double nnion_real = get_nnion(modelgridindex, element, ion);
-
-  if (IONGAMMA_POPFRAC_LEVELS_INCLUDED >= 1.) {
-    return {get_nlevels(element, ion), nnion_real};
-  }
-
-  double nnlevelsum = 0.;
-  int nlevels_important = get_ionisinglevels(element, ion);  // levels needed to get majority of ion pop
-
-  // debug: treat all ionising levels as important
-  // *nnlevelsum_out = nnion_real;
-  // return nlevels_important;
-
-  for (int lower = 0;
-       (nnlevelsum / nnion_real < IONGAMMA_POPFRAC_LEVELS_INCLUDED) && (lower < get_ionisinglevels(element, ion));
-       lower++) {
-    double nnlowerlevel{NAN};
-    if (assume_lte) {
-      const double T_exc = T_e;  // remember, other parts of the code in LTE mode use TJ, not T_e
-      const double E_level = epsilon(element, ion, lower);
-      const double E_ground = epsilon(element, ion, 0);
-      const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, ion) : 1.;
-
-      nnlowerlevel = (nnground * stat_weight(element, ion, lower) / stat_weight(element, ion, 0) *
-                      exp(-(E_level - E_ground) / KB / T_exc));
-    } else {
-      nnlowerlevel = get_levelpop(modelgridindex, element, ion, lower);
-    }
-    nnlevelsum += nnlowerlevel;
-    nlevels_important = lower + 1;
-  }
-  assert_always(nlevels_important <= get_nlevels(element, ion));
-  return {nlevels_important, nnlevelsum};
 }
 
 auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -> bool {
