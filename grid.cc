@@ -49,7 +49,7 @@ size_t npts_model = 0;           // number of model grid cells
 size_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
 double t_model = -1.;  // time at which densities in input model are correct.
-double *vout_model{};
+std::span<double> vout_model{};
 std::array<int, 3> ncoord_model{0};  // the model.txt input grid dimensions
 
 double min_den;  // minimum model density
@@ -560,8 +560,7 @@ void map_1dmodelto3dgrid()
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const double cellvmid = get_cellradialposmid(cellindex) / globals::tmin;
-    const int mgi =
-        static_cast<int>(std::lower_bound(vout_model, vout_model + get_npts_model(), cellvmid) - vout_model);
+    const int mgi = static_cast<int>(std::ranges::lower_bound(vout_model, cellvmid) - vout_model.begin());
 
     if (mgi < get_npts_model() && modelgrid[mgi].rhoinit > 0) {
       set_cell_modelgridindex(cellindex, mgi);
@@ -883,7 +882,7 @@ void read_1d_model()
   set_npts_model(npts_model_in);
   ncoord_model[0] = npts_model_in;
 
-  vout_model = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
+  vout_model = std::span(static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double))), get_npts_model());
 
   // Now read the time (in days) at which the model is specified.
   double t_model_days{NAN};
