@@ -48,7 +48,7 @@ auto get_nlte_vector_index(const int element, const int ion, const int level) ->
   return level_index;
 }
 
-void get_ion_level_of_nlte_vector_index(const int index, const int element, int *ion, int *level) {
+void get_ion_level_of_nlte_vector_index(const int index, const int element, int *const ion, int *const level) {
   // this could easily be optimized if need be
   for (int dion = 0; dion < get_nions(element); dion++) {
     for (int dlevel = 0; dlevel < get_nlevels(element, dion); dlevel++) {
