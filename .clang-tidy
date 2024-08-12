@@ -42,7 +42,10 @@ Checks: >
     -readability-identifier-length,
     -readability-function-cognitive-complexity,
     -readability-magic-numbers,
-WarningsAsErrors: ''
+WarningsAsErrors: >
+    *,
+    -modernize-use-ranges,
+    -performance-enum-size,
 FormatStyle: file
 ExtraArgs: [-std=c++20]
 CheckOptions:
