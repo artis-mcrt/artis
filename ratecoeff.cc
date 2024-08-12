@@ -52,71 +52,7 @@ char adatafile_hash[33];
 char compositionfile_hash[33];
 std::array<char[33], 3> phixsfile_hash;
 
-}  // anonymous namespace
-
-void setup_photoion_luts() {
-  size_t mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
-
-  if (globals::nbfcontinua > 0) {
-#ifdef MPI_ON
-    MPI_Win win = MPI_WIN_NULL;
-    MPI_Aint size =
-        (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
-    int disp_unit = sizeof(double);
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &spontrecombcoeffs,
-                                          &win) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &spontrecombcoeffs) == MPI_SUCCESS);
-#else
-    spontrecombcoeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
-#endif
-    assert_always(spontrecombcoeffs != nullptr);
-
-    if constexpr (USE_LUT_PHOTOION) {
-#ifdef MPI_ON
-      size =
-          (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
-      assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &corrphotoioncoeffs,
-                                            &win) == MPI_SUCCESS);
-      assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &corrphotoioncoeffs) == MPI_SUCCESS);
-#else
-      corrphotoioncoeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
-#endif
-      assert_always(corrphotoioncoeffs != nullptr);
-      mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
-    }
-
-    if constexpr (USE_LUT_BFHEATING) {
-#ifdef MPI_ON
-      size =
-          (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
-      assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                            &globals::bfheating_coeff, &win) == MPI_SUCCESS);
-      assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::bfheating_coeff) == MPI_SUCCESS);
-#else
-      globals::bfheating_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
-#endif
-      assert_always(globals::bfheating_coeff != nullptr);
-      mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
-    }
-
-#ifdef MPI_ON
-    size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &bfcooling_coeffs,
-                                          &win) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &bfcooling_coeffs) == MPI_SUCCESS);
-#else
-    bfcooling_coeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
-#endif
-    assert_always(bfcooling_coeffs != nullptr);
-  }
-
-  printout(
-      "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
-      "corrphotoioncoeff/bfheating if enabled) occupy %.3f MB\n",
-      mem_usage_photoionluts / 1024. / 1024.);
-}
-
-static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
+auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 /// Try to read in the precalculated rate coefficients from file
 /// return true if successful or false otherwise
 {
@@ -283,7 +219,7 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
   return true;
 }
 
-static void write_ratecoeff_dat() {
+void write_ratecoeff_dat() {
   FILE *ratecoeff_file = fopen_required("ratecoeff.dat", "w");
   fprintf(ratecoeff_file, "%32s\n", adatafile_hash);
   fprintf(ratecoeff_file, "%32s\n", compositionfile_hash);
@@ -326,7 +262,7 @@ static void write_ratecoeff_dat() {
   fclose(ratecoeff_file);
 }
 
-static auto alpha_sp_integrand_gsl(const double nu, void *const voidparas) -> double
+auto alpha_sp_integrand_gsl(const double nu, void *const voidparas) -> double
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
@@ -341,7 +277,7 @@ static auto alpha_sp_integrand_gsl(const double nu, void *const voidparas) -> do
   return x;
 }
 
-static auto alpha_sp_E_integrand_gsl(const double nu, void *const voidparas) -> double
+auto alpha_sp_E_integrand_gsl(const double nu, void *const voidparas) -> double
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
@@ -359,7 +295,7 @@ static auto alpha_sp_E_integrand_gsl(const double nu, void *const voidparas) -> 
   return x;
 }
 
-static auto gammacorr_integrand_gsl(const double nu, void *const voidparas) -> double
+auto gammacorr_integrand_gsl(const double nu, void *const voidparas) -> double
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
@@ -376,7 +312,7 @@ static auto gammacorr_integrand_gsl(const double nu, void *const voidparas) -> d
   return sigma_bf * ONEOVERH / nu * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
 }
 
-static auto approx_bfheating_integrand_gsl(const double nu, void *const voidparas) -> double
+auto approx_bfheating_integrand_gsl(const double nu, void *const voidparas) -> double
 /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
 /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 /// formula. The radiation fields dependence on W is taken into account by multiplying
@@ -395,7 +331,7 @@ static auto approx_bfheating_integrand_gsl(const double nu, void *const voidpara
   return x;
 }
 
-static auto bfcooling_integrand_gsl(const double nu, void *const voidparas) -> double
+auto bfcooling_integrand_gsl(const double nu, void *const voidparas) -> double
 /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
 /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 /// formula. The radiation fields dependence on W is taken into account by multiplying
@@ -412,7 +348,7 @@ static auto bfcooling_integrand_gsl(const double nu, void *const voidparas) -> d
   return sigma_bf * (nu - nu_edge) * TWOHOVERCLIGHTSQUARED * nu * nu * exp(-HOVERKB * nu / T);
 }
 
-static void precalculate_rate_coefficient_integrals() {
+void precalculate_rate_coefficient_integrals() {
   // target fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
   const double epsrelwarning = 1e-2;  // fractional error to emit a warning
 
@@ -547,6 +483,260 @@ static void precalculate_rate_coefficient_integrals() {
       gsl_set_error_handler(previous_handler);
     }
   }
+}
+
+void scale_level_phixs(const int element, const int ion, const int level, const double factor)
+// multiply the cross sections associated with a level by some factor and
+// also update the quantities integrated from (and proportional to) the cross sections
+{
+  // if we store the data in node shared memory, then only one rank should update it
+  if (globals::rank_in_node == 0) {
+    for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
+      globals::elements[element].ions[ion].levels[level].photoion_xs[n] *= factor;
+    }
+
+    const int nphixstargets = get_nphixstargets(element, ion, level);
+    for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+      for (int iter = 0; iter < TABLESIZE; iter++) {
+        spontrecombcoeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+
+        if constexpr (USE_LUT_PHOTOION) {
+          corrphotoioncoeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+        }
+
+        if constexpr (USE_LUT_BFHEATING) {
+          globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+        }
+
+        bfcooling_coeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+      }
+    }
+  }
+}
+
+void read_recombrate_file()
+// calibrate the recombination rates to tabulated values by scaling the photoionisation cross sections
+{
+  use_cellcache = false;
+  FILE *recombrate_file = fopen("recombrates.txt", "r");
+  if (recombrate_file == nullptr) {
+    printout("No recombrates.txt file found. Skipping recombination rate scaling...\n");
+    return;
+  }
+
+  printout("Reading recombination rate file (recombrates.txt)...\n");
+
+  const double Te_estimate = RECOMBCALIBRATION_T_ELEC;
+  const double log_Te_estimate = log10(Te_estimate);
+
+  printout("Calibrating recombination rates for a temperature of %.1f K\n", Te_estimate);
+
+  struct RRCRow {
+    double log_Te;
+    double rrc_low_n;
+    double rrc_total;
+  };
+
+  int atomicnumber = 0;
+  int upperionstage = 0;
+  int tablerows = 0;
+
+  while (fscanf(recombrate_file, "%d %d %d\n", &atomicnumber, &upperionstage, &tablerows) > 0) {
+    // printout("%d %d %d\n", atomicnumber, upperionstage, tablerows);
+
+    RRCRow T_highestbelow = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
+    RRCRow T_lowestabove = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
+    T_highestbelow.log_Te = -1;
+    T_lowestabove.log_Te = -1;
+    for (int i = 0; i < tablerows; i++) {
+      RRCRow row{};
+      assert_always(fscanf(recombrate_file, "%lg %lg %lg\n", &row.log_Te, &row.rrc_low_n, &row.rrc_total) == 3);
+      if (row.log_Te < log_Te_estimate && row.log_Te > T_highestbelow.log_Te) {
+        T_highestbelow.log_Te = row.log_Te;
+        T_highestbelow.rrc_low_n = row.rrc_low_n;
+        T_highestbelow.rrc_total = row.rrc_total;
+      }
+
+      if (row.log_Te > log_Te_estimate && (row.log_Te < T_lowestabove.log_Te || T_lowestabove.log_Te < 0)) {
+        T_lowestabove.log_Te = row.log_Te;
+        T_lowestabove.rrc_low_n = row.rrc_low_n;
+        T_lowestabove.rrc_total = row.rrc_total;
+      }
+    }
+    const int element = get_elementindex(atomicnumber);
+    if (element >= 0) {
+      const int ion = upperionstage - get_ionstage(element, 0);  // the index of the upper ion
+      if (ion > 0 && ion < get_nions(element)) {
+        printout("Z=%d ionstage %d->%d\n", atomicnumber, upperionstage, upperionstage - 1);
+        assert_always(T_highestbelow.log_Te > 0);
+        assert_always(T_lowestabove.log_Te > 0);
+
+        const int nlevels = get_ionisinglevels(element, ion - 1);
+
+        const double x = (log_Te_estimate - T_highestbelow.log_Te) / (T_lowestabove.log_Te - T_highestbelow.log_Te);
+        const double input_rrc_low_n = (x * T_highestbelow.rrc_low_n) + ((1 - x) * T_lowestabove.rrc_low_n);
+        const double input_rrc_total = (x * T_highestbelow.rrc_total) + ((1 - x) * T_lowestabove.rrc_total);
+
+        const bool assume_lte = true;
+        const bool printdebug = false;
+        const bool per_groundmultipletpop = true;
+
+        double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false,
+                                              per_groundmultipletpop, false);
+        printout("              rrc: %10.3e\n", rrc);
+
+        if (input_rrc_low_n >= 0)  // if it's < 0, ignore it
+        {
+          printout("  input_rrc_low_n: %10.3e\n", input_rrc_low_n);
+
+          const double phixs_multiplier = input_rrc_low_n / rrc;
+          if (phixs_multiplier < 0.05 || phixs_multiplier >= 2.0) {
+            printout("    Not scaling phixs of all levels by %.3f (because < 0.05 or >= 2.0)\n", phixs_multiplier);
+          } else {
+            printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
+
+            for (int level = 0; level < nlevels; level++) {
+              scale_level_phixs(element, ion - 1, level, phixs_multiplier);
+            }
+
+            rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false,
+                                           per_groundmultipletpop, false);
+            printout("              rrc: %10.3e\n", rrc);
+          }
+        }
+
+        // hopefully the RRC now matches the low_n value well, if it was defined
+        // Next, use the superlevel recombination rates to make up the excess needed to reach the total RRC
+
+        printout("  input_rrc_total: %10.3e\n", input_rrc_total);
+
+        if (rrc < input_rrc_total) {
+          const double rrc_superlevel = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false,
+                                                                 printdebug, true, per_groundmultipletpop, false);
+          printout("  rrc(superlevel): %10.3e\n", rrc_superlevel);
+
+          if (rrc_superlevel > 0) {
+            const double phixs_multiplier_superlevel = 1.0 + ((input_rrc_total - rrc) / rrc_superlevel);
+            printout("    scaling phixs of levels in the superlevel by %.3f\n", phixs_multiplier_superlevel);
+            assert_always(phixs_multiplier_superlevel >= 0);
+
+            const int first_superlevel_level = get_nlevels_nlte(element, ion - 1) + 1;
+            for (int level = first_superlevel_level; level < nlevels; level++) {
+              scale_level_phixs(element, ion - 1, level, phixs_multiplier_superlevel);
+            }
+          } else {
+            printout("There is no superlevel recombination, so multiplying all levels instead\n");
+            const double phixs_multiplier = input_rrc_total / rrc;
+            printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
+            assert_always(phixs_multiplier >= 0);
+
+            for (int level = 0; level < nlevels; level++) {
+              scale_level_phixs(element, ion - 1, level, phixs_multiplier);
+            }
+          }
+        } else {
+          printout("rrc >= input_rrc_total!\n");
+          const double phixs_multiplier = input_rrc_total / rrc;
+          printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
+          assert_always(phixs_multiplier >= 0);
+
+          for (int level = 0; level < nlevels; level++) {
+            scale_level_phixs(element, ion - 1, level, phixs_multiplier);
+          }
+        }
+
+        rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false,
+                                       per_groundmultipletpop, false);
+        printout("              rrc: %10.3e\n", rrc);
+      }
+    }
+  }
+  fclose(recombrate_file);
+}
+
+void precalculate_ion_alpha_sp() {
+  for (int iter = 0; iter < TABLESIZE; iter++) {
+    const float T_e = MINTEMP * exp(iter * T_step_log);
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element) - 1;
+      for (int ion = 0; ion < nions; ion++) {
+        const int nlevels = get_ionisinglevels(element, ion);
+        double zeta = 0.;
+        for (int level = 0; level < nlevels; level++) {
+          const auto nphixstargets = get_nphixstargets(element, ion, level);
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+            const double zeta_level = get_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
+            zeta += zeta_level;
+          }
+        }
+        globals::elements[element].ions[ion].Alpha_sp[iter] = zeta;
+      }
+    }
+  }
+}
+
+}  // anonymous namespace
+
+void setup_photoion_luts() {
+  size_t mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
+
+  if (globals::nbfcontinua > 0) {
+#ifdef MPI_ON
+    MPI_Win win = MPI_WIN_NULL;
+    MPI_Aint size =
+        (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
+    int disp_unit = sizeof(double);
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &spontrecombcoeffs,
+                                          &win) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &spontrecombcoeffs) == MPI_SUCCESS);
+#else
+    spontrecombcoeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+#endif
+    assert_always(spontrecombcoeffs != nullptr);
+
+    if constexpr (USE_LUT_PHOTOION) {
+#ifdef MPI_ON
+      size =
+          (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
+      assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &corrphotoioncoeffs,
+                                            &win) == MPI_SUCCESS);
+      assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &corrphotoioncoeffs) == MPI_SUCCESS);
+#else
+      corrphotoioncoeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+#endif
+      assert_always(corrphotoioncoeffs != nullptr);
+      mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
+    }
+
+    if constexpr (USE_LUT_BFHEATING) {
+#ifdef MPI_ON
+      size =
+          (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
+      assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                            &globals::bfheating_coeff, &win) == MPI_SUCCESS);
+      assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::bfheating_coeff) == MPI_SUCCESS);
+#else
+      globals::bfheating_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+#endif
+      assert_always(globals::bfheating_coeff != nullptr);
+      mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
+    }
+
+#ifdef MPI_ON
+    size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &bfcooling_coeffs,
+                                          &win) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &bfcooling_coeffs) == MPI_SUCCESS);
+#else
+    bfcooling_coeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+#endif
+    assert_always(bfcooling_coeffs != nullptr);
+  }
+
+  printout(
+      "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
+      "corrphotoioncoeff/bfheating if enabled) occupy %.3f MB\n",
+      mem_usage_photoionluts / 1024. / 1024.);
 }
 
 __host__ __device__ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel,
@@ -729,196 +919,6 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
              get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), alpha);
   }
   return alpha;
-}
-
-static void scale_level_phixs(const int element, const int ion, const int level, const double factor)
-// multiply the cross sections associated with a level by some factor and
-// also update the quantities integrated from (and proportional to) the cross sections
-{
-  // if we store the data in node shared memory, then only one rank should update it
-  if (globals::rank_in_node == 0) {
-    for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
-      globals::elements[element].ions[ion].levels[level].photoion_xs[n] *= factor;
-    }
-
-    const int nphixstargets = get_nphixstargets(element, ion, level);
-    for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-      for (int iter = 0; iter < TABLESIZE; iter++) {
-        spontrecombcoeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
-
-        if constexpr (USE_LUT_PHOTOION) {
-          corrphotoioncoeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
-        }
-
-        if constexpr (USE_LUT_BFHEATING) {
-          globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
-        }
-
-        bfcooling_coeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
-      }
-    }
-  }
-}
-
-static void read_recombrate_file()
-// calibrate the recombination rates to tabulated values by scaling the photoionisation cross sections
-{
-  use_cellcache = false;
-  FILE *recombrate_file = fopen("recombrates.txt", "r");
-  if (recombrate_file == nullptr) {
-    printout("No recombrates.txt file found. Skipping recombination rate scaling...\n");
-    return;
-  }
-
-  printout("Reading recombination rate file (recombrates.txt)...\n");
-
-  const double Te_estimate = RECOMBCALIBRATION_T_ELEC;
-  const double log_Te_estimate = log10(Te_estimate);
-
-  printout("Calibrating recombination rates for a temperature of %.1f K\n", Te_estimate);
-
-  struct RRCRow {
-    double log_Te;
-    double rrc_low_n;
-    double rrc_total;
-  };
-
-  int atomicnumber = 0;
-  int upperionstage = 0;
-  int tablerows = 0;
-
-  while (fscanf(recombrate_file, "%d %d %d\n", &atomicnumber, &upperionstage, &tablerows) > 0) {
-    // printout("%d %d %d\n", atomicnumber, upperionstage, tablerows);
-
-    RRCRow T_highestbelow = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
-    RRCRow T_lowestabove = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
-    T_highestbelow.log_Te = -1;
-    T_lowestabove.log_Te = -1;
-    for (int i = 0; i < tablerows; i++) {
-      RRCRow row{};
-      assert_always(fscanf(recombrate_file, "%lg %lg %lg\n", &row.log_Te, &row.rrc_low_n, &row.rrc_total) == 3);
-      if (row.log_Te < log_Te_estimate && row.log_Te > T_highestbelow.log_Te) {
-        T_highestbelow.log_Te = row.log_Te;
-        T_highestbelow.rrc_low_n = row.rrc_low_n;
-        T_highestbelow.rrc_total = row.rrc_total;
-      }
-
-      if (row.log_Te > log_Te_estimate && (row.log_Te < T_lowestabove.log_Te || T_lowestabove.log_Te < 0)) {
-        T_lowestabove.log_Te = row.log_Te;
-        T_lowestabove.rrc_low_n = row.rrc_low_n;
-        T_lowestabove.rrc_total = row.rrc_total;
-      }
-    }
-    const int element = get_elementindex(atomicnumber);
-    if (element >= 0) {
-      const int ion = upperionstage - get_ionstage(element, 0);  // the index of the upper ion
-      if (ion > 0 && ion < get_nions(element)) {
-        printout("Z=%d ionstage %d->%d\n", atomicnumber, upperionstage, upperionstage - 1);
-        assert_always(T_highestbelow.log_Te > 0);
-        assert_always(T_lowestabove.log_Te > 0);
-
-        const int nlevels = get_ionisinglevels(element, ion - 1);
-
-        const double x = (log_Te_estimate - T_highestbelow.log_Te) / (T_lowestabove.log_Te - T_highestbelow.log_Te);
-        const double input_rrc_low_n = (x * T_highestbelow.rrc_low_n) + ((1 - x) * T_lowestabove.rrc_low_n);
-        const double input_rrc_total = (x * T_highestbelow.rrc_total) + ((1 - x) * T_lowestabove.rrc_total);
-
-        const bool assume_lte = true;
-        const bool printdebug = false;
-        const bool per_groundmultipletpop = true;
-
-        double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false,
-                                              per_groundmultipletpop, false);
-        printout("              rrc: %10.3e\n", rrc);
-
-        if (input_rrc_low_n >= 0)  // if it's < 0, ignore it
-        {
-          printout("  input_rrc_low_n: %10.3e\n", input_rrc_low_n);
-
-          const double phixs_multiplier = input_rrc_low_n / rrc;
-          if (phixs_multiplier < 0.05 || phixs_multiplier >= 2.0) {
-            printout("    Not scaling phixs of all levels by %.3f (because < 0.05 or >= 2.0)\n", phixs_multiplier);
-          } else {
-            printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
-
-            for (int level = 0; level < nlevels; level++) {
-              scale_level_phixs(element, ion - 1, level, phixs_multiplier);
-            }
-
-            rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false,
-                                           per_groundmultipletpop, false);
-            printout("              rrc: %10.3e\n", rrc);
-          }
-        }
-
-        // hopefully the RRC now matches the low_n value well, if it was defined
-        // Next, use the superlevel recombination rates to make up the excess needed to reach the total RRC
-
-        printout("  input_rrc_total: %10.3e\n", input_rrc_total);
-
-        if (rrc < input_rrc_total) {
-          const double rrc_superlevel = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false,
-                                                                 printdebug, true, per_groundmultipletpop, false);
-          printout("  rrc(superlevel): %10.3e\n", rrc_superlevel);
-
-          if (rrc_superlevel > 0) {
-            const double phixs_multiplier_superlevel = 1.0 + ((input_rrc_total - rrc) / rrc_superlevel);
-            printout("    scaling phixs of levels in the superlevel by %.3f\n", phixs_multiplier_superlevel);
-            assert_always(phixs_multiplier_superlevel >= 0);
-
-            const int first_superlevel_level = get_nlevels_nlte(element, ion - 1) + 1;
-            for (int level = first_superlevel_level; level < nlevels; level++) {
-              scale_level_phixs(element, ion - 1, level, phixs_multiplier_superlevel);
-            }
-          } else {
-            printout("There is no superlevel recombination, so multiplying all levels instead\n");
-            const double phixs_multiplier = input_rrc_total / rrc;
-            printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
-            assert_always(phixs_multiplier >= 0);
-
-            for (int level = 0; level < nlevels; level++) {
-              scale_level_phixs(element, ion - 1, level, phixs_multiplier);
-            }
-          }
-        } else {
-          printout("rrc >= input_rrc_total!\n");
-          const double phixs_multiplier = input_rrc_total / rrc;
-          printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
-          assert_always(phixs_multiplier >= 0);
-
-          for (int level = 0; level < nlevels; level++) {
-            scale_level_phixs(element, ion - 1, level, phixs_multiplier);
-          }
-        }
-
-        rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false,
-                                       per_groundmultipletpop, false);
-        printout("              rrc: %10.3e\n", rrc);
-      }
-    }
-  }
-  fclose(recombrate_file);
-}
-
-static void precalculate_ion_alpha_sp() {
-  for (int iter = 0; iter < TABLESIZE; iter++) {
-    const float T_e = MINTEMP * exp(iter * T_step_log);
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element) - 1;
-      for (int ion = 0; ion < nions; ion++) {
-        const int nlevels = get_ionisinglevels(element, ion);
-        double zeta = 0.;
-        for (int level = 0; level < nlevels; level++) {
-          const auto nphixstargets = get_nphixstargets(element, ion, level);
-          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            const double zeta_level = get_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
-            zeta += zeta_level;
-          }
-        }
-        globals::elements[element].ions[ion].Alpha_sp[iter] = zeta;
-      }
-    }
-  }
 }
 
 void ratecoefficients_init()
