@@ -2463,7 +2463,7 @@ template <size_t S1>
 
 static auto get_coordboundary_distances_cylindrical2d(
     const std::array<double, 3> pkt_pos, const std::array<double, 3> pkt_dir,
-    const std::array<double, 3> pktposgridcoord, const std::array<double, 3> pktvelgridcoord, int cellindex,
+    const std::array<double, 3> pktposgridcoord, const std::array<double, 3> pktvelgridcoord, const int cellindex,
     const double tstart,
     const std::array<double, 3> cellcoordmax) -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // to get the cylindrical intersection, get the spherical intersection with Z components set to zero, and the
