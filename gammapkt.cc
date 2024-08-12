@@ -736,7 +736,7 @@ void pair_prod(Packet &pkt) {
   }
 }
 
-void transport_gamma(Packet &pkt, double t2)
+void transport_gamma(Packet &pkt, const double t2)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.
@@ -1105,7 +1105,7 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   // printout("pkt direction %g, %g, %g\n",pkt.dir[0],pkt.dir[1],pkt.dir[2]);
 }
 
-__host__ __device__ void do_gamma(Packet &pkt, const int nts, double t2) {
+__host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {
   if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
