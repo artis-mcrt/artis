@@ -495,7 +495,7 @@ void write_vspecpol(FILE *specpol_file) {
   }
 }
 
-void read_vspecpol(int my_rank, int nts) {
+void read_vspecpol(const int my_rank, const int nts) {
   char filename[MAXFILENAMELENGTH];
 
   snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);

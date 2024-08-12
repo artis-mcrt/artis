@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdio>
 #include <ctime>
+#include <functional>
 #include <ios>
 #include <string>
 #include <vector>
@@ -61,8 +62,8 @@ void printout_tracemission_stats() {
                traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY,
                traceemissabs_timemax / DAY, traceemission_totalenergy);
     } else {
-      std::ranges::stable_sort(traceemissionabsorption,
-                               [](const auto &a, const auto &b) { return a.energyabsorbed > b.energyabsorbed; });
+      std::ranges::stable_sort(traceemissionabsorption, std::ranges::greater{},
+                               &emissionabsorptioncontrib::energyabsorbed);
       printout("Top line absorption contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
                traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY,
                traceemissabs_timemax / DAY, traceabsorption_totalenergy);
@@ -294,7 +295,7 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, co
 }
 
 #ifdef MPI_ON
-void mpi_reduce_spectra(int my_rank, Spectra &spectra, int numtimesteps) {
+void mpi_reduce_spectra(int my_rank, Spectra &spectra, const int numtimesteps) {
   for (int n = 0; n < numtimesteps; n++) {
     MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.timesteps[n].flux, spectra.timesteps[n].flux, MNUBINS, MPI_DOUBLE,
                MPI_SUM, 0, MPI_COMM_WORLD);
@@ -316,7 +317,7 @@ void mpi_reduce_spectra(int my_rank, Spectra &spectra, int numtimesteps) {
 
 void write_spectrum(const std::string &spec_filename, const std::string &emission_filename,
                     const std::string &trueemission_filename, const std::string &absorption_filename,
-                    const Spectra &spectra, int numtimesteps) {
+                    const Spectra &spectra, const int numtimesteps) {
   FILE *spec_file = fopen_required(spec_filename, "w");
 
   FILE *emission_file{};
@@ -573,7 +574,7 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
   }
 }
 
-void add_to_spec_res(const Packet &pkt, int current_abin, Spectra &spectra, const Spectra *stokes_i,
+void add_to_spec_res(const Packet &pkt, const int current_abin, Spectra &spectra, const Spectra *stokes_i,
                      const Spectra *stokes_q, const Spectra *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
@@ -589,7 +590,7 @@ void add_to_spec_res(const Packet &pkt, int current_abin, Spectra &spectra, cons
   }
 }
 
-void write_partial_lightcurve_spectra(int my_rank, int nts, const Packet *pkts) {
+void write_partial_lightcurve_spectra(const int my_rank, const int nts, const Packet *pkts) {
   const auto time_func_start = std::time(nullptr);
 
   std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
@@ -687,7 +688,7 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
   }
 }
 
-void add_to_lc_res(const Packet &pkt, int current_abin, std::vector<double> &light_curve_lum,
+void add_to_lc_res(const Packet &pkt, const int current_abin, std::vector<double> &light_curve_lum,
                    std::vector<double> &light_curve_lumcmf)
 // add a packet to the outgoing light-curve.
 {

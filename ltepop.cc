@@ -121,49 +121,7 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
   return phi;
 }
 
-}  // anonymous namespace
-
-[[nodiscard]] auto calculate_ionfractions(const int element, const int modelgridindex, const double nne,
-                                          const bool use_phi_lte) -> std::vector<double>
-// Calculate the fractions of an element's population in each ionization stage based on Saha LTE or ionisation
-// equilibrium
-{
-  const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-
-  if (uppermost_ion < 0) {
-    return {};
-  }
-
-  std::vector<double> ionfractions(uppermost_ion + 1);
-  ionfractions[uppermost_ion] = 1;
-
-  double normfactor = 1.;
-
-  for (int ion = uppermost_ion - 1; ion >= 0; ion--) {
-    const auto phifactor = use_phi_lte ? phi_lte(element, ion, modelgridindex)
-                                       : phi_ion_equilib(element, ion, modelgridindex, nonemptymgi);
-    ionfractions[ion] = ionfractions[ion + 1] * nne * phifactor;
-    normfactor += ionfractions[ion];
-  }
-
-  for (int ion = 0; ion <= uppermost_ion; ion++) {
-    ionfractions[ion] = ionfractions[ion] / normfactor;
-
-    if (normfactor == 0. || !std::isfinite(ionfractions[ion])) {
-      printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
-               get_ionstage(element, ion), get_atomicnumber(element), modelgridindex, grid::get_Te(modelgridindex),
-               grid::get_TR(modelgridindex));
-      ionfractions[ion] = 0;
-    }
-  }
-  return ionfractions;
-}
-
-static auto get_element_nne_contrib(const int modelgridindex, const int element)
+auto get_element_nne_contrib(const int modelgridindex, const int element)
     -> double {  // calculate number density of the current element (abundances are given by mass)
   // Use ionization fractions to calculate the free electron contributions
   if (grid::get_elem_numberdens(modelgridindex, element) <= 0.) {
@@ -179,11 +137,11 @@ static auto get_element_nne_contrib(const int modelgridindex, const int element)
   return nne;
 }
 
-static auto nne_solution_f(double nne_assumed, void *voidparas) -> double
+auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double
 // assume a value for nne and then calculate the resulting nne
 // the difference between the assumed and calculated nne is returned
 {
-  const auto *paras = static_cast<nne_solution_paras *>(voidparas);
+  const auto *paras = static_cast<const nne_solution_paras *>(voidparas);
   const int modelgridindex = paras->modelgridindex;
   const bool force_lte = paras->force_lte;
 
@@ -213,47 +171,8 @@ static auto nne_solution_f(double nne_assumed, void *voidparas) -> double
   return nne_after - nne_assumed;
 }
 
-auto get_groundlevelpop(int modelgridindex, int element, int ion) -> double
-/// Returns the given ions groundlevel population for modelgridindex which was precalculated
-/// during update_grid and stored to the grid.
-{
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-
-  const double nn = grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
-  if (nn < MINPOP) {
-    if (grid::get_elem_abundance(modelgridindex, element) > 0) {
-      return MINPOP;
-    }
-    return 0.;
-  }
-  return nn;
-}
-
-auto calculate_levelpop_lte(int modelgridindex, int element, int ion, int level) -> double
-/// Calculates occupation population of a level assuming LTE excitation
-{
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-
-  const auto nnground = get_groundlevelpop(modelgridindex, element, ion);
-  if (level == 0) {
-    return nnground;
-  }
-
-  const auto T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(modelgridindex) : grid::get_Te(modelgridindex);
-
-  const double E_aboveground = epsilon(element, ion, level) - epsilon(element, ion, 0);
-
-  return (nnground * stat_weight(element, ion, level) / stat_weight(element, ion, 0) *
-          exp(-E_aboveground / KB / T_exc));
-}
-
-static auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion, int level,
-                                        bool *skipminpop) -> double {
+auto calculate_levelpop_nominpop(const int modelgridindex, const int element, const int ion, const int level,
+                                 bool *const skipminpop) -> double {
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
@@ -318,38 +237,7 @@ static auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion
   return nn;
 }
 
-auto calculate_levelpop(int modelgridindex, int element, int ion, int level) -> double {
-  bool skipminpop = false;
-  double nn = calculate_levelpop_nominpop(modelgridindex, element, ion, level, &skipminpop);
-  if (!skipminpop && nn < MINPOP) {
-    if (grid::get_elem_abundance(modelgridindex, element) > 0) {
-      nn = MINPOP;
-    } else {
-      nn = 0.;
-    }
-  }
-
-  return nn;
-}
-
-__host__ __device__ auto get_levelpop(int modelgridindex, int element, int ion, int level) -> double
-/// Calculates the population of a level from either LTE or NLTE information
-{
-  double nn = 0.;
-  if (use_cellcache) {
-    assert_testmodeonly(modelgridindex == globals::cellcache[cellcacheslotid].cellnumber);
-    nn = globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].population;
-  } else {
-    nn = calculate_levelpop(modelgridindex, element, ion, level);
-  }
-
-  assert_testmodeonly(nn >= 0.);
-  assert_testmodeonly(std::isfinite(nn));
-
-  return nn;
-}
-
-static auto calculate_partfunct(int element, int ion, int modelgridindex) -> double
+auto calculate_partfunct(const int element, const int ion, const int modelgridindex) -> double
 /// Calculates the partition function for ion=ion of element=element in
 /// cell modelgridindex
 {
@@ -396,49 +284,7 @@ static auto calculate_partfunct(int element, int ion, int modelgridindex) -> dou
   return U;
 }
 
-void calculate_cellpartfuncts(const int modelgridindex, const int element)
-/// The partition functions depend only on T_R and W. This means they don't
-/// change during any iteration on T_e. Therefore their precalculation was
-/// taken out of calculate_ion_balance_nne to save runtime.
-// TODO: not true if LTEPOP_EXCITATION_USE_TJ is true unless LTE mode only (TJ=TR=Te)
-{
-  /// Precalculate partition functions for each ion in every cell
-  /// this saves a factor 10 in calculation time of Saha-Boltzman populations
-  const int nions = get_nions(element);
-  for (int ion = 0; ion < nions; ion++) {
-    grid::modelgrid[modelgridindex].composition[element].partfunct[ion] =
-        calculate_partfunct(element, ion, modelgridindex);
-  }
-}
-
-__host__ __device__ auto calculate_sahafact(int element, int ion, int level, int upperionlevel, double T,
-                                            double E_threshold) -> double
-/// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
-{
-  const double g_lower = stat_weight(element, ion, level);
-  const double g_upper = stat_weight(element, ion + 1, upperionlevel);
-  const double sf = SAHACONST * g_lower / g_upper * pow(T, -1.5) * exp(E_threshold / KB / T);
-  // printout("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T,
-  // E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );
-  if (sf < 0) {
-    printout(
-        "[fatal] calculate_sahafact: Negative Saha factor. sfac %g element %d ion %d level %d upperionlevel %d "
-        "g_lower %g g_upper %g T %g E_threshold %g exppart %g\n",
-        sf, element, ion, level, upperionlevel, g_lower, g_upper, T, E_threshold, exp(E_threshold / KB / T));
-    std::abort();
-  }
-  return sf;
-}
-
-[[nodiscard]] __host__ __device__ auto get_nnion(int modelgridindex, int element, int ion) -> double
-/// Use the ground level population and partition function to get an ion population
-{
-  return get_groundlevelpop(modelgridindex, element, ion) *
-         grid::modelgrid[modelgridindex].composition[element].partfunct[ion] / stat_weight(element, ion, 0);
-}
-
-static auto find_uppermost_ion(const int modelgridindex, const int element, const double nne_hi,
-                               const bool force_lte) -> int {
+auto find_uppermost_ion(const int modelgridindex, const int element, const double nne_hi, const bool force_lte) -> int {
   const int nions = get_nions(element);
   if (nions == 0) {
     return -1;
@@ -483,7 +329,7 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   return uppermost_ion;
 }
 
-static void set_calculated_nne(const int modelgridindex) {
+void set_calculated_nne(const int modelgridindex) {
   double nne = 0.;  // free electron density
 
   for (int element = 0; element < get_nelements(); element++) {
@@ -493,50 +339,7 @@ static void set_calculated_nne(const int modelgridindex) {
   grid::set_nne(modelgridindex, std::max(MINPOP, nne));
 }
 
-void set_groundlevelpops(const int modelgridindex, const int element, const float nne, const bool force_lte) {
-  /// If not already set by the NLTE solver, set the ground level populations from either Saha LTE or
-  /// ionization/recombination balance (Photoionization Equilibrium)
-  const int nions = get_nions(element);
-
-  if (nions <= 0) {
-    return;
-  }
-
-  /// calculate number density of the current element (abundances are given by mass)
-  const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
-
-  const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
-
-  const auto ionfractions =
-      (nnelement > 0) ? calculate_ionfractions(element, modelgridindex, nne, use_phi_lte) : std::vector<double>();
-
-  const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
-
-  /// Use ion fractions to calculate the groundlevel populations
-  for (int ion = 0; ion < nions; ion++) {
-    double nnion{NAN};
-    if (ion <= uppermost_ion) {
-      if (nnelement > 0) {
-        nnion = std::max(MINPOP, nnelement * ionfractions[ion]);
-      } else {
-        nnion = 0.;
-      }
-    } else {
-      nnion = MINPOP;
-    }
-
-    const double groundpop =
-        nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
-
-    if (!std::isfinite(groundpop)) {
-      printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
-    }
-
-    grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
-  }
-}
-
-static void set_groundlevelpops_neutral(const int modelgridindex) {
+void set_groundlevelpops_neutral(const int modelgridindex) {
   /// Special case of only neutral ions, set nne to some finite value that
   /// packets are not lost in kpkts
   printout("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n", modelgridindex);
@@ -561,7 +364,7 @@ static void set_groundlevelpops_neutral(const int modelgridindex) {
   }
 }
 
-static auto find_converged_nne(const int modelgridindex, double nne_hi, const bool force_lte) -> float {
+auto find_converged_nne(const int modelgridindex, double nne_hi, const bool force_lte) -> float {
   /// Search solution for nne in [nne_lo,nne_hi]
 
   nne_solution_paras paras = {.modelgridindex = modelgridindex, .force_lte = force_lte};
@@ -617,6 +420,203 @@ static auto find_converged_nne(const int modelgridindex, double nne_hi, const bo
   gsl_root_fsolver_free(solver);
 
   return std::max(MINPOP, nne_solution);
+}
+
+}  // anonymous namespace
+
+[[nodiscard]] auto calculate_ionfractions(const int element, const int modelgridindex, const double nne,
+                                          const bool use_phi_lte) -> std::vector<double>
+// Calculate the fractions of an element's population in each ionization stage based on Saha LTE or ionisation
+// equilibrium
+{
+  const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
+  assert_testmodeonly(modelgridindex < grid::get_npts_model());
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+
+  if (uppermost_ion < 0) {
+    return {};
+  }
+
+  std::vector<double> ionfractions(uppermost_ion + 1);
+  ionfractions[uppermost_ion] = 1;
+
+  double normfactor = 1.;
+
+  for (int ion = uppermost_ion - 1; ion >= 0; ion--) {
+    const auto phifactor = use_phi_lte ? phi_lte(element, ion, modelgridindex)
+                                       : phi_ion_equilib(element, ion, modelgridindex, nonemptymgi);
+    ionfractions[ion] = ionfractions[ion + 1] * nne * phifactor;
+    normfactor += ionfractions[ion];
+  }
+
+  for (int ion = 0; ion <= uppermost_ion; ion++) {
+    ionfractions[ion] = ionfractions[ion] / normfactor;
+
+    if (normfactor == 0. || !std::isfinite(ionfractions[ion])) {
+      printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
+               get_ionstage(element, ion), get_atomicnumber(element), modelgridindex, grid::get_Te(modelgridindex),
+               grid::get_TR(modelgridindex));
+      ionfractions[ion] = 0;
+    }
+  }
+  return ionfractions;
+}
+
+auto get_groundlevelpop(const int modelgridindex, const int element, const int ion) -> double
+/// Returns the given ions groundlevel population for modelgridindex which was precalculated
+/// during update_grid and stored to the grid.
+{
+  assert_testmodeonly(modelgridindex < grid::get_npts_model());
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+
+  const double nn = grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
+  if (nn < MINPOP) {
+    if (grid::get_elem_abundance(modelgridindex, element) > 0) {
+      return MINPOP;
+    }
+    return 0.;
+  }
+  return nn;
+}
+
+auto calculate_levelpop_lte(const int modelgridindex, const int element, const int ion, const int level) -> double
+/// Calculates occupation population of a level assuming LTE excitation
+{
+  assert_testmodeonly(modelgridindex < grid::get_npts_model());
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+
+  const auto nnground = get_groundlevelpop(modelgridindex, element, ion);
+  if (level == 0) {
+    return nnground;
+  }
+
+  const auto T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(modelgridindex) : grid::get_Te(modelgridindex);
+
+  const double E_aboveground = epsilon(element, ion, level) - epsilon(element, ion, 0);
+
+  return (nnground * stat_weight(element, ion, level) / stat_weight(element, ion, 0) *
+          exp(-E_aboveground / KB / T_exc));
+}
+
+auto calculate_levelpop(const int modelgridindex, const int element, const int ion, const int level) -> double {
+  bool skipminpop = false;
+  double nn = calculate_levelpop_nominpop(modelgridindex, element, ion, level, &skipminpop);
+  if (!skipminpop && nn < MINPOP) {
+    if (grid::get_elem_abundance(modelgridindex, element) > 0) {
+      nn = MINPOP;
+    } else {
+      nn = 0.;
+    }
+  }
+
+  return nn;
+}
+
+__host__ __device__ auto get_levelpop(const int modelgridindex, const int element, const int ion,
+                                      const int level) -> double
+/// Calculates the population of a level from either LTE or NLTE information
+{
+  double nn = 0.;
+  if (use_cellcache) {
+    assert_testmodeonly(modelgridindex == globals::cellcache[cellcacheslotid].cellnumber);
+    nn = globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].population;
+  } else {
+    nn = calculate_levelpop(modelgridindex, element, ion, level);
+  }
+
+  assert_testmodeonly(nn >= 0.);
+  assert_testmodeonly(std::isfinite(nn));
+
+  return nn;
+}
+
+void calculate_cellpartfuncts(const int modelgridindex, const int element)
+/// The partition functions depend only on T_R and W. This means they don't
+/// change during any iteration on T_e. Therefore their precalculation was
+/// taken out of calculate_ion_balance_nne to save runtime.
+// TODO: not true if LTEPOP_EXCITATION_USE_TJ is true unless LTE mode only (TJ=TR=Te)
+{
+  /// Precalculate partition functions for each ion in every cell
+  /// this saves a factor 10 in calculation time of Saha-Boltzman populations
+  const int nions = get_nions(element);
+  for (int ion = 0; ion < nions; ion++) {
+    grid::modelgrid[modelgridindex].composition[element].partfunct[ion] =
+        calculate_partfunct(element, ion, modelgridindex);
+  }
+}
+
+__host__ __device__ auto calculate_sahafact(const int element, const int ion, const int level, const int upperionlevel,
+                                            const double T, const double E_threshold) -> double
+/// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
+{
+  const double g_lower = stat_weight(element, ion, level);
+  const double g_upper = stat_weight(element, ion + 1, upperionlevel);
+  const double sf = SAHACONST * g_lower / g_upper * pow(T, -1.5) * exp(E_threshold / KB / T);
+  // printout("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T,
+  // E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );
+  if (sf < 0) {
+    printout(
+        "[fatal] calculate_sahafact: Negative Saha factor. sfac %g element %d ion %d level %d upperionlevel %d "
+        "g_lower %g g_upper %g T %g E_threshold %g exppart %g\n",
+        sf, element, ion, level, upperionlevel, g_lower, g_upper, T, E_threshold, exp(E_threshold / KB / T));
+    std::abort();
+  }
+  return sf;
+}
+
+[[nodiscard]] __host__ __device__ auto get_nnion(const int modelgridindex, const int element, const int ion) -> double
+/// Use the ground level population and partition function to get an ion population
+{
+  return get_groundlevelpop(modelgridindex, element, ion) *
+         grid::modelgrid[modelgridindex].composition[element].partfunct[ion] / stat_weight(element, ion, 0);
+}
+
+void set_groundlevelpops(const int modelgridindex, const int element, const float nne, const bool force_lte) {
+  /// If not already set by the NLTE solver, set the ground level populations from either Saha LTE or
+  /// ionization/recombination balance (Photoionization Equilibrium)
+  const int nions = get_nions(element);
+
+  if (nions <= 0) {
+    return;
+  }
+
+  /// calculate number density of the current element (abundances are given by mass)
+  const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+
+  const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
+
+  const auto ionfractions =
+      (nnelement > 0) ? calculate_ionfractions(element, modelgridindex, nne, use_phi_lte) : std::vector<double>();
+
+  const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
+
+  /// Use ion fractions to calculate the groundlevel populations
+  for (int ion = 0; ion < nions; ion++) {
+    double nnion{NAN};
+    if (ion <= uppermost_ion) {
+      if (nnelement > 0) {
+        nnion = std::max(MINPOP, nnelement * ionfractions[ion]);
+      } else {
+        nnion = 0.;
+      }
+    } else {
+      nnion = MINPOP;
+    }
+
+    const double groundpop =
+        nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
+
+    if (!std::isfinite(groundpop)) {
+      printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
+    }
+
+    grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
+  }
 }
 
 auto calculate_ion_balance_nne(const int modelgridindex) -> void

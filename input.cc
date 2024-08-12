@@ -19,12 +19,14 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <ios>
 #include <iterator>
 #include <limits>
 #ifndef GPU_ON
 #include <random>
 #endif
+#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -46,6 +48,7 @@ namespace {
 
 const int groundstate_index_in = 1;  // starting level index in the input files
 int phixs_file_version = -1;
+float *allphixsblock{};
 
 struct Transitions {
   int *to;
@@ -404,7 +407,7 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
   }
 }
 
-void read_ion_transitions(std::fstream &ftransitiondata, const int tottransitions_in_file, int *tottransitions,
+void read_ion_transitions(std::fstream &ftransitiondata, const int tottransitions_in_file, int *const tottransitions,
                           std::vector<Transition> &transitiontable, const int nlevels_requiretransitions,
                           const int nlevels_requiretransitions_upperlevels) {
   transitiontable.reserve(*tottransitions);
@@ -658,7 +661,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 #endif
 }
 
-auto calculate_nlevels_groundterm(int element, int ion) -> int {
+auto calculate_nlevels_groundterm(const int element, const int ion) -> int {
   const int nlevels = get_nlevels(element, ion);
   if (nlevels == 1) {
     return 1;
@@ -1128,62 +1131,56 @@ void read_atomicdata_files() {
   update_includedionslevels_maxnions();
 }
 
-auto search_groundphixslist(double nu_edge, int el, int in, int ll) -> int
+auto search_groundphixslist(const double nu_edge, const int element_in, const int ion_in, const int level_in) -> int
 /// Return the closest ground level continuum index to the given edge
 /// frequency. If the given edge frequency is redder than the reddest
 /// continuum return -1.
 /// NB: groundphixslist must be in ascending order.
 {
   assert_always((USE_LUT_PHOTOION || USE_LUT_BFHEATING));
-  int index = 0;
 
   if (nu_edge < globals::groundcont[0].nu_edge) {
-    index = -1;
-  } else {
-    int i = 1;
-    int element = -1;
-    int ion = -1;
-    for (i = 1; i < globals::nbfcontinua_ground; i++) {
-      if (nu_edge < globals::groundcont[i].nu_edge) {
-        break;
-      }
-    }
-    if (i == globals::nbfcontinua_ground) {
-      element = globals::groundcont[i - 1].element;
-      ion = globals::groundcont[i - 1].ion;
-      if (element == el && ion == in && ll == 0) {
-        index = i - 1;
-      } else {
-        printout(
-            "[fatal] search_groundphixslist: element %d, ion %d, level %d has edge_frequency %g equal to the "
-            "bluest ground-level continuum\n",
-            el, in, ll, nu_edge);
-        printout(
-            "[fatal] search_groundphixslist: bluest ground level continuum is element %d, ion %d at "
-            "nu_edge %g\n",
-            element, ion, globals::groundcont[i - 1].nu_edge);
-        printout("[fatal] search_groundphixslist: i %d, nbfcontinua_ground %d\n", i, globals::nbfcontinua_ground);
-        printout(
-            "[fatal] This shouldn't happen, is hoewever possible if there are multiple levels in the adata file at "
-            "energy=0\n");
-        for (int looplevels = 0; looplevels < get_nlevels(el, in); looplevels++) {
-          printout("[fatal]   element %d, ion %d, level %d, energy %g\n", el, in, looplevels,
-                   epsilon(el, in, looplevels));
-        }
-        printout("[fatal] Abort omitted ... MAKE SURE ATOMIC DATA ARE CONSISTENT\n");
-        index = i - 1;
-        // abort();
-      }
-    } else {
-      const double left_diff = nu_edge - globals::groundcont[i - 1].nu_edge;
-      const double right_diff = globals::groundcont[i].nu_edge - nu_edge;
-      index = (left_diff <= right_diff) ? i - 1 : i;
-      element = globals::groundcont[index].element;
-      ion = globals::groundcont[index].ion;
+    return -1;
+  }
+
+  int i = 1;
+  for (i = 1; i < globals::nbfcontinua_ground; i++) {
+    if (nu_edge < globals::groundcont[i].nu_edge) {
+      break;
     }
   }
 
-  return index;
+  if (i == globals::nbfcontinua_ground) {
+    const int element = globals::groundcont[i - 1].element;
+    const int ion = globals::groundcont[i - 1].ion;
+    if (element == element_in && ion == ion_in && level_in == 0) {
+      return i - 1;
+    }
+
+    printout(
+        "[fatal] search_groundphixslist: element %d, ion %d, level %d has edge_frequency %g equal to the "
+        "bluest ground-level continuum\n",
+        element_in, ion_in, level_in, nu_edge);
+    printout(
+        "[fatal] search_groundphixslist: bluest ground level continuum is element %d, ion %d at "
+        "nu_edge %g\n",
+        element, ion, globals::groundcont[i - 1].nu_edge);
+    printout("[fatal] search_groundphixslist: i %d, nbfcontinua_ground %d\n", i, globals::nbfcontinua_ground);
+    printout(
+        "[fatal] This shouldn't happen, is hoewever possible if there are multiple levels in the adata file at "
+        "energy=0\n");
+    for (int looplevels = 0; looplevels < get_nlevels(element_in, ion_in); looplevels++) {
+      printout("[fatal]   element %d, ion %d, level %d, energy %g\n", element_in, ion_in, looplevels,
+               epsilon(element_in, ion_in, looplevels));
+    }
+    printout("[fatal] Abort omitted ... MAKE SURE ATOMIC DATA ARE CONSISTENT\n");
+    return i - 1;
+    // abort();
+  }
+
+  const double left_diff = nu_edge - globals::groundcont[i - 1].nu_edge;
+  const double right_diff = globals::groundcont[i].nu_edge - nu_edge;
+  return (left_diff <= right_diff) ? i - 1 : i;
 }
 
 void setup_cellcache() {
@@ -1379,8 +1376,8 @@ void setup_phixs_list() {
       }
     }
     assert_always(groundcontindex == globals::nbfcontinua_ground);
-    std::stable_sort(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
-                     [](const auto &a, const auto &b) { return static_cast<bool>(a.nu_edge < b.nu_edge); });
+    std::ranges::stable_sort(std::span(globals::groundcont, globals::nbfcontinua_ground), std::ranges::less{},
+                             &GroundPhotoion::nu_edge);
   }
 
   auto *nonconstallcont =
@@ -1394,10 +1391,11 @@ void setup_phixs_list() {
     for (int ion = 0; ion < nions - 1; ion++) {
       if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
         globals::elements[element].ions[ion].groundcontindex =
-            std::find_if(
-                globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
-                [=](const auto &groundcont) { return (groundcont.element == element) && (groundcont.ion == ion); }) -
-            globals::groundcont;
+            static_cast<int>(std::find_if(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
+                                          [=](const auto &groundcont) {
+                                            return (groundcont.element == element) && (groundcont.ion == ion);
+                                          }) -
+                             globals::groundcont);
         if (globals::elements[element].ions[ion].groundcontindex >= globals::nbfcontinua_ground) {
           globals::elements[element].ions[ion].groundcontindex = -1;
         }
@@ -1441,8 +1439,8 @@ void setup_phixs_list() {
   globals::bfestimcount = 0;
   if (globals::nbfcontinua > 0) {
     // indicies above were temporary only. continum index should be to the sorted list
-    std::stable_sort(nonconstallcont, nonconstallcont + globals::nbfcontinua,
-                     [](const auto &a, const auto &b) { return static_cast<bool>(a.nu_edge < b.nu_edge); });
+    std::ranges::stable_sort(std::span(nonconstallcont, globals::nbfcontinua), std::ranges::less{},
+                             &FullPhotoionTransition::nu_edge);
 
     globals::bfestim_nu_edge.clear();
     for (int i = 0; i < globals::nbfcontinua; i++) {
@@ -1466,7 +1464,6 @@ void setup_phixs_list() {
   if (globals::nbfcontinua > 0) {
 // copy the photoionisation tables into one contiguous block of memory
 #ifdef MPI_ON
-    float *allphixsblock{};
     MPI_Win win_allphixsblock = MPI_WIN_NULL;
     auto size =
         static_cast<MPI_Aint>((globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0);
@@ -1477,7 +1474,7 @@ void setup_phixs_list() {
 
     MPI_Barrier(MPI_COMM_WORLD);
 #else
-    auto *allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
+    allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
 #endif
 
     assert_always(allphixsblock != nullptr);

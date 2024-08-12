@@ -32,21 +32,21 @@ enum coolingtype {
   COOLINGTYPE_COLLION = 3,
 };
 
-struct CellCachecoolinglist {
+struct CellCacheCoolingList {
   enum coolingtype type;
   int level;
   int upperlevel;
 };
 
-CellCachecoolinglist *coolinglist;
+CellCacheCoolingList *coolinglist;
 
 int n_kpktdiffusion_timesteps{0};
 float kpktdiffusion_timescale{0.};
 
 template <bool update_cooling_contrib_list>
 auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion, const int indexionstart,
-                                 const int cellcacheslotid, double *C_ff, double *C_fb, double *C_exc,
-                                 double *C_ionization) -> double
+                                 const int cellcacheslotid, double *const C_ff, double *const C_fb, double *const C_exc,
+                                 double *const C_ionization) -> double
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
 {
@@ -178,6 +178,88 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
   return C_ion;
 }
 
+void set_ncoolingterms() {
+  ncoolingterms = 0;
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      int ionterms = 0;
+      globals::elements[element].ions[ion].coolingoffset = ncoolingterms;
+
+      /// Ionised ions add one ff-cooling term
+      if (get_ionstage(element, ion) > 1) {
+        ionterms++;
+      }
+      /// Ionisinglevels below the closure ion add to bf and col ionisation
+      /// All the levels add number of col excitations
+      const int nlevels = get_nlevels(element, ion);
+      for (int level = 0; level < nlevels; level++) {
+        // if (ion < nions - 1) and (level < get_ionisinglevels(element,ion))
+        if (ion < nions - 1) {
+          ionterms += 2 * get_nphixstargets(element, ion, level);
+        }
+
+        if (get_nuptrans(element, ion, level) > 0) {
+          ionterms++;  // level's coll. excitation cooling (all upper levels combined)
+        }
+      }
+      globals::elements[element].ions[ion].ncoolingterms = ionterms;
+      ncoolingterms += ionterms;
+    }
+  }
+}
+
+auto sample_planck_analytic(const double T) -> double
+// return a randomly chosen frequency according to the Planck distribution of temperature T using an analytic method.
+// More testing of this function is needed.
+{
+  const double nu_peak = 5.879e10 * T;
+  if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
+    printout("[warning] sample_planck: intensity peaks outside frequency range\n");
+  }
+
+  constexpr ptrdiff_t nubins = 500;
+  const auto delta_nu = (NU_MAX_R - NU_MIN_R) / (nubins - 1);
+  const auto integral_total = radfield::planck_integral_analytic(T, NU_MIN_R, NU_MAX_R, false);
+
+  const double rand_partintegral = rng_uniform() * integral_total;
+  double prev_partintegral = 0.;
+  double part_integral = 0.;
+  double bin_nu_lower = NU_MIN_R;
+  for (ptrdiff_t i = 1; i < nubins; i++) {
+    bin_nu_lower = NU_MIN_R + (i - 1) * delta_nu;
+    const double nu_upper = NU_MIN_R + (i * delta_nu);
+    prev_partintegral = part_integral;
+    part_integral = radfield::planck_integral_analytic(T, NU_MIN_R, nu_upper, false);
+    if (rand_partintegral >= part_integral) {
+      break;
+    }
+  }
+
+  // use a linear interpolation for the frequency within the bin
+  const double nuoffset = (rand_partintegral - prev_partintegral) / (part_integral - prev_partintegral) * delta_nu;
+
+  return bin_nu_lower + nuoffset;
+}
+
+auto sample_planck_montecarlo(const double T) -> double
+// return a randomly chosen frequency according to the Planck distribution of temperature T using a Monte Carlo method
+{
+  const double nu_peak = 5.879e10 * T;
+  if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
+    printout("[warning] sample_planck: intensity peaks outside frequency range\n");
+  }
+
+  const double B_peak = radfield::dbb(nu_peak, T, 1);
+
+  while (true) {
+    const double nu = NU_MIN_R + (rng_uniform() * (NU_MAX_R - NU_MIN_R));
+    if (rng_uniform() * B_peak <= radfield::dbb(nu, T, 1)) {
+      return nu;
+    }
+    // printout("[debug] sample_planck: planck_sampling %d\n", i);
+  }
+}
 }  // anonymous namespace
 
 void calculate_cooling_rates(const int modelgridindex, HeatingCoolingRates *heatingcoolingrates)
@@ -215,42 +297,11 @@ void calculate_cooling_rates(const int modelgridindex, HeatingCoolingRates *heat
   }
 }
 
-void set_kpktdiffusion(float kpktdiffusion_timescale_in, int n_kpktdiffusion_timesteps_in) {
+void set_kpktdiffusion(const float kpktdiffusion_timescale_in, const int n_kpktdiffusion_timesteps_in) {
   kpktdiffusion_timescale = kpktdiffusion_timescale_in;
   n_kpktdiffusion_timesteps = n_kpktdiffusion_timesteps_in;
   printout("input: kpkts diffuse %g of a time step's length for the first %d time steps\n", kpktdiffusion_timescale,
            n_kpktdiffusion_timesteps);
-}
-
-static void set_ncoolingterms() {
-  ncoolingterms = 0;
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      int ionterms = 0;
-      globals::elements[element].ions[ion].coolingoffset = ncoolingterms;
-
-      /// Ionised ions add one ff-cooling term
-      if (get_ionstage(element, ion) > 1) {
-        ionterms++;
-      }
-      /// Ionisinglevels below the closure ion add to bf and col ionisation
-      /// All the levels add number of col excitations
-      const int nlevels = get_nlevels(element, ion);
-      for (int level = 0; level < nlevels; level++) {
-        // if (ion < nions - 1) and (level < get_ionisinglevels(element,ion))
-        if (ion < nions - 1) {
-          ionterms += 2 * get_nphixstargets(element, ion, level);
-        }
-
-        if (get_nuptrans(element, ion, level) > 0) {
-          ionterms++;  // level's coll. excitation cooling (all upper levels combined)
-        }
-      }
-      globals::elements[element].ions[ion].ncoolingterms = ionterms;
-      ncoolingterms += ionterms;
-    }
-  }
 }
 
 void setup_coolinglist() {
@@ -263,9 +314,9 @@ void setup_coolinglist() {
   /// \sum_{elements,ions}get_nlevels(element,ion) and free-free which is \sum_{elements} get_nions(element)-1
 
   set_ncoolingterms();
-  const size_t mem_usage_coolinglist = ncoolingterms * sizeof(CellCachecoolinglist);
+  const size_t mem_usage_coolinglist = ncoolingterms * sizeof(CellCacheCoolingList);
   assert_always(ncoolingterms > 0);
-  coolinglist = static_cast<CellCachecoolinglist *>(malloc(ncoolingterms * sizeof(CellCachecoolinglist)));
+  coolinglist = static_cast<CellCacheCoolingList *>(malloc(ncoolingterms * sizeof(CellCacheCoolingList)));
   printout("[info] mem_usage: coolinglist occupies %.3f MB\n", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0;  // cooling list index
@@ -332,58 +383,6 @@ void setup_coolinglist() {
   printout("[info] read_atomicdata: number of coolingterms %d\n", ncoolingterms);
 }
 
-static auto sample_planck_analytic(const double T) -> double
-// return a randomly chosen frequency according to the Planck distribution of temperature T using an analytic method.
-// More testing of this function is needed.
-{
-  const double nu_peak = 5.879e10 * T;
-  if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
-    printout("[warning] sample_planck: intensity peaks outside frequency range\n");
-  }
-
-  constexpr ptrdiff_t nubins = 500;
-  const auto delta_nu = (NU_MAX_R - NU_MIN_R) / (nubins - 1);
-  const auto integral_total = radfield::planck_integral_analytic(T, NU_MIN_R, NU_MAX_R, false);
-
-  const double rand_partintegral = rng_uniform() * integral_total;
-  double prev_partintegral = 0.;
-  double part_integral = 0.;
-  double bin_nu_lower = NU_MIN_R;
-  for (ptrdiff_t i = 1; i < nubins; i++) {
-    bin_nu_lower = NU_MIN_R + (i - 1) * delta_nu;
-    const double nu_upper = NU_MIN_R + (i * delta_nu);
-    prev_partintegral = part_integral;
-    part_integral = radfield::planck_integral_analytic(T, NU_MIN_R, nu_upper, false);
-    if (rand_partintegral >= part_integral) {
-      break;
-    }
-  }
-
-  // use a linear interpolation for the frequency within the bin
-  const double nuoffset = (rand_partintegral - prev_partintegral) / (part_integral - prev_partintegral) * delta_nu;
-
-  return bin_nu_lower + nuoffset;
-}
-
-static auto sample_planck_montecarlo(const double T) -> double
-// return a randomly chosen frequency according to the Planck distribution of temperature T using a Monte Carlo method
-{
-  const double nu_peak = 5.879e10 * T;
-  if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
-    printout("[warning] sample_planck: intensity peaks outside frequency range\n");
-  }
-
-  const double B_peak = radfield::dbb(nu_peak, T, 1);
-
-  while (true) {
-    const double nu = NU_MIN_R + (rng_uniform() * (NU_MAX_R - NU_MIN_R));
-    if (rng_uniform() * B_peak <= radfield::dbb(nu, T, 1)) {
-      return nu;
-    }
-    // printout("[debug] sample_planck: planck_sampling %d\n", i);
-  }
-}
-
 __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
 /// handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 {
@@ -413,7 +412,7 @@ __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
   pkt.nscatterings = 0;
 }
 
-__host__ __device__ void do_kpkt(Packet &pkt, double t2, int nts)
+__host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts)
 /// handle a k-packet (kinetic energy of the free electrons)
 {
   const double t1 = pkt.prop_time;

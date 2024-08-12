@@ -36,13 +36,15 @@ Checks: >
     -hicpp-no-array-decay,
     -hicpp-no-malloc,
     -hicpp-signed-bitwise,
-    -misc-use-anonymous-namespace,
     -misc-no-recursion,
     -misc-non-private-member-variables-in-classes,
+    -modernize-use-ranges,
     -readability-identifier-length,
     -readability-function-cognitive-complexity,
     -readability-magic-numbers,
-WarningsAsErrors: ''
+WarningsAsErrors: >
+    *,
+    -performance-enum-size,
 FormatStyle: file
 ExtraArgs: [-std=c++20]
 CheckOptions:
@@ -68,3 +70,5 @@ CheckOptions:
       value: lower_case
     - key: bugprone-reserved-identifier.AllowedIdentifiers
       value: '__host__;__device__'
+    - key: misc-include-cleaner.IgnoreHeaders
+      value: '.*(ranges).*'

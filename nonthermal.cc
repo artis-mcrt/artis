@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <functional>
 #include <ios>
 #include <sstream>
 #include <string>
@@ -232,13 +233,13 @@ void read_binding_energies() {
   }
 }
 
-auto get_auger_probability(int modelgridindex, int element, int ion, int naugerelec) -> double {
+auto get_auger_probability(const int modelgridindex, const int element, const int ion, const int naugerelec) -> double {
   assert_always(naugerelec <= NT_MAX_AUGER_ELECTRONS);
   const int uniqueionindex = get_uniqueionindex(element, ion);
   return nt_solution[modelgridindex].prob_num_auger[(uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)) + naugerelec];
 }
 
-auto get_ion_auger_enfrac(int modelgridindex, int element, int ion, int naugerelec) -> double {
+auto get_ion_auger_enfrac(const int modelgridindex, const int element, const int ion, const int naugerelec) -> double {
   assert_always(naugerelec <= NT_MAX_AUGER_ELECTRONS);
   const int uniqueionindex = get_uniqueionindex(element, ion);
   return nt_solution[modelgridindex].ionenfrac_num_auger[(uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)) + naugerelec];
@@ -1334,7 +1335,7 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const int modelgridindex, c
   return 0.;
 }
 
-auto ion_ntion_energyrate(int modelgridindex, int element, int lowerion) -> double {
+auto ion_ntion_energyrate(const int modelgridindex, const int element, const int lowerion) -> double {
   // returns the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
   const double nnlowerion = get_nnion(modelgridindex, element, lowerion);
   double enrate = 0.;
@@ -1356,7 +1357,7 @@ auto ion_ntion_energyrate(int modelgridindex, int element, int lowerion) -> doub
   return gamma_nt * enrate;
 }
 
-auto get_ntion_energyrate(int modelgridindex) -> double {
+auto get_ntion_energyrate(const int modelgridindex) -> double {
   // returns the energy rate [erg/s] going toward non-thermal ionisation in a modelgrid cell
   double ratetotal = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
@@ -1368,7 +1369,7 @@ auto get_ntion_energyrate(int modelgridindex) -> double {
   return ratetotal;
 }
 
-auto select_nt_ionization(int modelgridindex) -> std::tuple<int, int> {
+auto select_nt_ionization(const int modelgridindex) -> std::tuple<int, int> {
   const double zrand = rng_uniform();
 
   // // select based on stored frac_deposition for each ion
@@ -1572,9 +1573,8 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 
   if constexpr (NT_EXCITATION_ON && (MAX_NT_EXCITATIONS_STORED > 0)) {
     // sort by descending frac_deposition
-    std::stable_sort(nt_solution[modelgridindex].frac_excitations_list.begin(),
-                     nt_solution[modelgridindex].frac_excitations_list.end(),
-                     [](const auto &a, const auto &b) { return a.frac_deposition > b.frac_deposition; });
+    std::ranges::stable_sort(nt_solution[modelgridindex].frac_excitations_list, std::ranges::greater{},
+                             &nt_excitation_struct::frac_deposition);
 
     // the excitation list is now sorted by frac_deposition descending
     const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
@@ -1631,9 +1631,8 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
     }
 
     // sort the excitation list by ascending lineindex for fast lookup with a binary search
-    std::stable_sort(nt_solution[modelgridindex].frac_excitations_list.begin(),
-                     nt_solution[modelgridindex].frac_excitations_list.end(),
-                     [](const auto &a, const auto &b) { return a.lineindex < b.lineindex; });
+    std::ranges::stable_sort(nt_solution[modelgridindex].frac_excitations_list, std::ranges::less{},
+                             &nt_excitation_struct::lineindex);
 
   }  // NT_EXCITATION_ON
 
@@ -2169,7 +2168,7 @@ __host__ __device__ auto nt_ionization_upperion_probability(const int modelgridi
       if (energyweighted) {
         assert_always(fabs(prob_remaining -
                            nt_solution[modelgridindex]
-                               .ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + numaugerelec]) <
+                               .ionenfrac_num_auger[(uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)) + numaugerelec]) <
                       0.001);
       } else {
         if (fabs(prob_remaining -
@@ -2179,7 +2178,7 @@ __host__ __device__ auto nt_ionization_upperion_probability(const int modelgridi
                    get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element, upperion));
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
             printout("  a %d prob %g\n", a,
-                     nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]);
+                     nt_solution[modelgridindex].prob_num_auger[(uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)) + a]);
           }
           std::abort();
         }
@@ -2297,8 +2296,7 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const
 
   // binary search, assuming the excitation list is sorted by lineindex ascending
   auto ntexclist = nt_solution[modelgridindex].frac_excitations_list;
-  auto ntexcitation = std::lower_bound(ntexclist.cbegin(), ntexclist.cend(), lineindex,
-                                       [](const auto &exc, const int lineindex) { return exc.lineindex < lineindex; });
+  auto ntexcitation = std::ranges::lower_bound(ntexclist, lineindex, {}, &nt_excitation_struct::lineindex);
   if (ntexcitation == ntexclist.end() || ntexcitation->lineindex != lineindex) {
     return 0.;
   }
@@ -2689,9 +2687,9 @@ void read_restart_data(FILE *gridsave_file) {
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
           assert_always(
               fscanf(gridsave_file, "%a %a ",
-                     &nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a],
+                     &nt_solution[modelgridindex].prob_num_auger[(uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)) + a],
                      &nt_solution[modelgridindex]
-                          .ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]) == 2);
+                          .ionenfrac_num_auger[(uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)) + a]) == 2);
         }
       }
 

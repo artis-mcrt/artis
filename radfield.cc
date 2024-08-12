@@ -106,7 +106,7 @@ struct gsl_T_R_solver_paras {
 
 FILE *radfieldfile{};
 
-constexpr auto get_bin_nu_upper(int binindex) -> double {
+constexpr auto get_bin_nu_upper(const int binindex) -> double {
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
   if (binindex == RADFIELDBINCOUNT - 1) {
     return nu_upper_superbin;
@@ -114,7 +114,7 @@ constexpr auto get_bin_nu_upper(int binindex) -> double {
   return nu_lower_first_initial + ((binindex + 1) * radfieldbins_delta_nu);
 }
 
-constexpr auto get_bin_nu_lower(int binindex) -> double {
+constexpr auto get_bin_nu_lower(const int binindex) -> double {
   if (binindex > 0) {
     return get_bin_nu_upper(binindex - 1);
   }
@@ -195,7 +195,7 @@ void add_detailed_line(const int lineindex)
   // printout("Added Jblue estimator for lineindex %d count %d\n", lineindex, detailed_linecount);
 }
 
-auto get_bin_J(int modelgridindex, int binindex) -> double
+auto get_bin_J(const int modelgridindex, const int binindex) -> double
 // get the normalised J_nu
 {
   const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
@@ -206,7 +206,7 @@ auto get_bin_J(int modelgridindex, int binindex) -> double
   return radfieldbins[(nonemptymgi * RADFIELDBINCOUNT) + binindex].J_raw * J_normfactor[nonemptymgi];
 }
 
-auto get_bin_nuJ(int modelgridindex, int binindex) -> double {
+auto get_bin_nuJ(const int modelgridindex, const int binindex) -> double {
   const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
@@ -215,7 +215,7 @@ auto get_bin_nuJ(int modelgridindex, int binindex) -> double {
   return radfieldbins[(nonemptymgi * RADFIELDBINCOUNT) + binindex].nuJ_raw * J_normfactor[nonemptymgi];
 }
 
-auto get_bin_nu_bar(int modelgridindex, int binindex) -> double
+auto get_bin_nu_bar(const int modelgridindex, const int binindex) -> double
 // importantly, this is average beween the current and previous timestep
 {
   const double nuJ_sum = get_bin_nuJ(modelgridindex, binindex);
@@ -223,17 +223,17 @@ auto get_bin_nu_bar(int modelgridindex, int binindex) -> double
   return nuJ_sum / J_sum;
 }
 
-auto get_bin_contribcount(int modelgridindex, int binindex) -> int {
+auto get_bin_contribcount(const int modelgridindex, const int binindex) -> int {
   const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   return radfieldbins[(nonemptymgi * RADFIELDBINCOUNT) + binindex].contribcount;
 }
 
-auto get_bin_W(int modelgridindex, int binindex) -> float {
+auto get_bin_W(const int modelgridindex, const int binindex) -> float {
   const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   return radfieldbin_solutions[(nonemptymgi * RADFIELDBINCOUNT) + binindex].W;
 }
 
-auto get_bin_T_R(int modelgridindex, int binindex) -> float {
+auto get_bin_T_R(const int modelgridindex, const int binindex) -> float {
   const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   return radfieldbin_solutions[(nonemptymgi * RADFIELDBINCOUNT) + binindex].T_R;
 }
@@ -251,9 +251,231 @@ constexpr auto gsl_integrand_planck(const double nu, void *voidparas) -> double 
   return integrand;
 }
 
+void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
+                         const double doppler_nucmf_on_nurf, const Phixslist &phixslist) {
+  assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
+
+  const double distance_e_cmf_over_nu =
+      distance_e_cmf / nu_cmf * doppler_nucmf_on_nurf;  // TODO: Luke: why did I put a doppler factor here?
+
+  // I think the nu_cmf slightly differs from when the phixslist was calculated
+  // so the nu condition on this nu_cmf can truncate the list further compared to what was used in the calculation
+  // of phixslist.gamma_contr
+
+  const auto bfestimend = std::upper_bound(globals::bfestim_nu_edge.data(),
+                                           globals::bfestim_nu_edge.data() + phixslist.bfestimend, nu_cmf) -
+                          globals::bfestim_nu_edge.data();
+
+  const auto bfestimbegin = std::lower_bound(globals::bfestim_nu_edge.data() + phixslist.bfestimbegin,
+                                             globals::bfestim_nu_edge.data() + bfestimend, nu_cmf,
+                                             [](const double nu_edge, const double nu_cmf) {
+                                               return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                             }) -
+                            globals::bfestim_nu_edge.data();
+
+  const auto bfestimcount = globals::bfestimcount;
+  for (auto bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
+    atomicadd(bfrate_raw[(nonemptymgi * bfestimcount) + bfestimindex],
+              phixslist.gamma_contr[bfestimindex] * distance_e_cmf_over_nu);
+  }
+}
+
+auto planck_integral(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu) -> double {
+  double integral = 0.;
+
+  double error = 0.;
+  const double epsrel = 1e-10;
+  const double epsabs = 0.;
+
+  const gsl_planck_integral_paras intparas = {.T_R = T_R, .times_nu = times_nu};
+
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+
+  const int status = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsabs, epsrel, GSL_INTEG_GAUSS61,
+                                                      &integral, &error);
+  if (status != 0) {
+    printout("planck_integral integrator status %d, GSL_FAILURE= %d. Integral value %g, setting to zero.\n", status,
+             GSL_FAILURE, integral);
+    integral = 0.;
+  }
+  gsl_set_error_handler(previous_handler);
+
+  return integral;
+}
+
+auto delta_nu_bar(const double T_R, void *const paras) -> double
+// difference between the average nu and the average nu of a Planck function
+// at temperature T_R, in the frequency range corresponding to a bin
+{
+  const auto *params = static_cast<const gsl_T_R_solver_paras *>(paras);
+  const int modelgridindex = params->modelgridindex;
+  const int binindex = params->binindex;
+
+  const double nu_lower = get_bin_nu_lower(binindex);
+  const double nu_upper = get_bin_nu_upper(binindex);
+
+  const double nu_bar_estimator = get_bin_nu_bar(modelgridindex, binindex);
+
+  const double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
+  const double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
+  const double nu_bar_planck_T_R = nu_times_planck_numerical / planck_integral_numerical;
+
+  // double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, true);
+  // double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, false);
+  // double nu_bar_planck = nu_times_planck_integral / planck_integral_result;
+
+  // // printout("nu_bar %g nu_bar_planck(T=%g) %g\n",nu_bar,T_R,nu_bar_planck);
+
+  // if (!std::isfinite(nu_bar_planck)) {
+  //   double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
+  //   double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
+  //   double nu_bar_planck_numerical = nu_times_planck_numerical / planck_integral_numerical;
+
+  //   printout("planck_integral_analytic is %g. Replacing with numerical result of %g.\n", nu_bar_planck,
+  //            nu_bar_planck_numerical);
+  //   nu_bar_planck = nu_bar_planck_numerical;
+  // }
+
+  const double delta_nu_bar = nu_bar_planck_T_R - nu_bar_estimator;
+
+  if (!std::isfinite(delta_nu_bar)) {
+    printout(
+        "delta_nu_bar is %g. nu_bar_planck_T_R %g nu_times_planck_numerical %g planck_integral_numerical %g "
+        "nu_bar_estimator %g\n",
+        delta_nu_bar, nu_bar_planck_T_R, nu_times_planck_numerical, planck_integral_numerical, nu_bar_estimator);
+  }
+
+  return delta_nu_bar;
+}
+
+auto find_T_R(const int modelgridindex, const int binindex) -> float {
+  double T_R = 0.;
+
+  gsl_T_R_solver_paras paras{};
+  paras.modelgridindex = modelgridindex;
+  paras.binindex = binindex;
+
+  /// Check whether the equation has a root in [T_min,T_max]
+  double delta_nu_bar_min = delta_nu_bar(T_R_min, &paras);
+  double delta_nu_bar_max = delta_nu_bar(T_R_max, &paras);
+
+  // printout("find_T_R: bin %4d delta_nu_bar(T_R_min) %g, delta_nu_bar(T_R_max) %g\n",
+  //          binindex, delta_nu_bar_min,delta_nu_bar_max);
+
+  if (!std::isfinite(delta_nu_bar_min) || !std::isfinite(delta_nu_bar_max)) {
+    delta_nu_bar_max = delta_nu_bar_min = -1;
+  }
+
+  if (delta_nu_bar_min * delta_nu_bar_max < 0) {
+    /// If there is a root in the interval, solve for T_R
+
+    const double epsrel = 1e-4;
+    const double epsabs = 0.;
+    const int maxit = 100;
+
+    gsl_function find_T_R_f = {.function = &delta_nu_bar, .params = &paras};
+
+    /// one dimensional gsl root solver, bracketing type
+    gsl_root_fsolver *T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
+    gsl_root_fsolver_set(T_R_solver, &find_T_R_f, T_R_min, T_R_max);
+    int status = 0;
+    for (int iteration_num = 0; iteration_num <= maxit; iteration_num++) {
+      gsl_root_fsolver_iterate(T_R_solver);
+      T_R = gsl_root_fsolver_root(T_R_solver);
+
+      const double T_R_lower = gsl_root_fsolver_x_lower(T_R_solver);
+      const double T_R_upper = gsl_root_fsolver_x_upper(T_R_solver);
+      status = gsl_root_test_interval(T_R_lower, T_R_upper, epsabs, epsrel);
+
+      // printout("find_T_R: bin %4d iter %d, T_R is between %7.1f and %7.1f, guess %7.1f, delta_nu_bar %g, status
+      // %d\n",
+      //          binindex,iteration_num,T_R_lower,T_R_upper,T_R,delta_nu_bar(T_R,&paras),status);
+      if (status != GSL_CONTINUE) {
+        break;
+      }
+    }
+
+    if (status == GSL_CONTINUE) {
+      printout("[warning] find_T_R: T_R did not converge within %d iterations\n", maxit);
+    }
+
+    gsl_root_fsolver_free(T_R_solver);
+  } else if (delta_nu_bar_max < 0) {
+    /// Thermal balance equation always negative ===> T_R = T_min
+    /// Calculate the rates again at this T_e to print them to file
+    T_R = T_R_max;
+    printout("find_T_R: cell %d bin %4d no solution in interval, clamping to T_R_max=%g\n", modelgridindex, binindex,
+             T_R_max);
+  } else {
+    T_R = T_R_min;
+    printout("find_T_R: cell %d bin %4d no solution in interval, clamping to T_R_min=%g\n", modelgridindex, binindex,
+             T_R_min);
+  }
+
+  return T_R;
+}  // namespace radfield
+
+void set_params_fullspec(const int modelgridindex, const int timestep) {
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const double nubar = nuJ[nonemptymgi] / J[nonemptymgi];
+  if (!std::isfinite(nubar) || nubar == 0.) {
+    printout("[warning] T_R estimator infinite in cell %d, keep T_R, T_J, W of last timestep. J = %g. nuJ = %g\n",
+             modelgridindex, J[nonemptymgi], nuJ[nonemptymgi]);
+  } else {
+    float T_J = pow(J[nonemptymgi] * PI / STEBO, 1 / 4.);
+    if (T_J > MAXTEMP) {
+      printout("[warning] temperature estimator T_J = %g exceeds T_max %g in cell %d. Setting T_J = T_max!\n", T_J,
+               MAXTEMP, modelgridindex);
+      T_J = MAXTEMP;
+    } else if (T_J < MINTEMP) {
+      printout("[warning] temperature estimator T_J = %g below T_min %g in cell %d. Setting T_J = T_min!\n", T_J,
+               MINTEMP, modelgridindex);
+      T_J = MINTEMP;
+    }
+    grid::set_TJ(modelgridindex, T_J);
+
+    float T_R = H * nubar / KB / 3.832229494;
+    if (T_R > MAXTEMP) {
+      printout("[warning] temperature estimator T_R = %g exceeds T_max %g in cell %d. Setting T_R = T_max!\n", T_R,
+               MAXTEMP, modelgridindex);
+      T_R = MAXTEMP;
+    } else if (T_R < MINTEMP) {
+      printout("[warning] temperature estimator T_R = %g below T_min %g in cell %d. Setting T_R = T_min!\n", T_R,
+               MINTEMP, modelgridindex);
+      T_R = MINTEMP;
+    }
+    grid::set_TR(modelgridindex, T_R);
+
+    const float W = J[nonemptymgi] * PI / STEBO / pow(T_R, 4);
+    grid::set_W(modelgridindex, W);
+
+    printout(
+        "Full-spectrum fit radfield for cell %d at timestep %d: J %g, nubar %5.1f Angstrom, T_J %g, T_R %g, W %g\n",
+        modelgridindex, timestep, J[nonemptymgi], 1e8 * CLIGHT / nubar, T_J, T_R, W);
+  }
+}
+
+auto get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
+  // simple linear search seems to be faster than the binary search
+  // possibly because lower frequency transitions near start of list are more likely to be called?
+  const auto bfcontindex = static_cast<int>(std::find_if(globals::allcont, globals::allcont + globals::nbfcontinua,
+                                                         [=](const auto &bf) {
+                                                           return (bf.element == element) && (bf.ion == lowerion) &&
+                                                                  (bf.level == lower) &&
+                                                                  (bf.phixstargetindex == phixstargetindex);
+                                                         }) -
+                                            globals::allcont);
+
+  if (bfcontindex < globals::nbfcontinua) {
+    return bfcontindex;
+  }
+  // not found in the continua list
+  return -1;
+}
+
 }  // anonymous namespace
 
-void init(int my_rank, int ndo_nonempty)
+void init(const int my_rank, const int ndo_nonempty)
 // this should be called only after the atomic data is in memory
 {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
@@ -503,7 +725,7 @@ auto get_Jb_lu_contribcount(const int modelgridindex, const int jblueindex) -> i
   return prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount;
 }
 
-void write_to_file(int modelgridindex, int timestep) {
+void write_to_file(const int modelgridindex, const int timestep) {
   assert_always(MULTIBIN_RADFIELD_MODEL_ON);
   const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 #ifdef _OPENMP
@@ -635,35 +857,6 @@ void zero_estimators()
   }
 }
 
-static void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                                const double doppler_nucmf_on_nurf, const Phixslist &phixslist) {
-  assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
-
-  const double distance_e_cmf_over_nu =
-      distance_e_cmf / nu_cmf * doppler_nucmf_on_nurf;  // TODO: Luke: why did I put a doppler factor here?
-
-  // I think the nu_cmf slightly differs from when the phixslist was calculated
-  // so the nu condition on this nu_cmf can truncate the list further compared to what was used in the calculation
-  // of phixslist.gamma_contr
-
-  const auto bfestimend = std::upper_bound(globals::bfestim_nu_edge.data(),
-                                           globals::bfestim_nu_edge.data() + phixslist.bfestimend, nu_cmf) -
-                          globals::bfestim_nu_edge.data();
-
-  const auto bfestimbegin = std::lower_bound(globals::bfestim_nu_edge.data() + phixslist.bfestimbegin,
-                                             globals::bfestim_nu_edge.data() + bfestimend, nu_cmf,
-                                             [](const double nu_edge, const double nu_cmf) {
-                                               return nu_edge * last_phixs_nuovernuedge < nu_cmf;
-                                             }) -
-                            globals::bfestim_nu_edge.data();
-
-  const auto bfestimcount = globals::bfestimcount;
-  for (auto bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
-    atomicadd(bfrate_raw[(nonemptymgi * bfestimcount) + bfestimindex],
-              phixslist.gamma_contr[bfestimindex] * distance_e_cmf_over_nu);
-  }
-}
-
 __host__ __device__ void update_estimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
                                            const double doppler_nucmf_on_nurf, const Phixslist &phixslist,
                                            const bool thickcell) {
@@ -706,7 +899,7 @@ __host__ __device__ void update_lineestimator(const int modelgridindex, const in
   }
 }
 
-__host__ __device__ auto radfield(double nu, int modelgridindex) -> double
+__host__ __device__ auto radfield(const double nu, const int modelgridindex) -> double
 // returns mean intensity J_nu [ergs/s/sr/cm2/Hz]
 {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -728,29 +921,6 @@ __host__ __device__ auto radfield(double nu, int modelgridindex) -> double
   const float W_fullspec = grid::get_W(modelgridindex);
   const double J_nu_fullspec = dbb(nu, T_R_fullspec, W_fullspec);
   return J_nu_fullspec;
-}
-
-static auto planck_integral(double T_R, double nu_lower, double nu_upper, const bool times_nu) -> double {
-  double integral = 0.;
-
-  double error = 0.;
-  const double epsrel = 1e-10;
-  const double epsabs = 0.;
-
-  const gsl_planck_integral_paras intparas = {.T_R = T_R, .times_nu = times_nu};
-
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-
-  const int status = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsabs, epsrel, GSL_INTEG_GAUSS61,
-                                                      &integral, &error);
-  if (status != 0) {
-    printout("planck_integral integrator status %d, GSL_FAILURE= %d. Integral value %g, setting to zero.\n", status,
-             GSL_FAILURE, integral);
-    integral = 0.;
-  }
-  gsl_set_error_handler(previous_handler);
-
-  return integral;
 }
 
 auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper,
@@ -791,159 +961,7 @@ auto planck_integral_analytic(const double T_R, const double nu_lower, const dou
   return integral;
 }
 
-static auto delta_nu_bar(double T_R, void *paras) -> double
-// difference between the average nu and the average nu of a Planck function
-// at temperature T_R, in the frequency range corresponding to a bin
-{
-  const auto *params = static_cast<const gsl_T_R_solver_paras *>(paras);
-  const int modelgridindex = params->modelgridindex;
-  const int binindex = params->binindex;
-
-  const double nu_lower = get_bin_nu_lower(binindex);
-  const double nu_upper = get_bin_nu_upper(binindex);
-
-  const double nu_bar_estimator = get_bin_nu_bar(modelgridindex, binindex);
-
-  const double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
-  const double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
-  const double nu_bar_planck_T_R = nu_times_planck_numerical / planck_integral_numerical;
-
-  // double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, true);
-  // double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, false);
-  // double nu_bar_planck = nu_times_planck_integral / planck_integral_result;
-
-  // // printout("nu_bar %g nu_bar_planck(T=%g) %g\n",nu_bar,T_R,nu_bar_planck);
-
-  // if (!std::isfinite(nu_bar_planck)) {
-  //   double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
-  //   double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
-  //   double nu_bar_planck_numerical = nu_times_planck_numerical / planck_integral_numerical;
-
-  //   printout("planck_integral_analytic is %g. Replacing with numerical result of %g.\n", nu_bar_planck,
-  //            nu_bar_planck_numerical);
-  //   nu_bar_planck = nu_bar_planck_numerical;
-  // }
-
-  const double delta_nu_bar = nu_bar_planck_T_R - nu_bar_estimator;
-
-  if (!std::isfinite(delta_nu_bar)) {
-    printout(
-        "delta_nu_bar is %g. nu_bar_planck_T_R %g nu_times_planck_numerical %g planck_integral_numerical %g "
-        "nu_bar_estimator %g\n",
-        delta_nu_bar, nu_bar_planck_T_R, nu_times_planck_numerical, planck_integral_numerical, nu_bar_estimator);
-  }
-
-  return delta_nu_bar;
-}
-
-static auto find_T_R(int modelgridindex, int binindex) -> float {
-  double T_R = 0.;
-
-  gsl_T_R_solver_paras paras{};
-  paras.modelgridindex = modelgridindex;
-  paras.binindex = binindex;
-
-  /// Check whether the equation has a root in [T_min,T_max]
-  double delta_nu_bar_min = delta_nu_bar(T_R_min, &paras);
-  double delta_nu_bar_max = delta_nu_bar(T_R_max, &paras);
-
-  // printout("find_T_R: bin %4d delta_nu_bar(T_R_min) %g, delta_nu_bar(T_R_max) %g\n",
-  //          binindex, delta_nu_bar_min,delta_nu_bar_max);
-
-  if (!std::isfinite(delta_nu_bar_min) || !std::isfinite(delta_nu_bar_max)) {
-    delta_nu_bar_max = delta_nu_bar_min = -1;
-  }
-
-  if (delta_nu_bar_min * delta_nu_bar_max < 0) {
-    /// If there is a root in the interval, solve for T_R
-
-    const double epsrel = 1e-4;
-    const double epsabs = 0.;
-    const int maxit = 100;
-
-    gsl_function find_T_R_f = {.function = &delta_nu_bar, .params = &paras};
-
-    /// one dimensional gsl root solver, bracketing type
-    gsl_root_fsolver *T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
-    gsl_root_fsolver_set(T_R_solver, &find_T_R_f, T_R_min, T_R_max);
-    int status = 0;
-    for (int iteration_num = 0; iteration_num <= maxit; iteration_num++) {
-      gsl_root_fsolver_iterate(T_R_solver);
-      T_R = gsl_root_fsolver_root(T_R_solver);
-
-      const double T_R_lower = gsl_root_fsolver_x_lower(T_R_solver);
-      const double T_R_upper = gsl_root_fsolver_x_upper(T_R_solver);
-      status = gsl_root_test_interval(T_R_lower, T_R_upper, epsabs, epsrel);
-
-      // printout("find_T_R: bin %4d iter %d, T_R is between %7.1f and %7.1f, guess %7.1f, delta_nu_bar %g, status
-      // %d\n",
-      //          binindex,iteration_num,T_R_lower,T_R_upper,T_R,delta_nu_bar(T_R,&paras),status);
-      if (status != GSL_CONTINUE) {
-        break;
-      }
-    }
-
-    if (status == GSL_CONTINUE) {
-      printout("[warning] find_T_R: T_R did not converge within %d iterations\n", maxit);
-    }
-
-    gsl_root_fsolver_free(T_R_solver);
-  } else if (delta_nu_bar_max < 0) {
-    /// Thermal balance equation always negative ===> T_R = T_min
-    /// Calculate the rates again at this T_e to print them to file
-    T_R = T_R_max;
-    printout("find_T_R: cell %d bin %4d no solution in interval, clamping to T_R_max=%g\n", modelgridindex, binindex,
-             T_R_max);
-  } else {
-    T_R = T_R_min;
-    printout("find_T_R: cell %d bin %4d no solution in interval, clamping to T_R_min=%g\n", modelgridindex, binindex,
-             T_R_min);
-  }
-
-  return T_R;
-}  // namespace radfield
-
-static void set_params_fullspec(const int modelgridindex, const int timestep) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  const double nubar = nuJ[nonemptymgi] / J[nonemptymgi];
-  if (!std::isfinite(nubar) || nubar == 0.) {
-    printout("[warning] T_R estimator infinite in cell %d, keep T_R, T_J, W of last timestep. J = %g. nuJ = %g\n",
-             modelgridindex, J[nonemptymgi], nuJ[nonemptymgi]);
-  } else {
-    float T_J = pow(J[nonemptymgi] * PI / STEBO, 1 / 4.);
-    if (T_J > MAXTEMP) {
-      printout("[warning] temperature estimator T_J = %g exceeds T_max %g in cell %d. Setting T_J = T_max!\n", T_J,
-               MAXTEMP, modelgridindex);
-      T_J = MAXTEMP;
-    } else if (T_J < MINTEMP) {
-      printout("[warning] temperature estimator T_J = %g below T_min %g in cell %d. Setting T_J = T_min!\n", T_J,
-               MINTEMP, modelgridindex);
-      T_J = MINTEMP;
-    }
-    grid::set_TJ(modelgridindex, T_J);
-
-    float T_R = H * nubar / KB / 3.832229494;
-    if (T_R > MAXTEMP) {
-      printout("[warning] temperature estimator T_R = %g exceeds T_max %g in cell %d. Setting T_R = T_max!\n", T_R,
-               MAXTEMP, modelgridindex);
-      T_R = MAXTEMP;
-    } else if (T_R < MINTEMP) {
-      printout("[warning] temperature estimator T_R = %g below T_min %g in cell %d. Setting T_R = T_min!\n", T_R,
-               MINTEMP, modelgridindex);
-      T_R = MINTEMP;
-    }
-    grid::set_TR(modelgridindex, T_R);
-
-    const float W = J[nonemptymgi] * PI / STEBO / pow(T_R, 4);
-    grid::set_W(modelgridindex, W);
-
-    printout(
-        "Full-spectrum fit radfield for cell %d at timestep %d: J %g, nubar %5.1f Angstrom, T_J %g, T_R %g, W %g\n",
-        modelgridindex, timestep, J[nonemptymgi], 1e8 * CLIGHT / nubar, T_J, T_R, W);
-  }
-}
-
-void fit_parameters(int modelgridindex, int timestep)
+void fit_parameters(const int modelgridindex, const int timestep)
 // finds the best fitting W and temperature parameters in each spectral bin
 // using J and nuJ
 {
@@ -1039,7 +1057,7 @@ void normalise_J(const int modelgridindex, const double estimator_normfactor_ove
   }
 }
 
-void normalise_bf_estimators(const int nts, const int nts_prev, const int titer, double deltat) {
+void normalise_bf_estimators(const int nts, const int nts_prev, const int titer, const double deltat) {
   if (nts != globals::timestep_initial || titer != 0) {
     for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
       const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
@@ -1058,23 +1076,6 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
       }
     }
   }
-}
-
-static auto get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
-  // simple linear search seems to be faster than the binary search
-  // possibly because lower frequency transitions near start of list are more likely to be called?
-  const auto bfcontindex = std::find_if(globals::allcont, globals::allcont + globals::nbfcontinua,
-                                        [=](const auto &bf) {
-                                          return (bf.element == element) && (bf.ion == lowerion) &&
-                                                 (bf.level == lower) && (bf.phixstargetindex == phixstargetindex);
-                                        }) -
-                           globals::allcont;
-
-  if (bfcontindex < globals::nbfcontinua) {
-    return bfcontindex;
-  }
-  // not found in the continua list
-  return -1;
 }
 
 auto get_bfrate_estimator(const int element, const int lowerion, const int lower, const int phixstargetindex,
@@ -1197,7 +1198,7 @@ void reduce_estimators()
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
+void do_MPI_Bcast(const int modelgridindex, const int root, const int root_node_id)
 // broadcast computed radfield results including parameters
 // from the cells belonging to root process to all processes
 {

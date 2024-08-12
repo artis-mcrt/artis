@@ -156,7 +156,7 @@ void calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   processrates[MA_ACTION_INTERNALUPHIGHER] = sum_up_higher;
 }
 
-auto do_macroatom_internal_down_same(int element, int ion, int level) -> int {
+auto do_macroatom_internal_down_same(const int element, const int ion, const int level) -> int {
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
   // printout("[debug] do_ma:   internal downward jump within current ionstage\n");
@@ -229,7 +229,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   pkt.nscatterings = 0;
 }
 
-void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int element, int *ion, int *level,
+void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int element, int *const ion, int *const level,
                             const double rad_recomb) {
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
@@ -289,7 +289,7 @@ void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int ele
   pkt.nscatterings = 0;
 }
 
-void do_macroatom_ionisation(const int modelgridindex, const int element, int *ion, int *level,
+void do_macroatom_ionisation(const int modelgridindex, const int element, int *const ion, int *const level,
                              const double epsilon_current, const double internal_up_higher) {
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
@@ -405,8 +405,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
     const double randomrate = rng_uniform() * cumulative_transitions[MA_ACTION_COUNT - 1];
 
     // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
-    const int selected_action =
-        std::ranges::upper_bound(cumulative_transitions, randomrate) - cumulative_transitions.cbegin();
+    const int selected_action = static_cast<int>(std::ranges::upper_bound(cumulative_transitions, randomrate) -
+                                                 cumulative_transitions.cbegin());
 
     assert_always(selected_action < MA_ACTION_COUNT);
     assert_always(cumulative_transitions[selected_action] > randomrate);
@@ -710,7 +710,7 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
 }
 
 auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
-                              const int uptransindex, const double epsilon_trans, int lineindex,
+                              const int uptransindex, const double epsilon_trans, const int lineindex,
                               const double t_current) -> double
 /// radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
@@ -875,8 +875,8 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
   return C;
 }
 
-auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, int element, int ion,
-                                int upper, const LevelTransition &downtransition) -> double
+auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, const int element,
+                                const int ion, const int upper, const LevelTransition &downtransition) -> double
 // multiply by upper level population to get a rate per second
 {
   const int lower = downtransition.targetlevelindex;
@@ -926,8 +926,9 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
   return nne * 8.629e-6 * coll_str_thisline / upperstatweight / std::sqrt(T_e);
 }
 
-auto col_excitation_ratecoeff(const float T_e, const float nne, int element, int ion, int lower, int uptransindex,
-                              const double epsilon_trans, const double lowerstatweight) -> double
+auto col_excitation_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
+                              const int uptransindex, const double epsilon_trans,
+                              const double lowerstatweight) -> double
 // multiply by lower level population to get a rate per second
 {
   // assert_testmodeonly(i < get_nuptrans(element, ion, lower));

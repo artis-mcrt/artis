@@ -29,45 +29,32 @@
 namespace gammapkt {
 // Code for handing gamma rays - creation and propagation
 
+namespace {
 struct GammaLine {
   double energy{};  // in erg
   double probability{};
 };
 
-static std::vector<std::vector<GammaLine>> gamma_spectra;
+std::vector<std::vector<GammaLine>> gamma_spectra;
 
 struct el_photoion_data {
   double energy;      // energy in MeV
   double sigma_xcom;  // cross section in barns/atom
 };
 
-static constexpr int numb_xcom_elements = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
+constexpr int numb_xcom_elements = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
 
-static std::array<std::vector<el_photoion_data>, numb_xcom_elements> photoion_data;
+std::array<std::vector<el_photoion_data>, numb_xcom_elements> photoion_data;
 
 struct NucGammaLine {
   int nucindex;       // is it a Ni56, Co56, a fake line, etc
   int nucgammaindex;  // which of the lines of that nuclide is it
   double energy;      // in erg
-
-  auto operator<(const NucGammaLine &g2) const -> bool {
-    // true if d1 < d2
-    if (energy < g2.energy) {
-      return true;
-    }
-    if (energy == g2.energy && nucindex < g2.nucindex) {
-      return true;
-    }
-    if (energy == g2.energy && nucindex == g2.nucindex && nucgammaindex < g2.nucgammaindex) {
-      return true;
-    }
-    return false;
-  }
 };
 
-static std::vector<NucGammaLine> allnuc_gamma_line_list;
+std::vector<NucGammaLine> allnuc_gamma_line_list;
 
-static void read_gamma_spectrum(const int nucindex, const char filename[50])
+void read_gamma_spectrum(const int nucindex, const char filename[50])
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
 {
   printout("reading gamma spectrum for Z=%d A=%d from %s...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
@@ -95,7 +82,7 @@ static void read_gamma_spectrum(const int nucindex, const char filename[50])
   printout("nlines %d avg_en_gamma %g MeV\n", nlines, E_gamma_avg / MEV);
 }
 
-static void set_trivial_gamma_spectrum(const int nucindex) {
+void set_trivial_gamma_spectrum(const int nucindex) {
   // printout("Setting trivial gamma spectrum for z %d a %d engamma %g\n", z, a, decay::nucdecayenergygamma(z, a));
   const int nlines = 1;
   gamma_spectra[nucindex].resize(nlines);
@@ -103,7 +90,7 @@ static void set_trivial_gamma_spectrum(const int nucindex) {
   gamma_spectra[nucindex][0].probability = 1.;
 }
 
-static void read_decaydata() {
+void read_decaydata() {
   // migrate from old filename
   if (!std::filesystem::exists("ni56_lines.txt") && std::filesystem::exists("ni_lines.txt")) {
     printout("Moving ni_lines.txt to ni56_lines.txt\n");
@@ -166,7 +153,7 @@ static void read_decaydata() {
 }
 
 // construct an energy ordered gamma ray line list.
-static void init_gamma_linelist() {
+void init_gamma_linelist() {
   read_decaydata();
 
   // Now do the sorting.
@@ -188,7 +175,19 @@ static void init_gamma_linelist() {
   }
   allnuc_gamma_line_list.shrink_to_fit();
   assert_always(static_cast<int>(allnuc_gamma_line_list.size()) == total_lines);
-  std::stable_sort(allnuc_gamma_line_list.begin(), allnuc_gamma_line_list.end());
+  std::ranges::stable_sort(allnuc_gamma_line_list, [](const NucGammaLine &g1, const NucGammaLine &g2) {
+    // true if d1 < d2
+    if (g1.energy < g2.energy) {
+      return true;
+    }
+    if (g1.energy == g2.energy && g1.nucindex < g2.nucindex) {
+      return true;
+    }
+    if (g1.energy == g2.energy && g1.nucindex == g2.nucindex && g1.nucgammaindex < g2.nucgammaindex) {
+      return true;
+    }
+    return false;
+  });
 
   FILE *const line_list = fopen_required("gammalinelist.out", "w");
 
@@ -204,7 +203,7 @@ static void init_gamma_linelist() {
   fclose(line_list);
 }
 
-static void init_xcom_photoion_data() {
+void init_xcom_photoion_data() {
   // read the file
   printout("reading XCOM photoionization data...\n");
   // reserve memory
@@ -234,14 +233,7 @@ static void init_xcom_photoion_data() {
   }
 }
 
-void init_gamma_data() {
-  init_gamma_linelist();
-  if constexpr (USE_XCOM_GAMMAPHOTOION) {
-    init_xcom_photoion_data();
-  }
-}
-
-__host__ __device__ static auto choose_gamma_ray(const int nucindex) -> double {
+__host__ __device__ auto choose_gamma_ray(const int nucindex) -> double {
   // Routine to choose which gamma ray line it'll be.
 
   const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
@@ -259,67 +251,7 @@ __host__ __device__ static auto choose_gamma_ray(const int nucindex) -> double {
   assert_always(false);
 }
 
-__host__ __device__ void pellet_gamma_decay(Packet &pkt) {
-  // Subroutine to convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
-
-  // pkt is a pointer to the packet that is decaying.
-
-  // Start by getting the position of the pellet at the point of decay. Pellet
-  // is moving with the matter.
-
-  // if no gamma spectra is known, then covert straight to kpkts (e.g., Fe52, Mn52)
-  if (gamma_spectra[pkt.pellet_nucindex].empty()) {
-    pkt.type = TYPE_KPKT;
-    pkt.absorptiontype = -6;
-    return;
-  }
-
-  // Now let's give the gamma ray a direction.
-  // Assuming isotropic emission in cmf
-
-  const auto dir_cmf = get_rand_isotropic_unitvec();
-
-  // This direction is in the cmf - we want to convert it to the rest
-  // frame - use aberation of angles. We want to convert from cmf to
-  // rest so need -ve velocity.
-
-  const auto vel_vec = get_velocity(pkt.pos, -1. * pkt.tdecay);
-  // negative time since we want the backwards transformation here
-
-  pkt.dir = angle_ab(dir_cmf, vel_vec);
-
-  // Now need to assign the frequency of the packet in the co-moving frame.
-
-  pkt.nu_cmf = choose_gamma_ray(pkt.pellet_nucindex);
-
-  // Finally we want to put in the rest frame energy and frequency. And record
-  // that it's now a gamma ray.
-
-  pkt.prop_time = pkt.tdecay;
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
-  pkt.e_rf = pkt.e_cmf / dopplerfactor;
-
-  pkt.type = TYPE_GAMMA;
-  pkt.last_cross = BOUNDARY_NONE;
-
-  // initialise polarisation information
-  pkt.stokes[0] = 1.;
-  pkt.stokes[1] = 0.;
-  pkt.stokes[2] = 0.;
-
-  pkt.pol_dir = cross_prod(pkt.dir, std::array<double, 3>{0., 0., 1.});
-  if ((dot(pkt.pol_dir, pkt.pol_dir)) < 1.e-8) {
-    pkt.pol_dir = cross_prod(pkt.dir, std::array<double, 3>{0., 1., 0.});
-  }
-
-  pkt.pol_dir = vec_norm(pkt.pol_dir);
-  // printout("initialise pol state of packet %g, %g, %g, %g,
-  // %g\n",pkt.stokes_qu[0],pkt.stokes_qu[1],pkt.pol_dir[0],pkt.pol_dir[1],pkt.pol_dir[2]);
-  // printout("pkt direction %g, %g, %g\n",pkt.dir[0],pkt.dir[1],pkt.dir[2]);
-}
-
-constexpr static auto sigma_compton_partial(const double x, const double f_max) -> double
+constexpr auto sigma_compton_partial(const double x, const double f_max) -> double
 // Routine to compute the partial cross section for Compton scattering.
 //   xx is the photon energy (in units of electron mass) and f
 //  is the energy loss factor up to which we wish to integrate.
@@ -331,7 +263,7 @@ constexpr static auto sigma_compton_partial(const double x, const double f_max) 
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
 
-static auto get_chi_compton_rf(const Packet &pkt) -> double {
+auto get_chi_compton_rf(const Packet &pkt) -> double {
   // calculate the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
   // Start by working out the compton x-section in the co-moving frame.
 
@@ -352,7 +284,7 @@ static auto get_chi_compton_rf(const Packet &pkt) -> double {
   return chi_rf;
 }
 
-static auto choose_f(const double xx, const double zrand) -> double
+auto choose_f(const double xx, const double zrand) -> double
 // To choose the value of f to integrate to - idea is we want
 //   sigma_compton_partial(xx,f) = zrand.
 {
@@ -388,7 +320,7 @@ static auto choose_f(const double xx, const double zrand) -> double
   return ftry;
 }
 
-static auto thomson_angle() -> double {
+auto thomson_angle() -> double {
   // For Thomson scattering we can get the new angle from a random number very easily.
 
   const double B_coeff = (8. * rng_uniform()) - 4.;
@@ -408,8 +340,7 @@ static auto thomson_angle() -> double {
   return mu;
 }
 
-[[nodiscard]] static auto scatter_dir(const std::array<double, 3> dir_in,
-                                      const double cos_theta) -> std::array<double, 3>
+[[nodiscard]] auto scatter_dir(const std::array<double, 3> dir_in, const double cos_theta) -> std::array<double, 3>
 // Routine for scattering a direction through angle theta.
 {
   // begin with setting the direction in coordinates where original direction
@@ -448,7 +379,7 @@ static auto thomson_angle() -> double {
   return dir_out;
 }
 
-static void compton_scatter(Packet &pkt)
+void compton_scatter(Packet &pkt)
 // Routine to deal with physical Compton scattering event.
 {
   //  printout("Compton scattering.\n");
@@ -545,7 +476,7 @@ static void compton_scatter(Packet &pkt)
   }
 }
 
-static auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
+auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
   // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the observer reference frame
 
   double chi_cmf{NAN};
@@ -643,7 +574,7 @@ static auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
   return chi_rf;
 }
 
-static auto sigma_pair_prod_rf(const Packet &pkt) -> double {
+auto sigma_pair_prod_rf(const Packet &pkt) -> double {
   // calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
 
   const int mgi = grid::get_cell_modelgridindex(pkt.where);
@@ -706,7 +637,7 @@ static auto sigma_pair_prod_rf(const Packet &pkt) -> double {
   return chi_rf;
 }
 
-constexpr static auto meanf_sigma(const double x) -> double
+constexpr auto meanf_sigma(const double x) -> double
 // Routine to compute the mean energy converted to non-thermal electrons times
 // the Klein-Nishina cross section.
 {
@@ -723,7 +654,7 @@ constexpr static auto meanf_sigma(const double x) -> double
   return tot;
 }
 
-static void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const int nonemptymgi) {
+void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const int nonemptymgi) {
   // Subroutine to record the heating rate in a cell due to gamma rays.
   // By heating rate I mean, for now, really the rate at which the code is making
   // k-packets in that cell which will then convert into r-packets. This is (going
@@ -757,7 +688,7 @@ static void update_gamma_dep(const Packet &pkt, const double dist, const int mgi
   atomicadd(globals::dep_estimator_gamma[nonemptymgi], heating_cont);
 }
 
-static void pair_prod(Packet &pkt) {
+void pair_prod(Packet &pkt) {
   // Routine to deal with pair production.
 
   //  In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
@@ -805,7 +736,7 @@ static void pair_prod(Packet &pkt) {
   }
 }
 
-static void transport_gamma(Packet &pkt, double t2)
+void transport_gamma(Packet &pkt, const double t2)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.
@@ -951,7 +882,7 @@ static void transport_gamma(Packet &pkt, double t2)
   }
 }
 
-static void barnes_thermalisation(Packet &pkt)
+void barnes_thermalisation(Packet &pkt)
 // Barnes treatment: packet is either getting absorbed immediately and locally
 // creating a k-packet or it escapes. The absorption probability matches the
 // Barnes thermalization efficiency, for expressions see the original paper:
@@ -986,7 +917,7 @@ static void barnes_thermalisation(Packet &pkt)
   }
 }
 
-static void wollaeger_thermalisation(Packet &pkt) {
+void wollaeger_thermalisation(Packet &pkt) {
   // corresponds to a local version of the Barnes scheme, i.e. it takes into account the local mass
   // density rather than a value averaged over the ejecta
   constexpr double mean_gamma_opac = 0.1;
@@ -1029,7 +960,7 @@ static void wollaeger_thermalisation(Packet &pkt) {
   }
 }
 
-static void guttman_thermalisation(Packet &pkt) {
+void guttman_thermalisation(Packet &pkt) {
   // Guttman+2024, arXiv:2403.08769v1
   // extension of the Wollaeger scheme. Rather than calculating a single optical depth in radial outward
   // direction, it calculates a spherical average in all possible gamma-ray emission directions.
@@ -1105,7 +1036,76 @@ static void guttman_thermalisation(Packet &pkt) {
   }
 }
 
-__host__ __device__ void do_gamma(Packet &pkt, const int nts, double t2) {
+}  // anonymous namespace
+
+void init_gamma_data() {
+  init_gamma_linelist();
+  if constexpr (USE_XCOM_GAMMAPHOTOION) {
+    init_xcom_photoion_data();
+  }
+}
+
+__host__ __device__ void pellet_gamma_decay(Packet &pkt) {
+  // Subroutine to convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
+
+  // pkt is a pointer to the packet that is decaying.
+
+  // Start by getting the position of the pellet at the point of decay. Pellet
+  // is moving with the matter.
+
+  // if no gamma spectra is known, then covert straight to kpkts (e.g., Fe52, Mn52)
+  if (gamma_spectra[pkt.pellet_nucindex].empty()) {
+    pkt.type = TYPE_KPKT;
+    pkt.absorptiontype = -6;
+    return;
+  }
+
+  // Now let's give the gamma ray a direction.
+  // Assuming isotropic emission in cmf
+
+  const auto dir_cmf = get_rand_isotropic_unitvec();
+
+  // This direction is in the cmf - we want to convert it to the rest
+  // frame - use aberation of angles. We want to convert from cmf to
+  // rest so need -ve velocity.
+
+  const auto vel_vec = get_velocity(pkt.pos, -1. * pkt.tdecay);
+  // negative time since we want the backwards transformation here
+
+  pkt.dir = angle_ab(dir_cmf, vel_vec);
+
+  // Now need to assign the frequency of the packet in the co-moving frame.
+
+  pkt.nu_cmf = choose_gamma_ray(pkt.pellet_nucindex);
+
+  // Finally we want to put in the rest frame energy and frequency. And record
+  // that it's now a gamma ray.
+
+  pkt.prop_time = pkt.tdecay;
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
+  pkt.e_rf = pkt.e_cmf / dopplerfactor;
+
+  pkt.type = TYPE_GAMMA;
+  pkt.last_cross = BOUNDARY_NONE;
+
+  // initialise polarisation information
+  pkt.stokes[0] = 1.;
+  pkt.stokes[1] = 0.;
+  pkt.stokes[2] = 0.;
+
+  pkt.pol_dir = cross_prod(pkt.dir, std::array<double, 3>{0., 0., 1.});
+  if ((dot(pkt.pol_dir, pkt.pol_dir)) < 1.e-8) {
+    pkt.pol_dir = cross_prod(pkt.dir, std::array<double, 3>{0., 1., 0.});
+  }
+
+  pkt.pol_dir = vec_norm(pkt.pol_dir);
+  // printout("initialise pol state of packet %g, %g, %g, %g,
+  // %g\n",pkt.stokes_qu[0],pkt.stokes_qu[1],pkt.pol_dir[0],pkt.pol_dir[1],pkt.pol_dir[2]);
+  // printout("pkt direction %g, %g, %g\n",pkt.dir[0],pkt.dir[1],pkt.dir[2]);
+}
+
+__host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {
   if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {

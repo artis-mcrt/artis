@@ -48,7 +48,8 @@
   }
 
 /*********************** FUNCTION DEFINITIONS ***********************/
-static void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
+namespace {
+void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
   WORD a = 0;
   WORD b = 0;
   WORD c = 0;
@@ -143,6 +144,8 @@ static void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
   ctx->state[3] += d;
 }
 
+}  // anonymous namespace
+
 void md5_init(MD5_CTX *ctx) {
   ctx->datalen = 0;
   ctx->bitlen = 0;
@@ -220,8 +223,9 @@ void md5_file(const char filename[], char hashout[(2 * MD5_BLOCK_SIZE) + 1]) {
   BYTE buffer[1024];
 
   long numbytes = -1;
-  while (numbytes != 0) {
+  while (numbytes != 0 && feof(infile) == 0) {
     numbytes = fread(buffer, sizeof(char), 1024, infile);
+    assert_always(ferror(infile) == 0);
     md5_update(&ctx, buffer, numbytes);
   }
 
