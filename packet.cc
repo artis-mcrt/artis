@@ -25,7 +25,9 @@
 #include "sn3d.h"
 #include "vectors.h"
 
-static void place_pellet(const double e0, const int cellindex, const int pktnumber, Packet &pkt)
+namespace {
+
+void place_pellet(const double e0, const int cellindex, const int pktnumber, Packet &pkt)
 /// This subroutine places pellet n with energy e0 in cell m
 {
   /// First choose a position for the pellet. In the cell.
@@ -83,6 +85,8 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 
   pkt.trueemissiontype = EMTYPE_NOTSET;
 }
+
+}  // anonymous namespace
 
 void packet_init(Packet *pkt)
 /// Subroutine that initialises the packets if we start a new simulation.
