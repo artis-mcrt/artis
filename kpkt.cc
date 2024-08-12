@@ -297,7 +297,7 @@ void calculate_cooling_rates(const int modelgridindex, HeatingCoolingRates *heat
   }
 }
 
-void set_kpktdiffusion(float kpktdiffusion_timescale_in, int n_kpktdiffusion_timesteps_in) {
+void set_kpktdiffusion(const float kpktdiffusion_timescale_in, const int n_kpktdiffusion_timesteps_in) {
   kpktdiffusion_timescale = kpktdiffusion_timescale_in;
   n_kpktdiffusion_timesteps = n_kpktdiffusion_timesteps_in;
   printout("input: kpkts diffuse %g of a time step's length for the first %d time steps\n", kpktdiffusion_timescale,
@@ -412,7 +412,7 @@ __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
   pkt.nscatterings = 0;
 }
 
-__host__ __device__ void do_kpkt(Packet &pkt, double t2, int nts)
+__host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts)
 /// handle a k-packet (kinetic energy of the free electrons)
 {
   const double t1 = pkt.prop_time;
