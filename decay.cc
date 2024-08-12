@@ -158,7 +158,7 @@ MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
   });
 }
 
-[[nodiscard]] auto get_nuc_z_a(int nucindex) -> std::pair<int, int> {
+[[nodiscard]] auto get_nuc_z_a(const int nucindex) -> std::pair<int, int> {
   assert_testmodeonly(nucindex >= 0);
   assert_testmodeonly(nucindex < get_num_nuclides());
   return {nuclides[nucindex].z, nuclides[nucindex].a};
@@ -252,7 +252,7 @@ void printout_nuclidemeanlife(const int z, const int a) {
 [[nodiscard]] auto get_num_decaypaths() -> int { return static_cast<int>(decaypaths.size()); }
 
 [[nodiscard]] auto get_decaypathlength(const DecayPath &dpath) -> int { return static_cast<int>(dpath.z.size()); }
-[[nodiscard]] auto get_decaypathlength(int decaypathindex) -> int {
+[[nodiscard]] auto get_decaypathlength(const int decaypathindex) -> int {
   return get_decaypathlength(decaypaths[decaypathindex]);
 }
 
@@ -702,8 +702,8 @@ auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const i
   return chain_endecay;
 }
 
-auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypathindex, double tlow,
-                                              double thigh) -> double
+auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypathindex, const double tlow,
+                                              const double thigh) -> double
 // get decay energy per mass [erg/g] released by a decaypath between times tlow [s] and thigh [s]
 {
   assert_always(tlow <= thigh);
