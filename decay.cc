@@ -164,7 +164,7 @@ MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
   return {nuclides[nucindex].z, nuclides[nucindex].a};
 }
 
-[[nodiscard]] auto get_nucindex_or_neg_one(int z, int a) -> int
+[[nodiscard]] auto get_nucindex_or_neg_one(const int z, const int a) -> int
 // get the nuclide array index from the atomic number and mass number
 {
   assert_testmodeonly(get_num_nuclides() > 0);
@@ -178,7 +178,7 @@ MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
   return -1;  // nuclide not found
 }
 
-[[nodiscard]] auto get_meanlife(int nucindex) -> double {
+[[nodiscard]] auto get_meanlife(const int nucindex) -> double {
   assert_testmodeonly(nucindex >= 0);
   assert_testmodeonly(nucindex < get_num_nuclides());
   return nuclides[nucindex].meanlife;
@@ -236,7 +236,7 @@ void printout_nuclidemeanlife(const int z, const int a) {
   return nuclides[nucindex].endecay_gamma + endecay_particles;
 }
 
-[[nodiscard]] auto nucdecayenergy(int nucindex, int decaytype) -> double
+[[nodiscard]] auto nucdecayenergy(const int nucindex, const int decaytype) -> double
 // contributed energy release per decay [erg] for decaytype (e.g. decaytypes::DECAYTYPE_BETAPLUS)
 // (excludes neutrinos!)
 {
@@ -245,7 +245,7 @@ void printout_nuclidemeanlife(const int z, const int a) {
   return endecay;
 }
 
-[[nodiscard]] auto nucdecayenergyqval(int nucindex, int decaytype) -> double {
+[[nodiscard]] auto nucdecayenergyqval(const int nucindex, const int decaytype) -> double {
   return nuclides[nucindex].endecay_q[decaytype];
 }
 
@@ -785,19 +785,19 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int mode
   return std::string(elsymbols[z]);
 }
 
-[[nodiscard]] auto get_nuc_z(int nucindex) -> int {
+[[nodiscard]] auto get_nuc_z(const int nucindex) -> int {
   assert_testmodeonly(nucindex >= 0);
   assert_testmodeonly(nucindex < get_num_nuclides());
   return nuclides[nucindex].z;
 }
 
-[[nodiscard]] auto get_nuc_a(int nucindex) -> int {
+[[nodiscard]] auto get_nuc_a(const int nucindex) -> int {
   assert_testmodeonly(nucindex >= 0);
   assert_testmodeonly(nucindex < get_num_nuclides());
   return nuclides[nucindex].a;
 }
 
-[[nodiscard]] auto get_nucindex(int z, int a) -> int
+[[nodiscard]] auto get_nucindex(const int z, const int a) -> int
 // get the nuclide array index from the atomic number and mass number
 {
   const int nucindex = get_nucindex_or_neg_one(z, a);
@@ -809,7 +809,7 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int mode
   return -1;
 }
 
-[[nodiscard]] auto nuc_exists(int z, int a) -> bool
+[[nodiscard]] auto nuc_exists(const int z, const int a) -> bool
 // check if nuclide exists in the simulation
 {
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
@@ -820,17 +820,17 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int mode
   return false;
 }
 
-[[nodiscard]] __host__ __device__ auto nucdecayenergygamma(int nucindex) -> double
+[[nodiscard]] __host__ __device__ auto nucdecayenergygamma(const int nucindex) -> double
 // average energy per decay in the form of gamma rays [erg]
 {
   return nuclides[nucindex].endecay_gamma;
 }
 
-[[nodiscard]] __host__ __device__ auto nucdecayenergygamma(int z, int a) -> double {
+[[nodiscard]] __host__ __device__ auto nucdecayenergygamma(const int z, const int a) -> double {
   return nucdecayenergygamma(get_nucindex(z, a));
 }
 
-void set_nucdecayenergygamma(int nucindex, double value)
+void set_nucdecayenergygamma(const int nucindex, const double value)
 // set average energy per decay in the form of gamma rays [erg]
 {
   nuclides[nucindex].endecay_gamma = value;
