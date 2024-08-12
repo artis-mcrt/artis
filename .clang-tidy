@@ -36,7 +36,6 @@ Checks: >
     -hicpp-no-array-decay,
     -hicpp-no-malloc,
     -hicpp-signed-bitwise,
-    -misc-no-recursion,
     -misc-non-private-member-variables-in-classes,
     -modernize-use-ranges,
     -readability-identifier-length,
