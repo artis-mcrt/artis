@@ -32,13 +32,13 @@ enum coolingtype {
   COOLINGTYPE_COLLION = 3,
 };
 
-struct CellCachecoolinglist {
+struct CellCacheCoolingList {
   enum coolingtype type;
   int level;
   int upperlevel;
 };
 
-CellCachecoolinglist *coolinglist;
+CellCacheCoolingList *coolinglist;
 
 int n_kpktdiffusion_timesteps{0};
 float kpktdiffusion_timescale{0.};
@@ -263,9 +263,9 @@ void setup_coolinglist() {
   /// \sum_{elements,ions}get_nlevels(element,ion) and free-free which is \sum_{elements} get_nions(element)-1
 
   set_ncoolingterms();
-  const size_t mem_usage_coolinglist = ncoolingterms * sizeof(CellCachecoolinglist);
+  const size_t mem_usage_coolinglist = ncoolingterms * sizeof(CellCacheCoolingList);
   assert_always(ncoolingterms > 0);
-  coolinglist = static_cast<CellCachecoolinglist *>(malloc(ncoolingterms * sizeof(CellCachecoolinglist)));
+  coolinglist = static_cast<CellCacheCoolingList *>(malloc(ncoolingterms * sizeof(CellCacheCoolingList)));
   printout("[info] mem_usage: coolinglist occupies %.3f MB\n", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0;  // cooling list index
