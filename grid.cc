@@ -564,7 +564,10 @@ void map_1dmodelto3dgrid()
 
     if (mgi < get_npts_model() && modelgrid[mgi].rhoinit > 0) {
       set_cell_modelgridindex(cellindex, mgi);
+      assert_always(vout_model[mgi] >= cellvmid);
+      assert_always((mgi > 0 ? vout_model[mgi - 1] : 0.0) <= cellvmid);
     } else {
+      // corner cells outside of the outermost model shell are empty
       set_cell_modelgridindex(cellindex, get_npts_model());
     }
   }
