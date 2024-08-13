@@ -578,27 +578,27 @@ void map_2dmodelto3dgrid()
 // Map 2D cylindrical model onto propagation grid
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    int mgi = get_npts_model();  // default to empty unless set
-
     // map to 3D Cartesian grid
     std::array<double, 3> pos_mid{};
     for (int d = 0; d < 3; d++) {
       pos_mid[d] = (get_cellcoordmin(cellindex, d) + (0.5 * wid_init(cellindex, d)));
     }
 
-    // 2D grid is uniform so rcyl and z positions can easily be calculated
     const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
 
+    // 2D grid is uniform so rcyl and z indicies can be calculated with no lookup
     const int n_rcyl = static_cast<int>(rcylindrical / globals::tmin / globals::vmax * ncoord_model[0]);
     const int n_z =
         static_cast<int>((pos_mid[2] / globals::tmin + globals::vmax) / (2 * globals::vmax) * ncoord_model[1]);
 
     if (n_rcyl >= 0 && n_rcyl < ncoord_model[0] && n_z >= 0 && n_z < ncoord_model[1]) {
-      mgi = (n_z * ncoord_model[0]) + n_rcyl;
-    }
+      const int mgi = (n_z * ncoord_model[0]) + n_rcyl;
 
-    if (modelgrid[mgi].rhoinit > 0) {
-      set_cell_modelgridindex(cellindex, mgi);
+      if (modelgrid[mgi].rhoinit > 0) {
+        set_cell_modelgridindex(cellindex, mgi);
+      } else {
+        set_cell_modelgridindex(cellindex, get_npts_model());
+      }
     } else {
       set_cell_modelgridindex(cellindex, get_npts_model());
     }
