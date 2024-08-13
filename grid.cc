@@ -568,6 +568,7 @@ void map_1dmodelto3dgrid()
       assert_always((mgi > 0 ? vout_model[mgi - 1] : 0.0) <= cellvmid);
     } else {
       // corner cells outside of the outermost model shell are empty
+      // and so are any shells with zero density
       set_cell_modelgridindex(cellindex, get_npts_model());
     }
   }
