@@ -610,13 +610,8 @@ void map_modeltogrid_direct()
 // get_npts_model())
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    const int mgi = cellindex;  // direct mapping
-
-    if (modelgrid[mgi].rhoinit > 0) {
-      set_cell_modelgridindex(cellindex, mgi);
-    } else {
-      set_cell_modelgridindex(cellindex, get_npts_model());
-    }
+    const int mgi = (modelgrid[cellindex].rhoinit > 0) ? cellindex : get_npts_model();
+    set_cell_modelgridindex(cellindex, mgi);
   }
 }
 
