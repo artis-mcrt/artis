@@ -606,7 +606,8 @@ void map_2dmodelto3dgrid()
 }
 
 void map_modeltogrid_direct()
-// mgi and cellindex are interchangeable in this mode
+// mgi and cellindex are interchangeable in this mode (except for empty cells that associated with mgi ==
+// get_npts_model())
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = cellindex;  // direct mapping
