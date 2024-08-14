@@ -63,7 +63,7 @@ struct PropGridCell {
   int modelgridindex{-1};
 };
 
-std::span<PropGridCell> cell{};
+std::vector<PropGridCell> cell{};
 
 std::vector<int> mg_associated_cells;
 std::vector<int> nonemptymgi_of_mgi;
@@ -1445,7 +1445,7 @@ void setup_grid_cartesian_3d()
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell = std::span(static_cast<PropGridCell *>(malloc(ngrid * sizeof(PropGridCell))), ngrid);
+  cell.resize(ngrid);
 
   coordlabel[0] = 'X';
   coordlabel[1] = 'Y';
@@ -1483,7 +1483,7 @@ void setup_grid_spherical1d() {
   ncoordgrid[2] = 1;
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell = std::span(static_cast<PropGridCell *>(malloc(ngrid * sizeof(PropGridCell))), ngrid);
+  cell.resize(ngrid);
 
   // direct mapping, cellindex and modelgridindex are the same
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
@@ -1511,7 +1511,7 @@ void setup_grid_cylindrical_2d() {
   ncoordgrid[2] = ncoord_model[2];
 
   ngrid = ncoordgrid[0] * ncoordgrid[1];
-  cell = std::span(static_cast<PropGridCell *>(malloc(ngrid * sizeof(PropGridCell))), ngrid);
+  cell.resize(ngrid);
 
   // direct mapping, cellindex and modelgridindex are the same
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
