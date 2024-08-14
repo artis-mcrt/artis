@@ -1054,10 +1054,10 @@ void allocate_expansionopacities() {
         static_cast<double *>(malloc(npts_nonempty * expopac_nbins * sizeof(double)));
   }
 #endif
-  expansionopacities = std::span{expansionopacities_data, static_cast<size_t>(npts_nonempty * expopac_nbins)};
-  expansionopacity_planck_cumulative = std::span{
-      expansionopacity_planck_cumulative_data,
-      static_cast<size_t>(expansionopacity_planck_cumulative_data == nullptr ? 0 : npts_nonempty * expopac_nbins)};
+  expansionopacities = std::span(expansionopacities_data, npts_nonempty * expopac_nbins);
+  expansionopacity_planck_cumulative =
+      std::span(expansionopacity_planck_cumulative_data,
+                expansionopacity_planck_cumulative_data == nullptr ? 0 : npts_nonempty * expopac_nbins);
 }
 
 __host__ __device__ auto closest_transition(const double nu_cmf, const int next_trans) -> int
