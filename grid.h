@@ -74,7 +74,7 @@ inline std::span<ModelGridCell> modelgrid{};
 
 inline int ngrid{0};
 
-inline double mtot_input;
+inline double mtot_input{0.};
 
 [[nodiscard]] auto get_elements_uppermost_ion(int modelgridindex, int element) -> int;
 void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
