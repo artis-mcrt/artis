@@ -69,7 +69,7 @@ std::vector<int> mg_associated_cells;
 std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
 
-double *totmassradionuclide{};  /// total mass of each radionuclide in the ejecta
+std::span<double> totmassradionuclide{};  /// total mass of each radionuclide in the ejecta
 
 #ifdef MPI_ON
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
@@ -1154,9 +1154,10 @@ void calc_modelinit_totmassradionuclides() {
   mtot_input = 0.;
   mfeg = 0.;
 
-  assert_always(totmassradionuclide == nullptr);
-  totmassradionuclide = static_cast<double *>(malloc(decay::get_num_nuclides() * sizeof(double)));
-  assert_always(totmassradionuclide != nullptr);
+  assert_always(totmassradionuclide.data() == nullptr);
+  totmassradionuclide =
+      std::span(static_cast<double *>(malloc(decay::get_num_nuclides() * sizeof(double))), decay::get_num_nuclides());
+  assert_always(totmassradionuclide.data() != nullptr);
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     totmassradionuclide[nucindex] = 0.;
