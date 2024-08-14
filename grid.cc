@@ -1485,11 +1485,9 @@ void setup_grid_spherical1d() {
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
   cell.resize(ngrid);
 
-  // direct mapping, cellindex and modelgridindex are the same
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
     const int mgi = cellindex;  // interchangeable in this mode
     const double v_inner = mgi > 0 ? vout_model[mgi - 1] : 0.;
-    set_cell_modelgridindex(cellindex, mgi);
     cell[cellindex].pos_min[0] = v_inner * globals::tmin;
     cell[cellindex].pos_min[1] = 0.;
     cell[cellindex].pos_min[2] = 0.;
@@ -1513,11 +1511,7 @@ void setup_grid_cylindrical_2d() {
   ngrid = ncoordgrid[0] * ncoordgrid[1];
   cell.resize(ngrid);
 
-  // direct mapping, cellindex and modelgridindex are the same
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
-    const int mgi = cellindex;  // interchangeable in this mode
-    set_cell_modelgridindex(cellindex, mgi);
-
     const int n_rcyl = get_cellcoordpointnum(cellindex, 0);
     const int n_z = get_cellcoordpointnum(cellindex, 1);
 
