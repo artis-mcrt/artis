@@ -1188,8 +1188,7 @@ void setup_cellcache() {
 
   // const int num_cellcache_slots = get_max_threads();
   const int num_cellcache_slots = 1;
-  globals::cellcache = static_cast<CellCache *>(malloc(num_cellcache_slots * sizeof(CellCache)));
-  assert_always(globals::cellcache != nullptr);
+  globals::cellcache.resize(num_cellcache_slots);
 
   for (int cellcachenum = 0; cellcachenum < num_cellcache_slots; cellcachenum++) {
     size_t mem_usage_cellcache = 0;

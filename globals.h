@@ -282,7 +282,7 @@ inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels
 inline int NPHIXSPOINTS{-1};
 inline double NPHIXSNUINCREMENT{-1};
 
-inline CellCache *cellcache{};
+inline std::vector<CellCache> cellcache{};
 
 #ifdef MPI_ON
 inline MPI_Comm mpi_comm_node{MPI_COMM_NULL};
