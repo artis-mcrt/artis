@@ -24,14 +24,14 @@
 
 namespace {
 
-struct stokeparams {
+struct StokesParams {
   double i = 0.;
   double q = 0.;
   double u = 0.;
 };
 
 struct VSpecPol {
-  stokeparams flux[VMNUBINS];
+  StokesParams flux[VMNUBINS];
   float lower_time{NAN};
   float delta_t{NAN};
 };
@@ -566,9 +566,9 @@ void init_vpkt_grid() {
       vgrid_q[n][m].flux.resize(Nrange_grid, {});
       vgrid_u[n][m].flux.resize(Nrange_grid, {});
       for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
-        vgrid_i[n][m].flux[wlbin] = std::vector<double>(Nobs, 0.);
-        vgrid_q[n][m].flux[wlbin] = std::vector<double>(Nobs, 0.);
-        vgrid_u[n][m].flux[wlbin] = std::vector<double>(Nobs, 0.);
+        vgrid_i[n][m].flux[wlbin].resize(Nobs, 0.);
+        vgrid_q[n][m].flux[wlbin].resize(Nobs, 0.);
+        vgrid_u[n][m].flux[wlbin].resize(Nobs, 0.);
       }
     }
   }
