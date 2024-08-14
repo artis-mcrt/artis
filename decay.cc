@@ -1074,6 +1074,7 @@ void setup_decaypath_energy_per_mass() {
       "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies %.1f MB (node "
       "shared)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
+  double *decaypath_energy_per_mass_data{nullptr};
 #ifdef MPI_ON
   size_t my_rank_cells = nonempty_npts_model / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
@@ -1081,7 +1082,6 @@ void setup_decaypath_energy_per_mass() {
     my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
   }
   auto size = static_cast<MPI_Aint>(my_rank_cells * get_num_decaypaths() * sizeof(double));
-  double *decaypath_energy_per_mass_data{nullptr};
   int disp_unit = sizeof(double);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                         &decaypath_energy_per_mass_data,
@@ -1125,12 +1125,12 @@ void free_decaypath_energy_per_mass() {
     win_decaypath_energy_per_mass = MPI_WIN_NULL;
   }
 #else
-  if (decaypath_energy_per_mass != nullptr) {
+  if (decaypath_energy_per_mass.data() != nullptr) {
     printout("[info] mem_usage: decaypath_energy_per_mass was freed\n");
-    free(decaypath_energy_per_mass);
-    decaypath_energy_per_mass = nullptr;
+    free(decaypath_energy_per_mass.data());
   }
 #endif
+  decaypath_energy_per_mass = {};
 }
 
 [[nodiscard]] auto get_particle_injection_rate(const int modelgridindex, const double t, const int decaytype) -> double
