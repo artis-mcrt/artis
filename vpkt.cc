@@ -36,7 +36,7 @@ struct VSpecPol {
   float delta_t{NAN};
 };
 
-VSpecPol **vspecpol{};
+std::vector<std::vector<VSpecPol>> vspecpol{};
 
 float lower_freq_vspec[VMNUBINS];
 float delta_freq_vspec[VMNUBINS];
@@ -427,11 +427,11 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 }
 
 void init_vspecpol() {
-  vspecpol = static_cast<VSpecPol **>(malloc(VMTBINS * sizeof(VSpecPol *)));
+  vspecpol.resize(VMTBINS);
 
   const int indexmax = Nspectra * Nobs;
   for (int p = 0; p < VMTBINS; p++) {
-    vspecpol[p] = static_cast<VSpecPol *>(malloc(indexmax * sizeof(VSpecPol)));
+    vspecpol[p].resize(indexmax);
   }
 
   dlogt_vspec = (log(VSPEC_TIMEMAX) - log(VSPEC_TIMEMIN)) / VMTBINS;
