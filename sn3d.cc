@@ -296,13 +296,8 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
           MPI_Pack(&grid::modelgrid[mgi].thick, 1, MPI_SHORT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
                    MPI_COMM_WORLD);
 
-          for (int element = 0; element < get_nelements(); element++) {
-            if (get_nions(element) > 0) {
-              MPI_Pack(grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT,
-                       mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-            }
-          }
-
+          MPI_Pack(grid::modelgrid[mgi].ion_groundlevelpops, get_includedions(), MPI_FLOAT, mpi_grid_buffer,
+                   mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
           MPI_Pack(grid::modelgrid[mgi].ion_partfuncts, get_includedions(), MPI_FLOAT, mpi_grid_buffer,
                    mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
           MPI_Pack(grid::modelgrid[mgi].ion_cooling_contribs, get_includedions(), MPI_DOUBLE, mpi_grid_buffer,
@@ -346,14 +341,8 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
         MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].thick, 1, MPI_SHORT,
                    MPI_COMM_WORLD);
 
-        for (int element = 0; element < get_nelements(); element++) {
-          if (get_nions(element) > 0) {
-            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                       grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT,
-                       MPI_COMM_WORLD);
-          }
-        }
-
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_groundlevelpops,
+                   get_includedions(), MPI_FLOAT, MPI_COMM_WORLD);
         MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_partfuncts,
                    get_includedions(), MPI_FLOAT, MPI_COMM_WORLD);
         MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_cooling_contribs,

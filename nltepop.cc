@@ -996,7 +996,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       }
 
       // store the ground level population
-      grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = gsl_vector_get(popvec, index_gs);
+      grid::modelgrid[modelgridindex].ion_groundlevelpops[get_uniqueionindex(element, ion)] =
+          gsl_vector_get(popvec, index_gs);
       // solution_ion_pop += gsl_vector_get(popvec, index_gs);
 
       calculate_cellpartfuncts(modelgridindex, element);
@@ -1174,7 +1175,7 @@ void nltepop_write_restart_data(FILE *restart_file) {
       for (int ion = 0; ion < nions; ion++) {
         const int uniqueionindex = get_uniqueionindex(element, ion);
         fprintf(restart_file, "%d %a %a %la\n", ion,
-                grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
+                grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex],
                 grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex],
                 grid::modelgrid[modelgridindex].ion_cooling_contribs[uniqueionindex]);
       }
@@ -1218,7 +1219,7 @@ void nltepop_read_restart_data(FILE *restart_file) {
         int ion_in = 0;
         const int uniqueionindex = get_uniqueionindex(element, ion);
         assert_always(fscanf(restart_file, "%d %a %a %la\n", &ion_in,
-                             &grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
+                             &grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex],
                              &grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex],
                              &grid::modelgrid[modelgridindex].ion_cooling_contribs[uniqueionindex]) == 4);
         if (ion_in != ion) {

@@ -247,7 +247,8 @@ auto calculate_partfunct(const int element, const int ion, const int modelgridin
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   double pop_store{NAN};
-  // double E_level, E_ground, test;
+
+  const int uniqueionindex = get_uniqueionindex(element, ion);
 
   bool initial = false;
   if (get_groundlevelpop(modelgridindex, element, ion) < MINPOP) {
@@ -256,7 +257,7 @@ auto calculate_partfunct(const int element, const int ion, const int modelgridin
     // of groundlevelpop for this calculation doesn't matter, so long as it's not zero!
     pop_store = get_groundlevelpop(modelgridindex, element, ion);
     initial = true;
-    grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = 1.;
+    grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex] = 1.;
   }
 
   double U = 1.;
@@ -280,7 +281,7 @@ auto calculate_partfunct(const int element, const int ion, const int modelgridin
 
   if (initial) {
     // put back the zero, just in case it matters for something
-    grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = pop_store;
+    grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex] = pop_store;
   }
 
   return U;
@@ -362,7 +363,7 @@ void set_groundlevelpops_neutral(const int modelgridindex) {
       const double groundpop =
           (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex]);
 
-      grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
+      grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex] = groundpop;
     }
   }
 }
@@ -475,7 +476,7 @@ auto get_groundlevelpop(const int modelgridindex, const int element, const int i
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
 
-  const double nn = grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
+  const double nn = grid::modelgrid[modelgridindex].ion_groundlevelpops[get_uniqueionindex(element, ion)];
   if (nn < MINPOP) {
     if (grid::get_elem_abundance(modelgridindex, element) > 0) {
       return MINPOP;
@@ -601,6 +602,7 @@ void set_groundlevelpops(const int modelgridindex, const int element, const floa
 
   /// Use ion fractions to calculate the groundlevel populations
   for (int ion = 0; ion < nions; ion++) {
+    const int uniqueionindex = get_uniqueionindex(element, ion);
     double nnion{NAN};
     if (ion <= uppermost_ion) {
       if (nnelement > 0) {
@@ -612,14 +614,14 @@ void set_groundlevelpops(const int modelgridindex, const int element, const floa
       nnion = MINPOP;
     }
 
-    const double groundpop = nnion * stat_weight(element, ion, 0) /
-                             grid::modelgrid[modelgridindex].ion_partfuncts[get_uniqueionindex(element, ion)];
+    const double groundpop =
+        nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex];
 
     if (!std::isfinite(groundpop)) {
       printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
     }
 
-    grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
+    grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex] = groundpop;
   }
 }
 

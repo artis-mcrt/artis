@@ -372,16 +372,13 @@ void allocate_nonemptycells_composition_cooling()
     for (int element = 0; element < get_nelements(); element++) {
       /// Set initial abundances to zero
       modelgrid[modelgridindex].composition[element].abundance = 0.;
+    }
 
-      /// and allocate memory to store the ground level populations for each ionisation stage
-      modelgrid[modelgridindex].composition[element].groundlevelpop =
-          static_cast<float *>(calloc(get_nions(element), sizeof(float)));
-      if (modelgrid[modelgridindex].composition[element].groundlevelpop == nullptr) {
-        printout(
-            "[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",
-            element, modelgridindex);
-        std::abort();
-      }
+    modelgrid[modelgridindex].ion_groundlevelpops = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
+    if (modelgrid[modelgridindex].ion_groundlevelpops == nullptr) {
+      printout("[fatal] input: not enough memory to initialize ion_groundlevelpops in cell %d... abort\n",
+               modelgridindex);
+      std::abort();
     }
 
     modelgrid[modelgridindex].ion_partfuncts = static_cast<float *>(calloc(get_includedions(), sizeof(float)));

@@ -15,9 +15,7 @@
 namespace grid {
 
 struct ModelCellElement {
-  float abundance;        /// Abundance of the element (by mass!).
-  float *groundlevelpop;  /// Pointer to an array of floats which contains the groundlevel populations
-                          /// of all included ionisation stages for the element.
+  float abundance;  /// Abundance of the element (by mass!).
 };
 
 struct ModelGridCell {
@@ -46,10 +44,9 @@ struct ModelGridCell {
   ModelCellElement *composition{};  /// Pointer to an array which contains the time dependent
                                     /// abundances of all included elements and all the groundlevel
                                     /// populations and partition functions for their ions
+  float *ion_groundlevelpops{};     /// groundlevel populations of all included ions
   float *ion_partfuncts{};
-  double *nlte_pops{};  /// Pointer to an array that contains the nlte-level
-                        /// populations for this cell
-
+  double *nlte_pops{};  /// Pointer to an array that contains the nlte-level populations for this cell
   double totalcooling = -1;
   double *ion_cooling_contribs{};
   uint_fast8_t thick = 0;
