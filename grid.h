@@ -52,7 +52,7 @@ struct ModelGridCell {
                                     /// populations for this cell
 
   double totalcooling = -1;
-  double **cooling_contrib_ion{};
+  double *cooling_contrib_ion{};
   uint_fast8_t thick = 0;
 };
 

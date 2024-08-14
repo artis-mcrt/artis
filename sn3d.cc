@@ -302,10 +302,11 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
                        mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
               MPI_Pack(grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
                        mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-              MPI_Pack(grid::modelgrid[mgi].cooling_contrib_ion[element], get_nions(element), MPI_DOUBLE,
-                       mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
             }
           }
+
+          MPI_Pack(grid::modelgrid[mgi].cooling_contrib_ion, get_includedions(), MPI_DOUBLE, mpi_grid_buffer,
+                   mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
         }
       }
       printout("[info] mem_usage: MPI_BUFFER: used %d of %zu bytes allocated to mpi_grid_buffer\n", position,
@@ -353,11 +354,11 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
             MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
                        grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
                        MPI_COMM_WORLD);
-            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                       grid::modelgrid[mgi].cooling_contrib_ion[element], get_nions(element), MPI_DOUBLE,
-                       MPI_COMM_WORLD);
           }
         }
+
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].cooling_contrib_ion,
+                   get_includedions(), MPI_DOUBLE, MPI_COMM_WORLD);
       }
     }
   }

@@ -17,6 +17,7 @@
 #include <numbers>
 #include <numeric>
 #include <set>
+#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>

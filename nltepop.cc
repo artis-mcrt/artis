@@ -1172,10 +1172,11 @@ void nltepop_write_restart_data(FILE *restart_file) {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
+        const int uniqueionindex = get_uniqueionindex(element, ion);
         fprintf(restart_file, "%d %a %a %la\n", ion,
                 grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
                 grid::modelgrid[modelgridindex].composition[element].partfunct[ion],
-                grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
+                grid::modelgrid[modelgridindex].cooling_contrib_ion[uniqueionindex]);
       }
     }
     for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
@@ -1215,10 +1216,11 @@ void nltepop_read_restart_data(FILE *restart_file) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
         int ion_in = 0;
+        const int uniqueionindex = get_uniqueionindex(element, ion);
         assert_always(fscanf(restart_file, "%d %a %a %la\n", &ion_in,
                              &grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
                              &grid::modelgrid[modelgridindex].composition[element].partfunct[ion],
-                             &grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]) == 4);
+                             &grid::modelgrid[modelgridindex].cooling_contrib_ion[uniqueionindex]) == 4);
         if (ion_in != ion) {
           printout("ERROR: expected data for ion %d but found ion %d\n", ion, ion_in);
           std::abort();

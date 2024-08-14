@@ -272,22 +272,17 @@ void calculate_cooling_rates(const int modelgridindex, HeatingCoolingRates *heat
   double C_fb_all = 0.;          /// free-bound creation of rpkt
   double C_exc_all = 0.;         /// collisional excitation of macroatoms
   double C_ionization_all = 0.;  /// collisional ionisation of macroatoms
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] = calculate_cooling_rates_ion<false>(
-          modelgridindex, element, ion, -1, cellcacheslotid, &C_ff_all, &C_fb_all, &C_exc_all, &C_ionization_all);
-    }
+  for (int allionindex = 0; allionindex < get_includedions(); allionindex++) {
+    const auto [element, ion] = get_ionfromuniqueionindex(allionindex);
+    grid::modelgrid[modelgridindex].cooling_contrib_ion[allionindex] = calculate_cooling_rates_ion<false>(
+        modelgridindex, element, ion, -1, cellcacheslotid, &C_ff_all, &C_fb_all, &C_exc_all, &C_ionization_all);
   }
 
   // this loop is made separate for future parallelisation of upper loop.
   // the ion contributions must be added in this exact order
   double C_total = 0.;
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      C_total += grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion];
-    }
+  for (int allionindex = 0; allionindex < get_includedions(); allionindex++) {
+    C_total += grid::modelgrid[modelgridindex].cooling_contrib_ion[allionindex];
   }
   grid::modelgrid[modelgridindex].totalcooling = C_total;
 
@@ -450,7 +445,8 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts)
   for (element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (ion = 0; ion < nions; ion++) {
-      coolingsum += grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion];
+      const int uniqueionindex = get_uniqueionindex(element, ion);
+      coolingsum += grid::modelgrid[modelgridindex].cooling_contrib_ion[uniqueionindex];
       // printout("Z=%d, ionstage %d, coolingsum %g\n", get_atomicnumber(element), get_ionstage(element, ion),
       // coolingsum);
       if (coolingsum > rndcool_ion) {
@@ -472,8 +468,9 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts)
     for (element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (ion = 0; ion < nions; ion++) {
+        const int uniqueionindex = get_uniqueionindex(element, ion);
         printout("do_kpkt: element %d, ion %d, coolingcontr %g\n", element, ion,
-                 grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
+                 grid::modelgrid[modelgridindex].cooling_contrib_ion[uniqueionindex]);
       }
     }
     std::abort();
@@ -489,8 +486,10 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts)
     //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
     C_ion_procsum = calculate_cooling_rates_ion<true>(modelgridindex, element, ion, ilow, cellcacheslotid, nullptr,
                                                       nullptr, nullptr, nullptr);
-    assert_testmodeonly((std::fabs(C_ion_procsum - grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]) /
-                         C_ion_procsum) < 1e-3);
+    assert_testmodeonly(
+        (std::fabs(C_ion_procsum -
+                   grid::modelgrid[modelgridindex].cooling_contrib_ion[get_uniqueionindex(element, ion)]) /
+         C_ion_procsum) < 1e-3);
   }
 
   // with the ion selected, we now select a level and transition type
