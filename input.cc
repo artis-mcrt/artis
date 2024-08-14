@@ -1211,14 +1211,14 @@ void setup_cellcache() {
 
     assert_always(globals::cellcache[cellcachenum].chelements != nullptr);
 
-    size_t chlevelblocksize = 0;
+    size_t chlevelcount = 0;
     size_t chphixsblocksize = 0;
     int chtransblocksize = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
-        chlevelblocksize += nlevels * sizeof(CellCacheLevels);
+        chlevelcount += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
@@ -1230,11 +1230,11 @@ void setup_cellcache() {
         }
       }
     }
-    assert_always(chlevelblocksize > 0);
-    globals::cellcache[cellcachenum].ch_all_levels = static_cast<CellCacheLevels *>(malloc(chlevelblocksize));
+    assert_always(chlevelcount > 0);
+    globals::cellcache[cellcachenum].ch_all_levels.resize(chlevelcount);
     chphixstargetsblock =
         chphixsblocksize > 0 ? static_cast<CellCachePhixsTargets *>(malloc(chphixsblocksize)) : nullptr;
-    mem_usage_cellcache += chlevelblocksize + chphixsblocksize;
+    mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + chphixsblocksize;
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
     double *const chtransblock =
@@ -1259,31 +1259,31 @@ void setup_cellcache() {
         alllevelindex += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
-          CellCacheLevels *chlevel = &globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level];
           const int nphixstargets = get_nphixstargets(element, ion, level);
-          chlevel->chphixstargets = chphixsblocksize > 0 ? &chphixstargetsblock[allphixstargetindex] : nullptr;
+          globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level].chphixstargets =
+              chphixsblocksize > 0 ? &chphixstargetsblock[allphixstargetindex] : nullptr;
           allphixstargetindex += nphixstargets;
         }
 
         for (int level = 0; level < nlevels; level++) {
-          CellCacheLevels *chlevel = &globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level];
           const int ndowntrans = get_ndowntrans(element, ion, level);
 
-          chlevel->sum_epstrans_rad_deexc = &chtransblock[chtransindex];
+          globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc =
+              &chtransblock[chtransindex];
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
-          CellCacheLevels *chlevel = &globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level];
           const int ndowntrans = get_ndowntrans(element, ion, level);
-          chlevel->sum_internal_down_same = &chtransblock[chtransindex];
+          globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level].sum_internal_down_same =
+              &chtransblock[chtransindex];
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
-          CellCacheLevels *chlevel = &globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level];
           const int nuptrans = get_nuptrans(element, ion, level);
-          chlevel->sum_internal_up_same = &chtransblock[chtransindex];
+          globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level].sum_internal_up_same =
+              &chtransblock[chtransindex];
           chtransindex += nuptrans;
         }
       }
