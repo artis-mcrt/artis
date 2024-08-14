@@ -489,7 +489,8 @@ void allocate_nonemptymodelcells() {
   globals::dep_estimator_electron.resize(nonempty_npts_model, 0.);
   globals::dep_estimator_alpha.resize(nonempty_npts_model, 0.);
 
-  auto ionestimsize = nonempty_npts_model * globals::nbfcontinua_ground * sizeof(double);
+  const auto ionestimcount = nonempty_npts_model * globals::nbfcontinua_ground;
+  const auto ionestimsize = ionestimcount * sizeof(double);
 
   if (USE_LUT_PHOTOION && ionestimsize > 0) {
 #ifdef MPI_ON
@@ -510,13 +511,13 @@ void allocate_nonemptymodelcells() {
     globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
 #endif
 
-    globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
+    globals::gammaestimator.resize(ionestimcount, 0.);
 #ifdef DO_TITER
     globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
 #endif
   } else {
     globals::corrphotoionrenorm = nullptr;
-    globals::gammaestimator = nullptr;
+    globals::gammaestimator.clear();
 #ifdef DO_TITER
     globals::gammaestimator_save = nullptr;
 #endif

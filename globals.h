@@ -227,7 +227,7 @@ inline double *corrphotoionrenorm{};
 inline MPI_Win win_corrphotoionrenorm{MPI_WIN_NULL};
 #endif
 
-inline double *gammaestimator{};
+inline std::vector<double> gammaestimator;
 
 // for USE_LUT_BFHEATING = true
 inline double *bfheatingestimator{};
