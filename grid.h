@@ -14,10 +14,6 @@
 
 namespace grid {
 
-struct ModelCellElement {
-  float abundance;  /// Abundance of the element (by mass!).
-};
-
 struct ModelGridCell {
   float Te = -1.;
   float TR = -1.;
@@ -36,17 +32,17 @@ struct ModelGridCell {
   float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
   float ffegrp = 0.;
   float kappagrey = 0.;
-  float grey_depth = 0.;            /// Grey optical depth to surface of the modelgridcell
-                                    /// This is only stored to print it outside the OpenMP loop in update_grid to the
-                                    /// estimatorsfile so there is no need to communicate it via MPI so far!
-  int *elements_uppermost_ion{};    /// Highest ionisation stage which has a decent population for a particular
-                                    /// element in a given cell.
-  ModelCellElement *composition{};  /// Pointer to an array which contains the time dependent
-                                    /// abundances of all included elements and all the groundlevel
-                                    /// populations and partition functions for their ions
-  float *ion_groundlevelpops{};     /// groundlevel populations of all included ions
-  float *ion_partfuncts{};
-  double *nlte_pops{};  /// Pointer to an array that contains the nlte-level populations for this cell
+  float grey_depth = 0.;          /// Grey optical depth to surface of the modelgridcell
+                                  /// This is only stored to print it outside the OpenMP loop in update_grid to the
+                                  /// estimatorsfile so there is no need to communicate it via MPI so far!
+  int *elements_uppermost_ion{};  /// Highest ionisation stage which has a decent population for a particular
+                                  /// element in a given cell.
+  float *elem_massfracs{};        /// Pointer to an array which contains the time dependent
+                                  /// abundances of all included elements and all the groundlevel
+
+  float *ion_groundlevelpops{};  /// groundlevel populations of all included ions
+  float *ion_partfuncts{};       /// partition functions for all included ions
+  double *nlte_pops{};           /// Pointer to an array that contains the nlte-level populations for this cell
   double totalcooling = -1;
   double *ion_cooling_contribs{};
   uint_fast8_t thick = 0;
@@ -133,8 +129,9 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] inline auto get_elem_abundance(int modelgridindex, int element) -> float
 // mass fraction of an element (all isotopes combined)
 {
-  return modelgrid[modelgridindex].composition[element].abundance;
+  return modelgrid[modelgridindex].elem_massfracs[element];
 }
+
 void calculate_kappagrey();
 
 inline void change_cell(Packet &pkt, const int snext)

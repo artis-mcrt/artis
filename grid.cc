@@ -268,7 +268,7 @@ void set_elem_stable_abund_from_total(const int mgi, const int element, const fl
   { modelgrid[mgi].initmassfracstable[element] = massfracstable; }
 
   // (isofracsum + massfracstable) might not exactly match elemabundance if we had to boost it to reach isofracsum
-  modelgrid[mgi].composition[element].abundance = isofracsum + massfracstable;
+  modelgrid[mgi].elem_massfracs[element] = isofracsum + massfracstable;
 }
 
 void allocate_nonemptycells_composition_cooling()
@@ -341,10 +341,9 @@ void allocate_nonemptycells_composition_cooling()
 
     assert_always(modelgrid[modelgridindex].elements_uppermost_ion != nullptr);
 
-    modelgrid[modelgridindex].composition =
-        static_cast<ModelCellElement *>(malloc(get_nelements() * sizeof(ModelCellElement)));
+    modelgrid[modelgridindex].elem_massfracs = static_cast<float *>(malloc(get_nelements() * sizeof(float)));
 
-    if (modelgrid[modelgridindex].composition == nullptr) {
+    if (modelgrid[modelgridindex].elem_massfracs == nullptr) {
       printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n", modelgridindex);
       std::abort();
     }
@@ -371,7 +370,7 @@ void allocate_nonemptycells_composition_cooling()
 
     for (int element = 0; element < get_nelements(); element++) {
       /// Set initial abundances to zero
-      modelgrid[modelgridindex].composition[element].abundance = 0.;
+      modelgrid[modelgridindex].elem_massfracs[element] = 0.;
     }
 
     modelgrid[modelgridindex].ion_groundlevelpops = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
@@ -1885,7 +1884,7 @@ __host__ __device__ auto get_ffegrp(const int modelgridindex) -> float { return 
 void set_elem_abundance(const int modelgridindex, const int element, const float newabundance)
 // mass fraction of an element (all isotopes combined)
 {
-  modelgrid[modelgridindex].composition[element].abundance = newabundance;
+  modelgrid[modelgridindex].elem_massfracs[element] = newabundance;
 }
 
 __host__ __device__ auto get_elem_numberdens(const int modelgridindex, const int element) -> double

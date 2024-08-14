@@ -102,7 +102,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     assert_always(upperlevel >= 0);
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets == 0);
     globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
-    *mem_usage_phixs += sizeof(grid::ModelCellElement);
+    *mem_usage_phixs += sizeof(PhotoionTarget);
 
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets == nullptr);
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
