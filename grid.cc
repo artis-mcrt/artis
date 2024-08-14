@@ -134,11 +134,14 @@ void allocate_initradiobund() {
 
   const size_t totalradioabundsize = (npts_model + 1) * num_nuclides * sizeof(float);
 #ifdef MPI_ON
-  auto my_rank_cells = (npts_model + 1) / globals::node_nprocs;
-  // rank_in_node 0 gets any remainder
-  if (globals::rank_in_node == 0) {
-    my_rank_cells += (npts_model + 1) - (my_rank_cells * globals::node_nprocs);
-  }
+  const auto my_rank_cells = [] {
+    auto my_rank_cells = (npts_model + 1) / globals::node_nprocs;
+    // rank_in_node 0 gets any remainder
+    if (globals::rank_in_node == 0) {
+      my_rank_cells += (npts_model + 1) - (my_rank_cells * globals::node_nprocs);
+    }
+    return my_rank_cells;
+  }();
 
   MPI_Aint size = my_rank_cells * num_nuclides * sizeof(float);
 
