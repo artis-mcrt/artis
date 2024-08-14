@@ -488,7 +488,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts)
                                                       nullptr, nullptr, nullptr);
     assert_testmodeonly(
         (std::fabs(C_ion_procsum -
-                   grid::modelgrid[modelgridindex].cooling_contrib_ion[get_uniqueionindex(element, ion)]) /
+                   grid::modelgrid[modelgridindex].ion_cooling_contribs[get_uniqueionindex(element, ion)]) /
          C_ion_procsum) < 1e-3);
   }
 
