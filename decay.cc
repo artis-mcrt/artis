@@ -131,7 +131,7 @@ std::vector<DecayPath> decaypaths;
 // decaypath_energy_per_mass points to an array of length npts_model * num_decaypaths
 // the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
 // during the simulation time range
-double *decaypath_energy_per_mass{};
+std::span<double> decaypath_energy_per_mass{};
 #ifdef MPI_ON
 MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
 #endif
@@ -1081,16 +1081,18 @@ void setup_decaypath_energy_per_mass() {
     my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
   }
   auto size = static_cast<MPI_Aint>(my_rank_cells * get_num_decaypaths() * sizeof(double));
-
+  double *decaypath_energy_per_mass_data{nullptr};
   int disp_unit = sizeof(double);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                        &decaypath_energy_per_mass, &win_decaypath_energy_per_mass) == MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(win_decaypath_energy_per_mass, 0, &size, &disp_unit, &decaypath_energy_per_mass) ==
-                MPI_SUCCESS);
+                                        &decaypath_energy_per_mass_data,
+                                        &win_decaypath_energy_per_mass) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(win_decaypath_energy_per_mass, 0, &size, &disp_unit,
+                                     &decaypath_energy_per_mass_data) == MPI_SUCCESS);
 #else
-  decaypath_energy_per_mass =
+  decaypath_energy_per_mass_data =
       static_cast<double *>(malloc(nonempty_npts_model * get_num_decaypaths() * sizeof(double)));
 #endif
+  decaypath_energy_per_mass = std::span(decaypath_energy_per_mass_data, nonempty_npts_model * get_num_decaypaths());
   printout("done.\n");
 
 #ifdef MPI_ON
