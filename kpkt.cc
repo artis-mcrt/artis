@@ -38,7 +38,7 @@ struct CellCacheCoolingList {
   int upperlevel;
 };
 
-CellCacheCoolingList *coolinglist;
+std::vector<CellCacheCoolingList> coolinglist;
 
 int n_kpktdiffusion_timesteps{0};
 float kpktdiffusion_timescale{0.};
@@ -316,7 +316,7 @@ void setup_coolinglist() {
   set_ncoolingterms();
   const size_t mem_usage_coolinglist = ncoolingterms * sizeof(CellCacheCoolingList);
   assert_always(ncoolingterms > 0);
-  coolinglist = static_cast<CellCacheCoolingList *>(malloc(ncoolingterms * sizeof(CellCacheCoolingList)));
+  coolinglist.resize(ncoolingterms);
   printout("[info] mem_usage: coolinglist occupies %.3f MB\n", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0;  // cooling list index
