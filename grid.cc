@@ -394,7 +394,7 @@ void allocate_nonemptycells_composition_cooling()
     modelgrid[modelgridindex].ion_cooling_contribs = static_cast<double *>(malloc(get_includedions() * sizeof(double)));
 
     if (modelgrid[modelgridindex].ion_cooling_contribs == nullptr) {
-      printout("[fatal] input: not enough memory to initialize cooling_contrib_ion for cell %d... abort\n",
+      printout("[fatal] input: not enough memory to initialize ion_cooling_contribs for cell %d... abort\n",
                modelgridindex);
       std::abort();
     }

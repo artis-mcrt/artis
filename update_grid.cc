@@ -1251,6 +1251,6 @@ void cellcache_change_cell(const int modelgridindex) {
   }
 
   if (modelgridindex >= 0) {
-    std::fill_n(globals::cellcache[cellcacheslotid].ch_allcont_departureratios, globals::nbfcontinua, -1);
+    std::ranges::fill(globals::cellcache[cellcacheslotid].ch_allcont_departureratios, -1.);
   }
 }

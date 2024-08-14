@@ -1291,8 +1291,7 @@ void setup_cellcache() {
     assert_always(chtransindex == chtransblocksize);
 
     assert_always(globals::nbfcontinua >= 0);
-    globals::cellcache[cellcachenum].ch_allcont_departureratios =
-        static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
+    globals::cellcache[cellcachenum].ch_allcont_departureratios.resize(globals::nbfcontinua);
     mem_usage_cellcache += globals::nbfcontinua * sizeof(double);
 
     printout("[info] mem_usage: cellcache for thread %d occupies %.3f MB\n", cellcachenum,
