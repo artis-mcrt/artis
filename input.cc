@@ -1389,10 +1389,10 @@ void setup_phixs_list() {
     for (int ion = 0; ion < nions - 1; ion++) {
       if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
         globals::elements[element].ions[ion].groundcontindex =
-            static_cast<int>(std::find_if(globals::groundcont.begin(), globals::groundcont.end(),
-                                          [=](const auto &groundcont) {
-                                            return (groundcont.element == element) && (groundcont.ion == ion);
-                                          }) -
+            static_cast<int>(std::ranges::find_if(globals::groundcont,
+                                                  [=](const auto &groundcont) {
+                                                    return (groundcont.element == element) && (groundcont.ion == ion);
+                                                  }) -
                              globals::groundcont.begin());
         if (globals::elements[element].ions[ion].groundcontindex >= globals::nbfcontinua_ground) {
           globals::elements[element].ions[ion].groundcontindex = -1;
