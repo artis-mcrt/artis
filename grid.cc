@@ -2398,7 +2398,6 @@ void grid_init(const int my_rank)
 
   if (get_model_type() == GRID_TYPE) {
     if (get_model_type() == GRID_CARTESIAN3D) {
-      assert_always(GRID_TYPE == GRID_CARTESIAN3D);
       assert_always(ncoord_model[0] == ncoordgrid[0]);
       assert_always(ncoord_model[1] == ncoordgrid[1]);
       assert_always(ncoord_model[2] == ncoordgrid[2]);
