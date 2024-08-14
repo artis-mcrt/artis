@@ -1,4 +1,5 @@
 #pragma once
+#include <span>
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
@@ -65,10 +66,11 @@ constexpr auto get_ngriddimensions() -> int {
       return 3;
     default:
       assert_always(false);
+      return -1;
   }
 }
 
-inline ModelGridCell *modelgrid{};
+inline std::span<ModelGridCell> modelgrid{};
 
 inline int ngrid{0};
 
