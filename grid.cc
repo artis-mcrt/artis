@@ -16,6 +16,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <span>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -54,7 +55,7 @@ std::array<int, 3> ncoord_model{0};  // the model.txt input grid dimensions
 
 double min_den;  // minimum model density
 
-double mfeg;  /// Total mass of Fe group elements in ejecta
+double mfegroup = 0.;  /// Total mass of Fe group elements in ejecta
 
 int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
 
@@ -1152,7 +1153,7 @@ void read_3d_model()
 
 void calc_modelinit_totmassradionuclides() {
   mtot_input = 0.;
-  mfeg = 0.;
+  mfegroup = 0.;
 
   assert_always(totmassradionuclide.data() == nullptr);
   totmassradionuclide =
@@ -1195,7 +1196,7 @@ void calc_modelinit_totmassradionuclides() {
       totmassradionuclide[nucindex] += mass_in_shell * get_modelinitradioabund(mgi, nucindex);
     }
 
-    mfeg += mass_in_shell * get_ffegrp(mgi);
+    mfegroup += mass_in_shell * get_ffegrp(mgi);
   }
 
   printout("Total input model mass: %9.3e [Msun]\n", mtot_input / MSUN);
@@ -1203,7 +1204,7 @@ void calc_modelinit_totmassradionuclides() {
   printout("  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n", get_totmassradionuclide(28, 56) / MSUN,
            get_totmassradionuclide(27, 56) / MSUN, get_totmassradionuclide(26, 52) / MSUN,
            get_totmassradionuclide(24, 48) / MSUN);
-  printout("  Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n", mfeg / MSUN, get_totmassradionuclide(28, 57) / MSUN,
+  printout("  Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n", mfegroup / MSUN, get_totmassradionuclide(28, 57) / MSUN,
            get_totmassradionuclide(27, 57) / MSUN);
 }
 
@@ -2164,7 +2165,7 @@ void calculate_kappagrey() {
         kappa = globals::GREY_OP;
       } else if (globals::opacity_case == 1 || globals::opacity_case == 4) {
         /// kappagrey used for initial grey approximation in case 4
-        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfeg / mtot_input) + 0.1);
+        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfegroup / mtot_input) + 0.1);
       } else if (globals::opacity_case == 2) {
         const double opcase2_normal = globals::GREY_OP * rho_sum / ((0.9 * fe_sum) + (0.1 * (ngrid - empty_cells)));
         kappa = opcase2_normal / get_rho_tmin(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1);
