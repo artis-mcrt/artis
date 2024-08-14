@@ -675,9 +675,9 @@ void precalculate_ion_alpha_sp() {
   }
 }
 
-auto integrand_stimrecombination_custom_radfield(const double nu, void *voidparas) -> double {
+auto integrand_stimrecombination_custom_radfield(const double nu, void *const voidparas) -> double {
   {
-    const gsl_integral_paras_gammacorr *const params = static_cast<gsl_integral_paras_gammacorr *>(voidparas);
+    const auto *const params = static_cast<const gsl_integral_paras_gammacorr *>(voidparas);
     const int modelgridindex = params->modelgridindex;
     const float T_e = params->T_e;
 
