@@ -296,6 +296,9 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
           MPI_Pack(&grid::modelgrid[mgi].thick, 1, MPI_SHORT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
                    MPI_COMM_WORLD);
 
+          MPI_Pack(grid::modelgrid[mgi].elem_massfracs, get_nelements(), MPI_FLOAT, mpi_grid_buffer,
+                   mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+
           MPI_Pack(grid::modelgrid[mgi].ion_groundlevelpops, get_includedions(), MPI_FLOAT, mpi_grid_buffer,
                    mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
           MPI_Pack(grid::modelgrid[mgi].ion_partfuncts, get_includedions(), MPI_FLOAT, mpi_grid_buffer,
@@ -340,6 +343,9 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
                    MPI_COMM_WORLD);
         MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].thick, 1, MPI_SHORT,
                    MPI_COMM_WORLD);
+
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].elem_massfracs,
+                   get_nelements(), MPI_FLOAT, MPI_COMM_WORLD);
 
         MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_groundlevelpops,
                    get_includedions(), MPI_FLOAT, MPI_COMM_WORLD);
@@ -983,7 +989,7 @@ auto main(int argc, char *argv[]) -> int {
   /// Initialise the exchange buffer
   /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
   /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
-  mpi_grid_buffer_size = 4 * ((12 + 4 * get_includedions()) * (maxndo) + 1);
+  mpi_grid_buffer_size = 4 * ((12 + 4 * get_includedions() + get_nelements()) * (maxndo) + 1);
   printout("reserve mpi_grid_buffer_size %zu space for MPI communication buffer\n", mpi_grid_buffer_size);
   mpi_grid_buffer = static_cast<char *>(malloc(mpi_grid_buffer_size * sizeof(char)));
   assert_always(mpi_grid_buffer != nullptr);
