@@ -382,20 +382,18 @@ void allocate_nonemptycells_composition_cooling()
             element, modelgridindex);
         std::abort();
       }
-
-      modelgrid[modelgridindex].composition[element].partfunct =
-          static_cast<float *>(calloc(get_nions(element), sizeof(float)));
-
-      if (modelgrid[modelgridindex].composition[element].partfunct == nullptr) {
-        printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",
-                 element, modelgridindex);
-        std::abort();
-      }
     }
 
-    modelgrid[modelgridindex].cooling_contrib_ion = static_cast<double *>(malloc(get_includedions() * sizeof(double)));
+    modelgrid[modelgridindex].ion_partfuncts = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
 
-    if (modelgrid[modelgridindex].cooling_contrib_ion == nullptr) {
+    if (modelgrid[modelgridindex].ion_partfuncts == nullptr) {
+      printout("[fatal] input: not enough memory to initialize partfunctlist in cell %d... abort\n", modelgridindex);
+      std::abort();
+    }
+
+    modelgrid[modelgridindex].ion_cooling_contribs = static_cast<double *>(malloc(get_includedions() * sizeof(double)));
+
+    if (modelgrid[modelgridindex].ion_cooling_contribs == nullptr) {
       printout("[fatal] input: not enough memory to initialize cooling_contrib_ion for cell %d... abort\n",
                modelgridindex);
       std::abort();

@@ -274,7 +274,7 @@ void calculate_cooling_rates(const int modelgridindex, HeatingCoolingRates *heat
   double C_ionization_all = 0.;  /// collisional ionisation of macroatoms
   for (int allionindex = 0; allionindex < get_includedions(); allionindex++) {
     const auto [element, ion] = get_ionfromuniqueionindex(allionindex);
-    grid::modelgrid[modelgridindex].cooling_contrib_ion[allionindex] = calculate_cooling_rates_ion<false>(
+    grid::modelgrid[modelgridindex].ion_cooling_contribs[allionindex] = calculate_cooling_rates_ion<false>(
         modelgridindex, element, ion, -1, cellcacheslotid, &C_ff_all, &C_fb_all, &C_exc_all, &C_ionization_all);
   }
 
@@ -282,7 +282,7 @@ void calculate_cooling_rates(const int modelgridindex, HeatingCoolingRates *heat
   // the ion contributions must be added in this exact order
   double C_total = 0.;
   for (int allionindex = 0; allionindex < get_includedions(); allionindex++) {
-    C_total += grid::modelgrid[modelgridindex].cooling_contrib_ion[allionindex];
+    C_total += grid::modelgrid[modelgridindex].ion_cooling_contribs[allionindex];
   }
   grid::modelgrid[modelgridindex].totalcooling = C_total;
 
@@ -446,7 +446,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts)
     const int nions = get_nions(element);
     for (ion = 0; ion < nions; ion++) {
       const int uniqueionindex = get_uniqueionindex(element, ion);
-      coolingsum += grid::modelgrid[modelgridindex].cooling_contrib_ion[uniqueionindex];
+      coolingsum += grid::modelgrid[modelgridindex].ion_cooling_contribs[uniqueionindex];
       // printout("Z=%d, ionstage %d, coolingsum %g\n", get_atomicnumber(element), get_ionstage(element, ion),
       // coolingsum);
       if (coolingsum > rndcool_ion) {
@@ -470,7 +470,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts)
       for (ion = 0; ion < nions; ion++) {
         const int uniqueionindex = get_uniqueionindex(element, ion);
         printout("do_kpkt: element %d, ion %d, coolingcontr %g\n", element, ion,
-                 grid::modelgrid[modelgridindex].cooling_contrib_ion[uniqueionindex]);
+                 grid::modelgrid[modelgridindex].ion_cooling_contribs[uniqueionindex]);
       }
     }
     std::abort();

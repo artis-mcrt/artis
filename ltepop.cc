@@ -48,8 +48,9 @@ auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const d
 
 auto phi_lte(const int element, const int ion, const int modelgridindex) -> double {
   // use Saha equation for LTE ionization balance
-  auto partfunc_ion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
-  auto partfunc_upperion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion + 1];
+  const int uniqueionindex = get_uniqueionindex(element, ion);
+  auto partfunc_ion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex];
+  auto partfunc_upperion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex + 1];
 
   const auto T_e = grid::get_Te(modelgridindex);
   const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);
@@ -70,8 +71,9 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
 
   assert_testmodeonly(!elem_has_nlte_levels(element));  // don't use this function if the NLTE solver is active
 
-  auto partfunc_ion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
-  auto partfunc_upperion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion + 1];
+  const int uniqueionindex = get_uniqueionindex(element, ion);
+  auto partfunc_ion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex];
+  auto partfunc_upperion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex + 1];
 
   const auto T_e = grid::get_Te(modelgridindex);
 
@@ -348,6 +350,7 @@ void set_groundlevelpops_neutral(const int modelgridindex) {
     const int nions = get_nions(element);
     /// Assign the species population to the neutral ion and set higher ions to MINPOP
     for (int ion = 0; ion < nions; ion++) {
+      const int uniqueionindex = get_uniqueionindex(element, ion);
       double nnion{NAN};
       if (ion == 0) {
         nnion = nnelement;
@@ -357,7 +360,7 @@ void set_groundlevelpops_neutral(const int modelgridindex) {
         nnion = 0.;
       }
       const double groundpop =
-          (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
+          (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex]);
 
       grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
     }
@@ -545,7 +548,7 @@ void calculate_cellpartfuncts(const int modelgridindex, const int element)
   /// this saves a factor 10 in calculation time of Saha-Boltzman populations
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++) {
-    grid::modelgrid[modelgridindex].composition[element].partfunct[ion] =
+    grid::modelgrid[modelgridindex].ion_partfuncts[get_uniqueionindex(element, ion)] =
         calculate_partfunct(element, ion, modelgridindex);
   }
 }
@@ -573,7 +576,8 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
 /// Use the ground level population and partition function to get an ion population
 {
   return get_groundlevelpop(modelgridindex, element, ion) *
-         grid::modelgrid[modelgridindex].composition[element].partfunct[ion] / stat_weight(element, ion, 0);
+         grid::modelgrid[modelgridindex].ion_partfuncts[get_uniqueionindex(element, ion)] /
+         stat_weight(element, ion, 0);
 }
 
 void set_groundlevelpops(const int modelgridindex, const int element, const float nne, const bool force_lte) {
@@ -608,8 +612,8 @@ void set_groundlevelpops(const int modelgridindex, const int element, const floa
       nnion = MINPOP;
     }
 
-    const double groundpop =
-        nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
+    const double groundpop = nnion * stat_weight(element, ion, 0) /
+                             grid::modelgrid[modelgridindex].ion_partfuncts[get_uniqueionindex(element, ion)];
 
     if (!std::isfinite(groundpop)) {
       printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");

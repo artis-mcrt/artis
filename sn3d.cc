@@ -300,12 +300,12 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
             if (get_nions(element) > 0) {
               MPI_Pack(grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT,
                        mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-              MPI_Pack(grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
-                       mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
             }
           }
 
-          MPI_Pack(grid::modelgrid[mgi].cooling_contrib_ion, get_includedions(), MPI_DOUBLE, mpi_grid_buffer,
+          MPI_Pack(grid::modelgrid[mgi].ion_partfuncts, get_includedions(), MPI_FLOAT, mpi_grid_buffer,
+                   mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(grid::modelgrid[mgi].ion_cooling_contribs, get_includedions(), MPI_DOUBLE, mpi_grid_buffer,
                    mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
         }
       }
@@ -351,13 +351,12 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
             MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
                        grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT,
                        MPI_COMM_WORLD);
-            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                       grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
-                       MPI_COMM_WORLD);
           }
         }
 
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].cooling_contrib_ion,
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_partfuncts,
+                   get_includedions(), MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_cooling_contribs,
                    get_includedions(), MPI_DOUBLE, MPI_COMM_WORLD);
       }
     }
