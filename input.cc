@@ -1354,8 +1354,7 @@ void setup_phixs_list() {
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", globals::nbfcontinua_ground);
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-    globals::groundcont = static_cast<GroundPhotoion *>(malloc(globals::nbfcontinua_ground * sizeof(GroundPhotoion)));
-    assert_always(globals::groundcont != nullptr);
+    globals::groundcont.resize(globals::nbfcontinua_ground);
 
     int groundcontindex = 0;
     for (int element = 0; element < get_nelements(); element++) {
@@ -1376,8 +1375,7 @@ void setup_phixs_list() {
       }
     }
     assert_always(groundcontindex == globals::nbfcontinua_ground);
-    std::ranges::stable_sort(std::span(globals::groundcont, globals::nbfcontinua_ground), std::ranges::less{},
-                             &GroundPhotoion::nu_edge);
+    std::ranges::stable_sort(globals::groundcont, std::ranges::less{}, &GroundPhotoion::nu_edge);
   }
 
   auto *nonconstallcont =
@@ -1391,11 +1389,11 @@ void setup_phixs_list() {
     for (int ion = 0; ion < nions - 1; ion++) {
       if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
         globals::elements[element].ions[ion].groundcontindex =
-            static_cast<int>(std::find_if(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
+            static_cast<int>(std::find_if(globals::groundcont.begin(), globals::groundcont.end(),
                                           [=](const auto &groundcont) {
                                             return (groundcont.element == element) && (groundcont.ion == ion);
                                           }) -
-                             globals::groundcont);
+                             globals::groundcont.begin());
         if (globals::elements[element].ions[ion].groundcontindex >= globals::nbfcontinua_ground) {
           globals::elements[element].ions[ion].groundcontindex = -1;
         }
@@ -1523,11 +1521,8 @@ void read_atomicdata() {
 
   /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
   if constexpr (RECORD_LINESTAT) {
-    globals::ecounter = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
-    assert_always(globals::ecounter != nullptr);
-
-    globals::acounter = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
-    assert_always(globals::acounter != nullptr);
+    globals::ecounter.resize(globals::nlines);
+    globals::acounter.resize(globals::nlines);
   }
 
   kpkt::setup_coolinglist();

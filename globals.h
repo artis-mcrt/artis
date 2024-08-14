@@ -230,19 +230,19 @@ inline MPI_Win win_corrphotoionrenorm{MPI_WIN_NULL};
 inline std::vector<double> gammaestimator;
 
 // for USE_LUT_BFHEATING = true
-inline double *bfheatingestimator{};
+inline std::vector<double> bfheatingestimator{};
 
-inline double *ffheatingestimator{};
-inline double *colheatingestimator{};
+inline std::vector<double> ffheatingestimator{};
+inline std::vector<double> colheatingestimator{};
 #ifdef DO_TITER
-inline double *gammaestimator_save{};
-inline double *bfheatingestimator_save{};
-inline double *ffheatingestimator_save{};
-inline double *colheatingestimator_save{};
+inline std::vector<double> gammaestimator_save{};
+inline std::vector<double> bfheatingestimator_save{};
+inline std::vector<double> ffheatingestimator_save{};
+inline std::vector<double> colheatingestimator_save{};
 #endif
 
-inline int *ecounter{};
-inline int *acounter{};
+inline std::vector<int> ecounter{};
+inline std::vector<int> acounter{};
 
 inline int nprocs_exspec{1};
 inline bool do_emission_res{true};
@@ -274,7 +274,7 @@ inline std::vector<double> allcont_nu_edge;
 inline const FullPhotoionTransition *allcont{};
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-inline GroundPhotoion *groundcont{};
+inline std::vector<GroundPhotoion> groundcont{};
 
 inline int nbfcontinua{-1};         // number of bf-continua
 inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels

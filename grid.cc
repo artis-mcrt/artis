@@ -513,33 +513,33 @@ void allocate_nonemptymodelcells() {
 
     globals::gammaestimator.resize(ionestimcount, 0.);
 #ifdef DO_TITER
-    globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
+    globals::gammaestimator_save.resize(nonempty_npts_model, 0.);
 #endif
   } else {
     globals::corrphotoionrenorm = nullptr;
     globals::gammaestimator.clear();
 #ifdef DO_TITER
-    globals::gammaestimator_save = nullptr;
+    globals::gammaestimator_save.clear();
 #endif
   }
 
   if (USE_LUT_BFHEATING && ionestimsize > 0) {
-    globals::bfheatingestimator = static_cast<double *>(malloc(ionestimsize));
+    globals::bfheatingestimator.resize(ionestimcount, 0.);
 #ifdef DO_TITER
-    globals::bfheatingestimator_save = static_cast<double *>(malloc(ionestimsize));
+    globals::bfheatingestimator_save.resize(nonempty_npts_model, 0.);
 #endif
   } else {
-    globals::bfheatingestimator = nullptr;
+    globals::bfheatingestimator.clear();
 #ifdef DO_TITER
-    globals::bfheatingestimator_save = nullptr;
+    globals::bfheatingestimator_save.clear();
 #endif
   }
 
-  globals::ffheatingestimator = static_cast<double *>(malloc(nonempty_npts_model * sizeof(double)));
-  globals::colheatingestimator = static_cast<double *>(malloc(nonempty_npts_model * sizeof(double)));
+  globals::ffheatingestimator.resize(nonempty_npts_model, 0.);
+  globals::colheatingestimator.resize(nonempty_npts_model, 0.);
 #ifdef DO_TITER
-  globals::ffheatingestimator_save = static_cast<double *>(malloc(nonempty_npts_model * sizeof(double)));
-  globals::colheatingestimator_save = static_cast<double *>(malloc(nonempty_npts_model * sizeof(double)));
+  globals::ffheatingestimator_save.resize(nonempty_npts_model, 0.);
+  globals::colheatingestimator_save.resize(nonempty_npts_model, 0.);
 #endif
 
 #ifdef MPI_ON
