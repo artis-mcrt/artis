@@ -370,7 +370,7 @@ void allocate_nonemptycells_composition_cooling()
 
     for (int element = 0; element < get_nelements(); element++) {
       /// Set initial abundances to zero
-      modelgrid[modelgridindex].elem_massfracs[element] = 0.;
+      modelgrid[modelgridindex].elem_massfracs[element] = 1.;
     }
 
     modelgrid[modelgridindex].ion_groundlevelpops = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
