@@ -74,10 +74,10 @@ std::span<double> totmassradionuclide{};  /// total mass of each radionuclide in
 
 #ifdef MPI_ON
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
-MPI_Win win_initradioabund_allcells = MPI_WIN_NULL;
+MPI_Win win_initnucmassfrac_allcells = MPI_WIN_NULL;
 #endif
 
-float *initradioabund_allcells{};
+float *initnucmassfrac_allcells{};
 float *initmassfracuntrackedstable_allcells{};
 float *elem_meanweight_allcells{};
 
@@ -147,11 +147,11 @@ void allocate_initradiobund() {
 
   int disp_unit = sizeof(float);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                        &initradioabund_allcells, &win_initradioabund_allcells) == MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(win_initradioabund_allcells, 0, &size, &disp_unit, &initradioabund_allcells) ==
+                                        &initnucmassfrac_allcells, &win_initnucmassfrac_allcells) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(win_initnucmassfrac_allcells, 0, &size, &disp_unit, &initnucmassfrac_allcells) ==
                 MPI_SUCCESS);
 #else
-  initradioabund_allcells = static_cast<float *>(malloc(totalradioabundsize));
+  initnucmassfrac_allcells = static_cast<float *>(malloc(totalradioabundsize));
 #endif
   printout(
       "[info] mem_usage: radioabundance data for %zu nuclides for %zu cells occupies %.3f MB (node shared memory)\n",
@@ -161,13 +161,13 @@ void allocate_initradiobund() {
   MPI_Barrier(globals::mpi_comm_node);
 #endif
 
-  assert_always(initradioabund_allcells != nullptr);
+  assert_always(initnucmassfrac_allcells != nullptr);
 
   for (size_t mgi = 0; mgi < (npts_model + 1); mgi++) {
-    modelgrid[mgi].initradioabund = &initradioabund_allcells[mgi * num_nuclides];
+    modelgrid[mgi].initnucmassfrac = &initnucmassfrac_allcells[mgi * num_nuclides];
     if (mgi % static_cast<size_t>(globals::node_nprocs) == static_cast<size_t>(globals::rank_in_node)) {
       for (int i = 0; i < decay::get_num_nuclides(); i++) {
-        modelgrid[mgi].initradioabund[i] = 0.;
+        modelgrid[mgi].initnucmassfrac[i] = 0.;
       }
     }
   }
@@ -213,9 +213,9 @@ void set_cell_modelgridindex(const int cellindex, const int new_modelgridindex) 
   cell[cellindex].modelgridindex = new_modelgridindex;
 }
 
-void set_modelinitradioabund(const int modelgridindex, const int nucindex, float abund) {
+void set_modelinitnucmassfrac(const int modelgridindex, const int nucindex, float abund) {
   // set the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
-  // initradioabund array is in node shared memory
+  // initnucmassfrac array is in node shared memory
   assert_always(nucindex >= 0);
   if (!(abund >= 0.)) {
     printout("WARNING: nuclear mass fraction for nucindex %d = %g is negative in cell %d\n", nucindex, abund,
@@ -227,8 +227,8 @@ void set_modelinitradioabund(const int modelgridindex, const int nucindex, float
   assert_always(abund >= 0.);
   assert_always(abund <= 1.);
 
-  assert_always(modelgrid[modelgridindex].initradioabund != nullptr);
-  modelgrid[modelgridindex].initradioabund[nucindex] = abund;
+  assert_always(modelgrid[modelgridindex].initnucmassfrac != nullptr);
+  modelgrid[modelgridindex].initnucmassfrac[nucindex] = abund;
 }
 
 void set_initenergyq(const int modelgridindex, const double initenergyq) {
@@ -246,7 +246,7 @@ void set_elem_untrackedstable_abund_from_total(const int mgi, const int element,
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     if (decay::get_nuc_z(nucindex) == atomic_number) {
       // radioactive isotope of this element
-      isofracsum += get_modelinitradioabund(mgi, nucindex);
+      isofracsum += get_modelinitnucmassfrac(mgi, nucindex);
     }
   }
 
@@ -446,9 +446,9 @@ void allocate_nonemptymodelcells() {
       nonemptymgi_of_mgi[mgi] = -1;
       set_rho_tmin(mgi, 0.);
       set_rho(mgi, 0.);
-      if (modelgrid[mgi].initradioabund != nullptr) {
+      if (modelgrid[mgi].initnucmassfrac != nullptr) {
         for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-          set_modelinitradioabund(mgi, nucindex, 0.);
+          set_modelinitnucmassfrac(mgi, nucindex, 0.);
         }
       }
     }
@@ -750,7 +750,7 @@ void read_model_radioabundances(std::fstream &fmodel, std::istringstream &ssline
 
     if (nucindexlist[i] >= 0) {
       assert_testmodeonly(valuein <= 1.);
-      set_modelinitradioabund(mgi, nucindexlist[i], valuein);
+      set_modelinitnucmassfrac(mgi, nucindexlist[i], valuein);
     } else if (colnames[i] == "X_Fegroup") {
       set_ffegrp(mgi, valuein);
     } else if (colnames[i] == "cellYe") {
@@ -1170,7 +1170,7 @@ void calc_modelinit_totmassradionuclides() {
     mtot_input += mass_in_shell;
 
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-      totmassradionuclide[nucindex] += mass_in_shell * get_modelinitradioabund(mgi, nucindex);
+      totmassradionuclide[nucindex] += mass_in_shell * get_modelinitnucmassfrac(mgi, nucindex);
     }
 
     mfegroup += mass_in_shell * get_ffegrp(mgi);
@@ -2019,11 +2019,11 @@ __host__ __device__ auto get_mgi_of_nonemptymgi(const int nonemptymgi) -> int
 
 // the abundances below are initial abundances at t_model
 
-auto get_modelinitradioabund(const int modelgridindex, const int nucindex) -> float {
+auto get_modelinitnucmassfrac(const int modelgridindex, const int nucindex) -> float {
   // get the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
 
-  assert_testmodeonly(modelgrid[modelgridindex].initradioabund != nullptr);
-  return modelgrid[modelgridindex].initradioabund[nucindex];
+  assert_testmodeonly(modelgrid[modelgridindex].initnucmassfrac != nullptr);
+  return modelgrid[modelgridindex].initnucmassfrac[nucindex];
 }
 
 auto get_stable_initabund(const int mgi, const int element) -> float {
@@ -2436,7 +2436,7 @@ void grid_init(const int my_rank)
       for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
         const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
         totmassradionuclide_actual +=
-            get_modelinitradioabund(mgi, nucindex) * get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi);
+            get_modelinitnucmassfrac(mgi, nucindex) * get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi);
       }
 
       if (totmassradionuclide_actual > 0.) {
@@ -2444,9 +2444,9 @@ void grid_init(const int my_rank)
         // printout("nuclide %d ratio %g\n", nucindex, ratio);
         for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
           const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-          const double prev_abund = get_modelinitradioabund(mgi, nucindex);
+          const double prev_abund = get_modelinitnucmassfrac(mgi, nucindex);
           const double new_abund = prev_abund * ratio;
-          set_modelinitradioabund(mgi, nucindex, new_abund);
+          set_modelinitnucmassfrac(mgi, nucindex, new_abund);
         }
       }
     }

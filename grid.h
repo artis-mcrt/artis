@@ -25,7 +25,7 @@ struct ModelGridCell {
   float rho = -1.;
   // modelgrid nn_tot
   float nnetot = -1.;  // total electron density (free + bound).
-  float *initradioabund{};
+  float *initnucmassfrac{};
   float *initmassfracuntrackedstable{};
   float *elem_meanweight{};
   float initelectronfrac = -1;  // Ye: electrons (or protons) per nucleon
@@ -101,7 +101,7 @@ void set_TR(int modelgridindex, float TR);
 void set_TJ(int modelgridindex, float TJ);
 void set_W(int modelgridindex, float W);
 void grid_init(int my_rank);
-[[nodiscard]] auto get_modelinitradioabund(int modelgridindex, int nucindex) -> float;
+[[nodiscard]] auto get_modelinitnucmassfrac(int modelgridindex, int nucindex) -> float;
 [[nodiscard]] auto get_stable_initabund(int mgi, int element) -> float;
 [[nodiscard]] auto get_element_meanweight(int mgi, int element) -> float;
 void set_element_meanweight(int mgi, int element, float meanweight);

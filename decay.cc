@@ -592,7 +592,7 @@ auto get_nuc_massfrac(const int modelgridindex, const int z, const int a, const 
     const int a_top = decaypath.a[0];
     const int nucindex_top = decaypath.nucindex[0];
 
-    const double top_initabund = grid::get_modelinitradioabund(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
+    const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
     assert_always(top_initabund >= 0.);
     if (top_initabund <= 0.) {
       continue;
@@ -617,7 +617,7 @@ auto get_nuc_massfrac(const int modelgridindex, const int z, const int a, const 
 
   // for stable nuclei in the network, we need to contribute the initial abundance
   if (nuc_exists_z_a && get_meanlife(nucindex) <= 0.) {
-    nuctotal += grid::get_modelinitradioabund(modelgridindex, nucindex);
+    nuctotal += grid::get_modelinitnucmassfrac(modelgridindex, nucindex);
   }
 
   return nuctotal;
@@ -639,7 +639,7 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
   const int a_top = decaypaths[decaypathindex].a[0];
   const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
 
-  const double top_initabund = grid::get_modelinitradioabund(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
+  const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
   if (top_initabund <= 0.) {
     return 0.;
   }
@@ -750,7 +750,7 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int mode
   const int a_top = decaypaths[decaypathindex].a[0];
   const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
 
-  const double top_initabund = grid::get_modelinitradioabund(modelgridindex, nucindex_top);
+  const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top);
   assert_always(top_initabund >= 0.);
   if (top_initabund <= 0.) {
     return 0.;
@@ -1045,7 +1045,7 @@ auto get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridinde
     const int a_top = decaypath.a[0];
     const int nucindex_top = decaypath.nucindex[0];
 
-    const double top_initabund = grid::get_modelinitradioabund(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
+    const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
 
     const double chain_endecay = (decaypath.branchproduct *
                                   calculate_decaychain(top_initabund, decaypath.lambdas, decaypathlength + 1,
@@ -1301,11 +1301,11 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   // for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   // {
   //   const auto [z, a] = get_nuc_z_a(nucindex);
-  //   initnucfracsum += grid::get_modelinitradioabund(modelgridindex, z, a);
+  //   initnucfracsum += grid::get_modelinitnucmassfrac(modelgridindex, z, a);
   //   nucfracsum += get_nuc_massfrac(modelgridindex, z, a, t_current);
   //
   //   // printout_nuclidename(z, a);
-  //   // printout(" init: %g now: %g\n", grid::get_modelinitradioabund(modelgridindex, z, a),
+  //   // printout(" init: %g now: %g\n", grid::get_modelinitnucmassfrac(modelgridindex, z, a),
   //   get_nuc_massfrac(modelgridindex, z, a, t_current));
   //
   //   for (int dectypeindex = 0; dectypeindex < decaytypes::DECAYTYPE_COUNT; dectypeindex++)

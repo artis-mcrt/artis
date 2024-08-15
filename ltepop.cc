@@ -88,8 +88,8 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
   const double Gamma_ion = Gamma * stat_weight(element, ion, 0) / partfunc_ion;
 
   if (Gamma == 0. && (!NT_ON || (globals::dep_estimator_gamma[nonemptymgi] == 0. &&
-                                 grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(24, 48)) == 0. &&
-                                 grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(28, 56)) == 0.))) {
+                                 grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(24, 48)) == 0. &&
+                                 grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(28, 56)) == 0.))) {
     printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);
     std::abort();
   }
@@ -305,8 +305,8 @@ auto find_uppermost_ion(const int modelgridindex, const int element, const doubl
     for (int ion = 0; ion < nions - 1; ion++) {
       if (iongamma_is_zero(nonemptymgi, element, ion) &&
           (!NT_ON || ((globals::dep_estimator_gamma[nonemptymgi] == 0.) &&
-                      (grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(24, 48)) == 0.) &&
-                      (grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(28, 56)) == 0.)))) {
+                      (grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(24, 48)) == 0.) &&
+                      (grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(28, 56)) == 0.)))) {
         uppermost_ion = ion;
         break;
       }
