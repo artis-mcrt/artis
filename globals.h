@@ -124,7 +124,6 @@ struct Element {
   /// Be aware that this must not be used outside of the update_grid routine
   /// and their daughters. Neither it will work with OpenMP threads.
   int uniqueionindexstart{-1};         /// Index of the lowest ionisation stage of this element
-  float abundance{0.};                 ///
   float initstablemeannucmass = {0.};  /// Atomic mass number in multiple of MH
   bool has_nlte_levels{false};
 };

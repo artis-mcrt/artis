@@ -357,21 +357,18 @@ void allocate_nonemptycells_composition_cooling()
     assert_always(modelgrid[modelgridindex].elem_meanweight != nullptr);
 
     if (globals::total_nlte_levels > 0) {
-      modelgrid[modelgridindex].nlte_pops = &nltepops_allcells[nonemptymgi * globals::total_nlte_levels];
-      assert_always(modelgrid[modelgridindex].nlte_pops != nullptr);
+      modelgrid[modelgridindex].nlte_pops =
+          std::span(&nltepops_allcells[nonemptymgi * globals::total_nlte_levels], globals::total_nlte_levels);
+      assert_always(modelgrid[modelgridindex].nlte_pops.data() != nullptr);
 
-      for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
-        modelgrid[modelgridindex].nlte_pops[nlteindex] = -1.;  /// flag to indicate that there is
-                                                               ///  currently no information on the nlte populations
-      }
-    } else {
-      modelgrid[modelgridindex].nlte_pops = nullptr;
+      /// -1 indicates that there is currently no information on the nlte populations
+      std::ranges::fill(modelgrid[modelgridindex].nlte_pops, -1.);
     }
 
     for (int element = 0; element < get_nelements(); element++) {
-      /// Set initial abundances to zero
       modelgrid[modelgridindex].elem_massfracs[element] = 1.;
     }
+    std::fill_n(modelgrid[modelgridindex].elem_massfracs, get_nelements(), 1.);
 
     modelgrid[modelgridindex].ion_groundlevelpops = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
     if (modelgrid[modelgridindex].ion_groundlevelpops == nullptr) {

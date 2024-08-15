@@ -744,22 +744,21 @@ void read_atomicdata_files() {
     int lowermost_ionstage = 0;
     int uppermost_ionstage = 0;
     int nlevelsmax_readin = 0;
-    double abundance{NAN};
+    double uniformabundance{NAN};  // no longer in use mode for setting uniform abundances
     double mass_amu{NAN};
     assert_always(compositiondata >> Z >> nions >> lowermost_ionstage >> uppermost_ionstage >> nlevelsmax_readin >>
-                  abundance >> mass_amu);
+                  uniformabundance >> mass_amu);
     printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n", Z,
              nions, lowermost_ionstage, uppermost_ionstage, nlevelsmax_readin);
     assert_always(Z > 0);
     assert_always(nions >= 0);
     assert_always(nions == 0 || (nions == uppermost_ionstage - lowermost_ionstage + 1));
-    assert_always(abundance >= 0);
+    assert_always(uniformabundance >= 0);
     assert_always(mass_amu >= 0);
 
     /// write this element's data to memory
     globals::elements[element].anumber = Z;
     globals::elements[element].nions = nions;
-    globals::elements[element].abundance = abundance;  /// abundances are expected to be given by mass
     globals::elements[element].initstablemeannucmass = mass_amu * MH;
     globals::elements[element].uniqueionindexstart = uniqueionindex;
 

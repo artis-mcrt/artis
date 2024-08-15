@@ -42,7 +42,7 @@ struct ModelGridCell {
 
   float *ion_groundlevelpops{};  /// groundlevel populations of all included ions
   float *ion_partfuncts{};       /// partition functions for all included ions
-  double *nlte_pops{};           /// Pointer to an array that contains the nlte-level populations for this cell
+  std::span<double> nlte_pops;   /// Pointer to an array that contains the nlte-level populations for this cell
   double totalcooling = -1;
   double *ion_cooling_contribs{};
   uint_fast8_t thick = 0;
