@@ -102,7 +102,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     assert_always(upperlevel >= 0);
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets == 0);
     globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
-    *mem_usage_phixs += sizeof(grid::ModelCellElement);
+    *mem_usage_phixs += sizeof(PhotoionTarget);
 
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets == nullptr);
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
@@ -744,22 +744,21 @@ void read_atomicdata_files() {
     int lowermost_ionstage = 0;
     int uppermost_ionstage = 0;
     int nlevelsmax_readin = 0;
-    double abundance{NAN};
+    double uniformabundance{NAN};  // no longer in use mode for setting uniform abundances
     double mass_amu{NAN};
     assert_always(compositiondata >> Z >> nions >> lowermost_ionstage >> uppermost_ionstage >> nlevelsmax_readin >>
-                  abundance >> mass_amu);
+                  uniformabundance >> mass_amu);
     printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n", Z,
              nions, lowermost_ionstage, uppermost_ionstage, nlevelsmax_readin);
     assert_always(Z > 0);
     assert_always(nions >= 0);
     assert_always(nions == 0 || (nions == uppermost_ionstage - lowermost_ionstage + 1));
-    assert_always(abundance >= 0);
+    assert_always(uniformabundance >= 0);
     assert_always(mass_amu >= 0);
 
     /// write this element's data to memory
     globals::elements[element].anumber = Z;
     globals::elements[element].nions = nions;
-    globals::elements[element].abundance = abundance;  /// abundances are expected to be given by mass
     globals::elements[element].initstablemeannucmass = mass_amu * MH;
     globals::elements[element].uniqueionindexstart = uniqueionindex;
 
@@ -1188,8 +1187,7 @@ void setup_cellcache() {
 
   // const int num_cellcache_slots = get_max_threads();
   const int num_cellcache_slots = 1;
-  globals::cellcache = static_cast<CellCache *>(malloc(num_cellcache_slots * sizeof(CellCache)));
-  assert_always(globals::cellcache != nullptr);
+  globals::cellcache.resize(num_cellcache_slots);
 
   for (int cellcachenum = 0; cellcachenum < num_cellcache_slots; cellcachenum++) {
     size_t mem_usage_cellcache = 0;
@@ -1212,14 +1210,14 @@ void setup_cellcache() {
 
     assert_always(globals::cellcache[cellcachenum].chelements != nullptr);
 
-    size_t chlevelblocksize = 0;
+    size_t chlevelcount = 0;
     size_t chphixsblocksize = 0;
     int chtransblocksize = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
-        chlevelblocksize += nlevels * sizeof(CellCacheLevels);
+        chlevelcount += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
@@ -1231,11 +1229,11 @@ void setup_cellcache() {
         }
       }
     }
-    assert_always(chlevelblocksize > 0);
-    globals::cellcache[cellcachenum].ch_all_levels = static_cast<CellCacheLevels *>(malloc(chlevelblocksize));
+    assert_always(chlevelcount > 0);
+    globals::cellcache[cellcachenum].ch_all_levels.resize(chlevelcount);
     chphixstargetsblock =
         chphixsblocksize > 0 ? static_cast<CellCachePhixsTargets *>(malloc(chphixsblocksize)) : nullptr;
-    mem_usage_cellcache += chlevelblocksize + chphixsblocksize;
+    mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + chphixsblocksize;
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
     double *const chtransblock =
@@ -1260,31 +1258,31 @@ void setup_cellcache() {
         alllevelindex += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
-          CellCacheLevels *chlevel = &globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level];
           const int nphixstargets = get_nphixstargets(element, ion, level);
-          chlevel->chphixstargets = chphixsblocksize > 0 ? &chphixstargetsblock[allphixstargetindex] : nullptr;
+          globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level].chphixstargets =
+              chphixsblocksize > 0 ? &chphixstargetsblock[allphixstargetindex] : nullptr;
           allphixstargetindex += nphixstargets;
         }
 
         for (int level = 0; level < nlevels; level++) {
-          CellCacheLevels *chlevel = &globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level];
           const int ndowntrans = get_ndowntrans(element, ion, level);
 
-          chlevel->sum_epstrans_rad_deexc = &chtransblock[chtransindex];
+          globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc =
+              &chtransblock[chtransindex];
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
-          CellCacheLevels *chlevel = &globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level];
           const int ndowntrans = get_ndowntrans(element, ion, level);
-          chlevel->sum_internal_down_same = &chtransblock[chtransindex];
+          globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level].sum_internal_down_same =
+              &chtransblock[chtransindex];
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
-          CellCacheLevels *chlevel = &globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level];
           const int nuptrans = get_nuptrans(element, ion, level);
-          chlevel->sum_internal_up_same = &chtransblock[chtransindex];
+          globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level].sum_internal_up_same =
+              &chtransblock[chtransindex];
           chtransindex += nuptrans;
         }
       }
@@ -1292,8 +1290,7 @@ void setup_cellcache() {
     assert_always(chtransindex == chtransblocksize);
 
     assert_always(globals::nbfcontinua >= 0);
-    globals::cellcache[cellcachenum].ch_allcont_departureratios =
-        static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
+    globals::cellcache[cellcachenum].ch_allcont_departureratios.resize(globals::nbfcontinua);
     mem_usage_cellcache += globals::nbfcontinua * sizeof(double);
 
     printout("[info] mem_usage: cellcache for thread %d occupies %.3f MB\n", cellcachenum,
@@ -1354,8 +1351,7 @@ void setup_phixs_list() {
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", globals::nbfcontinua_ground);
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-    globals::groundcont = static_cast<GroundPhotoion *>(malloc(globals::nbfcontinua_ground * sizeof(GroundPhotoion)));
-    assert_always(globals::groundcont != nullptr);
+    globals::groundcont.resize(globals::nbfcontinua_ground);
 
     int groundcontindex = 0;
     for (int element = 0; element < get_nelements(); element++) {
@@ -1376,8 +1372,7 @@ void setup_phixs_list() {
       }
     }
     assert_always(groundcontindex == globals::nbfcontinua_ground);
-    std::ranges::stable_sort(std::span(globals::groundcont, globals::nbfcontinua_ground), std::ranges::less{},
-                             &GroundPhotoion::nu_edge);
+    std::ranges::stable_sort(globals::groundcont, std::ranges::less{}, &GroundPhotoion::nu_edge);
   }
 
   auto *nonconstallcont =
@@ -1391,11 +1386,11 @@ void setup_phixs_list() {
     for (int ion = 0; ion < nions - 1; ion++) {
       if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
         globals::elements[element].ions[ion].groundcontindex =
-            static_cast<int>(std::find_if(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
-                                          [=](const auto &groundcont) {
-                                            return (groundcont.element == element) && (groundcont.ion == ion);
-                                          }) -
-                             globals::groundcont);
+            static_cast<int>(std::ranges::find_if(globals::groundcont,
+                                                  [=](const auto &groundcont) {
+                                                    return (groundcont.element == element) && (groundcont.ion == ion);
+                                                  }) -
+                             globals::groundcont.begin());
         if (globals::elements[element].ions[ion].groundcontindex >= globals::nbfcontinua_ground) {
           globals::elements[element].ions[ion].groundcontindex = -1;
         }
@@ -1523,11 +1518,8 @@ void read_atomicdata() {
 
   /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
   if constexpr (RECORD_LINESTAT) {
-    globals::ecounter = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
-    assert_always(globals::ecounter != nullptr);
-
-    globals::acounter = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
-    assert_always(globals::acounter != nullptr);
+    globals::ecounter.resize(globals::nlines);
+    globals::acounter.resize(globals::nlines);
   }
 
   kpkt::setup_coolinglist();

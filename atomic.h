@@ -274,7 +274,7 @@ inline auto get_elementindex(const int Z) -> int
   const auto elem =
       std::ranges::find_if(globals::elements, [Z](const Element &element) { return element.anumber == Z; });
   if (elem != globals::elements.end()) {
-    return elem - globals::elements.begin();
+    return static_cast<int>(elem - globals::elements.begin());
   }
 
   // printout("[debug] get_elementindex: element Z=%d was not found in atomic data ... skip readin of cross sections

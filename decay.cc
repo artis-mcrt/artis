@@ -17,6 +17,7 @@
 #include <numbers>
 #include <numeric>
 #include <set>
+#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -131,7 +132,7 @@ std::vector<DecayPath> decaypaths;
 // decaypath_energy_per_mass points to an array of length npts_model * num_decaypaths
 // the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
 // during the simulation time range
-double *decaypath_energy_per_mass{};
+std::span<double> decaypath_energy_per_mass{};
 #ifdef MPI_ON
 MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
 #endif
@@ -591,7 +592,7 @@ auto get_nuc_massfrac(const int modelgridindex, const int z, const int a, const 
     const int a_top = decaypath.a[0];
     const int nucindex_top = decaypath.nucindex[0];
 
-    const double top_initabund = grid::get_modelinitradioabund(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
+    const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
     assert_always(top_initabund >= 0.);
     if (top_initabund <= 0.) {
       continue;
@@ -616,7 +617,7 @@ auto get_nuc_massfrac(const int modelgridindex, const int z, const int a, const 
 
   // for stable nuclei in the network, we need to contribute the initial abundance
   if (nuc_exists_z_a && get_meanlife(nucindex) <= 0.) {
-    nuctotal += grid::get_modelinitradioabund(modelgridindex, nucindex);
+    nuctotal += grid::get_modelinitnucmassfrac(modelgridindex, nucindex);
   }
 
   return nuctotal;
@@ -638,7 +639,7 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
   const int a_top = decaypaths[decaypathindex].a[0];
   const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
 
-  const double top_initabund = grid::get_modelinitradioabund(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
+  const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
   if (top_initabund <= 0.) {
     return 0.;
   }
@@ -749,7 +750,7 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int mode
   const int a_top = decaypaths[decaypathindex].a[0];
   const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
 
-  const double top_initabund = grid::get_modelinitradioabund(modelgridindex, nucindex_top);
+  const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top);
   assert_always(top_initabund >= 0.);
   if (top_initabund <= 0.) {
     return 0.;
@@ -1044,7 +1045,7 @@ auto get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridinde
     const int a_top = decaypath.a[0];
     const int nucindex_top = decaypath.nucindex[0];
 
-    const double top_initabund = grid::get_modelinitradioabund(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
+    const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
 
     const double chain_endecay = (decaypath.branchproduct *
                                   calculate_decaychain(top_initabund, decaypath.lambdas, decaypathlength + 1,
@@ -1074,6 +1075,7 @@ void setup_decaypath_energy_per_mass() {
       "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies %.1f MB (node "
       "shared)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
+  double *decaypath_energy_per_mass_data{nullptr};
 #ifdef MPI_ON
   size_t my_rank_cells = nonempty_npts_model / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
@@ -1081,16 +1083,17 @@ void setup_decaypath_energy_per_mass() {
     my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
   }
   auto size = static_cast<MPI_Aint>(my_rank_cells * get_num_decaypaths() * sizeof(double));
-
   int disp_unit = sizeof(double);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                        &decaypath_energy_per_mass, &win_decaypath_energy_per_mass) == MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(win_decaypath_energy_per_mass, 0, &size, &disp_unit, &decaypath_energy_per_mass) ==
-                MPI_SUCCESS);
+                                        &decaypath_energy_per_mass_data,
+                                        &win_decaypath_energy_per_mass) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(win_decaypath_energy_per_mass, 0, &size, &disp_unit,
+                                     &decaypath_energy_per_mass_data) == MPI_SUCCESS);
 #else
-  decaypath_energy_per_mass =
+  decaypath_energy_per_mass_data =
       static_cast<double *>(malloc(nonempty_npts_model * get_num_decaypaths() * sizeof(double)));
 #endif
+  decaypath_energy_per_mass = std::span(decaypath_energy_per_mass_data, nonempty_npts_model * get_num_decaypaths());
   printout("done.\n");
 
 #ifdef MPI_ON
@@ -1123,12 +1126,12 @@ void free_decaypath_energy_per_mass() {
     win_decaypath_energy_per_mass = MPI_WIN_NULL;
   }
 #else
-  if (decaypath_energy_per_mass != nullptr) {
+  if (decaypath_energy_per_mass.data() != nullptr) {
     printout("[info] mem_usage: decaypath_energy_per_mass was freed\n");
-    free(decaypath_energy_per_mass);
-    decaypath_energy_per_mass = nullptr;
+    free(decaypath_energy_per_mass.data());
   }
 #endif
+  decaypath_energy_per_mass = {};
 }
 
 [[nodiscard]] auto get_particle_injection_rate(const int modelgridindex, const double t, const int decaytype) -> double
@@ -1298,11 +1301,11 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   // for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   // {
   //   const auto [z, a] = get_nuc_z_a(nucindex);
-  //   initnucfracsum += grid::get_modelinitradioabund(modelgridindex, z, a);
+  //   initnucfracsum += grid::get_modelinitnucmassfrac(modelgridindex, z, a);
   //   nucfracsum += get_nuc_massfrac(modelgridindex, z, a, t_current);
   //
   //   // printout_nuclidename(z, a);
-  //   // printout(" init: %g now: %g\n", grid::get_modelinitradioabund(modelgridindex, z, a),
+  //   // printout(" init: %g now: %g\n", grid::get_modelinitnucmassfrac(modelgridindex, z, a),
   //   get_nuc_massfrac(modelgridindex, z, a, t_current));
   //
   //   for (int dectypeindex = 0; dectypeindex < decaytypes::DECAYTYPE_COUNT; dectypeindex++)

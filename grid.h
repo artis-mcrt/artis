@@ -1,4 +1,5 @@
 #pragma once
+#include <span>
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
@@ -13,14 +14,6 @@
 
 namespace grid {
 
-struct ModelCellElement {
-  float abundance;        /// Abundance of the element (by mass!).
-  float *groundlevelpop;  /// Pointer to an array of floats which contains the groundlevel populations
-                          /// of all included ionisation stages for the element.
-  float *partfunct;       /// Pointer to an array of floats which contains the partition functions
-                          /// of all included ionisation stages for the element.
-};
-
 struct ModelGridCell {
   float Te = -1.;
   float TR = -1.;
@@ -32,26 +25,26 @@ struct ModelGridCell {
   float rho = -1.;
   // modelgrid nn_tot
   float nnetot = -1.;  // total electron density (free + bound).
-  float *initradioabund{};
-  float *initmassfracstable{};
+  float *initnucmassfrac{};
+  float *initmassfracuntrackedstable{};
   float *elem_meanweight{};
   float initelectronfrac = -1;  // Ye: electrons (or protons) per nucleon
   float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
   float ffegrp = 0.;
   float kappagrey = 0.;
-  float grey_depth = 0.;            /// Grey optical depth to surface of the modelgridcell
-                                    /// This is only stored to print it outside the OpenMP loop in update_grid to the
-                                    /// estimatorsfile so there is no need to communicate it via MPI so far!
-  int *elements_uppermost_ion{};    /// Highest ionisation stage which has a decent population for a particular
-                                    /// element in a given cell.
-  ModelCellElement *composition{};  /// Pointer to an array which contains the time dependent
-                                    /// abundances of all included elements and all the groundlevel
-                                    /// populations and partition functions for their ions
-  double *nlte_pops{};              /// Pointer to an array that contains the nlte-level
-                                    /// populations for this cell
+  float grey_depth = 0.;          /// Grey optical depth to surface of the modelgridcell
+                                  /// This is only stored to print it outside the OpenMP loop in update_grid to the
+                                  /// estimatorsfile so there is no need to communicate it via MPI so far!
+  int *elements_uppermost_ion{};  /// Highest ionisation stage which has a decent population for a particular
+                                  /// element in a given cell.
+  float *elem_massfracs{};        /// Pointer to an array which contains the time dependent
+                                  /// abundances of all included elements and all the groundlevel
 
+  float *ion_groundlevelpops{};  /// groundlevel populations of all included ions
+  float *ion_partfuncts{};       /// partition functions for all included ions
+  std::span<double> nlte_pops;   /// Pointer to an array that contains the nlte-level populations for this cell
   double totalcooling = -1;
-  double **cooling_contrib_ion{};
+  double *ion_cooling_contribs{};
   uint_fast8_t thick = 0;
 };
 
@@ -65,14 +58,15 @@ constexpr auto get_ngriddimensions() -> int {
       return 3;
     default:
       assert_always(false);
+      return -1;
   }
 }
 
-inline ModelGridCell *modelgrid{};
+inline std::span<ModelGridCell> modelgrid{};
 
 inline int ngrid{0};
 
-inline double mtot_input;
+inline double mtot_input{0.};
 
 [[nodiscard]] auto get_elements_uppermost_ion(int modelgridindex, int element) -> int;
 void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
@@ -107,7 +101,7 @@ void set_TR(int modelgridindex, float TR);
 void set_TJ(int modelgridindex, float TJ);
 void set_W(int modelgridindex, float W);
 void grid_init(int my_rank);
-[[nodiscard]] auto get_modelinitradioabund(int modelgridindex, int nucindex) -> float;
+[[nodiscard]] auto get_modelinitnucmassfrac(int modelgridindex, int nucindex) -> float;
 [[nodiscard]] auto get_stable_initabund(int mgi, int element) -> float;
 [[nodiscard]] auto get_element_meanweight(int mgi, int element) -> float;
 void set_element_meanweight(int mgi, int element, float meanweight);
@@ -135,8 +129,11 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] inline auto get_elem_abundance(int modelgridindex, int element) -> float
 // mass fraction of an element (all isotopes combined)
 {
-  return modelgrid[modelgridindex].composition[element].abundance;
+  const auto massfrac = modelgrid[modelgridindex].elem_massfracs[element];
+  assert_testmodeonly(massfrac >= 0.0);
+  return massfrac;
 }
+
 void calculate_kappagrey();
 
 inline void change_cell(Packet &pkt, const int snext)

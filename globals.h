@@ -124,7 +124,6 @@ struct Element {
   /// Be aware that this must not be used outside of the update_grid routine
   /// and their daughters. Neither it will work with OpenMP threads.
   int uniqueionindexstart{-1};         /// Index of the lowest ionisation stage of this element
-  float abundance{0.};                 ///
   float initstablemeannucmass = {0.};  /// Atomic mass number in multiple of MH
   bool has_nlte_levels{false};
 };
@@ -200,8 +199,8 @@ struct CellCacheElements {
 struct CellCache {
   double *cooling_contrib{};  /// Cooling contributions by the different processes.
   CellCacheElements *chelements{};
-  CellCacheLevels *ch_all_levels{};
-  double *ch_allcont_departureratios{};
+  std::vector<CellCacheLevels> ch_all_levels;
+  std::vector<double> ch_allcont_departureratios;
   double chi_ff_nnionpart{-1};
   int cellnumber{-1};  /// Identifies the cell the data is valid for.
 };
@@ -227,22 +226,22 @@ inline double *corrphotoionrenorm{};
 inline MPI_Win win_corrphotoionrenorm{MPI_WIN_NULL};
 #endif
 
-inline double *gammaestimator{};
+inline std::vector<double> gammaestimator;
 
 // for USE_LUT_BFHEATING = true
-inline double *bfheatingestimator{};
+inline std::vector<double> bfheatingestimator{};
 
-inline double *ffheatingestimator{};
-inline double *colheatingestimator{};
+inline std::vector<double> ffheatingestimator{};
+inline std::vector<double> colheatingestimator{};
 #ifdef DO_TITER
-inline double *gammaestimator_save{};
-inline double *bfheatingestimator_save{};
-inline double *ffheatingestimator_save{};
-inline double *colheatingestimator_save{};
+inline std::vector<double> gammaestimator_save{};
+inline std::vector<double> bfheatingestimator_save{};
+inline std::vector<double> ffheatingestimator_save{};
+inline std::vector<double> colheatingestimator_save{};
 #endif
 
-inline int *ecounter{};
-inline int *acounter{};
+inline std::vector<int> ecounter{};
+inline std::vector<int> acounter{};
 
 inline int nprocs_exspec{1};
 inline bool do_emission_res{true};
@@ -274,7 +273,7 @@ inline std::vector<double> allcont_nu_edge;
 inline const FullPhotoionTransition *allcont{};
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-inline GroundPhotoion *groundcont{};
+inline std::vector<GroundPhotoion> groundcont{};
 
 inline int nbfcontinua{-1};         // number of bf-continua
 inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels
@@ -282,7 +281,7 @@ inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels
 inline int NPHIXSPOINTS{-1};
 inline double NPHIXSNUINCREMENT{-1};
 
-inline CellCache *cellcache{};
+inline std::vector<CellCache> cellcache{};
 
 #ifdef MPI_ON
 inline MPI_Comm mpi_comm_node{MPI_COMM_NULL};

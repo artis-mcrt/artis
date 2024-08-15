@@ -241,8 +241,8 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
       nonthermal::nt_MPI_Bcast(modelgridindex, root, my_rank);
 
       if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
-        MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root_node_id,
-                  globals::mpi_comm_internode);
+        MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops.data(), globals::total_nlte_levels, MPI_DOUBLE,
+                  root_node_id, globals::mpi_comm_internode);
       }
 
       if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
@@ -255,8 +255,7 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
 
         MPI_Barrier(MPI_COMM_WORLD);
 
-        assert_always(globals::gammaestimator != nullptr);
-        MPI_Bcast(globals::gammaestimator + (nonemptymgi * globals::nbfcontinua_ground), globals::nbfcontinua_ground,
+        MPI_Bcast(&globals::gammaestimator[nonemptymgi * globals::nbfcontinua_ground], globals::nbfcontinua_ground,
                   MPI_DOUBLE, root, MPI_COMM_WORLD);
       }
 
@@ -297,16 +296,12 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
           MPI_Pack(&grid::modelgrid[mgi].thick, 1, MPI_SHORT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
                    MPI_COMM_WORLD);
 
-          for (int element = 0; element < get_nelements(); element++) {
-            if (get_nions(element) > 0) {
-              MPI_Pack(grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT,
-                       mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-              MPI_Pack(grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
-                       mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-              MPI_Pack(grid::modelgrid[mgi].cooling_contrib_ion[element], get_nions(element), MPI_DOUBLE,
-                       mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-            }
-          }
+          MPI_Pack(grid::modelgrid[mgi].ion_groundlevelpops, get_includedions(), MPI_FLOAT, mpi_grid_buffer,
+                   mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(grid::modelgrid[mgi].ion_partfuncts, get_includedions(), MPI_FLOAT, mpi_grid_buffer,
+                   mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(grid::modelgrid[mgi].ion_cooling_contribs, get_includedions(), MPI_DOUBLE, mpi_grid_buffer,
+                   mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
         }
       }
       printout("[info] mem_usage: MPI_BUFFER: used %d of %zu bytes allocated to mpi_grid_buffer\n", position,
@@ -346,19 +341,12 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
         MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].thick, 1, MPI_SHORT,
                    MPI_COMM_WORLD);
 
-        for (int element = 0; element < get_nelements(); element++) {
-          if (get_nions(element) > 0) {
-            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                       grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT,
-                       MPI_COMM_WORLD);
-            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                       grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
-                       MPI_COMM_WORLD);
-            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                       grid::modelgrid[mgi].cooling_contrib_ion[element], get_nions(element), MPI_DOUBLE,
-                       MPI_COMM_WORLD);
-          }
-        }
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_groundlevelpops,
+                   get_includedions(), MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_partfuncts,
+                   get_includedions(), MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_cooling_contribs,
+                   get_includedions(), MPI_DOUBLE, MPI_COMM_WORLD);
       }
     }
   }
@@ -369,32 +357,36 @@ void mpi_reduce_estimators(int nts) {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
   radfield::reduce_estimators();
   MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, globals::ffheatingestimator, nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator, nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  assert_always(!globals::ffheatingestimator.empty());
+  MPI_Allreduce(MPI_IN_PLACE, globals::ffheatingestimator.data(), globals::ffheatingestimator.size(), MPI_DOUBLE,
+                MPI_SUM, MPI_COMM_WORLD);
+  assert_always(!globals::colheatingestimator.empty());
+  MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator.data(), globals::colheatingestimator.size(), MPI_DOUBLE,
+                MPI_SUM, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (globals::nbfcontinua_ground > 0) {
     if constexpr (USE_LUT_PHOTOION) {
       MPI_Barrier(MPI_COMM_WORLD);
-      assert_always(globals::gammaestimator != nullptr);
-      MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, nonempty_npts_model * globals::nbfcontinua_ground,
-                    MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      assert_always(!globals::gammaestimator.empty());
+      MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator.data(), globals::gammaestimator.size(), MPI_DOUBLE, MPI_SUM,
+                    MPI_COMM_WORLD);
     }
 
     if constexpr (USE_LUT_BFHEATING) {
       MPI_Barrier(MPI_COMM_WORLD);
-      assert_always(globals::bfheatingestimator != nullptr);
-      MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, nonempty_npts_model * globals::nbfcontinua_ground,
+      assert_always(!globals::bfheatingestimator.empty());
+      MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator.data(), nonempty_npts_model * globals::nbfcontinua_ground,
                     MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
   }
 
   if constexpr (RECORD_LINESTAT) {
     MPI_Barrier(MPI_COMM_WORLD);
-    assert_always(globals::ecounter != nullptr);
-    MPI_Allreduce(MPI_IN_PLACE, globals::ecounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    assert_always(globals::acounter != nullptr);
-    MPI_Allreduce(MPI_IN_PLACE, globals::acounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    assert_always(!globals::ecounter.empty());
+    MPI_Allreduce(MPI_IN_PLACE, globals::ecounter.data(), globals::ecounter.size(), MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    assert_always(!globals::acounter.empty());
+    MPI_Allreduce(MPI_IN_PLACE, globals::acounter.data(), globals::acounter.size(), MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   }
 
   assert_always(static_cast<int>(globals::dep_estimator_gamma.size()) == nonempty_npts_model);
@@ -607,19 +599,19 @@ void zero_estimators() {
     }
   }
 
-  std::fill_n(globals::ffheatingestimator, grid::get_nonempty_npts_model(), 0.);
-  std::fill_n(globals::colheatingestimator, grid::get_nonempty_npts_model(), 0.);
+  std::ranges::fill(globals::ffheatingestimator, 0.);
+  std::ranges::fill(globals::colheatingestimator, 0.);
   std::ranges::fill(globals::dep_estimator_gamma, 0.);
 
   if constexpr (USE_LUT_PHOTOION) {
     if (globals::nbfcontinua_ground > 0) {
-      std::fill_n(globals::gammaestimator, grid::get_nonempty_npts_model() * globals::nbfcontinua_ground, 0.);
+      std::ranges::fill(globals::gammaestimator, 0.);
     }
   }
 
   if constexpr (USE_LUT_BFHEATING) {
     if (globals::nbfcontinua_ground > 0) {
-      std::fill_n(globals::bfheatingestimator, grid::get_nonempty_npts_model() * globals::nbfcontinua_ground, 0.);
+      std::ranges::fill(globals::bfheatingestimator, 0.);
     }
   }
 
