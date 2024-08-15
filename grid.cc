@@ -365,10 +365,7 @@ void allocate_nonemptycells_composition_cooling()
       std::ranges::fill(modelgrid[modelgridindex].nlte_pops, -1.);
     }
 
-    for (int element = 0; element < get_nelements(); element++) {
-      modelgrid[modelgridindex].elem_massfracs[element] = 1.;
-    }
-    std::fill_n(modelgrid[modelgridindex].elem_massfracs, get_nelements(), 1.);
+    std::fill_n(modelgrid[modelgridindex].elem_massfracs, get_nelements(), -1.);
 
     modelgrid[modelgridindex].ion_groundlevelpops = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
     if (modelgrid[modelgridindex].ion_groundlevelpops == nullptr) {

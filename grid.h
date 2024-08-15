@@ -129,7 +129,9 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] inline auto get_elem_abundance(int modelgridindex, int element) -> float
 // mass fraction of an element (all isotopes combined)
 {
-  return modelgrid[modelgridindex].elem_massfracs[element];
+  const auto massfrac = modelgrid[modelgridindex].elem_massfracs[element];
+  assert_testmodeonly(massfrac >= 0.0);
+  return massfrac;
 }
 
 void calculate_kappagrey();
