@@ -26,7 +26,7 @@ struct ModelGridCell {
   // modelgrid nn_tot
   float nnetot = -1.;  // total electron density (free + bound).
   float *initradioabund{};
-  float *initmassfracstable{};
+  float *initmassfracuntrackedstable{};
   float *elem_meanweight{};
   float initelectronfrac = -1;  // Ye: electrons (or protons) per nucleon
   float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]

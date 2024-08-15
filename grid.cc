@@ -78,7 +78,7 @@ MPI_Win win_initradioabund_allcells = MPI_WIN_NULL;
 #endif
 
 float *initradioabund_allcells{};
-float *initmassfracstable_allcells{};
+float *initmassfracuntrackedstable_allcells{};
 float *elem_meanweight_allcells{};
 
 std::vector<int> ranks_nstart;
@@ -235,7 +235,7 @@ void set_initenergyq(const int modelgridindex, const double initenergyq) {
   modelgrid[modelgridindex].initenergyq = initenergyq;
 }
 
-void set_elem_stable_abund_from_total(const int mgi, const int element, const float elemabundance) {
+void set_elem_untrackedstable_abund_from_total(const int mgi, const int element, const float elemabundance) {
   // set the stable mass fraction of an element from the total element mass fraction
   // by subtracting the abundances of radioactive isotopes.
   // if the element Z=anumber has no specific stable abundance variable then the function does nothing
@@ -250,9 +250,9 @@ void set_elem_stable_abund_from_total(const int mgi, const int element, const fl
     }
   }
 
-  double massfracstable = elemabundance - isofracsum;
+  double massfrac_untrackedstable = elemabundance - isofracsum;
 
-  if (massfracstable < 0.) {
+  if (massfrac_untrackedstable < 0.) {
     //  allow some roundoff error before we complain
     if ((isofracsum - elemabundance - 1.) > 1e-4 && std::abs(isofracsum - elemabundance) > 1e-6) {
       printout("WARNING: cell %d Z=%d element abundance is less than the sum of its radioisotope abundances \n", mgi,
@@ -260,15 +260,16 @@ void set_elem_stable_abund_from_total(const int mgi, const int element, const fl
       printout("  massfrac(Z) %g massfrac_radioisotopes(Z) %g\n", elemabundance, isofracsum);
       printout("  increasing elemental abundance to %g and setting stable isotopic abundance to zero\n", isofracsum);
     }
-    assert_always(massfracstable >= -1e-2);  // result is allowed to be slightly negative due to roundoff error
-    massfracstable = 0.;                     // bring up to zero if negative
+    assert_always(massfrac_untrackedstable >=
+                  -1e-2);           // result is allowed to be slightly negative due to roundoff error
+    massfrac_untrackedstable = 0.;  // bring up to zero if negative
   }
 
   // if (globals::rank_in_node == 0)
-  { modelgrid[mgi].initmassfracstable[element] = massfracstable; }
+  { modelgrid[mgi].initmassfracuntrackedstable[element] = massfrac_untrackedstable; }
 
   // (isofracsum + massfracstable) might not exactly match elemabundance if we had to boost it to reach isofracsum
-  modelgrid[mgi].elem_massfracs[element] = isofracsum + massfracstable;
+  set_elem_abundance(mgi, element, isofracsum + massfrac_untrackedstable);
 }
 
 void allocate_nonemptycells_composition_cooling()
@@ -298,8 +299,9 @@ void allocate_nonemptycells_composition_cooling()
     int disp_unit = sizeof(float);
     MPI_Win mpiwin = MPI_WIN_NULL;
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &initmassfracstable_allcells, &mpiwin) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &initmassfracstable_allcells) == MPI_SUCCESS);
+                                          &initmassfracuntrackedstable_allcells, &mpiwin) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &initmassfracuntrackedstable_allcells) ==
+                  MPI_SUCCESS);
   }
 
   {
@@ -313,7 +315,7 @@ void allocate_nonemptycells_composition_cooling()
     MPI_Barrier(globals::mpi_comm_node);
   }
 #else
-  initmassfracstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
+  initmassfracuntrackedstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
   elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
 #endif
 
@@ -348,9 +350,10 @@ void allocate_nonemptycells_composition_cooling()
       std::abort();
     }
 
-    modelgrid[modelgridindex].initmassfracstable = &initmassfracstable_allcells[nonemptymgi * get_nelements()];
+    modelgrid[modelgridindex].initmassfracuntrackedstable =
+        &initmassfracuntrackedstable_allcells[nonemptymgi * get_nelements()];
 
-    assert_always(modelgrid[modelgridindex].initmassfracstable != nullptr);
+    assert_always(modelgrid[modelgridindex].initmassfracuntrackedstable != nullptr);
 
     modelgrid[modelgridindex].elem_meanweight = &elem_meanweight_allcells[nonemptymgi * get_nelements()];
 
@@ -652,7 +655,7 @@ void abundances_read() {
         assert_always(elemabundance >= 0.);
 
         // radioactive nuclide abundances should have already been set by read_??_model
-        set_elem_stable_abund_from_total(mgi, element, elemabundance);
+        set_elem_untrackedstable_abund_from_total(mgi, element, elemabundance);
       }
     }
   }
@@ -2024,8 +2027,8 @@ auto get_modelinitradioabund(const int modelgridindex, const int nucindex) -> fl
 }
 
 auto get_stable_initabund(const int mgi, const int element) -> float {
-  assert_testmodeonly(modelgrid[mgi].initmassfracstable != nullptr);
-  return modelgrid[mgi].initmassfracstable[element];
+  assert_testmodeonly(modelgrid[mgi].initmassfracuntrackedstable != nullptr);
+  return modelgrid[mgi].initmassfracuntrackedstable[element];
 }
 
 auto get_element_meanweight(const int mgi, const int element) -> float
