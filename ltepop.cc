@@ -31,7 +31,8 @@ struct nneSolutionParas {
 auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-  assert_always(T >= MINTEMP);
+  assert_testmodeonly(T >= MINTEMP);
+
   const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1) {
     const int upperindex = lowerindex + 1;
