@@ -2462,13 +2462,11 @@ template <size_t S1>
   return -1.;
 }
 
-static auto get_coordboundary_distances_cylindrical2d(const std::array<double, 3> pkt_pos,
-                                                      const std::array<double, 3> pkt_dir,
-                                                      const std::array<double, 3> pktposgridcoord,
-                                                      const std::array<double, 3> pktvelgridcoord, int cellindex,
-                                                      const double tstart, const std::array<double, 3> cellcoordmax,
-                                                      bool neglect_exp)
-    -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
+static auto get_coordboundary_distances_cylindrical2d(
+    const std::array<double, 3> pkt_pos, const std::array<double, 3> pkt_dir,
+    const std::array<double, 3> pktposgridcoord, const std::array<double, 3> pktvelgridcoord, int cellindex,
+    const double tstart, const std::array<double, 3> cellcoordmax,
+    bool neglect_exp) -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // to get the cylindrical intersection, get the spherical intersection with Z components set to zero, and the
   // propagation speed set to the xy component of the 3-velocity
   double CLIGHT_PROP_DIST_CALC = (neglect_exp) ? 100 * CLIGHT_PROP : CLIGHT_PROP;

@@ -409,8 +409,8 @@ static auto thomson_angle() -> double {
   return mu;
 }
 
-[[nodiscard]] static auto scatter_dir(const std::array<double, 3> dir_in, const double cos_theta)
-    -> std::array<double, 3>
+[[nodiscard]] static auto scatter_dir(const std::array<double, 3> dir_in,
+                                      const double cos_theta) -> std::array<double, 3>
 // Routine for scattering a direction through angle theta.
 {
   // begin with setting the direction in coordinates where original direction
@@ -1000,15 +1000,15 @@ void wollaeger_thermalisation(Packet &pkt) {
   bool end_packet = false;
   while (!end_packet) {
     // distance to the next cell
-    const auto [sdist, snext] =
-        grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where, &pkt_copy.last_cross, true);
+    const auto [sdist, snext] = grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where,
+                                                        &pkt_copy.last_cross, true);
     const double s_cont = sdist * t_current * t_current * t_current / std::pow(pkt_copy.prop_time, 3);
     const int mgi = grid::get_cell_modelgridindex(pkt_copy.where);
     if (mgi != grid::get_npts_model()) {
       tau += grid::get_rho(mgi) * s_cont * mean_gamma_opac;  // contribution to the integral
     }
     // move packet copy now
-    move_pkt_withtime(pkt_copy, sdist, true);
+    move_pkt_withtime<100 * CLIGHT_PROP>(pkt_copy, sdist);
 
     grid::change_cell(pkt_copy, snext);
     end_packet = (pkt_copy.type == TYPE_ESCAPE);
@@ -1070,7 +1070,7 @@ void guttman_thermalisation(Packet &pkt) {
         column_densities[i] += grid::get_rho_tmin(mgi) * s_cont;  // contribution to the integral
       }
       // move packet copy now
-      move_pkt_withtime(pkt_copy, sdist, true);
+      move_pkt_withtime<100 * CLIGHT_PROP>(pkt_copy, sdist);
 
       grid::change_cell(pkt_copy, snext);
       end_packet = (pkt_copy.type == TYPE_ESCAPE);
