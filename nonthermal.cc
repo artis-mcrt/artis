@@ -168,8 +168,8 @@ struct nt_solution_struct {
 
 nt_solution_struct *nt_solution;
 
-double *deposition_rate_density;
-int *deposition_rate_density_timestep;
+std::vector<double> deposition_rate_density;
+std::vector<int> deposition_rate_density_timestep;
 
 void read_shell_configs() {
   assert_always(NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE);
@@ -1946,8 +1946,8 @@ void init(const int my_rank, const int ndo_nonempty) {
   assert_always(nonthermal_initialized == false);
   nonthermal_initialized = true;
 
-  deposition_rate_density = static_cast<double *>(malloc(grid::get_npts_model() * sizeof(double)));
-  deposition_rate_density_timestep = static_cast<int *>(malloc(grid::get_npts_model() * sizeof(int)));
+  deposition_rate_density.resize(grid::get_npts_model());
+  deposition_rate_density_timestep.resize(grid::get_npts_model());
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     deposition_rate_density[modelgridindex] = -1.;
@@ -2179,9 +2179,6 @@ __host__ __device__ auto get_deposition_rate_density(const int modelgridindex) -
 
 void close_file() {
   nonthermal_initialized = false;
-
-  free(deposition_rate_density);
-  free(deposition_rate_density_timestep);
 
   if (!NT_ON || !NT_SOLVE_SPENCERFANO) {
     return;
