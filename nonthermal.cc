@@ -21,6 +21,7 @@
 #include <cstdlib>
 #include <functional>
 #include <ios>
+#include <span>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -130,6 +131,12 @@ struct nt_excitation_struct {
   int loweruptransindex;
 };
 
+// temporary storage of full excitation list for current cell before possible truncation and copy to node-shared memory
+thread_local std::vector<nt_excitation_struct> tmp_excitation_list;
+
+// pointer to either local or node-shared memory excitation list of all cells
+nt_excitation_struct *excitations_list_all_cells{};
+
 struct nt_solution_struct {
   double *yfunc{};  // Samples of the Spencer-Fano solution function. Multiply by energy to get non-thermal
                     // electron number flux. y(E) * dE is the flux of electrons with energy in the range (E, E +
@@ -149,7 +156,8 @@ struct nt_solution_struct {
                                  // elements sum to 1.0 for a given ion
   float *ionenfrac_num_auger{};  // like above, but energy weighted. elements sum to 1.0 for an ion
 
-  std::vector<nt_excitation_struct> frac_excitations_list;
+  int frac_excitations_list_size = 0;
+  nt_excitation_struct *frac_excitations_list{};
 
   int timestep_last_solved = -1;     // the quantities above were calculated for this timestep
   float nneperion_when_solved{NAN};  // the nne when the solver was last run
@@ -1413,7 +1421,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
   double frac_ionization_total = 0.;
 
   int excitationindex = 0;  // unique index for every included excitation transition
-  nt_solution[modelgridindex].frac_excitations_list.resize(0);
+  tmp_excitation_list.resize(0);
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
     const int nions = get_nions(element);
@@ -1508,7 +1516,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
               // unreliable
               //   ratecoeffperdeposition = 0.;
 
-              nt_solution[modelgridindex].frac_excitations_list.push_back({
+              tmp_excitation_list.push_back({
                   .frac_deposition = frac_excitation_thistrans,
                   .ratecoeffperdeposition = ratecoeffperdeposition,
                   .lineindex = lineindex,
@@ -1573,28 +1581,31 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 
   if constexpr (NT_EXCITATION_ON && (MAX_NT_EXCITATIONS_STORED > 0)) {
     // sort by descending frac_deposition
-    std::ranges::stable_sort(nt_solution[modelgridindex].frac_excitations_list, std::ranges::greater{},
-                             &nt_excitation_struct::frac_deposition);
+    std::ranges::stable_sort(tmp_excitation_list, std::ranges::greater{}, &nt_excitation_struct::frac_deposition);
 
     // the excitation list is now sorted by frac_deposition descending
     const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
 
-    if (nt_solution[modelgridindex].frac_excitations_list.size() > MAX_NT_EXCITATIONS_STORED) {
+    if (std::ssize(tmp_excitation_list) > MAX_NT_EXCITATIONS_STORED) {
       // truncate the sorted list to save memory
-      printout("  Truncating non-thermal excitation list from %zu to %d transitions.\n",
-               nt_solution[modelgridindex].frac_excitations_list.size(), MAX_NT_EXCITATIONS_STORED);
-      nt_solution[modelgridindex].frac_excitations_list.resize(MAX_NT_EXCITATIONS_STORED);
+      printout("  Truncating non-thermal excitation list from %zu to %d transitions.\n", tmp_excitation_list.size(),
+               MAX_NT_EXCITATIONS_STORED);
+      tmp_excitation_list.resize(MAX_NT_EXCITATIONS_STORED);
     }
 
+    std::copy(tmp_excitation_list.begin(), tmp_excitation_list.end(),
+              nt_solution[modelgridindex].frac_excitations_list);
+
+    nt_solution[modelgridindex].frac_excitations_list_size = tmp_excitation_list.size();
+
     printout("[info] mem_usage: non-thermal excitations for cell %d at this timestep occupy %.3f MB\n", modelgridindex,
-             nt_solution[modelgridindex].frac_excitations_list.size() *
+             nt_solution[modelgridindex].frac_excitations_list_size *
                  sizeof(nt_solution[modelgridindex].frac_excitations_list[0]) / 1024. / 1024.);
 
     const auto T_e = grid::get_Te(modelgridindex);
-    printout("  Top non-thermal excitation fractions (total excitations = %zu):\n",
-             nt_solution[modelgridindex].frac_excitations_list.size());
-    const int ntransdisplayed =
-        std::min(50, static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size()));
+    printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
+             nt_solution[modelgridindex].frac_excitations_list_size);
+    const int ntransdisplayed = std::min(50, nt_solution[modelgridindex].frac_excitations_list_size);
 
     for (excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++) {
       const double frac_deposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
@@ -1631,8 +1642,9 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
     }
 
     // sort the excitation list by ascending lineindex for fast lookup with a binary search
-    std::ranges::stable_sort(nt_solution[modelgridindex].frac_excitations_list, std::ranges::less{},
-                             &nt_excitation_struct::lineindex);
+    std::ranges::stable_sort(std::span(nt_solution[modelgridindex].frac_excitations_list,
+                                       nt_solution[modelgridindex].frac_excitations_list_size),
+                             std::ranges::less{}, &nt_excitation_struct::lineindex);
 
   }  // NT_EXCITATION_ON
 
@@ -1950,6 +1962,44 @@ void init(const int my_rank, const int ndo_nonempty) {
     fflush(nonthermalfile);
   }
 
+  if (NT_EXCITATION_ON) {
+    printout(
+        "[info] mem_usage: storing non-thermal frac_excitations_list for all allocated cells occupies %.3f MB\n",
+        grid::get_nonempty_npts_model() * sizeof(nt_excitation_struct) * MAX_NT_EXCITATIONS_STORED / 1024. / 1024.);
+
+    const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
+#ifdef MPI_ON
+
+    MPI_Win win_shared_excitations_list{};
+
+    int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
+
+    // rank_in_node 0 gets any remainder
+    if (globals::rank_in_node == 0) {
+      my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
+    }
+
+    auto size = static_cast<MPI_Aint>(my_rank_cells * sizeof(nt_excitation_struct) * MAX_NT_EXCITATIONS_STORED);
+
+    int disp_unit = sizeof(nt_excitation_struct);
+    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &excitations_list_all_cells,
+                            &win_shared_excitations_list);
+
+    MPI_Win_shared_query(win_shared_excitations_list, 0, &size, &disp_unit, &excitations_list_all_cells);
+
+    nt_solution = static_cast<nt_solution_struct *>(calloc(grid::get_npts_model(), sizeof(nt_solution_struct)));
+
+    printout("Finished setting up shared memory for NT Excitation\n");
+    MPI_Barrier(MPI_COMM_WORLD);
+
+#else
+
+    excitations_list_all_cells = static_cast<nt_excitation_struct *>(
+        malloc(nonempty_npts_model * sizeof(nt_excitation_struct) * MAX_NT_EXCITATIONS_STORED));
+
+#endif
+  }
+
   nt_solution = static_cast<nt_solution_struct *>(calloc(grid::get_npts_model(), sizeof(nt_solution_struct)));
 
   size_t mem_usage_yfunc = 0;
@@ -1978,6 +2028,11 @@ void init(const int my_rank, const int ndo_nonempty) {
         mem_usage_yfunc += SFPTS * sizeof(double);
       }
 
+      const size_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+
+      nt_solution[modelgridindex].frac_excitations_list =
+          NT_EXCITATION_ON ? &excitations_list_all_cells[nonemptymgi * MAX_NT_EXCITATIONS_STORED] : nullptr;
+
       zero_all_effionpot(modelgridindex);
     } else {
       nt_solution[modelgridindex].eff_ionpot = nullptr;
@@ -1987,9 +2042,10 @@ void init(const int my_rank, const int ndo_nonempty) {
       nt_solution[modelgridindex].ionenfrac_num_auger = nullptr;
 
       nt_solution[modelgridindex].yfunc = nullptr;
+      nt_solution[modelgridindex].frac_excitations_list = nullptr;
     }
 
-    nt_solution[modelgridindex].frac_excitations_list.clear();
+    nt_solution[modelgridindex].frac_excitations_list_size = 0;
   }
 
   if (STORE_NT_SPECTRUM) {
@@ -2295,7 +2351,8 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const
   }
 
   // binary search, assuming the excitation list is sorted by lineindex ascending
-  auto ntexclist = nt_solution[modelgridindex].frac_excitations_list;
+  const auto ntexclist = std::span(nt_solution[modelgridindex].frac_excitations_list,
+                                   nt_solution[modelgridindex].frac_excitations_list_size);
   auto ntexcitation = std::ranges::lower_bound(ntexclist, lineindex, {}, &nt_excitation_struct::lineindex);
   if (ntexcitation == ntexclist.end() || ntexcitation->lineindex != lineindex) {
     return 0.;
@@ -2363,7 +2420,8 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
       zrand -= frac_ionization;
       // now zrand is between zero and frac_excitation
       // the selection algorithm is the same as for the ionization transitions
-      for (const auto &ntexcitation : nt_solution[modelgridindex].frac_excitations_list) {
+      for (const auto &ntexcitation : std::span(nt_solution[modelgridindex].frac_excitations_list,
+                                                nt_solution[modelgridindex].frac_excitations_list_size)) {
         const double frac_deposition_exc = ntexcitation.frac_deposition;
         if (zrand < frac_deposition_exc) {
           const int lineindex = ntexcitation.lineindex;
@@ -2430,7 +2488,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
     nt_solution[modelgridindex].nneperion_when_solved = -1.;
     nt_solution[modelgridindex].timestep_last_solved = -1;
 
-    nt_solution[modelgridindex].frac_excitations_list.resize(0);
+    nt_solution[modelgridindex].frac_excitations_list_size = 0;
 
     zero_all_effionpot(modelgridindex);
     return;
@@ -2623,9 +2681,10 @@ void write_restart_data(FILE *gridsave_file) {
       }
 
       // write NT excitations
-      fprintf(gridsave_file, "%d\n", static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size()));
+      fprintf(gridsave_file, "%d\n", nt_solution[modelgridindex].frac_excitations_list_size);
 
-      for (const auto &excitation : nt_solution[modelgridindex].frac_excitations_list) {
+      for (const auto &excitation : std::span(nt_solution[modelgridindex].frac_excitations_list,
+                                              nt_solution[modelgridindex].frac_excitations_list_size)) {
         fprintf(gridsave_file, "%la %la %d\n", excitation.frac_deposition, excitation.ratecoeffperdeposition,
                 excitation.lineindex);
       }
@@ -2699,8 +2758,8 @@ void read_restart_data(FILE *gridsave_file) {
       int frac_excitations_list_size_in = 0;
       assert_always(fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in) == 1);
 
-      if (static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size()) != frac_excitations_list_size_in) {
-        nt_solution[modelgridindex].frac_excitations_list.resize(frac_excitations_list_size_in);
+      if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_in) {
+        nt_solution[modelgridindex].frac_excitations_list_size = frac_excitations_list_size_in;
       }
 
       for (int excitationindex = 0; excitationindex < frac_excitations_list_size_in; excitationindex++) {
@@ -2721,7 +2780,7 @@ void read_restart_data(FILE *gridsave_file) {
 }
 
 #ifdef MPI_ON
-void nt_MPI_Bcast(const int modelgridindex, const int root, const int my_rank) {
+void nt_MPI_Bcast(const int modelgridindex, const int root, const int root_node_id) {
   if (grid::get_numassociatedcells(modelgridindex) == 0) {
     return;
   }
@@ -2751,59 +2810,17 @@ void nt_MPI_Bcast(const int modelgridindex, const int root, const int my_rank) {
               MPI_FLOAT, root, MPI_COMM_WORLD);
 
     // communicate NT excitations
-    const auto frac_excitations_list_size_old = nt_solution[modelgridindex].frac_excitations_list.size();
-    auto frac_excitations_list_size_new = nt_solution[modelgridindex].frac_excitations_list.size();
-    MPI_Bcast(&frac_excitations_list_size_new, 1, MPI_INT, root, MPI_COMM_WORLD);
+    MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list_size, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-    if (frac_excitations_list_size_new != frac_excitations_list_size_old) {
-      nt_solution[modelgridindex].frac_excitations_list.resize(frac_excitations_list_size_new);
-    }
-
-    const auto frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
-    int buffer_size = (2 * sizeof(double) + sizeof(int)) * frac_excitations_list_size;
-    char *buffer = static_cast<char *>(malloc(buffer_size));
-    int position = 0;
-
-    if constexpr (TESTMODE) {
-      printout("Size of frac_excitations_list: %zu\n", frac_excitations_list_size);
-      printout("Buffer size allocated for fractional excitations is %g MB\n", buffer_size / 1024. / 1024.);
+    if (globals::rank_in_node == 0) {
+      // communicate NT excitation list via inter-node communication
+      MPI_Bcast(
+          nt_solution[modelgridindex].frac_excitations_list,
+          static_cast<size_t>(nt_solution[modelgridindex].frac_excitations_list_size) * sizeof(nt_excitation_struct),
+          MPI_BYTE, root_node_id, globals::mpi_comm_internode);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-    if (root == my_rank) {
-      for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
-        MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
-                 buffer, buffer_size, &position, MPI_COMM_WORLD);
-        MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
-                 MPI_DOUBLE, buffer, buffer_size, &position, MPI_COMM_WORLD);
-        MPI_Pack(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, buffer,
-                 buffer_size, &position, MPI_COMM_WORLD);
-      }
-    }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    MPI_Bcast(buffer, buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    position = 0;
-
-    for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
-      MPI_Unpack(buffer, buffer_size, &position,
-                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
-                 MPI_COMM_WORLD);
-      MPI_Unpack(buffer, buffer_size, &position,
-                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
-                 MPI_DOUBLE, MPI_COMM_WORLD);
-      MPI_Unpack(buffer, buffer_size, &position,
-                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT,
-                 MPI_COMM_WORLD);
-    }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    free(buffer);
 
     if (STORE_NT_SPECTRUM) {
       assert_always(nt_solution[modelgridindex].yfunc != nullptr);
