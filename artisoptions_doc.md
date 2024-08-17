@@ -24,6 +24,10 @@ constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) { return fa
 // This is default on for classic, and off for nebularnlte, where it affects the super-level
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
 
+//Switch to use Te solver to calculate Te from heating and cooling rates. Use Te=TJ instead when heating/cooling rates 
+// are too noisy to get a good Te solution (e.g. when only a few species are in NLTE)
+constexpr bool USE_TE_SOLVER = true; /// If not solving for Te then Te=TJ
+
 // Only include a single level for the highest ion stage
 constexpr bool single_level_top_ion;
 
