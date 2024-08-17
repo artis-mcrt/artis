@@ -92,7 +92,7 @@ std::vector<std::vector<int>> shells_q;
 
 struct collionrow {
   int Z;
-  int nelec;
+  int ionstage;
   int n;
   int l;
   double ionpot_ev;
@@ -377,7 +377,7 @@ void read_auger_data() {
 
       // now loop through shells with impact ionisation cross sections and apply Auger data that matches n, l values
       for (auto &collionrow : colliondata) {
-        if (collionrow.Z == Z && collionrow.nelec == (Z - ionstage + 1) && collionrow.n == n && collionrow.l == l) {
+        if (collionrow.Z == Z && collionrow.ionstage == ionstage && collionrow.n == n && collionrow.l == l) {
           printout(
               "Z=%2d ionstage %2d shellnum %d n %d l %d ionpot %7.2f E_A %8.1f E_A' %8.1f epsilon %6d <n_Auger> %5.1f "
               "P(n_Auger)",
@@ -437,20 +437,22 @@ void read_collion_data() {
 
   for (int i = 0; i < colliondatacount; i++) {
     collionrow collionrow{};
-    assert_always(fscanf(cifile, "%2d %2d %1d %1d %lg %lg %lg %lg %lg", &collionrow.Z, &collionrow.nelec, &collionrow.n,
+    int nelec = -1;
+    assert_always(fscanf(cifile, "%2d %2d %1d %1d %lg %lg %lg %lg %lg", &collionrow.Z, &nelec, &collionrow.n,
                          &collionrow.l, &collionrow.ionpot_ev, &collionrow.A, &collionrow.B, &collionrow.C,
                          &collionrow.D) == 9);
 
+    assert_always(nelec > 0);
+    collionrow.ionstage = collionrow.Z - nelec + 1;
+
     const int element = get_elementindex(collionrow.Z);
-    const int ionstage = collionrow.Z - collionrow.nelec + 1;
-    if (element < 0 || ionstage < get_ionstage(element, 0) ||
-        ionstage > get_ionstage(element, get_nions(element) - 1)) {
+    if (element < 0 || collionrow.ionstage < get_ionstage(element, 0) ||
+        collionrow.ionstage > get_ionstage(element, get_nions(element) - 1)) {
       continue;
     }
+
+    std::ranges::fill(collionrow.prob_num_auger, 0.);
     collionrow.prob_num_auger[0] = 1.;
-    for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-      collionrow.prob_num_auger[a] = 0.;
-    }
 
     collionrow.auger_g_accumulated = 0.;
     collionrow.en_auger_ev = 0.;
@@ -461,6 +463,7 @@ void read_collion_data() {
     // printout("ci row: %2d %2d %1d %1d %lg %lg %lg %lg %lg\n", collionrow.Z, collionrow.nelec, collionrow.n,
     //          collionrow.l, collionrow.ionpot_ev, collionrow.A, collionrow.B, collionrow.C, collionrow.D);
   }
+  colliondata.shrink_to_fit();
   printout("Stored %zu of %d input shell cross sections\n", colliondata.size(), colliondatacount);
 
   fclose(cifile);
@@ -474,16 +477,15 @@ auto get_possible_nt_excitation_count() -> int {
   int ntexcitationcount = 0;
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
-      const int nlevels = std::min(NTEXCITATION_MAXNLEVELS_LOWER, get_nlevels(element, ion));
-      for (int lower = 0; lower < nlevels; lower++) {
+      const int lower_nlevels = std::min(NTEXCITATION_MAXNLEVELS_LOWER, get_nlevels(element, ion));
+      for (int lower = 0; lower < lower_nlevels; lower++) {
         const int nuptrans = get_nuptrans(element, ion, lower);
         for (int t = 0; t < nuptrans; t++) {
           const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
           const int upper = globals::linelist[lineindex].upperlevelindex;
-          if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
-            continue;
+          if (upper < NTEXCITATION_MAXNLEVELS_UPPER) {
+            ntexcitationcount++;
           }
-          ntexcitationcount++;
         }
       }
     }
@@ -802,7 +804,7 @@ auto N_e(const int modelgridindex, const double energy) -> double
 
       // ionization terms
       for (const auto &collionrow : colliondata) {
-        if (collionrow.Z == Z && collionrow.nelec == Z - ionstage + 1) {
+        if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
           const double ionpot_ev = collionrow.ionpot_ev;
           const double J = get_J(Z, ionstage, ionpot_ev);
           const double lambda = std::min(SF_EMAX - energy_ev, energy_ev + ionpot_ev);
@@ -1106,7 +1108,7 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
   double ionpot_valence = -1;
 
   for (auto &collionrow : colliondata) {
-    if (collionrow.Z == Z && collionrow.nelec == Z - ionstage + 1) {
+    if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       get_xs_ionization_vector(cross_section_vec, collionrow);
 
       if (assumeshellpotentialisvalence) {
@@ -1175,7 +1177,7 @@ void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int elemen
   double ionpot_valence = -1;
   int matching_nlsubshell_count = 0;
   for (auto &collionrow : colliondata) {
-    if (collionrow.Z == Z && collionrow.nelec == Z - ionstage + 1) {
+    if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       matching_nlsubshell_count++;
       const double frac_ionization_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow);
       eta_sum += frac_ionization_shell;
@@ -1473,7 +1475,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 
       int matching_nlsubshell_count = 0;
       for (auto &collionrow : colliondata) {
-        if (collionrow.Z == Z && collionrow.nelec == Z - ionstage + 1) {
+        if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
           const double frac_ionization_ion_shell =
               calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow);
           frac_ionization_ion += frac_ionization_ion_shell;
@@ -1647,8 +1649,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
         const int uptransindex = ntexc.loweruptransindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon(element, ion, lower);
 
-        const double ratecoeffperdeposition = ntexc.ratecoeffperdeposition;
-        const double ntcollexc_ratecoeff = ratecoeffperdeposition * deposition_rate_density;
+        const double ntcollexc_ratecoeff = ntexc.ratecoeffperdeposition * deposition_rate_density;
 
         const double t_mid = globals::timesteps[timestep].mid;
         const double radexc_ratecoeff = rad_excitation_ratecoeff(modelgridindex, element, ion, lower, uptransindex,
@@ -1779,7 +1780,7 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
 {
   gsl_vector *const vec_xs_ionization = gsl_vector_alloc(SFPTS);
   for (auto &collionrow : colliondata) {
-    if (collionrow.Z == Z && collionrow.nelec == Z - ionstage + 1) {
+    if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       const double ionpot_ev = collionrow.ionpot_ev;
       const double en_auger_ev = collionrow.en_auger_ev;
       // const double n_auger_elec_avg = colliondata[n].n_auger_elec_avg;
