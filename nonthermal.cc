@@ -1635,19 +1635,19 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
     const int ntransdisplayed = std::min(50, nt_solution[modelgridindex].frac_excitations_list_size);
 
     for (excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++) {
-      const double frac_deposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
+      const auto &ntexc = nt_solution[modelgridindex].frac_excitations_list[excitationindex];
+      const double frac_deposition = ntexc.frac_deposition;
       if (frac_deposition > 0.) {
-        const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
-        const TransitionLine *line = &globals::linelist[lineindex];
-        const int element = line->elementindex;
-        const int ion = line->ionindex;
-        const int lower = line->lowerlevelindex;
-        const int upper = line->upperlevelindex;
-        const int uptransindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].loweruptransindex;
+        const int lineindex = ntexc.lineindex;
+        const TransitionLine &line = globals::linelist[lineindex];
+        const int element = line.elementindex;
+        const int ion = line.ionindex;
+        const int lower = line.lowerlevelindex;
+        const int upper = line.upperlevelindex;
+        const int uptransindex = ntexc.loweruptransindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon(element, ion, lower);
 
-        const double ratecoeffperdeposition =
-            nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition;
+        const double ratecoeffperdeposition = ntexc.ratecoeffperdeposition;
         const double ntcollexc_ratecoeff = ratecoeffperdeposition * deposition_rate_density;
 
         const double t_mid = globals::timesteps[timestep].mid;
