@@ -1526,21 +1526,17 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
           }
 
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
-          const double nt_frac_excitation_perlevelpop =
-              epsilon_trans * calculate_nt_excitation_ratecoeff_perdeposition(modelgridindex, element, ion, lower, t,
-                                                                              statweight_lower, epsilon_trans);
+          const double ratecoeffperdeposition = calculate_nt_excitation_ratecoeff_perdeposition(
+              modelgridindex, element, ion, lower, t, statweight_lower, epsilon_trans);
+          const double nt_frac_excitation_perlevelpop = epsilon_trans * ratecoeffperdeposition;
           const double frac_excitation_thistrans = nnlevel * nt_frac_excitation_perlevelpop;
           frac_excitation_ion += frac_excitation_thistrans;
 
           if constexpr (NT_EXCITATION_ON) {
+            assert_always(std::isfinite(ratecoeffperdeposition));
             // the atomic data set was limited for Fe V, which caused the ground multiplet to be massively
             // depleted, and then almost no recombination happened!
-            if (above_minionfraction && nt_frac_excitation_perlevelpop > 0 && (Z != 26 || ionstage != 5)) {
-              const double ratecoeffperdeposition = nt_frac_excitation_perlevelpop / epsilon_trans;
-
-              assert_always(ratecoeffperdeposition >= 0);
-              assert_always(std::isfinite(ratecoeffperdeposition));
-
+            if (above_minionfraction && ratecoeffperdeposition > 0 && (Z != 26 || ionstage != 5)) {
               // if (get_coll_str(lineindex) < 0) // if collision strength is not defined, the rate coefficient is
               // unreliable
               //   ratecoeffperdeposition = 0.;
