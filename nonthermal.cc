@@ -100,11 +100,15 @@ struct collionrow {
   double B;
   double C;
   double D;
-  double auger_g_accumulated;  // track the statistical weight represented by the values below, so they can be updated
-                               // with new g-weighted averaged values
-  double prob_num_auger[NT_MAX_AUGER_ELECTRONS + 1];  // probability of 0, 1, ..., NT_MAX_AUGER_ELECTRONS Auger
-                                                      // electrons being ejected when the shell is ionised
-  float en_auger_ev;  // the average kinetic energy released in Auger electrons after making a hole in this shell
+  // track the statistical weight represented by the values below, so they can be updated with new g-weighted averaged
+  // values
+  double auger_g_accumulated;
+
+  // probability of 0, 1, ..., NT_MAX_AUGER_ELECTRONS Auger electrons being ejected when the shell is ionised
+  std::array<double, NT_MAX_AUGER_ELECTRONS + 1> prob_num_auger;
+
+  // the average kinetic energy released in Auger electrons after making a hole in this shell
+  float en_auger_ev;
   float n_auger_elec_avg;
 };
 
@@ -150,11 +154,10 @@ struct nt_solution_struct {
   float frac_excitation = 0.;  // fraction of deposition energy going to excitation
 
   // these points arrays of length includedions
-  float *eff_ionpot{};  // these are used to calculate the non-thermal ionization rate
-  double *fracdep_ionization_ion =
-      nullptr;  // the fraction of the non-thermal deposition energy going to ionizing this ion
+  float *eff_ionpot{};               // these are used to calculate the non-thermal ionization rate
+  double *fracdep_ionization_ion{};  // the fraction of the non-thermal deposition energy going to ionizing each ion
 
-  // these  point to arrays of length includedions * (NT_MAX_AUGER_ELECTRONS + 1)
+  // these point to arrays of length includedions * (NT_MAX_AUGER_ELECTRONS + 1)
   float *prob_num_auger{};       // probability that one ionisation of this ion will produce n Auger electrons.
                                  // elements sum to 1.0 for a given ion
   float *ionenfrac_num_auger{};  // like above, but energy weighted. elements sum to 1.0 for an ion
