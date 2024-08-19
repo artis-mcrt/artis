@@ -112,15 +112,14 @@ void calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   double sum_internal_up_same = 0.;
   const int nuptrans = get_nuptrans(element, ion, level);
   for (int i = 0; i < nuptrans; i++) {
-    const auto &uptransition = globals::elements[element].ions[ion].levels[level].uptrans[i];
-    const int upper = uptransition.targetlevelindex;
-    const int lineindex = uptransition.lineindex;
-    const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
+    const auto &uptrans = globals::elements[element].ions[ion].levels[level].uptrans[i];
+    const double epsilon_trans = epsilon(element, ion, uptrans.targetlevelindex) - epsilon_current;
 
-    const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, lineindex, t_mid);
+    const double R =
+        rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, uptrans.lineindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, statweight);
     const double NT =
-        nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, lineindex);
+        nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, uptrans.lineindex);
 
     const double individ_internal_up_same = (R + C + NT) * epsilon_current;
 
@@ -142,8 +141,6 @@ void calculate_macroatom_transitionrates(const int modelgridindex, const int ele
 
     const auto nphixstargets = get_nphixstargets(element, ion, level);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-      // const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      // const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon(element, ion, level);
       const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
 
       const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
@@ -316,9 +313,8 @@ void do_macroatom_ionisation(const int modelgridindex, const int element, int *c
 
 }  // anonymous namespace
 
-__host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
-/// Material for handling activated macro atoms.
-{
+// handle activated macro atoms
+__host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate) {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
   const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   assert_testmodeonly(nonemptymgi >= 0);
@@ -641,8 +637,6 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
   }
 }
 
-/// Calculation of radiative rates ///////////////////////////////////////////////////////
-
 void macroatom_open_file(const int my_rank) {
   if constexpr (!LOG_MACROATOM) {
     return;
@@ -662,12 +656,11 @@ void macroatom_close_file() {
   }
 }
 
-auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int upper,
-                                const int lower, const double epsilon_trans, const float A_ul,
-                                const double upperstatweight, const double t_current) -> double
 /// radiative deexcitation rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
-{
+auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int upper,
+                                const int lower, const double epsilon_trans, const float A_ul,
+                                const double upperstatweight, const double t_current) -> double {
   assert_always(upper > lower);
 
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
@@ -709,12 +702,11 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
   return R;
 }
 
-auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
-                              const int uptransindex, const double epsilon_trans, const int lineindex,
-                              const double t_current) -> double
 /// radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
-{
+auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
+                              const int uptransindex, const double epsilon_trans, const int lineindex,
+                              const double t_current) -> double {
   const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].targetlevelindex;
 
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
@@ -750,11 +742,10 @@ auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const
   return 0.;
 }
 
-auto rad_recombination_ratecoeff(const float T_e, const float nne, const int element, const int upperion,
-                                 const int upperionlevel, const int lowerionlevel, const int modelgridindex) -> double
 /// radiative recombination rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
-{
+auto rad_recombination_ratecoeff(const float T_e, const float nne, const int element, const int upperion,
+                                 const int upperionlevel, const int lowerionlevel, const int modelgridindex) -> double {
   // it's probably faster to only check this condition outside this function
   // in a case where this wasn't checked, the function will return zero anyway
   // if (upperionlevel > get_maxrecombininglevel(element, upperion))
@@ -800,10 +791,9 @@ auto stim_recombination_ratecoeff(const float nne, const int element, const int 
   return R;
 }
 
-auto col_recombination_ratecoeff(const int modelgridindex, const int element, const int upperion, const int upper,
-                                 const int lower, const double epsilon_trans) -> double
 // multiply by upper level population to get a rate per second
-{
+auto col_recombination_ratecoeff(const int modelgridindex, const int element, const int upperion, const int upper,
+                                 const int lower, const double epsilon_trans) -> double {
   // it's probably faster to only check this condition outside this function
   // in a case where this wasn't checked, the function will return zero anyway
   // if (upper > get_maxrecombininglevel(element, upperion))
@@ -842,11 +832,10 @@ auto col_recombination_ratecoeff(const int modelgridindex, const int element, co
   return 0.;
 }
 
-auto col_ionization_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
-                              const int phixstargetindex, const double epsilon_trans) -> double
 /// collisional ionization rate: paperII 3.5.1
 // multiply by lower level population to get a rate per second
-{
+auto col_ionization_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
+                              const int phixstargetindex, const double epsilon_trans) -> double {
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, lower));
 
@@ -875,10 +864,9 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
   return C;
 }
 
-auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, const int element,
-                                const int ion, const int upper, const LevelTransition &downtransition) -> double
 // multiply by upper level population to get a rate per second
-{
+auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, const int element,
+                                const int ion, const int upper, const LevelTransition &downtransition) -> double {
   const int lower = downtransition.targetlevelindex;
   const double upperstatweight = stat_weight(element, ion, upper);
   const double lowerstatweight = stat_weight(element, ion, lower);
@@ -926,11 +914,10 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
   return nne * 8.629e-6 * coll_str_thisline / upperstatweight / std::sqrt(T_e);
 }
 
+// multiply by lower level population to get a rate per second
 auto col_excitation_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
                               const int uptransindex, const double epsilon_trans,
-                              const double lowerstatweight) -> double
-// multiply by lower level population to get a rate per second
-{
+                              const double lowerstatweight) -> double {
   // assert_testmodeonly(i < get_nuptrans(element, ion, lower));
   double C = 0.;
   const double coll_strength = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].coll_str;
