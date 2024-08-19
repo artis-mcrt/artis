@@ -2797,13 +2797,6 @@ void nt_MPI_Bcast(const int modelgridindex, const int root, const int root_node_
 
     MPI_Bcast(nt_solution[modelgridindex].allions,
               static_cast<size_t>(get_includedions()) * sizeof(NonThermalSolutionIon), MPI_BYTE, root, MPI_COMM_WORLD);
-    // for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
-    //   auto &ntion = nt_solution[modelgridindex].allions[uniqueionindex];
-    //   MPI_Bcast(&ntion.fracdep_ionization_ion, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    //   MPI_Bcast(&ntion.eff_ionpot, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-    //   MPI_Bcast(ntion.prob_num_auger.data(), ntion.prob_num_auger.size(), MPI_FLOAT, root, MPI_COMM_WORLD);
-    //   MPI_Bcast(ntion.ionenfrac_num_auger.data(), ntion.prob_num_auger.size(), MPI_FLOAT, root, MPI_COMM_WORLD);
-    // }
 
     // communicate NT excitations
     MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list_size, 1, MPI_INT, root, MPI_COMM_WORLD);
