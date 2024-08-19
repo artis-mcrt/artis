@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <vector>
 
@@ -27,7 +28,7 @@ namespace kpkt {
 
 namespace {
 
-enum class CoolingType { FREEFREE, FREEBOUND, COLLEXC, COLLION };
+enum class CoolingType : std::uint8_t { FREEFREE, FREEBOUND, COLLEXC, COLLION };
 
 struct CellCacheCoolingList {
   CoolingType type;
