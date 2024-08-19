@@ -174,6 +174,9 @@ struct NonThermalCellSolution {
   float nneperion_when_solved{NAN};  // the nne when the solver was last run
 };
 
+// if not STORE_NT_SPECTRUM for each grid cell, keep one array for the current cell
+thread_local std::array<double, SFPTS> yfunc_current{};
+
 std::vector<NonThermalCellSolution> nt_solution;
 
 std::vector<double> deposition_rate_density;
@@ -2180,9 +2183,6 @@ void close_file() {
   gsl_vector_free(sourcevec);
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      if (STORE_NT_SPECTRUM) {
-        free(nt_solution[modelgridindex].yfunc);
-      }
       free(nt_solution[modelgridindex].allions);
     }
   }
@@ -2625,7 +2625,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   // printout("\n");
 
   if (!STORE_NT_SPECTRUM) {
-    nt_solution[modelgridindex].yfunc = static_cast<double *>(calloc(SFPTS, sizeof(double)));
+    nt_solution[modelgridindex].yfunc = yfunc_current.data();
   }
 
   gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
@@ -2643,7 +2643,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   analyse_sf_solution(modelgridindex, timestep, enable_sfexcitation);
 
   if (!STORE_NT_SPECTRUM) {
-    free(nt_solution[modelgridindex].yfunc);
+    nt_solution[modelgridindex].yfunc = nullptr;
   }
 }
 
