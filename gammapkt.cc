@@ -320,9 +320,8 @@ auto choose_f(const double xx, const double zrand) -> double
   return ftry;
 }
 
+// For Thomson scattering we can get the new angle from a random number very easily.
 auto thomson_angle() -> double {
-  // For Thomson scattering we can get the new angle from a random number very easily.
-
   const double B_coeff = (8. * rng_uniform()) - 4.;
 
   double t_coeff = sqrt((B_coeff * B_coeff) + 4);
@@ -340,9 +339,8 @@ auto thomson_angle() -> double {
   return mu;
 }
 
-[[nodiscard]] auto scatter_dir(const std::array<double, 3> dir_in, const double cos_theta) -> std::array<double, 3>
-// Routine for scattering a direction through angle theta.
-{
+// scattering a direction through angle theta.
+[[nodiscard]] auto scatter_dir(const std::array<double, 3> dir_in, const double cos_theta) -> std::array<double, 3> {
   // begin with setting the direction in coordinates where original direction
   // is parallel to z-hat.
 
@@ -379,9 +377,8 @@ auto thomson_angle() -> double {
   return dir_out;
 }
 
-void compton_scatter(Packet &pkt)
-// Routine to deal with physical Compton scattering event.
-{
+// handle physical Compton scattering event
+void compton_scatter(Packet &pkt) {
   //  printout("Compton scattering.\n");
 
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
@@ -476,9 +473,8 @@ void compton_scatter(Packet &pkt)
   }
 }
 
+// calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the observer reference frame
 auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
-  // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the observer reference frame
-
   double chi_cmf{NAN};
   // Start by working out the x-section in the co-moving frame.
 
@@ -574,9 +570,8 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
   return chi_rf;
 }
 
+// calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
 auto sigma_pair_prod_rf(const Packet &pkt) -> double {
-  // calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
-
   const int mgi = grid::get_cell_modelgridindex(pkt.where);
   const double rho = grid::get_rho(mgi);
 
@@ -637,10 +632,8 @@ auto sigma_pair_prod_rf(const Packet &pkt) -> double {
   return chi_rf;
 }
 
-constexpr auto meanf_sigma(const double x) -> double
-// Routine to compute the mean energy converted to non-thermal electrons times
-// the Klein-Nishina cross section.
-{
+// Routine to compute the mean energy converted to non-thermal electrons times the Klein-Nishina cross section.
+constexpr auto meanf_sigma(const double x) -> double {
   const double f = 1 + (2 * x);
 
   const double term0 = 2 / x;
@@ -654,15 +647,13 @@ constexpr auto meanf_sigma(const double x) -> double
   return tot;
 }
 
+// Subroutine to record the heating rate in a cell due to gamma rays.
+// By heating rate I mean, for now, really the rate at which the code is making
+// k-packets in that cell which will then convert into r-packets. This is (going
+// to be) used for the new light_curve syn-style calculation.
+// The intention is that dep_estimator_gamma will contain the emissivity of r-packets
+// in the co-moving frame (which is going to be isotropic).
 void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const int nonemptymgi) {
-  // Subroutine to record the heating rate in a cell due to gamma rays.
-  // By heating rate I mean, for now, really the rate at which the code is making
-  // k-packets in that cell which will then convert into r-packets. This is (going
-  // to be) used for the new light_curve syn-style calculation.
-
-  // The intention is that dep_estimator_gamma will contain the emissivity of r-packets
-  // in the co-moving frame (which is going to be isotropic).
-
   if (!(dist > 0)) {
     return;
   }
@@ -688,15 +679,14 @@ void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const
   atomicadd(globals::dep_estimator_gamma[nonemptymgi], heating_cont);
 }
 
+// handle physical pair production event
+//
+//  In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
+//  gamma ray energy - 1.022 MeV. We assume that the electron deposits any kinetic energy directly to
+//  the thermal pool. The positron annihilates with an electron locally making a pair of gamma rays
+//  at 0.511 MeV in the local cmf (isotropic). So all the thermal energy goes to the thermal pool
+//  immediately and the remainder goes into gamma-rays at 0.511 MeV.
 void pair_prod(Packet &pkt) {
-  // Routine to deal with pair production.
-
-  //  In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
-  //  gamma ray energy - 1.022 MeV. We assume that the electron deposits any kinetic energy directly to
-  //  the thermal pool. The positron annihilates with an electron locally making a pair of gamma rays
-  //  at 0.511 MeV in the local cmf (isotropic). So all the thermal energy goes to the thermal pool
-  //  immediately and the remainder goes into gamma-rays at 0.511 MeV.
-
   const double prob_gamma = 1.022 * MEV / (H * pkt.nu_cmf);
 
   if (prob_gamma < 0) {
@@ -736,11 +726,8 @@ void pair_prod(Packet &pkt) {
   }
 }
 
-void transport_gamma(Packet &pkt, const double t2)
-// Now routine for moving a gamma packet. Idea is that we have as input
-// a gamma packet with known properties at time t1 and we want to follow it
-// until time t2.
-{
+// move a gamma packet until time t2
+void transport_gamma(Packet &pkt, const double t2) {
   // Assign optical depth to next physical event. And start counter of
   // optical depth for this path.
   const double zrand = rng_uniform_pos();
@@ -1045,11 +1032,8 @@ void init_gamma_data() {
   }
 }
 
+// convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
 __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
-  // Subroutine to convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
-
-  // pkt is a pointer to the packet that is decaying.
-
   // Start by getting the position of the pellet at the point of decay. Pellet
   // is moving with the matter.
 

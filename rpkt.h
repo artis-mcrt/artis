@@ -45,7 +45,7 @@ void MPI_Bcast_binned_opacities(int modelgridindex, int root_node_id);
   // distance from packet position to redshifting into line at frequency nu_trans
 
   if (nu_cmf <= nu_trans) {
-    return 0;  /// photon was propagated too far, make sure that we don't miss a line
+    return 0;  // photon was propagated too far, make sure that we don't miss a line
   }
 
   if constexpr (USE_RELATIVISTIC_DOPPLER_SHIFT) {

@@ -39,7 +39,7 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
   std::vector<double> gamma_light_curve_lum(globals::ntimesteps, 0.);
   std::vector<double> gamma_light_curve_lumcmf(globals::ntimesteps, 0.);
 
-  /// Set up the spectrum grid and initialise the bins to zero.
+  // Set up the spectrum grid and initialise the bins to zero.
   init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
 
   if constexpr (POL_ON) {
@@ -208,7 +208,7 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
 
   printout("Begining exspec.\n");
 
-  /// Get input stuff
+  // Get input stuff
   printout("time before input %ld\n", std::time(nullptr));
   input(globals::rank_global);
   printout("time after input %ld\n", std::time(nullptr));

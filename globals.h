@@ -81,61 +81,61 @@ struct LevelTransition {
 };
 
 struct EnergyLevel {
-  double epsilon{-1};            /// Excitation energy of this level relative to the neutral ground level.
-  LevelTransition *uptrans{};    /// Allowed upward transitions from this level
-  LevelTransition *downtrans{};  /// Allowed downward transitions from this level
+  double epsilon{-1};            // Excitation energy of this level relative to the neutral ground level.
+  LevelTransition *uptrans{};    // Allowed upward transitions from this level
+  LevelTransition *downtrans{};  // Allowed downward transitions from this level
   int nuptrans{0};
   int ndowntrans{0};
-  PhotoionTarget *phixstargets{};  /// pointer to table of target states and probabilities
-  float *photoion_xs{};   /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
-  int nphixstargets{0};   /// length of phixstargets array:
-  float stat_weight{0.};  /// Statistical weight of this level.
+  PhotoionTarget *phixstargets{};  // pointer to table of target states and probabilities
+  float *photoion_xs{};            // Pointer to a lookup-table providing photoionisation cross-sections for this level.
+  int nphixstargets{0};            // length of phixstargets array:
+  float stat_weight{0.};           // Statistical weight of this level.
 
-  int cont_index{-1};  /// Index of the continuum associated to this level. Negative number.
+  int cont_index{-1};  // Index of the continuum associated to this level. Negative number.
   int closestgroundlevelcont{-1};
   bool metastable{};  ///
 };
 
 struct Ion {
-  EnergyLevel *levels;      /// Carries information for each level: 0,1,...,nlevels-1
-  int ionstage;             /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
-  int nlevels;              /// Number of levels for this ionisation stage
-  int nlevels_nlte;         /// number of nlte levels for this ion
-  int first_nlte;           /// index into nlte_pops array of a grid cell
-  int ionisinglevels;       /// Number of levels which have a bf-continuum
-  int maxrecombininglevel;  /// level index of the highest level with a non-zero recombination rate
+  EnergyLevel *levels;      // Carries information for each level: 0,1,...,nlevels-1
+  int ionstage;             // Which ionisation stage: XI=0, XII=1, XIII=2, ...
+  int nlevels;              // Number of levels for this ionisation stage
+  int nlevels_nlte;         // number of nlte levels for this ion
+  int first_nlte;           // index into nlte_pops array of a grid cell
+  int ionisinglevels;       // Number of levels which have a bf-continuum
+  int maxrecombininglevel;  // level index of the highest level with a non-zero recombination rate
   int nlevels_groundterm;
   int coolingoffset;
   int ncoolingterms;
   int uniquelevelindexstart;
   int groundcontindex;
   float *Alpha_sp;
-  double ionpot;  /// Ionisation threshold to the next ionstage
+  double ionpot;  // Ionisation threshold to the next ionstage
   // int nbfcontinua;
   // ionsphixslist *phixslist;
 };
 
 struct Element {
-  Ion *ions{};      /// Carries information for each ion: 0,1,...,nions-1
-  int nions{0};     /// Number of ions for the current element
-  int anumber{-1};  /// Atomic number
-  //  int uppermost_ion;                       /// Highest ionisation stage which has a decent population for a given
+  Ion *ions{};      // Carries information for each ion: 0,1,...,nions-1
+  int nions{0};     // Number of ions for the current element
+  int anumber{-1};  // Atomic number
+  //  int uppermost_ion;                       // Highest ionisation stage which has a decent population for a given
   //  cell
-  /// Be aware that this must not be used outside of the update_grid routine
-  /// and their daughters. Neither it will work with OpenMP threads.
-  int uniqueionindexstart{-1};         /// Index of the lowest ionisation stage of this element
-  float initstablemeannucmass = {0.};  /// Atomic mass number in multiple of MH
+  // Be aware that this must not be used outside of the update_grid routine
+  // and their daughters. Neither it will work with OpenMP threads.
+  int uniqueionindexstart{-1};         // Index of the lowest ionisation stage of this element
+  float initstablemeannucmass = {0.};  // Atomic mass number in multiple of MH
   bool has_nlte_levels{false};
 };
 
 struct TransitionLine {
-  double nu;  /// Frequency of the line transition
+  double nu;  // Frequency of the line transition
   float einstein_A;
-  int elementindex;     /// It's a transition of element (not its atomic number,
-                        /// but the (x-1)th element included in the simulation.
-  int ionindex;         /// The same for the elements ion
-  int upperlevelindex;  /// And the participating upper
-  int lowerlevelindex;  /// and lower levels
+  int elementindex;     // It's a transition of element (not its atomic number,
+                        // but the (x-1)th element included in the simulation.
+  int ionindex;         // The same for the elements ion
+  int upperlevelindex;  // And the participating upper
+  int lowerlevelindex;  // and lower levels
 };
 
 struct GSLIntegrationParas {
@@ -158,23 +158,23 @@ struct chphixstargets<true> {
 using CellCachePhixsTargets = chphixstargets<SEPARATE_STIMRECOMB>;
 
 enum ma_action {
-  /// Radiative deexcitation rate from this level.
+  // Radiative deexcitation rate from this level.
   MA_ACTION_RADDEEXC = 0,
-  /// Collisional deexcitation rate from this level.
+  // Collisional deexcitation rate from this level.
   MA_ACTION_COLDEEXC = 1,
-  /// Radiative recombination from this level.
+  // Radiative recombination from this level.
   MA_ACTION_RADRECOMB = 2,
-  /// Collisional recombination rate from this level.
+  // Collisional recombination rate from this level.
   MA_ACTION_COLRECOMB = 3,
-  /// Rate for internal downward transitions to same ionisation stage.
+  // Rate for internal downward transitions to same ionisation stage.
   MA_ACTION_INTERNALDOWNSAME = 4,
-  /// Rate for internal upward transitions to same ionisation stage.
+  // Rate for internal upward transitions to same ionisation stage.
   MA_ACTION_INTERNALDOWNLOWER = 5,
-  /// Rate for internal downward transitions to lower ionisation stage.
+  // Rate for internal downward transitions to lower ionisation stage.
   MA_ACTION_INTERNALUPSAME = 6,
-  /// Rate for internal upward transitions to higher ionisation stage.
+  // Rate for internal upward transitions to higher ionisation stage.
   MA_ACTION_INTERNALUPHIGHER = 7,
-  /// Rate for internal upward transitions to higher ionisation stage due to non-thermal collisions.
+  // Rate for internal upward transitions to higher ionisation stage due to non-thermal collisions.
   MA_ACTION_INTERNALUPHIGHERNT = 8,
   MA_ACTION_COUNT = 9,
 };
@@ -189,20 +189,20 @@ struct CellCacheLevels {
 };
 
 struct CellCacheIons {
-  CellCacheLevels *chlevels;  /// Pointer to the ions levellist.
+  CellCacheLevels *chlevels;  // Pointer to the ions levellist.
 };
 
 struct CellCacheElements {
-  CellCacheIons *chions;  /// Pointer to the elements ionlist.
+  CellCacheIons *chions;  // Pointer to the elements ionlist.
 };
 
 struct CellCache {
-  double *cooling_contrib{};  /// Cooling contributions by the different processes.
+  double *cooling_contrib{};  // Cooling contributions by the different processes.
   CellCacheElements *chelements{};
   std::vector<CellCacheLevels> ch_all_levels;
   std::vector<double> ch_allcont_departureratios;
   double chi_ff_nnionpart{-1};
-  int cellnumber{-1};  /// Identifies the cell the data is valid for.
+  int cellnumber{-1};  // Identifies the cell the data is valid for.
 };
 
 namespace globals {
@@ -258,7 +258,7 @@ inline int opacity_case{};  // 0 grey, 1 for Fe-grp dependence.
                             // MK: 3 combination of 1 & 2 depending on a rho_crit
                             // MK: 4 non-grey treatment
 
-/// ATOMIC DATA
+// ATOMIC DATA
 
 inline int nlines{-1};
 inline std::vector<Element> elements;

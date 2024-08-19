@@ -235,7 +235,7 @@ void read_binding_energies() {
     assert_always(get_noncommentline(binding_energies_file, line));
     std::istringstream ssline(line);
     int z_element = elemindex + 1;
-    /// new file as an atomic number column
+    // new file as an atomic number column
     if (binding_en_newformat) {
       ssline >> z_element;
     }
@@ -928,7 +928,7 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
   }
 
   const int num_shells = electron_binding[get_atomicnumber(element) - 1].size();
-  auto q = std::array<int, NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE ? 0 : 10>{0};
+  auto q = std::array < int, NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE ? 0 : 10 > {0};
 
   if (!NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
     for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {

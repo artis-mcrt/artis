@@ -28,11 +28,11 @@
 namespace {
 
 void place_pellet(const double e0, const int cellindex, const int pktnumber, Packet &pkt)
-/// This subroutine places pellet n with energy e0 in cell m
+// This subroutine places pellet n with energy e0 in cell m
 {
-  /// First choose a position for the pellet. In the cell.
+  // First choose a position for the pellet. In the cell.
   pkt.where = cellindex;
-  pkt.number = pktnumber;  /// record the packets number for debugging
+  pkt.number = pktnumber;  // record the packets number for debugging
   pkt.prop_time = globals::tmin;
   // pkt.last_cross = BOUNDARY_NONE;
   pkt.originated_from_particlenotgamma = false;
@@ -89,7 +89,7 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
 }  // anonymous namespace
 
 void packet_init(Packet *pkt)
-/// Subroutine that initialises the packets if we start a new simulation.
+// Subroutine that initialises the packets if we start a new simulation.
 {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
@@ -98,8 +98,8 @@ void packet_init(Packet *pkt)
 
   printout("INITIAL_PACKETS_ON is %s\n", (INITIAL_PACKETS_ON ? "on" : "off"));
 
-  /// The total number of pellets that we want to start with is just
-  /// npkts. The total energy of the pellets is given by etot.
+  // The total number of pellets that we want to start with is just
+  // npkts. The total energy of the pellets is given by etot.
   const double etot_tinf = decay::get_global_etot_t0_tinf();
 
   printout("etot %g (t_0 to t_inf)\n", etot_tinf);
@@ -128,7 +128,7 @@ void packet_init(Packet *pkt)
   assert_always(norm > 0);
 
   const double etot = norm;
-  /// So energy per pellet is
+  // So energy per pellet is
   const double e0 = etot / globals::npkts;
   printout("packet e0 (in time range) %g erg\n", e0);
 

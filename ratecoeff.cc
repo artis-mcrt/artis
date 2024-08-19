@@ -53,11 +53,11 @@ char compositionfile_hash[33];
 std::array<char[33], 3> phixsfile_hash;
 
 auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
-/// Try to read in the precalculated rate coefficients from file
-/// return true if successful or false otherwise
+// Try to read in the precalculated rate coefficients from file
+// return true if successful or false otherwise
 {
-  /// Check whether current atomic data and temperature range match
-  /// the precalculated rate coefficients
+  // Check whether current atomic data and temperature range match
+  // the precalculated rate coefficients
 
   char adatafile_hash_in[33] = "UNKNOWN";
   if (fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in) != 1) {
@@ -169,14 +169,14 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
     const int nions = get_nions(element) - 1;
     for (int ion = 0; ion < nions; ion++) {
       // nlevels = get_nlevels(element,ion);
-      const int nlevels = get_ionisinglevels(element, ion);  /// number of ionising levels associated with current ion
-      // int nbfcont = get_ionisinglevels(element,ion);     /// number of ionising levels of the current ion which
+      const int nlevels = get_ionisinglevels(element, ion);  // number of ionising levels associated with current ion
+      // int nbfcont = get_ionisinglevels(element,ion);     // number of ionising levels of the current ion which
       // are used in the simulation
       for (int level = 0; level < nlevels; level++) {
-        /// Loop over the phixs target states
+        // Loop over the phixs target states
         const int nphixstargets = get_nphixstargets(element, ion, level);
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          /// Loop over the temperature grid
+          // Loop over the temperature grid
           for (int iter = 0; iter < TABLESIZE; iter++) {
             double in_alpha_sp{NAN};
             double in_bfcooling_coeff{NAN};
@@ -244,10 +244,10 @@ void write_ratecoeff_dat() {
       // nlevels = get_nlevels(element,ion);
       const int nlevels = get_ionisinglevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
-        /// Loop over the phixs targets
+        // Loop over the phixs targets
         const auto nphixstargets = get_nphixstargets(element, ion, level);
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          /// Loop over the temperature grid
+          // Loop over the temperature grid
           for (int iter = 0; iter < TABLESIZE; iter++) {
             const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
 
@@ -263,23 +263,23 @@ void write_ratecoeff_dat() {
 }
 
 auto alpha_sp_integrand_gsl(const double nu, void *const voidparas) -> double
-/// Integrand to calculate the rate coefficient for spontaneous recombination
-/// using gsl integrators.
+// Integrand to calculate the rate coefficient for spontaneous recombination
+// using gsl integrators.
 {
   const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 2) * exp(-HOVERKB * nu / params->T);
-  /// in formula this looks like
-  /// x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
+  // in formula this looks like
+  // x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
 
-  /// set contributions from Lyman continuum artificially to zero to overcome it's large opacity
+  // set contributions from Lyman continuum artificially to zero to overcome it's large opacity
   return x;
 }
 
 auto alpha_sp_E_integrand_gsl(const double nu, void *const voidparas) -> double
-/// Integrand to calculate the rate coefficient for spontaneous recombination
-/// using gsl integrators.
+// Integrand to calculate the rate coefficient for spontaneous recombination
+// using gsl integrators.
 {
   const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
@@ -288,16 +288,16 @@ auto alpha_sp_E_integrand_gsl(const double nu, void *const voidparas) -> double
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 3) / nu_edge * exp(-HOVERKB * nu / T);
-  /// in formula this looks like
-  /// x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
+  // in formula this looks like
+  // x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
 
-  /// set contributions from Lyman continuum artificially to zero to overcome it's large opacity
+  // set contributions from Lyman continuum artificially to zero to overcome it's large opacity
   return x;
 }
 
 auto gammacorr_integrand_gsl(const double nu, void *const voidparas) -> double
-/// Integrand to calculate the rate coefficient for photoionization
-/// using gsl integrators. Corrected for stimulated recombination.
+// Integrand to calculate the rate coefficient for photoionization
+// using gsl integrators. Corrected for stimulated recombination.
 {
   const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
@@ -306,17 +306,17 @@ auto gammacorr_integrand_gsl(const double nu, void *const voidparas) -> double
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
-  /// Dependence on dilution factor W is linear. This allows to set it here to
-  /// 1. and scale to its actual value later on.
-  /// Assumption T_e = T_R makes n_kappa/n_i * (n_i/n_kappa)* = 1
+  // Dependence on dilution factor W is linear. This allows to set it here to
+  // 1. and scale to its actual value later on.
+  // Assumption T_e = T_R makes n_kappa/n_i * (n_i/n_kappa)* = 1
   return sigma_bf * ONEOVERH / nu * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
 }
 
 auto approx_bfheating_integrand_gsl(const double nu, void *const voidparas) -> double
-/// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
-/// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
-/// formula. The radiation fields dependence on W is taken into account by multiplying
-/// the resulting expression with the correct W later on.
+// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
+// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
+// formula. The radiation fields dependence on W is taken into account by multiplying
+// the resulting expression with the correct W later on.
 {
   const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
@@ -325,17 +325,17 @@ auto approx_bfheating_integrand_gsl(const double nu, void *const voidparas) -> d
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
-  /// Precalculation for T_e=T_R and W=1
+  // Precalculation for T_e=T_R and W=1
   const double x = sigma_bf * (1 - nu_edge / nu) * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
 
   return x;
 }
 
 auto bfcooling_integrand_gsl(const double nu, void *const voidparas) -> double
-/// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
-/// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
-/// formula. The radiation fields dependence on W is taken into account by multiplying
-/// the resulting expression with the correct W later on.
+// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
+// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
+// formula. The radiation fields dependence on W is taken into account by multiplying
+// the resulting expression with the correct W later on.
 {
   const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
@@ -352,7 +352,7 @@ void precalculate_rate_coefficient_integrals() {
   // target fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
   const double epsrelwarning = 1e-2;  // fractional error to emit a warning
 
-  /// Calculate the rate coefficients for each level of each ion of each element
+  // Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element) - 1;
 #ifdef _OPENMP
@@ -402,7 +402,7 @@ void precalculate_rate_coefficient_integrals() {
                 .T = T_e,
                 .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs};
 
-            /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
+            // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
             double alpha_sp = 0.;
 
             status =
@@ -736,8 +736,8 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
 }
 
 auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const voidparas) -> double
-/// Integrand to calculate the rate coefficient for photoionization
-/// using gsl integrators. Corrected for stimulated recombination.
+// Integrand to calculate the rate coefficient for photoionization
+// using gsl integrators. Corrected for stimulated recombination.
 {
   const gsl_integral_paras_gammacorr *const params = static_cast<gsl_integral_paras_gammacorr *>(voidparas);
   const int modelgridindex = params->modelgridindex;
@@ -985,7 +985,7 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
 
 __host__ __device__ auto get_spontrecombcoeff(int element, const int ion, const int level, const int phixstargetindex,
                                               float T_e) -> double
-/// Returns the rate coefficient for spontaneous recombination.
+// Returns the rate coefficient for spontaneous recombination.
 {
   double Alpha_sp{NAN};
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
@@ -1108,15 +1108,15 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
 }
 
 void ratecoefficients_init()
-/// Precalculates the rate coefficients for stimulated and spontaneous
-/// recombination and photoionisation on a given temperature grid using
-/// libgsl integrators.
-/// NB: with the nebular approximation they only depend on T_e, T_R and W.
-/// W is easily factored out. For stimulated recombination we must assume
-/// T_e = T_R for this precalculation.
+// Precalculates the rate coefficients for stimulated and spontaneous
+// recombination and photoionisation on a given temperature grid using
+// libgsl integrators.
+// NB: with the nebular approximation they only depend on T_e, T_R and W.
+// W is easily factored out. For stimulated recombination we must assume
+// T_e = T_R for this precalculation.
 {
   printout("time before tabulation of rate coefficients %ld\n", std::time(nullptr));
-  /// Determine the temperture grids gridsize
+  // Determine the temperture grids gridsize
   T_step_log = (log(MAXTEMP) - log(MINTEMP)) / (TABLESIZE - 1.);
 
   md5_file("adata.txt", adatafile_hash);
@@ -1127,7 +1127,7 @@ void ratecoefficients_init()
     }
   }
 
-  /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
+  // Check if we need to calculate the ratecoefficients or if we were able to read them from file
   bool ratecoeff_match = false;
   if (globals::rank_in_node == 0) {
     FILE *ratecoeff_file = fopen("ratecoeff.dat", "r");
@@ -1186,12 +1186,12 @@ auto interpolate_corrphotoioncoeff(const int element, const int ion, const int l
 
 auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex,
                                const int modelgridindex) -> double
-/// Returns the for stimulated emission corrected photoionisation rate coefficient.
+// Returns the for stimulated emission corrected photoionisation rate coefficient.
 {
   assert_always(USE_LUT_PHOTOION);
-  /// The correction factor for stimulated emission in gammacorr is set to its
-  /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  /// correction may be evaluated at T_R!
+  // The correction factor for stimulated emission in gammacorr is set to its
+  // LTE value. Because the T_e dependence of gammacorr is weak, this correction
+  // correction may be evaluated at T_R!
   const double W = grid::get_W(modelgridindex);
   const double T_R = grid::get_TR(modelgridindex);
 
@@ -1200,7 +1200,7 @@ auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, cons
 
 auto get_stimrecombcoeff(int element, const int lowerion, const int level, const int phixstargetindex,
                          const int modelgridindex) -> double
-/// Returns the stimulated recombination rate coefficient
+// Returns the stimulated recombination rate coefficient
 // multiple by upper level population and nne to get rate
 {
   double stimrecombcoeff = -1.;
@@ -1251,11 +1251,11 @@ __host__ __device__ auto get_bfcoolingcoeff(const int element, const int ion, co
 
 __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion, const int level,
                                                const int phixstargetindex, const int modelgridindex) -> double
-/// Returns the photoionisation rate coefficient (corrected for stimulated emission)
+// Returns the photoionisation rate coefficient (corrected for stimulated emission)
 {
-  /// The correction factor for stimulated emission in gammacorr is set to its
-  /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  /// correction may be evaluated at T_R!
+  // The correction factor for stimulated emission in gammacorr is set to its
+  // LTE value. Because the T_e dependence of gammacorr is weak, this correction
+  // correction may be evaluated at T_R!
   double gammacorr = (use_cellcache) ? globals::cellcache[cellcacheslotid]
                                            .chelements[element]
                                            .chions[ion]

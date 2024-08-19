@@ -53,7 +53,7 @@ constexpr bool USE_MODEL_INITIAL_ENERGY;
 // record counts of emissions and absorptions in each line
 constexpr bool RECORD_LINESTAT;
 
-/// Rate coefficients
+// Rate coefficients
 constexpr int TABLESIZE;
 constexpr double MINTEMP;
 constexpr double MAXTEMP;
@@ -74,8 +74,8 @@ constexpr bool TRACK_ION_STATS;
 
 constexpr double MINPOP;
 
-constexpr double NU_MIN_R;  /// lower frequency boundary for UVOIR spectra and BB sampling
-constexpr double NU_MAX_R;  /// upper frequency boundary for UVOIR spectra and BB sampling
+constexpr double NU_MIN_R;  // lower frequency boundary for UVOIR spectra and BB sampling
+constexpr double NU_MAX_R;  // upper frequency boundary for UVOIR spectra and BB sampling
 
 // ** Start of radiation field model options **
 

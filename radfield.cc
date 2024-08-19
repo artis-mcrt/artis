@@ -355,7 +355,7 @@ auto find_T_R(const int modelgridindex, const int binindex) -> float {
   paras.modelgridindex = modelgridindex;
   paras.binindex = binindex;
 
-  /// Check whether the equation has a root in [T_min,T_max]
+  // Check whether the equation has a root in [T_min,T_max]
   double delta_nu_bar_min = delta_nu_bar(T_R_min, &paras);
   double delta_nu_bar_max = delta_nu_bar(T_R_max, &paras);
 
@@ -367,7 +367,7 @@ auto find_T_R(const int modelgridindex, const int binindex) -> float {
   }
 
   if (delta_nu_bar_min * delta_nu_bar_max < 0) {
-    /// If there is a root in the interval, solve for T_R
+    // If there is a root in the interval, solve for T_R
 
     const double epsrel = 1e-4;
     const double epsabs = 0.;
@@ -375,7 +375,7 @@ auto find_T_R(const int modelgridindex, const int binindex) -> float {
 
     gsl_function find_T_R_f = {.function = &delta_nu_bar, .params = &paras};
 
-    /// one dimensional gsl root solver, bracketing type
+    // one dimensional gsl root solver, bracketing type
     gsl_root_fsolver *T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
     gsl_root_fsolver_set(T_R_solver, &find_T_R_f, T_R_min, T_R_max);
     int status = 0;
@@ -401,8 +401,8 @@ auto find_T_R(const int modelgridindex, const int binindex) -> float {
 
     gsl_root_fsolver_free(T_R_solver);
   } else if (delta_nu_bar_max < 0) {
-    /// Thermal balance equation always negative ===> T_R = T_min
-    /// Calculate the rates again at this T_e to print them to file
+    // Thermal balance equation always negative ===> T_R = T_min
+    // Calculate the rates again at this T_e to print them to file
     T_R = T_R_max;
     printout("find_T_R: cell %d bin %4d no solution in interval, clamping to T_R_max=%g\n", modelgridindex, binindex,
              T_R_max);
@@ -656,8 +656,8 @@ void init(const int my_rank, const int ndo_nonempty)
   }
 }
 
-/// Initialise estimator arrays which hold the last time steps values (used to damp out
-/// fluctuations over timestep iterations if DO_TITER is defined) to -1.
+// Initialise estimator arrays which hold the last time steps values (used to damp out
+// fluctuations over timestep iterations if DO_TITER is defined) to -1.
 void initialise_prev_titer_photoionestimators() {
 #ifdef DO_TITER
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
@@ -1104,12 +1104,12 @@ auto get_T_J_from_J(const int modelgridindex) -> double {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   const double T_J = pow(J[nonemptymgi] * PI / STEBO, 1. / 4.);
   if (!std::isfinite(T_J)) {
-    /// keep old value of T_J
+    // keep old value of T_J
     printout("[warning] get_T_J_from_J: T_J estimator infinite in cell %d, use value of last timestep\n",
              modelgridindex);
     return grid::get_TR(modelgridindex);
   }
-  /// Make sure that T is in the allowed temperature range.
+  // Make sure that T is in the allowed temperature range.
   if (T_J > MAXTEMP) {
     printout("[warning] get_T_J_from_J: T_J would be %.1f > MAXTEMP. Clamping to MAXTEMP = %.0f K\n", T_J, MAXTEMP);
     return MAXTEMP;

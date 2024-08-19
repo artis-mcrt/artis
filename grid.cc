@@ -43,7 +43,7 @@ namespace {
 
 std::array<char, 3> coordlabel{'?', '?', '?'};
 
-std::array<int, 3> ncoordgrid{0};  /// propagation grid dimensions
+std::array<int, 3> ncoordgrid{0};  // propagation grid dimensions
 
 enum gridtypes model_type = GRID_SPHERICAL1D;
 size_t npts_model = 0;           // number of model grid cells
@@ -55,7 +55,7 @@ std::array<int, 3> ncoord_model{0};  // the model.txt input grid dimensions
 
 double min_den;  // minimum model density
 
-double mfegroup = 0.;  /// Total mass of Fe group elements in ejecta
+double mfegroup = 0.;  // Total mass of Fe group elements in ejecta
 
 int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
 
@@ -70,7 +70,7 @@ std::vector<int> mg_associated_cells;
 std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
 
-std::span<double> totmassradionuclide{};  /// total mass of each radionuclide in the ejecta
+std::span<double> totmassradionuclide{};  // total mass of each radionuclide in the ejecta
 
 #ifdef MPI_ON
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
@@ -273,7 +273,7 @@ void set_elem_untrackedstable_abund_from_total(const int mgi, const int element,
 }
 
 void allocate_nonemptycells_composition_cooling()
-/// Initialise composition dependent cell data for the given cell
+// Initialise composition dependent cell data for the given cell
 {
   const size_t npts_nonempty = get_nonempty_npts_model();
 
@@ -364,7 +364,7 @@ void allocate_nonemptycells_composition_cooling()
           std::span(&nltepops_allcells[nonemptymgi * globals::total_nlte_levels], globals::total_nlte_levels);
       assert_always(modelgrid[modelgridindex].nlte_pops.data() != nullptr);
 
-      /// -1 indicates that there is currently no information on the nlte populations
+      // -1 indicates that there is currently no information on the nlte populations
       std::ranges::fill(modelgrid[modelgridindex].nlte_pops, -1.);
     }
 
@@ -601,14 +601,14 @@ void abundances_read() {
   printout("reading abundances.txt...");
   const bool threedimensional = (get_model_type() == GRID_CARTESIAN3D);
 
-  /// Open the abundances file
+  // Open the abundances file
   auto abundance_file = fstream_required("abundances.txt", std::ios::in);
 
-  /// and process through the grid to read in the abundances per cell
-  /// The abundance file should only contain information for non-empty
-  /// cells. Its format must be cellnumber (integer), abundance for
-  /// element Z=1 (float) up to abundance for element Z=30 (float)
-  /// i.e. in total one integer and 30 floats.
+  // and process through the grid to read in the abundances per cell
+  // The abundance file should only contain information for non-empty
+  // cells. Its format must be cellnumber (integer), abundance for
+  // element Z=1 (float) up to abundance for element Z=30 (float)
+  // i.e. in total one integer and 30 floats.
 
   // loop over propagation cells for 3D models, or modelgrid cells
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
@@ -648,8 +648,8 @@ void abundances_read() {
       }
 
       for (int element = 0; element < get_nelements(); element++) {
-        /// now set the abundances (by mass) of included elements, i.e.
-        /// read out the abundances specified in the atomic data file
+        // now set the abundances (by mass) of included elements, i.e.
+        // read out the abundances specified in the atomic data file
         const int anumber = get_atomicnumber(element);
         const float elemabundance = abundances_in[anumber - 1] / normfactor;
         assert_always(elemabundance >= 0.);
@@ -937,7 +937,7 @@ void read_2d_model()
   std::istringstream(line) >> t_model_days;
   t_model = t_model_days * DAY;
 
-  /// Now read in vmax for the model (in cm s^-1).
+  // Now read in vmax for the model (in cm s^-1).
   assert_always(get_noncommentline(fmodel, line));
   std::istringstream(line) >> globals::vmax;
 
@@ -998,14 +998,14 @@ void read_2d_model()
 }
 
 void read_3d_model()
-/// Subroutine to read in a 3-D model.
+// Subroutine to read in a 3-D model.
 {
   auto fmodel = fstream_required("model.txt", std::ios::in);
 
   std::string line;
 
-  /// 1st read the number of data points in the table of input model.
-  /// This MUST be the same number as the maximum number of points used in the grid - if not, abort.
+  // 1st read the number of data points in the table of input model.
+  // This MUST be the same number as the maximum number of points used in the grid - if not, abort.
   int npts_model_in = 0;
   assert_always(get_noncommentline(fmodel, line));
   std::istringstream(line) >> npts_model_in;
@@ -1025,13 +1025,13 @@ void read_3d_model()
   std::istringstream(line) >> t_model_days;
   t_model = t_model_days * DAY;
 
-  /// Now read in vmax for the model (in cm s^-1).
+  // Now read in vmax for the model (in cm s^-1).
   assert_always(get_noncommentline(fmodel, line));
   std::istringstream(line) >> globals::vmax;
 
   const double xmax_tmodel = globals::vmax * t_model;
 
-  /// Now read in the lines of the model.
+  // Now read in the lines of the model.
   min_den = -1.;
 
   // check if expected positions match in either xyz or zyx column order
@@ -1158,7 +1158,7 @@ void calc_modelinit_totmassradionuclides() {
       cellvolume = pow(globals::tmin / t_model, 3) * dcoord_z * PI *
                    (pow((n_r + 1) * dcoord_rcyl, 2.) - pow(n_r * dcoord_rcyl, 2.));
     } else if (get_model_type() == GRID_CARTESIAN3D) {
-      /// Assumes cells are cubes here - all same volume.
+      // Assumes cells are cubes here - all same volume.
       cellvolume = pow((2 * globals::vmax * globals::tmin), 3.) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
     } else {
       printout("Unknown model type %d in function %s\n", get_model_type(), __func__);
@@ -1270,18 +1270,18 @@ void read_grid_restart_data(const int timestep) {
 }
 
 void assign_initial_temperatures()
-/// Routine for assigning temperatures to the grid cells at the start of the simulation.
+// Routine for assigning temperatures to the grid cells at the start of the simulation.
 {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
-  /// For a simulation started from scratch we estimate the initial temperatures
+  // For a simulation started from scratch we estimate the initial temperatures
 
-  /// We assume that for early times the material is so optically thick, that
-  /// all the radiation is trapped in the cell it originates from. This
-  /// means furthermore LTE, so that both temperatures can be evaluated
-  /// according to the local energy density resulting from the 56Ni decay.
-  /// The dilution factor is W=1 in LTE.
+  // We assume that for early times the material is so optically thick, that
+  // all the radiation is trapped in the cell it originates from. This
+  // means furthermore LTE, so that both temperatures can be evaluated
+  // according to the local energy density resulting from the 56Ni decay.
+  // The dilution factor is W=1 in LTE.
 
   printout("Assigning initial temperatures...\n");
 
@@ -1391,7 +1391,7 @@ void setup_nstart_ndo() {
 }
 
 void setup_grid_cartesian_3d()
-/// Routine for doing a uniform cuboidal grid.
+// Routine for doing a uniform cuboidal grid.
 {
   // vmax is per coordinate, but the simulation volume corners will
   // have a higher expansion velocity than the sides
@@ -1401,7 +1401,7 @@ void setup_grid_cartesian_3d()
     assert_always(vmax_corner < CLIGHT);
   }
 
-  /// Set grid size for uniform xyz grid
+  // Set grid size for uniform xyz grid
   if (get_model_type() == GRID_CARTESIAN3D) {
     // if we used in a 3D ejecta model, the propagation grid must match the input grid exactly
     ncoordgrid[0] = ncoord_model[0];
@@ -2131,7 +2131,7 @@ void calculate_kappagrey() {
     }
   }
 
-  /// Second pass through allows calculation of normalized chi_grey
+  // Second pass through allows calculation of normalized chi_grey
   double check1 = 0.;
   double check2 = 0.;
   for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
@@ -2141,7 +2141,7 @@ void calculate_kappagrey() {
       if (globals::opacity_case == 0) {
         kappa = globals::GREY_OP;
       } else if (globals::opacity_case == 1 || globals::opacity_case == 4) {
-        /// kappagrey used for initial grey approximation in case 4
+        // kappagrey used for initial grey approximation in case 4
         kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfegroup / mtot_input) + 0.1);
       } else if (globals::opacity_case == 2) {
         const double opcase2_normal = globals::GREY_OP * rho_sum / ((0.9 * fe_sum) + (0.1 * (ngrid - empty_cells)));
@@ -2341,10 +2341,10 @@ auto get_ndo_nonempty(const int rank) -> int {
 }
 
 void grid_init(const int my_rank)
-/// Initialises the propagation grid cells and associates them with modelgrid cells
+// Initialises the propagation grid cells and associates them with modelgrid cells
 {
-  /// The cells will be ordered by x then y, then z. Call a routine that
-  /// sets up the initial positions and widths of the cells.
+  // The cells will be ordered by x then y, then z. Call a routine that
+  // sets up the initial positions and widths of the cells.
 
   if (GRID_TYPE == GRID_CARTESIAN3D) {
     setup_grid_cartesian_3d();
@@ -2364,7 +2364,7 @@ void grid_init(const int my_rank)
   }
   printout("    total propagation cells: %d\n", ngrid);
 
-  /// Now set up the density in each cell.
+  // Now set up the density in each cell.
 
   // Calculate the critical opacity at which opacity_case 3 switches from a
   // regime proportional to the density to a regime independent of the density
@@ -2398,7 +2398,7 @@ void grid_init(const int my_rank)
     for (int n = 0; n < ngrid; n++) {
       const int mgi = get_cell_modelgridindex(n);
       if (mgi != get_npts_model()) {
-        fprintf(grid_file, "%d %d\n", n, mgi);  /// write only non-empty cells to grid file
+        fprintf(grid_file, "%d %d\n", n, mgi);  // write only non-empty cells to grid file
       }
     }
     fclose(grid_file);
@@ -2413,10 +2413,10 @@ void grid_init(const int my_rank)
   radfield::init(my_rank, ndo_nonempty);
   nonthermal::init(my_rank, ndo_nonempty);
 
-  /// and assign a temperature to the cells
+  // and assign a temperature to the cells
   if (globals::simulation_continued_from_saved) {
-    /// For continuation of an existing simulation we read the temperatures
-    /// at the end of the simulation and write them to the grid.
+    // For continuation of an existing simulation we read the temperatures
+    // at the end of the simulation and write them to the grid.
     read_grid_restart_data(globals::timestep_initial);
   } else {
     assign_initial_temperatures();
@@ -2425,7 +2425,6 @@ void grid_init(const int my_rank)
   // when mapping 1D spherical or 2D cylindrical model onto cubic grid, scale up the
   // radioactive abundances to account for the missing masses in
   // the model cells that are not associated with any propagation cells
-  // Luke: TODO: it's probably better to adjust the density instead of the abundances
   if (GRID_TYPE == GRID_CARTESIAN3D && get_model_type() == GRID_SPHERICAL1D && globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
       if (totmassradionuclide[nucindex] <= 0) {
@@ -2469,7 +2468,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 }
 
 [[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> pos, const double time) -> int
-/// identify the cell index from an (x,y,z) position and a time.
+// identify the cell index from an (x,y,z) position and a time.
 {
   auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
@@ -2490,7 +2489,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
                                                          const std::array<double, 3> pos, const double tstart,
                                                          const int cellindex,
                                                          enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>
-/// Basic routine to compute distance to a cell boundary.
+// Basic routine to compute distance to a cell boundary.
 {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {

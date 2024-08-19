@@ -144,8 +144,8 @@ template <size_t S1, size_t S2>
 constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, const std::array<double, 3> dir_rf, double &prop_time,
                                  const double nu_rf, double &nu_cmf, const double e_rf, double &e_cmf,
                                  const double distance) -> double
-/// Subroutine to move a packet along a straight line (specified by current
-/// dir vector). The distance moved is in the rest frame.
+// Subroutine to move a packet along a straight line (specified by current
+// dir vector). The distance moved is in the rest frame.
 {
   assert_always(distance >= 0);
 
@@ -156,8 +156,8 @@ constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, const std::array<d
   pos_rf[1] += (dir_rf[1] * distance);
   pos_rf[2] += (dir_rf[2] * distance);
 
-  /// During motion, rest frame energy and frequency are conserved.
-  /// But need to update the co-moving ones.
+  // During motion, rest frame energy and frequency are conserved.
+  // But need to update the co-moving ones.
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pos_rf, dir_rf, prop_time);
 
   nu_cmf = nu_rf * dopplerfactor;
@@ -175,9 +175,9 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 }
 
 [[nodiscard]] [[gnu::const]] constexpr auto get_arrive_time(const Packet &pkt) -> double
-/// We know that a packet escaped at "escape_time". However, we have
-/// to allow for travel time. Use the formula in Leon's paper. The extra
-/// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
+// We know that a packet escaped at "escape_time". However, we have
+// to allow for travel time. Use the formula in Leon's paper. The extra
+// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
 {
   return pkt.escape_time - (dot(pkt.pos, pkt.dir) / CLIGHT_PROP);
 }
@@ -190,7 +190,7 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   const double dirmag = vec_len(dir_in);
   const auto dir = std::array<double, 3>{dir_in[0] / dirmag, dir_in[1] / dirmag, dir_in[2] / dirmag};
 
-  /// Angle resolved case: need to work out the correct angle bin
+  // Angle resolved case: need to work out the correct angle bin
   const double costheta = dot(dir, syn_dir);
   const int costhetabin = static_cast<int>((costheta + 1.0) * NPHIBINS / 2.0);
   assert_testmodeonly(costhetabin < NCOSTHETABINS);
