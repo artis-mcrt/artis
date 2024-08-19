@@ -465,10 +465,9 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
   return ionfractions;
 }
 
-auto get_groundlevelpop(const int modelgridindex, const int element, const int ion) -> double
-// Returns the given ions groundlevel population for modelgridindex which was precalculated
+// Return the given ions groundlevel population for modelgridindex which was precalculated
 // during update_grid and stored to the grid.
-{
+auto get_groundlevelpop(const int modelgridindex, const int element, const int ion) -> double {
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
@@ -534,14 +533,11 @@ __host__ __device__ auto get_levelpop(const int modelgridindex, const int elemen
   return nn;
 }
 
-void calculate_cellpartfuncts(const int modelgridindex, const int element)
 // The partition functions depend only on T_R and W. This means they don't
 // change during any iteration on T_e. Therefore their precalculation was
 // taken out of calculate_ion_balance_nne to save runtime.
 // TODO: not true if LTEPOP_EXCITATION_USE_TJ is true unless LTE mode only (TJ=TR=Te)
-{
-  // Precalculate partition functions for each ion in every cell
-  // this saves a factor 10 in calculation time of Saha-Boltzman populations
+void calculate_cellpartfuncts(const int modelgridindex, const int element) {
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++) {
     grid::modelgrid[modelgridindex].ion_partfuncts[get_uniqueionindex(element, ion)] =
@@ -567,17 +563,16 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
   return sf;
 }
 
-[[nodiscard]] __host__ __device__ auto get_nnion(const int modelgridindex, const int element, const int ion) -> double
 // Use the ground level population and partition function to get an ion population
-{
+[[nodiscard]] __host__ __device__ auto get_nnion(const int modelgridindex, const int element, const int ion) -> double {
   return get_groundlevelpop(modelgridindex, element, ion) *
          grid::modelgrid[modelgridindex].ion_partfuncts[get_uniqueionindex(element, ion)] /
          stat_weight(element, ion, 0);
 }
 
+// If not already set by the NLTE solver, set the ground level populations from either Saha LTE or
+// ionization/recombination balance (Photoionization Equilibrium)
 void set_groundlevelpops(const int modelgridindex, const int element, const float nne, const bool force_lte) {
-  // If not already set by the NLTE solver, set the ground level populations from either Saha LTE or
-  // ionization/recombination balance (Photoionization Equilibrium)
   const int nions = get_nions(element);
 
   if (nions <= 0) {

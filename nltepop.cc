@@ -32,10 +32,9 @@ FILE *nlte_file{};
 // can save memory by using a combined rate matrix at the cost of diagnostic information
 constexpr bool individual_process_matricies = true;
 
-auto get_nlte_vector_index(const int element, const int ion, const int level) -> int
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
-{
+auto get_nlte_vector_index(const int element, const int ion, const int level) -> int {
   // have to convert from nlte_pops index to nlte_vector index
   // the difference is that nlte vectors apply to a single element and include ground states
   // The (+ ion) term accounts for the ground state population indicies that are not counted in the NLTE array
@@ -80,12 +79,11 @@ void eliminate_nlte_matrix_rowcol(const int index, const int gs_index, gsl_matri
   gsl_vector_set(balance_vector, index, 0.0);
 }
 
-void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_vector *balance_vector,
-                        const gsl_vector * /*pop_norm_factor_vec*/)
 // find rows and columns that barely interaction with other levels, and effectively
 // removing them by zeroing their interactions and setting their departure
 // coeff to 1.0
-{
+void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_vector *balance_vector,
+                        const gsl_vector * /*pop_norm_factor_vec*/) {
   const gsl_matrix rate_matrix_var = *rate_matrix;
   const int nlte_dimension = rate_matrix_var.size1;
   for (int index = 0; index < nlte_dimension; index++) {
@@ -665,11 +663,10 @@ auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {
   return is_singular;
 }
 
-auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, const gsl_vector *balance_vector,
-                          gsl_vector *popvec, const gsl_vector *pop_normfactor_vec) -> bool
 // solve rate_matrix * x = balance_vector,
 // then popvec[i] = x[i] / pop_norm_factor_vec[i]
-{
+auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, const gsl_vector *balance_vector,
+                          gsl_vector *popvec, const gsl_vector *pop_normfactor_vec) -> bool {
   bool completed_solution = false;
   const size_t nlte_dimension = balance_vector->size;
   assert_always(pop_normfactor_vec->size == nlte_dimension);

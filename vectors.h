@@ -14,18 +14,16 @@
 #include "packet.h"
 #include "sn3d.h"
 
-template <size_t VECDIM>
-[[nodiscard]] [[gnu::const]] constexpr auto vec_len(const std::array<double, VECDIM> vec) -> double
 // return the the magnitude of a vector
-{
+template <size_t VECDIM>
+[[nodiscard]] [[gnu::const]] constexpr auto vec_len(const std::array<double, VECDIM> vec) -> double {
   const double squaredlen = std::accumulate(vec.begin(), vec.end(), 0., [](auto a, auto b) { return a + b * b; });
 
   return std::sqrt(squaredlen);
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto vec_norm(const std::array<double, 3> vec_in)
 // get a normalized copy of vec_in
-{
+[[nodiscard]] [[gnu::const]] constexpr auto vec_norm(const std::array<double, 3> vec_in) {
   const double magnitude = vec_len(vec_in);
   const auto vec_out = std::array<double, 3>{vec_in[0] / magnitude, vec_in[1] / magnitude, vec_in[2] / magnitude};
 
@@ -33,18 +31,16 @@ template <size_t VECDIM>
   return vec_out;
 }
 
+// vector dot product
 template <size_t S1, size_t S2>
 [[nodiscard]] [[gnu::const]] constexpr auto dot(const std::array<double, S1> x,
-                                                const std::array<double, S2> y) -> double
-// vector dot product
-{
+                                                const std::array<double, S2> y) -> double {
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
+// Get velocity vector of the flow at a position with homologous expansion.
 [[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(std::span<const double, 3> x,
-                                                        const double t) -> std::array<double, 3>
-// Routine for getting velocity vector of the flow at a position with homologous expansion.
-{
+                                                        const double t) -> std::array<double, 3> {
   return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
 }
 
@@ -59,13 +55,12 @@ template <size_t S1, size_t S2>
   return std::array<double, 3>{vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto angle_ab(const std::array<double, 3> dir1,
-                                                     const std::array<double, 3> vel) -> std::array<double, 3>
 // aberation of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
 //   dir2: direction vector in frame2
-{
+[[nodiscard]] [[gnu::const]] constexpr auto angle_ab(const std::array<double, 3> dir1,
+                                                     const std::array<double, 3> vel) -> std::array<double, 3> {
   const double vsqr = dot(vel, vel) / CLIGHTSQUARED;
   const double gamma_rel = 1. / std::sqrt(1 - vsqr);
 
@@ -79,14 +74,13 @@ template <size_t S1, size_t S2>
   return vec_norm(dir2);
 }
 
-[[gnu::const]] [[nodiscard]] constexpr auto doppler_nucmf_on_nurf(const std::array<double, 3> dir_rf,
-                                                                  const std::array<double, 3> vel_rf) -> double
 // Doppler factor
 // arguments:
 //   dir_rf: the rest frame direction (unit vector) of light propagation
 //   vel_rf: velocity of the comoving frame relative to the rest frame
 // returns: the ratio f = nu_cmf / nu_rf
-{
+[[gnu::const]] [[nodiscard]] constexpr auto doppler_nucmf_on_nurf(const std::array<double, 3> dir_rf,
+                                                                  const std::array<double, 3> vel_rf) -> double {
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
 
@@ -141,12 +135,10 @@ template <size_t S1, size_t S2>
   return doppler_nucmf_on_nurf(dir_rf, get_velocity(pos_rf, prop_time));
 }
 
+// Move a packet along a straight line (specified by current dir vector). The distance moved is in the rest frame.
 constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, const std::array<double, 3> dir_rf, double &prop_time,
                                  const double nu_rf, double &nu_cmf, const double e_rf, double &e_cmf,
-                                 const double distance) -> double
-// Subroutine to move a packet along a straight line (specified by current
-// dir vector). The distance moved is in the rest frame.
-{
+                                 const double distance) -> double {
   assert_always(distance >= 0);
 
   const double nu_cmf_old = nu_cmf;
@@ -215,9 +207,8 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   return na;
 }
 
-[[nodiscard]] inline auto get_rand_isotropic_unitvec() -> std::array<double, 3>
 // Assuming isotropic distribution, get a random direction vector
-{
+[[nodiscard]] inline auto get_rand_isotropic_unitvec() -> std::array<double, 3> {
   const double costheta = -1 + (2. * rng_uniform());
 
   const double phi = rng_uniform() * 2 * PI;
@@ -227,10 +218,10 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   return std::array<double, 3>{sintheta * std::cos(phi), sintheta * std::sin(phi), costheta};
 }
 
+// Rotation angle from the scattering plane
 [[nodiscard]] [[gnu::const]] constexpr auto rot_angle(const std::array<double, 3> n1, const std::array<double, 3> n2,
                                                       const std::array<double, 3> ref1,
                                                       const std::array<double, 3> ref2) -> double {
-  // Rotation angle from the scattering plane
   // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
   // the meridian frame such that Q=1 is in the scattering plane and along ref1
 

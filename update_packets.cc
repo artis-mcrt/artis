@@ -133,11 +133,11 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   }
 }
 
+// Handle inactive pellets. Need to do two things (a) check if it
+// decays in this time step and if it does handle that. (b) if it doesn't decay in
+// this time step then just move the packet along with the matter for the
+// start of the next time step.
 void update_pellet(Packet &pkt, const int nts, const double t2) {
-  // Handle inactive pellets. Need to do two things (a) check if it
-  // decays in this time step and if it does handle that. (b) if it doesn't decay in
-  // this time step then just move the packet along with the matter for the
-  // start of the next time step.
   assert_always(pkt.prop_time < t2);
   const double ts = pkt.prop_time;
 
@@ -342,9 +342,8 @@ void do_cell_packet_updates(std::span<Packet> packets, const int nts, const doub
 
 }  // anonymous namespace
 
-void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
-// Subroutine to move and update packets during the current timestep (nts)
-{
+// Move and update packets during the current timestep (nts)
+void update_packets(const int my_rank, const int nts, std::span<Packet> packets) {
   // At the start, the packets have all either just been initialised or have already been
   // processed for one or more timesteps. Those that are pellets will just be sitting in the
   // matter. Those that are photons (or one sort or another) will already have a position and

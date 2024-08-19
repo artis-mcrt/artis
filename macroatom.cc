@@ -174,9 +174,9 @@ auto do_macroatom_internal_down_same(const int element, const int ion, const int
   return lower;
 }
 
+// radiative deexcitation
 void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion, const int level,
                                   const int activatingline) {
-  // radiative deexcitation of MA: emitt rpkt
   // randomly select which line transitions occurs
   const int ndowntrans = get_ndowntrans(element, ion, level);
 

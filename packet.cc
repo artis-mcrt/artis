@@ -27,9 +27,8 @@
 
 namespace {
 
-void place_pellet(const double e0, const int cellindex, const int pktnumber, Packet &pkt)
-// This subroutine places pellet n with energy e0 in cell m
-{
+// Place pellet n with energy e0 in cell m
+void place_pellet(const double e0, const int cellindex, const int pktnumber, Packet &pkt) {
   // First choose a position for the pellet. In the cell.
   pkt.where = cellindex;
   pkt.number = pktnumber;  // record the packets number for debugging
@@ -170,8 +169,8 @@ void packet_init(Packet *pkt)
   printout("total energy that will be freed during simulation time: %g erg\n", e_cmf_total);
 }
 
+// write packets text file
 void write_packets(const char filename[], const Packet *const pkt) {
-  // write packets text file
   FILE *packets_file = fopen_required(filename, "w");
   fprintf(packets_file,
           "#number where type_id posx posy posz dirx diry dirz last_cross tdecay e_cmf e_rf nu_cmf nu_rf "

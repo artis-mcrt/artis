@@ -171,10 +171,9 @@ void realloc_detailed_lines(const int new_size) {
   }
 }
 
-void add_detailed_line(const int lineindex)
 // associate a Jb_lu estimator with a particular lineindex to be used
 // instead of the general radiation field model
-{
+void add_detailed_line(const int lineindex) {
   if (detailed_linecount % BLOCKSIZEJBLUE == 0) {
     const int new_size = detailed_linecount + BLOCKSIZEJBLUE;
     realloc_detailed_lines(new_size);
@@ -215,9 +214,8 @@ auto get_bin_nuJ(const int modelgridindex, const int binindex) -> double {
   return radfieldbins[(nonemptymgi * RADFIELDBINCOUNT) + binindex].nuJ_raw * J_normfactor[nonemptymgi];
 }
 
-auto get_bin_nu_bar(const int modelgridindex, const int binindex) -> double
-// importantly, this is average beween the current and previous timestep
-{
+// get <nuJ> / <J> for a bin
+auto get_bin_nu_bar(const int modelgridindex, const int binindex) -> double {
   const double nuJ_sum = get_bin_nuJ(modelgridindex, binindex);
   const double J_sum = get_bin_J(modelgridindex, binindex);
   return nuJ_sum / J_sum;
@@ -475,9 +473,9 @@ auto get_bfcontindex(const int element, const int lowerion, const int lower, con
 
 }  // anonymous namespace
 
-void init(const int my_rank, const int ndo_nonempty)
-// this should be called only after the atomic data is in memory
-{
+void init(const int my_rank, const int ndo_nonempty) {
+  // this should be called only after the atomic data is in memory
+
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
   J_normfactor.resize(nonempty_npts_model + 1);
@@ -681,9 +679,8 @@ void initialise_prev_titer_photoionestimators() {
 #endif
 }
 
-auto get_Jblueindex(const int lineindex) -> int
-// returns -1 if the line does not have a Jblue estimator
-{
+auto get_Jblueindex(const int lineindex) -> int {
+  // returns -1 if the line does not have a Jblue estimator
   if constexpr (!DETAILED_LINE_ESTIMATORS_ON) {
     return -1;
   }
@@ -823,10 +820,8 @@ void close_file() {
   }
 }
 
-void zero_estimators()
-// set up the new bins and clear the estimators in preparation
-// for a timestep
-{
+// set up the new bins and clear the estimators in preparation for a timestep
+void zero_estimators() {
   std::ranges::fill(J_normfactor, -1.0);
   std::ranges::fill(J, 0.0);
   std::ranges::fill(nuJ, 0.0);
@@ -899,9 +894,8 @@ __host__ __device__ void update_lineestimator(const int modelgridindex, const in
   }
 }
 
-__host__ __device__ auto radfield(const double nu, const int modelgridindex) -> double
-// returns mean intensity J_nu [ergs/s/sr/cm2/Hz]
-{
+// mean intensity J_nu [ergs/s/sr/cm2/Hz]
+__host__ __device__ auto radfield(const double nu, const int modelgridindex) -> double {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP) {
       const int binindex = select_bin(nu);
@@ -923,10 +917,10 @@ __host__ __device__ auto radfield(const double nu, const int modelgridindex) -> 
   return J_nu_fullspec;
 }
 
+// return the integral of nu^3 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
+// or if times_nu is true, the integral of nu^4 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
 auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper,
                               const bool times_nu) -> double {
-  // return the integral of nu^3 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
-  // or if times_nu is true, the integral of nu^4 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
   double integral = 0.;
 
   if (times_nu) {
@@ -961,10 +955,8 @@ auto planck_integral_analytic(const double T_R, const double nu_lower, const dou
   return integral;
 }
 
-void fit_parameters(const int modelgridindex, const int timestep)
-// finds the best fitting W and temperature parameters in each spectral bin
-// using J and nuJ
-{
+// finds the best fitting W and temperature parameters in each spectral bin using J and nuJ
+void fit_parameters(const int modelgridindex, const int timestep) {
   set_params_fullspec(modelgridindex, timestep);
 
   const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
@@ -1198,10 +1190,9 @@ void reduce_estimators()
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void do_MPI_Bcast(const int modelgridindex, const int root, const int root_node_id)
 // broadcast computed radfield results including parameters
 // from the cells belonging to root process to all processes
-{
+void do_MPI_Bcast(const int modelgridindex, const int root, const int root_node_id) {
   if (grid::get_numassociatedcells(modelgridindex) == 0) {
     return;
   }

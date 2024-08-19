@@ -54,10 +54,10 @@ MPI_Win win_expansionopacities = MPI_WIN_NULL;
 MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
 #endif
 
+// get the frequency change per distance travelled assuming linear change to the abort distance
+// this is done is two parts to get identical results to do_rpkt_step()
 auto get_nu_cmf_abort(const std::array<double, 3> pos, const std::array<double, 3> dir, const double prop_time,
                       const double nu_rf, const double abort_dist) -> double {
-  // get the frequency change per distance travelled assuming linear change to the abort distance
-  // this is done is two parts to get identical results to do_rpkt_step()
   const auto half_abort_dist = abort_dist / 2.;
   const auto abort_time = prop_time + (half_abort_dist / CLIGHT_PROP) + (half_abort_dist / CLIGHT_PROP);
 
@@ -82,16 +82,14 @@ constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double {
   return 1e8 * CLIGHT / lambda_upper;
 }
 
-auto get_event(const int modelgridindex,
-               const Packet &pkt,  // pointer to packet object
-               const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, MacroAtomState &mastate,
+// return edist, the distance to the next physical event (continuum or bound-bound) and is_boundbound_event, a
+// boolean BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
+auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+               MacroAtomState &mastate,
                const double tau_rnd,     // random optical depth until which the packet travels
                const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
                const double nu_cmf_abort, const double d_nu_on_d_l,
-               const double doppler) -> std::tuple<double, int, bool>
-// returns edist, the distance to the next physical event (continuum or bound-bound) and is_boundbound_event, a
-// boolean BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
-{
+               const double doppler) -> std::tuple<double, int, bool> {
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
 
   auto pos = pkt.pos;
@@ -546,13 +544,8 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
   }
 }
 
+// handle bound-bound transition and activate macro-atom in corresponding upper-level
 void rpkt_event_boundbound(Packet &pkt, const MacroAtomState &pktmastate, const int mgi) {
-  // bound-bound transition occured
-  // activate macro-atom in corresponding upper-level. Actually all the information
-  // about the macro atoms state has already been set by closest_transition, so
-  // we need here just the activation!
-  // printout("[debug] rpkt_event: bound-bound activation of macroatom\n");
-  // if (tid == 0) ma_stat_activation_bb++;
   stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BB);
   stats::increment(stats::COUNTER_INTERACTIONS);
   pkt.last_event = 1;
@@ -585,12 +578,9 @@ void rpkt_event_boundbound(Packet &pkt, const MacroAtomState &pktmastate, const 
   do_macroatom(pkt, pktmastate);
 }
 
-void rpkt_event_thickcell(Packet &pkt)
-// Event handling for optically thick cells. Those cells are treated in a grey
-// approximation with electron scattering only.
-// The packet stays an R_PKT of same nu_cmf than before (coherent scattering)
-// but with different direction.
-{
+// Handle r-packet interaction in thick cell (grey opacity).
+// The packet stays an RPKT of same nu_cmf as before (coherent scattering) but with a different direction.
+void rpkt_event_thickcell(Packet &pkt) {
   // printout("[debug] rpkt_event_thickcell:   electron scattering\n");
   stats::increment(stats::COUNTER_INTERACTIONS);
   pkt.nscatterings += 1;
@@ -598,19 +588,17 @@ void rpkt_event_thickcell(Packet &pkt)
   stats::increment(stats::COUNTER_ESCOUNTER);
 
   emit_rpkt(pkt);
-  // Electron scattering does not modify the last emission flag
-  // but it updates the last emission position
+  // Electron scattering does not modify the last emission flag but it updates the last emission position
   pkt.em_pos = pkt.pos;
   pkt.em_time = pkt.prop_time;
 }
 
-void update_estimators(const double e_cmf, const double nu_cmf, const double distance,
-                       const double doppler_nucmf_on_nurf, const int nonemptymgi,
-                       const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const bool thickcell)
 // Update the volume estimators J and nuJ
 // This is done in another routine than move, as we sometimes move dummy
 // packets which do not contribute to the radiation field.
-{
+void update_estimators(const double e_cmf, const double nu_cmf, const double distance,
+                       const double doppler_nucmf_on_nurf, const int nonemptymgi,
+                       const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const bool thickcell) {
   // Update only non-empty cells
   assert_testmodeonly(nonemptymgi >= 0);
   const double distance_e_cmf = distance * e_cmf;
@@ -648,10 +636,9 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
   }
 }
 
-auto do_rpkt_step(Packet &pkt, const double t2) -> bool
 // Update an r-packet and return true if no mgi change (or it goes into an empty cell) and no pkttype change and not
 // reached end of timestep, otherwise false
-{
+auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   const int cellindex = pkt.where;
   const int mgi = grid::get_cell_modelgridindex(cellindex);
   const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
@@ -875,10 +862,9 @@ auto get_chi_ff_nnionpart(const int modelgridindex) -> double {
   return globals::cellcache[cellcacheslotid].chi_ff_nnionpart;
 }
 
-auto calculate_chi_ffheating(const int modelgridindex, const double nu) -> double
 // calculate the free-free absorption (to kpkt heating) coefficient [cm^-1]
 // = kappa(free-free) * nne
-{
+auto calculate_chi_ffheating(const int modelgridindex, const double nu) -> double {
   assert_always(nu > 0.);
 
   const auto nne = grid::get_nne(modelgridindex);
@@ -890,10 +876,9 @@ auto calculate_chi_ffheating(const int modelgridindex, const double nu) -> doubl
   return chi_ff;
 }
 
+// get bound-free opacity
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
-auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phixslist *phixslist) -> double
-// bound-free opacity
-{
+auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phixslist *phixslist) -> double {
   assert_always(!USECELLHISTANDUPDATEPHIXSLIST || phixslist != nullptr);
 
   double chi_bf_sum = 0.;
@@ -1103,9 +1088,8 @@ __host__ __device__ auto closest_transition(const double nu_cmf, const int next_
   return matchindex;
 }
 
-__host__ __device__ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double
-// returns a randomly chosen frequency with a distribution of Planck function times the expansion opacity
-{
+// return a randomly chosen frequency with a distribution of Planck function times the expansion opacity
+__host__ __device__ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double {
   assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.);
 
   const auto *kappa_planck_bins = &expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins];
@@ -1132,8 +1116,8 @@ __host__ __device__ void do_rpkt(Packet &pkt, const double t2) {
   }
 }
 
+// make the packet an r-pkt and set further flags
 __host__ __device__ void emit_rpkt(Packet &pkt) {
-  // now make the packet a r-pkt and set further flags
   pkt.type = TYPE_RPKT;
   pkt.last_cross = BOUNDARY_NONE;  // allow all further cell crossings
 

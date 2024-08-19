@@ -583,10 +583,9 @@ void map_2dmodelto3dgrid()
   }
 }
 
-void map_modeltogrid_direct()
 // mgi and cellindex are interchangeable in this mode (except for empty cells that associated with mgi ==
 // get_npts_model())
-{
+void map_modeltogrid_direct() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = (modelgrid[cellindex].rhoinit > 0) ? cellindex : get_npts_model();
     set_cell_modelgridindex(cellindex, mgi);
@@ -845,9 +844,8 @@ auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<std::str
   return {colnames, nucindexlist, one_line_per_cell};
 }
 
-void read_1d_model()
 // Read in a 1D spherical model
-{
+void read_1d_model() {
   auto fmodel = fstream_required("model.txt", std::ios::in);
 
   std::string line;
@@ -917,9 +915,8 @@ void read_1d_model()
   globals::vmax = vout_model[get_npts_model() - 1];
 }
 
-void read_2d_model()
-// Read in a 2D axisymmetric spherical coordinate model
-{
+// Read in a 2D axisymmetric cylindrical model
+void read_2d_model() {
   auto fmodel = fstream_required("model.txt", std::ios::in);
 
   std::string line;
@@ -997,9 +994,8 @@ void read_2d_model()
   printout("effectively used model grid cells: %d\n", nonemptymgi);
 }
 
-void read_3d_model()
-// Subroutine to read in a 3-D model.
-{
+// read a 3D Cartesian model
+void read_3d_model() {
   auto fmodel = fstream_required("model.txt", std::ios::in);
 
   std::string line;
@@ -1269,9 +1265,8 @@ void read_grid_restart_data(const int timestep) {
   fclose(gridsave_file);
 }
 
-void assign_initial_temperatures()
-// Routine for assigning temperatures to the grid cells at the start of the simulation.
-{
+// Assign temperatures to the grid cells at the start of the simulation
+void assign_initial_temperatures() {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -1390,9 +1385,8 @@ void setup_nstart_ndo() {
   }
 }
 
-void setup_grid_cartesian_3d()
-// Routine for doing a uniform cuboidal grid.
-{
+// set up a uniform cuboidal grid.
+void setup_grid_cartesian_3d() {
   // vmax is per coordinate, but the simulation volume corners will
   // have a higher expansion velocity than the sides
   const double vmax_corner = sqrt(3 * pow(globals::vmax, 2));
@@ -1732,10 +1726,9 @@ auto wid_init(const int cellindex, const int axis) -> double
   assert_always(false);
 }
 
-auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double
 // return the model cell volume (when mapped to the propagation cells) at globals::tmin
 // for a uniform cubic grid this is constant
-{
+auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
   if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     return (wid_init(modelgridindex, 0) * wid_init(modelgridindex, 1) * wid_init(modelgridindex, 2)) *
            get_numassociatedcells(modelgridindex);
@@ -1787,18 +1780,16 @@ auto get_cellcoordmax(const int cellindex, const int axis) -> double
   assert_always(false);
 }
 
-auto get_cellcoordmin(const int cellindex, const int axis) -> double
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
-{
+auto get_cellcoordmin(const int cellindex, const int axis) -> double {
   return cell[cellindex].pos_min[axis];
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
 
-auto get_coordcellindexincrement(const int axis) -> int
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r
 // direction)
-{
+auto get_coordcellindexincrement(const int axis) -> int {
   // assert_testmodeonly(axis < get_ngriddimensions());
 
   switch (axis) {
@@ -1821,9 +1812,8 @@ auto get_coordcellindexincrement(const int axis) -> int
   }
 }
 
-auto get_cellcoordpointnum(const int cellindex, const int axis) -> int
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
-{
+auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
   if constexpr (GRID_TYPE == GRID_CARTESIAN3D || GRID_TYPE == GRID_CYLINDRICAL2D) {
     switch (axis) {
       // 3D Cartesian: increment x first, then y, then z
@@ -1878,15 +1868,13 @@ __host__ __device__ auto get_nnetot(const int modelgridindex) -> float {
 
 __host__ __device__ auto get_ffegrp(const int modelgridindex) -> float { return modelgrid[modelgridindex].ffegrp; }
 
-void set_elem_abundance(const int modelgridindex, const int element, const float newabundance)
 // mass fraction of an element (all isotopes combined)
-{
+void set_elem_abundance(const int modelgridindex, const int element, const float newabundance) {
   modelgrid[modelgridindex].elem_massfracs[element] = newabundance;
 }
 
-__host__ __device__ auto get_elem_numberdens(const int modelgridindex, const int element) -> double
 // mass fraction of an element (all isotopes combined)
-{
+__host__ __device__ auto get_elem_numberdens(const int modelgridindex, const int element) -> double {
   const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
   return get_elem_abundance(modelgridindex, element) / elem_meanweight * grid::get_rho(modelgridindex);
 }
@@ -1960,16 +1948,14 @@ __host__ __device__ auto get_npts_model() -> int
   return npts_model;
 }
 
-auto get_nonempty_npts_model() -> int
 // number of model grid cells
-{
+auto get_nonempty_npts_model() -> int {
   assert_testmodeonly(nonempty_npts_model > 0);
   return nonempty_npts_model;
 }
 
-auto get_t_model() -> double
 // get time at which model input densities are defined
-{
+auto get_t_model() -> double {
   assert_testmodeonly(t_model > 0.);
   return t_model;
 }
@@ -1983,16 +1969,14 @@ __host__ __device__ auto get_cell_modelgridindex(const int cellindex) -> int {
   return mgi;
 }
 
-__host__ __device__ auto get_numassociatedcells(const int modelgridindex) -> int
 // number of propagation cells associated with each modelgrid cell
-{
+__host__ __device__ auto get_numassociatedcells(const int modelgridindex) -> int {
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return mg_associated_cells[modelgridindex];
 }
 
-__host__ __device__ auto get_modelcell_nonemptymgi(const int mgi) -> int
 // get the index in the list of non-empty cells for a given model grid cell
-{
+__host__ __device__ auto get_modelcell_nonemptymgi(const int mgi) -> int {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
   assert_testmodeonly(mgi < get_npts_model());
 
@@ -2004,9 +1988,8 @@ __host__ __device__ auto get_modelcell_nonemptymgi(const int mgi) -> int
   return nonemptymgi;
 }
 
-__host__ __device__ auto get_mgi_of_nonemptymgi(const int nonemptymgi) -> int
 // get the index in the list of non-empty cells for a given model grid cell
-{
+__host__ __device__ auto get_mgi_of_nonemptymgi(const int nonemptymgi) -> int {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
@@ -2019,9 +2002,8 @@ __host__ __device__ auto get_mgi_of_nonemptymgi(const int nonemptymgi) -> int
 
 // the abundances below are initial abundances at t_model
 
+// get the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
 auto get_modelinitnucmassfrac(const int modelgridindex, const int nucindex) -> float {
-  // get the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
-
   assert_testmodeonly(modelgrid[modelgridindex].initnucmassfrac != nullptr);
   return modelgrid[modelgridindex].initnucmassfrac[nucindex];
 }
@@ -2043,9 +2025,8 @@ auto get_element_meanweight(const int mgi, const int element) -> float
   return globals::elements[element].initstablemeannucmass;
 }
 
-void set_element_meanweight(const int mgi, const int element, const float meanweight)
-// weight is in grams
-{
+// set element weight in grams
+void set_element_meanweight(const int mgi, const int element, const float meanweight) {
   assert_always(meanweight > 0.);
   modelgrid[mgi].elem_meanweight[element] = meanweight;
 }
@@ -2066,9 +2047,8 @@ auto get_initenergyq(const int modelgridindex) -> double {
   return modelgrid[modelgridindex].initenergyq;
 }
 
-auto get_cellradialposmid(const int cellindex) -> double
 // get the radial distance from the origin to the centre of the cell at time tmin
-{
+auto get_cellradialposmid(const int cellindex) -> double {
   if (GRID_TYPE == GRID_SPHERICAL1D) {
     // mid point radius
     // return get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex, 0));
@@ -2340,9 +2320,8 @@ auto get_ndo_nonempty(const int rank) -> int {
   return ranks_ndo_nonempty[rank];
 }
 
-void grid_init(const int my_rank)
-// Initialises the propagation grid cells and associates them with modelgrid cells
-{
+// Initialise the propagation grid cells and associate them with modelgrid cells
+void grid_init(const int my_rank) {
   // The cells will be ordered by x then y, then z. Call a routine that
   // sets up the initial positions and widths of the cells.
 
@@ -2467,9 +2446,8 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   return totmassradionuclide[decay::get_nucindex(z, a)];
 }
 
-[[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> pos, const double time) -> int
 // identify the cell index from an (x,y,z) position and a time.
-{
+[[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> pos, const double time) -> int {
   auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
   for (int d = 0; d < get_ngriddimensions(); d++) {
@@ -2485,12 +2463,10 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   return cellindex;
 }
 
-[[nodiscard]] __host__ __device__ auto boundary_distance(const std::array<double, 3> dir,
-                                                         const std::array<double, 3> pos, const double tstart,
-                                                         const int cellindex,
-                                                         enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>
-// Basic routine to compute distance to a cell boundary.
-{
+// compute distance to a cell boundary.
+[[nodiscard]] __host__ __device__ auto boundary_distance(
+    const std::array<double, 3> dir, const std::array<double, 3> pos, const double tstart, const int cellindex,
+    enum cell_boundary *pkt_last_cross) -> std::tuple<double, int> {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {
       return {0., -99};

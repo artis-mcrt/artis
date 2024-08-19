@@ -113,8 +113,8 @@ auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, con
   for (int level = 0; level < nlevels; level++) {
     const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
     const double epsilon_level = epsilon(element, ion, level);
+
     // Collisional heating: deexcitation to same ionization stage
-    // ----------------------------------------------------------
     const int ndowntrans = get_ndowntrans(element, ion, level);
     for (int i = 0; i < ndowntrans; i++) {
       const auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[i];
@@ -132,11 +132,10 @@ auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, con
   return C_deexc;
 }
 
+// Calculate the heating rates for a given cell. Results are returned via the elements of the heatingrates data
+// structure.
 void calculate_heating_rates(const int modelgridindex, const double T_e, const double nne,
-                             HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs)
-// Calculate the heating rates for a given cell. Results are returned
-// via the elements of the heatingrates data structure.
-{
+                             HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
   double C_deexc = 0.;
 
   // double C_recomb = 0.;
@@ -187,9 +186,8 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
   heatingcoolingrates->heating_ff = ffheating;
 }
 
-auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double
 // Thermal balance equation on which we have to iterate to get T_e
-{
+auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   const Te_solution_paras *const params = static_cast<Te_solution_paras *>(paras);
 
   const int modelgridindex = params->modelgridindex;
@@ -254,10 +252,8 @@ auto get_bfheatingcoeff_ana(const int element, const int ion, const int level, c
   return W * bfheatingcoeff;
 }
 
+// depends only the radiation field - no dependence on T_e or populations
 void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatingcoeffs) {
-  // depends only the radiation field
-  // no dependence on T_e or populations
-
   bfheatingcoeffs.resize(get_includedlevels());
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   const double minelfrac = 0.01;
