@@ -58,8 +58,6 @@ MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
 MPI_Win win_prev_bfrate_normed = MPI_WIN_NULL;
 #endif
 
-// ** Detailed lines - Jblue_lu estimators for selected lines
-
 struct Jb_lu_estimator {
   double value = 0.;
   int contribcount = 0;
@@ -74,8 +72,6 @@ int *detailed_lineindicies;
 
 Jb_lu_estimator **prev_Jb_lu_normed{};  // value from the previous timestep
 Jb_lu_estimator **Jb_lu_raw{};          // unnormalised estimator for the current timestep
-
-// ** end detailed lines
 
 float *prev_bfrate_normed{};     // values from the previous timestep
 std::vector<double> bfrate_raw;  // unnormalised estimators for the current timestep
@@ -121,9 +117,8 @@ constexpr auto get_bin_nu_lower(const int binindex) -> double {
   return nu_lower_first_initial;
 }
 
+// find the left-closed bin [nu_lower, nu_upper) that nu belongs to
 constexpr auto select_bin(const double nu) -> int {
-  // find the left-closed bin [nu_lower, nu_upper) that nu belongs to
-
   if (nu < nu_lower_first_initial) {
     return -2;  // out of range, nu lower than lowest bin's lower boundary
   }
@@ -194,9 +189,8 @@ void add_detailed_line(const int lineindex) {
   // printout("Added Jblue estimator for lineindex %d count %d\n", lineindex, detailed_linecount);
 }
 
-auto get_bin_J(const int modelgridindex, const int binindex) -> double
 // get the normalised J_nu
-{
+auto get_bin_J(const int modelgridindex, const int binindex) -> double {
   const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
