@@ -113,6 +113,11 @@ gsl_vector *envec;      // energy grid on which solution is sampled
 gsl_vector *logenvec;   // log of envec
 gsl_vector *sourcevec;  // samples of the source function (energy distribution of deposited energy)
 
+// Samples of the Spencer-Fano solution function. Multiply by energy to get non-thermal
+// electron number flux. y(E) * dE is the flux of electrons with energy in the range (E, E +
+// dE) y has units of particles / cm2 / s / eV
+thread_local std::array<double, SFPTS> yfunc_current{};
+
 // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV/s/cm3
 double E_init_ev = 0;
 
@@ -165,9 +170,6 @@ struct NonThermalCellSolution {
   int timestep_last_solved = -1;     // the quantities above were calculated for this timestep
   float nneperion_when_solved{NAN};  // the nne when the solver was last run
 };
-
-// if not STORE_NT_SPECTRUM for each grid cell, keep one array for the current cell
-thread_local std::array<double, SFPTS> yfunc_current{};
 
 std::vector<NonThermalCellSolution> nt_solution;
 
