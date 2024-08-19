@@ -174,7 +174,7 @@ struct NonThermalCellSolution {
   float nneperion_when_solved{NAN};  // the nne when the solver was last run
 };
 
-NonThermalCellSolution *nt_solution;
+std::vector<NonThermalCellSolution> nt_solution;
 
 std::vector<double> deposition_rate_density;
 std::vector<int> deposition_rate_density_timestep;
@@ -2024,7 +2024,7 @@ void init(const int my_rank, const int ndo_nonempty) {
 #endif
   }
 
-  nt_solution = static_cast<NonThermalCellSolution *>(calloc(grid::get_npts_model(), sizeof(NonThermalCellSolution)));
+  nt_solution.resize(grid::get_npts_model());
 
   size_t mem_usage_yfunc = 0;
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
