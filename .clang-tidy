@@ -44,7 +44,6 @@ Checks: >
     -readability-magic-numbers,
 WarningsAsErrors: >
     *,
-    -performance-enum-size,
 FormatStyle: file
 ExtraArgs: [-std=c++20]
 CheckOptions:
