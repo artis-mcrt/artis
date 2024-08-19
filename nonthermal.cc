@@ -2014,15 +2014,12 @@ void init(const int my_rank, const int ndo_nonempty) {
 
     MPI_Win_shared_query(win_shared_excitations_list, 0, &size, &disp_unit, &excitations_list_all_cells);
 
-    nt_solution = static_cast<NonThermalCellSolution *>(calloc(grid::get_npts_model(), sizeof(NonThermalCellSolution)));
-
-    printout("Finished setting up shared memory for NT Excitation\n");
     MPI_Barrier(MPI_COMM_WORLD);
 
 #else
 
-    excitations_list_all_cells = static_cast<nt_excitation_struct *>(
-        malloc(nonempty_npts_model * sizeof(nt_excitation_struct) * nt_excitations_stored));
+    excitations_list_all_cells = static_cast<NonThermalExcitation *>(
+        malloc(nonempty_npts_model * sizeof(NonThermalExcitation) * nt_excitations_stored));
 
 #endif
   }
