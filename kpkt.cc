@@ -69,7 +69,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
     if constexpr (update_cooling_contrib_list) {
       globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
-      assert_testmodeonly(coolinglist[i].type == CoolingType::FF);
+      assert_testmodeonly(coolinglist[i].type == CoolingType::FREEFREE);
 
       i++;
     } else {
@@ -154,7 +154,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
         if constexpr (update_cooling_contrib_list) {
           globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
-          assert_testmodeonly(coolinglist[i].type == CoolingType::FB);
+          assert_testmodeonly(coolinglist[i].type == CoolingType::FREEBOUND);
           assert_testmodeonly(coolinglist[i].level == level);
           assert_testmodeonly(coolinglist[i].upperlevel == get_phixsupperlevel(element, ion, level, phixstargetindex));
 
