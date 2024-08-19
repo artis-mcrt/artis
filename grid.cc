@@ -193,6 +193,9 @@ auto get_cell_r_inner(const int cellindex) -> double {
     const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 2)), std::abs(get_cellcoordmax(cellindex, 2)));
     return std::sqrt(std::pow(x_inner, 2) + std::pow(y_inner, 2) + std::pow(z_inner, 2));
   }
+
+  assert_always(false);
+  return NAN;
 }
 
 void set_ffegrp(const int modelgridindex, float x) {
