@@ -2,9 +2,9 @@
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS;
 
-constexpr int GRID_TYPE = {GRID_CARTESIAN3D, GRID_CYLINDRICAL2D, GRID_SPHERICAL1D}
+constexpr auto GRID_TYPE = {GridType::CARTESIAN3D, GridType::CYLINDRICAL2D, GridType::SPHERICAL1D}
 
-// for GRID_CARTESIAN3D, set the dimensions. This will have no effect with a 3D model.txt since they will be set to match the input
+// for GridType::CARTESIAN3D, set the dimensions. This will have no effect with a 3D model.txt since they will be set to match the input
 constexpr int CUBOID_NCOORDGRID_X;
 constexpr int CUBOID_NCOORDGRID_Y;
 constexpr int CUBOID_NCOORDGRID_Z;
@@ -53,7 +53,7 @@ constexpr bool USE_MODEL_INITIAL_ENERGY;
 // record counts of emissions and absorptions in each line
 constexpr bool RECORD_LINESTAT;
 
-/// Rate coefficients
+// Rate coefficients
 constexpr int TABLESIZE;
 constexpr double MINTEMP;
 constexpr double MAXTEMP;
@@ -74,8 +74,8 @@ constexpr bool TRACK_ION_STATS;
 
 constexpr double MINPOP;
 
-constexpr double NU_MIN_R;  /// lower frequency boundary for UVOIR spectra and BB sampling
-constexpr double NU_MAX_R;  /// upper frequency boundary for UVOIR spectra and BB sampling
+constexpr double NU_MIN_R;  // lower frequency boundary for UVOIR spectra and BB sampling
+constexpr double NU_MAX_R;  // upper frequency boundary for UVOIR spectra and BB sampling
 
 // ** Start of radiation field model options **
 
@@ -203,14 +203,8 @@ constexpr bool INSTANT_PARTICLE_DEPOSITION;
 // values that would give the same number or more more fixed timesteps than the total number of timesteps in the
 // simulation. The times are set in days.
 
-enum timestepsizemethods {
-  TIMESTEP_SIZES_LOGARITHMIC = 0,
-  TIMESTEP_SIZES_CONSTANT = 1,
-  TIMESTEP_SIZES_LOGARITHMIC_THEN_CONSTANT = 2,
-  TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC = 3,
-};
 
-constexpr enum timestepsizemethods TIMESTEP_SIZE_METHOD;
+constexpr enum class timestepsizemethods TIMESTEP_SIZE_METHOD;
 
 constexpr double FIXED_TIMESTEP_WIDTH;
 

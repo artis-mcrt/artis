@@ -39,7 +39,7 @@ struct gsl_integral_paras_bfheating {
 };
 
 auto integrand_bfheatingcoeff_custom_radfield(const double nu, void *const voidparas) -> double
-/// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
+// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
   const auto *const params = static_cast<const gsl_integral_paras_bfheating *>(voidparas);
 
@@ -113,8 +113,8 @@ auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, con
   for (int level = 0; level < nlevels; level++) {
     const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
     const double epsilon_level = epsilon(element, ion, level);
+
     // Collisional heating: deexcitation to same ionization stage
-    // ----------------------------------------------------------
     const int ndowntrans = get_ndowntrans(element, ion, level);
     for (int i = 0; i < ndowntrans; i++) {
       const auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[i];
@@ -132,11 +132,10 @@ auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, con
   return C_deexc;
 }
 
+// Calculate the heating rates for a given cell. Results are returned via the elements of the heatingrates data
+// structure.
 void calculate_heating_rates(const int modelgridindex, const double T_e, const double nne,
-                             HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs)
-/// Calculate the heating rates for a given cell. Results are returned
-/// via the elements of the heatingrates data structure.
-{
+                             HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
   double C_deexc = 0.;
 
   // double C_recomb = 0.;
@@ -151,16 +150,16 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
       }
     }
 
-    /// Collisional heating: recombination to lower ionization stage (not included)
-    /// ------------------------------------------------------------
+    // Collisional heating: recombination to lower ionization stage (not included)
+    // ------------------------------------------------------------
 
-    /// Bound-free heating (renormalised analytical calculation)
-    /// --------------------------------------------------------
-    /// We allow bound free-transitions only if there is a higher ionisation stage
-    /// left in the model atom to match the bound-free absorption in the rpkt routine.
-    /// There this condition is needed as we can only ionise to existing ionisation
-    /// stage even if there would be further ionisation stages in nature which
-    /// are not included in the model atom.
+    // Bound-free heating (renormalised analytical calculation)
+    // --------------------------------------------------------
+    // We allow bound free-transitions only if there is a higher ionisation stage
+    // left in the model atom to match the bound-free absorption in the rpkt routine.
+    // There this condition is needed as we can only ionise to existing ionisation
+    // stage even if there would be further ionisation stages in nature which
+    // are not included in the model atom.
 
     for (int ion = 0; ion < nions - 1; ion++) {
       const int nbflevels = get_ionisinglevels(element, ion);
@@ -171,7 +170,7 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
     }
   }
 
-  /// Free-free heating (from estimators)
+  // Free-free heating (from estimators)
 
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   ffheating = globals::ffheatingestimator[nonemptymgi];
@@ -179,7 +178,7 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
   if constexpr (DIRECT_COL_HEAT) {
     heatingcoolingrates->heating_collisional = C_deexc;
   } else {
-    /// Collisional heating (from estimators)
+    // Collisional heating (from estimators)
     heatingcoolingrates->heating_collisional = globals::colheatingestimator[nonemptymgi];  // C_deexc + C_recomb;
   }
 
@@ -187,22 +186,21 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
   heatingcoolingrates->heating_ff = ffheating;
 }
 
-auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double
-/// Thermal balance equation on which we have to iterate to get T_e
-{
+// Thermal balance equation on which we have to iterate to get T_e
+auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   const Te_solution_paras *const params = static_cast<Te_solution_paras *>(paras);
 
   const int modelgridindex = params->modelgridindex;
   const double t_current = params->t_current;
   auto *heatingcoolingrates = params->heatingcoolingrates;
 
-  /// Set new T_e guess for the current cell and update populations
+  // Set new T_e guess for the current cell and update populations
   // globals::cell[cellnumber].T_e = T_e;
   grid::set_Te(modelgridindex, T_e);
   calculate_ion_balance_nne(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
 
-  /// Then calculate heating and cooling rates
+  // Then calculate heating and cooling rates
   kpkt::calculate_cooling_rates(modelgridindex, heatingcoolingrates);
   calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
 
@@ -210,7 +208,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double
   heatingcoolingrates->heating_dep =
       nonthermal::get_deposition_rate_density(modelgridindex) * heatingcoolingrates->nt_frac_heating;
 
-  /// Adiabatic cooling term
+  // Adiabatic cooling term
   const double nntot = get_nnion_tot(modelgridindex) + nne;
   const double p = nntot * KB * T_e;  // pressure in [erg/cm^3]
   const double volumetmin = grid::get_modelcell_assocvolume_tmin(modelgridindex);
@@ -231,9 +229,9 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double
 
 auto get_bfheatingcoeff_ana(const int element, const int ion, const int level, const int phixstargetindex,
                             const double T_R, const double W) -> double {
-  /// The correction factor for stimulated emission in gammacorr is set to its
-  /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  /// correction may be evaluated at T_R!
+  // The correction factor for stimulated emission in gammacorr is set to its
+  // LTE value. Because the T_e dependence of gammacorr is weak, this correction
+  // correction may be evaluated at T_R!
   assert_always(USE_LUT_BFHEATING);
   double bfheatingcoeff = 0.;
 
@@ -254,10 +252,8 @@ auto get_bfheatingcoeff_ana(const int element, const int ion, const int level, c
   return W * bfheatingcoeff;
 }
 
+// depends only the radiation field - no dependence on T_e or populations
 void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatingcoeffs) {
-  // depends only the radiation field
-  // no dependence on T_e or populations
-
   bfheatingcoeffs.resize(get_includedlevels());
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   const double minelfrac = 0.01;
@@ -277,9 +273,9 @@ void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatin
             if constexpr (!USE_LUT_BFHEATING) {
               bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
             } else {
-              /// The correction factor for stimulated emission in gammacorr is set to its
-              /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
-              /// correction may be evaluated at T_R!
+              // The correction factor for stimulated emission in gammacorr is set to its
+              // LTE value. Because the T_e dependence of gammacorr is weak, this correction
+              // correction may be evaluated at T_R!
               const double T_R = grid::get_TR(modelgridindex);
               const double W = grid::get_W(modelgridindex);
               bfheatingcoeff += get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
@@ -327,9 +323,9 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   }
 
   double T_e{NAN};
-  /// Check whether the thermal balance equation has a root in [T_min,T_max]
+  // Check whether the thermal balance equation has a root in [T_min,T_max]
   if (thermalmin * thermalmax < 0) {
-    /// If it has, then solve for the root T_e
+    // If it has, then solve for the root T_e
 
     // one-dimensional gsl root solver, bracketing type
     gsl_root_fsolver *T_e_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
@@ -356,17 +352,17 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 
     gsl_root_fsolver_free(T_e_solver);
   }
-  /// Quick solver style: works if we can assume that there is either one or no
-  /// solution on [MINTEMP.MAXTEMP] (check that by doing a plot of heating-cooling vs. T_e)
+  // Quick solver style: works if we can assume that there is either one or no
+  // solution on [MINTEMP.MAXTEMP] (check that by doing a plot of heating-cooling vs. T_e)
   else if (thermalmax < 0) {
-    /// Thermal balance equation always negative ===> T_e = T_min
+    // Thermal balance equation always negative ===> T_e = T_min
     T_e = MINTEMP;
     printout(
         "[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in modelcell %d "
         "(T_R=%g,W=%g). T_e forced to be MINTEMP\n",
         MINTEMP, modelgridindex, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
   } else {
-    /// Thermal balance equation always negative ===> T_e = T_max
+    // Thermal balance equation always negative ===> T_e = T_max
     T_e = MAXTEMP;
     printout(
         "[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in modelcell %d "

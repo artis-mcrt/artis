@@ -27,17 +27,16 @@
 
 namespace {
 
-void place_pellet(const double e0, const int cellindex, const int pktnumber, Packet &pkt)
-/// This subroutine places pellet n with energy e0 in cell m
-{
-  /// First choose a position for the pellet. In the cell.
+// Place pellet n with energy e0 in cell m
+void place_pellet(const double e0, const int cellindex, const int pktnumber, Packet &pkt) {
+  // First choose a position for the pellet. In the cell.
   pkt.where = cellindex;
-  pkt.number = pktnumber;  /// record the packets number for debugging
+  pkt.number = pktnumber;  // record the packets number for debugging
   pkt.prop_time = globals::tmin;
   // pkt.last_cross = BOUNDARY_NONE;
   pkt.originated_from_particlenotgamma = false;
 
-  if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
+  if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
     const double zrand = rng_uniform();
     const double r_inner = grid::get_cellcoordmin(cellindex, 0);
     const double r_outer = grid::get_cellcoordmax(cellindex, 0);
@@ -48,7 +47,7 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
 
     pkt.pos = vec_scale(get_rand_isotropic_unitvec(), radius);
 
-  } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
+  } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
     const double zrand = rng_uniform_pos();
     const double rcyl_inner = grid::get_cellcoordmin(cellindex, 0);
     const double rcyl_outer = grid::get_cellcoordmax(cellindex, 0);
@@ -60,7 +59,7 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
 
     pkt.pos[2] = grid::get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * grid::wid_init(cellindex, 1));
 
-  } else if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
+  } else if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     for (int axis = 0; axis < 3; axis++) {
       pkt.pos[axis] = grid::get_cellcoordmin(cellindex, axis) + (rng_uniform_pos() * grid::wid_init(cellindex, axis));
     }
@@ -89,7 +88,7 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
 }  // anonymous namespace
 
 void packet_init(Packet *pkt)
-/// Subroutine that initialises the packets if we start a new simulation.
+// Subroutine that initialises the packets if we start a new simulation.
 {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
@@ -98,8 +97,8 @@ void packet_init(Packet *pkt)
 
   printout("INITIAL_PACKETS_ON is %s\n", (INITIAL_PACKETS_ON ? "on" : "off"));
 
-  /// The total number of pellets that we want to start with is just
-  /// npkts. The total energy of the pellets is given by etot.
+  // The total number of pellets that we want to start with is just
+  // npkts. The total energy of the pellets is given by etot.
   const double etot_tinf = decay::get_global_etot_t0_tinf();
 
   printout("etot %g (t_0 to t_inf)\n", etot_tinf);
@@ -128,7 +127,7 @@ void packet_init(Packet *pkt)
   assert_always(norm > 0);
 
   const double etot = norm;
-  /// So energy per pellet is
+  // So energy per pellet is
   const double e0 = etot / globals::npkts;
   printout("packet e0 (in time range) %g erg\n", e0);
 
@@ -170,8 +169,8 @@ void packet_init(Packet *pkt)
   printout("total energy that will be freed during simulation time: %g erg\n", e_cmf_total);
 }
 
+// write packets text file
 void write_packets(const char filename[], const Packet *const pkt) {
-  // write packets text file
   FILE *packets_file = fopen_required(filename, "w");
   fprintf(packets_file,
           "#number where type_id posx posy posz dirx diry dirz last_cross tdecay e_cmf e_rf nu_cmf nu_rf "

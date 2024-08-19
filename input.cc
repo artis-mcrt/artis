@@ -60,7 +60,7 @@ struct Transition {
   float A;
   float coll_str;
   bool forbidden;
-};  /// only used temporarily during input
+};  // only used temporarily during input
 
 constexpr std::array<std::string_view, 24> inputlinecomments = {
     " 0: pre_zseed: specific random number seed if > 0 or random if negative",
@@ -166,10 +166,10 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     }
   }
 
-  /// The level contributes to the ionisinglevels if its energy
-  /// is below the ionisation potential and the level doesn't
-  /// belong to the topmost ion included.
-  /// Rate coefficients are only available for ionising levels.
+  // The level contributes to the ionisinglevels if its energy
+  // is below the ionisation potential and the level doesn't
+  // belong to the topmost ion included.
+  // Rate coefficients are only available for ionising levels.
   //  also need (levelenergy < ionpot && ...)?
   if (lowerion < get_nions(element) - 1) {
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lowerlevel);
@@ -202,8 +202,8 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
       double phixs = -1.;
       assert_always(phixsfile >> energy >> phixs);
       nutable[i] = nu_edge + (energy * 13.6 * EV) / H;
-      /// the photoionisation cross-sections in the database are given in Mbarn=1e6 * 1e-28m^2
-      /// to convert to cgs units multiply by 1e-18
+      // the photoionisation cross-sections in the database are given in Mbarn=1e6 * 1e-28m^2
+      // to convert to cgs units multiply by 1e-18
       phixstable[i] = phixs * 1e-18;
     }
     const double nu_max = nutable[nphixspoints_inputtable - 1];
@@ -234,8 +234,8 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
       assert_always(phixsfile >> phixs);
       assert_always(phixs >= 0);
 
-      /// the photoionisation cross-sections in the database are given in Mbarn = 1e6 * 1e-28m^2
-      /// to convert to cgs units multiply by 1e-18
+      // the photoionisation cross-sections in the database are given in Mbarn = 1e6 * 1e-28m^2
+      // to convert to cgs units multiply by 1e-18
       globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs[i] = phixs * 1e-18;
       // fprintf(database_file,"%g %g\n", nutable[i], phixstable[i]);
     }
@@ -303,20 +303,20 @@ void read_phixs_data(const int phixs_file_version) {
     bool skip_this_phixs_table = false;
     // printout("[debug] Z %d, upperion %d, upperlevel %d, lowerion %d, lowerlevel,
     // %d\n",Z,upperion,upperlevel,lowerion,lowerlevel);
-    /// translate readin anumber to element index
+    // translate readin anumber to element index
     const int element = get_elementindex(Z);
 
-    /// store only photoionization crosssections for elements that are part of the current model atom
+    // store only photoionization crosssections for elements that are part of the current model atom
     skip_this_phixs_table = true;  // will be set to false for good data
     if (element >= 0 && get_nions(element) > 0) {
-      /// translate readin ionstages to ion indices
+      // translate readin ionstages to ion indices
 
       const int upperion = upperionstage - get_ionstage(element, 0);
       const int lowerion = lowerionstage - get_ionstage(element, 0);
       const int lowerlevel = lowerlevel_in - groundstate_index_in;
       assert_always(lowerionstage >= 0);
       assert_always(lowerlevel >= 0);
-      /// store only photoionization crosssections for ions that are part of the current model atom
+      // store only photoionization crosssections for ions that are part of the current model atom
       if (lowerion >= 0 && upperion < get_nions(element) && lowerlevel < get_nlevels(element, lowerion)) {
         read_phixs_data_table(phixsfile, nphixspoints_inputtable, element, lowerion, lowerlevel, upperion,
                               upperlevel_in, &mem_usage_phixs);
@@ -383,17 +383,17 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
       globals::elements[element].ions[ion].levels[level].metastable = true;
       // globals::elements[element].ions[ion].levels[level].main_qn = mainqn;
 
-      /// The level contributes to the ionisinglevels if its energy
-      /// is below the ionization potential and the level doesn't
-      /// belong to the topmost ion included.
-      /// Rate coefficients are only available for ionising levels.
+      // The level contributes to the ionisinglevels if its energy
+      // is below the ionization potential and the level doesn't
+      // belong to the topmost ion included.
+      // Rate coefficients are only available for ionising levels.
       if (levelenergy < ionpot && ion < nions - 1) {
         globals::elements[element].ions[ion].ionisinglevels++;
       }
 
-      /// store the possible downward transitions from the current level in following order to memory
-      ///     A_level,level-1; A_level,level-2; ... A_level,1
-      /// entries which are not explicitly set are zero (the zero is set/initialized by calloc!)
+      // store the possible downward transitions from the current level in following order to memory
+      //     A_level,level-1; A_level,level-2; ... A_level,1
+      // entries which are not explicitly set are zero (the zero is set/initialized by calloc!)
       transitions[level].to = &transitions[0].to[transitionblockindex];
       transitionblockindex += level;
       assert_always((transitionblockindex + level) < transitblocksize);
@@ -558,8 +558,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         continue;
       }
 
-      /// Make sure that we don't allow duplicate. In that case take only the lines
-      /// first occurrence
+      // Make sure that we don't allow duplicate. In that case take only the lines
+      // first occurrence
       const int transitioncheck = transitions[level].to[(level - targetlevel) - 1];
 
       // -99 means that the transition hasn't been seen yet
@@ -610,7 +610,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
               .forbidden = transition.forbidden};
         }
 
-        /// This is not a metastable level.
+        // This is not a metastable level.
         globals::elements[element].ions[ion].levels[level].metastable = false;
 
         (*lineindex)++;
@@ -712,17 +712,17 @@ void read_atomicdata_files() {
 
   printout("single_level_top_ion: %s\n", single_level_top_ion ? "true" : "false");
   printout("single_ground_level: %s\n", single_ground_level ? "true" : "false");
-  /// initialize atomic data structure to number of elements
+  // initialize atomic data structure to number of elements
   int nelements_in = 0;
   assert_always(compositiondata >> nelements_in);
   set_nelements(nelements_in);
 
-  /// Initialize the linelist
+  // Initialize the linelist
   std::vector<TransitionLine> temp_linelist;
 
   std::vector<Transition> transitiontable;
 
-  /// temperature to determine relevant ionstages
+  // temperature to determine relevant ionstages
   int T_preset = 0;
   assert_always(compositiondata >> T_preset);
   assert_always(T_preset == 0);  // no longer in use
@@ -730,15 +730,15 @@ void read_atomicdata_files() {
   assert_always(compositiondata >> homogeneous_abundances);
   assert_always(homogeneous_abundances == 0);  // no longer in use
 
-  /// open transition data file
+  // open transition data file
   auto ftransitiondata = fstream_required("transitiondata.txt", std::ios::in);
 
-  int lineindex = 0;         /// counter to determine the total number of lines
+  int lineindex = 0;         // counter to determine the total number of lines
   int uniqueionindex = 0;    // index into list of all ions of all elements
   int uniquelevelindex = 0;  // index into list of all levels of all ions of all elements
   int nbfcheck = 0;
   for (int element = 0; element < get_nelements(); element++) {
-    /// read information about the next element which should be stored to memory
+    // read information about the next element which should be stored to memory
     int Z = 0;
     int nions = 0;
     int lowermost_ionstage = 0;
@@ -756,29 +756,29 @@ void read_atomicdata_files() {
     assert_always(uniformabundance >= 0);
     assert_always(mass_amu >= 0);
 
-    /// write this element's data to memory
+    // write this element's data to memory
     globals::elements[element].anumber = Z;
     globals::elements[element].nions = nions;
     globals::elements[element].initstablemeannucmass = mass_amu * MH;
     globals::elements[element].uniqueionindexstart = uniqueionindex;
 
-    /// Initialize the elements ionlist
+    // Initialize the elements ionlist
     globals::elements[element].ions = static_cast<Ion *>(calloc(nions, sizeof(Ion)));
     assert_always(globals::elements[element].ions != nullptr);
 
-    /// now read in data for all ions of the current element. before doing so initialize
-    /// energy scale for the current element (all level energies are stored relative to
-    /// the ground level of the neutral ion)
+    // now read in data for all ions of the current element. before doing so initialize
+    // energy scale for the current element (all level energies are stored relative to
+    // the ground level of the neutral ion)
     double energyoffset = 0.;
     double ionpot = 0.;
     for (int ion = 0; ion < nions; ion++) {
       int nlevelsmax = nlevelsmax_readin;
       // printout("element %d ion %d\n", element, ion);
-      /// calculate the current levels ground level energy
+      // calculate the current levels ground level energy
       assert_always(ionpot >= 0);
       energyoffset += ionpot;
 
-      /// read information for the elements next ionstage
+      // read information for the elements next ionstage
       int adata_Z_in = -1;
       int ionstage = -1;
       int nlevels = 0;
@@ -830,7 +830,7 @@ void read_atomicdata_files() {
         nlevelsmax = nlevels;
       }
 
-      /// and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
+      // and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
       int transdata_Z_in = -1;
       int transdata_ionstage_in = -1;
       int tottransitions_in_file = 0;
@@ -849,7 +849,7 @@ void read_atomicdata_files() {
       assert_always(tottransitions_in_file >= 0);
 
       // read the data for the levels and set up the list of possible transitions for each level
-      /// store the ions data to memory and set up the ions zeta and levellist
+      // store the ions data to memory and set up the ions zeta and levellist
       globals::elements[element].ions[ion].ionstage = ionstage;
       globals::elements[element].ions[ion].nlevels = nlevelsmax;
       globals::elements[element].ions[ion].ionisinglevels = 0;
@@ -881,7 +881,7 @@ void read_atomicdata_files() {
       assert_always(transdata_Z_in == Z);
       assert_always(transdata_ionstage_in == ionstage);
 
-      /// load transition table for the CURRENT ion to temporary memory
+      // load transition table for the CURRENT ion to temporary memory
 
       // first <nlevels_requiretransitions> levels will be collisionally
       // coupled to the first <nlevels_requiretransitions_upperlevels> levels (assumed forbidden)
@@ -921,7 +921,7 @@ void read_atomicdata_files() {
   }
   printout("nbfcheck %d\n", nbfcheck);
 
-  /// Save the linecounters value to the global variable containing the number of lines
+  // Save the linecounters value to the global variable containing the number of lines
   globals::nlines = lineindex;
   printout("nlines %d\n", globals::nlines);
   if (globals::rank_in_node == 0) {
@@ -932,7 +932,7 @@ void read_atomicdata_files() {
     std::abort();
   }
 
-  /// Set up the list of allowed upward transitions for each level
+  // Set up the list of allowed upward transitions for each level
   printout("total uptrans %d\n", totaluptrans);
   printout("total downtrans %d\n", totaldowntrans);
 
@@ -1000,7 +1000,7 @@ void read_atomicdata_files() {
   printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
            globals::nlines * sizeof(TransitionLine) / 1024. / 1024);
 
-  /// Save sorted linelist into a file
+  // Save sorted linelist into a file
   // if (rank_global == 0)
   // {
   //   FILE *linelist_file = fopen_required("linelist.dat", "w");
@@ -1131,10 +1131,10 @@ void read_atomicdata_files() {
 }
 
 auto search_groundphixslist(const double nu_edge, const int element_in, const int ion_in, const int level_in) -> int
-/// Return the closest ground level continuum index to the given edge
-/// frequency. If the given edge frequency is redder than the reddest
-/// continuum return -1.
-/// NB: groundphixslist must be in ascending order.
+// Return the closest ground level continuum index to the given edge
+// frequency. If the given edge frequency is redder than the reddest
+// continuum return -1.
+// NB: groundphixslist must be in ascending order.
 {
   assert_always((USE_LUT_PHOTOION || USE_LUT_BFHEATING));
 
@@ -1343,10 +1343,9 @@ void write_bflist_file() {
   }
 }
 
+// set up the photoionisation transition lists
+// and temporary gamma/kappa lists for each thread
 void setup_phixs_list() {
-  // set up the photoionisation transition lists
-  // and temporary gamma/kappa lists for each thread
-
   printout("[info] read_atomicdata: number of bfcontinua %d\n", globals::nbfcontinua);
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", globals::nbfcontinua_ground);
 
@@ -1516,7 +1515,7 @@ void setup_phixs_list() {
 void read_atomicdata() {
   read_atomicdata_files();
 
-  /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
+  // INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
   if constexpr (RECORD_LINESTAT) {
     globals::ecounter.resize(globals::nlines);
     globals::acounter.resize(globals::nlines);
@@ -1526,7 +1525,7 @@ void read_atomicdata() {
 
   setup_cellcache();
 
-  /// Printout some information about the read-in model atom
+  // Printout some information about the read-in model atom
 
   int includedionisinglevels = 0;
   int includedboundboundtransitions = 0;
@@ -1566,7 +1565,7 @@ void read_atomicdata() {
 
   setup_phixs_list();
 
-  /// set-up/gather information for nlte stuff
+  // set-up/gather information for nlte stuff
 
   globals::total_nlte_levels = 0;
   int n_super_levels = 0;
@@ -1617,9 +1616,8 @@ void read_atomicdata() {
 
 }  // anonymous namespace
 
-void input(int rank)
-/// To govern the input. For now hardwire everything.
-{
+// read input.txt, atomic data, and ejecta model
+void input(int rank) {
   globals::n_titer = 1;
   globals::lte_iteration = false;
 
@@ -1638,10 +1636,10 @@ void input(int rank)
     std::abort();
   }
 
-  /// Read in parameters from input.txt
+  // Read in parameters from input.txt
   read_parameterfile(rank);
 
-  /// Read in parameters from vpkt.txt
+  // Read in parameters from vpkt.txt
   if (VPKT_ON) {
     read_parameterfile_vpkt();
   }
@@ -1659,9 +1657,8 @@ void input(int rank)
   grid::read_ejecta_model();
 }
 
-auto get_noncommentline(std::fstream &input, std::string &line) -> bool
 // read the next line, skipping any comment lines beginning with '#'
-{
+auto get_noncommentline(std::fstream &input, std::string &line) -> bool {
   while (true) {
     const bool linefound = !(!std::getline(input, line));
     // printout("LINE: >%s<  linefound: %s commentonly: %s \n", line.c_str(), linefound ? "true" : "false",
@@ -1675,9 +1672,8 @@ auto get_noncommentline(std::fstream &input, std::string &line) -> bool
   }
 }
 
-void read_parameterfile(int rank)
-/// Subroutine to read in input parameters from input.txt.
-{
+// read input parameters from input.txt
+void read_parameterfile(int rank) {
   auto file = fstream_required("input.txt", std::ios::in);
 
   std::string line;
@@ -1704,9 +1700,9 @@ void read_parameterfile(int rank)
 #pragma omp parallel
 #endif
   {
-    /// For MPI parallelisation, the random seed is changed based on the rank of the process
-    /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
-    /// to the thread-ID tid.
+    // For MPI parallelisation, the random seed is changed based on the rank of the process
+    // For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
+    // to the thread-ID tid.
     const auto tid = get_thread_num();
     auto rngseed = pre_zseed + static_cast<std::int64_t>(13 * (rank * get_max_threads() + tid));
 #ifndef GPU_ON
@@ -1753,11 +1749,11 @@ void read_parameterfile(int rank)
   int dum1 = 0;
   std::istringstream(line) >> dum1;
   if (dum1 == 1) {
-    grid::set_model_type(GRID_SPHERICAL1D);
+    grid::set_model_type(GridType::SPHERICAL1D);
   } else if (dum1 == 2) {
-    grid::set_model_type(GRID_CYLINDRICAL2D);
+    grid::set_model_type(GridType::CYLINDRICAL2D);
   } else if (dum1 == 3) {
-    grid::set_model_type(GRID_CARTESIAN3D);
+    grid::set_model_type(GridType::CARTESIAN3D);
   }
 
   assert_always(get_noncommentline(file, line));  // UNUSED compute the r-light curve?
@@ -1793,7 +1789,7 @@ void read_parameterfile(int rank)
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> globals::rho_crit_para;  // free parameter for calculation of rho_crit
   printout("input: rho_crit_para %g\n", globals::rho_crit_para);
-  /// he calculation of rho_crit itself depends on the time, therfore it happens in grid_init and update_grid
+  // he calculation of rho_crit itself depends on the time, therfore it happens in grid_init and update_grid
 
   assert_always(get_noncommentline(file, line));
   int debug_packet = 0;
@@ -1813,15 +1809,15 @@ void read_parameterfile(int rank)
     assert_always(globals::timestep_initial == 0);
   }
 
-  /// Wavelength (in Angstroms) at which the parameterisation of the radiation field
-  /// switches from the nebular approximation to LTE.
+  // Wavelength (in Angstroms) at which the parameterisation of the radiation field
+  // switches from the nebular approximation to LTE.
   float dum2{NAN};
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> dum2;  // free parameter for calculation of rho_crit
   globals::nu_rfcut = CLIGHT / (dum2 * 1e-8);
   printout("input: nu_rfcut %g\n", globals::nu_rfcut);
 
-  /// Sets the number of initial LTE timesteps for NLTE runs
+  // Sets the number of initial LTE timesteps for NLTE runs
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> globals::num_lte_timesteps;
   printout("input: doing the first %d timesteps in LTE\n", globals::num_lte_timesteps);
@@ -1854,35 +1850,35 @@ void read_parameterfile(int rank)
         "LUT).\n");
   }
 
-  /// Set up initial grey approximation?
+  // Set up initial grey approximation?
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> globals::cell_is_optically_thick >> globals::num_grey_timesteps;
   printout(
       "input: cells with Thomson optical depth > %g are treated in grey approximation for the first %d timesteps\n",
       globals::cell_is_optically_thick, globals::num_grey_timesteps);
 
-  /// Limit the number of bf-continua
+  // Limit the number of bf-continua
   assert_always(get_noncommentline(file, line));
   int max_bf_continua = 0;
   std::istringstream(line) >> max_bf_continua;
   assert_always(max_bf_continua == -1);
 
-  /// for exspec: read number of MPI tasks
+  // for exspec: read number of MPI tasks
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> globals::nprocs_exspec;
 
-  /// Extract line-of-sight dependent information of last emission for spectrum_res
+  // Extract line-of-sight dependent information of last emission for spectrum_res
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> dum1;
   globals::do_emission_res = (dum1 != 0);
 
-  /// To reduce the work imbalance between different MPI tasks I introduced a diffusion
-  /// for kpkts, since it turned out that this work imbalance was largely dominated
-  /// by continuous collisional interactions. By introducing a diffusion time for kpkts
-  /// this loop is broken. The following two parameters control this approximation.
-  /// Parameter one (a float) gives the relative fraction of a time step which individual
-  /// kpkts live. Parameter two (an int) gives the number of time steps for which we
-  /// want to use this approximation
+  // To reduce the work imbalance between different MPI tasks I introduced a diffusion
+  // for kpkts, since it turned out that this work imbalance was largely dominated
+  // by continuous collisional interactions. By introducing a diffusion time for kpkts
+  // this loop is broken. The following two parameters control this approximation.
+  // Parameter one (a float) gives the relative fraction of a time step which individual
+  // kpkts live. Parameter two (an int) gives the number of time steps for which we
+  // want to use this approximation
   assert_always(get_noncommentline(file, line));
   int n_kpktdiffusion_timesteps{0};
   float kpktdiffusion_timescale{0.};
@@ -1898,7 +1894,7 @@ void read_parameterfile(int rank)
 }
 
 void update_parameterfile(int nts)
-/// Subroutine to read in input parameters from input.txt.
+// Subroutine to read in input parameters from input.txt.
 {
   assert_always(globals::rank_global == 0);
   if (nts >= 0) {
@@ -1932,19 +1928,19 @@ void update_parameterfile(int nts)
       // overwrite particular lines to enable restarting from the current timestep
       if (nts >= 0) {
         if (noncomment_linenum == 2) {
-          /// Number of start and end time step
+          // Number of start and end time step
           snprintf(c_line, sizeof(c_line), "%d %d", nts, globals::timestep_finish);
           // line.assign(c_line);
           line.replace(line.begin(), line.end(), c_line);
         } else if (noncomment_linenum == 16) {
-          /// resume from gridsave file
-          snprintf(c_line, sizeof(c_line), "%d", 1);  /// Force continuation
+          // resume from gridsave file
+          snprintf(c_line, sizeof(c_line), "%d", 1);  // Force continuation
           line.assign(c_line);
         }
       }
 
       if (noncomment_linenum == 21) {
-        /// by default, exspec should use all available packet files
+        // by default, exspec should use all available packet files
         globals::nprocs_exspec = globals::nprocs;
         snprintf(c_line, sizeof(c_line), "%d", globals::nprocs_exspec);
         line.assign(c_line);
@@ -1980,20 +1976,19 @@ void update_parameterfile(int nts)
   printout("done\n");
 }
 
-void time_init()
-// define the time steps
-{
-  /// t=globals::tmin is the start of the calculation. t=globals::tmax is the end of the calculation.
-  /// globals::ntimesteps is the number of time steps
+// initialize the time steps
+void time_init() {
+  // t=globals::tmin is the start of the calculation. t=globals::tmax is the end of the calculation.
+  // globals::ntimesteps is the number of time steps
 
   globals::timesteps.resize(globals::ntimesteps + 1);
   for (auto &ts : globals::timesteps) {
     ts = TimeStep{};
   }
 
-  /// Now set the individual time steps
+  // Now set the individual time steps
   switch (TIMESTEP_SIZE_METHOD) {
-    case TIMESTEP_SIZES_LOGARITHMIC: {
+    case TimeStepSizeMethod::LOGARITHMIC: {
       for (int n = 0; n < globals::ntimesteps; n++) {  // For logarithmic steps, the logarithmic inverval will be
         const double dlogt = (log(globals::tmax) - log(globals::tmin)) / globals::ntimesteps;
         globals::timesteps[n].start = globals::tmin * exp(n * dlogt);
@@ -2003,7 +1998,7 @@ void time_init()
       break;
     }
 
-    case TIMESTEP_SIZES_CONSTANT: {
+    case TimeStepSizeMethod::CONSTANT: {
       for (int n = 0; n < globals::ntimesteps; n++) {
         // for constant timesteps
         const double dt = (globals::tmax - globals::tmin) / globals::ntimesteps;
@@ -2014,7 +2009,7 @@ void time_init()
       break;
     }
 
-    case TIMESTEP_SIZES_LOGARITHMIC_THEN_CONSTANT: {
+    case TimeStepSizeMethod::LOGARITHMIC_THEN_CONSTANT: {
       // First part log, second part fixed timesteps
       const double t_transition = TIMESTEP_TRANSITION_TIME * DAY;  // transition from logarithmic to fixed timesteps
       const double maxtsdelta = FIXED_TIMESTEP_WIDTH * DAY;        // maximum timestep width in fixed part
@@ -2047,8 +2042,8 @@ void time_init()
       break;
     }
 
-    case TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC: {
-      // /// First part fixed timesteps, second part log timesteps
+    case TimeStepSizeMethod::CONSTANT_THEN_LOGARITHMIC: {
+      // // First part fixed timesteps, second part log timesteps
       const double t_transition = TIMESTEP_TRANSITION_TIME * DAY;  // transition from fixed to logarithmic timesteps
       const double maxtsdelta = FIXED_TIMESTEP_WIDTH * DAY;        // timestep width of fixed timesteps
       assert_always(t_transition > globals::tmin);
@@ -2102,8 +2097,8 @@ void time_init()
   // }
   // assert_always(globals::timesteps[0].width <= maxt); // no solution is possible with these constraints!
 
-  /// and add a dummy timestep which contains the endtime
-  /// of the calculation
+  // and add a dummy timestep which contains the endtime
+  // of the calculation
   globals::timesteps[globals::ntimesteps].start = globals::tmax;
   globals::timesteps[globals::ntimesteps].mid = globals::tmax;
   globals::timesteps[globals::ntimesteps].width = 0.;

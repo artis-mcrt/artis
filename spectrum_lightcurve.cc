@@ -142,13 +142,13 @@ auto get_proccount() -> int
 
 auto columnindex_from_emissiontype(const int et) -> int {
   if (et >= 0) {
-    /// bb-emission
+    // bb-emission
     const int element = globals::linelist[et].elementindex;
     const int ion = globals::linelist[et].ionindex;
     return (element * get_max_nions()) + ion;
   }
   if (et == EMTYPE_FREEFREE) {
-    /// ff-emission
+    // ff-emission
 
     const int contindex = -1 - et;
     assert_always(contindex >= globals::nbfcontinua);  // make sure the special value didn't collide with a real process
@@ -157,7 +157,7 @@ auto columnindex_from_emissiontype(const int et) -> int {
   }
   if (et == EMTYPE_NOTSET) {
     return -1;
-  }  /// bf-emission
+  }  // bf-emission
   const int contindex = -1 - et;
   if (globals::nbfcontinua == 0) {
     // assert_always(false);  // if there are no bf processes, we should not get here
@@ -258,7 +258,7 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, co
                                          PI / PARSEC / PARSEC / globals::nprocs_exspec * anglefactor;
         const int at = pkt.absorptiontype;
         if (at >= 0) {
-          /// bb-emission
+          // bb-emission
           const int element = globals::linelist[at].elementindex;
           const int ion = globals::linelist[at].ionindex;
           spectra.timesteps[nt].absorption[(nnu_abs * ioncount) + (element * get_max_nions()) + ion] +=
@@ -668,7 +668,7 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
 
   char linebuffer[1024];
 
-  /// Print out the UVOIR bolometric light curve.
+  // Print out the UVOIR bolometric light curve.
   for (int nts = 0; nts < numtimesteps; nts++) {
     assert_always(snprintf(linebuffer, sizeof(linebuffer), "%g %g %g", globals::timesteps[nts].mid / DAY,
                            (light_curve_lum[nts] / LSUN),
@@ -677,7 +677,7 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
   }
 
   if (current_abin == -1) {
-    /// Now print out the gamma ray deposition rate in the same file.
+    // Now print out the gamma ray deposition rate in the same file.
     for (int m = 0; m < numtimesteps; m++) {
       assert_always(snprintf(linebuffer, sizeof(linebuffer), "%g %g %g", globals::timesteps[m].mid / DAY,
                              (globals::timesteps[m].gamma_dep / LSUN / globals::timesteps[m].width),
@@ -693,7 +693,7 @@ void add_to_lc_res(const Packet &pkt, const int current_abin, std::vector<double
 // add a packet to the outgoing light-curve.
 {
   if (current_abin == -1) {
-    /// Put this into the time grid
+    // Put this into the time grid
     const double arrive_time = get_arrive_time(pkt);
     if (arrive_time > globals::tmin && arrive_time < globals::tmax) {
       const int nt = get_timestep(arrive_time);
@@ -702,7 +702,7 @@ void add_to_lc_res(const Packet &pkt, const int current_abin, std::vector<double
 
     const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
 
-    /// Now do the cmf light curve.
+    // Now do the cmf light curve.
     // t_arrive = pkt.escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
     const double arrive_time_cmf = pkt.escape_time * inverse_gamma;
 

@@ -191,7 +191,7 @@ void pkt_action_counters_printout(const int nts) {
     modelvolume += grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
   }
 
-  /// Printout packet statistics
+  // Printout packet statistics
   printout("timestep %d: ma_stat_activation_collexc = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_COLLEXC));
   printout("timestep %d: ma_stat_activation_collion = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_COLLION));
   printout("timestep %d: ma_stat_activation_ntcollexc = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC));

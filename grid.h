@@ -32,17 +32,17 @@ struct ModelGridCell {
   float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
   float ffegrp = 0.;
   float kappagrey = 0.;
-  float grey_depth = 0.;          /// Grey optical depth to surface of the modelgridcell
-                                  /// This is only stored to print it outside the OpenMP loop in update_grid to the
-                                  /// estimatorsfile so there is no need to communicate it via MPI so far!
-  int *elements_uppermost_ion{};  /// Highest ionisation stage which has a decent population for a particular
-                                  /// element in a given cell.
-  float *elem_massfracs{};        /// Pointer to an array which contains the time dependent
-                                  /// abundances of all included elements and all the groundlevel
+  float grey_depth = 0.;          // Grey optical depth to surface of the modelgridcell
+                                  // This is only stored to print it outside the OpenMP loop in update_grid to the
+                                  // estimatorsfile so there is no need to communicate it via MPI so far!
+  int *elements_uppermost_ion{};  // Highest ionisation stage which has a decent population for a particular
+                                  // element in a given cell.
+  float *elem_massfracs{};        // Pointer to an array which contains the time dependent
+                                  // abundances of all included elements and all the groundlevel
 
-  float *ion_groundlevelpops{};  /// groundlevel populations of all included ions
-  float *ion_partfuncts{};       /// partition functions for all included ions
-  std::span<double> nlte_pops;   /// Pointer to an array that contains the nlte-level populations for this cell
+  float *ion_groundlevelpops{};  // groundlevel populations of all included ions
+  float *ion_partfuncts{};       // partition functions for all included ions
+  std::span<double> nlte_pops;   // Pointer to an array that contains the nlte-level populations for this cell
   double totalcooling = -1;
   double *ion_cooling_contribs{};
   uint_fast8_t thick = 0;
@@ -50,11 +50,11 @@ struct ModelGridCell {
 
 constexpr auto get_ngriddimensions() -> int {
   switch (GRID_TYPE) {
-    case GRID_SPHERICAL1D:
+    case GridType::SPHERICAL1D:
       return 1;
-    case GRID_CYLINDRICAL2D:
+    case GridType::CYLINDRICAL2D:
       return 2;
-    case GRID_CARTESIAN3D:
+    case GridType::CARTESIAN3D:
       return 3;
     default:
       assert_always(false);
@@ -109,8 +109,8 @@ void set_element_meanweight(int mgi, int element, float meanweight);
 [[nodiscard]] auto get_numassociatedcells(int modelgridindex) -> int;
 [[nodiscard]] auto get_modelcell_nonemptymgi(int mgi) -> int;
 [[nodiscard]] auto get_mgi_of_nonemptymgi(int nonemptymgi) -> int;
-[[nodiscard]] auto get_model_type() -> enum gridtypes;
-void set_model_type(enum gridtypes model_type_value);
+[[nodiscard]] auto get_model_type() -> GridType;
+void set_model_type(GridType model_type_value);
 [[nodiscard]] auto get_npts_model() -> int;
 [[nodiscard]] auto get_nonempty_npts_model() -> int;
 [[nodiscard]] auto get_t_model() -> double;
@@ -137,7 +137,7 @@ void write_grid_restart_data(int timestep);
 void calculate_kappagrey();
 
 inline void change_cell(Packet &pkt, const int snext)
-/// Routine to take a packet across a boundary.
+// Routine to take a packet across a boundary.
 {
   if (snext >= 0) {
     // Just need to update "where".

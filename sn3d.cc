@@ -1,7 +1,7 @@
 /* 2007-10-30 -- MK
    Non-grey treatment of UVOIR opacity as opacity_case 4 added.
    Still not fully commented.
-   Comments are marked by ///  Deactivated code by // */
+   Comments are marked by //  Deactivated code by // */
 /* 2007-01-17 -- MK
    Several minor modifications (some marked in the code with //MK), these include
      - global printout() routine (located in sn3d.c)
@@ -410,7 +410,7 @@ void mpi_reduce_estimators(int nts) {
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  /// Communicate gamma and positron deposition and write to file
+  // Communicate gamma and positron deposition and write to file
   MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].cmf_lum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].cmf_lum /= globals::nprocs;
 
@@ -666,11 +666,11 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
 
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
   if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
-    /// Read the packets file to reset before each additional iteration on the timestep
+    // Read the packets file to reset before each additional iteration on the timestep
     read_temp_packetsfile(nts, my_rank, packets);
   }
 
-  /// Some counters on pkt-actions need to be reset to do statistics
+  // Some counters on pkt-actions need to be reset to do statistics
   stats::pkt_action_counters_reset();
 
   if (nts == 0) {
@@ -691,7 +691,7 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
 
   const auto sys_time_start_communicate_grid = std::time(nullptr);
 
-/// Each process has now updated its own set of cells. The results now need to be communicated between processes.
+// Each process has now updated its own set of cells. The results now need to be communicated between processes.
 #ifdef MPI_ON
   mpi_communicate_grid_properties(my_rank, globals::nprocs, nstart, ndo, mpi_grid_buffer, mpi_grid_buffer_size);
 #endif
@@ -699,9 +699,9 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
   printout("timestep %d: time after grid properties have been communicated %ld (took %ld seconds)\n", nts,
            std::time(nullptr), std::time(nullptr) - sys_time_start_communicate_grid);
 
-  /// If this is not the 0th time step of the current job step,
-  /// write out a snapshot of the grid properties for further restarts
-  /// and update input.txt accordingly
+  // If this is not the 0th time step of the current job step,
+  // write out a snapshot of the grid properties for further restarts
+  // and update input.txt accordingly
   if (((nts - globals::timestep_initial) != 0)) {
     save_grid_and_packets(nts, my_rank, packets);
     do_this_full_loop = walltime_sufficient_to_continue(nts, nts_prev, walltimelimitseconds);
@@ -717,7 +717,7 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
   if ((nts < globals::timestep_finish) && do_this_full_loop) {
-    /// Now process the packets.
+    // Now process the packets.
 
     update_packets(my_rank, nts, std::span{packets, static_cast<size_t>(globals::npkts)});
 
@@ -763,9 +763,9 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
 
     if constexpr (RECORD_LINESTAT) {
       if (my_rank == 0) {
-        /// Print net absorption/emission in lines to the linestat_file
-        /// Currently linestat information is only properly implemented for MPI only runs
-        /// For hybrid runs only data from thread 0 is recorded
+        // Print net absorption/emission in lines to the linestat_file
+        // Currently linestat information is only properly implemented for MPI only runs
+        // For hybrid runs only data from thread 0 is recorded
         for (int i = 0; i < globals::nlines; i++) {
           fprintf(linestat_file, "%d ", globals::ecounter[i]);
         }
@@ -831,7 +831,7 @@ auto main(int argc, char *argv[]) -> int {
 #pragma omp parallel private(filename)
 #endif
   {
-    /// initialise the thread and rank specific output file
+    // initialise the thread and rank specific output file
     snprintf(filename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, get_thread_num());
     output_file = std::ofstream(filename);
     assert_always(output_file.is_open());
@@ -921,10 +921,10 @@ auto main(int argc, char *argv[]) -> int {
   printout("time after input %ld\n", std::time(nullptr));
   printout("timesteps %d\n", globals::ntimesteps);
 
-  /// Precalculate the rate coefficients for spontaneous and stimulated recombination
-  /// and for photoionisation. With the nebular approximation they only depend on T_e
-  /// T_R and W. W is easily factored out. For stimulated recombination we must assume
-  /// T_e = T_R for this precalculation.
+  // Precalculate the rate coefficients for spontaneous and stimulated recombination
+  // and for photoionisation. With the nebular approximation they only depend on T_e
+  // T_R and W. W is easily factored out. For stimulated recombination we must assume
+  // T_e = T_R for this precalculation.
 
   ratecoefficients_init();
 
@@ -936,7 +936,7 @@ auto main(int argc, char *argv[]) -> int {
 
   stats::init();
 
-  /// Record the chosen syn_dir
+  // Record the chosen syn_dir
   FILE *syn_file = fopen_required("syn_dir.txt", "w");
   fprintf(syn_file, "%g %g %g", globals::syn_dir[0], globals::syn_dir[1], globals::syn_dir[2]);
   fclose(syn_file);
@@ -950,7 +950,7 @@ auto main(int argc, char *argv[]) -> int {
     write_timestep_file();
   }
 
-  /// Initialise the grid. Set up the initial positions and sizes of the grid cells.
+  // Initialise the grid. Set up the initial positions and sizes of the grid cells.
   printout("time grid_init %ld\n", std::time(nullptr));
   grid::grid_init(my_rank);
 
@@ -961,17 +961,17 @@ auto main(int argc, char *argv[]) -> int {
 
   if (!globals::simulation_continued_from_saved) {
     std::remove("deposition.out");
-    /// Next we want to initialise the packets.
-    /// Create a bunch of npkts packets
-    /// and write them to a binary file for later readin.
+    // Next we want to initialise the packets.
+    // Create a bunch of npkts packets
+    // and write them to a binary file for later readin.
     packet_init(packets);
     zero_estimators();
   }
 
-  /// For the parallelisation of update_grid, the process needs to be told which cells belong to it.
-  /// The next loop is over all grid cells. For parallelisation, we want to split this loop between
-  /// processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
-  /// cells are sent to processes 0 ... process n_leftover -1.
+  // For the parallelisation of update_grid, the process needs to be told which cells belong to it.
+  // The next loop is over all grid cells. For parallelisation, we want to split this loop between
+  // processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
+  // cells are sent to processes 0 ... process n_leftover -1.
   const int nstart = grid::get_nstart(my_rank);
   const int ndo = grid::get_ndo(my_rank);
   const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
@@ -986,9 +986,9 @@ auto main(int argc, char *argv[]) -> int {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
   const size_t maxndo = grid::get_maxndo();
-  /// Initialise the exchange buffer
-  /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
-  /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
+  // Initialise the exchange buffer
+  // The factor 4 comes from the fact that our buffer should contain elements of 4 byte
+  // instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
   mpi_grid_buffer_size = 4 * ((12 + 4 * get_includedions() + get_nelements()) * (maxndo) + 1);
   printout("reserve mpi_grid_buffer_size %zu space for MPI communication buffer\n", mpi_grid_buffer_size);
   mpi_grid_buffer = static_cast<char *>(malloc(mpi_grid_buffer_size * sizeof(char)));
@@ -1022,7 +1022,7 @@ auto main(int argc, char *argv[]) -> int {
     //        time_after_barrier);
 #endif
 
-    /// titer example: Do 3 iterations on timestep 0-6
+    // titer example: Do 3 iterations on timestep 0-6
     // globals::n_titer = (nts < 6) ? 3: 1;
 
     globals::n_titer = 1;
@@ -1032,7 +1032,7 @@ auto main(int argc, char *argv[]) -> int {
     for (int titer = 0; titer < globals::n_titer; titer++) {
       terminate_early = do_timestep(nts, titer, my_rank, nstart, ndo, packets, walltimelimitseconds);
 #ifdef DO_TITER
-      /// No iterations over the zeroth timestep, set titer > n_titer
+      // No iterations over the zeroth timestep, set titer > n_titer
       if (nts == 0) titer = globals::n_titer + 1;
 #endif
     }
@@ -1040,10 +1040,10 @@ auto main(int argc, char *argv[]) -> int {
     nts++;
   }
 
-  /// The main calculation is now over. The packets now have all stored the time, place and direction
-  /// at which they left the grid. Also their rest frame energies and frequencies.
-  /// Spectra and light curves are now extracted using exspec which is another make target of this
-  /// code.
+  // The main calculation is now over. The packets now have all stored the time, place and direction
+  // at which they left the grid. Also their rest frame energies and frequencies.
+  // Spectra and light curves are now extracted using exspec which is another make target of this
+  // code.
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);

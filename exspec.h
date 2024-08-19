@@ -2,7 +2,7 @@
 #ifndef EXSPEC_H
 #define EXSPEC_H
 
-/// Spectrum data structure
+// Spectrum data structure
 constexpr int MNUBINS = 1000;
 
 constexpr int NPHIBINS = 10;

@@ -9,7 +9,7 @@
 
 constexpr int MPKTS = 15000;
 
-constexpr int GRID_TYPE = GRID_CARTESIAN3D;
+constexpr auto GRID_TYPE = GridType::CARTESIAN3D;
 constexpr int CUBOID_NCOORDGRID_X = 50;
 constexpr int CUBOID_NCOORDGRID_Y = 50;
 constexpr int CUBOID_NCOORDGRID_Z = 50;
@@ -130,7 +130,7 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = true;
 
 constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = false;
 
-constexpr enum timestepsizemethods TIMESTEP_SIZE_METHOD = TIMESTEP_SIZES_LOGARITHMIC;
+constexpr auto TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
 
 constexpr double FIXED_TIMESTEP_WIDTH = -1.;
 

@@ -716,7 +716,7 @@ void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, cons
     const auto sys_time_start_Te = std::time(nullptr);
     const int nts_for_te = (titer == 0) ? nts - 1 : nts;
 
-    /// Find T_e as solution for thermal balance
+    // Find T_e as solution for thermal balance
     call_T_e_finder(mgi, nts, globals::timesteps[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates,
                     bfheatingcoeffs);
 
@@ -811,20 +811,20 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
         }
       }
 
-      /// 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm
-      /// values so that the values are known when required by the call to get_corrphotoioncoeff in
-      /// the following loops. Otherwise get_corrphotoioncoeff tries to renormalize by the closest
-      /// corrphotoionrenorm in frequency space which can lead to zero contributions to the total
-      /// photoionsation rate!
+      // 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm
+      // values so that the values are known when required by the call to get_corrphotoioncoeff in
+      // the following loops. Otherwise get_corrphotoioncoeff tries to renormalize by the closest
+      // corrphotoionrenorm in frequency space which can lead to zero contributions to the total
+      // photoionsation rate!
     }
   }
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
-        /// Reuse the gammaestimator array as temporary storage of the Gamma values during
-        /// the remaining part of the update_grid phase. Afterwards it is reset to record
-        /// the next timesteps gamma estimators.
+        // Reuse the gammaestimator array as temporary storage of the Gamma values during
+        // the remaining part of the update_grid phase. Afterwards it is reset to record
+        // the next timesteps gamma estimators.
         const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
         if (groundcontindex < 0) {
           continue;
@@ -844,9 +844,9 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
           }
           bfheatingestimator_save[ionestimindex] = globals::bfheatingestimator[ionestimindex];
 #endif
-          /// Now convert bfheatingestimator into the bfheating renormalisation coefficient used in
-          /// get_bfheating in the remaining part of update_grid. Later on it's reset and new
-          /// contributions are added up.
+          // Now convert bfheatingestimator into the bfheating renormalisation coefficient used in
+          // get_bfheating in the remaining part of update_grid. Later on it's reset and new
+          // contributions are added up.
 
           const double bfheatingcoeff_ana =
               get_bfheatingcoeff_ana(element, ion, 0, 0, grid::get_TR(mgi), grid::get_W(mgi));
@@ -884,8 +884,8 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
                       const double deltat, HeatingCoolingRates *heatingcoolingrates) {
   const int assoc_cells = grid::get_numassociatedcells(mgi);
   if (assoc_cells < 1) {
-    /// For modelgrid cells that are not represented in the simulation grid,
-    /// Set grid properties to zero
+    // For modelgrid cells that are not represented in the simulation grid,
+    // Set grid properties to zero
     grid::set_TR(mgi, 0.);
     grid::set_TJ(mgi, 0.);
     grid::set_Te(mgi, 0.);
@@ -901,10 +901,10 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
   printout("update_grid_cell: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
 
-  /// Update current mass density of cell
+  // Update current mass density of cell
   grid::set_rho(mgi, grid::get_rho_tmin(mgi) / pow(tratmid, 3));
 
-  /// Update elemental abundances with radioactive decays
+  // Update elemental abundances with radioactive decays
   decay::update_abundances(mgi, nts, globals::timesteps[nts].mid);
   nonthermal::calculate_deposition_rate_density(mgi, nts, heatingcoolingrates);
 
@@ -935,14 +935,14 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     // either by trapped energy release calculation, or reading from gridsave file
 
     if (USE_LUT_PHOTOION && !globals::simulation_continued_from_saved) {
-      /// Determine renormalisation factor for corrected photoionization cross-sections
+      // Determine renormalisation factor for corrected photoionization cross-sections
       std::fill_n(globals::corrphotoionrenorm + (nonemptymgi * globals::nbfcontinua_ground),
                   globals::nbfcontinua_ground, 1.);
     }
 
-    /// W == 1 indicates that this modelgrid cell was treated grey in the
-    /// last timestep. Therefore it has no valid Gamma estimators and must
-    /// be treated in LTE at restart.
+    // W == 1 indicates that this modelgrid cell was treated grey in the
+    // last timestep. Therefore it has no valid Gamma estimators and must
+    // be treated in LTE at restart.
     if (grid::modelgrid[mgi].thick != 1 && grid::get_W(mgi) == 1) {
       printout(
           "force modelgrid cell %d to grey/LTE thick = 1 for update grid since existing W == 1. (will not have "
@@ -963,11 +963,11 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
   } else {
     // For all other timesteps temperature corrections have to be applied
 
-    /// we have to calculate the electron density
-    /// and all the level populations
-    /// Normalise estimators and make sure that they are finite.
-    /// Then update T_R and W using the estimators.
-    /// (This could in principle also be done for empty cells)
+    // we have to calculate the electron density
+    // and all the level populations
+    // Normalise estimators and make sure that they are finite.
+    // Then update T_R and W using the estimators.
+    // (This could in principle also be done for empty cells)
 
     const auto sys_time_start_temperature_corrections = std::time(nullptr);
 
@@ -1070,8 +1070,8 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     assert_always(grid::modelgrid[mgi].totalcooling >= 0.);
     assert_always(grid::modelgrid[mgi].ion_cooling_contribs[0] >= 0.);
   } else {
-    /// Cooling rates depend only on cell properties, precalculate total cooling
-    /// and ion contributions inside update grid and communicate between MPI tasks
+    // Cooling rates depend only on cell properties, precalculate total cooling
+    // and ion contributions inside update grid and communicate between MPI tasks
     const auto sys_time_start_calc_kpkt_rates = std::time(nullptr);
 
     printout("calculating cooling_rates for timestep %d cell %d...", nts, mgi);
@@ -1101,7 +1101,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
                  const int ndo, const int titer, const std::time_t real_time_start)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
-/// nts timestep
+// nts timestep
 {
   const auto sys_time_start_update_grid = std::time(nullptr);
   printout("\n");
@@ -1111,11 +1111,11 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // printout("[debug] update_grid: starting update for timestep %d...\n",m);
   const double tratmid = globals::timesteps[nts].mid / globals::tmin;
 
-  /// Calculate the critical opacity at which opacity_case 3 switches from a
-  /// regime proportional to the density to a regime independent of the density
-  /// This is done by solving for tau_sobolev == 1
-  /// tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(28, 56) * 3000e-8 *
-  /// globals::timesteps[m].mid;
+  // Calculate the critical opacity at which opacity_case 3 switches from a
+  // regime proportional to the density to a regime independent of the density
+  // This is done by solving for tau_sobolev == 1
+  // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(28, 56) * 3000e-8 *
+  // globals::timesteps[m].mid;
   globals::rho_crit = ME * CLIGHT * decay::nucmass(28, 56) /
                       (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::timesteps[nts].mid);
   printout("update_grid: rho_crit = %g\n", globals::rho_crit);
@@ -1129,7 +1129,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
   cellcache_change_cell(-99);
 
-  /// Do not use values which are saved in the cellcache within update_grid
+  // Do not use values which are saved in the cellcache within update_grid
   use_cellcache = false;
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
@@ -1140,14 +1140,14 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #pragma omp parallel
 #endif
   {
-/// Updating cell information
+// Updating cell information
 #ifdef _OPENMP
 #pragma omp for schedule(dynamic)
 #endif
 
     for (int mgi = nstart; mgi < nstart + ndo; mgi++) {
-      /// Check if this task should work on the current model grid cell.
-      /// If yes, update the cell and write out the estimators
+      // Check if this task should work on the current model grid cell.
+      // If yes, update the cell and write out the estimators
       HeatingCoolingRates heatingcoolingrates{};
       update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates);
 
@@ -1156,12 +1156,12 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #pragma omp critical(estimators_file)
 #endif
       { write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates); }
-    }  /// end parallel for loop over all modelgrid cells
+    }  // end parallel for loop over all modelgrid cells
 
-  }  /// end OpenMP parallel section
+  }  // end OpenMP parallel section
 
-  /// Now after all the relevant taks of update_grid have been finished activate
-  /// the use of the cellcache for all OpenMP tasks, in what follows (update_packets)
+  // Now after all the relevant taks of update_grid have been finished activate
+  // the use of the cellcache for all OpenMP tasks, in what follows (update_packets)
   use_cellcache = true;
 
   // alterative way to write out estimators. this keeps the modelgrid cells in order but
@@ -1188,10 +1188,10 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 }
 
 void cellcache_change_cell(const int modelgridindex) {
-  /// All entries of the cellcache stack must be flagged as empty at the
-  /// onset of the new timestep. Also, boundary crossing?
-  /// Calculate the level populations for this cell, and flag the other entries
-  /// as empty.
+  // All entries of the cellcache stack must be flagged as empty at the
+  // onset of the new timestep. Also, boundary crossing?
+  // Calculate the level populations for this cell, and flag the other entries
+  // as empty.
   if (modelgridindex == globals::cellcache[cellcacheslotid].cellnumber) {
     return;
   }

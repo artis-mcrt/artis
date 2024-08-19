@@ -58,8 +58,6 @@ MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
 MPI_Win win_prev_bfrate_normed = MPI_WIN_NULL;
 #endif
 
-// ** Detailed lines - Jblue_lu estimators for selected lines
-
 struct Jb_lu_estimator {
   double value = 0.;
   int contribcount = 0;
@@ -74,8 +72,6 @@ int *detailed_lineindicies;
 
 Jb_lu_estimator **prev_Jb_lu_normed{};  // value from the previous timestep
 Jb_lu_estimator **Jb_lu_raw{};          // unnormalised estimator for the current timestep
-
-// ** end detailed lines
 
 float *prev_bfrate_normed{};     // values from the previous timestep
 std::vector<double> bfrate_raw;  // unnormalised estimators for the current timestep
@@ -121,9 +117,8 @@ constexpr auto get_bin_nu_lower(const int binindex) -> double {
   return nu_lower_first_initial;
 }
 
+// find the left-closed bin [nu_lower, nu_upper) that nu belongs to
 constexpr auto select_bin(const double nu) -> int {
-  // find the left-closed bin [nu_lower, nu_upper) that nu belongs to
-
   if (nu < nu_lower_first_initial) {
     return -2;  // out of range, nu lower than lowest bin's lower boundary
   }
@@ -171,10 +166,9 @@ void realloc_detailed_lines(const int new_size) {
   }
 }
 
-void add_detailed_line(const int lineindex)
 // associate a Jb_lu estimator with a particular lineindex to be used
 // instead of the general radiation field model
-{
+void add_detailed_line(const int lineindex) {
   if (detailed_linecount % BLOCKSIZEJBLUE == 0) {
     const int new_size = detailed_linecount + BLOCKSIZEJBLUE;
     realloc_detailed_lines(new_size);
@@ -195,9 +189,8 @@ void add_detailed_line(const int lineindex)
   // printout("Added Jblue estimator for lineindex %d count %d\n", lineindex, detailed_linecount);
 }
 
-auto get_bin_J(const int modelgridindex, const int binindex) -> double
 // get the normalised J_nu
-{
+auto get_bin_J(const int modelgridindex, const int binindex) -> double {
   const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
@@ -215,9 +208,8 @@ auto get_bin_nuJ(const int modelgridindex, const int binindex) -> double {
   return radfieldbins[(nonemptymgi * RADFIELDBINCOUNT) + binindex].nuJ_raw * J_normfactor[nonemptymgi];
 }
 
-auto get_bin_nu_bar(const int modelgridindex, const int binindex) -> double
-// importantly, this is average beween the current and previous timestep
-{
+// get <nuJ> / <J> for a bin
+auto get_bin_nu_bar(const int modelgridindex, const int binindex) -> double {
   const double nuJ_sum = get_bin_nuJ(modelgridindex, binindex);
   const double J_sum = get_bin_J(modelgridindex, binindex);
   return nuJ_sum / J_sum;
@@ -355,7 +347,7 @@ auto find_T_R(const int modelgridindex, const int binindex) -> float {
   paras.modelgridindex = modelgridindex;
   paras.binindex = binindex;
 
-  /// Check whether the equation has a root in [T_min,T_max]
+  // Check whether the equation has a root in [T_min,T_max]
   double delta_nu_bar_min = delta_nu_bar(T_R_min, &paras);
   double delta_nu_bar_max = delta_nu_bar(T_R_max, &paras);
 
@@ -367,7 +359,7 @@ auto find_T_R(const int modelgridindex, const int binindex) -> float {
   }
 
   if (delta_nu_bar_min * delta_nu_bar_max < 0) {
-    /// If there is a root in the interval, solve for T_R
+    // If there is a root in the interval, solve for T_R
 
     const double epsrel = 1e-4;
     const double epsabs = 0.;
@@ -375,7 +367,7 @@ auto find_T_R(const int modelgridindex, const int binindex) -> float {
 
     gsl_function find_T_R_f = {.function = &delta_nu_bar, .params = &paras};
 
-    /// one dimensional gsl root solver, bracketing type
+    // one dimensional gsl root solver, bracketing type
     gsl_root_fsolver *T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
     gsl_root_fsolver_set(T_R_solver, &find_T_R_f, T_R_min, T_R_max);
     int status = 0;
@@ -401,8 +393,8 @@ auto find_T_R(const int modelgridindex, const int binindex) -> float {
 
     gsl_root_fsolver_free(T_R_solver);
   } else if (delta_nu_bar_max < 0) {
-    /// Thermal balance equation always negative ===> T_R = T_min
-    /// Calculate the rates again at this T_e to print them to file
+    // Thermal balance equation always negative ===> T_R = T_min
+    // Calculate the rates again at this T_e to print them to file
     T_R = T_R_max;
     printout("find_T_R: cell %d bin %4d no solution in interval, clamping to T_R_max=%g\n", modelgridindex, binindex,
              T_R_max);
@@ -475,9 +467,9 @@ auto get_bfcontindex(const int element, const int lowerion, const int lower, con
 
 }  // anonymous namespace
 
-void init(const int my_rank, const int ndo_nonempty)
-// this should be called only after the atomic data is in memory
-{
+void init(const int my_rank, const int ndo_nonempty) {
+  // this should be called only after the atomic data is in memory
+
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
   J_normfactor.resize(nonempty_npts_model + 1);
@@ -656,8 +648,8 @@ void init(const int my_rank, const int ndo_nonempty)
   }
 }
 
-/// Initialise estimator arrays which hold the last time steps values (used to damp out
-/// fluctuations over timestep iterations if DO_TITER is defined) to -1.
+// Initialise estimator arrays which hold the last time steps values (used to damp out
+// fluctuations over timestep iterations if DO_TITER is defined) to -1.
 void initialise_prev_titer_photoionestimators() {
 #ifdef DO_TITER
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
@@ -681,9 +673,8 @@ void initialise_prev_titer_photoionestimators() {
 #endif
 }
 
-auto get_Jblueindex(const int lineindex) -> int
-// returns -1 if the line does not have a Jblue estimator
-{
+auto get_Jblueindex(const int lineindex) -> int {
+  // returns -1 if the line does not have a Jblue estimator
   if constexpr (!DETAILED_LINE_ESTIMATORS_ON) {
     return -1;
   }
@@ -823,10 +814,8 @@ void close_file() {
   }
 }
 
-void zero_estimators()
-// set up the new bins and clear the estimators in preparation
-// for a timestep
-{
+// set up the new bins and clear the estimators in preparation for a timestep
+void zero_estimators() {
   std::ranges::fill(J_normfactor, -1.0);
   std::ranges::fill(J, 0.0);
   std::ranges::fill(nuJ, 0.0);
@@ -899,9 +888,8 @@ __host__ __device__ void update_lineestimator(const int modelgridindex, const in
   }
 }
 
-__host__ __device__ auto radfield(const double nu, const int modelgridindex) -> double
-// returns mean intensity J_nu [ergs/s/sr/cm2/Hz]
-{
+// mean intensity J_nu [ergs/s/sr/cm2/Hz]
+__host__ __device__ auto radfield(const double nu, const int modelgridindex) -> double {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP) {
       const int binindex = select_bin(nu);
@@ -923,10 +911,10 @@ __host__ __device__ auto radfield(const double nu, const int modelgridindex) -> 
   return J_nu_fullspec;
 }
 
+// return the integral of nu^3 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
+// or if times_nu is true, the integral of nu^4 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
 auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper,
                               const bool times_nu) -> double {
-  // return the integral of nu^3 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
-  // or if times_nu is true, the integral of nu^4 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
   double integral = 0.;
 
   if (times_nu) {
@@ -961,10 +949,8 @@ auto planck_integral_analytic(const double T_R, const double nu_lower, const dou
   return integral;
 }
 
-void fit_parameters(const int modelgridindex, const int timestep)
-// finds the best fitting W and temperature parameters in each spectral bin
-// using J and nuJ
-{
+// finds the best fitting W and temperature parameters in each spectral bin using J and nuJ
+void fit_parameters(const int modelgridindex, const int timestep) {
   set_params_fullspec(modelgridindex, timestep);
 
   const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
@@ -1104,12 +1090,12 @@ auto get_T_J_from_J(const int modelgridindex) -> double {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   const double T_J = pow(J[nonemptymgi] * PI / STEBO, 1. / 4.);
   if (!std::isfinite(T_J)) {
-    /// keep old value of T_J
+    // keep old value of T_J
     printout("[warning] get_T_J_from_J: T_J estimator infinite in cell %d, use value of last timestep\n",
              modelgridindex);
     return grid::get_TR(modelgridindex);
   }
-  /// Make sure that T is in the allowed temperature range.
+  // Make sure that T is in the allowed temperature range.
   if (T_J > MAXTEMP) {
     printout("[warning] get_T_J_from_J: T_J would be %.1f > MAXTEMP. Clamping to MAXTEMP = %.0f K\n", T_J, MAXTEMP);
     return MAXTEMP;
@@ -1198,10 +1184,9 @@ void reduce_estimators()
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void do_MPI_Bcast(const int modelgridindex, const int root, const int root_node_id)
 // broadcast computed radfield results including parameters
 // from the cells belonging to root process to all processes
-{
+void do_MPI_Bcast(const int modelgridindex, const int root, const int root_node_id) {
   if (grid::get_numassociatedcells(modelgridindex) == 0) {
     return;
   }
