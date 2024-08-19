@@ -118,8 +118,7 @@ void calculate_macroatom_transitionrates(const int modelgridindex, const int ele
     const double R =
         rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, uptrans.lineindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, statweight);
-    const double NT =
-        nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, uptrans.lineindex);
+    const double NT = nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, i, uptrans.lineindex);
 
     const double individ_internal_up_same = (R + C + NT) * epsilon_current;
 

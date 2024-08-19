@@ -489,8 +489,7 @@ void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, 
       assert_always(std::isfinite(C));
 
       const double NTC =
-          nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, lineindex) *
-          s_renorm[level];
+          nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, i, lineindex) * s_renorm[level];
 
       const int lower_index = level_index;
       const int upper_index = get_nlte_vector_index(element, ion, upper);

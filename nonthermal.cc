@@ -70,14 +70,6 @@ namespace {
 //   return 0.;
 // }
 
-constexpr bool STORE_NT_SPECTRUM = false;  // if this is on, the non-thermal energy spectrum will be kept in memory for
-                                           // every grid cell during packet propagation, which
-                                           // can take up a lot of memory for large grid sizes
-                                           // alternatively, just the non-thermal ionization rates can be stored
-                                           // but we might want to re-enable this option to incorporate
-                                           // non-thermal excitation rates if there are
-                                           // many more transitions to store than there are NT spectrum samples
-
 // minimum number fraction of the total population to include in SF solution
 constexpr double minionfraction = 1.e-8;
 
@@ -1708,17 +1700,6 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
   nt_solution[modelgridindex].frac_heating = 1. - frac_excitation_total - frac_ionization_total;
   printout("  (replacing calculated frac_heating_tot with %g to make frac_sum = 1.0)\n",
            nt_solution[modelgridindex].frac_heating);
-
-  // const double nnion = get_nnion(modelgridindex, element, ion);
-  // double ntexcit_in_a = 0.;
-  // for (int level = 0; level < get_nlevels(0, 1); level++)
-  // {
-  //   ntexcit_in_a += nnion * nt_excitation_ratecoeff(modelgridindex, 0, 1, level, 75);
-  // }
-  // printout("  total nt excitation rate into level 75: %g\n", ntexcit_in_a);
-
-  // compensate for lost energy by scaling the solution
-  // E_init_ev *= frac_sum;
 }
 
 void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridindex, const int element, const int ion) {
@@ -1976,7 +1957,6 @@ void init(const int my_rank, const int ndo_nonempty) {
   printout("  SFPTS %d\n", SFPTS);
   printout("  SF_EMIN %g eV\n", SF_EMIN);
   printout("  SF_EMAX %g eV\n", SF_EMAX);
-  printout("  STORE_NT_SPECTRUM %s\n", STORE_NT_SPECTRUM ? "on" : "off");
   printout("  NT_USE_VALENCE_IONPOTENTIAL %s\n", NT_USE_VALENCE_IONPOTENTIAL ? "on" : "off");
   printout("  NT_MAX_AUGER_ELECTRONS %d\n", NT_MAX_AUGER_ELECTRONS);
   printout("  SF_AUGER_CONTRIBUTION %s\n", SF_AUGER_CONTRIBUTION_ON ? "on" : "off");
@@ -2029,7 +2009,6 @@ void init(const int my_rank, const int ndo_nonempty) {
 
   nt_solution.resize(grid::get_npts_model());
 
-  size_t mem_usage_yfunc = 0;
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     // should make these negative?
     nt_solution[modelgridindex].frac_heating = 0.97;
@@ -2039,15 +2018,11 @@ void init(const int my_rank, const int ndo_nonempty) {
     nt_solution[modelgridindex].nneperion_when_solved = -1.;
     nt_solution[modelgridindex].timestep_last_solved = -1;
 
+    nt_solution[modelgridindex].yfunc = nullptr;
+
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
       nt_solution[modelgridindex].allions =
           static_cast<NonThermalSolutionIon *>(calloc(get_includedions(), sizeof(NonThermalSolutionIon)));
-
-      if (STORE_NT_SPECTRUM) {
-        nt_solution[modelgridindex].yfunc = static_cast<double *>(calloc(SFPTS, sizeof(double)));
-        assert_always(nt_solution[modelgridindex].yfunc != nullptr);
-        mem_usage_yfunc += SFPTS * sizeof(double);
-      }
 
       const size_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
@@ -2058,17 +2033,11 @@ void init(const int my_rank, const int ndo_nonempty) {
     } else {
       nt_solution[modelgridindex].allions = nullptr;
 
-      nt_solution[modelgridindex].yfunc = nullptr;
       nt_solution[modelgridindex].frac_excitations_list = nullptr;
     }
 
     nt_solution[modelgridindex].frac_excitations_list_size = 0;
   }
-
-  if (STORE_NT_SPECTRUM) {
-    printout("[info] mem_usage: storing non-thermal spectra for all allocated cells occupies %.3f MB\n",
-             mem_usage_yfunc / 1024. / 1024.);
-  };
 
   envec = gsl_vector_calloc(SFPTS);  // energy grid on which solution is sampled
   logenvec = gsl_vector_calloc(SFPTS);
@@ -2323,7 +2292,7 @@ __host__ __device__ auto nt_ionization_ratecoeff(const int modelgridindex, const
 
 __host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const int ion,
                                                  const int lowerlevel, const int uptransindex,
-                                                 const double epsilon_trans, const int lineindex) -> double {
+                                                 const int lineindex) -> double {
   if constexpr (!NT_EXCITATION_ON) {
     return 0.;
   }
@@ -2336,18 +2305,6 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const
   }
 
   assert_testmodeonly(grid::get_numassociatedcells(modelgridindex) > 0);
-
-  // if the NT spectrum is stored, we can calculate any non-thermal excitation rate, even if
-  // it didn't make the cut to be kept in the stored excitation list
-  if constexpr (STORE_NT_SPECTRUM) {
-    const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
-    const double statweight_lower = stat_weight(element, ion, lowerlevel);
-
-    const double ratecoeffperdeposition = calculate_nt_excitation_ratecoeff_perdeposition(
-        modelgridindex, element, ion, lowerlevel, uptransindex, statweight_lower, epsilon_trans);
-
-    return ratecoeffperdeposition * deposition_rate_density;
-  }
 
   // binary search, assuming the excitation list is sorted by lineindex ascending
   const auto ntexclist = std::span(nt_solution[modelgridindex].frac_excitations_list,
@@ -2624,9 +2581,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   // }
   // printout("\n");
 
-  if (!STORE_NT_SPECTRUM) {
-    nt_solution[modelgridindex].yfunc = yfunc_current.data();
-  }
+  nt_solution[modelgridindex].yfunc = yfunc_current.data();
 
   gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
   gsl_vector *yvec = &yvecview.vector;
@@ -2642,9 +2597,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   analyse_sf_solution(modelgridindex, timestep, enable_sfexcitation);
 
-  if (!STORE_NT_SPECTRUM) {
-    nt_solution[modelgridindex].yfunc = nullptr;
-  }
+  nt_solution[modelgridindex].yfunc = nullptr;
 }
 
 void write_restart_data(FILE *gridsave_file) {
@@ -2682,13 +2635,6 @@ void write_restart_data(FILE *gridsave_file) {
                                               nt_solution[modelgridindex].frac_excitations_list_size)) {
         fprintf(gridsave_file, "%la %la %d\n", excitation.frac_deposition, excitation.ratecoeffperdeposition,
                 excitation.lineindex);
-      }
-
-      // write non-thermal spectrum
-      if (STORE_NT_SPECTRUM) {
-        for (int s = 0; s < SFPTS; s++) {
-          fprintf(gridsave_file, "%la\n", nt_solution[modelgridindex].yfunc[s]);
-        }
       }
     }
   }
@@ -2762,13 +2708,6 @@ void read_restart_data(FILE *gridsave_file) {
                              &nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition,
                              &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex) == 3);
       }
-
-      // read non-thermal spectrum
-      if (STORE_NT_SPECTRUM) {
-        for (int s = 0; s < SFPTS; s++) {
-          assert_always(fscanf(gridsave_file, "%la\n", &nt_solution[modelgridindex].yfunc[s]) == 1);
-        }
-      }
     }
   }
 }
@@ -2807,13 +2746,6 @@ void nt_MPI_Bcast(const int modelgridindex, const int root, const int root_node_
           nt_solution[modelgridindex].frac_excitations_list,
           static_cast<size_t>(nt_solution[modelgridindex].frac_excitations_list_size) * sizeof(NonThermalExcitation),
           MPI_BYTE, root_node_id, globals::mpi_comm_internode);
-    }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    if (STORE_NT_SPECTRUM) {
-      assert_always(nt_solution[modelgridindex].yfunc != nullptr);
-      MPI_Bcast(nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
