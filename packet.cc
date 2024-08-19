@@ -36,7 +36,7 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
   // pkt.last_cross = BOUNDARY_NONE;
   pkt.originated_from_particlenotgamma = false;
 
-  if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
+  if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
     const double zrand = rng_uniform();
     const double r_inner = grid::get_cellcoordmin(cellindex, 0);
     const double r_outer = grid::get_cellcoordmax(cellindex, 0);
@@ -47,7 +47,7 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
 
     pkt.pos = vec_scale(get_rand_isotropic_unitvec(), radius);
 
-  } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
+  } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
     const double zrand = rng_uniform_pos();
     const double rcyl_inner = grid::get_cellcoordmin(cellindex, 0);
     const double rcyl_outer = grid::get_cellcoordmax(cellindex, 0);
@@ -59,7 +59,7 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
 
     pkt.pos[2] = grid::get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * grid::wid_init(cellindex, 1));
 
-  } else if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
+  } else if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     for (int axis = 0; axis < 3; axis++) {
       pkt.pos[axis] = grid::get_cellcoordmin(cellindex, axis) + (rng_uniform_pos() * grid::wid_init(cellindex, axis));
     }

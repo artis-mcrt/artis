@@ -1749,11 +1749,11 @@ void read_parameterfile(int rank) {
   int dum1 = 0;
   std::istringstream(line) >> dum1;
   if (dum1 == 1) {
-    grid::set_model_type(GRID_SPHERICAL1D);
+    grid::set_model_type(GridType::SPHERICAL1D);
   } else if (dum1 == 2) {
-    grid::set_model_type(GRID_CYLINDRICAL2D);
+    grid::set_model_type(GridType::CYLINDRICAL2D);
   } else if (dum1 == 3) {
-    grid::set_model_type(GRID_CARTESIAN3D);
+    grid::set_model_type(GridType::CARTESIAN3D);
   }
 
   assert_always(get_noncommentline(file, line));  // UNUSED compute the r-light curve?

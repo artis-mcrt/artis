@@ -50,11 +50,11 @@ struct ModelGridCell {
 
 constexpr auto get_ngriddimensions() -> int {
   switch (GRID_TYPE) {
-    case GRID_SPHERICAL1D:
+    case GridType::SPHERICAL1D:
       return 1;
-    case GRID_CYLINDRICAL2D:
+    case GridType::CYLINDRICAL2D:
       return 2;
-    case GRID_CARTESIAN3D:
+    case GridType::CARTESIAN3D:
       return 3;
     default:
       assert_always(false);
@@ -109,8 +109,8 @@ void set_element_meanweight(int mgi, int element, float meanweight);
 [[nodiscard]] auto get_numassociatedcells(int modelgridindex) -> int;
 [[nodiscard]] auto get_modelcell_nonemptymgi(int mgi) -> int;
 [[nodiscard]] auto get_mgi_of_nonemptymgi(int nonemptymgi) -> int;
-[[nodiscard]] auto get_model_type() -> enum gridtypes;
-void set_model_type(enum gridtypes model_type_value);
+[[nodiscard]] auto get_model_type() -> GridType;
+void set_model_type(GridType model_type_value);
 [[nodiscard]] auto get_npts_model() -> int;
 [[nodiscard]] auto get_nonempty_npts_model() -> int;
 [[nodiscard]] auto get_t_model() -> double;

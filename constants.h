@@ -46,13 +46,11 @@ constexpr double OSCSTRENGTHCONVERSION = 1.3473837e+21;
 
 constexpr double H_ionpot = 13.5979996 * EV;
 
-enum gridtypes {
-  GRID_SPHERICAL1D = 1,    // 1D radial shells (non-uniform dr)
-  GRID_CYLINDRICAL2D = 2,  // 2D cylindrical grid with uniform dz, drcyl
-  GRID_CARTESIAN3D = 3     // 3D Cartesian cubic grid with uniform dx=dy=dz
+enum class GridType {
+  SPHERICAL1D,    // 1D radial shells (non-uniform dr)
+  CYLINDRICAL2D,  // 2D cylindrical grid with uniform dz, drcyl
+  CARTESIAN3D     // 3D Cartesian cubic grid with uniform dx=dy=dz
 };
-
-constexpr int GRID_UNIFORM = GRID_CARTESIAN3D;  // deprecated alias for GRID_CARTESIAN3D
 
 // constant for van-Regemorter approximation.
 constexpr double C_0 = 5.465e-11;

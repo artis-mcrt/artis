@@ -9,7 +9,7 @@
 
 constexpr int MPKTS = 100000;
 
-constexpr int GRID_TYPE = GRID_CARTESIAN3D;
+constexpr auto GRID_TYPE = GridType::CARTESIAN3D;
 constexpr int CUBOID_NCOORDGRID_X = 100;
 constexpr int CUBOID_NCOORDGRID_Y = 100;
 constexpr int CUBOID_NCOORDGRID_Z = 100;

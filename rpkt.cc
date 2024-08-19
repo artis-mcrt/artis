@@ -686,7 +686,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
 
     return (pkt.type == TYPE_RPKT && (newmgi == grid::get_npts_model() || newmgi == mgi));
   }
-  const double maxsdist = (GRID_TYPE == GRID_CARTESIAN3D)
+  const double maxsdist = (GRID_TYPE == GridType::CARTESIAN3D)
                               ? globals::rmax * pkt.prop_time / globals::tmin
                               : 2 * globals::rmax * (pkt.prop_time + sdist / CLIGHT_PROP) / globals::tmin;
   if (sdist > maxsdist) {
