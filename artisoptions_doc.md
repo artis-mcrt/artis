@@ -203,14 +203,8 @@ constexpr bool INSTANT_PARTICLE_DEPOSITION;
 // values that would give the same number or more more fixed timesteps than the total number of timesteps in the
 // simulation. The times are set in days.
 
-enum timestepsizemethods {
-  TIMESTEP_SIZES_LOGARITHMIC = 0,
-  TIMESTEP_SIZES_CONSTANT = 1,
-  TIMESTEP_SIZES_LOGARITHMIC_THEN_CONSTANT = 2,
-  TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC = 3,
-};
 
-constexpr enum timestepsizemethods TIMESTEP_SIZE_METHOD;
+constexpr enum class timestepsizemethods TIMESTEP_SIZE_METHOD;
 
 constexpr double FIXED_TIMESTEP_WIDTH;
 

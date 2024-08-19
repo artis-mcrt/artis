@@ -60,12 +60,7 @@ constexpr double C_0 = 5.465e-11;
 constexpr int MAXFILENAMELENGTH = 128;
 constexpr size_t GSLWSIZE = 16384;  // GSL integration workspace size
 
-enum timestepsizemethods {
-  TIMESTEP_SIZES_LOGARITHMIC = 0,
-  TIMESTEP_SIZES_CONSTANT = 1,
-  TIMESTEP_SIZES_LOGARITHMIC_THEN_CONSTANT = 2,
-  TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC = 3,
-};
+enum class TimeStepSizeMethod { LOGARITHMIC, CONSTANT, LOGARITHMIC_THEN_CONSTANT, CONSTANT_THEN_LOGARITHMIC };
 
 enum class ThermalisationScheme { INSTANT, DETAILED, BARNES, WOLLAEGER, GUTTMAN };
 

@@ -1988,7 +1988,7 @@ void time_init() {
 
   // Now set the individual time steps
   switch (TIMESTEP_SIZE_METHOD) {
-    case TIMESTEP_SIZES_LOGARITHMIC: {
+    case TimeStepSizeMethod::LOGARITHMIC: {
       for (int n = 0; n < globals::ntimesteps; n++) {  // For logarithmic steps, the logarithmic inverval will be
         const double dlogt = (log(globals::tmax) - log(globals::tmin)) / globals::ntimesteps;
         globals::timesteps[n].start = globals::tmin * exp(n * dlogt);
@@ -1998,7 +1998,7 @@ void time_init() {
       break;
     }
 
-    case TIMESTEP_SIZES_CONSTANT: {
+    case TimeStepSizeMethod::CONSTANT: {
       for (int n = 0; n < globals::ntimesteps; n++) {
         // for constant timesteps
         const double dt = (globals::tmax - globals::tmin) / globals::ntimesteps;
@@ -2009,7 +2009,7 @@ void time_init() {
       break;
     }
 
-    case TIMESTEP_SIZES_LOGARITHMIC_THEN_CONSTANT: {
+    case TimeStepSizeMethod::LOGARITHMIC_THEN_CONSTANT: {
       // First part log, second part fixed timesteps
       const double t_transition = TIMESTEP_TRANSITION_TIME * DAY;  // transition from logarithmic to fixed timesteps
       const double maxtsdelta = FIXED_TIMESTEP_WIDTH * DAY;        // maximum timestep width in fixed part
@@ -2042,7 +2042,7 @@ void time_init() {
       break;
     }
 
-    case TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC: {
+    case TimeStepSizeMethod::CONSTANT_THEN_LOGARITHMIC: {
       // // First part fixed timesteps, second part log timesteps
       const double t_transition = TIMESTEP_TRANSITION_TIME * DAY;  // transition from fixed to logarithmic timesteps
       const double maxtsdelta = FIXED_TIMESTEP_WIDTH * DAY;        // timestep width of fixed timesteps
