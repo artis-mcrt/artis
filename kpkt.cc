@@ -27,15 +27,10 @@ namespace kpkt {
 
 namespace {
 
-enum coolingtype {
-  COOLINGTYPE_FF = 0,
-  COOLINGTYPE_FB = 1,
-  COOLINGTYPE_COLLEXC = 2,
-  COOLINGTYPE_COLLION = 3,
-};
+enum class CoolingType { FREEFREE, FREEBOUND, COLLEXC, COLLION };
 
 struct CellCacheCoolingList {
-  enum coolingtype type;
+  CoolingType type;
   int level;
   int upperlevel;
 };
@@ -74,7 +69,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
     if constexpr (update_cooling_contrib_list) {
       globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
-      assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_FF);
+      assert_testmodeonly(coolinglist[i].type == CoolingType::FF);
 
       i++;
     } else {
@@ -106,7 +101,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
       if constexpr (update_cooling_contrib_list) {
         globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
-        assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_COLLEXC);
+        assert_testmodeonly(coolinglist[i].type == CoolingType::COLLEXC);
 
         i++;
       }
@@ -133,7 +128,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
         if constexpr (update_cooling_contrib_list) {
           globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
-          assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_COLLION);
+          assert_testmodeonly(coolinglist[i].type == CoolingType::COLLION);
           assert_testmodeonly(coolinglist[i].level == level);
           assert_testmodeonly(coolinglist[i].upperlevel == upper);
 
@@ -159,7 +154,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
         if constexpr (update_cooling_contrib_list) {
           globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
-          assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_FB);
+          assert_testmodeonly(coolinglist[i].type == CoolingType::FB);
           assert_testmodeonly(coolinglist[i].level == level);
           assert_testmodeonly(coolinglist[i].upperlevel == get_phixsupperlevel(element, ion, level, phixstargetindex));
 
@@ -323,7 +318,7 @@ void setup_coolinglist() {
       const int ioncharge = get_ionstage(element, ion) - 1;
       // printout("[debug] ioncharge %d, nncurrention %g, nne %g\n",ion,nncurrention,nne);
       if (ioncharge > 0) {
-        coolinglist[i].type = COOLINGTYPE_FF;
+        coolinglist[i].type = CoolingType::FREEFREE;
         coolinglist[i].level = -99;
         coolinglist[i].upperlevel = -99;
         i++;
@@ -331,7 +326,7 @@ void setup_coolinglist() {
 
       for (int level = 0; level < nlevels_currention; level++) {
         if (get_nuptrans(element, ion, level) > 0) {
-          coolinglist[i].type = COOLINGTYPE_COLLEXC;
+          coolinglist[i].type = CoolingType::COLLEXC;
           coolinglist[i].level = level;
           // upper level is not valid because this is the contribution of all upper levels combined - have to
           // calculate individually when selecting a random process
@@ -346,7 +341,7 @@ void setup_coolinglist() {
           const int nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-            coolinglist[i].type = COOLINGTYPE_COLLION;
+            coolinglist[i].type = CoolingType::COLLION;
             coolinglist[i].level = level;
             coolinglist[i].upperlevel = upper;
             i++;
@@ -359,7 +354,7 @@ void setup_coolinglist() {
           const int nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-            coolinglist[i].type = COOLINGTYPE_FB;
+            coolinglist[i].type = CoolingType::FREEBOUND;
             coolinglist[i].level = level;
             coolinglist[i].upperlevel = upper;
             i++;
@@ -516,7 +511,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   const auto rndcoolingtype = coolinglist[i].type;
   const auto T_e = grid::get_Te(modelgridindex);
 
-  if (rndcoolingtype == COOLINGTYPE_FF) {
+  if (rndcoolingtype == CoolingType::FREEFREE) {
     // The k-packet converts directly into a r-packet by free-free-emission.
     // Need to select the r-packets frequency and a random direction in the
     // co-moving frame.
@@ -543,7 +538,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
       vpkt_call_estimators(pkt, TYPE_KPKT);
     }
 
-  } else if (rndcoolingtype == COOLINGTYPE_FB) {
+  } else if (rndcoolingtype == CoolingType::FREEBOUND) {
     // The k-packet converts directly into a r-packet by free-bound-emission.
     // Need to select the r-packets frequency and a random direction in the
     // co-moving frame.
@@ -583,7 +578,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     if constexpr (VPKT_ON) {
       vpkt_call_estimators(pkt, TYPE_KPKT);
     }
-  } else if (rndcoolingtype == COOLINGTYPE_COLLEXC) {
+  } else if (rndcoolingtype == CoolingType::COLLEXC) {
     // the k-packet activates a macro-atom due to collisional excitation
     // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
     const float nne = grid::get_nne(modelgridindex);
@@ -639,7 +634,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     pkt.trueemissionvelocity = -1;
 
     do_macroatom(pkt, {.element = element, .ion = ion, .level = upper, .activatingline = -99});
-  } else if (rndcoolingtype == COOLINGTYPE_COLLION) {
+  } else if (rndcoolingtype == CoolingType::COLLION) {
     // the k-packet activates a macro-atom due to collisional ionisation
     // printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
 
@@ -660,8 +655,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
 
     do_macroatom(pkt, {.element = element, .ion = upperion, .level = upper, .activatingline = -99});
   } else if constexpr (TESTMODE) {
-    printout("ERROR: Unknown rndcoolingtype type %d\n", rndcoolingtype);
-    assert_testmodeonly(false);
+    assert_always(false);
   } else {
     __builtin_unreachable();
   }
