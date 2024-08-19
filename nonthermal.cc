@@ -548,7 +548,7 @@ auto get_y(const double energy_ev) -> double {
     assert_always(std::isfinite(yfunc[0]));
     return yfunc[0];
   }
-  if (index > SFPTS - 1) {
+  if (index >= SFPTS - 1) {
     return 0.;
   }
   const double enbelow = gsl_vector_get(envec, index);
