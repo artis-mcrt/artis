@@ -47,6 +47,7 @@ thread_local std::vector<double> vec_rate_matrix_LU_decomp;
 thread_local std::vector<double> vec_balance_vector;
 thread_local std::vector<double> vec_pop_norm_factor_vec;
 thread_local std::vector<double> vec_pop_vec;
+thread_local std::vector<double> vec_x;
 
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
@@ -696,7 +697,8 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
   assert_always(rate_matrix->size1 == nlte_dimension);
   assert_always(rate_matrix->size2 == nlte_dimension);
 
-  gsl_vector *x = gsl_vector_alloc(nlte_dimension);  // population solution vector (normalised)
+  vec_x.resize(vec_pop_norm_factor_vec.size());
+  gsl_vector x = gsl_vector_view_array(vec_x.data(), nlte_dimension).vector;
 
   vec_rate_matrix_LU_decomp.resize(vec_rate_matrix.size());
   // make a copy of the rate matrix for the LU decomp
@@ -717,7 +719,7 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
     gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
     // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
-    gsl_linalg_LU_solve(&rate_matrix_LU_decomp, p, balance_vector, x);
+    gsl_linalg_LU_solve(&rate_matrix_LU_decomp, p, balance_vector, &x);
 
     gsl_set_error_handler(previous_handler);
 
@@ -732,16 +734,16 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
     int iteration = 0;
     for (iteration = 0; iteration < 10; iteration++) {
       if (iteration > 0) {
-        gsl_linalg_LU_refine(rate_matrix, &rate_matrix_LU_decomp, p, balance_vector, x, gsl_work_vector);
+        gsl_linalg_LU_refine(rate_matrix, &rate_matrix_LU_decomp, p, balance_vector, &x, gsl_work_vector);
       }
 
       gsl_vector_memcpy(residual_vector, balance_vector);
-      gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, x, -1.0, residual_vector);  // calculate Ax - b = residual
+      gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, &x, -1.0, residual_vector);  // calculate Ax - b = residual
       const double error = fabs(
           gsl_vector_get(residual_vector, gsl_blas_idamax(residual_vector)));  // value of the largest absolute residual
 
       if (error < error_best || error_best < 0.) {
-        gsl_vector_memcpy(x_best, x);
+        gsl_vector_memcpy(x_best, &x);
         error_best = error;
       }
       // printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
@@ -759,21 +761,21 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
             iteration, error_best);
       }
 
-      gsl_vector_memcpy(x, x_best);
+      gsl_vector_memcpy(&x, x_best);
     }
 
     gsl_vector_free(x_best);
     gsl_vector_free(gsl_work_vector);
 
     // get the real populations using the x vector and the normalisation factors
-    gsl_vector_memcpy(popvec, x);
+    gsl_vector_memcpy(popvec, &x);
     gsl_vector_mul(popvec, pop_normfactor_vec);
     // popvec will be used contains the real population densities
 
     for (size_t row = 0; row < nlte_dimension; row++) {
       double recovered_balance_vector_elem = 0.;
       gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
-      gsl_blas_ddot(&row_view.vector, x, &recovered_balance_vector_elem);
+      gsl_blas_ddot(&row_view.vector, &x, &recovered_balance_vector_elem);
 
       int ion = 0;
       int level = 0;
@@ -791,7 +793,7 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
             "  WARNING: NLTE solver gave negative population to index %zud (Z=%d ionstage %d level %d), pop = %g. "
             "Replacing with LTE pop of %g\n",
             row, get_atomicnumber(element), get_ionstage(element, ion), level,
-            gsl_vector_get(x, row) * gsl_vector_get(pop_normfactor_vec, row), gsl_vector_get(pop_normfactor_vec, row));
+            gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row), gsl_vector_get(pop_normfactor_vec, row));
         gsl_vector_set(popvec, row, gsl_vector_get(pop_normfactor_vec, row));
       }
     }
@@ -800,7 +802,6 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
     completed_solution = true;
   }
 
-  gsl_vector_free(x);
   gsl_permutation_free(p);
 
   return completed_solution;
