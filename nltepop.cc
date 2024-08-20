@@ -32,7 +32,14 @@ FILE *nlte_file{};
 // can save memory by using a combined rate matrix at the cost of diagnostic information
 constexpr bool individual_process_matricies = true;
 
+// the backing storage for the gsl matrices
 thread_local std::vector<double> vec_rate_matrix;
+thread_local std::vector<double> vec_rate_matrix_rad_bb;
+thread_local std::vector<double> vec_rate_matrix_coll_bb;
+thread_local std::vector<double> vec_rate_matrix_ntcoll_bb;
+thread_local std::vector<double> vec_rate_matrix_rad_bf;
+thread_local std::vector<double> vec_rate_matrix_coll_bf;
+thread_local std::vector<double> vec_rate_matrix_ntcoll_bf;
 
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
@@ -430,13 +437,35 @@ auto get_element_nlte_dimension(const int element) -> int {
   return nlte_dimension;
 }
 
-void alloc_matricies() {
+void alloc_matrix_storage() {
+  // we are using vectors to handle the memory management that will be accessed by gsl matrix pointers
+
   int max_nlte_dimension = 0;
   for (int element = 0; element < get_nelements(); element++) {
     max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element));
   }
   vec_rate_matrix.resize(max_nlte_dimension * max_nlte_dimension);
   vec_rate_matrix.shrink_to_fit();
+
+  if constexpr (individual_process_matricies) {
+    vec_rate_matrix_rad_bb.resize(max_nlte_dimension * max_nlte_dimension);
+    vec_rate_matrix_rad_bb.shrink_to_fit();
+
+    vec_rate_matrix_coll_bb.resize(max_nlte_dimension * max_nlte_dimension);
+    vec_rate_matrix_coll_bb.shrink_to_fit();
+
+    vec_rate_matrix_ntcoll_bb.resize(max_nlte_dimension * max_nlte_dimension);
+    vec_rate_matrix_ntcoll_bb.shrink_to_fit();
+
+    vec_rate_matrix_rad_bf.resize(max_nlte_dimension * max_nlte_dimension);
+    vec_rate_matrix_rad_bf.shrink_to_fit();
+
+    vec_rate_matrix_coll_bf.resize(max_nlte_dimension * max_nlte_dimension);
+    vec_rate_matrix_coll_bf.shrink_to_fit();
+
+    vec_rate_matrix_ntcoll_bf.resize(max_nlte_dimension * max_nlte_dimension);
+    vec_rate_matrix_ntcoll_bf.shrink_to_fit();
+  }
 }
 
 void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, const int ion, const double t_mid,
@@ -835,7 +864,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
-  alloc_matricies();
+  alloc_matrix_storage();
   auto rate_matrix_view = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension);
   gsl_matrix *rate_matrix = &rate_matrix_view.matrix;
   gsl_matrix_set_all(rate_matrix, 0.);
@@ -847,12 +876,29 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_matrix *rate_matrix_coll_bf{};
   gsl_matrix *rate_matrix_ntcoll_bf{};
   if (individual_process_matricies) {
-    rate_matrix_rad_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    rate_matrix_coll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    rate_matrix_ntcoll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    rate_matrix_rad_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    rate_matrix_coll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    rate_matrix_ntcoll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+    auto rate_matrix_rad_bb_view = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension);
+    gsl_matrix *rate_matrix_rad_bb = &rate_matrix_rad_bb_view.matrix;
+    gsl_matrix_set_all(rate_matrix_rad_bb, 0.);
+
+    auto rate_matrix_coll_bb_view = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension);
+    gsl_matrix *rate_matrix_coll_bb = &rate_matrix_coll_bb_view.matrix;
+    gsl_matrix_set_all(rate_matrix_coll_bb, 0.);
+
+    auto rate_matrix_ntcoll_bb_view = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension);
+    gsl_matrix *rate_matrix_ntcoll_bb = &rate_matrix_ntcoll_bb_view.matrix;
+    gsl_matrix_set_all(rate_matrix_ntcoll_bb, 0.);
+
+    auto rate_matrix_rad_bf_view = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension);
+    gsl_matrix *rate_matrix_rad_bf = &rate_matrix_rad_bf_view.matrix;
+    gsl_matrix_set_all(rate_matrix_rad_bf, 0.);
+
+    auto rrate_matrix_coll_bf_view = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension);
+    gsl_matrix *rate_matrix_coll_bf = &rrate_matrix_coll_bf_view.matrix;
+    gsl_matrix_set_all(rate_matrix_coll_bf, 0.);
+
+    auto rate_matrix_ntcoll_bf_view = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension);
+    gsl_matrix *rate_matrix_ntcoll_bf = &rate_matrix_ntcoll_bf_view.matrix;
+    gsl_matrix_set_all(rate_matrix_ntcoll_bf, 0.);
   } else {
     // alias the single matrix accounting for all processes
     rate_matrix_rad_bb = rate_matrix;
@@ -1056,15 +1102,6 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
                           rate_matrix_ntcoll_bf);
       }
     }
-  }
-
-  if (individual_process_matricies) {
-    gsl_matrix_free(rate_matrix_rad_bb);
-    gsl_matrix_free(rate_matrix_coll_bb);
-    gsl_matrix_free(rate_matrix_ntcoll_bb);
-    gsl_matrix_free(rate_matrix_rad_bf);
-    gsl_matrix_free(rate_matrix_coll_bf);
-    gsl_matrix_free(rate_matrix_ntcoll_bf);
   }
 
   gsl_vector_free(popvec);
