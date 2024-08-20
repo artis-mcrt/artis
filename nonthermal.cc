@@ -1315,18 +1315,18 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const gsl_vector_view yvecv
                                                      const int lower, const int uptransindex,
                                                      const double statweight_lower,
                                                      const double epsilon_trans) -> double {
-  gsl_vector *xs_excitation_vec = gsl_vector_alloc(SFPTS);
-  if (get_xs_excitation_vector(xs_excitation_vec, element, ion, lower, uptransindex, statweight_lower, epsilon_trans) >=
-      0) {
+  thread_local static std::array<double, SFPTS> xs_excitation_vec{};
+
+  gsl_vector gsl_xs_excitation_vec = gsl_vector_view_array(xs_excitation_vec.data(), SFPTS).vector;
+  if (get_xs_excitation_vector(&gsl_xs_excitation_vec, element, ion, lower, uptransindex, statweight_lower,
+                               epsilon_trans) >= 0) {
     double y_dot_crosssection = 0.;
-    gsl_blas_ddot(xs_excitation_vec, &yvecview.vector, &y_dot_crosssection);
-    gsl_vector_free(xs_excitation_vec);
+    gsl_blas_ddot(&gsl_xs_excitation_vec, &yvecview.vector, &y_dot_crosssection);
 
     y_dot_crosssection *= DELTA_E;
 
     return y_dot_crosssection / E_init_ev / EV;
   }
-  gsl_vector_free(xs_excitation_vec);
 
   return 0.;
 }
