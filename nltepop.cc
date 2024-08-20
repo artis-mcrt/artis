@@ -446,27 +446,17 @@ void alloc_matrix_storage() {
     max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element));
   }
   vec_rate_matrix.resize(max_nlte_dimension * max_nlte_dimension);
-  vec_rate_matrix.shrink_to_fit();
 
   if constexpr (individual_process_matricies) {
     vec_rate_matrix_rad_bb.resize(max_nlte_dimension * max_nlte_dimension);
-    vec_rate_matrix_rad_bb.shrink_to_fit();
-
     vec_rate_matrix_coll_bb.resize(max_nlte_dimension * max_nlte_dimension);
-    vec_rate_matrix_coll_bb.shrink_to_fit();
-
     vec_rate_matrix_ntcoll_bb.resize(max_nlte_dimension * max_nlte_dimension);
-    vec_rate_matrix_ntcoll_bb.shrink_to_fit();
-
     vec_rate_matrix_rad_bf.resize(max_nlte_dimension * max_nlte_dimension);
-    vec_rate_matrix_rad_bf.shrink_to_fit();
-
     vec_rate_matrix_coll_bf.resize(max_nlte_dimension * max_nlte_dimension);
-    vec_rate_matrix_coll_bf.shrink_to_fit();
-
     vec_rate_matrix_ntcoll_bf.resize(max_nlte_dimension * max_nlte_dimension);
-    vec_rate_matrix_ntcoll_bf.shrink_to_fit();
   }
+
+  vec_balance_vector.resize(max_nlte_dimension);
 }
 
 void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, const int ion, const double t_mid,
