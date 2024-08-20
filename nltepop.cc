@@ -48,6 +48,7 @@ thread_local std::vector<double> vec_balance_vector;
 thread_local std::vector<double> vec_pop_norm_factor_vec;
 thread_local std::vector<double> vec_pop_vec;
 thread_local std::vector<double> vec_x;
+thread_local std::vector<size_t> vec_permutation;
 
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
@@ -706,10 +707,11 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
       gsl_matrix_view_array(vec_rate_matrix_LU_decomp.data(), nlte_dimension, nlte_dimension).matrix;
   gsl_matrix_memcpy(&rate_matrix_LU_decomp, rate_matrix);
 
-  gsl_permutation *p = gsl_permutation_alloc(nlte_dimension);
+  vec_permutation.resize(vec_pop_norm_factor_vec.size());
+  gsl_permutation p{.size = nlte_dimension, .data = vec_permutation.data()};
 
   int s = 0;  // sign of the transformation
-  gsl_linalg_LU_decomp(&rate_matrix_LU_decomp, p, &s);
+  gsl_linalg_LU_decomp(&rate_matrix_LU_decomp, &p, &s);
 
   if (lumatrix_is_singular(&rate_matrix_LU_decomp, element)) {
     printout("ERROR: NLTE matrix is singular for element Z=%d!\n", get_atomicnumber(element));
@@ -719,7 +721,7 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
     gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
     // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
-    gsl_linalg_LU_solve(&rate_matrix_LU_decomp, p, balance_vector, &x);
+    gsl_linalg_LU_solve(&rate_matrix_LU_decomp, &p, balance_vector, &x);
 
     gsl_set_error_handler(previous_handler);
 
@@ -734,7 +736,7 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
     int iteration = 0;
     for (iteration = 0; iteration < 10; iteration++) {
       if (iteration > 0) {
-        gsl_linalg_LU_refine(rate_matrix, &rate_matrix_LU_decomp, p, balance_vector, &x, gsl_work_vector);
+        gsl_linalg_LU_refine(rate_matrix, &rate_matrix_LU_decomp, &p, balance_vector, &x, gsl_work_vector);
       }
 
       gsl_vector_memcpy(residual_vector, balance_vector);
@@ -801,8 +803,6 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
     gsl_vector_free(residual_vector);
     completed_solution = true;
   }
-
-  gsl_permutation_free(p);
 
   return completed_solution;
 }
