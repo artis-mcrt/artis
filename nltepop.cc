@@ -32,6 +32,8 @@ FILE *nlte_file{};
 // can save memory by using a combined rate matrix at the cost of diagnostic information
 constexpr bool individual_process_matricies = true;
 
+thread_local std::vector<double> vec_rate_matrix;
+
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
 auto get_nlte_vector_index(const int element, const int ion, const int level) -> int {
@@ -426,6 +428,15 @@ auto get_element_nlte_dimension(const int element) -> int {
   }
 
   return nlte_dimension;
+}
+
+void alloc_matricies() {
+  int max_nlte_dimension = 0;
+  for (int element = 0; element < get_nelements(); element++) {
+    max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element));
+  }
+  vec_rate_matrix.resize(max_nlte_dimension * max_nlte_dimension);
+  vec_rate_matrix.shrink_to_fit();
 }
 
 void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, const int ion, const double t_mid,
@@ -824,7 +835,11 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
-  gsl_matrix *rate_matrix = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+  alloc_matricies();
+  auto rate_matrix_view = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension);
+  gsl_matrix *rate_matrix = &rate_matrix_view.matrix;
+  gsl_matrix_set_all(rate_matrix, 0.);
+
   gsl_matrix *rate_matrix_rad_bb{};
   gsl_matrix *rate_matrix_coll_bb{};
   gsl_matrix *rate_matrix_ntcoll_bb{};
@@ -1054,7 +1069,6 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   gsl_vector_free(popvec);
 
-  gsl_matrix_free(rate_matrix);
   gsl_vector_free(balance_vector);
   gsl_vector_free(pop_norm_factor_vec);
   const int duration_nltesolver = std::time(nullptr) - sys_time_start_nltesolver;
