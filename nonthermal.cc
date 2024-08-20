@@ -114,17 +114,18 @@ gsl_vector *logenvec;   // log of envec
 gsl_vector *sourcevec;  // samples of the source function (energy distribution of deposited energy)
 
 // Samples of the Spencer-Fano solution function for the current cell being worked on. Multiply by energy to get
-// non-thermal electron number flux. y(E) * dE is the flux of electrons with energy in the range (E, E + dE) y has units
-// of particles / cm2 / s / eV
+// non-thermal electron number flux. y(E) * dE is the flux of electrons with energy in the range (E, E + dE) in units of
+// particles/cm2/s. y has units of particles/cm2/s/eV
 thread_local std::array<double, SFPTS> yfunc{};
 
-// the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV/s/cm3
+// the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
+// This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.
 double E_init_ev = 0;
 
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
 // Monte Carlo result - compare to analytical expectation
-double nt_energy_deposited;
+double nt_energy_deposited = 0;
 
 struct NonThermalExcitation {
   double frac_deposition;  // the fraction of the non-thermal deposition energy going to the excitation transition
@@ -535,6 +536,8 @@ auto get_energyindex_ev_gteq(const double energy_ev) -> int
   return index;
 }
 
+// interpolate the y flux values to get the value at a given energy
+// y has units of particles / cm2 / s / eV
 auto get_y(const double energy_ev) -> double {
   if (energy_ev <= 0) {
     return 0.;
@@ -601,9 +604,9 @@ void nt_write_to_file(const int modelgridindex, const int timestep, const int it
 #endif
 }
 
-auto get_xs_ionization_vector(gsl_vector *const xs_vec, const collionrow &colliondata) -> int
 // xs_vec will be set with impact ionization cross sections for E > ionpot_ev (and zeros below this energy)
-{
+// returns the index of the first energy point >= ionpot_ev
+auto get_xs_ionization_vector(gsl_vector *const xs_vec, const collionrow &colliondata) -> int {
   const double ionpot_ev = colliondata.ionpot_ev;
   const int startindex = get_energyindex_ev_gteq(ionpot_ev);
 
@@ -627,10 +630,9 @@ auto get_xs_ionization_vector(gsl_vector *const xs_vec, const collionrow &collio
   return startindex;
 }
 
-auto Psecondary(const double e_p, const double epsilon, const double I, const double J) -> double
 // distribution of secondary electron energies for primary electron with energy e_p
 // Opal, Peterson, & Beaty (1971)
-{
+auto Psecondary(const double e_p, const double epsilon, const double I, const double J) -> double {
   const double e_s = epsilon - I;
 
   if (e_p <= I || e_s < 0.) {
@@ -661,11 +663,10 @@ auto get_J(const int Z, const int ionstage, const double ionpot_ev) -> double {
   return 0.6 * ionpot_ev;
 }
 
-constexpr auto xs_excitation(const int element, const int ion, const int lower, const int uptransindex,
-                             const double epsilon_trans, const double lowerstatweight, const double energy) -> double
 // collisional excitation cross section in cm^2
 // energies are in erg
-{
+constexpr auto xs_excitation(const int element, const int ion, const int lower, const int uptransindex,
+                             const double epsilon_trans, const double lowerstatweight, const double energy) -> double {
   if (energy < epsilon_trans) {
     return 0.;
   }
@@ -695,18 +696,17 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
   return 0.;
 }
 
-constexpr auto electron_loss_rate(const double energy, const double nne) -> double
 // -dE / dx for fast electrons
 // energy is in ergs
 // nne is the thermal electron density [cm^-3]
-// return units are erg / cm
-{
+// return value has units of erg/cm
+constexpr auto electron_loss_rate(const double energy, const double nne) -> double {
   if (energy <= 0.) {
     return 0;
   }
 
   // normally set to 1.0, but Shingles et al. (2021) boosted this to increase heating
-  const double boostfactor = 1.;
+  constexpr double boostfactor = 1.;
 
   const double omegap = sqrt(4 * PI * nne * pow(QE, 2) / ME);
   const double zetae = H * omegap / 2 / PI;
@@ -717,12 +717,11 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
   return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(ME * pow(v, 3) / (EULERGAMMA * pow(QE, 2) * omegap));
 }
 
-constexpr auto xs_impactionization(const double energy_ev, const collionrow &colliondata) -> double
 // impact ionization cross section in cm^2
 // energy and ionization_potential should be in eV
 // fitting forumula of Younger 1981
 // called Q_i(E) in KF92 equation 7
-{
+constexpr auto xs_impactionization(const double energy_ev, const collionrow &colliondata) -> double {
   const double ionpot_ev = colliondata.ionpot_ev;
   const double u = energy_ev / ionpot_ev;
 
@@ -737,11 +736,10 @@ constexpr auto xs_impactionization(const double energy_ev, const collionrow &col
   return 1e-14 * (A * (1 - 1 / u) + B * pow((1 - (1 / u)), 2) + C * log(u) + D * log(u) / u) / (u * pow(ionpot_ev, 2));
 }
 
-auto N_e(const int modelgridindex, const double energy) -> double
 // Kozma & Fransson equation 6.
 // Something related to a number of electrons, needed to calculate the heating fraction in equation 3
 // not valid for energy > SF_EMIN
-{
+auto N_e(const int modelgridindex, const double energy) -> double {
   const double energy_ev = energy / EV;
   const double tot_nion = get_nnion_tot(modelgridindex);
   double N_e = 0.;
@@ -823,9 +821,9 @@ auto N_e(const int modelgridindex, const double energy) -> double
   return N_e;
 }
 
-auto calculate_frac_heating(const int modelgridindex) -> float
+// fraction of deposited energy that goes into heating the thermal electrons
 // Kozma & Fransson equation 3
-{
+auto calculate_frac_heating(const int modelgridindex) -> float {
   // frac_heating multiplied by E_init, which will be divided out at the end
   double frac_heating_Einit = 0.;
 
@@ -864,6 +862,7 @@ auto calculate_frac_heating(const int modelgridindex) -> float
   return frac_heating;
 }
 
+// fraction of deposited energy that goes into ionization
 auto get_nt_frac_ionization(const int modelgridindex) -> float {
   if (!NT_ON) {
     return 0.;
@@ -883,6 +882,7 @@ auto get_nt_frac_ionization(const int modelgridindex) -> float {
   return frac_ionization;
 }
 
+// fraction of deposited energy that goes into collisional excitation
 auto get_nt_frac_excitation(const int modelgridindex) -> float {
   if (!NT_ON || !NT_SOLVE_SPENCERFANO) {
     return 0.;
@@ -1016,10 +1016,10 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
   return total;
 }
 
+// compute the work per ion pair for doing the NT ionization calculation.
+// Makes use of EXTREMELY SIMPLE approximations - high energy limits only (can be used as an alternative to the
+// Spencer-Fano solver)
 auto get_oneoverw(const int element, const int ion, const int modelgridindex) -> double {
-  // Routine to compute the work per ion pair for doing the NT ionization calculation.
-  // Makes use of EXTREMELY SIMPLE approximations - high energy limits only
-
   // Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec).
   // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
   // denominator is extremely simplified. Need to get the mean Z value.
@@ -1028,29 +1028,24 @@ auto get_oneoverw(const int element, const int ion, const int modelgridindex) ->
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
     Zbar += grid::get_elem_abundance(modelgridindex, ielement) * get_atomicnumber(ielement);
   }
-  // printout("cell %d has Zbar of %g\n", modelgridindex, Zbar);
 
-  const double Aconst = 1.33e-14 * EV * EV;
   const double binding = get_mean_binding_energy(element, ion);
+  constexpr double Aconst = 1.33e-14 * EV * EV;
   const double oneoverW = Aconst * binding / Zbar / (2 * PI * pow(QE, 4));
-  // printout("For element %d ion %d I got W of %g (eV)\n", element, ion, 1./oneoverW/EV);
 
   return oneoverW;
 }
 
+// the fraction of deposited energy that goes into ionising electrons in a particular shell
 auto calculate_nt_frac_ionization_shell(const int modelgridindex, const int element, const int ion,
-                                        const collionrow &collionrow) -> double
-// the fraction of deposition energy that goes into ionising electrons in this particular shell
-{
-  const double nnion = get_nnion(modelgridindex, element, ion);  // hopefully ions per cm^3?
+                                        const collionrow &collionrow) -> double {
+  const double nnion = get_nnion(modelgridindex, element, ion);
   const double ionpot_ev = collionrow.ionpot_ev;
 
   gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
   get_xs_ionization_vector(cross_section_vec, collionrow);
 
-  // either multiply by the variable delta_e for LOG_E spacing...
-
-  gsl_vector_view const yvecview = gsl_vector_view_array(yfunc.data(), SFPTS);
+  const gsl_vector_view yvecview = gsl_vector_view_array(yfunc.data(), SFPTS);
 
   double y_dot_crosssection_de = 0.;
   gsl_blas_ddot(&yvecview.vector, cross_section_vec, &y_dot_crosssection_de);
@@ -1111,7 +1106,7 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
   gsl_vector_free(cross_section_vec);
 
   double y_dot_crosssection_de = 0.;
-  gsl_vector_view const yvecview_thismgi = gsl_vector_view_array(yfunc.data(), SFPTS);
+  const gsl_vector_view yvecview_thismgi = gsl_vector_view_array(yfunc.data(), SFPTS);
   gsl_blas_ddot(&yvecview_thismgi.vector, cross_section_vec_allshells, &y_dot_crosssection_de);
   gsl_vector_free(cross_section_vec_allshells);
 
@@ -1915,10 +1910,8 @@ void init(const int my_rank, const int ndo_nonempty) {
   deposition_rate_density.resize(grid::get_npts_model());
   deposition_rate_density_timestep.resize(grid::get_npts_model());
 
-  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-    deposition_rate_density[modelgridindex] = -1.;
-    deposition_rate_density_timestep[modelgridindex] = -1;
-  }
+  std::ranges::fill(deposition_rate_density, -1.);
+  std::ranges::fill(deposition_rate_density_timestep, -1);
 
   if (!NT_ON) {
     return;
@@ -1957,14 +1950,13 @@ void init(const int my_rank, const int ndo_nonempty) {
              nt_excitations_stored,
              grid::get_nonempty_npts_model() * sizeof(NonThermalExcitation) * nt_excitations_stored / 1024. / 1024.);
 
-    const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
+    const auto nonempty_npts_model = grid::get_nonempty_npts_model();
 
 #ifdef MPI_ON
 
     MPI_Win win_shared_excitations_list{};
 
     int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
-
     // rank_in_node 0 gets any remainder
     if (globals::rank_in_node == 0) {
       my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
@@ -2065,11 +2057,10 @@ void init(const int my_rank, const int ndo_nonempty) {
   printout("Finished initializing non-thermal solver\n");
 }
 
-void calculate_deposition_rate_density(const int modelgridindex, const int timestep,
-                                       HeatingCoolingRates *heatingcoolingrates)
 // set total non-thermal deposition rate from individual gamma/positron/electron/alpha rates. This should be called
 // after packet propagation is finished for this timestep and normalise_deposition_estimators() has been done
-{
+void calculate_deposition_rate_density(const int modelgridindex, const int timestep,
+                                       HeatingCoolingRates *heatingcoolingrates) {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   heatingcoolingrates->dep_gamma = globals::dep_estimator_gamma[nonemptymgi];
 
@@ -2392,10 +2383,9 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
   stats::increment(stats::COUNTER_NT_STAT_TO_KPKT);
 }
 
-void solve_spencerfano(const int modelgridindex, const int timestep, const int iteration)
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
-{
+void solve_spencerfano(const int modelgridindex, const int timestep, const int iteration) {
   bool skip_solution = false;
   if (grid::get_numassociatedcells(modelgridindex) < 1) {
     printout("Associated_cells < 1 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex,
@@ -2416,6 +2406,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   }
 
   if (skip_solution) {
+    // Axelrod values
     nt_solution[modelgridindex].frac_heating = 0.97;
     nt_solution[modelgridindex].frac_ionization = 0.03;
     nt_solution[modelgridindex].frac_excitation = 0.;
@@ -2429,7 +2420,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
     return;
   }
 
-  const float nne = grid::get_nne(modelgridindex);  // electrons per cm^3
+  const auto nne = grid::get_nne(modelgridindex);  // electrons per cm^3
   const double nne_per_ion = nne / get_nnion_tot(modelgridindex);
   const double nne_per_ion_last = nt_solution[modelgridindex].nneperion_when_solved;
   const double nne_per_ion_fracdiff = fabs((nne_per_ion_last / nne_per_ion) - 1.);
@@ -2732,12 +2723,6 @@ void nt_reset_stats() { nt_energy_deposited = 0.; }
 void nt_print_stats(const double modelvolume, const double deltat) {
   const double deposition_rate_density_montecarlo = nt_energy_deposited / EV / modelvolume / deltat;
 
-  // deposition rate density for all cells has not been communicated yet - could change this
-  // double total_deposition_rate_density = 0.;
-  // for (int mgi = 0; mgi < npts_model; mgi++)
-  // {
-  //   total_deposition_rate_density += get_deposition_rate_density(mgi) / EV;
-  // }
   printout("nt_energy_deposited = %g [eV/s/cm^3]\n", deposition_rate_density_montecarlo);
 }
 
