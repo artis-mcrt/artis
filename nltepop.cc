@@ -41,6 +41,9 @@ thread_local std::vector<double> vec_rate_matrix_rad_bf;
 thread_local std::vector<double> vec_rate_matrix_coll_bf;
 thread_local std::vector<double> vec_rate_matrix_ntcoll_bf;
 
+// backing storage for gsl vectors
+thread_local std::vector<double> vec_balance_vector;
+
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
 auto get_nlte_vector_index(const int element, const int ion, const int level) -> int {
@@ -136,41 +139,39 @@ auto get_total_rate(const int index_selected, const gsl_matrix *rate_matrix, con
 
   if (into_level) {
     // find rate into selected level
-    gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, index_selected);
-    const gsl_vector *rates_vec = &row_view.vector;
+    auto row_vec = gsl_matrix_const_row(rate_matrix, index_selected).vector;
 
     // multiply incoming rate coefficients by their corresponding populations to get rates
     if (!only_levels_above)  // add levels below
     {
       for (int index = 0; index < index_selected; index++) {
-        total_rate += gsl_vector_get(rates_vec, index) * gsl_vector_get(popvec, index);
+        total_rate += gsl_vector_get(&row_vec, index) * gsl_vector_get(popvec, index);
       }
     }
 
     if (!only_levels_below)  // add levels above
     {
       for (unsigned int index = index_selected + 1; index < rate_matrix->size1; index++) {
-        total_rate += gsl_vector_get(rates_vec, index) * gsl_vector_get(popvec, index);
+        total_rate += gsl_vector_get(&row_vec, index) * gsl_vector_get(popvec, index);
       }
     }
   } else {
     // find rate out of selected level
-    gsl_vector_const_view col_view = gsl_matrix_const_column(rate_matrix, index_selected);
-    const gsl_vector *rates_vec = &col_view.vector;
+    auto col_vec = gsl_matrix_const_column(rate_matrix, index_selected).vector;
 
     // multiply outgoing rate coefficients by the population of the selected level to get rates
 
     if (!only_levels_above)  // add levels below
     {
       for (int index = 0; index < index_selected; index++) {
-        total_rate += gsl_vector_get(rates_vec, index);
+        total_rate += gsl_vector_get(&col_vec, index);
       }
     }
 
     if (!only_levels_below)  // add levels above
     {
       for (unsigned int index = index_selected + 1; index < rate_matrix->size2; index++) {
-        total_rate += gsl_vector_get(rates_vec, index);
+        total_rate += gsl_vector_get(&col_vec, index);
       }
     }
 
@@ -909,9 +910,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     rate_matrix_ntcoll_bf = rate_matrix;
   }
 
-  gsl_vector *const balance_vector = gsl_vector_calloc(nlte_dimension);
-
-  assert_always(balance_vector != nullptr);
+  auto balance_vector = gsl_vector_view_array(vec_balance_vector.data(), nlte_dimension).vector;
+  gsl_vector_set_all(&balance_vector, 0.);
 
   // printout("  Adding rates for ion stages:");
   for (int ion = 0; ion < nions; ion++) {
@@ -958,7 +958,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_vector_view first_row_view = gsl_matrix_row(rate_matrix, 0);
   gsl_vector_set_all(&first_row_view.vector, 1.0);
   // set first balance vector entry to the element population (all other entries will be zero)
-  gsl_vector_set(balance_vector, 0, nnelement);
+  gsl_vector_set(&balance_vector, 0, nnelement);
 
   if (FORCE_SAHA_ION_BALANCE(atomic_number)) {
     const auto ionfractions = calculate_ionfractions(element, modelgridindex, grid::get_nne(modelgridindex), true);
@@ -975,7 +975,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
         gsl_vector_set(&ion_ground_row_view.vector, index, 1.);
       }
 
-      gsl_vector_set(balance_vector, get_nlte_vector_index(element, ion, index_ion_ground), nnion);
+      gsl_vector_set(&balance_vector, get_nlte_vector_index(element, ion, index_ion_ground), nnion);
     }
   }
 
@@ -1008,7 +1008,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_vector *popvec = gsl_vector_alloc(nlte_dimension);  // the true population densities
 
   const bool matrix_solve_success =
-      nltepop_matrix_solve(element, rate_matrix, balance_vector, popvec, pop_norm_factor_vec);
+      nltepop_matrix_solve(element, rate_matrix, &balance_vector, popvec, pop_norm_factor_vec);
 
   if (!matrix_solve_success) {
     printout(
@@ -1106,7 +1106,6 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   gsl_vector_free(popvec);
 
-  gsl_vector_free(balance_vector);
   gsl_vector_free(pop_norm_factor_vec);
   const int duration_nltesolver = std::time(nullptr) - sys_time_start_nltesolver;
   if (duration_nltesolver > 2) {
