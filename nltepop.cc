@@ -854,7 +854,6 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   auto rate_matrix = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension).matrix;
   gsl_matrix_set_all(&rate_matrix, 0.);
 
-  // if not individual_process_matricies, alias the single matrix for all processes
   gsl_matrix rate_matrix_rad_bb;
   gsl_matrix rate_matrix_coll_bb;
   gsl_matrix rate_matrix_ntcoll_bb;
@@ -889,6 +888,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
         gsl_matrix_view_array(vec_rate_matrix_ntcoll_bf.data(), nlte_dimension, nlte_dimension).matrix;
     gsl_matrix_set_all(&rate_matrix_ntcoll_bf, 0.);
   } else {
+    // if not individual_process_matricies, alias a single matrix for all transition types
+    // the "gsl_matrix" structs are independent, but the data is shared
     rate_matrix_rad_bb = rate_matrix;
     rate_matrix_coll_bb = rate_matrix;
     rate_matrix_ntcoll_bb = rate_matrix;
@@ -896,10 +897,6 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     rate_matrix_coll_bf = rate_matrix;
     rate_matrix_ntcoll_bf = rate_matrix;
   }
-
-  vec_balance_vector.resize(max_nlte_dimension);
-  auto balance_vector = gsl_vector_view_array(vec_balance_vector.data(), nlte_dimension).vector;
-  gsl_vector_set_all(&balance_vector, 0.);
 
   // printout("  Adding rates for ion stages:");
   for (int ion = 0; ion < nions; ion++) {
@@ -932,7 +929,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   // printout("\n");
 
   if (individual_process_matricies) {
-    // sum the matricies for each transition process to get a total rate matrix
+    // sum the matricies for each transition type to get a total rate matrix
     gsl_matrix_add(&rate_matrix, &rate_matrix_rad_bb);
     gsl_matrix_add(&rate_matrix, &rate_matrix_coll_bb);
     gsl_matrix_add(&rate_matrix, &rate_matrix_ntcoll_bb);
@@ -945,6 +942,10 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   // constraint on the total element population
   gsl_vector_view first_row_view = gsl_matrix_row(&rate_matrix, 0);
   gsl_vector_set_all(&first_row_view.vector, 1.0);
+
+  vec_balance_vector.resize(max_nlte_dimension);
+  auto balance_vector = gsl_vector_view_array(vec_balance_vector.data(), nlte_dimension).vector;
+  gsl_vector_set_all(&balance_vector, 0.);
   // set first balance vector entry to the element population (all other entries will be zero)
   gsl_vector_set(&balance_vector, 0, nnelement);
 
