@@ -43,6 +43,7 @@ thread_local std::vector<double> vec_rate_matrix_ntcoll_bf;
 
 // backing storage for gsl vectors
 thread_local std::vector<double> vec_balance_vector;
+thread_local std::vector<double> vec_pop_norm_factor_vec;
 
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
@@ -438,7 +439,7 @@ auto get_element_nlte_dimension(const int element) -> int {
   return nlte_dimension;
 }
 
-void alloc_matrix_storage() {
+void alloc_matrix_vector_storage() {
   // we are using vectors to handle the memory management that will be accessed by gsl matrix pointers
 
   int max_nlte_dimension = 0;
@@ -457,6 +458,7 @@ void alloc_matrix_storage() {
   }
 
   vec_balance_vector.resize(max_nlte_dimension);
+  vec_pop_norm_factor_vec.resize(max_nlte_dimension);
 }
 
 void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, const int ion, const double t_mid,
@@ -855,7 +857,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
-  alloc_matrix_storage();
+  alloc_matrix_vector_storage();
   auto rate_matrix_view = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension);
   gsl_matrix *rate_matrix = &rate_matrix_view.matrix;
   gsl_matrix_set_all(rate_matrix, 0.);
@@ -971,9 +973,10 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   // calculate the normalisation factors and apply them to the matrix
   // columns and balance vector elements
-  gsl_vector *pop_norm_factor_vec = gsl_vector_calloc(nlte_dimension);
-  // gsl_vector_set_all(pop_norm_factor_vec, 1.0);
-  nltepop_matrix_normalise(modelgridindex, element, rate_matrix, pop_norm_factor_vec);
+  auto pop_norm_factor_vec = gsl_vector_view_array(vec_pop_norm_factor_vec.data(), nlte_dimension).vector;
+  gsl_vector_set_all(&pop_norm_factor_vec, 1.0);
+
+  nltepop_matrix_normalise(modelgridindex, element, rate_matrix, &pop_norm_factor_vec);
 
   // printout("Rate matrix | balance vector:\n");
   // for (int row = 0; row < nlte_dimension; row++)
@@ -998,7 +1001,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_vector *popvec = gsl_vector_alloc(nlte_dimension);  // the true population densities
 
   const bool matrix_solve_success =
-      nltepop_matrix_solve(element, rate_matrix, &balance_vector, popvec, pop_norm_factor_vec);
+      nltepop_matrix_solve(element, rate_matrix, &balance_vector, popvec, &pop_norm_factor_vec);
 
   if (!matrix_solve_success) {
     printout(
@@ -1096,7 +1099,6 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   gsl_vector_free(popvec);
 
-  gsl_vector_free(pop_norm_factor_vec);
   const int duration_nltesolver = std::time(nullptr) - sys_time_start_nltesolver;
   if (duration_nltesolver > 2) {
     printout("NLTE population solver call for Z=%d took %d seconds\n", get_atomicnumber(element), duration_nltesolver);
