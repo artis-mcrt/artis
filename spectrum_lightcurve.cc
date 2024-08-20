@@ -525,7 +525,7 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
   std::ranges::fill(spectra.fluxalltimesteps, 0.0);
 
   mem_usage += globals::ntimesteps * sizeof(Spectra);
-  mem_usage += globals::ntimesteps * sizeof(TimeStepstepspec);
+  mem_usage += globals::ntimesteps * sizeof(TimeStepSpecrum);
   mem_usage += globals::ntimesteps * MNUBINS * sizeof(double);
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {

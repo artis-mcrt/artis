@@ -7,7 +7,7 @@
 
 #include "packet.h"
 
-struct TimeStepstepspec {
+struct TimeStepSpecrum {
   double *flux{};
   double *absorption{};
   double *emission{};
@@ -23,7 +23,7 @@ struct Spectra {
   std::vector<double> absorptionalltimesteps;
   std::vector<double> emissionalltimesteps;
   std::vector<double> trueemissionalltimesteps;
-  std::vector<TimeStepstepspec> timesteps;
+  std::vector<TimeStepSpecrum> timesteps;
   bool do_emission_res = false;
 };
 
