@@ -854,54 +854,47 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   auto rate_matrix = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension).matrix;
   gsl_matrix_set_all(&rate_matrix, 0.);
 
-  gsl_matrix *rate_matrix_rad_bb{};
-  gsl_matrix *rate_matrix_coll_bb{};
-  gsl_matrix *rate_matrix_ntcoll_bb{};
-  gsl_matrix *rate_matrix_rad_bf{};
-  gsl_matrix *rate_matrix_coll_bf{};
-  gsl_matrix *rate_matrix_ntcoll_bf{};
+  // if not individual_process_matricies, alias the single matrix for all processes
+  gsl_matrix rate_matrix_rad_bb;
+  gsl_matrix rate_matrix_coll_bb;
+  gsl_matrix rate_matrix_ntcoll_bb;
+  gsl_matrix rate_matrix_rad_bf;
+  gsl_matrix rate_matrix_coll_bf;
+  gsl_matrix rate_matrix_ntcoll_bf;
+
   if constexpr (individual_process_matricies) {
     vec_rate_matrix_rad_bb.resize(max_nlte_dimension * max_nlte_dimension);
-    auto rate_matrix_rad_bb_view = gsl_matrix_view_array(vec_rate_matrix_rad_bb.data(), nlte_dimension, nlte_dimension);
-    gsl_matrix *rate_matrix_rad_bb = &rate_matrix_rad_bb_view.matrix;
-    gsl_matrix_set_all(rate_matrix_rad_bb, 0.);
+    rate_matrix_rad_bb = gsl_matrix_view_array(vec_rate_matrix_rad_bb.data(), nlte_dimension, nlte_dimension).matrix;
+    gsl_matrix_set_all(&rate_matrix_rad_bb, 0.);
 
     vec_rate_matrix_coll_bb.resize(max_nlte_dimension * max_nlte_dimension);
-    auto rate_matrix_coll_bb_view =
-        gsl_matrix_view_array(vec_rate_matrix_coll_bb.data(), nlte_dimension, nlte_dimension);
-    gsl_matrix *rate_matrix_coll_bb = &rate_matrix_coll_bb_view.matrix;
-    gsl_matrix_set_all(rate_matrix_coll_bb, 0.);
+    rate_matrix_coll_bb = gsl_matrix_view_array(vec_rate_matrix_coll_bb.data(), nlte_dimension, nlte_dimension).matrix;
+    gsl_matrix_set_all(&rate_matrix_coll_bb, 0.);
 
     vec_rate_matrix_ntcoll_bb.resize(max_nlte_dimension * max_nlte_dimension);
-    auto rate_matrix_ntcoll_bb_view =
-        gsl_matrix_view_array(vec_rate_matrix_ntcoll_bb.data(), nlte_dimension, nlte_dimension);
-    gsl_matrix *rate_matrix_ntcoll_bb = &rate_matrix_ntcoll_bb_view.matrix;
-    gsl_matrix_set_all(rate_matrix_ntcoll_bb, 0.);
+    rate_matrix_ntcoll_bb =
+        gsl_matrix_view_array(vec_rate_matrix_ntcoll_bb.data(), nlte_dimension, nlte_dimension).matrix;
+    gsl_matrix_set_all(&rate_matrix_ntcoll_bb, 0.);
 
     vec_rate_matrix_rad_bf.resize(max_nlte_dimension * max_nlte_dimension);
-    auto rate_matrix_rad_bf_view = gsl_matrix_view_array(vec_rate_matrix_rad_bf.data(), nlte_dimension, nlte_dimension);
-    gsl_matrix *rate_matrix_rad_bf = &rate_matrix_rad_bf_view.matrix;
-    gsl_matrix_set_all(rate_matrix_rad_bf, 0.);
+    rate_matrix_rad_bf = gsl_matrix_view_array(vec_rate_matrix_rad_bf.data(), nlte_dimension, nlte_dimension).matrix;
+    gsl_matrix_set_all(&rate_matrix_rad_bf, 0.);
 
     vec_rate_matrix_coll_bf.resize(max_nlte_dimension * max_nlte_dimension);
-    auto rrate_matrix_coll_bf_view =
-        gsl_matrix_view_array(vec_rate_matrix_coll_bf.data(), nlte_dimension, nlte_dimension);
-    gsl_matrix *rate_matrix_coll_bf = &rrate_matrix_coll_bf_view.matrix;
-    gsl_matrix_set_all(rate_matrix_coll_bf, 0.);
+    rate_matrix_coll_bf = gsl_matrix_view_array(vec_rate_matrix_coll_bf.data(), nlte_dimension, nlte_dimension).matrix;
+    gsl_matrix_set_all(&rate_matrix_coll_bf, 0.);
 
     vec_rate_matrix_ntcoll_bf.resize(max_nlte_dimension * max_nlte_dimension);
-    auto rate_matrix_ntcoll_bf_view =
-        gsl_matrix_view_array(vec_rate_matrix_ntcoll_bf.data(), nlte_dimension, nlte_dimension);
-    gsl_matrix *rate_matrix_ntcoll_bf = &rate_matrix_ntcoll_bf_view.matrix;
-    gsl_matrix_set_all(rate_matrix_ntcoll_bf, 0.);
+    rate_matrix_ntcoll_bf =
+        gsl_matrix_view_array(vec_rate_matrix_ntcoll_bf.data(), nlte_dimension, nlte_dimension).matrix;
+    gsl_matrix_set_all(&rate_matrix_ntcoll_bf, 0.);
   } else {
-    // alias the single matrix accounting for all processes
-    rate_matrix_rad_bb = &rate_matrix;
-    rate_matrix_coll_bb = &rate_matrix;
-    rate_matrix_ntcoll_bb = &rate_matrix;
-    rate_matrix_rad_bf = &rate_matrix;
-    rate_matrix_coll_bf = &rate_matrix;
-    rate_matrix_ntcoll_bf = &rate_matrix;
+    rate_matrix_rad_bb = rate_matrix;
+    rate_matrix_coll_bb = rate_matrix;
+    rate_matrix_ntcoll_bb = rate_matrix;
+    rate_matrix_rad_bf = rate_matrix;
+    rate_matrix_coll_bf = rate_matrix;
+    rate_matrix_ntcoll_bf = rate_matrix;
   }
 
   vec_balance_vector.resize(max_nlte_dimension);
@@ -925,14 +918,14 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       s_renorm[level] = superlevel_boltzmann(modelgridindex, element, ion, level) / superlevel_partfunc[ion];
     }
 
-    nltepop_matrix_add_boundbound(modelgridindex, element, ion, t_mid, s_renorm, rate_matrix_rad_bb,
-                                  rate_matrix_coll_bb, rate_matrix_ntcoll_bb);
+    nltepop_matrix_add_boundbound(modelgridindex, element, ion, t_mid, s_renorm, &rate_matrix_rad_bb,
+                                  &rate_matrix_coll_bb, &rate_matrix_ntcoll_bb);
 
     if (ion < nions - 1) {
       // this is the slowest component
-      nltepop_matrix_add_ionisation(modelgridindex, element, ion, s_renorm, rate_matrix_rad_bf, rate_matrix_coll_bf);
+      nltepop_matrix_add_ionisation(modelgridindex, element, ion, s_renorm, &rate_matrix_rad_bf, &rate_matrix_coll_bf);
       if (NT_ON) {
-        nltepop_matrix_add_nt_ionisation(modelgridindex, element, ion, s_renorm, rate_matrix_ntcoll_bf);
+        nltepop_matrix_add_nt_ionisation(modelgridindex, element, ion, s_renorm, &rate_matrix_ntcoll_bf);
       }
     }
   }
@@ -940,12 +933,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   if (individual_process_matricies) {
     // sum the matricies for each transition process to get a total rate matrix
-    gsl_matrix_add(&rate_matrix, rate_matrix_rad_bb);
-    gsl_matrix_add(&rate_matrix, rate_matrix_coll_bb);
-    gsl_matrix_add(&rate_matrix, rate_matrix_ntcoll_bb);
-    gsl_matrix_add(&rate_matrix, rate_matrix_rad_bf);
-    gsl_matrix_add(&rate_matrix, rate_matrix_coll_bf);
-    gsl_matrix_add(&rate_matrix, rate_matrix_ntcoll_bf);
+    gsl_matrix_add(&rate_matrix, &rate_matrix_rad_bb);
+    gsl_matrix_add(&rate_matrix, &rate_matrix_coll_bb);
+    gsl_matrix_add(&rate_matrix, &rate_matrix_ntcoll_bb);
+    gsl_matrix_add(&rate_matrix, &rate_matrix_rad_bf);
+    gsl_matrix_add(&rate_matrix, &rate_matrix_coll_bf);
+    gsl_matrix_add(&rate_matrix, &rate_matrix_ntcoll_bf);
   }
 
   // replace the first row of the matrix and balance vector with the normalisation
@@ -1073,9 +1066,9 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     if (individual_process_matricies && (timestep % 5 == 0) &&
         (nlte_iter == 0))  // output NLTE stats every nth timestep for the first NLTE iteration only
     {
-      print_element_rates_summary(element, modelgridindex, timestep, nlte_iter, &popvec, rate_matrix_rad_bb,
-                                  rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf,
-                                  rate_matrix_ntcoll_bf);
+      print_element_rates_summary(element, modelgridindex, timestep, nlte_iter, &popvec, &rate_matrix_rad_bb,
+                                  &rate_matrix_coll_bb, &rate_matrix_ntcoll_bb, &rate_matrix_rad_bf,
+                                  &rate_matrix_coll_bf, &rate_matrix_ntcoll_bf);
     }
 
     const bool print_detailed_level_stats = false;
@@ -1090,16 +1083,16 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       const int ion = ionstage - get_ionstage(element, 0);
 
       for (int level = 0; level < get_nlevels_nlte(element, ion); level++) {
-        print_level_rates(modelgridindex, timestep, element, ion, level, &popvec, rate_matrix_rad_bb,
-                          rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf,
-                          rate_matrix_ntcoll_bf);
+        print_level_rates(modelgridindex, timestep, element, ion, level, &popvec, &rate_matrix_rad_bb,
+                          &rate_matrix_coll_bb, &rate_matrix_ntcoll_bb, &rate_matrix_rad_bf, &rate_matrix_coll_bf,
+                          &rate_matrix_ntcoll_bf);
       }
 
       if (ion_has_superlevel(element, ion)) {
         const int slindex = get_nlevels_nlte(element, ion) + 1;
-        print_level_rates(modelgridindex, timestep, element, ion, slindex, &popvec, rate_matrix_rad_bb,
-                          rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf,
-                          rate_matrix_ntcoll_bf);
+        print_level_rates(modelgridindex, timestep, element, ion, slindex, &popvec, &rate_matrix_rad_bb,
+                          &rate_matrix_coll_bb, &rate_matrix_ntcoll_bb, &rate_matrix_rad_bf, &rate_matrix_coll_bf,
+                          &rate_matrix_ntcoll_bf);
       }
     }
   }
