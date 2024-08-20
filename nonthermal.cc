@@ -1106,8 +1106,8 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
   gsl_vector_free(cross_section_vec);
 
   double y_dot_crosssection_de = 0.;
-  const gsl_vector_view yvecview_thismgi = gsl_vector_view_array(yfunc.data(), SFPTS);
-  gsl_blas_ddot(&yvecview_thismgi.vector, cross_section_vec_allshells, &y_dot_crosssection_de);
+  const auto gsl_yvec = gsl_vector_view_array(yfunc.data(), SFPTS).vector;
+  gsl_blas_ddot(&gsl_yvec, cross_section_vec_allshells, &y_dot_crosssection_de);
   gsl_vector_free(cross_section_vec_allshells);
 
   y_dot_crosssection_de *= DELTA_E;
