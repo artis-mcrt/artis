@@ -46,12 +46,12 @@ thread_local std::vector<double> vec_rate_matrix_LU_decomp;
 // backing storage for gsl vectors
 thread_local std::vector<double> vec_balance_vector;
 thread_local std::vector<double> vec_pop_norm_factor_vec;
-thread_local std::vector<double> vec_pop_vec;
+thread_local std::vector<double> vec_pop;
 thread_local std::vector<double> vec_x;
 thread_local std::vector<size_t> vec_permutation;
-thread_local std::vector<double> vec_work_vector;
+thread_local std::vector<double> vec_work;
 thread_local std::vector<double> vec_x_best;
-thread_local std::vector<double> vec_residual_vector;
+thread_local std::vector<double> vec_residual;
 
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
@@ -732,17 +732,17 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
 
     const double TOLERANCE = 1e-40;
 
-    vec_work_vector.resize(vec_pop_norm_factor_vec.size());
-    gsl_vector gsl_work_vector = gsl_vector_view_array(vec_work_vector.data(), nlte_dimension).vector;
+    vec_work.resize(vec_pop_norm_factor_vec.size());
+    gsl_vector gsl_work_vector = gsl_vector_view_array(vec_work.data(), nlte_dimension).vector;
 
     double error_best = -1.;
 
     // population solution vector with lowest error
     vec_x_best.resize(vec_pop_norm_factor_vec.size());
-    gsl_vector x_best = gsl_vector_view_array(vec_x_best.data(), nlte_dimension).vector;
+    gsl_vector gsl_x_best = gsl_vector_view_array(vec_x_best.data(), nlte_dimension).vector;
 
-    vec_residual_vector.resize(vec_pop_norm_factor_vec.size());
-    gsl_vector residual_vector = gsl_vector_view_array(vec_residual_vector.data(), nlte_dimension).vector;
+    vec_residual.resize(vec_pop_norm_factor_vec.size());
+    gsl_vector gsl_vec_residual = gsl_vector_view_array(vec_residual.data(), nlte_dimension).vector;
 
     int iteration = 0;
     for (iteration = 0; iteration < 10; iteration++) {
@@ -750,13 +750,13 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
         gsl_linalg_LU_refine(rate_matrix, &rate_matrix_LU_decomp, &p, balance_vector, &x, &gsl_work_vector);
       }
 
-      gsl_vector_memcpy(&residual_vector, balance_vector);
-      gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, &x, -1.0, &residual_vector);  // calculate Ax - b = residual
+      gsl_vector_memcpy(&gsl_vec_residual, balance_vector);
+      gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, &x, -1.0, &gsl_vec_residual);  // calculate Ax - b = residual
       const double error = fabs(gsl_vector_get(
-          &residual_vector, gsl_blas_idamax(&residual_vector)));  // value of the largest absolute residual
+          &gsl_vec_residual, gsl_blas_idamax(&gsl_vec_residual)));  // value of the largest absolute residual
 
       if (error < error_best || error_best < 0.) {
-        gsl_vector_memcpy(&x_best, &x);
+        gsl_vector_memcpy(&gsl_x_best, &x);
         error_best = error;
       }
       // printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
@@ -774,7 +774,7 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
             iteration, error_best);
       }
 
-      gsl_vector_memcpy(&x, &x_best);
+      gsl_vector_memcpy(&x, &gsl_x_best);
     }
 
     // get the real populations using the x vector and the normalisation factors
@@ -1005,9 +1005,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   // filter_nlte_matrix(element, rate_matrix, balance_vector, pop_norm_factor_vec);
 
   // the true population densities
-
-  vec_pop_vec.resize(max_nlte_dimension);
-  auto popvec = gsl_vector_view_array(vec_pop_vec.data(), nlte_dimension).vector;
+  vec_pop.resize(max_nlte_dimension);
+  auto popvec = gsl_vector_view_array(vec_pop.data(), nlte_dimension).vector;
 
   const bool matrix_solve_success =
       nltepop_matrix_solve(element, &rate_matrix, &balance_vector, &popvec, &pop_norm_factor_vec);
