@@ -2011,7 +2011,8 @@ void init(const int my_rank, const int ndo_nonempty) {
   }
 
   gsl_logenvec = gsl_vector_calloc(SFPTS);
-  gsl_sourcevec = gsl_vector_calloc(SFPTS);  // energy grid on which solution is sampled
+  std::array<double, SFPTS> sourcevec{};
+  auto gsl_sourcevec = gsl_vector_view_array(sourcevec.data(), SFPTS).vector;
 
   // const int source_spread_pts = ceil(SFPTS / 20);
   const int source_spread_pts = ceil(SFPTS * 0.03333);  // KF92 OXYGEN TEST
@@ -2025,16 +2026,16 @@ void init(const int my_rank, const int ndo_nonempty) {
 
     // spread the source over some energy width
     if (s < sourcelowerindex) {
-      gsl_vector_set(gsl_sourcevec, s, 0.);
+      gsl_vector_set(&gsl_sourcevec, s, 0.);
     } else {
-      gsl_vector_set(gsl_sourcevec, s, 1. / source_spread_en);
+      gsl_vector_set(&gsl_sourcevec, s, 1. / source_spread_en);
     }
   }
 
   // integrate the source vector to find the assumed injection rate
   std::array<double, SFPTS> integralvec{};
   gsl_vector gsl_integralvec = gsl_vector_view_array(integralvec.data(), SFPTS).vector;
-  gsl_vector_memcpy(&gsl_integralvec, gsl_sourcevec);
+  gsl_vector_memcpy(&gsl_integralvec, &gsl_sourcevec);
   gsl_vector_scale(&gsl_integralvec, DELTA_E);
   const double sourceintegral = gsl_blas_dasum(&gsl_integralvec);  // integral of S(e) dE
 
