@@ -41,12 +41,7 @@ thread_local std::vector<double> vec_rate_matrix_rad_bf;
 thread_local std::vector<double> vec_rate_matrix_coll_bf;
 thread_local std::vector<double> vec_rate_matrix_ntcoll_bf;
 
-// backing storage for gsl vectors
 thread_local std::vector<double> vec_pop_norm_factor_vec;
-thread_local std::vector<double> vec_pop;
-thread_local std::vector<double> vec_x;
-thread_local std::vector<double> vec_x_best;
-thread_local std::vector<double> vec_residual;
 
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
@@ -696,6 +691,8 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
   assert_always(rate_matrix->size1 == nlte_dimension);
   assert_always(rate_matrix->size2 == nlte_dimension);
 
+  // backing storage for gsl vectors
+  THREADLOCALONHOST std::vector<double> vec_x;
   vec_x.resize(vec_pop_norm_factor_vec.size());
   gsl_vector x = gsl_vector_view_array(vec_x.data(), nlte_dimension).vector;
 
@@ -735,9 +732,11 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
     double error_best = -1.;
 
     // population solution vector with lowest error
+    THREADLOCALONHOST std::vector<double> vec_x_best;
     vec_x_best.resize(vec_pop_norm_factor_vec.size());
     gsl_vector gsl_x_best = gsl_vector_view_array(vec_x_best.data(), nlte_dimension).vector;
 
+    THREADLOCALONHOST std::vector<double> vec_residual;
     vec_residual.resize(vec_pop_norm_factor_vec.size());
     gsl_vector gsl_vec_residual = gsl_vector_view_array(vec_residual.data(), nlte_dimension).vector;
 
@@ -1003,6 +1002,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   // filter_nlte_matrix(element, rate_matrix, balance_vector, pop_norm_factor_vec);
 
   // the true population densities
+  THREADLOCALONHOST std::vector<double> vec_pop;
   vec_pop.resize(max_nlte_dimension);
   auto popvec = gsl_vector_view_array(vec_pop.data(), nlte_dimension).vector;
 
