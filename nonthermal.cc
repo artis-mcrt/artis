@@ -2490,13 +2490,13 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
     double source_integral_to_SF_EMAX = 0.;
     if (i < SFPTS - 1) {
       for (int j = i + 1; j < SFPTS; j++) {
-        source_integral_to_SF_EMAX += sourcevec[j] * DELTA_E;
+        source_integral_to_SF_EMAX += sourcevec[j];
       }
     } else {
       source_integral_to_SF_EMAX = 0;
     }
 
-    rhsvec[i] = source_integral_to_SF_EMAX;
+    rhsvec[i] = source_integral_to_SF_EMAX * DELTA_E;
   }
   // gsl_vector_set_all(rhsvec, 1.); // alternative if all electrons are injected at SF_EMAX
 
