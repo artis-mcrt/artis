@@ -601,14 +601,11 @@ void nt_write_to_file(const int modelgridindex, const int timestep, const int it
 
 // xs_vec will be set with impact ionization cross sections for E > ionpot_ev (and zeros below this energy)
 // returns the index of the first energy point >= ionpot_ev
-auto get_xs_ionization_vector(gsl_vector *const xs_vec, const collionrow &colliondata) -> int {
+auto get_xs_ionization_vector(std::array<double, SFPTS> &xs_vec, const collionrow &colliondata) -> int {
   const double ionpot_ev = colliondata.ionpot_ev;
   const int startindex = get_energyindex_ev_gteq(ionpot_ev);
 
-  // en points for which en < ionpot
-  for (int i = 0; i < startindex; i++) {
-    gsl_vector_set(xs_vec, i, 0.);
-  }
+  std::fill_n(xs_vec.begin(), startindex, 0.);
 
   const double A = colliondata.A;
   const double B = colliondata.B;
@@ -619,7 +616,7 @@ auto get_xs_ionization_vector(gsl_vector *const xs_vec, const collionrow &collio
     const double u = gsl_vector_get(envec, i) / ionpot_ev;
     const double xs_ioniz =
         1e-14 * (A * (1 - 1 / u) + B * pow((1 - (1 / u)), 2) + C * log(u) + D * log(u) / u) / (u * pow(ionpot_ev, 2));
-    gsl_vector_set(xs_vec, i, xs_ioniz);
+    xs_vec[i] = xs_ioniz;
   }
 
   return startindex;
@@ -1039,16 +1036,9 @@ auto calculate_nt_frac_ionization_shell(const int modelgridindex, const int elem
   const double ionpot_ev = collionrow.ionpot_ev;
 
   std::array<double, SFPTS> cross_section_vec{};
-  auto gsl_cross_section_vec = gsl_vector_view_array(cross_section_vec.data(), SFPTS).vector;
-  get_xs_ionization_vector(&gsl_cross_section_vec, collionrow);
+  get_xs_ionization_vector(cross_section_vec, collionrow);
 
-  const auto gsl_yvec = gsl_vector_const_view_array(yfunc.data(), SFPTS).vector;
-
-  double y_dot_crosssection_de = 0.;
-  gsl_blas_ddot(&gsl_yvec, &gsl_cross_section_vec, &y_dot_crosssection_de);
-
-  // or multiply the scalar result by the constant DELTA_E
-  y_dot_crosssection_de *= DELTA_E;
+  const double y_dot_crosssection_de = cblas_ddot(SFPTS, yfunc.data(), 1, cross_section_vec.data(), 1) * DELTA_E;
 
   return nnion * ionpot_ev * y_dot_crosssection_de / E_init_ev;
 }
@@ -1083,7 +1073,7 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
 
   for (auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
-      get_xs_ionization_vector(&gsl_cross_section_vec, collionrow);
+      get_xs_ionization_vector(cross_section_vec, collionrow);
 
       if (assumeshellpotentialisvalence) {
         const double ionpot_shell = collionrow.ionpot_ev * EV;
@@ -1311,7 +1301,7 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const gsl_vector &gsl_yvec,
                                                      const double epsilon_trans) -> double {
   THREADLOCALONHOST std::array<double, SFPTS> xs_excitation_vec{};
 
-  gsl_vector gsl_xs_excitation_vec = gsl_vector_view_array(xs_excitation_vec.data(), SFPTS).vector;
+  auto gsl_xs_excitation_vec = gsl_vector_view_array(xs_excitation_vec.data(), SFPTS).vector;
   if (get_xs_excitation_vector(xs_excitation_vec, element, ion, lower, uptransindex, statweight_lower, epsilon_trans) >=
       0) {
     double y_dot_crosssection = 0.;
@@ -1729,7 +1719,7 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
 // add the ionization terms to the Spencer-Fano matrix
 {
   THREADLOCALONHOST std::array<double, SFPTS> vec_xs_ionization{};
-  auto gslvec_xs_ionization = gsl_vector_view_array(vec_xs_ionization.data(), SFPTS).vector;
+  // auto gslvec_xs_ionization = gsl_vector_view_array(vec_xs_ionization.data(), SFPTS).vector;
   for (auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       const double ionpot_ev = collionrow.ionpot_ev;
@@ -1742,7 +1732,7 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
       // printout("Z=%2d ionstage %d n %d l %d ionpot %g eV\n",
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
-      const int xsstartindex = get_xs_ionization_vector(&gslvec_xs_ionization, collionrow);
+      const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, collionrow);
       // Luke Shingles: the use of min and max on the epsilon limits keeps energies
       // from becoming unphysical. This insight came from reading the
       // CMFGEN Fortran source code (Li, Dessart, Hillier 2012, doi:10.1111/j.1365-2966.2012.21198.x)
@@ -1754,7 +1744,7 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
         const double endash = gsl_vector_get(envec, j);
         const double epsilon_upper = std::min((endash + ionpot_ev) / 2, endash);
         int_eps_upper[j] = atan((epsilon_upper - ionpot_ev) / J);
-        prefactors[j] = gsl_vector_get(&gslvec_xs_ionization, j) * nnion / atan((endash - ionpot_ev) / 2 / J);
+        prefactors[j] = vec_xs_ionization[j] * nnion / atan((endash - ionpot_ev) / 2 / J);
       }
 
       for (int i = 0; i < SFPTS; i++) {
@@ -1812,7 +1802,7 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
           const double en = gsl_vector_get(envec, i);
           const int jstart = i > xsstartindex ? i : xsstartindex;
           for (int j = jstart; j < SFPTS; j++) {
-            const double xs = gsl_vector_get(&gslvec_xs_ionization, j);
+            const double xs = vec_xs_ionization[j];
             if (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
               const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
               for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++) {
