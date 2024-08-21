@@ -30,12 +30,6 @@
 #include "vectors.h"
 #include "vpkt.h"
 
-#ifdef GPU_ON
-#define THREADLOCALONHOST
-#else
-#define THREADLOCALONHOST thread_local static
-#endif
-
 namespace {
 
 constexpr float expopac_lambdamin = 534.5;
