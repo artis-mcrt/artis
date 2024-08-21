@@ -1046,10 +1046,10 @@ auto calculate_nt_frac_ionization_shell(const int modelgridindex, const int elem
   auto gsl_cross_section_vec = gsl_vector_view_array(cross_section_vec.data(), SFPTS).vector;
   get_xs_ionization_vector(&gsl_cross_section_vec, collionrow);
 
-  const gsl_vector_view yvecview = gsl_vector_view_array(yfunc.data(), SFPTS);
+  const auto gsl_yvec = gsl_vector_const_view_array(yfunc.data(), SFPTS).vector;
 
   double y_dot_crosssection_de = 0.;
-  gsl_blas_ddot(&yvecview.vector, &gsl_cross_section_vec, &y_dot_crosssection_de);
+  gsl_blas_ddot(&gsl_yvec, &gsl_cross_section_vec, &y_dot_crosssection_de);
 
   // or multiply the scalar result by the constant DELTA_E
   y_dot_crosssection_de *= DELTA_E;
