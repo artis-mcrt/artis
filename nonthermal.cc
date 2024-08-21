@@ -1835,8 +1835,11 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
   gsl_vector_free(vec_xs_ionization);
 }
 
-void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec,
-                    std::array<double, NT_SOLVE_SPENCERFANO ? SFPTS : 0> &yvec_arr) {
+auto sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec) {
+  std::array<double, NT_SOLVE_SPENCERFANO ? SFPTS : 0> yvec_arr{};
+  if (!NT_SOLVE_SPENCERFANO) {
+    return yvec_arr;
+  }
   THREADLOCALONHOST std::array<size_t, SFPTS> vec_permutation{};
 
   gsl_permutation p{.size = SFPTS, .data = vec_permutation.data()};
@@ -1902,6 +1905,7 @@ void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec,
   if (gsl_vector_isnonneg(&yvec) == 0) {
     printout("solve_sfmatrix: WARNING: y function goes negative!\n");
   }
+  return yvec_arr;
 }
 
 }  // anonymous namespace
@@ -2554,7 +2558,9 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   // }
   // printout("\n");
 
-  sfmatrix_solve(sfmatrix, rhsvec, yfunc);
+  if constexpr (NT_SOLVE_SPENCERFANO) {
+    yfunc = sfmatrix_solve(sfmatrix, rhsvec);
+  }
 
   gsl_matrix_free(sfmatrix);
   gsl_vector_free(rhsvec);
