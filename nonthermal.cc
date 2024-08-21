@@ -116,7 +116,7 @@ gsl_vector *sourcevec;  // samples of the source function (energy distribution o
 // Samples of the Spencer-Fano solution function for the current cell being worked on. Multiply by energy to get
 // non-thermal electron number flux. y(E) * dE is the flux of electrons with energy in the range (E, E + dE) in units of
 // particles/cm2/s. y has units of particles/cm2/s/eV
-THREADLOCALONHOST std::array<double, NT_SOLVE_SPENCERFANO ? SFPTS : 0> yfunc{};
+THREADLOCALONHOST std::array<double, SFPTS> yfunc{};
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
 // This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.
@@ -538,7 +538,7 @@ auto get_energyindex_ev_gteq(const double energy_ev) -> int
 
 // interpolate the y flux values to get the value at a given energy
 // y has units of particles / cm2 / s / eV
-auto get_y(const double energy_ev) -> double {
+auto get_y(const double energy_ev, const std::array<double, SFPTS> &yfunc) -> double {
   if (energy_ev <= 0) {
     return 0.;
   }
@@ -775,7 +775,7 @@ auto N_e(const int modelgridindex, const double energy) -> double {
           }
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double epsilon_trans_ev = epsilon_trans / EV;
-          N_e_ion += (nnlevel / nnion) * get_y(energy_ev + epsilon_trans_ev) *
+          N_e_ion += (nnlevel / nnion) * get_y(energy_ev + epsilon_trans_ev, yfunc) *
                      xs_excitation(element, ion, lower, t, epsilon_trans, statweight_lower, energy + epsilon_trans);
         }
       }
@@ -795,7 +795,7 @@ auto N_e(const int modelgridindex, const double energy) -> double {
             const double endash = gsl_vector_get(envec, i);
             const double delta_endash = DELTA_E;
 
-            N_e_ion += get_y(energy_ev + endash) * xs_impactionization(energy_ev + endash, collionrow) *
+            N_e_ion += get_y(energy_ev + endash, yfunc) * xs_impactionization(energy_ev + endash, collionrow) *
                        Psecondary(energy_ev + endash, endash, ionpot_ev, J) * delta_endash;
           }
 
@@ -838,7 +838,7 @@ auto calculate_frac_heating(const int modelgridindex) -> float {
   }
 
   // second term
-  frac_heating_Einit += SF_EMIN * get_y(SF_EMIN) * (electron_loss_rate(SF_EMIN * EV, nne) / EV);
+  frac_heating_Einit += SF_EMIN * get_y(SF_EMIN, yfunc) * (electron_loss_rate(SF_EMIN * EV, nne) / EV);
 
   double N_e_contrib = 0.;
   // third term (integral from zero to SF_EMIN)
@@ -1835,10 +1835,7 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
 }
 
 auto sfmatrix_solve(const gsl_matrix &gsl_sfmatrix, const gsl_vector &gsl_rhsvec) {
-  std::array<double, NT_SOLVE_SPENCERFANO ? SFPTS : 0> yvec_arr{};
-  if (!NT_SOLVE_SPENCERFANO) {
-    return yvec_arr;
-  }
+  std::array<double, SFPTS> yvec_arr{};
   THREADLOCALONHOST std::array<size_t, SFPTS> vec_permutation{};
 
   gsl_permutation p{.size = SFPTS, .data = vec_permutation.data()};
