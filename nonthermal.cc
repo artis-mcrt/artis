@@ -2482,9 +2482,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++) {
-    const double en = envec[i];
-
-    sfmatrix[i * SFPTS + i] += electron_loss_rate(en * EV, nne) / EV;
+    sfmatrix[i * SFPTS + i] += electron_loss_rate(envec[i] * EV, nne) / EV;
 
     double source_integral_to_SF_EMAX{NAN};
     if (i < SFPTS - 1) {
