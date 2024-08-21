@@ -116,7 +116,7 @@ gsl_vector *sourcevec;  // samples of the source function (energy distribution o
 // Samples of the Spencer-Fano solution function for the current cell being worked on. Multiply by energy to get
 // non-thermal electron number flux. y(E) * dE is the flux of electrons with energy in the range (E, E + dE) in units of
 // particles/cm2/s. y has units of particles/cm2/s/eV
-thread_local std::array<double, SFPTS> yfunc{};
+THREADLOCALONHOST std::array<double, SFPTS> yfunc{};
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
 // This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.
@@ -134,7 +134,7 @@ struct NonThermalExcitation {
 };
 
 // temporary storage of full excitation list for current cell before possible truncation and copy to node-shared memory
-thread_local std::vector<NonThermalExcitation> tmp_excitation_list;
+THREADLOCALONHOST std::vector<NonThermalExcitation> tmp_excitation_list;
 
 // pointer to either local or node-shared memory excitation list of all cells
 NonThermalExcitation *excitations_list_all_cells{};
@@ -1836,9 +1836,13 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
 }
 
 void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec, std::array<double, SFPTS> &yvec_arr) {
-  // WARNING: this assumes sfmatrix is in upper triangular form already!
+  THREADLOCALONHOST std::array<size_t, SFPTS> vec_permutation{};
+
+  gsl_permutation p{.size = SFPTS, .data = vec_permutation.data()};
+  gsl_permutation_init(&p);
+
+  // sfmatrix must be in upper triangular form
   const gsl_matrix *sfmatrix_LU = sfmatrix;
-  gsl_permutation *p = gsl_permutation_calloc(SFPTS);  // identity permutation
 
   // if the matrix is not upper triangular, then do a decomposition
   // printout("Doing LU decomposition of SF matrix\n");
@@ -1851,11 +1855,10 @@ void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec, std::a
 
   // printout("Solving SF matrix equation\n");
 
-  gsl_vector_view yvecview = gsl_vector_view_array(yvec_arr.data(), SFPTS);
-  gsl_vector *yvec = &yvecview.vector;
+  auto yvec = gsl_vector_view_array(yvec_arr.data(), SFPTS).vector;
 
   // solve matrix equation: sf_matrix * y_vec = rhsvec for yvec
-  gsl_linalg_LU_solve(sfmatrix_LU, p, rhsvec, yvec);
+  gsl_linalg_LU_solve(sfmatrix_LU, &p, rhsvec, &yvec);
   // printout("Refining solution\n");
 
   double error_best = -1.;
@@ -1865,19 +1868,19 @@ void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec, std::a
   int iteration = 0;
   for (iteration = 0; iteration < 10; iteration++) {
     if (iteration > 0) {
-      gsl_linalg_LU_refine(sfmatrix, sfmatrix_LU, p, rhsvec, yvec,
+      gsl_linalg_LU_refine(sfmatrix, sfmatrix_LU, &p, rhsvec, &yvec,
                            gsl_work_vector);  // first argument must be original matrix
     }
 
     // calculate Ax - b = residual
     gsl_vector_memcpy(residual_vector, rhsvec);
-    gsl_blas_dgemv(CblasNoTrans, 1.0, sfmatrix, yvec, -1.0, residual_vector);
+    gsl_blas_dgemv(CblasNoTrans, 1.0, sfmatrix, &yvec, -1.0, residual_vector);
 
     // value of the largest absolute residual
     const double error = fabs(gsl_vector_get(residual_vector, gsl_blas_idamax(residual_vector)));
 
     if (error < error_best || error_best < 0.) {
-      gsl_vector_memcpy(yvec_best, yvec);
+      gsl_vector_memcpy(yvec_best, &yvec);
       error_best = error;
     }
     // printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
@@ -1887,16 +1890,15 @@ void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec, std::a
       printout("  SF solver LU_refine: After %d iterations, best solution vector has a max residual of %g (WARNING)\n",
                iteration, error_best);
     }
-    gsl_vector_memcpy(yvec, yvec_best);
+    gsl_vector_memcpy(&yvec, yvec_best);
   }
   gsl_vector_free(yvec_best);
   gsl_vector_free(gsl_work_vector);
   gsl_vector_free(residual_vector);
 
   // gsl_matrix_free(sfmatrix_LU); // if this matrix is different to sfmatrix then free it
-  gsl_permutation_free(p);
 
-  if (gsl_vector_isnonneg(yvec) == 0) {
+  if (gsl_vector_isnonneg(&yvec) == 0) {
     printout("solve_sfmatrix: WARNING: y function goes negative!\n");
   }
 }
