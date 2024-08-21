@@ -1310,7 +1310,7 @@ auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int ele
 
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
 // returns the rate coefficient in s^-1 divided by deposition rate density in erg/cm^3/s
-auto calculate_nt_excitation_ratecoeff_perdeposition(const gsl_vector_view yvecview, const int element, const int ion,
+auto calculate_nt_excitation_ratecoeff_perdeposition(const gsl_vector &gsl_yvec, const int element, const int ion,
                                                      const int lower, const int uptransindex,
                                                      const double statweight_lower,
                                                      const double epsilon_trans) -> double {
@@ -1320,7 +1320,7 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const gsl_vector_view yvecv
   if (get_xs_excitation_vector(&gsl_xs_excitation_vec, element, ion, lower, uptransindex, statweight_lower,
                                epsilon_trans) >= 0) {
     double y_dot_crosssection = 0.;
-    gsl_blas_ddot(&gsl_xs_excitation_vec, &yvecview.vector, &y_dot_crosssection);
+    gsl_blas_ddot(&gsl_xs_excitation_vec, &gsl_yvec, &y_dot_crosssection);
 
     y_dot_crosssection *= DELTA_E;
 
@@ -1411,7 +1411,7 @@ auto get_uptransindex(const int element, const int ion, const int lower, const i
 }
 
 void analyse_sf_solution(const int modelgridindex, const int timestep, const bool enable_sfexcitation) {
-  const gsl_vector_view yvecview = gsl_vector_view_array(yfunc.data(), SFPTS);
+  const auto gsl_yvec = gsl_vector_const_view_array(yfunc.data(), SFPTS).vector;
   const float nne = grid::get_nne(modelgridindex);
   const double nntot = get_nnion_tot(modelgridindex);
   const double nnetot = grid::get_nnetot(modelgridindex);
@@ -1496,7 +1496,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double ratecoeffperdeposition = calculate_nt_excitation_ratecoeff_perdeposition(
-              yvecview, element, ion, lower, t, statweight_lower, epsilon_trans);
+              gsl_yvec, element, ion, lower, t, statweight_lower, epsilon_trans);
           const double frac_excitation_thistrans = nnlevel * epsilon_trans * ratecoeffperdeposition;
           frac_excitation_ion += frac_excitation_thistrans;
 
