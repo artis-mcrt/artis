@@ -1039,14 +1039,14 @@ auto calculate_nt_frac_ionization_shell(const int modelgridindex, const int elem
   const double nnion = get_nnion(modelgridindex, element, ion);
   const double ionpot_ev = collionrow.ionpot_ev;
 
-  gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
-  get_xs_ionization_vector(cross_section_vec, collionrow);
+  std::array<double, SFPTS> cross_section_vec{};
+  auto gsl_cross_section_vec = gsl_vector_view_array(cross_section_vec.data(), SFPTS).vector;
+  get_xs_ionization_vector(&gsl_cross_section_vec, collionrow);
 
   const auto gsl_yvec = gsl_vector_const_view_array(yfunc.data(), SFPTS).vector;
 
   double y_dot_crosssection_de = 0.;
-  gsl_blas_ddot(&gsl_yvec, cross_section_vec, &y_dot_crosssection_de);
-  gsl_vector_free(cross_section_vec);
+  gsl_blas_ddot(&gsl_yvec, &gsl_cross_section_vec, &y_dot_crosssection_de);
 
   // or multiply the scalar result by the constant DELTA_E
   y_dot_crosssection_de *= DELTA_E;
@@ -1073,8 +1073,10 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
 // IMPORTANT: we are dividing by the shell potential, not the valence potential here!
 // To change this set assumeshellpotentialisvalence to true
 {
-  gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
-  gsl_vector *cross_section_vec_allshells = gsl_vector_calloc(SFPTS);
+  std::array<double, SFPTS> cross_section_vec{};
+  auto gsl_cross_section_vec = gsl_vector_view_array(cross_section_vec.data(), SFPTS).vector;
+  std::array<double, SFPTS> cross_section_vec_allshells{};
+  auto gsl_cross_section_vec_allshells = gsl_vector_view_array(cross_section_vec_allshells.data(), SFPTS).vector;
 
   const int Z = get_atomicnumber(element);
   const int ionstage = get_ionstage(element, ion);
@@ -1082,7 +1084,7 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
 
   for (auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
-      get_xs_ionization_vector(cross_section_vec, collionrow);
+      get_xs_ionization_vector(&gsl_cross_section_vec, collionrow);
 
       if (assumeshellpotentialisvalence) {
         const double ionpot_shell = collionrow.ionpot_ev * EV;
@@ -1094,19 +1096,16 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
         assert_always(ionpot_shell >= ionpot_valence);
 
         // boost the ionization rate by assuming shell vacancy energy is used to eject valence electrons
-        gsl_vector_scale(cross_section_vec, ionpot_shell / ionpot_valence);
+        gsl_vector_scale(&gsl_cross_section_vec, ionpot_shell / ionpot_valence);
       }
 
-      gsl_vector_add(cross_section_vec_allshells, cross_section_vec);
+      gsl_vector_add(&gsl_cross_section_vec_allshells, &gsl_cross_section_vec);
     }
   }
 
-  gsl_vector_free(cross_section_vec);
-
   double y_dot_crosssection_de = 0.;
   const auto gsl_yvec = gsl_vector_const_view_array(yfunc.data(), SFPTS).vector;
-  gsl_blas_ddot(&gsl_yvec, cross_section_vec_allshells, &y_dot_crosssection_de);
-  gsl_vector_free(cross_section_vec_allshells);
+  gsl_blas_ddot(&gsl_yvec, &gsl_cross_section_vec_allshells, &y_dot_crosssection_de);
 
   y_dot_crosssection_de *= DELTA_E;
 
@@ -1850,9 +1849,8 @@ auto sfmatrix_solve(const gsl_matrix &sfmatrix, const gsl_vector &rhsvec) {
   // make a copy of the matrix for the LU decomp
   // gsl_matrix *sfmatrix_LU = gsl_matrix_alloc(SFPTS, SFPTS);
   // gsl_matrix_memcpy(sfmatrix_LU, sfmatrix);
-  // int s; //sign of the transformation
-  // gsl_permutation *p = gsl_permutation_alloc(SFPTS);
-  // gsl_linalg_LU_decomp(sfmatrix_LU, p, &s);
+  // int s;  // sign of the transformation
+  // gsl_linalg_LU_decomp(sfmatrix_LU, &p, &s);
 
   // printout("Solving SF matrix equation\n");
 
