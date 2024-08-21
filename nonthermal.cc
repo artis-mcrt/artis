@@ -1313,7 +1313,7 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const gsl_vector &gsl_yvec,
                                                      const int lower, const int uptransindex,
                                                      const double statweight_lower,
                                                      const double epsilon_trans) -> double {
-  thread_local static std::array<double, SFPTS> xs_excitation_vec{};
+  THREADLOCALONHOST std::array<double, SFPTS> xs_excitation_vec{};
 
   gsl_vector gsl_xs_excitation_vec = gsl_vector_view_array(xs_excitation_vec.data(), SFPTS).vector;
   if (get_xs_excitation_vector(&gsl_xs_excitation_vec, element, ion, lower, uptransindex, statweight_lower,
@@ -1734,7 +1734,8 @@ void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridinde
 void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int ionstage, const double nnion)
 // add the ionization terms to the Spencer-Fano matrix
 {
-  gsl_vector *const vec_xs_ionization = gsl_vector_alloc(SFPTS);
+  THREADLOCALONHOST std::array<double, SFPTS> vec_xs_ionization{};
+  auto gslvec_xs_ionization = gsl_vector_view_array(vec_xs_ionization.data(), SFPTS).vector;
   for (auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       const double ionpot_ev = collionrow.ionpot_ev;
@@ -1747,7 +1748,7 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
       // printout("Z=%2d ionstage %d n %d l %d ionpot %g eV\n",
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
-      const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, collionrow);
+      const int xsstartindex = get_xs_ionization_vector(&gslvec_xs_ionization, collionrow);
       // Luke Shingles: the use of min and max on the epsilon limits keeps energies
       // from becoming unphysical. This insight came from reading the
       // CMFGEN Fortran source code (Li, Dessart, Hillier 2012, doi:10.1111/j.1365-2966.2012.21198.x)
@@ -1759,7 +1760,7 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
         const double endash = gsl_vector_get(envec, j);
         const double epsilon_upper = std::min((endash + ionpot_ev) / 2, endash);
         int_eps_upper[j] = atan((epsilon_upper - ionpot_ev) / J);
-        prefactors[j] = gsl_vector_get(vec_xs_ionization, j) * nnion / atan((endash - ionpot_ev) / 2 / J);
+        prefactors[j] = gsl_vector_get(&gslvec_xs_ionization, j) * nnion / atan((endash - ionpot_ev) / 2 / J);
       }
 
       for (int i = 0; i < SFPTS; i++) {
@@ -1817,7 +1818,7 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
           const double en = gsl_vector_get(envec, i);
           const int jstart = i > xsstartindex ? i : xsstartindex;
           for (int j = jstart; j < SFPTS; j++) {
-            const double xs = gsl_vector_get(vec_xs_ionization, j);
+            const double xs = gsl_vector_get(&gslvec_xs_ionization, j);
             if (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
               const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
               for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++) {
@@ -1836,7 +1837,6 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
       }
     }
   }
-  gsl_vector_free(vec_xs_ionization);
 }
 
 // solve the Spencer-Fano matrix equation and return the y vector (samples of the Spencer-Fano solution function).
