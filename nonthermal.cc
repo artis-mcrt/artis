@@ -1835,7 +1835,7 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
   gsl_vector_free(vec_xs_ionization);
 }
 
-auto sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec) {
+auto sfmatrix_solve(const gsl_matrix &sfmatrix, const gsl_vector &rhsvec) {
   std::array<double, NT_SOLVE_SPENCERFANO ? SFPTS : 0> yvec_arr{};
   if (!NT_SOLVE_SPENCERFANO) {
     return yvec_arr;
@@ -1846,7 +1846,7 @@ auto sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec) {
   gsl_permutation_init(&p);
 
   // sfmatrix must be in upper triangular form
-  const gsl_matrix *sfmatrix_LU = sfmatrix;
+  const gsl_matrix *sfmatrix_LU = &sfmatrix;
 
   // if the matrix is not upper triangular, then do a decomposition
   // printout("Doing LU decomposition of SF matrix\n");
@@ -1862,7 +1862,7 @@ auto sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec) {
   auto yvec = gsl_vector_view_array(yvec_arr.data(), SFPTS).vector;
 
   // solve matrix equation: sf_matrix * y_vec = rhsvec for yvec
-  gsl_linalg_LU_solve(sfmatrix_LU, &p, rhsvec, &yvec);
+  gsl_linalg_LU_solve(sfmatrix_LU, &p, &rhsvec, &yvec);
   // printout("Refining solution\n");
 
   double error_best = -1.;
@@ -1872,13 +1872,13 @@ auto sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec) {
   int iteration = 0;
   for (iteration = 0; iteration < 10; iteration++) {
     if (iteration > 0) {
-      gsl_linalg_LU_refine(sfmatrix, sfmatrix_LU, &p, rhsvec, &yvec,
+      gsl_linalg_LU_refine(&sfmatrix, sfmatrix_LU, &p, &rhsvec, &yvec,
                            gsl_work_vector);  // first argument must be original matrix
     }
 
     // calculate Ax - b = residual
-    gsl_vector_memcpy(residual_vector, rhsvec);
-    gsl_blas_dgemv(CblasNoTrans, 1.0, sfmatrix, &yvec, -1.0, residual_vector);
+    gsl_vector_memcpy(residual_vector, &rhsvec);
+    gsl_blas_dgemv(CblasNoTrans, 1.0, &sfmatrix, &yvec, -1.0, residual_vector);
 
     // value of the largest absolute residual
     const double error = fabs(gsl_vector_get(residual_vector, gsl_blas_idamax(residual_vector)));
@@ -2483,14 +2483,20 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   //   timesteps.\n");
   // }
 
-  gsl_matrix *const sfmatrix = gsl_matrix_calloc(SFPTS, SFPTS);
-  gsl_vector *const rhsvec = gsl_vector_calloc(SFPTS);  // constant term (not dependent on y func) in each equation
+  THREADLOCALONHOST std::array<double, SFPTS * SFPTS> sfmatrix_data;
+  std::ranges::fill(sfmatrix_data, 0.);
+  auto sfmatrix = gsl_matrix_view_array(sfmatrix_data.data(), SFPTS, SFPTS).matrix;
+
+  // rhs is the constant term (not dependent on y func) in each equation
+  THREADLOCALONHOST std::array<double, SFPTS * SFPTS> rhsvec_data;
+  std::ranges::fill(rhsvec_data, 0.);
+  auto rhsvec = gsl_vector_view_array(rhsvec_data.data(), SFPTS).vector;
 
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++) {
     const double en = gsl_vector_get(envec, i);
 
-    *gsl_matrix_ptr(sfmatrix, i, i) += electron_loss_rate(en * EV, nne) / EV;
+    *gsl_matrix_ptr(&sfmatrix, i, i) += electron_loss_rate(en * EV, nne) / EV;
 
     double source_integral_to_SF_EMAX{NAN};
     if (i < SFPTS - 1) {
@@ -2500,7 +2506,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
       source_integral_to_SF_EMAX = 0;
     }
 
-    gsl_vector_set(rhsvec, i, source_integral_to_SF_EMAX);
+    gsl_vector_set(&rhsvec, i, source_integral_to_SF_EMAX);
   }
   // gsl_vector_set_all(rhsvec, 1.); // alternative if all electrons are injected at SF_EMAX
 
@@ -2529,11 +2535,11 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
         printout("%d ", ionstage);
 
         if (enable_sfexcitation) {
-          sfmatrix_add_excitation(sfmatrix, modelgridindex, element, ion);
+          sfmatrix_add_excitation(&sfmatrix, modelgridindex, element, ion);
         }
 
         if (enable_sfionization && (ion < nions - 1)) {
-          sfmatrix_add_ionization(sfmatrix, Z, ionstage, nnion);
+          sfmatrix_add_ionization(&sfmatrix, Z, ionstage, nnion);
         }
       }
       if (!first_included_ion_of_element) {
@@ -2558,12 +2564,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   // }
   // printout("\n");
 
-  if constexpr (NT_SOLVE_SPENCERFANO) {
-    yfunc = sfmatrix_solve(sfmatrix, rhsvec);
-  }
-
-  gsl_matrix_free(sfmatrix);
-  gsl_vector_free(rhsvec);
+  yfunc = sfmatrix_solve(sfmatrix, rhsvec);
 
   if (timestep % 10 == 0) {
     nt_write_to_file(modelgridindex, timestep, iteration);
