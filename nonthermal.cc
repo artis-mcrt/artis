@@ -113,13 +113,6 @@ constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
 // energy grid on which solution is sampled
 std::array<double, SFPTS> envec{};
-// constexpr auto envec = [] {
-//   std::array<double, SFPTS> envec{};
-//   for (int i = 0; i < SFPTS; i++) {
-//     envec[i] = SF_EMIN + (i * DELTA_E);
-//   }
-//   return envec;
-// }();
 
 gsl_vector *gsl_logenvec;   // log of envec
 gsl_vector *gsl_sourcevec;  // samples of the source function (energy distribution of deposited energy)
@@ -511,6 +504,8 @@ void zero_all_effionpot(const int modelgridindex) {
   check_auger_probabilities(modelgridindex);
 }
 
+constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
+
 auto get_energyindex_ev_lteq(const double energy_ev) -> int
 // finds the highest energy point <= energy_ev
 {
@@ -622,7 +617,7 @@ auto get_xs_ionization_vector(std::array<double, SFPTS> &xs_vec, const collionro
   const double D = colliondata.D;
 
   for (int i = startindex; i < SFPTS; i++) {
-    const double u = envec[i] / ionpot_ev;
+    const double u = engrid(i) / ionpot_ev;
     const double xs_ioniz =
         1e-14 * (A * (1 - 1 / u) + B * pow((1 - (1 / u)), 2) + C * log(u) + D * log(u) / u) / (u * pow(ionpot_ev, 2));
     xs_vec[i] = xs_ioniz;
@@ -793,7 +788,7 @@ auto N_e(const int modelgridindex, const double energy, const std::array<double,
 
           // integral from ionpot up to lambda
           for (int i = integral1startindex; i <= integral1stopindex; i++) {
-            const double endash = envec[i];
+            const double endash = engrid(i);
 
             N_e_ion += get_y(yfunc, energy_ev + endash) * xs_impactionization(energy_ev + endash, collionrow) *
                        Psecondary(energy_ev + endash, endash, ionpot_ev, J) * DELTA_E;
@@ -802,7 +797,7 @@ auto N_e(const int modelgridindex, const double energy, const std::array<double,
           // integral from 2E + I up to E_max
           const int integral2startindex = get_energyindex_ev_lteq((2 * energy_ev) + ionpot_ev);
           for (int i = integral2startindex; i < SFPTS; i++) {
-            const double endash = envec[i];
+            const double endash = engrid(i);
             N_e_ion += yfunc[i] * xs_impactionization(endash, collionrow) *
                        Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * DELTA_E;
           }
@@ -830,7 +825,7 @@ auto calculate_frac_heating(const int modelgridindex, const std::array<double, S
   // const float nnetot = grid::get_nnetot(modelgridindex);
 
   for (int i = 0; i < SFPTS; i++) {
-    const double endash = envec[i];
+    const double endash = engrid(i);
 
     // first term
     frac_heating_Einit += yfunc[i] * (electron_loss_rate(endash * EV, nne) / EV) * DELTA_E;
@@ -1641,7 +1636,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 
   double nne_nt_max = 0.;
   for (int i = 0; i < SFPTS; i++) {
-    const double endash = envec[i];
+    const double endash = engrid(i);
     const double delta_endash = DELTA_E;
     const double oneovervelocity = sqrt(9.10938e-31 / 2 / endash / 1.60218e-19) / 100;  // in sec/cm
     nne_nt_max += yscalefactor * yfunc[i] * oneovervelocity * delta_endash;
@@ -1702,7 +1697,7 @@ void sfmatrix_add_excitation(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
         cblas_dscal(SFPTS, DELTA_E, vec_xs_excitation_deltae.data(), 1);
 
         for (int i = 0; i < SFPTS; i++) {
-          const double en = envec[i];
+          const double en = engrid(i);
           const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
 
           const int startindex = i > xsstartindex ? i : xsstartindex;
@@ -1758,7 +1753,7 @@ void sfmatrix_add_ionization(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
 
       for (int i = 0; i < SFPTS; i++) {
         // i is the matrix row index, which corresponds to an energy E at which we are solve from y(E)
-        const double en = envec[i];
+        const double en = engrid(i);
 
         // endash ranges from en to SF_EMAX, but skip over the zero-cross section points
         const int jstart = std::max(i, xsstartindex);
@@ -1808,7 +1803,7 @@ void sfmatrix_add_ionization(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
         }
 
         for (int i = 0; i < augerstopindex; i++) {
-          const double en = envec[i];
+          const double en = engrid(i);
           const int jstart = i > xsstartindex ? i : xsstartindex;
           for (int j = jstart; j < SFPTS; j++) {
             const double xs = vec_xs_ionization[j];
@@ -2491,7 +2486,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++) {
-    sfmatrix[(i * SFPTS) + i] += electron_loss_rate(envec[i] * EV, nne) / EV;
+    sfmatrix[(i * SFPTS) + i] += electron_loss_rate(engrid(i) * EV, nne) / EV;
 
     double source_integral_to_SF_EMAX{NAN};
     if (i < SFPTS - 1) {
