@@ -1850,44 +1850,49 @@ auto sfmatrix_solve(const gsl_matrix &gsl_sfmatrix, const gsl_vector &gsl_rhsvec
   gsl_permutation_init(&p);
 
   // sfmatrix must be in upper triangular form
-  const gsl_matrix *sfmatrix_LU = &gsl_sfmatrix;
+  const auto &gsl_sfmatrix_LU = gsl_sfmatrix;
 
   // if the matrix is not upper triangular, then do a decomposition
   // printout("Doing LU decomposition of SF matrix\n");
   // make a copy of the matrix for the LU decomp
-  // gsl_matrix *sfmatrix_LU = gsl_matrix_alloc(SFPTS, SFPTS);
-  // gsl_matrix_memcpy(sfmatrix_LU, sfmatrix);
-  // int s;  // sign of the transformation
-  // gsl_linalg_LU_decomp(sfmatrix_LU, &p, &s);
+  // std::array<double, SFPTS> sfmatrix_LU{};
+  // auto gsl_sfmatrix_LU = gsl_matrix_view_array(sfmatrix_LU.data(), SFPTS, SFPTS).matrix;
+  // gsl_matrix_memcpy(&gsl_sfmatrix_LU, &gsl_sfmatrix);
+  // int s{};  // sign of the transformation
+  // gsl_linalg_LU_decomp(&gsl_sfmatrix_LU, &p, &s);
 
   // printout("Solving SF matrix equation\n");
 
   auto gsl_yvec = gsl_vector_view_array(yvec_arr.data(), SFPTS).vector;
 
   // solve matrix equation: sf_matrix * y_vec = rhsvec for yvec
-  gsl_linalg_LU_solve(sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec);
+  gsl_linalg_LU_solve(&gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec);
   // printout("Refining solution\n");
 
   double error_best = -1.;
-  gsl_vector *yvec_best = gsl_vector_alloc(SFPTS);  // solution vector with lowest error
-  gsl_vector *gsl_work_vector = gsl_vector_alloc(SFPTS);
-  gsl_vector *residual_vector = gsl_vector_alloc(SFPTS);
+  std::array<double, SFPTS> yvec_best{};
+  auto gsl_yvec_best = gsl_vector_view_array(yvec_best.data(), SFPTS).vector;
+  std::array<double, SFPTS> work_vector{};
+  auto gsl_work_vector = gsl_vector_view_array(work_vector.data(), SFPTS).vector;
+  std::array<double, SFPTS> residual_vector{};
+  auto gsl_residual_vector = gsl_vector_view_array(residual_vector.data(), SFPTS).vector;
+
   int iteration = 0;
   for (iteration = 0; iteration < 10; iteration++) {
     if (iteration > 0) {
-      gsl_linalg_LU_refine(&gsl_sfmatrix, sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec,
-                           gsl_work_vector);  // first argument must be original matrix
+      gsl_linalg_LU_refine(&gsl_sfmatrix, &gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec,
+                           &gsl_work_vector);  // first argument must be original matrix
     }
 
     // calculate Ax - b = residual
-    gsl_vector_memcpy(residual_vector, &gsl_rhsvec);
-    gsl_blas_dgemv(CblasNoTrans, 1.0, &gsl_sfmatrix, &gsl_yvec, -1.0, residual_vector);
+    gsl_vector_memcpy(&gsl_residual_vector, &gsl_rhsvec);
+    gsl_blas_dgemv(CblasNoTrans, 1.0, &gsl_sfmatrix, &gsl_yvec, -1.0, &gsl_residual_vector);
 
     // value of the largest absolute residual
-    const double error = fabs(gsl_vector_get(residual_vector, gsl_blas_idamax(residual_vector)));
+    const double error = fabs(gsl_vector_get(&gsl_residual_vector, gsl_blas_idamax(&gsl_residual_vector)));
 
     if (error < error_best || error_best < 0.) {
-      gsl_vector_memcpy(yvec_best, &gsl_yvec);
+      gsl_vector_memcpy(&gsl_yvec_best, &gsl_yvec);
       error_best = error;
     }
     // printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
@@ -1897,13 +1902,8 @@ auto sfmatrix_solve(const gsl_matrix &gsl_sfmatrix, const gsl_vector &gsl_rhsvec
       printout("  SF solver LU_refine: After %d iterations, best solution vector has a max residual of %g (WARNING)\n",
                iteration, error_best);
     }
-    gsl_vector_memcpy(&gsl_yvec, yvec_best);
+    gsl_vector_memcpy(&gsl_yvec, &gsl_yvec_best);
   }
-  gsl_vector_free(yvec_best);
-  gsl_vector_free(gsl_work_vector);
-  gsl_vector_free(residual_vector);
-
-  // gsl_matrix_free(sfmatrix_LU); // if this matrix is different to sfmatrix then free it
 
   if (gsl_vector_isnonneg(&gsl_yvec) == 0) {
     printout("solve_sfmatrix: WARNING: y function goes negative!\n");
