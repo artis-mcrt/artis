@@ -740,7 +740,7 @@ constexpr auto xs_impactionization(const double energy_ev, const collionrow &col
 // Kozma & Fransson equation 6.
 // Something related to a number of electrons, needed to calculate the heating fraction in equation 3
 // not valid for energy > SF_EMIN
-auto N_e(const int modelgridindex, const double energy) -> double {
+auto N_e(const int modelgridindex, const double energy, const std::array<double, SFPTS> &yfunc) -> double {
   const double energy_ev = energy / EV;
   const double tot_nion = get_nnion_tot(modelgridindex);
   double N_e = 0.;
@@ -824,7 +824,7 @@ auto N_e(const int modelgridindex, const double energy) -> double {
 
 // fraction of deposited energy that goes into heating the thermal electrons
 // Kozma & Fransson equation 3
-auto calculate_frac_heating(const int modelgridindex) -> float {
+auto calculate_frac_heating(const int modelgridindex, const std::array<double, SFPTS> &yfunc) -> float {
   // frac_heating multiplied by E_init, which will be divided out at the end
   double frac_heating_Einit = 0.;
 
@@ -848,7 +848,7 @@ auto calculate_frac_heating(const int modelgridindex) -> float {
   const double delta_endash = SF_EMIN / nsteps;
   for (int j = 0; j < nsteps; j++) {
     const double endash = SF_EMIN * j / nsteps;
-    N_e_contrib += N_e(modelgridindex, endash * EV) * endash * delta_endash;
+    N_e_contrib += N_e(modelgridindex, endash * EV, yfunc) * endash * delta_endash;
   }
   frac_heating_Einit += N_e_contrib;
   printout(" heating N_e contrib (en < EMIN) %g nsteps %d\n", N_e_contrib / E_init_ev, nsteps);
@@ -1039,7 +1039,8 @@ auto get_oneoverw(const int element, const int ion, const int modelgridindex) ->
 
 // the fraction of deposited energy that goes into ionising electrons in a particular shell
 auto calculate_nt_frac_ionization_shell(const int modelgridindex, const int element, const int ion,
-                                        const collionrow &collionrow) -> double {
+                                        const collionrow &collionrow,
+                                        const std::array<double, SFPTS> &yfunc) -> double {
   const double nnion = get_nnion(modelgridindex, element, ion);
   const double ionpot_ev = collionrow.ionpot_ev;
 
@@ -1069,7 +1070,8 @@ auto nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int elemen
 }
 
 auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion,
-                                       const bool assumeshellpotentialisvalence) -> double
+                                       const bool assumeshellpotentialisvalence,
+                                       const std::array<double, SFPTS> &yfunc) -> double
 // Integrate the ionization cross section over the electron degradation function to get the ionization rate coefficient
 // i.e. multiply this by ion population to get a rate of ionizations per second
 // Do not call during packet propagation, as the y vector may not be in memory!
@@ -1107,7 +1109,7 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
   }
 
   double y_dot_crosssection_de = 0.;
-  const auto gsl_yvec = gsl_vector_view_array(yfunc.data(), SFPTS).vector;
+  const auto gsl_yvec = gsl_vector_const_view_array(yfunc.data(), SFPTS).vector;
   gsl_blas_ddot(&gsl_yvec, &gsl_cross_section_vec_allshells, &y_dot_crosssection_de);
 
   y_dot_crosssection_de *= DELTA_E;
@@ -1118,7 +1120,8 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
   return yscalefactor * y_dot_crosssection_de;
 }
 
-void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int element, const int ion)
+void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int element, const int ion,
+                                      const std::array<double, SFPTS> &yfunc)
 // Kozma & Fransson 1992 equation 12, except modified to be a sum over all shells of an ion
 // the result is in ergs
 {
@@ -1149,7 +1152,8 @@ void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int elemen
   for (auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       matching_nlsubshell_count++;
-      const double frac_ionization_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow);
+      const double frac_ionization_shell =
+          calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow, yfunc);
       eta_sum += frac_ionization_shell;
       const double ionpot_shell = collionrow.ionpot_ev * EV;
 
@@ -1442,13 +1446,13 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
       // printout("    nnion: %g\n", nnion);
       printout("    nnion/nntot: %g\n", nnion / nntot);
 
-      calculate_eff_ionpot_auger_rates(modelgridindex, element, ion);
+      calculate_eff_ionpot_auger_rates(modelgridindex, element, ion, yfunc);
 
       int matching_nlsubshell_count = 0;
       for (auto &collionrow : colliondata) {
         if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
           const double frac_ionization_ion_shell =
-              calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow);
+              calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow, yfunc);
           frac_ionization_ion += frac_ionization_ion_shell;
           matching_nlsubshell_count++;
           printout("      shell n %d, l %d, I %5.1f eV: frac_ionization %10.4e", collionrow.n, collionrow.l,
@@ -1534,10 +1538,10 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
       printout("    workfn approx Gamma:     %9.3e\n", nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion));
 
       printout("    SF integral Gamma:       %9.3e\n",
-               calculate_nt_ionization_ratecoeff(modelgridindex, element, ion, false));
+               calculate_nt_ionization_ratecoeff(modelgridindex, element, ion, false, yfunc));
 
       printout("    SF integral(I=Iv) Gamma: %9.3e  (if always use valence potential)\n",
-               calculate_nt_ionization_ratecoeff(modelgridindex, element, ion, true));
+               calculate_nt_ionization_ratecoeff(modelgridindex, element, ion, true, yfunc));
 
       printout("    ARTIS using Gamma:       %9.3e\n", nt_ionization_ratecoeff(modelgridindex, element, ion));
 
@@ -1663,7 +1667,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
   printout("  nne_nt/nne < %9.3e\n", nne_nt_max / nne);
 
   // store the solution properties now while the NT spectrum is in memory (in case we free before packet prop)
-  nt_solution[modelgridindex].frac_heating = calculate_frac_heating(modelgridindex);
+  nt_solution[modelgridindex].frac_heating = calculate_frac_heating(modelgridindex, yfunc);
 
   printout("  frac_heating_tot:    %g\n", nt_solution[modelgridindex].frac_heating);
   printout("  frac_excitation_tot: %g\n", frac_excitation_total);
