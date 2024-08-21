@@ -2032,16 +2032,16 @@ void init(const int my_rank, const int ndo_nonempty) {
   }
 
   // integrate the source vector to find the assumed injection rate
-  gsl_vector *integralvec = gsl_vector_alloc(SFPTS);
-  gsl_vector_memcpy(integralvec, gsl_sourcevec);
-  gsl_vector_scale(integralvec, DELTA_E);
-  const double sourceintegral = gsl_blas_dasum(integralvec);  // integral of S(e) dE
+  std::array<double, SFPTS> integralvec{};
+  gsl_vector gsl_integralvec = gsl_vector_view_array(integralvec.data(), SFPTS).vector;
+  gsl_vector_memcpy(&gsl_integralvec, gsl_sourcevec);
+  gsl_vector_scale(&gsl_integralvec, DELTA_E);
+  const double sourceintegral = gsl_blas_dasum(&gsl_integralvec);  // integral of S(e) dE
 
   for (int s = 0; s < SFPTS; s++) {
-    integralvec->data[s] *= engrid(s);
+    integralvec[s] *= engrid(s);
   }
-  E_init_ev = gsl_blas_dasum(integralvec);  // integral of E * S(e) dE
-  gsl_vector_free(integralvec);
+  E_init_ev = gsl_blas_dasum(&gsl_integralvec);  // integral of E * S(e) dE
 
   // or put all of the source into one point at SF_EMAX
   // gsl_vector_set_zero(sourcevec);
