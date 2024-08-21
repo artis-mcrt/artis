@@ -1664,7 +1664,8 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
            nt_solution[modelgridindex].frac_heating);
 }
 
-void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridindex, const int element, const int ion) {
+void sfmatrix_add_excitation(std::array<double, SFPTS * SFPTS> &sfmatrix, const int modelgridindex, const int element,
+                             const int ion) {
   // excitation terms
   std::array<double, SFPTS> vec_xs_excitation_deltae{};
 
@@ -1699,7 +1700,7 @@ void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridinde
 
           const int startindex = i > xsstartindex ? i : xsstartindex;
           for (int j = startindex; j < stopindex; j++) {
-            *gsl_matrix_ptr(sfmatrix, i, j) += nnlevel * vec_xs_excitation_deltae[j];
+            sfmatrix[i * SFPTS + j] += nnlevel * vec_xs_excitation_deltae[j];
           }
 
           // do the last bit separately because we're not using the full delta_e interval
@@ -1707,8 +1708,7 @@ void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridinde
 
           const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get(envec, stopindex));
 
-          *gsl_matrix_ptr(sfmatrix, i, stopindex) +=
-              nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / delta_en;
+          sfmatrix[i * SFPTS + stopindex] += nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / delta_en;
         }
       }
     }
@@ -2521,7 +2521,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
         printout("%d ", ionstage);
 
         if (enable_sfexcitation) {
-          sfmatrix_add_excitation(&gsl_sfmatrix, modelgridindex, element, ion);
+          sfmatrix_add_excitation(sfmatrix, modelgridindex, element, ion);
         }
 
         if (enable_sfionization && (ion < nions - 1)) {
