@@ -1826,10 +1826,9 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
 // solve the Spencer-Fano matrix equation and return the y vector (samples of the Spencer-Fano solution function).
 // Multiply y by energy interval [eV] to get non-thermal electron number flux. y(E) * dE is the flux of electrons with
 // energy in the range (E, E + dE) in units of particles/cm2/s. y has units of particles/cm2/s/eV
-auto sfmatrix_solve(const gsl_matrix &gsl_sfmatrix, const gsl_vector &gsl_rhsvec) {
-  std::array<double, SFPTS> yvec_arr{};
-  THREADLOCALONHOST std::array<size_t, SFPTS> vec_permutation{};
-
+auto sfmatrix_solve(const gsl_matrix &gsl_sfmatrix,
+                    const std::array<double, SFPTS> &rhsvec) -> std::array<double, SFPTS> {
+  std::array<size_t, SFPTS> vec_permutation{};
   gsl_permutation p{.size = SFPTS, .data = vec_permutation.data()};
   gsl_permutation_init(&p);
 
@@ -1847,7 +1846,9 @@ auto sfmatrix_solve(const gsl_matrix &gsl_sfmatrix, const gsl_vector &gsl_rhsvec
 
   // printout("Solving SF matrix equation\n");
 
+  std::array<double, SFPTS> yvec_arr{};
   auto gsl_yvec = gsl_vector_view_array(yvec_arr.data(), SFPTS).vector;
+  const auto gsl_rhsvec = gsl_vector_const_view_array(rhsvec.data(), SFPTS).vector;
 
   // solve matrix equation: sf_matrix * y_vec = rhsvec for yvec
   gsl_linalg_LU_solve(&gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec);
@@ -2476,7 +2477,6 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   // rhs is the constant term (not dependent on y func) in each equation
   std::array<double, SFPTS> rhsvec{};
-  auto gsl_rhsvec = gsl_vector_view_array(rhsvec.data(), SFPTS).vector;
 
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++) {
@@ -2492,7 +2492,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
       source_integral_to_SF_EMAX = 0;
     }
 
-    gsl_vector_set(&gsl_rhsvec, i, source_integral_to_SF_EMAX);
+    rhsvec[i] = source_integral_to_SF_EMAX;
   }
   // gsl_vector_set_all(rhsvec, 1.); // alternative if all electrons are injected at SF_EMAX
 
@@ -2550,7 +2550,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   // }
   // printout("\n");
 
-  const auto yfunc = sfmatrix_solve(gsl_sfmatrix, gsl_rhsvec);
+  const auto yfunc = sfmatrix_solve(gsl_sfmatrix, rhsvec);
 
   if (timestep % 10 == 0) {
     nt_write_to_file(modelgridindex, timestep, iteration, yfunc);
