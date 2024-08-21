@@ -111,8 +111,11 @@ bool nonthermal_initialized = false;
 
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
-gsl_vector *gsl_logenvec;   // log of envec
-gsl_vector *gsl_sourcevec;  // samples of the source function (energy distribution of deposited energy)
+gsl_vector *gsl_logenvec;  // log of envec
+
+std::array<double, SFPTS> sourcevec{};
+// samples of the source function (energy distribution of deposited energy)
+auto gsl_sourcevec = gsl_vector_view_array(sourcevec.data(), SFPTS).vector;
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
 // This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.
@@ -593,7 +596,7 @@ void nt_write_to_file(const int modelgridindex, const int timestep, const int it
 
     for (int s = 0; s < SFPTS; s++) {
       fprintf(nonthermalfile, "%d %d %d %.5e %.5e %.5e\n", timestep, modelgridindex, s, engrid(s),
-              gsl_vector_get(gsl_sourcevec, s), yscalefactor * yfunc[s]);
+              gsl_vector_get(&gsl_sourcevec, s), yscalefactor * yfunc[s]);
     }
     fflush(nonthermalfile);
 #ifdef _OPENMP
@@ -807,7 +810,7 @@ auto N_e(const int modelgridindex, const double energy, const std::array<double,
   }
 
   // source term, should be zero at the low end anyway
-  N_e += gsl_vector_get(gsl_sourcevec, get_energyindex_ev_lteq(energy_ev));
+  N_e += gsl_vector_get(&gsl_sourcevec, get_energyindex_ev_lteq(energy_ev));
 
   assert_always(std::isfinite(N_e));
   return N_e;
@@ -2011,9 +2014,7 @@ void init(const int my_rank, const int ndo_nonempty) {
   }
 
   gsl_logenvec = gsl_vector_calloc(SFPTS);
-  std::array<double, SFPTS> sourcevec{};
-  std::ranges::fill(sourcevec, 0.);
-  auto gsl_sourcevec = gsl_vector_view_array(sourcevec.data(), SFPTS).vector;
+  gsl_sourcevec = gsl_vector_view_array(sourcevec.data(), SFPTS).vector;
 
   // const int source_spread_pts = std::ceil(SFPTS / 20);
   const int source_spread_pts = std::ceil(SFPTS * 0.03333);  // KF92 OXYGEN TEST
@@ -2121,7 +2122,6 @@ void close_file() {
     fclose(nonthermalfile);
     nonthermalfile = nullptr;
   }
-  gsl_vector_free(gsl_sourcevec);
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
       free(nt_solution[modelgridindex].allions);
@@ -2491,7 +2491,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
     double source_integral_to_SF_EMAX{NAN};
     if (i < SFPTS - 1) {
-      gsl_vector_const_view source_e_to_SF_EMAX = gsl_vector_const_subvector(gsl_sourcevec, i + 1, SFPTS - i - 1);
+      gsl_vector_const_view source_e_to_SF_EMAX = gsl_vector_const_subvector(&gsl_sourcevec, i + 1, SFPTS - i - 1);
       source_integral_to_SF_EMAX = gsl_blas_dasum(&source_e_to_SF_EMAX.vector) * DELTA_E;
     } else {
       source_integral_to_SF_EMAX = 0;
