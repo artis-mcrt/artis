@@ -2482,7 +2482,6 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   // rhs is the constant term (not dependent on y func) in each equation
   std::array<double, SFPTS> rhsvec{};
-  auto gsl_sourcevec = gsl_vector_view_array(sourcevec.data(), SFPTS).vector;
 
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++) {
@@ -2490,8 +2489,9 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
     double source_integral_to_SF_EMAX{NAN};
     if (i < SFPTS - 1) {
-      gsl_vector_const_view source_e_to_SF_EMAX = gsl_vector_const_subvector(&gsl_sourcevec, i + 1, SFPTS - i - 1);
-      source_integral_to_SF_EMAX = gsl_blas_dasum(&source_e_to_SF_EMAX.vector) * DELTA_E;
+      for (int j = i + 1; j < SFPTS; j++) {
+        source_integral_to_SF_EMAX += sourcevec[j] * DELTA_E;
+      }
     } else {
       source_integral_to_SF_EMAX = 0;
     }
