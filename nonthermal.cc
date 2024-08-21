@@ -2039,8 +2039,8 @@ void init(const int my_rank, const int ndo_nonempty) {
   double sourceintegral = 0.;  // integral of S(e) dE
   E_init_ev = 0.;              // integral of E * S(e) dE
   for (int i = 0; i < SFPTS; i++) {
-    E_init_ev += envec[i] * gsl_vector_get(gsl_sourcevec, i) * DELTA_E;
-    sourceintegral += envec[i] * gsl_vector_get(gsl_sourcevec, i) * DELTA_E;
+    E_init_ev += gsl_vector_get(gsl_sourcevec, i) * DELTA_E * envec[i];
+    sourceintegral += gsl_vector_get(gsl_sourcevec, i) * DELTA_E;
   }
 
   // or put all of the source into one point at SF_EMAX
