@@ -206,7 +206,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
     // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
     // ref1_sc and ref2_sc in the scattering plane.
-    const double i1 = rot_angle(old_dir_cmf, obs_cmf, ref1_old, ref2_old);
+    const double i1 = get_rot_angle(old_dir_cmf, obs_cmf, ref1_old, ref2_old);
     const double cos2i1 = cos(2 * i1);
     const double sin2i1 = sin(2 * i1);
 
@@ -234,7 +234,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
     // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
     // meridian frame. NB: we need to add PI to transform THETA to i2
-    const double i2 = PI + rot_angle(obs_cmf, old_dir_cmf, ref1, ref2);
+    const double i2 = PI + get_rot_angle(obs_cmf, old_dir_cmf, ref1, ref2);
     const double cos2i2 = cos(2 * i2);
     const double sin2i2 = sin(2 * i2);
 
