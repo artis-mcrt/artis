@@ -1759,7 +1759,7 @@ void sfmatrix_add_ionization(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
         const int jstart = std::max(i, xsstartindex);
         for (int j = jstart; j < SFPTS; j++) {
           // j is the matrix column index which corresponds to the piece of the integral at y(E') where E' >= E and E'
-          // = envec(j)
+          // = engrid(j)
           const double endash = engrid(j);
 
           // J * atan[(epsilon - ionpot_ev) / J] is the indefinite integral of 1/[1 + (epsilon - ionpot_ev)^2/ J^2]
@@ -2041,7 +2041,9 @@ void init(const int my_rank, const int ndo_nonempty) {
   gsl_vector_scale(integralvec, DELTA_E);
   const double sourceintegral = gsl_blas_dasum(integralvec);  // integral of S(e) dE
 
-  gsl_vector_mul(integralvec, &gsl_envec);
+  for (int s = 0; s < SFPTS; s++) {
+    integralvec->data[s] *= envec[s];
+  }
   E_init_ev = gsl_blas_dasum(integralvec);  // integral of E * S(e) dE
   gsl_vector_free(integralvec);
 
