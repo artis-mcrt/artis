@@ -112,13 +112,14 @@ bool nonthermal_initialized = false;
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
 // energy grid on which solution is sampled
-constexpr auto envec = [] {
-  std::array<double, SFPTS> envec{};
-  for (int i = 0; i < SFPTS; i++) {
-    envec[i] = SF_EMIN + (i * DELTA_E);
-  }
-  return envec;
-}();
+std::array<double, SFPTS> envec{};
+// constexpr auto envec = [] {
+//   std::array<double, SFPTS> envec{};
+//   for (int i = 0; i < SFPTS; i++) {
+//     envec[i] = SF_EMIN + (i * DELTA_E);
+//   }
+//   return envec;
+// }();
 
 gsl_vector *gsl_logenvec;   // log of envec
 gsl_vector *gsl_sourcevec;  // samples of the source function (energy distribution of deposited energy)
@@ -2024,8 +2025,12 @@ void init(const int my_rank, const int ndo_nonempty) {
   const double source_spread_en = source_spread_pts * DELTA_E;
   const int sourcelowerindex = SFPTS - source_spread_pts;
 
+  auto gsl_envec = gsl_vector_view_array(envec.data(), SFPTS).vector;
   for (int s = 0; s < SFPTS; s++) {
-    gsl_vector_set(gsl_logenvec, s, log(envec[s]));
+    const double energy_ev = SF_EMIN + (s * DELTA_E);
+
+    gsl_vector_set(&gsl_envec, s, energy_ev);
+    gsl_vector_set(gsl_logenvec, s, log(energy_ev));
 
     // spread the source over some energy width
     if (s < sourcelowerindex) {
@@ -2036,12 +2041,14 @@ void init(const int my_rank, const int ndo_nonempty) {
   }
 
   // integrate the source vector to find the assumed injection rate
-  double sourceintegral = 0.;  // integral of S(e) dE
-  E_init_ev = 0.;              // integral of E * S(e) dE
-  for (int i = 0; i < SFPTS; i++) {
-    E_init_ev += gsl_vector_get(gsl_sourcevec, i) * DELTA_E * envec[i];
-    sourceintegral += gsl_vector_get(gsl_sourcevec, i) * DELTA_E;
-  }
+  gsl_vector *integralvec = gsl_vector_alloc(SFPTS);
+  gsl_vector_memcpy(integralvec, gsl_sourcevec);
+  gsl_vector_scale(integralvec, DELTA_E);
+  const double sourceintegral = gsl_blas_dasum(integralvec);  // integral of S(e) dE
+
+  gsl_vector_mul(integralvec, &gsl_envec);
+  E_init_ev = gsl_blas_dasum(integralvec);  // integral of E * S(e) dE
+  gsl_vector_free(integralvec);
 
   // or put all of the source into one point at SF_EMAX
   // gsl_vector_set_zero(sourcevec);
