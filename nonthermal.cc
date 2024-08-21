@@ -1870,7 +1870,7 @@ auto sfmatrix_solve(const gsl_matrix &gsl_sfmatrix, const gsl_vector &gsl_rhsvec
 
   double error_best = -1.;
   gsl_vector *yvec_best = gsl_vector_alloc(SFPTS);  // solution vector with lowest error
-  gsl_vector *gsl_work_vector = gsl_vector_calloc(SFPTS);
+  gsl_vector *gsl_work_vector = gsl_vector_alloc(SFPTS);
   gsl_vector *residual_vector = gsl_vector_alloc(SFPTS);
   int iteration = 0;
   for (iteration = 0; iteration < 10; iteration++) {
