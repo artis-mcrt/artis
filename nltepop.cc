@@ -32,11 +32,6 @@ FILE *nlte_file{};
 // can save memory by using a combined rate matrix at the cost of diagnostic information
 constexpr bool individual_process_matricies = true;
 
-// the backing storage for the gsl matrices
-thread_local std::vector<double> vec_rate_matrix;
-
-thread_local std::vector<double> vec_pop_norm_factor_vec;
-
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
 auto get_nlte_vector_index(const int element, const int ion, const int level) -> int {
@@ -678,7 +673,8 @@ auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {
 // solve rate_matrix * x = balance_vector,
 // then popvec[i] = x[i] / pop_norm_factor_vec[i]
 auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, const gsl_vector *balance_vector,
-                          gsl_vector *popvec, const gsl_vector *pop_normfactor_vec) -> bool {
+                          gsl_vector *popvec, const gsl_vector *pop_normfactor_vec,
+                          const int max_nlte_dimension) -> bool {
   bool completed_solution = false;
   const size_t nlte_dimension = balance_vector->size;
   assert_always(pop_normfactor_vec->size == nlte_dimension);
@@ -687,18 +683,18 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
 
   // backing storage for gsl vectors
   THREADLOCALONHOST std::vector<double> vec_x;
-  vec_x.resize(vec_pop_norm_factor_vec.size());
+  vec_x.resize(max_nlte_dimension);
   gsl_vector x = gsl_vector_view_array(vec_x.data(), nlte_dimension).vector;
 
   THREADLOCALONHOST std::vector<double> vec_rate_matrix_LU_decomp;
-  vec_rate_matrix_LU_decomp.resize(vec_rate_matrix.size());
+  vec_rate_matrix_LU_decomp.resize(max_nlte_dimension * max_nlte_dimension);
   // make a copy of the rate matrix for the LU decomp
   gsl_matrix rate_matrix_LU_decomp =
       gsl_matrix_view_array(vec_rate_matrix_LU_decomp.data(), nlte_dimension, nlte_dimension).matrix;
   gsl_matrix_memcpy(&rate_matrix_LU_decomp, rate_matrix);
 
   THREADLOCALONHOST std::vector<size_t> vec_permutation;
-  vec_permutation.resize(vec_pop_norm_factor_vec.size());
+  vec_permutation.resize(max_nlte_dimension);
   gsl_permutation p{.size = nlte_dimension, .data = vec_permutation.data()};
 
   int s = 0;  // sign of the transformation
@@ -720,18 +716,18 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
 
     const double TOLERANCE = 1e-40;
     THREADLOCALONHOST std::vector<double> vec_work;
-    vec_work.resize(vec_pop_norm_factor_vec.size());
+    vec_work.resize(max_nlte_dimension);
     gsl_vector gsl_work_vector = gsl_vector_view_array(vec_work.data(), nlte_dimension).vector;
 
     double error_best = -1.;
 
     // population solution vector with lowest error
     THREADLOCALONHOST std::vector<double> vec_x_best;
-    vec_x_best.resize(vec_pop_norm_factor_vec.size());
+    vec_x_best.resize(max_nlte_dimension);
     gsl_vector gsl_x_best = gsl_vector_view_array(vec_x_best.data(), nlte_dimension).vector;
 
     THREADLOCALONHOST std::vector<double> vec_residual;
-    vec_residual.resize(vec_pop_norm_factor_vec.size());
+    vec_residual.resize(max_nlte_dimension);
     gsl_vector gsl_vec_residual = gsl_vector_view_array(vec_residual.data(), nlte_dimension).vector;
 
     int iteration = 0;
@@ -848,6 +844,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   const auto max_nlte_dimension = get_max_nlte_dimension();
 
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix;
   vec_rate_matrix.resize(max_nlte_dimension * max_nlte_dimension);
   auto rate_matrix = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension).matrix;
   gsl_matrix_set_all(&rate_matrix, 0.);
@@ -975,6 +972,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   // calculate the normalisation factors and apply them to the matrix
   // columns and balance vector elements
+  THREADLOCALONHOST std::vector<double> vec_pop_norm_factor_vec;
   vec_pop_norm_factor_vec.resize(max_nlte_dimension);
   auto pop_norm_factor_vec = gsl_vector_view_array(vec_pop_norm_factor_vec.data(), nlte_dimension).vector;
   gsl_vector_set_all(&pop_norm_factor_vec, 1.0);
@@ -1007,7 +1005,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   auto popvec = gsl_vector_view_array(vec_pop.data(), nlte_dimension).vector;
 
   const bool matrix_solve_success =
-      nltepop_matrix_solve(element, &rate_matrix, &balance_vector, &popvec, &pop_norm_factor_vec);
+      nltepop_matrix_solve(element, &rate_matrix, &balance_vector, &popvec, &pop_norm_factor_vec, max_nlte_dimension);
 
   if (!matrix_solve_success) {
     printout(
