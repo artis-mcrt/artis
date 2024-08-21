@@ -41,15 +41,10 @@ thread_local std::vector<double> vec_rate_matrix_rad_bf;
 thread_local std::vector<double> vec_rate_matrix_coll_bf;
 thread_local std::vector<double> vec_rate_matrix_ntcoll_bf;
 
-thread_local std::vector<double> vec_rate_matrix_LU_decomp;
-
 // backing storage for gsl vectors
-thread_local std::vector<double> vec_balance_vector;
 thread_local std::vector<double> vec_pop_norm_factor_vec;
 thread_local std::vector<double> vec_pop;
 thread_local std::vector<double> vec_x;
-thread_local std::vector<size_t> vec_permutation;
-thread_local std::vector<double> vec_work;
 thread_local std::vector<double> vec_x_best;
 thread_local std::vector<double> vec_residual;
 
@@ -704,12 +699,14 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
   vec_x.resize(vec_pop_norm_factor_vec.size());
   gsl_vector x = gsl_vector_view_array(vec_x.data(), nlte_dimension).vector;
 
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_LU_decomp;
   vec_rate_matrix_LU_decomp.resize(vec_rate_matrix.size());
   // make a copy of the rate matrix for the LU decomp
   gsl_matrix rate_matrix_LU_decomp =
       gsl_matrix_view_array(vec_rate_matrix_LU_decomp.data(), nlte_dimension, nlte_dimension).matrix;
   gsl_matrix_memcpy(&rate_matrix_LU_decomp, rate_matrix);
 
+  THREADLOCALONHOST std::vector<size_t> vec_permutation;
   vec_permutation.resize(vec_pop_norm_factor_vec.size());
   gsl_permutation p{.size = nlte_dimension, .data = vec_permutation.data()};
 
@@ -731,7 +728,7 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
     // gsl_linalg_HH_solve (&m.matrix, &b.vector, x);
 
     const double TOLERANCE = 1e-40;
-
+    THREADLOCALONHOST std::vector<double> vec_work;
     vec_work.resize(vec_pop_norm_factor_vec.size());
     gsl_vector gsl_work_vector = gsl_vector_view_array(vec_work.data(), nlte_dimension).vector;
 
@@ -951,6 +948,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_vector_view first_row_view = gsl_matrix_row(&rate_matrix, 0);
   gsl_vector_set_all(&first_row_view.vector, 1.0);
 
+  THREADLOCALONHOST std::vector<double> vec_balance_vector;
   vec_balance_vector.resize(max_nlte_dimension);
   auto balance_vector = gsl_vector_view_array(vec_balance_vector.data(), nlte_dimension).vector;
   gsl_vector_set_all(&balance_vector, 0.);
