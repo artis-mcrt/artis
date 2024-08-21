@@ -1706,7 +1706,7 @@ void sfmatrix_add_excitation(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
 
           const int startindex = i > xsstartindex ? i : xsstartindex;
           for (int j = startindex; j < stopindex; j++) {
-            sfmatrix[i * SFPTS + j] += nnlevel * vec_xs_excitation_deltae[j];
+            sfmatrix[(i * SFPTS) + j] += nnlevel * vec_xs_excitation_deltae[j];
           }
 
           // do the last bit separately because we're not using the full delta_e interval
@@ -1714,7 +1714,8 @@ void sfmatrix_add_excitation(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
 
           const double delta_en_actual = (en + epsilon_trans_ev - envec[stopindex]);
 
-          sfmatrix[i * SFPTS + stopindex] += nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / delta_en;
+          sfmatrix[(i * SFPTS) + stopindex] +=
+              nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / delta_en;
         }
       }
     }
@@ -1772,7 +1773,7 @@ void sfmatrix_add_ionization(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
               std::max(endash - en, ionpot_ev);  // and epsilon_upper = (endash + ionpot_ev) / 2;
           const double int_eps_lower = atan((epsilon_lower - ionpot_ev) / J);
           if (int_eps_lower <= int_eps_upper[j]) {
-            sfmatrix[i * SFPTS + j] += prefactors[j] * (int_eps_upper[j] - int_eps_lower) * DELTA_E;
+            sfmatrix[(i * SFPTS) + j] += prefactors[j] * (int_eps_upper[j] - int_eps_lower) * DELTA_E;
           }
         }
 
@@ -1786,7 +1787,7 @@ void sfmatrix_add_ionization(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
             // epsilon_lower = en + ionpot_ev;
             // epsilon_upper = (endash + ionpot_ev) / 2;
             if (int_eps_lower2 <= int_eps_upper[j]) {
-              sfmatrix[i * SFPTS + j] -= prefactors[j] * (int_eps_upper[j] - int_eps_lower2) * DELTA_E;
+              sfmatrix[(i * SFPTS) + j] -= prefactors[j] * (int_eps_upper[j] - int_eps_lower2) * DELTA_E;
             }
           }
         }
@@ -1814,14 +1815,14 @@ void sfmatrix_add_ionization(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
               const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
               for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++) {
                 if (en < (en_auger_ev * en_boost / a)) {
-                  sfmatrix[i * SFPTS + j] -= nnion * xs * collionrow.prob_num_auger[a] * a;
+                  sfmatrix[(i * SFPTS) + j] -= nnion * xs * collionrow.prob_num_auger[a] * a;
                 }
               }
             } else {
               assert_always(en < en_auger_ev);
               // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en,
               // en_auger_ev, nnion * xs, ij_contribution);
-              sfmatrix[i * SFPTS + j] -= nnion * xs;  // * n_auger_elec_avg; // * en_auger_ev???
+              sfmatrix[(i * SFPTS) + j] -= nnion * xs;  // * n_auger_elec_avg; // * en_auger_ev???
             }
           }
         }
@@ -2482,7 +2483,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++) {
-    sfmatrix[i * SFPTS + i] += electron_loss_rate(envec[i] * EV, nne) / EV;
+    sfmatrix[(i * SFPTS) + i] += electron_loss_rate(envec[i] * EV, nne) / EV;
 
     double source_integral_to_SF_EMAX{NAN};
     if (i < SFPTS - 1) {
