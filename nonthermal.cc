@@ -2035,8 +2035,9 @@ void init(const int my_rank, const int ndo_nonempty) {
   // integrate the source vector to find the assumed injection rate
   std::array<double, SFPTS> integralvec{};
   gsl_vector gsl_integralvec = gsl_vector_view_array(integralvec.data(), SFPTS).vector;
-  gsl_vector_memcpy(&gsl_integralvec, &gsl_sourcevec);
-  gsl_vector_scale(&gsl_integralvec, DELTA_E);
+  for (int s = 0; s < SFPTS; s++) {
+    integralvec[s] = sourcevec[s] * DELTA_E;
+  }
   const double sourceintegral = gsl_blas_dasum(&gsl_integralvec);  // integral of S(e) dE
 
   for (int s = 0; s < SFPTS; s++) {
