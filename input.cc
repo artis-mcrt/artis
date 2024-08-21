@@ -1982,9 +1982,6 @@ void time_init() {
   // globals::ntimesteps is the number of time steps
 
   globals::timesteps.resize(globals::ntimesteps + 1);
-  for (auto &ts : globals::timesteps) {
-    ts = TimeStep{};
-  }
 
   // Now set the individual time steps
   switch (TIMESTEP_SIZE_METHOD) {

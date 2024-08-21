@@ -73,7 +73,6 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
   auto partfunc_ion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex];
-  auto partfunc_upperion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex + 1];
 
   const auto T_e = grid::get_Te(modelgridindex);
 
@@ -107,6 +106,7 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
   // Y_nt should generally be higher than the Gamma term for nebular epoch
 
   if (!std::isfinite(phi) || phi == 0.) {
+    auto partfunc_upperion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex + 1];
     printout(
         "[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g ... remove higher or "
         "lower ionisation stages\n",
