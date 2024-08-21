@@ -2482,12 +2482,12 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   //   timesteps.\n");
   // }
 
-  THREADLOCALONHOST std::array<double, SFPTS * SFPTS> sfmatrix;
+  THREADLOCALONHOST std::array<double, SFPTS * SFPTS> sfmatrix{};
   std::ranges::fill(sfmatrix, 0.);
   auto gsl_sfmatrix = gsl_matrix_view_array(sfmatrix.data(), SFPTS, SFPTS).matrix;
 
   // rhs is the constant term (not dependent on y func) in each equation
-  THREADLOCALONHOST std::array<double, SFPTS> rhsvec;
+  std::array<double, SFPTS> rhsvec{};
   auto gsl_rhsvec = gsl_vector_view_array(rhsvec.data(), SFPTS).vector;
 
   // loss terms and source terms
