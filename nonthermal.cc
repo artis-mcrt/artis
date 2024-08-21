@@ -538,7 +538,7 @@ auto get_energyindex_ev_gteq(const double energy_ev) -> int
 
 // interpolate the y flux values to get the value at a given energy
 // y has units of particles / cm2 / s / eV
-auto get_y(const double energy_ev, const std::array<double, SFPTS> &yfunc) -> double {
+auto get_y(const std::array<double, SFPTS> &yfunc, const double energy_ev) -> double {
   if (energy_ev <= 0) {
     return 0.;
   }
@@ -775,7 +775,7 @@ auto N_e(const int modelgridindex, const double energy) -> double {
           }
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double epsilon_trans_ev = epsilon_trans / EV;
-          N_e_ion += (nnlevel / nnion) * get_y(energy_ev + epsilon_trans_ev, yfunc) *
+          N_e_ion += (nnlevel / nnion) * get_y(yfunc, energy_ev + epsilon_trans_ev) *
                      xs_excitation(element, ion, lower, t, epsilon_trans, statweight_lower, energy + epsilon_trans);
         }
       }
@@ -795,7 +795,7 @@ auto N_e(const int modelgridindex, const double energy) -> double {
             const double endash = gsl_vector_get(envec, i);
             const double delta_endash = DELTA_E;
 
-            N_e_ion += get_y(energy_ev + endash, yfunc) * xs_impactionization(energy_ev + endash, collionrow) *
+            N_e_ion += get_y(yfunc, energy_ev + endash) * xs_impactionization(energy_ev + endash, collionrow) *
                        Psecondary(energy_ev + endash, endash, ionpot_ev, J) * delta_endash;
           }
 
@@ -838,7 +838,7 @@ auto calculate_frac_heating(const int modelgridindex) -> float {
   }
 
   // second term
-  frac_heating_Einit += SF_EMIN * get_y(SF_EMIN, yfunc) * (electron_loss_rate(SF_EMIN * EV, nne) / EV);
+  frac_heating_Einit += SF_EMIN * get_y(yfunc, SF_EMIN) * (electron_loss_rate(SF_EMIN * EV, nne) / EV);
 
   double N_e_contrib = 0.;
   // third term (integral from zero to SF_EMIN)
