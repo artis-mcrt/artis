@@ -112,14 +112,14 @@ bool nonthermal_initialized = false;
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
 // energy grid on which solution is sampled
-// std::array<double, SFPTS> envec{};
-auto envec = [] {
-  std::array<double, SFPTS> envec{};
-  for (int i = 0; i < SFPTS; i++) {
-    envec[i] = SF_EMIN + (i * DELTA_E);
-  }
-  return envec;
-}();
+std::array<double, SFPTS> envec{};
+// constexpr auto envec = [] {
+//   std::array<double, SFPTS> envec{};
+//   for (int i = 0; i < SFPTS; i++) {
+//     envec[i] = SF_EMIN + (i * DELTA_E);
+//   }
+//   return envec;
+// }();
 
 gsl_vector *gsl_logenvec;   // log of envec
 gsl_vector *gsl_sourcevec;  // samples of the source function (energy distribution of deposited energy)
@@ -2029,7 +2029,7 @@ void init(const int my_rank, const int ndo_nonempty) {
   for (int s = 0; s < SFPTS; s++) {
     const double energy_ev = SF_EMIN + (s * DELTA_E);
 
-    // gsl_vector_set(&gsl_envec, s, energy_ev);
+    gsl_vector_set(&gsl_envec, s, energy_ev);
     gsl_vector_set(gsl_logenvec, s, log(energy_ev));
 
     // spread the source over some energy width
