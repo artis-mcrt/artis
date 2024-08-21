@@ -2475,7 +2475,8 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   //   timesteps.\n");
   // }
 
-  THREADLOCALONHOST std::array<double, SFPTS * SFPTS> sfmatrix{};
+  constexpr int SFTPSsquared = SFPTS * SFPTS;  // so that cppcheck gets the size of the array correct
+  THREADLOCALONHOST std::array<double, SFTPSsquared> sfmatrix{};
   std::ranges::fill(sfmatrix, 0.);
 
   // rhs is the constant term (not dependent on y func) in each equation
