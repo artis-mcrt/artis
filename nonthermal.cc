@@ -2015,7 +2015,7 @@ void init(const int my_rank, const int ndo_nonempty) {
   auto gsl_sourcevec = gsl_vector_view_array(sourcevec.data(), SFPTS).vector;
 
   // const int source_spread_pts = ceil(SFPTS / 20);
-  const int source_spread_pts = ceil(SFPTS * 0.03333);  // KF92 OXYGEN TEST
+  const int source_spread_pts = std::ceil(SFPTS * 0.03333);  // KF92 OXYGEN TEST
   const double source_spread_en = source_spread_pts * DELTA_E;
   const int sourcelowerindex = SFPTS - source_spread_pts;
 
@@ -2034,10 +2034,10 @@ void init(const int my_rank, const int ndo_nonempty) {
 
   // integrate the source vector to find the assumed injection rate
   std::array<double, SFPTS> integralvec{};
-  gsl_vector gsl_integralvec = gsl_vector_view_array(integralvec.data(), SFPTS).vector;
   for (int s = 0; s < SFPTS; s++) {
     integralvec[s] = sourcevec[s] * DELTA_E;
   }
+  gsl_vector gsl_integralvec = gsl_vector_view_array(integralvec.data(), SFPTS).vector;
   const double sourceintegral = gsl_blas_dasum(&gsl_integralvec);  // integral of S(e) dE
 
   for (int s = 0; s < SFPTS; s++) {
