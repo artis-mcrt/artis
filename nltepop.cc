@@ -34,12 +34,6 @@ constexpr bool individual_process_matricies = true;
 
 // the backing storage for the gsl matrices
 thread_local std::vector<double> vec_rate_matrix;
-thread_local std::vector<double> vec_rate_matrix_rad_bb;
-thread_local std::vector<double> vec_rate_matrix_coll_bb;
-thread_local std::vector<double> vec_rate_matrix_ntcoll_bb;
-thread_local std::vector<double> vec_rate_matrix_rad_bf;
-thread_local std::vector<double> vec_rate_matrix_coll_bf;
-thread_local std::vector<double> vec_rate_matrix_ntcoll_bf;
 
 thread_local std::vector<double> vec_pop_norm_factor_vec;
 
@@ -865,6 +859,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_matrix rate_matrix_coll_bf;
   gsl_matrix rate_matrix_ntcoll_bf;
 
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bb;
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bb;
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_ntcoll_bb;
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bf;
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bf;
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_ntcoll_bf;
   if constexpr (individual_process_matricies) {
     vec_rate_matrix_rad_bb.resize(max_nlte_dimension * max_nlte_dimension);
     rate_matrix_rad_bb = gsl_matrix_view_array(vec_rate_matrix_rad_bb.data(), nlte_dimension, nlte_dimension).matrix;
