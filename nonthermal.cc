@@ -2012,6 +2012,7 @@ void init(const int my_rank, const int ndo_nonempty) {
 
   gsl_logenvec = gsl_vector_calloc(SFPTS);
   std::array<double, SFPTS> sourcevec{};
+  std::ranges::fill(sourcevec, 0.);
   auto gsl_sourcevec = gsl_vector_view_array(sourcevec.data(), SFPTS).vector;
 
   // const int source_spread_pts = std::ceil(SFPTS / 20);
