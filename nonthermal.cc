@@ -116,7 +116,7 @@ gsl_vector *sourcevec;  // samples of the source function (energy distribution o
 // Samples of the Spencer-Fano solution function for the current cell being worked on. Multiply by energy to get
 // non-thermal electron number flux. y(E) * dE is the flux of electrons with energy in the range (E, E + dE) in units of
 // particles/cm2/s. y has units of particles/cm2/s/eV
-THREADLOCALONHOST std::array<double, SFPTS> yfunc{};
+THREADLOCALONHOST std::array<double, NT_SOLVE_SPENCERFANO ? SFPTS : 0> yfunc{};
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
 // This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.
@@ -1835,7 +1835,8 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
   gsl_vector_free(vec_xs_ionization);
 }
 
-void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec, std::array<double, SFPTS> &yvec_arr) {
+void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec,
+                    std::array<double, NT_SOLVE_SPENCERFANO ? SFPTS : 0> &yvec_arr) {
   THREADLOCALONHOST std::array<size_t, SFPTS> vec_permutation{};
 
   gsl_permutation p{.size = SFPTS, .data = vec_permutation.data()};
