@@ -552,8 +552,8 @@ auto get_y(const std::array<double, SFPTS> &yfunc, const double energy_ev) -> do
   if (index >= SFPTS - 1) {
     return 0.;
   }
-  const double enbelow = envec[index];
-  const double enabove = envec[index + 1];
+  const double enbelow = engrid(index);
+  const double enabove = engrid(index + 1);
   const double ybelow = yfunc[index];
   const double yabove = yfunc[index + 1];
   const double x = (energy_ev - enbelow) / (enabove - enbelow);
@@ -594,7 +594,7 @@ void nt_write_to_file(const int modelgridindex, const int timestep, const int it
 #endif
 
     for (int s = 0; s < SFPTS; s++) {
-      fprintf(nonthermalfile, "%d %d %d %.5e %.5e %.5e\n", timestep, modelgridindex, s, envec[s],
+      fprintf(nonthermalfile, "%d %d %d %.5e %.5e %.5e\n", timestep, modelgridindex, s, engrid(s),
               gsl_vector_get(gsl_sourcevec, s), yscalefactor * yfunc[s]);
     }
     fflush(nonthermalfile);
@@ -1254,7 +1254,7 @@ auto get_xs_excitation_vector(std::array<double, SFPTS> &xs_excitation_vec, cons
     std::fill_n(xs_excitation_vec.begin(), en_startindex, 0.);
 
     for (int j = en_startindex; j < SFPTS; j++) {
-      const double energy = envec[j] * EV;
+      const double energy = engrid(j) * EV;
       xs_excitation_vec[j] = constantfactor * pow(energy, -2);
     }
     return en_startindex;
@@ -1282,12 +1282,12 @@ auto get_xs_excitation_vector(std::array<double, SFPTS> &xs_excitation_vec, cons
 
     // U = en / epsilon
     // g_bar = A * log(U) + b
-    // xs[j] = constantfactor * g_bar / envec[j]
+    // xs[j] = constantfactor * g_bar / engrid(j)
 
     for (int j = en_startindex; j < SFPTS; j++) {
       const double logU = gsl_vector_get(gsl_logenvec, j) - log(epsilon_trans_ev);
       const double g_bar = (A * logU) + B;
-      xs_excitation_vec[j] = constantfactor * g_bar / envec[j];
+      xs_excitation_vec[j] = constantfactor * g_bar / engrid(j);
     }
 
     return en_startindex;
@@ -1708,7 +1708,7 @@ void sfmatrix_add_excitation(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
           // do the last bit separately because we're not using the full delta_e interval
           const double delta_en = DELTA_E;
 
-          const double delta_en_actual = (en + epsilon_trans_ev - envec[stopindex]);
+          const double delta_en_actual = (en + epsilon_trans_ev - engrid(stopindex));
 
           sfmatrix[(i * SFPTS) + stopindex] +=
               nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / delta_en;
@@ -1745,7 +1745,7 @@ void sfmatrix_add_ionization(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
       std::array<double, SFPTS> int_eps_upper = {0};
       std::array<double, SFPTS> prefactors = {0};
       for (int j = xsstartindex; j < SFPTS; j++) {
-        const double endash = envec[j];
+        const double endash = engrid(j);
         const double epsilon_upper = std::min((endash + ionpot_ev) / 2, endash);
         int_eps_upper[j] = atan((epsilon_upper - ionpot_ev) / J);
         prefactors[j] = vec_xs_ionization[j] * nnion / atan((endash - ionpot_ev) / 2 / J);
@@ -1760,7 +1760,7 @@ void sfmatrix_add_ionization(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
         for (int j = jstart; j < SFPTS; j++) {
           // j is the matrix column index which corresponds to the piece of the integral at y(E') where E' >= E and E'
           // = envec(j)
-          const double endash = envec[j];
+          const double endash = engrid(j);
 
           // J * atan[(epsilon - ionpot_ev) / J] is the indefinite integral of 1/[1 + (epsilon - ionpot_ev)^2/ J^2]
           // in Kozma & Fransson 1992 equation 4
