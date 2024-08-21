@@ -111,9 +111,6 @@ bool nonthermal_initialized = false;
 
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
-// energy grid on which solution is sampled
-std::array<double, SFPTS> envec{};
-
 gsl_vector *gsl_logenvec;   // log of envec
 gsl_vector *gsl_sourcevec;  // samples of the source function (energy distribution of deposited energy)
 
@@ -504,6 +501,7 @@ void zero_all_effionpot(const int modelgridindex) {
   check_auger_probabilities(modelgridindex);
 }
 
+// energy grid on which solution is sampled
 constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
 
 auto get_energyindex_ev_lteq(const double energy_ev) -> int
@@ -2020,11 +2018,9 @@ void init(const int my_rank, const int ndo_nonempty) {
   const double source_spread_en = source_spread_pts * DELTA_E;
   const int sourcelowerindex = SFPTS - source_spread_pts;
 
-  auto gsl_envec = gsl_vector_view_array(envec.data(), SFPTS).vector;
   for (int s = 0; s < SFPTS; s++) {
     const double energy_ev = SF_EMIN + (s * DELTA_E);
 
-    gsl_vector_set(&gsl_envec, s, energy_ev);
     gsl_vector_set(gsl_logenvec, s, log(energy_ev));
 
     // spread the source over some energy width
@@ -2042,7 +2038,7 @@ void init(const int my_rank, const int ndo_nonempty) {
   const double sourceintegral = gsl_blas_dasum(integralvec);  // integral of S(e) dE
 
   for (int s = 0; s < SFPTS; s++) {
-    integralvec->data[s] *= envec[s];
+    integralvec->data[s] *= engrid(s);
   }
   E_init_ev = gsl_blas_dasum(integralvec);  // integral of E * S(e) dE
   gsl_vector_free(integralvec);
