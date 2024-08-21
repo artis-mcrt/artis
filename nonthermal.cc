@@ -1833,7 +1833,7 @@ auto sfmatrix_solve(const std::array<double, SFPTS * SFPTS> &sfmatrix,
   gsl_permutation p{.size = SFPTS, .data = vec_permutation.data()};
   gsl_permutation_init(&p);
 
-  auto gsl_sfmatrix = gsl_matrix_const_view_array(sfmatrix.data(), SFPTS, SFPTS).matrix;
+  const auto gsl_sfmatrix = gsl_matrix_const_view_array(sfmatrix.data(), SFPTS, SFPTS).matrix;
 
   // sfmatrix must be in upper triangular form
   const auto &gsl_sfmatrix_LU = gsl_sfmatrix;
@@ -1851,6 +1851,7 @@ auto sfmatrix_solve(const std::array<double, SFPTS * SFPTS> &sfmatrix,
 
   std::array<double, SFPTS> yvec_arr{};
   auto gsl_yvec = gsl_vector_view_array(yvec_arr.data(), SFPTS).vector;
+
   const auto gsl_rhsvec = gsl_vector_const_view_array(rhsvec.data(), SFPTS).vector;
 
   // solve matrix equation: sf_matrix * y_vec = rhsvec for yvec
