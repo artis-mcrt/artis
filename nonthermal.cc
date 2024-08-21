@@ -2487,7 +2487,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   for (int i = 0; i < SFPTS; i++) {
     sfmatrix[(i * SFPTS) + i] += electron_loss_rate(engrid(i) * EV, nne) / EV;
 
-    double source_integral_to_SF_EMAX{NAN};
+    double source_integral_to_SF_EMAX = 0.;
     if (i < SFPTS - 1) {
       for (int j = i + 1; j < SFPTS; j++) {
         source_integral_to_SF_EMAX += sourcevec[j] * DELTA_E;
