@@ -1715,7 +1715,8 @@ void sfmatrix_add_excitation(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
   }
 }
 
-void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int ionstage, const double nnion)
+void sfmatrix_add_ionization(std::array<double, SFPTS * SFPTS> &sfmatrix, const int Z, const int ionstage,
+                             const double nnion)
 // add the ionization terms to the Spencer-Fano matrix
 {
   THREADLOCALONHOST std::array<double, SFPTS> vec_xs_ionization{};
@@ -1765,7 +1766,7 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
               std::max(endash - en, ionpot_ev);  // and epsilon_upper = (endash + ionpot_ev) / 2;
           const double int_eps_lower = atan((epsilon_lower - ionpot_ev) / J);
           if (int_eps_lower <= int_eps_upper[j]) {
-            *gsl_matrix_ptr(sfmatrix, i, j) += prefactors[j] * (int_eps_upper[j] - int_eps_lower) * DELTA_E;
+            sfmatrix[i * SFPTS + j] += prefactors[j] * (int_eps_upper[j] - int_eps_lower) * DELTA_E;
           }
         }
 
@@ -1779,7 +1780,7 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
             // epsilon_lower = en + ionpot_ev;
             // epsilon_upper = (endash + ionpot_ev) / 2;
             if (int_eps_lower2 <= int_eps_upper[j]) {
-              *gsl_matrix_ptr(sfmatrix, i, j) -= prefactors[j] * (int_eps_upper[j] - int_eps_lower2) * DELTA_E;
+              sfmatrix[i * SFPTS + j] -= prefactors[j] * (int_eps_upper[j] - int_eps_lower2) * DELTA_E;
             }
           }
         }
@@ -1807,14 +1808,14 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
               const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
               for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++) {
                 if (en < (en_auger_ev * en_boost / a)) {
-                  *gsl_matrix_ptr(sfmatrix, i, j) -= nnion * xs * collionrow.prob_num_auger[a] * a;
+                  sfmatrix[i * SFPTS + j] -= nnion * xs * collionrow.prob_num_auger[a] * a;
                 }
               }
             } else {
               assert_always(en < en_auger_ev);
               // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en,
               // en_auger_ev, nnion * xs, ij_contribution);
-              *gsl_matrix_ptr(sfmatrix, i, j) -= nnion * xs;  // * n_auger_elec_avg; // * en_auger_ev???
+              sfmatrix[i * SFPTS + j] -= nnion * xs;  // * n_auger_elec_avg; // * en_auger_ev???
             }
           }
         }
@@ -1826,11 +1827,13 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
 // solve the Spencer-Fano matrix equation and return the y vector (samples of the Spencer-Fano solution function).
 // Multiply y by energy interval [eV] to get non-thermal electron number flux. y(E) * dE is the flux of electrons with
 // energy in the range (E, E + dE) in units of particles/cm2/s. y has units of particles/cm2/s/eV
-auto sfmatrix_solve(const gsl_matrix &gsl_sfmatrix,
+auto sfmatrix_solve(const std::array<double, SFPTS * SFPTS> &sfmatrix,
                     const std::array<double, SFPTS> &rhsvec) -> std::array<double, SFPTS> {
   std::array<size_t, SFPTS> vec_permutation{};
   gsl_permutation p{.size = SFPTS, .data = vec_permutation.data()};
   gsl_permutation_init(&p);
+
+  auto gsl_sfmatrix = gsl_matrix_const_view_array(sfmatrix.data(), SFPTS, SFPTS).matrix;
 
   // sfmatrix must be in upper triangular form
   const auto &gsl_sfmatrix_LU = gsl_sfmatrix;
@@ -2473,7 +2476,6 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   THREADLOCALONHOST std::array<double, SFPTS * SFPTS> sfmatrix{};
   std::ranges::fill(sfmatrix, 0.);
-  auto gsl_sfmatrix = gsl_matrix_view_array(sfmatrix.data(), SFPTS, SFPTS).matrix;
 
   // rhs is the constant term (not dependent on y func) in each equation
   std::array<double, SFPTS> rhsvec{};
@@ -2482,7 +2484,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   for (int i = 0; i < SFPTS; i++) {
     const double en = gsl_vector_get(envec, i);
 
-    *gsl_matrix_ptr(&gsl_sfmatrix, i, i) += electron_loss_rate(en * EV, nne) / EV;
+    sfmatrix[i * SFPTS + i] += electron_loss_rate(en * EV, nne) / EV;
 
     double source_integral_to_SF_EMAX{NAN};
     if (i < SFPTS - 1) {
@@ -2525,7 +2527,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
         }
 
         if (enable_sfionization && (ion < nions - 1)) {
-          sfmatrix_add_ionization(&gsl_sfmatrix, Z, ionstage, nnion);
+          sfmatrix_add_ionization(sfmatrix, Z, ionstage, nnion);
         }
       }
       if (!first_included_ion_of_element) {
@@ -2550,7 +2552,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   // }
   // printout("\n");
 
-  const auto yfunc = sfmatrix_solve(gsl_sfmatrix, rhsvec);
+  const auto yfunc = sfmatrix_solve(sfmatrix, rhsvec);
 
   if (timestep % 10 == 0) {
     nt_write_to_file(modelgridindex, timestep, iteration, yfunc);
