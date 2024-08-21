@@ -565,7 +565,8 @@ auto get_y(const std::array<double, SFPTS> &yfunc, const double energy_ev) -> do
   // return yfunc[index];
 }
 
-void nt_write_to_file(const int modelgridindex, const int timestep, const int iteration) {
+void nt_write_to_file(const int modelgridindex, const int timestep, const int iteration,
+                      const std::array<double, SFPTS> &yfunc) {
 #ifdef _OPENMP
 #pragma omp critical(nonthermal_out_file)
   {
@@ -1410,7 +1411,8 @@ auto get_uptransindex(const int element, const int ion, const int lower, const i
   return -1;
 }
 
-void analyse_sf_solution(const int modelgridindex, const int timestep, const bool enable_sfexcitation) {
+void analyse_sf_solution(const int modelgridindex, const int timestep, const bool enable_sfexcitation,
+                         const std::array<double, SFPTS> &yfunc) {
   const auto gsl_yvec = gsl_vector_const_view_array(yfunc.data(), SFPTS).vector;
   const float nne = grid::get_nne(modelgridindex);
   const double nntot = get_nnion_tot(modelgridindex);
@@ -2561,10 +2563,10 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   yfunc = sfmatrix_solve(gsl_sfmatrix, gsl_rhsvec);
 
   if (timestep % 10 == 0) {
-    nt_write_to_file(modelgridindex, timestep, iteration);
+    nt_write_to_file(modelgridindex, timestep, iteration, yfunc);
   }
 
-  analyse_sf_solution(modelgridindex, timestep, enable_sfexcitation);
+  analyse_sf_solution(modelgridindex, timestep, enable_sfexcitation, yfunc);
 }
 
 void write_restart_data(FILE *gridsave_file) {
