@@ -128,9 +128,6 @@ struct NonThermalExcitation {
   int lineindex;
 };
 
-// temporary storage of full excitation list for current cell before possible truncation and copy to node-shared memory
-THREADLOCALONHOST std::vector<NonThermalExcitation> tmp_excitation_list;
-
 // pointer to either local or node-shared memory excitation list of all cells
 NonThermalExcitation *excitations_list_all_cells{};
 
@@ -468,6 +465,8 @@ void read_collion_data() {
 }
 
 auto get_possible_nt_excitation_count() -> int {
+  // count the number of excitation transitions that pass the MAXNLEVELS_LOWER and MAXNLEVELS_UPPER conditions
+  // this count might be higher than the number of stored ratecoeffs due to the MAX_NT_EXCITATIONS_STORED limit
   int ntexcitationcount = 0;
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
@@ -1420,7 +1419,11 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
   double frac_excitation_total = 0.;
   double frac_ionization_total = 0.;
 
-  tmp_excitation_list.resize(0);
+  // temporary storage of the full excitation list for current cell before possible truncation and copying to
+  // node-shared memory
+  THREADLOCALONHOST std::vector<NonThermalExcitation> tmp_excitation_list;
+  tmp_excitation_list.clear();
+
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
     const int nions = get_nions(element);
