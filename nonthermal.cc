@@ -1680,7 +1680,9 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 
 void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridindex, const int element, const int ion) {
   // excitation terms
-  gsl_vector *vec_xs_excitation_deltae = gsl_vector_alloc(SFPTS);
+  std::array<double, SFPTS> vec_xs_excitation_deltae{};
+
+  auto gsl_vec_xs_excitation_deltae = gsl_vector_view_array(vec_xs_excitation_deltae.data(), SFPTS).vector;
 
   const int nlevels_all = get_nlevels(element, ion);
   const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
@@ -1702,10 +1704,10 @@ void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridinde
         continue;
       }
 
-      const int xsstartindex =
-          get_xs_excitation_vector(vec_xs_excitation_deltae, element, ion, lower, t, statweight_lower, epsilon_trans);
+      const int xsstartindex = get_xs_excitation_vector(&gsl_vec_xs_excitation_deltae, element, ion, lower, t,
+                                                        statweight_lower, epsilon_trans);
       if (xsstartindex >= 0) {
-        gsl_blas_dscal(DELTA_E, vec_xs_excitation_deltae);
+        gsl_blas_dscal(DELTA_E, &gsl_vec_xs_excitation_deltae);
 
         for (int i = 0; i < SFPTS; i++) {
           const double en = gsl_vector_get(envec, i);
@@ -1713,7 +1715,7 @@ void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridinde
 
           const int startindex = i > xsstartindex ? i : xsstartindex;
           for (int j = startindex; j < stopindex; j++) {
-            *gsl_matrix_ptr(sfmatrix, i, j) += nnlevel * gsl_vector_get(vec_xs_excitation_deltae, j);
+            *gsl_matrix_ptr(sfmatrix, i, j) += nnlevel * gsl_vector_get(&gsl_vec_xs_excitation_deltae, j);
           }
 
           // do the last bit separately because we're not using the full delta_e interval
@@ -1722,12 +1724,11 @@ void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridinde
           const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get(envec, stopindex));
 
           *gsl_matrix_ptr(sfmatrix, i, stopindex) +=
-              nnlevel * gsl_vector_get(vec_xs_excitation_deltae, stopindex) * delta_en_actual / delta_en;
+              nnlevel * gsl_vector_get(&gsl_vec_xs_excitation_deltae, stopindex) * delta_en_actual / delta_en;
         }
       }
     }
   }
-  gsl_vector_free(vec_xs_excitation_deltae);
 }
 
 void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int ionstage, const double nnion)
