@@ -507,7 +507,7 @@ constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E);
 auto get_energyindex_ev_lteq(const double energy_ev) -> int
 // finds the highest energy point <= energy_ev
 {
-  const int index = floor((energy_ev - SF_EMIN) / DELTA_E);
+  const int index = std::floor((energy_ev - SF_EMIN) / DELTA_E);
 
   if (index < 0) {
     return 0;
@@ -521,7 +521,7 @@ auto get_energyindex_ev_lteq(const double energy_ev) -> int
 auto get_energyindex_ev_gteq(const double energy_ev) -> int
 // finds the highest energy point <= energy_ev
 {
-  const int index = ceil((energy_ev - SF_EMIN) / DELTA_E);
+  const int index = std::ceil((energy_ev - SF_EMIN) / DELTA_E);
 
   if (index < 0) {
     return 0;
@@ -834,7 +834,7 @@ auto calculate_frac_heating(const int modelgridindex, const std::array<double, S
 
   double N_e_contrib = 0.;
   // third term (integral from zero to SF_EMIN)
-  const int nsteps = static_cast<int>(ceil(SF_EMIN / DELTA_E) * 10);
+  const int nsteps = static_cast<int>(std::ceil(SF_EMIN / DELTA_E) * 10);
   assert_always(nsteps > 0);
   const double delta_endash = SF_EMIN / nsteps;
   for (int j = 0; j < nsteps; j++) {
@@ -2014,7 +2014,7 @@ void init(const int my_rank, const int ndo_nonempty) {
   std::array<double, SFPTS> sourcevec{};
   auto gsl_sourcevec = gsl_vector_view_array(sourcevec.data(), SFPTS).vector;
 
-  // const int source_spread_pts = ceil(SFPTS / 20);
+  // const int source_spread_pts = std::ceil(SFPTS / 20);
   const int source_spread_pts = std::ceil(SFPTS * 0.03333);  // KF92 OXYGEN TEST
   const double source_spread_en = source_spread_pts * DELTA_E;
   const int sourcelowerindex = SFPTS - source_spread_pts;
