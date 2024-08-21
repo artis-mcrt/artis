@@ -58,7 +58,7 @@
 #ifdef __NVCOMPILER_CUDA_ARCH__
 #define THREADLOCALONHOST
 #else
-#define THREADLOCALONHOST thread_local
+#define THREADLOCALONHOST thread_local static
 #endif
 
 #include "constants.h"
