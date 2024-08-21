@@ -1678,8 +1678,6 @@ void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridinde
   // excitation terms
   std::array<double, SFPTS> vec_xs_excitation_deltae{};
 
-  auto gsl_vec_xs_excitation_deltae = gsl_vector_view_array(vec_xs_excitation_deltae.data(), SFPTS).vector;
-
   const int nlevels_all = get_nlevels(element, ion);
   const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
 
@@ -1703,7 +1701,7 @@ void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridinde
       const int xsstartindex =
           get_xs_excitation_vector(vec_xs_excitation_deltae, element, ion, lower, t, statweight_lower, epsilon_trans);
       if (xsstartindex >= 0) {
-        gsl_blas_dscal(DELTA_E, &gsl_vec_xs_excitation_deltae);
+        cblas_dscal(SFPTS, DELTA_E, vec_xs_excitation_deltae.data(), 1);
 
         for (int i = 0; i < SFPTS; i++) {
           const double en = gsl_vector_get(envec, i);
