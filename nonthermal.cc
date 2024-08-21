@@ -1248,8 +1248,8 @@ auto nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, con
 // epsilon_trans is in erg
 // returns the index of the first valid cross section point (en >= epsilon_trans)
 // all elements below this index are invalid and should not be used
-auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int element, const int ion, const int lower,
-                              const int uptransindex, const double statweight_lower,
+auto get_xs_excitation_vector(std::array<double, SFPTS> &xs_excitation_vec, const int element, const int ion,
+                              const int lower, const int uptransindex, const double statweight_lower,
                               const double epsilon_trans) -> int {
   const double coll_strength = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].coll_str;
   if (coll_strength >= 0) {
@@ -1259,13 +1259,11 @@ auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int ele
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
 
-    for (int j = 0; j < en_startindex; j++) {
-      gsl_vector_set(xs_excitation_vec, j, 0.);
-    }
+    std::fill_n(xs_excitation_vec.begin(), en_startindex, 0.);
 
     for (int j = en_startindex; j < SFPTS; j++) {
       const double energy = gsl_vector_get(envec, j) * EV;
-      gsl_vector_set(xs_excitation_vec, j, constantfactor * pow(energy, -2));
+      xs_excitation_vec[j] = constantfactor * pow(energy, -2);
     }
     return en_startindex;
   }
@@ -1288,9 +1286,7 @@ auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int ele
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans_ev);
 
-    for (int j = 0; j < en_startindex; j++) {
-      gsl_vector_set(xs_excitation_vec, j, 0.);
-    }
+    std::fill_n(xs_excitation_vec.begin(), en_startindex, 0.);
 
     // U = en / epsilon
     // g_bar = A * log(U) + b
@@ -1299,7 +1295,7 @@ auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int ele
     for (int j = en_startindex; j < SFPTS; j++) {
       const double logU = gsl_vector_get(logenvec, j) - log(epsilon_trans_ev);
       const double g_bar = (A * logU) + B;
-      gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / gsl_vector_get(envec, j));
+      xs_excitation_vec[j] = constantfactor * g_bar / gsl_vector_get(envec, j);
     }
 
     return en_startindex;
@@ -1316,8 +1312,8 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const gsl_vector &gsl_yvec,
   THREADLOCALONHOST std::array<double, SFPTS> xs_excitation_vec{};
 
   gsl_vector gsl_xs_excitation_vec = gsl_vector_view_array(xs_excitation_vec.data(), SFPTS).vector;
-  if (get_xs_excitation_vector(&gsl_xs_excitation_vec, element, ion, lower, uptransindex, statweight_lower,
-                               epsilon_trans) >= 0) {
+  if (get_xs_excitation_vector(xs_excitation_vec, element, ion, lower, uptransindex, statweight_lower, epsilon_trans) >=
+      0) {
     double y_dot_crosssection = 0.;
     gsl_blas_ddot(&gsl_xs_excitation_vec, &gsl_yvec, &y_dot_crosssection);
 
@@ -1704,8 +1700,8 @@ void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridinde
         continue;
       }
 
-      const int xsstartindex = get_xs_excitation_vector(&gsl_vec_xs_excitation_deltae, element, ion, lower, t,
-                                                        statweight_lower, epsilon_trans);
+      const int xsstartindex =
+          get_xs_excitation_vector(vec_xs_excitation_deltae, element, ion, lower, t, statweight_lower, epsilon_trans);
       if (xsstartindex >= 0) {
         gsl_blas_dscal(DELTA_E, &gsl_vec_xs_excitation_deltae);
 
@@ -1715,7 +1711,7 @@ void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridinde
 
           const int startindex = i > xsstartindex ? i : xsstartindex;
           for (int j = startindex; j < stopindex; j++) {
-            *gsl_matrix_ptr(sfmatrix, i, j) += nnlevel * gsl_vector_get(&gsl_vec_xs_excitation_deltae, j);
+            *gsl_matrix_ptr(sfmatrix, i, j) += nnlevel * vec_xs_excitation_deltae[j];
           }
 
           // do the last bit separately because we're not using the full delta_e interval
@@ -1724,7 +1720,7 @@ void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridinde
           const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get(envec, stopindex));
 
           *gsl_matrix_ptr(sfmatrix, i, stopindex) +=
-              nnlevel * gsl_vector_get(&gsl_vec_xs_excitation_deltae, stopindex) * delta_en_actual / delta_en;
+              nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / delta_en;
         }
       }
     }
