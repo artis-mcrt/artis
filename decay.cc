@@ -897,7 +897,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   nuclides.push_back({.z = 25, .a = 52, .meanlife = 0.0211395 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
 
-  auto standard_nuclides = nuclides;
+  const auto standard_nuclides = nuclides;
 
   // any nuclides in the custom list that are not in the standard list need beta and alpha decay data
 
