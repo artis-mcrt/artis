@@ -1076,14 +1076,12 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
     }
   }
 
-  double y_dot_crosssection_de = cblas_ddot(SFPTS, yfunc.data(), 1, cross_section_vec_allshells.data(), 1);
-
-  y_dot_crosssection_de *= DELTA_E;
+  const double y_xs_de = cblas_ddot(SFPTS, yfunc.data(), 1, cross_section_vec_allshells.data(), 1) * DELTA_E;
 
   const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
   const double yscalefactor = deposition_rate_density_ev / E_init_ev;
 
-  return yscalefactor * y_dot_crosssection_de;
+  return yscalefactor * y_xs_de;
 }
 
 void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int element, const int ion,
@@ -1285,11 +1283,9 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
 
   if (get_xs_excitation_vector(xs_excitation_vec, element, ion, lower, uptransindex, statweight_lower, epsilon_trans) >=
       0) {
-    double y_dot_crosssection = cblas_ddot(SFPTS, xs_excitation_vec.data(), 1, yvec.data(), 1);
+    const double y_xs_de = cblas_ddot(SFPTS, xs_excitation_vec.data(), 1, yvec.data(), 1) * DELTA_E;
 
-    y_dot_crosssection *= DELTA_E;
-
-    return y_dot_crosssection / E_init_ev / EV;
+    return y_xs_de / E_init_ev / EV;
   }
 
   return 0.;
