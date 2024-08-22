@@ -1838,8 +1838,7 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrix, const int Z, const i
 // solve the Spencer-Fano matrix equation and return the y vector (samples of the Spencer-Fano solution function).
 // Multiply y by energy interval [eV] to get non-thermal electron number flux. y(E) * dE is the flux of electrons with
 // energy in the range (E, E + dE) in units of particles/cm2/s. y has units of particles/cm2/s/eV
-auto sfmatrix_solve(const std::vector<double> &sfmatrix,
-                    const std::array<double, SFPTS> &rhsvec) -> std::array<double, SFPTS> {
+auto sfmatrix_solve(const std::vector<double> &sfmatrix) -> std::array<double, SFPTS> {
   std::array<size_t, SFPTS> vec_permutation{};
   gsl_permutation p{.size = SFPTS, .data = vec_permutation.data()};
   gsl_permutation_init(&p);
@@ -2513,7 +2512,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   // }
   // printout("\n");
 
-  const auto yfunc = sfmatrix_solve(sfmatrix, rhsvec);
+  const auto yfunc = sfmatrix_solve(sfmatrix);
 
   if (timestep % 10 == 0) {
     nt_write_to_file(modelgridindex, timestep, iteration, yfunc);
