@@ -1696,7 +1696,6 @@ void sfmatrix_add_ionization(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
 // add the ionization terms to the Spencer-Fano matrix
 {
   THREADLOCALONHOST std::array<double, SFPTS> vec_xs_ionization{};
-  // auto gslvec_xs_ionization = gsl_vector_view_array(vec_xs_ionization.data(), SFPTS).vector;
   for (auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       const double ionpot_ev = collionrow.ionpot_ev;
