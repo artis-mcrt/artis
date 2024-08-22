@@ -43,13 +43,13 @@ std::array<float, VMNUBINS> delta_freq_vspec;
 
 // --------- INPUT PARAMETERS -----------
 
-int Nobs;      // Number of observer directions
-int Nspectra;  // Number of virtual packet spectra per observer direction (total + elements switched off)
+int Nobs = 0;      // Number of observer directions
+int Nspectra = 0;  // Number of virtual packet spectra per observer direction (total + elements switched off)
 std::vector<double> nz_obs_vpkt;
 std::vector<double> phiobs;
 double VSPEC_TIMEMIN_input;
 double VSPEC_TIMEMAX_input;
-int Nrange;  // Number of wavelength ranges
+int Nrange = 0;  // Number of wavelength ranges
 
 std::vector<double> VSPEC_NUMIN_input;
 std::vector<double> VSPEC_NUMAX_input;
@@ -565,14 +565,9 @@ void write_vpkt_grid(FILE *vpkt_grid_file) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
-          fprintf(vpkt_grid_file, "%g ", vgrid[n][m].yvel);
-          fprintf(vpkt_grid_file, "%g ", vgrid[n][m].zvel);
-
-          fprintf(vpkt_grid_file, "%g ", vgrid[n][m].flux[wlbin][obsdirindex].i);
-          fprintf(vpkt_grid_file, "%g ", vgrid[n][m].flux[wlbin][obsdirindex].q);
-          fprintf(vpkt_grid_file, "%g ", vgrid[n][m].flux[wlbin][obsdirindex].u);
-
-          fprintf(vpkt_grid_file, "\n");
+          fprintf(vpkt_grid_file, "%g %g %g %g %g \n", vgrid[n][m].yvel, vgrid[n][m].zvel,
+                  vgrid[n][m].flux[wlbin][obsdirindex].i, vgrid[n][m].flux[wlbin][obsdirindex].q,
+                  vgrid[n][m].flux[wlbin][obsdirindex].u);
         }
       }
     }
@@ -593,14 +588,9 @@ void read_vpkt_grid(const int my_rank, const int nts) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid[n][m].yvel) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid[n][m].zvel) == 1);
-
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid[n][m].flux[wlbin][obsdirindex].i) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid[n][m].flux[wlbin][obsdirindex].q) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid[n][m].flux[wlbin][obsdirindex].u) == 1);
-
-          assert_always(fscanf(vpkt_grid_file, "\n") == 0);
+          assert_always(fscanf(vpkt_grid_file, "%lg %lg %lg %lg %lg \n", &vgrid[n][m].yvel, &vgrid[n][m].zvel,
+                               &vgrid[n][m].flux[wlbin][obsdirindex].i, &vgrid[n][m].flux[wlbin][obsdirindex].q,
+                               &vgrid[n][m].flux[wlbin][obsdirindex].u) == 5);
         }
       }
     }
