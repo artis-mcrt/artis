@@ -1283,7 +1283,7 @@ auto get_xs_excitation_vector(std::array<double, SFPTS> &xs_excitation_vec, cons
     // xs[j] = constantfactor * g_bar / engrid(j)
 
     for (int j = en_startindex; j < SFPTS; j++) {
-      const double logU = std::log(engrid(j)) - log(epsilon_trans_ev);
+      const double logU = std::log(engrid(j)) - std::log(epsilon_trans_ev);
       const double g_bar = (A * logU) + B;
       xs_excitation_vec[j] = constantfactor * g_bar / engrid(j);
     }
@@ -2025,13 +2025,12 @@ void init(const int my_rank, const int ndo_nonempty) {
   for (int s = 0; s < SFPTS; s++) {
     integralvec[s] = sourcevec[s] * DELTA_E;
   }
-  gsl_vector gsl_integralvec = gsl_vector_view_array(integralvec.data(), SFPTS).vector;
-  const double sourceintegral = gsl_blas_dasum(&gsl_integralvec);  // integral of S(e) dE
+  const double sourceintegral = cblas_dasum(SFPTS, integralvec.data(), 1);  // integral of S(e) dE
 
   for (int s = 0; s < SFPTS; s++) {
     integralvec[s] *= engrid(s);
   }
-  E_init_ev = gsl_blas_dasum(&gsl_integralvec);  // integral of E * S(e) dE
+  E_init_ev = cblas_dasum(SFPTS, integralvec.data(), 1);  // integral of E * S(e) dE
 
   // or put all of the source into one point at SF_EMAX
   // gsl_vector_set_zero(sourcevec);
