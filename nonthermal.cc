@@ -135,7 +135,7 @@ constexpr auto sourcevec(const int index) {
 constexpr double E_init_ev = []() {
   double integral = 0.;
   for (int s = 0; s < SFPTS; s++) {
-    integral += (sourcevec(s) * DELTA_E) * engrid(s);
+    integral += sourcevec(s) * DELTA_E * engrid(s);
   }
   return integral;
 }();
