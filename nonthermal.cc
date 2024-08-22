@@ -111,17 +111,6 @@ bool nonthermal_initialized = false;
 
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
-// energy grid on which solution is sampled
-constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
-
-const auto logengrid = []() {
-  std::array<double, SFPTS> logengrid{};
-  for (int i = 0; i < SFPTS; i++) {
-    logengrid[i] = std::log(engrid(i));
-  }
-  return logengrid;
-}();
-
 // samples of the source function (energy distribution of deposited energy)
 std::array<double, SFPTS> sourcevec{};
 
@@ -511,6 +500,9 @@ void zero_all_effionpot(const int modelgridindex) {
   }
   check_auger_probabilities(modelgridindex);
 }
+
+// energy grid on which solution is sampled
+constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
 
 auto get_energyindex_ev_lteq(const double energy_ev) -> int
 // finds the highest energy point <= energy_ev
@@ -1291,7 +1283,7 @@ auto get_xs_excitation_vector(std::array<double, SFPTS> &xs_excitation_vec, cons
     // xs[j] = constantfactor * g_bar / engrid(j)
 
     for (int j = en_startindex; j < SFPTS; j++) {
-      const double logU = logengrid[j] - log(epsilon_trans_ev);
+      const double logU = std::log(engrid(j)) - log(epsilon_trans_ev);
       const double g_bar = (A * logU) + B;
       xs_excitation_vec[j] = constantfactor * g_bar / engrid(j);
     }
