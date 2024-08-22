@@ -716,12 +716,12 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
     // permitted E1 electric dipole transitions
     const double U = energy / epsilon_trans;
 
-    // const double g_bar = 0.2;
-    const double A = 0.28;
-    const double B = 0.15;
+    // constexpr double g_bar = 0.2;
+    constexpr double A = 0.28;
+    constexpr double B = 0.15;
     const double g_bar = (A * log(U)) + B;
 
-    const double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
+    constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
     return prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * trans_osc_strength * g_bar / U;
   }
@@ -740,12 +740,12 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
   // normally set to 1.0, but Shingles et al. (2021) boosted this to increase heating
   constexpr double boostfactor = 1.;
 
-  const double omegap = sqrt(4 * PI * nne * pow(QE, 2) / ME);
+  const double omegap = std::sqrt(4 * PI * nne * pow(QE, 2) / ME);
   const double zetae = H * omegap / 2 / PI;
   if (energy > 14 * EV) {
     return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(2 * energy / zetae);
   }
-  const double v = sqrt(2 * energy / ME);
+  const double v = std::sqrt(2 * energy / ME);
   return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(ME * pow(v, 3) / (EULERGAMMA * pow(QE, 2) * omegap));
 }
 
@@ -1280,11 +1280,11 @@ auto get_xs_excitation_vector(std::array<double, SFPTS> &xs_excitation_vec, cons
         globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].osc_strength;
     // permitted E1 electric dipole transitions
 
-    // const double g_bar = 0.2;
-    const double A = 0.28;
-    const double B = 0.15;
+    // constexpr double g_bar = 0.2;
+    constexpr double A = 0.28;
+    constexpr double B = 0.15;
 
-    const double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
+    constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     const double epsilon_trans_ev = epsilon_trans / EV;
 
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
@@ -1648,7 +1648,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
   for (int i = 0; i < SFPTS; i++) {
     const double endash = engrid(i);
     const double delta_endash = DELTA_E;
-    const double oneovervelocity = sqrt(9.10938e-31 / 2 / endash / 1.60218e-19) / 100;  // in sec/cm
+    const double oneovervelocity = std::sqrt(9.10938e-31 / 2 / endash / 1.60218e-19) / 100;  // in sec/cm
     nne_nt_max += yscalefactor * yfunc[i] * oneovervelocity * delta_endash;
   }
 
