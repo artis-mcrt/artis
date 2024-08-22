@@ -513,7 +513,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Win win_alltransblock = MPI_WIN_NULL;
 
-      auto [_, my_rank_trans] = get_range_chunk(totupdowntrans, globals::node_nprocs, globals::rank_in_node);
+      const auto [_, my_rank_trans] = get_range_chunk(totupdowntrans, globals::node_nprocs, globals::rank_in_node);
 
       auto size = static_cast<MPI_Aint>(my_rank_trans * sizeof(LevelTransition));
       int disp_unit = sizeof(LevelTransition);
