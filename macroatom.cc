@@ -225,21 +225,22 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   pkt.nscatterings = 0;
 }
 
-void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int element, int *const ion, int *const level,
+void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int element, int &ion, int &level,
                             const double rad_recomb) {
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
-  const double epsilon_current = epsilon(element, *ion, *level);
-  const int upperion = *ion;
-  const int upperionlevel = *level;
+  const int upperion = ion;
+  const int upperionlevel = level;
+  const double epsilon_current = epsilon(element, upperion, upperionlevel);
   // Randomly select a continuum
   const double targetval = rng_uniform() * rad_recomb;
   double rate = 0;
   const int nlevels = get_ionisinglevels(element, upperion - 1);
-  int lower = 0;
-  for (lower = 0; lower < nlevels; lower++) {
-    const double epsilon_trans = epsilon_current - epsilon(element, upperion - 1, lower);
-    const double R = rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, lower, modelgridindex);
+  int lowerionlevel = 0;
+  for (lowerionlevel = 0; lowerionlevel < nlevels; lowerionlevel++) {
+    const double epsilon_trans = epsilon_current - epsilon(element, upperion - 1, lowerionlevel);
+    const double R =
+        rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, lowerionlevel, modelgridindex);
 
     rate += R * epsilon_trans;
 
@@ -252,15 +253,15 @@ void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int ele
         "%s: From Z=%d ionstage %d level %d, could not select lower level to recombine to. targetval %g * rad_recomb "
         "%g >= "
         "rate %g",
-        __func__, get_atomicnumber(element), get_ionstage(element, *ion), *level, targetval, rad_recomb, rate);
+        __func__, get_atomicnumber(element), get_ionstage(element, ion), level, targetval, rad_recomb, rate);
     std::abort();
   }
 
   // set the new state
-  *ion = upperion - 1;
-  *level = lower;
+  ion = upperion - 1;
+  level = lowerionlevel;
 
-  pkt.nu_cmf = select_continuum_nu(element, upperion - 1, lower, upperionlevel, T_e);
+  pkt.nu_cmf = select_continuum_nu(element, upperion - 1, lowerionlevel, upperionlevel, T_e);
 
   if (!std::isfinite(pkt.nu_cmf)) {
     printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
@@ -279,7 +280,7 @@ void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int ele
   }
 
   pkt.next_trans = -1;  // continuum transition, no restrictions for further line interactions
-  pkt.emissiontype = get_emtype_continuum(element, *ion, lower, upperionlevel);
+  pkt.emissiontype = get_emtype_continuum(element, ion, lowerionlevel, upperionlevel);
   pkt.em_pos = pkt.pos;
   pkt.em_time = pkt.prop_time;
   pkt.nscatterings = 0;
@@ -468,7 +469,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           // stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
         }
 
-        do_macroatom_radrecomb(pkt, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB]);
+        do_macroatom_radrecomb(pkt, modelgridindex, element, ion, level, processrates[MA_ACTION_RADRECOMB]);
         end_packet = true;
         break;
       }
