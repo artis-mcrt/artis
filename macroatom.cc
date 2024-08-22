@@ -577,9 +577,9 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
         }
 
-        ion += 1;
         level = do_macroatom_ionisation(modelgridindex, element, ion, level, epsilon_current,
                                         processrates[MA_ACTION_INTERNALUPHIGHER]);
+        ion += 1;
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
