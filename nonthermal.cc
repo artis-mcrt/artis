@@ -900,7 +900,7 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
   }
 
   const int num_shells = electron_binding[get_atomicnumber(element) - 1].size();
-  auto q = std::array < int, NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE ? 0 : 10 > {0};
+  auto q = std::array<int, (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE ? 0 : 10)>{0};
 
   if (!NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
     for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
@@ -2028,7 +2028,7 @@ void init(const int my_rank, const int ndo_nonempty) {
   // integrate the source vector to find the assumed injection rate
   E_init_ev = 0.;  // integral of E * S(e) dE
   for (int s = 0; s < SFPTS; s++) {
-    E_init_ev += (sourcevec[s] * DELTA_E) * engrid(s);
+    E_init_ev += sourcevec[s] * DELTA_E * engrid(s);
   }
 
   // or put all of the source into one point at SF_EMAX
