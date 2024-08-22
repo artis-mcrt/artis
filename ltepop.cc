@@ -50,8 +50,8 @@ auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const d
 // use Saha equation for LTE ionization balance
 auto phi_lte(const int element, const int ion, const int modelgridindex) -> double {
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  auto partfunc_ion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex];
-  auto partfunc_upperion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex + 1];
+  const auto partfunc_ion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex];
+  const auto partfunc_upperion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex + 1];
 
   const auto T_e = grid::get_Te(modelgridindex);
   const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);
@@ -72,7 +72,7 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
   assert_testmodeonly(!elem_has_nlte_levels(element));  // don't use this function if the NLTE solver is active
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  auto partfunc_ion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex];
+  const auto partfunc_ion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex];
 
   const auto T_e = grid::get_Te(modelgridindex);
 
@@ -106,7 +106,7 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
   // Y_nt should generally be higher than the Gamma term for nebular epoch
 
   if (!std::isfinite(phi) || phi == 0.) {
-    auto partfunc_upperion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex + 1];
+    const auto partfunc_upperion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex + 1];
     printout(
         "[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g ... remove higher or "
         "lower ionisation stages\n",
