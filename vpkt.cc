@@ -31,15 +31,15 @@ struct StokesParams {
 };
 
 struct VSpecPol {
-  StokesParams flux[VMNUBINS];
+  std::array<StokesParams, VMNUBINS> flux;
   float lower_time{NAN};
   float delta_t{NAN};
 };
 
 std::vector<std::vector<VSpecPol>> vspecpol{};
 
-float lower_freq_vspec[VMNUBINS];
-float delta_freq_vspec[VMNUBINS];
+std::array<float, VMNUBINS> lower_freq_vspec;
+std::array<float, VMNUBINS> delta_freq_vspec;
 
 // --------- INPUT PARAMETERS -----------
 
@@ -82,8 +82,8 @@ std::vector<double> nu_grid_min;
 std::vector<double> nu_grid_max;
 bool vgrid_on;
 
-double dlogt_vspec{NAN};
-double dlognu_vspec{NAN};
+const double dlogt_vspec = (std::log(VSPEC_TIMEMAX) - std::log(VSPEC_TIMEMIN)) / VMTBINS;
+const double dlognu_vspec = (std::log(VSPEC_NUMAX) - std::log(VSPEC_NUMIN)) / VMNUBINS;
 
 // Virtual packet is killed when tau reaches tau_max_vpkt for ALL the different setups
 // E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt
@@ -433,9 +433,6 @@ void init_vspecpol() {
   for (int p = 0; p < VMTBINS; p++) {
     vspecpol[p].resize(indexmax);
   }
-
-  dlogt_vspec = (log(VSPEC_TIMEMAX) - log(VSPEC_TIMEMIN)) / VMTBINS;
-  dlognu_vspec = (log(VSPEC_NUMAX) - log(VSPEC_NUMIN)) / VMNUBINS;
 
   for (int m = 0; m < VMNUBINS; m++) {
     lower_freq_vspec[m] = exp(log(VSPEC_NUMIN) + (m * (dlognu_vspec)));
