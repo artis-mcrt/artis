@@ -145,9 +145,8 @@ const auto rhsvec = []() {
   std::array<double, SFPTS> rhsvec{};
   double source_integral_to_SF_EMAX = 0.;
   for (int i = SFPTS - 1; i >= 0; i--) {
-    source_integral_to_SF_EMAX += sourcevec(i);
-
     rhsvec[i] = source_integral_to_SF_EMAX * DELTA_E;
+    source_integral_to_SF_EMAX += sourcevec(i);
   }
   return rhsvec;
 }();
