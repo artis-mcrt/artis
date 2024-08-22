@@ -918,14 +918,13 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, const int elemen
                               const int uptransindex, const double epsilon_trans,
                               const double lowerstatweight) -> double {
   // assert_testmodeonly(i < get_nuptrans(element, ion, lower));
-  double C = 0.;
   const double coll_strength = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].coll_str;
   const double eoverkt = epsilon_trans / (KB * T_e);
 
   if (coll_strength < 0) {
     const bool forbidden = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].forbidden;
-    if (!forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
-    {
+    if (!forbidden) {
+      // alternative condition: (coll_strength > -1.5) i.e. to catch -1
       const double trans_osc_strength =
           globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].osc_strength;
       // permitted E1 electric dipole transitions
@@ -943,20 +942,19 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, const int elemen
 
       const double test = 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt));
       const double Gamma = g_bar > test ? g_bar : test;
-      C = C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow(H_ionpot / epsilon_trans, 2) * eoverkt /
-          exp_eoverkt * Gamma;
-    } else  // alterative: (coll_strength > -3.5) to catch -2 or -3
-    {
-      // forbidden transitions: magnetic dipole, electric quadropole...
-      // Axelrod's approximation (thesis 1980)
-      const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].targetlevelindex;
-      const double upperstatweight = stat_weight(element, ion, upper);
-      C = nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
+      return C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow(H_ionpot / epsilon_trans, 2) *
+             eoverkt / exp_eoverkt * Gamma;
     }
-  } else {
-    // from Osterbrock and Ferland, p51
-    C = nne * 8.629e-6 * coll_strength * std::exp(-eoverkt) / lowerstatweight / std::sqrt(T_e);
+
+    // alterative condition: (coll_strength > -3.5) to catch -2 or -3
+
+    // forbidden transitions: magnetic dipole, electric quadropole...
+    // Axelrod's approximation (thesis 1980)
+    const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].targetlevelindex;
+    const double upperstatweight = stat_weight(element, ion, upper);
+    return nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
   }
 
-  return C;
+  // from Osterbrock and Ferland, p51
+  return nne * 8.629e-6 * coll_strength * std::exp(-eoverkt) / lowerstatweight / std::sqrt(T_e);
 }
