@@ -1639,7 +1639,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
            nt_solution[modelgridindex].frac_heating);
 }
 
-void sfmatrix_add_excitation(std::array<double, SFPTS * SFPTS> &sfmatrix, const int modelgridindex, const int element,
+void sfmatrix_add_excitation(std::vector<double> &sfmatrix, const int modelgridindex, const int element,
                              const int ion) {
   // excitation terms
   std::array<double, SFPTS> vec_xs_excitation_deltae{};
@@ -1691,8 +1691,7 @@ void sfmatrix_add_excitation(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
   }
 }
 
-void sfmatrix_add_ionization(std::array<double, SFPTS * SFPTS> &sfmatrix, const int Z, const int ionstage,
-                             const double nnion)
+void sfmatrix_add_ionization(std::vector<double> &sfmatrix, const int Z, const int ionstage, const double nnion)
 // add the ionization terms to the Spencer-Fano matrix
 {
   std::array<double, SFPTS> vec_xs_ionization{};
@@ -1802,7 +1801,7 @@ void sfmatrix_add_ionization(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
 // solve the Spencer-Fano matrix equation and return the y vector (samples of the Spencer-Fano solution function).
 // Multiply y by energy interval [eV] to get non-thermal electron number flux. y(E) * dE is the flux of electrons with
 // energy in the range (E, E + dE) in units of particles/cm2/s. y has units of particles/cm2/s/eV
-auto sfmatrix_solve(const std::array<double, SFPTS * SFPTS> &sfmatrix,
+auto sfmatrix_solve(const std::vector<double> &sfmatrix,
                     const std::array<double, SFPTS> &rhsvec) -> std::array<double, SFPTS> {
   std::array<size_t, SFPTS> vec_permutation{};
   gsl_permutation p{.size = SFPTS, .data = vec_permutation.data()};
@@ -2436,8 +2435,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   //   timesteps.\n");
   // }
 
-  constexpr int SFTPSsquared = SFPTS * SFPTS;  // so that cppcheck gets the size of the array correct
-  THREADLOCALONHOST std::array<double, SFTPSsquared> sfmatrix{};
+  THREADLOCALONHOST std::vector<double> sfmatrix(SFPTS * SFPTS);
   std::ranges::fill(sfmatrix, 0.);
 
   // rhs is the constant term (not dependent on y func) in each equation
