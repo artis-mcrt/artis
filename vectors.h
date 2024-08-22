@@ -130,14 +130,14 @@ template <size_t S1, size_t S2>
   return dopplerfactorsq;
 }
 
-[[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(std::span<const double, 3> pos_rf,
+[[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(const std::span<const double, 3> pos_rf,
                                                                         const std::array<double, 3> dir_rf,
                                                                         const double prop_time) -> double {
   return doppler_nucmf_on_nurf(dir_rf, get_velocity(pos_rf, prop_time));
 }
 
 // Move a packet along a straight line (specified by current dir vector). The distance moved is in the rest frame.
-constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, const std::array<double, 3> dir_rf, double &prop_time,
+constexpr auto move_pkt_withtime(std::array<double, 3> &pos_rf, const std::array<double, 3> dir_rf, double &prop_time,
                                  const double nu_rf, double &nu_cmf, const double e_rf, double &e_cmf,
                                  const double distance) -> double {
   assert_always(distance >= 0);
