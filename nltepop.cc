@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <tuple>
 #include <vector>
 
 #include "artisoptions.h"
