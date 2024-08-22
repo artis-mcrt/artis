@@ -139,11 +139,11 @@ const auto sourcevec = []() {
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
 // This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.
 const double E_init_ev = []() {
-  std::array<double, SFPTS> integralvec{};
+  double integral = 0.;
   for (int s = 0; s < SFPTS; s++) {
-    integralvec[s] = (sourcevec[s] * DELTA_E) * engrid(s);
+    integral += (sourcevec[s] * DELTA_E) * engrid(s);
   }
-  return cblas_dasum(SFPTS, integralvec.data(), 1);  // integral of E * S(e) dE
+  return integral;
 }();
 
 // rhs is the constant term (not dependent on y func) in each equation
