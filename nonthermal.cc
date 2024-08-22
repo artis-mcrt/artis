@@ -2027,14 +2027,14 @@ void init(const int my_rank, const int ndo_nonempty) {
   }
   const double sourceintegral = cblas_dasum(SFPTS, integralvec.data(), 1);  // integral of S(e) dE
 
+  E_init_ev = 0.;  // integral of E * S(e) dE
   for (int s = 0; s < SFPTS; s++) {
-    integralvec[s] = (sourcevec[s] * DELTA_E) * engrid(s);
+    E_init_ev += (sourcevec[s] * DELTA_E) * engrid(s);
   }
-  E_init_ev = cblas_dasum(SFPTS, integralvec.data(), 1);  // integral of E * S(e) dE
 
   // or put all of the source into one point at SF_EMAX
-  // gsl_vector_set_zero(sourcevec);
-  // gsl_vector_set(sourcevec, SFPTS - 1, 1 / DELTA_E);
+  // std::ranges::fill(sourcevec, 0.);
+  // sourcevec[SFPTS - 1] = 1 / DELTA_E;
   // E_init_ev = SF_EMAX;
 
   printout("E_init: %14.7e eV\n", E_init_ev);
