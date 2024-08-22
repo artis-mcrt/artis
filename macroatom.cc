@@ -808,14 +808,15 @@ auto col_recombination_ratecoeff(const int modelgridindex, const int element, co
 
       // Seaton approximation: Mihalas (1978), eq.5-79, p.134
       // select gaunt factor according to ionic charge
-      double g{NAN};
-      if (ionstage - 1 == 1) {
-        g = 0.1;
-      } else if (ionstage - 1 == 2) {
-        g = 0.2;
-      } else {
-        g = 0.3;
-      }
+      const auto g = [](const int ionstage) {
+        if (ionstage - 1 == 1) {
+          return 0.1;
+        }
+        if (ionstage - 1 == 2) {
+          return 0.2;
+        }
+        return 0.3;
+      }(ionstage);
 
       const double sigma_bf = (globals::elements[element].ions[upperion - 1].levels[lower].photoion_xs[0] *
                                get_phixsprobability(element, upperion - 1, lower, phixstargetindex));
@@ -840,15 +841,16 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 
   // Seaton approximation: Mihalas (1978), eq.5-79, p.134
   // select gaunt factor according to ionic charge
-  double g{NAN};
   const int ionstage = get_ionstage(element, ion);
-  if (ionstage == 1) {
-    g = 0.1;
-  } else if (ionstage == 2) {
-    g = 0.2;
-  } else {
-    g = 0.3;
-  }
+  const auto g = [](const int ionstage) {
+    if (ionstage - 1 == 1) {
+      return 0.1;
+    }
+    if (ionstage - 1 == 2) {
+      return 0.2;
+    }
+    return 0.3;
+  }(ionstage);
 
   const double fac1 = epsilon_trans / KB / T_e;
 
