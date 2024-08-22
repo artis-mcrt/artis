@@ -112,9 +112,13 @@ bool nonthermal_initialized = false;
 
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
+// energy grid on which solution is sampled
+constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
+
 // samples of the source function (energy distribution of deposited energy)
 const auto sourcevec = []() {
   std::array<double, SFPTS> sourcevec{};
+
   // const int source_spread_pts = std::ceil(SFPTS / 20);
   constexpr int source_spread_pts = static_cast<int>(SFPTS * 0.03333) + 1;
   constexpr double source_spread_en = source_spread_pts * DELTA_E;
@@ -124,12 +128,24 @@ const auto sourcevec = []() {
     // spread the source over some energy width
     sourcevec[s] = (s < sourcelowerindex) ? 0. : 1. / source_spread_en;
   }
+
+  // or put all of the source into one point at SF_EMAX
+  // std::ranges::fill(sourcevec, 0.);
+  // sourcevec[SFPTS - 1] = 1 / DELTA_E;
+  // E_init_ev = SF_EMAX;
+
   return sourcevec;
 }();
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
 // This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.
-double E_init_ev = 0;
+const double E_init_ev = []() {
+  std::array<double, SFPTS> integralvec{};
+  for (int s = 0; s < SFPTS; s++) {
+    integralvec[s] = (sourcevec[s] * DELTA_E) * engrid(s);
+  }
+  return cblas_dasum(SFPTS, integralvec.data(), 1);  // integral of E * S(e) dE
+}();
 
 // Monte Carlo result - compare to analytical expectation
 double nt_energy_deposited = 0;
@@ -513,9 +529,6 @@ void zero_all_effionpot(const int modelgridindex) {
   }
   check_auger_probabilities(modelgridindex);
 }
-
-// energy grid on which solution is sampled
-constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
 
 auto get_energyindex_ev_lteq(const double energy_ev) -> int
 // finds the highest energy point <= energy_ev
@@ -1999,17 +2012,6 @@ void init(const int my_rank, const int ndo_nonempty) {
   for (int s = 0; s < SFPTS; s++) {
     sourceintegral += sourcevec[s] * DELTA_E;
   }
-
-  std::array<double, SFPTS> integralvec{};
-  for (int s = 0; s < SFPTS; s++) {
-    integralvec[s] = (sourcevec[s] * DELTA_E) * engrid(s);
-  }
-  E_init_ev = cblas_dasum(SFPTS, integralvec.data(), 1);  // integral of E * S(e) dE
-
-  // or put all of the source into one point at SF_EMAX
-  // std::ranges::fill(sourcevec, 0.);
-  // sourcevec[SFPTS - 1] = 1 / DELTA_E;
-  // E_init_ev = SF_EMAX;
 
   printout("E_init: %14.7e eV/s/cm3\n", E_init_ev);
   printout("source function integral: %14.7e\n", sourceintegral);
