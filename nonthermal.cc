@@ -1851,7 +1851,8 @@ auto sfmatrix_solve(const std::array<double, SFPTS * SFPTS> &sfmatrix,
 
     // calculate Ax - b = residual
     gsl_vector_memcpy(&gsl_residual_vector, &gsl_rhsvec);
-    gsl_blas_dgemv(CblasNoTrans, 1.0, &gsl_sfmatrix, &gsl_yvec, -1.0, &gsl_residual_vector);
+    cblas_dgemv(CblasRowMajor, CblasNoTrans, SFPTS, SFPTS, 1.0, sfmatrix.data(), SFPTS, yvec_arr.data(), 1, -1.0,
+                residual_vector.data(), 1);
 
     // value of the largest absolute residual
     const double error = fabs(gsl_vector_get(&gsl_residual_vector, gsl_blas_idamax(&gsl_residual_vector)));
