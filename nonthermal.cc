@@ -21,6 +21,7 @@
 #include <cstdlib>
 #include <functional>
 #include <ios>
+#include <numeric>
 #include <span>
 #include <sstream>
 #include <string>
@@ -40,7 +41,6 @@
 #include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"
-#include "vectors.h"
 
 namespace nonthermal {
 
@@ -1076,7 +1076,7 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
     }
   }
 
-  double y_dot_crosssection_de = dot(yfunc, cross_section_vec_allshells);
+  double y_dot_crosssection_de = cblas_ddot(SFPTS, yfunc.data(), 1, cross_section_vec_allshells.data(), 1);
 
   y_dot_crosssection_de *= DELTA_E;
 
@@ -1277,17 +1277,15 @@ auto get_xs_excitation_vector(std::array<double, SFPTS> &xs_excitation_vec, cons
 
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
 // returns the rate coefficient in s^-1 divided by deposition rate density in erg/cm^3/s
-auto calculate_nt_excitation_ratecoeff_perdeposition(const gsl_vector &gsl_yvec, const int element, const int ion,
-                                                     const int lower, const int uptransindex,
+auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SFPTS> &yvec, const int element,
+                                                     const int ion, const int lower, const int uptransindex,
                                                      const double statweight_lower,
                                                      const double epsilon_trans) -> double {
   THREADLOCALONHOST std::array<double, SFPTS> xs_excitation_vec{};
 
-  const auto gsl_xs_excitation_vec = gsl_vector_view_array(xs_excitation_vec.data(), SFPTS).vector;
   if (get_xs_excitation_vector(xs_excitation_vec, element, ion, lower, uptransindex, statweight_lower, epsilon_trans) >=
       0) {
-    double y_dot_crosssection = 0.;
-    gsl_blas_ddot(&gsl_xs_excitation_vec, &gsl_yvec, &y_dot_crosssection);
+    double y_dot_crosssection = cblas_ddot(SFPTS, xs_excitation_vec.data(), 1, yvec.data(), 1);
 
     y_dot_crosssection *= DELTA_E;
 
@@ -1379,7 +1377,6 @@ auto get_uptransindex(const int element, const int ion, const int lower, const i
 
 void analyse_sf_solution(const int modelgridindex, const int timestep, const bool enable_sfexcitation,
                          const std::array<double, SFPTS> &yfunc) {
-  const auto gsl_yvec = gsl_vector_const_view_array(yfunc.data(), SFPTS).vector;
   const float nne = grid::get_nne(modelgridindex);
   const double nntot = get_nnion_tot(modelgridindex);
   const double nnetot = grid::get_nnetot(modelgridindex);
@@ -1468,7 +1465,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double ratecoeffperdeposition = calculate_nt_excitation_ratecoeff_perdeposition(
-              gsl_yvec, element, ion, lower, t, statweight_lower, epsilon_trans);
+              yfunc, element, ion, lower, t, statweight_lower, epsilon_trans);
           const double frac_excitation_thistrans = nnlevel * epsilon_trans * ratecoeffperdeposition;
           frac_excitation_ion += frac_excitation_thistrans;
 
