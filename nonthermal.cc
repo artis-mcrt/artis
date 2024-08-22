@@ -115,32 +115,27 @@ constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
 
 // samples of the source function (energy distribution of deposited energy)
-const auto sourcevec = []() {
-  std::array<double, SFPTS> sourcevec{};
+constexpr auto sourcevec(const int index) {
+  assert_testmodeonly(index >= 0 && index < SFPTS);
 
   // spread the source over some energy width
   constexpr int source_spread_pts = static_cast<int>(SFPTS * 0.03333) + 1;
   constexpr double source_spread_en = source_spread_pts * DELTA_E;
   constexpr int sourcestartindex = SFPTS - source_spread_pts;
 
-  for (int s = 0; s < SFPTS; s++) {
-    sourcevec[s] = (s < sourcestartindex) ? 0. : 1. / source_spread_en;
-  }
+  return (index < sourcestartindex) ? 0. : 1. / source_spread_en;
 
   // or put all of the source into one point at SF_EMAX
-  // std::ranges::fill(sourcevec, 0.);
-  // sourcevec[SFPTS - 1] = 1 / DELTA_E;
-  // E_init_ev = SF_EMAX;
-
-  return sourcevec;
-}();
+  // return (index < SFPTS - 1) ? 0. : 1. / DELTA_E;
+  // so that E_init_ev = SF_EMAX;
+};
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
 // This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.
 const double E_init_ev = []() {
   double integral = 0.;
   for (int s = 0; s < SFPTS; s++) {
-    integral += (sourcevec[s] * DELTA_E) * engrid(s);
+    integral += (sourcevec(s) * DELTA_E) * engrid(s);
   }
   return integral;
 }();
@@ -151,7 +146,7 @@ const auto rhsvec = []() {
   for (int i = 0; i < SFPTS; i++) {
     double source_integral_to_SF_EMAX = 0.;
     for (int j = i + 1; j < SFPTS; j++) {
-      source_integral_to_SF_EMAX += sourcevec[j];
+      source_integral_to_SF_EMAX += sourcevec(j);
     }
     rhsvec[i] = source_integral_to_SF_EMAX * DELTA_E;
   }
@@ -629,7 +624,7 @@ void nt_write_to_file(const int modelgridindex, const int timestep, const int it
 #endif
 
     for (int s = 0; s < SFPTS; s++) {
-      fprintf(nonthermalfile, "%d %d %d %.5e %.5e %.5e\n", timestep, modelgridindex, s, engrid(s), sourcevec[s],
+      fprintf(nonthermalfile, "%d %d %d %.5e %.5e %.5e\n", timestep, modelgridindex, s, engrid(s), sourcevec(s),
               yscalefactor * yfunc[s]);
     }
     fflush(nonthermalfile);
@@ -844,7 +839,7 @@ auto N_e(const int modelgridindex, const double energy, const std::array<double,
   }
 
   // source term, should be zero at the low end anyway
-  N_e += sourcevec[get_energyindex_ev_lteq(energy_ev)];
+  N_e += sourcevec(get_energyindex_ev_lteq(energy_ev));
 
   assert_always(std::isfinite(N_e));
   return N_e;
@@ -2020,7 +2015,7 @@ void init(const int my_rank, const int ndo_nonempty) {
 
   double sourceintegral = 0.;  // integral of S(e) dE
   for (int s = 0; s < SFPTS; s++) {
-    sourceintegral += sourcevec[s] * DELTA_E;
+    sourceintegral += sourcevec(s) * DELTA_E;
   }
 
   printout("E_init: %14.7e eV/s/cm3\n", E_init_ev);
