@@ -1300,8 +1300,7 @@ auto get_xs_excitation_vector(std::array<double, SFPTS> &xs_excitation_vec, cons
     // xs[j] = constantfactor * g_bar / engrid(j)
     const double logepsilon = std::log(epsilon_trans_ev);
     for (int j = en_startindex; j < SFPTS; j++) {
-      assert_always(std::log(engrid(j)) == logengrid[j]);
-      const double logU = std::log(engrid(j)) - logepsilon;
+      const double logU = logengrid[j] - logepsilon;
       const double g_bar = (A * logU) + B;
       xs_excitation_vec[j] = constantfactor * g_bar / engrid(j);
     }
