@@ -6,7 +6,6 @@
 #include <array>
 #include <cmath>
 #include <numeric>
-#include <span>
 #include <tuple>
 
 #include "constants.h"
