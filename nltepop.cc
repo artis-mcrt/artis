@@ -905,12 +905,10 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     // printout(" %d", ionstage);
 
     const int nlevels = get_nlevels(element, ion);
-    const int nlevels_nlte = get_nlevels_nlte(element, ion);
+    const int nlevels_nlte = get_nlevels_nlte(element, ion);  // does not count the ground state!
 
     auto s_renorm = std::vector<double>(nlevels);
-    for (int level = 0; level <= nlevels_nlte; level++) {
-      s_renorm[level] = 1.;
-    }
+    std::fill_n(s_renorm.begin(), nlevels_nlte + 1, 1.);
 
     for (int level = (nlevels_nlte + 1); level < nlevels; level++) {
       s_renorm[level] = superlevel_boltzmann(modelgridindex, element, ion, level) / superlevel_partfunc[ion];
