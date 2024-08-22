@@ -2007,11 +2007,11 @@ void init(const int my_rank, const int ndo_nonempty) {
     sourceintegral += sourcevec[s] * DELTA_E;
   }
 
-  // integrate the source vector to find the assumed injection rate
-  E_init_ev = 0.;  // integral of E * S(e) dE
+  std::array<double, SFPTS> integralvec{};
   for (int s = 0; s < SFPTS; s++) {
-    E_init_ev += sourcevec[s] * DELTA_E * engrid(s);
+    integralvec[s] = (sourcevec[s] * DELTA_E) * engrid(s);
   }
+  E_init_ev = cblas_dasum(SFPTS, integralvec.data(), 1);  // integral of E * S(e) dE
 
   // or put all of the source into one point at SF_EMAX
   // std::ranges::fill(sourcevec, 0.);
