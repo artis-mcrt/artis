@@ -2446,7 +2446,10 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   const auto rhsvec = []() {
     std::array<double, SFPTS> rhsvec{};
     for (int i = 0; i < SFPTS; i++) {
-      const double source_integral_to_SF_EMAX = std::accumulate(sourcevec.begin() + i + 1, sourcevec.end(), 0.);
+      double source_integral_to_SF_EMAX = 0.;
+      for (int j = i + 1; j < SFPTS; j++) {
+        source_integral_to_SF_EMAX += sourcevec[j];
+      }
       rhsvec[i] = source_integral_to_SF_EMAX * DELTA_E;
     }
     return rhsvec;
