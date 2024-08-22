@@ -286,25 +286,23 @@ void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int ele
   pkt.nscatterings = 0;
 }
 
-void do_macroatom_ionisation(const int modelgridindex, const int element, int *const ion, int *const level,
-                             const double epsilon_current, const double internal_up_higher) {
+[[nodiscard]] auto do_macroatom_ionisation(const int modelgridindex, const int element, const int ion, const int level,
+                                           const double epsilon_current, const double internal_up_higher) -> int {
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
 
   // Randomly select the occuring transition
   const double targetrate = rng_uniform() * internal_up_higher;
   double rate = 0.;
-  const int nphixstargets = get_nphixstargets(element, *ion, *level);
+  const int nphixstargets = get_nphixstargets(element, ion, level);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-    const double epsilon_trans = get_phixs_threshold(element, *ion, *level, phixstargetindex);
-    const double R = get_corrphotoioncoeff(element, *ion, *level, phixstargetindex, modelgridindex);
-    const double C = col_ionization_ratecoeff(T_e, nne, element, *ion, *level, phixstargetindex, epsilon_trans);
+    const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
+    const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+    const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
     rate += (R + C) * epsilon_current;
     if (rate > targetrate) {
       // set the macroatom's new state
-      *level = get_phixsupperlevel(element, *ion, *level, phixstargetindex);
-      *ion += 1;
-      return;
+      return get_phixsupperlevel(element, ion, level, phixstargetindex);
     }
   }
 
@@ -579,8 +577,9 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
         }
 
-        do_macroatom_ionisation(modelgridindex, element, &ion, &level, epsilon_current,
-                                processrates[MA_ACTION_INTERNALUPHIGHER]);
+        ion += 1;
+        level = do_macroatom_ionisation(modelgridindex, element, ion, level, epsilon_current,
+                                        processrates[MA_ACTION_INTERNALUPHIGHER]);
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
