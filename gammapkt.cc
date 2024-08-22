@@ -368,9 +368,9 @@ auto thomson_angle() -> double {
   const double r32 = dir_in[1] * norm2;
   const double r33 = dir_in[2] * norm2;
 
-  std::array<double, 3> dir_out{(r11 * xprime) + (r21 * yprime) + (r31 * zprime),
-                                (r12 * xprime) + (r22 * yprime) + (r32 * zprime),
-                                (r13 * xprime) + (r23 * yprime) + (r33 * zprime)};
+  const auto dir_out = std::array<double, 3>{(r11 * xprime) + (r21 * yprime) + (r31 * zprime),
+                                             (r12 * xprime) + (r22 * yprime) + (r32 * zprime),
+                                             (r13 * xprime) + (r23 * yprime) + (r33 * zprime)};
 
   assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
 
@@ -971,7 +971,7 @@ void guttman_thermalisation(Packet &pkt) {
     // step 1: draw a random direction
     Packet pkt_copy = pkt;
     // phi rotation: around z-axis
-    const std::array<double, 3> random_dir = get_rand_isotropic_unitvec();
+    const auto random_dir = get_rand_isotropic_unitvec();
     pkt_copy.dir = random_dir;  // fix new direction
 
     // step 2: move packet into the calculated direction and integrate the density

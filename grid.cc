@@ -2566,10 +2566,12 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   // globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 2), cellcoordmax[2] - (initpos[2] *
   // globals::tmin/tstart)); printout("dir [%g, %g, %g]\n", dir[0],dir[1],dir[2]);
 
-  auto d_coordmaxboundary =
-      std::array<double, 3>{-1};  // distance to reach the cell's upper boundary on each coordinate
-  auto d_coordminboundary =
-      std::array<double, 3>{-1};  // distance to reach the cell's lower boundary on each coordinate
+  // distance to reach the cell's upper boundary on each coordinate
+  auto d_coordmaxboundary = std::array<double, 3>{-1};
+
+  // distance to reach the cell's lower boundary on each coordinate
+  auto d_coordminboundary = std::array<double, 3>{-1};
+
   if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
     last_cross = BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
     const double speed = vec_len(dir) * CLIGHT_PROP;  // just in case dir is not normalised

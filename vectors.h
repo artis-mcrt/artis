@@ -69,8 +69,8 @@ template <size_t S1, size_t S2>
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
   const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
-  std::array<double, 3> dir2{(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
-                             (dir1[2] - (vel[2] * fact2)) / fact1};
+  const auto dir2 = std::array<double, 3>{(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
+                                          (dir1[2] - (vel[2] * fact2)) / fact1};
 
   return vec_norm(dir2);
 }
@@ -277,10 +277,10 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 
   const double gamma_rel = 1. / (sqrt(1 - vsqr));
 
-  const std::array<double, 3> e_par{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
-                                    dot(e_rf, beta) * beta[2] / (vsqr)};
+  const auto e_par = std::array<double, 3>{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
+                                           dot(e_rf, beta) * beta[2] / (vsqr)};
 
-  const std::array<double, 3> e_perp{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
+  const auto e_perp = std::array<double, 3>{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
 
   const auto b_rf = cross_prod(n_rf, e_rf);
 

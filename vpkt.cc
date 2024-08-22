@@ -243,7 +243,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
     // Transform Stokes Parameters from the CMF to the RF
 
-    const std::array<double, 3> vel_rev{-vel_vec[0], -vel_vec[1], -vel_vec[2]};
+    const auto vel_rev = std::array<double, 3>{-vel_vec[0], -vel_vec[1], -vel_vec[2]};
 
     frame_transform(obs_cmf, &Q, &U, vel_rev);
 
@@ -949,7 +949,7 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
   for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
     // loop over different observer directions
 
-    const std::array<double, 3> obsdir{
+    const auto obsdir = std::array<double, 3>{
         sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * cos(phiobs[obsdirindex]),
         sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * sin(phiobs[obsdirindex]),
         nz_obs_vpkt[obsdirindex]};
