@@ -71,9 +71,9 @@ struct vgrid {
   double zvel{NAN};
 };
 
-vgrid vgrid_i[VGRID_NY][VGRID_NZ];
-vgrid vgrid_q[VGRID_NY][VGRID_NZ];
-vgrid vgrid_u[VGRID_NY][VGRID_NZ];
+std::array<std::array<vgrid, VGRID_NZ>, VGRID_NY> vgrid_i;
+std::array<std::array<vgrid, VGRID_NZ>, VGRID_NY> vgrid_q;
+std::array<std::array<vgrid, VGRID_NZ>, VGRID_NY> vgrid_u;
 
 int Nrange_grid;
 double tmin_grid;
