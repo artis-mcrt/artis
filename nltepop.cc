@@ -47,17 +47,17 @@ auto get_nlte_vector_index(const int element, const int ion, const int level) ->
   return level_index;
 }
 
-void get_ion_level_of_nlte_vector_index(const int index, const int element, int *const ion, int *const level) {
+auto get_ion_level_of_nlte_vector_index(const int index, const int element) -> std::tuple<int, int> {
   // this could easily be optimized if need be
   for (int dion = 0; dion < get_nions(element); dion++) {
     for (int dlevel = 0; dlevel < get_nlevels(element, dion); dlevel++) {
       if (get_nlte_vector_index(element, dion, dlevel) == index) {
-        *ion = dion;
-        *level = dlevel;
-        return;
+        return {dion, dlevel};
       }
     }
   }
+  assert_always(false);
+  return {-1, -1};
 }
 
 void eliminate_nlte_matrix_rowcol(const int index, const int gs_index, gsl_matrix *rate_matrix,
@@ -98,9 +98,7 @@ void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_vector *
       const double element_value = fabs(gsl_matrix_get(rate_matrix, row, index));
       col_max = std::max(element_value, col_max);
     }
-    int ion = -1;
-    int level = -1;
-    get_ion_level_of_nlte_vector_index(index, element, &ion, &level);
+    const auto [ion, level] = get_ion_level_of_nlte_vector_index(index, element);
     // printout("index%4d (ionstage%2d level%4d) row_max %.1e col_max %.1e ",
     //          index,get_ionstage(element,ion),level,row_max,col_max);
 
@@ -337,9 +335,7 @@ void print_level_rates(const int modelgridindex, const int timestep, const int e
     if (index == selected_index) {
       continue;
     }
-    int ion = -1;
-    int level = -1;
-    get_ion_level_of_nlte_vector_index(index, element, &ion, &level);
+    const auto [ion, level] = get_ion_level_of_nlte_vector_index(index, element);
     const int ionstage = get_ionstage(element, ion);
     // in means populating the selected level, out means depopulating the selected level
     const double pop = gsl_vector_get(popvec, index);
@@ -611,9 +607,7 @@ void nltepop_matrix_normalise(const int modelgridindex, const int element, gsl_m
   // TODO: consider replacing normalisation by LTE populations with
   // GSL's gsl_linalg_balance_matrix(gsl_matrix * A, gsl_vector * D) function instead
   for (size_t column = 0; column < nlte_dimension; column++) {
-    int ion = -1;
-    int level = -1;
-    get_ion_level_of_nlte_vector_index(column, element, &ion, &level);
+    const auto [ion, level] = get_ion_level_of_nlte_vector_index(column, element);
 
     gsl_vector_set(pop_norm_factor_vec, column, calculate_levelpop_lte(modelgridindex, element, ion, level));
 
@@ -653,9 +647,7 @@ auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {
   for (size_t i = 0; i < n; i++) {
     const double u = gsl_matrix_get(LU, i, i);
     if (u == 0) {
-      int ion = -1;
-      int level = -1;
-      get_ion_level_of_nlte_vector_index(i, element, &ion, &level);
+      const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element);
       if (is_nlte(element, ion, level)) {
         printout("NLTE disconnected level: Z=%d ionstage %d level %d\n", get_atomicnumber(element),
                  get_ionstage(element, ion), level);
@@ -773,9 +765,7 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
       gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
       gsl_blas_ddot(&row_view.vector, &x, &recovered_balance_vector_elem);
 
-      int ion = 0;
-      int level = 0;
-      get_ion_level_of_nlte_vector_index(row, element, &ion, &level);
+      const auto [ion, level] = get_ion_level_of_nlte_vector_index(row, element);
 
       // printout("index %4d (ionstage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e
       // departure ratio %.4f\n",
