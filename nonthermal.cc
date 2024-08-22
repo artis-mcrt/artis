@@ -111,8 +111,6 @@ bool nonthermal_initialized = false;
 
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
-gsl_vector *gsl_logenvec;  // log of envec
-
 // samples of the source function (energy distribution of deposited energy)
 std::array<double, SFPTS> sourcevec{};
 
@@ -1285,7 +1283,7 @@ auto get_xs_excitation_vector(std::array<double, SFPTS> &xs_excitation_vec, cons
     // xs[j] = constantfactor * g_bar / engrid(j)
 
     for (int j = en_startindex; j < SFPTS; j++) {
-      const double logU = gsl_vector_get(gsl_logenvec, j) - log(epsilon_trans_ev);
+      const double logU = std::log(engrid(j)) - log(epsilon_trans_ev);
       const double g_bar = (A * logU) + B;
       xs_excitation_vec[j] = constantfactor * g_bar / engrid(j);
     }
@@ -2012,18 +2010,12 @@ void init(const int my_rank, const int ndo_nonempty) {
     nt_solution[modelgridindex].frac_excitations_list_size = 0;
   }
 
-  gsl_logenvec = gsl_vector_calloc(SFPTS);
-
   // const int source_spread_pts = std::ceil(SFPTS / 20);
   constexpr int source_spread_pts = static_cast<int>(SFPTS * 0.03333) + 1;
   constexpr double source_spread_en = source_spread_pts * DELTA_E;
   constexpr int sourcelowerindex = SFPTS - source_spread_pts;
 
   for (int s = 0; s < SFPTS; s++) {
-    const double energy_ev = SF_EMIN + (s * DELTA_E);
-
-    gsl_vector_set(gsl_logenvec, s, log(energy_ev));
-
     // spread the source over some energy width
     sourcevec[s] = (s < sourcelowerindex) ? 0. : 1. / source_spread_en;
   }
