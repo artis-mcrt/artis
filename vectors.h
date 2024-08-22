@@ -6,6 +6,7 @@
 #include <array>
 #include <cmath>
 #include <numeric>
+#include <span>
 #include <tuple>
 
 #include "constants.h"
@@ -39,7 +40,7 @@ template <size_t S1, size_t S2>
 }
 
 // Get velocity vector of the flow at a position with homologous expansion.
-[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(const std::array<double, 3> x,
+[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(std::span<const double, 3> x,
                                                         const double t) -> std::array<double, 3> {
   return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
 }
@@ -129,7 +130,7 @@ template <size_t S1, size_t S2>
   return dopplerfactorsq;
 }
 
-[[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(const std::array<double, 3> pos_rf,
+[[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(const std::span<const double, 3> pos_rf,
                                                                         const std::array<double, 3> dir_rf,
                                                                         const double prop_time) -> double {
   return doppler_nucmf_on_nurf(dir_rf, get_velocity(pos_rf, prop_time));
