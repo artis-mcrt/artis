@@ -1279,7 +1279,7 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
                                                      const int ion, const int lower, const int uptransindex,
                                                      const double statweight_lower,
                                                      const double epsilon_trans) -> double {
-  THREADLOCALONHOST std::array<double, SFPTS> xs_excitation_vec{};
+  std::array<double, SFPTS> xs_excitation_vec{};
 
   if (get_xs_excitation_vector(xs_excitation_vec, element, ion, lower, uptransindex, statweight_lower, epsilon_trans) >=
       0) {
@@ -1695,7 +1695,7 @@ void sfmatrix_add_ionization(std::array<double, SFPTS * SFPTS> &sfmatrix, const 
                              const double nnion)
 // add the ionization terms to the Spencer-Fano matrix
 {
-  THREADLOCALONHOST std::array<double, SFPTS> vec_xs_ionization{};
+  std::array<double, SFPTS> vec_xs_ionization{};
   // auto gslvec_xs_ionization = gsl_vector_view_array(vec_xs_ionization.data(), SFPTS).vector;
   for (auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
@@ -2438,7 +2438,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   // }
 
   constexpr int SFTPSsquared = SFPTS * SFPTS;  // so that cppcheck gets the size of the array correct
-  THREADLOCALONHOST std::array<double, SFTPSsquared> sfmatrix{};
+  std::array<double, SFTPSsquared> sfmatrix{};
   std::ranges::fill(sfmatrix, 0.);
 
   // rhs is the constant term (not dependent on y func) in each equation
