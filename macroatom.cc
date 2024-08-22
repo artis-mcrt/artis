@@ -225,12 +225,12 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   pkt.nscatterings = 0;
 }
 
-void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int element, int &ion, int &level,
-                            const double rad_recomb) {
+// get the level index of the lower ionisation stage after a randomly selected radiative recombination and update
+// counters
+[[nodiscard]] auto do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int element, const int upperion,
+                                          const int upperionlevel, const double rad_recomb) -> int {
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
-  const int upperion = ion;
-  const int upperionlevel = level;
   const double epsilon_current = epsilon(element, upperion, upperionlevel);
   // Randomly select a continuum
   const double targetval = rng_uniform() * rad_recomb;
@@ -253,20 +253,16 @@ void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int ele
         "%s: From Z=%d ionstage %d level %d, could not select lower level to recombine to. targetval %g * rad_recomb "
         "%g >= "
         "rate %g",
-        __func__, get_atomicnumber(element), get_ionstage(element, ion), level, targetval, rad_recomb, rate);
+        __func__, get_atomicnumber(element), get_ionstage(element, upperion), upperionlevel, targetval, rad_recomb,
+        rate);
     std::abort();
   }
 
   // set the new state
-  ion = upperion - 1;
-  level = lowerionlevel;
+  const int lowerion = upperion - 1;
 
   pkt.nu_cmf = select_continuum_nu(element, upperion - 1, lowerionlevel, upperionlevel, T_e);
 
-  if (!std::isfinite(pkt.nu_cmf)) {
-    printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
-    std::abort();
-  }
   stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_FB);
   stats::increment(stats::COUNTER_INTERACTIONS);
   pkt.last_event = 2;
@@ -280,12 +276,15 @@ void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int ele
   }
 
   pkt.next_trans = -1;  // continuum transition, no restrictions for further line interactions
-  pkt.emissiontype = get_emtype_continuum(element, ion, lowerionlevel, upperionlevel);
+  pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerionlevel, upperionlevel);
   pkt.em_pos = pkt.pos;
   pkt.em_time = pkt.prop_time;
   pkt.nscatterings = 0;
+  return lowerionlevel;
 }
 
+// get the level index of the upper ionisation stage after randomly-selected photoionisation or thermal collisional
+// ionisation and update counters
 [[nodiscard]] auto do_macroatom_ionisation(const int modelgridindex, const int element, const int ion, const int level,
                                            const double epsilon_current, const double internal_up_higher) -> int {
   const auto T_e = grid::get_Te(modelgridindex);
@@ -467,7 +466,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           // stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
         }
 
-        do_macroatom_radrecomb(pkt, modelgridindex, element, ion, level, processrates[MA_ACTION_RADRECOMB]);
+        level = do_macroatom_radrecomb(pkt, modelgridindex, element, ion, level, processrates[MA_ACTION_RADRECOMB]);
+        ion -= 1;
         end_packet = true;
         break;
       }
