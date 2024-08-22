@@ -40,6 +40,7 @@
 #include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"
+#include "vectors.h"
 
 namespace nonthermal {
 
@@ -1075,9 +1076,7 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
     }
   }
 
-  double y_dot_crosssection_de = 0.;
-  const auto gsl_yvec = gsl_vector_const_view_array(yfunc.data(), SFPTS).vector;
-  gsl_blas_ddot(&gsl_yvec, &gsl_cross_section_vec_allshells, &y_dot_crosssection_de);
+  double y_dot_crosssection_de = dot(yfunc, cross_section_vec_allshells);
 
   y_dot_crosssection_de *= DELTA_E;
 
