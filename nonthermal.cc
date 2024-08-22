@@ -2015,9 +2015,9 @@ void init(const int my_rank, const int ndo_nonempty) {
   gsl_logenvec = gsl_vector_calloc(SFPTS);
 
   // const int source_spread_pts = std::ceil(SFPTS / 20);
-  const int source_spread_pts = std::ceil(SFPTS * 0.03333);  // KF92 OXYGEN TEST
-  const double source_spread_en = source_spread_pts * DELTA_E;
-  const int sourcelowerindex = SFPTS - source_spread_pts;
+  constexpr int source_spread_pts = static_cast<int>(SFPTS * 0.03333) + 1;
+  constexpr double source_spread_en = source_spread_pts * DELTA_E;
+  constexpr int sourcelowerindex = SFPTS - source_spread_pts;
 
   for (int s = 0; s < SFPTS; s++) {
     const double energy_ev = SF_EMIN + (s * DELTA_E);
