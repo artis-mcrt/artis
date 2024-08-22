@@ -904,62 +904,47 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
 
   if (!NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
     for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
-      if (q[0] < 2)  // K 1s
-      {
-        q[0]++;
-      } else if (q[1] < 2)  // L1 2s
-      {
-        q[1]++;
-      } else if (q[2] < 2)  // L2 2p[1/2]
-      {
-        q[2]++;
-      } else if (q[3] < 4)  // L3 2p[3/2]
-      {
-        q[3]++;
-      } else if (q[4] < 2)  // M1 3s
-      {
-        q[4]++;
-      } else if (q[5] < 2)  // M2 3p[1/2]
-      {
-        q[5]++;
-      } else if (q[6] < 4)  // M3 3p[3/2]
-      {
-        q[6]++;
+      if (q[0] < 2) {
+        q[0]++;  // K 1s
+      } else if (q[1] < 2) {
+        q[1]++;  // L1 2s
+      } else if (q[2] < 2) {
+        q[2]++;  // L2 2p[1/2]
+      } else if (q[3] < 4) {
+        q[3]++;  // L3 2p[3/2]
+      } else if (q[4] < 2) {
+        q[4]++;  // M1 3s
+      } else if (q[5] < 2) {
+        q[5]++;  // M2 3p[1/2]
+      } else if (q[6] < 4) {
+        q[6]++;  // M3 3p[3/2]
       } else if (ioncharge == 0) {
-        if (q[9] < 2)  // N1 4s
-        {
-          q[9]++;
-        } else if (q[7] < 4)  // M4 3d[3/2]
-        {
-          q[7]++;
-        } else if (q[8] < 6)  // M5 3d[5/2]
-        {
-          q[8]++;
+        if (q[9] < 2) {
+          q[9]++;  // N1 4s
+        } else if (q[7] < 4) {
+          q[7]++;  // M4 3d[3/2]
+        } else if (q[8] < 6) {
+          q[8]++;  // M5 3d[5/2]
         } else {
           printout("Going beyond the 4s shell in NT calculation. Abort!\n");
           std::abort();
         }
       } else if (ioncharge == 1) {
-        if (q[9] < 1)  // N1 4s
-        {
-          q[9]++;
-        } else if (q[7] < 4)  // M4 3d[3/2]
-        {
-          q[7]++;
-        } else if (q[8] < 6)  // M5 3d[5/2]
-        {
-          q[8]++;
+        if (q[9] < 1) {
+          q[9]++;  // N1 4s
+        } else if (q[7] < 4) {
+          q[7]++;  // M4 3d[3/2]
+        } else if (q[8] < 6) {
+          q[8]++;  // M5 3d[5/2]
         } else {
           printout("Going beyond the 4s shell in NT calculation. Abort!\n");
           std::abort();
         }
       } else if (ioncharge > 1) {
-        if (q[7] < 4)  // M4 3d[3/2]
-        {
-          q[7]++;
-        } else if (q[8] < 6)  // M5 3d[5/2]
-        {
-          q[8]++;
+        if (q[7] < 4) {
+          q[7]++;  // M4 3d[3/2]
+        } else if (q[8] < 6) {
+          q[8]++;  // M5 3d[5/2]
         } else {
           printout("Going beyond the 4s shell in NT calculation. Abort!\n");
           std::abort();
@@ -1001,8 +986,6 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
       }
     }
     total += electronsinshell / std::max(ionpot, enbinding);
-
-    // printout("total %g\n", total);
   }
 
   return total;
