@@ -120,9 +120,9 @@ template <size_t S1, size_t S2>
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
 
   const double ndotv_on_c = dot(dir_rf, vel_rf) / CLIGHT;
-  double dopplerfactorsq = USE_RELATIVISTIC_DOPPLER_SHIFT
-                               ? std::pow(1. - ndotv_on_c, 2) / (1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED))
-                               : (1. - 2 * ndotv_on_c);
+  const double dopplerfactorsq = USE_RELATIVISTIC_DOPPLER_SHIFT
+                                     ? std::pow(1. - ndotv_on_c, 2) / (1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED))
+                                     : (1. - 2 * ndotv_on_c);
 
   assert_testmodeonly(std::isfinite(dopplerfactorsq));
   assert_testmodeonly(dopplerfactorsq > 0);
@@ -294,9 +294,9 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
   //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
 
-  auto e_cmf = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
-                                     e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
-                                     e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
+  const auto e_cmf = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
+                                           e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
+                                           e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
   return vec_norm(e_cmf);
 }
 
