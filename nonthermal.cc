@@ -2020,13 +2020,12 @@ void init(const int my_rank, const int ndo_nonempty) {
     sourcevec[s] = (s < sourcelowerindex) ? 0. : 1. / source_spread_en;
   }
 
-  // integrate the source vector to find the assumed injection rate
-  std::array<double, SFPTS> integralvec{};
+  double sourceintegral = 0.;  // integral of S(e) dE
   for (int s = 0; s < SFPTS; s++) {
-    integralvec[s] = sourcevec[s] * DELTA_E;
+    sourceintegral += sourcevec[s] * DELTA_E;
   }
-  const double sourceintegral = cblas_dasum(SFPTS, integralvec.data(), 1);  // integral of S(e) dE
 
+  // integrate the source vector to find the assumed injection rate
   E_init_ev = 0.;  // integral of E * S(e) dE
   for (int s = 0; s < SFPTS; s++) {
     E_init_ev += (sourcevec[s] * DELTA_E) * engrid(s);
@@ -2037,7 +2036,7 @@ void init(const int my_rank, const int ndo_nonempty) {
   // sourcevec[SFPTS - 1] = 1 / DELTA_E;
   // E_init_ev = SF_EMAX;
 
-  printout("E_init: %14.7e eV\n", E_init_ev);
+  printout("E_init: %14.7e eV/s/cm3\n", E_init_ev);
   printout("source function integral: %14.7e\n", sourceintegral);
 
   read_collion_data();
