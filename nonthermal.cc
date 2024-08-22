@@ -113,7 +113,19 @@ bool nonthermal_initialized = false;
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
 // samples of the source function (energy distribution of deposited energy)
-std::array<double, SFPTS> sourcevec{};
+const auto sourcevec = []() {
+  std::array<double, SFPTS> sourcevec{};
+  // const int source_spread_pts = std::ceil(SFPTS / 20);
+  constexpr int source_spread_pts = static_cast<int>(SFPTS * 0.03333) + 1;
+  constexpr double source_spread_en = source_spread_pts * DELTA_E;
+  constexpr int sourcelowerindex = SFPTS - source_spread_pts;
+
+  for (int s = 0; s < SFPTS; s++) {
+    // spread the source over some energy width
+    sourcevec[s] = (s < sourcelowerindex) ? 0. : 1. / source_spread_en;
+  }
+  return sourcevec;
+}();
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
 // This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.
@@ -1981,16 +1993,6 @@ void init(const int my_rank, const int ndo_nonempty) {
     }
 
     nt_solution[modelgridindex].frac_excitations_list_size = 0;
-  }
-
-  // const int source_spread_pts = std::ceil(SFPTS / 20);
-  constexpr int source_spread_pts = static_cast<int>(SFPTS * 0.03333) + 1;
-  constexpr double source_spread_en = source_spread_pts * DELTA_E;
-  constexpr int sourcelowerindex = SFPTS - source_spread_pts;
-
-  for (int s = 0; s < SFPTS; s++) {
-    // spread the source over some energy width
-    sourcevec[s] = (s < sourcelowerindex) ? 0. : 1. / source_spread_en;
   }
 
   double sourceintegral = 0.;  // integral of S(e) dE
