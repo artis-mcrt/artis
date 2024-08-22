@@ -884,8 +884,8 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
 
       const double eoverkt = epsilon_trans / (KB * T_e);
       // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-      const double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl -> n'l'
-                                 // and 0.7 for transitions nl -> nl'
+      constexpr double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl ->
+                                     // n'l' and 0.7 for transitions nl -> nl'
       // test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
       // crude approximation to the already crude Van-Regemorter formula
 
@@ -934,11 +934,11 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, const int elemen
       // osc_strength(element,ion,upper,lower);
 
       // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-      const double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl -> n'l'
-                                 // and 0.7 for transitions nl -> nl'
-      // test = 0.276 * exp(eoverkt) * gsl_sf_expint_E1(eoverkt);
+      constexpr double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl ->
+                                     // n'l' and 0.7 for transitions nl -> nl'
+      // test = 0.276 * std::exp(eoverkt) * gsl_sf_expint_E1(eoverkt);
       // crude approximation to the already crude Van-Regemorter formula
-      const double exp_eoverkt = exp(eoverkt);
+      const double exp_eoverkt = std::exp(eoverkt);
 
       const double test = 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt));
       const double Gamma = g_bar > test ? g_bar : test;
