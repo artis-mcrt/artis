@@ -2481,17 +2481,19 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   std::ranges::fill(sfmatrix, 0.);
 
   // rhs is the constant term (not dependent on y func) in each equation
-  std::array<double, SFPTS> rhsvec{};
+  const auto rhsvec = []() {
+    std::array<double, SFPTS> rhsvec{};
+    for (int i = 0; i < SFPTS; i++) {
+      const double source_integral_to_SF_EMAX = std::accumulate(sourcevec.begin() + i + 1, sourcevec.end(), 0.);
+      rhsvec[i] = source_integral_to_SF_EMAX * DELTA_E;
+    }
+    return rhsvec;
+  }();
 
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++) {
     sfmatrix[(i * SFPTS) + i] += electron_loss_rate(engrid(i) * EV, nne) / EV;
-
-    const double source_integral_to_SF_EMAX = std::accumulate(sourcevec.begin() + i + 1, sourcevec.end(), 0.);
-
-    rhsvec[i] = source_integral_to_SF_EMAX * DELTA_E;
   }
-  // gsl_vector_set_all(rhsvec, 1.); // alternative if all electrons are injected at SF_EMAX
 
   if (enable_sfexcitation || enable_sfionization) {
     for (int element = 0; element < get_nelements(); element++) {
