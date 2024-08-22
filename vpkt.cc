@@ -66,14 +66,12 @@ std::ofstream vpkt_contrib_file;
 // --------- VPacket GRID -----------
 
 struct VGrid {
-  std::vector<std::vector<double>> flux;
+  std::vector<std::vector<StokesParams>> flux;
   double yvel{NAN};
   double zvel{NAN};
 };
 
-std::array<std::array<VGrid, VGRID_NZ>, VGRID_NY> vgrid_i;
-std::array<std::array<VGrid, VGRID_NZ>, VGRID_NY> vgrid_q;
-std::array<std::array<VGrid, VGRID_NZ>, VGRID_NY> vgrid_u;
+std::array<std::array<VGrid, VGRID_NZ>, VGRID_NY> vgrid;
 
 int Nrange_grid;
 double tmin_grid;
@@ -155,9 +153,9 @@ void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> vel, const
 
   // Add contribution
   if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {
-    atomicadd(vgrid_i[ny][nz].flux[wlbin][obsdirindex], vpkt.stokes[0] * vpkt.e_rf);
-    atomicadd(vgrid_q[ny][nz].flux[wlbin][obsdirindex], vpkt.stokes[1] * vpkt.e_rf);
-    atomicadd(vgrid_u[ny][nz].flux[wlbin][obsdirindex], vpkt.stokes[2] * vpkt.e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].i, vpkt.stokes[0] * vpkt.e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].q, vpkt.stokes[1] * vpkt.e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].u, vpkt.stokes[2] * vpkt.e_rf);
   }
 }
 
@@ -550,22 +548,13 @@ void init_vpkt_grid() {
       const double yvel = globals::vmax - ((n + 0.5) * ybin);
       const double zvel = globals::vmax - ((m + 0.5) * zbin);
 
-      vgrid_i[n][m].yvel = yvel;
-      vgrid_i[n][m].zvel = zvel;
+      vgrid[n][m].yvel = yvel;
+      vgrid[n][m].zvel = zvel;
 
-      vgrid_q[n][m].yvel = yvel;
-      vgrid_q[n][m].zvel = zvel;
+      vgrid[n][m].flux.resize(Nrange_grid, {});
 
-      vgrid_u[n][m].yvel = yvel;
-      vgrid_u[n][m].zvel = zvel;
-
-      vgrid_i[n][m].flux.resize(Nrange_grid, {});
-      vgrid_q[n][m].flux.resize(Nrange_grid, {});
-      vgrid_u[n][m].flux.resize(Nrange_grid, {});
       for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
-        vgrid_i[n][m].flux[wlbin].resize(Nobs, 0.);
-        vgrid_q[n][m].flux[wlbin].resize(Nobs, 0.);
-        vgrid_u[n][m].flux[wlbin].resize(Nobs, 0.);
+        vgrid[n][m].flux[wlbin].resize(Nobs, {0., 0., 0.});
       }
     }
   }
@@ -576,12 +565,12 @@ void write_vpkt_grid(FILE *vpkt_grid_file) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
-          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].yvel);
-          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].zvel);
+          fprintf(vpkt_grid_file, "%g ", vgrid[n][m].yvel);
+          fprintf(vpkt_grid_file, "%g ", vgrid[n][m].zvel);
 
-          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].flux[wlbin][obsdirindex]);
-          fprintf(vpkt_grid_file, "%g ", vgrid_q[n][m].flux[wlbin][obsdirindex]);
-          fprintf(vpkt_grid_file, "%g ", vgrid_u[n][m].flux[wlbin][obsdirindex]);
+          fprintf(vpkt_grid_file, "%g ", vgrid[n][m].flux[wlbin][obsdirindex].i);
+          fprintf(vpkt_grid_file, "%g ", vgrid[n][m].flux[wlbin][obsdirindex].q);
+          fprintf(vpkt_grid_file, "%g ", vgrid[n][m].flux[wlbin][obsdirindex].u);
 
           fprintf(vpkt_grid_file, "\n");
         }
@@ -604,12 +593,12 @@ void read_vpkt_grid(const int my_rank, const int nts) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].yvel) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].zvel) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid[n][m].yvel) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid[n][m].zvel) == 1);
 
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].flux[wlbin][obsdirindex]) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_q[n][m].flux[wlbin][obsdirindex]) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_u[n][m].flux[wlbin][obsdirindex]) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid[n][m].flux[wlbin][obsdirindex].i) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid[n][m].flux[wlbin][obsdirindex].q) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid[n][m].flux[wlbin][obsdirindex].u) == 1);
 
           assert_always(fscanf(vpkt_grid_file, "\n") == 0);
         }
