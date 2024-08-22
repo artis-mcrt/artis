@@ -2028,7 +2028,7 @@ void init(const int my_rank, const int ndo_nonempty) {
   const double sourceintegral = cblas_dasum(SFPTS, integralvec.data(), 1);  // integral of S(e) dE
 
   for (int s = 0; s < SFPTS; s++) {
-    integralvec[s] *= engrid(s);
+    integralvec[s] = (sourcevec[s] * DELTA_E) * engrid(s);
   }
   E_init_ev = cblas_dasum(SFPTS, integralvec.data(), 1);  // integral of E * S(e) dE
 
