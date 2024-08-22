@@ -47,7 +47,7 @@ auto get_nlte_vector_index(const int element, const int ion, const int level) ->
   return level_index;
 }
 
-auto get_ion_level_of_nlte_vector_index(const int index, const int element) -> std::tuple<int, int> {
+[[nodiscard]] auto get_ion_level_of_nlte_vector_index(const int index, const int element) -> std::tuple<int, int> {
   // this could easily be optimized if need be
   for (int dion = 0; dion < get_nions(element); dion++) {
     for (int dlevel = 0; dlevel < get_nlevels(element, dion); dlevel++) {
@@ -118,8 +118,9 @@ void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_vector *
   }
 }
 
-auto get_total_rate(const int index_selected, const gsl_matrix *rate_matrix, const gsl_vector *popvec,
-                    const bool into_level, const bool only_levels_below, const bool only_levels_above) -> double {
+[[nodiscard]] auto get_total_rate(const int index_selected, const gsl_matrix *rate_matrix, const gsl_vector *popvec,
+                                  const bool into_level, const bool only_levels_below,
+                                  const bool only_levels_above) -> double {
   double total_rate = 0.;
   assert_always(!only_levels_below || !only_levels_above);
 
@@ -405,7 +406,7 @@ auto get_element_superlevelpartfuncs(const int modelgridindex, const int element
   return superlevel_partfuncs;
 }
 
-auto get_element_nlte_dimension(const int element) -> int {
+[[nodiscard]] auto get_element_nlte_dimension(const int element) -> int {
   int nlte_dimension = 0;
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++) {
@@ -423,7 +424,7 @@ auto get_element_nlte_dimension(const int element) -> int {
 }
 
 // get the maximum NLTE dimension for any of the included elements
-auto get_max_nlte_dimension() {
+[[nodiscard]] auto get_max_nlte_dimension() {
   int max_nlte_dimension = 0;
   for (int element = 0; element < get_nelements(); element++) {
     max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element));
@@ -640,9 +641,8 @@ void set_element_pops_lte(const int modelgridindex, const int element) {
   set_groundlevelpops(modelgridindex, element, grid::get_nne(modelgridindex), true);
 }
 
-auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {
+[[nodiscard]] auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {
   size_t const n = LU->size1;
-  bool is_singular = false;
 
   for (size_t i = 0; i < n; i++) {
     const double u = gsl_matrix_get(LU, i, i);
@@ -655,11 +655,11 @@ auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {
         printout("NLTE disconnected superlevel: Z=%d ionstage %d\n", get_atomicnumber(element),
                  get_ionstage(element, ion));
       }
-      is_singular = true;
+      return true;
     }
   }
 
-  return is_singular;
+  return false;
 }
 
 // solve rate_matrix * x = balance_vector,
