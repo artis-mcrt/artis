@@ -2025,11 +2025,7 @@ void init(const int my_rank, const int ndo_nonempty) {
     gsl_vector_set(gsl_logenvec, s, log(energy_ev));
 
     // spread the source over some energy width
-    if (s < sourcelowerindex) {
-      sourcevec[s] = 0.;
-    } else {
-      sourcevec[s] = 1. / source_spread_en;
-    }
+    sourcevec[s] = (s < sourcelowerindex) ? 0. : 1. / source_spread_en;
   }
 
   // integrate the source vector to find the assumed injection rate
