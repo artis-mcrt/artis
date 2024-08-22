@@ -65,15 +65,15 @@ std::ofstream vpkt_contrib_file;
 
 // --------- VPacket GRID -----------
 
-struct vgrid {
+struct VGrid {
   std::vector<std::vector<double>> flux;
   double yvel{NAN};
   double zvel{NAN};
 };
 
-std::array<std::array<vgrid, VGRID_NZ>, VGRID_NY> vgrid_i;
-std::array<std::array<vgrid, VGRID_NZ>, VGRID_NY> vgrid_q;
-std::array<std::array<vgrid, VGRID_NZ>, VGRID_NY> vgrid_u;
+std::array<std::array<VGrid, VGRID_NZ>, VGRID_NY> vgrid_i;
+std::array<std::array<VGrid, VGRID_NZ>, VGRID_NY> vgrid_q;
+std::array<std::array<VGrid, VGRID_NZ>, VGRID_NY> vgrid_u;
 
 int Nrange_grid;
 double tmin_grid;
