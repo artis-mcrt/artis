@@ -115,7 +115,7 @@ constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
 
 const auto logengrid = []() {
-  std::array<double, SFPTS> logengrid{};
+  std::vector<double> logengrid(SFPTS);
   for (int i = 0; i < SFPTS; i++) {
     logengrid[i] = std::log(engrid(i));
   }
