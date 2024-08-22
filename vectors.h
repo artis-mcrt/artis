@@ -35,6 +35,7 @@ template <size_t VECDIM>
 template <size_t S1, size_t S2>
 [[nodiscard]] [[gnu::const]] constexpr auto dot(const std::array<double, S1> x,
                                                 const std::array<double, S2> y) -> double {
+  // if len(x) < len(y), the extra elements of y are ignored
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
