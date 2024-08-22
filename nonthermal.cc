@@ -21,7 +21,6 @@
 #include <cstdlib>
 #include <functional>
 #include <ios>
-#include <numeric>
 #include <span>
 #include <sstream>
 #include <string>
@@ -145,6 +144,19 @@ const double E_init_ev = []() {
     integralvec[s] = (sourcevec[s] * DELTA_E) * engrid(s);
   }
   return cblas_dasum(SFPTS, integralvec.data(), 1);  // integral of E * S(e) dE
+}();
+
+// rhs is the constant term (not dependent on y func) in each equation
+const auto rhsvec = []() {
+  std::array<double, SFPTS> rhsvec{};
+  for (int i = 0; i < SFPTS; i++) {
+    double source_integral_to_SF_EMAX = 0.;
+    for (int j = i + 1; j < SFPTS; j++) {
+      source_integral_to_SF_EMAX += sourcevec[j];
+    }
+    rhsvec[i] = source_integral_to_SF_EMAX * DELTA_E;
+  }
+  return rhsvec;
 }();
 
 // Monte Carlo result - compare to analytical expectation
@@ -2441,19 +2453,6 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   THREADLOCALONHOST std::vector<double> sfmatrix(SFPTS * SFPTS);
   std::ranges::fill(sfmatrix, 0.);
-
-  // rhs is the constant term (not dependent on y func) in each equation
-  const auto rhsvec = []() {
-    std::array<double, SFPTS> rhsvec{};
-    for (int i = 0; i < SFPTS; i++) {
-      double source_integral_to_SF_EMAX = 0.;
-      for (int j = i + 1; j < SFPTS; j++) {
-        source_integral_to_SF_EMAX += sourcevec[j];
-      }
-      rhsvec[i] = source_integral_to_SF_EMAX * DELTA_E;
-    }
-    return rhsvec;
-  }();
 
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++) {
