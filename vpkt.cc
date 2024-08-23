@@ -31,25 +31,25 @@ struct StokesParams {
 };
 
 struct VSpecPol {
-  StokesParams flux[VMNUBINS];
+  std::array<StokesParams, VMNUBINS> flux;
   float lower_time{NAN};
   float delta_t{NAN};
 };
 
 std::vector<std::vector<VSpecPol>> vspecpol{};
 
-float lower_freq_vspec[VMNUBINS];
-float delta_freq_vspec[VMNUBINS];
+std::array<float, VMNUBINS> lower_freq_vspec;
+std::array<float, VMNUBINS> delta_freq_vspec;
 
 // --------- INPUT PARAMETERS -----------
 
-int Nobs;      // Number of observer directions
-int Nspectra;  // Number of virtual packet spectra per observer direction (total + elements switched off)
+int Nobs = 0;      // Number of observer directions
+int Nspectra = 0;  // Number of virtual packet spectra per observer direction (total + elements switched off)
 std::vector<double> nz_obs_vpkt;
 std::vector<double> phiobs;
 double VSPEC_TIMEMIN_input;
 double VSPEC_TIMEMAX_input;
-int Nrange;  // Number of wavelength ranges
+int Nrange = 0;  // Number of wavelength ranges
 
 std::vector<double> VSPEC_NUMIN_input;
 std::vector<double> VSPEC_NUMAX_input;
@@ -65,15 +65,13 @@ std::ofstream vpkt_contrib_file;
 
 // --------- VPacket GRID -----------
 
-struct vgrid {
-  std::vector<std::vector<double>> flux;
+struct VGrid {
+  std::vector<std::vector<StokesParams>> flux;
   double yvel{NAN};
   double zvel{NAN};
 };
 
-vgrid vgrid_i[VGRID_NY][VGRID_NZ];
-vgrid vgrid_q[VGRID_NY][VGRID_NZ];
-vgrid vgrid_u[VGRID_NY][VGRID_NZ];
+std::array<std::array<VGrid, VGRID_NZ>, VGRID_NY> vgrid;
 
 int Nrange_grid;
 double tmin_grid;
@@ -82,8 +80,8 @@ std::vector<double> nu_grid_min;
 std::vector<double> nu_grid_max;
 bool vgrid_on;
 
-double dlogt_vspec{NAN};
-double dlognu_vspec{NAN};
+const double dlogt_vspec = (std::log(VSPEC_TIMEMAX) - std::log(VSPEC_TIMEMIN)) / VMTBINS;
+const double dlognu_vspec = (std::log(VSPEC_NUMAX) - std::log(VSPEC_NUMIN)) / VMNUBINS;
 
 // Virtual packet is killed when tau reaches tau_max_vpkt for ALL the different setups
 // E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt
@@ -155,9 +153,9 @@ void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> vel, const
 
   // Add contribution
   if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {
-    atomicadd(vgrid_i[ny][nz].flux[wlbin][obsdirindex], vpkt.stokes[0] * vpkt.e_rf);
-    atomicadd(vgrid_q[ny][nz].flux[wlbin][obsdirindex], vpkt.stokes[1] * vpkt.e_rf);
-    atomicadd(vgrid_u[ny][nz].flux[wlbin][obsdirindex], vpkt.stokes[2] * vpkt.e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].i, vpkt.stokes[0] * vpkt.e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].q, vpkt.stokes[1] * vpkt.e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].u, vpkt.stokes[2] * vpkt.e_rf);
   }
 }
 
@@ -195,18 +193,18 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
 
-    auto old_dir_cmf = frame_transform(pkt.dir, &Qi, &Ui, vel_vec);
+    const auto old_dir_cmf = frame_transform(pkt.dir, &Qi, &Ui, vel_vec);
 
     // Need to rotate Stokes Parameters in the scattering plane
 
-    auto obs_cmf = angle_ab(vpkt.dir, vel_vec);
+    const auto obs_cmf = angle_ab(vpkt.dir, vel_vec);
 
-    auto [ref1_old, ref2_old] = meridian(old_dir_cmf);
+    const auto [ref1_old, ref2_old] = meridian(old_dir_cmf);
 
     // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
     // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
     // ref1_sc and ref2_sc in the scattering plane.
-    const double i1 = rot_angle(old_dir_cmf, obs_cmf, ref1_old, ref2_old);
+    const double i1 = get_rot_angle(old_dir_cmf, obs_cmf, ref1_old, ref2_old);
     const double cos2i1 = cos(2 * i1);
     const double sin2i1 = sin(2 * i1);
 
@@ -229,12 +227,12 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
     // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame
 
-    auto [ref1, ref2] = meridian(obs_cmf);
+    const auto [ref1, ref2] = meridian(obs_cmf);
 
     // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
     // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
     // meridian frame. NB: we need to add PI to transform THETA to i2
-    const double i2 = PI + rot_angle(obs_cmf, old_dir_cmf, ref1, ref2);
+    const double i2 = PI + get_rot_angle(obs_cmf, old_dir_cmf, ref1, ref2);
     const double cos2i2 = cos(2 * i2);
     const double sin2i2 = sin(2 * i2);
 
@@ -243,7 +241,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
     // Transform Stokes Parameters from the CMF to the RF
 
-    const std::array<double, 3> vel_rev{-vel_vec[0], -vel_vec[1], -vel_vec[2]};
+    const auto vel_rev = std::array<double, 3>{-vel_vec[0], -vel_vec[1], -vel_vec[2]};
 
     frame_transform(obs_cmf, &Q, &U, vel_rev);
 
@@ -434,9 +432,6 @@ void init_vspecpol() {
     vspecpol[p].resize(indexmax);
   }
 
-  dlogt_vspec = (log(VSPEC_TIMEMAX) - log(VSPEC_TIMEMIN)) / VMTBINS;
-  dlognu_vspec = (log(VSPEC_NUMAX) - log(VSPEC_NUMIN)) / VMNUBINS;
-
   for (int m = 0; m < VMNUBINS; m++) {
     lower_freq_vspec[m] = exp(log(VSPEC_NUMIN) + (m * (dlognu_vspec)));
     delta_freq_vspec[m] = exp(log(VSPEC_NUMIN) + ((m + 1) * (dlognu_vspec))) - lower_freq_vspec[m];
@@ -553,22 +548,13 @@ void init_vpkt_grid() {
       const double yvel = globals::vmax - ((n + 0.5) * ybin);
       const double zvel = globals::vmax - ((m + 0.5) * zbin);
 
-      vgrid_i[n][m].yvel = yvel;
-      vgrid_i[n][m].zvel = zvel;
+      vgrid[n][m].yvel = yvel;
+      vgrid[n][m].zvel = zvel;
 
-      vgrid_q[n][m].yvel = yvel;
-      vgrid_q[n][m].zvel = zvel;
+      vgrid[n][m].flux.resize(Nrange_grid, {});
 
-      vgrid_u[n][m].yvel = yvel;
-      vgrid_u[n][m].zvel = zvel;
-
-      vgrid_i[n][m].flux.resize(Nrange_grid, {});
-      vgrid_q[n][m].flux.resize(Nrange_grid, {});
-      vgrid_u[n][m].flux.resize(Nrange_grid, {});
       for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
-        vgrid_i[n][m].flux[wlbin].resize(Nobs, 0.);
-        vgrid_q[n][m].flux[wlbin].resize(Nobs, 0.);
-        vgrid_u[n][m].flux[wlbin].resize(Nobs, 0.);
+        vgrid[n][m].flux[wlbin].resize(Nobs, {0., 0., 0.});
       }
     }
   }
@@ -579,14 +565,9 @@ void write_vpkt_grid(FILE *vpkt_grid_file) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
-          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].yvel);
-          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].zvel);
-
-          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].flux[wlbin][obsdirindex]);
-          fprintf(vpkt_grid_file, "%g ", vgrid_q[n][m].flux[wlbin][obsdirindex]);
-          fprintf(vpkt_grid_file, "%g ", vgrid_u[n][m].flux[wlbin][obsdirindex]);
-
-          fprintf(vpkt_grid_file, "\n");
+          fprintf(vpkt_grid_file, "%g %g %g %g %g \n", vgrid[n][m].yvel, vgrid[n][m].zvel,
+                  vgrid[n][m].flux[wlbin][obsdirindex].i, vgrid[n][m].flux[wlbin][obsdirindex].q,
+                  vgrid[n][m].flux[wlbin][obsdirindex].u);
         }
       }
     }
@@ -607,14 +588,9 @@ void read_vpkt_grid(const int my_rank, const int nts) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].yvel) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].zvel) == 1);
-
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].flux[wlbin][obsdirindex]) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_q[n][m].flux[wlbin][obsdirindex]) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_u[n][m].flux[wlbin][obsdirindex]) == 1);
-
-          assert_always(fscanf(vpkt_grid_file, "\n") == 0);
+          assert_always(fscanf(vpkt_grid_file, "%lg %lg %lg %lg %lg \n", &vgrid[n][m].yvel, &vgrid[n][m].zvel,
+                               &vgrid[n][m].flux[wlbin][obsdirindex].i, &vgrid[n][m].flux[wlbin][obsdirindex].q,
+                               &vgrid[n][m].flux[wlbin][obsdirindex].u) == 5);
         }
       }
     }
@@ -949,7 +925,7 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
   for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
     // loop over different observer directions
 
-    const std::array<double, 3> obsdir{
+    const auto obsdir = std::array<double, 3>{
         sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * cos(phiobs[obsdirindex]),
         sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * sin(phiobs[obsdirindex]),
         nz_obs_vpkt[obsdirindex]};

@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <tuple>
 #include <vector>
 
 #include "artisoptions.h"
@@ -32,27 +33,6 @@ FILE *nlte_file{};
 // can save memory by using a combined rate matrix at the cost of diagnostic information
 constexpr bool individual_process_matricies = true;
 
-// the backing storage for the gsl matrices
-thread_local std::vector<double> vec_rate_matrix;
-thread_local std::vector<double> vec_rate_matrix_rad_bb;
-thread_local std::vector<double> vec_rate_matrix_coll_bb;
-thread_local std::vector<double> vec_rate_matrix_ntcoll_bb;
-thread_local std::vector<double> vec_rate_matrix_rad_bf;
-thread_local std::vector<double> vec_rate_matrix_coll_bf;
-thread_local std::vector<double> vec_rate_matrix_ntcoll_bf;
-
-thread_local std::vector<double> vec_rate_matrix_LU_decomp;
-
-// backing storage for gsl vectors
-thread_local std::vector<double> vec_balance_vector;
-thread_local std::vector<double> vec_pop_norm_factor_vec;
-thread_local std::vector<double> vec_pop_vec;
-thread_local std::vector<double> vec_x;
-thread_local std::vector<size_t> vec_permutation;
-thread_local std::vector<double> vec_work_vector;
-thread_local std::vector<double> vec_x_best;
-thread_local std::vector<double> vec_residual_vector;
-
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
 auto get_nlte_vector_index(const int element, const int ion, const int level) -> int {
@@ -68,17 +48,17 @@ auto get_nlte_vector_index(const int element, const int ion, const int level) ->
   return level_index;
 }
 
-void get_ion_level_of_nlte_vector_index(const int index, const int element, int *const ion, int *const level) {
+[[nodiscard]] auto get_ion_level_of_nlte_vector_index(const int index, const int element) -> std::tuple<int, int> {
   // this could easily be optimized if need be
   for (int dion = 0; dion < get_nions(element); dion++) {
     for (int dlevel = 0; dlevel < get_nlevels(element, dion); dlevel++) {
       if (get_nlte_vector_index(element, dion, dlevel) == index) {
-        *ion = dion;
-        *level = dlevel;
-        return;
+        return {dion, dlevel};
       }
     }
   }
+  assert_always(false);
+  return {-1, -1};
 }
 
 void eliminate_nlte_matrix_rowcol(const int index, const int gs_index, gsl_matrix *rate_matrix,
@@ -119,9 +99,7 @@ void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_vector *
       const double element_value = fabs(gsl_matrix_get(rate_matrix, row, index));
       col_max = std::max(element_value, col_max);
     }
-    int ion = -1;
-    int level = -1;
-    get_ion_level_of_nlte_vector_index(index, element, &ion, &level);
+    const auto [ion, level] = get_ion_level_of_nlte_vector_index(index, element);
     // printout("index%4d (ionstage%2d level%4d) row_max %.1e col_max %.1e ",
     //          index,get_ionstage(element,ion),level,row_max,col_max);
 
@@ -141,8 +119,9 @@ void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_vector *
   }
 }
 
-auto get_total_rate(const int index_selected, const gsl_matrix *rate_matrix, const gsl_vector *popvec,
-                    const bool into_level, const bool only_levels_below, const bool only_levels_above) -> double {
+[[nodiscard]] auto get_total_rate(const int index_selected, const gsl_matrix *rate_matrix, const gsl_vector *popvec,
+                                  const bool into_level, const bool only_levels_below,
+                                  const bool only_levels_above) -> double {
   double total_rate = 0.;
   assert_always(!only_levels_below || !only_levels_above);
 
@@ -358,9 +337,7 @@ void print_level_rates(const int modelgridindex, const int timestep, const int e
     if (index == selected_index) {
       continue;
     }
-    int ion = -1;
-    int level = -1;
-    get_ion_level_of_nlte_vector_index(index, element, &ion, &level);
+    const auto [ion, level] = get_ion_level_of_nlte_vector_index(index, element);
     const int ionstage = get_ionstage(element, ion);
     // in means populating the selected level, out means depopulating the selected level
     const double pop = gsl_vector_get(popvec, index);
@@ -430,7 +407,7 @@ auto get_element_superlevelpartfuncs(const int modelgridindex, const int element
   return superlevel_partfuncs;
 }
 
-auto get_element_nlte_dimension(const int element) -> int {
+[[nodiscard]] auto get_element_nlte_dimension(const int element) -> int {
   int nlte_dimension = 0;
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++) {
@@ -448,7 +425,7 @@ auto get_element_nlte_dimension(const int element) -> int {
 }
 
 // get the maximum NLTE dimension for any of the included elements
-auto get_max_nlte_dimension() {
+[[nodiscard]] auto get_max_nlte_dimension() {
   int max_nlte_dimension = 0;
   for (int element = 0; element < get_nelements(); element++) {
     max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element));
@@ -632,9 +609,7 @@ void nltepop_matrix_normalise(const int modelgridindex, const int element, gsl_m
   // TODO: consider replacing normalisation by LTE populations with
   // GSL's gsl_linalg_balance_matrix(gsl_matrix * A, gsl_vector * D) function instead
   for (size_t column = 0; column < nlte_dimension; column++) {
-    int ion = -1;
-    int level = -1;
-    get_ion_level_of_nlte_vector_index(column, element, &ion, &level);
+    const auto [ion, level] = get_ion_level_of_nlte_vector_index(column, element);
 
     gsl_vector_set(pop_norm_factor_vec, column, calculate_levelpop_lte(modelgridindex, element, ion, level));
 
@@ -667,16 +642,13 @@ void set_element_pops_lte(const int modelgridindex, const int element) {
   set_groundlevelpops(modelgridindex, element, grid::get_nne(modelgridindex), true);
 }
 
-auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {
+[[nodiscard]] auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {
   size_t const n = LU->size1;
-  bool is_singular = false;
 
   for (size_t i = 0; i < n; i++) {
     const double u = gsl_matrix_get(LU, i, i);
     if (u == 0) {
-      int ion = -1;
-      int level = -1;
-      get_ion_level_of_nlte_vector_index(i, element, &ion, &level);
+      const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element);
       if (is_nlte(element, ion, level)) {
         printout("NLTE disconnected level: Z=%d ionstage %d level %d\n", get_atomicnumber(element),
                  get_ionstage(element, ion), level);
@@ -684,33 +656,38 @@ auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {
         printout("NLTE disconnected superlevel: Z=%d ionstage %d\n", get_atomicnumber(element),
                  get_ionstage(element, ion));
       }
-      is_singular = true;
+      return true;
     }
   }
 
-  return is_singular;
+  return false;
 }
 
 // solve rate_matrix * x = balance_vector,
 // then popvec[i] = x[i] / pop_norm_factor_vec[i]
 auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, const gsl_vector *balance_vector,
-                          gsl_vector *popvec, const gsl_vector *pop_normfactor_vec) -> bool {
+                          gsl_vector *popvec, const gsl_vector *pop_normfactor_vec,
+                          const int max_nlte_dimension) -> bool {
   bool completed_solution = false;
   const size_t nlte_dimension = balance_vector->size;
   assert_always(pop_normfactor_vec->size == nlte_dimension);
   assert_always(rate_matrix->size1 == nlte_dimension);
   assert_always(rate_matrix->size2 == nlte_dimension);
 
-  vec_x.resize(vec_pop_norm_factor_vec.size());
+  // backing storage for gsl vectors
+  THREADLOCALONHOST std::vector<double> vec_x;
+  vec_x.resize(max_nlte_dimension);
   gsl_vector x = gsl_vector_view_array(vec_x.data(), nlte_dimension).vector;
 
-  vec_rate_matrix_LU_decomp.resize(vec_rate_matrix.size());
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_LU_decomp;
+  vec_rate_matrix_LU_decomp.resize(max_nlte_dimension * max_nlte_dimension);
   // make a copy of the rate matrix for the LU decomp
   gsl_matrix rate_matrix_LU_decomp =
       gsl_matrix_view_array(vec_rate_matrix_LU_decomp.data(), nlte_dimension, nlte_dimension).matrix;
   gsl_matrix_memcpy(&rate_matrix_LU_decomp, rate_matrix);
 
-  vec_permutation.resize(vec_pop_norm_factor_vec.size());
+  THREADLOCALONHOST std::vector<size_t> vec_permutation;
+  vec_permutation.resize(max_nlte_dimension);
   gsl_permutation p{.size = nlte_dimension, .data = vec_permutation.data()};
 
   int s = 0;  // sign of the transformation
@@ -731,18 +708,20 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
     // gsl_linalg_HH_solve (&m.matrix, &b.vector, x);
 
     const double TOLERANCE = 1e-40;
-
-    vec_work_vector.resize(vec_pop_norm_factor_vec.size());
-    gsl_vector gsl_work_vector = gsl_vector_view_array(vec_work_vector.data(), nlte_dimension).vector;
+    THREADLOCALONHOST std::vector<double> vec_work;
+    vec_work.resize(max_nlte_dimension);
+    gsl_vector gsl_work_vector = gsl_vector_view_array(vec_work.data(), nlte_dimension).vector;
 
     double error_best = -1.;
 
     // population solution vector with lowest error
-    vec_x_best.resize(vec_pop_norm_factor_vec.size());
-    gsl_vector x_best = gsl_vector_view_array(vec_x_best.data(), nlte_dimension).vector;
+    THREADLOCALONHOST std::vector<double> vec_x_best;
+    vec_x_best.resize(max_nlte_dimension);
+    gsl_vector gsl_x_best = gsl_vector_view_array(vec_x_best.data(), nlte_dimension).vector;
 
-    vec_residual_vector.resize(vec_pop_norm_factor_vec.size());
-    gsl_vector residual_vector = gsl_vector_view_array(vec_residual_vector.data(), nlte_dimension).vector;
+    THREADLOCALONHOST std::vector<double> vec_residual;
+    vec_residual.resize(max_nlte_dimension);
+    gsl_vector gsl_vec_residual = gsl_vector_view_array(vec_residual.data(), nlte_dimension).vector;
 
     int iteration = 0;
     for (iteration = 0; iteration < 10; iteration++) {
@@ -750,13 +729,13 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
         gsl_linalg_LU_refine(rate_matrix, &rate_matrix_LU_decomp, &p, balance_vector, &x, &gsl_work_vector);
       }
 
-      gsl_vector_memcpy(&residual_vector, balance_vector);
-      gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, &x, -1.0, &residual_vector);  // calculate Ax - b = residual
+      gsl_vector_memcpy(&gsl_vec_residual, balance_vector);
+      gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, &x, -1.0, &gsl_vec_residual);  // calculate Ax - b = residual
       const double error = fabs(gsl_vector_get(
-          &residual_vector, gsl_blas_idamax(&residual_vector)));  // value of the largest absolute residual
+          &gsl_vec_residual, gsl_blas_idamax(&gsl_vec_residual)));  // value of the largest absolute residual
 
       if (error < error_best || error_best < 0.) {
-        gsl_vector_memcpy(&x_best, &x);
+        gsl_vector_memcpy(&gsl_x_best, &x);
         error_best = error;
       }
       // printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
@@ -774,7 +753,7 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
             iteration, error_best);
       }
 
-      gsl_vector_memcpy(&x, &x_best);
+      gsl_vector_memcpy(&x, &gsl_x_best);
     }
 
     // get the real populations using the x vector and the normalisation factors
@@ -787,9 +766,7 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
       gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
       gsl_blas_ddot(&row_view.vector, &x, &recovered_balance_vector_elem);
 
-      int ion = 0;
-      int level = 0;
-      get_ion_level_of_nlte_vector_index(row, element, &ion, &level);
+      const auto [ion, level] = get_ion_level_of_nlte_vector_index(row, element);
 
       // printout("index %4d (ionstage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e
       // departure ratio %.4f\n",
@@ -858,6 +835,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   const auto max_nlte_dimension = get_max_nlte_dimension();
 
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix;
   vec_rate_matrix.resize(max_nlte_dimension * max_nlte_dimension);
   auto rate_matrix = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension).matrix;
   gsl_matrix_set_all(&rate_matrix, 0.);
@@ -869,6 +847,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_matrix rate_matrix_coll_bf;
   gsl_matrix rate_matrix_ntcoll_bf;
 
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bb;
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bb;
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_ntcoll_bb;
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bf;
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bf;
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_ntcoll_bf;
   if constexpr (individual_process_matricies) {
     vec_rate_matrix_rad_bb.resize(max_nlte_dimension * max_nlte_dimension);
     rate_matrix_rad_bb = gsl_matrix_view_array(vec_rate_matrix_rad_bb.data(), nlte_dimension, nlte_dimension).matrix;
@@ -912,12 +896,10 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     // printout(" %d", ionstage);
 
     const int nlevels = get_nlevels(element, ion);
-    const int nlevels_nlte = get_nlevels_nlte(element, ion);
+    const int nlevels_nlte = get_nlevels_nlte(element, ion);  // does not count the ground state!
 
     auto s_renorm = std::vector<double>(nlevels);
-    for (int level = 0; level <= nlevels_nlte; level++) {
-      s_renorm[level] = 1.;
-    }
+    std::fill_n(s_renorm.begin(), nlevels_nlte + 1, 1.);
 
     for (int level = (nlevels_nlte + 1); level < nlevels; level++) {
       s_renorm[level] = superlevel_boltzmann(modelgridindex, element, ion, level) / superlevel_partfunc[ion];
@@ -951,6 +933,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_vector_view first_row_view = gsl_matrix_row(&rate_matrix, 0);
   gsl_vector_set_all(&first_row_view.vector, 1.0);
 
+  THREADLOCALONHOST std::vector<double> vec_balance_vector;
   vec_balance_vector.resize(max_nlte_dimension);
   auto balance_vector = gsl_vector_view_array(vec_balance_vector.data(), nlte_dimension).vector;
   gsl_vector_set_all(&balance_vector, 0.);
@@ -978,6 +961,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   // calculate the normalisation factors and apply them to the matrix
   // columns and balance vector elements
+  THREADLOCALONHOST std::vector<double> vec_pop_norm_factor_vec;
   vec_pop_norm_factor_vec.resize(max_nlte_dimension);
   auto pop_norm_factor_vec = gsl_vector_view_array(vec_pop_norm_factor_vec.data(), nlte_dimension).vector;
   gsl_vector_set_all(&pop_norm_factor_vec, 1.0);
@@ -1005,12 +989,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   // filter_nlte_matrix(element, rate_matrix, balance_vector, pop_norm_factor_vec);
 
   // the true population densities
-
-  vec_pop_vec.resize(max_nlte_dimension);
-  auto popvec = gsl_vector_view_array(vec_pop_vec.data(), nlte_dimension).vector;
+  THREADLOCALONHOST std::vector<double> vec_pop;
+  vec_pop.resize(max_nlte_dimension);
+  auto popvec = gsl_vector_view_array(vec_pop.data(), nlte_dimension).vector;
 
   const bool matrix_solve_success =
-      nltepop_matrix_solve(element, &rate_matrix, &balance_vector, &popvec, &pop_norm_factor_vec);
+      nltepop_matrix_solve(element, &rate_matrix, &balance_vector, &popvec, &pop_norm_factor_vec, max_nlte_dimension);
 
   if (!matrix_solve_success) {
     printout(

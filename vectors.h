@@ -25,7 +25,7 @@ template <size_t VECDIM>
 // get a normalized copy of vec_in
 [[nodiscard]] [[gnu::const]] constexpr auto vec_norm(const std::array<double, 3> vec_in) {
   const double magnitude = vec_len(vec_in);
-  const auto vec_out = std::array<double, 3>{vec_in[0] / magnitude, vec_in[1] / magnitude, vec_in[2] / magnitude};
+  const std::array<double, 3> vec_out{vec_in[0] / magnitude, vec_in[1] / magnitude, vec_in[2] / magnitude};
 
   assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
   return vec_out;
@@ -35,6 +35,7 @@ template <size_t VECDIM>
 template <size_t S1, size_t S2>
 [[nodiscard]] [[gnu::const]] constexpr auto dot(const std::array<double, S1> x,
                                                 const std::array<double, S2> y) -> double {
+  // if len(x) < len(y), the extra elements of y are ignored
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
@@ -68,8 +69,8 @@ template <size_t S1, size_t S2>
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
   const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
-  std::array<double, 3> dir2{(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
-                             (dir1[2] - (vel[2] * fact2)) / fact1};
+  const auto dir2 = std::array<double, 3>{(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
+                                          (dir1[2] - (vel[2] * fact2)) / fact1};
 
   return vec_norm(dir2);
 }
@@ -119,9 +120,9 @@ template <size_t S1, size_t S2>
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
 
   const double ndotv_on_c = dot(dir_rf, vel_rf) / CLIGHT;
-  double dopplerfactorsq = USE_RELATIVISTIC_DOPPLER_SHIFT
-                               ? std::pow(1. - ndotv_on_c, 2) / (1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED))
-                               : (1. - 2 * ndotv_on_c);
+  const double dopplerfactorsq = USE_RELATIVISTIC_DOPPLER_SHIFT
+                                     ? std::pow(1. - ndotv_on_c, 2) / (1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED))
+                                     : (1. - 2 * ndotv_on_c);
 
   assert_testmodeonly(std::isfinite(dopplerfactorsq));
   assert_testmodeonly(dopplerfactorsq > 0);
@@ -129,14 +130,14 @@ template <size_t S1, size_t S2>
   return dopplerfactorsq;
 }
 
-[[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(std::span<const double, 3> pos_rf,
+[[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(const std::span<const double, 3> pos_rf,
                                                                         const std::array<double, 3> dir_rf,
                                                                         const double prop_time) -> double {
   return doppler_nucmf_on_nurf(dir_rf, get_velocity(pos_rf, prop_time));
 }
 
 // Move a packet along a straight line (specified by current dir vector). The distance moved is in the rest frame.
-constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, const std::array<double, 3> dir_rf, double &prop_time,
+constexpr auto move_pkt_withtime(std::array<double, 3> &pos_rf, const std::array<double, 3> dir_rf, double &prop_time,
                                  const double nu_rf, double &nu_cmf, const double e_rf, double &e_cmf,
                                  const double distance) -> double {
   assert_always(distance >= 0);
@@ -219,9 +220,10 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 }
 
 // Rotation angle from the scattering plane
-[[nodiscard]] [[gnu::const]] constexpr auto rot_angle(const std::array<double, 3> n1, const std::array<double, 3> n2,
-                                                      const std::array<double, 3> ref1,
-                                                      const std::array<double, 3> ref2) -> double {
+[[nodiscard]] [[gnu::const]] constexpr auto get_rot_angle(const std::array<double, 3> n1,
+                                                          const std::array<double, 3> n2,
+                                                          const std::array<double, 3> ref1,
+                                                          const std::array<double, 3> ref2) -> double {
   // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
   // the meridian frame such that Q=1 is in the scattering plane and along ref1
 
@@ -275,10 +277,10 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 
   const double gamma_rel = 1. / (sqrt(1 - vsqr));
 
-  const std::array<double, 3> e_par{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
-                                    dot(e_rf, beta) * beta[2] / (vsqr)};
+  const auto e_par = std::array<double, 3>{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
+                                           dot(e_rf, beta) * beta[2] / (vsqr)};
 
-  const std::array<double, 3> e_perp{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
+  const auto e_perp = std::array<double, 3>{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
 
   const auto b_rf = cross_prod(n_rf, e_rf);
 
@@ -292,9 +294,9 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
   //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
 
-  auto e_cmf = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
-                                     e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
-                                     e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
+  const auto e_cmf = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
+                                           e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
+                                           e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
   return vec_norm(e_cmf);
 }
 

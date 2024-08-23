@@ -16,9 +16,18 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cassert>
+#include <csignal>
+#include <cstdio>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <limits>
 #include <memory>
+#ifndef GPU_ON
+#include <random>
+#endif
 #include <string>
 #include <tuple>
 
@@ -46,14 +55,10 @@
 #include <mpi.h>
 #endif
 
-#include <cassert>
-#include <csignal>
-#include <cstdio>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#ifndef GPU_ON
-#include <random>
+#ifdef __NVCOMPILER_CUDA_ARCH__
+#define THREADLOCALONHOST
+#else
+#define THREADLOCALONHOST thread_local static
 #endif
 
 #include "constants.h"

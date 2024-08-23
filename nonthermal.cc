@@ -109,20 +109,55 @@ std::vector<collionrow> colliondata;
 FILE *nonthermalfile{};
 bool nonthermal_initialized = false;
 
-gsl_vector *envec;      // energy grid on which solution is sampled
-gsl_vector *logenvec;   // log of envec
-gsl_vector *sourcevec;  // samples of the source function (energy distribution of deposited energy)
+constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
-// Samples of the Spencer-Fano solution function for the current cell being worked on. Multiply by energy to get
-// non-thermal electron number flux. y(E) * dE is the flux of electrons with energy in the range (E, E + dE) in units of
-// particles/cm2/s. y has units of particles/cm2/s/eV
-thread_local std::array<double, SFPTS> yfunc{};
+// energy grid on which solution is sampled
+constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
+
+const auto logengrid = []() {
+  std::vector<double> logengrid(SFPTS);
+  for (int i = 0; i < SFPTS; i++) {
+    logengrid[i] = std::log(engrid(i));
+  }
+  return logengrid;
+}();
+
+// samples of the source function (energy distribution of deposited energy)
+constexpr auto sourcevec(const int index) {
+  assert_testmodeonly(index >= 0 && index < SFPTS);
+
+  // spread the source over some energy width
+  constexpr int source_spread_pts = static_cast<int>(SFPTS * 0.03333) + 1;
+  constexpr double source_spread_en = source_spread_pts * DELTA_E;
+  constexpr int sourcestartindex = SFPTS - source_spread_pts;
+
+  return (index < sourcestartindex) ? 0. : 1. / source_spread_en;
+
+  // or put all of the source into one point at SF_EMAX
+  // return (index < SFPTS - 1) ? 0. : 1. / DELTA_E;
+  // so that E_init_ev = SF_EMAX;
+};
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
 // This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.
-double E_init_ev = 0;
+constexpr double E_init_ev = []() {
+  double integral = 0.;
+  for (int s = 0; s < SFPTS; s++) {
+    integral += sourcevec(s) * DELTA_E * engrid(s);
+  }
+  return integral;
+}();
 
-constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
+// rhs is the constant term (not dependent on y func) in each equation
+constexpr auto rhsvec = []() {
+  std::array<double, SFPTS> rhsvec{};
+  double source_integral_to_SF_EMAX = 0.;
+  for (int i = SFPTS - 1; i >= 0; i--) {
+    rhsvec[i] = source_integral_to_SF_EMAX * DELTA_E;
+    source_integral_to_SF_EMAX += sourcevec(i);
+  }
+  return rhsvec;
+}();
 
 // Monte Carlo result - compare to analytical expectation
 double nt_energy_deposited = 0;
@@ -132,9 +167,6 @@ struct NonThermalExcitation {
   double ratecoeffperdeposition;  // the excitation rate coefficient divided by the deposition rate density
   int lineindex;
 };
-
-// temporary storage of full excitation list for current cell before possible truncation and copy to node-shared memory
-thread_local std::vector<NonThermalExcitation> tmp_excitation_list;
 
 // pointer to either local or node-shared memory excitation list of all cells
 NonThermalExcitation *excitations_list_all_cells{};
@@ -473,6 +505,8 @@ void read_collion_data() {
 }
 
 auto get_possible_nt_excitation_count() -> int {
+  // count the number of excitation transitions that pass the MAXNLEVELS_LOWER and MAXNLEVELS_UPPER conditions
+  // this count might be higher than the number of stored ratecoeffs due to the MAX_NT_EXCITATIONS_STORED limit
   int ntexcitationcount = 0;
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
@@ -511,7 +545,7 @@ void zero_all_effionpot(const int modelgridindex) {
 auto get_energyindex_ev_lteq(const double energy_ev) -> int
 // finds the highest energy point <= energy_ev
 {
-  const int index = floor((energy_ev - SF_EMIN) / DELTA_E);
+  const int index = std::floor((energy_ev - SF_EMIN) / DELTA_E);
 
   if (index < 0) {
     return 0;
@@ -525,7 +559,7 @@ auto get_energyindex_ev_lteq(const double energy_ev) -> int
 auto get_energyindex_ev_gteq(const double energy_ev) -> int
 // finds the highest energy point <= energy_ev
 {
-  const int index = ceil((energy_ev - SF_EMIN) / DELTA_E);
+  const int index = std::ceil((energy_ev - SF_EMIN) / DELTA_E);
 
   if (index < 0) {
     return 0;
@@ -538,7 +572,7 @@ auto get_energyindex_ev_gteq(const double energy_ev) -> int
 
 // interpolate the y flux values to get the value at a given energy
 // y has units of particles / cm2 / s / eV
-auto get_y(const double energy_ev) -> double {
+auto get_y(const std::array<double, SFPTS> &yfunc, const double energy_ev) -> double {
   if (energy_ev <= 0) {
     return 0.;
   }
@@ -554,8 +588,8 @@ auto get_y(const double energy_ev) -> double {
   if (index >= SFPTS - 1) {
     return 0.;
   }
-  const double enbelow = gsl_vector_get(envec, index);
-  const double enabove = gsl_vector_get(envec, index + 1);
+  const double enbelow = engrid(index);
+  const double enabove = engrid(index + 1);
   const double ybelow = yfunc[index];
   const double yabove = yfunc[index + 1];
   const double x = (energy_ev - enbelow) / (enabove - enbelow);
@@ -565,7 +599,8 @@ auto get_y(const double energy_ev) -> double {
   // return yfunc[index];
 }
 
-void nt_write_to_file(const int modelgridindex, const int timestep, const int iteration) {
+void nt_write_to_file(const int modelgridindex, const int timestep, const int iteration,
+                      const std::array<double, SFPTS> &yfunc) {
 #ifdef _OPENMP
 #pragma omp critical(nonthermal_out_file)
   {
@@ -595,8 +630,8 @@ void nt_write_to_file(const int modelgridindex, const int timestep, const int it
 #endif
 
     for (int s = 0; s < SFPTS; s++) {
-      fprintf(nonthermalfile, "%d %d %d %.5e %.5e %.5e\n", timestep, modelgridindex, s, gsl_vector_get(envec, s),
-              gsl_vector_get(sourcevec, s), yscalefactor * yfunc[s]);
+      fprintf(nonthermalfile, "%d %d %d %.5e %.5e %.5e\n", timestep, modelgridindex, s, engrid(s), sourcevec(s),
+              yscalefactor * yfunc[s]);
     }
     fflush(nonthermalfile);
 #ifdef _OPENMP
@@ -606,14 +641,11 @@ void nt_write_to_file(const int modelgridindex, const int timestep, const int it
 
 // xs_vec will be set with impact ionization cross sections for E > ionpot_ev (and zeros below this energy)
 // returns the index of the first energy point >= ionpot_ev
-auto get_xs_ionization_vector(gsl_vector *const xs_vec, const collionrow &colliondata) -> int {
+auto get_xs_ionization_vector(std::array<double, SFPTS> &xs_vec, const collionrow &colliondata) -> int {
   const double ionpot_ev = colliondata.ionpot_ev;
   const int startindex = get_energyindex_ev_gteq(ionpot_ev);
 
-  // en points for which en < ionpot
-  for (int i = 0; i < startindex; i++) {
-    gsl_vector_set(xs_vec, i, 0.);
-  }
+  std::fill_n(xs_vec.begin(), startindex, 0.);
 
   const double A = colliondata.A;
   const double B = colliondata.B;
@@ -621,10 +653,10 @@ auto get_xs_ionization_vector(gsl_vector *const xs_vec, const collionrow &collio
   const double D = colliondata.D;
 
   for (int i = startindex; i < SFPTS; i++) {
-    const double u = gsl_vector_get(envec, i) / ionpot_ev;
+    const double u = engrid(i) / ionpot_ev;
     const double xs_ioniz =
         1e-14 * (A * (1 - 1 / u) + B * pow((1 - (1 / u)), 2) + C * log(u) + D * log(u) / u) / (u * pow(ionpot_ev, 2));
-    gsl_vector_set(xs_vec, i, xs_ioniz);
+    xs_vec[i] = xs_ioniz;
   }
 
   return startindex;
@@ -684,12 +716,12 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
     // permitted E1 electric dipole transitions
     const double U = energy / epsilon_trans;
 
-    // const double g_bar = 0.2;
-    const double A = 0.28;
-    const double B = 0.15;
+    // constexpr double g_bar = 0.2;
+    constexpr double A = 0.28;
+    constexpr double B = 0.15;
     const double g_bar = (A * log(U)) + B;
 
-    const double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
+    constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
     return prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * trans_osc_strength * g_bar / U;
   }
@@ -708,12 +740,12 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
   // normally set to 1.0, but Shingles et al. (2021) boosted this to increase heating
   constexpr double boostfactor = 1.;
 
-  const double omegap = sqrt(4 * PI * nne * pow(QE, 2) / ME);
+  const double omegap = std::sqrt(4 * PI * nne * pow(QE, 2) / ME);
   const double zetae = H * omegap / 2 / PI;
   if (energy > 14 * EV) {
     return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(2 * energy / zetae);
   }
-  const double v = sqrt(2 * energy / ME);
+  const double v = std::sqrt(2 * energy / ME);
   return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(ME * pow(v, 3) / (EULERGAMMA * pow(QE, 2) * omegap));
 }
 
@@ -739,7 +771,7 @@ constexpr auto xs_impactionization(const double energy_ev, const collionrow &col
 // Kozma & Fransson equation 6.
 // Something related to a number of electrons, needed to calculate the heating fraction in equation 3
 // not valid for energy > SF_EMIN
-auto N_e(const int modelgridindex, const double energy) -> double {
+auto N_e(const int modelgridindex, const double energy, const std::array<double, SFPTS> &yfunc) -> double {
   const double energy_ev = energy / EV;
   const double tot_nion = get_nnion_tot(modelgridindex);
   double N_e = 0.;
@@ -775,7 +807,7 @@ auto N_e(const int modelgridindex, const double energy) -> double {
           }
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double epsilon_trans_ev = epsilon_trans / EV;
-          N_e_ion += (nnlevel / nnion) * get_y(energy_ev + epsilon_trans_ev) *
+          N_e_ion += (nnlevel / nnion) * get_y(yfunc, energy_ev + epsilon_trans_ev) *
                      xs_excitation(element, ion, lower, t, epsilon_trans, statweight_lower, energy + epsilon_trans);
         }
       }
@@ -792,20 +824,18 @@ auto N_e(const int modelgridindex, const double energy) -> double {
 
           // integral from ionpot up to lambda
           for (int i = integral1startindex; i <= integral1stopindex; i++) {
-            const double endash = gsl_vector_get(envec, i);
-            const double delta_endash = DELTA_E;
+            const double endash = engrid(i);
 
-            N_e_ion += get_y(energy_ev + endash) * xs_impactionization(energy_ev + endash, collionrow) *
-                       Psecondary(energy_ev + endash, endash, ionpot_ev, J) * delta_endash;
+            N_e_ion += get_y(yfunc, energy_ev + endash) * xs_impactionization(energy_ev + endash, collionrow) *
+                       Psecondary(energy_ev + endash, endash, ionpot_ev, J) * DELTA_E;
           }
 
           // integral from 2E + I up to E_max
           const int integral2startindex = get_energyindex_ev_lteq((2 * energy_ev) + ionpot_ev);
           for (int i = integral2startindex; i < SFPTS; i++) {
-            const double endash = gsl_vector_get(envec, i);
-            const double delta_endash = DELTA_E;
+            const double endash = engrid(i);
             N_e_ion += yfunc[i] * xs_impactionization(endash, collionrow) *
-                       Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * delta_endash;
+                       Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * DELTA_E;
           }
         }
       }
@@ -815,7 +845,7 @@ auto N_e(const int modelgridindex, const double energy) -> double {
   }
 
   // source term, should be zero at the low end anyway
-  N_e += gsl_vector_get(sourcevec, get_energyindex_ev_lteq(energy_ev));
+  N_e += sourcevec(get_energyindex_ev_lteq(energy_ev));
 
   assert_always(std::isfinite(N_e));
   return N_e;
@@ -823,7 +853,7 @@ auto N_e(const int modelgridindex, const double energy) -> double {
 
 // fraction of deposited energy that goes into heating the thermal electrons
 // Kozma & Fransson equation 3
-auto calculate_frac_heating(const int modelgridindex) -> float {
+auto calculate_frac_heating(const int modelgridindex, const std::array<double, SFPTS> &yfunc) -> float {
   // frac_heating multiplied by E_init, which will be divided out at the end
   double frac_heating_Einit = 0.;
 
@@ -831,23 +861,23 @@ auto calculate_frac_heating(const int modelgridindex) -> float {
   // const float nnetot = grid::get_nnetot(modelgridindex);
 
   for (int i = 0; i < SFPTS; i++) {
-    const double endash = gsl_vector_get(envec, i);
+    const double endash = engrid(i);
 
     // first term
     frac_heating_Einit += yfunc[i] * (electron_loss_rate(endash * EV, nne) / EV) * DELTA_E;
   }
 
   // second term
-  frac_heating_Einit += SF_EMIN * get_y(SF_EMIN) * (electron_loss_rate(SF_EMIN * EV, nne) / EV);
+  frac_heating_Einit += SF_EMIN * get_y(yfunc, SF_EMIN) * (electron_loss_rate(SF_EMIN * EV, nne) / EV);
 
   double N_e_contrib = 0.;
   // third term (integral from zero to SF_EMIN)
-  const int nsteps = static_cast<int>(ceil(SF_EMIN / DELTA_E) * 10);
+  const int nsteps = static_cast<int>(std::ceil(SF_EMIN / DELTA_E) * 10);
   assert_always(nsteps > 0);
   const double delta_endash = SF_EMIN / nsteps;
   for (int j = 0; j < nsteps; j++) {
     const double endash = SF_EMIN * j / nsteps;
-    N_e_contrib += N_e(modelgridindex, endash * EV) * endash * delta_endash;
+    N_e_contrib += N_e(modelgridindex, endash * EV, yfunc) * endash * delta_endash;
   }
   frac_heating_Einit += N_e_contrib;
   printout(" heating N_e contrib (en < EMIN) %g nsteps %d\n", N_e_contrib / E_init_ev, nsteps);
@@ -908,66 +938,51 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
   }
 
   const int num_shells = electron_binding[get_atomicnumber(element) - 1].size();
-  auto q = std::array < int, NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE ? 0 : 10 > {0};
+  auto q = std::array<int, (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE ? 0 : 10)>{0};
 
   if (!NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
     for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
-      if (q[0] < 2)  // K 1s
-      {
-        q[0]++;
-      } else if (q[1] < 2)  // L1 2s
-      {
-        q[1]++;
-      } else if (q[2] < 2)  // L2 2p[1/2]
-      {
-        q[2]++;
-      } else if (q[3] < 4)  // L3 2p[3/2]
-      {
-        q[3]++;
-      } else if (q[4] < 2)  // M1 3s
-      {
-        q[4]++;
-      } else if (q[5] < 2)  // M2 3p[1/2]
-      {
-        q[5]++;
-      } else if (q[6] < 4)  // M3 3p[3/2]
-      {
-        q[6]++;
+      if (q[0] < 2) {
+        q[0]++;  // K 1s
+      } else if (q[1] < 2) {
+        q[1]++;  // L1 2s
+      } else if (q[2] < 2) {
+        q[2]++;  // L2 2p[1/2]
+      } else if (q[3] < 4) {
+        q[3]++;  // L3 2p[3/2]
+      } else if (q[4] < 2) {
+        q[4]++;  // M1 3s
+      } else if (q[5] < 2) {
+        q[5]++;  // M2 3p[1/2]
+      } else if (q[6] < 4) {
+        q[6]++;  // M3 3p[3/2]
       } else if (ioncharge == 0) {
-        if (q[9] < 2)  // N1 4s
-        {
-          q[9]++;
-        } else if (q[7] < 4)  // M4 3d[3/2]
-        {
-          q[7]++;
-        } else if (q[8] < 6)  // M5 3d[5/2]
-        {
-          q[8]++;
+        if (q[9] < 2) {
+          q[9]++;  // N1 4s
+        } else if (q[7] < 4) {
+          q[7]++;  // M4 3d[3/2]
+        } else if (q[8] < 6) {
+          q[8]++;  // M5 3d[5/2]
         } else {
           printout("Going beyond the 4s shell in NT calculation. Abort!\n");
           std::abort();
         }
       } else if (ioncharge == 1) {
-        if (q[9] < 1)  // N1 4s
-        {
-          q[9]++;
-        } else if (q[7] < 4)  // M4 3d[3/2]
-        {
-          q[7]++;
-        } else if (q[8] < 6)  // M5 3d[5/2]
-        {
-          q[8]++;
+        if (q[9] < 1) {
+          q[9]++;  // N1 4s
+        } else if (q[7] < 4) {
+          q[7]++;  // M4 3d[3/2]
+        } else if (q[8] < 6) {
+          q[8]++;  // M5 3d[5/2]
         } else {
           printout("Going beyond the 4s shell in NT calculation. Abort!\n");
           std::abort();
         }
       } else if (ioncharge > 1) {
-        if (q[7] < 4)  // M4 3d[3/2]
-        {
-          q[7]++;
-        } else if (q[8] < 6)  // M5 3d[5/2]
-        {
-          q[8]++;
+        if (q[7] < 4) {
+          q[7]++;  // M4 3d[3/2]
+        } else if (q[8] < 6) {
+          q[8]++;  // M5 3d[5/2]
         } else {
           printout("Going beyond the 4s shell in NT calculation. Abort!\n");
           std::abort();
@@ -1009,8 +1024,6 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
       }
     }
     total += electronsinshell / std::max(ionpot, enbinding);
-
-    // printout("total %g\n", total);
   }
 
   return total;
@@ -1038,21 +1051,15 @@ auto get_oneoverw(const int element, const int ion, const int modelgridindex) ->
 
 // the fraction of deposited energy that goes into ionising electrons in a particular shell
 auto calculate_nt_frac_ionization_shell(const int modelgridindex, const int element, const int ion,
-                                        const collionrow &collionrow) -> double {
+                                        const collionrow &collionrow,
+                                        const std::array<double, SFPTS> &yfunc) -> double {
   const double nnion = get_nnion(modelgridindex, element, ion);
   const double ionpot_ev = collionrow.ionpot_ev;
 
-  gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
+  std::array<double, SFPTS> cross_section_vec{};
   get_xs_ionization_vector(cross_section_vec, collionrow);
 
-  const gsl_vector_view yvecview = gsl_vector_view_array(yfunc.data(), SFPTS);
-
-  double y_dot_crosssection_de = 0.;
-  gsl_blas_ddot(&yvecview.vector, cross_section_vec, &y_dot_crosssection_de);
-  gsl_vector_free(cross_section_vec);
-
-  // or multiply the scalar result by the constant DELTA_E
-  y_dot_crosssection_de *= DELTA_E;
+  const double y_dot_crosssection_de = cblas_ddot(SFPTS, yfunc.data(), 1, cross_section_vec.data(), 1) * DELTA_E;
 
   return nnion * ionpot_ev * y_dot_crosssection_de / E_init_ev;
 }
@@ -1068,15 +1075,18 @@ auto nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int elemen
 }
 
 auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion,
-                                       const bool assumeshellpotentialisvalence) -> double
+                                       const bool assumeshellpotentialisvalence,
+                                       const std::array<double, SFPTS> &yfunc) -> double
 // Integrate the ionization cross section over the electron degradation function to get the ionization rate coefficient
 // i.e. multiply this by ion population to get a rate of ionizations per second
 // Do not call during packet propagation, as the y vector may not be in memory!
 // IMPORTANT: we are dividing by the shell potential, not the valence potential here!
 // To change this set assumeshellpotentialisvalence to true
 {
-  gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
-  gsl_vector *cross_section_vec_allshells = gsl_vector_calloc(SFPTS);
+  std::array<double, SFPTS> cross_section_vec{};
+  auto gsl_cross_section_vec = gsl_vector_view_array(cross_section_vec.data(), SFPTS).vector;
+  std::array<double, SFPTS> cross_section_vec_allshells{};
+  auto gsl_cross_section_vec_allshells = gsl_vector_view_array(cross_section_vec_allshells.data(), SFPTS).vector;
 
   const int Z = get_atomicnumber(element);
   const int ionstage = get_ionstage(element, ion);
@@ -1096,29 +1106,23 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
         assert_always(ionpot_shell >= ionpot_valence);
 
         // boost the ionization rate by assuming shell vacancy energy is used to eject valence electrons
-        gsl_vector_scale(cross_section_vec, ionpot_shell / ionpot_valence);
+        gsl_vector_scale(&gsl_cross_section_vec, ionpot_shell / ionpot_valence);
       }
 
-      gsl_vector_add(cross_section_vec_allshells, cross_section_vec);
+      gsl_vector_add(&gsl_cross_section_vec_allshells, &gsl_cross_section_vec);
     }
   }
 
-  gsl_vector_free(cross_section_vec);
-
-  double y_dot_crosssection_de = 0.;
-  const auto gsl_yvec = gsl_vector_view_array(yfunc.data(), SFPTS).vector;
-  gsl_blas_ddot(&gsl_yvec, cross_section_vec_allshells, &y_dot_crosssection_de);
-  gsl_vector_free(cross_section_vec_allshells);
-
-  y_dot_crosssection_de *= DELTA_E;
+  const double y_xs_de = cblas_ddot(SFPTS, yfunc.data(), 1, cross_section_vec_allshells.data(), 1) * DELTA_E;
 
   const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
   const double yscalefactor = deposition_rate_density_ev / E_init_ev;
 
-  return yscalefactor * y_dot_crosssection_de;
+  return yscalefactor * y_xs_de;
 }
 
-void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int element, const int ion)
+void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int element, const int ion,
+                                      const std::array<double, SFPTS> &yfunc)
 // Kozma & Fransson 1992 equation 12, except modified to be a sum over all shells of an ion
 // the result is in ergs
 {
@@ -1149,7 +1153,8 @@ void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int elemen
   for (auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       matching_nlsubshell_count++;
-      const double frac_ionization_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow);
+      const double frac_ionization_shell =
+          calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow, yfunc);
       eta_sum += frac_ionization_shell;
       const double ionpot_shell = collionrow.ionpot_ev * EV;
 
@@ -1250,8 +1255,8 @@ auto nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, con
 // epsilon_trans is in erg
 // returns the index of the first valid cross section point (en >= epsilon_trans)
 // all elements below this index are invalid and should not be used
-auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int element, const int ion, const int lower,
-                              const int uptransindex, const double statweight_lower,
+auto get_xs_excitation_vector(std::array<double, SFPTS> &xs_excitation_vec, const int element, const int ion,
+                              const int lower, const int uptransindex, const double statweight_lower,
                               const double epsilon_trans) -> int {
   const double coll_strength = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].coll_str;
   if (coll_strength >= 0) {
@@ -1261,13 +1266,11 @@ auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int ele
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
 
-    for (int j = 0; j < en_startindex; j++) {
-      gsl_vector_set(xs_excitation_vec, j, 0.);
-    }
+    std::fill_n(xs_excitation_vec.begin(), en_startindex, 0.);
 
     for (int j = en_startindex; j < SFPTS; j++) {
-      const double energy = gsl_vector_get(envec, j) * EV;
-      gsl_vector_set(xs_excitation_vec, j, constantfactor * pow(energy, -2));
+      const double energy = engrid(j) * EV;
+      xs_excitation_vec[j] = constantfactor * pow(energy, -2);
     }
     return en_startindex;
   }
@@ -1277,11 +1280,11 @@ auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int ele
         globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].osc_strength;
     // permitted E1 electric dipole transitions
 
-    // const double g_bar = 0.2;
-    const double A = 0.28;
-    const double B = 0.15;
+    // constexpr double g_bar = 0.2;
+    constexpr double A = 0.28;
+    constexpr double B = 0.15;
 
-    const double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
+    constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     const double epsilon_trans_ev = epsilon_trans / EV;
 
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
@@ -1290,18 +1293,16 @@ auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int ele
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans_ev);
 
-    for (int j = 0; j < en_startindex; j++) {
-      gsl_vector_set(xs_excitation_vec, j, 0.);
-    }
+    std::fill_n(xs_excitation_vec.begin(), en_startindex, 0.);
 
     // U = en / epsilon
     // g_bar = A * log(U) + b
-    // xs[j] = constantfactor * g_bar / envec[j]
-
+    // xs[j] = constantfactor * g_bar / engrid(j)
+    const double logepsilon = std::log(epsilon_trans_ev);
     for (int j = en_startindex; j < SFPTS; j++) {
-      const double logU = gsl_vector_get(logenvec, j) - log(epsilon_trans_ev);
+      const double logU = logengrid[j] - logepsilon;
       const double g_bar = (A * logU) + B;
-      gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / gsl_vector_get(envec, j));
+      xs_excitation_vec[j] = constantfactor * g_bar / engrid(j);
     }
 
     return en_startindex;
@@ -1311,21 +1312,17 @@ auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int ele
 
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
 // returns the rate coefficient in s^-1 divided by deposition rate density in erg/cm^3/s
-auto calculate_nt_excitation_ratecoeff_perdeposition(const gsl_vector_view yvecview, const int element, const int ion,
-                                                     const int lower, const int uptransindex,
+auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SFPTS> &yvec, const int element,
+                                                     const int ion, const int lower, const int uptransindex,
                                                      const double statweight_lower,
                                                      const double epsilon_trans) -> double {
-  thread_local static std::array<double, SFPTS> xs_excitation_vec{};
+  std::array<double, SFPTS> xs_excitation_vec{};
 
-  gsl_vector gsl_xs_excitation_vec = gsl_vector_view_array(xs_excitation_vec.data(), SFPTS).vector;
-  if (get_xs_excitation_vector(&gsl_xs_excitation_vec, element, ion, lower, uptransindex, statweight_lower,
-                               epsilon_trans) >= 0) {
-    double y_dot_crosssection = 0.;
-    gsl_blas_ddot(&gsl_xs_excitation_vec, &yvecview.vector, &y_dot_crosssection);
+  if (get_xs_excitation_vector(xs_excitation_vec, element, ion, lower, uptransindex, statweight_lower, epsilon_trans) >=
+      0) {
+    const double y_xs_de = cblas_ddot(SFPTS, xs_excitation_vec.data(), 1, yvec.data(), 1) * DELTA_E;
 
-    y_dot_crosssection *= DELTA_E;
-
-    return y_dot_crosssection / E_init_ev / EV;
+    return y_xs_de / E_init_ev / EV;
   }
 
   return 0.;
@@ -1411,8 +1408,8 @@ auto get_uptransindex(const int element, const int ion, const int lower, const i
   return -1;
 }
 
-void analyse_sf_solution(const int modelgridindex, const int timestep, const bool enable_sfexcitation) {
-  const gsl_vector_view yvecview = gsl_vector_view_array(yfunc.data(), SFPTS);
+void analyse_sf_solution(const int modelgridindex, const int timestep, const bool enable_sfexcitation,
+                         const std::array<double, SFPTS> &yfunc) {
   const float nne = grid::get_nne(modelgridindex);
   const double nntot = get_nnion_tot(modelgridindex);
   const double nnetot = grid::get_nnetot(modelgridindex);
@@ -1420,7 +1417,11 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
   double frac_excitation_total = 0.;
   double frac_ionization_total = 0.;
 
-  tmp_excitation_list.resize(0);
+  // temporary storage of the full excitation list for current cell before possible truncation and copying to
+  // node-shared memory
+  THREADLOCALONHOST std::vector<NonThermalExcitation> tmp_excitation_list;
+  tmp_excitation_list.clear();
+
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
     const int nions = get_nions(element);
@@ -1441,13 +1442,13 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
       // printout("    nnion: %g\n", nnion);
       printout("    nnion/nntot: %g\n", nnion / nntot);
 
-      calculate_eff_ionpot_auger_rates(modelgridindex, element, ion);
+      calculate_eff_ionpot_auger_rates(modelgridindex, element, ion, yfunc);
 
       int matching_nlsubshell_count = 0;
       for (auto &collionrow : colliondata) {
         if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
           const double frac_ionization_ion_shell =
-              calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow);
+              calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow, yfunc);
           frac_ionization_ion += frac_ionization_ion_shell;
           matching_nlsubshell_count++;
           printout("      shell n %d, l %d, I %5.1f eV: frac_ionization %10.4e", collionrow.n, collionrow.l,
@@ -1497,7 +1498,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double ratecoeffperdeposition = calculate_nt_excitation_ratecoeff_perdeposition(
-              yvecview, element, ion, lower, t, statweight_lower, epsilon_trans);
+              yfunc, element, ion, lower, t, statweight_lower, epsilon_trans);
           const double frac_excitation_thistrans = nnlevel * epsilon_trans * ratecoeffperdeposition;
           frac_excitation_ion += frac_excitation_thistrans;
 
@@ -1533,10 +1534,10 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
       printout("    workfn approx Gamma:     %9.3e\n", nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion));
 
       printout("    SF integral Gamma:       %9.3e\n",
-               calculate_nt_ionization_ratecoeff(modelgridindex, element, ion, false));
+               calculate_nt_ionization_ratecoeff(modelgridindex, element, ion, false, yfunc));
 
       printout("    SF integral(I=Iv) Gamma: %9.3e  (if always use valence potential)\n",
-               calculate_nt_ionization_ratecoeff(modelgridindex, element, ion, true));
+               calculate_nt_ionization_ratecoeff(modelgridindex, element, ion, true, yfunc));
 
       printout("    ARTIS using Gamma:       %9.3e\n", nt_ionization_ratecoeff(modelgridindex, element, ion));
 
@@ -1645,9 +1646,9 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 
   double nne_nt_max = 0.;
   for (int i = 0; i < SFPTS; i++) {
-    const double endash = gsl_vector_get(envec, i);
+    const double endash = engrid(i);
     const double delta_endash = DELTA_E;
-    const double oneovervelocity = sqrt(9.10938e-31 / 2 / endash / 1.60218e-19) / 100;  // in sec/cm
+    const double oneovervelocity = std::sqrt(9.10938e-31 / 2 / endash / 1.60218e-19) / 100;  // in sec/cm
     nne_nt_max += yscalefactor * yfunc[i] * oneovervelocity * delta_endash;
   }
 
@@ -1662,7 +1663,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
   printout("  nne_nt/nne < %9.3e\n", nne_nt_max / nne);
 
   // store the solution properties now while the NT spectrum is in memory (in case we free before packet prop)
-  nt_solution[modelgridindex].frac_heating = calculate_frac_heating(modelgridindex);
+  nt_solution[modelgridindex].frac_heating = calculate_frac_heating(modelgridindex, yfunc);
 
   printout("  frac_heating_tot:    %g\n", nt_solution[modelgridindex].frac_heating);
   printout("  frac_excitation_tot: %g\n", frac_excitation_total);
@@ -1675,9 +1676,10 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
            nt_solution[modelgridindex].frac_heating);
 }
 
-void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridindex, const int element, const int ion) {
+void sfmatrix_add_excitation(std::vector<double> &sfmatrix, const int modelgridindex, const int element,
+                             const int ion) {
   // excitation terms
-  gsl_vector *vec_xs_excitation_deltae = gsl_vector_alloc(SFPTS);
+  std::array<double, SFPTS> vec_xs_excitation_deltae{};
 
   const int nlevels_all = get_nlevels(element, ion);
   const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
@@ -1702,35 +1704,34 @@ void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridinde
       const int xsstartindex =
           get_xs_excitation_vector(vec_xs_excitation_deltae, element, ion, lower, t, statweight_lower, epsilon_trans);
       if (xsstartindex >= 0) {
-        gsl_blas_dscal(DELTA_E, vec_xs_excitation_deltae);
+        cblas_dscal(SFPTS, DELTA_E, vec_xs_excitation_deltae.data(), 1);
 
         for (int i = 0; i < SFPTS; i++) {
-          const double en = gsl_vector_get(envec, i);
+          const double en = engrid(i);
           const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
 
           const int startindex = i > xsstartindex ? i : xsstartindex;
           for (int j = startindex; j < stopindex; j++) {
-            *gsl_matrix_ptr(sfmatrix, i, j) += nnlevel * gsl_vector_get(vec_xs_excitation_deltae, j);
+            sfmatrix[(i * SFPTS) + j] += nnlevel * vec_xs_excitation_deltae[j];
           }
 
           // do the last bit separately because we're not using the full delta_e interval
           const double delta_en = DELTA_E;
 
-          const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get(envec, stopindex));
+          const double delta_en_actual = (en + epsilon_trans_ev - engrid(stopindex));
 
-          *gsl_matrix_ptr(sfmatrix, i, stopindex) +=
-              nnlevel * gsl_vector_get(vec_xs_excitation_deltae, stopindex) * delta_en_actual / delta_en;
+          sfmatrix[(i * SFPTS) + stopindex] +=
+              nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / delta_en;
         }
       }
     }
   }
-  gsl_vector_free(vec_xs_excitation_deltae);
 }
 
-void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int ionstage, const double nnion)
+void sfmatrix_add_ionization(std::vector<double> &sfmatrix, const int Z, const int ionstage, const double nnion)
 // add the ionization terms to the Spencer-Fano matrix
 {
-  gsl_vector *const vec_xs_ionization = gsl_vector_alloc(SFPTS);
+  std::array<double, SFPTS> vec_xs_ionization{};
   for (auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       const double ionpot_ev = collionrow.ionpot_ev;
@@ -1752,22 +1753,22 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
       std::array<double, SFPTS> int_eps_upper = {0};
       std::array<double, SFPTS> prefactors = {0};
       for (int j = xsstartindex; j < SFPTS; j++) {
-        const double endash = gsl_vector_get(envec, j);
+        const double endash = engrid(j);
         const double epsilon_upper = std::min((endash + ionpot_ev) / 2, endash);
         int_eps_upper[j] = atan((epsilon_upper - ionpot_ev) / J);
-        prefactors[j] = gsl_vector_get(vec_xs_ionization, j) * nnion / atan((endash - ionpot_ev) / 2 / J);
+        prefactors[j] = vec_xs_ionization[j] * nnion / atan((endash - ionpot_ev) / 2 / J);
       }
 
       for (int i = 0; i < SFPTS; i++) {
         // i is the matrix row index, which corresponds to an energy E at which we are solve from y(E)
-        const double en = gsl_vector_get(envec, i);
+        const double en = engrid(i);
 
         // endash ranges from en to SF_EMAX, but skip over the zero-cross section points
         const int jstart = std::max(i, xsstartindex);
         for (int j = jstart; j < SFPTS; j++) {
           // j is the matrix column index which corresponds to the piece of the integral at y(E') where E' >= E and E'
-          // = envec(j)
-          const double endash = gsl_vector_get(envec, j);
+          // = engrid(j)
+          const double endash = engrid(j);
 
           // J * atan[(epsilon - ionpot_ev) / J] is the indefinite integral of 1/[1 + (epsilon - ionpot_ev)^2/ J^2]
           // in Kozma & Fransson 1992 equation 4
@@ -1776,7 +1777,7 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
               std::max(endash - en, ionpot_ev);  // and epsilon_upper = (endash + ionpot_ev) / 2;
           const double int_eps_lower = atan((epsilon_lower - ionpot_ev) / J);
           if (int_eps_lower <= int_eps_upper[j]) {
-            *gsl_matrix_ptr(sfmatrix, i, j) += prefactors[j] * (int_eps_upper[j] - int_eps_lower) * DELTA_E;
+            sfmatrix[(i * SFPTS) + j] += prefactors[j] * (int_eps_upper[j] - int_eps_lower) * DELTA_E;
           }
         }
 
@@ -1790,7 +1791,7 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
             // epsilon_lower = en + ionpot_ev;
             // epsilon_upper = (endash + ionpot_ev) / 2;
             if (int_eps_lower2 <= int_eps_upper[j]) {
-              *gsl_matrix_ptr(sfmatrix, i, j) -= prefactors[j] * (int_eps_upper[j] - int_eps_lower2) * DELTA_E;
+              sfmatrix[(i * SFPTS) + j] -= prefactors[j] * (int_eps_upper[j] - int_eps_lower2) * DELTA_E;
             }
           }
         }
@@ -1810,74 +1811,87 @@ void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int 
         }
 
         for (int i = 0; i < augerstopindex; i++) {
-          const double en = gsl_vector_get(envec, i);
+          const double en = engrid(i);
           const int jstart = i > xsstartindex ? i : xsstartindex;
           for (int j = jstart; j < SFPTS; j++) {
-            const double xs = gsl_vector_get(vec_xs_ionization, j);
+            const double xs = vec_xs_ionization[j];
             if (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
               const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
               for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++) {
                 if (en < (en_auger_ev * en_boost / a)) {
-                  *gsl_matrix_ptr(sfmatrix, i, j) -= nnion * xs * collionrow.prob_num_auger[a] * a;
+                  sfmatrix[(i * SFPTS) + j] -= nnion * xs * collionrow.prob_num_auger[a] * a;
                 }
               }
             } else {
               assert_always(en < en_auger_ev);
               // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en,
               // en_auger_ev, nnion * xs, ij_contribution);
-              *gsl_matrix_ptr(sfmatrix, i, j) -= nnion * xs;  // * n_auger_elec_avg; // * en_auger_ev???
+              sfmatrix[(i * SFPTS) + j] -= nnion * xs;  // * n_auger_elec_avg; // * en_auger_ev???
             }
           }
         }
       }
     }
   }
-  gsl_vector_free(vec_xs_ionization);
 }
 
-void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec, std::array<double, SFPTS> &yvec_arr) {
-  // WARNING: this assumes sfmatrix is in upper triangular form already!
-  const gsl_matrix *sfmatrix_LU = sfmatrix;
-  gsl_permutation *p = gsl_permutation_calloc(SFPTS);  // identity permutation
+// solve the Spencer-Fano matrix equation and return the y vector (samples of the Spencer-Fano solution function).
+// Multiply y by energy interval [eV] to get non-thermal electron number flux. y(E) * dE is the flux of electrons with
+// energy in the range (E, E + dE) in units of particles/cm2/s. y has units of particles/cm2/s/eV
+auto sfmatrix_solve(const std::vector<double> &sfmatrix) -> std::array<double, SFPTS> {
+  std::array<size_t, SFPTS> vec_permutation{};
+  gsl_permutation p{.size = SFPTS, .data = vec_permutation.data()};
+  gsl_permutation_init(&p);
+
+  const auto gsl_sfmatrix = gsl_matrix_const_view_array(sfmatrix.data(), SFPTS, SFPTS).matrix;
+
+  // sfmatrix must be in upper triangular form
+  const auto &gsl_sfmatrix_LU = gsl_sfmatrix;
 
   // if the matrix is not upper triangular, then do a decomposition
   // printout("Doing LU decomposition of SF matrix\n");
   // make a copy of the matrix for the LU decomp
-  // gsl_matrix *sfmatrix_LU = gsl_matrix_alloc(SFPTS, SFPTS);
-  // gsl_matrix_memcpy(sfmatrix_LU, sfmatrix);
-  // int s; //sign of the transformation
-  // gsl_permutation *p = gsl_permutation_alloc(SFPTS);
-  // gsl_linalg_LU_decomp(sfmatrix_LU, p, &s);
+  // std::array<double, SFPTS> sfmatrix_LU{};
+  // auto gsl_sfmatrix_LU = gsl_matrix_view_array(sfmatrix_LU.data(), SFPTS, SFPTS).matrix;
+  // gsl_matrix_memcpy(&gsl_sfmatrix_LU, &gsl_sfmatrix);
+  // int s{};  // sign of the transformation
+  // gsl_linalg_LU_decomp(&gsl_sfmatrix_LU, &p, &s);
 
   // printout("Solving SF matrix equation\n");
 
-  gsl_vector_view yvecview = gsl_vector_view_array(yvec_arr.data(), SFPTS);
-  gsl_vector *yvec = &yvecview.vector;
+  std::array<double, SFPTS> yvec_arr{};
+  auto gsl_yvec = gsl_vector_view_array(yvec_arr.data(), SFPTS).vector;
+
+  const auto gsl_rhsvec = gsl_vector_const_view_array(rhsvec.data(), SFPTS).vector;
 
   // solve matrix equation: sf_matrix * y_vec = rhsvec for yvec
-  gsl_linalg_LU_solve(sfmatrix_LU, p, rhsvec, yvec);
+  gsl_linalg_LU_solve(&gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec);
   // printout("Refining solution\n");
 
   double error_best = -1.;
-  gsl_vector *yvec_best = gsl_vector_alloc(SFPTS);  // solution vector with lowest error
-  gsl_vector *gsl_work_vector = gsl_vector_calloc(SFPTS);
-  gsl_vector *residual_vector = gsl_vector_alloc(SFPTS);
+  std::array<double, SFPTS> yvec_best{};
+  auto gsl_yvec_best = gsl_vector_view_array(yvec_best.data(), SFPTS).vector;
+  std::array<double, SFPTS> work_vector{};
+  auto gsl_work_vector = gsl_vector_view_array(work_vector.data(), SFPTS).vector;
+  std::array<double, SFPTS> residual_vector{};
+  auto gsl_residual_vector = gsl_vector_view_array(residual_vector.data(), SFPTS).vector;
+
   int iteration = 0;
   for (iteration = 0; iteration < 10; iteration++) {
     if (iteration > 0) {
-      gsl_linalg_LU_refine(sfmatrix, sfmatrix_LU, p, rhsvec, yvec,
-                           gsl_work_vector);  // first argument must be original matrix
+      gsl_linalg_LU_refine(&gsl_sfmatrix, &gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec,
+                           &gsl_work_vector);  // first argument must be original matrix
     }
 
     // calculate Ax - b = residual
-    gsl_vector_memcpy(residual_vector, rhsvec);
-    gsl_blas_dgemv(CblasNoTrans, 1.0, sfmatrix, yvec, -1.0, residual_vector);
+    gsl_vector_memcpy(&gsl_residual_vector, &gsl_rhsvec);
+    gsl_blas_dgemv(CblasNoTrans, 1.0, &gsl_sfmatrix, &gsl_yvec, -1.0, &gsl_residual_vector);
 
     // value of the largest absolute residual
-    const double error = fabs(gsl_vector_get(residual_vector, gsl_blas_idamax(residual_vector)));
+    const double error = fabs(gsl_vector_get(&gsl_residual_vector, gsl_blas_idamax(&gsl_residual_vector)));
 
     if (error < error_best || error_best < 0.) {
-      gsl_vector_memcpy(yvec_best, yvec);
+      gsl_vector_memcpy(&gsl_yvec_best, &gsl_yvec);
       error_best = error;
     }
     // printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
@@ -1887,18 +1901,13 @@ void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec, std::a
       printout("  SF solver LU_refine: After %d iterations, best solution vector has a max residual of %g (WARNING)\n",
                iteration, error_best);
     }
-    gsl_vector_memcpy(yvec, yvec_best);
+    gsl_vector_memcpy(&gsl_yvec, &gsl_yvec_best);
   }
-  gsl_vector_free(yvec_best);
-  gsl_vector_free(gsl_work_vector);
-  gsl_vector_free(residual_vector);
 
-  // gsl_matrix_free(sfmatrix_LU); // if this matrix is different to sfmatrix then free it
-  gsl_permutation_free(p);
-
-  if (gsl_vector_isnonneg(yvec) == 0) {
+  if (gsl_vector_isnonneg(&gsl_yvec) == 0) {
     printout("solve_sfmatrix: WARNING: y function goes negative!\n");
   }
+  return yvec_arr;
 }
 
 }  // anonymous namespace
@@ -2010,45 +2019,12 @@ void init(const int my_rank, const int ndo_nonempty) {
     nt_solution[modelgridindex].frac_excitations_list_size = 0;
   }
 
-  envec = gsl_vector_calloc(SFPTS);  // energy grid on which solution is sampled
-  logenvec = gsl_vector_calloc(SFPTS);
-  sourcevec = gsl_vector_calloc(SFPTS);  // energy grid on which solution is sampled
-
-  // const int source_spread_pts = ceil(SFPTS / 20);
-  const int source_spread_pts = ceil(SFPTS * 0.03333);  // KF92 OXYGEN TEST
-  const double source_spread_en = source_spread_pts * DELTA_E;
-  const int sourcelowerindex = SFPTS - source_spread_pts;
-
+  double sourceintegral = 0.;  // integral of S(e) dE
   for (int s = 0; s < SFPTS; s++) {
-    const double energy_ev = SF_EMIN + (s * DELTA_E);
-
-    gsl_vector_set(envec, s, energy_ev);
-    gsl_vector_set(logenvec, s, log(energy_ev));
-
-    // spread the source over some energy width
-    if (s < sourcelowerindex) {
-      gsl_vector_set(sourcevec, s, 0.);
-    } else {
-      gsl_vector_set(sourcevec, s, 1. / source_spread_en);
-    }
+    sourceintegral += sourcevec(s) * DELTA_E;
   }
 
-  // integrate the source vector to find the assumed injection rate
-  gsl_vector *integralvec = gsl_vector_alloc(SFPTS);
-  gsl_vector_memcpy(integralvec, sourcevec);
-  gsl_vector_scale(integralvec, DELTA_E);
-  const double sourceintegral = gsl_blas_dasum(integralvec);  // integral of S(e) dE
-
-  gsl_vector_mul(integralvec, envec);
-  E_init_ev = gsl_blas_dasum(integralvec);  // integral of E * S(e) dE
-  gsl_vector_free(integralvec);
-
-  // or put all of the source into one point at SF_EMAX
-  // gsl_vector_set_zero(sourcevec);
-  // gsl_vector_set(sourcevec, SFPTS - 1, 1 / DELTA_E);
-  // E_init_ev = SF_EMAX;
-
-  printout("E_init: %14.7e eV\n", E_init_ev);
+  printout("E_init: %14.7e eV/s/cm3\n", E_init_ev);
   printout("source function integral: %14.7e\n", sourceintegral);
 
   read_collion_data();
@@ -2118,8 +2094,6 @@ void close_file() {
     fclose(nonthermalfile);
     nonthermalfile = nullptr;
   }
-  gsl_vector_free(envec);
-  gsl_vector_free(sourcevec);
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
       free(nt_solution[modelgridindex].allions);
@@ -2476,26 +2450,13 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   //   timesteps.\n");
   // }
 
-  gsl_matrix *const sfmatrix = gsl_matrix_calloc(SFPTS, SFPTS);
-  gsl_vector *const rhsvec = gsl_vector_calloc(SFPTS);  // constant term (not dependent on y func) in each equation
+  THREADLOCALONHOST std::vector<double> sfmatrix(SFPTS * SFPTS);
+  std::ranges::fill(sfmatrix, 0.);
 
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++) {
-    const double en = gsl_vector_get(envec, i);
-
-    *gsl_matrix_ptr(sfmatrix, i, i) += electron_loss_rate(en * EV, nne) / EV;
-
-    double source_integral_to_SF_EMAX{NAN};
-    if (i < SFPTS - 1) {
-      gsl_vector_const_view source_e_to_SF_EMAX = gsl_vector_const_subvector(sourcevec, i + 1, SFPTS - i - 1);
-      source_integral_to_SF_EMAX = gsl_blas_dasum(&source_e_to_SF_EMAX.vector) * DELTA_E;
-    } else {
-      source_integral_to_SF_EMAX = 0;
-    }
-
-    gsl_vector_set(rhsvec, i, source_integral_to_SF_EMAX);
+    sfmatrix[(i * SFPTS) + i] += electron_loss_rate(engrid(i) * EV, nne) / EV;
   }
-  // gsl_vector_set_all(rhsvec, 1.); // alternative if all electrons are injected at SF_EMAX
 
   if (enable_sfexcitation || enable_sfionization) {
     for (int element = 0; element < get_nelements(); element++) {
@@ -2551,16 +2512,13 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   // }
   // printout("\n");
 
-  sfmatrix_solve(sfmatrix, rhsvec, yfunc);
-
-  gsl_matrix_free(sfmatrix);
-  gsl_vector_free(rhsvec);
+  const auto yfunc = sfmatrix_solve(sfmatrix);
 
   if (timestep % 10 == 0) {
-    nt_write_to_file(modelgridindex, timestep, iteration);
+    nt_write_to_file(modelgridindex, timestep, iteration, yfunc);
   }
 
-  analyse_sf_solution(modelgridindex, timestep, enable_sfexcitation);
+  analyse_sf_solution(modelgridindex, timestep, enable_sfexcitation, yfunc);
 }
 
 void write_restart_data(FILE *gridsave_file) {

@@ -30,12 +30,6 @@
 #include "vectors.h"
 #include "vpkt.h"
 
-#ifdef GPU_ON
-#define THREADLOCALONHOST
-#else
-#define THREADLOCALONHOST thread_local static
-#endif
-
 namespace {
 
 constexpr float expopac_lambdamin = 534.5;
@@ -93,9 +87,9 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
 
   auto pos = pkt.pos;
-  auto nu_rf = pkt.nu_rf;
+  const auto nu_rf = pkt.nu_rf;
   auto nu_cmf = pkt.nu_cmf;
-  auto e_rf = pkt.e_rf;
+  const auto e_rf = pkt.e_rf;
   auto e_cmf = pkt.e_cmf;
   auto prop_time = pkt.prop_time;
   int next_trans = pkt.next_trans;
@@ -221,9 +215,9 @@ auto get_event_expansion_opacity(
     MacroAtomState &mastate, const double tau_rnd, const double nu_cmf_abort, const double d_nu_on_d_l,
     const double doppler) -> std::tuple<double, int, bool> {
   auto pos = pkt.pos;
-  auto nu_rf = pkt.nu_rf;
+  const auto nu_rf = pkt.nu_rf;
   auto nu_cmf = pkt.nu_cmf;
-  auto e_rf = pkt.e_rf;
+  const auto e_rf = pkt.e_rf;
   auto e_cmf = pkt.e_cmf;
   auto prop_time = pkt.prop_time;
 
@@ -382,13 +376,13 @@ void electron_scatter_rpkt(Packet &pkt) {
 
   // Need to rotate Stokes Parameters in the scattering plane
 
-  auto [ref1_olddir, ref2_olddir] = meridian(old_dir_cmf);
+  const auto [ref1_olddir, ref2_olddir] = meridian(old_dir_cmf);
 
   // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
   // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
   // ref1_sc and ref2_sc in the scattering plane. It is the supplementary angle of the
   // scatt angle phisc chosen in the rejection technique above (phisc+i1=180 or phisc+i1=540)
-  const double i1 = rot_angle(old_dir_cmf, new_dir_cmf, ref1_olddir, ref2_olddir);
+  const double i1 = get_rot_angle(old_dir_cmf, new_dir_cmf, ref1_olddir, ref2_olddir);
   const double cos2i1 = cos(2 * i1);
   const double sin2i1 = sin(2 * i1);
 
@@ -405,12 +399,12 @@ void electron_scatter_rpkt(Packet &pkt) {
 
   // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
 
-  auto [ref1, ref2] = meridian(new_dir_cmf);
+  const auto [ref1, ref2] = meridian(new_dir_cmf);
 
   // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
   // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
   // meridian frame. NB: we need to add PI to transform THETA to i2
-  const double i2 = PI + rot_angle(new_dir_cmf, old_dir_cmf, ref1, ref2);
+  const double i2 = PI + get_rot_angle(new_dir_cmf, old_dir_cmf, ref1, ref2);
   const double cos2i2 = cos(2 * i2);
   const double sin2i2 = sin(2 * i2);
 

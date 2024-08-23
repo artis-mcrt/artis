@@ -225,21 +225,22 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   pkt.nscatterings = 0;
 }
 
-void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int element, int *const ion, int *const level,
-                            const double rad_recomb) {
+// get the level index of the lower ionisation stage after a randomly selected radiative recombination and update
+// counters
+[[nodiscard]] auto do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int element, const int upperion,
+                                          const int upperionlevel, const double rad_recomb) -> int {
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
-  const double epsilon_current = epsilon(element, *ion, *level);
-  const int upperion = *ion;
-  const int upperionlevel = *level;
+  const double epsilon_current = epsilon(element, upperion, upperionlevel);
   // Randomly select a continuum
   const double targetval = rng_uniform() * rad_recomb;
   double rate = 0;
   const int nlevels = get_ionisinglevels(element, upperion - 1);
-  int lower = 0;
-  for (lower = 0; lower < nlevels; lower++) {
-    const double epsilon_trans = epsilon_current - epsilon(element, upperion - 1, lower);
-    const double R = rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, lower, modelgridindex);
+  int lowerionlevel = 0;
+  for (lowerionlevel = 0; lowerionlevel < nlevels; lowerionlevel++) {
+    const double epsilon_trans = epsilon_current - epsilon(element, upperion - 1, lowerionlevel);
+    const double R =
+        rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, lowerionlevel, modelgridindex);
 
     rate += R * epsilon_trans;
 
@@ -252,20 +253,16 @@ void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int ele
         "%s: From Z=%d ionstage %d level %d, could not select lower level to recombine to. targetval %g * rad_recomb "
         "%g >= "
         "rate %g",
-        __func__, get_atomicnumber(element), get_ionstage(element, *ion), *level, targetval, rad_recomb, rate);
+        __func__, get_atomicnumber(element), get_ionstage(element, upperion), upperionlevel, targetval, rad_recomb,
+        rate);
     std::abort();
   }
 
   // set the new state
-  *ion = upperion - 1;
-  *level = lower;
+  const int lowerion = upperion - 1;
 
-  pkt.nu_cmf = select_continuum_nu(element, upperion - 1, lower, upperionlevel, T_e);
+  pkt.nu_cmf = select_continuum_nu(element, upperion - 1, lowerionlevel, upperionlevel, T_e);
 
-  if (!std::isfinite(pkt.nu_cmf)) {
-    printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
-    std::abort();
-  }
   stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_FB);
   stats::increment(stats::COUNTER_INTERACTIONS);
   pkt.last_event = 2;
@@ -279,31 +276,32 @@ void do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int ele
   }
 
   pkt.next_trans = -1;  // continuum transition, no restrictions for further line interactions
-  pkt.emissiontype = get_emtype_continuum(element, *ion, lower, upperionlevel);
+  pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerionlevel, upperionlevel);
   pkt.em_pos = pkt.pos;
   pkt.em_time = pkt.prop_time;
   pkt.nscatterings = 0;
+  return lowerionlevel;
 }
 
-void do_macroatom_ionisation(const int modelgridindex, const int element, int *const ion, int *const level,
-                             const double epsilon_current, const double internal_up_higher) {
+// get the level index of the upper ionisation stage after randomly-selected photoionisation or thermal collisional
+// ionisation and update counters
+[[nodiscard]] auto do_macroatom_ionisation(const int modelgridindex, const int element, const int ion, const int level,
+                                           const double epsilon_current, const double internal_up_higher) -> int {
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
 
   // Randomly select the occuring transition
   const double targetrate = rng_uniform() * internal_up_higher;
   double rate = 0.;
-  const int nphixstargets = get_nphixstargets(element, *ion, *level);
+  const int nphixstargets = get_nphixstargets(element, ion, level);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-    const double epsilon_trans = get_phixs_threshold(element, *ion, *level, phixstargetindex);
-    const double R = get_corrphotoioncoeff(element, *ion, *level, phixstargetindex, modelgridindex);
-    const double C = col_ionization_ratecoeff(T_e, nne, element, *ion, *level, phixstargetindex, epsilon_trans);
+    const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
+    const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+    const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
     rate += (R + C) * epsilon_current;
     if (rate > targetrate) {
       // set the macroatom's new state
-      *level = get_phixsupperlevel(element, *ion, *level, phixstargetindex);
-      *ion += 1;
-      return;
+      return get_phixsupperlevel(element, ion, level, phixstargetindex);
     }
   }
 
@@ -468,7 +466,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           // stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
         }
 
-        do_macroatom_radrecomb(pkt, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB]);
+        level = do_macroatom_radrecomb(pkt, modelgridindex, element, ion, level, processrates[MA_ACTION_RADRECOMB]);
+        ion -= 1;
         end_packet = true;
         break;
       }
@@ -578,8 +577,9 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
         }
 
-        do_macroatom_ionisation(modelgridindex, element, &ion, &level, epsilon_current,
-                                processrates[MA_ACTION_INTERNALUPHIGHER]);
+        level = do_macroatom_ionisation(modelgridindex, element, ion, level, epsilon_current,
+                                        processrates[MA_ACTION_INTERNALUPHIGHER]);
+        ion += 1;
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
@@ -884,8 +884,8 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
 
       const double eoverkt = epsilon_trans / (KB * T_e);
       // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-      const double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl -> n'l'
-                                 // and 0.7 for transitions nl -> nl'
+      constexpr double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl ->
+                                     // n'l' and 0.7 for transitions nl -> nl'
       // test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
       // crude approximation to the already crude Van-Regemorter formula
 
@@ -918,14 +918,13 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, const int elemen
                               const int uptransindex, const double epsilon_trans,
                               const double lowerstatweight) -> double {
   // assert_testmodeonly(i < get_nuptrans(element, ion, lower));
-  double C = 0.;
   const double coll_strength = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].coll_str;
   const double eoverkt = epsilon_trans / (KB * T_e);
 
   if (coll_strength < 0) {
     const bool forbidden = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].forbidden;
-    if (!forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
-    {
+    if (!forbidden) {
+      // alternative condition: (coll_strength > -1.5) i.e. to catch -1
       const double trans_osc_strength =
           globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].osc_strength;
       // permitted E1 electric dipole transitions
@@ -935,28 +934,27 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, const int elemen
       // osc_strength(element,ion,upper,lower);
 
       // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-      const double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl -> n'l'
-                                 // and 0.7 for transitions nl -> nl'
-      // test = 0.276 * exp(eoverkt) * gsl_sf_expint_E1(eoverkt);
+      constexpr double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl ->
+                                     // n'l' and 0.7 for transitions nl -> nl'
+      // test = 0.276 * std::exp(eoverkt) * gsl_sf_expint_E1(eoverkt);
       // crude approximation to the already crude Van-Regemorter formula
-      const double exp_eoverkt = exp(eoverkt);
+      const double exp_eoverkt = std::exp(eoverkt);
 
       const double test = 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt));
       const double Gamma = g_bar > test ? g_bar : test;
-      C = C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow(H_ionpot / epsilon_trans, 2) * eoverkt /
-          exp_eoverkt * Gamma;
-    } else  // alterative: (coll_strength > -3.5) to catch -2 or -3
-    {
-      // forbidden transitions: magnetic dipole, electric quadropole...
-      // Axelrod's approximation (thesis 1980)
-      const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].targetlevelindex;
-      const double upperstatweight = stat_weight(element, ion, upper);
-      C = nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
+      return C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow(H_ionpot / epsilon_trans, 2) *
+             eoverkt / exp_eoverkt * Gamma;
     }
-  } else {
-    // from Osterbrock and Ferland, p51
-    C = nne * 8.629e-6 * coll_strength * std::exp(-eoverkt) / lowerstatweight / std::sqrt(T_e);
+
+    // alterative condition: (coll_strength > -3.5) to catch -2 or -3
+
+    // forbidden transitions: magnetic dipole, electric quadropole...
+    // Axelrod's approximation (thesis 1980)
+    const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].targetlevelindex;
+    const double upperstatweight = stat_weight(element, ion, upper);
+    return nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
   }
 
-  return C;
+  // from Osterbrock and Ferland, p51
+  return nne * 8.629e-6 * coll_strength * std::exp(-eoverkt) / lowerstatweight / std::sqrt(T_e);
 }
