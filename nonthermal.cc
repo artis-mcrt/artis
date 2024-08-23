@@ -542,7 +542,7 @@ void zero_all_effionpot(const int modelgridindex) {
   check_auger_probabilities(modelgridindex);
 }
 
-auto get_energyindex_ev_lteq(const double energy_ev) -> int
+[[nodiscard]] constexpr auto get_energyindex_ev_lteq(const double energy_ev) -> int
 // finds the highest energy point <= energy_ev
 {
   const int index = std::floor((energy_ev - SF_EMIN) / DELTA_E);
@@ -556,7 +556,7 @@ auto get_energyindex_ev_lteq(const double energy_ev) -> int
   return index;
 }
 
-auto get_energyindex_ev_gteq(const double energy_ev) -> int
+[[nodiscard]] constexpr auto get_energyindex_ev_gteq(const double energy_ev) -> int
 // finds the highest energy point <= energy_ev
 {
   const int index = std::ceil((energy_ev - SF_EMIN) / DELTA_E);
@@ -572,7 +572,7 @@ auto get_energyindex_ev_gteq(const double energy_ev) -> int
 
 // interpolate the y flux values to get the value at a given energy
 // y has units of particles / cm2 / s / eV
-auto get_y(const std::array<double, SFPTS> &yfunc, const double energy_ev) -> double {
+[[nodiscard]] constexpr auto get_y(const std::array<double, SFPTS> &yfunc, const double energy_ev) -> double {
   if (energy_ev <= 0) {
     return 0.;
   }
@@ -654,8 +654,8 @@ auto get_xs_ionization_vector(std::array<double, SFPTS> &xs_vec, const collionro
 
   for (int i = startindex; i < SFPTS; i++) {
     const double u = engrid(i) / ionpot_ev;
-    const double xs_ioniz =
-        1e-14 * (A * (1 - 1 / u) + B * pow((1 - (1 / u)), 2) + C * log(u) + D * log(u) / u) / (u * pow(ionpot_ev, 2));
+    const double xs_ioniz = 1e-14 * (A * (1 - 1 / u) + B * std::pow((1 - (1 / u)), 2) + C * log(u) + D * log(u) / u) /
+                            (u * std::pow(ionpot_ev, 2));
     xs_vec[i] = xs_ioniz;
   }
 
@@ -664,20 +664,21 @@ auto get_xs_ionization_vector(std::array<double, SFPTS> &xs_vec, const collionro
 
 // distribution of secondary electron energies for primary electron with energy e_p
 // Opal, Peterson, & Beaty (1971)
-auto Psecondary(const double e_p, const double epsilon, const double I, const double J) -> double {
+[[nodiscard]] constexpr auto Psecondary(const double e_p, const double epsilon, const double I,
+                                        const double J) -> double {
   const double e_s = epsilon - I;
 
   if (e_p <= I || e_s < 0.) {
     return 0.;
   }
-  assert_always(J > 0);
-  assert_always(e_p >= I);
-  assert_always(e_s >= 0);
-  assert_always(std::isfinite(atan((e_p - I) / 2 / J)));
-  return 1 / (J * atan((e_p - I) / 2 / J) * (1 + pow(e_s / J, 2)));
+  assert_testmodeonly(J > 0);
+  assert_testmodeonly(e_p >= I);
+  assert_testmodeonly(e_s >= 0);
+  assert_testmodeonly(std::isfinite(std::atan((e_p - I) / 2 / J)));
+  return 1 / (J * std::atan((e_p - I) / 2 / J) * (1 + std::pow(e_s / J, 2)));
 }
 
-auto get_J(const int Z, const int ionstage, const double ionpot_ev) -> double {
+[[nodiscard]] constexpr auto get_J(const int Z, const int ionstage, const double ionpot_ev) -> double {
   // returns an energy in eV
   // values from Opal et al. 1971 as applied by Kozma & Fransson 1992
   if (ionstage == 1) {
@@ -707,7 +708,7 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
   if (coll_strength >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
-    return pow(H_ionpot / energy, 2) / lowerstatweight * coll_strength * PI * A_naught_squared;
+    return std::pow(H_ionpot / energy, 2) / lowerstatweight * coll_strength * PI * A_naught_squared;
   }
   const bool forbidden = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].forbidden;
   if (!forbidden) {
@@ -723,7 +724,7 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
 
     constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
-    return prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * trans_osc_strength * g_bar / U;
+    return prefactor * A_naught_squared * std::pow(H_ionpot / epsilon_trans, 2) * trans_osc_strength * g_bar / U;
   }
   return 0.;
 }
@@ -740,13 +741,14 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
   // normally set to 1.0, but Shingles et al. (2021) boosted this to increase heating
   constexpr double boostfactor = 1.;
 
-  const double omegap = std::sqrt(4 * PI * nne * pow(QE, 2) / ME);
+  const double omegap = std::sqrt(4 * PI * nne * std::pow(QE, 2) / ME);
   const double zetae = H * omegap / 2 / PI;
   if (energy > 14 * EV) {
-    return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(2 * energy / zetae);
+    return boostfactor * nne * 2 * PI * std::pow(QE, 4) / energy * log(2 * energy / zetae);
   }
   const double v = std::sqrt(2 * energy / ME);
-  return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(ME * pow(v, 3) / (EULERGAMMA * pow(QE, 2) * omegap));
+  return boostfactor * nne * 2 * PI * std::pow(QE, 4) / energy *
+         log(ME * std::pow(v, 3) / (EULERGAMMA * std::pow(QE, 2) * omegap));
 }
 
 // impact ionization cross section in cm^2
@@ -765,7 +767,8 @@ constexpr auto xs_impactionization(const double energy_ev, const collionrow &col
   const double C = colliondata.C;
   const double D = colliondata.D;
 
-  return 1e-14 * (A * (1 - 1 / u) + B * pow((1 - (1 / u)), 2) + C * log(u) + D * log(u) / u) / (u * pow(ionpot_ev, 2));
+  return 1e-14 * (A * (1 - 1 / u) + B * std::pow((1 - (1 / u)), 2) + C * log(u) + D * log(u) / u) /
+         (u * std::pow(ionpot_ev, 2));
 }
 
 // Kozma & Fransson equation 6.
@@ -1044,7 +1047,7 @@ auto get_oneoverw(const int element, const int ion, const int modelgridindex) ->
 
   const double binding = get_mean_binding_energy(element, ion);
   constexpr double Aconst = 1.33e-14 * EV * EV;
-  const double oneoverW = Aconst * binding / Zbar / (2 * PI * pow(QE, 4));
+  const double oneoverW = Aconst * binding / Zbar / (2 * PI * std::pow(QE, 4));
 
   return oneoverW;
 }
@@ -1255,14 +1258,15 @@ auto nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, con
 // epsilon_trans is in erg
 // returns the index of the first valid cross section point (en >= epsilon_trans)
 // all elements below this index are invalid and should not be used
-auto get_xs_excitation_vector(std::array<double, SFPTS> &xs_excitation_vec, const int element, const int ion,
-                              const int lower, const int uptransindex, const double statweight_lower,
-                              const double epsilon_trans) -> int {
+auto get_xs_excitation_vector(const int element, const int ion, const int lower, const int uptransindex,
+                              const double statweight_lower,
+                              const double epsilon_trans) -> std::tuple<std::array<double, SFPTS>, int> {
+  std::array<double, SFPTS> xs_excitation_vec{};
   const double coll_strength = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].coll_str;
   if (coll_strength >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
-    const double constantfactor = pow(H_ionpot, 2) / statweight_lower * coll_strength * PI * A_naught_squared;
+    const double constantfactor = std::pow(H_ionpot, 2) / statweight_lower * coll_strength * PI * A_naught_squared;
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
 
@@ -1270,9 +1274,9 @@ auto get_xs_excitation_vector(std::array<double, SFPTS> &xs_excitation_vec, cons
 
     for (int j = en_startindex; j < SFPTS; j++) {
       const double energy = engrid(j) * EV;
-      xs_excitation_vec[j] = constantfactor * pow(energy, -2);
+      xs_excitation_vec[j] = constantfactor * std::pow(energy, -2);
     }
-    return en_startindex;
+    return {xs_excitation_vec, en_startindex};
   }
   const bool forbidden = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].forbidden;
   if (!forbidden) {
@@ -1289,7 +1293,7 @@ auto get_xs_excitation_vector(std::array<double, SFPTS> &xs_excitation_vec, cons
 
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
     const double constantfactor =
-        epsilon_trans_ev * prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * trans_osc_strength;
+        epsilon_trans_ev * prefactor * A_naught_squared * std::pow(H_ionpot / epsilon_trans, 2) * trans_osc_strength;
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans_ev);
 
@@ -1305,9 +1309,10 @@ auto get_xs_excitation_vector(std::array<double, SFPTS> &xs_excitation_vec, cons
       xs_excitation_vec[j] = constantfactor * g_bar / engrid(j);
     }
 
-    return en_startindex;
-  }  // gsl_vector_set_zero(xs_excitation_vec);
-  return -1;
+    return {xs_excitation_vec, en_startindex};
+  }
+
+  return {xs_excitation_vec, -1};
 }
 
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
@@ -1316,11 +1321,13 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
                                                      const int ion, const int lower, const int uptransindex,
                                                      const double statweight_lower,
                                                      const double epsilon_trans) -> double {
-  std::array<double, SFPTS> xs_excitation_vec{};
+  const auto [xs_excitation_vec, xsstartindex] =
+      get_xs_excitation_vector(element, ion, lower, uptransindex, statweight_lower, epsilon_trans);
 
-  if (get_xs_excitation_vector(xs_excitation_vec, element, ion, lower, uptransindex, statweight_lower, epsilon_trans) >=
-      0) {
-    const double y_xs_de = cblas_ddot(SFPTS, xs_excitation_vec.data(), 1, yvec.data(), 1) * DELTA_E;
+  if (xsstartindex >= 0) {
+    const double y_xs_de =
+        cblas_ddot(SFPTS - xsstartindex, xs_excitation_vec.data() + xsstartindex, 1, yvec.data() + xsstartindex, 1) *
+        DELTA_E;
 
     return y_xs_de / E_init_ev / EV;
   }
@@ -1679,7 +1686,6 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 void sfmatrix_add_excitation(std::vector<double> &sfmatrix, const int modelgridindex, const int element,
                              const int ion) {
   // excitation terms
-  std::array<double, SFPTS> vec_xs_excitation_deltae{};
 
   const int nlevels_all = get_nlevels(element, ion);
   const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
@@ -1701,27 +1707,24 @@ void sfmatrix_add_excitation(std::vector<double> &sfmatrix, const int modelgridi
         continue;
       }
 
-      const int xsstartindex =
-          get_xs_excitation_vector(vec_xs_excitation_deltae, element, ion, lower, t, statweight_lower, epsilon_trans);
+      auto [vec_xs_excitation_deltae, xsstartindex] =
+          get_xs_excitation_vector(element, ion, lower, t, statweight_lower, epsilon_trans);
       if (xsstartindex >= 0) {
-        cblas_dscal(SFPTS, DELTA_E, vec_xs_excitation_deltae.data(), 1);
+        cblas_dscal(SFPTS - xsstartindex, DELTA_E, vec_xs_excitation_deltae.data() + xsstartindex, 1);
 
         for (int i = 0; i < SFPTS; i++) {
           const double en = engrid(i);
           const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
 
-          const int startindex = i > xsstartindex ? i : xsstartindex;
+          const int startindex = std::max(i, xsstartindex);
           for (int j = startindex; j < stopindex; j++) {
             sfmatrix[(i * SFPTS) + j] += nnlevel * vec_xs_excitation_deltae[j];
           }
 
           // do the last bit separately because we're not using the full delta_e interval
-          const double delta_en = DELTA_E;
-
           const double delta_en_actual = (en + epsilon_trans_ev - engrid(stopindex));
-
           sfmatrix[(i * SFPTS) + stopindex] +=
-              nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / delta_en;
+              nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / DELTA_E;
         }
       }
     }
@@ -1749,14 +1752,15 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrix, const int Z, const i
       // from becoming unphysical. This insight came from reading the
       // CMFGEN Fortran source code (Li, Dessart, Hillier 2012, doi:10.1111/j.1365-2966.2012.21198.x)
       // I had neglected this, so the limits of integration were incorrect. The fix didn't massively affect
-      // ionisation rates or spectra, but it was a source of error that led to energy fractions not adding up to 100%
+      // ionisation rates or spectra, but it was a source of error that led to energy fractions not adding up to
+      // 100%
       std::array<double, SFPTS> int_eps_upper = {0};
       std::array<double, SFPTS> prefactors = {0};
       for (int j = xsstartindex; j < SFPTS; j++) {
         const double endash = engrid(j);
         const double epsilon_upper = std::min((endash + ionpot_ev) / 2, endash);
-        int_eps_upper[j] = atan((epsilon_upper - ionpot_ev) / J);
-        prefactors[j] = vec_xs_ionization[j] * nnion / atan((endash - ionpot_ev) / 2 / J);
+        int_eps_upper[j] = std::atan((epsilon_upper - ionpot_ev) / J);
+        prefactors[j] = vec_xs_ionization[j] * nnion / std::atan((endash - ionpot_ev) / 2 / J);
       }
 
       for (int i = 0; i < SFPTS; i++) {
@@ -1775,14 +1779,14 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrix, const int Z, const i
 
           const double epsilon_lower =
               std::max(endash - en, ionpot_ev);  // and epsilon_upper = (endash + ionpot_ev) / 2;
-          const double int_eps_lower = atan((epsilon_lower - ionpot_ev) / J);
+          const double int_eps_lower = std::atan((epsilon_lower - ionpot_ev) / J);
           if (int_eps_lower <= int_eps_upper[j]) {
             sfmatrix[(i * SFPTS) + j] += prefactors[j] * (int_eps_upper[j] - int_eps_lower) * DELTA_E;
           }
         }
 
-        // below is atan((epsilon_lower - ionpot_ev) / J) where epsilon_lower = en + ionpot_ev;
-        const double int_eps_lower2 = atan(en / J);
+        // below is std::atan((epsilon_lower - ionpot_ev) / J) where epsilon_lower = en + ionpot_ev;
+        const double int_eps_lower2 = std::atan(en / J);
 
         // endash ranges from 2 * en + ionpot_ev to SF_EMAX
         if (2 * en + ionpot_ev <= SF_EMAX) {
