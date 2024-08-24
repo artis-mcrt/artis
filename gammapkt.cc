@@ -175,7 +175,7 @@ void init_gamma_linelist() {
   }
   allnuc_gamma_line_list.shrink_to_fit();
   assert_always(static_cast<int>(allnuc_gamma_line_list.size()) == total_lines);
-  std::ranges::stable_sort(allnuc_gamma_line_list, [](const NucGammaLine &g1, const NucGammaLine &g2) {
+  std::ranges::SORT_OR_STABLE_SORT(allnuc_gamma_line_list, [](const NucGammaLine &g1, const NucGammaLine &g2) {
     // true if d1 < d2
     if (g1.energy < g2.energy) {
       return true;

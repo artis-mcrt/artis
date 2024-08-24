@@ -28,7 +28,16 @@ ifeq ($(TESTMODE),ON)
 else ifeq ($(TESTMODE),OFF)
 else ifeq ($(TESTMODE),)
 else
-  $(error bad value for testmode option. Should be ON or OFF)
+  $(error bad value for TESTMODE option. Should be ON or OFF)
+endif
+
+ifeq ($(REPRODUCIBLE),ON)
+	CXXFLAGS += -DREPRODUCIBLE=true
+	BUILD_DIR := $(BUILD_DIR)_reproducable
+else ifeq ($(REPRODUCIBLE),OFF)
+else ifeq ($(REPRODUCIBLE),)
+else
+  $(error bad value for REPRODUCIBLE option. Should be ON or OFF)
 endif
 
 
