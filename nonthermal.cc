@@ -686,7 +686,8 @@ auto get_xs_ionization_vector(std::array<double, SFPTS> &xs_vec, const collionro
 
   for (int i = startindex; i < SFPTS; i++) {
     const double u = engrid(i) / ionpot_ev;
-    const double xs_ioniz = 1e-14 * (A * (1 - 1 / u) + B * std::pow((1 - (1 / u)), 2) + C * log(u) + D * log(u) / u) /
+    const double xs_ioniz = 1e-14 *
+                            (A * (1 - 1 / u) + B * std::pow((1 - (1 / u)), 2) + C * std::log(u) + D * std::log(u) / u) /
                             (u * std::pow(ionpot_ev, 2));
     xs_vec[i] = xs_ioniz;
   }
@@ -752,7 +753,7 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
     // constexpr double g_bar = 0.2;
     constexpr double A = 0.28;
     constexpr double B = 0.15;
-    const double g_bar = (A * log(U)) + B;
+    const double g_bar = (A * std::log(U)) + B;
 
     constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
@@ -776,11 +777,11 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
   const double omegap = std::sqrt(4 * PI * nne * std::pow(QE, 2) / ME);
   const double zetae = H * omegap / 2 / PI;
   if (energy > 14 * EV) {
-    return boostfactor * nne * 2 * PI * std::pow(QE, 4) / energy * log(2 * energy / zetae);
+    return boostfactor * nne * 2 * PI * std::pow(QE, 4) / energy * std::log(2 * energy / zetae);
   }
   const double v = std::sqrt(2 * energy / ME);
   return boostfactor * nne * 2 * PI * std::pow(QE, 4) / energy *
-         log(ME * std::pow(v, 3) / (EULERGAMMA * std::pow(QE, 2) * omegap));
+         std::log(ME * std::pow(v, 3) / (EULERGAMMA * std::pow(QE, 2) * omegap));
 }
 
 // impact ionization cross section in cm^2
@@ -799,7 +800,7 @@ constexpr auto xs_impactionization(const double energy_ev, const collionrow &col
   const double C = colliondata.C;
   const double D = colliondata.D;
 
-  return 1e-14 * (A * (1 - 1 / u) + B * std::pow((1 - (1 / u)), 2) + C * log(u) + D * log(u) / u) /
+  return 1e-14 * (A * (1 - 1 / u) + B * std::pow((1 - (1 / u)), 2) + C * std::log(u) + D * std::log(u) / u) /
          (u * std::pow(ionpot_ev, 2));
 }
 
@@ -1331,7 +1332,7 @@ auto get_xs_excitation_vector(const int element, const int ion, const int lower,
     std::fill_n(xs_excitation_vec.begin(), en_startindex, 0.);
 
     // U = en / epsilon
-    // g_bar = A * log(U) + b
+    // g_bar = A * std::log(U) + b
     // xs[j] = constantfactor * g_bar / engrid(j)
     const double logepsilon = std::log(epsilon_trans_ev);
     for (int j = en_startindex; j < SFPTS; j++) {
