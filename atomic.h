@@ -413,8 +413,7 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
       return phixstargetindex;
     }
   }
-  printout("Could not find phixstargetindex\n");
-  std::abort();
+  assert_testmodeonly(false);
   return -1;
 }
 
