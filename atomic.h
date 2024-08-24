@@ -110,14 +110,6 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
   return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].probability;
 }
 
-// double einstein_spontaneous_emission(int element, int ion, int upper, int lower)
-// reads A_ul from levellist which consists of
-// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... |
-// (A_upper,1; f_upper,1)
-[[nodiscard]] inline auto einstein_spontaneous_emission(const int lineindex) -> double {
-  return globals::linelist[lineindex].einstein_A;
-}
-
 // Return the statistical weight of (element,ion,level).
 [[nodiscard]] inline auto stat_weight(const int element, const int ion, const int level) -> double {
   assert_testmodeonly(element < get_nelements());
@@ -219,7 +211,7 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
 
   const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
-  const double A_ul = einstein_spontaneous_emission(lineindex);
+  const double A_ul = globals::linelist[lineindex].einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
   const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
@@ -421,8 +413,10 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
       return phixstargetindex;
     }
   }
-  printout("Could not find phixstargetindex\n");
-  std::abort();
+  assert_testmodeonly(false);
+  if constexpr (!TESTMODE) {
+    __builtin_unreachable();
+  }
   return -1;
 }
 
