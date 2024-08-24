@@ -205,6 +205,39 @@ std::vector<NonThermalCellSolution> nt_solution;
 std::vector<double> deposition_rate_density;
 std::vector<int> deposition_rate_density_timestep;
 
+constexpr auto uppertriangular(const int i, const int j) -> int {
+  assert_testmodeonly(i >= 0);
+  assert_testmodeonly(i < SFPTS);
+  // sometimes you might want to get an offset for a row using j = 0 < i, so that j can be added to it.
+  // assert_testmodeonly(j >= i);
+  assert_testmodeonly(j < SFPTS);
+  return (SFPTS * i) - (i * (i + 1) / 2) + j;
+}
+
+constexpr void compactify_triangular_matrix(std::vector<double> &matrix) {
+  for (int i = 1; i < SFPTS; i++) {
+    const int rowoffset = uppertriangular(i, 0);
+    for (int j = 0; j < i; j++) {
+      assert_always(matrix[i * SFPTS + j] == 0.);
+    }
+    for (int j = i; j < SFPTS; j++) {
+      matrix[rowoffset + j] = matrix[i * SFPTS + j];
+    }
+  }
+}
+
+constexpr void decompactify_triangular_matrix(std::vector<double> &matrix) {
+  for (int i = SFPTS - 1; i > 0; i--) {
+    const int rowoffset = uppertriangular(i, 0);
+    for (int j = SFPTS - 1; j >= i; j--) {
+      matrix[i * SFPTS + j] = matrix[rowoffset + j];
+    }
+    for (int j = i - 1; j >= 0; j--) {
+      matrix[i * SFPTS + j] = 0.;
+    }
+  }
+}
+
 void read_shell_configs() {
   assert_always(NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE);
   auto shells_file = fstream_required("electron_shell_occupancy.txt", std::ios::in);
@@ -1681,7 +1714,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
            nt_solution[modelgridindex].frac_heating);
 }
 
-void sfmatrix_add_excitation(std::vector<double> &sfmatrix, const int modelgridindex, const int element,
+void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int modelgridindex, const int element,
                              const int ion) {
   // excitation terms
 
@@ -1710,17 +1743,18 @@ void sfmatrix_add_excitation(std::vector<double> &sfmatrix, const int modelgridi
         cblas_dscal(SFPTS - xsstartindex, DELTA_E, vec_xs_excitation_deltae.data() + xsstartindex, 1);
 
         for (int i = 0; i < SFPTS; i++) {
+          const int rowoffset = uppertriangular(i, 0);
           const double en = engrid(i);
           const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
 
           const int startindex = std::max(i, xsstartindex);
           for (int j = startindex; j < stopindex; j++) {
-            sfmatrix[(i * SFPTS) + j] += nnlevel * vec_xs_excitation_deltae[j];
+            sfmatrixuppertri[rowoffset + j] += nnlevel * vec_xs_excitation_deltae[j];
           }
 
           // do the last bit separately because we're not using the full delta_e interval
           const double delta_en_actual = (en + epsilon_trans_ev - engrid(stopindex));
-          sfmatrix[(i * SFPTS) + stopindex] +=
+          sfmatrixuppertri[rowoffset + stopindex] +=
               nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / DELTA_E;
         }
       }
@@ -1728,7 +1762,7 @@ void sfmatrix_add_excitation(std::vector<double> &sfmatrix, const int modelgridi
   }
 }
 
-void sfmatrix_add_ionization(std::vector<double> &sfmatrix, const int Z, const int ionstage, const double nnion)
+void sfmatrix_add_ionization(std::vector<double> &sfmatrixuppertri, const int Z, const int ionstage, const double nnion)
 // add the ionization terms to the Spencer-Fano matrix
 {
   std::array<double, SFPTS> vec_xs_ionization{};
@@ -1763,6 +1797,7 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrix, const int Z, const i
       for (int i = 0; i < SFPTS; i++) {
         // i is the matrix row index, which corresponds to an energy E at which we are solve from y(E)
         const double en = engrid(i);
+        const int rowoffset = uppertriangular(i, 0);
 
         // endash ranges from en to SF_EMAX, but skip over the zero-cross section points
         const int jstart = std::max(i, xsstartindex);
@@ -1778,7 +1813,7 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrix, const int Z, const i
               std::max(endash - en, ionpot_ev);  // and epsilon_upper = (endash + ionpot_ev) / 2;
           const double int_eps_lower = std::atan((epsilon_lower - ionpot_ev) / J);
           if (int_eps_lower <= int_eps_upper[j]) {
-            sfmatrix[(i * SFPTS) + j] += prefactors[j] * (int_eps_upper[j] - int_eps_lower) * DELTA_E;
+            sfmatrixuppertri[rowoffset + j] += prefactors[j] * (int_eps_upper[j] - int_eps_lower) * DELTA_E;
           }
         }
 
@@ -1792,7 +1827,7 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrix, const int Z, const i
             // epsilon_lower = en + ionpot_ev;
             // epsilon_upper = (endash + ionpot_ev) / 2;
             if (int_eps_lower2 <= int_eps_upper[j]) {
-              sfmatrix[(i * SFPTS) + j] -= prefactors[j] * (int_eps_upper[j] - int_eps_lower2) * DELTA_E;
+              sfmatrixuppertri[rowoffset + j] -= prefactors[j] * (int_eps_upper[j] - int_eps_lower2) * DELTA_E;
             }
           }
         }
@@ -1812,22 +1847,23 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrix, const int Z, const i
         }
 
         for (int i = 0; i < augerstopindex; i++) {
+          const int rowoffset = uppertriangular(i, 0);
           const double en = engrid(i);
           const int jstart = i > xsstartindex ? i : xsstartindex;
           for (int j = jstart; j < SFPTS; j++) {
             const double xs = vec_xs_ionization[j];
-            if (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
+            if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
               const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
               for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++) {
                 if (en < (en_auger_ev * en_boost / a)) {
-                  sfmatrix[(i * SFPTS) + j] -= nnion * xs * collionrow.prob_num_auger[a] * a;
+                  sfmatrixuppertri[rowoffset + j] -= nnion * xs * collionrow.prob_num_auger[a] * a;
                 }
               }
             } else {
               assert_always(en < en_auger_ev);
               // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en,
               // en_auger_ev, nnion * xs, ij_contribution);
-              sfmatrix[(i * SFPTS) + j] -= nnion * xs;  // * n_auger_elec_avg; // * en_auger_ev???
+              sfmatrixuppertri[rowoffset + j] -= nnion * xs;  // * n_auger_elec_avg; // * en_auger_ev???
             }
           }
         }
@@ -2451,12 +2487,14 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   //   timesteps.\n");
   // }
 
+  // sfmatrix will be a compacted upper triangular matrix during construction and then expanded into a full matrix (with
+  // lots of zeros) just before the solver is called
   THREADLOCALONHOST std::vector<double> sfmatrix(SFPTS * SFPTS);
-  std::ranges::fill(sfmatrix, 0.);
+  std::fill_n(sfmatrix.begin(), SFPTS * (SFPTS + 1) / 2, 0.);
 
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++) {
-    sfmatrix[(i * SFPTS) + i] += electron_loss_rate(engrid(i) * EV, nne) / EV;
+    sfmatrix[uppertriangular(i, i)] += electron_loss_rate(engrid(i) * EV, nne) / EV;
   }
 
   if (enable_sfexcitation || enable_sfionization) {
@@ -2513,6 +2551,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   // }
   // printout("\n");
 
+  decompactify_triangular_matrix(sfmatrix);
   const auto yfunc = sfmatrix_solve(sfmatrix);
 
   if (timestep % 10 == 0) {
