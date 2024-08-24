@@ -33,7 +33,7 @@ endif
 
 ifeq ($(REPRODUCIBLE),ON)
 	CXXFLAGS += -DREPRODUCIBLE=true
-	BUILD_DIR := $(BUILD_DIR)_reproducable
+	BUILD_DIR := $(BUILD_DIR)_reproducible
 else ifeq ($(REPRODUCIBLE),OFF)
 else ifeq ($(REPRODUCIBLE),)
 else
