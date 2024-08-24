@@ -109,7 +109,7 @@ void printout_tracemission_stats() {
         const double statweight_lower = stat_weight(element, ion, lower);
 
         const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
-        const double A_ul = einstein_spontaneous_emission(lineindex);
+        const double A_ul = globals::linelist[lineindex].einstein_A;
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = statweight_target / statweight_lower * B_ul;
 
@@ -122,7 +122,7 @@ void printout_tracemission_stats() {
         printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n", encontrib,
                  100 * encontrib / totalenergy, get_atomicnumber(element), get_ionstage(element, ion),
                  globals::linelist[lineindex].upperlevelindex, globals::linelist[lineindex].lowerlevelindex,
-                 downtrans->coll_str, einstein_spontaneous_emission(lineindex), downtrans->forbidden, linelambda, v_rad,
+                 downtrans->coll_str, globals::linelist[lineindex].einstein_A, downtrans->forbidden, linelambda, v_rad,
                  B_lu, B_ul);
       } else {
         break;

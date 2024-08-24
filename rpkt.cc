@@ -131,7 +131,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
         const int ion = globals::linelist[lineindex].ionindex;
         const int upper = globals::linelist[lineindex].upperlevelindex;
         const int lower = globals::linelist[lineindex].lowerlevelindex;
-        const double A_ul = einstein_spontaneous_emission(lineindex);
+        const double A_ul = globals::linelist[lineindex].einstein_A;
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 

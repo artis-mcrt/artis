@@ -506,7 +506,7 @@ void init(const int my_rank, const int ndo_nonempty) {
         // const int upperlevel = linelist[i].upperlevelindex;
         // const int ion = linelist[i].ionindex;
         // const int ionstage = get_ionstage(element, ion);
-        const double A_ul = einstein_spontaneous_emission(i);
+        const double A_ul = globals::linelist[i].einstein_A;
 
         bool addline = false;
         // if (ionstage == 1 && lowerlevel == 6 && upperlevel == 55)
