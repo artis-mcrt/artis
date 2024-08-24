@@ -474,10 +474,10 @@ void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, 
 
     // excitation
     const int nuptrans = get_nuptrans(element, ion, level);
+    const auto &leveluptrans = globals::elements[element].ions[ion].levels[level].uptrans;
     for (int i = 0; i < nuptrans; i++) {
-      const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-      const TransitionLine *line = &globals::linelist[lineindex];
-      const int upper = line->upperlevelindex;
+      const int lineindex = leveluptrans[i].lineindex;
+      const int upper = leveluptrans[i].targetlevelindex;
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
 
       const double R =
