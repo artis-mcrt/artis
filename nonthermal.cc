@@ -514,8 +514,7 @@ auto get_possible_nt_excitation_count() -> int {
       for (int lower = 0; lower < lower_nlevels; lower++) {
         const int nuptrans = get_nuptrans(element, ion, lower);
         for (int t = 0; t < nuptrans; t++) {
-          const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
-          const int upper = globals::linelist[lineindex].upperlevelindex;
+          const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[t].targetlevelindex;
           if (upper < NTEXCITATION_MAXNLEVELS_UPPER) {
             ntexcitationcount++;
           }
@@ -803,8 +802,7 @@ auto N_e(const int modelgridindex, const double energy, const std::array<double,
         const double epsilon_lower = epsilon(element, ion, lower);
         const auto statweight_lower = stat_weight(element, ion, lower);
         for (int t = 0; t < nuptrans; t++) {
-          const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
-          const int upper = globals::linelist[lineindex].upperlevelindex;
+          const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[t].targetlevelindex;
           if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
             continue;
           }
@@ -1497,8 +1495,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
         const double epsilon_lower = epsilon(element, ion, lower);
 
         for (int t = 0; t < nuptrans; t++) {
-          const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
-          const int upper = globals::linelist[lineindex].upperlevelindex;
+          const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[t].targetlevelindex;
           if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
             continue;
           }
@@ -1517,6 +1514,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
               // if (get_coll_str(lineindex) < 0) // if collision strength is not defined, the rate coefficient is
               // unreliable
               //   ratecoeffperdeposition = 0.;
+              const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
 
               tmp_excitation_list.push_back({
                   .frac_deposition = frac_excitation_thistrans,
@@ -1696,8 +1694,7 @@ void sfmatrix_add_excitation(std::vector<double> &sfmatrix, const int modelgridi
     const double epsilon_lower = epsilon(element, ion, lower);
     const int nuptrans = get_nuptrans(element, ion, lower);
     for (int t = 0; t < nuptrans; t++) {
-      const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
-      const int upper = globals::linelist[lineindex].upperlevelindex;
+      const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[t].targetlevelindex;
       if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
         continue;
       }
@@ -1803,7 +1800,7 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrix, const int Z, const i
 
       if constexpr (SF_AUGER_CONTRIBUTION_ON) {
         int augerstopindex = 0;
-        if (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
+        if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
           // en_auger_ev is (if LJS understands it correctly) averaged to include some probability of zero Auger
           // electrons so we need a boost to get the average energy of Auger electrons given that there are one or
           // more
