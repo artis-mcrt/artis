@@ -414,6 +414,9 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
     }
   }
   assert_testmodeonly(false);
+  if constexpr (!TESTMODE) {
+    __builtin_unreachable();
+  }
   return -1;
 }
 
