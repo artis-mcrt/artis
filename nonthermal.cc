@@ -218,10 +218,10 @@ constexpr void compactify_triangular_matrix(std::vector<double> &matrix) {
   for (int i = 1; i < SFPTS; i++) {
     const int rowoffset = uppertriangular(i, 0);
     for (int j = 0; j < i; j++) {
-      assert_always(matrix[i * SFPTS + j] == 0.);
+      assert_always(matrix[(i * SFPTS) + j] == 0.);
     }
     for (int j = i; j < SFPTS; j++) {
-      matrix[rowoffset + j] = matrix[i * SFPTS + j];
+      matrix[rowoffset + j] = matrix[(i * SFPTS) + j];
     }
   }
 }
@@ -230,10 +230,10 @@ constexpr void decompactify_triangular_matrix(std::vector<double> &matrix) {
   for (int i = SFPTS - 1; i > 0; i--) {
     const int rowoffset = uppertriangular(i, 0);
     for (int j = SFPTS - 1; j >= i; j--) {
-      matrix[i * SFPTS + j] = matrix[rowoffset + j];
+      matrix[(i * SFPTS) + j] = matrix[rowoffset + j];
     }
     for (int j = i - 1; j >= 0; j--) {
-      matrix[i * SFPTS + j] = 0.;
+      matrix[(i * SFPTS) + j] = 0.;
     }
   }
 }
