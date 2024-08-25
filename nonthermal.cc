@@ -1613,7 +1613,8 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 
   if (nt_excitations_stored > 0) {
     // sort by descending frac_deposition
-    std::ranges::stable_sort(tmp_excitation_list, std::ranges::greater{}, &NonThermalExcitation::frac_deposition);
+    std::ranges::SORT_OR_STABLE_SORT(tmp_excitation_list, std::ranges::greater{},
+                                     &NonThermalExcitation::frac_deposition);
 
     // the excitation list is now sorted by frac_deposition descending
     const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
@@ -1673,9 +1674,9 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
     }
 
     // sort the excitation list by ascending lineindex for fast lookup with a binary search
-    std::ranges::stable_sort(std::span(nt_solution[modelgridindex].frac_excitations_list,
-                                       nt_solution[modelgridindex].frac_excitations_list_size),
-                             std::ranges::less{}, &NonThermalExcitation::lineindex);
+    std::ranges::SORT_OR_STABLE_SORT(std::span(nt_solution[modelgridindex].frac_excitations_list,
+                                               nt_solution[modelgridindex].frac_excitations_list_size),
+                                     std::ranges::less{}, &NonThermalExcitation::lineindex);
 
   }  // NT_EXCITATION_ON
 

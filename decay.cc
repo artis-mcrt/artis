@@ -393,7 +393,7 @@ void find_decaypaths(const std::vector<int> &custom_zlist, const std::vector<int
     }
   }
 
-  std::ranges::stable_sort(decaypaths, [](const DecayPath &d1, const DecayPath &d2) {
+  std::ranges::SORT_OR_STABLE_SORT(decaypaths, [](const DecayPath &d1, const DecayPath &d2) {
     // true if d1 < d2
     // chains are sorted by mass number, then atomic number, then length
     const int d1_length = get_decaypathlength(d1);

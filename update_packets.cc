@@ -361,7 +361,7 @@ void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
 
     // printout("sorting packets...");
 
-    std::ranges::stable_sort(packets, std_compare_packets_bymodelgriddensity);
+    std::ranges::SORT_OR_STABLE_SORT(packets, std_compare_packets_bymodelgriddensity);
 
     // printout("took %lds\n", std::time(nullptr) - sys_time_start_pass);
 

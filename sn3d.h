@@ -148,6 +148,12 @@ inline void print_line_start() {
 #define assert_testmodeonly(e) (void)0
 #endif
 
+#if defined REPRODUCIBLE && REPRODUCIBLE
+#define SORT_OR_STABLE_SORT stable_sort
+#else
+#define SORT_OR_STABLE_SORT sort
+#endif
+
 template <typename T>
 inline void atomicadd(T &var, const T &val) {
 #ifdef _OPENMP

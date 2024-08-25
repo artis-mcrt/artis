@@ -942,8 +942,8 @@ void read_atomicdata_files() {
 
   if (globals::rank_in_node == 0) {
     // sort the lineline in descending frequency
-    std::stable_sort(EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(),
-                     [](const auto &a, const auto &b) { return a.nu > b.nu; });
+    std::SORT_OR_STABLE_SORT(EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(),
+                             [](const auto &a, const auto &b) { return a.nu > b.nu; });
 
     for (int i = 0; i < globals::nlines - 1; i++) {
       const double nu = temp_linelist[i].nu;
@@ -1371,7 +1371,7 @@ void setup_phixs_list() {
       }
     }
     assert_always(groundcontindex == globals::nbfcontinua_ground);
-    std::ranges::stable_sort(globals::groundcont, std::ranges::less{}, &GroundPhotoion::nu_edge);
+    std::ranges::SORT_OR_STABLE_SORT(globals::groundcont, std::ranges::less{}, &GroundPhotoion::nu_edge);
   }
 
   auto *nonconstallcont =
@@ -1433,8 +1433,8 @@ void setup_phixs_list() {
   globals::bfestimcount = 0;
   if (globals::nbfcontinua > 0) {
     // indicies above were temporary only. continum index should be to the sorted list
-    std::ranges::stable_sort(std::span(nonconstallcont, globals::nbfcontinua), std::ranges::less{},
-                             &FullPhotoionTransition::nu_edge);
+    std::ranges::SORT_OR_STABLE_SORT(std::span(nonconstallcont, globals::nbfcontinua), std::ranges::less{},
+                                     &FullPhotoionTransition::nu_edge);
 
     globals::bfestim_nu_edge.clear();
     for (int i = 0; i < globals::nbfcontinua; i++) {
@@ -1694,6 +1694,10 @@ void read_parameterfile(int rank) {
     MPI_Bcast(&pre_zseed, 1, MPI_INT64_T, 0, MPI_COMM_WORLD);
 #endif
     printout("randomly-generated random number seed is %" PRId64 "\n", pre_zseed);
+#if defined REPRODUCIBLE && REPRODUCIBLE
+    printout("ERROR: reproducible mode is on, so random number seed is required.\n");
+    std::abort();
+#endif
   }
 
 #if defined(_OPENMP) && !defined(GPU_ON)
