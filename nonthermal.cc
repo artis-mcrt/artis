@@ -17,6 +17,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <functional>
@@ -642,7 +643,7 @@ void nt_write_to_file(const int modelgridindex, const int timestep, const int it
       std::abort();
     }
 
-    static long nonthermalfile_offset_iteration_zero = 0;
+    static int64_t nonthermalfile_offset_iteration_zero = 0;
 #ifdef _OPENMP
 #pragma omp threadprivate(nonthermalfile_offset_iteration_zero)
 #endif

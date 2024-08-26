@@ -141,7 +141,7 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
     if (nu == nu_edge) {
       sigma_bf = photoion_xs[0];
     } else if (nu <= nu_edge * (1 + globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS)) {
-      const int i = static_cast<int>(floor((nu - nu_edge) / (globals::NPHIXSNUINCREMENT * nu_edge)));
+      const int i = static_cast<int>((nu - nu_edge) / (globals::NPHIXSNUINCREMENT * nu_edge));
       sigma_bf = photoion_xs[i];
     } else {
       // use a parameterization of sigma_bf by the Kramers formula
@@ -154,7 +154,7 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
   }
 
   const double ireal = (nu / nu_edge - 1.0) / globals::NPHIXSNUINCREMENT;
-  const int i = floor(ireal);
+  const int i = static_cast<int>(ireal);
 
   if (i < 0) {
     sigma_bf = 0.;
