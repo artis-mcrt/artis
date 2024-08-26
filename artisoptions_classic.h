@@ -57,6 +57,8 @@ constexpr double NU_MIN_R = 1e14;
 
 constexpr double NU_MAX_R = 5e15;
 
+constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION = true;
+
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON = false;
 
 constexpr int RADFIELDBINCOUNT = 256;
