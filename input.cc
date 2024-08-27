@@ -1075,6 +1075,13 @@ void read_atomicdata_files() {
   // read in photoionisation cross sections
   phixs_file_version_exists[1] = std::filesystem::exists(phixsdata_filenames[1]);
   phixs_file_version_exists[2] = std::filesystem::exists(phixsdata_filenames[2]);
+
+#ifdef MPI_ON
+  // just in case the file system was faulty and the ranks disagree on the existence of the files
+  // broadcast the existence of the files to all ranks from rank 0
+
+  MPI_Bcast(phixs_file_version_exists.data(), sizeof(phixs_file_version_exists), MPI_BYTE, 0, MPI_COMM_WORLD);
+#endif
   assert_always(phixs_file_version_exists[1] || phixs_file_version_exists[2]);  // at least one must exist
   if (phixs_file_version_exists[1] && phixs_file_version_exists[2]) {
     printout(
