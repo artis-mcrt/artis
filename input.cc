@@ -232,8 +232,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   } else {
     for (int i = 0; i < globals::NPHIXSPOINTS; i++) {
       float phixs{NAN};
-      assert_always(get_noncommentline(phixsfile, phixsline));
-      assert_always(std::stringstream(phixsline) >> phixs);
+      assert_always(phixsfile >> phixs);
       assert_always(phixs >= 0);
 
       // the photoionisation cross-sections in the database are given in Mbarn = 1e6 * 1e-28m^2
@@ -341,7 +340,14 @@ void read_phixs_data(const int phixs_file_version) {
       }
       for (int i = 0; i < nphixspoints_inputtable; i++)  // skip through cross section list
       {
-        assert_always(get_noncommentline(phixsfile, phixsline));
+        if (phixs_file_version == 1) {
+          assert_always(get_noncommentline(phixsfile, phixsline));
+        } else {
+          // one day we might want to put all of the cross section points onto a single line,
+          // so don't use getline here
+          float phixs = 0;
+          assert_always(phixsfile >> phixs);
+        }
       }
     }
   }
