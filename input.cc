@@ -329,6 +329,7 @@ void read_phixs_data(const int phixs_file_version) {
       {
         int nphixstargets = 0;
         assert_always(get_noncommentline(phixsfile, phixsline));
+        assert_always(std::stringstream(phixsline) >> nphixstargets);
         for (int i = 0; i < nphixstargets; i++) {
           assert_always(get_noncommentline(phixsfile, phixsline));
         }
