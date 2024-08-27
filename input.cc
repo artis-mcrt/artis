@@ -108,11 +108,11 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
         static_cast<PhotoionTarget *>(calloc(1, sizeof(PhotoionTarget)));
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
-    if (single_level_top_ion &&
-        (upperion == get_nions(element) - 1))  // top ion has only one level, so send it to that level
-    {
+    if (single_level_top_ion && (upperion == get_nions(element) - 1)) {
+      // top ion has only one level, so send it to that level
       upperlevel = 0;
     }
+
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = upperlevel;
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.;
   } else {  // upperlevel < 0, indicating that a table of upper levels and their probabilities will follow
@@ -133,7 +133,8 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
       double probability_sum = 0.;
       for (int i = 0; i < in_nphixstargets; i++) {
         double phixstargetprobability{NAN};
-        assert_always(phixsfile >> upperlevel_in >> phixstargetprobability);
+        assert_always(get_noncommentline(phixsfile, phixsline));
+        assert_always(std::stringstream(phixsline) >> upperlevel_in >> phixstargetprobability);
         const int upperlevel = upperlevel_in - groundstate_index_in;
         assert_always(upperlevel >= 0);
         assert_always(phixstargetprobability > 0);
