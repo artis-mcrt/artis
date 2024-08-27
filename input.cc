@@ -47,7 +47,6 @@
 namespace {
 
 const int groundstate_index_in = 1;  // starting level index in the input files
-int phixs_file_version = -1;
 float *allphixsblock{};
 
 struct Transitions {
@@ -95,7 +94,7 @@ CellCachePhixsTargets *chphixstargetsblock{};
 
 void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
-                           size_t *mem_usage_phixs) {
+                           size_t *mem_usage_phixs, const int phixs_file_version) {
   if (upperlevel_in >= 0)  // file gives photoionisation to a single target state only
   {
     int upperlevel = upperlevel_in - groundstate_index_in;
@@ -319,7 +318,7 @@ void read_phixs_data(const int phixs_file_version) {
       // store only photoionization crosssections for ions that are part of the current model atom
       if (lowerion >= 0 && upperion < get_nions(element) && lowerlevel < get_nlevels(element, lowerion)) {
         read_phixs_data_table(phixsfile, nphixspoints_inputtable, element, lowerion, lowerlevel, upperion,
-                              upperlevel_in, &mem_usage_phixs);
+                              upperlevel_in, &mem_usage_phixs, phixs_file_version);
 
         skip_this_phixs_table = false;
       }
