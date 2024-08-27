@@ -95,6 +95,7 @@ CellCachePhixsTargets *chphixstargetsblock{};
 void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
                            size_t *mem_usage_phixs) {
+  std::string phixsline;
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - groundstate_index_in;
     assert_always(upperlevel >= 0);
@@ -116,7 +117,8 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.;
   } else {  // upperlevel < 0, indicating that a table of upper levels and their probabilities will follow
     int in_nphixstargets = 0;
-    assert_always(phixsfile >> in_nphixstargets);
+    assert_always(get_noncommentline(phixsfile, phixsline));
+    assert_always(std::stringstream(phixsline) >> in_nphixstargets);
     assert_always(in_nphixstargets >= 0);
     // read in a table of target states and probabilities and store them
     if (!single_level_top_ion || upperion < get_nions(element) - 1)  // in case the top ion has nlevelsmax = 1
@@ -152,8 +154,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
       assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
       for (int i = 0; i < in_nphixstargets; i++) {
-        double phixstargetprobability{NAN};
-        assert_always(phixsfile >> upperlevel_in >> phixstargetprobability);
+        assert_always(get_noncommentline(phixsfile, phixsline));
       }
 
       // send it to the ground state of the top ion
