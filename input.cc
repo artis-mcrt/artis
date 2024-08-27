@@ -1073,6 +1073,7 @@ void read_atomicdata_files() {
   globals::nbfcontinua = 0;
 
   // read in photoionisation cross sections
+  phixs_file_version_exists[0] = false;
   phixs_file_version_exists[1] = std::filesystem::exists(phixsdata_filenames[1]);
   phixs_file_version_exists[2] = std::filesystem::exists(phixsdata_filenames[2]);
 
