@@ -94,9 +94,8 @@ CellCachePhixsTargets *chphixstargetsblock{};
 
 void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
-                           size_t *mem_usage_phixs, const int phixs_file_version) {
-  if (upperlevel_in >= 0)  // file gives photoionisation to a single target state only
-  {
+                           size_t *mem_usage_phixs) {
+  if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - groundstate_index_in;
     assert_always(upperlevel >= 0);
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets == 0);
@@ -115,8 +114,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     }
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = upperlevel;
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.;
-  } else  // upperlevel < 0, indicating that a table of upper levels and their probabilities will follow
-  {
+  } else {  // upperlevel < 0, indicating that a table of upper levels and their probabilities will follow
     int in_nphixstargets = 0;
     assert_always(phixsfile >> in_nphixstargets);
     assert_always(in_nphixstargets >= 0);
@@ -146,8 +144,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
         printout("WARNING: photoionisation table for Z=%d ionstage %d has probabilities that sum to %g",
                  get_atomicnumber(element), get_ionstage(element, lowerion), probability_sum);
       }
-    } else  // file has table of target states and probabilities but our top ion is limited to one level
-    {
+    } else {  // file has table of target states and probabilities but our top ion is limited to one level
       globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
       *mem_usage_phixs += sizeof(PhotoionTarget);
       globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
