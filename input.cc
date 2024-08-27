@@ -94,7 +94,7 @@ CellCachePhixsTargets *chphixstargetsblock{};
 
 void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
-                           size_t *mem_usage_phixs) {
+                           size_t *mem_usage_phixs, const int phixs_file_version) {
   std::string phixsline;
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - groundstate_index_in;
