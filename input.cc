@@ -330,10 +330,9 @@ void read_phixs_data(const int phixs_file_version) {
       if (upperlevel_in < 0)  // a table of target states and probabilities will follow, so read past those lines
       {
         int nphixstargets = 0;
-        assert_always(phixsfile >> nphixstargets);
+        assert_always(get_noncommentline(phixsfile, phixsline));
         for (int i = 0; i < nphixstargets; i++) {
-          double phixstargetprobability{NAN};
-          assert_always(phixsfile >> upperlevel_in >> phixstargetprobability);
+          assert_always(get_noncommentline(phixsfile, phixsline));
         }
       }
       for (int i = 0; i < nphixspoints_inputtable; i++)  // skip through cross section list
