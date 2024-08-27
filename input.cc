@@ -198,7 +198,10 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     for (int i = 0; i < nphixspoints_inputtable; i++) {
       double energy = -1.;
       double phixs = -1.;
-      assert_always(phixsfile >> energy >> phixs);
+      assert_always(get_noncommentline(phixsfile, phixsline));
+      assert_always(std::stringstream(phixsline) >> energy >> phixs);
+      assert_always(energy >= 0);
+      assert_always(phixs >= 0);
       nutable[i] = nu_edge + (energy * 13.6 * EV) / H;
       // the photoionisation cross-sections in the database are given in Mbarn=1e6 * 1e-28m^2
       // to convert to cgs units multiply by 1e-18
@@ -229,7 +232,8 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   } else {
     for (int i = 0; i < globals::NPHIXSPOINTS; i++) {
       float phixs{NAN};
-      assert_always(phixsfile >> phixs);
+      assert_always(get_noncommentline(phixsfile, phixsline));
+      assert_always(std::stringstream(phixsline) >> phixs);
       assert_always(phixs >= 0);
 
       // the photoionisation cross-sections in the database are given in Mbarn = 1e6 * 1e-28m^2
