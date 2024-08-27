@@ -77,6 +77,10 @@ constexpr double MINPOP;
 constexpr double NU_MIN_R;  // lower frequency boundary for UVOIR spectra and BB sampling
 constexpr double NU_MAX_R;  // upper frequency boundary for UVOIR spectra and BB sampling
 
+// use nearest-neighbour instead of linear interpolation of photoionisation cross sections
+// to match classic artis
+constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION;
+
 // ** Start of radiation field model options **
 
 // if using this, avoid look up tables and switch on the direct integration options below

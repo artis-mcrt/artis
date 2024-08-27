@@ -136,7 +136,7 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
 
   float sigma_bf = 0.;
 
-  if (phixs_file_version_exists[1] && !phixs_file_version_exists[2]) {
+  if constexpr (PHIXS_CLASSIC_NO_INTERPOLATION) {
     // classic mode: no interpolation
     if (nu == nu_edge) {
       sigma_bf = photoion_xs[0];

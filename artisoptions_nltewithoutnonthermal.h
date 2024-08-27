@@ -59,8 +59,9 @@ constexpr bool TRACK_ION_STATS = false;
 constexpr double MINPOP = 1e-40;
 
 constexpr double NU_MIN_R = 1e14;
-
 constexpr double NU_MAX_R = 5e16;
+
+constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION = false;
 
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON = true;
 
