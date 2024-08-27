@@ -190,10 +190,8 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
 
     const double nu_edge = (epsilon(element, upperion, 0) - epsilon(element, lowerion, lowerlevel)) / H;
 
-    auto *nutable = static_cast<double *>(calloc(nphixspoints_inputtable, sizeof(double)));
-    assert_always(nutable != nullptr);
-    auto *phixstable = static_cast<double *>(calloc(nphixspoints_inputtable, sizeof(double)));
-    assert_always(phixstable != nullptr);
+    auto nutable = std::vector<double>(nphixspoints_inputtable);
+    auto phixstable = std::vector<double>(nphixspoints_inputtable);
 
     for (int i = 0; i < nphixspoints_inputtable; i++) {
       double energy = -1.;
@@ -214,7 +212,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
 
     gsl_interp_accel *acc = gsl_interp_accel_alloc();
     gsl_spline *spline = gsl_spline_alloc(gsl_interp_linear, nphixspoints_inputtable);
-    gsl_spline_init(spline, nutable, phixstable, nphixspoints_inputtable);
+    gsl_spline_init(spline, nutable.data(), phixstable.data(), nphixspoints_inputtable);
     for (int i = 1; i < globals::NPHIXSPOINTS; i++) {
       const double nu = nu_edge * (1. + i * globals::NPHIXSNUINCREMENT);
       if (nu > nu_max) {
@@ -227,8 +225,6 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     }
     gsl_spline_free(spline);
     gsl_interp_accel_free(acc);
-    free(nutable);
-    free(phixstable);
   } else {
     for (int i = 0; i < globals::NPHIXSPOINTS; i++) {
       float phixs{NAN};
