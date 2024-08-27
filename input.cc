@@ -254,6 +254,7 @@ void read_phixs_data(const int phixs_file_version) {
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
 
   auto phixsfile = fstream_required(phixsdata_filenames[phixs_file_version], std::ios::in);
+  std::string phixsline;
 
   if (phixs_file_version == 1 && phixs_file_version_exists[2]) {
     printout(
@@ -284,7 +285,6 @@ void read_phixs_data(const int phixs_file_version) {
   double phixs_threshold_ev = -1;  // currently just ignored, and epilson is used instead
   while (true) {
     int nphixspoints_inputtable = 0;
-    std::string phixsline;
     if (!get_noncommentline(phixsfile, phixsline)) {
       break;
     }
@@ -338,13 +338,7 @@ void read_phixs_data(const int phixs_file_version) {
       }
       for (int i = 0; i < nphixspoints_inputtable; i++)  // skip through cross section list
       {
-        float phixs = 0;
-        if (phixs_file_version == 1) {
-          double energy = 0;
-          assert_always(phixsfile >> energy >> phixs);
-        } else {
-          assert_always(phixsfile >> phixs);
-        }
+        assert_always(get_noncommentline(phixsfile, phixsline));
       }
     }
   }
