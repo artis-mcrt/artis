@@ -312,6 +312,7 @@ inline void check_already_running() {
 }
 
 template <typename T>
+  requires std::is_integral<T>::value
 constexpr auto get_range_chunk(const T size, const auto nchunks_in, const auto nchunk_in) -> std::tuple<T, T> {
   const auto nchunks = static_cast<T>(nchunks_in);
   const auto nchunk = static_cast<T>(nchunk_in);
