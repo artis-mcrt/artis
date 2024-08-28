@@ -1075,7 +1075,7 @@ __host__ __device__ auto closest_transition(const double nu_cmf, const int next_
   // lower_bound matches the first element where the comparison function is false
   const int matchindex = static_cast<int>(
       std::lower_bound(globals::linelist, globals::linelist + globals::nlines, nu_cmf,
-                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; }) -
+                       [](const auto &line, const double find_nu_cmf) -> bool { return line.nu > find_nu_cmf; }) -
       globals::linelist);
 
   if (matchindex >= globals::nlines) [[unlikely]] {
