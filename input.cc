@@ -246,7 +246,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   }
 }
 
-void read_phixs_data(const int phixs_file_version) {
+void read_phixs_file(const int phixs_file_version) {
   size_t mem_usage_phixs = 0;
 
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
@@ -297,14 +297,11 @@ void read_phixs_data(const int phixs_file_version) {
     assert_always(Z > 0);
     assert_always(upperionstage >= 2);
     assert_always(lowerionstage >= 1);
-    bool skip_this_phixs_table = false;
-    // printout("[debug] Z %d, upperion %d, upperlevel %d, lowerion %d, lowerlevel,
-    // %d\n",Z,upperion,upperlevel,lowerion,lowerlevel);
-    // translate readin anumber to element index
+
     const int element = get_elementindex(Z);
 
     // store only photoionization crosssections for elements that are part of the current model atom
-    skip_this_phixs_table = true;  // will be set to false for good data
+    bool skip_this_phixs_table = true;  // will be set to false for good data
     if (element >= 0 && get_nions(element) > 0) {
       // translate readin ionstages to ion indices
 
@@ -313,6 +310,7 @@ void read_phixs_data(const int phixs_file_version) {
       const int lowerlevel = lowerlevel_in - groundstate_index_in;
       assert_always(lowerionstage >= 0);
       assert_always(lowerlevel >= 0);
+
       // store only photoionization crosssections for ions that are part of the current model atom
       if (lowerion >= 0 && upperion < get_nions(element) && lowerlevel < get_nlevels(element, lowerion)) {
         read_phixs_data_table(phixsfile, nphixspoints_inputtable, element, lowerion, lowerlevel, upperion,
@@ -322,11 +320,9 @@ void read_phixs_data(const int phixs_file_version) {
       }
     }
 
-    if (skip_this_phixs_table)  // for ions or elements that are not part of the current model atom, proceed through the
-                                // lines and throw away the data
-    {
-      if (upperlevel_in < 0)  // a table of target states and probabilities will follow, so read past those lines
-      {
+    if (skip_this_phixs_table) {  // for ions or elements that are not part of the current model atom, proceed through
+                                  // the table and throw away the data
+      if (upperlevel_in < 0) {    // a table of target states and probabilities will follow, so read past those lines
         int nphixstargets = 0;
         assert_always(get_noncommentline(phixsfile, phixsline));
         assert_always(std::stringstream(phixsline) >> nphixstargets);
@@ -334,8 +330,8 @@ void read_phixs_data(const int phixs_file_version) {
           assert_always(get_noncommentline(phixsfile, phixsline));
         }
       }
-      for (int i = 0; i < nphixspoints_inputtable; i++)  // skip through cross section list
-      {
+      // skip through cross section list
+      for (int i = 0; i < nphixspoints_inputtable; i++) {
         if (phixs_file_version == 1) {
           assert_always(get_noncommentline(phixsfile, phixsline));
         } else {
@@ -1091,10 +1087,10 @@ void read_atomicdata_files() {
         "from phixsdata_v2.txt to interpolate the phixsdata.txt data\n");
   }
   if (phixs_file_version_exists[2]) {
-    read_phixs_data(2);
+    read_phixs_file(2);
   }
   if (phixs_file_version_exists[1]) {
-    read_phixs_data(1);
+    read_phixs_file(1);
   }
 
   int cont_index = -1;
