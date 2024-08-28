@@ -1525,7 +1525,7 @@ constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> pos_xyz) -> s
   }
 
   assert_always(false);
-  return std::array<double, 3>{0.};
+  return std::array<double, 3>{0., 0., 0.};
 }
 
 template <size_t S1>
