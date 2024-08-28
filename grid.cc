@@ -537,10 +537,9 @@ void map_2dmodelto3dgrid()
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     // map to 3D Cartesian grid
-    std::array<double, 3> pos_mid{};
-    for (int d = 0; d < 3; d++) {
-      pos_mid[d] = (get_cellcoordmin(cellindex, d) + (0.5 * wid_init(cellindex, d)));
-    }
+    const auto pos_mid = std::array<double, 3>{get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex, 0)),
+                                               get_cellcoordmin(cellindex, 1) + (0.5 * wid_init(cellindex, 1)),
+                                               get_cellcoordmin(cellindex, 2) + (0.5 * wid_init(cellindex, 2))};
 
     const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
 
