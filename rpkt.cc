@@ -1009,6 +1009,7 @@ void allocate_expansionopacities() {
   if (globals::rank_in_node == 0) {
     my_rank_nonemptycells += npts_nonempty - (my_rank_nonemptycells * globals::node_nprocs);
   }
+
   {
     MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(float));
     int disp_unit = sizeof(float);
