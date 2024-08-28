@@ -965,13 +965,9 @@ void read_atomicdata_files() {
 #ifdef MPI_ON
   MPI_Win win_nonconstlinelist = MPI_WIN_NULL;
 
-  size_t my_rank_lines = globals::nlines / globals::node_nprocs;
-  // rank_in_node 0 gets any remainder
-  if (globals::rank_in_node == 0) {
-    my_rank_lines += globals::nlines - (my_rank_lines * globals::node_nprocs);
-  }
+  const auto [_, noderank_lines] = get_range_chunk(globals::nlines, globals::node_nprocs, globals::rank_in_node);
 
-  MPI_Aint size = my_rank_lines * static_cast<MPI_Aint>(sizeof(TransitionLine));
+  MPI_Aint size = noderank_lines * static_cast<MPI_Aint>(sizeof(TransitionLine));
   int disp_unit = sizeof(TransitionLine);
   MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nonconstlinelist,
                           &win_nonconstlinelist);
