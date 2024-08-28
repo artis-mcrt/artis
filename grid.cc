@@ -274,11 +274,11 @@ void allocate_nonemptycells_composition_cooling()
   const size_t npts_nonempty = get_nonempty_npts_model();
 
 #ifdef MPI_ON
-  const auto [_, my_rank_cells_nonempty] =
+  const auto [_, noderank_nonemptycellcount] =
       get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
 
   {
-    auto size = static_cast<MPI_Aint>(my_rank_cells_nonempty * get_nelements() * sizeof(float));
+    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * get_nelements() * sizeof(float));
     int disp_unit = sizeof(float);
     MPI_Win mpiwin = MPI_WIN_NULL;
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
@@ -288,7 +288,7 @@ void allocate_nonemptycells_composition_cooling()
   }
 
   {
-    auto size = static_cast<MPI_Aint>(my_rank_cells_nonempty * get_nelements() * sizeof(float));
+    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * get_nelements() * sizeof(float));
     int disp_unit = sizeof(float);
     MPI_Win mpiwin = MPI_WIN_NULL;
 
@@ -305,7 +305,7 @@ void allocate_nonemptycells_composition_cooling()
   double *nltepops_allcells{};
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    auto size = static_cast<MPI_Aint>(my_rank_cells_nonempty * globals::total_nlte_levels * sizeof(double));
+    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * globals::total_nlte_levels * sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
                                           &win_nltepops_allcells) == MPI_SUCCESS);
@@ -453,10 +453,10 @@ void allocate_nonemptymodelcells() {
 
   if (USE_LUT_PHOTOION && ionestimsize > 0) {
 #ifdef MPI_ON
-    const auto [_, my_rank_cells_nonempty] =
+    const auto [_, noderank_nonemptycellcount] =
         get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
 
-    auto size = static_cast<MPI_Aint>(my_rank_cells_nonempty * globals::nbfcontinua_ground * sizeof(double));
+    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * globals::nbfcontinua_ground * sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                           &globals::corrphotoionrenorm,
