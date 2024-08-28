@@ -1034,19 +1034,19 @@ void read_atomicdata_files() {
     // there is never more than one transition per pair of levels,
     // so find the first matching the upper and lower transition
 
-    const int nupperdowntrans = get_ndowntrans(element, ion, upperlevel);
-    auto &downtranslist = globals::elements[element].ions[ion].levels[upperlevel].downtrans;
-    auto *downtrans = std::find_if(downtranslist, downtranslist + nupperdowntrans,
-                                   [=](const auto &downtr) { return downtr.targetlevelindex == lowerlevel; });
-    assert_always(downtrans != (downtranslist + nupperdowntrans));
+    auto downtranslist = std::span(globals::elements[element].ions[ion].levels[upperlevel].downtrans,
+                                   get_ndowntrans(element, ion, upperlevel));
+    auto downtrans = std::find_if(downtranslist.begin(), downtranslist.end(),
+                                  [=](const auto &downtr) { return downtr.targetlevelindex == lowerlevel; });
+    assert_always(downtrans != downtranslist.end());
     // assert_always(downtrans->targetlevelindex == lowerlevel);
     downtrans->lineindex = lineindex;
 
-    const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
-    auto &uptranslist = globals::elements[element].ions[ion].levels[lowerlevel].uptrans;
-    auto *uptrans = std::find_if(uptranslist, uptranslist + nloweruptrans,
-                                 [=](const auto &uptr) { return uptr.targetlevelindex == upperlevel; });
-    assert_always(uptrans != (uptranslist + nloweruptrans));
+    auto uptranslist = std::span(globals::elements[element].ions[ion].levels[upperlevel].uptrans,
+                                 get_nuptrans(element, ion, lowerlevel));
+    auto uptrans = std::find_if(uptranslist.begin(), uptranslist.end(),
+                                [=](const auto &uptr) { return uptr.targetlevelindex == upperlevel; });
+    assert_always(uptrans != uptranslist.end());
     // assert_always(uptrans->targetlevelindex == upperlevel);
     uptrans->lineindex = lineindex;
   }
