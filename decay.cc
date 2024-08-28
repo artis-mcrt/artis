@@ -1062,6 +1062,8 @@ void setup_decaypath_energy_per_mass() {
   if (globals::rank_in_node == 0) {
     my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
   }
+  assert_always(my_rank_cells == static_cast<size_t>(std::get<1>(get_range_chunk(
+                                     nonempty_npts_model, globals::node_nprocs, globals::rank_in_node))));
   auto size = static_cast<MPI_Aint>(my_rank_cells * get_num_decaypaths() * sizeof(double));
   int disp_unit = sizeof(double);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
