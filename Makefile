@@ -237,7 +237,7 @@ else
 	# endif
 endif
 
-CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare
+CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare -Wshadow
 
 # sn3d.cc and exspec.cc have main() defined
 common_files := $(filter-out sn3d.cc exspec.cc, $(wildcard *.cc))
