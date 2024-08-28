@@ -134,9 +134,9 @@ void allocate_initradiobund() {
 
   const size_t totalradioabundsize = (npts_model + 1) * num_nuclides * sizeof(float);
 #ifdef MPI_ON
-  const auto [_, my_rank_cells] = get_range_chunk(npts_model + 1, globals::node_nprocs, globals::rank_in_node);
+  const auto [_, noderank_cells] = get_range_chunk(npts_model + 1, globals::node_nprocs, globals::rank_in_node);
 
-  auto size = static_cast<MPI_Aint>(my_rank_cells * num_nuclides * sizeof(float));
+  auto size = static_cast<MPI_Aint>(noderank_cells * num_nuclides * sizeof(float));
 
   int disp_unit = sizeof(float);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
