@@ -134,16 +134,9 @@ void allocate_initradiobund() {
 
   const size_t totalradioabundsize = (npts_model + 1) * num_nuclides * sizeof(float);
 #ifdef MPI_ON
-  const auto my_rank_cells = [] {
-    auto ncells = (npts_model + 1) / globals::node_nprocs;
-    // rank_in_node 0 gets any remainder
-    if (globals::rank_in_node == 0) {
-      ncells += (npts_model + 1) - (ncells * globals::node_nprocs);
-    }
-    return ncells;
-  }();
+  const auto [_, my_rank_cells] = get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
 
-  MPI_Aint size = my_rank_cells * num_nuclides * sizeof(float);
+  auto size = static_cast<MPI_Aint>(my_rank_cells * num_nuclides * sizeof(float));
 
   int disp_unit = sizeof(float);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
@@ -281,24 +274,11 @@ void allocate_nonemptycells_composition_cooling()
   const size_t npts_nonempty = get_nonempty_npts_model();
 
 #ifdef MPI_ON
-  int my_rank_nonemptycells = nonempty_npts_model / globals::node_nprocs;
-  // rank_in_node 0 gets any remainder
-  if (globals::rank_in_node == 0) {
-    my_rank_nonemptycells += nonempty_npts_model - (my_rank_nonemptycells * globals::node_nprocs);
-  }
-#endif
+  const auto [_, my_rank_cells_nonempty] =
+      get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
 
-#ifdef MPI_ON
-  size_t my_rank_cells_nonempty = nonempty_npts_model / globals::node_nprocs;
-  // rank_in_node 0 gets any remainder
-  if (globals::rank_in_node == 0) {
-    my_rank_cells_nonempty += nonempty_npts_model - (my_rank_cells_nonempty * globals::node_nprocs);
-  }
-#endif
-
-#ifdef MPI_ON
   {
-    MPI_Aint size = my_rank_cells_nonempty * get_nelements() * sizeof(float);
+    auto size = static_cast<MPI_Aint>(my_rank_cells_nonempty * get_nelements() * sizeof(float));
     int disp_unit = sizeof(float);
     MPI_Win mpiwin = MPI_WIN_NULL;
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
@@ -325,7 +305,7 @@ void allocate_nonemptycells_composition_cooling()
   double *nltepops_allcells{};
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    auto size = static_cast<MPI_Aint>(my_rank_nonemptycells * globals::total_nlte_levels * sizeof(double));
+    auto size = static_cast<MPI_Aint>(my_rank_cells_nonempty * globals::total_nlte_levels * sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
                                           &win_nltepops_allcells) == MPI_SUCCESS);
@@ -473,13 +453,10 @@ void allocate_nonemptymodelcells() {
 
   if (USE_LUT_PHOTOION && ionestimsize > 0) {
 #ifdef MPI_ON
-    auto my_rank_cells = nonempty_npts_model / globals::node_nprocs;
-    // rank_in_node 0 gets any remainder
-    if (globals::rank_in_node == 0) {
-      my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
-    }
+    const auto [_, my_rank_cells_nonempty] =
+        get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
 
-    auto size = static_cast<MPI_Aint>(my_rank_cells * globals::nbfcontinua_ground * sizeof(double));
+    auto size = static_cast<MPI_Aint>(my_rank_cells_nonempty * globals::nbfcontinua_ground * sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                           &globals::corrphotoionrenorm,
