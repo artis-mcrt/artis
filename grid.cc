@@ -1523,6 +1523,9 @@ constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> pos_xyz) -> s
   if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
     return std::array<double, 3>{vec_len(pos_xyz), 0., 0.};
   }
+
+  assert_always(false);
+  return std::array<double, 3>{0.};
 }
 
 template <size_t S1>
