@@ -203,8 +203,7 @@ struct NonThermalCellSolution {
 
 std::vector<NonThermalCellSolution> nt_solution;
 
-std::vector<double> deposition_rate_density;
-std::vector<int> deposition_rate_density_timestep;
+std::vector<double> deposition_rate_density_all_cells;
 
 constexpr auto uppertriangular(const int i, const int j) -> int {
   assert_testmodeonly(i >= 0);
@@ -674,16 +673,16 @@ void nt_write_to_file(const int modelgridindex, const int timestep, const int it
 
 // xs_vec will be set with impact ionization cross sections for E > ionpot_ev (and zeros below this energy)
 // returns the index of the first energy point >= ionpot_ev
-auto get_xs_ionization_vector(std::array<double, SFPTS> &xs_vec, const collionrow &colliondata) -> int {
-  const double ionpot_ev = colliondata.ionpot_ev;
+auto get_xs_ionization_vector(std::array<double, SFPTS> &xs_vec, const collionrow &colliondata_ion) -> int {
+  const double ionpot_ev = colliondata_ion.ionpot_ev;
   const int startindex = get_energyindex_ev_gteq(ionpot_ev);
 
   std::fill_n(xs_vec.begin(), startindex, 0.);
 
-  const double A = colliondata.A;
-  const double B = colliondata.B;
-  const double C = colliondata.C;
-  const double D = colliondata.D;
+  const double A = colliondata_ion.A;
+  const double B = colliondata_ion.B;
+  const double C = colliondata_ion.C;
+  const double D = colliondata_ion.D;
 
   for (int i = startindex; i < SFPTS; i++) {
     const double u = engrid(i) / ionpot_ev;
@@ -789,17 +788,17 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
 // energy and ionization_potential should be in eV
 // fitting forumula of Younger 1981
 // called Q_i(E) in KF92 equation 7
-constexpr auto xs_impactionization(const double energy_ev, const collionrow &colliondata) -> double {
-  const double ionpot_ev = colliondata.ionpot_ev;
+constexpr auto xs_impactionization(const double energy_ev, const collionrow &colliondata_ion) -> double {
+  const double ionpot_ev = colliondata_ion.ionpot_ev;
   const double u = energy_ev / ionpot_ev;
 
   if (u <= 1.) {
     return 0;
   }
-  const double A = colliondata.A;
-  const double B = colliondata.B;
-  const double C = colliondata.C;
-  const double D = colliondata.D;
+  const double A = colliondata_ion.A;
+  const double B = colliondata_ion.B;
+  const double C = colliondata_ion.C;
+  const double D = colliondata_ion.D;
 
   return 1e-14 * (A * (1 - 1 / u) + B * std::pow((1 - (1 / u)), 2) + C * std::log(u) + D * std::log(u) / u) /
          (u * std::pow(ionpot_ev, 2));
@@ -1956,11 +1955,9 @@ void init(const int my_rank, const int ndo_nonempty) {
   assert_always(nonthermal_initialized == false);
   nonthermal_initialized = true;
 
-  deposition_rate_density.resize(grid::get_npts_model());
-  deposition_rate_density_timestep.resize(grid::get_npts_model());
+  deposition_rate_density_all_cells.resize(grid::get_npts_model());
 
-  std::ranges::fill(deposition_rate_density, -1.);
-  std::ranges::fill(deposition_rate_density_timestep, -1);
+  std::ranges::fill(deposition_rate_density_all_cells, -1.);
 
   if (!NT_ON) {
     return;
@@ -2109,18 +2106,16 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
     heatingcoolingrates->dep_alpha = globals::dep_estimator_alpha[nonemptymgi];
   }
 
-  deposition_rate_density[modelgridindex] = (heatingcoolingrates->dep_gamma + heatingcoolingrates->dep_positron +
-                                             heatingcoolingrates->dep_electron + heatingcoolingrates->dep_alpha);
-
-  deposition_rate_density_timestep[modelgridindex] = timestep;
+  deposition_rate_density_all_cells[modelgridindex] =
+      (heatingcoolingrates->dep_gamma + heatingcoolingrates->dep_positron + heatingcoolingrates->dep_electron +
+       heatingcoolingrates->dep_alpha);
 }
 
 __host__ __device__ auto get_deposition_rate_density(const int modelgridindex) -> double
 // get non-thermal deposition rate density in erg / s / cm^3 previously stored by calculate_deposition_rate_density()
 {
-  assert_testmodeonly(deposition_rate_density_timestep[modelgridindex] == globals::timestep);
-  assert_always(deposition_rate_density[modelgridindex] >= 0);
-  return deposition_rate_density[modelgridindex];
+  assert_always(deposition_rate_density_all_cells[modelgridindex] >= 0);
+  return deposition_rate_density_all_cells[modelgridindex];
 }
 
 void close_file() {
@@ -2572,8 +2567,7 @@ void write_restart_data(FILE *gridsave_file) {
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    fprintf(gridsave_file, "%d %d %la ", modelgridindex, deposition_rate_density_timestep[modelgridindex],
-            deposition_rate_density[modelgridindex]);
+    fprintf(gridsave_file, "%d %la ", modelgridindex, deposition_rate_density_all_cells[modelgridindex]);
 
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
       check_auger_probabilities(modelgridindex);
@@ -2630,8 +2624,7 @@ void read_restart_data(FILE *gridsave_file) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
     int mgi_in = 0;
-    assert_always(fscanf(gridsave_file, "%d %d %la ", &mgi_in, &deposition_rate_density_timestep[modelgridindex],
-                         &deposition_rate_density[modelgridindex]) == 3);
+    assert_always(fscanf(gridsave_file, "%d %la ", &mgi_in, &deposition_rate_density_all_cells[modelgridindex]) == 2);
 
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
       assert_always(fscanf(gridsave_file, "%a %a %a %a\n", &nt_solution[modelgridindex].nneperion_when_solved,
@@ -2687,8 +2680,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root, const int root_node_
   //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
   //          get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
 
-  MPI_Bcast(&deposition_rate_density_timestep[modelgridindex], 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&deposition_rate_density[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+  MPI_Bcast(&deposition_rate_density_all_cells[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
   if (NT_ON && NT_SOLVE_SPENCERFANO) {
     assert_always(nonthermal_initialized);
