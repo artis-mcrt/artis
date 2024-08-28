@@ -1513,21 +1513,17 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 }
 
 constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> pos_xyz) -> std::array<double, 3> {
-  auto posgridcoord = std::array<double, 3>{};
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
-    posgridcoord[0] = pos_xyz[0];
-    posgridcoord[1] = pos_xyz[1];
-    posgridcoord[2] = pos_xyz[2];
-  } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
-    posgridcoord[0] = std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2));
-    posgridcoord[1] = pos_xyz[2];
-    posgridcoord[2] = 0.;
-  } else if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
-    posgridcoord[0] = vec_len(pos_xyz);
-    posgridcoord[1] = 0.;
-    posgridcoord[2] = 0.;
+    return pos_xyz;
   }
-  return posgridcoord;
+
+  if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
+    return std::array<double, 3>{std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2], 0.};
+  }
+
+  if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
+    return std::array<double, 3>{vec_len(pos_xyz), 0., 0.};
+  }
 }
 
 template <size_t S1>
