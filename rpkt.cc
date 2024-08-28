@@ -1009,12 +1009,14 @@ void allocate_expansionopacities() {
   if (globals::rank_in_node == 0) {
     my_rank_nonemptycells += npts_nonempty - (my_rank_nonemptycells * globals::node_nprocs);
   }
-  MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(float));
-  int disp_unit = sizeof(float);
-  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                        &expansionopacities_data, &win_expansionopacities) == MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(win_expansionopacities, 0, &size, &disp_unit, &expansionopacities_data) ==
-                MPI_SUCCESS);
+  {
+    MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(float));
+    int disp_unit = sizeof(float);
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &expansionopacities_data, &win_expansionopacities) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(win_expansionopacities, 0, &size, &disp_unit, &expansionopacities_data) ==
+                  MPI_SUCCESS);
+  }
 
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
     MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(double));

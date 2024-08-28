@@ -121,8 +121,8 @@ inline void print_line_start() {
 
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
-    const bool pass = static_cast<bool>(e);                                                                            \
-    if (!pass) {                                                                                                       \
+    const bool assertpass = static_cast<bool>(e);                                                                      \
+    if (!assertpass) {                                                                                                 \
       if (output_file) {                                                                                               \
         output_file << "\n[rank " << globals::rank_global << "] " << __FILE__ << ":" << __LINE__                       \
                     << ": failed assertion `" << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                \
@@ -132,7 +132,7 @@ inline void print_line_start() {
                 << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                                              \
       std::abort();                                                                                                    \
     }                                                                                                                  \
-    assert(pass);                                                                                                      \
+    assert(assertpass);                                                                                                \
   }
 #endif
 

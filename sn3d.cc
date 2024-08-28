@@ -219,8 +219,7 @@ void write_deposition_file(const int nts, const int my_rank, const int nstart, c
 }
 
 #ifdef MPI_ON
-void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart, const int ndo,
-                                     char *mpi_grid_buffer, const size_t mpi_grid_buffer_size) {
+void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart, const int ndo) {
   int position = 0;
   for (int root = 0; root < nprocs; root++) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -693,7 +692,7 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
 
 // Each process has now updated its own set of cells. The results now need to be communicated between processes.
 #ifdef MPI_ON
-  mpi_communicate_grid_properties(my_rank, globals::nprocs, nstart, ndo, mpi_grid_buffer, mpi_grid_buffer_size);
+  mpi_communicate_grid_properties(my_rank, globals::nprocs, nstart, ndo);
 #endif
 
   printout("timestep %d: time after grid properties have been communicated %ld (took %ld seconds)\n", nts,
