@@ -2002,13 +2002,10 @@ void init(const int my_rank, const int ndo_nonempty) {
 
     MPI_Win win_shared_excitations_list{};
 
-    int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
-    // rank_in_node 0 gets any remainder
-    if (globals::rank_in_node == 0) {
-      my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
-    }
+    const auto [_, my_rank_cells_nonempty] =
+        get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
 
-    auto size = static_cast<MPI_Aint>(my_rank_cells * sizeof(NonThermalExcitation) * nt_excitations_stored);
+    auto size = static_cast<MPI_Aint>(my_rank_cells_nonempty * sizeof(NonThermalExcitation) * nt_excitations_stored);
 
     int disp_unit = sizeof(NonThermalExcitation);
     MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &excitations_list_all_cells,
