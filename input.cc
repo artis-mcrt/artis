@@ -1034,22 +1034,22 @@ void read_atomicdata_files() {
     // there is never more than one transition per pair of levels,
     // so find the first matching the upper and lower transition
 
-    auto downtranslist = std::span(globals::elements[element].ions[ion].levels[upperlevel].downtrans,
-                                   get_ndowntrans(element, ion, upperlevel));
-    auto downtrans = std::find_if(downtranslist.begin(), downtranslist.end(),
-                                  [=](const auto &downtr) { return downtr.targetlevelindex == lowerlevel; });
-    assert_always(downtrans != downtranslist.end());
+    const int nupperdowntrans = get_ndowntrans(element, ion, upperlevel);
+    auto &downtranslist = globals::elements[element].ions[ion].levels[upperlevel].downtrans;
+    auto *downtransition = std::find_if(downtranslist, downtranslist + nupperdowntrans, [=](const auto &downtrans) {
+      return downtrans.targetlevelindex == lowerlevel;
+    });
+    assert_always(downtransition != (downtranslist + nupperdowntrans));
     // assert_always(downtrans->targetlevelindex == lowerlevel);
-    downtrans->lineindex = lineindex;
+    downtransition->lineindex = lineindex;
 
-    auto uptranslist = std::span(globals::elements[element].ions[ion].levels[upperlevel].uptrans,
-                                 get_nuptrans(element, ion, lowerlevel));
-
-    auto uptrans = std::find_if(uptranslist.begin(), uptranslist.end(),
-                                [=](const auto &uptr) { return uptr.targetlevelindex == upperlevel; });
-    assert_always(uptrans != uptranslist.end());
+    const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
+    auto &uptranslist = globals::elements[element].ions[ion].levels[lowerlevel].uptrans;
+    auto *uptransition = std::find_if(uptranslist, uptranslist + nloweruptrans,
+                                      [=](const auto &uptr) { return uptr.targetlevelindex == upperlevel; });
+    assert_always(uptransition != (uptranslist + nloweruptrans));
     // assert_always(uptrans->targetlevelindex == upperlevel);
-    uptrans->lineindex = lineindex;
+    uptransition->lineindex = lineindex;
   }
 
   printout("  took %lds\n", std::time(nullptr) - time_start_establish_linelist_connections);
