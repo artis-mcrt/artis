@@ -115,8 +115,8 @@ void printout_tracemission_stats() {
 
         auto downtranslist = std::span(globals::elements[element].ions[ion].levels[upper].downtrans,
                                        get_ndowntrans(element, ion, upper));
-        auto downtrans =
-            std::ranges::find_if(downtranslist, [=](const auto &downtr) { return downtr.targetlevelindex == lower; });
+        auto downtrans = std::find_if(downtranslist.begin(), downtranslist.end(),
+                                      [=](const auto &downtr) { return downtr.targetlevelindex == lower; });
         assert_always(downtrans != downtranslist.end());
 
         printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n", encontrib,
