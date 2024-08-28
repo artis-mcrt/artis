@@ -1035,9 +1035,9 @@ void read_atomicdata_files() {
     // so find the first matching the upper and lower transition
 
     const int nupperdowntrans = get_ndowntrans(element, ion, upperlevel);
-    auto *downtranslist = globals::elements[element].ions[ion].levels[upperlevel].downtrans;
+    auto &downtranslist = globals::elements[element].ions[ion].levels[upperlevel].downtrans;
     auto *downtrans = std::find_if(downtranslist, downtranslist + nupperdowntrans,
-                                   [=](const auto &downtrans) { return downtrans.targetlevelindex == lowerlevel; });
+                                   [=](const auto &downtr) { return downtr.targetlevelindex == lowerlevel; });
     assert_always(downtrans != (downtranslist + nupperdowntrans));
     // assert_always(downtrans->targetlevelindex == lowerlevel);
     downtrans->lineindex = lineindex;
