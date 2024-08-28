@@ -121,8 +121,8 @@ inline void print_line_start() {
 
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
-    const bool pass = static_cast<bool>(e);                                                                            \
-    if (!pass) {                                                                                                       \
+    const bool assertpass = static_cast<bool>(e);                                                                      \
+    if (!assertpass) {                                                                                                 \
       if (output_file) {                                                                                               \
         output_file << "\n[rank " << globals::rank_global << "] " << __FILE__ << ":" << __LINE__                       \
                     << ": failed assertion `" << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                \
@@ -132,7 +132,7 @@ inline void print_line_start() {
                 << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                                              \
       std::abort();                                                                                                    \
     }                                                                                                                  \
-    assert(pass);                                                                                                      \
+    assert(assertpass);                                                                                                \
   }
 #endif
 
@@ -311,13 +311,17 @@ inline void check_already_running() {
 #endif
 }
 
-constexpr auto get_range_chunk(int size, int nchunks, int nchunk) -> std::tuple<int, int> {
-  const int minchunksize = size / nchunks;  // integer division, minimum non-empty cells per process
-  const int n_remainder = size % nchunks;
-  const auto nstart =
-      (minchunksize + 1) * std::min(n_remainder, nchunk) + minchunksize * std::max(0, nchunk - n_remainder);
+template <typename T>
+  requires std::is_integral<T>::value
+constexpr auto get_range_chunk(const T size, const auto nchunks_in, const auto nchunk_in) -> std::tuple<T, T> {
+  const auto nchunks = static_cast<T>(nchunks_in);
+  const auto nchunk = static_cast<T>(nchunk_in);
+  const auto minchunksize = size / nchunks;  // integer division, minimum non-empty cells per process
+  const auto n_remainder = size % nchunks;
+  const auto nstart = (minchunksize + 1) * std::min(n_remainder, nchunk) +
+                      minchunksize * std::max(static_cast<T>(0), nchunk - n_remainder);
   const auto nsize = (nchunk < n_remainder) ? minchunksize + 1 : minchunksize;
-  return {nstart, nsize};
+  return std::tuple{nstart, nsize};
 }
 
 #endif  // SN3D_H

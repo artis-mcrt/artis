@@ -134,16 +134,9 @@ void allocate_initradiobund() {
 
   const size_t totalradioabundsize = (npts_model + 1) * num_nuclides * sizeof(float);
 #ifdef MPI_ON
-  const auto my_rank_cells = [] {
-    auto my_rank_cells = (npts_model + 1) / globals::node_nprocs;
-    // rank_in_node 0 gets any remainder
-    if (globals::rank_in_node == 0) {
-      my_rank_cells += (npts_model + 1) - (my_rank_cells * globals::node_nprocs);
-    }
-    return my_rank_cells;
-  }();
+  const auto [_, noderank_cells] = get_range_chunk(npts_model + 1, globals::node_nprocs, globals::rank_in_node);
 
-  MPI_Aint size = my_rank_cells * num_nuclides * sizeof(float);
+  auto size = static_cast<MPI_Aint>(noderank_cells * num_nuclides * sizeof(float));
 
   int disp_unit = sizeof(float);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
@@ -281,24 +274,11 @@ void allocate_nonemptycells_composition_cooling()
   const size_t npts_nonempty = get_nonempty_npts_model();
 
 #ifdef MPI_ON
-  int my_rank_nonemptycells = nonempty_npts_model / globals::node_nprocs;
-  // rank_in_node 0 gets any remainder
-  if (globals::rank_in_node == 0) {
-    my_rank_nonemptycells += nonempty_npts_model - (my_rank_nonemptycells * globals::node_nprocs);
-  }
-#endif
+  const auto [_, noderank_nonemptycellcount] =
+      get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
 
-#ifdef MPI_ON
-  size_t my_rank_cells_nonempty = nonempty_npts_model / globals::node_nprocs;
-  // rank_in_node 0 gets any remainder
-  if (globals::rank_in_node == 0) {
-    my_rank_cells_nonempty += nonempty_npts_model - (my_rank_cells_nonempty * globals::node_nprocs);
-  }
-#endif
-
-#ifdef MPI_ON
   {
-    MPI_Aint size = my_rank_cells_nonempty * get_nelements() * sizeof(float);
+    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * get_nelements() * sizeof(float));
     int disp_unit = sizeof(float);
     MPI_Win mpiwin = MPI_WIN_NULL;
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
@@ -308,7 +288,7 @@ void allocate_nonemptycells_composition_cooling()
   }
 
   {
-    auto size = static_cast<MPI_Aint>(my_rank_cells_nonempty * get_nelements() * sizeof(float));
+    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * get_nelements() * sizeof(float));
     int disp_unit = sizeof(float);
     MPI_Win mpiwin = MPI_WIN_NULL;
 
@@ -325,7 +305,7 @@ void allocate_nonemptycells_composition_cooling()
   double *nltepops_allcells{};
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    auto size = static_cast<MPI_Aint>(my_rank_nonemptycells * globals::total_nlte_levels * sizeof(double));
+    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * globals::total_nlte_levels * sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
                                           &win_nltepops_allcells) == MPI_SUCCESS);
@@ -473,13 +453,10 @@ void allocate_nonemptymodelcells() {
 
   if (USE_LUT_PHOTOION && ionestimsize > 0) {
 #ifdef MPI_ON
-    auto my_rank_cells = nonempty_npts_model / globals::node_nprocs;
-    // rank_in_node 0 gets any remainder
-    if (globals::rank_in_node == 0) {
-      my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
-    }
+    const auto [_, noderank_nonemptycellcount] =
+        get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
 
-    auto size = static_cast<MPI_Aint>(my_rank_cells * globals::nbfcontinua_ground * sizeof(double));
+    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * globals::nbfcontinua_ground * sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                           &globals::corrphotoionrenorm,
@@ -560,10 +537,9 @@ void map_2dmodelto3dgrid()
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     // map to 3D Cartesian grid
-    std::array<double, 3> pos_mid{};
-    for (int d = 0; d < 3; d++) {
-      pos_mid[d] = (get_cellcoordmin(cellindex, d) + (0.5 * wid_init(cellindex, d)));
-    }
+    const auto pos_mid = std::array<double, 3>{get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex, 0)),
+                                               get_cellcoordmin(cellindex, 1) + (0.5 * wid_init(cellindex, 1)),
+                                               get_cellcoordmin(cellindex, 2) + (0.5 * wid_init(cellindex, 2))};
 
     const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
 
@@ -1536,21 +1512,20 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 }
 
 constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> pos_xyz) -> std::array<double, 3> {
-  auto posgridcoord = std::array<double, 3>{};
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
-    posgridcoord[0] = pos_xyz[0];
-    posgridcoord[1] = pos_xyz[1];
-    posgridcoord[2] = pos_xyz[2];
-  } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
-    posgridcoord[0] = std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2));
-    posgridcoord[1] = pos_xyz[2];
-    posgridcoord[2] = 0.;
-  } else if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
-    posgridcoord[0] = vec_len(pos_xyz);
-    posgridcoord[1] = 0.;
-    posgridcoord[2] = 0.;
+    return pos_xyz;
   }
-  return posgridcoord;
+
+  if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
+    return {std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2], 0.};
+  }
+
+  if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
+    return {vec_len(pos_xyz), 0., 0.};
+  }
+
+  assert_always(false);
+  return {0., 0., 0.};
 }
 
 template <size_t S1>

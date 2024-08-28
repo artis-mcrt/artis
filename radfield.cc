@@ -260,8 +260,8 @@ void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, con
 
   const auto bfestimbegin = std::lower_bound(globals::bfestim_nu_edge.data() + phixslist.bfestimbegin,
                                              globals::bfestim_nu_edge.data() + bfestimend, nu_cmf,
-                                             [](const double nu_edge, const double nu_cmf) {
-                                               return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                             [](const double nu_edge, const double find_nu_cmf) {
+                                               return nu_edge * last_phixs_nuovernuedge < find_nu_cmf;
                                              }) -
                             globals::bfestim_nu_edge.data();
 
@@ -548,6 +548,10 @@ void init(const int my_rank, const int ndo_nonempty) {
   } else {
     printout("\n");
   }
+#ifdef MPI_ON
+  const auto [_, noderank_nonemptycellcount] =
+      get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
+#endif
 
   if (MULTIBIN_RADFIELD_MODEL_ON) {
     printout("The multibin radiation field is being used from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);
@@ -571,12 +575,7 @@ void init(const int my_rank, const int ndo_nonempty) {
 
 #ifdef MPI_ON
     {
-      int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
-      // rank_in_node 0 gets any remainder
-      if (globals::rank_in_node == 0) {
-        my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
-      }
-      auto size = static_cast<MPI_Aint>(my_rank_cells * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution));
+      auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution));
       int disp_unit = sizeof(RadFieldBinSolution);
       MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions,
                               &win_radfieldbin_solutions);
@@ -600,24 +599,17 @@ void init(const int my_rank, const int ndo_nonempty) {
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-#ifdef MPI_ON
     {
-      int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
-      // rank_in_node 0 gets any remainder
-      if (globals::rank_in_node == 0) {
-        my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
-      }
-      auto size = static_cast<MPI_Aint>(my_rank_cells * globals::bfestimcount * sizeof(float));
+#ifdef MPI_ON
+      auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * globals::bfestimcount * sizeof(float));
       int disp_unit = sizeof(float);
       MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed,
                               &win_prev_bfrate_normed);
       MPI_Win_shared_query(win_prev_bfrate_normed, 0, &size, &disp_unit, &prev_bfrate_normed);
-    }
 #else
-    {
       prev_bfrate_normed = static_cast<float *>(malloc(nonempty_npts_model * globals::bfestimcount * sizeof(float)));
-    }
 #endif
+    }
     printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
              nonempty_npts_model * globals::bfestimcount * sizeof(float) / 1024. / 1024.);
 

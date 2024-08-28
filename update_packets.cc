@@ -57,7 +57,6 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::WOLLAEGER) {
     // particle thermalisation from Wollaeger+2018, similar to Barnes but using a slightly different expression
     const double A = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 1.2 * 1.e-11 : 1.3 * 1.e-11;
-    const int mgi = grid::get_cell_modelgridindex(pkt.where);
     const double aux_term = 2 * A / (ts * grid::get_rho(mgi));
     // In Bulla 2023 (arXiv:2211.14348), the following line contains (<-> eq. 7) contains a typo. The way implemented
     // here is the original from Wollaeger paper without the typo
@@ -79,7 +78,6 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     // endot [erg/s] from Barnes et al. (2016). see their figure 6.
     const double endot = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
 
-    const double ts = pkt.prop_time;
     const double particle_en = H * pkt.nu_cmf;  // energy of the particles in the packet
 
     // for endot independent of energy, the next line is trival (for E dependent endot, an integral would be needed)
