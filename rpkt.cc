@@ -1003,15 +1003,13 @@ void allocate_expansionopacities() {
   const auto npts_nonempty = grid::get_nonempty_npts_model();
   float *expansionopacities_data{};
   double *expansionopacity_planck_cumulative_data{};
+
 #ifdef MPI_ON
-  int my_rank_nonemptycells = npts_nonempty / globals::node_nprocs;
-  // rank_in_node 0 gets any remainder
-  if (globals::rank_in_node == 0) {
-    my_rank_nonemptycells += npts_nonempty - (my_rank_nonemptycells * globals::node_nprocs);
-  }
+  const auto [_, noderank_nonemptycellcount] =
+      get_range_chunk(npts_nonempty, globals::node_nprocs, globals::rank_in_node);
 
   {
-    MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(float));
+    MPI_Aint size = noderank_nonemptycellcount * expopac_nbins * static_cast<MPI_Aint>(sizeof(float));
     int disp_unit = sizeof(float);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                           &expansionopacities_data, &win_expansionopacities) == MPI_SUCCESS);
@@ -1020,7 +1018,7 @@ void allocate_expansionopacities() {
   }
 
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
-    MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(double));
+    MPI_Aint size = noderank_nonemptycellcount * expopac_nbins * static_cast<MPI_Aint>(sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                           &expansionopacity_planck_cumulative_data,
