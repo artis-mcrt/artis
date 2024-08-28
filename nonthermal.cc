@@ -116,11 +116,11 @@ constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
 
 const auto logengrid = []() {
-  std::vector<double> logengrid(SFPTS);
+  std::vector<double> _logengrid(SFPTS);
   for (int i = 0; i < SFPTS; i++) {
-    logengrid[i] = std::log(engrid(i));
+    _logengrid[i] = std::log(engrid(i));
   }
-  return logengrid;
+  return _logengrid;
 }();
 
 // samples of the source function (energy distribution of deposited energy)
@@ -151,13 +151,13 @@ constexpr double E_init_ev = []() {
 
 // rhs is the constant term (not dependent on y func) in each equation
 constexpr auto rhsvec = []() {
-  std::array<double, SFPTS> rhsvec{};
+  std::array<double, SFPTS> _rhsvec{};
   double source_integral_to_SF_EMAX = 0.;
   for (int i = SFPTS - 1; i >= 0; i--) {
-    rhsvec[i] = source_integral_to_SF_EMAX * DELTA_E;
+    _rhsvec[i] = source_integral_to_SF_EMAX * DELTA_E;
     source_integral_to_SF_EMAX += sourcevec(i);
   }
-  return rhsvec;
+  return _rhsvec;
 }();
 
 // Monte Carlo result - compare to analytical expectation

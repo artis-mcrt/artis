@@ -260,8 +260,8 @@ void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, con
 
   const auto bfestimbegin = std::lower_bound(globals::bfestim_nu_edge.data() + phixslist.bfestimbegin,
                                              globals::bfestim_nu_edge.data() + bfestimend, nu_cmf,
-                                             [](const double nu_edge, const double nu_cmf) {
-                                               return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                             [](const double nu_edge, const double find_nu_cmf) {
+                                               return nu_edge * last_phixs_nuovernuedge < find_nu_cmf;
                                              }) -
                             globals::bfestim_nu_edge.data();
 
