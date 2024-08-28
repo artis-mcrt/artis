@@ -1517,15 +1517,15 @@ constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> pos_xyz) -> s
   }
 
   if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
-    return std::array<double, 3>{std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2], 0.};
+    return {std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2], 0.};
   }
 
   if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
-    return std::array<double, 3>{vec_len(pos_xyz), 0., 0.};
+    return {vec_len(pos_xyz), 0., 0.};
   }
 
   assert_always(false);
-  return std::array<double, 3>{0., 0., 0.};
+  return {0., 0., 0.};
 }
 
 template <size_t S1>
