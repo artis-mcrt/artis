@@ -1043,9 +1043,9 @@ void read_atomicdata_files() {
     downtrans->lineindex = lineindex;
 
     const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
-    auto *uptranslist = globals::elements[element].ions[ion].levels[lowerlevel].uptrans;
+    auto &uptranslist = globals::elements[element].ions[ion].levels[lowerlevel].uptrans;
     auto *uptrans = std::find_if(uptranslist, uptranslist + nloweruptrans,
-                                 [=](const auto &uptrans) { return uptrans.targetlevelindex == upperlevel; });
+                                 [=](const auto &uptr) { return uptr.targetlevelindex == upperlevel; });
     assert_always(uptrans != (uptranslist + nloweruptrans));
     // assert_always(uptrans->targetlevelindex == upperlevel);
     uptrans->lineindex = lineindex;
