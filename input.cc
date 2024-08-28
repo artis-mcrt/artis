@@ -1036,16 +1036,17 @@ void read_atomicdata_files() {
 
     auto downtranslist = std::span(globals::elements[element].ions[ion].levels[upperlevel].downtrans,
                                    get_ndowntrans(element, ion, upperlevel));
-    auto downtrans = std::find_if(downtranslist.begin(), downtranslist.end(),
-                                  [=](const auto &downtr) { return downtr.targetlevelindex == lowerlevel; });
+    auto downtrans =
+        std::ranges::find_if(downtranslist, [=](const auto &downtr) { return downtr.targetlevelindex == lowerlevel; });
     assert_always(downtrans != downtranslist.end());
     // assert_always(downtrans->targetlevelindex == lowerlevel);
     downtrans->lineindex = lineindex;
 
     auto uptranslist = std::span(globals::elements[element].ions[ion].levels[upperlevel].uptrans,
                                  get_nuptrans(element, ion, lowerlevel));
-    auto uptrans = std::find_if(uptranslist.begin(), uptranslist.end(),
-                                [=](const auto &uptr) { return uptr.targetlevelindex == upperlevel; });
+
+    auto uptrans =
+        std::ranges::find_if(uptranslist, [=](const auto &uptr) { return uptr.targetlevelindex == upperlevel; });
     assert_always(uptrans != uptranslist.end());
     // assert_always(uptrans->targetlevelindex == upperlevel);
     uptrans->lineindex = lineindex;
