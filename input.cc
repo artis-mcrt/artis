@@ -105,7 +105,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
 
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets == nullptr);
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
-        static_cast<PhotoionTarget *>(calloc(1, sizeof(PhotoionTarget)));
+        static_cast<PhotoionTarget *>(malloc(sizeof(PhotoionTarget)));
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
     if (single_level_top_ion && (upperion == get_nions(element) - 1)) {
@@ -127,7 +127,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
       *mem_usage_phixs += in_nphixstargets * sizeof(PhotoionTarget);
 
       globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
-          static_cast<PhotoionTarget *>(calloc(in_nphixstargets, sizeof(PhotoionTarget)));
+          static_cast<PhotoionTarget *>(malloc(in_nphixstargets * sizeof(PhotoionTarget)));
       assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
       double probability_sum = 0.;
@@ -151,7 +151,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
       globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
       *mem_usage_phixs += sizeof(PhotoionTarget);
       globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
-          static_cast<PhotoionTarget *>(calloc(1, sizeof(PhotoionTarget)));
+          static_cast<PhotoionTarget *>(malloc(sizeof(PhotoionTarget)));
       assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
       for (int i = 0; i < in_nphixstargets; i++) {
@@ -181,7 +181,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
 
   *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
   globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs =
-      static_cast<float *>(calloc(globals::NPHIXSPOINTS, sizeof(float)));
+      static_cast<float *>(malloc(globals::NPHIXSPOINTS * sizeof(float)));
   assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs != nullptr);
 
   if (phixs_file_version == 1) {
@@ -757,7 +757,7 @@ void read_atomicdata_files() {
     globals::elements[element].uniqueionindexstart = uniqueionindex;
 
     // Initialize the elements ionlist
-    globals::elements[element].ions = static_cast<Ion *>(calloc(nions, sizeof(Ion)));
+    globals::elements[element].ions = static_cast<Ion *>(malloc(nions * sizeof(Ion)));
     assert_always(globals::elements[element].ions != nullptr);
 
     // now read in data for all ions of the current element. before doing so initialize
