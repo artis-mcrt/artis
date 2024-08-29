@@ -854,13 +854,14 @@ void read_atomicdata_files() {
       globals::elements[element].ions[ion].groundcontindex = -1;
       globals::elements[element].ions[ion].first_nlte = -1;
 
-      globals::elements[element].ions[ion].Alpha_sp = static_cast<float *>(calloc(TABLESIZE, sizeof(float)));
+      globals::elements[element].ions[ion].Alpha_sp = static_cast<float *>(malloc(TABLESIZE * sizeof(float)));
       assert_always(globals::elements[element].ions[ion].Alpha_sp != nullptr);
 
-      globals::elements[element].ions[ion].levels = static_cast<EnergyLevel *>(calloc(nlevelsmax, sizeof(EnergyLevel)));
+      globals::elements[element].ions[ion].levels =
+          static_cast<EnergyLevel *>(malloc(nlevelsmax * sizeof(EnergyLevel)));
       assert_always(globals::elements[element].ions[ion].levels != nullptr);
 
-      auto *transitions = static_cast<Transitions *>(calloc(nlevelsmax, sizeof(Transitions)));
+      auto *transitions = static_cast<Transitions *>(malloc(nlevelsmax * sizeof(Transitions)));
       assert_always(transitions != nullptr);
 
       read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, transitions);
