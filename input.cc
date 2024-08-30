@@ -398,15 +398,15 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
   }
 }
 
-void read_ion_transitions(std::fstream &ftransitiondata, const int tottransitions_in_file, int *const tottransitions,
+void read_ion_transitions(std::fstream &ftransitiondata, const int tottransitions_in_file, int &tottransitions,
                           std::vector<Transition> &iontransitiontable, const int nlevels_requiretransitions,
                           const int nlevels_requiretransitions_upperlevels) {
   iontransitiontable.clear();
-  iontransitiontable.reserve(*tottransitions);
+  iontransitiontable.reserve(tottransitions);
 
   std::string line;
 
-  if (*tottransitions == 0) {
+  if (tottransitions == 0) {
     // we will not read in any transitions, just skip past these lines in the file
     for (int i = 0; i < tottransitions_in_file; i++) {
       assert_always(getline(ftransitiondata, line));
@@ -469,7 +469,7 @@ void read_ion_transitions(std::fstream &ftransitiondata, const int tottransition
           }
           // printout("+adding transition index %d Z=%02d ionstage %d lower %d upper %d\n", i, Z, ionstage, prev_lower,
           // tmplevel);
-          (*tottransitions)++;
+          tottransitions++;
           assert_always(tmplevel >= 0);
           iontransitiontable.push_back(
               {.lower = prev_lower, .upper = tmplevel, .A = 0., .coll_str = -2., .forbidden = true});
@@ -881,15 +881,13 @@ void read_atomicdata_files() {
       nlevels_requiretransitions = std::min(nlevelsmax, nlevels_requiretransitions);
       nlevels_requiretransitions_upperlevels = std::min(nlevelsmax, nlevels_requiretransitions_upperlevels);
 
-      read_ion_transitions(ftransitiondata, tottransitions_in_file, &tottransitions, iontransitiontable,
+      read_ion_transitions(ftransitiondata, tottransitions_in_file, tottransitions, iontransitiontable,
                            nlevels_requiretransitions, nlevels_requiretransitions_upperlevels);
 
       add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, iontransitiontable, iondowntranslineindicies,
                                            lineindex, temp_linelist);
 
       free(iondowntranslineindicies[0]);
-      iondowntranslineindicies.clear();
-      iontransitiontable.clear();
 
       for (int level = 0; level < nlevelsmax; level++) {
         globals::elements[element].ions[ion].levels[level].nphixstargets = 0;
