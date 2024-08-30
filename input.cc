@@ -482,7 +482,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
     lineindex = lineindex_initial;
     if (pass == 1) {
       int alltransindex = 0;
-      LevelTransition *alltransblock{};
+      auto &ionalltrans = globals::elements[element].ions[ion].alltransitions;
 
 #ifdef MPI_ON
       MPI_Barrier(MPI_COMM_WORLD);
@@ -492,19 +492,18 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
       auto size = static_cast<MPI_Aint>(noderank_trans * sizeof(LevelTransition));
       int disp_unit = sizeof(LevelTransition);
-      MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &alltransblock,
-                              &win_alltransblock);
+      MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &ionalltrans, &win_alltransblock);
 
-      MPI_Win_shared_query(win_alltransblock, 0, &size, &disp_unit, &alltransblock);
+      MPI_Win_shared_query(win_alltransblock, 0, &size, &disp_unit, &ionalltrans);
 #else
       alltransblock = static_cast<LevelTransition *>(malloc(totupdowntrans * sizeof(LevelTransition)));
 #endif
 
       for (int level = 0; level < nlevelsmax; level++) {
-        globals::elements[element].ions[ion].levels[level].downtrans = &alltransblock[alltransindex];
+        globals::elements[element].ions[ion].levels[level].downtrans = &ionalltrans[alltransindex];
         alltransindex += get_ndowntrans(element, ion, level);
 
-        globals::elements[element].ions[ion].levels[level].uptrans = &alltransblock[alltransindex];
+        globals::elements[element].ions[ion].levels[level].uptrans = &ionalltrans[alltransindex];
         alltransindex += get_nuptrans(element, ion, level);
 
         set_ndowntrans(element, ion, level, 0);

@@ -109,6 +109,7 @@ struct Ion {
   int uniquelevelindexstart;
   int groundcontindex;
   double ionpot;  // Ionisation threshold to the next ionstage
+  LevelTransition *alltransitions;
 };
 
 struct Element {
