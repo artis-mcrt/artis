@@ -928,7 +928,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
     if ((DETAILED_BF_ESTIMATORS_ON && grid::get_elem_abundance(modelgridindex, element) > 0) ||
         (!DETAILED_BF_ESTIMATORS_ON && ((get_nnion(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0))))
         [[likely]] {
-      const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? get_levelpop(modelgridindex, element, ion, level)
+      const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? globals::cellcache[cellcacheslotid].ch_allcont_nnlevel[i]
                                                            : calculate_levelpop(modelgridindex, element, ion, level);
 
       if (nnlevel > 0) {

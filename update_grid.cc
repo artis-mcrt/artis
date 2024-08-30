@@ -1192,65 +1192,61 @@ void cellcache_change_cell(const int modelgridindex) {
   // onset of the new timestep. Also, boundary crossing?
   // Calculate the level populations for this cell, and flag the other entries
   // as empty.
-  if (modelgridindex == globals::cellcache[cellcacheslotid].cellnumber) {
+  auto &cacheslot = globals::cellcache[cellcacheslotid];
+  if (modelgridindex == cacheslot.cellnumber) {
     return;
   }
 
-  globals::cellcache[cellcacheslotid].cellnumber = modelgridindex;
-  globals::cellcache[cellcacheslotid].chi_ff_nnionpart = -1.;
+  cacheslot.cellnumber = modelgridindex;
+  cacheslot.chi_ff_nnionpart = -1.;
 
   const int nelements = get_nelements();
   for (int element = 0; element < nelements; element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      globals::cellcache[cellcacheslotid]
+      cacheslot
           .cooling_contrib[kpkt::get_coolinglistoffset(element, ion) + kpkt::get_ncoolingterms_ion(element, ion) - 1] =
           COOLING_UNDEFINED;
 
       if (modelgridindex >= 0) {
         const int nlevels = get_nlevels(element, ion);
+        auto &chion = cacheslot.chelements[element].chions[ion];
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
         for (int level = 0; level < nlevels; level++) {
-          globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].population =
-              calculate_levelpop(modelgridindex, element, ion, level);
+          chion.chlevels[level].population = calculate_levelpop(modelgridindex, element, ion, level);
         }
       }
     }
 
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels = get_nlevels(element, ion);
+      auto &chion = cacheslot.chelements[element].chions[ion];
       for (int level = 0; level < nlevels; level++) {
         const auto nphixstargets = get_nphixstargets(element, ion, level);
+        auto &chlevel = chion.chlevels[level];
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          globals::cellcache[cellcacheslotid]
-              .chelements[element]
-              .chions[ion]
-              .chlevels[level]
-              .chphixstargets[phixstargetindex]
-              .corrphotoioncoeff = -99.;
+          chlevel.chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
 
 #if (SEPARATE_STIMRECOMB)
-          globals::cellcache[cellcacheslotid]
-              .chelements[element]
-              .chions[ion]
-              .chlevels[level]
-              .chphixstargets[phixstargetindex]
-              .stimrecombcoeff = -99.;
+          chlevel.chphixstargets[phixstargetindex].stimrecombcoeff = -99.;
 #endif
         }
 
-        globals::cellcache[cellcacheslotid]
-            .chelements[element]
-            .chions[ion]
-            .chlevels[level]
-            .processrates[MA_ACTION_INTERNALUPHIGHER] = -99.;
+        chlevel.processrates[MA_ACTION_INTERNALUPHIGHER] = -99.;
       }
     }
   }
 
   if (modelgridindex >= 0) {
-    std::ranges::fill(globals::cellcache[cellcacheslotid].ch_allcont_departureratios, -1.);
+    std::ranges::fill(cacheslot.ch_allcont_departureratios, -1.);
+
+    for (int i = 0; i < globals::nbfcontinua; i++) {
+      const int element = globals::allcont[i].element;
+      const int ion = globals::allcont[i].ion;
+      const int level = globals::allcont[i].level;
+      cacheslot.ch_allcont_nnlevel[i] = get_levelpop(modelgridindex, element, ion, level);
+    }
   }
 }

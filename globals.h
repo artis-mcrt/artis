@@ -201,6 +201,7 @@ struct CellCache {
   CellCacheElements *chelements{};
   std::vector<CellCacheLevels> ch_all_levels;
   std::vector<double> ch_allcont_departureratios;
+  std::vector<double> ch_allcont_nnlevel;
   double chi_ff_nnionpart{-1};
   int cellnumber{-1};  // Identifies the cell the data is valid for.
 };
