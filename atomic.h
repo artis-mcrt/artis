@@ -158,15 +158,7 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
 
   if (i < 0) {
     sigma_bf = 0.;
-    // printout("[warning] photoionization_crosssection was called with nu=%g < nu_edge=%g\n",nu,nu_edge);
-    // printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot
-    // %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot); printout("[warning]
-    // element %d, ion+1 %d, level %d epsilon %g, ionpot
-    // %g\n",element,ion+1,0,epsilon(element,ion+1,0),elements[element].ions[ion].ionpot); printout("[warning]
-    // photoionization_crosssection %g\n",sigma_bf); abort();
   } else if (i < globals::NPHIXSPOINTS - 1) {
-    // sigma_bf = globals::elements[element].ions[ion].levels[level].photoion_xs[i];
-
     const double sigma_bf_a = photoion_xs[i];
     const double sigma_bf_b = photoion_xs[i + 1];
     const double factor_b = ireal - i;
@@ -178,16 +170,6 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
     sigma_bf = photoion_xs[globals::NPHIXSPOINTS - 1] * pow(nu_max_phixs / nu, 3);
   }
-
-  // if (sigma_bf < 0)
-  // {
-  //   printout("[warning] photoionization_crosssection returns negative cross-section %g\n",sigma_bf);
-  //   printout("[warning]   nu=%g,  nu_edge=%g\n",nu,nu_edge);
-  //   printout("[warning]   xs@edge=%g,
-  //   xs@maxfreq\n",elements[element].ions[ion].levels[level].photoion_xs[0],elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1]);
-  //   printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot
-  //   %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
-  // }
 
   return sigma_bf;
 }
