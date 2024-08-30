@@ -536,15 +536,15 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
     totupdowntrans = 0;
     for (const auto &transition : transitiontable) {
       const int level = transition.upper;
-      const int targetlevel = transition.lower;
+      const int lowerlevel = transition.lower;
       if (pass == 0) {
-        assert_always(targetlevel >= 0);
-        assert_always(level > targetlevel);
+        assert_always(lowerlevel >= 0);
+        assert_always(level > lowerlevel);
       }
 
       double nu_trans = -1.;
-      if (targetlevel < nlevelsmax && level < nlevelsmax) {
-        nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, targetlevel)) / H;
+      if (lowerlevel < nlevelsmax && level < nlevelsmax) {
+        nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, lowerlevel)) / H;
       }
       if (!(nu_trans > 0)) {
         continue;
@@ -552,7 +552,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
       // Make sure that we don't allow duplicate. In that case take only the lines
       // first occurrence
-      int &downtranslineindex = iondowntranslineindicies[level][level - targetlevel - 1];
+      int &downtranslineindex = iondowntranslineindicies[level][lowerlevel];
 
       // -99 means that the transition hasn't been seen yet
       if (downtranslineindex < 0) {
@@ -561,8 +561,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
         set_ndowntrans(element, ion, level, nupperdowntrans);
 
-        const int nloweruptrans = get_nuptrans(element, ion, targetlevel) + 1;
-        set_nuptrans(element, ion, targetlevel, nloweruptrans);
+        const int nloweruptrans = get_nuptrans(element, ion, lowerlevel) + 1;
+        set_nuptrans(element, ion, lowerlevel, nloweruptrans);
 
         totupdowntrans += 2;
 
@@ -570,7 +570,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
           const float A_ul = transition.A;
           const float coll_str = transition.coll_str;
 
-          const auto g_ratio = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
+          const auto g_ratio = stat_weight(element, ion, level) / stat_weight(element, ion, lowerlevel);
           const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
           assert_always(std::isfinite(f_ul));
 
@@ -580,7 +580,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
               .elementindex = element,
               .ionindex = ion,
               .upperlevelindex = level,
-              .lowerlevelindex = targetlevel,
+              .lowerlevelindex = lowerlevel,
           });
 
           // the line list has not been sorted yet, so the store the level index for now and
@@ -588,12 +588,12 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
           globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans - 1] = {
               .lineindex = -1,
-              .targetlevelindex = targetlevel,
+              .targetlevelindex = lowerlevel,
               .einstein_A = static_cast<float>(A_ul),
               .coll_str = coll_str,
               .osc_strength = f_ul,
               .forbidden = transition.forbidden};
-          globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans - 1] = {
+          globals::elements[element].ions[ion].levels[lowerlevel].uptrans[nloweruptrans - 1] = {
               .lineindex = -1,
               .targetlevelindex = level,
               .einstein_A = static_cast<float>(A_ul),
@@ -613,11 +613,10 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         if ((temp_linelist[downtranslineindex].elementindex != element) ||
             (temp_linelist[downtranslineindex].ionindex != ion) ||
             (temp_linelist[downtranslineindex].upperlevelindex != level) ||
-            (temp_linelist[downtranslineindex].lowerlevelindex != targetlevel)) {
+            (temp_linelist[downtranslineindex].lowerlevelindex != lowerlevel)) {
           printout("[input] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
-          printout("[input]   element %d ion %d targetlevel %d level %d\n", element, ion, targetlevel, level);
-          printout("[input]   transitions[level].to[level-targetlevel-1]=lineindex %d\n",
-                   iondowntranslineindicies[level][level - targetlevel - 1]);
+          printout("[input]   element %d ion %d targetlevel %d level %d\n", element, ion, lowerlevel, level);
+          printout("[input]   transitions[level].to[targetlevel]=lineindex %d\n", downtranslineindex);
           printout("[input]   A_ul %g, coll_str %g\n", A_ul, coll_str);
           printout(
               "[input]   globals::linelist[lineindex].elementindex %d, "
@@ -628,19 +627,19 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
           std::abort();
         }
 
-        const auto g_ratio = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
+        const auto g_ratio = stat_weight(element, ion, level) / stat_weight(element, ion, lowerlevel);
         const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
 
         const int nupperdowntrans = get_ndowntrans(element, ion, level);
 
-        const int nloweruptrans = get_nuptrans(element, ion, targetlevel);
+        const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
 
         auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans];
         downtransition.einstein_A += A_ul;
         downtransition.osc_strength += f_ul;
         downtransition.coll_str = std::max(downtransition.coll_str, coll_str);
 
-        auto &uptransition = globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans];
+        auto &uptransition = globals::elements[element].ions[ion].levels[lowerlevel].uptrans[nloweruptrans];
         uptransition.einstein_A += A_ul;
         uptransition.osc_strength += f_ul;
         uptransition.coll_str = std::max(uptransition.coll_str, coll_str);
