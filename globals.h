@@ -110,19 +110,13 @@ struct Ion {
   int groundcontindex;
   float *Alpha_sp;
   double ionpot;  // Ionisation threshold to the next ionstage
-  // int nbfcontinua;
-  // ionsphixslist *phixslist;
 };
 
 struct Element {
-  Ion *ions{};      // Carries information for each ion: 0,1,...,nions-1
-  int nions{0};     // Number of ions for the current element
-  int anumber{-1};  // Atomic number
-  //  int uppermost_ion;                       // Highest ionisation stage which has a decent population for a given
-  //  cell
-  // Be aware that this must not be used outside of the update_grid routine
-  // and their daughters. Neither it will work with OpenMP threads.
-  int uniqueionindexstart{-1};         // Index of the lowest ionisation stage of this element
+  Ion *ions{};                         // Carries information for each ion: 0,1,...,nions-1
+  int nions{0};                        // Number of ions for the current element
+  int anumber{-1};                     // Atomic number
+  int uniqueionindexstart{-1};         /// uniqueionindex index of the lowest ionisation stage of this element
   float initstablemeannucmass = {0.};  // Atomic mass number in multiple of MH
   bool has_nlte_levels{false};
 };

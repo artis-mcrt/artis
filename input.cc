@@ -364,8 +364,6 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
     if (level < nlevelsmax) {
       const double currentlevelenergy = (energyoffset + levelenergy) * EV;
       globals::elements[element].ions[ion].levels[level].epsilon = currentlevelenergy;
-
-      // if (level == 0 && ion == 0) energyoffset = levelenergy;
       globals::elements[element].ions[ion].levels[level].stat_weight = statweight;
       assert_always(statweight > 0.);
 
@@ -377,12 +375,7 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
         globals::elements[element].ions[ion].ionisinglevels++;
       }
 
-      // store the possible downward transitions from the current level in following order to memory
-      //     A_level,level-1; A_level,level-2; ... A_level,1
-      // entries which are not explicitly set are zero (the zero is set/initialized by calloc!)
-
       set_ndowntrans(element, ion, level, 0);
-
       set_nuptrans(element, ion, level, 0);
     } else {
       // globals::elements[element].ions[ion].levels[nlevelsmax - 1].stat_weight += statweight;
