@@ -555,7 +555,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
       int &downtranslineindex = iondowntranslineindicies[level][level - targetlevel - 1];
 
       // -99 means that the transition hasn't been seen yet
-      if (downtranslineindex == -99) {
+      if (downtranslineindex < 0) {
         downtranslineindex = lineindex;
 
         const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
