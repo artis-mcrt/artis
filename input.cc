@@ -535,7 +535,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
     }
 
     for (int level = 0; level < nlevelsmax; level++) {
-      std::fill_n(iondowntranstmplineindicies[level], level, -99);
+      std::fill_n(iondowntranstmplineindicies[0] + downtranslevelstart(level), level, -99);
     }
 
     totupdowntrans = 0;
@@ -554,7 +554,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
       // Make sure that we don't allow duplicate. In that case take only the lines
       // first occurrence
-      int &downtranslineindex = iondowntranstmplineindicies[level][lowerlevel];
+      int &downtranslineindex = iondowntranstmplineindicies[0][downtranslevelstart(level) + lowerlevel];
 
       // negative means that the transition hasn't been seen yet
       if (downtranslineindex < 0) {
