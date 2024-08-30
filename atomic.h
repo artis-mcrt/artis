@@ -125,6 +125,10 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
   return globals::elements[element].ions[ion].maxrecombininglevel;
 }
 
+inline auto get_phixs_table(const int element, const int ion, const int level) -> float * {
+  return globals::elements[element].ions[ion].levels[level].photoion_xs;
+}
+
 // Calculate the photoionisation cross-section at frequency nu out of the atomic data.
 [[nodiscard]] inline auto photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge,
                                                                  const double nu) -> double {
@@ -179,8 +183,7 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  return photoionization_crosssection_fromtable(globals::elements[element].ions[ion].levels[level].photoion_xs, nu_edge,
-                                                nu);
+  return photoionization_crosssection_fromtable(get_phixs_table(element, ion, level), nu_edge, nu);
 }
 
 [[nodiscard]] inline auto get_tau_sobolev(const int modelgridindex, const int lineindex, const double t_current,

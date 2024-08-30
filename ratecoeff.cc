@@ -387,12 +387,10 @@ void precalculate_rate_coefficient_integrals() {
 
             const double sfac = calculate_sahafact(element, ion, level, upperlevel, T_e, E_threshold);
 
-            assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != nullptr);
+            assert_always(get_phixs_table(element, ion, level) != nullptr);
             // the threshold of the first target gives nu of the first phixstable point
             const GSLIntegrationParas intparas = {
-                .nu_edge = nu_threshold,
-                .T = T_e,
-                .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs};
+                .nu_edge = nu_threshold, .T = T_e, .photoion_xs = get_phixs_table(element, ion, level)};
 
             // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
             double alpha_sp = 0.;
@@ -483,7 +481,7 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
   // if we store the data in node shared memory, then only one rank should update it
   if (globals::rank_in_node == 0) {
     for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
-      globals::elements[element].ions[ion].levels[level].photoion_xs[n] *= factor;
+      get_phixs_table(element, ion, level)[n] *= factor;
     }
 
     const int nphixstargets = get_nphixstargets(element, ion, level);
@@ -779,7 +777,7 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
   const auto intparas = gsl_integral_paras_gammacorr{
       .nu_edge = nu_threshold,
       .departure_ratio = departure_ratio,
-      .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs,
+      .photoion_xs = get_phixs_table(element, ion, level),
       .T_e = T_e,
       .modelgridindex = modelgridindex,
   };

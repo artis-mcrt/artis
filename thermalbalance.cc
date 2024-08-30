@@ -76,11 +76,10 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
 
-  const gsl_integral_paras_bfheating intparas = {
-      .nu_edge = nu_threshold,
-      .modelgridindex = modelgridindex,
-      .T_R = grid::get_TR(modelgridindex),
-      .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs};
+  const gsl_integral_paras_bfheating intparas = {.nu_edge = nu_threshold,
+                                                 .modelgridindex = modelgridindex,
+                                                 .T_R = grid::get_TR(modelgridindex),
+                                                 .photoion_xs = get_phixs_table(element, ion, level)};
 
   // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
 
