@@ -1455,6 +1455,9 @@ void setup_phixs_list() {
 #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
+
+    setup_photoion_luts();
+
     for (int i = 0; i < globals::nbfcontinua; i++) {
       const int element = nonconstallcont[i].element;
       const int ion = nonconstallcont[i].ion;
@@ -1464,8 +1467,6 @@ void setup_phixs_list() {
   }
   globals::allcont = nonconstallcont;
   nonconstallcont = nullptr;
-
-  setup_photoion_luts();
 }
 
 void read_atomicdata() {
