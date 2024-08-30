@@ -645,21 +645,23 @@ void read_recombrate_file() {
 }
 
 void precalculate_ion_alpha_sp() {
+  globals::ion_alpha_sp.resize(get_includedions() * TABLESIZE);
   for (int iter = 0; iter < TABLESIZE; iter++) {
     const float T_e = MINTEMP * exp(iter * T_step_log);
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element) - 1;
       for (int ion = 0; ion < nions; ion++) {
-        const int nlevels = get_ionisinglevels(element, ion);
+        const auto uniqueionindex = get_uniqueionindex(element, ion);
+        const int nionisinglevels = get_ionisinglevels(element, ion);
         double zeta = 0.;
-        for (int level = 0; level < nlevels; level++) {
+        for (int level = 0; level < nionisinglevels; level++) {
           const auto nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const double zeta_level = get_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
             zeta += zeta_level;
           }
         }
-        globals::elements[element].ions[ion].Alpha_sp[iter] = zeta;
+        globals::ion_alpha_sp[(uniqueionindex * TABLESIZE) + iter] = zeta;
       }
     }
   }

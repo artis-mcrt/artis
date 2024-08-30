@@ -108,7 +108,6 @@ struct Ion {
   int ncoolingterms;
   int uniquelevelindexstart;
   int groundcontindex;
-  float *Alpha_sp;
   double ionpot;  // Ionisation threshold to the next ionstage
 };
 

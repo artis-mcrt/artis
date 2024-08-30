@@ -28,23 +28,20 @@ struct nneSolutionParas {
   bool force_lte;
 };
 
-auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T) -> double {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(T >= MINTEMP);
-
+auto interpolate_ions_spontrecombcoeff(const int uniqueionindex, const double T) -> double {
   const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
+  assert_testmodeonly(lowerindex >= 0);
   if (lowerindex < TABLESIZE - 1) {
     const int upperindex = lowerindex + 1;
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper = globals::elements[element].ions[ion].Alpha_sp[upperindex];
-    const double f_lower = globals::elements[element].ions[ion].Alpha_sp[lowerindex];
+    const double f_upper = globals::ion_alpha_sp[(uniqueionindex * TABLESIZE) + upperindex];
+    const double f_lower = globals::ion_alpha_sp[(uniqueionindex * TABLESIZE) + lowerindex];
 
     return f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower));
   }
-  return globals::elements[element].ions[ion].Alpha_sp[TABLESIZE - 1];
+  return globals::ion_alpha_sp[(uniqueionindex * TABLESIZE) + TABLESIZE - 1];
 }
 
 // use Saha equation for LTE ionization balance
@@ -93,7 +90,7 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
     std::abort();
   }
 
-  const double Alpha_sp = interpolate_ions_spontrecombcoeff(element, ion, T_e);
+  const double Alpha_sp = interpolate_ions_spontrecombcoeff(uniqueionindex, T_e);
 
   // const double Col_rec = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, true, false, false,
   // false);

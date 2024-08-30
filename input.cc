@@ -823,9 +823,6 @@ void read_atomicdata_files() {
       globals::elements[element].ions[ion].groundcontindex = -1;
       globals::elements[element].ions[ion].first_nlte = -1;
 
-      globals::elements[element].ions[ion].Alpha_sp = static_cast<float *>(calloc(TABLESIZE, sizeof(float)));
-      assert_always(globals::elements[element].ions[ion].Alpha_sp != nullptr);
-
       globals::elements[element].ions[ion].levels = static_cast<EnergyLevel *>(calloc(nlevelsmax, sizeof(EnergyLevel)));
       assert_always(globals::elements[element].ions[ion].levels != nullptr);
 
