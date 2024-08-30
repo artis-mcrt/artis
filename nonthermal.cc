@@ -2037,7 +2037,7 @@ void init(const int my_rank, const int ndo_nonempty) {
 
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
       nt_solution[modelgridindex].allions =
-          static_cast<NonThermalSolutionIon *>(malloc(get_includedions() * sizeof(NonThermalSolutionIon)));
+          static_cast<NonThermalSolutionIon *>(calloc(get_includedions(), sizeof(NonThermalSolutionIon)));
 
       const size_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
