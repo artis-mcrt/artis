@@ -47,7 +47,6 @@
 namespace {
 
 const int groundstate_index_in = 1;  // starting level index in the input files
-float *allphixsblock{};
 
 struct Transition {
   int lower;
@@ -1420,15 +1419,16 @@ void setup_phixs_list() {
         static_cast<MPI_Aint>((globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0);
     int disp_unit = sizeof(TransitionLine);
 
-    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &allphixsblock, &win_allphixsblock);
-    MPI_Win_shared_query(win_allphixsblock, MPI_PROC_NULL, &size, &disp_unit, &allphixsblock);
+    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &globals::allphixs,
+                            &win_allphixsblock);
+    MPI_Win_shared_query(win_allphixsblock, MPI_PROC_NULL, &size, &disp_unit, &globals::allphixs);
 
     MPI_Barrier(MPI_COMM_WORLD);
 #else
-    allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
+    globals::allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
 #endif
 
-    assert_always(allphixsblock != nullptr);
+    assert_always(globals::allphixs != nullptr);
     size_t nbftableschanged = 0;
     for (int i = 0; i < globals::nbfcontinua; i++) {
       globals::allcont_nu_edge[i] = nonconstallcont[i].nu_edge;
@@ -1440,15 +1440,15 @@ void setup_phixs_list() {
 
       // different targets share the same cross section table, so don't repeat this process
       if (phixstargetindex == 0) {
+        auto *newblock = globals::allphixs + (nbftableschanged * globals::NPHIXSPOINTS);
         if (globals::rank_in_node == 0) {
-          memcpy(allphixsblock, globals::elements[element].ions[ion].levels[level].photoion_xs,
+          memcpy(newblock, globals::elements[element].ions[ion].levels[level].photoion_xs,
                  globals::NPHIXSPOINTS * sizeof(float));
         }
 
         free(globals::elements[element].ions[ion].levels[level].photoion_xs);
-        globals::elements[element].ions[ion].levels[level].photoion_xs = allphixsblock;
+        globals::elements[element].ions[ion].levels[level].photoion_xs = newblock;
 
-        allphixsblock += globals::NPHIXSPOINTS;
         nbftableschanged++;
       }
     }
