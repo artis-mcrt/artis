@@ -179,14 +179,15 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
       static_cast<float *>(malloc(globals::NPHIXSPOINTS * sizeof(float)));
   assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs != nullptr);
 
+  auto *levelphixstable = globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs;
   if (phixs_file_version == 1) {
     assert_always(get_nphixstargets(element, lowerion, lowerlevel) == 1);
     assert_always(get_phixsupperlevel(element, lowerion, lowerlevel, 0) == 0);
 
     const double nu_edge = (epsilon(element, upperion, 0) - epsilon(element, lowerion, lowerlevel)) / H;
 
-    auto nutable = std::vector<double>(nphixspoints_inputtable);
-    auto phixstable = std::vector<double>(nphixspoints_inputtable);
+    auto nugrid_in = std::vector<double>(nphixspoints_inputtable);
+    auto phixs_in = std::vector<double>(nphixspoints_inputtable);
 
     for (int i = 0; i < nphixspoints_inputtable; i++) {
       double energy = -1.;
@@ -195,27 +196,25 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
       assert_always(std::stringstream(phixsline) >> energy >> phixs);
       assert_always(energy >= 0);
       assert_always(phixs >= 0);
-      nutable[i] = nu_edge + (energy * 13.6 * EV) / H;
+      nugrid_in[i] = nu_edge + (energy * 13.6 * EV) / H;
       // the photoionisation cross-sections in the database are given in Mbarn=1e6 * 1e-28m^2
       // to convert to cgs units multiply by 1e-18
-      phixstable[i] = phixs * 1e-18;
+      phixs_in[i] = phixs * 1e-18;
     }
-    const double nu_max = nutable[nphixspoints_inputtable - 1];
+    const double nu_max = nugrid_in.back();
 
     // Now interpolate these cross-sections
-    globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs[0] = phixstable[0];
+    levelphixstable[0] = phixs_in[0];
 
     gsl_interp_accel *acc = gsl_interp_accel_alloc();
     gsl_spline *spline = gsl_spline_alloc(gsl_interp_linear, nphixspoints_inputtable);
-    gsl_spline_init(spline, nutable.data(), phixstable.data(), nphixspoints_inputtable);
+    gsl_spline_init(spline, nugrid_in.data(), phixs_in.data(), nphixspoints_inputtable);
     for (int i = 1; i < globals::NPHIXSPOINTS; i++) {
       const double nu = nu_edge * (1. + i * globals::NPHIXSNUINCREMENT);
       if (nu > nu_max) {
-        const double phixs = phixstable[nphixspoints_inputtable - 1] * pow(nu_max / nu, 3);
-        globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs[i] = phixs;
+        levelphixstable[i] = phixs_in[nphixspoints_inputtable - 1] * pow(nu_max / nu, 3);
       } else {
-        const double phixs = gsl_spline_eval(spline, nu, acc);
-        globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs[i] = phixs;
+        levelphixstable[i] = gsl_spline_eval(spline, nu, acc);
       }
     }
     gsl_spline_free(spline);
@@ -228,7 +227,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
 
       // the photoionisation cross-sections in the database are given in Mbarn = 1e6 * 1e-28m^2
       // to convert to cgs units multiply by 1e-18
-      globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs[i] = phixs * 1e-18;
+      levelphixstable[i] = phixs * 1e-18;
       // fprintf(database_file,"%g %g\n", nutable[i], phixstable[i]);
     }
   }
@@ -1425,7 +1424,7 @@ void setup_phixs_list() {
 
     MPI_Barrier(MPI_COMM_WORLD);
 #else
-    globals::allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
+    globals::allphixs = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
 #endif
 
     assert_always(globals::allphixs != nullptr);
@@ -1440,14 +1439,14 @@ void setup_phixs_list() {
 
       // different targets share the same cross section table, so don't repeat this process
       if (phixstargetindex == 0) {
-        auto *newblock = globals::allphixs + (nbftableschanged * globals::NPHIXSPOINTS);
+        auto *blocktablestart = globals::allphixs + (nbftableschanged * globals::NPHIXSPOINTS);
         if (globals::rank_in_node == 0) {
-          memcpy(newblock, globals::elements[element].ions[ion].levels[level].photoion_xs,
+          memcpy(blocktablestart, globals::elements[element].ions[ion].levels[level].photoion_xs,
                  globals::NPHIXSPOINTS * sizeof(float));
         }
 
         free(globals::elements[element].ions[ion].levels[level].photoion_xs);
-        globals::elements[element].ions[ion].levels[level].photoion_xs = newblock;
+        globals::elements[element].ions[ion].levels[level].photoion_xs = blocktablestart;
 
         nbftableschanged++;
       }
