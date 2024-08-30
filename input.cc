@@ -343,12 +343,17 @@ void read_phixs_file(const int phixs_file_version) {
   printout("[info] mem_usage: photoionisation tables occupy %.3f MB\n", mem_usage_phixs / 1024. / 1024.);
 }
 
+constexpr auto downtranslevelstart(const int level) {
+  // each level index is associated with a block of size levelindex spanning all possible down transitions.
+  // so use the formula for the sum of 1 + 2 + 3 + 4 + ... + level
+  return level * (level + 1) / 2;
+}
+
 void read_ion_levels(std::fstream &adata, const int element, const int ion, const int nions, const int nlevels,
                      int nlevelsmax, const double energyoffset, const double ionpot,
                      std::vector<int *> &iondowntranstmplineindicies) {
   const ptrdiff_t nlevels_used = std::min(nlevels, nlevelsmax);
-  // each level contains 0..level elements. series sum of 1 + 2 + 3 + 4 + ... + nlevels_used is used here
-  const ptrdiff_t transitblocksize = nlevels_used * (nlevels_used + 1) / 2;
+  const ptrdiff_t transitblocksize = downtranslevelstart(nlevels_used);
   iondowntranstmplineindicies[0] = static_cast<int *>(malloc(transitblocksize * sizeof(int)));
 
   ptrdiff_t transitionblockindex = 0;
