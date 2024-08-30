@@ -345,11 +345,11 @@ void read_phixs_file(const int phixs_file_version) {
 
 void read_ion_levels(std::fstream &adata, const int element, const int ion, const int nions, const int nlevels,
                      int nlevelsmax, const double energyoffset, const double ionpot,
-                     std::vector<int *> &leveldowntransitions) {
+                     std::vector<int *> &iondowntranslineindicies) {
   const ptrdiff_t nlevels_used = std::min(nlevels, nlevelsmax);
   // each level contains 0..level elements. series sum of 1 + 2 + 3 + 4 + ... + nlevels_used is used here
   const ptrdiff_t transitblocksize = nlevels_used * (nlevels_used + 1) / 2;
-  leveldowntransitions[0] = static_cast<int *>(malloc(transitblocksize * sizeof(int)));
+  iondowntranslineindicies[0] = static_cast<int *>(malloc(transitblocksize * sizeof(int)));
 
   ptrdiff_t transitionblockindex = 0;
   for (int level = 0; level < nlevels; level++) {
@@ -385,7 +385,7 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
       // store the possible downward transitions from the current level in following order to memory
       //     A_level,level-1; A_level,level-2; ... A_level,1
       // entries which are not explicitly set are zero (the zero is set/initialized by calloc!)
-      leveldowntransitions[level] = &leveldowntransitions[0][transitionblockindex];
+      iondowntranslineindicies[level] = &iondowntranslineindicies[0][transitionblockindex];
       transitionblockindex += level;
       assert_always((transitionblockindex + level) < transitblocksize);
 
@@ -489,7 +489,7 @@ void read_ion_transitions(std::fstream &ftransitiondata, const int tottransition
 
 void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
                                           const std::vector<Transition> &transitiontable,
-                                          const std::vector<int *> &leveldowntransitions, int &lineindex,
+                                          const std::vector<int *> &iondowntranslineindicies, int &lineindex,
                                           std::vector<TransitionLine> &temp_linelist) {
   const int lineindex_initial = lineindex;
   size_t totupdowntrans = 0;
@@ -530,7 +530,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
     }
 
     for (int level = 0; level < nlevelsmax; level++) {
-      std::fill_n(leveldowntransitions[level], level, -99);
+      std::fill_n(iondowntranslineindicies[level], level, -99);
     }
 
     totupdowntrans = 0;
@@ -552,11 +552,11 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
       // Make sure that we don't allow duplicate. In that case take only the lines
       // first occurrence
-      const int transitioncheck = leveldowntransitions[level][(level - targetlevel) - 1];
+      int &downtranslineindex = iondowntranslineindicies[level][level - targetlevel - 1];
 
       // -99 means that the transition hasn't been seen yet
-      if (transitioncheck == -99) {
-        leveldowntransitions[level][level - targetlevel - 1] = lineindex;
+      if (downtranslineindex == -99) {
+        downtranslineindex = lineindex;
 
         const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
         set_ndowntrans(element, ion, level, nupperdowntrans);
@@ -609,7 +609,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
       } else if (pass == 1 && globals::rank_in_node == 0) {
         // This is a new branch to deal with lines that have different types of transition. It should trip after a
         // transition is already known.
-        const int linelistindex = leveldowntransitions[level][level - targetlevel - 1];
+        const int linelistindex = iondowntranslineindicies[level][level - targetlevel - 1];
         const float A_ul = transition.A;
         const float coll_str = transition.coll_str;
 
@@ -622,7 +622,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
           printout("[input] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
           printout("[input]   element %d ion %d targetlevel %d level %d\n", element, ion, targetlevel, level);
           printout("[input]   transitions[level].to[level-targetlevel-1]=linelistindex %d\n",
-                   leveldowntransitions[level][level - targetlevel - 1]);
+                   iondowntranslineindicies[level][level - targetlevel - 1]);
           printout("[input]   A_ul %g, coll_str %g\n", A_ul, coll_str);
           printout(
               "[input]   globals::linelist[linelistindex].elementindex %d, "
@@ -713,7 +713,7 @@ void read_atomicdata_files() {
   std::vector<TransitionLine> temp_linelist;
 
   std::vector<Transition> iontransitiontable;
-  std::vector<int *> leveldowntransitions;
+  std::vector<int *> iondowntranslineindicies;
 
   // temperature to determine relevant ionstages
   int T_preset = 0;
@@ -859,10 +859,10 @@ void read_atomicdata_files() {
       globals::elements[element].ions[ion].levels = static_cast<EnergyLevel *>(calloc(nlevelsmax, sizeof(EnergyLevel)));
       assert_always(globals::elements[element].ions[ion].levels != nullptr);
 
-      leveldowntransitions.resize(nlevelsmax);
-      std::ranges::fill(leveldowntransitions, nullptr);
+      iondowntranslineindicies.resize(nlevelsmax);
+      std::ranges::fill(iondowntranslineindicies, nullptr);
 
-      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, leveldowntransitions);
+      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, iondowntranslineindicies);
 
       int tottransitions = tottransitions_in_file;
 
@@ -889,11 +889,11 @@ void read_atomicdata_files() {
       read_ion_transitions(ftransitiondata, tottransitions_in_file, &tottransitions, iontransitiontable,
                            nlevels_requiretransitions, nlevels_requiretransitions_upperlevels);
 
-      add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, iontransitiontable, leveldowntransitions,
+      add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, iontransitiontable, iondowntranslineindicies,
                                            lineindex, temp_linelist);
 
-      free(leveldowntransitions[0]);
-      leveldowntransitions.clear();
+      free(iondowntranslineindicies[0]);
+      iondowntranslineindicies.clear();
       iontransitiontable.clear();
 
       for (int level = 0; level < nlevelsmax; level++) {
