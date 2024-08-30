@@ -87,7 +87,7 @@ struct EnergyLevel {
   int nuptrans{0};
   int ndowntrans{0};
   PhotoionTarget *phixstargets{};  // pointer to table of target states and probabilities
-  int phixsstart{-1};              // index to start of photoionisation cross-sections table in global::allphixs
+  float *photoion_xs{};            // Pointer to a lookup-table providing photoionisation cross-sections for this level.
   int nphixstargets{0};            // length of phixstargets array:
   float stat_weight{0.};           // Statistical weight of this level.
 

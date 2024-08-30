@@ -126,7 +126,7 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
 }
 
 inline auto get_phixs_table(const int element, const int ion, const int level) -> float * {
-  return globals::allphixs + globals::elements[element].ions[ion].levels[level].phixsstart;
+  return globals::elements[element].ions[ion].levels[level].photoion_xs;
 }
 
 // Calculate the photoionisation cross-section at frequency nu out of the atomic data.
