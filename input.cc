@@ -488,14 +488,14 @@ void read_ion_transitions(std::fstream &ftransitiondata, const int tottransition
 
 void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
                                           const std::vector<Transition> &transitiontable,
-                                          const std::vector<int *> &transitions, int *lineindex,
+                                          const std::vector<int *> &transitions, int &lineindex,
                                           std::vector<TransitionLine> &temp_linelist) {
-  const int lineindex_initial = *lineindex;
+  const int lineindex_initial = lineindex;
   size_t totupdowntrans = 0;
   // pass 0 to get transition counts of each level
   // pass 1 to allocate and fill transition arrays
   for (int pass = 0; pass < 2; pass++) {
-    *lineindex = lineindex_initial;
+    lineindex = lineindex_initial;
     if (pass == 1) {
       int alltransindex = 0;
       LevelTransition *alltransblock{};
@@ -555,7 +555,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
       // -99 means that the transition hasn't been seen yet
       if (transitioncheck == -99) {
-        transitions[level][level - targetlevel - 1] = *lineindex;
+        transitions[level][level - targetlevel - 1] = lineindex;
 
         const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
         set_ndowntrans(element, ion, level, nupperdowntrans);
@@ -604,7 +604,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         // This is not a metastable level.
         globals::elements[element].ions[ion].levels[level].metastable = false;
 
-        (*lineindex)++;
+        lineindex++;
       } else if (pass == 1 && globals::rank_in_node == 0) {
         // This is a new branch to deal with lines that have different types of transition. It should trip after a
         // transition is already known.
@@ -888,7 +888,7 @@ void read_atomicdata_files() {
       read_ion_transitions(ftransitiondata, tottransitions_in_file, &tottransitions, transitiontable,
                            nlevels_requiretransitions, nlevels_requiretransitions_upperlevels);
 
-      add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, transitiontable, transitions, &lineindex,
+      add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, transitiontable, transitions, lineindex,
                                            temp_linelist);
 
       free(transitions[0]);
