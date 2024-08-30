@@ -816,7 +816,7 @@ auto col_recombination_ratecoeff(const int modelgridindex, const int element, co
         g = 0.3;
       }
 
-      const double sigma_bf = (globals::elements[element].ions[upperion - 1].levels[lower].photoion_xs[0] *
+      const double sigma_bf = (get_phixs_table(element, upperion - 1, lower)[0] *
                                get_phixsprobability(element, upperion - 1, lower, phixstargetindex));
 
       const double sf = calculate_sahafact(element, upperion - 1, lower, upper, T_e, epsilon_trans);
@@ -851,8 +851,8 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 
   const double fac1 = epsilon_trans / KB / T_e;
 
-  const double sigma_bf = globals::elements[element].ions[ion].levels[lower].photoion_xs[0] *
-                          get_phixsprobability(element, ion, lower, phixstargetindex);
+  const double sigma_bf =
+      get_phixs_table(element, ion, lower)[0] * get_phixsprobability(element, ion, lower, phixstargetindex);
   const double C = nne * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;  // photoionization at the edge
 
   // printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",
