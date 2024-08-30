@@ -1,4 +1,5 @@
 #pragma once
+#include <limits>
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
@@ -87,7 +88,7 @@ struct EnergyLevel {
   int nuptrans{0};
   int ndowntrans{0};
   PhotoionTarget *phixstargets{};  // pointer to table of target states and probabilities
-  float *photoion_xs{};            // Pointer to a lookup-table providing photoionisation cross-sections for this level.
+  int phixsstart{-1};              // index to start of photoionisation cross-sections table in global::allphixs
   int nphixstargets{0};            // length of phixstargets array:
   float stat_weight{0.};           // Statistical weight of this level.
 

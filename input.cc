@@ -87,6 +87,8 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
 
 CellCachePhixsTargets *chphixstargetsblock{};
 
+std::vector<float> tmpallphixs;
+
 void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
                            size_t *mem_usage_phixs, const int phixs_file_version) {
@@ -175,11 +177,11 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   }
 
   *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
-  globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs =
-      static_cast<float *>(malloc(globals::NPHIXSPOINTS * sizeof(float)));
-  assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs != nullptr);
+  const auto tmpphixsstart = tmpallphixs.size();
+  globals::elements[element].ions[lowerion].levels[lowerlevel].phixsstart = tmpphixsstart;
+  tmpallphixs.resize(tmpallphixs.size() + globals::NPHIXSPOINTS);
 
-  auto *levelphixstable = globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs;
+  auto *levelphixstable = &tmpallphixs[tmpphixsstart];
   if (phixs_file_version == 1) {
     assert_always(get_nphixstargets(element, lowerion, lowerlevel) == 1);
     assert_always(get_phixsupperlevel(element, lowerion, lowerlevel, 0) == 0);
@@ -496,7 +498,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
       MPI_Win_shared_query(win_alltransblock, 0, &size, &disp_unit, &ionalltrans);
 #else
-      alltransblock = static_cast<LevelTransition *>(malloc(totupdowntrans * sizeof(LevelTransition)));
+      ionalltrans = static_cast<LevelTransition *>(malloc(totupdowntrans * sizeof(LevelTransition)));
 #endif
 
       for (int level = 0; level < nlevelsmax; level++) {
@@ -856,7 +858,6 @@ void read_atomicdata_files() {
       for (int level = 0; level < nlevelsmax; level++) {
         globals::elements[element].ions[ion].levels[level].nphixstargets = 0;
         globals::elements[element].ions[ion].levels[level].phixstargets = nullptr;
-        globals::elements[element].ions[ion].levels[level].photoion_xs = nullptr;
         uniquelevelindex++;
         totaldowntrans += get_ndowntrans(element, ion, level);
         totaluptrans += get_nuptrans(element, ion, level);
@@ -1428,30 +1429,14 @@ void setup_phixs_list() {
 #endif
 
     assert_always(globals::allphixs != nullptr);
-    size_t nbftableschanged = 0;
     for (int i = 0; i < globals::nbfcontinua; i++) {
       globals::allcont_nu_edge[i] = nonconstallcont[i].nu_edge;
-
-      const int element = nonconstallcont[i].element;
-      const int ion = nonconstallcont[i].ion;
-      const int level = nonconstallcont[i].level;
-      const int phixstargetindex = nonconstallcont[i].phixstargetindex;
-
-      // different targets share the same cross section table, so don't repeat this process
-      if (phixstargetindex == 0) {
-        auto *blocktablestart = globals::allphixs + (nbftableschanged * globals::NPHIXSPOINTS);
-        if (globals::rank_in_node == 0) {
-          memcpy(blocktablestart, globals::elements[element].ions[ion].levels[level].photoion_xs,
-                 globals::NPHIXSPOINTS * sizeof(float));
-        }
-
-        free(globals::elements[element].ions[ion].levels[level].photoion_xs);
-        globals::elements[element].ions[ion].levels[level].photoion_xs = blocktablestart;
-
-        nbftableschanged++;
-      }
     }
-    assert_always(nbftableschanged == nbftables);
+
+    std::copy_n(tmpallphixs.cbegin(), nbftables * globals::NPHIXSPOINTS, globals::allphixs);
+
+    tmpallphixs.clear();
+    tmpallphixs.shrink_to_fit();
 #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
