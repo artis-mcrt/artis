@@ -318,6 +318,7 @@ inline void check_already_running() {
 template <typename T>
   requires std::is_integral<T>::value
 constexpr auto get_range_chunk(const T size, const auto nchunks_in, const auto nchunk_in) -> std::tuple<T, T> {
+  assert_always(size >= 0);
   const auto nchunks = static_cast<T>(nchunks_in);
   const auto nchunk = static_cast<T>(nchunk_in);
   const auto minchunksize = size / nchunks;  // integer division, minimum non-empty cells per process
@@ -325,6 +326,9 @@ constexpr auto get_range_chunk(const T size, const auto nchunks_in, const auto n
   const auto nstart = (minchunksize + 1) * std::min(n_remainder, nchunk) +
                       minchunksize * std::max(static_cast<T>(0), nchunk - n_remainder);
   const auto nsize = (nchunk < n_remainder) ? minchunksize + 1 : minchunksize;
+  assert_testmodeonly(nstart >= 0);
+  assert_testmodeonly(nsize >= 0);
+  assert_testmodeonly(nstart + nsize <= size);
   return std::tuple{nstart, nsize};
 }
 
