@@ -871,11 +871,9 @@ void read_atomicdata_files() {
       // coupled to the first <nlevels_requiretransitions_upperlevels> levels (assumed forbidden)
       // use 0 to disable adding extra transitions
 
-      int nlevels_requiretransitions = NLEVELS_REQUIRETRANSITIONS(Z, ionstage);
-      int nlevels_requiretransitions_upperlevels = nlevelsmax;  // no effect if previous line is zero
-
-      nlevels_requiretransitions = std::min(nlevelsmax, nlevels_requiretransitions);
-      nlevels_requiretransitions_upperlevels = std::min(nlevelsmax, nlevels_requiretransitions_upperlevels);
+      const int nlevels_requiretransitions = std::min(nlevelsmax, NLEVELS_REQUIRETRANSITIONS(Z, ionstage));
+      // next value with have no effect if nlevels_requiretransitions = 0
+      const int nlevels_requiretransitions_upperlevels = std::min(nlevelsmax, nlevels_requiretransitions_upperlevels);
 
       read_ion_transitions(ftransitiondata, tottransitions_in_file, tottransitions, iontransitiontable,
                            nlevels_requiretransitions, nlevels_requiretransitions_upperlevels);
