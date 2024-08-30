@@ -712,6 +712,7 @@ void read_atomicdata_files() {
   std::vector<TransitionLine> temp_linelist;
 
   std::vector<Transition> transitiontable;
+  std::vector<int *> transitions;
 
   // temperature to determine relevant ionstages
   int T_preset = 0;
@@ -857,7 +858,7 @@ void read_atomicdata_files() {
       globals::elements[element].ions[ion].levels = static_cast<EnergyLevel *>(calloc(nlevelsmax, sizeof(EnergyLevel)));
       assert_always(globals::elements[element].ions[ion].levels != nullptr);
 
-      auto transitions = std::vector<int *>(nlevelsmax);
+      transitions.resize(nlevelsmax);
       std::ranges::fill(transitions, nullptr);
 
       read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, transitions);
