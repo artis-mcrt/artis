@@ -269,7 +269,10 @@ inline void update_includedionslevels_maxnions() {
 }
 
 // return the number of ions of all elements combined
-inline auto get_includedions() -> int { return includedions; }
+inline auto get_includedions() -> int {
+  assert_testmodeonly(includedions > 0);
+  return includedions;
+}
 
 // return the number of ions of all elements combined
 inline auto get_includedlevels() -> int { return includedlevels; }
