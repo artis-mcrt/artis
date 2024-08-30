@@ -556,7 +556,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
       // -99 means that the transition hasn't been seen yet
       if (downtranslineindex < 0) {
-        downtranslineindex = lineindex;
+        downtranslineindex = lineindex++;
 
         const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
         set_ndowntrans(element, ion, level, nupperdowntrans);
@@ -604,8 +604,6 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
         // This is not a metastable level.
         globals::elements[element].ions[ion].levels[level].metastable = false;
-
-        lineindex++;
       } else if (pass == 1 && globals::rank_in_node == 0) {
         // This is a new branch to deal with lines that have different types of transition. It should trip after a
         // transition is already known.
