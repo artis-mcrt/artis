@@ -525,9 +525,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
       }
     }
 
-    for (int level = 0; level < nlevelsmax; level++) {
-      std::fill_n(&iondowntranstmplineindicies[downtranslevelstart(level)], level, -99);
-    }
+    std::ranges::fill(iondowntranstmplineindicies, -99);
 
     totupdowntrans = 0;
     for (const auto &transition : transitiontable) {
