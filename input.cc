@@ -1020,6 +1020,7 @@ void read_atomicdata_files() {
 
   globals::nbfcontinua_ground = 0;
   globals::nbfcontinua = 0;
+  tmpallphixs.clear();
 
   // read in photoionisation cross sections
   phixs_file_version_exists[0] = false;
@@ -1206,15 +1207,15 @@ void setup_cellcache() {
 
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
-        globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels =
-            &globals::cellcache[cellcachenum].ch_all_levels[alllevelindex];
+        auto &chion = globals::cellcache[cellcachenum].chelements[element].chions[ion];
+        chion.chlevels = &globals::cellcache[cellcachenum].ch_all_levels[alllevelindex];
 
         assert_always(alllevelindex == get_uniquelevelindex(element, ion, 0));
         alllevelindex += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
-          globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level].chphixstargets =
+          chion.chlevels[level].chphixstargets =
               chphixsblocksize > 0 ? &chphixstargetsblock[allphixstargetindex] : nullptr;
           allphixstargetindex += nphixstargets;
         }
@@ -1222,22 +1223,19 @@ void setup_cellcache() {
         for (int level = 0; level < nlevels; level++) {
           const int ndowntrans = get_ndowntrans(element, ion, level);
 
-          globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc =
-              &chtransblock[chtransindex];
+          chion.chlevels[level].sum_epstrans_rad_deexc = &chtransblock[chtransindex];
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
           const int ndowntrans = get_ndowntrans(element, ion, level);
-          globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level].sum_internal_down_same =
-              &chtransblock[chtransindex];
+          chion.chlevels[level].sum_internal_down_same = &chtransblock[chtransindex];
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
           const int nuptrans = get_nuptrans(element, ion, level);
-          globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level].sum_internal_up_same =
-              &chtransblock[chtransindex];
+          chion.chlevels[level].sum_internal_up_same = &chtransblock[chtransindex];
           chtransindex += nuptrans;
         }
       }
@@ -1247,7 +1245,7 @@ void setup_cellcache() {
     assert_always(globals::nbfcontinua >= 0);
     globals::cellcache[cellcachenum].ch_allcont_departureratios.resize(globals::nbfcontinua);
     globals::cellcache[cellcachenum].ch_allcont_nnlevel.resize(globals::nbfcontinua);
-    mem_usage_cellcache += globals::nbfcontinua * sizeof(double);
+    mem_usage_cellcache += 2 * globals::nbfcontinua * sizeof(double);
 
     printout("[info] mem_usage: cellcache for thread %d occupies %.3f MB\n", cellcachenum,
              mem_usage_cellcache / 1024. / 1024.);
