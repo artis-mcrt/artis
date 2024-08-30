@@ -690,7 +690,7 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
   const auto T_e = grid::get_Te(modelgridindex);
   const auto intparas = gsl_integral_paras_gammacorr{
       .nu_edge = nu_threshold,
-      .photoion_xs = globals::elements[element].ions[lowerion].levels[level].photoion_xs,
+      .photoion_xs = get_phixs_table(element, lowerion, level),
       .T_e = T_e,
       .modelgridindex = modelgridindex,
   };
@@ -923,9 +923,7 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
   const int npieces = globals::NPHIXSPOINTS;
 
   const GSLIntegrationParas intparas = {
-      .nu_edge = nu_threshold,
-      .T = T_e,
-      .photoion_xs = globals::elements[element].ions[lowerion].levels[lower].photoion_xs};
+      .nu_edge = nu_threshold, .T = T_e, .photoion_xs = get_phixs_table(element, lowerion, lower)};
 
   const double zrand = 1. - rng_uniform();  // Make sure that 0 < zrand <= 1
 
