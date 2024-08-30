@@ -542,13 +542,10 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         assert_always(level > lowerlevel);
       }
 
-      double nu_trans = -1.;
-      if (lowerlevel < nlevelsmax && level < nlevelsmax) {
-        nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, lowerlevel)) / H;
-      }
-      if (!(nu_trans > 0)) {
+      if ((lowerlevel >= nlevelsmax) || (level >= nlevelsmax)) {
         continue;
       }
+      const double nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, lowerlevel)) / H;
 
       // Make sure that we don't allow duplicate. In that case take only the lines
       // first occurrence
