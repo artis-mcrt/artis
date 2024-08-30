@@ -609,7 +609,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
       } else if (pass == 1 && globals::rank_in_node == 0) {
         // This is a new branch to deal with lines that have different types of transition. It should trip after a
         // transition is already known.
-        const int linelistindex = iondowntranslineindicies[level][level - targetlevel - 1];
+        const int linelistindex = downtranslineindex;
         const float A_ul = transition.A;
         const float coll_str = transition.coll_str;
 
