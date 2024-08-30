@@ -93,7 +93,6 @@ struct EnergyLevel {
 
   int cont_index{-1};  // Index of the continuum associated to this level. Negative number.
   int closestgroundlevelcont{-1};
-  bool metastable{};  ///
 };
 
 struct Ion {

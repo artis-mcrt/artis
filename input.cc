@@ -369,10 +369,6 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
       globals::elements[element].ions[ion].levels[level].stat_weight = statweight;
       assert_always(statweight > 0.);
 
-      // set the metastable flag to true until we find a a downward transition
-      globals::elements[element].ions[ion].levels[level].metastable = true;
-      // globals::elements[element].ions[ion].levels[level].main_qn = mainqn;
-
       // The level contributes to the ionisinglevels if its energy
       // is below the ionization potential and the level doesn't
       // belong to the topmost ion included.
@@ -590,8 +586,6 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
               .forbidden = transition.forbidden};
         }
 
-        // This is not a metastable level.
-        globals::elements[element].ions[ion].levels[level].metastable = false;
       } else if (pass == 1 && globals::rank_in_node == 0) {
         // This is a new branch to deal with lines that have different types of transition. It should trip after a
         // transition is already known.
