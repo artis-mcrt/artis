@@ -1459,7 +1459,7 @@ void setup_phixs_list() {
       const int element = nonconstallcont[i].element;
       const int ion = nonconstallcont[i].ion;
       const int level = nonconstallcont[i].level;
-      nonconstallcont[i].photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
+      nonconstallcont[i].photoion_xs = get_phixs_table(element, ion, level);
     }
   }
   globals::allcont = nonconstallcont;
