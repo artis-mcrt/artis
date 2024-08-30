@@ -1252,5 +1252,12 @@ void cellcache_change_cell(const int modelgridindex) {
 
   if (modelgridindex >= 0) {
     std::ranges::fill(globals::cellcache[cellcacheslotid].ch_allcont_departureratios, -1.);
+
+    for (int i = 0; i < globals::nbfcontinua; i++) {
+      const int element = globals::allcont[i].element;
+      const int ion = globals::allcont[i].ion;
+      const int level = globals::allcont[i].level;
+      globals::cellcache[cellcacheslotid].ch_allcont_nnlevel[i] = get_levelpop(modelgridindex, element, ion, level);
+    }
   }
 }
