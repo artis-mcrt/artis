@@ -89,7 +89,7 @@ CellCachePhixsTargets *chphixstargetsblock{};
 
 void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
-                           size_t *mem_usage_phixs, const int phixs_file_version) {
+                           std::vector<float> &tmpallphixs, size_t *mem_usage_phixs, const int phixs_file_version) {
   std::string phixsline;
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - groundstate_index_in;
@@ -175,11 +175,11 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   }
 
   *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
-  globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs =
-      static_cast<float *>(malloc(globals::NPHIXSPOINTS * sizeof(float)));
-  assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs != nullptr);
+  const int phixsstart = tmpallphixs.size();
+  globals::elements[element].ions[lowerion].levels[lowerlevel].phixsstart = phixsstart;
+  tmpallphixs.resize(tmpallphixs.size() + globals::NPHIXSPOINTS);
 
-  auto *levelphixstable = globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs;
+  auto *levelphixstable = tmpallphixs.data() + phixsstart;
   if (phixs_file_version == 1) {
     assert_always(get_nphixstargets(element, lowerion, lowerlevel) == 1);
     assert_always(get_phixsupperlevel(element, lowerion, lowerlevel, 0) == 0);
@@ -240,7 +240,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   }
 }
 
-void read_phixs_file(const int phixs_file_version) {
+void read_phixs_file(const int phixs_file_version, std::vector<float> &tmpallphixs) {
   size_t mem_usage_phixs = 0;
 
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
@@ -308,7 +308,7 @@ void read_phixs_file(const int phixs_file_version) {
       // store only photoionization crosssections for ions that are part of the current model atom
       if (lowerion >= 0 && upperion < get_nions(element) && lowerlevel < get_nlevels(element, lowerion)) {
         read_phixs_data_table(phixsfile, nphixspoints_inputtable, element, lowerion, lowerlevel, upperion,
-                              upperlevel_in, &mem_usage_phixs, phixs_file_version);
+                              upperlevel_in, tmpallphixs, &mem_usage_phixs, phixs_file_version);
 
         skip_this_phixs_table = false;
       }
@@ -662,7 +662,8 @@ auto calculate_nlevels_groundterm(const int element, const int ion) -> int {
   return nlevels_groundterm;
 }
 
-void read_atomicdata_files() {
+auto read_atomicdata_files() {
+  std::vector<float> tmpallphixs;
   int totaluptrans = 0;
   int totaldowntrans = 0;
 
@@ -856,7 +857,7 @@ void read_atomicdata_files() {
       for (int level = 0; level < nlevelsmax; level++) {
         globals::elements[element].ions[ion].levels[level].nphixstargets = 0;
         globals::elements[element].ions[ion].levels[level].phixstargets = nullptr;
-        globals::elements[element].ions[ion].levels[level].photoion_xs = nullptr;
+        globals::elements[element].ions[ion].levels[level].phixsstart = -1;
         uniquelevelindex++;
         totaldowntrans += get_ndowntrans(element, ion, level);
         totaluptrans += get_nuptrans(element, ion, level);
@@ -1038,10 +1039,10 @@ void read_atomicdata_files() {
         "from phixsdata_v2.txt to interpolate the phixsdata.txt data\n");
   }
   if (phixs_file_version_exists[2]) {
-    read_phixs_file(2);
+    read_phixs_file(2, tmpallphixs);
   }
   if (phixs_file_version_exists[1]) {
-    read_phixs_file(1);
+    read_phixs_file(1, tmpallphixs);
   }
 
   int cont_index = -1;
@@ -1082,6 +1083,8 @@ void read_atomicdata_files() {
   printout("cont_index %d\n", cont_index);
 
   update_includedionslevels_maxnions();
+
+  return tmpallphixs;
 }
 
 auto search_groundphixslist(const double nu_edge, const int element_in, const int ion_in, const int level_in) -> int
@@ -1300,7 +1303,7 @@ void write_bflist_file() {
 
 // set up the photoionisation transition lists
 // and temporary gamma/kappa lists for each thread
-void setup_phixs_list() {
+void setup_phixs_list(std::vector<float> &tmpallphixs) {
   printout("[info] read_atomicdata: number of bfcontinua %d\n", globals::nbfcontinua);
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", globals::nbfcontinua_ground);
 
@@ -1428,30 +1431,8 @@ void setup_phixs_list() {
 #endif
 
     assert_always(globals::allphixs != nullptr);
-    size_t nbftableschanged = 0;
-    for (int i = 0; i < globals::nbfcontinua; i++) {
-      globals::allcont_nu_edge[i] = nonconstallcont[i].nu_edge;
-
-      const int element = nonconstallcont[i].element;
-      const int ion = nonconstallcont[i].ion;
-      const int level = nonconstallcont[i].level;
-      const int phixstargetindex = nonconstallcont[i].phixstargetindex;
-
-      // different targets share the same cross section table, so don't repeat this process
-      if (phixstargetindex == 0) {
-        auto *blocktablestart = globals::allphixs + (nbftableschanged * globals::NPHIXSPOINTS);
-        if (globals::rank_in_node == 0) {
-          memcpy(blocktablestart, globals::elements[element].ions[ion].levels[level].photoion_xs,
-                 globals::NPHIXSPOINTS * sizeof(float));
-        }
-
-        free(globals::elements[element].ions[ion].levels[level].photoion_xs);
-        globals::elements[element].ions[ion].levels[level].photoion_xs = blocktablestart;
-
-        nbftableschanged++;
-      }
-    }
-    assert_always(nbftableschanged == nbftables);
+    std::copy_n(tmpallphixs.cbegin(), nbftables * globals::NPHIXSPOINTS, globals::allphixs);
+    tmpallphixs.clear();
 #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -1461,15 +1442,15 @@ void setup_phixs_list() {
       const int level = nonconstallcont[i].level;
       nonconstallcont[i].photoion_xs = get_phixs_table(element, ion, level);
     }
+
+    setup_photoion_luts();
   }
   globals::allcont = nonconstallcont;
   nonconstallcont = nullptr;
-
-  setup_photoion_luts();
 }
 
 void read_atomicdata() {
-  read_atomicdata_files();
+  auto tmpallphixs = read_atomicdata_files();
 
   // INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
   if constexpr (RECORD_LINESTAT) {
@@ -1519,7 +1500,7 @@ void read_atomicdata() {
 
   write_bflist_file();
 
-  setup_phixs_list();
+  setup_phixs_list(tmpallphixs);
 
   // set-up/gather information for nlte stuff
 
