@@ -564,16 +564,13 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         totupdowntrans += 2;
 
         if (pass == 1 && globals::rank_in_node == 0) {
-          const float A_ul = transition.A;
-          const float coll_str = transition.coll_str;
-
           const auto g_ratio = stat_weight(element, ion, level) / stat_weight(element, ion, lowerlevel);
-          const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
+          const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A;
           assert_always(std::isfinite(f_ul));
 
           temp_linelist.push_back({
               .nu = nu_trans,
-              .einstein_A = A_ul,
+              .einstein_A = transition.A,
               .elementindex = element,
               .ionindex = ion,
               .upperlevelindex = level,
@@ -586,15 +583,15 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
           globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans - 1] = {
               .lineindex = -1,
               .targetlevelindex = lowerlevel,
-              .einstein_A = static_cast<float>(A_ul),
-              .coll_str = coll_str,
+              .einstein_A = transition.A,
+              .coll_str = transition.coll_str,
               .osc_strength = f_ul,
               .forbidden = transition.forbidden};
           globals::elements[element].ions[ion].levels[lowerlevel].uptrans[nloweruptrans - 1] = {
               .lineindex = -1,
               .targetlevelindex = level,
-              .einstein_A = static_cast<float>(A_ul),
-              .coll_str = coll_str,
+              .einstein_A = transition.A,
+              .coll_str = transition.coll_str,
               .osc_strength = f_ul,
               .forbidden = transition.forbidden};
         }
