@@ -628,15 +628,15 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
 
         const int nupperdowntrans = get_ndowntrans(element, ion, level);
-
-        const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
-
         auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans];
+        assert_always(downtransition.targetlevelindex == lowerlevel);
         downtransition.einstein_A += A_ul;
         downtransition.osc_strength += f_ul;
         downtransition.coll_str = std::max(downtransition.coll_str, coll_str);
 
+        const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
         auto &uptransition = globals::elements[element].ions[ion].levels[lowerlevel].uptrans[nloweruptrans];
+        assert_always(uptransition.targetlevelindex == level);
         uptransition.einstein_A += A_ul;
         uptransition.osc_strength += f_ul;
         uptransition.coll_str = std::max(uptransition.coll_str, coll_str);
