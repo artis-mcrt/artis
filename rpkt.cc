@@ -925,13 +925,15 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
     // The bf process happens only if the current cell contains
     // the involved atomic species
 
-    if ((DETAILED_BF_ESTIMATORS_ON && grid::get_elem_abundance(modelgridindex, element) > 0) ||
-        (!DETAILED_BF_ESTIMATORS_ON && ((get_nnion(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0))))
-        [[likely]] {
+    const bool should_keep_this_cont = USECELLHISTANDUPDATEPHIXSLIST
+                                           ? globals::cellcache[cellcacheslotid].ch_keep_this_cont[i]
+                                           : keep_this_cont(element, ion, level, modelgridindex, nnetot);
+
+    if (should_keep_this_cont) [[likely]] {
       const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? globals::cellcache[cellcacheslotid].ch_allcont_nnlevel[i]
                                                            : calculate_levelpop(modelgridindex, element, ion, level);
 
-      if (nnlevel > 0) {
+      if (USECELLHISTANDUPDATEPHIXSLIST || nnlevel > 0) {
         const double nu_edge = globals::allcont[i].nu_edge;
         const double sigma_bf = photoionization_crosssection_fromtable(globals::allcont[i].photoion_xs, nu_edge, nu);
 

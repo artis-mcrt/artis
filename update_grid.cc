@@ -1242,11 +1242,14 @@ void cellcache_change_cell(const int modelgridindex) {
   if (modelgridindex >= 0) {
     std::ranges::fill(cacheslot.ch_allcont_departureratios, -1.);
 
+    const auto nnetot = grid::get_nnetot(modelgridindex);
     for (int i = 0; i < globals::nbfcontinua; i++) {
       const int element = globals::allcont[i].element;
       const int ion = globals::allcont[i].ion;
       const int level = globals::allcont[i].level;
-      cacheslot.ch_allcont_nnlevel[i] = get_levelpop(modelgridindex, element, ion, level);
+      const auto nnlevel = get_levelpop(modelgridindex, element, ion, level);
+      cacheslot.ch_allcont_nnlevel[i] = nnlevel;
+      cacheslot.ch_keep_this_cont[i] = nnlevel > 0 && keep_this_cont(element, ion, level, modelgridindex, nnetot);
     }
   }
 }
