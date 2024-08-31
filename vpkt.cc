@@ -389,9 +389,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
     assert_always(std::isfinite(prob));
 
-    vpkt.stokes[0] = I * prob;
-    vpkt.stokes[1] = Q * prob;
-    vpkt.stokes[2] = U * prob;
+    vpkt.stokes = {I * prob, Q * prob, U * prob};
 
     for (const auto stokeval : vpkt.stokes) {
       assert_always(std::isfinite(stokeval));
@@ -409,9 +407,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
   if (vgrid_on) {
     const double prob = pn * exp(-tau_vpkt[0]);
 
-    vpkt.stokes[0] = I * prob;
-    vpkt.stokes[1] = Q * prob;
-    vpkt.stokes[2] = U * prob;
+    vpkt.stokes = {I * prob, Q * prob, U * prob};
 
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {  // Frequency selection

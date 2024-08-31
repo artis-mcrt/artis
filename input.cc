@@ -1718,15 +1718,11 @@ void read_parameterfile(int rank) {
   const double rr = (syn_dir_in[0] * syn_dir_in[0]) + (syn_dir_in[1] * syn_dir_in[1]) + (syn_dir_in[2] * syn_dir_in[2]);
   // ensure that this vector is normalised.
   if (rr > 1.e-6) {
-    globals::syn_dir[0] = syn_dir_in[0] / sqrt(rr);
-    globals::syn_dir[1] = syn_dir_in[1] / sqrt(rr);
-    globals::syn_dir[2] = syn_dir_in[2] / sqrt(rr);
+    globals::syn_dir = {syn_dir_in[0] / sqrt(rr), syn_dir_in[1] / sqrt(rr), syn_dir_in[2] / sqrt(rr)};
   } else {
     const double z1 = 1. - (2 * rng_uniform());
     const double z2 = rng_uniform() * 2.0 * PI;
-    globals::syn_dir[2] = z1;
-    globals::syn_dir[0] = sqrt((1. - (z1 * z1))) * cos(z2);
-    globals::syn_dir[1] = sqrt((1. - (z1 * z1))) * sin(z2);
+    globals::syn_dir = {sqrt((1. - (z1 * z1))) * cos(z2), sqrt((1. - (z1 * z1))) * sin(z2), z1};
   }
 
   assert_always(get_noncommentline(file, line));

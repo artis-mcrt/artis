@@ -365,13 +365,7 @@ void electron_scatter_rpkt(Packet &pkt) {
                      old_dir_cmf[1] * cos(tsc);
     new_dir_cmf[2] = sin(tsc) * cos(phisc) * sqrt(1 - pow(old_dir_cmf[2], 2.)) + old_dir_cmf[2] * cos(tsc);
   } else {
-    new_dir_cmf[0] = sin(tsc) * cos(phisc);
-    new_dir_cmf[1] = sin(tsc) * sin(phisc);
-    if (old_dir_cmf[2] > 0) {
-      new_dir_cmf[2] = cos(tsc);
-    } else {
-      new_dir_cmf[2] = -cos(tsc);
-    }
+    new_dir_cmf = {sin(tsc) * cos(phisc), sin(tsc) * sin(phisc), (old_dir_cmf[2] > 0) ? cos(tsc) : -cos(tsc)};
   }
 
   // Need to rotate Stokes Parameters in the scattering plane
@@ -546,9 +540,7 @@ void rpkt_event_boundbound(Packet &pkt, const MacroAtomState &pktmastate, const 
 
   pkt.absorptiontype = pktmastate.activatingline;
   pkt.absorptionfreq = pkt.nu_rf;
-  pkt.absorptiondir[0] = pkt.dir[0];
-  pkt.absorptiondir[1] = pkt.dir[1];
-  pkt.absorptiondir[2] = pkt.dir[2];
+  pkt.absorptiondir = pkt.dir;
   pkt.type = TYPE_MA;
 
   if constexpr (TRACK_ION_STATS) {
@@ -1139,9 +1131,7 @@ __host__ __device__ void emit_rpkt(Packet &pkt) {
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
   // Reset polarization information
-  pkt.stokes[0] = 1.;
-  pkt.stokes[1] = 0.;
-  pkt.stokes[2] = 0.;
+  pkt.stokes = {1., 0., 0.};
 
   pkt.pol_dir = cross_prod(pkt.dir, std::array<double, 3>{0., 0., 1.});
 
