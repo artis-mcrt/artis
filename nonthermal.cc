@@ -1294,7 +1294,8 @@ auto get_xs_excitation_vector(const int element, const int ion, const int lower,
                               const double statweight_lower,
                               const double epsilon_trans) -> std::tuple<std::array<double, SFPTS>, int> {
   std::array<double, SFPTS> xs_excitation_vec{};
-  const double coll_strength = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].coll_str;
+  const auto &uptr = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex];
+  const double coll_strength = uptr.coll_str;
   if (coll_strength >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
@@ -1310,10 +1311,9 @@ auto get_xs_excitation_vector(const int element, const int ion, const int lower,
     }
     return {xs_excitation_vec, en_startindex};
   }
-  const bool forbidden = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].forbidden;
+  const bool forbidden = uptr.forbidden;
   if (!forbidden) {
-    const double trans_osc_strength =
-        globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].osc_strength;
+    const double trans_osc_strength = uptr.osc_strength;
     // permitted E1 electric dipole transitions
 
     // constexpr double g_bar = 0.2;
