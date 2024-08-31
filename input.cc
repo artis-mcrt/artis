@@ -908,8 +908,6 @@ void read_phixs_data() {
     }
   }
 
-  setup_phixs_list();
-
   printout("cont_index %d\n", cont_index);
 
   if (nbftables > 0) {
@@ -937,6 +935,7 @@ void read_phixs_data() {
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
   }
+  setup_phixs_list();
 }
 
 void read_atomicdata_files() {
