@@ -913,10 +913,12 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
     const int element = globals::allcont[i].element;
     const int ion = globals::allcont[i].ion;
     const int level = globals::allcont[i].level;
-    const auto bfestimindex = globals::allcont[i].bfestimindex;
+    const auto bfestimindex =
+        (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) ? globals::allcont[i].bfestimindex : -1;
+    double sigma_contr = 0.;
+
     // The bf process happens only if the current cell contains
     // the involved atomic species
-
     const bool should_keep_this_cont = USECELLHISTANDUPDATEPHIXSLIST
                                            ? globals::cellcache[cellcacheslotid].ch_keep_this_cont[i]
                                            : keep_this_cont(element, ion, level, modelgridindex, nnetot);
@@ -948,7 +950,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
           corrfactor = std::max(0., 1 - stimfactor);  // photoionisation minus stimulated recombination
         }
 
-        const double sigma_contr = sigma_bf * globals::allcont[i].probability * corrfactor;
+        sigma_contr = sigma_bf * globals::allcont[i].probability * corrfactor;
 
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
           if (level == 0 && globals::allcont[i].phixstargetindex == 0) {
@@ -956,31 +958,14 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
           }
         }
 
-        if constexpr (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) {
-          if (bfestimindex >= 0) {
-            phixslist->gamma_contr[bfestimindex] = sigma_contr;
-          }
-        }
-
         chi_bf_sum += nnlevel * sigma_contr;
-        if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-          phixslist->chi_bf_sum[i] = chi_bf_sum;
-        }
-      } else if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-        // ignore this particular process
-        phixslist->chi_bf_sum[i] = chi_bf_sum;
-        if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-          if (bfestimindex >= 0) {
-            phixslist->gamma_contr[bfestimindex] = 0.;
-          }
-        }
       }
-    } else if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-      // no element present or not an important level
+    }
+    if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
       phixslist->chi_bf_sum[i] = chi_bf_sum;
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
         if (bfestimindex >= 0) {
-          phixslist->gamma_contr[bfestimindex] = 0.;
+          phixslist->gamma_contr[bfestimindex] = sigma_contr;
         }
       }
     }
@@ -1236,7 +1221,7 @@ void calculate_expansion_opacities(const int modelgridindex) {
 
   // find the first line with nu below the upper limit of the first bin
   int lineindex = static_cast<int>(
-      std::lower_bound(&globals::linelist[0], &globals::linelist[globals::nlines], get_expopac_bin_nu_upper(0),
+      std::lower_bound(globals::linelist, globals::linelist + globals::nlines, get_expopac_bin_nu_upper(0),
                        [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; }) -
       globals::linelist);
 
