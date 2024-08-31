@@ -834,6 +834,7 @@ void setup_phixs_list() {
       const int ion = nonconstallcont[i].ion;
       const int level = nonconstallcont[i].level;
       nonconstallcont[i].photoion_xs = get_phixs_table(element, ion, level);
+      assert_always(nonconstallcont[i].photoion_xs != nullptr);
     }
   }
   globals::allcont = nonconstallcont;
@@ -935,6 +936,7 @@ void read_phixs_data() {
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
   }
+
   setup_phixs_list();
 }
 
@@ -1458,6 +1460,54 @@ void write_bflist_file() {
   }
 }
 
+void setup_nlte_levels() {
+  globals::total_nlte_levels = 0;
+  int n_super_levels = 0;
+
+  for (int element = 0; element < get_nelements(); element++) {
+    globals::elements[element].has_nlte_levels = elem_has_nlte_levels_search(element);
+  }
+
+  for (int element = 0; element < get_nelements(); element++) {
+    if (elem_has_nlte_levels(element)) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions; ion++) {
+        globals::elements[element].ions[ion].first_nlte = globals::total_nlte_levels;
+        const int nlevels = get_nlevels(element, ion);
+        int fullnlteexcitedlevelcount = 0;
+        bool found_lte_only_level = false;
+        for (int level = 1; level < nlevels; level++) {
+          if (is_nlte(element, ion, level)) {
+            fullnlteexcitedlevelcount++;
+            globals::total_nlte_levels++;
+            assert_always(found_lte_only_level == false);  // NLTE levels must be consecutive
+          } else {
+            found_lte_only_level = true;
+          }
+        }
+        globals::elements[element].ions[ion].nlevels_nlte = fullnlteexcitedlevelcount;
+
+        const bool has_superlevel = (nlevels > (fullnlteexcitedlevelcount + 1));
+        if (has_superlevel) {
+          // If there are more levels that the ground state + the number of NLTE levels then we need an extra
+          // slot to store data for the "superlevel", which is a representation of all the other levels that
+          // are not treated in detail.
+          globals::total_nlte_levels++;
+          n_super_levels++;
+        }
+
+        assert_always(has_superlevel == ion_has_superlevel(element, ion));
+
+        printout("[input]  element %2d Z=%2d ionstage %2d has %5d NLTE excited levels%s. Starting at %d\n", element,
+                 get_atomicnumber(element), get_ionstage(element, ion), fullnlteexcitedlevelcount,
+                 has_superlevel ? " plus a superlevel" : "", globals::elements[element].ions[ion].first_nlte);
+      }
+    }
+  }
+
+  printout("[input] Total NLTE levels: %d, of which %d are superlevels\n", globals::total_nlte_levels, n_super_levels);
+}
+
 void read_atomicdata() {
   read_atomicdata_files();
 
@@ -1509,53 +1559,7 @@ void read_atomicdata() {
 
   write_bflist_file();
 
-  // set-up/gather information for nlte stuff
-
-  globals::total_nlte_levels = 0;
-  int n_super_levels = 0;
-
-  for (int element = 0; element < get_nelements(); element++) {
-    globals::elements[element].has_nlte_levels = elem_has_nlte_levels_search(element);
-  }
-
-  for (int element = 0; element < get_nelements(); element++) {
-    if (elem_has_nlte_levels(element)) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions; ion++) {
-        globals::elements[element].ions[ion].first_nlte = globals::total_nlte_levels;
-        const int nlevels = get_nlevels(element, ion);
-        int fullnlteexcitedlevelcount = 0;
-        bool found_lte_only_level = false;
-        for (int level = 1; level < nlevels; level++) {
-          if (is_nlte(element, ion, level)) {
-            fullnlteexcitedlevelcount++;
-            globals::total_nlte_levels++;
-            assert_always(found_lte_only_level == false);  // NLTE levels must be consecutive
-          } else {
-            found_lte_only_level = true;
-          }
-        }
-        globals::elements[element].ions[ion].nlevels_nlte = fullnlteexcitedlevelcount;
-
-        const bool has_superlevel = (nlevels > (fullnlteexcitedlevelcount + 1));
-        if (has_superlevel) {
-          // If there are more levels that the ground state + the number of NLTE levels then we need an extra
-          // slot to store data for the "superlevel", which is a representation of all the other levels that
-          // are not treated in detail.
-          globals::total_nlte_levels++;
-          n_super_levels++;
-        }
-
-        assert_always(has_superlevel == ion_has_superlevel(element, ion));
-
-        printout("[input]  element %2d Z=%2d ionstage %2d has %5d NLTE excited levels%s. Starting at %d\n", element,
-                 get_atomicnumber(element), get_ionstage(element, ion), fullnlteexcitedlevelcount,
-                 has_superlevel ? " plus a superlevel" : "", globals::elements[element].ions[ion].first_nlte);
-      }
-    }
-  }
-
-  printout("[input] Total NLTE levels: %d, of which %d are superlevels\n", globals::total_nlte_levels, n_super_levels);
+  setup_nlte_levels();
 }
 
 }  // anonymous namespace
