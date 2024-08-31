@@ -87,11 +87,9 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
 
 CellCachePhixsTargets *chphixstargetsblock{};
 
-std::vector<float> tmpallphixs;
-
 void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
-                           size_t *mem_usage_phixs, const int phixs_file_version) {
+                           std::vector<float> &tmpallphixs, size_t *mem_usage_phixs, const int phixs_file_version) {
   std::string phixsline;
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - groundstate_index_in;
@@ -243,7 +241,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   }
 }
 
-void read_phixs_file(const int phixs_file_version) {
+void read_phixs_file(const int phixs_file_version, std::vector<float> &tmpallphixs) {
   size_t mem_usage_phixs = 0;
 
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
@@ -311,7 +309,7 @@ void read_phixs_file(const int phixs_file_version) {
       // store only photoionization crosssections for ions that are part of the current model atom
       if (lowerion >= 0 && upperion < get_nions(element) && lowerlevel < get_nlevels(element, lowerion)) {
         read_phixs_data_table(phixsfile, nphixspoints_inputtable, element, lowerion, lowerlevel, upperion,
-                              upperlevel_in, &mem_usage_phixs, phixs_file_version);
+                              upperlevel_in, tmpallphixs, &mem_usage_phixs, phixs_file_version);
 
         skip_this_phixs_table = false;
       }
@@ -678,9 +676,8 @@ void read_atomicdata_files() {
   // initialize atomic data structure to number of elements
   int nelements_in = 0;
   assert_always(compositiondata >> nelements_in);
-  set_nelements(nelements_in);
+  globals::elements.resize(nelements_in);
 
-  // Initialize the linelist
   std::vector<TransitionLine> temp_linelist;
 
   std::vector<Transition> iontransitiontable;
@@ -919,20 +916,22 @@ void read_atomicdata_files() {
 
   // create a linelist shared on node and then copy data across, freeing the local copy
   TransitionLine *nonconstlinelist{};
+  {
 #ifdef MPI_ON
-  MPI_Win win_nonconstlinelist = MPI_WIN_NULL;
+    MPI_Win win_nonconstlinelist = MPI_WIN_NULL;
 
-  const auto [_, noderank_lines] = get_range_chunk(globals::nlines, globals::node_nprocs, globals::rank_in_node);
+    const auto [_, noderank_lines] = get_range_chunk(globals::nlines, globals::node_nprocs, globals::rank_in_node);
 
-  MPI_Aint size = noderank_lines * static_cast<MPI_Aint>(sizeof(TransitionLine));
-  int disp_unit = sizeof(TransitionLine);
-  MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nonconstlinelist,
-                          &win_nonconstlinelist);
+    MPI_Aint size = noderank_lines * static_cast<MPI_Aint>(sizeof(TransitionLine));
+    int disp_unit = sizeof(TransitionLine);
+    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nonconstlinelist,
+                            &win_nonconstlinelist);
 
-  MPI_Win_shared_query(win_nonconstlinelist, 0, &size, &disp_unit, &nonconstlinelist);
+    MPI_Win_shared_query(win_nonconstlinelist, 0, &size, &disp_unit, &nonconstlinelist);
 #else
-  nonconstlinelist = static_cast<TransitionLine *>(malloc(globals::nlines * sizeof(TransitionLine)));
+    nonconstlinelist = static_cast<TransitionLine *>(malloc(globals::nlines * sizeof(TransitionLine)));
 #endif
+  }
 
   if (globals::rank_in_node == 0) {
     memcpy(static_cast<void *>(nonconstlinelist), temp_linelist.data(), globals::nlines * sizeof(TransitionLine));
@@ -1021,7 +1020,7 @@ void read_atomicdata_files() {
 
   globals::nbfcontinua_ground = 0;
   globals::nbfcontinua = 0;
-  tmpallphixs.clear();
+  std::vector<float> tmpallphixs;
 
   // read in photoionisation cross sections
   phixs_file_version_exists[0] = false;
@@ -1041,13 +1040,14 @@ void read_atomicdata_files() {
         "from phixsdata_v2.txt to interpolate the phixsdata.txt data\n");
   }
   if (phixs_file_version_exists[2]) {
-    read_phixs_file(2);
+    read_phixs_file(2, tmpallphixs);
   }
   if (phixs_file_version_exists[1]) {
-    read_phixs_file(1);
+    read_phixs_file(1, tmpallphixs);
   }
 
   int cont_index = -1;
+  size_t nbftables = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
@@ -1057,6 +1057,9 @@ void read_atomicdata_files() {
         globals::elements[element].ions[ion].levels[level].cont_index =
             (nphixstargets > 0) ? cont_index : std::numeric_limits<int>::max();
         cont_index -= nphixstargets;
+        if (nphixstargets > 0) {
+          nbftables++;
+        }
       }
 
       // below is just an extra warning consistency check
@@ -1083,6 +1086,32 @@ void read_atomicdata_files() {
   }
 
   printout("cont_index %d\n", cont_index);
+
+  if (nbftables > 0) {
+// copy the photoionisation tables into one contiguous block of memory
+#ifdef MPI_ON
+    MPI_Win win_allphixsblock = MPI_WIN_NULL;
+    auto size =
+        static_cast<MPI_Aint>((globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0);
+    int disp_unit = sizeof(TransitionLine);
+
+    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &globals::allphixs,
+                            &win_allphixsblock);
+    MPI_Win_shared_query(win_allphixsblock, MPI_PROC_NULL, &size, &disp_unit, &globals::allphixs);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+#else
+    globals::allphixs = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
+#endif
+
+    assert_always(globals::allphixs != nullptr);
+
+    std::copy_n(tmpallphixs.cbegin(), nbftables * globals::NPHIXSPOINTS, globals::allphixs);
+
+#ifdef MPI_ON
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
+  }
 
   update_includedionslevels_maxnions();
 }
@@ -1334,7 +1363,6 @@ void setup_phixs_list() {
       static_cast<FullPhotoionTransition *>(malloc(globals::nbfcontinua * sizeof(FullPhotoionTransition)));
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
            globals::nbfcontinua * (sizeof(FullPhotoionTransition)) / 1024. / 1024.);
-  size_t nbftables = 0;
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -1353,10 +1381,6 @@ void setup_phixs_list() {
       const int nlevels = get_ionisinglevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         const int nphixstargets = get_nphixstargets(element, ion, level);
-
-        if (nphixstargets > 0) {
-          nbftables++;
-        }
 
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
           const double nu_edge = get_phixs_threshold(element, ion, level, phixstargetindex) / H;
@@ -1412,34 +1436,9 @@ void setup_phixs_list() {
   printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
 
   if (globals::nbfcontinua > 0) {
-// copy the photoionisation tables into one contiguous block of memory
-#ifdef MPI_ON
-    MPI_Win win_allphixsblock = MPI_WIN_NULL;
-    auto size =
-        static_cast<MPI_Aint>((globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0);
-    int disp_unit = sizeof(TransitionLine);
-
-    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &globals::allphixs,
-                            &win_allphixsblock);
-    MPI_Win_shared_query(win_allphixsblock, MPI_PROC_NULL, &size, &disp_unit, &globals::allphixs);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-#else
-    globals::allphixs = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
-#endif
-
-    assert_always(globals::allphixs != nullptr);
     for (int i = 0; i < globals::nbfcontinua; i++) {
       globals::allcont_nu_edge[i] = nonconstallcont[i].nu_edge;
     }
-
-    std::copy_n(tmpallphixs.cbegin(), nbftables * globals::NPHIXSPOINTS, globals::allphixs);
-
-    tmpallphixs.clear();
-    tmpallphixs.shrink_to_fit();
-#ifdef MPI_ON
-    MPI_Barrier(MPI_COMM_WORLD);
-#endif
 
     setup_photoion_luts();
 

@@ -207,8 +207,6 @@ inline auto get_phixs_table(const int element, const int ion, const int level) -
   return std::max(B_lu * n_l * HCLIGHTOVERFOURPI * t_current, 0.);
 }
 
-inline void set_nelements(const int nelements_in) { globals::elements.resize(nelements_in); }
-
 // Returns the atomic number associated with a given elementindex.
 inline auto get_atomicnumber(const int element) -> int {
   assert_testmodeonly(element >= 0);
