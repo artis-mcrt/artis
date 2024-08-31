@@ -177,8 +177,9 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   }
 
   *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
+  assert_always(tmpallphixs.size() % globals::NPHIXSPOINTS == 0);
   const auto tmpphixsstart = tmpallphixs.size();
-  globals::elements[element].ions[lowerion].levels[lowerlevel].phixsstart = tmpphixsstart;
+  globals::elements[element].ions[lowerion].levels[lowerlevel].phixsstart = tmpphixsstart / globals::NPHIXSPOINTS;
   tmpallphixs.resize(tmpallphixs.size() + globals::NPHIXSPOINTS);
 
   auto *levelphixstable = &tmpallphixs[tmpphixsstart];
