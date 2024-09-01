@@ -2413,7 +2413,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 
 // compute distance to a cell boundary.
 [[nodiscard]] __host__ __device__ auto boundary_distance(
-    const std::array<double, 3> dir, const std::array<double, 3> pos, const double tstart, const int cellindex,
+    const std::array<double, 3> &dir, const std::array<double, 3> &pos, const double tstart, const int cellindex,
     enum cell_boundary *pkt_last_cross) -> std::tuple<double, int> {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {
