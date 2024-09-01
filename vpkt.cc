@@ -171,7 +171,6 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
   vpkt.last_cross = BOUNDARY_NONE;
 
   bool end_packet = false;
-  double ldist = 0;
   double t_future = t_current;
 
   for (int opacindex = 0; opacindex < Nspectra; opacindex++) {
@@ -292,7 +291,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
       assert_testmodeonly(nu_cmf_abort <= vpkt.nu_cmf);
       const double d_nu_on_d_l = (nu_cmf_abort - vpkt.nu_cmf) / sdist;
 
-      ldist = 0;
+      double ldist = 0;
       while (ldist < sdist) {
         const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans);
 
