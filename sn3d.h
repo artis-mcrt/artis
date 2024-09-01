@@ -81,12 +81,10 @@ inline tm timebuf{};
 #define USE_SIMPSON_INTEGRATOR false
 #endif
 
-inline void nop(gsl_integration_workspace *w) {};
-
 inline thread_local auto gslworkspace =
     std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace *)>{
         USE_SIMPSON_INTEGRATOR ? nullptr : gsl_integration_workspace_alloc(GSLWSIZE),
-        USE_SIMPSON_INTEGRATOR ? nop : gsl_integration_workspace_free};
+        USE_SIMPSON_INTEGRATOR ? [](gsl_integration_workspace *const w) {} : gsl_integration_workspace_free};
 
 #ifdef _OPENMP
 
