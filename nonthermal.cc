@@ -914,9 +914,9 @@ auto calculate_frac_heating(const int modelgridindex, const std::array<double, S
   // third term (integral from zero to SF_EMIN)
   constexpr int nsteps = (static_cast<int>(SF_EMIN / DELTA_E) + 1) * 10;
   static_assert(nsteps > 0);
-  const double delta_endash = SF_EMIN / nsteps;
-  for (int j = 0; j < nsteps; j++) {
-    const double endash = SF_EMIN * j / nsteps;
+  constexpr double delta_endash = SF_EMIN / nsteps;
+  for (int j = 1; j < nsteps; j++) {
+    const double endash = delta_endash * j;
     N_e_contrib += N_e(modelgridindex, endash * EV, yfunc) * endash * delta_endash;
   }
   frac_heating_Einit += N_e_contrib;
