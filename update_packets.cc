@@ -83,11 +83,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     // for endot independent of energy, the next line is trival (for E dependent endot, an integral would be needed)
 
     const double t_enzero = ts + (particle_en / endot);  // time at which zero energy is reached
-    if (t_enzero > t2) {
-      en_deposited = pkt.e_cmf * (t2 - ts) / (particle_en / endot);
-    } else {
-      en_deposited = pkt.e_cmf * (t_enzero - ts) / (particle_en / endot);
-    }
+    en_deposited = pkt.e_cmf * (std::min(t2, t_enzero) - ts) / (particle_en / endot);
 
     // A discrete absorption event should occur somewhere along the
     // continuous track from initial kinetic energy to zero KE.
