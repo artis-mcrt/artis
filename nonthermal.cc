@@ -585,13 +585,7 @@ void zero_all_effionpot(const int modelgridindex) {
 {
   const int index = std::floor((energy_ev - SF_EMIN) / DELTA_E);
 
-  if (index < 0) {
-    return 0;
-  }
-  if (index > SFPTS - 1) {
-    return SFPTS - 1;
-  }
-  return index;
+  return std::clamp(index, 0, SFPTS - 1);
 }
 
 [[nodiscard]] constexpr auto get_energyindex_ev_gteq(const double energy_ev) -> int
@@ -599,13 +593,7 @@ void zero_all_effionpot(const int modelgridindex) {
 {
   const int index = std::ceil((energy_ev - SF_EMIN) / DELTA_E);
 
-  if (index < 0) {
-    return 0;
-  }
-  if (index > SFPTS - 1) {
-    return SFPTS - 1;
-  }
-  return index;
+  return std::clamp(index, 0, SFPTS - 1);
 }
 
 // interpolate the y flux values to get the value at a given energy
