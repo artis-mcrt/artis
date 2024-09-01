@@ -99,7 +99,7 @@ template <size_t S1, size_t S2>
 }
 
 [[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(const std::array<double, 3> &pos_rf,
-                                                           const std::array<double, 3> dir_rf,
+                                                           const std::array<double, 3> &dir_rf,
                                                            const double prop_time) -> double
 // Doppler factor squared, either to first order v/c or fully relativisitic
 // depending on USE_RELATIVISTIC_DOPPLER_SHIFT
@@ -134,7 +134,7 @@ template <size_t S1, size_t S2>
 }
 
 // Move a packet along a straight line (specified by current dir vector). The distance moved is in the rest frame.
-constexpr auto move_pkt_withtime(std::array<double, 3> &pos_rf, const std::array<double, 3> dir_rf, double &prop_time,
+constexpr auto move_pkt_withtime(std::array<double, 3> &pos_rf, const std::array<double, 3> &dir_rf, double &prop_time,
                                  const double nu_rf, double &nu_cmf, const double e_rf, double &e_cmf,
                                  const double distance) -> double {
   assert_always(distance >= 0);
