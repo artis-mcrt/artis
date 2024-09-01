@@ -274,9 +274,13 @@ void read_shell_configs() {
 }
 
 void read_binding_energies() {
-  const bool binding_en_newformat = std::filesystem::exists("binding_energies_lotz_tab1and2.txt") ||
-                                    std::filesystem::exists("data/binding_energies_lotz_tab1and2.txt");
+  bool binding_en_newformat = std::filesystem::exists("binding_energies_lotz_tab1and2.txt") ||
+                              std::filesystem::exists("data/binding_energies_lotz_tab1and2.txt");
 
+#ifdef MPI_ON
+  // just in case the file system was faulty and the ranks disagree on the existence of the files
+  MPI_Allreduce(MPI_IN_PLACE, &binding_en_newformat, 1, MPI_C_BOOL, MPI_LOR, MPI_COMM_WORLD);
+#endif
   int nshells = 0;      // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in binding energy file
 
@@ -293,10 +297,11 @@ void read_binding_energies() {
   for (int elemindex = 0; elemindex < n_z_binding; elemindex++) {
     assert_always(get_noncommentline(binding_energies_file, line));
     std::istringstream ssline(line);
-    int z_element = elemindex + 1;
     // new file as an atomic number column
     if (binding_en_newformat) {
+      int z_element{-1};
       ssline >> z_element;
+      assert_always(z_element = elemindex + 1);
     }
     for (int shell = 0; shell < nshells; shell++) {
       float bindingenergy = 0.;
@@ -1127,7 +1132,7 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
   const int ionstage = get_ionstage(element, ion);
   double ionpot_valence = -1;
 
-  for (auto &collionrow : colliondata) {
+  for (const auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       get_xs_ionization_vector(cross_section_vec, collionrow);
 
@@ -1185,7 +1190,7 @@ void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int elemen
   double eta_sum = 0.;
   double ionpot_valence = -1;
   int matching_nlsubshell_count = 0;
-  for (auto &collionrow : colliondata) {
+  for (const auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       matching_nlsubshell_count++;
       const double frac_ionization_shell =
@@ -1484,7 +1489,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
       calculate_eff_ionpot_auger_rates(modelgridindex, element, ion, yfunc);
 
       int matching_nlsubshell_count = 0;
-      for (auto &collionrow : colliondata) {
+      for (const auto &collionrow : colliondata) {
         if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
           const double frac_ionization_ion_shell =
               calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow, yfunc);
@@ -1768,7 +1773,7 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrixuppertri, const int Z,
 // add the ionization terms to the Spencer-Fano matrix
 {
   std::array<double, SFPTS> vec_xs_ionization{};
-  for (auto &collionrow : colliondata) {
+  for (const auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       const double ionpot_ev = collionrow.ionpot_ev;
       const double en_auger_ev = collionrow.en_auger_ev;
@@ -2653,9 +2658,7 @@ void read_restart_data(FILE *gridsave_file) {
       int frac_excitations_list_size_in = 0;
       assert_always(fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in) == 1);
 
-      if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_in) {
-        nt_solution[modelgridindex].frac_excitations_list_size = frac_excitations_list_size_in;
-      }
+      nt_solution[modelgridindex].frac_excitations_list_size = frac_excitations_list_size_in;
 
       for (int excitationindex = 0; excitationindex < frac_excitations_list_size_in; excitationindex++) {
         assert_always(fscanf(gridsave_file, "%la %la %d\n",
