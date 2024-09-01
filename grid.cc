@@ -1490,7 +1490,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
   return -1;
 }
 
-constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> pos_xyz) -> std::array<double, 3> {
+constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) -> std::array<double, 3> {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return pos_xyz;
   }
@@ -1603,11 +1603,11 @@ template <size_t S1>
   return -1.;
 }
 
-auto get_coordboundary_distances_cylindrical2d(const std::array<double, 3> pkt_pos, const std::array<double, 3> pkt_dir,
-                                               const std::array<double, 3> pktposgridcoord,
-                                               const std::array<double, 3> pktvelgridcoord, const int cellindex,
-                                               const double tstart, const std::array<double, 3> cellcoordmax)
-    -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
+auto get_coordboundary_distances_cylindrical2d(
+    const std::array<double, 3> &pkt_pos, const std::array<double, 3> &pkt_dir,
+    const std::array<double, 3> &pktposgridcoord, const std::array<double, 3> &pktvelgridcoord, const int cellindex,
+    const double tstart,
+    const std::array<double, 3> &cellcoordmax) -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // to get the cylindrical intersection, get the spherical intersection with Z components set to zero, and the
   // propagation speed set to the xy component of the 3-velocity
 
