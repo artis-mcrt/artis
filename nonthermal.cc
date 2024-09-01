@@ -302,7 +302,7 @@ void read_binding_energies() {
     if (binding_en_newformat) {
       int z_element{-1};
       ssline >> z_element;
-      assert_always(z_element == elemindex + 1);
+      assert_always(z_element == (elemindex + 1));
     }
     for (int shell = 0; shell < nshells; shell++) {
       float bindingenergy = 0.;
