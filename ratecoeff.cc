@@ -252,8 +252,8 @@ void write_ratecoeff_dat() {
             const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
 
             fprintf(ratecoeff_file, "%la %la %la %la\n", spontrecombcoeffs[bflutindex], bfcooling_coeffs[bflutindex],
-                    !USE_LUT_PHOTOION ? -1 : corrphotoioncoeffs[bflutindex],
-                    !USE_LUT_BFHEATING ? -1 : globals::bfheating_coeff[bflutindex]);
+                    USE_LUT_PHOTOION ? corrphotoioncoeffs[bflutindex] : -1,
+                    USE_LUT_BFHEATING ? globals::bfheating_coeff[bflutindex] : -1);
           }
         }
       }
