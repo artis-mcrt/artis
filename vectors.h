@@ -217,9 +217,9 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 }
 
 // Rotation angle from the scattering plane
-[[nodiscard]] constexpr auto get_rot_angle(const std::array<double, 3> n1, const std::array<double, 3> n2,
-                                           const std::array<double, 3> ref1,
-                                           const std::array<double, 3> ref2) -> double {
+[[nodiscard]] constexpr auto get_rot_angle(const std::array<double, 3> &n1, const std::array<double, 3> &n2,
+                                           const std::array<double, 3> &ref1,
+                                           const std::array<double, 3> &ref2) -> double {
   // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
   // the meridian frame such that Q=1 is in the scattering plane and along ref1
 
