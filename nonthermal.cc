@@ -110,6 +110,7 @@ std::vector<collionrow> colliondata;
 FILE *nonthermalfile{};
 bool nonthermal_initialized = false;
 
+static_assert(SF_EMIN > 0.);
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
 // energy grid on which solution is sampled
@@ -2458,8 +2459,6 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
       "Setting up Spencer-Fano equation with %d energy points from %g eV to %g eV in cell %d at timestep %d iteration "
       "%d (nne=%g e-/cm^3)\n",
       SFPTS, SF_EMIN, SF_EMAX, modelgridindex, timestep, iteration, nne);
-
-  assert_always(SF_EMIN > 0.);
 
   nt_solution[modelgridindex].nneperion_when_solved = nne_per_ion;
   nt_solution[modelgridindex].timestep_last_solved = timestep;
