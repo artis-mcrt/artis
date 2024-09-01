@@ -187,7 +187,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
   // ------------ SCATTERING EVENT: dipole function --------------------
 
   double pn{NAN};
-  double I{NAN};
+  constexpr double I = 1.;
   double Q{NAN};
   double U{NAN};
   if (type_before_rpkt == TYPE_RPKT) {
@@ -218,12 +218,8 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     pn = 3. / (16. * PI) * (1 + pow(mu, 2.) + (pow(mu, 2.) - 1) * Qold);
 
     const double Inew = 0.75 * ((mu * mu + 1.0) + Qold * (mu * mu - 1.0));
-    double Qnew = 0.75 * ((mu * mu - 1.0) + Qold * (mu * mu + 1.0));
-    double Unew = 1.5 * mu * Uold;
-
-    Qnew = Qnew / Inew;
-    Unew = Unew / Inew;
-    I = Inew / Inew;
+    const double Qnew = (0.75 * ((mu * mu - 1.0) + Qold * (mu * mu + 1.0))) / Inew;
+    const double Unew = (1.5 * mu * Uold) / Inew;
 
     // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame
 
@@ -247,7 +243,6 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
   } else if (type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA) {
     // MACROATOM and KPKT: isotropic emission
-    I = 1;
     Q = 0;
     U = 0;
     pn = 1 / (4 * PI);
