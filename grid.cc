@@ -2394,7 +2394,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 }
 
 // identify the cell index from an (x,y,z) position and a time.
-[[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> pos, const double time) -> int {
+[[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> &pos, const double time) -> int {
   auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
   for (int d = 0; d < get_ngriddimensions(); d++) {
