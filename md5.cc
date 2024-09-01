@@ -222,7 +222,7 @@ void md5_file(const char filename[], char hashout[(2 * MD5_BLOCK_SIZE) + 1]) {
 
   BYTE buffer[1024];
 
-  size_t numbytes = -1;
+  size_t numbytes = 1;
   while (numbytes != 0 && feof(infile) == 0) {
     numbytes = fread(buffer, sizeof(char), 1024, infile);
     assert_always(ferror(infile) == 0);
