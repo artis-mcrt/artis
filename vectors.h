@@ -60,8 +60,8 @@ template <size_t S1, size_t S2>
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
 //   dir2: direction vector in frame2
-[[nodiscard]] [[gnu::const]] constexpr auto angle_ab(const std::array<double, 3> &dir1,
-                                                     const std::array<double, 3> &vel) -> std::array<double, 3> {
+[[nodiscard]] [[gnu::const]] constexpr auto angle_ab(const std::array<double, 3> dir1,
+                                                     const std::array<double, 3> vel) -> std::array<double, 3> {
   const double vsqr = dot(vel, vel) / CLIGHTSQUARED;
   const double gamma_rel = 1. / std::sqrt(1 - vsqr);
 
