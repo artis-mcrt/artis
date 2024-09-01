@@ -30,7 +30,7 @@ jobs:
             - name: show cppcheck style suggestions
               run: |
                   cppcheck --version
-                  cppcheck --force --language=c++ --std=c++20 --enable=style,performance --suppress=knownConditionTrueFalse --check-level=exhaustive .
+                  cppcheck --force --language=c++ --std=c++20 --enable=style,performance --suppress=knownConditionTrueFalse --suppress=constParameterCallback --check-level=exhaustive .
 
     clang-format:
         runs-on: ubuntu-24.04
