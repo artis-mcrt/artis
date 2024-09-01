@@ -252,7 +252,7 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
-[[nodiscard]] constexpr auto meridian(const std::array<double, 3> n)
+[[nodiscard]] constexpr auto meridian(const std::array<double, 3> &n)
     -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // for ref_1 use (from triple product rule)
   const double n_xylen = std::sqrt(n[0] * n[0] + n[1] * n[1]);
@@ -264,8 +264,8 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   return {ref1, ref2};
 }
 
-[[nodiscard]] constexpr auto lorentz(const std::array<double, 3> e_rf, const std::array<double, 3> n_rf,
-                                     const std::array<double, 3> v) -> std::array<double, 3> {
+[[nodiscard]] constexpr auto lorentz(const std::array<double, 3> &e_rf, const std::array<double, 3> &n_rf,
+                                     const std::array<double, 3> &v) -> std::array<double, 3> {
   // Use Lorentz transformations to get e_cmf from e_rf
 
   const auto beta = std::array<double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
