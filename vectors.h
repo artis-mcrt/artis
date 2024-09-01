@@ -16,14 +16,14 @@
 
 // return the the magnitude of a vector
 template <size_t VECDIM>
-[[nodiscard]] constexpr auto vec_len(const std::array<double, VECDIM> vec) -> double {
+[[nodiscard]] constexpr auto vec_len(const std::array<double, VECDIM> &vec) -> double {
   const double squaredlen = std::accumulate(vec.begin(), vec.end(), 0., [](auto a, auto b) { return a + b * b; });
 
   return std::sqrt(squaredlen);
 }
 
 // get a normalized copy of vec_in
-[[nodiscard]] constexpr auto vec_norm(const std::array<double, 3> vec_in) {
+[[nodiscard]] constexpr auto vec_norm(const std::array<double, 3> &vec_in) {
   const double magnitude = vec_len(vec_in);
   const std::array<double, 3> vec_out{vec_in[0] / magnitude, vec_in[1] / magnitude, vec_in[2] / magnitude};
 
