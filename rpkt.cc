@@ -50,7 +50,7 @@ MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
 
 // get the frequency change per distance travelled assuming linear change to the abort distance
 // this is done is two parts to get identical results to do_rpkt_step()
-auto get_nu_cmf_abort(const std::array<double, 3> pos, const std::array<double, 3> dir, const double prop_time,
+auto get_nu_cmf_abort(const std::array<double, 3> &pos, const std::array<double, 3> &dir, const double prop_time,
                       const double nu_rf, const double abort_dist) -> double {
   const auto half_abort_dist = abort_dist / 2.;
   const auto abort_time = prop_time + (half_abort_dist / CLIGHT_PROP) + (half_abort_dist / CLIGHT_PROP);
