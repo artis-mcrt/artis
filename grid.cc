@@ -1505,10 +1505,10 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
         return n_r;
       }
     }
-    assert_always(false);
-  } else {
-    assert_always(false);
   }
+
+  assert_always(false);
+  return -1;
 }
 
 constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> pos_xyz) -> std::array<double, 3> {
