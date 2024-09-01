@@ -48,7 +48,7 @@ template <size_t S1, size_t S2>
                                (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
 }
 
-[[nodiscard]] constexpr auto vec_scale(const std::array<double, 3> vec, const double scalefactor) {
+[[nodiscard]] constexpr auto vec_scale(const std::array<double, 3> &vec, const double scalefactor) {
   return std::array<double, 3>{vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
 }
 
@@ -294,8 +294,8 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
-constexpr auto frame_transform(const std::array<double, 3> n_rf, double *Q, double *U,
-                               const std::array<double, 3> v) -> std::array<double, 3> {
+constexpr auto frame_transform(const std::array<double, 3> &n_rf, double *Q, double *U,
+                               const std::array<double, 3> &v) -> std::array<double, 3> {
   // Meridian frame in the RF
   const auto [ref1_rf, ref2_rf] = meridian(n_rf);
 
