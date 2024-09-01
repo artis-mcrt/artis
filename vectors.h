@@ -33,7 +33,7 @@ template <size_t VECDIM>
 
 // vector dot product
 template <size_t S1, size_t S2>
-[[nodiscard]] constexpr auto dot(const std::array<double, S1> x, const std::array<double, S2> y) -> double {
+[[nodiscard]] constexpr auto dot(const std::array<double, S1> &x, const std::array<double, S2> &y) -> double {
   // if len(x) < len(y), the extra elements of y are ignored
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
@@ -57,8 +57,8 @@ template <size_t S1, size_t S2>
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
 //   dir2: direction vector in frame2
-[[nodiscard]] constexpr auto angle_ab(const std::array<double, 3> dir1,
-                                      const std::array<double, 3> vel) -> std::array<double, 3> {
+[[nodiscard]] constexpr auto angle_ab(const std::array<double, 3> &dir1,
+                                      const std::array<double, 3> &vel) -> std::array<double, 3> {
   const double vsqr = dot(vel, vel) / CLIGHTSQUARED;
   const double gamma_rel = 1. / std::sqrt(1 - vsqr);
 
@@ -77,8 +77,8 @@ template <size_t S1, size_t S2>
 //   dir_rf: the rest frame direction (unit vector) of light propagation
 //   vel_rf: velocity of the comoving frame relative to the rest frame
 // returns: the ratio f = nu_cmf / nu_rf
-[[nodiscard]] constexpr auto doppler_nucmf_on_nurf(const std::array<double, 3> dir_rf,
-                                                   const std::array<double, 3> vel_rf) -> double {
+[[nodiscard]] constexpr auto doppler_nucmf_on_nurf(const std::array<double, 3> &dir_rf,
+                                                   const std::array<double, 3> &vel_rf) -> double {
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
 
