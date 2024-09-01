@@ -665,10 +665,10 @@ void set_element_pops_lte(const int modelgridindex, const int element) {
 
 // solve rate_matrix * x = balance_vector,
 // then popvec[i] = x[i] / pop_norm_factor_vec[i]
-auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, const gsl_vector *balance_vector,
-                          gsl_vector *popvec, const gsl_vector *pop_normfactor_vec,
-                          const int max_nlte_dimension) -> bool {
-  bool completed_solution = false;
+// return true if the solution is successful, or false if the matrix is singular
+[[nodiscard]] auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix,
+                                        const gsl_vector *balance_vector, gsl_vector *popvec,
+                                        const gsl_vector *pop_normfactor_vec, const int max_nlte_dimension) -> bool {
   const size_t nlte_dimension = balance_vector->size;
   assert_always(pop_normfactor_vec->size == nlte_dimension);
   assert_always(rate_matrix->size1 == nlte_dimension);
@@ -696,100 +696,99 @@ auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, cons
   if (lumatrix_is_singular(&rate_matrix_LU_decomp, element)) {
     printout("ERROR: NLTE matrix is singular for element Z=%d!\n", get_atomicnumber(element));
     // abort();
-    completed_solution = false;
-  } else {
-    gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-
-    // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
-    gsl_linalg_LU_solve(&rate_matrix_LU_decomp, &p, balance_vector, &x);
-
-    gsl_set_error_handler(previous_handler);
-
-    // gsl_linalg_HH_solve (&m.matrix, &b.vector, x);
-
-    const double TOLERANCE = 1e-40;
-    THREADLOCALONHOST std::vector<double> vec_work;
-    vec_work.resize(max_nlte_dimension);
-    gsl_vector gsl_work_vector = gsl_vector_view_array(vec_work.data(), nlte_dimension).vector;
-
-    double error_best = -1.;
-
-    // population solution vector with lowest error
-    THREADLOCALONHOST std::vector<double> vec_x_best;
-    vec_x_best.resize(max_nlte_dimension);
-    gsl_vector gsl_x_best = gsl_vector_view_array(vec_x_best.data(), nlte_dimension).vector;
-
-    THREADLOCALONHOST std::vector<double> vec_residual;
-    vec_residual.resize(max_nlte_dimension);
-    gsl_vector gsl_vec_residual = gsl_vector_view_array(vec_residual.data(), nlte_dimension).vector;
-
-    int iteration = 0;
-    for (iteration = 0; iteration < 10; iteration++) {
-      if (iteration > 0) {
-        gsl_linalg_LU_refine(rate_matrix, &rate_matrix_LU_decomp, &p, balance_vector, &x, &gsl_work_vector);
-      }
-
-      gsl_vector_memcpy(&gsl_vec_residual, balance_vector);
-      gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, &x, -1.0, &gsl_vec_residual);  // calculate Ax - b = residual
-      const double error = fabs(gsl_vector_get(
-          &gsl_vec_residual, gsl_blas_idamax(&gsl_vec_residual)));  // value of the largest absolute residual
-
-      if (error < error_best || error_best < 0.) {
-        gsl_vector_memcpy(&gsl_x_best, &x);
-        error_best = error;
-      }
-      // printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
-      if (error < TOLERANCE) {
-        break;
-      }
-    }
-    if (error_best >= 0.) {
-      // printout("  NLTE solver matrix LU_refine: After %d iterations, keeping solution vector with a max residual of
-      // %g\n",iteration,error_best);
-      if (error_best > 1e-10) {
-        printout(
-            "  NLTE solver matrix LU_refine: After %d iterations, best solution vector has a max residual of %g "
-            "(WARNING!)\n",
-            iteration, error_best);
-      }
-
-      gsl_vector_memcpy(&x, &gsl_x_best);
-    }
-
-    // get the real populations using the x vector and the normalisation factors
-    gsl_vector_memcpy(popvec, &x);
-    gsl_vector_mul(popvec, pop_normfactor_vec);
-    // popvec will be used contains the real population densities
-
-    for (size_t row = 0; row < nlte_dimension; row++) {
-      double recovered_balance_vector_elem = 0.;
-      gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
-      gsl_blas_ddot(&row_view.vector, &x, &recovered_balance_vector_elem);
-
-      const auto [ion, level] = get_ion_level_of_nlte_vector_index(row, element);
-
-      // printout("index %4d (ionstage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e
-      // departure ratio %.4f\n",
-      //          row,get_ionstage(element,ion),level, gsl_vector_get(residual_vector,row),
-      //          recovered_balance_vector_elem, gsl_vector_get(x,row),
-      //          gsl_vector_get(popvec, row),
-      //          gsl_vector_get(x, row) / gsl_vector_get(x,get_nlte_vector_index(element,ion,0)));
-
-      if (gsl_vector_get(popvec, row) < 0.0) {
-        printout(
-            "  WARNING: NLTE solver gave negative population to index %zud (Z=%d ionstage %d level %d), pop = %g. "
-            "Replacing with LTE pop of %g\n",
-            row, get_atomicnumber(element), get_ionstage(element, ion), level,
-            gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row), gsl_vector_get(pop_normfactor_vec, row));
-        gsl_vector_set(popvec, row, gsl_vector_get(pop_normfactor_vec, row));
-      }
-    }
-
-    completed_solution = true;
+    return false;
   }
 
-  return completed_solution;
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+
+  // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
+  gsl_linalg_LU_solve(&rate_matrix_LU_decomp, &p, balance_vector, &x);
+
+  gsl_set_error_handler(previous_handler);
+
+  // gsl_linalg_HH_solve (&m.matrix, &b.vector, x);
+
+  const double TOLERANCE = 1e-40;
+  THREADLOCALONHOST std::vector<double> vec_work;
+  vec_work.resize(max_nlte_dimension);
+  gsl_vector gsl_work_vector = gsl_vector_view_array(vec_work.data(), nlte_dimension).vector;
+
+  double error_best = -1.;
+
+  // population solution vector with lowest error
+  THREADLOCALONHOST std::vector<double> vec_x_best;
+  vec_x_best.resize(max_nlte_dimension);
+  gsl_vector gsl_x_best = gsl_vector_view_array(vec_x_best.data(), nlte_dimension).vector;
+
+  THREADLOCALONHOST std::vector<double> vec_residual;
+  vec_residual.resize(max_nlte_dimension);
+  gsl_vector gsl_vec_residual = gsl_vector_view_array(vec_residual.data(), nlte_dimension).vector;
+
+  int iteration = 0;
+  for (iteration = 0; iteration < 10; iteration++) {
+    if (iteration > 0) {
+      gsl_linalg_LU_refine(rate_matrix, &rate_matrix_LU_decomp, &p, balance_vector, &x, &gsl_work_vector);
+    }
+
+    gsl_vector_memcpy(&gsl_vec_residual, balance_vector);
+    gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, &x, -1.0, &gsl_vec_residual);  // calculate Ax - b = residual
+    const double error = fabs(gsl_vector_get(
+        &gsl_vec_residual, gsl_blas_idamax(&gsl_vec_residual)));  // value of the largest absolute residual
+
+    if (error < error_best || error_best < 0.) {
+      gsl_vector_memcpy(&gsl_x_best, &x);
+      error_best = error;
+    }
+    // printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
+    if (error < TOLERANCE) {
+      break;
+    }
+  }
+  if (error_best >= 0.) {
+    // printout("  NLTE solver matrix LU_refine: After %d iterations, keeping solution vector with a max residual of
+    // %g\n",iteration,error_best);
+    if (error_best > 1e-10) {
+      printout(
+          "  NLTE solver matrix LU_refine: After %d iterations, best solution vector has a max residual of %g "
+          "(WARNING!)\n",
+          iteration, error_best);
+    }
+
+    gsl_vector_memcpy(&x, &gsl_x_best);
+  }
+
+  // get the real populations using the x vector and the normalisation factors
+  gsl_vector_memcpy(popvec, &x);
+  gsl_vector_mul(popvec, pop_normfactor_vec);
+  // popvec will be used contains the real population densities
+
+  for (size_t row = 0; row < nlte_dimension; row++) {
+    double recovered_balance_vector_elem = 0.;
+    gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
+    gsl_blas_ddot(&row_view.vector, &x, &recovered_balance_vector_elem);
+
+    const auto [ion, level] = get_ion_level_of_nlte_vector_index(row, element);
+
+    // printout("index %4d (ionstage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e
+    // departure ratio %.4f\n",
+    //          row,get_ionstage(element,ion),level, gsl_vector_get(residual_vector,row),
+    //          recovered_balance_vector_elem, gsl_vector_get(x,row),
+    //          gsl_vector_get(popvec, row),
+    //          gsl_vector_get(x, row) / gsl_vector_get(x,get_nlte_vector_index(element,ion,0)));
+
+    if (gsl_vector_get(popvec, row) < 0.0) {
+      printout(
+          "  WARNING: NLTE solver gave negative population to index %zud (Z=%d ionstage %d level %d), pop = %g. "
+          "Replacing with LTE pop of %g\n",
+          row, get_atomicnumber(element), get_ionstage(element, ion), level,
+          gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row), gsl_vector_get(pop_normfactor_vec, row));
+      gsl_vector_set(popvec, row, gsl_vector_get(pop_normfactor_vec, row));
+    }
+  }
+
+  return true;
 }
+
 }  // anonymous namespace
 
 void solve_nlte_pops_element(const int element, const int modelgridindex, const int timestep, const int nlte_iter)
