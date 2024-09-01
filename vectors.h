@@ -127,8 +127,8 @@ template <size_t S1, size_t S2>
   return dopplerfactorsq;
 }
 
-[[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(const std::span<const double, 3> pos_rf,
-                                                          const std::array<double, 3> dir_rf,
+[[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(const std::span<const double, 3> &pos_rf,
+                                                          const std::array<double, 3> &dir_rf,
                                                           const double prop_time) -> double {
   return doppler_nucmf_on_nurf(dir_rf, get_velocity(pos_rf, prop_time));
 }
