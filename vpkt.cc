@@ -593,12 +593,12 @@ void read_vpkt_grid(const int my_rank, const int nts) {
 }  // anonymous namespace
 
 void vpkt_remove_temp_file(const int nts, const int my_rank) {
-  char filenames[3][MAXFILENAMELENGTH];
+  std::array<char[MAXFILENAMELENGTH], 3> filenames{};
   snprintf(filenames[0], MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
   snprintf(filenames[1], MAXFILENAMELENGTH, "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
   snprintf(filenames[2], MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
 
-  for (const auto &filename : filenames) {
+  for (const auto *filename : filenames) {
     if (std::filesystem::exists(filename)) {
       std::remove(filename);
       printout("Deleted %s\n", filename);
@@ -894,7 +894,7 @@ void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved
   }
 }
 
-auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) -> void {
+auto vpkt_call_estimators(const Packet &pkt, const enum packet_type type_before_rpkt) -> void {
   if constexpr (!VPKT_ON) {
     return;
   }
