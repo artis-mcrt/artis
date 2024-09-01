@@ -111,8 +111,8 @@ void add_to_vspecpol(const Packet &vpkt, const int obsdirindex, const int opacho
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> vel, const int wlbin, const int obsdirindex,
-                      const std::array<double, 3> obs) {
+void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> &vel, const int wlbin, const int obsdirindex,
+                      const std::array<double, 3> &obs) {
   double vref1{NAN};
   double vref2{NAN};
 
@@ -160,7 +160,7 @@ void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> vel, const
 }
 
 auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_arrive, const double nu_rf,
-                    const double e_rf, const int obsdirindex, const std::array<double, 3> obsdir,
+                    const double e_rf, const int obsdirindex, const std::array<double, 3> &obsdir,
                     const enum packet_type type_before_rpkt, std::stringstream &vpkt_contrib_row) -> bool {
   int mgi = 0;
 
