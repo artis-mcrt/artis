@@ -340,7 +340,7 @@ auto thomson_angle() -> double {
 }
 
 // scattering a direction through angle theta.
-[[nodiscard]] auto scatter_dir(const std::array<double, 3> dir_in, const double cos_theta) -> std::array<double, 3> {
+[[nodiscard]] auto scatter_dir(const std::array<double, 3> &dir_in, const double cos_theta) -> std::array<double, 3> {
   // begin with setting the direction in coordinates where original direction
   // is parallel to z-hat.
 
