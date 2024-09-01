@@ -99,7 +99,11 @@ inline thread_local auto gslworkspace =
 #ifdef __NVCOMPILER_CUDA_ARCH__
 #define printout(...) printf(__VA_ARGS__)
 
-#define __artis_assert(e) assert(e)
+#define __artis_assert(e)                         \
+  {                                               \
+    const bool assertpass = static_cast<bool>(e); \
+    assert(assertpass);                           \
+  }
 
 #else
 inline void print_line_start() {
