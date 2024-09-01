@@ -77,7 +77,7 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
 
   // pellet packet is moving with the homologous flow, so dir is proportional to pos
   pkt.dir = vec_norm(pkt.pos);  // assign dir = pos / vec_len(pos)
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
   pkt.trueemissiontype = EMTYPE_NOTSET;

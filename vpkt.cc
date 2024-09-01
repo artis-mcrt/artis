@@ -908,8 +908,6 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
 
   const double t_current = pkt.prop_time;
 
-  const auto vel_vec = get_velocity(pkt.pos, pkt.prop_time);
-
   std::stringstream vpkt_contrib_row;
 
   bool any_dir_escaped = false;
@@ -927,7 +925,7 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
     if (t_arrive >= VSPEC_TIMEMIN_input && t_arrive <= VSPEC_TIMEMAX_input) {
       // time selection
 
-      const double doppler = doppler_nucmf_on_nurf(obsdir, vel_vec);
+      const double doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, obsdir, pkt.prop_time);
       const double nu_rf = pkt.nu_cmf / doppler;
       const double e_rf = pkt.e_cmf / doppler;
 

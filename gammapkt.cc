@@ -277,7 +277,7 @@ auto get_chi_compton_rf(const Packet &pkt) -> double {
   const double chi_cmf = sigma_cmf * grid::get_nnetot(grid::get_cell_modelgridindex(pkt.where));
 
   // convert between frames
-  const double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double chi_rf = chi_cmf * calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
   assert_testmodeonly(std::isfinite(chi_rf));
 
@@ -460,7 +460,7 @@ void compton_scatter(Packet &pkt) {
 
     // It now has a rest frame direction and a co-moving frequency.
     //  Just need to set the rest frame energy.
-    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+    const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
     pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
     pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
@@ -566,7 +566,7 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
 
   // Now convert between frames.
 
-  const double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double chi_rf = chi_cmf * calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   return chi_rf;
 }
 
@@ -622,7 +622,7 @@ auto sigma_pair_prod_rf(const Packet &pkt) -> double {
 
   // Now need to convert between frames.
 
-  double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  double chi_rf = chi_cmf * calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
   if (chi_rf < 0) {
     printout("Negative pair production sigma. Setting to zero. Abort? %g\n", chi_rf);
@@ -717,7 +717,7 @@ void pair_prod(Packet &pkt) {
 
     pkt.dir = angle_ab(dir_cmf, vel_vec);
 
-    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+    const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
     pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
     pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
@@ -1066,7 +1066,7 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   // that it's now a gamma ray.
 
   pkt.prop_time = pkt.tdecay;
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 

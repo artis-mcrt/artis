@@ -59,7 +59,7 @@ auto get_nu_cmf_abort(const std::array<double, 3> pos, const std::array<double, 
                                         pos[1] + (dir[1] * half_abort_dist) + (dir[1] * half_abort_dist),
                                         pos[2] + (dir[2] * half_abort_dist) + (dir[2] * half_abort_dist)};
 
-  const double nu_cmf_abort = nu_rf * doppler_packet_nucmf_on_nurf(abort_pos, dir, abort_time);
+  const double nu_cmf_abort = nu_rf * calculate_doppler_nucmf_on_nurf(abort_pos, dir, abort_time);
 
   return nu_cmf_abort;
 }
@@ -417,7 +417,7 @@ void electron_scatter_rpkt(Packet &pkt) {
   // Finally we want to put in the rest frame energy and frequency.
   // And record that it's now a r-pkt.
 
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 }
@@ -425,7 +425,7 @@ void electron_scatter_rpkt(Packet &pkt) {
 void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const int modelgridindex) {
   const double nu = pkt.nu_cmf;
 
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   const double chi_cont = chi_rpkt_cont.total * dopplerfactor;
   const double chi_escatter = chi_rpkt_cont.ffescat * dopplerfactor;
   const double chi_ff = chi_rpkt_cont.ffheat * dopplerfactor;
@@ -727,8 +727,8 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   } else if (thickcell) [[unlikely]] {
     // In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
-    const double chi_grey =
-        grid::get_kappagrey(mgi) * grid::get_rho(mgi) * doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+    const double chi_grey = grid::get_kappagrey(mgi) * grid::get_rho(mgi) *
+                            calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
     edist = tau_next / chi_grey;
     pkt.next_trans = -1;
@@ -740,7 +740,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
 
     const auto nu_cmf_abort = get_nu_cmf_abort(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, abort_dist);
     const auto d_nu_on_d_l = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
-    const auto doppler = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+    const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
     if constexpr (EXPANSIONOPACITIES_ON) {
       std::tie(edist, pkt.next_trans, event_is_boundbound) = get_event_expansion_opacity(
@@ -1111,7 +1111,7 @@ __host__ __device__ void emit_rpkt(Packet &pkt) {
   // Finally we want to put in the rest frame energy and frequency. And record
   // that it's now a r-pkt.
 
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 

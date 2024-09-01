@@ -71,13 +71,46 @@ template <size_t S1, size_t S2>
   return vec_norm(dir2);
 }
 
-// Doppler factor
-// arguments:
+// Doppler factor squared, either to first order v/c or fully relativisitic depending on USE_RELATIVISTIC_DOPPLER_SHIFT
+// Arguments:
+//   pos_rf: the rest frame position of the packet
 //   dir_rf: the rest frame direction (unit vector) of light propagation
-//   vel_rf: velocity of the comoving frame relative to the rest frame
+//   prop_time: the propagation time of the packet
+// returns: the ratio f = (nu_cmf / nu_rf) ^ 2
+[[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(const std::array<double, 3> &pos_rf,
+                                                           const std::array<double, 3> &dir_rf,
+                                                           const double prop_time) -> double {
+  // velocity of the comoving frame relative to the rest frame
+  const auto vel_rf = get_velocity(pos_rf, prop_time);
+
+  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
+  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
+
+  const double ndotv_on_c = dot(dir_rf, vel_rf) / CLIGHT;
+  const double dopplerfactorsq = USE_RELATIVISTIC_DOPPLER_SHIFT
+                                     ? std::pow(1. - ndotv_on_c, 2) / (1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED))
+                                     : (1. - 2 * ndotv_on_c);
+
+  assert_testmodeonly(std::isfinite(dopplerfactorsq));
+  assert_testmodeonly(dopplerfactorsq > 0);
+
+  return dopplerfactorsq;
+}
+
+// Doppler factor either to first order v/c or fully relativisitic depending on USE_RELATIVISTIC_DOPPLER_SHIFT
+// Arguments:
+//   pos_rf: the rest frame position of the packet
+//   dir_rf: the rest frame direction (unit vector) of light propagation
+//   prop_time: the propagation time of the packet
 // returns: the ratio f = nu_cmf / nu_rf
-[[nodiscard]] constexpr auto doppler_nucmf_on_nurf(const std::array<double, 3> &dir_rf,
-                                                   const std::array<double, 3> &vel_rf) -> double {
+[[nodiscard]] constexpr auto calculate_doppler_nucmf_on_nurf(const std::array<double, 3> &pos_rf,
+                                                             const std::array<double, 3> &dir_rf,
+                                                             const double prop_time) -> double {
+  //   dir_rf: the rest frame direction (unit vector) of light propagation
+  //   vel_rf: velocity of the comoving frame relative to the rest frame
+  // returns: the ratio f = nu_cmf / nu_rf
+  const auto vel_rf = get_velocity(pos_rf, prop_time);
+
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
 
@@ -97,41 +130,6 @@ template <size_t S1, size_t S2>
   return dopplerfactor;
 }
 
-[[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(const std::array<double, 3> &pos_rf,
-                                                           const std::array<double, 3> &dir_rf,
-                                                           const double prop_time) -> double
-// Doppler factor squared, either to first order v/c or fully relativisitic
-// depending on USE_RELATIVISTIC_DOPPLER_SHIFT
-//
-// arguments:
-//   pos_rf: the rest frame position of the packet
-//   dir_rf: the rest frame direction (unit vector) of light propagation
-//   prop_time: the propagation time of the packet
-// returns: the ratio f = (nu_cmf / nu_rf) ^ 2
-{
-  // velocity of the comoving frame relative to the rest frame
-  const auto vel_rf = get_velocity(pos_rf, prop_time);
-
-  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
-  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
-
-  const double ndotv_on_c = dot(dir_rf, vel_rf) / CLIGHT;
-  const double dopplerfactorsq = USE_RELATIVISTIC_DOPPLER_SHIFT
-                                     ? std::pow(1. - ndotv_on_c, 2) / (1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED))
-                                     : (1. - 2 * ndotv_on_c);
-
-  assert_testmodeonly(std::isfinite(dopplerfactorsq));
-  assert_testmodeonly(dopplerfactorsq > 0);
-
-  return dopplerfactorsq;
-}
-
-[[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(const std::array<double, 3> &pos_rf,
-                                                          const std::array<double, 3> &dir_rf,
-                                                          const double prop_time) -> double {
-  return doppler_nucmf_on_nurf(dir_rf, get_velocity(pos_rf, prop_time));
-}
-
 // Move a packet along a straight line (specified by current dir vector). The distance moved is in the rest frame.
 constexpr auto move_pkt_withtime(std::array<double, 3> &pos_rf, const std::array<double, 3> &dir_rf, double &prop_time,
                                  const double nu_rf, double &nu_cmf, const double e_rf, double &e_cmf,
@@ -147,7 +145,7 @@ constexpr auto move_pkt_withtime(std::array<double, 3> &pos_rf, const std::array
 
   // During motion, rest frame energy and frequency are conserved.
   // But need to update the co-moving ones.
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pos_rf, dir_rf, prop_time);
+  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pos_rf, dir_rf, prop_time);
 
   nu_cmf = nu_rf * dopplerfactor;
   e_cmf = e_rf * dopplerfactor;
