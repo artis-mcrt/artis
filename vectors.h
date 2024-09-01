@@ -45,14 +45,14 @@ template <size_t S1, size_t S2>
   return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto cross_prod(const std::array<double, 3> vec_a,
-                                                       const std::array<double, 3> vec_b) {
+[[nodiscard]] [[gnu::const]] constexpr auto cross_prod(const std::array<double, 3> &vec_a,
+                                                       const std::array<double, 3> &vec_b) {
   return std::array<double, 3>{(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]),
                                (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
                                (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto vec_scale(const std::array<double, 3> vec, const double scalefactor) {
+[[nodiscard]] [[gnu::const]] constexpr auto vec_scale(const std::array<double, 3> &vec, const double scalefactor) {
   return std::array<double, 3>{vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
 }
 
