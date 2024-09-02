@@ -248,7 +248,7 @@ auto calculate_partfunct(const int element, const int ion, const int modelgridin
 
   bool initial = false;
   if (get_groundlevelpop(modelgridindex, element, ion) < MINPOP) {
-    // either there reall is none of this ion or this is a first pass through
+    // either there really is none of this ion or this is a first pass through
     // in either case, we won't have any real nlte_populations so the actual value of
     // of groundlevelpop for this calculation doesn't matter, so long as it's not zero!
     pop_store = get_groundlevelpop(modelgridindex, element, ion);

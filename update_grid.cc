@@ -1160,7 +1160,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
   }  // end OpenMP parallel section
 
-  // Now after all the relevant taks of update_grid have been finished activate
+  // Now after all the relevant tasks of update_grid have been finished activate
   // the use of the cellcache for all OpenMP tasks, in what follows (update_packets)
   use_cellcache = true;
 

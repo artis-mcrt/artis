@@ -1866,11 +1866,6 @@ void update_parameterfile(int nts)
     if (!lineiscommentonly(line)) {
       noncomment_linenum++;  // line number starting from 0, ignoring comment and blank lines (that start with '#')
 
-      // if (!preceeding_comment && noncomment_linenum < inputlinecomments.size() - 1)
-      // {
-      //   fileout << '#' << inputlinecomments[noncomment_linenum] << '\n';
-      // }
-
       // overwrite particular lines to enable restarting from the current timestep
       if (nts >= 0) {
         if (noncomment_linenum == 2) {

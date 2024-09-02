@@ -392,7 +392,7 @@ void precalculate_rate_coefficient_integrals() {
             const GSLIntegrationParas intparas = {
                 .nu_edge = nu_threshold, .T = T_e, .photoion_xs = get_phixs_table(element, ion, level)};
 
-            // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
+            // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
             double alpha_sp = 0.;
 
             status =
@@ -943,7 +943,7 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
     alpha_sp_old = alpha_sp;
     const double xlow = nu_threshold + (i * deltanu);
 
-    // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
+    // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
     integrator<alpha_sp_E_integrand_gsl>(intparas, xlow, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY,
                                          GSL_INTEG_GAUSS31, &alpha_sp, &error);
 
