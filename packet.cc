@@ -54,10 +54,8 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
     // use equal area probability distribution to select radius
     const double rcyl_rand = std::sqrt((zrand * std::pow(rcyl_inner, 2)) + ((1. - zrand) * std::pow(rcyl_outer, 2)));
     const double theta_rand = rng_uniform() * 2 * PI;
-    pkt.pos[0] = std::cos(theta_rand) * rcyl_rand;
-    pkt.pos[1] = std::sin(theta_rand) * rcyl_rand;
-
-    pkt.pos[2] = grid::get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * grid::wid_init(cellindex, 1));
+    pkt.pos = {std::cos(theta_rand) * rcyl_rand, std::sin(theta_rand) * rcyl_rand,
+               grid::get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * grid::wid_init(cellindex, 1))};
 
   } else if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     for (int axis = 0; axis < 3; axis++) {
@@ -79,7 +77,7 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
 
   // pellet packet is moving with the homologous flow, so dir is proportional to pos
   pkt.dir = vec_norm(pkt.pos);  // assign dir = pos / vec_len(pos)
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
   pkt.trueemissiontype = EMTYPE_NOTSET;

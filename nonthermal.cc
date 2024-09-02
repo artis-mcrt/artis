@@ -110,6 +110,7 @@ std::vector<collionrow> colliondata;
 FILE *nonthermalfile{};
 bool nonthermal_initialized = false;
 
+static_assert(SF_EMIN > 0.);
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
 // energy grid on which solution is sampled
@@ -274,8 +275,15 @@ void read_shell_configs() {
 }
 
 void read_binding_energies() {
-  const bool binding_en_newformat = std::filesystem::exists("binding_energies_lotz_tab1and2.txt") ||
-                                    std::filesystem::exists("data/binding_energies_lotz_tab1and2.txt");
+  const bool binding_en_newformat_local = std::filesystem::exists("binding_energies_lotz_tab1and2.txt") ||
+                                          std::filesystem::exists("data/binding_energies_lotz_tab1and2.txt");
+#ifdef MPI_ON
+  bool binding_en_newformat = binding_en_newformat_local;
+  // just in case the file system was faulty and the ranks disagree on the existence of the files
+  MPI_Allreduce(MPI_IN_PLACE, &binding_en_newformat, 1, MPI_C_BOOL, MPI_LOR, MPI_COMM_WORLD);
+#else
+  const bool binding_en_newformat = binding_en_newformat_local;
+#endif
 
   int nshells = 0;      // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in binding energy file
@@ -293,10 +301,11 @@ void read_binding_energies() {
   for (int elemindex = 0; elemindex < n_z_binding; elemindex++) {
     assert_always(get_noncommentline(binding_energies_file, line));
     std::istringstream ssline(line);
-    int z_element = elemindex + 1;
     // new file as an atomic number column
     if (binding_en_newformat) {
+      int z_element{-1};
       ssline >> z_element;
+      assert_always(z_element == (elemindex + 1));
     }
     for (int shell = 0; shell < nshells; shell++) {
       float bindingenergy = 0.;
@@ -579,13 +588,7 @@ void zero_all_effionpot(const int modelgridindex) {
 {
   const int index = std::floor((energy_ev - SF_EMIN) / DELTA_E);
 
-  if (index < 0) {
-    return 0;
-  }
-  if (index > SFPTS - 1) {
-    return SFPTS - 1;
-  }
-  return index;
+  return std::clamp(index, 0, SFPTS - 1);
 }
 
 [[nodiscard]] constexpr auto get_energyindex_ev_gteq(const double energy_ev) -> int
@@ -593,13 +596,7 @@ void zero_all_effionpot(const int modelgridindex) {
 {
   const int index = std::ceil((energy_ev - SF_EMIN) / DELTA_E);
 
-  if (index < 0) {
-    return 0;
-  }
-  if (index > SFPTS - 1) {
-    return SFPTS - 1;
-  }
-  return index;
+  return std::clamp(index, 0, SFPTS - 1);
 }
 
 // interpolate the y flux values to get the value at a given energy
@@ -786,7 +783,7 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
 
 // impact ionization cross section in cm^2
 // energy and ionization_potential should be in eV
-// fitting forumula of Younger 1981
+// fitting formula of Younger 1981
 // called Q_i(E) in KF92 equation 7
 constexpr auto xs_impactionization(const double energy_ev, const collionrow &colliondata_ion) -> double {
   const double ionpot_ev = colliondata_ion.ionpot_ev;
@@ -907,11 +904,11 @@ auto calculate_frac_heating(const int modelgridindex, const std::array<double, S
 
   double N_e_contrib = 0.;
   // third term (integral from zero to SF_EMIN)
-  const int nsteps = static_cast<int>(std::ceil(SF_EMIN / DELTA_E) * 10);
-  assert_always(nsteps > 0);
-  const double delta_endash = SF_EMIN / nsteps;
-  for (int j = 0; j < nsteps; j++) {
-    const double endash = SF_EMIN * j / nsteps;
+  constexpr int nsteps = (static_cast<int>(SF_EMIN / DELTA_E) + 1) * 10;
+  static_assert(nsteps > 0);
+  constexpr double delta_endash = SF_EMIN / nsteps;
+  for (int j = 1; j < nsteps; j++) {
+    const double endash = delta_endash * j;
     N_e_contrib += N_e(modelgridindex, endash * EV, yfunc) * endash * delta_endash;
   }
   frac_heating_Einit += N_e_contrib;
@@ -1127,7 +1124,7 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
   const int ionstage = get_ionstage(element, ion);
   double ionpot_valence = -1;
 
-  for (auto &collionrow : colliondata) {
+  for (const auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       get_xs_ionization_vector(cross_section_vec, collionrow);
 
@@ -1185,7 +1182,7 @@ void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int elemen
   double eta_sum = 0.;
   double ionpot_valence = -1;
   int matching_nlsubshell_count = 0;
-  for (auto &collionrow : colliondata) {
+  for (const auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       matching_nlsubshell_count++;
       const double frac_ionization_shell =
@@ -1205,7 +1202,7 @@ void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int elemen
 
       eta_over_ionpot_sum += eta_over_ionpot;
 
-      for (size_t a = 0; a < eta_nauger_ionize_sum.size(); a++) {
+      for (ptrdiff_t a = 0; a < std::ssize(eta_nauger_ionize_sum); a++) {
         eta_nauger_ionize_over_ionpot_sum[a] += eta_over_ionpot * collionrow.prob_num_auger[a];
         eta_nauger_ionize_sum[a] += frac_ionization_shell * collionrow.prob_num_auger[a];
       }
@@ -1294,7 +1291,8 @@ auto get_xs_excitation_vector(const int element, const int ion, const int lower,
                               const double statweight_lower,
                               const double epsilon_trans) -> std::tuple<std::array<double, SFPTS>, int> {
   std::array<double, SFPTS> xs_excitation_vec{};
-  const double coll_strength = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].coll_str;
+  const auto &uptr = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex];
+  const double coll_strength = uptr.coll_str;
   if (coll_strength >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
@@ -1310,10 +1308,9 @@ auto get_xs_excitation_vector(const int element, const int ion, const int lower,
     }
     return {xs_excitation_vec, en_startindex};
   }
-  const bool forbidden = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].forbidden;
+  const bool forbidden = uptr.forbidden;
   if (!forbidden) {
-    const double trans_osc_strength =
-        globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].osc_strength;
+    const double trans_osc_strength = uptr.osc_strength;
     // permitted E1 electric dipole transitions
 
     // constexpr double g_bar = 0.2;
@@ -1422,7 +1419,7 @@ auto select_nt_ionization(const int modelgridindex) -> std::tuple<int, int> {
 
   const double ratetotal = get_ntion_energyrate(modelgridindex);
 
-  // select based on the calcuated energy going to ionisation for each ion
+  // select based on the calculated energy going to ionisation for each ion
   double ratesum = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
     const int nions = get_nions(ielement);
@@ -1484,7 +1481,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
       calculate_eff_ionpot_auger_rates(modelgridindex, element, ion, yfunc);
 
       int matching_nlsubshell_count = 0;
-      for (auto &collionrow : colliondata) {
+      for (const auto &collionrow : colliondata) {
         if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
           const double frac_ionization_ion_shell =
               calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow, yfunc);
@@ -1768,7 +1765,7 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrixuppertri, const int Z,
 // add the ionization terms to the Spencer-Fano matrix
 {
   std::array<double, SFPTS> vec_xs_ionization{};
-  for (auto &collionrow : colliondata) {
+  for (const auto &collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       const double ionpot_ev = collionrow.ionpot_ev;
       const double en_auger_ev = collionrow.en_auger_ev;
@@ -1781,6 +1778,7 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrixuppertri, const int Z,
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
       const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, collionrow);
+      assert_always(xsstartindex >= 0);
       // Luke Shingles: the use of min and max on the epsilon limits keeps energies
       // from becoming unphysical. This insight came from reading the
       // CMFGEN Fortran source code (Li, Dessart, Hillier 2012, doi:10.1111/j.1365-2966.2012.21198.x)
@@ -1851,7 +1849,7 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrixuppertri, const int Z,
         for (int i = 0; i < augerstopindex; i++) {
           const int rowoffset = uppertriangular(i, 0);
           const double en = engrid(i);
-          const int jstart = i > xsstartindex ? i : xsstartindex;
+          const int jstart = std::max(i, xsstartindex);
           for (int j = jstart; j < SFPTS; j++) {
             const double xs = vec_xs_ionization[j];
             if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
@@ -2037,9 +2035,9 @@ void init(const int my_rank, const int ndo_nonempty) {
 
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
       nt_solution[modelgridindex].allions =
-          static_cast<NonThermalSolutionIon *>(calloc(get_includedions(), sizeof(NonThermalSolutionIon)));
+          static_cast<NonThermalSolutionIon *>(malloc(get_includedions() * sizeof(NonThermalSolutionIon)));
 
-      const size_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+      const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
       nt_solution[modelgridindex].frac_excitations_list =
           NT_EXCITATION_ON ? &excitations_list_all_cells[nonemptymgi * nt_excitations_stored] : nullptr;
@@ -2454,8 +2452,6 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
       "%d (nne=%g e-/cm^3)\n",
       SFPTS, SF_EMIN, SF_EMAX, modelgridindex, timestep, iteration, nne);
 
-  assert_always(SF_EMIN > 0.);
-
   nt_solution[modelgridindex].nneperion_when_solved = nne_per_ion;
   nt_solution[modelgridindex].timestep_last_solved = timestep;
 
@@ -2653,9 +2649,7 @@ void read_restart_data(FILE *gridsave_file) {
       int frac_excitations_list_size_in = 0;
       assert_always(fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in) == 1);
 
-      if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_in) {
-        nt_solution[modelgridindex].frac_excitations_list_size = frac_excitations_list_size_in;
-      }
+      nt_solution[modelgridindex].frac_excitations_list_size = frac_excitations_list_size_in;
 
       for (int excitationindex = 0; excitationindex < frac_excitations_list_size_in; excitationindex++) {
         assert_always(fscanf(gridsave_file, "%la %la %d\n",

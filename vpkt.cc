@@ -111,8 +111,8 @@ void add_to_vspecpol(const Packet &vpkt, const int obsdirindex, const int opacho
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> vel, const int wlbin, const int obsdirindex,
-                      const std::array<double, 3> obs) {
+void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> &vel, const int wlbin, const int obsdirindex,
+                      const std::array<double, 3> &obs) {
   double vref1{NAN};
   double vref2{NAN};
 
@@ -160,7 +160,7 @@ void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> vel, const
 }
 
 auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_arrive, const double nu_rf,
-                    const double e_rf, const int obsdirindex, const std::array<double, 3> obsdir,
+                    const double e_rf, const int obsdirindex, const std::array<double, 3> &obsdir,
                     const enum packet_type type_before_rpkt, std::stringstream &vpkt_contrib_row) -> bool {
   int mgi = 0;
 
@@ -171,7 +171,6 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
   vpkt.last_cross = BOUNDARY_NONE;
 
   bool end_packet = false;
-  double ldist = 0;
   double t_future = t_current;
 
   for (int opacindex = 0; opacindex < Nspectra; opacindex++) {
@@ -187,7 +186,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
   // ------------ SCATTERING EVENT: dipole function --------------------
 
   double pn{NAN};
-  double I{NAN};
+  constexpr double I = 1.;
   double Q{NAN};
   double U{NAN};
   if (type_before_rpkt == TYPE_RPKT) {
@@ -218,12 +217,8 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     pn = 3. / (16. * PI) * (1 + pow(mu, 2.) + (pow(mu, 2.) - 1) * Qold);
 
     const double Inew = 0.75 * ((mu * mu + 1.0) + Qold * (mu * mu - 1.0));
-    double Qnew = 0.75 * ((mu * mu - 1.0) + Qold * (mu * mu + 1.0));
-    double Unew = 1.5 * mu * Uold;
-
-    Qnew = Qnew / Inew;
-    Unew = Unew / Inew;
-    I = Inew / Inew;
+    const double Qnew = (0.75 * ((mu * mu - 1.0) + Qold * (mu * mu + 1.0))) / Inew;
+    const double Unew = (1.5 * mu * Uold) / Inew;
 
     // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame
 
@@ -247,7 +242,6 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
   } else if (type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA) {
     // MACROATOM and KPKT: isotropic emission
-    I = 1;
     Q = 0;
     U = 0;
     pn = 1 / (4 * PI);
@@ -297,7 +291,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
       assert_testmodeonly(nu_cmf_abort <= vpkt.nu_cmf);
       const double d_nu_on_d_l = (nu_cmf_abort - vpkt.nu_cmf) / sdist;
 
-      ldist = 0;
+      double ldist = 0;
       while (ldist < sdist) {
         const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans);
 
@@ -389,9 +383,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
     assert_always(std::isfinite(prob));
 
-    vpkt.stokes[0] = I * prob;
-    vpkt.stokes[1] = Q * prob;
-    vpkt.stokes[2] = U * prob;
+    vpkt.stokes = {I * prob, Q * prob, U * prob};
 
     for (const auto stokeval : vpkt.stokes) {
       assert_always(std::isfinite(stokeval));
@@ -409,9 +401,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
   if (vgrid_on) {
     const double prob = pn * exp(-tau_vpkt[0]);
 
-    vpkt.stokes[0] = I * prob;
-    vpkt.stokes[1] = Q * prob;
-    vpkt.stokes[2] = U * prob;
+    vpkt.stokes = {I * prob, Q * prob, U * prob};
 
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
@@ -425,11 +415,11 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 }
 
 void init_vspecpol() {
-  vspecpol.resize(VMTBINS);
+  vspecpol.resize(VMTBINS, {});
 
   const int indexmax = Nspectra * Nobs;
   for (int p = 0; p < VMTBINS; p++) {
-    vspecpol[p].resize(indexmax);
+    vspecpol[p].resize(indexmax, {});
   }
 
   for (int m = 0; m < VMNUBINS; m++) {
@@ -602,12 +592,12 @@ void read_vpkt_grid(const int my_rank, const int nts) {
 }  // anonymous namespace
 
 void vpkt_remove_temp_file(const int nts, const int my_rank) {
-  char filenames[3][MAXFILENAMELENGTH];
+  std::array<char[MAXFILENAMELENGTH], 3> filenames{};
   snprintf(filenames[0], MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
   snprintf(filenames[1], MAXFILENAMELENGTH, "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
   snprintf(filenames[2], MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
 
-  for (const auto &filename : filenames) {
+  for (const auto *filename : filenames) {
     if (std::filesystem::exists(filename)) {
       std::remove(filename);
       printout("Deleted %s\n", filename);
@@ -744,10 +734,10 @@ void read_parameterfile_vpkt() {
   }
 
   // if dum7=1, vpkt are not created when cell optical depth is larger than cell_is_optically_thick_vpkt
-  int overrride_thickcell_tau = 0;
-  assert_always(fscanf(input_file, "%d %lg \n", &overrride_thickcell_tau, &cell_is_optically_thick_vpkt) == 2);
+  int override_thickcell_tau = 0;
+  assert_always(fscanf(input_file, "%d %lg \n", &override_thickcell_tau, &cell_is_optically_thick_vpkt) == 2);
 
-  if (overrride_thickcell_tau == 1) {
+  if (override_thickcell_tau == 1) {
     printout("vpkt.txt: cell_is_optically_thick_vpkt %lg\n", cell_is_optically_thick_vpkt);
   } else {
     cell_is_optically_thick_vpkt = globals::cell_is_optically_thick;
@@ -903,7 +893,7 @@ void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved
   }
 }
 
-auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) -> void {
+auto vpkt_call_estimators(const Packet &pkt, const enum packet_type type_before_rpkt) -> void {
   if constexpr (!VPKT_ON) {
     return;
   }
@@ -916,8 +906,6 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
   }
 
   const double t_current = pkt.prop_time;
-
-  const auto vel_vec = get_velocity(pkt.pos, pkt.prop_time);
 
   std::stringstream vpkt_contrib_row;
 
@@ -936,7 +924,7 @@ auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) 
     if (t_arrive >= VSPEC_TIMEMIN_input && t_arrive <= VSPEC_TIMEMAX_input) {
       // time selection
 
-      const double doppler = doppler_nucmf_on_nurf(obsdir, vel_vec);
+      const double doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, obsdir, pkt.prop_time);
       const double nu_rf = pkt.nu_cmf / doppler;
       const double e_rf = pkt.e_cmf / doppler;
 

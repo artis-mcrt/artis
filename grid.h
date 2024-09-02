@@ -115,7 +115,7 @@ void set_model_type(GridType model_type_value);
 [[nodiscard]] auto get_nonempty_npts_model() -> int;
 [[nodiscard]] auto get_t_model() -> double;
 [[nodiscard]] auto get_cell_modelgridindex(int cellindex) -> int;
-[[nodiscard]] auto get_cellindex_from_pos(std::array<double, 3> pos, double time) -> int;
+[[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> &pos, double time) -> int;
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_maxndo() -> int;
@@ -123,8 +123,8 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_ndo(int rank) -> int;
 [[nodiscard]] auto get_ndo_nonempty(int rank) -> int;
 [[nodiscard]] auto get_totmassradionuclide(int z, int a) -> double;
-[[nodiscard]] auto boundary_distance(std::array<double, 3> dir, std::array<double, 3> pos, double tstart, int cellindex,
-                                     enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>;
+[[nodiscard]] auto boundary_distance(const std::array<double, 3> &dir, const std::array<double, 3> &pos, double tstart,
+                                     int cellindex, enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>;
 
 [[nodiscard]] inline auto get_elem_abundance(int modelgridindex, int element) -> float
 // mass fraction of an element (all isotopes combined)

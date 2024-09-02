@@ -371,7 +371,7 @@ void find_decaypaths(const std::vector<int> &custom_zlist, const std::vector<int
         continue;
       }
       bool is_custom_nuclide = false;
-      for (size_t i = 0; i < custom_zlist.size(); i++) {
+      for (ptrdiff_t i = 0; i < std::ssize(custom_zlist); i++) {
         if ((z == custom_zlist[i]) && (a == custom_alist[i])) {
           is_custom_nuclide = true;
           break;
@@ -423,7 +423,7 @@ void find_decaypaths(const std::vector<int> &custom_zlist, const std::vector<int
                               [](const auto nucindex) { return get_meanlife(nucindex) > 0.; }));
 
     // convert mean lifetimes to decay constants
-    decaypath.lambdas.resize(decaypath.nucindex.size());
+    decaypath.lambdas.resize(decaypath.nucindex.size(), -1.);
     std::ranges::transform(decaypath.nucindex, decaypath.lambdas.begin(), [](const auto nucindex) {
       const double meanlife = get_meanlife(nucindex);
       // last nuclide might be stable (meanlife <= 0.)
@@ -449,14 +449,14 @@ void filter_unused_nuclides(const std::vector<int> &custom_zlist, const std::vec
       return false;
     }
     // keep nucleus if it is in the custom list
-    for (size_t i = 0; i < custom_zlist.size(); i++) {
+    for (ptrdiff_t i = 0; i < std::ssize(custom_zlist); i++) {
       if ((nuc.z == custom_zlist[i]) && (nuc.a == custom_alist[i])) {
         return false;
       }
     }
 
     const bool in_any_decaypath = std::ranges::any_of(decaypaths, [&nuc](const auto &decaypath) {
-      for (size_t i = 0; i < decaypath.z.size(); i++) {
+      for (ptrdiff_t i = 0; i < std::ssize(decaypath.z); i++) {
         if (decaypath.z[i] == nuc.z && decaypath.a[i] == nuc.a) {
           // nuc is in the decay path
           return true;
@@ -512,7 +512,7 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::vect
   // numnuclides:        number of items in lambdas to use
   // lambdas:            array of 1/(mean lifetime) for nuc[0]..nuc[num_nuclides-1]  [seconds^-1]
   // useexpansionfactor: if true, return a modified 'abundance' at the end of the chain, with a weighting factor
-  //                          accounting for photon energy loss from expansion since the decays occured
+  //                          accounting for photon energy loss from expansion since the decays occurred
   //                          (This is needed to get the initial temperature)
 
   assert_always(num_nuclides >= 1);
@@ -725,7 +725,7 @@ auto calculate_simtime_endecay_per_ejectamass(const int mgi, const int decaypath
 auto get_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex) -> double
 // get the decay energy released during the simulation time per unit mass [erg/g]
 {
-  const size_t nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
   const double chainendecay = decaypath_energy_per_mass[(nonemptymgi * get_num_decaypaths()) + decaypathindex];
   assert_testmodeonly(chainendecay >= 0.);
   assert_testmodeonly(std::isfinite(chainendecay));
@@ -902,7 +902,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   // any nuclides in the custom list that are not in the standard list need beta and alpha decay data
 
   bool use_custom_nuclides = false;
-  for (size_t i = 0; i < custom_zlist.size(); i++) {
+  for (ptrdiff_t i = 0; i < std::ssize(custom_zlist); i++) {
     if (custom_zlist[i] < 0 || custom_alist[i] < 0) {
       continue;
     }
@@ -1078,11 +1078,11 @@ void setup_decaypath_energy_per_mass() {
 #endif
 
   printout("Calculating decaypath_energy_per_mass for all cells...");
-  const size_t num_decaypaths = get_num_decaypaths();
+  const ptrdiff_t num_decaypaths = get_num_decaypaths();
   for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
     if (nonemptymgi % globals::node_nprocs == globals::rank_in_node) {
       const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-      for (size_t decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
+      for (ptrdiff_t decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
         decaypath_energy_per_mass[(nonemptymgi * num_decaypaths) + decaypathindex] =
             calculate_simtime_endecay_per_ejectamass(mgi, decaypathindex);
       }

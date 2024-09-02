@@ -427,7 +427,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   assert_always(grid::modelgrid[modelgridindex].totalcooling > 0.);
   const double rndcool_ion = rng_uniform() * grid::modelgrid[modelgridindex].totalcooling;
 
-  // Randomly select the occuring cooling process
+  // Randomly select the occurring cooling process
   double coolingsum = 0.;
   int element = -1;
   int ion = -1;
@@ -491,7 +491,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
       globals::cellcache[cellcacheslotid].cooling_contrib;
 
   if (i > ihigh) {
-    printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %td, rndcool %g\n", ilow,
+    printout("do_kpkt: error occurred while selecting a cooling channel: low %d, high %d, i %td, rndcool %g\n", ilow,
              ihigh, i, rndcool_ion_process);
     printout("element %d, ion %d, offset %d, terms %d, coolingsum %g\n", element, ion,
              get_coolinglistoffset(element, ion), get_ncoolingterms_ion(element, ion), coolingsum);

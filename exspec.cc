@@ -206,7 +206,7 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
   assert_always(globals::rank_global == 0);
   assert_always(globals::nprocs == 1);
 
-  printout("Begining exspec.\n");
+  printout("Beginning exspec.\n");
 
   // Get input stuff
   printout("time before input %ld\n", std::time(nullptr));

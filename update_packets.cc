@@ -44,7 +44,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     const double prefactor = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 7.74 : 7.4;
     const double tau_ineff = prefactor * 86400 * std::sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) *
                              std::pow((0.2 * 29979200000) / v_ej, 3. / 2.);
-    const double f_p = std::log(1 + (2. * ts * ts / tau_ineff / tau_ineff)) / (2. * ts * ts / tau_ineff / tau_ineff);
+    const double f_p = std::log1p(2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
     if (rng_uniform() < f_p) {
@@ -60,7 +60,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     const double aux_term = 2 * A / (ts * grid::get_rho(mgi));
     // In Bulla 2023 (arXiv:2211.14348), the following line contains (<-> eq. 7) contains a typo. The way implemented
     // here is the original from Wollaeger paper without the typo
-    const double f_p = std::log(1. + aux_term) / aux_term;
+    const double f_p = std::log1p(aux_term) / aux_term;
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
     if (rng_uniform() < f_p) {
@@ -80,14 +80,10 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
 
     const double particle_en = H * pkt.nu_cmf;  // energy of the particles in the packet
 
-    // for endot independent of energy, the next line is trival (for E dependent endot, an integral would be needed)
+    // for endot independent of energy, the next line is trivial (for E dependent endot, an integral would be needed)
 
     const double t_enzero = ts + (particle_en / endot);  // time at which zero energy is reached
-    if (t_enzero > t2) {
-      en_deposited = pkt.e_cmf * (t2 - ts) / (particle_en / endot);
-    } else {
-      en_deposited = pkt.e_cmf * (t_enzero - ts) / (particle_en / endot);
-    }
+    en_deposited = pkt.e_cmf * (std::min(t2, t_enzero) - ts) / (particle_en / endot);
 
     // A discrete absorption event should occur somewhere along the
     // continuous track from initial kinetic energy to zero KE.

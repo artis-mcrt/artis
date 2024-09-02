@@ -688,7 +688,7 @@ void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, cons
   calculate_bfheatingcoeffs(mgi, bfheatingcoeffs);
   printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calculate_bfheatingcoeffs);
 
-  const double covergence_tolerance = 0.04;
+  const double convergence_tolerance = 0.04;
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++) {
     const auto sys_time_start_spencerfano = std::time(nullptr);
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
@@ -760,11 +760,11 @@ void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, cons
         "%g, new nne is %g, fracdiff %g, prev T_e %g new T_e %g fracdiff %g\n",
         mgi, nts, nlte_iter, nne_prev, grid::get_nne(mgi), fracdiff_nne, prev_T_e, grid::get_Te(mgi), fracdiff_T_e);
 
-    if (fracdiff_nne <= covergence_tolerance && fracdiff_T_e <= covergence_tolerance) {
+    if (fracdiff_nne <= convergence_tolerance && fracdiff_T_e <= convergence_tolerance) {
       printout(
           "NLTE (Spencer-Fano/Te/pops) solver nne converged to tolerance %g <= %g and T_e to "
           "tolerance %g <= %g after %d iterations.\n",
-          fracdiff_nne, covergence_tolerance, fracdiff_T_e, covergence_tolerance, nlte_iter + 1);
+          fracdiff_nne, convergence_tolerance, fracdiff_T_e, convergence_tolerance, nlte_iter + 1);
       break;
     }
     if (nlte_iter == NLTEITER) {
@@ -1160,11 +1160,11 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
   }  // end OpenMP parallel section
 
-  // Now after all the relevant taks of update_grid have been finished activate
+  // Now after all the relevant tasks of update_grid have been finished activate
   // the use of the cellcache for all OpenMP tasks, in what follows (update_packets)
   use_cellcache = true;
 
-  // alterative way to write out estimators. this keeps the modelgrid cells in order but
+  // alternative way to write out estimators. this keeps the modelgrid cells in order but
   // heatingrates are not valid. #ifdef _OPENMP for (int n = nstart; n < nstart+nblock; n++)
   // {
   //   write_to_estimators_file(n,nts);
@@ -1242,11 +1242,14 @@ void cellcache_change_cell(const int modelgridindex) {
   if (modelgridindex >= 0) {
     std::ranges::fill(cacheslot.ch_allcont_departureratios, -1.);
 
+    const auto nnetot = grid::get_nnetot(modelgridindex);
     for (int i = 0; i < globals::nbfcontinua; i++) {
       const int element = globals::allcont[i].element;
       const int ion = globals::allcont[i].ion;
       const int level = globals::allcont[i].level;
-      cacheslot.ch_allcont_nnlevel[i] = get_levelpop(modelgridindex, element, ion, level);
+      const auto nnlevel = get_levelpop(modelgridindex, element, ion, level);
+      cacheslot.ch_allcont_nnlevel[i] = nnlevel;
+      cacheslot.ch_keep_this_cont[i] = nnlevel > 0 && keep_this_cont(element, ion, level, modelgridindex, nnetot);
     }
   }
 }

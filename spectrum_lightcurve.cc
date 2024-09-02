@@ -1,14 +1,14 @@
 #include "spectrum_lightcurve.h"
 
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
-
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <ctime>
 #include <functional>
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
 #include <ios>
 #include <string>
 #include <vector>
@@ -417,7 +417,7 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();
   assert_always(stokes_i->lower_freq.size() == stokes_i->delta_freq.size());
-  for (size_t m = 0; m < stokes_i->lower_freq.size(); m++) {
+  for (ptrdiff_t m = 0; m < std::ssize(stokes_i->lower_freq); m++) {
     fprintf(specpol_file, "%g ", ((stokes_i->lower_freq[m] + (stokes_i->delta_freq[m] / 2))));
 
     // Stokes I
@@ -513,7 +513,7 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
 
   spectra.lower_freq.resize(MNUBINS);
   spectra.delta_freq.resize(spectra.lower_freq.size());
-  for (size_t nnu = 0; nnu < spectra.lower_freq.size(); nnu++) {
+  for (ptrdiff_t nnu = 0; nnu < std::ssize(spectra.lower_freq); nnu++) {
     spectra.lower_freq[nnu] = exp(log(nu_min) + (nnu * (dlognu)));
     spectra.delta_freq[nnu] = exp(log(nu_min) + ((nnu + 1) * (dlognu))) - spectra.lower_freq[nnu];
   }
@@ -546,7 +546,7 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
     std::ranges::fill(spectra.emissionalltimesteps, 0.0);
     std::ranges::fill(spectra.trueemissionalltimesteps, 0.0);
 
-    for (size_t nts = 0; nts < spectra.timesteps.size(); nts++) {
+    for (ptrdiff_t nts = 0; nts < std::ssize(spectra.timesteps); nts++) {
       spectra.timesteps[nts].absorption =
           &spectra.absorptionalltimesteps[nts * MNUBINS * get_nelements() * get_max_nions()];
       spectra.timesteps[nts].emission = &spectra.emissionalltimesteps[nts * MNUBINS * proccount];

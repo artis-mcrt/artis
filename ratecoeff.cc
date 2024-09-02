@@ -252,8 +252,8 @@ void write_ratecoeff_dat() {
             const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
 
             fprintf(ratecoeff_file, "%la %la %la %la\n", spontrecombcoeffs[bflutindex], bfcooling_coeffs[bflutindex],
-                    !USE_LUT_PHOTOION ? -1 : corrphotoioncoeffs[bflutindex],
-                    !USE_LUT_BFHEATING ? -1 : globals::bfheating_coeff[bflutindex]);
+                    USE_LUT_PHOTOION ? corrphotoioncoeffs[bflutindex] : -1,
+                    USE_LUT_BFHEATING ? globals::bfheating_coeff[bflutindex] : -1);
           }
         }
       }
@@ -387,14 +387,12 @@ void precalculate_rate_coefficient_integrals() {
 
             const double sfac = calculate_sahafact(element, ion, level, upperlevel, T_e, E_threshold);
 
-            assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != nullptr);
+            assert_always(get_phixs_table(element, ion, level) != nullptr);
             // the threshold of the first target gives nu of the first phixstable point
             const GSLIntegrationParas intparas = {
-                .nu_edge = nu_threshold,
-                .T = T_e,
-                .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs};
+                .nu_edge = nu_threshold, .T = T_e, .photoion_xs = get_phixs_table(element, ion, level)};
 
-            // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
+            // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
             double alpha_sp = 0.;
 
             status =
@@ -482,24 +480,30 @@ void precalculate_rate_coefficient_integrals() {
 void scale_level_phixs(const int element, const int ion, const int level, const double factor) {
   // if we store the data in node shared memory, then only one rank should update it
   if (globals::rank_in_node == 0) {
-    for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
-      globals::elements[element].ions[ion].levels[level].photoion_xs[n] *= factor;
+    const int nphixstargets = get_nphixstargets(element, ion, level);
+    if (nphixstargets == 0) {
+      return;
     }
 
-    const int nphixstargets = get_nphixstargets(element, ion, level);
+    auto *phixstable = get_phixs_table(element, ion, level);
+    for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
+      phixstable[n] *= factor;
+    }
+
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       for (int iter = 0; iter < TABLESIZE; iter++) {
-        spontrecombcoeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+        const auto bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
+        spontrecombcoeffs[bflutindex] *= factor;
 
         if constexpr (USE_LUT_PHOTOION) {
-          corrphotoioncoeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+          corrphotoioncoeffs[bflutindex] *= factor;
         }
 
         if constexpr (USE_LUT_BFHEATING) {
-          globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+          globals::bfheating_coeff[bflutindex] *= factor;
         }
 
-        bfcooling_coeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+        bfcooling_coeffs[bflutindex] *= factor;
       }
     }
   }
@@ -645,21 +649,23 @@ void read_recombrate_file() {
 }
 
 void precalculate_ion_alpha_sp() {
+  globals::ion_alpha_sp.resize(get_includedions() * TABLESIZE);
   for (int iter = 0; iter < TABLESIZE; iter++) {
     const float T_e = MINTEMP * exp(iter * T_step_log);
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element) - 1;
       for (int ion = 0; ion < nions; ion++) {
-        const int nlevels = get_ionisinglevels(element, ion);
+        const auto uniqueionindex = get_uniqueionindex(element, ion);
+        const int nionisinglevels = get_ionisinglevels(element, ion);
         double zeta = 0.;
-        for (int level = 0; level < nlevels; level++) {
+        for (int level = 0; level < nionisinglevels; level++) {
           const auto nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const double zeta_level = get_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
             zeta += zeta_level;
           }
         }
-        globals::elements[element].ions[ion].Alpha_sp[iter] = zeta;
+        globals::ion_alpha_sp[(uniqueionindex * TABLESIZE) + iter] = zeta;
       }
     }
   }
@@ -690,7 +696,7 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
   const auto T_e = grid::get_Te(modelgridindex);
   const auto intparas = gsl_integral_paras_gammacorr{
       .nu_edge = nu_threshold,
-      .photoion_xs = globals::elements[element].ions[lowerion].levels[level].photoion_xs,
+      .photoion_xs = get_phixs_table(element, lowerion, level),
       .T_e = T_e,
       .modelgridindex = modelgridindex,
   };
@@ -777,7 +783,7 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
   const auto intparas = gsl_integral_paras_gammacorr{
       .nu_edge = nu_threshold,
       .departure_ratio = departure_ratio,
-      .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs,
+      .photoion_xs = get_phixs_table(element, ion, level),
       .T_e = T_e,
       .modelgridindex = modelgridindex,
   };
@@ -851,60 +857,57 @@ auto get_nlevels_important(const int modelgridindex, const int element, const in
 }  // anonymous namespace
 
 void setup_photoion_luts() {
+  assert_always(globals::nbfcontinua > 0);
   size_t mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
 
-  if (globals::nbfcontinua > 0) {
 #ifdef MPI_ON
-    MPI_Win win = MPI_WIN_NULL;
-    MPI_Aint size =
-        (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
-    int disp_unit = sizeof(double);
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &spontrecombcoeffs,
-                                          &win) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &spontrecombcoeffs) == MPI_SUCCESS);
+  MPI_Win win = MPI_WIN_NULL;
+  MPI_Aint size =
+      (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
+  int disp_unit = sizeof(double);
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &spontrecombcoeffs,
+                                        &win) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &spontrecombcoeffs) == MPI_SUCCESS);
 #else
-    spontrecombcoeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+  spontrecombcoeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
 #endif
-    assert_always(spontrecombcoeffs != nullptr);
+  assert_always(spontrecombcoeffs != nullptr);
 
-    if constexpr (USE_LUT_PHOTOION) {
-#ifdef MPI_ON
-      size =
-          (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
-      assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &corrphotoioncoeffs,
-                                            &win) == MPI_SUCCESS);
-      assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &corrphotoioncoeffs) == MPI_SUCCESS);
-#else
-      corrphotoioncoeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
-#endif
-      assert_always(corrphotoioncoeffs != nullptr);
-      mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
-    }
-
-    if constexpr (USE_LUT_BFHEATING) {
-#ifdef MPI_ON
-      size =
-          (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
-      assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                            &globals::bfheating_coeff, &win) == MPI_SUCCESS);
-      assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::bfheating_coeff) == MPI_SUCCESS);
-#else
-      globals::bfheating_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
-#endif
-      assert_always(globals::bfheating_coeff != nullptr);
-      mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
-    }
-
+  if constexpr (USE_LUT_PHOTOION) {
 #ifdef MPI_ON
     size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &bfcooling_coeffs,
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &corrphotoioncoeffs,
                                           &win) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &bfcooling_coeffs) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &corrphotoioncoeffs) == MPI_SUCCESS);
 #else
-    bfcooling_coeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+    corrphotoioncoeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
 #endif
-    assert_always(bfcooling_coeffs != nullptr);
+    assert_always(corrphotoioncoeffs != nullptr);
+    mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
   }
+
+  if constexpr (USE_LUT_BFHEATING) {
+#ifdef MPI_ON
+    size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &globals::bfheating_coeff, &win) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::bfheating_coeff) == MPI_SUCCESS);
+#else
+    globals::bfheating_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+#endif
+    assert_always(globals::bfheating_coeff != nullptr);
+    mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
+  }
+
+#ifdef MPI_ON
+  size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &bfcooling_coeffs,
+                                        &win) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &bfcooling_coeffs) == MPI_SUCCESS);
+#else
+  bfcooling_coeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+#endif
+  assert_always(bfcooling_coeffs != nullptr);
 
   printout(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
@@ -923,9 +926,7 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
   const int npieces = globals::NPHIXSPOINTS;
 
   const GSLIntegrationParas intparas = {
-      .nu_edge = nu_threshold,
-      .T = T_e,
-      .photoion_xs = globals::elements[element].ions[lowerion].levels[lower].photoion_xs};
+      .nu_edge = nu_threshold, .T = T_e, .photoion_xs = get_phixs_table(element, lowerion, lower)};
 
   const double zrand = 1. - rng_uniform();  // Make sure that 0 < zrand <= 1
 
@@ -948,7 +949,7 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
     alpha_sp_old = alpha_sp;
     const double xlow = nu_threshold + (i * deltanu);
 
-    // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
+    // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
     integrator<alpha_sp_E_integrand_gsl>(intparas, xlow, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY,
                                          GSL_INTEG_GAUSS31, &alpha_sp, &error);
 
@@ -1100,7 +1101,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
 // T_e = T_R for this precalculation.
 void ratecoefficients_init() {
   printout("time before tabulation of rate coefficients %ld\n", std::time(nullptr));
-  // Determine the temperture grids gridsize
+  // Determine the temperature grids gridsize
   T_step_log = (log(MAXTEMP) - log(MINTEMP)) / (TABLESIZE - 1.);
 
   md5_file("adata.txt", adatafile_hash);

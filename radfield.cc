@@ -42,7 +42,7 @@ struct RadFieldBinSolution {
 };
 
 struct RadFieldBin {
-  double J_raw;  // value needs to be multipled by J_normfactor to get the true value
+  double J_raw;  // value needs to be multiplied by J_normfactor to get the true value
   double nuJ_raw;
   int contribcount;
 };
@@ -1036,22 +1036,28 @@ void normalise_J(const int modelgridindex, const double estimator_normfactor_ove
 }
 
 void normalise_bf_estimators(const int nts, const int nts_prev, const int titer, const double deltat) {
-  if (nts != globals::timestep_initial || titer != 0) {
-    for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
-      const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
-      if (!globals::lte_iteration && grid::modelgrid[mgi].thick != 1) {
-        const int assoc_cells = grid::get_numassociatedcells(mgi);
-        if (assoc_cells > 0) {
-          const double deltaV =
-              grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
-          const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
-          assert_always(nonemptymgi >= 0);
-          for (int i = 0; i < globals::bfestimcount; i++) {
-            const auto mgibfindex = (nonemptymgi * globals::bfestimcount) + i;
-            prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * (estimator_normfactor / H);
-          }
-        }
-      }
+  if (globals::rank_in_node != 0) {
+    return;
+  }
+  if (globals::lte_iteration) {
+    return;
+  }
+  if (nts == globals::timestep_initial && titer == 0) {
+    return;
+  }
+  const auto bfestimcount = globals::bfestimcount;
+  const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
+  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
+    const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+    if (grid::modelgrid[mgi].thick == 1) {
+      continue;
+    }
+    const double deltaV =
+        grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
+    const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
+    for (int i = 0; i < bfestimcount; i++) {
+      const auto mgibfindex = (nonemptymgi * bfestimcount) + i;
+      prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * (estimator_normfactor / H);
     }
   }
 }

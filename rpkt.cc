@@ -50,7 +50,7 @@ MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
 
 // get the frequency change per distance travelled assuming linear change to the abort distance
 // this is done is two parts to get identical results to do_rpkt_step()
-auto get_nu_cmf_abort(const std::array<double, 3> pos, const std::array<double, 3> dir, const double prop_time,
+auto get_nu_cmf_abort(const std::array<double, 3> &pos, const std::array<double, 3> &dir, const double prop_time,
                       const double nu_rf, const double abort_dist) -> double {
   const auto half_abort_dist = abort_dist / 2.;
   const auto abort_time = prop_time + (half_abort_dist / CLIGHT_PROP) + (half_abort_dist / CLIGHT_PROP);
@@ -59,19 +59,19 @@ auto get_nu_cmf_abort(const std::array<double, 3> pos, const std::array<double, 
                                         pos[1] + (dir[1] * half_abort_dist) + (dir[1] * half_abort_dist),
                                         pos[2] + (dir[2] * half_abort_dist) + (dir[2] * half_abort_dist)};
 
-  const double nu_cmf_abort = nu_rf * doppler_packet_nucmf_on_nurf(abort_pos, dir, abort_time);
+  const double nu_cmf_abort = nu_rf * calculate_doppler_nucmf_on_nurf(abort_pos, dir, abort_time);
 
   return nu_cmf_abort;
 }
 
 // wavelength bins are ordered by ascending wavelength (descending frequency)
 
-constexpr auto get_expopac_bin_nu_upper(const size_t binindex) -> double {
+constexpr auto get_expopac_bin_nu_upper(const ptrdiff_t binindex) -> double {
   const auto lambda_lower = expopac_lambdamin + (binindex * expopac_deltalambda);
   return 1e8 * CLIGHT / lambda_lower;
 }
 
-constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double {
+constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
   const auto lambda_upper = expopac_lambdamin + ((binindex + 1) * expopac_deltalambda);
   return 1e8 * CLIGHT / lambda_upper;
 }
@@ -342,7 +342,7 @@ void electron_scatter_rpkt(Packet &pkt) {
       p = (mu + 1) + (mu - 1) * (cos(2 * phisc) * Qi + sin(2 * phisc) * Ui);
 
       // generate a number between 0 and the maximum of the previous function (2)
-      x = 2 * rng_uniform();
+      x = 2. * rng_uniform();
     };
   } else {
     // Assume isotropic scattering
@@ -365,13 +365,7 @@ void electron_scatter_rpkt(Packet &pkt) {
                      old_dir_cmf[1] * cos(tsc);
     new_dir_cmf[2] = sin(tsc) * cos(phisc) * sqrt(1 - pow(old_dir_cmf[2], 2.)) + old_dir_cmf[2] * cos(tsc);
   } else {
-    new_dir_cmf[0] = sin(tsc) * cos(phisc);
-    new_dir_cmf[1] = sin(tsc) * sin(phisc);
-    if (old_dir_cmf[2] > 0) {
-      new_dir_cmf[2] = cos(tsc);
-    } else {
-      new_dir_cmf[2] = -cos(tsc);
-    }
+    new_dir_cmf = {sin(tsc) * cos(phisc), sin(tsc) * sin(phisc), (old_dir_cmf[2] > 0) ? cos(tsc) : -cos(tsc)};
   }
 
   // Need to rotate Stokes Parameters in the scattering plane
@@ -423,7 +417,7 @@ void electron_scatter_rpkt(Packet &pkt) {
   // Finally we want to put in the rest frame energy and frequency.
   // And record that it's now a r-pkt.
 
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 }
@@ -431,7 +425,7 @@ void electron_scatter_rpkt(Packet &pkt) {
 void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const int modelgridindex) {
   const double nu = pkt.nu_cmf;
 
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   const double chi_cont = chi_rpkt_cont.total * dopplerfactor;
   const double chi_escatter = chi_rpkt_cont.ffescat * dopplerfactor;
   const double chi_ff = chi_rpkt_cont.ffheat * dopplerfactor;
@@ -546,9 +540,7 @@ void rpkt_event_boundbound(Packet &pkt, const MacroAtomState &pktmastate, const 
 
   pkt.absorptiontype = pktmastate.activatingline;
   pkt.absorptionfreq = pkt.nu_rf;
-  pkt.absorptiondir[0] = pkt.dir[0];
-  pkt.absorptiondir[1] = pkt.dir[1];
-  pkt.absorptiondir[2] = pkt.dir[2];
+  pkt.absorptiondir = pkt.dir;
   pkt.type = TYPE_MA;
 
   if constexpr (TRACK_ION_STATS) {
@@ -716,7 +708,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   // At present there is no scattering/destruction process so all that needs to
   // happen is that we determine whether the packet reaches the boundary during the timestep.
 
-  // Find how far it can travel during the time inverval.
+  // Find how far it can travel during the time interval.
 
   const double tdist = (t2 - pkt.prop_time) * CLIGHT_PROP;
 
@@ -735,8 +727,8 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   } else if (thickcell) [[unlikely]] {
     // In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
-    const double chi_grey =
-        grid::get_kappagrey(mgi) * grid::get_rho(mgi) * doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+    const double chi_grey = grid::get_kappagrey(mgi) * grid::get_rho(mgi) *
+                            calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
     edist = tau_next / chi_grey;
     pkt.next_trans = -1;
@@ -748,7 +740,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
 
     const auto nu_cmf_abort = get_nu_cmf_abort(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, abort_dist);
     const auto d_nu_on_d_l = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
-    const auto doppler = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+    const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
     if constexpr (EXPANSIONOPACITIES_ON) {
       std::tie(edist, pkt.next_trans, event_is_boundbound) = get_event_expansion_opacity(
@@ -876,8 +868,10 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
   assert_always(!USECELLHISTANDUPDATEPHIXSLIST || phixslist != nullptr);
 
   double chi_bf_sum = 0.;
-  if constexpr (USECELLHISTANDUPDATEPHIXSLIST && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
-    std::ranges::fill(phixslist->groundcont_gamma_contr, 0.);
+  if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+    if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
+      std::ranges::fill(phixslist->groundcont_gamma_contr, 0.);
+    }
   }
 
   const auto T_e = grid::get_Te(modelgridindex);
@@ -921,17 +915,21 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
     const int element = globals::allcont[i].element;
     const int ion = globals::allcont[i].ion;
     const int level = globals::allcont[i].level;
-    const auto bfestimindex = globals::allcont[i].bfestimindex;
+    const auto bfestimindex =
+        (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) ? globals::allcont[i].bfestimindex : -1;
+    double sigma_contr = 0.;
+
     // The bf process happens only if the current cell contains
     // the involved atomic species
+    const bool should_keep_this_cont = USECELLHISTANDUPDATEPHIXSLIST
+                                           ? globals::cellcache[cellcacheslotid].ch_keep_this_cont[i]
+                                           : keep_this_cont(element, ion, level, modelgridindex, nnetot);
 
-    if ((DETAILED_BF_ESTIMATORS_ON && grid::get_elem_abundance(modelgridindex, element) > 0) ||
-        (!DETAILED_BF_ESTIMATORS_ON && ((get_nnion(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0))))
-        [[likely]] {
+    if (should_keep_this_cont) [[likely]] {
       const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? globals::cellcache[cellcacheslotid].ch_allcont_nnlevel[i]
                                                            : calculate_levelpop(modelgridindex, element, ion, level);
 
-      if (nnlevel > 0) {
+      if (USECELLHISTANDUPDATEPHIXSLIST || nnlevel > 0) {
         const double nu_edge = globals::allcont[i].nu_edge;
         const double sigma_bf = photoionization_crosssection_fromtable(globals::allcont[i].photoion_xs, nu_edge, nu);
 
@@ -954,39 +952,22 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
           corrfactor = std::max(0., 1 - stimfactor);  // photoionisation minus stimulated recombination
         }
 
-        const double sigma_contr = sigma_bf * globals::allcont[i].probability * corrfactor;
+        sigma_contr = sigma_bf * globals::allcont[i].probability * corrfactor;
 
-        if constexpr (USECELLHISTANDUPDATEPHIXSLIST && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
-          if (level == 0 && globals::allcont[i].phixstargetindex == 0) {
+        if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+          if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && level == 0 && globals::allcont[i].phixstargetindex == 0) {
             phixslist->groundcont_gamma_contr[globals::allcont[i].index_in_groundphixslist] = sigma_contr;
           }
         }
 
-        if constexpr (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) {
-          if (bfestimindex >= 0) {
-            phixslist->gamma_contr[bfestimindex] = sigma_contr;
-          }
-        }
-
         chi_bf_sum += nnlevel * sigma_contr;
-        if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-          phixslist->chi_bf_sum[i] = chi_bf_sum;
-        }
-      } else if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-        // ignore this particular process
-        phixslist->chi_bf_sum[i] = chi_bf_sum;
-        if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-          if (bfestimindex >= 0) {
-            phixslist->gamma_contr[bfestimindex] = 0.;
-          }
-        }
       }
-    } else if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-      // no element present or not an important level
+    }
+    if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
       phixslist->chi_bf_sum[i] = chi_bf_sum;
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
         if (bfestimindex >= 0) {
-          phixslist->gamma_contr[bfestimindex] = 0.;
+          phixslist->gamma_contr[bfestimindex] = sigma_contr;
         }
       }
     }
@@ -1121,7 +1102,7 @@ __host__ __device__ void emit_rpkt(Packet &pkt) {
   const auto dir_cmf = get_rand_isotropic_unitvec();
 
   // This direction is in the cmf - we want to convert it to the rest
-  // frame - use aberation of angles. We want to convert from cmf to
+  // frame - use aberration of angles. We want to convert from cmf to
   // rest so need -ve velocity.
   const auto vel_vec = get_velocity(pkt.pos, -1. * pkt.prop_time);
   // negative time since we want the backwards transformation here
@@ -1132,14 +1113,12 @@ __host__ __device__ void emit_rpkt(Packet &pkt) {
   // Finally we want to put in the rest frame energy and frequency. And record
   // that it's now a r-pkt.
 
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
   // Reset polarization information
-  pkt.stokes[0] = 1.;
-  pkt.stokes[1] = 0.;
-  pkt.stokes[2] = 0.;
+  pkt.stokes = {1., 0., 0.};
 
   pkt.pol_dir = cross_prod(pkt.dir, std::array<double, 3>{0., 0., 1.});
 
@@ -1244,13 +1223,13 @@ void calculate_expansion_opacities(const int modelgridindex) {
 
   // find the first line with nu below the upper limit of the first bin
   int lineindex = static_cast<int>(
-      std::lower_bound(&globals::linelist[0], &globals::linelist[globals::nlines], get_expopac_bin_nu_upper(0),
+      std::lower_bound(globals::linelist, globals::linelist + globals::nlines, get_expopac_bin_nu_upper(0),
                        [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; }) -
       globals::linelist);
 
   double kappa_planck_cumulative = 0.;
 
-  for (size_t binindex = 0; binindex < expopac_nbins; binindex++) {
+  for (ptrdiff_t binindex = 0; binindex < expopac_nbins; binindex++) {
     double bin_linesum = 0.;
 
     const auto nu_upper = get_expopac_bin_nu_upper(binindex);

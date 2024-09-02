@@ -1,4 +1,5 @@
 #pragma once
+#include <limits>
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
@@ -87,13 +88,12 @@ struct EnergyLevel {
   int nuptrans{0};
   int ndowntrans{0};
   PhotoionTarget *phixstargets{};  // pointer to table of target states and probabilities
-  float *photoion_xs{};            // Pointer to a lookup-table providing photoionisation cross-sections for this level.
+  int phixsstart{-1};              // index to start of photoionisation cross-sections table in global::allphixs
   int nphixstargets{0};            // length of phixstargets array:
   float stat_weight{0.};           // Statistical weight of this level.
 
   int cont_index{-1};  // Index of the continuum associated to this level. Negative number.
   int closestgroundlevelcont{-1};
-  bool metastable{};  ///
 };
 
 struct Ion {
@@ -109,21 +109,15 @@ struct Ion {
   int ncoolingterms;
   int uniquelevelindexstart;
   int groundcontindex;
-  float *Alpha_sp;
   double ionpot;  // Ionisation threshold to the next ionstage
-  // int nbfcontinua;
-  // ionsphixslist *phixslist;
+  LevelTransition *alltransitions;
 };
 
 struct Element {
-  Ion *ions{};      // Carries information for each ion: 0,1,...,nions-1
-  int nions{0};     // Number of ions for the current element
-  int anumber{-1};  // Atomic number
-  //  int uppermost_ion;                       // Highest ionisation stage which has a decent population for a given
-  //  cell
-  // Be aware that this must not be used outside of the update_grid routine
-  // and their daughters. Neither it will work with OpenMP threads.
-  int uniqueionindexstart{-1};         // Index of the lowest ionisation stage of this element
+  Ion *ions{};                         // Carries information for each ion: 0,1,...,nions-1
+  int nions{0};                        // Number of ions for the current element
+  int anumber{-1};                     // Atomic number
+  int uniqueionindexstart{-1};         /// uniqueionindex index of the lowest ionisation stage of this element
   float initstablemeannucmass = {0.};  // Atomic mass number in multiple of MH
   bool has_nlte_levels{false};
 };
@@ -202,6 +196,7 @@ struct CellCache {
   std::vector<CellCacheLevels> ch_all_levels;
   std::vector<double> ch_allcont_departureratios;
   std::vector<double> ch_allcont_nnlevel;
+  std::vector<bool> ch_keep_this_cont;
   double chi_ff_nnionpart{-1};
   int cellnumber{-1};  // Identifies the cell the data is valid for.
 };
@@ -261,9 +256,13 @@ inline int opacity_case{};  // 0 grey, 1 for Fe-grp dependence.
 
 // ATOMIC DATA
 
-inline int nlines{-1};
+inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperature table value
+
+inline float *allphixs{};
+
 inline std::vector<Element> elements;
 
+inline int nlines{-1};
 inline const TransitionLine *linelist{};
 inline std::vector<BFListEntry> bflist;
 

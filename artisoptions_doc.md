@@ -20,7 +20,7 @@ constexpr int NLTEITER;
 // (i.e. level indices < X should return true for some X)
 constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) { return false; }
 
-// Use TJ radiation density temperature for Boltzmann excitation formua instead of electron temperature Te
+// Use TJ radiation density temperature for Boltzmann excitation formula instead of electron temperature Te
 // This is default on for classic, and off for nebularnlte, where it affects the super-level
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
 
@@ -42,7 +42,7 @@ constexpr bool UNIFORM_PELLET_ENERGIES;
 constexpr bool DIRECT_COL_HEAT;
 
 // INITIAL PACKETS will seed the cells on the first timestep at tmin with K-packets
-// repesenting decay energy from t_model to tmin, and,
+// representing decay energy from t_model to tmin, and,
 // if USE_MODEL_INITIAL_ENERGY is true, also the snapshot energy at t_model
 constexpr bool INITIAL_PACKETS_ON;
 
@@ -193,7 +193,7 @@ constexpr double IONGAMMA_POPFRAC_LEVELS_INCLUDED;
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 
 // when converting mass fraction to a number density, use a mean atomic mass
-// calcuated from the nuclear composition (plus stable component),
+// calculated from the nuclear composition (plus stable component),
 // rather than just from the compositiondata.txt values
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
 

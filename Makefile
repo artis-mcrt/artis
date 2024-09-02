@@ -161,7 +161,7 @@ ifeq ($(shell uname -s),Darwin)
 	# LDFLAGS += -lprofiler
 
 else
-	# sometimes the login nodes have slighty different CPUs
+	# sometimes the login nodes have slightly different CPUs
 	# to the job nodes. Try to find the lowest common denominator here
 	# to enable vector extensions
 	# CXXFLAGS += -march=cascadelake
@@ -302,7 +302,6 @@ sn3dwhole: $(BUILD_DIR)/sn3dwhole
 	ln -sf $(BUILD_DIR)/sn3dwhole sn3d
 
 $(BUILD_DIR)/exspec: $(exspec_objects)
-	ln -sf $(BUILD_DIR)/exspec exspec
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o $(BUILD_DIR)/exspec
 -include $(exspec_dep)
 

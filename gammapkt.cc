@@ -64,7 +64,7 @@ void read_gamma_spectrum(const int nucindex, const char filename[50])
   int nlines = 0;
   assert_always(fscanf(filein, "%d", &nlines) == 1);
 
-  gamma_spectra[nucindex].resize(nlines);
+  gamma_spectra[nucindex].resize(nlines, {});
 
   double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++) {
@@ -85,7 +85,7 @@ void read_gamma_spectrum(const int nucindex, const char filename[50])
 void set_trivial_gamma_spectrum(const int nucindex) {
   // printout("Setting trivial gamma spectrum for z %d a %d engamma %g\n", z, a, decay::nucdecayenergygamma(z, a));
   const int nlines = 1;
-  gamma_spectra[nucindex].resize(nlines);
+  gamma_spectra[nucindex].resize(nlines, {});
   gamma_spectra[nucindex][0].energy = decay::nucdecayenergygamma(nucindex);
   gamma_spectra[nucindex][0].probability = 1.;
 }
@@ -103,7 +103,7 @@ void read_decaydata() {
     std::rename("co_lines.txt", "co56_lines.txt");
   }
 
-  gamma_spectra.resize(decay::get_num_nuclides());
+  gamma_spectra.resize(decay::get_num_nuclides(), {});
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     gamma_spectra[nucindex].clear();
@@ -277,7 +277,7 @@ auto get_chi_compton_rf(const Packet &pkt) -> double {
   const double chi_cmf = sigma_cmf * grid::get_nnetot(grid::get_cell_modelgridindex(pkt.where));
 
   // convert between frames
-  const double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double chi_rf = chi_cmf * calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
   assert_testmodeonly(std::isfinite(chi_rf));
 
@@ -340,7 +340,7 @@ auto thomson_angle() -> double {
 }
 
 // scattering a direction through angle theta.
-[[nodiscard]] auto scatter_dir(const std::array<double, 3> dir_in, const double cos_theta) -> std::array<double, 3> {
+[[nodiscard]] auto scatter_dir(const std::array<double, 3> &dir_in, const double cos_theta) -> std::array<double, 3> {
   // begin with setting the direction in coordinates where original direction
   // is parallel to z-hat.
 
@@ -425,7 +425,7 @@ void compton_scatter(Packet &pkt) {
     pkt.nu_cmf = pkt.nu_cmf / f;  // reduce frequency
 
     // The packet has stored the direction in the rest frame.
-    // Use aberation of angles to get this into the co-moving frame.
+    // Use aberration of angles to get this into the co-moving frame.
 
     auto vel_vec = get_velocity(pkt.pos, pkt.prop_time);
 
@@ -460,7 +460,7 @@ void compton_scatter(Packet &pkt) {
 
     // It now has a rest frame direction and a co-moving frequency.
     //  Just need to set the rest frame energy.
-    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+    const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
     pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
     pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
@@ -566,7 +566,7 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
 
   // Now convert between frames.
 
-  const double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double chi_rf = chi_cmf * calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   return chi_rf;
 }
 
@@ -622,7 +622,7 @@ auto sigma_pair_prod_rf(const Packet &pkt) -> double {
 
   // Now need to convert between frames.
 
-  double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  double chi_rf = chi_cmf * calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
   if (chi_rf < 0) {
     printout("Negative pair production sigma. Setting to zero. Abort? %g\n", chi_rf);
@@ -709,7 +709,7 @@ void pair_prod(Packet &pkt) {
     const auto dir_cmf = get_rand_isotropic_unitvec();
 
     // This direction is in the cmf - we want to convert it to the rest
-    // frame - use aberation of angles. We want to convert from cmf to
+    // frame - use aberration of angles. We want to convert from cmf to
     // rest so need -ve velocity.
 
     const auto vel_vec = get_velocity(pkt.pos, -1. * pkt.prop_time);
@@ -717,7 +717,7 @@ void pair_prod(Packet &pkt) {
 
     pkt.dir = angle_ab(dir_cmf, vel_vec);
 
-    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+    const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
     pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
     pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
@@ -786,19 +786,13 @@ void transport_gamma(Packet &pkt, const double t2) {
 
   const double edist = chi_tot > 0. ? (tau_next - tau_current) / chi_tot : std::numeric_limits<double>::max();
 
-  if (edist < 0) {
-    printout("Negative distance (edist). Abort. \n");
-    std::abort();
-  }
+  assert_always(edist >= 0);
 
-  // Find how far it can travel during the time inverval.
+  // Find how far it can travel during the time interval.
 
   const double tdist = (t2 - pkt.prop_time) * CLIGHT_PROP;
 
-  if (tdist < 0) {
-    printout("Negative distance (tdist). Abort. \n");
-    std::abort();
-  }
+  assert_always(tdist >= 0);
 
   // printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
 
@@ -1050,7 +1044,7 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   const auto dir_cmf = get_rand_isotropic_unitvec();
 
   // This direction is in the cmf - we want to convert it to the rest
-  // frame - use aberation of angles. We want to convert from cmf to
+  // frame - use aberration of angles. We want to convert from cmf to
   // rest so need -ve velocity.
 
   const auto vel_vec = get_velocity(pkt.pos, -1. * pkt.tdecay);
@@ -1066,7 +1060,7 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   // that it's now a gamma ray.
 
   pkt.prop_time = pkt.tdecay;
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
@@ -1074,9 +1068,7 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   pkt.last_cross = BOUNDARY_NONE;
 
   // initialise polarisation information
-  pkt.stokes[0] = 1.;
-  pkt.stokes[1] = 0.;
-  pkt.stokes[2] = 0.;
+  pkt.stokes = {1., 0., 0.};
 
   pkt.pol_dir = cross_prod(pkt.dir, std::array<double, 3>{0., 0., 1.});
   if ((dot(pkt.pol_dir, pkt.pol_dir)) < 1.e-8) {

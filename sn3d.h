@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #ifndef SN3D_H
 #define SN3D_H
 
@@ -81,12 +82,10 @@ inline tm timebuf{};
 #define USE_SIMPSON_INTEGRATOR false
 #endif
 
-inline void nop(gsl_integration_workspace *w) {};
-
 inline thread_local auto gslworkspace =
     std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace *)>{
         USE_SIMPSON_INTEGRATOR ? nullptr : gsl_integration_workspace_alloc(GSLWSIZE),
-        USE_SIMPSON_INTEGRATOR ? nop : gsl_integration_workspace_free};
+        USE_SIMPSON_INTEGRATOR ? [](gsl_integration_workspace *const w) {} : gsl_integration_workspace_free};
 
 #ifdef _OPENMP
 
@@ -315,16 +314,19 @@ inline void check_already_running() {
 #endif
 }
 
-template <typename T>
-  requires std::is_integral<T>::value
-constexpr auto get_range_chunk(const T size, const auto nchunks_in, const auto nchunk_in) -> std::tuple<T, T> {
-  const auto nchunks = static_cast<T>(nchunks_in);
-  const auto nchunk = static_cast<T>(nchunk_in);
+constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks,
+                               const ptrdiff_t nchunk) -> std::tuple<ptrdiff_t, ptrdiff_t> {
+  assert_always(size >= 0);
+  assert_always(nchunks >= 0);
+  assert_always(nchunk >= 0);
   const auto minchunksize = size / nchunks;  // integer division, minimum non-empty cells per process
   const auto n_remainder = size % nchunks;
   const auto nstart = (minchunksize + 1) * std::min(n_remainder, nchunk) +
-                      minchunksize * std::max(static_cast<T>(0), nchunk - n_remainder);
+                      minchunksize * std::max(static_cast<ptrdiff_t>(0), nchunk - n_remainder);
   const auto nsize = (nchunk < n_remainder) ? minchunksize + 1 : minchunksize;
+  assert_testmodeonly(nstart >= 0);
+  assert_testmodeonly(nsize >= 0);
+  assert_testmodeonly((nstart + nsize) <= size);
   return std::tuple{nstart, nsize};
 }
 

@@ -112,7 +112,7 @@ void calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   double sum_internal_up_same = 0.;
   const int nuptrans = get_nuptrans(element, ion, level);
   for (int i = 0; i < nuptrans; i++) {
-    const auto &uptrans = globals::elements[element].ions[ion].levels[level].uptrans[i];
+    const auto &uptrans = levelref.uptrans[i];
     const double epsilon_trans = epsilon(element, ion, uptrans.targetlevelindex) - epsilon_current;
 
     const double R =
@@ -160,13 +160,13 @@ auto do_macroatom_internal_down_same(const int element, const int ion, const int
   const double *sum_internal_down_same =
       globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].sum_internal_down_same;
 
-  // Randomly select the occuring transition
+  // Randomly select the occurring transition
   const double targetval = rng_uniform() * sum_internal_down_same[ndowntrans - 1];
 
   // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
   const double *const upperval =
-      std::upper_bound(&sum_internal_down_same[0], &sum_internal_down_same[ndowntrans], targetval);
-  const ptrdiff_t downtransindex = upperval - &sum_internal_down_same[0];
+      std::upper_bound(sum_internal_down_same, sum_internal_down_same + ndowntrans, targetval);
+  const ptrdiff_t downtransindex = upperval - sum_internal_down_same;
 
   assert_always(downtransindex < ndowntrans);
   const int lower = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex].targetlevelindex;
@@ -290,7 +290,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
 
-  // Randomly select the occuring transition
+  // Randomly select the occurring transition
   const double targetrate = rng_uniform() * internal_up_higher;
   double rate = 0.;
   const int nphixstargets = get_nphixstargets(element, ion, level);
@@ -497,7 +497,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
         stats::increment(stats::COUNTER_MA_STAT_INTERNALDOWNLOWER);
 
-        // Randomly select the occuring transition
+        // Randomly select the occurring transition
         const double targetrate = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNLOWER];
         // zrand = 1. - 1e-14;
         double rate = 0.;
@@ -535,7 +535,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           std::abort();
         }
         if (get_ionstage(element, ion) == 0 && lower == 0) {
-          printout("internal downward transition to ground level occured ... abort\n");
+          printout("internal downward transition to ground level occurred ... abort\n");
           printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
           printout("Z %d, ionstage %d, energy %g\n", get_atomicnumber(element), get_ionstage(element, ion - 1),
                    globals::elements[element].ions[ion - 1].levels[lower].epsilon);
@@ -549,7 +549,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         // printout("[debug] do_ma:   internal upward jump within current ionstage\n");
         stats::increment(stats::COUNTER_INTERACTIONS);
 
-        // randomly select the occuring transition
+        // randomly select the occurring transition
         const double *sum_internal_up_same =
             globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].sum_internal_up_same;
 
@@ -557,8 +557,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
         // first sum_internal_up_same[i] such that sum_internal_up_same[i] > targetval
         const double *const upperval =
-            std::upper_bound(&sum_internal_up_same[0], &sum_internal_up_same[nuptrans], targetval);
-        const ptrdiff_t uptransindex = upperval - &sum_internal_up_same[0];
+            std::upper_bound(sum_internal_up_same, sum_internal_up_same + nuptrans, targetval);
+        const ptrdiff_t uptransindex = upperval - sum_internal_up_same;
 
         assert_always(uptransindex < nuptrans);
         const int upper = globals::elements[element].ions[ion].levels[level].uptrans[uptransindex].targetlevelindex;
@@ -705,12 +705,13 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
 auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
                               const int uptransindex, const double epsilon_trans, const int lineindex,
                               const double t_current) -> double {
-  const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].targetlevelindex;
+  const auto &uptr = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex];
+  const int upper = uptr.targetlevelindex;
 
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
   const double nu_trans = epsilon_trans / H;
-  const double A_ul = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].einstein_A;
+  const double A_ul = uptr.einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
   const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
@@ -816,7 +817,7 @@ auto col_recombination_ratecoeff(const int modelgridindex, const int element, co
         g = 0.3;
       }
 
-      const double sigma_bf = (globals::elements[element].ions[upperion - 1].levels[lower].photoion_xs[0] *
+      const double sigma_bf = (get_phixs_table(element, upperion - 1, lower)[0] *
                                get_phixsprobability(element, upperion - 1, lower, phixstargetindex));
 
       const double sf = calculate_sahafact(element, upperion - 1, lower, upper, T_e, epsilon_trans);
@@ -851,8 +852,8 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 
   const double fac1 = epsilon_trans / KB / T_e;
 
-  const double sigma_bf = globals::elements[element].ions[ion].levels[lower].photoion_xs[0] *
-                          get_phixsprobability(element, ion, lower, phixstargetindex);
+  const double sigma_bf =
+      get_phixs_table(element, ion, lower)[0] * get_phixsprobability(element, ion, lower, phixstargetindex);
   const double C = nne * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;  // photoionization at the edge
 
   // printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",
@@ -916,16 +917,15 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
 auto col_excitation_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
                               const int uptransindex, const double epsilon_trans,
                               const double lowerstatweight) -> double {
-  // assert_testmodeonly(i < get_nuptrans(element, ion, lower));
-  const double coll_strength = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].coll_str;
+  const auto &uptr = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex];
+  const double coll_strength = uptr.coll_str;
   const double eoverkt = epsilon_trans / (KB * T_e);
 
   if (coll_strength < 0) {
-    const bool forbidden = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].forbidden;
+    const bool forbidden = uptr.forbidden;
     if (!forbidden) {
       // alternative condition: (coll_strength > -1.5) i.e. to catch -1
-      const double trans_osc_strength =
-          globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].osc_strength;
+      const double trans_osc_strength = uptr.osc_strength;
       // permitted E1 electric dipole transitions
       // collisional excitation: formula valid only for atoms!!!!!!!!!!!
       // Rutten script eq. 3.32. p.50
@@ -945,11 +945,11 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, const int elemen
              eoverkt / exp_eoverkt * Gamma;
     }
 
-    // alterative condition: (coll_strength > -3.5) to catch -2 or -3
+    // alternative condition: (coll_strength > -3.5) to catch -2 or -3
 
     // forbidden transitions: magnetic dipole, electric quadropole...
     // Axelrod's approximation (thesis 1980)
-    const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].targetlevelindex;
+    const int upper = uptr.targetlevelindex;
     const double upperstatweight = stat_weight(element, ion, upper);
     return nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
   }

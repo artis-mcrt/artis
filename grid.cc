@@ -1,13 +1,10 @@
 #include "grid.h"
 
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
-
 #include <algorithm>
 #include <array>
 #include <cctype>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -16,6 +13,9 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
 #include <span>
 #include <sstream>
 #include <string>
@@ -46,8 +46,8 @@ std::array<char, 3> coordlabel{'?', '?', '?'};
 std::array<int, 3> ncoordgrid{0};  // propagation grid dimensions
 
 auto model_type = GridType::SPHERICAL1D;
-size_t npts_model = 0;           // number of model grid cells
-size_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
+ptrdiff_t npts_model = 0;           // number of model grid cells
+ptrdiff_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
 double t_model = -1.;  // time at which densities in input model are correct.
 std::vector<double> vout_model{};
@@ -57,7 +57,7 @@ double min_den;  // minimum model density
 
 double mfegroup = 0.;  // Total mass of Fe group elements in ejecta
 
-int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
+int first_cellindex = -1;  // auto-determine first cell index in model.txt (usually 1 or 0)
 
 struct PropGridCell {
   std::array<double, 3> pos_min{};  // Initial co-ordinates of inner most corner of cell.
@@ -71,6 +71,8 @@ std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
 
 std::span<double> totmassradionuclide{};  // total mass of each radionuclide in the ejecta
+
+double *nltepops_allcells{};
 
 #ifdef MPI_ON
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
@@ -130,7 +132,7 @@ void set_npts_model(const int new_npts_model) {
 void allocate_initradiobund() {
   assert_always(npts_model > 0);
 
-  const size_t num_nuclides = decay::get_num_nuclides();
+  const ptrdiff_t num_nuclides = decay::get_num_nuclides();
 
   const size_t totalradioabundsize = (npts_model + 1) * num_nuclides * sizeof(float);
 #ifdef MPI_ON
@@ -147,7 +149,7 @@ void allocate_initradiobund() {
   initnucmassfrac_allcells = static_cast<float *>(malloc(totalradioabundsize));
 #endif
   printout(
-      "[info] mem_usage: radioabundance data for %zu nuclides for %zu cells occupies %.3f MB (node shared memory)\n",
+      "[info] mem_usage: radioabundance data for %td nuclides for %td cells occupies %.3f MB (node shared memory)\n",
       num_nuclides, npts_model, static_cast<double>(totalradioabundsize) / 1024. / 1024.);
 
 #ifdef MPI_ON
@@ -156,9 +158,9 @@ void allocate_initradiobund() {
 
   assert_always(initnucmassfrac_allcells != nullptr);
 
-  for (size_t mgi = 0; mgi < (npts_model + 1); mgi++) {
+  for (ptrdiff_t mgi = 0; mgi < (npts_model + 1); mgi++) {
     modelgrid[mgi].initnucmassfrac = &initnucmassfrac_allcells[mgi * num_nuclides];
-    if (mgi % static_cast<size_t>(globals::node_nprocs) == static_cast<size_t>(globals::rank_in_node)) {
+    if (mgi % static_cast<ptrdiff_t>(globals::node_nprocs) == globals::rank_in_node) {
       for (int i = 0; i < decay::get_num_nuclides(); i++) {
         modelgrid[mgi].initnucmassfrac[i] = 0.;
       }
@@ -251,7 +253,7 @@ void set_elem_untrackedstable_abund_from_total(const int mgi, const int element,
   if (massfrac_untrackedstable < 0.) {
     //  allow some roundoff error before we complain
     if ((isofracsum - elemabundance - 1.) > 1e-4 && std::abs(isofracsum - elemabundance) > 1e-6) {
-      printout("WARNING: cell %d Z=%d element abundance is less than the sum of its radioisotope abundances \n", mgi,
+      printout("WARNING: cell %d Z=%d element abundance is less than the sum of its radioisotope abundances\n", mgi,
                atomic_number);
       printout("  massfrac(Z) %g massfrac_radioisotopes(Z) %g\n", elemabundance, isofracsum);
       printout("  increasing elemental abundance to %g and setting stable isotopic abundance to zero\n", isofracsum);
@@ -271,7 +273,7 @@ void set_elem_untrackedstable_abund_from_total(const int mgi, const int element,
 void allocate_nonemptycells_composition_cooling()
 // Initialise composition dependent cell data for the given cell
 {
-  const size_t npts_nonempty = get_nonempty_npts_model();
+  const ptrdiff_t npts_nonempty = get_nonempty_npts_model();
 
 #ifdef MPI_ON
   const auto [_, noderank_nonemptycellcount] =
@@ -302,7 +304,6 @@ void allocate_nonemptycells_composition_cooling()
   elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
 #endif
 
-  double *nltepops_allcells{};
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
     auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * globals::total_nlte_levels * sizeof(double));
@@ -319,7 +320,7 @@ void allocate_nonemptycells_composition_cooling()
     assert_always(nltepops_allcells != nullptr);
   }
 
-  for (size_t nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
+  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
     modelgrid[modelgridindex].elements_uppermost_ion = static_cast<int *>(malloc(get_nelements() * sizeof(int)));
@@ -412,7 +413,7 @@ void allocate_nonemptymodelcells() {
   }
   assert_always(nonempty_npts_model > 0);
 
-  mgi_of_nonemptymgi.resize(nonempty_npts_model);
+  mgi_of_nonemptymgi.resize(nonempty_npts_model, -2);
 
   int nonemptymgi = 0;  // index within list of non-empty modelgrid cells
 
@@ -506,7 +507,8 @@ void allocate_nonemptymodelcells() {
   printout("[info] mem_usage: the modelgrid array occupies %.3f MB\n",
            (get_npts_model() + 1) * sizeof(modelgrid[0]) / 1024. / 1024.);
 
-  printout("There are %zu modelgrid cells with associated propagation cells\n", nonempty_npts_model);
+  printout("There are %td modelgrid cells with associated propagation cells (nonempty_npts_model)\n",
+           nonempty_npts_model);
 
   printout(
       "[info] mem_usage: NLTE populations for all allocated cells occupy a total of %.3f MB (node shared memory)\n",
@@ -722,7 +724,7 @@ void read_model_radioabundances(std::fstream &fmodel, std::istringstream &ssline
     return;
   }
 
-  for (size_t i = 0; i < colnames.size(); i++) {
+  for (ptrdiff_t i = 0; i < std::ssize(colnames); i++) {
     double valuein = 0.;
     assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
 
@@ -814,7 +816,7 @@ auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<std::str
   decay::init_nuclides(zlist, alist);
 
   std::vector<int> nucindexlist(zlist.size());
-  for (std::size_t i = 0; i < zlist.size(); i++) {
+  for (ptrdiff_t i = 0; i < std::ssize(zlist); i++) {
     nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
@@ -837,7 +839,7 @@ void read_1d_model() {
   set_npts_model(npts_model_in);
   ncoord_model[0] = npts_model_in;
 
-  vout_model.resize(get_npts_model());
+  vout_model.resize(get_npts_model(), NAN);
 
   // Now read the time (in days) at which the model is specified.
   double t_model_days{NAN};
@@ -925,7 +927,6 @@ void read_2d_model() {
   // Second is the total FeG mass, initial 56Ni mass, initial 56Co mass
 
   int mgi = 0;
-  int nonemptymgi = 0;
   while (std::getline(fmodel, line)) {
     int cellnumberin = 0;
     float cell_r_in{NAN};
@@ -958,10 +959,6 @@ void read_2d_model() {
 
     read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
 
-    if (keepcell) {
-      nonemptymgi++;
-    }
-
     mgi++;
   }
 
@@ -969,8 +966,6 @@ void read_2d_model() {
     printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, get_npts_model());
     std::abort();
   }
-
-  printout("effectively used model grid cells: %d\n", nonemptymgi);
 }
 
 // read a 3D Cartesian model
@@ -989,10 +984,8 @@ void read_3d_model() {
   ncoord_model[0] = ncoord_model[1] = ncoord_model[2] = static_cast<int>(round(pow(npts_model_in, 1 / 3.)));
   assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_model_in);
 
-  // for a 3D input model, the progation cells will match the input cells exactly
-  ncoordgrid[0] = ncoord_model[0];
-  ncoordgrid[1] = ncoord_model[1];
-  ncoordgrid[2] = ncoord_model[2];
+  // for a 3D input model, the propagation cells will match the input cells exactly
+  ncoordgrid = ncoord_model;
   ngrid = npts_model_in;
 
   double t_model_days{NAN};
@@ -1019,7 +1012,6 @@ void read_3d_model() {
   // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
   // otherwise each input cell is one modelgrid cell
   int mgi = 0;  // corresponds to model.txt index column, but zero indexed! (model.txt might be 1-indexed)
-  int nonemptymgi = 0;
   while (std::getline(fmodel, line)) {
     int cellnumberin = 0;
     std::array<float, 3> cellpos_in{};
@@ -1074,10 +1066,6 @@ void read_3d_model() {
 
     read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
 
-    if (keepcell) {
-      nonemptymgi++;
-    }
-
     mgi++;
   }
   if (mgi != npts_model_in) {
@@ -1100,7 +1088,6 @@ void read_3d_model() {
   }
 
   printout("min_den %g [g/cm3]\n", min_den);
-  printout("effectively used model grid cells: %d\n", nonemptymgi);
 }
 
 void calc_modelinit_totmassradionuclides() {
@@ -1304,9 +1291,9 @@ void setup_nstart_ndo() {
   const int n_remainder = npts_nonempty % nprocesses;
   maxndo = 0;
 
-  ranks_nstart.resize(nprocesses);
-  ranks_ndo.resize(nprocesses);
-  ranks_ndo_nonempty.resize(nprocesses);
+  ranks_nstart.resize(nprocesses, -1);
+  ranks_ndo.resize(nprocesses, 0);
+  ranks_ndo_nonempty.resize(nprocesses, 0);
 
   // begin with no cell assignments
   std::ranges::fill(ranks_nstart, 0);
@@ -1376,18 +1363,12 @@ void setup_grid_cartesian_3d() {
   // Set grid size for uniform xyz grid
   if (get_model_type() == GridType::CARTESIAN3D) {
     // if we used in a 3D ejecta model, the propagation grid must match the input grid exactly
-    ncoordgrid[0] = ncoord_model[0];
-    ncoordgrid[1] = ncoord_model[1];
-    ncoordgrid[2] = ncoord_model[2];
-
     // in case the user specified a grid size, we should ensure that it matches
     assert_always(ncoordgrid[0] == CUBOID_NCOORDGRID_X || CUBOID_NCOORDGRID_X < 0);
     assert_always(ncoordgrid[1] == CUBOID_NCOORDGRID_Y || CUBOID_NCOORDGRID_Y < 0);
     assert_always(ncoordgrid[2] == CUBOID_NCOORDGRID_Z || CUBOID_NCOORDGRID_Z < 0);
   } else {
-    ncoordgrid[0] = CUBOID_NCOORDGRID_X;
-    ncoordgrid[1] = CUBOID_NCOORDGRID_Y;
-    ncoordgrid[2] = CUBOID_NCOORDGRID_Z;
+    ncoordgrid = {CUBOID_NCOORDGRID_X, CUBOID_NCOORDGRID_Y, CUBOID_NCOORDGRID_Z};
   }
 
   // artis assumes in some places that the cells are cubes, not cubioids
@@ -1395,11 +1376,9 @@ void setup_grid_cartesian_3d() {
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell.resize(ngrid);
+  cell.resize(ngrid, {});
 
-  coordlabel[0] = 'X';
-  coordlabel[1] = 'Y';
-  coordlabel[2] = 'Z';
+  coordlabel = {'X', 'Y', 'Z'};
   std::array<int, 3> nxyz = {0, 0, 0};
   for (int n = 0; n < ngrid; n++) {
     for (int axis = 0; axis < 3; axis++) {
@@ -1424,23 +1403,17 @@ void setup_grid_cartesian_3d() {
 
 void setup_grid_spherical1d() {
   assert_always(get_model_type() == GridType::SPHERICAL1D);
-  coordlabel[0] = 'r';
-  coordlabel[1] = '_';
-  coordlabel[2] = '_';
+  coordlabel = {'r', '_', '_'};
 
-  ncoordgrid[0] = get_npts_model();
-  ncoordgrid[1] = 1;
-  ncoordgrid[2] = 1;
+  ncoordgrid = {get_npts_model(), 1, 1};
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell.resize(ngrid);
+  cell.resize(ngrid, {});
 
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
     const int mgi = cellindex;  // interchangeable in this mode
     const double v_inner = mgi > 0 ? vout_model[mgi - 1] : 0.;
-    cell[cellindex].pos_min[0] = v_inner * globals::tmin;
-    cell[cellindex].pos_min[1] = 0.;
-    cell[cellindex].pos_min[2] = 0.;
+    cell[cellindex].pos_min = {v_inner * globals::tmin, 0., 0.};
   }
 }
 
@@ -1450,24 +1423,19 @@ void setup_grid_cylindrical_2d() {
   assert_always(vmax_corner < CLIGHT);
 
   assert_always(get_model_type() == GridType::CYLINDRICAL2D);
-  coordlabel[0] = 'r';
-  coordlabel[1] = 'z';
-  coordlabel[2] = '_';
+  coordlabel = {'r', 'z', '_'};
 
-  ncoordgrid[0] = ncoord_model[0];
-  ncoordgrid[1] = ncoord_model[1];
-  ncoordgrid[2] = ncoord_model[2];
+  ncoordgrid = ncoord_model;
 
   ngrid = ncoordgrid[0] * ncoordgrid[1];
-  cell.resize(ngrid);
+  cell.resize(ngrid, {});
 
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
     const int n_rcyl = get_cellcoordpointnum(cellindex, 0);
     const int n_z = get_cellcoordpointnum(cellindex, 1);
 
-    cell[cellindex].pos_min[0] = n_rcyl * globals::rmax / ncoord_model[0];
-    cell[cellindex].pos_min[1] = globals::rmax * (-1 + n_z * 2. / ncoord_model[1]);
-    cell[cellindex].pos_min[2] = 0.;
+    cell[cellindex].pos_min = {n_rcyl * globals::rmax / ncoord_model[0],
+                               globals::rmax * (-1 + n_z * 2. / ncoord_model[1]), 0.};
   }
 }
 
@@ -1511,7 +1479,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
   return -1;
 }
 
-constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> pos_xyz) -> std::array<double, 3> {
+constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) -> std::array<double, 3> {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return pos_xyz;
   }
@@ -1529,14 +1497,16 @@ constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> pos_xyz) -> s
 }
 
 template <size_t S1>
-[[nodiscard]] [[gnu::pure]] constexpr auto expanding_shell_intersection(
-    const std::array<double, S1> pos, const std::array<double, S1> dir, const double speed,
-    const double shellradiuststart, const bool isinnerboundary, const double tstart) -> double
+[[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, S1> &pos,
+                                                          const std::array<double, S1> &dir, const double speed,
+                                                          const double shellradiuststart, const bool isinnerboundary,
+                                                          const double tstart) -> double
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
 // 3-vectors) or expanding circle (2D vectors)
 // returns -1 if there are no forward intersections (or if the intersection
 // is tangential to the shell)
 {
+  static_assert(S1 == 2 || S1 == 3);
   assert_always(shellradiuststart > 0);
 
   // quadratic equation for intersection of ray with sphere
@@ -1562,7 +1532,7 @@ template <size_t S1>
     auto posfinal1 = std::array<double, 3>{0.};
     auto posfinal2 = std::array<double, 3>{0.};
 
-    for (size_t d = 0; d < pos.size(); d++) {
+    for (int d = 0; d < std::ssize(pos); d++) {
       posfinal1[d] = pos[d] + dist1 * dir[d];
       posfinal2[d] = pos[d] + dist2 * dir[d];
     }
@@ -1624,11 +1594,11 @@ template <size_t S1>
   return -1.;
 }
 
-auto get_coordboundary_distances_cylindrical2d(const std::array<double, 3> pkt_pos, const std::array<double, 3> pkt_dir,
-                                               const std::array<double, 3> pktposgridcoord,
-                                               const std::array<double, 3> pktvelgridcoord, const int cellindex,
-                                               const double tstart, const std::array<double, 3> cellcoordmax)
-    -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
+auto get_coordboundary_distances_cylindrical2d(
+    const std::array<double, 3> &pkt_pos, const std::array<double, 3> &pkt_dir,
+    const std::array<double, 3> &pktposgridcoord, const std::array<double, 3> &pktvelgridcoord, const int cellindex,
+    const double tstart,
+    const std::array<double, 3> &cellcoordmax) -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // to get the cylindrical intersection, get the spherical intersection with Z components set to zero, and the
   // propagation speed set to the xy component of the 3-velocity
 
@@ -2415,7 +2385,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 }
 
 // identify the cell index from an (x,y,z) position and a time.
-[[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> pos, const double time) -> int {
+[[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> &pos, const double time) -> int {
   auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
   for (int d = 0; d < get_ngriddimensions(); d++) {
@@ -2433,7 +2403,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 
 // compute distance to a cell boundary.
 [[nodiscard]] __host__ __device__ auto boundary_distance(
-    const std::array<double, 3> dir, const std::array<double, 3> pos, const double tstart, const int cellindex,
+    const std::array<double, 3> &dir, const std::array<double, 3> &pos, const double tstart, const int cellindex,
     enum cell_boundary *pkt_last_cross) -> std::tuple<double, int> {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {
@@ -2639,7 +2609,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
       }
       printout("|initpos| %g |dir| %g |pos.dir| %g\n", vec_len(pos), vec_len(dir), dot(pos, dir));
       for (int d2 = 0; d2 < ndim; d2++) {
-        printout("coord %d: dist_posmax %g dist_posmin %g \n", d2, d_coordmaxboundary[d2], d_coordminboundary[d2]);
+        printout("coord %d: dist_posmax %g dist_posmin %g\n", d2, d_coordmaxboundary[d2], d_coordminboundary[d2]);
         printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2,
                  grid::get_cellcoordmin(cellindex, d2) * tstart / globals::tmin,
                  cellcoordmax[d2] * tstart / globals::tmin);

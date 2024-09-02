@@ -125,6 +125,12 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
   return globals::elements[element].ions[ion].maxrecombininglevel;
 }
 
+inline auto get_phixs_table(const int element, const int ion, const int level) -> float * {
+  const auto phixsstart = globals::elements[element].ions[ion].levels[level].phixsstart;
+  assert_testmodeonly(phixsstart >= 0);
+  return globals::allphixs + (phixsstart * globals::NPHIXSPOINTS);
+}
+
 // Calculate the photoionisation cross-section at frequency nu out of the atomic data.
 [[nodiscard]] inline auto photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge,
                                                                  const double nu) -> double {
@@ -158,15 +164,7 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
 
   if (i < 0) {
     sigma_bf = 0.;
-    // printout("[warning] photoionization_crosssection was called with nu=%g < nu_edge=%g\n",nu,nu_edge);
-    // printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot
-    // %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot); printout("[warning]
-    // element %d, ion+1 %d, level %d epsilon %g, ionpot
-    // %g\n",element,ion+1,0,epsilon(element,ion+1,0),elements[element].ions[ion].ionpot); printout("[warning]
-    // photoionization_crosssection %g\n",sigma_bf); abort();
   } else if (i < globals::NPHIXSPOINTS - 1) {
-    // sigma_bf = globals::elements[element].ions[ion].levels[level].photoion_xs[i];
-
     const double sigma_bf_a = photoion_xs[i];
     const double sigma_bf_b = photoion_xs[i + 1];
     const double factor_b = ireal - i;
@@ -179,26 +177,7 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
     sigma_bf = photoion_xs[globals::NPHIXSPOINTS - 1] * pow(nu_max_phixs / nu, 3);
   }
 
-  // if (sigma_bf < 0)
-  // {
-  //   printout("[warning] photoionization_crosssection returns negative cross-section %g\n",sigma_bf);
-  //   printout("[warning]   nu=%g,  nu_edge=%g\n",nu,nu_edge);
-  //   printout("[warning]   xs@edge=%g,
-  //   xs@maxfreq\n",elements[element].ions[ion].levels[level].photoion_xs[0],elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1]);
-  //   printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot
-  //   %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
-  // }
-
   return sigma_bf;
-}
-
-[[nodiscard]] inline auto photoionization_crosssection(const int element, const int ion, const int level,
-                                                       const double nu_edge, const double nu) -> double {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  return photoionization_crosssection_fromtable(globals::elements[element].ions[ion].levels[level].photoion_xs, nu_edge,
-                                                nu);
 }
 
 [[nodiscard]] inline auto get_tau_sobolev(const int modelgridindex, const int lineindex, const double t_current,
@@ -221,8 +200,6 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
   }
   return std::max(B_lu * n_l * HCLIGHTOVERFOURPI * t_current, 0.);
 }
-
-inline void set_nelements(const int nelements_in) { globals::elements.resize(nelements_in); }
 
 // Returns the atomic number associated with a given elementindex.
 inline auto get_atomicnumber(const int element) -> int {
@@ -269,7 +246,10 @@ inline void update_includedionslevels_maxnions() {
 }
 
 // return the number of ions of all elements combined
-inline auto get_includedions() -> int { return includedions; }
+inline auto get_includedions() -> int {
+  assert_testmodeonly(includedions > 0);
+  return includedions;
+}
 
 // return the number of ions of all elements combined
 inline auto get_includedlevels() -> int { return includedlevels; }
