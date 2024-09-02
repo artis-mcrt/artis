@@ -60,7 +60,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     const double aux_term = 2 * A / (ts * grid::get_rho(mgi));
     // In Bulla 2023 (arXiv:2211.14348), the following line contains (<-> eq. 7) contains a typo. The way implemented
     // here is the original from Wollaeger paper without the typo
-    const double f_p = std::log(1. + aux_term) / aux_term;
+    const double f_p = std::log1p(aux_term) / aux_term;
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
     if (rng_uniform() < f_p) {
