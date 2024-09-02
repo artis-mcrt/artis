@@ -21,6 +21,7 @@ jobs:
                   brew update
                   brew install gsl openmpi cppcheck || true
                   cp artisoptions_nltenebular.h artisoptions.h
+                  make version.h
 
             - name: run cppcheck
               run: |
@@ -80,8 +81,6 @@ jobs:
                   python3 -m pip install compiledb
                   cp artisoptions_nltenebular.h artisoptions.h
                   make version.h
-                  make clean
-                  ls vers*
                   python3 -m compiledb -n --full-path make
 
             - name: cat compile_commands.json
