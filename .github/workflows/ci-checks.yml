@@ -22,15 +22,10 @@ jobs:
                   brew install gsl openmpi cppcheck || true
                   cp artisoptions_nltenebular.h artisoptions.h
 
-            - name: run cppcheck and check for errors
+            - name: run cppcheck
               run: |
                   cppcheck --version
-                  cppcheck --force --error-exitcode=1 --language=c++ --std=c++20 --enable=warning,performance,portability  --suppress=memleak --check-level=exhaustive .
-
-            - name: show cppcheck style suggestions
-              run: |
-                  cppcheck --version
-                  cppcheck --force --language=c++ --std=c++20 --enable=style,performance --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --check-level=exhaustive .
+                  cppcheck --force --error-exitcode=1 --language=c++ --std=c++20 --enable=performance,portability,style,warning --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --suppress=knownArgument --suppress=missingIncludeSystem --suppress=unusedFunction --check-level=exhaustive .
 
     clang-format:
         runs-on: ubuntu-24.04
