@@ -31,7 +31,7 @@ namespace {
 FILE *nlte_file{};
 
 // can save memory by using a combined rate matrix at the cost of diagnostic information
-constexpr bool individual_process_matricies = true;
+constexpr bool individual_process_matrices = true;
 
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
@@ -290,7 +290,7 @@ void print_level_rates(const int modelgridindex, const int timestep, const int e
 
   if (rate_matrix_rad_bb == rate_matrix_coll_bb) {
     printout(
-        "print_level_rates: rate_matrix_rad_bb == rate_matrix_coll_bb. check individual_process_matricies is off\n");
+        "print_level_rates: rate_matrix_rad_bb == rate_matrix_coll_bb. check individual_process_matrices is off\n");
     std::abort();
   }
 
@@ -852,7 +852,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bf;
   THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bf;
   THREADLOCALONHOST std::vector<double> vec_rate_matrix_ntcoll_bf;
-  if constexpr (individual_process_matricies) {
+  if constexpr (individual_process_matrices) {
     vec_rate_matrix_rad_bb.resize(max_nlte_dimension * max_nlte_dimension);
     rate_matrix_rad_bb = gsl_matrix_view_array(vec_rate_matrix_rad_bb.data(), nlte_dimension, nlte_dimension).matrix;
     gsl_matrix_set_all(&rate_matrix_rad_bb, 0.);
@@ -879,7 +879,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
         gsl_matrix_view_array(vec_rate_matrix_ntcoll_bf.data(), nlte_dimension, nlte_dimension).matrix;
     gsl_matrix_set_all(&rate_matrix_ntcoll_bf, 0.);
   } else {
-    // if not individual_process_matricies, alias a single matrix for all transition types
+    // if not individual_process_matrices, alias a single matrix for all transition types
     // the "gsl_matrix" structs are independent, but the data is shared
     rate_matrix_rad_bb = rate_matrix;
     rate_matrix_coll_bb = rate_matrix;
@@ -917,8 +917,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   }
   // printout("\n");
 
-  if (individual_process_matricies) {
-    // sum the matricies for each transition type to get a total rate matrix
+  if (individual_process_matrices) {
+    // sum the matrices for each transition type to get a total rate matrix
     gsl_matrix_add(&rate_matrix, &rate_matrix_rad_bb);
     gsl_matrix_add(&rate_matrix, &rate_matrix_coll_bb);
     gsl_matrix_add(&rate_matrix, &rate_matrix_ntcoll_bb);
@@ -1055,7 +1055,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       set_element_pops_lte(modelgridindex, element);
     }
 
-    if (individual_process_matricies && (timestep % 5 == 0) &&
+    if (individual_process_matrices && (timestep % 5 == 0) &&
         (nlte_iter == 0))  // output NLTE stats every nth timestep for the first NLTE iteration only
     {
       print_element_rates_summary(element, modelgridindex, timestep, nlte_iter, &popvec, &rate_matrix_rad_bb,
@@ -1070,7 +1070,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     //   print_detailed_level_stats = true;
     // }
 
-    if (individual_process_matricies && print_detailed_level_stats) {
+    if (individual_process_matrices && print_detailed_level_stats) {
       const int ionstage = 2;
       const int ion = ionstage - get_ionstage(element, 0);
 

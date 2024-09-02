@@ -512,7 +512,7 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::vect
   // numnuclides:        number of items in lambdas to use
   // lambdas:            array of 1/(mean lifetime) for nuc[0]..nuc[num_nuclides-1]  [seconds^-1]
   // useexpansionfactor: if true, return a modified 'abundance' at the end of the chain, with a weighting factor
-  //                          accounting for photon energy loss from expansion since the decays occured
+  //                          accounting for photon energy loss from expansion since the decays occurred
   //                          (This is needed to get the initial temperature)
 
   assert_always(num_nuclides >= 1);

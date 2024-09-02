@@ -52,7 +52,7 @@ template <size_t S1, size_t S2>
   return std::array<double, 3>{vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
 }
 
-// aberation of angles in special relativity
+// aberration of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
 //   dir2: direction vector in frame2

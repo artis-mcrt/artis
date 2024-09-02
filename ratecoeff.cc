@@ -1095,7 +1095,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
 // T_e = T_R for this precalculation.
 void ratecoefficients_init() {
   printout("time before tabulation of rate coefficients %ld\n", std::time(nullptr));
-  // Determine the temperture grids gridsize
+  // Determine the temperature grids gridsize
   T_step_log = (log(MAXTEMP) - log(MINTEMP)) / (TABLESIZE - 1.);
 
   md5_file("adata.txt", adatafile_hash);

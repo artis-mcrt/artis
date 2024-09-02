@@ -42,7 +42,7 @@ struct RadFieldBinSolution {
 };
 
 struct RadFieldBin {
-  double J_raw;  // value needs to be multipled by J_normfactor to get the true value
+  double J_raw;  // value needs to be multiplied by J_normfactor to get the true value
   double nuJ_raw;
   int contribcount;
 };

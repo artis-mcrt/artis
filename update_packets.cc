@@ -80,7 +80,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
 
     const double particle_en = H * pkt.nu_cmf;  // energy of the particles in the packet
 
-    // for endot independent of energy, the next line is trival (for E dependent endot, an integral would be needed)
+    // for endot independent of energy, the next line is trivial (for E dependent endot, an integral would be needed)
 
     const double t_enzero = ts + (particle_en / endot);  // time at which zero energy is reached
     en_deposited = pkt.e_cmf * (std::min(t2, t_enzero) - ts) / (particle_en / endot);

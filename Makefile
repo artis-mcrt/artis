@@ -161,7 +161,7 @@ ifeq ($(shell uname -s),Darwin)
 	# LDFLAGS += -lprofiler
 
 else
-	# sometimes the login nodes have slighty different CPUs
+	# sometimes the login nodes have slightly different CPUs
 	# to the job nodes. Try to find the lowest common denominator here
 	# to enable vector extensions
 	# CXXFLAGS += -march=cascadelake

@@ -799,7 +799,7 @@ void setup_phixs_list() {
 
   globals::bfestimcount = 0;
   if (globals::nbfcontinua > 0) {
-    // indicies above were temporary only. continum index should be to the sorted list
+    // indicies above were temporary only. continuum index should be to the sorted list
     std::ranges::SORT_OR_STABLE_SORT(std::span(nonconstallcont, globals::nbfcontinua), std::ranges::less{},
                                      &FullPhotoionTransition::nu_edge);
 
@@ -1735,7 +1735,7 @@ void read_parameterfile(int rank) {
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> globals::rho_crit_para;  // free parameter for calculation of rho_crit
   printout("input: rho_crit_para %g\n", globals::rho_crit_para);
-  // he calculation of rho_crit itself depends on the time, therfore it happens in grid_init and update_grid
+  // he calculation of rho_crit itself depends on the time, therefore it happens in grid_init and update_grid
 
   assert_always(get_noncommentline(file, line));
   int debug_packet = 0;
@@ -1932,7 +1932,7 @@ void time_init() {
   // Now set the individual time steps
   switch (TIMESTEP_SIZE_METHOD) {
     case TimeStepSizeMethod::LOGARITHMIC: {
-      for (int n = 0; n < globals::ntimesteps; n++) {  // For logarithmic steps, the logarithmic inverval will be
+      for (int n = 0; n < globals::ntimesteps; n++) {  // For logarithmic steps, the logarithmic interval will be
         const double dlogt = (log(globals::tmax) - log(globals::tmin)) / globals::ntimesteps;
         globals::timesteps[n].start = globals::tmin * exp(n * dlogt);
         globals::timesteps[n].mid = globals::tmin * exp((n + 0.5) * dlogt);
@@ -1968,7 +1968,7 @@ void time_init() {
       assert_always((nts_log + nts_fixed) == globals::ntimesteps);
       for (int n = 0; n < globals::ntimesteps; n++) {
         if (n < nts_log) {
-          // For logarithmic steps, the logarithmic inverval will be
+          // For logarithmic steps, the logarithmic interval will be
           const double dlogt = (log(t_transition) - log(globals::tmin)) / nts_log;
           globals::timesteps[n].start = globals::tmin * exp(n * dlogt);
           globals::timesteps[n].mid = globals::tmin * exp((n + 0.5) * dlogt);

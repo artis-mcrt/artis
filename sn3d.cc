@@ -532,8 +532,8 @@ void save_grid_and_packets(const int nts, const int my_rank, const Packet *packe
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  bool write_verified_sucess = false;
-  while (!write_verified_sucess) {
+  bool write_verified_success = false;
+  while (!write_verified_success) {
     const auto time_write_packets_file_start = std::time(nullptr);
     printout("time before write temporary packets file %ld\n", time_write_packets_file_start);
 
@@ -561,7 +561,7 @@ void save_grid_and_packets(const int nts, const int my_rank, const Packet *packe
     printout("reading back temporary packets file to check validity...\n");
 
     // read packets file back to check that the disk write didn't fail
-    write_verified_sucess = verify_temp_packetsfile(nts, my_rank, packets);
+    write_verified_success = verify_temp_packetsfile(nts, my_rank, packets);
 
 #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
@@ -734,7 +734,7 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
              std::time(nullptr), std::time(nullptr) - time_communicate_estimators_start);
 #endif
 
-    // The estimators have been summed across all proceses and distributed.
+    // The estimators have been summed across all processes and distributed.
     // They will now be normalised independently on all processes.
 
     normalise_deposition_estimators(nts);

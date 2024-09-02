@@ -160,7 +160,7 @@ auto do_macroatom_internal_down_same(const int element, const int ion, const int
   const double *sum_internal_down_same =
       globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].sum_internal_down_same;
 
-  // Randomly select the occuring transition
+  // Randomly select the occurring transition
   const double targetval = rng_uniform() * sum_internal_down_same[ndowntrans - 1];
 
   // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
@@ -290,7 +290,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
 
-  // Randomly select the occuring transition
+  // Randomly select the occurring transition
   const double targetrate = rng_uniform() * internal_up_higher;
   double rate = 0.;
   const int nphixstargets = get_nphixstargets(element, ion, level);
@@ -497,7 +497,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
         stats::increment(stats::COUNTER_MA_STAT_INTERNALDOWNLOWER);
 
-        // Randomly select the occuring transition
+        // Randomly select the occurring transition
         const double targetrate = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNLOWER];
         // zrand = 1. - 1e-14;
         double rate = 0.;
@@ -535,7 +535,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           std::abort();
         }
         if (get_ionstage(element, ion) == 0 && lower == 0) {
-          printout("internal downward transition to ground level occured ... abort\n");
+          printout("internal downward transition to ground level occurred ... abort\n");
           printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
           printout("Z %d, ionstage %d, energy %g\n", get_atomicnumber(element), get_ionstage(element, ion - 1),
                    globals::elements[element].ions[ion - 1].levels[lower].epsilon);
@@ -549,7 +549,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         // printout("[debug] do_ma:   internal upward jump within current ionstage\n");
         stats::increment(stats::COUNTER_INTERACTIONS);
 
-        // randomly select the occuring transition
+        // randomly select the occurring transition
         const double *sum_internal_up_same =
             globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].sum_internal_up_same;
 
@@ -945,7 +945,7 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, const int elemen
              eoverkt / exp_eoverkt * Gamma;
     }
 
-    // alterative condition: (coll_strength > -3.5) to catch -2 or -3
+    // alternative condition: (coll_strength > -3.5) to catch -2 or -3
 
     // forbidden transitions: magnetic dipole, electric quadropole...
     // Axelrod's approximation (thesis 1980)

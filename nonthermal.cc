@@ -783,7 +783,7 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
 
 // impact ionization cross section in cm^2
 // energy and ionization_potential should be in eV
-// fitting forumula of Younger 1981
+// fitting formula of Younger 1981
 // called Q_i(E) in KF92 equation 7
 constexpr auto xs_impactionization(const double energy_ev, const collionrow &colliondata_ion) -> double {
   const double ionpot_ev = colliondata_ion.ionpot_ev;
@@ -1419,7 +1419,7 @@ auto select_nt_ionization(const int modelgridindex) -> std::tuple<int, int> {
 
   const double ratetotal = get_ntion_energyrate(modelgridindex);
 
-  // select based on the calcuated energy going to ionisation for each ion
+  // select based on the calculated energy going to ionisation for each ion
   double ratesum = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
     const int nions = get_nions(ielement);

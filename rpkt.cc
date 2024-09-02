@@ -708,7 +708,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   // At present there is no scattering/destruction process so all that needs to
   // happen is that we determine whether the packet reaches the boundary during the timestep.
 
-  // Find how far it can travel during the time inverval.
+  // Find how far it can travel during the time interval.
 
   const double tdist = (t2 - pkt.prop_time) * CLIGHT_PROP;
 
@@ -1102,7 +1102,7 @@ __host__ __device__ void emit_rpkt(Packet &pkt) {
   const auto dir_cmf = get_rand_isotropic_unitvec();
 
   // This direction is in the cmf - we want to convert it to the rest
-  // frame - use aberation of angles. We want to convert from cmf to
+  // frame - use aberration of angles. We want to convert from cmf to
   // rest so need -ve velocity.
   const auto vel_vec = get_velocity(pkt.pos, -1. * pkt.prop_time);
   // negative time since we want the backwards transformation here

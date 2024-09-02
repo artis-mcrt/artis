@@ -57,7 +57,7 @@ double min_den;  // minimum model density
 
 double mfegroup = 0.;  // Total mass of Fe group elements in ejecta
 
-int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
+int first_cellindex = -1;  // auto-determine first cell index in model.txt (usually 1 or 0)
 
 struct PropGridCell {
   std::array<double, 3> pos_min{};  // Initial co-ordinates of inner most corner of cell.
@@ -989,7 +989,7 @@ void read_3d_model() {
   ncoord_model[0] = ncoord_model[1] = ncoord_model[2] = static_cast<int>(round(pow(npts_model_in, 1 / 3.)));
   assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_model_in);
 
-  // for a 3D input model, the progation cells will match the input cells exactly
+  // for a 3D input model, the propagation cells will match the input cells exactly
   ncoordgrid = ncoord_model;
   ngrid = npts_model_in;
 

@@ -734,10 +734,10 @@ void read_parameterfile_vpkt() {
   }
 
   // if dum7=1, vpkt are not created when cell optical depth is larger than cell_is_optically_thick_vpkt
-  int overrride_thickcell_tau = 0;
-  assert_always(fscanf(input_file, "%d %lg \n", &overrride_thickcell_tau, &cell_is_optically_thick_vpkt) == 2);
+  int override_thickcell_tau = 0;
+  assert_always(fscanf(input_file, "%d %lg \n", &override_thickcell_tau, &cell_is_optically_thick_vpkt) == 2);
 
-  if (overrride_thickcell_tau == 1) {
+  if (override_thickcell_tau == 1) {
     printout("vpkt.txt: cell_is_optically_thick_vpkt %lg\n", cell_is_optically_thick_vpkt);
   } else {
     cell_is_optically_thick_vpkt = globals::cell_is_optically_thick;
