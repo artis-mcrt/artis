@@ -42,8 +42,8 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     const double v_ej = std::sqrt(E_kin * 2 / grid::mtot_input);
 
     const double prefactor = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 7.74 : 7.4;
-    const double tau_ineff = prefactor * 86400 * std::sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) /
-                             std::pow((0.2 * 29979200000) / v_ej, 3. / 2.);
+    const double tau_ineff = prefactor * 86400 * std::sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) *
+                             std::pow(v_ej / (0.2 * 29979200000), -3. / 2.);
     const double f_p = std::log(1 + (2. * ts * ts / tau_ineff / tau_ineff)) / (2. * ts * ts / tau_ineff / tau_ineff);
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
