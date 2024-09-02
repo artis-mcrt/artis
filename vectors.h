@@ -106,9 +106,7 @@ template <size_t S1, size_t S2>
 [[nodiscard]] constexpr auto calculate_doppler_nucmf_on_nurf(const std::array<double, 3> &pos_rf,
                                                              const std::array<double, 3> &dir_rf,
                                                              const double prop_time) -> double {
-  //   dir_rf: the rest frame direction (unit vector) of light propagation
-  //   vel_rf: velocity of the comoving frame relative to the rest frame
-  // returns: the ratio f = nu_cmf / nu_rf
+  // velocity of the comoving frame relative to the rest frame
   const auto vel_rf = get_velocity(pos_rf, prop_time);
 
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
