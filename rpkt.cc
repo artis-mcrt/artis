@@ -342,7 +342,7 @@ void electron_scatter_rpkt(Packet &pkt) {
       p = (mu + 1) + (mu - 1) * (cos(2 * phisc) * Qi + sin(2 * phisc) * Ui);
 
       // generate a number between 0 and the maximum of the previous function (2)
-      x = 2 * rng_uniform();
+      x = 2. * rng_uniform();
     };
   } else {
     // Assume isotropic scattering
@@ -868,8 +868,10 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
   assert_always(!USECELLHISTANDUPDATEPHIXSLIST || phixslist != nullptr);
 
   double chi_bf_sum = 0.;
-  if constexpr (USECELLHISTANDUPDATEPHIXSLIST && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
-    std::ranges::fill(phixslist->groundcont_gamma_contr, 0.);
+  if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+    if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
+      std::ranges::fill(phixslist->groundcont_gamma_contr, 0.);
+    }
   }
 
   const auto T_e = grid::get_Te(modelgridindex);
@@ -952,8 +954,8 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
 
         sigma_contr = sigma_bf * globals::allcont[i].probability * corrfactor;
 
-        if constexpr (USECELLHISTANDUPDATEPHIXSLIST && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
-          if (level == 0 && globals::allcont[i].phixstargetindex == 0) {
+        if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+          if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && level == 0 && globals::allcont[i].phixstargetindex == 0) {
             phixslist->groundcont_gamma_contr[globals::allcont[i].index_in_groundphixslist] = sigma_contr;
           }
         }
