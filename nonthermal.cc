@@ -1778,6 +1778,7 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrixuppertri, const int Z,
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
       const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, collionrow);
+      assert_always(xsstartindex >= 0);
       // Luke Shingles: the use of min and max on the epsilon limits keeps energies
       // from becoming unphysical. This insight came from reading the
       // CMFGEN Fortran source code (Li, Dessart, Hillier 2012, doi:10.1111/j.1365-2966.2012.21198.x)
@@ -1848,7 +1849,7 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrixuppertri, const int Z,
         for (int i = 0; i < augerstopindex; i++) {
           const int rowoffset = uppertriangular(i, 0);
           const double en = engrid(i);
-          const int jstart = i > xsstartindex ? i : xsstartindex;
+          const int jstart = std::max(i, xsstartindex);
           for (int j = jstart; j < SFPTS; j++) {
             const double xs = vec_xs_ionization[j];
             if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
