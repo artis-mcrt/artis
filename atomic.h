@@ -178,14 +178,6 @@ inline auto get_phixs_table(const int element, const int ion, const int level) -
   return sigma_bf;
 }
 
-[[nodiscard]] inline auto photoionization_crosssection(const int element, const int ion, const int level,
-                                                       const double nu_edge, const double nu) -> double {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  return photoionization_crosssection_fromtable(get_phixs_table(element, ion, level), nu_edge, nu);
-}
-
 [[nodiscard]] inline auto get_tau_sobolev(const int modelgridindex, const int lineindex, const double t_current,
                                           bool sub_updown) -> double {
   const int element = globals::linelist[lineindex].elementindex;
