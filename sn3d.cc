@@ -65,6 +65,7 @@ std::mt19937 stdrng{std::random_device{}()};
 std::ofstream output_file;
 
 namespace {
+constexpr bool VERIFY_WRITTEN_PACKETS_FILES = false;
 
 FILE *linestat_file{};
 auto real_time_start = -1;
@@ -532,8 +533,8 @@ void save_grid_and_packets(const int nts, const int my_rank, const Packet *packe
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  bool write_verified_success = false;
-  while (!write_verified_success) {
+  bool write_successful = false;
+  while (!write_successful) {
     const auto time_write_packets_file_start = std::time(nullptr);
     printout("time before write temporary packets file %ld\n", time_write_packets_file_start);
 
@@ -542,33 +543,38 @@ void save_grid_and_packets(const int nts, const int my_rank, const Packet *packe
 
     vpkt_write_timestep(nts, my_rank, false);
 
-    const auto time_write_packets_file_finished = std::time(nullptr);
+    const auto time_write_packets_finished_thisrank = std::time(nullptr);
 
 #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
+    const auto timenow = std::time(nullptr);
 
-    printout("time after write temporary packets file %ld (took %ld seconds, waited %ld s for other ranks)\n",
-             std::time(nullptr), time_write_packets_file_finished - time_write_packets_file_start,
-             std::time(nullptr) - time_write_packets_file_finished);
+    printout("time after write temporary packets file %ld (took %lds, waited %lds, total %lds)\n", timenow,
+             time_write_packets_finished_thisrank - time_write_packets_file_start,
+             timenow - time_write_packets_finished_thisrank, timenow - time_write_packets_file_start);
 
+    if constexpr (VERIFY_WRITTEN_PACKETS_FILES) {
 #ifdef MPI_ON
-    MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-    const auto time_readback_packets_start = std::time(nullptr);
+      const auto time_readback_packets_start = std::time(nullptr);
 
-    printout("reading back temporary packets file to check validity...\n");
+      printout("reading back temporary packets file to check validity...\n");
 
-    // read packets file back to check that the disk write didn't fail
-    write_verified_success = verify_temp_packetsfile(nts, my_rank, packets);
+      // read packets file back to check that the disk write didn't fail
+      write_successful = verify_temp_packetsfile(nts, my_rank, packets);
 
 #ifdef MPI_ON
-    MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-    printout("Verifying packets files for all ranks took %ld seconds.\n",
-             std::time(nullptr) - time_readback_packets_start);
+      printout("Verifying packets files for all ranks took %ld seconds.\n",
+               std::time(nullptr) - time_readback_packets_start);
+    } else {
+      write_successful = true;
+    }
   }
 
   if (my_rank == 0) {
