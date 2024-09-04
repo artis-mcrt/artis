@@ -1,4 +1,3 @@
-#pragma once
 #ifndef GAMMAPKT_H
 #define GAMMAPKT_H
 

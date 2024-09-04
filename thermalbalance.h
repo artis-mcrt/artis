@@ -1,4 +1,3 @@
-#pragma once
 #ifndef THERMALBALANCE_H
 #define THERMALBALANCE_H
 

@@ -1,4 +1,3 @@
-#pragma once
 #ifndef VECTORS_H
 #define VECTORS_H
 

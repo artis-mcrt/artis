@@ -1,4 +1,3 @@
-#pragma once
 #ifndef LTEPOP_H
 #define LTEPOP_H
 

@@ -1,4 +1,3 @@
-#pragma once
 #ifndef VPKT_H
 #define VPKT_H
 

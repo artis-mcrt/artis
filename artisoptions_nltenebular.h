@@ -1,4 +1,3 @@
-#pragma once
 #ifndef ARTISOPTIONS_H  // NOLINT(llvm-header-guard)
 #define ARTISOPTIONS_H
 // NOLINTBEGIN(modernize*,misc-unused-parameters)

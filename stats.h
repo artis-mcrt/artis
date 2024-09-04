@@ -1,4 +1,3 @@
-#pragma once
 #include <cstddef>
 #ifndef STATS_H
 #define STATS_H

@@ -1,4 +1,3 @@
-#pragma once
 #include <span>
 #ifndef GRIDINIT_H
 #define GRIDINIT_H

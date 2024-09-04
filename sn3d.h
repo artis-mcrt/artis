@@ -1,5 +1,3 @@
-#pragma once
-#include <cstddef>
 #ifndef SN3D_H
 #define SN3D_H
 
@@ -19,6 +17,7 @@
 #include <atomic>
 #include <cassert>
 #include <csignal>
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>

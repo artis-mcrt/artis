@@ -1,4 +1,3 @@
-#pragma once
 #include <cstddef>
 #ifndef RADFIELD_H
 #define RADFIELD_H

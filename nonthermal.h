@@ -1,4 +1,3 @@
-#pragma once
 #ifndef NONTHERMAL_H
 #define NONTHERMAL_H
 
