@@ -66,7 +66,7 @@ constexpr auto simpson_integrator(auto &params, double a, double b, int sampleco
       weight = 4.;
     }
 
-    const double x = a + deltax * i;
+    const double x = a + (deltax * i);
 
     integral += weight * func_integrand(x, &params) * deltax;
   }
@@ -80,7 +80,7 @@ auto integrator(auto params, double a, double b, double epsabs, double epsrel, i
                 double *abserr) {
   if constexpr (USE_SIMPSON_INTEGRATOR) {
     // need an odd number for Simpson rule
-    const int samplecount = std::max(1, static_cast<int>((b / a) / globals::NPHIXSNUINCREMENT)) * 4 + 1;
+    const int samplecount = (std::max(1, static_cast<int>((b / a) / globals::NPHIXSNUINCREMENT)) * 4) + 1;
 
     *result = simpson_integrator<func_integrand>(params, a, b, samplecount);
     *abserr = 0.;

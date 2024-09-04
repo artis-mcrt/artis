@@ -16,7 +16,7 @@
 // return the the magnitude of a vector
 template <size_t VECDIM>
 [[nodiscard]] constexpr auto vec_len(const std::array<double, VECDIM> &vec) -> double {
-  const double squaredlen = std::accumulate(vec.begin(), vec.end(), 0., [](auto a, auto b) { return a + b * b; });
+  const double squaredlen = std::accumulate(vec.begin(), vec.end(), 0., [](auto a, auto b) { return a + (b * b); });
 
   return std::sqrt(squaredlen);
 }
@@ -89,7 +89,7 @@ template <size_t S1, size_t S2>
   const double ndotv_on_c = dot(dir_rf, vel_rf) / CLIGHT;
   const double dopplerfactorsq = USE_RELATIVISTIC_DOPPLER_SHIFT
                                      ? std::pow(1. - ndotv_on_c, 2) / (1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED))
-                                     : (1. - 2 * ndotv_on_c);
+                                     : (1. - (2 * ndotv_on_c));
 
   assert_testmodeonly(std::isfinite(dopplerfactorsq));
   assert_testmodeonly(dopplerfactorsq > 0);
@@ -220,7 +220,8 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 
   // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
   const double n1_dot_n2 = dot(n1, n2);
-  auto ref1_sc = std::array<double, 3>{n1[0] * n1_dot_n2 - n2[0], n1[1] * n1_dot_n2 - n2[1], n1[2] * n1_dot_n2 - n2[2]};
+  auto ref1_sc =
+      std::array<double, 3>{(n1[0] * n1_dot_n2) - n2[0], (n1[1] * n1_dot_n2) - n2[1], (n1[2] * n1_dot_n2) - n2[2]};
   ref1_sc = vec_norm(ref1_sc);
 
   const double cos_stokes_rot_1 = std::clamp(dot(ref1_sc, ref1), -1., 1.);
@@ -250,7 +251,7 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 [[nodiscard]] constexpr auto meridian(const std::array<double, 3> &n)
     -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // for ref_1 use (from triple product rule)
-  const double n_xylen = std::sqrt(n[0] * n[0] + n[1] * n[1]);
+  const double n_xylen = std::sqrt((n[0] * n[0]) + (n[1] * n[1]));
   const auto ref1 =
       std::array<double, 3>{-1. * n[0] * n[2] / n_xylen, -1. * n[1] * n[2] / n_xylen, (1 - (n[2] * n[2])) / n_xylen};
 
@@ -285,9 +286,9 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
   //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
 
-  const auto e_cmf = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
-                                           e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
-                                           e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
+  const auto e_cmf = std::array<double, 3>{e_par[0] + (gamma_rel * (e_perp[0] + v_cr_b[0])),
+                                           e_par[1] + (gamma_rel * (e_perp[1] + v_cr_b[1])),
+                                           e_par[2] + (gamma_rel * (e_perp[2] + v_cr_b[2]))};
   return vec_norm(e_cmf);
 }
 
@@ -301,7 +302,7 @@ constexpr auto frame_transform(const std::array<double, 3> &n_rf, double *Q, dou
   const double U0 = *U;
 
   // Compute polarisation (which is invariant)
-  const double p = sqrt(Q0 * Q0 + U0 * U0);
+  const double p = sqrt((Q0 * Q0) + (U0 * U0));
 
   // We want to compute the angle between ref1 and the electric field
   double rot_angle = 0;
@@ -334,9 +335,9 @@ constexpr auto frame_transform(const std::array<double, 3> &n_rf, double *Q, dou
 
   // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
 
-  const auto elec_rf = std::array<double, 3>{cos(rot_angle) * ref1_rf[0] - sin(rot_angle) * ref2_rf[0],
-                                             cos(rot_angle) * ref1_rf[1] - sin(rot_angle) * ref2_rf[1],
-                                             cos(rot_angle) * ref1_rf[2] - sin(rot_angle) * ref2_rf[2]};
+  const auto elec_rf = std::array<double, 3>{(cos(rot_angle) * ref1_rf[0]) - (sin(rot_angle) * ref2_rf[0]),
+                                             (cos(rot_angle) * ref1_rf[1]) - (sin(rot_angle) * ref2_rf[1]),
+                                             (cos(rot_angle) * ref1_rf[2]) - (sin(rot_angle) * ref2_rf[2])};
 
   // Aberration
   const auto n_cmf = angle_ab(n_rf, v);

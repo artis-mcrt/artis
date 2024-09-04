@@ -219,7 +219,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
                                          const int phixstargetindex) -> int {
   const int contindex = -1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
 
-  const int bflutindex = tempindex * globals::nbfcontinua + contindex;
+  const int bflutindex = (tempindex * globals::nbfcontinua) + contindex;
   assert_testmodeonly(bflutindex >= 0);
   assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
   return bflutindex;
@@ -321,8 +321,8 @@ constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks,
   assert_always(nchunk >= 0);
   const auto minchunksize = size / nchunks;  // integer division, minimum non-empty cells per process
   const auto n_remainder = size % nchunks;
-  const auto nstart = (minchunksize + 1) * std::min(n_remainder, nchunk) +
-                      minchunksize * std::max(static_cast<ptrdiff_t>(0), nchunk - n_remainder);
+  const auto nstart = ((minchunksize + 1) * std::min(n_remainder, nchunk)) +
+                      (minchunksize * std::max(static_cast<ptrdiff_t>(0), nchunk - n_remainder));
   const auto nsize = (nchunk < n_remainder) ? minchunksize + 1 : minchunksize;
   assert_testmodeonly(nstart >= 0);
   assert_testmodeonly(nsize >= 0);

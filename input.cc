@@ -925,8 +925,8 @@ void read_phixs_data() {
 
   if (!tmpallphixs.empty()) {
     assert_always((nbftables * globals::NPHIXSPOINTS) == std::ssize(tmpallphixs));
-    // nbftables is not large enough! This is a bug.
-// copy the photoionisation tables into one contiguous block of memory
+
+    // copy the photoionisation tables into one contiguous block of memory
 #ifdef MPI_ON
     MPI_Win win_allphixsblock = MPI_WIN_NULL;
 

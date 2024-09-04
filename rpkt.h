@@ -66,7 +66,7 @@ void MPI_Bcast_binned_opacities(int modelgridindex, int root_node_id);
   assert_testmodeonly(ion < get_nions(element) - 1);
   const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
   assert_always(groundcontindex >= 0);
-  return nonemptymgi * globals::nbfcontinua_ground + groundcontindex;
+  return (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 }
 
 inline auto keep_this_cont(int element, const int ion, const int level, const int modelgridindex,
