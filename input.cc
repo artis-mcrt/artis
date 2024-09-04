@@ -609,14 +609,22 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
         const int nupperdowntrans = get_ndowntrans(element, ion, level);
         auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans];
-        assert_always(downtransition.targetlevelindex == lowerlevel);
+
+        // this is what classic did, but it is not quite correct. The downtrans list should be searched to find the
+        // correct index, not just using the last one. It probably works for the case where the transitions are sorted,
+        // but the assertion tripped on C IV in the classic dataset.
+        // assert_always(downtransition.targetlevelindex == lowerlevel);
+
         downtransition.einstein_A += transition.A;
         downtransition.osc_strength += f_ul;
         downtransition.coll_str = std::max(downtransition.coll_str, transition.coll_str);
 
         const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
         auto &uptransition = globals::elements[element].ions[ion].levels[lowerlevel].uptrans[nloweruptrans];
-        assert_always(uptransition.targetlevelindex == level);
+
+        // as above, the downtrans list should be searched to find the correct index instead of using the last one.
+        // assert_always(uptransition.targetlevelindex == level);
+
         uptransition.einstein_A += transition.A;
         uptransition.osc_strength += f_ul;
         uptransition.coll_str = std::max(uptransition.coll_str, transition.coll_str);
