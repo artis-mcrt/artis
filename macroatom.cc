@@ -111,8 +111,9 @@ void calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   // transitions within the current ionisation stage
   double sum_internal_up_same = 0.;
   const int nuptrans = get_nuptrans(element, ion, level);
+  const auto *const uptranslist = get_uptranslist(element, ion, level);
   for (int i = 0; i < nuptrans; i++) {
-    const auto &uptrans = levelref.uptrans[i];
+    const auto &uptrans = uptranslist[i];
     const double epsilon_trans = epsilon(element, ion, uptrans.targetlevelindex) - epsilon_current;
 
     const double R =
@@ -561,7 +562,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         const ptrdiff_t uptransindex = upperval - sum_internal_up_same;
 
         assert_always(uptransindex < nuptrans);
-        const int upper = globals::elements[element].ions[ion].levels[level].uptrans[uptransindex].targetlevelindex;
+        const int upper = get_uptranslist(element, ion, level)[uptransindex].targetlevelindex;
 
         level = upper;
         break;
@@ -705,7 +706,7 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
 auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
                               const int uptransindex, const double epsilon_trans, const int lineindex,
                               const double t_current) -> double {
-  const auto &uptr = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex];
+  const auto &uptr = get_uptranslist(element, ion, lower)[uptransindex];
   const int upper = uptr.targetlevelindex;
 
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
@@ -917,7 +918,7 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
 auto col_excitation_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
                               const int uptransindex, const double epsilon_trans,
                               const double lowerstatweight) -> double {
-  const auto &uptr = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex];
+  const auto &uptr = get_uptranslist(element, ion, lower)[uptransindex];
   const double coll_strength = uptr.coll_str;
   const double eoverkt = epsilon_trans / (KB * T_e);
 
