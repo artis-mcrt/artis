@@ -620,7 +620,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         downtransition.coll_str = std::max(downtransition.coll_str, transition.coll_str);
 
         const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
-        auto &uptransition = globals::elements[element].ions[ion].levels[lowerlevel].uptrans[nloweruptrans];
+        auto &uptransition = get_uptranslist(element, ion, lowerlevel)[nloweruptrans];
 
         // as above, the downtrans list should be searched to find the correct index instead of using the last one.
         // assert_always(uptransition.targetlevelindex == level);
@@ -1284,7 +1284,7 @@ void read_atomicdata_files() {
     downtransition->lineindex = lineindex;
 
     const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
-    auto &uptranslist = globals::elements[element].ions[ion].levels[lowerlevel].uptrans;
+    auto *uptranslist = get_uptranslist(element, ion, lowerlevel);
     auto *uptransition = std::find_if(uptranslist, uptranslist + nloweruptrans,
                                       [=](const auto &uptr) { return uptr.targetlevelindex == upperlevel; });
     assert_always(uptransition != (uptranslist + nloweruptrans));
