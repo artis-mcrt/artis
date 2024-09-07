@@ -368,6 +368,14 @@ inline auto get_includedlevels() -> int { return includedlevels; }
   return globals::elements[element].ions[ion].levels[level].nuptrans;
 }
 
+[[nodiscard]] inline auto get_uptranslist(const int element, const int ion, const int level) {
+  return globals::elements[element].ions[ion].levels[level].uptrans;
+}
+
+[[nodiscard]] inline auto get_uptransspan(const int element, const int ion, const int level) {
+  return std::span(get_uptranslist(element, ion, level), get_nuptrans(element, ion, level));
+}
+
 // the number of downward bound-bound transitions from the specified level
 inline void set_ndowntrans(const int element, const int ion, const int level, const int ndowntrans) {
   assert_testmodeonly(element < get_nelements());
