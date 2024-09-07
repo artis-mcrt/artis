@@ -88,8 +88,9 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
 
     const int nuptrans = get_nuptrans(element, ion, level);
     if (nuptrans > 0) {
+      const auto *const uptranslist = get_uptranslist(element, ion, level);
       for (int ii = 0; ii < nuptrans; ii++) {
-        const int upper = globals::elements[element].ions[ion].levels[level].uptrans[ii].targetlevelindex;
+        const int upper = uptranslist[ii].targetlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
         const double C = nnlevel *
                          col_excitation_ratecoeff(T_e, nne, element, ion, level, ii, epsilon_trans, statweight) *
@@ -596,9 +597,9 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     int upper = -1;
     // excitation to same ionization stage
     const int nuptrans = get_nuptrans(element, ion, level);
-    const auto *const uptrans = globals::elements[element].ions[ion].levels[level].uptrans;
+    const auto *const uptranslist = get_uptranslist(element, ion, level);
     for (int ii = 0; ii < nuptrans; ii++) {
-      const int tmpupper = uptrans[ii].targetlevelindex;
+      const int tmpupper = uptranslist[ii].targetlevelindex;
       // printout("    excitation to level %d possible\n",upper);
       const double epsilon_trans = epsilon(element, ion, tmpupper) - epsilon_current;
       const double C = nnlevel *
