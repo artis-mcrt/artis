@@ -608,7 +608,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A;
 
         const int nupperdowntrans = get_ndowntrans(element, ion, level);
-        auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans];
+        auto &downtransition = get_downtranslist(element, ion, level)[nupperdowntrans];
 
         // this is what classic did, but it is not quite correct. The downtrans list should be searched to find the
         // correct index, not just using the last one. It probably works for the case where the transitions are sorted,
@@ -1275,7 +1275,7 @@ void read_atomicdata_files() {
     // so find the first matching the upper and lower transition
 
     const int nupperdowntrans = get_ndowntrans(element, ion, upperlevel);
-    auto &downtranslist = globals::elements[element].ions[ion].levels[upperlevel].downtrans;
+    auto *downtranslist = get_downtranslist(element, ion, upperlevel);
     auto *downtransition = std::find_if(downtranslist, downtranslist + nupperdowntrans, [=](const auto &downtrans) {
       return downtrans.targetlevelindex == lowerlevel;
     });
