@@ -164,9 +164,9 @@ auto do_macroatom_internal_down_same(const int element, const int ion, const int
   const double targetval = rng_uniform() * sum_internal_down_same[ndowntrans - 1];
 
   // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
-  const double *const upperval =
-      std::upper_bound(sum_internal_down_same, sum_internal_down_same + ndowntrans - 1, targetval);
-  const ptrdiff_t downtransindex = upperval - sum_internal_down_same;
+  const auto downtransindex =
+      static_cast<int>(std::upper_bound(sum_internal_down_same, sum_internal_down_same + ndowntrans - 1, targetval) -
+                       sum_internal_down_same);
 
   const int lower = get_downtranslist(element, ion, level)[downtransindex].targetlevelindex;
 
