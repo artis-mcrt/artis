@@ -165,8 +165,8 @@ auto do_macroatom_internal_down_same(const int element, const int ion, const int
 
   // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
   const auto downtransindex =
-      static_cast<int>(std::upper_bound(sum_internal_down_same, sum_internal_down_same + ndowntrans - 1, targetval) -
-                       sum_internal_down_same);
+      std::upper_bound(sum_internal_down_same, sum_internal_down_same + ndowntrans - 1, targetval) -
+      sum_internal_down_same;
 
   const int lower = get_downtranslist(element, ion, level)[downtransindex].targetlevelindex;
 
@@ -186,8 +186,8 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
 
   // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
   const auto downtransindex =
-      static_cast<int>(std::upper_bound(sum_epstrans_rad_deexc, sum_epstrans_rad_deexc + ndowntrans - 1, targetval) -
-                       sum_epstrans_rad_deexc);
+      std::upper_bound(sum_epstrans_rad_deexc, sum_epstrans_rad_deexc + ndowntrans - 1, targetval) -
+      sum_epstrans_rad_deexc;
 
   const auto &downtrans = get_downtranslist(element, ion, level)[downtransindex];
 
@@ -396,7 +396,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
     const double randomrate = rng_uniform() * cumulative_transitions[MA_ACTION_COUNT - 1];
 
     // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
-    const int selected_action =
+    const auto selected_action =
         std::min(MA_ACTION_COUNT - 1, static_cast<int>(std::ranges::upper_bound(cumulative_transitions, randomrate) -
                                                        cumulative_transitions.cbegin()));
 
@@ -552,11 +552,10 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALUPSAME];
 
         // first sum_internal_up_same[i] such that sum_internal_up_same[i] > targetval
-        const double *const upperval =
-            std::upper_bound(sum_internal_up_same, sum_internal_up_same + nuptrans, targetval);
-        const ptrdiff_t uptransindex = upperval - sum_internal_up_same;
+        const auto uptransindex =
+            std::upper_bound(sum_internal_up_same, sum_internal_up_same + nuptrans - 1, targetval) -
+            sum_internal_up_same;
 
-        assert_always(uptransindex < nuptrans);
         const int upper = get_uptranslist(element, ion, level)[uptransindex].targetlevelindex;
 
         level = upper;
