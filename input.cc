@@ -489,10 +489,10 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
       int alltransindex = temp_alltranslist.size();
       temp_alltranslist.resize(temp_alltranslist.size() + totupdowntrans);
       for (int level = 0; level < nlevelsmax; level++) {
-        globals::elements[element].ions[ion].levels[level].downtrans = alltransindex;
+        globals::elements[element].ions[ion].levels[level].alltrans_startdown = alltransindex;
         alltransindex += get_ndowntrans(element, ion, level);
 
-        globals::elements[element].ions[ion].levels[level].uptrans = alltransindex;
+        globals::elements[element].ions[ion].levels[level].alltrans_startup = alltransindex;
         alltransindex += get_nuptrans(element, ion, level);
 
         set_ndowntrans(element, ion, level, 0);
@@ -552,20 +552,20 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
           // the line list has not been sorted yet, so the store the level index for now and
           // the index into the sorted line list will be set later
 
-          temp_alltranslist[globals::elements[element].ions[ion].levels[level].downtrans + nupperdowntrans - 1] = {
-              .lineindex = -1,
-              .targetlevelindex = lowerlevel,
-              .einstein_A = transition.A,
-              .coll_str = transition.coll_str,
-              .osc_strength = f_ul,
-              .forbidden = transition.forbidden};
-          temp_alltranslist[globals::elements[element].ions[ion].levels[lowerlevel].uptrans + nloweruptrans - 1] = {
-              .lineindex = -1,
-              .targetlevelindex = level,
-              .einstein_A = transition.A,
-              .coll_str = transition.coll_str,
-              .osc_strength = f_ul,
-              .forbidden = transition.forbidden};
+          temp_alltranslist[globals::elements[element].ions[ion].levels[level].alltrans_startdown + nupperdowntrans -
+                            1] = {.lineindex = -1,
+                                  .targetlevelindex = lowerlevel,
+                                  .einstein_A = transition.A,
+                                  .coll_str = transition.coll_str,
+                                  .osc_strength = f_ul,
+                                  .forbidden = transition.forbidden};
+          temp_alltranslist[globals::elements[element].ions[ion].levels[lowerlevel].alltrans_startup + nloweruptrans -
+                            1] = {.lineindex = -1,
+                                  .targetlevelindex = level,
+                                  .einstein_A = transition.A,
+                                  .coll_str = transition.coll_str,
+                                  .osc_strength = f_ul,
+                                  .forbidden = transition.forbidden};
         }
 
       } else if (pass == 1 && globals::rank_in_node == 0) {

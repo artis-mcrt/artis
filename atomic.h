@@ -361,7 +361,7 @@ inline auto get_includedlevels() -> int { return includedlevels; }
 }
 
 [[nodiscard]] inline auto get_downtranslist(const int element, const int ion, const int level) -> LevelTransition * {
-  return globals::alltrans + globals::elements[element].ions[ion].levels[level].downtrans;
+  return globals::alltrans + globals::elements[element].ions[ion].levels[level].alltrans_startdown;
 }
 
 // the number of upward bound-bound transitions from the specified level
@@ -373,7 +373,7 @@ inline auto get_includedlevels() -> int { return includedlevels; }
 }
 
 [[nodiscard]] inline auto get_uptranslist(const int element, const int ion, const int level) -> LevelTransition * {
-  return globals::alltrans + globals::elements[element].ions[ion].levels[level].uptrans;
+  return globals::alltrans + globals::elements[element].ions[ion].levels[level].alltrans_startup;
 }
 
 [[nodiscard]] inline auto get_uptransspan(const int element, const int ion, const int level) {
