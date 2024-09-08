@@ -43,24 +43,23 @@ void calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   const double epsilon_current = epsilon(element, ion, level);
   const double statweight = stat_weight(element, ion, level);
 
-  const auto &levelref = globals::elements[element].ions[ion].levels[level];
-
   // Downward transitions within the current ionisation stage:
   // radiative/collisional deexcitation and internal downward jumps
   double sum_internal_down_same = 0.;
   double sum_raddeexc = 0.;
   double sum_coldeexc = 0.;
   const int ndowntrans = get_ndowntrans(element, ion, level);
+  const auto *const leveldowntranslist = get_downtranslist(element, ion, level);
   for (int i = 0; i < ndowntrans; i++) {
-    const auto &downtransition = levelref.downtrans[i];
-    const int lower = downtransition.targetlevelindex;
-    const auto A_ul = downtransition.einstein_A;
+    const auto &downtrans = leveldowntranslist[i];
+    const int lower = downtrans.targetlevelindex;
+    const auto A_ul = downtrans.einstein_A;
     const double epsilon_target = epsilon(element, ion, lower);
     const double epsilon_trans = epsilon_current - epsilon_target;
 
     const double R =
         rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul, statweight, t_mid);
-    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtransition);
+    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtrans);
 
     const double individ_internal_down_same = (R + C) * epsilon_target;
 
@@ -169,8 +168,8 @@ auto do_macroatom_internal_down_same(const int element, const int ion, const int
       std::upper_bound(sum_internal_down_same, sum_internal_down_same + ndowntrans, targetval);
   const ptrdiff_t downtransindex = upperval - sum_internal_down_same;
 
-  assert_always(downtransindex < ndowntrans);
-  const int lower = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex].targetlevelindex;
+  assert_testmodeonly(downtransindex < ndowntrans);
+  const int lower = get_downtranslist(element, ion, level)[downtransindex].targetlevelindex;
 
   return lower;
 }
@@ -192,17 +191,17 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
 
   assert_always(downtransindex < ndowntrans);
 
-  const auto &selecteddowntrans = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex];
+  const auto &downtrans = get_downtranslist(element, ion, level)[downtransindex];
 
-  if (selecteddowntrans.lineindex == activatingline) {
+  if (downtrans.lineindex == activatingline) {
     stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
   }
 
   if constexpr (RECORD_LINESTAT) {
-    atomicadd(globals::ecounter[selecteddowntrans.lineindex], 1);
+    atomicadd(globals::ecounter[downtrans.lineindex], 1);
   }
 
-  const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, selecteddowntrans.targetlevelindex);
+  const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, downtrans.targetlevelindex);
 
   const double oldnucmf{(pkt.last_event == 1) ? pkt.nu_cmf : NAN};
   pkt.nu_cmf = epsilon_trans / H;
@@ -219,8 +218,8 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   emit_rpkt(pkt);
 
   // the r-pkt can only interact with lines redder than the current one
-  pkt.next_trans = selecteddowntrans.lineindex + 1;
-  pkt.emissiontype = selecteddowntrans.lineindex;
+  pkt.next_trans = downtrans.lineindex + 1;
+  pkt.emissiontype = downtrans.lineindex;
   pkt.em_pos = pkt.pos;
   pkt.em_time = pkt.prop_time;
   pkt.nscatterings = 0;
