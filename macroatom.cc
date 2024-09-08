@@ -34,10 +34,11 @@ constexpr bool LOG_MACROATOM = false;
 
 FILE *macroatom_file{};
 
-void calculate_macroatom_transitionrates(const int modelgridindex, const int element, const int ion, const int level,
+auto calculate_macroatom_transitionrates(const int modelgridindex, const int element, const int ion, const int level,
                                          const double t_mid, CellCacheLevels &chlevel) {
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
-  auto &processrates = chlevel.processrates;
+  auto processrates = std::array<double, MA_ACTION_COUNT>{};
+
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, ion, level);
@@ -150,6 +151,8 @@ void calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   }
   processrates[MA_ACTION_INTERNALUPHIGHERNT] = sum_up_highernt;
   processrates[MA_ACTION_INTERNALUPHIGHER] = sum_up_higher;
+
+  return processrates;
 }
 
 auto do_macroatom_internal_down_same(const int element, const int ion, const int level) -> int {
@@ -370,7 +373,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
       // If there are no precalculated rates available then calculate them
       if (chlevel.processrates[MA_ACTION_INTERNALUPHIGHER] < 0) {
-        calculate_macroatom_transitionrates(modelgridindex, element, ion, level, t_mid, chlevel);
+        chlevel.processrates = calculate_macroatom_transitionrates(modelgridindex, element, ion, level, t_mid, chlevel);
       }
     }
 
