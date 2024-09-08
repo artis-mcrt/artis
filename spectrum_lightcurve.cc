@@ -115,8 +115,8 @@ void printout_tracemission_stats() {
 
         const int nupperdowntrans = get_ndowntrans(element, ion, upper);
         const auto *downtranslist = get_downtranslist(element, ion, upper);
-        auto *downtransition = std::find_if(downtranslist, downtranslist + nupperdowntrans,
-                                            [=](const auto &downtr) { return downtr.targetlevelindex == lower; });
+        const auto *downtransition = std::find_if(downtranslist, downtranslist + nupperdowntrans,
+                                                  [=](const auto &downtr) { return downtr.targetlevelindex == lower; });
         assert_always(downtransition != (downtranslist + nupperdowntrans));
 
         printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n", encontrib,
