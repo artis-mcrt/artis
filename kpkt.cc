@@ -612,15 +612,6 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
       }
     }
 
-    if (upper < 0) {
-      printout(
-          "WARNING: Could not select an upper level. modelgridindex %d i %td element %d ion %d level %d rndcool "
-          "%g "
-          "contrib_low %g contrib %g (should match %g) upper %d nuptrans %d\n",
-          modelgridindex, i, element, ion, level, rndcool_ion_process, contrib_low, contrib,
-          globals::cellcache[cellcacheslotid].cooling_contrib[i], upper, nuptrans);
-      std::abort();
-    }
     assert_always(upper >= 0);
 
     if constexpr (TRACK_ION_STATS) {
