@@ -391,14 +391,13 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
     // select transition according to probabilities
     std::array<double, MA_ACTION_COUNT> cumulative_transitions{};
-    std::partial_sum(processrates.begin(), processrates.end(), cumulative_transitions.begin());
+    std::partial_sum(processrates.cbegin(), processrates.cend(), cumulative_transitions.begin());
 
     const double randomrate = rng_uniform() * cumulative_transitions[MA_ACTION_COUNT - 1];
 
     // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
-    const auto selected_action =
-        std::min(MA_ACTION_COUNT - 1, static_cast<int>(std::ranges::upper_bound(cumulative_transitions, randomrate) -
-                                                       cumulative_transitions.cbegin()));
+    const auto selected_action = static_cast<enum ma_action>(
+        std::ranges::upper_bound(cumulative_transitions, randomrate) - cumulative_transitions.cbegin());
 
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
