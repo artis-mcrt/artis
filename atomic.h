@@ -360,6 +360,10 @@ inline auto get_includedlevels() -> int { return includedlevels; }
   return globals::elements[element].ions[ion].levels[level].ndowntrans;
 }
 
+[[nodiscard]] inline auto get_downtranslist(const int element, const int ion, const int level) {
+  return globals::elements[element].ions[ion].levels[level].downtrans;
+}
+
 // the number of upward bound-bound transitions from the specified level
 [[nodiscard]] inline auto get_nuptrans(const int element, const int ion, const int level) -> int {
   assert_testmodeonly(element < get_nelements());
