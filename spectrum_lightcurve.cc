@@ -114,7 +114,7 @@ void printout_tracemission_stats() {
         const double B_lu = statweight_target / statweight_lower * B_ul;
 
         const int nupperdowntrans = get_ndowntrans(element, ion, upper);
-        auto &downtranslist = globals::elements[element].ions[ion].levels[upper].downtrans;
+        const auto *downtranslist = get_downtranslist(element, ion, upper);
         auto *downtransition = std::find_if(downtranslist, downtranslist + nupperdowntrans,
                                             [=](const auto &downtr) { return downtr.targetlevelindex == lower; });
         assert_always(downtransition != (downtranslist + nupperdowntrans));
