@@ -567,20 +567,18 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
           // the line list has not been sorted yet, so the store the level index for now and
           // the index into the sorted line list will be set later
 
-          globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans - 1] = {
-              .lineindex = -1,
-              .targetlevelindex = lowerlevel,
-              .einstein_A = transition.A,
-              .coll_str = transition.coll_str,
-              .osc_strength = f_ul,
-              .forbidden = transition.forbidden};
-          globals::elements[element].ions[ion].levels[lowerlevel].uptrans[nloweruptrans - 1] = {
-              .lineindex = -1,
-              .targetlevelindex = level,
-              .einstein_A = transition.A,
-              .coll_str = transition.coll_str,
-              .osc_strength = f_ul,
-              .forbidden = transition.forbidden};
+          get_downtranslist(element, ion, level)[nupperdowntrans - 1] = {.lineindex = -1,
+                                                                         .targetlevelindex = lowerlevel,
+                                                                         .einstein_A = transition.A,
+                                                                         .coll_str = transition.coll_str,
+                                                                         .osc_strength = f_ul,
+                                                                         .forbidden = transition.forbidden};
+          get_uptranslist(element, ion, lowerlevel)[nloweruptrans - 1] = {.lineindex = -1,
+                                                                          .targetlevelindex = level,
+                                                                          .einstein_A = transition.A,
+                                                                          .coll_str = transition.coll_str,
+                                                                          .osc_strength = f_ul,
+                                                                          .forbidden = transition.forbidden};
         }
 
       } else if (pass == 1 && globals::rank_in_node == 0) {
