@@ -56,8 +56,8 @@ void increment_ion_stats_contabsorption(const Packet &pkt, const int modelgridin
   stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION, n_photons_absorbed);
 
   const int et = pkt.emissiontype;
-  if (et >= 0)  // r-packet is from bound-bound emission
-  {
+  if (et >= 0) {
+    // r-packet is from bound-bound emission
     stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUND, n_photons_absorbed);
     const int emissionelement = globals::linelist[et].elementindex;
     const int emissionion = globals::linelist[et].ionindex;
@@ -76,9 +76,8 @@ void increment_ion_stats_contabsorption(const Packet &pkt, const int modelgridin
                                    n_photons_absorbed);
       }
     }
-  } else if (et != EMTYPE_FREEFREE &&
-             et != EMTYPE_NOTSET)  // r-pkt is from bound-free emission (not free-free scattering)
-  {
+  } else if (et != EMTYPE_FREEFREE && et != EMTYPE_NOTSET) {
+    // r-pkt is from bound-free emission (not free-free scattering)
     stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBOUNDFREE, n_photons_absorbed);
 
     const int bfindex = (-1 * et) - 1;
