@@ -81,17 +81,15 @@ struct PhotoionTarget {
 };
 
 struct EnergyLevel {
-  double epsilon{-1};  // Excitation energy of this level relative to the neutral ground level.
-  int nuptrans{0};
-  int alltrans_startup{};  // Allowed upward transitions from this level
+  double epsilon{-1};        // Excitation energy of this level relative to the neutral ground level.
+  int alltrans_startdown{};  // Allowed downward transitions from this level
   int ndowntrans{0};
-  int alltrans_startdown{};        // Allowed downward transitions from this level
-  PhotoionTarget *phixstargets{};  // pointer to table of target states and probabilities
+  int nuptrans{0};
   int phixsstart{-1};              // index to start of photoionisation cross-sections table in global::allphixs
   int nphixstargets{0};            // length of phixstargets array:
   float stat_weight{0.};           // Statistical weight of this level.
-
-  int cont_index{-1};  // Index of the continuum associated to this level. Negative number.
+  PhotoionTarget *phixstargets{};  // pointer to table of target states and probabilities
+  int cont_index{-1};              // Index of the continuum associated to this level. Negative number.
   int closestgroundlevelcont{-1};
 };
 
