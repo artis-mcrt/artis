@@ -81,11 +81,11 @@ struct LevelTransition {
 };
 
 struct EnergyLevel {
-  double epsilon{-1};            // Excitation energy of this level relative to the neutral ground level.
-  LevelTransition *uptrans{};    // Allowed upward transitions from this level
-  LevelTransition *downtrans{};  // Allowed downward transitions from this level
+  double epsilon{-1};  // Excitation energy of this level relative to the neutral ground level.
   int nuptrans{0};
+  int uptrans{};  // Allowed upward transitions from this level
   int ndowntrans{0};
+  int downtrans{};                 // Allowed downward transitions from this level
   PhotoionTarget *phixstargets{};  // pointer to table of target states and probabilities
   int phixsstart{-1};              // index to start of photoionisation cross-sections table in global::allphixs
   int nphixstargets{0};            // length of phixstargets array:
@@ -109,7 +109,6 @@ struct Ion {
   int uniquelevelindexstart;
   int groundcontindex;
   double ionpot;  // Ionisation threshold to the next ionstage
-  LevelTransition *alltransitions;
 };
 
 struct Element {
@@ -258,6 +257,7 @@ inline int opacity_case{};  // 0 grey, 1 for Fe-grp dependence.
 inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperature table value
 
 inline float *allphixs{};
+inline LevelTransition *alltrans;
 
 inline std::vector<Element> elements;
 
