@@ -655,7 +655,7 @@ void macroatom_close_file() {
 auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int upper,
                                 const int lower, const double epsilon_trans, const float A_ul,
                                 const double upperstatweight, const double t_current) -> double {
-  assert_always(upper > lower);
+  assert_testmodeonly(upper > lower);
 
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
