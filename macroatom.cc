@@ -155,13 +155,13 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   return processrates;
 }
 
-auto do_macroatom_internal_down_same(const int element, const int ion, const int level) -> int {
+auto do_macroatom_internal_down_same(const int element, const int ion, const int level,
+                                     const CellCacheLevels &chlevel) -> int {
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
   // printout("[debug] do_ma:   internal downward jump within current ionstage\n");
 
-  const double *sum_internal_down_same =
-      globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].sum_internal_down_same;
+  const double *sum_internal_down_same = chlevel.sum_internal_down_same;
 
   // Randomly select the occurring transition
   const double targetval = rng_uniform() * sum_internal_down_same[ndowntrans - 1];
@@ -178,12 +178,11 @@ auto do_macroatom_internal_down_same(const int element, const int ion, const int
 
 // radiative deexcitation
 void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion, const int level,
-                                  const int activatingline) {
+                                  const int activatingline, const CellCacheLevels &chlevel) {
   // randomly select which line transitions occurs
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
-  const auto *sum_epstrans_rad_deexc =
-      globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc;
+  const auto *sum_epstrans_rad_deexc = chlevel.sum_epstrans_rad_deexc;
 
   const double targetval = rng_uniform() * sum_epstrans_rad_deexc[ndowntrans - 1];
 
@@ -406,7 +405,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
       case MA_ACTION_RADDEEXC: {
         // printout("[debug] do_ma:   radiative deexcitation\n");
 
-        do_macroatom_raddeexcitation(pkt, element, ion, level, activatingline);
+        do_macroatom_raddeexcitation(pkt, element, ion, level, activatingline, chlevel);
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC, pkt.e_cmf);
@@ -448,7 +447,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
       case MA_ACTION_INTERNALDOWNSAME: {
         stats::increment(stats::COUNTER_INTERACTIONS);
-        level = do_macroatom_internal_down_same(element, ion, level);
+        level = do_macroatom_internal_down_same(element, ion, level, chlevel);
 
         break;
       }
@@ -548,8 +547,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         stats::increment(stats::COUNTER_INTERACTIONS);
 
         // randomly select the occurring transition
-        const double *sum_internal_up_same =
-            globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].sum_internal_up_same;
+        const double *sum_internal_up_same = chlevel.sum_internal_up_same;
 
         const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALUPSAME];
 
