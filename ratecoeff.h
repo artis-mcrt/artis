@@ -45,7 +45,7 @@ void setup_photoion_luts();
 inline double T_step_log{};
 
 template <double func_integrand(double, void *)>
-constexpr auto simpson_integrator(auto &params, double a, double b, int samplecount) -> double {
+constexpr auto simpson_integrator(auto &params, const double a, const double b, const int samplecount) -> double {
   assert_testmodeonly(samplecount % 2 == 1);
 
   const double deltax = (b - a) / samplecount;
@@ -75,8 +75,8 @@ constexpr auto simpson_integrator(auto &params, double a, double b, int sampleco
 }
 
 template <double func_integrand(double, void *)>
-auto integrator(auto params, double a, double b, double epsabs, double epsrel, int key, double *result,
-                double *abserr) {
+auto integrator(auto params, const double a, const double b, const double epsabs, const double epsrel, const int key,
+                double *result, double *abserr) {
   if constexpr (USE_SIMPSON_INTEGRATOR) {
     // need an odd number for Simpson rule
     const int samplecount = (std::max(1, static_cast<int>((b / a) / globals::NPHIXSNUINCREMENT)) * 4) + 1;
