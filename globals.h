@@ -84,7 +84,6 @@ struct EnergyLevel {
   double epsilon{-1};        // Excitation energy of this level relative to the neutral ground level.
   int alltrans_startdown{};  // index into globals::alltrans for first down transition from this level
   int ndowntrans{0};         // Number of down transitions from this level
-  int alltrans_startup{};    // Allowed upward transitions from this level
   int nuptrans{0};           // Number of up transitions to this level
   int phixsstart{-1};        // index to start of photoionisation cross-sections table in global::allphixs
   int nphixstargets{0};      // number of target levels for photoionisation
