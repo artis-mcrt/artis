@@ -95,12 +95,12 @@ auto get_phixsupperlevel_tmp(const std::vector<PhotoionTarget> &temp_allphixstar
 
 void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
-                           std::vector<float> &tmpallphixs, std::vector<PhotoionTarget> &temp_allphixstargets,
-                           size_t *mem_usage_phixs, const int phixs_file_version) {
+                           std::vector<float> &tmpallphixs, auto &temp_allphixstargets, size_t *mem_usage_phixs,
+                           const int phixs_file_version) {
   std::string phixsline;
   assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargetstart == -1);
   globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargetstart =
-      static_cast<int>(std::ssize(temp_allphixstargets));
+      static_cast<int>(temp_allphixstargets.size());
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - groundstate_index_in;
     assert_always(upperlevel >= 0);
