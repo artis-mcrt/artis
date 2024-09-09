@@ -866,7 +866,7 @@ void read_phixs_data() {
     read_phixs_file(1, tmpallphixs);
   }
 
-  int cont_index = -1;
+  int cont_index = 0;
   ptrdiff_t nbftables = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -874,9 +874,8 @@ void read_phixs_data() {
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         const int nphixstargets = get_nphixstargets(element, ion, level);
-        globals::elements[element].ions[ion].levels[level].cont_index =
-            (nphixstargets > 0) ? cont_index : std::numeric_limits<int>::max();
-        cont_index -= nphixstargets;
+        globals::elements[element].ions[ion].levels[level].cont_index = (nphixstargets > 0) ? cont_index : -1;
+        cont_index += nphixstargets;
         if (nphixstargets > 0) {
           nbftables++;
         }

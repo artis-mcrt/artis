@@ -417,7 +417,7 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
 [[nodiscard]] inline auto get_emtype_continuum(const int element, const int ion, const int level,
                                                const int upperionlevel) -> int {
   const int phixstargetindex = get_phixtargetindex(element, ion, level, upperionlevel);
-  return globals::elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
+  return -1 - globals::elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
 }
 
 // Returns the energy of (element,ion,level).
