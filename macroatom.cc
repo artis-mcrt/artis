@@ -91,9 +91,7 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
     const double C = col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, statweight);
     const double NT = nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, i, uptrans.lineindex);
 
-    const double individ_internal_up_same = (R + C + NT) * epsilon_current;
-
-    sum_internal_up_same += individ_internal_up_same;
+    sum_internal_up_same += (R + C + NT) * epsilon_current;
     chlevel.sum_internal_up_same[i] = sum_internal_up_same;
   }
   processrates[MA_ACTION_INTERNALUPSAME] = sum_internal_up_same;
