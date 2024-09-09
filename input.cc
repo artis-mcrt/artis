@@ -591,7 +591,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A;
 
         const int nupperdowntrans = get_ndowntrans(element, ion, level);
-        auto &downtransition = get_downtranslist(element, ion, level)[nupperdowntrans];
+        auto &downtransition = temp_alltranslist[globals::elements[element].ions[ion].levels[level].alltrans_startdown +
+                                                 nupperdowntrans - 1];
 
         // this is what classic did, but it is not quite correct. The downtrans list should be searched to find the
         // correct index, not just using the last one. It probably works for the case where the transitions are sorted,
