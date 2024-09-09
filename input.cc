@@ -492,7 +492,6 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
       for (int level = 0; level < nlevelsmax; level++) {
         globals::elements[element].ions[ion].levels[level].alltrans_startdown = alltransindex;
         alltransindex += get_ndowntrans(element, ion, level);
-        globals::elements[element].ions[ion].levels[level].alltrans_startup = alltransindex;
         alltransindex += get_nuptrans(element, ion, level);
 
         set_ndowntrans(element, ion, level, 0);
@@ -559,13 +558,14 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
                                   .coll_str = transition.coll_str,
                                   .osc_strength = f_ul,
                                   .forbidden = transition.forbidden};
-          temp_alltranslist[globals::elements[element].ions[ion].levels[lowerlevel].alltrans_startup + nloweruptrans -
-                            1] = {.lineindex = -1,
-                                  .targetlevelindex = level,
-                                  .einstein_A = transition.A,
-                                  .coll_str = transition.coll_str,
-                                  .osc_strength = f_ul,
-                                  .forbidden = transition.forbidden};
+          const auto lowerstartup = globals::elements[element].ions[ion].levels[lowerlevel].alltrans_startdown +
+                                    get_ndowntrans(element, ion, lowerlevel);
+          temp_alltranslist[lowerstartup + nloweruptrans - 1] = {.lineindex = -1,
+                                                                 .targetlevelindex = level,
+                                                                 .einstein_A = transition.A,
+                                                                 .coll_str = transition.coll_str,
+                                                                 .osc_strength = f_ul,
+                                                                 .forbidden = transition.forbidden};
         }
 
       } else if (pass == 1 && globals::rank_in_node == 0) {
@@ -603,9 +603,9 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         downtransition.coll_str = std::max(downtransition.coll_str, transition.coll_str);
 
         const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
-        auto &uptransition =
-            temp_alltranslist[globals::elements[element].ions[ion].levels[lowerlevel].alltrans_startup + nloweruptrans -
-                              1];
+        const auto lowerstartup = globals::elements[element].ions[ion].levels[lowerlevel].alltrans_startdown +
+                                  get_ndowntrans(element, ion, lowerlevel);
+        auto &uptransition = temp_alltranslist[lowerstartup + nloweruptrans - 1];
 
         // as above, the downtrans list should be searched to find the correct index instead of using the last one.
         // assert_always(uptransition.targetlevelindex == level);

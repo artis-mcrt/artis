@@ -378,7 +378,7 @@ inline auto get_includedlevels() -> int { return includedlevels; }
 
 [[nodiscard]] inline auto get_uptranslist(const int element, const int ion, const int level) -> LevelTransition * {
   const auto &levelref = globals::elements[element].ions[ion].levels[level];
-  return globals::alltrans + levelref.alltrans_startup;
+  return globals::alltrans + levelref.alltrans_startdown + levelref.ndowntrans;
 }
 
 [[nodiscard]] inline auto get_uptransspan(const int element, const int ion, const int level) {
