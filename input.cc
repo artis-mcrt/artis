@@ -429,7 +429,9 @@ void read_ion_transitions(std::fstream &ftransitiondata, const int tottransition
       const int lower = lower_in - groundstate_index_in;
       const int upper = upper_in - groundstate_index_in;
       assert_always(lower >= 0);
-      assert_always(upper >= 0);
+      assert_always(upper > lower);
+      assert_always(lower >= prev_lower);
+      assert_always(upper >= prev_upper || lower > prev_lower);
 
       // this entire block can be removed if we don't want to add in extra collisonal
       // transitions between levels
@@ -471,12 +473,6 @@ void read_ion_transitions(std::fstream &ftransitiondata, const int tottransition
       prev_upper = upper;
     }
   }
-  std::sort(iontransitiontable.begin(), iontransitiontable.end(), [](const Transition &a, const Transition &b) {
-    if (a.lower == b.lower) {
-      return a.upper < b.upper;
-    }
-    return a.lower < b.lower;
-  });
 }
 
 void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
