@@ -471,6 +471,12 @@ void read_ion_transitions(std::fstream &ftransitiondata, const int tottransition
       prev_upper = upper;
     }
   }
+  std::sort(iontransitiontable.begin(), iontransitiontable.end(), [](const Transition &a, const Transition &b) {
+    if (a.lower == b.lower) {
+      return a.upper < b.upper;
+    }
+    return a.lower < b.lower;
+  });
 }
 
 void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
