@@ -1642,6 +1642,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
         const int ion = line.ionindex;
         const int lower = line.lowerlevelindex;
         const int upper = line.upperlevelindex;
+        const auto nnlevel_lower = get_levelpop(modelgridindex, element, ion, lower);
 
         const auto uptransindex = get_uptransindex(element, ion, lower, upper);
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon(element, ion, lower);
@@ -1650,7 +1651,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 
         const double t_mid = globals::timesteps[timestep].mid;
         const double radexc_ratecoeff = rad_excitation_ratecoeff(modelgridindex, element, ion, lower, uptransindex,
-                                                                 epsilon_trans, lineindex, t_mid);
+                                                                 epsilon_trans, nnlevel_lower, lineindex, t_mid);
 
         const double collexc_ratecoeff = col_excitation_ratecoeff(T_e, nne, element, ion, lower, uptransindex,
                                                                   epsilon_trans, stat_weight(element, ion, lower));

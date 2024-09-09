@@ -483,7 +483,7 @@ void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, 
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
 
       const double R =
-          rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, lineindex, t_mid) *
+          rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, nnlevel, lineindex, t_mid) *
           s_renorm[level];
       assert_always(R >= 0);
       assert_always(std::isfinite(R));

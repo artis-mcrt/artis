@@ -87,8 +87,8 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
     const auto &uptrans = uptranslist[i];
     const double epsilon_trans = epsilon(element, ion, uptrans.targetlevelindex) - epsilon_current;
 
-    const double R =
-        rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, uptrans.lineindex, t_mid);
+    const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, nnlevel,
+                                              uptrans.lineindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, statweight);
     const double NT = nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, i, uptrans.lineindex);
 
@@ -693,13 +693,13 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
 // radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
 auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
-                              const int uptransindex, const double epsilon_trans, const int lineindex,
-                              const double t_current) -> double {
+                              const int uptransindex, const double epsilon_trans, const double nnlevel_lower,
+                              const int lineindex, const double t_current) -> double {
   const auto &uptr = get_uptranslist(element, ion, lower)[uptransindex];
   const int upper = uptr.targetlevelindex;
 
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
-  const double n_l = get_levelpop(modelgridindex, element, ion, lower);
+  const auto &n_l = nnlevel_lower;
   const double nu_trans = epsilon_trans / H;
   const double A_ul = uptr.einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
