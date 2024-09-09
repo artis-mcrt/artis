@@ -51,6 +51,8 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   double sum_coldeexc = 0.;
   const int ndowntrans = get_ndowntrans(element, ion, level);
   const auto *const leveldowntranslist = get_downtranslist(element, ion, level);
+  auto *const arr_sum_epstrans_rad_deexc = chlevel.sum_epstrans_rad_deexc;
+  auto *const arr_sum_internal_down_same = chlevel.sum_internal_down_same;
   for (int i = 0; i < ndowntrans; i++) {
     const auto &downtrans = leveldowntranslist[i];
     const int lower = downtrans.targetlevelindex;
@@ -62,17 +64,12 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
         rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul, statweight, t_mid);
     const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtrans);
 
-    const double individ_internal_down_same = (R + C) * epsilon_target;
+    sum_raddeexc += R * epsilon_trans;
+    sum_coldeexc += C * epsilon_trans;
+    sum_internal_down_same += (R + C) * epsilon_target;
 
-    const double sum_epstrans_rad_deexc = R * epsilon_trans;
-    const double individ_col_deexc = C * epsilon_trans;
-
-    sum_raddeexc += sum_epstrans_rad_deexc;
-    sum_coldeexc += individ_col_deexc;
-    sum_internal_down_same += individ_internal_down_same;
-
-    chlevel.sum_epstrans_rad_deexc[i] = sum_raddeexc;
-    chlevel.sum_internal_down_same[i] = sum_internal_down_same;
+    arr_sum_epstrans_rad_deexc[i] = sum_raddeexc;
+    arr_sum_internal_down_same[i] = sum_internal_down_same;
 
     // printout("checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,lower,R,C,epsilon_trans);
   }
