@@ -9,8 +9,8 @@ void macroatom_close_file();
 
 void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate);
 
-[[nodiscard]] auto rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower,
-                                              double epsilon_trans, float A_ul, double upperstatweight,
+[[nodiscard]] auto rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int lower, double epsilon_trans,
+                                              float A_ul, double upperstatweight, double nnlevelupper,
                                               double t_current) -> double;
 [[nodiscard]] auto rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int uptransindex,
                                             double epsilon_trans, int lineindex, double t_current) -> double;

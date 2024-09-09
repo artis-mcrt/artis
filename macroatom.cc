@@ -43,6 +43,7 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   const auto nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, ion, level);
   const double statweight = stat_weight(element, ion, level);
+  const auto nnlevel = get_levelpop(modelgridindex, element, ion, level);
 
   // Downward transitions within the current ionisation stage:
   // radiative/collisional deexcitation and internal downward jumps
@@ -60,8 +61,8 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
     const double epsilon_target = epsilon(element, ion, lower);
     const double epsilon_trans = epsilon_current - epsilon_target;
 
-    const double R =
-        rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul, statweight, t_mid);
+    const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, lower, epsilon_trans, A_ul, statweight,
+                                                nnlevel, t_mid);
     const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtrans);
 
     sum_raddeexc += R * epsilon_trans;
@@ -647,12 +648,11 @@ void macroatom_close_file() {
 
 // radiative deexcitation rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
-auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int upper,
-                                const int lower, const double epsilon_trans, const float A_ul,
-                                const double upperstatweight, const double t_current) -> double {
+auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
+                                const double epsilon_trans, const float A_ul, const double upperstatweight,
+                                const double nnlevelupper, const double t_current) -> double {
   assert_testmodeonly(upper > lower);
-
-  const double n_u = get_levelpop(modelgridindex, element, ion, upper);
+  const auto &n_u = nnlevelupper;
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
 
   double R = 0.;
