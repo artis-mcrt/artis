@@ -1152,7 +1152,7 @@ void reduce_estimators()
 
     for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-        const auto mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+        const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -1194,7 +1194,7 @@ void do_MPI_Bcast(const int modelgridindex, const int root, const int root_node_
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      const auto mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+      const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
       if (globals::rank_in_node == 0) {
         MPI_Bcast(&radfieldbin_solutions[mgibinindex].W, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
         MPI_Bcast(&radfieldbin_solutions[mgibinindex].T_R, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
