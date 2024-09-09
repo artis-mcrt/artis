@@ -490,6 +490,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
       for (int level = 0; level < nlevelsmax; level++) {
         globals::elements[element].ions[ion].levels[level].alltrans_startdown = alltransindex;
         alltransindex += get_ndowntrans(element, ion, level);
+        globals::elements[element].ions[ion].levels[level].alltrans_startup = alltransindex;
         alltransindex += get_nuptrans(element, ion, level);
 
         set_ndowntrans(element, ion, level, 0);
@@ -556,14 +557,13 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
                                   .coll_str = transition.coll_str,
                                   .osc_strength = f_ul,
                                   .forbidden = transition.forbidden};
-          temp_alltranslist[globals::elements[element].ions[ion].levels[lowerlevel].alltrans_startdown +
-                            get_ndowntrans(element, ion, lowerlevel) + nloweruptrans - 1] = {
-              .lineindex = -1,
-              .targetlevelindex = level,
-              .einstein_A = transition.A,
-              .coll_str = transition.coll_str,
-              .osc_strength = f_ul,
-              .forbidden = transition.forbidden};
+          temp_alltranslist[globals::elements[element].ions[ion].levels[lowerlevel].alltrans_startup + nloweruptrans -
+                            1] = {.lineindex = -1,
+                                  .targetlevelindex = level,
+                                  .einstein_A = transition.A,
+                                  .coll_str = transition.coll_str,
+                                  .osc_strength = f_ul,
+                                  .forbidden = transition.forbidden};
         }
 
       } else if (pass == 1 && globals::rank_in_node == 0) {
@@ -591,8 +591,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A;
 
         const int nupperdowntrans = get_ndowntrans(element, ion, level);
-        auto &downtransition = temp_alltranslist[globals::elements[element].ions[ion].levels[level].alltrans_startdown +
-                                                 nupperdowntrans - 1];
+        auto &downtransition =
+            temp_alltranslist[globals::elements[element].ions[ion].levels[level].alltrans_startdown + nupperdowntrans];
 
         // this is what classic did, but it is not quite correct. The downtrans list should be searched to find the
         // correct index, not just using the last one. It probably works for the case where the transitions are sorted,
@@ -604,7 +604,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         downtransition.coll_str = std::max(downtransition.coll_str, transition.coll_str);
 
         const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
-        auto &uptransition = get_uptranslist(element, ion, lowerlevel)[nloweruptrans];
+        auto &uptransition =
+            temp_alltranslist[globals::elements[element].ions[ion].levels[lowerlevel].alltrans_startup + nloweruptrans];
 
         // as above, the downtrans list should be searched to find the correct index instead of using the last one.
         // assert_always(uptransition.targetlevelindex == level);
