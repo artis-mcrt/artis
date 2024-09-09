@@ -600,9 +600,6 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         auto &downtransition = temp_alltranslist[globals::elements[element].ions[ion].levels[level].alltrans_startdown +
                                                  nupperdowntrans - 1];
 
-        // this is what classic did, but it is not quite correct. The downtrans list should be searched to find the
-        // correct index, not just using the last one. It probably works for the case where the transitions are sorted,
-        // but the assertion tripped on C IV in the classic dataset.
         assert_always(downtransition.targetlevelindex == lowerlevel);
 
         downtransition.einstein_A += transition.A;
