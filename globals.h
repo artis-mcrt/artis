@@ -82,14 +82,16 @@ struct PhotoionTarget {
 
 struct EnergyLevel {
   double epsilon{-1};        // Excitation energy of this level relative to the neutral ground level.
-  int alltrans_startdown{};  // Allowed downward transitions from this level
-  int ndowntrans{0};
-  int nuptrans{0};
-  int phixsstart{-1};              // index to start of photoionisation cross-sections table in global::allphixs
-  int nphixstargets{0};            // length of phixstargets array:
-  float stat_weight{0.};           // Statistical weight of this level.
-  PhotoionTarget *phixstargets{};  // pointer to table of target states and probabilities
-  int cont_index{-1};              // Index of the continuum associated to this level. Negative number.
+  int alltrans_startdown{};  // index into globals::alltrans for first down transition from this level
+  int ndowntrans{0};         // Number of down transitions from this level
+  int nuptrans{0};           // Number of up transitions to this level
+  int phixsstart{-1};        // index to start of photoionisation cross-sections table in global::allphixs
+  int nphixstargets{0};      // number of target levels for photoionisation
+  float stat_weight{0.};     // statistical weight of this level
+  int phixstargetstart{};    // index into globals::allphixstargets
+  int cont_index{-1};        // index of the bound-free continuum (for first target) sorted by
+                             // element/ion/level/phixstargetindex
+                             // (not an index into the nu_edge-sorted allcont list!)
   int closestgroundlevelcont{-1};
 };
 
@@ -256,6 +258,7 @@ inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperatur
 
 inline float *allphixs{};
 inline LevelTransition *alltrans;
+inline std::vector<PhotoionTarget> allphixstargets;
 
 inline std::vector<Element> elements;
 

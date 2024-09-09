@@ -94,7 +94,9 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
 
-  return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].levelindex;
+  return globals::allphixstargets[globals::elements[element].ions[ion].levels[level].phixstargetstart +
+                                  phixstargetindex]
+      .levelindex;
 }
 
 // Return the probability of a target state for photoionization of (element,ion,level).
@@ -106,7 +108,9 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
 
-  return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].probability;
+  return globals::allphixstargets[globals::elements[element].ions[ion].levels[level].phixstargetstart +
+                                  phixstargetindex]
+      .probability;
 }
 
 // Return the statistical weight of (element,ion,level).
