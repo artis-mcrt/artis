@@ -80,6 +80,29 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   processrates[MA_ACTION_COLDEEXC] = sum_coldeexc;
   processrates[MA_ACTION_INTERNALDOWNSAME] = sum_internal_down_same;
 
+  // Calculate sum for upward internal transitions
+  // transitions within the current ionisation stage
+  double sum_internal_up_same = 0.;
+  const int nuptrans = get_nuptrans(element, ion, level);
+  const auto *const uptranslist = get_uptranslist(element, ion, level);
+  for (int i = 0; i < nuptrans; i++) {
+    const auto &uptrans = uptranslist[i];
+    const double epsilon_trans = epsilon(element, ion, uptrans.targetlevelindex) - epsilon_current;
+
+    const double R =
+        rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, uptrans.lineindex, t_mid);
+    const double C = col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, statweight);
+    const double NT = nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, i, uptrans.lineindex);
+
+    const double individ_internal_up_same = (R + C + NT) * epsilon_current;
+
+    sum_internal_up_same += individ_internal_up_same;
+    chlevel.sum_internal_up_same[i] = sum_internal_up_same;
+  }
+  processrates[MA_ACTION_INTERNALUPSAME] = sum_internal_up_same;
+
+  assert_always(std::isfinite(processrates[MA_ACTION_INTERNALUPSAME]));
+
   // Downward transitions to lower ionisation stages:
   // radiative/collisional recombination and internal downward jumps
   // checks only if there is a lower ion, doesn't make sure that Z(ion)=Z(ion-1)+1
@@ -106,29 +129,6 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   processrates[MA_ACTION_INTERNALDOWNLOWER] = sum_internal_down_lower;
   processrates[MA_ACTION_RADRECOMB] = sum_radrecomb;
   processrates[MA_ACTION_COLRECOMB] = sum_colrecomb;
-
-  // Calculate sum for upward internal transitions
-  // transitions within the current ionisation stage
-  double sum_internal_up_same = 0.;
-  const int nuptrans = get_nuptrans(element, ion, level);
-  const auto *const uptranslist = get_uptranslist(element, ion, level);
-  for (int i = 0; i < nuptrans; i++) {
-    const auto &uptrans = uptranslist[i];
-    const double epsilon_trans = epsilon(element, ion, uptrans.targetlevelindex) - epsilon_current;
-
-    const double R =
-        rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, uptrans.lineindex, t_mid);
-    const double C = col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, statweight);
-    const double NT = nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, i, uptrans.lineindex);
-
-    const double individ_internal_up_same = (R + C + NT) * epsilon_current;
-
-    sum_internal_up_same += individ_internal_up_same;
-    chlevel.sum_internal_up_same[i] = sum_internal_up_same;
-  }
-  processrates[MA_ACTION_INTERNALUPSAME] = sum_internal_up_same;
-
-  assert_always(std::isfinite(processrates[MA_ACTION_INTERNALUPSAME]));
 
   // Transitions to higher ionisation stages
   double sum_up_highernt = 0.;
