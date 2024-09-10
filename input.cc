@@ -941,38 +941,9 @@ void read_phixs_data() {
     tmpallphixs.shrink_to_fit();
   }
 
-  if (!temp_allphixstargets.empty()) {
-    assert_always(cont_index == std::ssize(temp_allphixstargets));
-
-    // copy the photoionisation tables into one contiguous block of memory
-#ifdef MPI_ON
-    MPI_Win win_allphixstargetsblock = MPI_WIN_NULL;
-
-    const auto [_, noderank_phixstargetcount] =
-        get_range_chunk(std::ssize(temp_allphixstargets), globals::node_nprocs, globals::rank_in_node);
-
-    auto size = static_cast<MPI_Aint>(noderank_phixstargetcount * sizeof(PhotoionTarget));
-    int disp_unit = sizeof(float);
-    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &globals::allphixstargets,
-                            &win_allphixstargetsblock);
-    MPI_Win_shared_query(win_allphixstargetsblock, MPI_PROC_NULL, &size, &disp_unit, &globals::allphixstargets);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-#else
-    globals::allphixstargets =
-        static_cast<PhotoionTarget *>(malloc(temp_allphixstargets.size() * sizeof(PhotoionTarget)));
-#endif
-
-    assert_always(globals::allphixstargets != nullptr);
-
-    std::copy_n(temp_allphixstargets.cbegin(), temp_allphixstargets.size(), globals::allphixstargets);
-
-#ifdef MPI_ON
-    MPI_Barrier(MPI_COMM_WORLD);
-#endif
-    temp_allphixstargets.clear();
-    temp_allphixstargets.shrink_to_fit();
-  }
+  temp_allphixstargets.shrink_to_fit();
+  globals::allphixstargets = temp_allphixstargets;
+  assert_always(cont_index == std::ssize(globals::allphixstargets));
 
   setup_phixs_list();
 }

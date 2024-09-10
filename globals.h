@@ -258,7 +258,7 @@ inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperatur
 
 inline float *allphixs{};
 inline LevelTransition *alltrans;
-inline PhotoionTarget *allphixstargets;
+inline std::vector<PhotoionTarget> allphixstargets;
 
 inline std::vector<Element> elements;
 
