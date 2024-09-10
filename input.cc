@@ -86,21 +86,13 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
 
 CellCachePhixsTargets *chphixstargetsblock{};
 
-// use the temporary list, before it has been copied to node-shared memory
-auto get_phixsupperlevel_tmp(const std::vector<PhotoionTarget> &temp_allphixstargets, const int element, const int ion,
-                             const int level, const int phixstargetindex) {
-  return temp_allphixstargets[globals::elements[element].ions[ion].levels[level].phixstargetstart + phixstargetindex]
-      .levelindex;
-}
-
 void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
-                           std::vector<float> &tmpallphixs, auto &temp_allphixstargets, size_t *mem_usage_phixs,
-                           const int phixs_file_version) {
+                           std::vector<float> &tmpallphixs, size_t *mem_usage_phixs, const int phixs_file_version) {
   std::string phixsline;
   assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargetstart == -1);
   globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargetstart =
-      static_cast<int>(temp_allphixstargets.size());
+      static_cast<int>(globals::allphixstargets.size());
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - groundstate_index_in;
     assert_always(upperlevel >= 0);
@@ -113,7 +105,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
       upperlevel = 0;
     }
 
-    temp_allphixstargets.push_back({.probability = 1., .levelindex = upperlevel});
+    globals::allphixstargets.push_back({.probability = 1., .levelindex = upperlevel});
   } else {  // upperlevel < 0, indicating that a table of upper levels and their probabilities will follow
     int in_nphixstargets = 0;
     assert_always(get_noncommentline(phixsfile, phixsline));
@@ -133,7 +125,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
         const int upperlevel = upperlevel_in - groundstate_index_in;
         assert_always(upperlevel >= 0);
         assert_always(phixstargetprobability > 0);
-        temp_allphixstargets.push_back({.probability = phixstargetprobability, .levelindex = upperlevel});
+        globals::allphixstargets.push_back({.probability = phixstargetprobability, .levelindex = upperlevel});
 
         probability_sum += phixstargetprobability;
       }
@@ -150,7 +142,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
       }
 
       // send it to the ground state of the top ion
-      temp_allphixstargets.push_back({.probability = 1., .levelindex = 0});
+      globals::allphixstargets.push_back({.probability = 1., .levelindex = 0});
     }
   }
 
@@ -163,8 +155,8 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lowerlevel);
          phixstargetindex++) {
       const int upperlevel =
-          temp_allphixstargets[globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargetstart +
-                               phixstargetindex]
+          globals::allphixstargets[globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargetstart +
+                                   phixstargetindex]
               .levelindex;
       if (upperlevel > get_maxrecombininglevel(element, lowerion + 1)) {
         globals::elements[element].ions[lowerion + 1].maxrecombininglevel = upperlevel;
@@ -181,7 +173,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   auto *levelphixstable = &tmpallphixs[tmpphixsstart];
   if (phixs_file_version == 1) {
     assert_always(get_nphixstargets(element, lowerion, lowerlevel) == 1);
-    assert_always(get_phixsupperlevel_tmp(temp_allphixstargets, element, lowerion, lowerlevel, 0) == 0);
+    assert_always(get_phixsupperlevel(element, lowerion, lowerlevel, 0) == 0);
 
     const double nu_edge = (epsilon(element, upperion, 0) - epsilon(element, lowerion, lowerlevel)) / H;
 
@@ -239,8 +231,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   }
 }
 
-void read_phixs_file(const int phixs_file_version, std::vector<float> &tmpallphixs,
-                     std::vector<PhotoionTarget> &temp_allphixstargets) {
+void read_phixs_file(const int phixs_file_version, std::vector<float> &tmpallphixs) {
   size_t mem_usage_phixs = 0;
 
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
@@ -308,7 +299,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float> &tmpallphi
       // store only photoionization crosssections for ions that are part of the current model atom
       if (lowerion >= 0 && upperion < get_nions(element) && lowerlevel < get_ionisinglevels(element, lowerion)) {
         read_phixs_data_table(phixsfile, nphixspoints_inputtable, element, lowerion, lowerlevel, upperion,
-                              upperlevel_in, tmpallphixs, temp_allphixstargets, &mem_usage_phixs, phixs_file_version);
+                              upperlevel_in, tmpallphixs, &mem_usage_phixs, phixs_file_version);
 
         skip_this_phixs_table = false;
       }
@@ -844,7 +835,7 @@ void read_phixs_data() {
   globals::nbfcontinua_ground = 0;
   globals::nbfcontinua = 0;
   std::vector<float> tmpallphixs;
-  std::vector<PhotoionTarget> temp_allphixstargets;
+  globals::allphixstargets.clear();
 
   // read in photoionisation cross sections
   phixs_file_version_exists[0] = false;
@@ -862,10 +853,10 @@ void read_phixs_data() {
         "from phixsdata_v2.txt to interpolate the phixsdata.txt data\n");
   }
   if (phixs_file_version_exists[2]) {
-    read_phixs_file(2, tmpallphixs, temp_allphixstargets);
+    read_phixs_file(2, tmpallphixs);
   }
   if (phixs_file_version_exists[1]) {
-    read_phixs_file(1, tmpallphixs, temp_allphixstargets);
+    read_phixs_file(1, tmpallphixs);
   }
 
   int cont_index = 0;
@@ -889,9 +880,8 @@ void read_phixs_data() {
       // all levels in the ground term should be photoionisation targets from the lower ground state
       if (ion > 0 && ion < get_nions(element) - 1) {
         const int nphixstargets = get_nphixstargets(element, ion - 1, 0);
-        if (nphixstargets > 0 && get_phixsupperlevel_tmp(temp_allphixstargets, element, ion - 1, 0, 0) == 0) {
-          const int phixstargetlevels =
-              get_phixsupperlevel_tmp(temp_allphixstargets, element, ion - 1, 0, nphixstargets - 1) + 1;
+        if (nphixstargets > 0 && get_phixsupperlevel(element, ion - 1, 0, 0) == 0) {
+          const int phixstargetlevels = get_phixsupperlevel(element, ion - 1, 0, nphixstargets - 1) + 1;
 
           if (nlevels_groundterm != phixstargetlevels) {
             printout("WARNING: Z=%d ionstage %d nlevels_groundterm %d phixstargetlevels(ion-1) %d.\n",
@@ -941,8 +931,7 @@ void read_phixs_data() {
     tmpallphixs.shrink_to_fit();
   }
 
-  temp_allphixstargets.shrink_to_fit();
-  globals::allphixstargets = temp_allphixstargets;
+  globals::allphixstargets.shrink_to_fit();
   assert_always(cont_index == std::ssize(globals::allphixstargets));
 
   setup_phixs_list();
