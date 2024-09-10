@@ -82,14 +82,12 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
                MacroAtomState &mastate,
                const double tau_rnd,     // random optical depth until which the packet travels
                const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
-               const double nu_cmf_abort, const double d_nu_on_d_l, const double doppler,
-               const auto *const linelist) -> std::tuple<double, int, bool> {
+               const double nu_cmf_abort, const double d_nu_on_d_l, const double doppler, const auto *const linelist,
+               const int nlines) -> std::tuple<double, int, bool> {
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
 
   auto pos = pkt.pos;
-  const auto nu_rf = pkt.nu_rf;
   auto nu_cmf = pkt.nu_cmf;
-  const auto e_rf = pkt.e_rf;
   auto e_cmf = pkt.e_cmf;
   auto prop_time = pkt.prop_time;
   int next_trans = pkt.next_trans;
@@ -104,7 +102,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
     // create therefore new variables in packet, which contain next_lowerlevel, ...
 
     // returns negative value if nu_cmf > nu_trans
-    if (const int lineindex = closest_transition(nu_cmf, next_trans); lineindex >= 0) [[likely]] {
+    if (const int lineindex = closest_transition(nu_cmf, next_trans, nlines, linelist); lineindex >= 0) [[likely]] {
       // line interaction is possible (nu_cmf > nu_trans)
 
       const double nu_trans = linelist[lineindex].nu;
@@ -154,7 +152,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
           tau += tau_cont + tau_line;
 
           if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
-            move_pkt_withtime(pos, pkt.dir, prop_time, nu_rf, nu_cmf, e_rf, e_cmf, ldist);
+            move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
           } else {
             // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
             // and use the linear approx instead
@@ -175,7 +173,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
           mastate = {.element = element, .ion = ion, .level = upper, .activatingline = lineindex};
 
           if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-            move_pkt_withtime(pos, pkt.dir, prop_time, nu_rf, nu_cmf, e_rf, e_cmf, ldist);
+            move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
             radfield::update_lineestimator(modelgridindex, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
           }
 
@@ -267,7 +265,7 @@ auto get_event_expansion_opacity(
         bool event_is_boundbound = false;
         std::tie(edist_after_bin, next_trans, event_is_boundbound) =
             get_event(modelgridindex, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
-                      std::numeric_limits<double>::max(), 0., d_nu_on_d_l, doppler, globals::linelist);
+                      std::numeric_limits<double>::max(), 0., d_nu_on_d_l, doppler, globals::linelist, globals::nlines);
         // assert_always(edist_after_bin <= 1.1 * binedgedist);
         dist = dist + edist_after_bin;
 
@@ -748,7 +746,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     } else {
       std::tie(edist, pkt.next_trans, event_is_boundbound) =
           get_event(mgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l, doppler,
-                    globals::linelist);
+                    globals::linelist, globals::nlines);
     }
   }
   assert_always(edist >= 0);
@@ -1022,49 +1020,6 @@ void allocate_expansionopacities() {
   expansionopacity_planck_cumulative =
       std::span(expansionopacity_planck_cumulative_data,
                 expansionopacity_planck_cumulative_data == nullptr ? 0 : npts_nonempty * expopac_nbins);
-}
-
-__host__ __device__ auto closest_transition(const double nu_cmf, const int next_trans) -> int
-// for the propagation through non empty cells
-// find the next transition lineindex redder than nu_cmf
-// return -1 if no transition can be reached
-{
-  if (next_trans > (globals::nlines - 1)) {
-    // packet is tagged as having no more line interactions
-    return -1;
-  }
-  // if nu_cmf is smaller than the lowest frequency in the linelist,
-  // no line interaction is possible: return negative value as a flag
-  if (nu_cmf < globals::linelist[globals::nlines - 1].nu) {
-    return -1;
-  }
-
-  if (next_trans > 0) [[likely]] {
-    // if next_trans > 0 we know the next line we should interact with, independent of the packets
-    // current nu_cmf which might be smaller than globals::linelist[left].nu due to propagation errors
-    return next_trans;
-  }
-  if (nu_cmf >= globals::linelist[0].nu) {
-    // if nu_cmf is larger than the highest frequency in the the linelist,
-    // interaction with the first line occurs - no search
-    return 0;
-  }
-  // otherwise go through the list until nu_cmf is located between two
-  // entries in the line list and get the index of the closest line
-  // to lower frequencies
-
-  // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
-  // lower_bound matches the first element where the comparison function is false
-  const int matchindex = static_cast<int>(
-      std::lower_bound(globals::linelist, globals::linelist + globals::nlines, nu_cmf,
-                       [](const auto &line, const double find_nu_cmf) -> bool { return line.nu > find_nu_cmf; }) -
-      globals::linelist);
-
-  if (matchindex >= globals::nlines) [[unlikely]] {
-    return -1;
-  }
-
-  return matchindex;
 }
 
 // return a randomly chosen frequency with a distribution of Planck function times the expansion opacity
