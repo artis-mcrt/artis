@@ -133,7 +133,7 @@ struct TransitionLine {
 struct GSLIntegrationParas {
   double nu_edge;
   float T;
-  float *photoion_xs;
+  const float *photoion_xs;
 };
 
 template <bool separatestimrecomb>

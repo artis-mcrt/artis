@@ -35,7 +35,7 @@ struct gsl_integral_paras_bfheating {
   double nu_edge;
   int modelgridindex;
   float T_R;
-  float *photoion_xs;
+  const float *photoion_xs;
 };
 
 auto integrand_bfheatingcoeff_custom_radfield(const double nu, void *const voidparas) -> double
