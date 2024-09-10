@@ -199,7 +199,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
       }
       // continuum process occurs at edist
 
-      return {dist + ((tau_rnd - tau) / chi_cont), globals::nlines + 1, false};
+      return {dist + ((tau_rnd - tau) / chi_cont), nlines + 1, false};
     }
   }
 
