@@ -82,8 +82,8 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
                MacroAtomState &mastate,
                const double tau_rnd,     // random optical depth until which the packet travels
                const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
-               const double nu_cmf_abort, const double d_nu_on_d_l,
-               const double doppler) -> std::tuple<double, int, bool> {
+               const double nu_cmf_abort, const double d_nu_on_d_l, const double doppler,
+               const auto *const linelist) -> std::tuple<double, int, bool> {
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
 
   auto pos = pkt.pos;
@@ -107,7 +107,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
     if (const int lineindex = closest_transition(nu_cmf, next_trans); lineindex >= 0) [[likely]] {
       // line interaction is possible (nu_cmf > nu_trans)
 
-      const double nu_trans = globals::linelist[lineindex].nu;
+      const double nu_trans = linelist[lineindex].nu;
 
       // helper variable to overcome numerical problems after line scattering
       // further scattering events should be located at lower frequencies to prevent
@@ -127,11 +127,11 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
           return {std::numeric_limits<double>::max(), next_trans - 1, false};
         }
 
-        const int element = globals::linelist[lineindex].elementindex;
-        const int ion = globals::linelist[lineindex].ionindex;
-        const int upper = globals::linelist[lineindex].upperlevelindex;
-        const int lower = globals::linelist[lineindex].lowerlevelindex;
-        const double A_ul = globals::linelist[lineindex].einstein_A;
+        const int element = linelist[lineindex].elementindex;
+        const int ion = linelist[lineindex].ionindex;
+        const int upper = linelist[lineindex].upperlevelindex;
+        const int lower = linelist[lineindex].lowerlevelindex;
+        const double A_ul = linelist[lineindex].einstein_A;
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
@@ -267,7 +267,7 @@ auto get_event_expansion_opacity(
         bool event_is_boundbound = false;
         std::tie(edist_after_bin, next_trans, event_is_boundbound) =
             get_event(modelgridindex, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
-                      std::numeric_limits<double>::max(), 0., d_nu_on_d_l, doppler);
+                      std::numeric_limits<double>::max(), 0., d_nu_on_d_l, doppler, globals::linelist);
         // assert_always(edist_after_bin <= 1.1 * binedgedist);
         dist = dist + edist_after_bin;
 
@@ -747,7 +747,8 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
           mgi, nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, nu_cmf_abort, d_nu_on_d_l, doppler);
     } else {
       std::tie(edist, pkt.next_trans, event_is_boundbound) =
-          get_event(mgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l, doppler);
+          get_event(mgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l, doppler,
+                    globals::linelist);
     }
   }
   assert_always(edist >= 0);
