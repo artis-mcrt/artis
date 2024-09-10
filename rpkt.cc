@@ -877,6 +877,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
   const auto nnetot = grid::get_nnetot(modelgridindex);
+  const auto &allcont_nu_edge = globals::allcont_nu_edge;
 
   // The phixslist is sorted by nu_edge in ascending order (longest to shortest wavelength)
   // If nu < allcont[i].nu_edge no absorption in any of the following continua
@@ -884,18 +885,19 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
   // break the list into nu >= nu_edge and the remainder (nu < nu_edge)
 
   int i = 0;
-  const int allcontend =
-      static_cast<int>(std::ranges::upper_bound(globals::allcont_nu_edge, nu) - globals::allcont_nu_edge.cbegin());
+  const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.cbegin());
 
-  const int allcontbegin =
-      std::lower_bound(
-          globals::allcont_nu_edge.data(), globals::allcont_nu_edge.data() + allcontend, nu,
-          [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }) -
-      globals::allcont_nu_edge.data();
+  const int allcontbegin = std::lower_bound(allcont_nu_edge.data(), allcont_nu_edge.data() + allcontend, nu,
+                                            [](const double nu_edge, const double nu_cmf) {
+                                              return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                            }) -
+                           allcont_nu_edge.data();
 
   assert_testmodeonly(allcontbegin >= 0);
   assert_testmodeonly(allcontend <= globals::nbfcontinua);
   assert_testmodeonly(allcontbegin <= allcontend);
+
+  const auto *const allcont = globals::allcont;
 
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     phixslist->allcontbegin = allcontbegin;
@@ -912,11 +914,11 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
   }
 
   for (i = allcontbegin; i < allcontend; i++) {
-    const int element = globals::allcont[i].element;
-    const int ion = globals::allcont[i].ion;
-    const int level = globals::allcont[i].level;
+    const int element = allcont[i].element;
+    const int ion = allcont[i].ion;
+    const int level = allcont[i].level;
     const auto bfestimindex =
-        (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) ? globals::allcont[i].bfestimindex : -1;
+        (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) ? allcont[i].bfestimindex : -1;
     double sigma_contr = 0.;
 
     // The bf process happens only if the current cell contains
@@ -930,14 +932,14 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
                                                            : calculate_levelpop(modelgridindex, element, ion, level);
 
       if (USECELLHISTANDUPDATEPHIXSLIST || nnlevel > 0) {
-        const double nu_edge = globals::allcont[i].nu_edge;
-        const double sigma_bf = photoionization_crosssection_fromtable(globals::allcont[i].photoion_xs, nu_edge, nu);
+        const double nu_edge = allcont[i].nu_edge;
+        const double sigma_bf = photoionization_crosssection_fromtable(allcont[i].photoion_xs, nu_edge, nu);
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         if constexpr (!SEPARATE_STIMRECOMB) {
           double departure_ratio = globals::cellcache[cellcacheslotid].ch_allcont_departureratios[i];
           if (!USECELLHISTANDUPDATEPHIXSLIST || departure_ratio < 0) {
-            const int upper = globals::allcont[i].upperlevel;
+            const int upper = allcont[i].upperlevel;
             const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
                                                ? get_levelpop(modelgridindex, element, ion + 1, upper)
                                                : calculate_levelpop(modelgridindex, element, ion + 1, upper);
@@ -952,11 +954,11 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
           corrfactor = std::max(0., 1 - stimfactor);  // photoionisation minus stimulated recombination
         }
 
-        sigma_contr = sigma_bf * globals::allcont[i].probability * corrfactor;
+        sigma_contr = sigma_bf * allcont[i].probability * corrfactor;
 
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-          if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && level == 0 && globals::allcont[i].phixstargetindex == 0) {
-            phixslist->groundcont_gamma_contr[globals::allcont[i].index_in_groundphixslist] = sigma_contr;
+          if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && level == 0 && allcont[i].phixstargetindex == 0) {
+            phixslist->groundcont_gamma_contr[allcont[i].index_in_groundphixslist] = sigma_contr;
           }
         }
 
