@@ -293,7 +293,9 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
       double ldist = 0;
       while (ldist < sdist) {
-        const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans);
+        const int lineindex =
+            closest_transition(vpkt.nu_cmf, vpkt.next_trans, globals::nlines,
+                               globals::linelist);  // find the closest transition to the current frequency
 
         if (lineindex < 0) {
           // no more lines below the current frequency

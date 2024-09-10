@@ -88,8 +88,9 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
 
     const int nuptrans = get_nuptrans(element, ion, level);
     if (nuptrans > 0) {
+      const auto *const uptranslist = get_uptranslist(element, ion, level);
       for (int ii = 0; ii < nuptrans; ii++) {
-        const int upper = globals::elements[element].ions[ion].levels[level].uptrans[ii].targetlevelindex;
+        const int upper = uptranslist[ii].targetlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
         const double C = nnlevel *
                          col_excitation_ratecoeff(T_e, nne, element, ion, level, ii, epsilon_trans, statweight) *
@@ -596,9 +597,9 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     int upper = -1;
     // excitation to same ionization stage
     const int nuptrans = get_nuptrans(element, ion, level);
-    const auto *const uptrans = globals::elements[element].ions[ion].levels[level].uptrans;
+    const auto *const uptranslist = get_uptranslist(element, ion, level);
     for (int ii = 0; ii < nuptrans; ii++) {
-      const int tmpupper = uptrans[ii].targetlevelindex;
+      const int tmpupper = uptranslist[ii].targetlevelindex;
       // printout("    excitation to level %d possible\n",upper);
       const double epsilon_trans = epsilon(element, ion, tmpupper) - epsilon_current;
       const double C = nnlevel *
@@ -611,15 +612,6 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
       }
     }
 
-    if (upper < 0) {
-      printout(
-          "WARNING: Could not select an upper level. modelgridindex %d i %td element %d ion %d level %d rndcool "
-          "%g "
-          "contrib_low %g contrib %g (should match %g) upper %d nuptrans %d\n",
-          modelgridindex, i, element, ion, level, rndcool_ion_process, contrib_low, contrib,
-          globals::cellcache[cellcacheslotid].cooling_contrib[i], upper, nuptrans);
-      std::abort();
-    }
     assert_always(upper >= 0);
 
     if constexpr (TRACK_ION_STATS) {

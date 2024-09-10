@@ -34,10 +34,10 @@ mkdir ${SLURM_JOB_ID}.slurm
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
-    sbatch ./artis/scripts/artis-juwels.sh
+    sbatch --job-name="$SLURM_JOB_NAME" ./artis/scripts/artis-juwels.sh
     # sbatch $SLURM_JOB_NAME
 fi
 
 if [ -f packets00_0000.out ]; then
-    sbatch ./artis/scripts/exspec-gzip-juwels.sh
+    sbatch --job-name="exspec_${PWD##*/}" ./artis/scripts/exspec-gzip-juwels.sh
 fi

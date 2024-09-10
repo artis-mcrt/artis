@@ -82,14 +82,12 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
                MacroAtomState &mastate,
                const double tau_rnd,     // random optical depth until which the packet travels
                const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
-               const double nu_cmf_abort, const double d_nu_on_d_l,
-               const double doppler) -> std::tuple<double, int, bool> {
+               const double nu_cmf_abort, const double d_nu_on_d_l, const double doppler, const auto *const linelist,
+               const int nlines) -> std::tuple<double, int, bool> {
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
 
   auto pos = pkt.pos;
-  const auto nu_rf = pkt.nu_rf;
   auto nu_cmf = pkt.nu_cmf;
-  const auto e_rf = pkt.e_rf;
   auto e_cmf = pkt.e_cmf;
   auto prop_time = pkt.prop_time;
   int next_trans = pkt.next_trans;
@@ -104,10 +102,10 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
     // create therefore new variables in packet, which contain next_lowerlevel, ...
 
     // returns negative value if nu_cmf > nu_trans
-    if (const int lineindex = closest_transition(nu_cmf, next_trans); lineindex >= 0) [[likely]] {
+    if (const int lineindex = closest_transition(nu_cmf, next_trans, nlines, linelist); lineindex >= 0) [[likely]] {
       // line interaction is possible (nu_cmf > nu_trans)
 
-      const double nu_trans = globals::linelist[lineindex].nu;
+      const double nu_trans = linelist[lineindex].nu;
 
       // helper variable to overcome numerical problems after line scattering
       // further scattering events should be located at lower frequencies to prevent
@@ -127,11 +125,11 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
           return {std::numeric_limits<double>::max(), next_trans - 1, false};
         }
 
-        const int element = globals::linelist[lineindex].elementindex;
-        const int ion = globals::linelist[lineindex].ionindex;
-        const int upper = globals::linelist[lineindex].upperlevelindex;
-        const int lower = globals::linelist[lineindex].lowerlevelindex;
-        const double A_ul = globals::linelist[lineindex].einstein_A;
+        const int element = linelist[lineindex].elementindex;
+        const int ion = linelist[lineindex].ionindex;
+        const int upper = linelist[lineindex].upperlevelindex;
+        const int lower = linelist[lineindex].lowerlevelindex;
+        const double A_ul = linelist[lineindex].einstein_A;
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
@@ -154,7 +152,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
           tau += tau_cont + tau_line;
 
           if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
-            move_pkt_withtime(pos, pkt.dir, prop_time, nu_rf, nu_cmf, e_rf, e_cmf, ldist);
+            move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
           } else {
             // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
             // and use the linear approx instead
@@ -175,7 +173,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
           mastate = {.element = element, .ion = ion, .level = upper, .activatingline = lineindex};
 
           if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-            move_pkt_withtime(pos, pkt.dir, prop_time, nu_rf, nu_cmf, e_rf, e_cmf, ldist);
+            move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
             radfield::update_lineestimator(modelgridindex, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
           }
 
@@ -201,7 +199,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
       }
       // continuum process occurs at edist
 
-      return {dist + ((tau_rnd - tau) / chi_cont), globals::nlines + 1, false};
+      return {dist + ((tau_rnd - tau) / chi_cont), nlines + 1, false};
     }
   }
 
@@ -267,7 +265,7 @@ auto get_event_expansion_opacity(
         bool event_is_boundbound = false;
         std::tie(edist_after_bin, next_trans, event_is_boundbound) =
             get_event(modelgridindex, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
-                      std::numeric_limits<double>::max(), 0., d_nu_on_d_l, doppler);
+                      std::numeric_limits<double>::max(), 0., d_nu_on_d_l, doppler, globals::linelist, globals::nlines);
         // assert_always(edist_after_bin <= 1.1 * binedgedist);
         dist = dist + edist_after_bin;
 
@@ -747,7 +745,8 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
           mgi, nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, nu_cmf_abort, d_nu_on_d_l, doppler);
     } else {
       std::tie(edist, pkt.next_trans, event_is_boundbound) =
-          get_event(mgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l, doppler);
+          get_event(mgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l, doppler,
+                    globals::linelist, globals::nlines);
     }
   }
   assert_always(edist >= 0);
@@ -877,6 +876,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
   const auto nnetot = grid::get_nnetot(modelgridindex);
+  const auto &allcont_nu_edge = globals::allcont_nu_edge;
 
   // The phixslist is sorted by nu_edge in ascending order (longest to shortest wavelength)
   // If nu < allcont[i].nu_edge no absorption in any of the following continua
@@ -884,18 +884,19 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
   // break the list into nu >= nu_edge and the remainder (nu < nu_edge)
 
   int i = 0;
-  const int allcontend =
-      static_cast<int>(std::ranges::upper_bound(globals::allcont_nu_edge, nu) - globals::allcont_nu_edge.cbegin());
+  const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.cbegin());
 
-  const int allcontbegin =
-      std::lower_bound(
-          globals::allcont_nu_edge.data(), globals::allcont_nu_edge.data() + allcontend, nu,
-          [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }) -
-      globals::allcont_nu_edge.data();
+  const int allcontbegin = std::lower_bound(allcont_nu_edge.data(), allcont_nu_edge.data() + allcontend, nu,
+                                            [](const double nu_edge, const double nu_cmf) {
+                                              return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                            }) -
+                           allcont_nu_edge.data();
 
   assert_testmodeonly(allcontbegin >= 0);
   assert_testmodeonly(allcontend <= globals::nbfcontinua);
   assert_testmodeonly(allcontbegin <= allcontend);
+
+  const auto *const allcont = globals::allcont;
 
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     phixslist->allcontbegin = allcontbegin;
@@ -912,11 +913,11 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
   }
 
   for (i = allcontbegin; i < allcontend; i++) {
-    const int element = globals::allcont[i].element;
-    const int ion = globals::allcont[i].ion;
-    const int level = globals::allcont[i].level;
+    const int element = allcont[i].element;
+    const int ion = allcont[i].ion;
+    const int level = allcont[i].level;
     const auto bfestimindex =
-        (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) ? globals::allcont[i].bfestimindex : -1;
+        (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) ? allcont[i].bfestimindex : -1;
     double sigma_contr = 0.;
 
     // The bf process happens only if the current cell contains
@@ -930,14 +931,14 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
                                                            : calculate_levelpop(modelgridindex, element, ion, level);
 
       if (USECELLHISTANDUPDATEPHIXSLIST || nnlevel > 0) {
-        const double nu_edge = globals::allcont[i].nu_edge;
-        const double sigma_bf = photoionization_crosssection_fromtable(globals::allcont[i].photoion_xs, nu_edge, nu);
+        const double nu_edge = allcont[i].nu_edge;
+        const double sigma_bf = photoionization_crosssection_fromtable(allcont[i].photoion_xs, nu_edge, nu);
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         if constexpr (!SEPARATE_STIMRECOMB) {
           double departure_ratio = globals::cellcache[cellcacheslotid].ch_allcont_departureratios[i];
           if (!USECELLHISTANDUPDATEPHIXSLIST || departure_ratio < 0) {
-            const int upper = globals::allcont[i].upperlevel;
+            const int upper = allcont[i].upperlevel;
             const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
                                                ? get_levelpop(modelgridindex, element, ion + 1, upper)
                                                : calculate_levelpop(modelgridindex, element, ion + 1, upper);
@@ -952,11 +953,11 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
           corrfactor = std::max(0., 1 - stimfactor);  // photoionisation minus stimulated recombination
         }
 
-        sigma_contr = sigma_bf * globals::allcont[i].probability * corrfactor;
+        sigma_contr = sigma_bf * allcont[i].probability * corrfactor;
 
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-          if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && level == 0 && globals::allcont[i].phixstargetindex == 0) {
-            phixslist->groundcont_gamma_contr[globals::allcont[i].index_in_groundphixslist] = sigma_contr;
+          if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && level == 0 && allcont[i].phixstargetindex == 0) {
+            phixslist->groundcont_gamma_contr[allcont[i].index_in_groundphixslist] = sigma_contr;
           }
         }
 
@@ -1019,49 +1020,6 @@ void allocate_expansionopacities() {
   expansionopacity_planck_cumulative =
       std::span(expansionopacity_planck_cumulative_data,
                 expansionopacity_planck_cumulative_data == nullptr ? 0 : npts_nonempty * expopac_nbins);
-}
-
-__host__ __device__ auto closest_transition(const double nu_cmf, const int next_trans) -> int
-// for the propagation through non empty cells
-// find the next transition lineindex redder than nu_cmf
-// return -1 if no transition can be reached
-{
-  if (next_trans > (globals::nlines - 1)) {
-    // packet is tagged as having no more line interactions
-    return -1;
-  }
-  // if nu_cmf is smaller than the lowest frequency in the linelist,
-  // no line interaction is possible: return negative value as a flag
-  if (nu_cmf < globals::linelist[globals::nlines - 1].nu) {
-    return -1;
-  }
-
-  if (next_trans > 0) [[likely]] {
-    // if next_trans > 0 we know the next line we should interact with, independent of the packets
-    // current nu_cmf which might be smaller than globals::linelist[left].nu due to propagation errors
-    return next_trans;
-  }
-  if (nu_cmf >= globals::linelist[0].nu) {
-    // if nu_cmf is larger than the highest frequency in the the linelist,
-    // interaction with the first line occurs - no search
-    return 0;
-  }
-  // otherwise go through the list until nu_cmf is located between two
-  // entries in the line list and get the index of the closest line
-  // to lower frequencies
-
-  // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
-  // lower_bound matches the first element where the comparison function is false
-  const int matchindex = static_cast<int>(
-      std::lower_bound(globals::linelist, globals::linelist + globals::nlines, nu_cmf,
-                       [](const auto &line, const double find_nu_cmf) -> bool { return line.nu > find_nu_cmf; }) -
-      globals::linelist);
-
-  if (matchindex >= globals::nlines) [[unlikely]] {
-    return -1;
-  }
-
-  return matchindex;
 }
 
 // return a randomly chosen frequency with a distribution of Planck function times the expansion opacity

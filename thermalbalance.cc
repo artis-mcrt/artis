@@ -35,7 +35,7 @@ struct gsl_integral_paras_bfheating {
   double nu_edge;
   int modelgridindex;
   float T_R;
-  float *photoion_xs;
+  const float *photoion_xs;
 };
 
 auto integrand_bfheatingcoeff_custom_radfield(const double nu, void *const voidparas) -> double
@@ -115,8 +115,9 @@ auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, con
 
     // Collisional heating: deexcitation to same ionization stage
     const int ndowntrans = get_ndowntrans(element, ion, level);
+    const auto *const leveldowntranslist = get_downtranslist(element, ion, level);
     for (int i = 0; i < ndowntrans; i++) {
-      const auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[i];
+      const auto &downtransition = leveldowntranslist[i];
       const int lower = downtransition.targetlevelindex;
       const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
       const double C = nnlevel *

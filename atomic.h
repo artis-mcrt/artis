@@ -94,7 +94,9 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
 
-  return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].levelindex;
+  return globals::allphixstargets[globals::elements[element].ions[ion].levels[level].phixstargetstart +
+                                  phixstargetindex]
+      .levelindex;
 }
 
 // Return the probability of a target state for photoionization of (element,ion,level).
@@ -106,7 +108,9 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
 
-  return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].probability;
+  return globals::allphixstargets[globals::elements[element].ions[ion].levels[level].phixstargetstart +
+                                  phixstargetindex]
+      .probability;
 }
 
 // Return the statistical weight of (element,ion,level).
@@ -360,12 +364,25 @@ inline auto get_includedlevels() -> int { return includedlevels; }
   return globals::elements[element].ions[ion].levels[level].ndowntrans;
 }
 
+[[nodiscard]] inline auto get_downtranslist(const int element, const int ion, const int level) -> LevelTransition * {
+  return globals::alltrans + globals::elements[element].ions[ion].levels[level].alltrans_startdown;
+}
+
 // the number of upward bound-bound transitions from the specified level
 [[nodiscard]] inline auto get_nuptrans(const int element, const int ion, const int level) -> int {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
   return globals::elements[element].ions[ion].levels[level].nuptrans;
+}
+
+[[nodiscard]] inline auto get_uptranslist(const int element, const int ion, const int level) -> LevelTransition * {
+  const auto &levelref = globals::elements[element].ions[ion].levels[level];
+  return globals::alltrans + levelref.alltrans_startdown + levelref.ndowntrans;
+}
+
+[[nodiscard]] inline auto get_uptransspan(const int element, const int ion, const int level) {
+  return std::span(get_uptranslist(element, ion, level), get_nuptrans(element, ion, level));
 }
 
 // the number of downward bound-bound transitions from the specified level
@@ -404,7 +421,7 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
 [[nodiscard]] inline auto get_emtype_continuum(const int element, const int ion, const int level,
                                                const int upperionlevel) -> int {
   const int phixstargetindex = get_phixtargetindex(element, ion, level, upperionlevel);
-  return globals::elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
+  return -1 - globals::elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
 }
 
 // Returns the energy of (element,ion,level).

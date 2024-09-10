@@ -43,7 +43,7 @@ double *bfcooling_coeffs{};
 struct gsl_integral_paras_gammacorr {
   double nu_edge;
   double departure_ratio;
-  float *photoion_xs;
+  const float *photoion_xs;
   float T_e;
   int modelgridindex;
 };

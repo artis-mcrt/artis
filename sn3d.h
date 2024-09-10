@@ -216,7 +216,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
 
 [[nodiscard]] inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
                                          const int phixstargetindex) -> int {
-  const int contindex = -1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
+  const int contindex = globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
 
   const int bflutindex = (tempindex * globals::nbfcontinua) + contindex;
   assert_testmodeonly(bflutindex >= 0);

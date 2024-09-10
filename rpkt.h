@@ -32,7 +32,6 @@ struct Rpkt_continuum_absorptioncoeffs {
 
 void do_rpkt(Packet &pkt, double t2);
 void emit_rpkt(Packet &pkt);
-[[nodiscard]] auto closest_transition(double nu_cmf, int next_trans) -> int;
 void calculate_chi_rpkt_cont(double nu_cmf, Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, int modelgridindex);
 [[nodiscard]] auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
 void allocate_expansionopacities();
@@ -57,6 +56,50 @@ void MPI_Bcast_binned_opacities(int modelgridindex, int root_node_id);
   }
 
   return CLIGHT * prop_time * (nu_cmf / nu_trans - 1);
+}
+
+constexpr auto closest_transition(const double nu_cmf, const int next_trans, const int nlines,
+                                  const auto *const linelist) -> int
+// for the propagation through non empty cells
+// find the next transition lineindex redder than nu_cmf
+// return -1 if no transition can be reached
+{
+  if (next_trans > (nlines - 1)) {
+    // packet is tagged as having no more line interactions
+    return -1;
+  }
+  // if nu_cmf is smaller than the lowest frequency in the linelist,
+  // no line interaction is possible: return negative value as a flag
+  if (nu_cmf < linelist[nlines - 1].nu) {
+    return -1;
+  }
+
+  if (next_trans > 0) [[likely]] {
+    // if next_trans > 0 we know the next line we should interact with, independent of the packets
+    // current nu_cmf which might be smaller than globals::linelist[left].nu due to propagation errors
+    return next_trans;
+  }
+  if (nu_cmf >= linelist[0].nu) {
+    // if nu_cmf is larger than the highest frequency in the the linelist,
+    // interaction with the first line occurs - no search
+    return 0;
+  }
+  // otherwise go through the list until nu_cmf is located between two
+  // entries in the line list and get the index of the closest line
+  // to lower frequencies
+
+  // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
+  // lower_bound matches the first element where the comparison function is false
+  const int matchindex = static_cast<int>(
+      std::lower_bound(linelist, linelist + nlines, nu_cmf,
+                       [](const auto &line, const double find_nu_cmf) -> bool { return line.nu > find_nu_cmf; }) -
+      linelist);
+
+  if (matchindex >= nlines) [[unlikely]] {
+    return -1;
+  }
+
+  return matchindex;
 }
 
 [[nodiscard]] inline auto get_ionestimindex_nonemptymgi(const int nonemptymgi, const int element,

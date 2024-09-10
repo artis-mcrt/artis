@@ -443,18 +443,20 @@ void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, 
     const int level_index = get_nlte_vector_index(element, ion, level);
     const double epsilon_level = epsilon(element, ion, level);
     const double statweight = stat_weight(element, ion, level);
+    const auto nnlevel = get_levelpop(modelgridindex, element, ion, level);
 
     // de-excitation
     const int ndowntrans = get_ndowntrans(element, ion, level);
+    const auto *const leveldowntranslist = get_downtranslist(element, ion, level);
     for (int i = 0; i < ndowntrans; i++) {
-      const auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[i];
+      const auto &downtransition = leveldowntranslist[i];
       const double A_ul = downtransition.einstein_A;
       const int lower = downtransition.targetlevelindex;
 
       const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
 
-      const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul,
-                                                  statweight, t_mid) *
+      const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, lower, epsilon_trans, A_ul, statweight,
+                                                  nnlevel, t_mid) *
                        s_renorm[level];
       const double C =
           col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtransition) * s_renorm[level];
@@ -474,14 +476,14 @@ void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, 
 
     // excitation
     const int nuptrans = get_nuptrans(element, ion, level);
-    const auto &leveluptrans = globals::elements[element].ions[ion].levels[level].uptrans;
+    const auto *const leveluptranslist = get_uptranslist(element, ion, level);
     for (int i = 0; i < nuptrans; i++) {
-      const int lineindex = leveluptrans[i].lineindex;
-      const int upper = leveluptrans[i].targetlevelindex;
+      const int lineindex = leveluptranslist[i].lineindex;
+      const int upper = leveluptranslist[i].targetlevelindex;
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
 
       const double R =
-          rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, lineindex, t_mid) *
+          rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, nnlevel, lineindex, t_mid) *
           s_renorm[level];
       assert_always(R >= 0);
       assert_always(std::isfinite(R));
