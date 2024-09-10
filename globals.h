@@ -54,7 +54,7 @@ struct FullPhotoionTransition {
   int level;
   int phixstargetindex;
   int upperlevel;
-  float *photoion_xs;
+  const float *photoion_xs;
   double probability;
   int index_in_groundphixslist;
   int bfestimindex;
