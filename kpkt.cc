@@ -242,10 +242,6 @@ auto sample_planck_analytic(const double T) -> double {
 // return a randomly chosen frequency according to the Planck distribution of temperature T using a Monte Carlo method
 auto sample_planck_montecarlo(const double T) -> double {
   const double nu_peak = 5.879e10 * T;
-  if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
-    printout("[warning] sample_planck: intensity peaks outside frequency range\n");
-  }
-
   const double B_peak = radfield::dbb(nu_peak, T, 1);
 
   while (true) {

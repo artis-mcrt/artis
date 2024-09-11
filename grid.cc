@@ -1876,7 +1876,20 @@ void set_nnetot(const int modelgridindex, const float nnetot) {
 
 void set_kappagrey(const int modelgridindex, const float kappagrey) { modelgrid[modelgridindex].kappagrey = kappagrey; }
 
-void set_Te(const int modelgridindex, const float Te) { modelgrid[modelgridindex].Te = Te; }
+void set_Te(const int modelgridindex, const float Te) {
+  if (Te > 0.) {
+    // ignore the zero initialisation value for this check
+    const double nu_peak = 5.879e10 * Te;
+    if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
+      printout(
+          "[warning] modelgridindex %d B_planck(Te=%g K) peak at %g Hz is outside frequency range NU_MIN_R %g NU_MAX_R "
+          "%g\n",
+          modelgridindex, Te, nu_peak, NU_MIN_R, NU_MAX_R);
+    }
+  }
+
+  modelgrid[modelgridindex].Te = Te;
+}
 
 void set_TR(const int modelgridindex, const float TR) { modelgrid[modelgridindex].TR = TR; }
 
