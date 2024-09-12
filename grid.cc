@@ -1194,7 +1194,8 @@ void read_grid_restart_data(const int timestep) {
     assert_always(fscanf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", &mgi_in, &T_R, &T_e, &W, &T_J,
                          &thick, &globals::dep_estimator_gamma[nonemptymgi],
                          &globals::dep_estimator_positron[nonemptymgi], &globals::dep_estimator_electron[nonemptymgi],
-                         &globals::dep_estimator_alpha[nonemptymgi], &modelgrid[mgi].nne, &modelgrid[mgi].nnetot) == 9);
+                         &globals::dep_estimator_alpha[nonemptymgi], &modelgrid[mgi].nne,
+                         &modelgrid[mgi].nnetot) == 12);
 
     if (mgi_in != mgi) {
       printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
