@@ -647,6 +647,16 @@ constexpr auto meanf_sigma(const double x) -> double {
   return tot;
 }
 
+// get the gamma-ray opacity (with the expected energy loss per interaction factor included)
+auto get_kappa(const Packet &pkt) -> double {
+  const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
+  const int mgi = grid::get_cell_modelgridindex(pkt.where);
+  const double chi = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + get_chi_photo_electric_rf(pkt) +
+                      (sigma_pair_prod_rf(pkt) * (1. - (2.46636e+20 / pkt.nu_cmf))));
+  const double kappa = 1 / grid::get_rho(mgi) * chi;
+  return kappa;
+}
+
 // Subroutine to record the heating rate in a cell due to gamma rays.
 // By heating rate I mean, for now, really the rate at which the code is making
 // k-packets in that cell which will then convert into r-packets. This is (going
@@ -1079,6 +1089,9 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   // printout("initialise pol state of packet %g, %g, %g, %g,
   // %g\n",pkt.stokes_qu[0],pkt.stokes_qu[1],pkt.pol_dir[0],pkt.pol_dir[1],pkt.pol_dir[2]);
   // printout("pkt direction %g, %g, %g\n",pkt.dir[0],pkt.dir[1],pkt.dir[2]);
+
+  atomicadd(globals::estimator_gamma_kappa_decayspec, get_kappa(pkt) * pkt.e_cmf);
+  atomicadd(globals::estimator_gamma_nu_cmf_decayspec, pkt.nu_cmf * pkt.e_cmf);
 }
 
 __host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {
@@ -1096,6 +1109,8 @@ __host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {
 
   if (pkt.type != TYPE_GAMMA && pkt.type != TYPE_ESCAPE) {
     atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
+    atomicadd(globals::estimator_gamma_kappa_absorbedspec, get_kappa(pkt) * pkt.e_cmf);
+    atomicadd(globals::estimator_gamma_nu_cmf_absorbedspec, pkt.nu_cmf * pkt.e_cmf);
 
     if constexpr (GAMMA_THERMALISATION_SCHEME != ThermalisationScheme::DETAILED) {
       // no transport, so the path-based gamma deposition estimator won't get updated unless we do it here

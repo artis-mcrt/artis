@@ -617,6 +617,11 @@ void zero_estimators() {
   std::ranges::fill(globals::dep_estimator_electron, 0.);
   std::ranges::fill(globals::dep_estimator_alpha, 0.);
 
+  globals::estimator_gamma_nu_cmf_decayspec = 0.;
+  globals::estimator_gamma_nu_cmf_absorbedspec = 0.;
+  globals::estimator_gamma_kappa_decayspec = 0.;
+  globals::estimator_gamma_kappa_absorbedspec = 0.;
+
   if constexpr (USE_LUT_PHOTOION) {
     if (globals::nbfcontinua_ground > 0) {
       std::ranges::fill(globals::gammaestimator, 0.);
@@ -642,6 +647,20 @@ void normalise_deposition_estimators(int nts) {
   globals::timesteps[nts].positron_dep = 0.;
   globals::timesteps[nts].electron_dep = 0.;
   globals::timesteps[nts].alpha_dep = 0.;
+
+  globals::estimator_gamma_kappa_decayspec /= globals::timesteps[nts].gamma_emission;
+  globals::estimator_gamma_nu_cmf_decayspec /= globals::timesteps[nts].gamma_emission;
+  const double mean_en_decay_mev = H * globals::estimator_gamma_nu_cmf_decayspec / MEV;
+
+  globals::estimator_gamma_kappa_absorbedspec /= globals::timesteps[nts].gamma_dep_discrete;
+  globals::estimator_gamma_nu_cmf_absorbedspec /= globals::timesteps[nts].gamma_dep_discrete;
+  const double mean_en_absorb_mev = H * globals::estimator_gamma_nu_cmf_absorbedspec / MEV;
+
+  printout(
+      "timestep %d %.2f days kappa_eff [cm2/g]: decay_spec %.3f deposit_spec %.3f. mean gamma "
+      "E[MeV]: decay %.2f deposit %.2f\n",
+      nts, globals::timesteps[nts].mid / DAY, globals::estimator_gamma_kappa_decayspec,
+      globals::estimator_gamma_kappa_absorbedspec, mean_en_decay_mev, mean_en_absorb_mev);
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
