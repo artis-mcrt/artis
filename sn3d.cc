@@ -613,6 +613,9 @@ void zero_estimators() {
   std::ranges::fill(globals::ffheatingestimator, 0.);
   std::ranges::fill(globals::colheatingestimator, 0.);
   std::ranges::fill(globals::dep_estimator_gamma, 0.);
+  std::ranges::fill(globals::dep_estimator_positron, 0.);
+  std::ranges::fill(globals::dep_estimator_electron, 0.);
+  std::ranges::fill(globals::dep_estimator_alpha, 0.);
 
   if constexpr (USE_LUT_PHOTOION) {
     if (globals::nbfcontinua_ground > 0) {
