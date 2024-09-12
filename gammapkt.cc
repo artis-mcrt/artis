@@ -1027,6 +1027,9 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
 
   // initialise polarisation information
   pkt.stokes = {1., 0., 0.};
+
+  atomicadd(globals::estimator_gamma_kappa_decayspec, get_kappa(pkt) * pkt.e_cmf);
+  atomicadd(globals::estimator_gamma_nu_cmf_decayspec, pkt.nu_cmf * pkt.e_cmf);
 }
 
 __host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {
@@ -1046,6 +1049,8 @@ __host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {
     if constexpr (PARTICLE_THERMALISATION_SCHEME != ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
       atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
     }
+    atomicadd(globals::estimator_gamma_kappa_absorbedspec, get_kappa(pkt) * pkt.e_cmf);
+    atomicadd(globals::estimator_gamma_nu_cmf_absorbedspec, pkt.nu_cmf * pkt.e_cmf);
 
     if constexpr (GAMMA_THERMALISATION_SCHEME != ThermalisationScheme::DETAILED &&
                   GAMMA_THERMALISATION_SCHEME != ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
