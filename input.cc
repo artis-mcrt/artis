@@ -470,7 +470,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
                                           const std::vector<Transition> &transitiontable,
                                           std::vector<int> &iondowntranstmplineindicies, int &lineindex,
                                           std::vector<TransitionLine> &temp_linelist,
-                                          std::vector<LevelTransition> &temp_alltranslist) {
+                                          std::vector<LevelTransition> &temp_alltranslist,
+                                          size_t &temp_alltranslist_size) {
   const int lineindex_initial = lineindex;
   ptrdiff_t totupdowntrans = 0;
   // pass 0 to get transition counts of each level
@@ -478,8 +479,11 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
   for (int pass = 0; pass < 2; pass++) {
     lineindex = lineindex_initial;
     if (pass == 1) {
-      int alltransindex = temp_alltranslist.size();
-      temp_alltranslist.resize(temp_alltranslist.size() + totupdowntrans);
+      int alltransindex = temp_alltranslist_size;
+      temp_alltranslist_size += totupdowntrans;
+      if (globals::rank_in_node == 0) {
+        temp_alltranslist.resize(temp_alltranslist_size);
+      }
       for (int level = 0; level < nlevelsmax; level++) {
         globals::elements[element].ions[ion].levels[level].alltrans_startdown = alltransindex;
         alltransindex += get_ndowntrans(element, ion, level);
@@ -954,6 +958,7 @@ void read_atomicdata_files() {
 
   std::vector<TransitionLine> temp_linelist;
   std::vector<LevelTransition> temp_alltranslist;
+  size_t temp_alltranslist_size = 0;  // keep size separate because the vector is only resized on rank_in_node == 0
 
   std::vector<Transition> iontransitiontable;
   std::vector<int> iondowntranstmplineindicies;
@@ -1127,7 +1132,7 @@ void read_atomicdata_files() {
       iondowntranstmplineindicies.resize(downtranslevelstart(nlevelsmax));
 
       add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, iontransitiontable, iondowntranstmplineindicies,
-                                           lineindex, temp_linelist, temp_alltranslist);
+                                           lineindex, temp_linelist, temp_alltranslist, temp_alltranslist_size);
 
       for (int level = 0; level < nlevelsmax; level++) {
         uniquelevelindex++;
@@ -1191,7 +1196,7 @@ void read_atomicdata_files() {
   {
     // create a shared all transitions list and then copy data across, freeing the local copy
     const auto totupdowntrans = totaluptrans + totaldowntrans;
-    assert_always(totupdowntrans == static_cast<int>(temp_alltranslist.size()));
+    assert_always(totupdowntrans == static_cast<int>(temp_alltranslist_size));
 #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Win win_alltransblock = MPI_WIN_NULL;
