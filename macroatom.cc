@@ -648,6 +648,7 @@ void macroatom_close_file() {
 
 // radiative deexcitation rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
+#pragma omp declare simd
 auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
                                 const double epsilon_trans, const float A_ul, const double upperstatweight,
                                 const double nnlevelupper, const double t_current) -> double {
@@ -691,6 +692,7 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
 
 // radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
+#pragma omp declare simd
 auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
                               const int uptransindex, const double epsilon_trans, const double nnlevel_lower,
                               const int lineindex, const double t_current) -> double {
@@ -732,6 +734,7 @@ auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const
 
 // radiative recombination rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
+#pragma omp declare simd
 auto rad_recombination_ratecoeff(const float T_e, const float nne, const int element, const int upperion,
                                  const int upperionlevel, const int lowerionlevel, const int modelgridindex) -> double {
   // it's probably faster to only check this condition outside this function
@@ -780,6 +783,7 @@ auto stim_recombination_ratecoeff(const float nne, const int element, const int 
 }
 
 // multiply by upper level population to get a rate per second
+#pragma omp declare simd
 auto col_recombination_ratecoeff(const int modelgridindex, const int element, const int upperion, const int upper,
                                  const int lower, const double epsilon_trans) -> double {
   // it's probably faster to only check this condition outside this function
@@ -822,6 +826,7 @@ auto col_recombination_ratecoeff(const int modelgridindex, const int element, co
 
 // collisional ionization rate: paperII 3.5.1
 // multiply by lower level population to get a rate per second
+#pragma omp declare simd
 auto col_ionization_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
                               const int phixstargetindex, const double epsilon_trans) -> double {
   assert_testmodeonly(phixstargetindex >= 0);
@@ -853,6 +858,7 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 }
 
 // multiply by upper level population to get a rate per second
+#pragma omp declare simd
 auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, const int element,
                                 const int ion, const int upper, const LevelTransition &downtransition) -> double {
   const int lower = downtransition.targetlevelindex;
@@ -903,6 +909,7 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
 }
 
 // multiply by lower level population to get a rate per second
+#pragma omp declare simd
 auto col_excitation_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
                               const int uptransindex, const double epsilon_trans, const double lowerstatweight)
     -> double {
