@@ -73,6 +73,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
       grid::change_cell(pkt, -99);
     }
   } else {
+    // ThermalisationScheme::DETAILED or ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS
     // local, detailed absorption following Shingles+2023
     const double rho = grid::get_rho(grid::get_cell_modelgridindex(pkt.where));
 
@@ -113,20 +114,30 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
 
   // contribute to the trajectory integrated deposition estimator
   // and if a deposition event occurred, also the discrete Monte Carlo count deposition rate
-  if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS) {
-    atomicadd(globals::dep_estimator_electron[nonemptymgi], en_deposited);
-    if (pkt.type == deposit_type) {
-      atomicadd(globals::timesteps[nts].electron_dep_discrete, pkt.e_cmf);
-    }
-  } else if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS) {
-    atomicadd(globals::dep_estimator_positron[nonemptymgi], en_deposited);
-    if (pkt.type == deposit_type) {
-      atomicadd(globals::timesteps[nts].positron_dep_discrete, pkt.e_cmf);
-    }
-  } else if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) {
-    atomicadd(globals::dep_estimator_alpha[nonemptymgi], en_deposited);
-    if (pkt.type == deposit_type) {
-      atomicadd(globals::timesteps[nts].alpha_dep_discrete, pkt.e_cmf);
+  // for DETAILEDWITHGAMMAPRODUCTS, gamma-ray deposition will lead to predeposit beta particles, but they will count
+  // toward "gamma deposition" not particle deposition
+  if (pkt.originated_from_particlenotgamma) {
+    if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS) {
+      atomicadd(globals::dep_estimator_electron[nonemptymgi], en_deposited);
+      if (pkt.type == deposit_type) {
+        atomicadd(globals::timesteps[nts].electron_dep_discrete, pkt.e_cmf);
+      }
+    } else if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS) {
+      atomicadd(globals::dep_estimator_positron[nonemptymgi], en_deposited);
+      if (pkt.type == deposit_type) {
+        atomicadd(globals::timesteps[nts].positron_dep_discrete, pkt.e_cmf);
+      }
+    } else if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) {
+      atomicadd(globals::dep_estimator_alpha[nonemptymgi], en_deposited);
+      if (pkt.type == deposit_type) {
+        atomicadd(globals::timesteps[nts].alpha_dep_discrete, pkt.e_cmf);
+      }
+
+    } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
+      atomicadd(globals::dep_estimator_gamma[nonemptymgi], en_deposited);
+      if (pkt.type == TYPE_NTLEPTON_DEPOSITED) {
+        atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
+      }
     }
   }
 }

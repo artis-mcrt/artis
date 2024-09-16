@@ -441,8 +441,13 @@ void compton_scatter(Packet &pkt) {
 
     pkt.last_cross = BOUNDARY_NONE;  // allow it to re-cross a boundary
   } else {
-    // It's converted to an e-minus packet.
-    pkt.type = TYPE_NTLEPTON_DEPOSITED;
+    // energy loss of the gamma becomes energy of the electron (needed to calculate time-dependent thermalisation rate)
+    if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
+      pkt.nu_cmf = pkt.nu_cmf * (1 - 1 / f);
+      pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS;
+    } else {
+      pkt.type = TYPE_NTLEPTON_DEPOSITED;
+    }
     pkt.absorptiontype = -3;
     stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
   }
@@ -632,6 +637,9 @@ void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const
   if (!(dist > 0)) {
     return;
   }
+  if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
+    return;  // don't instantly deposit energy from gamma rays, handle the particles they produce instead
+  }
 
   const double doppler_sq = doppler_squared_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
@@ -666,10 +674,16 @@ void pair_prod(Packet &pkt) {
 
   assert_always(prob_gamma >= 0);
 
-  if (rng_uniform() > prob_gamma) {
-    // Convert it to an e-minus packet - actually it could be positron EK too, but this works
-    // for consistency with compton_scatter.
-    pkt.type = TYPE_NTLEPTON_DEPOSITED;
+  const auto zrand = rng_uniform();
+  if (zrand > prob_gamma) {
+    if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
+      // Convert it to an e-minus or positron kinetic energy packet
+      pkt.type = (rng_uniform() > 0.5) ? TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS : TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS;
+    } else {
+      pkt.type = TYPE_NTLEPTON_DEPOSITED;
+    }
+
+    // nu_cmf stays the same as the gamma energy becomes the kinetic energy of the electron
     pkt.absorptiontype = -5;
     stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
   } else {
@@ -809,8 +823,15 @@ void transport_gamma(Packet &pkt, const double t2) {
       // Compton scattering.
       compton_scatter(pkt);
     } else if ((chi_compton + chi_photo_electric) > chi_rnd) {
-      // Photo electric effect - makes it a k-packet for sure.
-      pkt.type = TYPE_NTLEPTON_DEPOSITED;
+      // Photo electric effect
+      if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
+        pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS;
+        // nu_cmf stays the same as the gamma-ray energy becomes the kinetic energy of the electron (minus ionisation
+        // energy but this is neglected here)
+      } else {
+        pkt.type = TYPE_NTLEPTON_DEPOSITED;
+      }
+
       pkt.absorptiontype = -4;
       stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
     } else {
@@ -818,7 +839,6 @@ void transport_gamma(Packet &pkt, const double t2) {
       pair_prod(pkt);
     }
   } else {
-    printout("Failed to identify event. Gamma (2). edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
     assert_always(false);
   }
 }
@@ -1055,9 +1075,12 @@ __host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {
   }
 
   if (pkt.type != TYPE_GAMMA && pkt.type != TYPE_ESCAPE) {
-    atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
+    if constexpr (PARTICLE_THERMALISATION_SCHEME != ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
+      atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
+    }
 
-    if constexpr (GAMMA_THERMALISATION_SCHEME != ThermalisationScheme::DETAILED) {
+    if constexpr (GAMMA_THERMALISATION_SCHEME != ThermalisationScheme::DETAILED &&
+                  GAMMA_THERMALISATION_SCHEME != ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
       // no transport, so the path-based gamma deposition estimator won't get updated unless we do it here
       const int mgi = grid::get_cell_modelgridindex(pkt.where);
       const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
