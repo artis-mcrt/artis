@@ -118,6 +118,7 @@ constexpr auto get_bin_nu_lower(const int binindex) -> double {
 }
 
 // find the left-closed bin [nu_lower, nu_upper) that nu belongs to
+#pragma omp declare simd
 constexpr auto select_bin(const double nu) -> int {
   if (nu < nu_lower_first_initial) {
     return -2;  // out of range, nu lower than lowest bin's lower boundary
@@ -266,6 +267,7 @@ void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, con
                             globals::bfestim_nu_edge.data();
 
   const auto bfestimcount = globals::bfestimcount;
+#pragma omp simd
   for (auto bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
     atomicadd(bfrate_raw[(nonemptymgi * bfestimcount) + bfestimindex],
               phixslist.gamma_contr[bfestimindex] * distance_e_cmf_over_nu);

@@ -2267,6 +2267,7 @@ __host__ __device__ auto nt_ionization_ratecoeff(const int modelgridindex, const
   return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
 }
 
+#pragma omp declare simd
 __host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const int ion,
                                                  const int lowerlevel, const int uptransindex, const int lineindex)
     -> double {
