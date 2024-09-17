@@ -324,17 +324,14 @@ auto choose_f(const double xx, const double zrand) -> double
 auto thomson_angle() -> double {
   const double B_coeff = (8. * rng_uniform()) - 4.;
 
-  double t_coeff = sqrt((B_coeff * B_coeff) + 4);
+  double t_coeff = std::sqrt((B_coeff * B_coeff) + 4);
   t_coeff = t_coeff - B_coeff;
   t_coeff = t_coeff / 2;
-  t_coeff = cbrt(t_coeff);
+  t_coeff = std::cbrt(t_coeff);
 
   const double mu = (1 / t_coeff) - t_coeff;
 
-  if (fabs(mu) > 1) {
-    printout("Error in Thomson. Abort.\n");
-    std::abort();
-  }
+  assert_always(fabs(mu) <= 1);
 
   return mu;
 }
@@ -396,12 +393,10 @@ void compton_scatter(Packet &pkt) {
   // factor by which the energy changes "f" such that
   // sigma_partial/sigma_tot = zrand
 
-  bool stay_gamma = false;
-  double f{NAN};
-  if (xx < THOMSON_LIMIT) {
-    f = 1.;  // no energy loss
-    stay_gamma = true;
-  } else {
+  // initialise with Thomson limit case (no energy loss)
+  double f = 1.;
+  bool stay_gamma = true;
+  if (xx >= THOMSON_LIMIT) {
     f = choose_f(xx, rng_uniform());
 
     // Check that f lies between 1.0 and (2xx  + 1)
@@ -437,20 +432,8 @@ void compton_scatter(Packet &pkt) {
 
     const auto new_dir = scatter_dir(cmf_dir, cos_theta);
 
-    const double test = dot(new_dir, new_dir);
-    if (fabs(1. - test) > 1.e-8) {
-      printout("Not a unit vector - Compton. Abort. %g %g %g\n", f, xx, test);
-      printout("new_dir %g %g %g\n", new_dir[0], new_dir[1], new_dir[2]);
-      printout("cmf_dir %g %g %g\n", cmf_dir[0], cmf_dir[1], cmf_dir[2]);
-      printout("cos_theta %g", cos_theta);
-      std::abort();
-    }
-
-    const double test2 = dot(new_dir, cmf_dir);
-    if (fabs(test2 - cos_theta) > 1.e-8) {
-      printout("Problem with angle - Compton. Abort.\n");
-      std::abort();
-    }
+    assert_testmodeonly(fabs(1. - dot(new_dir, new_dir)) < 1e-8);
+    assert_testmodeonly(fabs(dot(new_dir, cmf_dir) - cos_theta) < 1e-8);
 
     // Now convert back again.
 
@@ -689,10 +672,7 @@ void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const
 void pair_prod(Packet &pkt) {
   const double prob_gamma = 1.022 * MEV / (H * pkt.nu_cmf);
 
-  if (prob_gamma < 0) {
-    printout("prob_gamma < 0. pair_prod. Abort. %g\n", prob_gamma);
-    std::abort();
-  }
+  assert_always(prob_gamma >= 0);
 
   if (rng_uniform() > prob_gamma) {
     // Convert it to an e-minus packet - actually it could be positron EK too, but this works
@@ -746,7 +726,7 @@ void transport_gamma(Packet &pkt, const double t2) {
   if (sdist > maxsdist) {
     printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", globals::rmax, pkt.prop_time / globals::tmin,
              sdist);
-    std::abort();
+    assert_always(false);
   }
 
   if (sdist < 0) {
@@ -757,7 +737,7 @@ void transport_gamma(Packet &pkt, const double t2) {
   if (((snext < 0) && (snext != -99)) || (snext >= grid::ngrid)) {
     printout("Heading for inappropriate grid cell. Abort.\n");
     printout("Current cell %d, target cell %d.\n", pkt.where, snext);
-    std::abort();
+    assert_always(false);
   }
 
   if (sdist > globals::max_path_step) {
