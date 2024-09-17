@@ -192,7 +192,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
 
   const int modelgridindex = params->modelgridindex;
   const double t_current = params->t_current;
-  auto *heatingcoolingrates = params->heatingcoolingrates;
+  auto *const heatingcoolingrates = params->heatingcoolingrates;
 
   // Set new T_e guess for the current cell and update populations
   // globals::cell[cellnumber].T_e = T_e;
