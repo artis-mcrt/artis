@@ -1,4 +1,4 @@
-#Binding energies from Lotz tables 1 and 2
+#Binding energies from Lotz tables 1 and 2 of Lotz W., 1967, JOSA, 57, 873. doi:10.1364/JOSA.57.000873. 1967JOSA...57..873L
 28  108
 #Z  K  L1  L2  L3  M1  M2  M3  M4  M5  N1  N2  N3  N4  N5  N6  N7  O1  O2  O3  O4  O5  O6  O7  P1  P2  P3  P4  Q1
 1  13.600  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000  0.000
