@@ -20,6 +20,7 @@ void calculate_deposition_rate_density(int modelgridindex, int timestep, Heating
 [[nodiscard]] auto get_nt_frac_heating(int modelgridindex) -> float;
 [[nodiscard]] auto nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int lowerlevel, int uptransindex,
                                            int lineindex) -> double;
+void do_ntalpha_deposit(Packet &pkt);
 void do_ntlepton_deposit(Packet &pkt);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);

@@ -236,11 +236,7 @@ void do_packet(Packet &pkt, const double t2, const int nts)
     }
 
     case TYPE_NTALPHA_DEPOSITED: {
-      // could potentially do a Spencer-Fano for alphas, if this becomes important
-      // for now, just ignore excitation and ionisation by alphas
-      pkt.last_event = 22;
-      pkt.type = TYPE_KPKT;
-      stats::increment(stats::COUNTER_NT_STAT_TO_KPKT);
+      nonthermal::do_ntalpha_deposit(pkt);
       break;
     }
 
