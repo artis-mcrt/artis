@@ -2102,8 +2102,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   }
 
   deposition_rate_density_all_cells[modelgridindex] =
-      (heatingcoolingrates->dep_gamma + heatingcoolingrates->dep_positron + heatingcoolingrates->dep_electron +
-       heatingcoolingrates->dep_alpha);
+      (heatingcoolingrates->dep_gamma + heatingcoolingrates->dep_positron + heatingcoolingrates->dep_electron);
 }
 
 __host__ __device__ auto get_deposition_rate_density(const int modelgridindex) -> double
@@ -2292,6 +2291,16 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const
   const double ratecoeffperdeposition = ntexcitation->ratecoeffperdeposition;
 
   return ratecoeffperdeposition * deposition_rate_density;
+}
+
+__host__ __device__ void do_ntalpha_deposit(Packet &pkt) {
+  // if ionisation by alpha particles is found to be important for the ionisation state, we could do a separate
+  // Spencer-Fano solution. For now, just treat alpha deposition as pure heating (even though the alpha deposition rate
+  // was calculated from the sum of ionisation and plasma heating)
+  atomicadd(nt_energy_deposited, pkt.e_cmf);
+  pkt.last_event = 22;
+  pkt.type = TYPE_KPKT;
+  stats::increment(stats::COUNTER_NT_STAT_TO_KPKT);
 }
 
 __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {

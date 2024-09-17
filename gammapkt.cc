@@ -324,17 +324,11 @@ auto choose_f(const double xx, const double zrand) -> double
 auto thomson_angle() -> double {
   const double B_coeff = (8. * rng_uniform()) - 4.;
 
-  double t_coeff = sqrt((B_coeff * B_coeff) + 4);
-  t_coeff = t_coeff - B_coeff;
-  t_coeff = t_coeff / 2;
-  t_coeff = cbrt(t_coeff);
+  const double t_coeff = std::cbrt((std::sqrt((B_coeff * B_coeff) + 4) - B_coeff) / 2);
 
   const double mu = (1 / t_coeff) - t_coeff;
 
-  if (fabs(mu) > 1) {
-    printout("Error in Thomson. Abort.\n");
-    std::abort();
-  }
+  assert_always(fabs(mu) <= 1);
 
   return mu;
 }
@@ -396,23 +390,16 @@ void compton_scatter(Packet &pkt) {
   // factor by which the energy changes "f" such that
   // sigma_partial/sigma_tot = zrand
 
-  bool stay_gamma = false;
-  double f{NAN};
-  if (xx < THOMSON_LIMIT) {
-    f = 1.;  // no energy loss
-    stay_gamma = true;
-  } else {
+  // initialise with Thomson limit case (no energy loss)
+  double f = 1.;
+  bool stay_gamma = true;
+  if (xx >= THOMSON_LIMIT) {
     f = choose_f(xx, rng_uniform());
 
-    // Check that f lies between 1.0 and (2xx  + 1)
-
-    if ((f < 1) || (f > (2 * xx + 1))) {
-      printout("Compton f out of bounds. Abort.\n");
-      std::abort();
-    }
+    assert_always(f >= 1.);
+    assert_always(f <= (2 * xx + 1.));
 
     // Prob of keeping gamma ray is...
-
     const double prob_gamma = 1. / f;
 
     stay_gamma = (rng_uniform() < prob_gamma);
@@ -437,20 +424,8 @@ void compton_scatter(Packet &pkt) {
 
     const auto new_dir = scatter_dir(cmf_dir, cos_theta);
 
-    const double test = dot(new_dir, new_dir);
-    if (fabs(1. - test) > 1.e-8) {
-      printout("Not a unit vector - Compton. Abort. %g %g %g\n", f, xx, test);
-      printout("new_dir %g %g %g\n", new_dir[0], new_dir[1], new_dir[2]);
-      printout("cmf_dir %g %g %g\n", cmf_dir[0], cmf_dir[1], cmf_dir[2]);
-      printout("cos_theta %g", cos_theta);
-      std::abort();
-    }
-
-    const double test2 = dot(new_dir, cmf_dir);
-    if (fabs(test2 - cos_theta) > 1.e-8) {
-      printout("Problem with angle - Compton. Abort.\n");
-      std::abort();
-    }
+    assert_testmodeonly(fabs(1. - dot(new_dir, new_dir)) < 1e-8);
+    assert_testmodeonly(fabs(dot(new_dir, cmf_dir) - cos_theta) < 1e-8);
 
     // Now convert back again.
 
@@ -571,7 +546,7 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
 }
 
 // calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
-auto sigma_pair_prod_rf(const Packet &pkt) -> double {
+auto get_chi_pair_prod_rf(const Packet &pkt) -> double {
   const int mgi = grid::get_cell_modelgridindex(pkt.where);
   const double rho = grid::get_rho(mgi);
 
@@ -662,7 +637,7 @@ void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const
 
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
   double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + get_chi_photo_electric_rf(pkt) +
-                         (sigma_pair_prod_rf(pkt) * (1. - (2.46636e+20 / pkt.nu_cmf))));
+                         (get_chi_pair_prod_rf(pkt) * (1. - (2.46636e+20 / pkt.nu_cmf))));
   heating_cont = heating_cont * pkt.e_rf * dist * doppler_sq;
 
   // The terms in the above are for Compton, photoelectric and pair production. The pair production one
@@ -689,10 +664,7 @@ void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const
 void pair_prod(Packet &pkt) {
   const double prob_gamma = 1.022 * MEV / (H * pkt.nu_cmf);
 
-  if (prob_gamma < 0) {
-    printout("prob_gamma < 0. pair_prod. Abort. %g\n", prob_gamma);
-    std::abort();
-  }
+  assert_always(prob_gamma >= 0);
 
   if (rng_uniform() > prob_gamma) {
     // Convert it to an e-minus packet - actually it could be positron EK too, but this works
@@ -746,7 +718,7 @@ void transport_gamma(Packet &pkt, const double t2) {
   if (sdist > maxsdist) {
     printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", globals::rmax, pkt.prop_time / globals::tmin,
              sdist);
-    std::abort();
+    assert_always(false);
   }
 
   if (sdist < 0) {
@@ -757,7 +729,7 @@ void transport_gamma(Packet &pkt, const double t2) {
   if (((snext < 0) && (snext != -99)) || (snext >= grid::ngrid)) {
     printout("Heading for inappropriate grid cell. Abort.\n");
     printout("Current cell %d, target cell %d.\n", pkt.where, snext);
-    std::abort();
+    assert_always(false);
   }
 
   if (sdist > globals::max_path_step) {
@@ -775,7 +747,7 @@ void transport_gamma(Packet &pkt, const double t2) {
   }
 
   const double chi_photo_electric = get_chi_photo_electric_rf(pkt);
-  const double chi_pair_prod = sigma_pair_prod_rf(pkt);
+  const double chi_pair_prod = get_chi_pair_prod_rf(pkt);
   const double chi_tot = chi_compton + chi_photo_electric + chi_pair_prod;
 
   assert_testmodeonly(std::isfinite(chi_compton));
@@ -841,25 +813,13 @@ void transport_gamma(Packet &pkt, const double t2) {
       pkt.type = TYPE_NTLEPTON_DEPOSITED;
       pkt.absorptiontype = -4;
       stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
-    } else if ((chi_compton + chi_photo_electric + chi_pair_prod) > chi_rnd) {
+    } else {
       // It's a pair production
       pair_prod(pkt);
-    } else {
-      printout(
-          "Failed to identify event. Gamma (1). chi_compton %g chi_photo_electric %g chi_tot %g chi_rnd %g Abort.\n",
-          chi_compton, chi_photo_electric, chi_tot, chi_rnd);
-      const int cellindex = pkt.where;
-      printout(
-          " globals::cell[pkt.where].rho %g pkt.nu_cmf %g pkt.dir[0] %g pkt.dir[1] %g "
-          "pkt.dir[2] %g pkt.pos[0] %g pkt.pos[1] %g pkt.pos[2] %g \n",
-          grid::get_rho(grid::get_cell_modelgridindex(cellindex)), pkt.nu_cmf, pkt.dir[0], pkt.dir[0], pkt.dir[1],
-          pkt.dir[2], pkt.pos[1], pkt.pos[2]);
-
-      std::abort();
     }
   } else {
     printout("Failed to identify event. Gamma (2). edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
-    std::abort();
+    assert_always(false);
   }
 }
 

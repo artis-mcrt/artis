@@ -12,7 +12,7 @@ struct HeatingCoolingRates {
   double heating_bf{0};
   double heating_ff{0};
   double heating_dep{0};
-  double nt_frac_heating{0};
+  double dep_frac_heating{0};
   double dep_gamma{0};
   double dep_positron{0};
   double dep_electron{0};

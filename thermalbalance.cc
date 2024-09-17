@@ -192,7 +192,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
 
   const int modelgridindex = params->modelgridindex;
   const double t_current = params->t_current;
-  auto *heatingcoolingrates = params->heatingcoolingrates;
+  auto *const heatingcoolingrates = params->heatingcoolingrates;
 
   // Set new T_e guess for the current cell and update populations
   // globals::cell[cellnumber].T_e = T_e;
@@ -204,9 +204,13 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   kpkt::calculate_cooling_rates(modelgridindex, heatingcoolingrates);
   calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
 
-  heatingcoolingrates->nt_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
-  heatingcoolingrates->heating_dep =
-      nonthermal::get_deposition_rate_density(modelgridindex) * heatingcoolingrates->nt_frac_heating;
+  const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
+  const auto ntlepton_dep = nonthermal::get_deposition_rate_density(modelgridindex);
+  const auto ntalpha_frac_heating = 1.;
+  const auto ntalpha_dep = heatingcoolingrates->dep_alpha;
+  heatingcoolingrates->heating_dep = ntlepton_dep * ntlepton_frac_heating + ntalpha_dep * ntalpha_frac_heating;
+  heatingcoolingrates->dep_frac_heating =
+      (ntalpha_dep > 0) ? heatingcoolingrates->heating_dep / (ntlepton_dep + ntalpha_dep) : ntlepton_frac_heating;
 
   // Adiabatic cooling term
   const double nntot = get_nnion_tot(modelgridindex) + nne;
