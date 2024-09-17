@@ -209,7 +209,8 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   const auto ntalpha_frac_heating = 1.;
   const auto ntalpha_dep = heatingcoolingrates->dep_alpha;
   heatingcoolingrates->heating_dep = ntlepton_dep * ntlepton_frac_heating + ntalpha_dep * ntalpha_frac_heating;
-  heatingcoolingrates->dep_frac_heating = heatingcoolingrates->heating_dep / (ntlepton_dep + ntalpha_dep);
+  heatingcoolingrates->dep_frac_heating =
+      (ntalpha_dep > 0) ? heatingcoolingrates->heating_dep / (ntlepton_dep + ntalpha_dep) : ntlepton_frac_heating;
 
   // Adiabatic cooling term
   const double nntot = get_nnion_tot(modelgridindex) + nne;
