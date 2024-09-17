@@ -399,15 +399,10 @@ void compton_scatter(Packet &pkt) {
   if (xx >= THOMSON_LIMIT) {
     f = choose_f(xx, rng_uniform());
 
-    // Check that f lies between 1.0 and (2xx  + 1)
-
-    if ((f < 1) || (f > (2 * xx + 1))) {
-      printout("Compton f out of bounds. Abort.\n");
-      std::abort();
-    }
+    assert_always(f >= 1.);
+    assert_always(f <= (2 * xx + 1.));
 
     // Prob of keeping gamma ray is...
-
     const double prob_gamma = 1. / f;
 
     stay_gamma = (rng_uniform() < prob_gamma);
