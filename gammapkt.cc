@@ -571,7 +571,7 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
 }
 
 // calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
-auto sigma_pair_prod_rf(const Packet &pkt) -> double {
+auto get_chi_pair_prod_rf(const Packet &pkt) -> double {
   const int mgi = grid::get_cell_modelgridindex(pkt.where);
   const double rho = grid::get_rho(mgi);
 
@@ -662,7 +662,7 @@ void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const
 
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
   double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + get_chi_photo_electric_rf(pkt) +
-                         (sigma_pair_prod_rf(pkt) * (1. - (2.46636e+20 / pkt.nu_cmf))));
+                         (get_chi_pair_prod_rf(pkt) * (1. - (2.46636e+20 / pkt.nu_cmf))));
   heating_cont = heating_cont * pkt.e_rf * dist * doppler_sq;
 
   // The terms in the above are for Compton, photoelectric and pair production. The pair production one
@@ -775,7 +775,7 @@ void transport_gamma(Packet &pkt, const double t2) {
   }
 
   const double chi_photo_electric = get_chi_photo_electric_rf(pkt);
-  const double chi_pair_prod = sigma_pair_prod_rf(pkt);
+  const double chi_pair_prod = get_chi_pair_prod_rf(pkt);
   const double chi_tot = chi_compton + chi_photo_electric + chi_pair_prod;
 
   assert_testmodeonly(std::isfinite(chi_compton));
@@ -841,25 +841,13 @@ void transport_gamma(Packet &pkt, const double t2) {
       pkt.type = TYPE_NTLEPTON_DEPOSITED;
       pkt.absorptiontype = -4;
       stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
-    } else if ((chi_compton + chi_photo_electric + chi_pair_prod) > chi_rnd) {
+    } else {
       // It's a pair production
       pair_prod(pkt);
-    } else {
-      printout(
-          "Failed to identify event. Gamma (1). chi_compton %g chi_photo_electric %g chi_tot %g chi_rnd %g Abort.\n",
-          chi_compton, chi_photo_electric, chi_tot, chi_rnd);
-      const int cellindex = pkt.where;
-      printout(
-          " globals::cell[pkt.where].rho %g pkt.nu_cmf %g pkt.dir[0] %g pkt.dir[1] %g "
-          "pkt.dir[2] %g pkt.pos[0] %g pkt.pos[1] %g pkt.pos[2] %g \n",
-          grid::get_rho(grid::get_cell_modelgridindex(cellindex)), pkt.nu_cmf, pkt.dir[0], pkt.dir[0], pkt.dir[1],
-          pkt.dir[2], pkt.pos[1], pkt.pos[2]);
-
-      std::abort();
     }
   } else {
     printout("Failed to identify event. Gamma (2). edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
-    std::abort();
+    assert_always(false);
   }
 }
 
