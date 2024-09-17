@@ -41,7 +41,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     const double E_kin = grid::get_ejecta_kinetic_energy();
     const double v_ej = std::sqrt(E_kin * 2 / grid::mtot_input);
 
-    const double prefactor = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 7.74 : 7.4;
+    const double prefactor = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 7.74 : 7.4;
     const double tau_ineff = prefactor * 86400 * std::sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) *
                              std::pow((0.2 * 29979200000) / v_ej, 3. / 2.);
     const double f_p = std::log1p(2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
@@ -56,7 +56,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     }
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::WOLLAEGER) {
     // particle thermalisation from Wollaeger+2018, similar to Barnes but using a slightly different expression
-    const double A = (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 1.2 * 1.e-11 : 1.3 * 1.e-11;
+    const double A = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 1.2 * 1.e-11 : 1.3 * 1.e-11;
     const double aux_term = 2 * A / (ts * grid::get_rho(mgi));
     // In Bulla 2023 (arXiv:2211.14348), the following line contains (<-> eq. 7) contains a typo. The way implemented
     // here is the original from Wollaeger paper without the typo
