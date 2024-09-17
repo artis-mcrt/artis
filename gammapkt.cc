@@ -324,10 +324,7 @@ auto choose_f(const double xx, const double zrand) -> double
 auto thomson_angle() -> double {
   const double B_coeff = (8. * rng_uniform()) - 4.;
 
-  double t_coeff = std::sqrt((B_coeff * B_coeff) + 4);
-  t_coeff = t_coeff - B_coeff;
-  t_coeff = t_coeff / 2;
-  t_coeff = std::cbrt(t_coeff);
+  const double t_coeff = std::cbrt((std::sqrt((B_coeff * B_coeff) + 4) - B_coeff) / 2.2);
 
   const double mu = (1 / t_coeff) - t_coeff;
 
