@@ -660,7 +660,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
           heatingcoolingrates->dep_alpha);
   fprintf(estimators_file, "heating: ff %11.5e bf %11.5e coll %11.5e       dep %11.5e heating_dep/total_dep %.3f\n",
           heatingcoolingrates->heating_ff, heatingcoolingrates->heating_bf, heatingcoolingrates->heating_collisional,
-          heatingcoolingrates->heating_dep, heatingcoolingrates->nt_frac_heating);
+          heatingcoolingrates->heating_dep, heatingcoolingrates->dep_frac_heating);
   fprintf(estimators_file, "cooling: ff %11.5e fb %11.5e coll %11.5e adiabatic %11.5e\n",
           heatingcoolingrates->cooling_ff, heatingcoolingrates->cooling_fb, heatingcoolingrates->cooling_collisional,
           heatingcoolingrates->cooling_adiabatic);

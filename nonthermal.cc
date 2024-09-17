@@ -2102,8 +2102,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   }
 
   deposition_rate_density_all_cells[modelgridindex] =
-      (heatingcoolingrates->dep_gamma + heatingcoolingrates->dep_positron + heatingcoolingrates->dep_electron +
-       heatingcoolingrates->dep_alpha);
+      (heatingcoolingrates->dep_gamma + heatingcoolingrates->dep_positron + heatingcoolingrates->dep_electron);
 }
 
 __host__ __device__ auto get_deposition_rate_density(const int modelgridindex) -> double

@@ -33,10 +33,12 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
   const auto priortype = pkt.type;
   const double ts = pkt.prop_time;
+  const auto deposit_type =
+      (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? TYPE_NTALPHA_DEPOSITED : TYPE_NTLEPTON_DEPOSITED;
 
   if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
     // absorption happens
-    pkt.type = TYPE_NTLEPTON_DEPOSITED;
+    pkt.type = deposit_type;
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
     const double E_kin = grid::get_ejecta_kinetic_energy();
     const double v_ej = std::sqrt(E_kin * 2 / grid::mtot_input);
@@ -48,7 +50,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
     if (rng_uniform() < f_p) {
-      pkt.type = TYPE_NTLEPTON_DEPOSITED;
+      pkt.type = deposit_type;
     } else {
       en_deposited = 0.;
       pkt.type = TYPE_ESCAPE;
@@ -64,7 +66,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
     if (rng_uniform() < f_p) {
-      pkt.type = TYPE_NTLEPTON_DEPOSITED;
+      pkt.type = deposit_type;
     } else {
       en_deposited = 0.;
       pkt.type = TYPE_ESCAPE;
@@ -100,7 +102,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     const auto t_new = std::min(t_absorb, t2);
 
     if (t_absorb <= t2) {
-      pkt.type = TYPE_NTLEPTON_DEPOSITED;
+      pkt.type = deposit_type;
     } else {
       pkt.nu_cmf = (particle_en - endot * (t_new - ts)) / H;
     }
@@ -109,19 +111,21 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
     pkt.prop_time = t_new;
   }
 
+  // contribute to the trajectory integrated deposition estimator
+  // and if a deposition event occurred, also the discrete Monte Carlo count deposition rate
   if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS) {
     atomicadd(globals::dep_estimator_electron[nonemptymgi], en_deposited);
-    if (pkt.type == TYPE_NTLEPTON_DEPOSITED) {
+    if (pkt.type == deposit_type) {
       atomicadd(globals::timesteps[nts].electron_dep_discrete, pkt.e_cmf);
     }
   } else if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS) {
     atomicadd(globals::dep_estimator_positron[nonemptymgi], en_deposited);
-    if (pkt.type == TYPE_NTLEPTON_DEPOSITED) {
+    if (pkt.type == deposit_type) {
       atomicadd(globals::timesteps[nts].positron_dep_discrete, pkt.e_cmf);
     }
   } else if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) {
     atomicadd(globals::dep_estimator_alpha[nonemptymgi], en_deposited);
-    if (pkt.type == TYPE_NTLEPTON_DEPOSITED) {
+    if (pkt.type == deposit_type) {
       atomicadd(globals::timesteps[nts].alpha_dep_discrete, pkt.e_cmf);
     }
   }
@@ -228,6 +232,15 @@ void do_packet(Packet &pkt, const double t2, const int nts)
 
     case TYPE_NTLEPTON_DEPOSITED: {
       nonthermal::do_ntlepton_deposit(pkt);
+      break;
+    }
+
+    case TYPE_NTALPHA_DEPOSITED: {
+      // could potentially do a Spencer-Fano for alphas, if this becomes important
+      // for now, just ignore excitation and ionisation by alphas
+      pkt.last_event = 22;
+      pkt.type = TYPE_KPKT;
+      stats::increment(stats::COUNTER_NT_STAT_TO_KPKT);
       break;
     }
 
