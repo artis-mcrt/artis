@@ -1163,8 +1163,7 @@ void read_atomicdata_files() {
   printout("total uptrans %d\n", totaluptrans);
   printout("total downtrans %d\n", totaldowntrans);
 
-  printout("[info] mem_usage: transition lists occupy %.3f MB (this rank) and %.3f MB (shared on node)\n",
-           2 * uniquelevelindex * sizeof(LevelTransition *) / 1024. / 1024.,
+  printout("[info] mem_usage: transition lists occupy %.3f MB (shared on node)\n",
            (totaluptrans + totaldowntrans) * sizeof(LevelTransition) / 1024. / 1024.);
 
   if (globals::rank_in_node == 0) {
@@ -1214,8 +1213,9 @@ void read_atomicdata_files() {
 #endif
     if (globals::rank_in_node == 0) {
       std::copy_n(temp_alltranslist.data(), totupdowntrans, globals::alltrans);
-      temp_alltranslist.clear();
     }
+    temp_alltranslist.clear();
+    temp_alltranslist.shrink_to_fit();
   }
 
   // create a linelist shared on node and then copy data across, freeing the local copy
@@ -1239,8 +1239,9 @@ void read_atomicdata_files() {
 
   if (globals::rank_in_node == 0) {
     memcpy(static_cast<void *>(nonconstlinelist), temp_linelist.data(), globals::nlines * sizeof(TransitionLine));
-    temp_linelist.clear();
   }
+  temp_linelist.clear();
+  temp_alltranslist.shrink_to_fit();
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
