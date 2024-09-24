@@ -10,11 +10,11 @@ void macroatom_close_file();
 void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate);
 
 [[nodiscard]] auto rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int lower, double epsilon_trans,
-                                              float A_ul, double upperstatweight, double nnlevelupper,
-                                              double t_current) -> double;
+                                              float A_ul, double upperstatweight, double nnlevelupper, double t_current)
+    -> double;
 [[nodiscard]] auto rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int uptransindex,
-                                            double epsilon_trans, double nnlevel_lower, int lineindex,
-                                            double t_current) -> double;
+                                            double epsilon_trans, double nnlevel_lower, int lineindex, double t_current)
+    -> double;
 [[nodiscard]] auto rad_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upperionlevel,
                                                int lowerionlevel, int modelgridindex) -> double;
 [[nodiscard]] auto stim_recombination_ratecoeff(float nne, int element, int upperion, int upper, int lower,

@@ -102,8 +102,8 @@ constexpr auto closest_transition(const double nu_cmf, const int next_trans, con
   return matchindex;
 }
 
-[[nodiscard]] inline auto get_ionestimindex_nonemptymgi(const int nonemptymgi, const int element,
-                                                        const int ion) -> int {
+[[nodiscard]] inline auto get_ionestimindex_nonemptymgi(const int nonemptymgi, const int element, const int ion)
+    -> int {
   assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element) - 1);
   const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
@@ -111,8 +111,8 @@ constexpr auto closest_transition(const double nu_cmf, const int next_trans, con
   return (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 }
 
-inline auto keep_this_cont(int element, const int ion, const int level, const int modelgridindex,
-                           const float nnetot) -> bool {
+inline auto keep_this_cont(int element, const int ion, const int level, const int modelgridindex, const float nnetot)
+    -> bool {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     return grid::get_elem_abundance(modelgridindex, element) > 0;
   }

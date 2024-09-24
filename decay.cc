@@ -501,8 +501,8 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
 }
 
 constexpr auto calculate_decaychain(const double firstinitabund, const std::vector<double> &lambdas,
-                                    const int num_nuclides, const double timediff,
-                                    const bool useexpansionfactor) -> double {
+                                    const int num_nuclides, const double timediff, const bool useexpansionfactor)
+    -> double {
   // calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
   // the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
   // are assumed to start with zero abundance)
@@ -615,8 +615,8 @@ auto get_nuc_massfrac(const int modelgridindex, const int z, const int a, const 
   return nuctotal;
 }
 
-auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const int decaypathindex,
-                                                const double time) -> double
+auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const int decaypathindex, const double time)
+    -> double
 // returns decay energy [erg/g] that would be released from time tstart [s] to time infinity by a given decaypath
 {
   // e.g. Ni56 -> Co56, represents the decay of Co56 nuclei
@@ -653,8 +653,8 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
 }
 
 auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const int modelgridindex,
-                                                                         const int decaypathindex,
-                                                                         const double tstart) -> double
+                                                                         const int decaypathindex, const double tstart)
+    -> double
 // just here as as check on the analytic result from get_endecay_per_ejectamass_t0_to_time_withexpansion()
 // this version does an Euler integration
 {
@@ -1112,8 +1112,8 @@ void free_decaypath_energy_per_mass() {
 }
 
 // energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in [erg/s/g]
-[[nodiscard]] auto get_particle_injection_rate(const int modelgridindex, const double t,
-                                               const int decaytype) -> double {
+[[nodiscard]] auto get_particle_injection_rate(const int modelgridindex, const double t, const int decaytype)
+    -> double {
   double dep_sum = 0.;
   const auto num_nuclides = get_num_nuclides();
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {

@@ -905,8 +905,8 @@ __host__ __device__ auto radfield(const double nu, const int modelgridindex) -> 
 
 // return the integral of nu^3 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
 // or if times_nu is true, the integral of nu^4 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
-auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper,
-                              const bool times_nu) -> double {
+auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
+    -> double {
   double integral = 0.;
 
   if (times_nu) {

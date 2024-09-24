@@ -111,8 +111,8 @@ void increment_ion_stats_contabsorption(const Packet &pkt, const int modelgridin
   }
 }
 
-auto get_ion_stats(const int modelgridindex, const int element, const int ion,
-                   enum ionstattypes ionstattype) -> double {
+auto get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype)
+    -> double {
   assert_always(ion < get_nions(element));
   assert_always(ionstattype < ION_STAT_COUNT);
   const int uniqueionindex = get_uniqueionindex(element, ion);

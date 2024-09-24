@@ -17,19 +17,19 @@ void setup_photoion_luts();
 
 [[nodiscard]] auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e) -> double;
 
-[[nodiscard]] auto interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex,
-                                                 double T) -> double;
+[[nodiscard]] auto interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T)
+    -> double;
 
 [[nodiscard]] auto get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double;
-[[nodiscard]] auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex,
-                                       int modelgridindex) -> double;
+[[nodiscard]] auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int modelgridindex)
+    -> double;
 
 [[nodiscard]] auto get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double;
 
-[[nodiscard]] auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex,
-                                         int modelgridindex) -> double;
-[[nodiscard]] auto get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex,
-                                             int modelgridindex) -> double;
+[[nodiscard]] auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+    -> double;
+[[nodiscard]] auto get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+    -> double;
 
 [[nodiscard]] auto iongamma_is_zero(int nonemptymgi, int element, int ion) -> bool;
 
