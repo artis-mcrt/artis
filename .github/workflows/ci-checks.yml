@@ -29,14 +29,19 @@ jobs:
                   cppcheck --force --error-exitcode=1 --language=c++ --std=c++20 --enable=all --inconclusive --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --suppress=knownArgument --suppress=missingIncludeSystem --suppress=unusedFunction --check-level=exhaustive .
 
     clang-format:
-        runs-on: ubuntu-24.04
+        runs-on: macos-14
         steps:
             - uses: actions/checkout@v4
+
+            - name: install clang-format
+              run: |
+                  brew update
+                  brew install clang-format || true
 
             - name: Run clang-format style check
               uses: jidicula/clang-format-action@v4.13.0
               with:
-                  clang-format-version: '18'
+                  clang-format-version: '19'
                   check-path: .
 
     clang-tidy:

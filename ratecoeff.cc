@@ -996,8 +996,8 @@ __host__ __device__ auto get_spontrecombcoeff(int element, const int ion, const 
 // multiply by upper ion population (or ground population if per_groundmultipletpop is true) and nne to get a rate
 auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const int element, const int upperion,
                               const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
-                              const bool lower_superlevel_only, const bool per_groundmultipletpop,
-                              const bool stimonly) -> double {
+                              const bool lower_superlevel_only, const bool per_groundmultipletpop, const bool stimonly)
+    -> double {
   const int lowerion = upperion - 1;
   if (lowerion < 0) {
     return 0.;

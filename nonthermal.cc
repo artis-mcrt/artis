@@ -694,8 +694,8 @@ auto get_xs_ionization_vector(std::array<double, SFPTS> &xs_vec, const collionro
 
 // distribution of secondary electron energies for primary electron with energy e_p
 // Opal, Peterson, & Beaty (1971)
-[[nodiscard]] constexpr auto Psecondary(const double e_p, const double epsilon, const double I,
-                                        const double J) -> double {
+[[nodiscard]] constexpr auto Psecondary(const double e_p, const double epsilon, const double I, const double J)
+    -> double {
   const double e_s = epsilon - I;
 
   if (e_p <= I || e_s < 0.) {
@@ -1081,8 +1081,8 @@ auto get_oneoverw(const int element, const int ion, const int modelgridindex) ->
 
 // the fraction of deposited energy that goes into ionising electrons in a particular shell
 auto calculate_nt_frac_ionization_shell(const int modelgridindex, const int element, const int ion,
-                                        const collionrow &collionrow,
-                                        const std::array<double, SFPTS> &yfunc) -> double {
+                                        const collionrow &collionrow, const std::array<double, SFPTS> &yfunc)
+    -> double {
   const double nnion = get_nnion(modelgridindex, element, ion);
   const double ionpot_ev = collionrow.ionpot_ev;
 
@@ -1105,8 +1105,8 @@ auto nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int elemen
 }
 
 auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion,
-                                       const bool assumeshellpotentialisvalence,
-                                       const std::array<double, SFPTS> &yfunc) -> double
+                                       const bool assumeshellpotentialisvalence, const std::array<double, SFPTS> &yfunc)
+    -> double
 // Integrate the ionization cross section over the electron degradation function to get the ionization rate coefficient
 // i.e. multiply this by ion population to get a rate of ionizations per second
 // Do not call during packet propagation, as the y vector may not be in memory!
@@ -1286,8 +1286,8 @@ auto nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, con
 // returns the index of the first valid cross section point (en >= epsilon_trans)
 // all elements below this index are invalid and should not be used
 auto get_xs_excitation_vector(const int element, const int ion, const int lower, const int uptransindex,
-                              const double statweight_lower,
-                              const double epsilon_trans) -> std::tuple<std::array<double, SFPTS>, int> {
+                              const double statweight_lower, const double epsilon_trans)
+    -> std::tuple<std::array<double, SFPTS>, int> {
   std::array<double, SFPTS> xs_excitation_vec{};
   const auto &uptr = get_uptranslist(element, ion, lower)[uptransindex];
   if (uptr.coll_str >= 0) {
@@ -1344,8 +1344,8 @@ auto get_xs_excitation_vector(const int element, const int ion, const int lower,
 // returns the rate coefficient in s^-1 divided by deposition rate density in erg/cm^3/s
 auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SFPTS> &yvec, const int element,
                                                      const int ion, const int lower, const int uptransindex,
-                                                     const double statweight_lower,
-                                                     const double epsilon_trans) -> double {
+                                                     const double statweight_lower, const double epsilon_trans)
+    -> double {
   const auto [xs_excitation_vec, xsstartindex] =
       get_xs_excitation_vector(element, ion, lower, uptransindex, statweight_lower, epsilon_trans);
 
@@ -2264,8 +2264,8 @@ __host__ __device__ auto nt_ionization_ratecoeff(const int modelgridindex, const
 }
 
 __host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const int ion,
-                                                 const int lowerlevel, const int uptransindex,
-                                                 const int lineindex) -> double {
+                                                 const int lowerlevel, const int uptransindex, const int lineindex)
+    -> double {
   if constexpr (!NT_EXCITATION_ON) {
     return 0.;
   }

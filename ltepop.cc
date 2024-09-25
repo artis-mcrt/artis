@@ -514,8 +514,8 @@ auto calculate_levelpop(const int modelgridindex, const int element, const int i
 }
 
 // Calculate the population of a level from either LTE or NLTE information
-__host__ __device__ auto get_levelpop(const int modelgridindex, const int element, const int ion,
-                                      const int level) -> double {
+__host__ __device__ auto get_levelpop(const int modelgridindex, const int element, const int ion, const int level)
+    -> double {
   double nn = 0.;
   if (use_cellcache) {
     assert_testmodeonly(modelgridindex == globals::cellcache[cellcacheslotid].cellnumber);

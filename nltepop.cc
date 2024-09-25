@@ -120,8 +120,8 @@ void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_vector *
 }
 
 [[nodiscard]] auto get_total_rate(const int index_selected, const gsl_matrix *rate_matrix, const gsl_vector *popvec,
-                                  const bool into_level, const bool only_levels_below,
-                                  const bool only_levels_above) -> double {
+                                  const bool into_level, const bool only_levels_below, const bool only_levels_above)
+    -> double {
   double total_rate = 0.;
   assert_always(!only_levels_below || !only_levels_above);
 

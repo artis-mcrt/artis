@@ -313,8 +313,8 @@ inline void check_already_running() {
 #endif
 }
 
-constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks,
-                               const ptrdiff_t nchunk) -> std::tuple<ptrdiff_t, ptrdiff_t> {
+constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks, const ptrdiff_t nchunk)
+    -> std::tuple<ptrdiff_t, ptrdiff_t> {
   assert_always(size >= 0);
   assert_always(nchunks >= 0);
   assert_always(nchunk >= 0);
