@@ -1155,7 +1155,9 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #ifdef _OPENMP
 #pragma omp critical(estimators_file)
 #endif
-      { write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates); }
+      {
+        write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates);
+      }
     }  // end parallel for loop over all modelgrid cells
 
   }  // end OpenMP parallel section

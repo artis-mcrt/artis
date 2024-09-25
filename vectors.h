@@ -55,8 +55,8 @@ template <size_t S1, size_t S2>
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
 //   dir2: direction vector in frame2
-[[nodiscard]] constexpr auto angle_ab(const std::array<double, 3> &dir1,
-                                      const std::array<double, 3> &vel) -> std::array<double, 3> {
+[[nodiscard]] constexpr auto angle_ab(const std::array<double, 3> &dir1, const std::array<double, 3> &vel)
+    -> std::array<double, 3> {
   const double vsqr = dot(vel, vel) / CLIGHTSQUARED;
   const double gamma_rel = 1. / std::sqrt(1 - vsqr);
 
@@ -77,8 +77,8 @@ template <size_t S1, size_t S2>
 //   prop_time: the propagation time of the packet
 // returns: the ratio f = (nu_cmf / nu_rf) ^ 2
 [[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(const std::array<double, 3> &pos_rf,
-                                                           const std::array<double, 3> &dir_rf,
-                                                           const double prop_time) -> double {
+                                                           const std::array<double, 3> &dir_rf, const double prop_time)
+    -> double {
   // velocity of the comoving frame relative to the rest frame
   const auto vel_rf = get_velocity(pos_rf, prop_time);
 
@@ -212,8 +212,8 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 
 // Rotation angle from the scattering plane
 [[nodiscard]] constexpr auto get_rot_angle(const std::array<double, 3> &n1, const std::array<double, 3> &n2,
-                                           const std::array<double, 3> &ref1,
-                                           const std::array<double, 3> &ref2) -> double {
+                                           const std::array<double, 3> &ref1, const std::array<double, 3> &ref2)
+    -> double {
   // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
   // the meridian frame such that Q=1 is in the scattering plane and along ref1
 
@@ -292,8 +292,8 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
-constexpr auto frame_transform(const std::array<double, 3> &n_rf, double *Q, double *U,
-                               const std::array<double, 3> &v) -> std::array<double, 3> {
+constexpr auto frame_transform(const std::array<double, 3> &n_rf, double *Q, double *U, const std::array<double, 3> &v)
+    -> std::array<double, 3> {
   // Meridian frame in the RF
   const auto [ref1_rf, ref2_rf] = meridian(n_rf);
 

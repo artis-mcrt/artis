@@ -151,8 +151,8 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   return processrates;
 }
 
-auto do_macroatom_internal_down_same(const int element, const int ion, const int level,
-                                     const CellCacheLevels &chlevel) -> int {
+auto do_macroatom_internal_down_same(const int element, const int ion, const int level, const CellCacheLevels &chlevel)
+    -> int {
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
   // printout("[debug] do_ma:   internal downward jump within current ionstage\n");
@@ -904,8 +904,8 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
 
 // multiply by lower level population to get a rate per second
 auto col_excitation_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
-                              const int uptransindex, const double epsilon_trans,
-                              const double lowerstatweight) -> double {
+                              const int uptransindex, const double epsilon_trans, const double lowerstatweight)
+    -> double {
   const auto &uptr = get_uptranslist(element, ion, lower)[uptransindex];
   const double coll_strength = uptr.coll_str;
   const double eoverkt = epsilon_trans / (KB * T_e);

@@ -34,8 +34,8 @@ void do_MPI_Bcast(int modelgridindex, int root, int root_node_id);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);
 void normalise_bf_estimators(int nts, int nts_prev, int titer, double deltat);
-[[nodiscard]] auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex,
-                                        int modelgridindex) -> double;
+[[nodiscard]] auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex)
+    -> double;
 void print_bfrate_contributions(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex,
                                 double nnlowerlevel, double nnlowerion);
 void reset_bfrate_contributions(int modelgridindex);

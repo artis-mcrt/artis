@@ -264,7 +264,9 @@ void set_elem_untrackedstable_abund_from_total(const int mgi, const int element,
   }
 
   // if (globals::rank_in_node == 0)
-  { modelgrid[mgi].initmassfracuntrackedstable[element] = massfrac_untrackedstable; }
+  {
+    modelgrid[mgi].initmassfracuntrackedstable[element] = massfrac_untrackedstable;
+  }
 
   // (isofracsum + massfracstable) might not exactly match elemabundance if we had to boost it to reach isofracsum
   set_elem_abundance(mgi, element, isofracsum + massfrac_untrackedstable);
@@ -1598,11 +1600,12 @@ template <size_t S1>
   return -1.;
 }
 
-auto get_coordboundary_distances_cylindrical2d(
-    const std::array<double, 3> &pkt_pos, const std::array<double, 3> &pkt_dir,
-    const std::array<double, 3> &pktposgridcoord, const std::array<double, 3> &pktvelgridcoord, const int cellindex,
-    const double tstart,
-    const std::array<double, 3> &cellcoordmax) -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
+auto get_coordboundary_distances_cylindrical2d(const std::array<double, 3> &pkt_pos,
+                                               const std::array<double, 3> &pkt_dir,
+                                               const std::array<double, 3> &pktposgridcoord,
+                                               const std::array<double, 3> &pktvelgridcoord, const int cellindex,
+                                               const double tstart, const std::array<double, 3> &cellcoordmax)
+    -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // to get the cylindrical intersection, get the spherical intersection with Z components set to zero, and the
   // propagation speed set to the xy component of the 3-velocity
 
@@ -2421,9 +2424,10 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 }
 
 // compute distance to a cell boundary.
-[[nodiscard]] __host__ __device__ auto boundary_distance(
-    const std::array<double, 3> &dir, const std::array<double, 3> &pos, const double tstart, const int cellindex,
-    enum cell_boundary *pkt_last_cross) -> std::tuple<double, int> {
+[[nodiscard]] __host__ __device__ auto boundary_distance(const std::array<double, 3> &dir,
+                                                         const std::array<double, 3> &pos, const double tstart,
+                                                         const int cellindex, enum cell_boundary *pkt_last_cross)
+    -> std::tuple<double, int> {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {
       return {0., -99};

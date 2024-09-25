@@ -1,9 +1,8 @@
 #ifndef DECAY_H
 #define DECAY_H
 
-// #include <cstdio>
-
 #include <array>
+#include <cstdio>
 #include <string>
 #include <vector>
 
