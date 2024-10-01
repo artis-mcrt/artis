@@ -59,6 +59,6 @@ constexpr size_t GSLWSIZE = 16384;  // GSL integration workspace size
 
 enum class TimeStepSizeMethod { LOGARITHMIC, CONSTANT, LOGARITHMIC_THEN_CONSTANT, CONSTANT_THEN_LOGARITHMIC };
 
-enum class ThermalisationScheme { INSTANT, DETAILED, BARNES, WOLLAEGER, GUTTMAN };
+enum class ThermalisationScheme { INSTANT, DETAILED, DETAILEDWITHGAMMAPRODUCTS, BARNES, WOLLAEGER, GUTTMAN };
 
 #endif
