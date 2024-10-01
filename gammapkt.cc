@@ -212,7 +212,7 @@ void init_xcom_photoion_data() {
   }
   std::string filepath{"xcom_photoion_data.txt"};
   if (!std::filesystem::exists(filepath)) {
-    filepath = "data/xcom_photoion_data.txt";
+    filepath = "artis/data/xcom_photoion_data.txt";
   }
   assert_always(std::filesystem::exists(filepath));
 
