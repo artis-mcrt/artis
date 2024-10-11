@@ -906,11 +906,7 @@ auto get_xs_ionization_vector(std::array<double, SFPTS> &xs_vec, const collionro
                             (u * std::pow(ionpot_ev, 2));
     xs_vec[i] = xs_ioniz;
   }
-  // std::array<double, SFPTS> xs_vec_lotz{};
-  // get_xs_ionization_vector_lotz(xs_vec_lotz, colliondata_ion);
-  // printout("cross section comparison AR %g %g %g Lotz %g %g %g\n", xs_vec[startindex], xs_vec[startindex + 1],
-  //          xs_vec[startindex + 2], xs_vec_lotz[startindex], xs_vec_lotz[startindex + 1], xs_vec_lotz[startindex +
-  //          2]);
+
   return startindex;
 }
 
