@@ -959,6 +959,62 @@ auto get_nt_frac_excitation(const int modelgridindex) -> float {
   return frac_excitation;
 }
 
+auto get_approx_shell_occupancy(const int nbound, const int ioncharge) {
+  assert_always(nbound > 0);
+  assert_always(ioncharge >= 0);
+  auto q = std::array<int, 10>{};
+
+  for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
+    if (q[0] < 2) {
+      q[0]++;  // K 1s
+    } else if (q[1] < 2) {
+      q[1]++;  // L1 2s
+    } else if (q[2] < 2) {
+      q[2]++;  // L2 2p[1/2]
+    } else if (q[3] < 4) {
+      q[3]++;  // L3 2p[3/2]
+    } else if (q[4] < 2) {
+      q[4]++;  // M1 3s
+    } else if (q[5] < 2) {
+      q[5]++;  // M2 3p[1/2]
+    } else if (q[6] < 4) {
+      q[6]++;  // M3 3p[3/2]
+    } else if (ioncharge == 0) {
+      if (q[9] < 2) {
+        q[9]++;  // N1 4s
+      } else if (q[7] < 4) {
+        q[7]++;  // M4 3d[3/2]
+      } else if (q[8] < 6) {
+        q[8]++;  // M5 3d[5/2]
+      } else {
+        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+        std::abort();
+      }
+    } else if (ioncharge == 1) {
+      if (q[9] < 1) {
+        q[9]++;  // N1 4s
+      } else if (q[7] < 4) {
+        q[7]++;  // M4 3d[3/2]
+      } else if (q[8] < 6) {
+        q[8]++;  // M5 3d[5/2]
+      } else {
+        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+        std::abort();
+      }
+    } else if (ioncharge > 1) {
+      if (q[7] < 4) {
+        q[7]++;  // M4 3d[3/2]
+      } else if (q[8] < 6) {
+        q[8]++;  // M5 3d[5/2]
+      } else {
+        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+        std::abort();
+      }
+    }
+  }
+  return q;
+}
+
 auto get_mean_binding_energy(const int element, const int ion) -> double {
   const int ioncharge = get_ionstage(element, ion) - 1;
   const int nbound = get_atomicnumber(element) - ioncharge;  // number of bound electrons
@@ -968,72 +1024,16 @@ auto get_mean_binding_energy(const int element, const int ion) -> double {
   }
 
   const int num_shells = electron_binding[get_atomicnumber(element) - 1].size();
-  auto q = std::array<int, (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE ? 0 : 10)>{};
-
-  if (!NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
-    for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
-      if (q[0] < 2) {
-        q[0]++;  // K 1s
-      } else if (q[1] < 2) {
-        q[1]++;  // L1 2s
-      } else if (q[2] < 2) {
-        q[2]++;  // L2 2p[1/2]
-      } else if (q[3] < 4) {
-        q[3]++;  // L3 2p[3/2]
-      } else if (q[4] < 2) {
-        q[4]++;  // M1 3s
-      } else if (q[5] < 2) {
-        q[5]++;  // M2 3p[1/2]
-      } else if (q[6] < 4) {
-        q[6]++;  // M3 3p[3/2]
-      } else if (ioncharge == 0) {
-        if (q[9] < 2) {
-          q[9]++;  // N1 4s
-        } else if (q[7] < 4) {
-          q[7]++;  // M4 3d[3/2]
-        } else if (q[8] < 6) {
-          q[8]++;  // M5 3d[5/2]
-        } else {
-          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          std::abort();
-        }
-      } else if (ioncharge == 1) {
-        if (q[9] < 1) {
-          q[9]++;  // N1 4s
-        } else if (q[7] < 4) {
-          q[7]++;  // M4 3d[3/2]
-        } else if (q[8] < 6) {
-          q[8]++;  // M5 3d[5/2]
-        } else {
-          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          std::abort();
-        }
-      } else if (ioncharge > 1) {
-        if (q[7] < 4) {
-          q[7]++;  // M4 3d[3/2]
-        } else if (q[8] < 6) {
-          q[8]++;  // M5 3d[5/2]
-        } else {
-          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          std::abort();
-        }
-      }
-    }
-  }
-
-  //      printout("For element %d ion %d I got q's of: %d %d %d %d %d %d %d %d %d %d\n", element, ion, q[0], q[1],
-  //      q[2], q[3], q[4], q[5], q[6], q[7], q[8], q[9]);
-  // printout("%g %g %g %g %g %g %g %g %g %g\n", electron_binding[get_atomicnumber(element)-1][0],
-  // electron_binding[get_atomicnumber(element)-1][1],
-  // electron_binding[get_atomicnumber(element)-1][2],electron_binding[get_atomicnumber(element)-1][3],electron_binding[get_atomicnumber(element)-1][4],electron_binding[get_atomicnumber(element)-1][5],electron_binding[get_atomicnumber(element)-1][6],electron_binding[get_atomicnumber(element)-1][7],electron_binding[get_atomicnumber(element)-1][8],electron_binding[get_atomicnumber(element)-1][9]);
+  // get the approximate shell occupancy if we don't have the data file
+  auto approx_shells_q = get_approx_shell_occupancy(nbound, ioncharge);
 
   double total = 0.;
   for (int shellindex = 0; shellindex < num_shells; shellindex++) {
     int electronsinshell = 0;
     if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
       electronsinshell = shells_q[get_atomicnumber(element) - 1][shellindex];
-    } else if (shellindex < std::ssize(q)) {
-      electronsinshell = q[shellindex];
+    } else if (shellindex < std::ssize(approx_shells_q)) {
+      electronsinshell = approx_shells_q[shellindex];
     }
 
     if (electronsinshell <= 0) {
