@@ -262,12 +262,12 @@ void read_shell_configs() {
 
     int z_element = 0;
     assert_always(ssline >> z_element);
-    printout("Reading shells Z=%d\n", z_element);
+    // printout("Reading shells Z=%d\n", z_element);
 
     for (int shell = 0; shell < nshells; shell++) {
       int q = 0;
       assert_always(ssline >> q);
-      printout("q of %d in shell %d element number %d Z=%d\n", q, shell, elementcounter, z_element);
+      // printout("q of %d in shell %d element number %d Z=%d\n", q, shell, elementcounter, z_element);
       shells_q[elementcounter][shell] = q;
     }
     elementcounter++;
@@ -315,6 +315,10 @@ void read_binding_energies() {
   }
 
   if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
+    if (!binding_en_newformat) {
+      printout(
+          "NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE is true, but could not find binding_energies_lotz_tab1and2.txt\n");
+    }
     assert_always(binding_en_newformat);
     read_shell_configs();
   }
