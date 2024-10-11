@@ -646,7 +646,7 @@ void read_collion_data() {
     for (int ion = 0; ion < get_nions(element) - 1; ion++) {
       const int ionstage = get_ionstage(element, ion);
       bool any_data_matched = false;
-      for (auto &collionrow : colliondata) {
+      for (const auto &collionrow : colliondata) {
         if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
           any_data_matched = true;
           break;
