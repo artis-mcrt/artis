@@ -1601,8 +1601,13 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
               calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow, yfunc);
           frac_ionization_ion += frac_ionization_ion_shell;
           matching_nlsubshell_count++;
-          printout("      shell n %d, l %d, I %5.1f eV: frac_ionization %10.4e", collionrow.n, collionrow.l,
-                   collionrow.ionpot_ev, frac_ionization_ion_shell);
+          printout("      shell ");
+          if (collionrow.n >= 0) {
+            printout("n %d, l %d", collionrow.n, collionrow.l);
+          } else {
+            printout("%s", "(Lotz average)");
+          }
+          printout(" I %5.1f eV: frac_ionization %10.4e", collionrow.ionpot_ev, frac_ionization_ion_shell);
 
           if (NT_MAX_AUGER_ELECTRONS > 0) {
             printout("  prob(n Auger elec):");
