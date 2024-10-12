@@ -836,7 +836,7 @@ auto xs_ionization_lotz(const double en_erg, const collionrow &colliondata_ion) 
       continue;
     }
     double enbinding = electron_binding[colliondata_ion.Z - 1][shellindex];
-    const double ionpot = colliondata_ion.ionpot_ev;
+    const double ionpot = colliondata_ion.ionpot_ev * EV;
     if (enbinding <= 0) {
       enbinding = electron_binding[colliondata_ion.Z - 1][shellindex - 1];
 
@@ -846,9 +846,9 @@ auto xs_ionization_lotz(const double en_erg, const collionrow &colliondata_ion) 
         assert_always(shellindex != 9)
       }
     }
-    const double p = std::max(ionpot, enbinding) * EV;
+    const double p = std::max(ionpot, enbinding);
 
-    if (en_erg > (p * EV)) {
+    if (en_erg > p) {
       const double part_sigma_shell = (electronsinshell / p *
                                        (std::log(std::pow(beta, 2) * ME * std::pow(CLIGHT, 2) / 2.0 / p) -
                                         std::log10(1 - std::pow(beta, 2)) - std::pow(beta, 2)));
