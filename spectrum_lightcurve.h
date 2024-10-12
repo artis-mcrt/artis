@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "exspec.h"
 #include "packet.h"
 
 struct TimeStepSpecrum {
@@ -16,8 +17,8 @@ struct TimeStepSpecrum {
 struct Spectra {
   double nu_min = -1.;
   double nu_max = -1.;
-  std::vector<float> lower_freq;
-  std::vector<float> delta_freq;
+  std::array<float, MNUBINS> lower_freq;
+  std::array<float, MNUBINS> delta_freq;
   std::vector<double> fluxalltimesteps;
   std::vector<double> absorptionalltimesteps;
   std::vector<double> emissionalltimesteps;
