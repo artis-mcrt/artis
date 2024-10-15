@@ -559,7 +559,7 @@ auto get_approx_shell_occupancy(const int nbound, const int ioncharge) {
   return q;
 }
 
-auto get_inverse_mean_binding_energy(const int element, const int ion) -> double {
+auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
   const int ioncharge = get_ionstage(element, ion) - 1;
   const int nbound = get_atomicnumber(element) - ioncharge;  // number of bound electrons
 
@@ -1190,7 +1190,7 @@ auto get_oneoverw(const int element, const int ion, const int modelgridindex) ->
     Zbar += grid::get_elem_abundance(modelgridindex, ielement) * get_atomicnumber(ielement);
   }
 
-  const double binding = get_inverse_mean_binding_energy(element, ion);
+  const double binding = get_sum_q_over_binding_energy(element, ion);
   constexpr double Aconst = 1.33e-14 * EV * EV;
   const double oneoverW = Aconst * binding / Zbar / (2 * PI * std::pow(QE, 4));
 
