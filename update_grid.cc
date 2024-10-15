@@ -809,7 +809,6 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
       // photoionsation rate!
     }
   }
-  globals::gamma_ion_currentcell.resize(get_includedions());
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions - 1; ion++) {
@@ -1135,6 +1134,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     for (int mgi = nstart; mgi < nstart + ndo; mgi++) {
       // Check if this task should work on the current model grid cell.
       // If yes, update the cell and write out the estimators
+      std::ranges::fill(globals::gamma_ion_currentcell, 0.);
       HeatingCoolingRates heatingcoolingrates{};
       update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates);
 
