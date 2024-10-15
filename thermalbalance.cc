@@ -197,6 +197,21 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   // Set new T_e guess for the current cell and update populations
   // globals::cell[cellnumber].T_e = T_e;
   grid::set_Te(modelgridindex, T_e);
+
+  if constexpr (!USE_LUT_PHOTOION && !LTEPOP_EXCITATION_USE_TJ) {
+    const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+    for (int element = 0; element < get_nelements(); element++) {
+      if (!elem_has_nlte_levels(element)) {
+        // recalculate the Gammas using the current population estimates
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions - 1; ion++) {
+          globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] =
+              calculate_iongamma_per_gspop(modelgridindex, element, ion);
+        }
+      }
+    }
+  }
+
   calculate_ion_balance_nne(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
 
