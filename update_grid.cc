@@ -831,7 +831,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
       }
       const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 
-      if (USE_LUT_PHOTOION || !elem_has_nlte_levels(element)) {
+      if (!elem_has_nlte_levels(element)) {
         globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(mgi, element, ion);
       }
 
