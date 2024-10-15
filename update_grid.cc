@@ -701,14 +701,6 @@ void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, cons
     for (int element = 0; element < get_nelements(); element++) {
       if (!elem_has_nlte_levels(element)) {
         calculate_cellpartfuncts(mgi, element);
-        if (!LTEPOP_EXCITATION_USE_TJ) {
-          // recalculate the Gammas using the current population estimates
-          const int nions = get_nions(element);
-          for (int ion = 0; ion < nions - 1; ion++) {
-            globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] =
-                calculate_iongamma_per_gspop(mgi, element, ion);
-          }
-        }
       }
     }
     const int duration_solve_partfuncs_or_gamma = std::time(nullptr) - sys_time_start_partfuncs_or_gamma;
