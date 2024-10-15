@@ -515,7 +515,7 @@ void read_auger_data() {
 auto get_approx_shell_occupancy(const int nbound, const int ioncharge) {
   assert_always(nbound > 0);
   assert_always(ioncharge >= 0);
-  auto q = std::array<int, 10>{};
+  auto q = std::vector<int>(10, 0.);
 
   for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
     if (q[0] < 2) {
