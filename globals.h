@@ -324,9 +324,6 @@ inline int num_grey_timesteps;
 inline int n_titer;
 inline bool lte_iteration;
 
-// size is included_ions(). used during update_grid for a cell
-inline thread_local std::vector<double> gamma_ion_currentcell;
-
 inline std::deque<std::mutex> mutex_cellcachemacroatom;
 
 inline void setup_mpi_vars() {

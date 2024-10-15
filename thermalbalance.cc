@@ -20,6 +20,7 @@
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
+#include "rpkt.h"
 #include "sn3d.h"
 
 namespace {
@@ -198,12 +199,13 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   grid::set_Te(modelgridindex, T_e);
 
   if constexpr (!USE_LUT_PHOTOION && !LTEPOP_EXCITATION_USE_TJ) {
+    const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     for (int element = 0; element < get_nelements(); element++) {
       if (!elem_has_nlte_levels(element)) {
         // recalculate the Gammas using the current population estimates
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions - 1; ion++) {
-          globals::gamma_ion_currentcell[get_uniqueionindex(element, ion)] =
+          globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] =
               calculate_iongamma_per_gspop(modelgridindex, element, ion);
         }
       }

@@ -642,7 +642,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
         const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
         if (groundcontindex >= 0) {
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                  globals::gamma_ion_currentcell[get_uniqueionindex(element, ion)]);
+                  globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)]);
         }
       }
       fprintf(estimators_file, "\n");
@@ -812,16 +812,17 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions - 1; ion++) {
+      // Reuse the gammaestimator array as temporary storage of the Gamma values during
+      // the remaining part of the update_grid phase. Afterwards it is reset to record
+      // the next timesteps gamma estimators.
       const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
       if (groundcontindex < 0) {
         continue;
       }
       const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 
-      // store the ion gammas for use by phi_ion_equilib()
       if (!elem_has_nlte_levels(element)) {
-        globals::gamma_ion_currentcell[get_uniqueionindex(element, ion)] =
-            calculate_iongamma_per_gspop(mgi, element, ion);
+        globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(mgi, element, ion);
       }
 
       if constexpr (USE_LUT_BFHEATING) {
@@ -1134,7 +1135,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     for (int mgi = nstart; mgi < nstart + ndo; mgi++) {
       // Check if this task should work on the current model grid cell.
       // If yes, update the cell and write out the estimators
-      std::ranges::fill(globals::gamma_ion_currentcell, 0.);
       HeatingCoolingRates heatingcoolingrates{};
       update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates);
 
