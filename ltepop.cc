@@ -74,11 +74,7 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
   const auto T_e = grid::get_Te(modelgridindex);
 
   double Gamma = 0.;
-  if constexpr (USE_LUT_PHOTOION) {
-    Gamma = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
-  } else {
-    Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
-  }
+  Gamma = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
 
   // Gamma is the photoionization rate per ground level pop
   const double Gamma_ion = Gamma * stat_weight(element, ion, 0) / partfunc_ion;
