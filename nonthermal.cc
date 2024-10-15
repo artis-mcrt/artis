@@ -80,29 +80,38 @@ constexpr double MINDEPRATE = 0.;
 // Bohr radius squared in cm^2
 constexpr double A_naught_squared = 2.800285203e-17;
 
+const std::array<std::string, 28> shellnames{"K ", "L1", "L2", "L3", "M1", "M2", "M3", "M4", "M5", "N1",
+                                             "N2", "N3", "N4", "N5", "N6", "N7", "O1", "O2", "O3", "O4",
+                                             "O5", "O6", "O7", "P1", "P2", "P3", "P4", "Q1"};
+
 std::vector<std::vector<double>> electron_binding;
 std::vector<std::vector<int>> shells_q;
 
 struct collionrow {
-  int Z;
-  int ionstage;
-  int n;
-  int l;
-  double ionpot_ev;
-  double A;
-  double B;
-  double C;
-  double D;
+  int Z{-1};
+  int ionstage{-1};
+  int n = -1;
+  int l = -1;
+  double ionpot_ev{NAN};
+  double A{NAN};
+  double B{NAN};
+  double C{NAN};
+  double D{NAN};
   // track the statistical weight represented by the values below, so they can be updated with new g-weighted averaged
   // values
-  double auger_g_accumulated;
+  double auger_g_accumulated = 0.;
 
   // probability of 0, 1, ..., NT_MAX_AUGER_ELECTRONS Auger electrons being ejected when the shell is ionised
-  std::array<double, NT_MAX_AUGER_ELECTRONS + 1> prob_num_auger;
+  std::array<double, NT_MAX_AUGER_ELECTRONS + 1> prob_num_auger{};
 
   // the average kinetic energy released in Auger electrons after making a hole in this shell
-  float en_auger_ev;
-  float n_auger_elec_avg;
+  float en_auger_ev{NAN};
+  float n_auger_elec_avg{NAN};
+
+  collionrow() {
+    std::ranges::fill(prob_num_auger, 0.);
+    prob_num_auger[0] = 1.;
+  }
 };
 
 std::vector<collionrow> colliondata;
@@ -654,27 +663,60 @@ void read_collion_data() {
         const double ionpot_ev = globals::elements[element].ions[ion].ionpot / EV;
         printout("No collisional ionisation data for Z=%d ionstage %d. Using Lotz approximation with ionpot = %g eV\n",
                  Z, ionstage, ionpot_ev);
-        collionrow collionrow{};
-        collionrow.Z = Z;
-        collionrow.ionstage = ionstage;
-        collionrow.n = -1;
-        collionrow.l = -1;
-        collionrow.ionpot_ev = ionpot_ev;
-        collionrow.A = -1.;
-        collionrow.B = -1.;
-        collionrow.C = -1.;
-        collionrow.D = -1.;
-        std::ranges::fill(collionrow.prob_num_auger, 0.);
-        collionrow.prob_num_auger[0] = 1.;
-        collionrow.auger_g_accumulated = 0.;
-        collionrow.en_auger_ev = 0.;
-        collionrow.n_auger_elec_avg = 0.;
 
-        colliondata.push_back(collionrow);
+        const int ioncharge = ionstage - 1;
+        const int nbound = Z - ioncharge;  // number of bound electrons
+        const int num_shells = electron_binding[Z - 1].size();
+        // get the approximate shell occupancy if we don't have the data file
+        auto approx_shells_q = get_approx_shell_occupancy(nbound, ioncharge);
+        for (int shellindex = 0; shellindex < num_shells; shellindex++) {
+          int electronsinshell = 0;
+          if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
+            electronsinshell = shells_q.at(Z - 1).at(shellindex);
+          } else if (shellindex < std::ssize(approx_shells_q)) {
+            electronsinshell = approx_shells_q.at(shellindex);
+          }
+
+          if (electronsinshell <= 0) {
+            continue;
+          }
+          double enbinding = electron_binding.at(Z - 1).at(shellindex);
+          const double ionpot = ionpot_ev * EV;
+          if (enbinding <= 0) {
+            enbinding = electron_binding.at(Z - 1).at(shellindex - 1);
+
+            if (shellindex != 8) {
+              // For some reason in the Lotz data, this is no energy for the M5 shell before Ni. So if the complaint
+              // is for 8 (corresponding to that shell) then just use the M4 value
+              assert_always(shellindex != 9)
+            }
+          }
+          const double p = std::max(ionpot, enbinding);
+          collionrow collionrow{};
+          collionrow.Z = Z;
+          collionrow.ionstage = ionstage;
+          collionrow.n = -1;
+          collionrow.l = shellindex;
+          collionrow.ionpot_ev = p / EV;
+          collionrow.A = -1.;
+          collionrow.B = -1.;
+          collionrow.C = -1.;
+          collionrow.D = -1.;
+          std::ranges::fill(collionrow.prob_num_auger, 0.);
+          collionrow.prob_num_auger[0] = 1.;
+          collionrow.auger_g_accumulated = 0.;
+          collionrow.en_auger_ev = 0.;
+          collionrow.n_auger_elec_avg = 0.;
+
+          colliondata.push_back(collionrow);
+        }
       }
     }
   }
   colliondata.shrink_to_fit();
+  std::ranges::stable_sort(colliondata, [](const collionrow &a, const collionrow &b) {
+    return std::tie(a.Z, a.ionstage, a.ionpot_ev, a.n, a.l) < std::tie(b.Z, b.ionstage, b.ionpot_ev, b.n, b.l);
+  });
 
   fclose(cifile);
 
@@ -813,7 +855,6 @@ auto xs_ionization_lotz(const double en_erg, const collionrow &colliondata_ion) 
   // const double gamma = (en_erg / (ME * std::pow(CLIGHT, 2))) + 1;
   // const double beta = std::sqrt(1.0 - (1.0 / (std::pow(gamma, 2))));
   const double beta = std::sqrt(2 * en_erg / ME) / CLIGHT;
-  double part_sigma = 0.0;
 
   const int ioncharge = colliondata_ion.ionstage - 1;
   const int nbound = colliondata_ion.Z - ioncharge;  // number of bound electrons
@@ -822,49 +863,33 @@ auto xs_ionization_lotz(const double en_erg, const collionrow &colliondata_ion) 
     return 0.;
   }
 
-  const int num_shells = electron_binding[colliondata_ion.Z - 1].size();
   // get the approximate shell occupancy if we don't have the data file
   auto approx_shells_q = get_approx_shell_occupancy(nbound, ioncharge);
 
-  for (int shellindex = 0; shellindex < num_shells; shellindex++) {
-    int electronsinshell = 0;
-    if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
-      electronsinshell = shells_q[colliondata_ion.Z - 1][shellindex];
-    } else if (shellindex < std::ssize(approx_shells_q)) {
-      electronsinshell = approx_shells_q[shellindex];
-    }
+  const int shellindex = colliondata_ion.l;
+  int electronsinshell = 0;
+  if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
+    electronsinshell = shells_q[colliondata_ion.Z - 1][shellindex];
+  } else if (shellindex < std::ssize(approx_shells_q)) {
+    electronsinshell = approx_shells_q[shellindex];
+  }
+  assert_always(electronsinshell >= 0);
 
-    if (electronsinshell <= 0) {
-      continue;
-    }
-    double enbinding = electron_binding[colliondata_ion.Z - 1][shellindex];
-    const double ionpot = colliondata_ion.ionpot_ev * EV;
-    if (enbinding <= 0) {
-      enbinding = electron_binding[colliondata_ion.Z - 1][shellindex - 1];
+  const double p = colliondata_ion.ionpot_ev * EV;
 
-      if (shellindex != 8) {
-        // For some reason in the Lotz data, this is no energy for the M5 shell before Ni. So if the complaint
-        // is for 8 (corresponding to that shell) then just use the M4 value
-        assert_always(shellindex != 9)
-      }
-    }
-    const double p = std::max(ionpot, enbinding);
-
-    if (en_erg > p) {
-      const double part_sigma_shell = (electronsinshell / p *
-                                       (std::log(std::pow(beta, 2) * ME * std::pow(CLIGHT, 2) / 2.0 / p) -
-                                        std::log10(1 - std::pow(beta, 2)) - std::pow(beta, 2)));
-      if (part_sigma_shell > 0) {
-        part_sigma += part_sigma_shell;
-      }
+  if (en_erg > p) {
+    const double part_sigma_shell = (electronsinshell / p *
+                                     (std::log(std::pow(beta, 2) * ME * std::pow(CLIGHT, 2) / 2.0 / p) -
+                                      std::log10(1 - std::pow(beta, 2)) - std::pow(beta, 2)));
+    if (part_sigma_shell > 0.) {
+      constexpr double Aconst = 1.33e-14 * EV * EV;
+      const double sigma = 2 * Aconst / std::pow(beta, 2) / ME / std::pow(CLIGHT, 2) * part_sigma_shell;
+      assert_always(sigma >= 0);
+      return sigma;
     }
   }
-  assert_always(part_sigma >= 0);
 
-  constexpr double Aconst = 1.33e-14 * EV * EV;
-  const double sigma = 2 * Aconst / std::pow(beta, 2) / ME / std::pow(CLIGHT, 2) * part_sigma;
-  assert_always(sigma >= 0);
-  return sigma;
+  return 0.;
 }
 
 auto get_xs_ionization_vector_lotz(std::array<double, SFPTS> &xs_vec, const collionrow &colliondata_ion) -> int {
@@ -1607,7 +1632,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
           if (collionrow.n >= 0) {
             printout("n %d, l %d", collionrow.n, collionrow.l);
           } else {
-            printout("%s", "(Lotz average)");
+            printout("%s (Lotz)", shellnames[collionrow.l].c_str());
           }
           printout(" I %5.1f eV: frac_ionization %10.4e", collionrow.ionpot_ev, frac_ionization_ion_shell);
 
