@@ -845,7 +845,7 @@ auto get_nlevels_important(const int modelgridindex, const int element, const in
     }
     nnlevelsum += nnlowerlevel;
     nlevels_important = lower + 1;
-    if ((nnlevelsum / nnion_real) > IONGAMMA_POPFRAC_LEVELS_INCLUDED) {
+    if ((nnlevelsum / nnion_real) >= IONGAMMA_POPFRAC_LEVELS_INCLUDED) {
       break;
     }
   }
