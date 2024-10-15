@@ -751,16 +751,14 @@ void setup_phixs_list() {
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions - 1; ion++) {
-      if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-        globals::elements[element].ions[ion].groundcontindex =
-            static_cast<int>(std::ranges::find_if(globals::groundcont,
-                                                  [=](const auto &groundcont) {
-                                                    return (groundcont.element == element) && (groundcont.ion == ion);
-                                                  }) -
-                             globals::groundcont.begin());
-        if (globals::elements[element].ions[ion].groundcontindex >= globals::nbfcontinua_ground) {
-          globals::elements[element].ions[ion].groundcontindex = -1;
-        }
+      globals::elements[element].ions[ion].groundcontindex =
+          static_cast<int>(std::ranges::find_if(globals::groundcont,
+                                                [=](const auto &groundcont) {
+                                                  return (groundcont.element == element) && (groundcont.ion == ion);
+                                                }) -
+                           globals::groundcont.begin());
+      if (globals::elements[element].ions[ion].groundcontindex >= globals::nbfcontinua_ground) {
+        globals::elements[element].ions[ion].groundcontindex = -1;
       }
       const int nlevels = get_ionisinglevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
