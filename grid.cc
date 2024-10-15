@@ -454,7 +454,7 @@ void allocate_nonemptymodelcells() {
   const auto ionestimcount = nonempty_npts_model * globals::nbfcontinua_ground;
   const auto ionestimsize = ionestimcount * sizeof(double);
 
-  if (USE_LUT_PHOTOION && ionestimsize > 0) {
+  if (ionestimsize > 0) {
 #ifdef MPI_ON
     const auto [_, noderank_nonemptycellcount] =
         get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);

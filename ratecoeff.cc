@@ -151,7 +151,7 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
       assert_always(
           fscanf(ratecoeff_file, "%d %d %d %d\n", &in_element, &in_ionstage, &in_levels, &in_ionisinglevels) == 4);
       const int nlevels = get_nlevels(element, ion);
-      const int ionisinglevels = get_ionisinglevels(element, ion);
+      const int ionisinglevels = get_nlevels_ionising(element, ion);
       if (get_atomicnumber(element) != in_element || get_ionstage(element, ion) != in_ionstage ||
           nlevels != in_levels || ionisinglevels != in_ionisinglevels) {
         printout(
@@ -169,9 +169,7 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
     const int nions = get_nions(element) - 1;
     for (int ion = 0; ion < nions; ion++) {
       // nlevels = get_nlevels(element,ion);
-      const int nlevels = get_ionisinglevels(element, ion);  // number of ionising levels associated with current ion
-      // int nbfcont = get_ionisinglevels(element,ion);     // number of ionising levels of the current ion which
-      // are used in the simulation
+      const int nlevels = get_nlevels_ionising(element, ion);  // number of ionising levels associated with current ion
       for (int level = 0; level < nlevels; level++) {
         // Loop over the phixs target states
         const int nphixstargets = get_nphixstargets(element, ion, level);
@@ -234,7 +232,7 @@ void write_ratecoeff_dat() {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       fprintf(ratecoeff_file, "%d %d %d %d\n", get_atomicnumber(element), get_ionstage(element, ion),
-              get_nlevels(element, ion), get_ionisinglevels(element, ion));
+              get_nlevels(element, ion), get_nlevels_ionising(element, ion));
     }
   }
 
@@ -242,7 +240,7 @@ void write_ratecoeff_dat() {
     const int nions = get_nions(element) - 1;
     for (int ion = 0; ion < nions; ion++) {
       // nlevels = get_nlevels(element,ion);
-      const int nlevels = get_ionisinglevels(element, ion);
+      const int nlevels = get_nlevels_ionising(element, ion);
       for (int level = 0; level < nlevels; level++) {
         // Loop over the phixs targets
         const auto nphixstargets = get_nphixstargets(element, ion, level);
@@ -353,7 +351,7 @@ void precalculate_rate_coefficient_integrals() {
     for (int ion = 0; ion < nions; ion++) {
       const int atomic_number = get_atomicnumber(element);
       const int ionstage = get_ionstage(element, ion);
-      const int nlevels = get_ionisinglevels(element, ion);
+      const int nlevels = get_nlevels_ionising(element, ion);
       printout("Performing rate integrals for Z = %d, ionstage %d...\n", atomic_number, ionstage);
 
       gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
@@ -565,7 +563,7 @@ void read_recombrate_file() {
         assert_always(T_highestbelow.log_Te > 0);
         assert_always(T_lowestabove.log_Te > 0);
 
-        const int nlevels = get_ionisinglevels(element, ion - 1);
+        const int nlevels = get_nlevels_ionising(element, ion - 1);
 
         const double x = (log_Te_estimate - T_highestbelow.log_Te) / (T_lowestabove.log_Te - T_highestbelow.log_Te);
         const double input_rrc_low_n = (x * T_highestbelow.rrc_low_n) + ((1 - x) * T_lowestabove.rrc_low_n);
@@ -656,7 +654,7 @@ void precalculate_ion_alpha_sp() {
       const int nions = get_nions(element) - 1;
       for (int ion = 0; ion < nions; ion++) {
         const auto uniqueionindex = get_uniqueionindex(element, ion);
-        const int nionisinglevels = get_ionisinglevels(element, ion);
+        const int nionisinglevels = get_nlevels_ionising(element, ion);
         double zeta = 0.;
         for (int level = 0; level < nionisinglevels; level++) {
           const auto nphixstargets = get_nphixstargets(element, ion, level);
@@ -826,15 +824,13 @@ auto get_nlevels_important(const int modelgridindex, const int element, const in
   }
 
   double nnlevelsum = 0.;
-  int nlevels_important = get_ionisinglevels(element, ion);  // levels needed to get majority of ion pop
+  int nlevels_important = get_nlevels_ionising(element, ion);  // levels needed to get majority of ion pop
 
   // debug: treat all ionising levels as important
   // *nnlevelsum_out = nnion_real;
   // return nlevels_important;
 
-  for (int lower = 0;
-       (nnlevelsum / nnion_real < IONGAMMA_POPFRAC_LEVELS_INCLUDED) && (lower < get_ionisinglevels(element, ion));
-       lower++) {
+  for (int lower = 0; lower < get_nlevels_ionising(element, ion); lower++) {
     double nnlowerlevel{NAN};
     if (assume_lte) {
       const double T_exc = T_e;  // remember, other parts of the code in LTE mode use TJ, not T_e
@@ -849,6 +845,9 @@ auto get_nlevels_important(const int modelgridindex, const int element, const in
     }
     nnlevelsum += nnlowerlevel;
     nlevels_important = lower + 1;
+    if ((nnlevelsum / nnion_real) >= IONGAMMA_POPFRAC_LEVELS_INCLUDED) {
+      break;
+    }
   }
   assert_always(nlevels_important <= get_nlevels(element, ion));
   return {nlevels_important, nnlevelsum};
@@ -1289,7 +1288,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
   }
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-  if constexpr (USE_LUT_PHOTOION) {
+  if (USE_LUT_PHOTOION || !elem_has_nlte_levels(element)) {
     return (globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] == 0);
   }
 
@@ -1336,7 +1335,7 @@ auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, c
 
   double Col_ion = 0.;
   for (int level = 0; level < nlevels_important; level++) {
-    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    const double nnlevel = calculate_levelpop(modelgridindex, element, ion, level);
     const int nphixstargets = get_nphixstargets(element, ion, level);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
