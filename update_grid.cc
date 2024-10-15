@@ -990,22 +990,6 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
         calculate_cellpartfuncts(mgi, element);
       }
       calculate_ion_balance_nne(mgi);
-
-      for (int element = 0; element < get_nelements(); element++) {
-        const int nions = get_nions(element);
-        for (int ion = 0; ion < nions - 1; ion++) {
-          const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
-          if (groundcontindex < 0) {
-            continue;
-          }
-          const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
-
-          // store the ion gammas for use by phi_ion_equilib()
-          if (!elem_has_nlte_levels(element)) {
-            globals::gamma_ion_currentcell[get_uniqueionindex(element, ion)] = globals::gammaestimator[ionestimindex];
-          }
-        }
-      }
     } else {
       // not lte_iteration and not a thick cell
       // non-LTE timesteps with T_e from heating/cooling
