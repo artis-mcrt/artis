@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include <ctime>
+#include <vector>
 
 void update_grid(FILE *estimators_file, int nts, int nts_prev, int my_rank, int nstart, int ndo, int titer,
                  time_t real_time_start);
