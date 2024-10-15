@@ -454,7 +454,7 @@ void allocate_nonemptymodelcells() {
   const auto ionestimcount = nonempty_npts_model * globals::nbfcontinua_ground;
   const auto ionestimsize = ionestimcount * sizeof(double);
 
-  if (ionestimsize > 0) {
+  if (USE_LUT_PHOTOION && ionestimsize > 0) {
 #ifdef MPI_ON
     const auto [_, noderank_nonemptycellcount] =
         get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
@@ -470,6 +470,7 @@ void allocate_nonemptymodelcells() {
     globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
 #endif
 
+    globals::gammaestimator.reserve(ionestimcount);
     globals::gammaestimator.resize(ionestimcount, 0.);
 #ifdef DO_TITER
     globals::gammaestimator_save.resize(nonempty_npts_model, 0.);
@@ -483,6 +484,7 @@ void allocate_nonemptymodelcells() {
   }
 
   if (USE_LUT_BFHEATING && ionestimsize > 0) {
+    globals::gammaestimator.reserve(ionestimcount);
     globals::bfheatingestimator.resize(ionestimcount, 0.);
 #ifdef DO_TITER
     globals::bfheatingestimator_save.resize(nonempty_npts_model, 0.);
