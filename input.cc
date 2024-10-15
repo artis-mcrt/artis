@@ -718,30 +718,28 @@ void setup_phixs_list() {
   printout("[info] read_atomicdata: number of bfcontinua %d\n", globals::nbfcontinua);
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", globals::nbfcontinua_ground);
 
-  if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-    globals::groundcont.resize(globals::nbfcontinua_ground);
+  globals::groundcont.resize(globals::nbfcontinua_ground);
 
-    int groundcontindex = 0;
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions - 1; ion++) {
-        const int level = 0;
-        const int nphixstargets = get_nphixstargets(element, ion, level);
-        if (nphixstargets == 0) {
-          continue;
-        }
-        const double E_threshold = get_phixs_threshold(element, ion, level, 0);
-        const double nu_edge = E_threshold / H;
-        assert_always(groundcontindex < globals::nbfcontinua_ground);
-
-        globals::groundcont[groundcontindex] = {.nu_edge = nu_edge, .element = element, .ion = ion};
-
-        groundcontindex++;
+  int nextgroundcontindex = 0;
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions - 1; ion++) {
+      const int level = 0;
+      const int nphixstargets = get_nphixstargets(element, ion, level);
+      if (nphixstargets == 0) {
+        continue;
       }
+      const double E_threshold = get_phixs_threshold(element, ion, level, 0);
+      const double nu_edge = E_threshold / H;
+      assert_always(nextgroundcontindex < globals::nbfcontinua_ground);
+
+      globals::groundcont[nextgroundcontindex] = {.nu_edge = nu_edge, .element = element, .ion = ion};
+
+      nextgroundcontindex++;
     }
-    assert_always(groundcontindex == globals::nbfcontinua_ground);
-    std::ranges::SORT_OR_STABLE_SORT(globals::groundcont, std::ranges::less{}, &GroundPhotoion::nu_edge);
   }
+  assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
+  std::ranges::SORT_OR_STABLE_SORT(globals::groundcont, std::ranges::less{}, &GroundPhotoion::nu_edge);
 
   auto *nonconstallcont =
       static_cast<FullPhotoionTransition *>(malloc(globals::nbfcontinua * sizeof(FullPhotoionTransition)));

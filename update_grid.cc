@@ -777,7 +777,6 @@ void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, cons
 }
 
 void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const double estimator_normfactor) {
-  assert_always(USE_LUT_PHOTOION || USE_LUT_BFHEATING);
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
   if constexpr (USE_LUT_PHOTOION) {
     for (int element = 0; element < get_nelements(); element++) {
@@ -818,47 +817,45 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
       // photoionsation rate!
     }
   }
-  if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions - 1; ion++) {
-        // Reuse the gammaestimator array as temporary storage of the Gamma values during
-        // the remaining part of the update_grid phase. Afterwards it is reset to record
-        // the next timesteps gamma estimators.
-        const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
-        if (groundcontindex < 0) {
-          continue;
-        }
-        const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions - 1; ion++) {
+      // Reuse the gammaestimator array as temporary storage of the Gamma values during
+      // the remaining part of the update_grid phase. Afterwards it is reset to record
+      // the next timesteps gamma estimators.
+      const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
+      if (groundcontindex < 0) {
+        continue;
+      }
+      const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 
-        if constexpr (USE_LUT_PHOTOION) {
-          globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(mgi, element, ion);
-        }
+      if (!USE_LUT_PHOTOION || !elem_has_nlte_levels(element)) {
+        globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(mgi, element, ion);
+      }
 
-        if constexpr (USE_LUT_BFHEATING) {
-          globals::bfheatingestimator[ionestimindex] *= estimator_normfactor;
+      if constexpr (USE_LUT_BFHEATING) {
+        globals::bfheatingestimator[ionestimindex] *= estimator_normfactor;
 #ifdef DO_TITER
-          if (bfheatingestimator_save[ionestimindex] >= 0) {
-            globals::bfheatingestimator[ionestimindex] =
-                (globals::bfheatingestimator[ionestimindex] + bfheatingestimator_save[ionestimindex]) / 2;
-          }
-          bfheatingestimator_save[ionestimindex] = globals::bfheatingestimator[ionestimindex];
+        if (bfheatingestimator_save[ionestimindex] >= 0) {
+          globals::bfheatingestimator[ionestimindex] =
+              (globals::bfheatingestimator[ionestimindex] + bfheatingestimator_save[ionestimindex]) / 2;
+        }
+        bfheatingestimator_save[ionestimindex] = globals::bfheatingestimator[ionestimindex];
 #endif
-          // Now convert bfheatingestimator into the bfheating renormalisation coefficient used in
-          // get_bfheating in the remaining part of update_grid. Later on it's reset and new
-          // contributions are added up.
+        // Now convert bfheatingestimator into the bfheating renormalisation coefficient used in
+        // get_bfheating in the remaining part of update_grid. Later on it's reset and new
+        // contributions are added up.
 
-          const double bfheatingcoeff_ana =
-              get_bfheatingcoeff_ana(element, ion, 0, 0, grid::get_TR(mgi), grid::get_W(mgi));
-          globals::bfheatingestimator[ionestimindex] = globals::bfheatingestimator[ionestimindex] / bfheatingcoeff_ana;
+        const double bfheatingcoeff_ana =
+            get_bfheatingcoeff_ana(element, ion, 0, 0, grid::get_TR(mgi), grid::get_W(mgi));
+        globals::bfheatingestimator[ionestimindex] = globals::bfheatingestimator[ionestimindex] / bfheatingcoeff_ana;
 
-          if (!std::isfinite(globals::bfheatingestimator[ionestimindex])) {
-            printout(
-                "[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / "
-                "get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
-                element, ion, 0, 0, mgi, globals::bfheatingestimator[ionestimindex], bfheatingcoeff_ana);
-            std::abort();
-          }
+        if (!std::isfinite(globals::bfheatingestimator[ionestimindex])) {
+          printout(
+              "[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / "
+              "get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
+              element, ion, 0, 0, mgi, globals::bfheatingestimator[ionestimindex], bfheatingcoeff_ana);
+          std::abort();
         }
       }
     }
@@ -1016,9 +1013,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       titer_average_estimators(mgi);
 #endif
 
-      if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-        update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
-      }
+      update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
 
       // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the
       // full-spectrum and binned J and nuJ estimators
