@@ -669,6 +669,7 @@ void read_collion_data() {
         const int num_shells = electron_binding[Z - 1].size();
         // get the approximate shell occupancy if we don't have the data file
         auto approx_shells_q = get_approx_shell_occupancy(nbound, ioncharge);
+        int electron_count = 0;
         for (int shellindex = 0; shellindex < num_shells; shellindex++) {
           int electronsinshell = 0;
           if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
@@ -676,6 +677,7 @@ void read_collion_data() {
           } else if (shellindex < std::ssize(approx_shells_q)) {
             electronsinshell = approx_shells_q.at(shellindex);
           }
+          electron_count += electronsinshell;
 
           if (electronsinshell <= 0) {
             continue;
@@ -696,7 +698,7 @@ void read_collion_data() {
           collionrow.Z = Z;
           collionrow.ionstage = ionstage;
           collionrow.n = -1;
-          collionrow.l = shellindex;
+          collionrow.l = -shellindex;
           collionrow.ionpot_ev = p / EV;
           collionrow.A = -1.;
           collionrow.B = -1.;
@@ -709,6 +711,9 @@ void read_collion_data() {
           collionrow.n_auger_elec_avg = 0.;
 
           colliondata.push_back(collionrow);
+          if (electron_count >= nbound) {
+            break;
+          }
         }
       }
     }
@@ -866,7 +871,7 @@ auto xs_ionization_lotz(const double en_erg, const collionrow &colliondata_ion) 
   // get the approximate shell occupancy if we don't have the data file
   auto approx_shells_q = get_approx_shell_occupancy(nbound, ioncharge);
 
-  const int shellindex = colliondata_ion.l;
+  const int shellindex = -colliondata_ion.l;
   int electronsinshell = 0;
   if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
     electronsinshell = shells_q[colliondata_ion.Z - 1][shellindex];
@@ -1621,18 +1626,18 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 
       calculate_eff_ionpot_auger_rates(modelgridindex, element, ion, yfunc);
 
-      int matching_nlsubshell_count = 0;
+      int matching_subshell_count = 0;
       for (const auto &collionrow : colliondata) {
         if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
           const double frac_ionization_ion_shell =
               calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow, yfunc);
           frac_ionization_ion += frac_ionization_ion_shell;
-          matching_nlsubshell_count++;
+          matching_subshell_count++;
           printout("      shell ");
           if (collionrow.n >= 0) {
             printout("n %d, l %d", collionrow.n, collionrow.l);
           } else {
-            printout("%s (Lotz)", shellnames[collionrow.l].c_str());
+            printout("%s (Lotz)", shellnames.at(-collionrow.l).c_str());
           }
           printout(" I %5.1f eV: frac_ionization %10.4e", collionrow.ionpot_ev, frac_ionization_ion_shell);
 
@@ -1654,7 +1659,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
       } else {
         nt_solution[modelgridindex].allions[uniqueionindex].fracdep_ionization_ion = 0.;
       }
-      printout("    frac_ionization: %g (%d subshells)\n", frac_ionization_ion, matching_nlsubshell_count);
+      printout("    frac_ionization: %g (%d subshells)\n", frac_ionization_ion, matching_subshell_count);
 
       // excitation from all levels is very SLOW
       const int nlevels_all = get_nlevels(element, ion);
