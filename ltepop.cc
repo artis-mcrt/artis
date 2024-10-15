@@ -58,7 +58,7 @@ auto phi_lte(const int element, const int ion, const int modelgridindex) -> doub
 
 // Calculate population ratio (a saha factor) of two consecutive ionisation stages in nebular approximation phi_j,k* =
 // N_j,k*/(N_j+1,k* * nne)
-auto phi_ion_equilib(const int element, const int ion, const int modelgridindex) -> double {
+auto phi_ion_equilib(const int element, const int ion, const int modelgridindex, const int nonemptymgi) -> double {
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
@@ -74,7 +74,7 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex)
   const auto T_e = grid::get_Te(modelgridindex);
 
   // photoionisation plus collisional ionisation rate coefficient per ground level pop
-  const double Gamma = globals::gamma_ion_currentcell[uniqueionindex];
+  const double Gamma = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
 
   // Gamma is the photoionization rate per ground level pop
   const double Gamma_ion = Gamma * stat_weight(element, ion, 0) / partfunc_ion;
@@ -307,7 +307,7 @@ auto find_uppermost_ion(const int modelgridindex, const int element, const doubl
   int ion = 0;
   for (ion = 0; ion < uppermost_ion; ion++) {
     const auto phifactor =
-        use_lte ? phi_lte(element, ion, modelgridindex) : phi_ion_equilib(element, ion, modelgridindex);
+        use_lte ? phi_lte(element, ion, modelgridindex) : phi_ion_equilib(element, ion, modelgridindex, nonemptymgi);
     factor *= nne_hi * phifactor;
 
     if (!std::isfinite(factor)) {
@@ -425,6 +425,7 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
   if (uppermost_ion < 0) {
     return {};
@@ -436,8 +437,8 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
   double normfactor = 1.;
 
   for (int ion = uppermost_ion - 1; ion >= 0; ion--) {
-    const auto phifactor =
-        use_phi_lte ? phi_lte(element, ion, modelgridindex) : phi_ion_equilib(element, ion, modelgridindex);
+    const auto phifactor = use_phi_lte ? phi_lte(element, ion, modelgridindex)
+                                       : phi_ion_equilib(element, ion, modelgridindex, nonemptymgi);
     ionfractions[ion] = ionfractions[ion + 1] * nne * phifactor;
     normfactor += ionfractions[ion];
   }

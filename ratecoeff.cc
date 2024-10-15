@@ -28,6 +28,7 @@
 #include "macroatom.h"
 #include "md5.h"
 #include "radfield.h"
+#include "rpkt.h"
 #include "sn3d.h"
 
 namespace {
@@ -1288,7 +1289,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   if (USE_LUT_PHOTOION || !elem_has_nlte_levels(element)) {
-    return (globals::gamma_ion_currentcell[get_uniqueionindex(element, ion)] == 0);
+    return (globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] == 0);
   }
 
   const auto T_e = grid::get_Te(modelgridindex);
