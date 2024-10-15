@@ -73,7 +73,7 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
 
   const auto T_e = grid::get_Te(modelgridindex);
 
-  // ion photoionisation rate coefficient per ground level pop
+  // photoionisation plus collisional ionisation rate coefficient per ground level pop
   const double Gamma = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
 
   // Gamma is the photoionization rate per ground level pop
