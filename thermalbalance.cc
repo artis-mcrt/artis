@@ -196,7 +196,6 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   auto *const heatingcoolingrates = params->heatingcoolingrates;
 
   // Set new T_e guess for the current cell and update populations
-  // globals::cell[cellnumber].T_e = T_e;
   grid::set_Te(modelgridindex, T_e);
 
   if constexpr (!USE_LUT_PHOTOION && !LTEPOP_EXCITATION_USE_TJ) {
