@@ -575,6 +575,8 @@ auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
   for (int shellindex = 0; shellindex < num_shells; shellindex++) {
     int electronsinshell = 0;
     if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
+      // todo check if shell index is greater than nbound? or occupied shells only?
+      // occupancy data is for neutral atoms
       electronsinshell = shells_q[get_atomicnumber(element) - 1][shellindex];
     } else if (shellindex < std::ssize(approx_shells_q)) {
       electronsinshell = approx_shells_q[shellindex];
