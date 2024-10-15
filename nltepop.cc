@@ -519,7 +519,7 @@ void nltepop_matrix_add_ionisation(const int modelgridindex, const int element, 
   assert_always(ion + 1 < get_nions(element));  // can't ionise the top ion
   const auto T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
-  const int nionisinglevels = get_ionisinglevels(element, ion);
+  const int nionisinglevels = get_nlevels_ionising(element, ion);
   const int maxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
 
   for (int level = 0; level < nionisinglevels; level++) {

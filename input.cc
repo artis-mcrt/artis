@@ -297,7 +297,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float> &tmpallphi
       assert_always(lowerlevel >= 0);
 
       // store only photoionization crosssections for ions that are part of the current model atom
-      if (lowerion >= 0 && upperion < get_nions(element) && lowerlevel < get_ionisinglevels(element, lowerion)) {
+      if (lowerion >= 0 && upperion < get_nions(element) && lowerlevel < get_nlevels_ionising(element, lowerion)) {
         read_phixs_data_table(phixsfile, nphixspoints_inputtable, element, lowerion, lowerlevel, upperion,
                               upperlevel_in, tmpallphixs, &mem_usage_phixs, phixs_file_version);
 
@@ -758,7 +758,7 @@ void setup_phixs_list() {
       if (globals::elements[element].ions[ion].groundcontindex >= globals::nbfcontinua_ground) {
         globals::elements[element].ions[ion].groundcontindex = -1;
       }
-      const int nlevels = get_ionisinglevels(element, ion);
+      const int nlevels = get_nlevels_ionising(element, ion);
       for (int level = 0; level < nlevels; level++) {
         const int nphixstargets = get_nphixstargets(element, ion, level);
 
@@ -1460,7 +1460,7 @@ void write_bflist_file() {
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      const int nlevels = get_ionisinglevels(element, ion);
+      const int nlevels = get_nlevels_ionising(element, ion);
       for (int level = 0; level < nlevels; level++) {
         const auto nphixstargets = get_nphixstargets(element, ion, level);
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
@@ -1577,9 +1577,10 @@ void read_atomicdata() {
           "[input]    ionstage %d: %4d levels (%d in groundterm, %4d ionising) %7d lines %6d bf transitions "
           "(epsilon_ground: %7.2f eV)\n",
           get_ionstage(element, ion), get_nlevels(element, ion), get_nlevels_groundterm(element, ion),
-          get_ionisinglevels(element, ion), ion_bbtransitions, ion_photoiontransitions, epsilon(element, ion, 0) / EV);
+          get_nlevels_ionising(element, ion), ion_bbtransitions, ion_photoiontransitions,
+          epsilon(element, ion, 0) / EV);
 
-      includedionisinglevels += get_ionisinglevels(element, ion);
+      includedionisinglevels += get_nlevels_ionising(element, ion);
       includedphotoiontransitions += ion_photoiontransitions;
       includedboundboundtransitions += ion_bbtransitions;
     }

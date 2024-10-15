@@ -163,7 +163,7 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
     // are not included in the model atom.
 
     for (int ion = 0; ion < nions - 1; ion++) {
-      const int nbflevels = get_ionisinglevels(element, ion);
+      const int nbflevels = get_nlevels_ionising(element, ion);
       for (int level = 0; level < nbflevels; level++) {
         const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
         bfheating += nnlevel * bfheatingcoeffs[get_uniquelevelindex(element, ion, level)];
