@@ -675,8 +675,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
   }
 }
 
-void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, const int titer,
-                       HeatingCoolingRates *heatingcoolingrates)
+void solve_Te_nltepops(const int mgi, const int nts, const int titer, HeatingCoolingRates *heatingcoolingrates)
 // nts is the timestep number
 {
   // bfheating coefficients are needed for the T_e solver, but
@@ -1012,7 +1011,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       // full-spectrum and binned J and nuJ estimators
       radfield::fit_parameters(mgi, nts);
 
-      solve_Te_nltepops(mgi, nonemptymgi, nts, titer, heatingcoolingrates);
+      solve_Te_nltepops(mgi, nts, titer, heatingcoolingrates);
     }
     printout("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", mgi, nts,
              std::time(nullptr) - sys_time_start_temperature_corrections);
