@@ -74,11 +74,7 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
   const auto T_e = grid::get_Te(modelgridindex);
 
   double Gamma = 0.;
-  if constexpr (USE_LUT_PHOTOION) {
-    Gamma = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
-  } else {
-    Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
-  }
+  Gamma = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
 
   // Gamma is the photoionization rate per ground level pop
   const double Gamma_ion = Gamma * stat_weight(element, ion, 0) / partfunc_ion;
@@ -617,6 +613,20 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void {
   const bool force_lte = globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1;
 
   const double nne_hi = grid::get_rho(modelgridindex) / MH;
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+
+  if constexpr (!USE_LUT_PHOTOION) {
+    for (int element = 0; element < get_nelements(); element++) {
+      if (!elem_has_nlte_levels(element)) {
+        // recalculate the Gammas using the current population estimates
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions - 1; ion++) {
+          globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] =
+              calculate_iongamma_per_gspop(modelgridindex, element, ion);
+        }
+      }
+    }
+  }
 
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
