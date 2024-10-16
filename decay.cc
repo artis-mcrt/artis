@@ -38,7 +38,7 @@ namespace decay {
 
 namespace {
 
-constexpr std::array<const std::string_view, 119> elsymbols{
+const std::array<const std::string, 119> elsymbols{
     "n",  "H",  "He", "Li", "Be", "B",  "C",  "N",  "O",  "F",  "Ne", "Na",  "Mg", "Al",  "Si", "P",   "S",
     "Cl", "Ar", "K",  "Ca", "Sc", "Ti", "V",  "Cr", "Mn", "Fe", "Co", "Ni",  "Cu", "Zn",  "Ga", "Ge",  "As",
     "Se", "Br", "Kr", "Rb", "Sr", "Y",  "Zr", "Nb", "Mo", "Tc", "Ru", "Rh",  "Pd", "Ag",  "Cd", "In",  "Sn",
@@ -775,7 +775,7 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int mode
 
 [[nodiscard]] auto get_elname(const int z) -> std::string {
   assert_testmodeonly(z <= Z_MAX);
-  return std::string(elsymbols[z]);
+  return elsymbols[z];
 }
 
 [[nodiscard]] auto get_nuc_z(const int nucindex) -> int {

@@ -186,10 +186,10 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, co
 
   const double nu_min = spectra.nu_min;
   const double nu_max = spectra.nu_max;
+  const double dlognu = (log(nu_max) - log(nu_min)) / MNUBINS;
   const double t_arrive = get_arrive_time(pkt);
   if (t_arrive > globals::tmin && t_arrive < globals::tmax && pkt.nu_rf > nu_min && pkt.nu_rf < nu_max) {
     const int nt = get_timestep(t_arrive);
-    const double dlognu = (log(nu_max) - log(nu_min)) / MNUBINS;
 
     const int nnu = static_cast<int>((log(pkt.nu_rf) - log(nu_min)) / dlognu);
     assert_always(nnu < MNUBINS);
@@ -509,11 +509,9 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
   spectra.nu_max = nu_max;
   spectra.do_emission_res = do_emission_res;
   const bool print_memusage =
-      (spectra.lower_freq.empty() || (do_emission_res && spectra.absorptionalltimesteps.empty()));
+      (spectra.timesteps.empty() || (do_emission_res && spectra.absorptionalltimesteps.empty()));
 
-  spectra.lower_freq.resize(MNUBINS);
-  spectra.delta_freq.resize(spectra.lower_freq.size());
-  for (ptrdiff_t nnu = 0; nnu < std::ssize(spectra.lower_freq); nnu++) {
+  for (ptrdiff_t nnu = 0; nnu < MNUBINS; nnu++) {
     spectra.lower_freq[nnu] = exp(log(nu_min) + (nnu * (dlognu)));
     spectra.delta_freq[nnu] = exp(log(nu_min) + ((nnu + 1) * (dlognu))) - spectra.lower_freq[nnu];
   }
