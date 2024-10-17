@@ -1428,16 +1428,24 @@ void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
   // final decaying nuclide at the end of the chain
   const int pathlength = get_decaypathlength(decaypathindex);
   const int nucindex = decaypaths[decaypathindex].nucindex[pathlength - 1];
-  const int decaytype = decaypaths[decaypathindex].decaytypes[pathlength - 1];
+  // const int decaytype = decaypaths[decaypathindex].decaytypes[pathlength - 1];
+    
+  // use the constant splitup rations from Bulla 23:
+  // 40 percent for gammas, 35 percent for neutrinos, 20 percent for electrons, 5 percent for alphas
+    
+  // if a decay happens to be a particle decay, the above rations demand 1/5 alphas and 4/5 electrons
+  pkt.pellet_decaytype = (rng_uniform() >= 0.2) ? DECAYTYPE_BETAMINUS : DECAYTYPE_ALPHA; 
 
   pkt.type = TYPE_RADIOACTIVE_PELLET;
   pkt.pellet_nucindex = nucindex;
   pkt.pellet_decaytype = decaytype;
 
-  const auto engamma = nucdecayenergygamma(nucindex);
+  // const auto engamma = nucdecayenergygamma(nucindex);
   const auto enparticle = nucdecayenergyparticle(nucindex, decaytype);
 
-  pkt.originated_from_particlenotgamma = (rng_uniform() >= engamma / (engamma + enparticle));
+  // pkt.originated_from_particlenotgamma = (rng_uniform() >= engamma / (engamma + enparticle));
+  // not accounting for the neutrino fraction, 61.5 percent of the decay energy goes into gammas -> change probability accordingly
+  pkt.originated_from_particlenotgamma = (rng_uniform() >= 0.615);
   pkt.nu_cmf = enparticle / H;  // will be overwritten for gamma rays, but affects the thermalisation of particles
 }
 
