@@ -1428,7 +1428,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
   // final decaying nuclide at the end of the chain
   const int pathlength = get_decaypathlength(decaypathindex);
   const int nucindex = decaypaths[decaypathindex].nucindex[pathlength - 1];
-  // const int decaytype = decaypaths[decaypathindex].decaytypes[pathlength - 1];
+  const int decaytype = decaypaths[decaypathindex].decaytypes[pathlength - 1];
     
   // use the constant splitup rations from Bulla 23:
   // 40 percent for gammas, 35 percent for neutrinos, 20 percent for electrons, 5 percent for alphas
