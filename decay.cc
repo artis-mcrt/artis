@@ -1438,7 +1438,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
 
   pkt.type = TYPE_RADIOACTIVE_PELLET;
   pkt.pellet_nucindex = nucindex;
-  pkt.pellet_decaytype = decaytype;
+  // pkt.pellet_decaytype = decaytype;
 
   // const auto engamma = nucdecayenergygamma(nucindex);
   const auto enparticle = nucdecayenergyparticle(nucindex, decaytype);
