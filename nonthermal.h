@@ -18,6 +18,7 @@ void solve_spencerfano(int modelgridindex, int timestep, int iteration);
 void calculate_deposition_rate_density(int modelgridindex, int timestep, HeatingCoolingRates *heatingcoolingrates);
 [[nodiscard]] auto get_deposition_rate_density(int modelgridindex) -> double;
 [[nodiscard]] auto get_nt_frac_heating(int modelgridindex) -> float;
+#pragma omp declare simd
 [[nodiscard]] auto nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int lowerlevel, int uptransindex,
                                            int lineindex) -> double;
 void do_ntalpha_deposit(Packet &pkt);
