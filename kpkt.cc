@@ -57,7 +57,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
   double C_ion = 0.;
   int i = indexionstart;  // NOLINT(misc-const-correctness)
 
-  const int nionisinglevels = get_ionisinglevels(element, ion);
+  const int nionisinglevels = get_nlevels_ionising(element, ion);
   const double nncurrention = get_nnion(modelgridindex, element, ion);
 
   // ff creation of rpkt
@@ -192,7 +192,7 @@ void set_ncoolingterms() {
       // All the levels add number of col excitations
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
-        // if (ion < nions - 1) and (level < get_ionisinglevels(element,ion))
+        // if (ion < nions - 1) and (level < get_nlevels_ionising(element,ion))
         if (ion < nions - 1) {
           ionterms += 2 * get_nphixstargets(element, ion, level);
         }
@@ -309,7 +309,7 @@ void setup_coolinglist() {
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels_currention = get_nlevels(element, ion);
 
-      const int nionisinglevels = get_ionisinglevels(element, ion);
+      const int nionisinglevels = get_nlevels_ionising(element, ion);
 
       // ff creation of rpkt
       // -------------------
