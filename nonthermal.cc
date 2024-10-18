@@ -681,7 +681,7 @@ void read_collion_data() {
   printout("Stored %zu of %d input shell cross sections\n", colliondata.size(), colliondatacount);
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
-    for (int ion = 0; ion < get_nions(element) - 1; ion++) {
+    for (int ion = 0; ion < get_nions(element); ion++) {
       const int ionstage = get_ionstage(element, ion);
       const bool any_data_matched = std::any_of(
           colliondata.cbegin(), colliondata.cend(),
