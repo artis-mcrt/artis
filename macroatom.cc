@@ -54,7 +54,6 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   const auto *const leveldowntranslist = get_downtranslist(element, ion, level);
   auto *const arr_sum_epstrans_rad_deexc = chlevel.sum_epstrans_rad_deexc;
   auto *const arr_sum_internal_down_same = chlevel.sum_internal_down_same;
-#pragma omp simd reduction(+ : sum_raddeexc, sum_coldeexc, sum_internal_down_same)
   for (int i = 0; i < ndowntrans; i++) {
     const auto &downtrans = leveldowntranslist[i];
     const int lower = downtrans.targetlevelindex;
@@ -84,7 +83,6 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   double sum_internal_up_same = 0.;
   const int nuptrans = get_nuptrans(element, ion, level);
   const auto *const uptranslist = get_uptranslist(element, ion, level);
-#pragma omp simd reduction(+ : sum_internal_up_same)
   for (int i = 0; i < nuptrans; i++) {
     const auto &uptrans = uptranslist[i];
     const double epsilon_trans = epsilon(element, ion, uptrans.targetlevelindex) - epsilon_current;

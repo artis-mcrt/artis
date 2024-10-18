@@ -114,6 +114,7 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
 }
 
 // Return the statistical weight of (element,ion,level).
+#pragma omp declare simd
 [[nodiscard]] inline auto stat_weight(const int element, const int ion, const int level) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
