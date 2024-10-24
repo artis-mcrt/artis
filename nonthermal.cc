@@ -264,23 +264,21 @@ void read_shell_configs() {
   elements_shells_q.resize(n_z_binding, std::vector<int>(nshells, 0.));
 
   assert_always(elements_shells_q.size() == elements_electron_binding.size());
-  assert_always(elements_shells_q[0].size() == elements_electron_binding[0].size());
 
-  int elementcounter = 0;
+  int zminusone = 0;
   while (get_noncommentline(shells_file, line)) {
     std::istringstream ssline(line);
 
     int z_element = 0;
     assert_always(ssline >> z_element);
-    // printout("Reading shells Z=%d\n", z_element);
 
+    assert_always(elements_shells_q[zminusone].size() == elements_electron_binding[zminusone].size());
     for (int shell = 0; shell < nshells; shell++) {
       int q = 0;
       assert_always(ssline >> q);
-      // printout("q of %d in shell %d element number %d Z=%d\n", q, shell, elementcounter, z_element);
-      elements_shells_q[elementcounter][shell] = q;
+      elements_shells_q.at(zminusone).at(shell) = q;
     }
-    elementcounter++;
+    zminusone++;
   }
 }
 
@@ -308,19 +306,19 @@ void read_binding_energies() {
 
   elements_electron_binding.resize(n_z_binding, std::vector<double>(nshells, 0.));
 
-  for (int elemindex = 0; elemindex < n_z_binding; elemindex++) {
+  for (int zminusone = 0; zminusone < n_z_binding; zminusone++) {
     assert_always(get_noncommentline(binding_energies_file, line));
     std::istringstream ssline(line);
     // new file as an atomic number column
     if (binding_en_newformat) {
       int z_element{-1};
       ssline >> z_element;
-      assert_always(z_element == (elemindex + 1));
+      assert_always(z_element == (zminusone + 1));
     }
     for (int shell = 0; shell < nshells; shell++) {
       float bindingenergy = 0.;
       assert_always(ssline >> bindingenergy);
-      elements_electron_binding[elemindex][shell] = bindingenergy * EV;
+      elements_electron_binding.at(zminusone).at(shell) = bindingenergy * EV;
     }
   }
 
@@ -626,14 +624,9 @@ auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
     double enbinding = binding_energies.at(shellindex);
     const double ionpot = globals::elements[element].ions[ion].ionpot;
     if (enbinding <= 0) {
+      // if we don't have the shell's binding energy, use the previous one
       enbinding = binding_energies.at(shellindex - 1);
-      if (shellindex != 8) {
-        // For some reason in the Lotz data, this is no energy for the M5 shell before Ni. So if the complaint
-        // is for 8 (corresponding to that shell) then just use the M4 value
-        printout("Huh? I'm trying to use a binding energy when I have no data. element %d ion %d\n", element, ion);
-        printout("Z = %d, ionstage = %d\n", get_atomicnumber(element), get_ionstage(element, ion));
-        std::abort();
-      }
+      assert_always(enbinding > 0);
     }
     total += electronsinshell / std::max(ionpot, enbinding);
   }
@@ -707,13 +700,9 @@ void read_collion_data() {
           double enbinding = elements_electron_binding.at(Z - 1).at(shellindex);
           const double ionpot = ionpot_ev * EV;
           if (enbinding <= 0) {
+            // if we don't have the shell's binding energy, use the previous one
             enbinding = elements_electron_binding.at(Z - 1).at(shellindex - 1);
-
-            if (shellindex != 8) {
-              // For some reason in the Lotz data, this is no energy for the M5 shell before Ni. So if the complaint
-              // is for 8 (corresponding to that shell) then just use the M4 value
-              assert_always(shellindex != 9)
-            }
+            assert_always(enbinding > 0);
           }
           const double p = std::max(ionpot, enbinding);
           collionrow collionrow{};
