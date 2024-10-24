@@ -73,18 +73,11 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
 
   const auto T_e = grid::get_Te(modelgridindex);
 
-  double Gamma = 0.;
-  Gamma = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
+  // photoionisation plus collisional ionisation rate coefficient per ground level pop
+  const double Gamma = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
 
   // Gamma is the photoionization rate per ground level pop
   const double Gamma_ion = Gamma * stat_weight(element, ion, 0) / partfunc_ion;
-
-  if (Gamma == 0. && (!NT_ON || (globals::dep_estimator_gamma[nonemptymgi] == 0. &&
-                                 grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(24, 48)) == 0. &&
-                                 grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(28, 56)) == 0.))) {
-    printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);
-    std::abort();
-  }
 
   const double Alpha_sp = interpolate_ions_spontrecombcoeff(uniqueionindex, T_e);
 
@@ -93,6 +86,11 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
   const double Col_rec = 0.;
 
   const double gamma_nt = NT_ON ? nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion) : 0.;
+
+  if ((Gamma + gamma_nt) == 0) {
+    printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);
+    std::abort();
+  }
 
   const double phi = (Alpha_sp + Col_rec) / (Gamma_ion + gamma_nt);
 
