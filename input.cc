@@ -793,15 +793,17 @@ void setup_phixs_list() {
 
   assert_always(allcontindex == globals::nbfcontinua);
   assert_always(globals::nbfcontinua >= 0);  // was initialised as -1 before startup
+  const auto nbfcontinua =
+      globals::nbfcontinua;  // so that clang-tidy doesn't throw errors on the assumption that nbfcontinua is changing
 
   globals::bfestimcount = 0;
-  if (globals::nbfcontinua > 0) {
+  if (nbfcontinua > 0) {
     // indicies above were temporary only. continuum index should be to the sorted list
-    std::ranges::SORT_OR_STABLE_SORT(std::span(nonconstallcont, globals::nbfcontinua), std::ranges::less{},
+    std::ranges::SORT_OR_STABLE_SORT(std::span(nonconstallcont, nbfcontinua), std::ranges::less{},
                                      &FullPhotoionTransition::nu_edge);
 
     globals::bfestim_nu_edge.clear();
-    for (int i = 0; i < globals::nbfcontinua; i++) {
+    for (int i = 0; i < nbfcontinua; i++) {
       auto &cont = nonconstallcont[i];
       if (DETAILED_BF_ESTIMATORS_ON &&
           LEVEL_HAS_BFEST(get_atomicnumber(cont.element), get_ionstage(cont.element, cont.ion), cont.level)) {
@@ -813,20 +815,17 @@ void setup_phixs_list() {
       }
     }
 
-    globals::allcont_nu_edge.resize(globals::nbfcontinua, 0.);
+    globals::allcont_nu_edge.resize(nbfcontinua, 0.);
     globals::bfestim_nu_edge.shrink_to_fit();
     assert_always(globals::bfestimcount == std::ssize(globals::bfestim_nu_edge));
-  }
-  printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
 
-  if (globals::nbfcontinua > 0) {
-    for (int i = 0; i < globals::nbfcontinua; i++) {
+    for (int i = 0; i < nbfcontinua; i++) {
       globals::allcont_nu_edge[i] = nonconstallcont[i].nu_edge;
     }
 
     setup_photoion_luts();
 
-    for (int i = 0; i < globals::nbfcontinua; i++) {
+    for (int i = 0; i < nbfcontinua; i++) {
       const int element = nonconstallcont[i].element;
       const int ion = nonconstallcont[i].ion;
       const int level = nonconstallcont[i].level;
@@ -834,6 +833,7 @@ void setup_phixs_list() {
       assert_always(nonconstallcont[i].photoion_xs != nullptr);
     }
   }
+  printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
   globals::allcont = nonconstallcont;
   nonconstallcont = nullptr;
 }
