@@ -97,6 +97,7 @@ inline thread_local auto gslworkspace =
 
 #ifdef __NVCOMPILER_CUDA_ARCH__
 #define printout(...) printf(__VA_ARGS__)
+#define printoutf(...) printf(__VA_ARGS__)
 
 #define __artis_assert(e)                         \
   {                                               \
