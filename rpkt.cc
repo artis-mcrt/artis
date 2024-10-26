@@ -138,13 +138,13 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
 
         const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * prop_time);
 
-        // printout("[debug] get_event:     tau_line %g\n", tau_line);
-        // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
+        // printoutf("[debug] get_event:     tau_line %g\n", tau_line);
+        // printoutf("[debug] get_event:       tau_rnd - tau > tau_cont\n");
 
         if (tau_rnd - tau > tau_cont + tau_line) {
           // total optical depth still below tau_rnd: propagate to the line and continue
 
-          // printout(
+          // printoutf(
           //     "[debug] get_event: tau_rnd - tau > tau_cont + tau_line ... proceed this packets "
           //     "propagation\n");
 
@@ -168,7 +168,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
 
         } else {
           // bound-bound process occurs
-          // printout("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
+          // printoutf("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
 
           mastate = {.element = element, .ion = ion, .level = upper, .activatingline = lineindex};
 
@@ -178,7 +178,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
           }
 
           // the line and its parameters were already selected by closest_transition!
-          // printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop
+          // printoutf("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop
           // %d\n",edist,abort_dist,edist-abort_dist,endloop);
 
           return {dist + ldist, next_trans, true};
@@ -431,8 +431,8 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
 
   // continuum process happens. select due to its probabilities sigma/chi_cont, chi_ff/chi_cont,
   // chi_bf/chi_cont
-  // printout("[debug] rpkt_event:   r-pkt undergoes a continuum transition\n");
-  // printout("[debug] rpkt_event:   zrand*chi_cont %g, sigma %g, chi_ff %g, chi_bf %g\n", zrand * chi_cont,
+  // printoutf("[debug] rpkt_event:   r-pkt undergoes a continuum transition\n");
+  // printoutf("[debug] rpkt_event:   zrand*chi_cont %g, sigma %g, chi_ff %g, chi_bf %g\n", zrand * chi_cont,
   // sigma, chi_ff, chi_bf);
 
   const auto chi_rnd = rng_uniform() * chi_cont;
@@ -441,7 +441,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     // electron scattering occurs
     // in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
     // but with different direction
-    // printout("[debug] rpkt_event:   electron scattering\n");
+    // printoutf("[debug] rpkt_event:   electron scattering\n");
     stats::increment(stats::COUNTER_INTERACTIONS);
     pkt.nscatterings += 1;
     pkt.last_event = LASTEVENT_ELECTRONSCATTERING;
@@ -462,7 +462,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
 
   } else if (chi_rnd < chi_escatter + chi_ff) {
     // ff: transform to k-pkt
-    // printout("[debug] rpkt_event:   free-free transition\n");
+    // printoutf("[debug] rpkt_event:   free-free transition\n");
     stats::increment(stats::COUNTER_K_STAT_FROM_FF);
     stats::increment(stats::COUNTER_INTERACTIONS);
     pkt.last_event = 5;
@@ -470,7 +470,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     pkt.absorptiontype = -1;
   } else if (chi_rnd < chi_escatter + chi_ff + chi_bf) {
     // bf: transform to k-pkt or activate macroatom corresponding to probabilities
-    // printout("[debug] rpkt_event:   bound-free transition\n");
+    // printoutf("[debug] rpkt_event:   bound-free transition\n");
 
     const auto &phixslist = *chi_rpkt_cont.phixslist;
 
@@ -494,8 +494,8 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     const int level = globals::allcont[allcontindex].level;
     const int phixstargetindex = globals::allcont[allcontindex].phixstargetindex;
 
-    // printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n", element, ion +
-    // 1, 0, ion, level); printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
+    // printoutf("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n", element, ion +
+    // 1, 0, ion, level); printoutf("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
 
     if constexpr (TRACK_ION_STATS) {
       stats::increment_ion_stats_contabsorption(pkt, modelgridindex, element, ion);
@@ -519,7 +519,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     // or to the thermal pool
     else {
       // transform to k-pkt
-      // printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
+      // printoutf("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
       stats::increment(stats::COUNTER_K_STAT_FROM_BF);
       stats::increment(stats::COUNTER_INTERACTIONS);
       pkt.last_event = 4;
@@ -565,7 +565,7 @@ void rpkt_event_boundbound(Packet &pkt, const MacroAtomState &pktmastate, const 
 // Handle r-packet interaction in thick cell (grey opacity).
 // The packet stays an RPKT of same nu_cmf as before (coherent scattering) but with a different direction.
 void rpkt_event_thickcell(Packet &pkt) {
-  // printout("[debug] rpkt_event_thickcell:   electron scattering\n");
+  // printoutf("[debug] rpkt_event_thickcell:   electron scattering\n");
   stats::increment(stats::COUNTER_INTERACTIONS);
   pkt.nscatterings += 1;
   pkt.last_event = LASTEVENT_ELECTRONSCATTERING;
