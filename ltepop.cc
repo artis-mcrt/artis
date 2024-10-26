@@ -82,7 +82,7 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
   if (Gamma == 0. && (!NT_ON || (globals::dep_estimator_gamma[nonemptymgi] == 0. &&
                                  grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(24, 48)) == 0. &&
                                  grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(28, 56)) == 0.))) {
-    printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);
+    printoutf("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);
     std::abort();
   }
 
@@ -100,16 +100,16 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
 
   if (!std::isfinite(phi) || phi == 0.) {
     const auto partfunc_upperion = grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex + 1];
-    printout(
+    printoutf(
         "[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g ... remove higher or "
         "lower ionisation stages\n",
         phi, element, ion, T_e);
-    printout("[fatal] phi: Alpha_sp %g, Gamma %g, partfunct %g, stat_weight %g\n", Alpha_sp, Gamma, partfunc_ion,
-             stat_weight(element, ion, 0));
-    printout("[fatal] phi: upperionpartfunct %g, upperionstatweight %g\n", partfunc_upperion,
-             stat_weight(element, ion + 1, 0));
-    printout("[fatal] phi: gamma_nt %g Col_rec %g grid::get_nne(modelgridindex) %g\n", gamma_nt, Col_rec,
-             grid::get_nne(modelgridindex));
+    printoutf("[fatal] phi: Alpha_sp %g, Gamma %g, partfunct %g, stat_weight %g\n", Alpha_sp, Gamma, partfunc_ion,
+              stat_weight(element, ion, 0));
+    printoutf("[fatal] phi: upperionpartfunct %g, upperionstatweight %g\n", partfunc_upperion,
+              stat_weight(element, ion + 1, 0));
+    printoutf("[fatal] phi: gamma_nt %g Col_rec %g grid::get_nne(modelgridindex) %g\n", gamma_nt, Col_rec,
+              grid::get_nne(modelgridindex));
     std::abort();
   }
 
@@ -185,13 +185,13 @@ auto calculate_levelpop_nominpop(const int modelgridindex, const int element, co
         // Case for when no NLTE level information is available yet
         nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
       } else {
-        // printout("Using an nlte population!\n");
+        // printoutf("Using an nlte population!\n");
         nn = nltepop_over_rho * grid::get_rho(modelgridindex);
         if (!std::isfinite(nn)) {
-          printout("[fatal] NLTE population failure.\n");
-          printout("element %d ion %d level %d\n", element, ion, level);
-          printout("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, grid::get_rho(modelgridindex));
-          printout("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
+          printoutf("[fatal] NLTE population failure.\n");
+          printoutf("element %d ion %d level %d\n", element, ion, level);
+          printoutf("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, grid::get_rho(modelgridindex));
+          printoutf("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
           std::abort();
         }
         *skipminpop = true;
@@ -209,15 +209,15 @@ auto calculate_levelpop_nominpop(const int modelgridindex, const int element, co
         // Case for when no NLTE level information is available yet
         nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
       } else {
-        // printout("Using a superlevel population!\n");
+        // printoutf("Using a superlevel population!\n");
         nn = superlevelpop_over_rho * grid::get_rho(modelgridindex) *
              superlevel_boltzmann(modelgridindex, element, ion, level);
         if (!std::isfinite(nn)) {
-          printout("[fatal] NLTE population failure.\n");
-          printout("element %d ion %d level %d\n", element, ion, level);
-          printout("nn %g superlevelpop_over_rho %g rho %g\n", nn, superlevelpop_over_rho,
-                   grid::get_rho(modelgridindex));
-          printout("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
+          printoutf("[fatal] NLTE population failure.\n");
+          printoutf("element %d ion %d level %d\n", element, ion, level);
+          printoutf("nn %g superlevelpop_over_rho %g rho %g\n", nn, superlevelpop_over_rho,
+                    grid::get_rho(modelgridindex));
+          printoutf("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
           std::abort();
         }
         *skipminpop = true;
@@ -264,10 +264,10 @@ auto calculate_partfunct(const int element, const int ion, const int modelgridin
   U *= stat_weight(element, ion, 0);
 
   if (!std::isfinite(U)) {
-    printout("element %d ion %d\n", element, ion);
-    printout("modelgridindex %d\n", modelgridindex);
-    printout("nlevels %d\n", nlevels);
-    printout("sw %g\n", stat_weight(element, ion, 0));
+    printoutf("element %d ion %d\n", element, ion);
+    printoutf("modelgridindex %d\n", modelgridindex);
+    printoutf("nlevels %d\n", nlevels);
+    printoutf("sw %g\n", stat_weight(element, ion, 0));
     std::abort();
   }
 
@@ -313,7 +313,7 @@ auto find_uppermost_ion(const int modelgridindex, const int element, const doubl
     factor *= nne_hi * phifactor;
 
     if (!std::isfinite(factor)) {
-      printout(
+      printoutf(
           "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element "
           "Z=%d, ionstage %d in cell %d\n",
           get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
@@ -336,7 +336,7 @@ void set_calculated_nne(const int modelgridindex) {
 
 // Special case of only neutral ions, set nne to some finite value so that packets are not lost in kpkts
 void set_groundlevelpops_neutral(const int modelgridindex) {
-  printout("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n", modelgridindex);
+  printoutf("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n", modelgridindex);
   for (int element = 0; element < get_nelements(); element++) {
     const auto nnelement = grid::get_elem_numberdens(modelgridindex, element);
     const int nions = get_nions(element);
@@ -370,20 +370,20 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
     const auto T_R = grid::get_TR(modelgridindex);
     const auto T_e = grid::get_Te(modelgridindex);
     const auto W = grid::get_W(modelgridindex);
-    printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi, T_R,
-             T_e, W, grid::get_rho(modelgridindex));
-    printout("nne@x_lo %g\n", nne_solution_f(nne_lo, f.params));
-    printout("nne@x_hi %g\n", nne_solution_f(nne_hi, f.params));
+    printoutf("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi, T_R,
+              T_e, W, grid::get_rho(modelgridindex));
+    printoutf("nne@x_lo %g\n", nne_solution_f(nne_lo, f.params));
+    printoutf("nne@x_hi %g\n", nne_solution_f(nne_hi, f.params));
 
     for (int element = 0; element < get_nelements(); element++) {
-      printout("cell %d, element %d, uppermost_ion is %d\n", modelgridindex, element,
-               grid::get_elements_uppermost_ion(modelgridindex, element));
+      printoutf("cell %d, element %d, uppermost_ion is %d\n", modelgridindex, element,
+                grid::get_elements_uppermost_ion(modelgridindex, element));
 
       if constexpr (USE_LUT_PHOTOION) {
         for (int ion = 0; ion <= grid::get_elements_uppermost_ion(modelgridindex, element); ion++) {
-          printout("element %d, ion %d, gammaionest %g\n", element, ion,
-                   globals::gammaestimator[get_ionestimindex_nonemptymgi(
-                       grid::get_modelcell_nonemptymgi(modelgridindex), element, ion)]);
+          printoutf("element %d, ion %d, gammaionest %g\n", element, ion,
+                    globals::gammaestimator[get_ionestimindex_nonemptymgi(
+                        grid::get_modelcell_nonemptymgi(modelgridindex), element, ion)]);
         }
       }
     }
@@ -409,7 +409,7 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
     }
   }
   if (status == GSL_CONTINUE) {
-    printout("[warning] calculate_ion_balance_nne: nne did not converge within %d iterations\n", iter + 1);
+    printoutf("[warning] calculate_ion_balance_nne: nne did not converge within %d iterations\n", iter + 1);
   }
 
   gsl_root_fsolver_free(solver);
@@ -449,9 +449,9 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
     ionfractions[ion] = ionfractions[ion] / normfactor;
 
     if (normfactor == 0. || !std::isfinite(ionfractions[ion])) {
-      printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
-               get_ionstage(element, ion), get_atomicnumber(element), modelgridindex, grid::get_Te(modelgridindex),
-               grid::get_TR(modelgridindex));
+      printoutf("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
+                get_ionstage(element, ion), get_atomicnumber(element), modelgridindex, grid::get_Te(modelgridindex),
+                grid::get_TR(modelgridindex));
       ionfractions[ion] = 0;
     }
   }
@@ -544,10 +544,10 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
   const double g_lower = stat_weight(element, ion, level);
   const double g_upper = stat_weight(element, ion + 1, upperionlevel);
   const double sf = SAHACONST * g_lower / g_upper * pow(T, -1.5) * exp(E_threshold / KB / T);
-  // printout("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T,
+  // printoutf("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T,
   // E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );
   if (sf < 0) {
-    printout(
+    printoutf(
         "[fatal] calculate_sahafact: Negative Saha factor. sfac %g element %d ion %d level %d upperionlevel %d "
         "g_lower %g g_upper %g T %g E_threshold %g exppart %g\n",
         sf, element, ion, level, upperionlevel, g_lower, g_upper, T, E_threshold, exp(E_threshold / KB / T));
@@ -600,7 +600,7 @@ void set_groundlevelpops(const int modelgridindex, const int element, const floa
         nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex];
 
     if (!std::isfinite(groundpop)) {
-      printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
+      printoutf("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
     }
 
     grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex] = groundpop;
