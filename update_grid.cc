@@ -952,7 +952,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     }
 
     printout("lte_iteration %d\n", globals::lte_iteration ? 1 : 0);
-    printout("mgi %d modelgrid.thick: %d (during grid update)\n", mgi, static_cast<int>(grid::modelgrid[mgi].thick));
+    printout("mgi %d modelgrid.thick: %d (during grid update)\n", mgi, grid::modelgrid[mgi].thick);
 
     for (int element = 0; element < get_nelements(); element++) {
       calculate_cellpartfuncts(mgi, element);

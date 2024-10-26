@@ -293,7 +293,7 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
                    MPI_COMM_WORLD);
           MPI_Pack(&grid::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position,
                    MPI_COMM_WORLD);
-          MPI_Pack(&grid::modelgrid[mgi].thick, 1, MPI_SHORT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
+          MPI_Pack(&grid::modelgrid[mgi].thick, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
                    MPI_COMM_WORLD);
 
           MPI_Pack(grid::modelgrid[mgi].elem_massfracs, get_nelements(), MPI_FLOAT, mpi_grid_buffer,
@@ -341,7 +341,7 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
                    MPI_COMM_WORLD);
         MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE,
                    MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].thick, 1, MPI_SHORT,
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].thick, 1, MPI_INT,
                    MPI_COMM_WORLD);
 
         MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].elem_massfracs,

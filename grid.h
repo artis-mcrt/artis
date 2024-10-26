@@ -44,7 +44,7 @@ struct ModelGridCell {
   std::span<double> nlte_pops;   // Pointer to an array that contains the nlte-level populations for this cell
   double totalcooling = -1;
   double *ion_cooling_contribs{};
-  uint_fast8_t thick = 0;
+  int thick = 0;
 };
 
 consteval auto get_ngriddimensions() -> int {
