@@ -17,6 +17,7 @@
 #include <atomic>
 #include <cassert>
 #include <csignal>
+#include <cstdarg>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
