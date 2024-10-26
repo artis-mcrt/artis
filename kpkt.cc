@@ -463,7 +463,8 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   }
 
   const int ilow = get_coolinglistoffset(element, ion);
-  const int ihigh = ilow + get_ncoolingterms_ion(element, ion) - 1;
+  const int ncoolingterms_ion = get_ncoolingterms_ion(element, ion);
+  const int ihigh = ilow + ncoolingterms_ion - 1;
   double C_ion_procsum = globals::cellcache[cellcacheslotid].cooling_contrib[ihigh];
 
   if (C_ion_procsum < 0.) {
@@ -490,17 +491,8 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   if (i > ihigh) {
     printout("do_kpkt: error occurred while selecting a cooling channel: low %d, high %d, i %td, rndcool %g\n", ilow,
              ihigh, i, rndcool_ion_process);
-    printout("element %d, ion %d, offset %d, terms %d, coolingsum %g\n", element, ion,
-             get_coolinglistoffset(element, ion), get_ncoolingterms_ion(element, ion), coolingsum);
-
-    printout("lower %g, %g, %g\n",
-             globals::cellcache[cellcacheslotid].cooling_contrib[get_coolinglistoffset(element, ion) - 1],
-             globals::cellcache[cellcacheslotid].cooling_contrib[get_coolinglistoffset(element, ion)],
-             globals::cellcache[cellcacheslotid].cooling_contrib[get_coolinglistoffset(element, ion) + 1]);
-    const int finalpos = get_coolinglistoffset(element, ion) + get_ncoolingterms_ion(element, ion) - 1;
-    printout("upper %g, %g, %g\n", globals::cellcache[cellcacheslotid].cooling_contrib[finalpos - 1],
-             globals::cellcache[cellcacheslotid].cooling_contrib[finalpos],
-             globals::cellcache[cellcacheslotid].cooling_contrib[finalpos + 1]);
+    printout("element %d, ion %d, offset %d, terms %d, coolingsum %g\n", element, ion, ilow, ncoolingterms_ion,
+             coolingsum);
   }
 
   assert_always(i <= ihigh);
