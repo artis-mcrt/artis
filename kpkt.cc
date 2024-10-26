@@ -62,7 +62,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
 
   // ff creation of rpkt
   const int ioncharge = get_ionstage(element, ion) - 1;
-  // printout("[debug] ioncharge %d, nncurrention %g, nne %g\n",ion,nncurrention,nne);
+  // printoutf("[debug] ioncharge %d, nncurrention %g, nne %g\n",ion,nncurrention,nne);
   if (ioncharge > 0) {
     const double C_ff_ion = 1.426e-27 * sqrt(T_e) * pow(ioncharge, 2) * nncurrention * nne;
     C_ion += C_ff_ion;
@@ -81,7 +81,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
   // excitation to same ionization stage
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
-    // printout("[debug] do_kpkt: element %d, ion %d, level %d\n", element, ion, level);
+    // printoutf("[debug] do_kpkt: element %d, ion %d, level %d\n", element, ion, level);
     const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
     const double epsilon_current = epsilon(element, ion, level);
     const double statweight = stat_weight(element, ion, level);
@@ -212,7 +212,7 @@ void set_ncoolingterms() {
 auto sample_planck_analytic(const double T) -> double {
   const double nu_peak = 5.879e10 * T;
   if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
-    printout("[warning] sample_planck: intensity peaks outside frequency range\n");
+    printoutf("[warning] sample_planck: intensity peaks outside frequency range\n");
   }
 
   constexpr ptrdiff_t nubins = 500;
@@ -249,7 +249,7 @@ auto sample_planck_montecarlo(const double T) -> double {
     if (rng_uniform() * B_peak <= radfield::dbb(nu, T, 1)) {
       return nu;
     }
-    // printout("[debug] sample_planck: planck_sampling %d\n", i);
+    // printoutf("[debug] sample_planck: planck_sampling %d\n", i);
   }
 }
 }  // anonymous namespace
@@ -286,8 +286,8 @@ void calculate_cooling_rates(const int modelgridindex, HeatingCoolingRates *heat
 void set_kpktdiffusion(const float kpktdiffusion_timescale_in, const int n_kpktdiffusion_timesteps_in) {
   kpktdiffusion_timescale = kpktdiffusion_timescale_in;
   n_kpktdiffusion_timesteps = n_kpktdiffusion_timesteps_in;
-  printout("input: kpkts diffuse %g of a time step's length for the first %d time steps\n", kpktdiffusion_timescale,
-           n_kpktdiffusion_timesteps);
+  printoutf("input: kpkts diffuse %g of a time step's length for the first %d time steps\n", kpktdiffusion_timescale,
+            n_kpktdiffusion_timesteps);
 }
 
 void setup_coolinglist() {
@@ -301,7 +301,7 @@ void setup_coolinglist() {
   const size_t mem_usage_coolinglist = ncoolingterms * sizeof(CellCacheCoolingList);
   assert_always(ncoolingterms > 0);
   coolinglist.resize(ncoolingterms);
-  printout("[info] mem_usage: coolinglist occupies %.3f MB\n", mem_usage_coolinglist / 1024. / 1024.);
+  printoutf("[info] mem_usage: coolinglist occupies %.3f MB\n", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0;  // cooling list index
   for (int element = 0; element < get_nelements(); element++) {
@@ -314,7 +314,7 @@ void setup_coolinglist() {
       // ff creation of rpkt
       // -------------------
       const int ioncharge = get_ionstage(element, ion) - 1;
-      // printout("[debug] ioncharge %d, nncurrention %g, nne %g\n",ion,nncurrention,nne);
+      // printoutf("[debug] ioncharge %d, nncurrention %g, nne %g\n",ion,nncurrention,nne);
       if (ioncharge > 0) {
         coolinglist[i].type = CoolingType::FREEFREE;
         coolinglist[i].level = -99;
@@ -364,7 +364,7 @@ void setup_coolinglist() {
   }
 
   assert_always(ncoolingterms == i);  // if this doesn't match, we miscalculated the number of cooling terms
-  printout("[info] read_atomicdata: number of coolingterms %d\n", ncoolingterms);
+  printoutf("[info] read_atomicdata: number of coolingterms %d\n", ncoolingterms);
 }
 
 __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
@@ -384,7 +384,7 @@ __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
   assert_always(std::isfinite(pkt.nu_cmf));
   // and then emit the packet randomly in the comoving frame
   emit_rpkt(pkt);
-  // printout("[debug] calculate_chi_rpkt after kpkt to rpkt by ff\n");
+  // printoutf("[debug] calculate_chi_rpkt after kpkt to rpkt by ff\n");
   pkt.next_trans = -1;  // FLAG: transition history here not important, cont. process
   // if (tid == 0) k_stat_to_r_bb++;
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
@@ -404,7 +404,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   // don't calculate cooling rates after each cell crossings any longer
   // but only if we really get a kpkt and they hadn't been calculated already
 
-  // printout("[debug] do_kpkt: propagate k-pkt\n");
+  // printoutf("[debug] do_kpkt: propagate k-pkt\n");
 
   const double deltat =
       (nts < n_kpktdiffusion_timesteps) ? kpktdiffusion_timescale * globals::timesteps[nts].width : 0.;
@@ -433,7 +433,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     for (ion = 0; ion < nions; ion++) {
       const int uniqueionindex = get_uniqueionindex(element, ion);
       coolingsum += grid::modelgrid[modelgridindex].ion_cooling_contribs[uniqueionindex];
-      // printout("Z=%d, ionstage %d, coolingsum %g\n", get_atomicnumber(element), get_ionstage(element, ion),
+      // printoutf("Z=%d, ionstage %d, coolingsum %g\n", get_atomicnumber(element), get_ionstage(element, ion),
       // coolingsum);
       if (coolingsum > rndcool_ion) {
         break;
@@ -445,18 +445,18 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   }
 
   if (element >= get_nelements() || element < 0 || ion >= get_nions(element) || ion < 0) {
-    printout("do_kpkt: problem selecting a cooling process ... abort\n");
-    printout("do_kpkt: modelgridindex %d element %d ion %d\n", modelgridindex, element, ion);
-    printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool_ion %g\n", grid::modelgrid[modelgridindex].totalcooling,
-             coolingsum, rndcool_ion);
-    printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n", modelgridindex, pkt.where,
-             grid::get_nne(modelgridindex));
+    printoutf("do_kpkt: problem selecting a cooling process ... abort\n");
+    printoutf("do_kpkt: modelgridindex %d element %d ion %d\n", modelgridindex, element, ion);
+    printoutf("do_kpkt: totalcooling %g, coolingsum %g, rndcool_ion %g\n", grid::modelgrid[modelgridindex].totalcooling,
+              coolingsum, rndcool_ion);
+    printoutf("do_kpkt: modelgridindex %d, cellno %d, nne %g\n", modelgridindex, pkt.where,
+              grid::get_nne(modelgridindex));
     for (element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (ion = 0; ion < nions; ion++) {
         const int uniqueionindex = get_uniqueionindex(element, ion);
-        printout("do_kpkt: element %d, ion %d, coolingcontr %g\n", element, ion,
-                 grid::modelgrid[modelgridindex].ion_cooling_contribs[uniqueionindex]);
+        printoutf("do_kpkt: element %d, ion %d, coolingcontr %g\n", element, ion,
+                  grid::modelgrid[modelgridindex].ion_cooling_contribs[uniqueionindex]);
       }
     }
     std::abort();
@@ -468,7 +468,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   double C_ion_procsum = globals::cellcache[cellcacheslotid].cooling_contrib[ihigh];
 
   if (C_ion_procsum < 0.) {
-    // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
+    // printoutf("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
     // oldcoolingsum %g\n",
     //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
     C_ion_procsum = calculate_cooling_rates_ion<true>(modelgridindex, element, ion, ilow, cellcacheslotid, nullptr,
@@ -489,15 +489,15 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
       globals::cellcache[cellcacheslotid].cooling_contrib;
 
   if (i > ihigh) {
-    printout("do_kpkt: error occurred while selecting a cooling channel: low %d, high %d, i %td, rndcool %g\n", ilow,
-             ihigh, i, rndcool_ion_process);
-    printout("element %d, ion %d, offset %d, terms %d, coolingsum %g\n", element, ion, ilow, ncoolingterms_ion,
-             coolingsum);
+    printoutf("do_kpkt: error occurred while selecting a cooling channel: low %d, high %d, i %td, rndcool %g\n", ilow,
+              ihigh, i, rndcool_ion_process);
+    printoutf("element %d, ion %d, offset %d, terms %d, coolingsum %g\n", element, ion, ilow, ncoolingterms_ion,
+              coolingsum);
   }
 
   assert_always(i <= ihigh);
 
-  // printout("do_kpkt: selected process %d, coolingsum %g\n", i, coolingsum);
+  // printoutf("do_kpkt: selected process %d, coolingsum %g\n", i, coolingsum);
   const auto rndcoolingtype = coolinglist[i].type;
   const auto T_e = grid::get_Te(modelgridindex);
 
@@ -505,7 +505,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     // The k-packet converts directly into a r-packet by free-free-emission.
     // Need to select the r-packets frequency and a random direction in the
     // co-moving frame.
-    // printout("[debug] do_kpkt: k-pkt -> free-free\n");
+    // printoutf("[debug] do_kpkt: k-pkt -> free-free\n");
 
     // Sample the packets comoving frame frequency according to paperII 5.4.3 eq.41
 
@@ -570,7 +570,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     }
   } else if (rndcoolingtype == CoolingType::COLLEXC) {
     // the k-packet activates a macro-atom due to collisional excitation
-    // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
+    // printoutf("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
     const float nne = grid::get_nne(modelgridindex);
 
     // if the previous entry belongs to the same ion, then pick up the cumulative sum from
@@ -588,7 +588,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     const auto *const uptranslist = get_uptranslist(element, ion, level);
     for (int ii = 0; ii < nuptrans; ii++) {
       const int tmpupper = uptranslist[ii].targetlevelindex;
-      // printout("    excitation to level %d possible\n",upper);
+      // printoutf("    excitation to level %d possible\n",upper);
       const double epsilon_trans = epsilon(element, ion, tmpupper) - epsilon_current;
       const double C = nnlevel *
                        col_excitation_ratecoeff(T_e, nne, element, ion, level, ii, epsilon_trans, statweight) *
@@ -617,7 +617,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     do_macroatom(pkt, {.element = element, .ion = ion, .level = upper, .activatingline = -99});
   } else if (rndcoolingtype == CoolingType::COLLION) {
     // the k-packet activates a macro-atom due to collisional ionisation
-    // printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
+    // printoutf("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
 
     const int upperion = ion + 1;
     const int upper = coolinglist[i].upperlevel;
