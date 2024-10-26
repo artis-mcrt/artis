@@ -91,18 +91,18 @@ void packet_init(Packet *pkt)
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
-  printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
+  printoutf("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
 
-  printout("INITIAL_PACKETS_ON is %s\n", (INITIAL_PACKETS_ON ? "on" : "off"));
+  printoutf("INITIAL_PACKETS_ON is %s\n", (INITIAL_PACKETS_ON ? "on" : "off"));
 
   // The total number of pellets that we want to start with is just
   // npkts. The total energy of the pellets is given by etot.
   const double etot_tinf = decay::get_global_etot_t0_tinf();
 
-  printout("etot %g (t_0 to t_inf)\n", etot_tinf);
+  printoutf("etot %g (t_0 to t_inf)\n", etot_tinf);
 
   const double e0_tinf = etot_tinf / globals::npkts;
-  printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
+  printoutf("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
 
   decay::setup_decaypath_energy_per_mass();
 
@@ -127,13 +127,13 @@ void packet_init(Packet *pkt)
   const double etot = norm;
   // So energy per pellet is
   const double e0 = etot / globals::npkts;
-  printout("packet e0 (in time range) %g erg\n", e0);
+  printoutf("packet e0 (in time range) %g erg\n", e0);
 
-  printout("etot %g erg (in time range) erg\n", etot);
+  printoutf("etot %g erg (in time range) erg\n", etot);
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
-  printout("Placing pellets...\n");
+  printoutf("Placing pellets...\n");
   auto allpkts = std::ranges::iota_view{0, globals::npkts};
   std::ranges::for_each(allpkts, [&, norm, e0](const int n) {
     pkt[n] = Packet{};
@@ -153,14 +153,14 @@ void packet_init(Packet *pkt)
     e_cmf_total += pkt[n].e_cmf;
   }
   const double e_ratio = etot / e_cmf_total;
-  printout("packet energy sum %g should be %g normalisation factor: %g\n", e_cmf_total, etot, e_ratio);
+  printoutf("packet energy sum %g should be %g normalisation factor: %g\n", e_cmf_total, etot, e_ratio);
   assert_always(std::isfinite(e_cmf_total));
   e_cmf_total *= e_ratio;
   for (int n = 0; n < globals::npkts; n++) {
     pkt[n].e_cmf *= e_ratio;
     pkt[n].e_rf *= e_ratio;
   }
-  printout("total energy that will be freed during simulation time: %g erg\n", e_cmf_total);
+  printoutf("total energy that will be freed during simulation time: %g erg\n", e_cmf_total);
 }
 
 // write packets text file
@@ -212,12 +212,12 @@ void read_temp_packetsfile(const int timestep, const int my_rank, Packet *pkt) {
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
-  printout("Reading %s...", filename);
+  printoutf("Reading %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
   assert_always(std::fread(pkt, sizeof(Packet), globals::npkts, packets_file) == static_cast<size_t>(globals::npkts));
 
   fclose(packets_file);
-  printout("done\n");
+  printoutf("done\n");
 }
 
 auto verify_temp_packetsfile(const int timestep, const int my_rank, const Packet *const pkt) -> bool {
@@ -227,25 +227,25 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, const Packet
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
-  printout("Verifying file %s...", filename);
+  printoutf("Verifying file %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
   Packet pkt_in;
   bool readback_passed = true;
   for (int n = 0; n < globals::npkts; n++) {
     assert_always(std::fread(&pkt_in, sizeof(Packet), 1, packets_file) == 1);
     if (pkt_in != pkt[n]) {
-      printout("failed on packet %d\n", n);
-      printout(" compare number %d %d\n", pkt_in.number, pkt[n].number);
-      printout(" compare nu_cmf %lg %lg\n", pkt_in.nu_cmf, pkt[n].nu_cmf);
-      printout(" compare e_rf %lg %lg\n", pkt_in.e_rf, pkt[n].e_rf);
+      printoutf("failed on packet %d\n", n);
+      printoutf(" compare number %d %d\n", pkt_in.number, pkt[n].number);
+      printoutf(" compare nu_cmf %lg %lg\n", pkt_in.nu_cmf, pkt[n].nu_cmf);
+      printoutf(" compare e_rf %lg %lg\n", pkt_in.e_rf, pkt[n].e_rf);
       readback_passed = false;
     }
   }
   fclose(packets_file);
   if (readback_passed) {
-    printout("  verification passed\n");
+    printoutf("  verification passed\n");
   } else {
-    printout("  verification FAILED\n");
+    printoutf("  verification FAILED\n");
   }
   return readback_passed;
 }
@@ -267,7 +267,7 @@ void read_packets(const char filename[], Packet *pkt) {
     const int i = packets_read - 1;
 
     if (i > globals::npkts - 1) {
-      printout(
+      printoutf(
           "ERROR: More data found beyond packet %d (expecting %d packets). Recompile exspec with the correct number "
           "of packets. Run (wc -l < packets00_0000.out) to count them.\n",
           packets_read, globals::npkts);
@@ -324,7 +324,7 @@ void read_packets(const char filename[], Packet *pkt) {
   }
 
   if (packets_read < globals::npkts) {
-    printout(
+    printoutf(
         "ERROR: Read failed after packet %d (expecting %d packets). Recompile exspec with the correct number of "
         "packets. Run (wc -l < packets00_0000.out) to count them.\n",
         packets_read, globals::npkts);
