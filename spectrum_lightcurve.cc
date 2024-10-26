@@ -122,8 +122,8 @@ void printout_tracemission_stats() {
         printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n", encontrib,
                  100 * encontrib / totalenergy, get_atomicnumber(element), get_ionstage(element, ion),
                  globals::linelist[lineindex].upperlevelindex, globals::linelist[lineindex].lowerlevelindex,
-                 downtransition->coll_str, globals::linelist[lineindex].einstein_A, downtransition->forbidden,
-                 linelambda, v_rad, B_lu, B_ul);
+                 downtransition->coll_str, globals::linelist[lineindex].einstein_A,
+                 static_cast<int>(downtransition->forbidden), linelambda, v_rad, B_lu, B_ul);
       } else {
         break;
       }
