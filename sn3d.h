@@ -121,6 +121,18 @@ inline void print_line_start() {
     output_file.flush();                                                    \
   }
 
+__attribute__((__format__(__printf__, 1, 2))) inline auto printoutf(const char *format, ...) -> void {
+  print_line_start();
+  va_list args{};
+  va_start(args, format);
+  vsnprintf(outputlinebuf, sizeof(outputlinebuf), format, args);
+  va_end(args);
+
+  outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n');
+  output_file << outputlinebuf;
+  output_file.flush();
+}
+
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
     const bool assertpass = static_cast<bool>(e);                                                                      \
