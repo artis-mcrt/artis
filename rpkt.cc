@@ -674,27 +674,27 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
                               ? globals::rmax * pkt.prop_time / globals::tmin
                               : 2 * globals::rmax * (pkt.prop_time + sdist / CLIGHT_PROP) / globals::tmin;
   if (sdist > maxsdist) {
-    printout("[fatal] do_rpkt: Unreasonably large sdist for packet %d. Rpkt. Abort. %g %g %g\n", pkt.number,
-             globals::rmax, pkt.prop_time / globals::tmin, sdist);
+    printoutf("[fatal] do_rpkt: Unreasonably large sdist for packet %d. Rpkt. Abort. %g %g %g\n", pkt.number,
+              globals::rmax, pkt.prop_time / globals::tmin, sdist);
     std::abort();
   }
 
   if (sdist < 0) {
     const int cellindexnew = pkt.where;
-    printout("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
-    printout("[warning] r_pkt: cell %d snext %d\n", cellindexnew, snext);
-    printout("[warning] r_pkt: pos %g %g %g\n", pkt.pos[0], pkt.pos[1], pkt.pos[2]);
-    printout("[warning] r_pkt: dir %g %g %g\n", pkt.dir[0], pkt.dir[1], pkt.dir[2]);
-    printout("[warning] r_pkt: cell corner %g %g %g\n",
-             grid::get_cellcoordmin(cellindexnew, 0) * pkt.prop_time / globals::tmin,
-             grid::get_cellcoordmin(cellindexnew, 1) * pkt.prop_time / globals::tmin,
-             grid::get_cellcoordmin(cellindexnew, 2) * pkt.prop_time / globals::tmin);
-    printout("[warning] r_pkt: cell width %g\n", grid::wid_init(cellindexnew, 0) * pkt.prop_time / globals::tmin);
+    printoutf("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
+    printoutf("[warning] r_pkt: cell %d snext %d\n", cellindexnew, snext);
+    printoutf("[warning] r_pkt: pos %g %g %g\n", pkt.pos[0], pkt.pos[1], pkt.pos[2]);
+    printoutf("[warning] r_pkt: dir %g %g %g\n", pkt.dir[0], pkt.dir[1], pkt.dir[2]);
+    printoutf("[warning] r_pkt: cell corner %g %g %g\n",
+              grid::get_cellcoordmin(cellindexnew, 0) * pkt.prop_time / globals::tmin,
+              grid::get_cellcoordmin(cellindexnew, 1) * pkt.prop_time / globals::tmin,
+              grid::get_cellcoordmin(cellindexnew, 2) * pkt.prop_time / globals::tmin);
+    printoutf("[warning] r_pkt: cell width %g\n", grid::wid_init(cellindexnew, 0) * pkt.prop_time / globals::tmin);
     assert_always(false);
   }
   if (((snext != -99) && (snext < 0)) || (snext >= grid::ngrid)) {
-    printout("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
-    printout("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt.where, snext);
+    printoutf("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
+    printoutf("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt.where, snext);
     std::abort();
   }
 
@@ -1066,7 +1066,7 @@ __host__ __device__ void emit_rpkt(Packet &pkt) {
   // negative time since we want the backwards transformation here
 
   pkt.dir = angle_ab(dir_cmf, vel_vec);
-  // printout("[debug] pkt.dir in RF: %g %g %g\n",pkt.dir[0],pkt.dir[1],pkt.dir[2]);
+  // printoutf("[debug] pkt.dir in RF: %g %g %g\n",pkt.dir[0],pkt.dir[1],pkt.dir[2]);
 
   // Finally we want to put in the rest frame energy and frequency. And record
   // that it's now a r-pkt.
@@ -1135,11 +1135,11 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   chi_rpkt_cont.total = chi_rpkt_cont.ffescat + chi_rpkt_cont.bf + chi_rpkt_cont.ffheat;
 
   if (!std::isfinite(chi_rpkt_cont.total)) {
-    printout("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
-    printout("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont.ffescat, chi_rpkt_cont.ffheat, chi_rpkt_cont.bf);
-    printout("[fatal] nbfcontinua %d\n", globals::nbfcontinua);
-    printout("[fatal] in cell %d with density %g\n", modelgridindex, grid::get_rho(modelgridindex));
-    printout("[fatal] pkt.nu_cmf %g\n", nu_cmf);
+    printoutf("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
+    printoutf("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont.ffescat, chi_rpkt_cont.ffheat, chi_rpkt_cont.bf);
+    printoutf("[fatal] nbfcontinua %d\n", globals::nbfcontinua);
+    printoutf("[fatal] in cell %d with density %g\n", modelgridindex, grid::get_rho(modelgridindex));
+    printoutf("[fatal] pkt.nu_cmf %g\n", nu_cmf);
     if (std::isfinite(chi_rpkt_cont.ffescat)) {
       chi_rpkt_cont.ffheat = 0.;
       chi_rpkt_cont.bf = 0.;
@@ -1175,7 +1175,7 @@ void calculate_expansion_opacities(const int modelgridindex) {
   const auto sys_time_start_calc = std::time(nullptr);
   const auto temperature = grid::get_TR(modelgridindex);
 
-  printout("calculating expansion opacities for cell %d...", modelgridindex);
+  printoutf("calculating expansion opacities for cell %d...", modelgridindex);
 
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
@@ -1222,5 +1222,5 @@ void calculate_expansion_opacities(const int modelgridindex) {
       expansionopacity_planck_cumulative[(nonemptymgi * expopac_nbins) + binindex] = kappa_planck_cumulative;
     }
   }
-  printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calc);
+  printoutf("took %ld seconds\n", std::time(nullptr) - sys_time_start_calc);
 }
