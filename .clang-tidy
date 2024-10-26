@@ -16,6 +16,7 @@ Checks: >
     -bugprone-narrowing-conversions,
     -boost-use-ranges,
     -llvmlibc-*,
+    -cert-dcl50-cpp,
     -cert-err33-c,
     -cert-err34-c,
     -cert-err58-cpp,
