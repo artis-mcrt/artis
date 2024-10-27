@@ -193,7 +193,7 @@ inline void atomicadd(T &var, const T &val) {
 inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
   if (gsl_errno != 18)  // roundoff error
   {
-    printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
+    printoutf("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
     // abort();
   }
 }
@@ -207,7 +207,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
 
   FILE *file = std::fopen(filename.c_str(), mode);
   if (file == nullptr) {
-    printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename.c_str(), mode);
+    printoutf("ERROR: Could not open file '%s' for mode '%s'.\n", filename.c_str(), mode);
     std::abort();
   }
 
@@ -221,7 +221,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   }
   auto file = std::fstream(filename, mode);
   if (!file.is_open()) {
-    printout("ERROR: Could not open file '%s'\n", filename.c_str());
+    printoutf("ERROR: Could not open file '%s'\n", filename.c_str());
     std::abort();
   }
   return file;
