@@ -62,7 +62,7 @@ CXXFLAGS += -std=c++20 -fstrict-aliasing
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
 
 ifneq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -fopenmp-simd -ftree-vectorize -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
+	CXXFLAGS += -ftree-vectorize -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
 	# add -ftrivial-auto-var-init=zero when we drop gcc 11 support
 endif
 
@@ -241,7 +241,7 @@ else
 			ifeq ($(COMPILER_NAME),NVHPC)
 				CXXFLAGS += -fast
 			else
-				CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only
+				CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only -fopenmp-simd
 			endif
 		endif
 	# endif
