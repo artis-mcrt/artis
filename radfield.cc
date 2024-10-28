@@ -187,7 +187,6 @@ void add_detailed_line(const int lineindex) {
   }
   detailed_lineindicies[detailed_linecount] = lineindex;
   detailed_linecount++;
-  // printout("Added Jblue estimator for lineindex %d count %d\n", lineindex, detailed_linecount);
 }
 
 // get the normalised J_nu
@@ -687,13 +686,6 @@ auto get_Jblueindex(const int lineindex) -> int {
       return mid;
     }
   }
-
-  // const int element = linelist[lineindex].elementindex;
-  // const int ion = linelist[lineindex].ionindex;
-  // const int lower = linelist[lineindex].lowerlevelindex;
-  // const int upper = linelist[lineindex].upperlevelindex;
-  // printout("Could not find lineindex %d among %d items (Z=%02d ionstage %d lower %d upper %d)\n",
-  //          lineindex, detailed_linecount, get_atomicnumber(element), get_ionstage(element, ion), lower, upper);
 
   return -1;
 }

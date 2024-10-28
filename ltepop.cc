@@ -185,7 +185,6 @@ auto calculate_levelpop_nominpop(const int modelgridindex, const int element, co
         // Case for when no NLTE level information is available yet
         nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
       } else {
-        // printout("Using an nlte population!\n");
         nn = nltepop_over_rho * grid::get_rho(modelgridindex);
         if (!std::isfinite(nn)) {
           printout("[fatal] NLTE population failure.\n");
@@ -209,7 +208,6 @@ auto calculate_levelpop_nominpop(const int modelgridindex, const int element, co
         // Case for when no NLTE level information is available yet
         nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
       } else {
-        // printout("Using a superlevel population!\n");
         nn = superlevelpop_over_rho * grid::get_rho(modelgridindex) *
              superlevel_boltzmann(modelgridindex, element, ion, level);
         if (!std::isfinite(nn)) {
@@ -544,8 +542,6 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
   const double g_lower = stat_weight(element, ion, level);
   const double g_upper = stat_weight(element, ion + 1, upperionlevel);
   const double sf = SAHACONST * g_lower / g_upper * pow(T, -1.5) * exp(E_threshold / KB / T);
-  // printout("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T,
-  // E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );
   if (sf < 0) {
     printout(
         "[fatal] calculate_sahafact: Negative Saha factor. sfac %g element %d ion %d level %d upperionlevel %d "
