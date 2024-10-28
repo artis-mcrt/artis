@@ -366,7 +366,7 @@ void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
   const double ts_end = ts + tw;
 
   const auto time_update_packets_start = std::time(nullptr);
-  printout("timestep %d: start update_packets at time %ld\n", nts, time_update_packets_start);
+  printoutf("timestep %d: start update_packets at time %ld\n", nts, time_update_packets_start);
   bool timestepcomplete = false;
   int passnumber = 0;
   while (!timestepcomplete) {
