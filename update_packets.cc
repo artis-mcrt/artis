@@ -434,7 +434,7 @@ void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);  // hold all processes once the packets are updated
 #endif
-  printout(
+  printoutf(
       "timestep %d: time after update packets for all processes %ld (rank %d took %lds, waited %lds, total %lds)\n",
       nts, std::time(nullptr), my_rank, time_update_packets_end_thisrank - time_update_packets_start,
       std::time(nullptr) - time_update_packets_end_thisrank, std::time(nullptr) - time_update_packets_start);
