@@ -909,7 +909,6 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     grid::modelgrid[mgi].thick = 1;
 
     if (globals::opacity_case == 3) {
-      // printout("update_grid: opacity_case 3 ... updating globals::cell[n].chi_grey"); //MK
       if (grid::get_rho(mgi) > globals::rho_crit) {
         grid::set_kappagrey(mgi, globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1) * globals::rho_crit /
                                      grid::get_rho(mgi));

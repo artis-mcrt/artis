@@ -1116,7 +1116,6 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   } else {
     // in the other cases chi_grey is an mass absorption coefficient
     // therefore use the mass density
-    // sigma = globals::cell[pkt.where].chi_grey * globals::cell[pkt.where].rho;
     // sigma = SIGMA_T * nne;
 
     chi_escat = 0.;
