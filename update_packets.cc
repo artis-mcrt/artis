@@ -201,7 +201,6 @@ void update_pellet(Packet &pkt, const int nts, const double t2) {
     pkt.absorptiontype = -7;
     stats::increment(stats::COUNTER_K_STAT_FROM_EARLIERDECAY);
 
-    // printout("already decayed packets and propagation by packet_prop\n");
     pkt.prop_time = globals::tmin;
   } else if constexpr (TESTMODE) {
     printoutf("ERROR: Something wrong with decaying pellets. tdecay %g ts %g (ts + tw) %g\n", tdecay, ts, t2);
@@ -373,11 +372,7 @@ void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
   while (!timestepcomplete) {
     const auto sys_time_start_pass = std::time(nullptr);
 
-    // printout("sorting packets...");
-
     std::ranges::SORT_OR_STABLE_SORT(packets, std_compare_packets_bymodelgriddensity);
-
-    // printout("took %lds\n", std::time(nullptr) - sys_time_start_pass);
 
     printout("  update_packets timestep %d pass %3d: started at %ld\n", nts, passnumber, sys_time_start_pass);
 
