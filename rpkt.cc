@@ -812,9 +812,9 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     return false;
   }
 
-  printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist,
-           tdist);
-  printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt.number);
+  printoutf("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist,
+            tdist);
+  printoutf("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt.number);
   std::abort();
 }
 
