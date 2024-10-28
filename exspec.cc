@@ -58,13 +58,13 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
     if (a == -1 || !load_allrank_packets) {
       char pktfilename[MAXFILENAMELENGTH];
       snprintf(pktfilename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", 0, p);
-      printoutf("reading %s (file %d of %d)\n", pktfilename, p + 1, globals::nprocs_exspec);
+      printout("reading %s (file %d of %d)\n", pktfilename, p + 1, globals::nprocs_exspec);
 
       if (std::filesystem::exists(pktfilename)) {
         read_packets(pktfilename, pkts_start);
       } else {
-        printoutf("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n",
-                  pktfilename, globals::timestep_initial);
+        printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n",
+                 pktfilename, globals::timestep_initial);
         read_temp_packetsfile(globals::timestep_initial, p, pkts_start);
       }
     }
@@ -74,7 +74,7 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
 #endif
 
     if (p % globals::nprocs != globals::rank_global) {
-      printoutf("skipping packets file %d %d\n", p + 1, globals::nprocs);
+      printout("skipping packets file %d %d\n", p + 1, globals::nprocs);
       continue;
     }
 
@@ -82,7 +82,7 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
     int nesc_gamma = 0;
     int nesc_rpkt = 0;
     for (int ii = 0; ii < globals::npkts; ii++) {
-      // printoutf("packet %d escape_type %d type %d", ii, pkts[ii].escape_type, pkts[ii].type);
+      // printout("packet %d escape_type %d type %d", ii, pkts[ii].escape_type, pkts[ii].type);
       if (pkts_start[ii].type == TYPE_ESCAPE) {
         nesc_tot++;
         if (pkts_start[ii].escape_type == TYPE_RPKT) {
@@ -100,8 +100,8 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
       }
     }
     if (a == -1 || !load_allrank_packets) {
-      printoutf("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts)\n", nesc_tot, globals::npkts, nesc_gamma,
-                nesc_rpkt);
+      printout("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts)\n", nesc_tot, globals::npkts, nesc_gamma,
+               nesc_rpkt);
     }
   }
 
@@ -119,7 +119,7 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
 
     write_spectrum("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
 
-    printoutf("finished angle-averaged stuff\n");
+    printout("finished angle-averaged stuff\n");
   } else {
     // direction bin a
     // line-of-sight dependent spectra and light curves
@@ -156,7 +156,7 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
       write_specpol(specpol_filename, emissionpol_filename, absorptionpol_filename, &stokes_i, &stokes_q, &stokes_u);
     }
 
-    printoutf("Did %d of %d angle bins.\n", a + 1, MABINS);
+    printout("Did %d of %d angle bins.\n", a + 1, MABINS);
   }
 }
 
@@ -180,38 +180,38 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
     assert_always(output_file.is_open());
   }
 
-  printoutf("git branch %s\n", GIT_BRANCH);
+  printout("git branch %s\n", GIT_BRANCH);
 
-  printoutf("git version: %s\n", GIT_VERSION);
+  printout("git version: %s\n", GIT_VERSION);
 
-  printoutf("git status %s\n", GIT_STATUS);
+  printout("git status %s\n", GIT_STATUS);
 
-  printoutf("exspec compiled at %s on %s\n", __TIME__, __DATE__);
+  printout("exspec compiled at %s on %s\n", __TIME__, __DATE__);
 
 #if defined TESTMODE && TESTMODE
-  printoutf("TESTMODE is ON\n");
+  printout("TESTMODE is ON\n");
 #endif
 
 #ifdef MPI_ON
-  printoutf("process id (pid): %d\n", getpid());
-  printoutf("MPI enabled:\n");
-  printoutf("  rank_global %d of [0..%d] in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs - 1);
-  printoutf("  rank_in_node %d of [0..%d] in node %d of [0..%d]\n", globals::rank_in_node, globals::node_nprocs - 1,
-            globals::node_id, globals::node_count - 1);
+  printout("process id (pid): %d\n", getpid());
+  printout("MPI enabled:\n");
+  printout("  rank_global %d of [0..%d] in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs - 1);
+  printout("  rank_in_node %d of [0..%d] in node %d of [0..%d]\n", globals::rank_in_node, globals::node_nprocs - 1,
+           globals::node_id, globals::node_count - 1);
 #else
-  printoutf("MPI is disabled in this build\n");
+  printout("MPI is disabled in this build\n");
 #endif
 
   // single rank only for now
   assert_always(globals::rank_global == 0);
   assert_always(globals::nprocs == 1);
 
-  printoutf("Beginning exspec.\n");
+  printout("Beginning exspec.\n");
 
   // Get input stuff
-  printoutf("time before input %ld\n", std::time(nullptr));
+  printout("time before input %ld\n", std::time(nullptr));
   input(globals::rank_global);
-  printoutf("time after input %ld\n", std::time(nullptr));
+  printout("time after input %ld\n", std::time(nullptr));
 
   // nprocs_exspec is the number of rank output files to process with expec
   // however, we might be running exspec with 1 or just a few ranks
@@ -219,13 +219,12 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
   auto *pkts = static_cast<Packet *>(malloc(globals::nprocs_exspec * globals::npkts * sizeof(Packet)));
   const bool load_allrank_packets = (pkts != nullptr);
   if (load_allrank_packets) {
-    printoutf(
-        "mem_usage: loading %d packets from each %d processes simultaneously (total %d packets, %.1f MB memory)\n",
-        globals::npkts, globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
-        globals::nprocs_exspec * globals::npkts * sizeof(Packet) / 1024. / 1024.);
+    printout("mem_usage: loading %d packets from each %d processes simultaneously (total %d packets, %.1f MB memory)\n",
+             globals::npkts, globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
+             globals::nprocs_exspec * globals::npkts * sizeof(Packet) / 1024. / 1024.);
   } else {
-    printoutf("mem_usage: malloc failed to allocate memory for all packets\n");
-    printoutf(
+    printout("mem_usage: malloc failed to allocate memory for all packets\n");
+    printout(
         "mem_usage: loading %d packets from each of %d processes sequentially (total %d packets, %.1f MB memory)\n",
         globals::npkts, globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
         globals::nprocs_exspec * globals::npkts * sizeof(Packet) / 1024. / 1024.);
@@ -253,7 +252,7 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
 
   free(pkts);
   decay::cleanup();
-  printoutf("exspec finished at %ld (tstart + %ld seconds)\n", std::time(nullptr), std::time(nullptr) - sys_time_start);
+  printout("exspec finished at %ld (tstart + %ld seconds)\n", std::time(nullptr), std::time(nullptr) - sys_time_start);
 
 #ifdef MPI_ON
   MPI_Finalize();

@@ -97,7 +97,6 @@ inline thread_local auto gslworkspace =
 
 #ifdef __NVCOMPILER_CUDA_ARCH__
 #define printout(...) printf(__VA_ARGS__)
-#define printoutf(...) printf(__VA_ARGS__)
 
 #define __artis_assert(e)                         \
   {                                               \
@@ -114,7 +113,7 @@ inline void print_line_start() {
   }
 }
 
-__attribute__((__format__(__printf__, 1, 2))) inline auto printoutf(const char *format, ...) -> void {
+__attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *format, ...) -> void {
   print_line_start();
   va_list args{};
   va_start(args, format);
@@ -184,7 +183,7 @@ inline void atomicadd(T &var, const T &val) {
 inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
   if (gsl_errno != 18)  // roundoff error
   {
-    printoutf("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
+    printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
     // abort();
   }
 }
@@ -198,7 +197,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
 
   FILE *file = std::fopen(filename.c_str(), mode);
   if (file == nullptr) {
-    printoutf("ERROR: Could not open file '%s' for mode '%s'.\n", filename.c_str(), mode);
+    printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename.c_str(), mode);
     std::abort();
   }
 
@@ -212,7 +211,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   }
   auto file = std::fstream(filename, mode);
   if (!file.is_open()) {
-    printoutf("ERROR: Could not open file '%s'\n", filename.c_str());
+    printout("ERROR: Could not open file '%s'\n", filename.c_str());
     std::abort();
   }
   return file;

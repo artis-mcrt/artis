@@ -57,8 +57,8 @@ std::vector<NucGammaLine> allnuc_gamma_line_list;
 void read_gamma_spectrum(const int nucindex, const char filename[50])
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
 {
-  printoutf("reading gamma spectrum for Z=%d A=%d from %s...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
-            filename);
+  printout("reading gamma spectrum for Z=%d A=%d from %s...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
+           filename);
 
   FILE *filein = fopen_required(filename, "r");
   int nlines = 0;
@@ -79,11 +79,11 @@ void read_gamma_spectrum(const int nucindex, const char filename[50])
 
   decay::set_nucdecayenergygamma(nucindex, E_gamma_avg);
 
-  printoutf("nlines %d avg_en_gamma %g MeV\n", nlines, E_gamma_avg / MEV);
+  printout("nlines %d avg_en_gamma %g MeV\n", nlines, E_gamma_avg / MEV);
 }
 
 void set_trivial_gamma_spectrum(const int nucindex) {
-  // printoutf("Setting trivial gamma spectrum for z %d a %d engamma %g\n", z, a, decay::nucdecayenergygamma(z, a));
+  // printout("Setting trivial gamma spectrum for z %d a %d engamma %g\n", z, a, decay::nucdecayenergygamma(z, a));
   const int nlines = 1;
   gamma_spectra[nucindex].resize(nlines, {});
   gamma_spectra[nucindex][0].energy = decay::nucdecayenergygamma(nucindex);
@@ -93,13 +93,13 @@ void set_trivial_gamma_spectrum(const int nucindex) {
 void read_decaydata() {
   // migrate from old filename
   if (!std::filesystem::exists("ni56_lines.txt") && std::filesystem::exists("ni_lines.txt")) {
-    printoutf("Moving ni_lines.txt to ni56_lines.txt\n");
+    printout("Moving ni_lines.txt to ni56_lines.txt\n");
     std::rename("ni_lines.txt", "ni56_lines.txt");
   }
 
   // migrate from old filename
   if (!std::filesystem::exists("co56_lines.txt") && std::filesystem::exists("co_lines.txt")) {
-    printoutf("Moving co_lines.txt to co56_lines.txt\n");
+    printout("Moving co_lines.txt to co56_lines.txt\n");
     std::rename("co_lines.txt", "co56_lines.txt");
   }
 
@@ -129,7 +129,7 @@ void read_decaydata() {
     } else if (std::ifstream(filename2)) {
       read_gamma_spectrum(nucindex, filename2);
     } else if (decay::nucdecayenergygamma(nucindex) > 0.) {
-      // printoutf("%s does not exist. Setting 100%% chance of single gamma-line with energy %g MeV\n",
+      // printout("%s does not exist. Setting 100%% chance of single gamma-line with energy %g MeV\n",
       //   filename, decay::nucdecayenergygamma(z, a) / EV / 1e6);
       set_trivial_gamma_spectrum(nucindex);
 
@@ -140,7 +140,7 @@ void read_decaydata() {
       assert_always(z != 28 || a != 57);  // Ni-57 must have a gamma spectrum if present in list of nuclides
       assert_always(z != 28 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
     } else {
-      // printoutf("%s does not exist. No gamma decay from this nuclide.\n", filename);
+      // printout("%s does not exist. No gamma decay from this nuclide.\n", filename);
     }
   }
 
@@ -162,7 +162,7 @@ void init_gamma_linelist() {
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     total_lines += std::ssize(gamma_spectra[nucindex]);
   }
-  printoutf("total gamma-ray lines %td\n", total_lines);
+  printout("total gamma-ray lines %td\n", total_lines);
 
   allnuc_gamma_line_list = std::vector<NucGammaLine>();
   allnuc_gamma_line_list.reserve(total_lines);
@@ -205,7 +205,7 @@ void init_gamma_linelist() {
 
 void init_xcom_photoion_data() {
   // read the file
-  printoutf("reading XCOM photoionization data...\n");
+  printout("reading XCOM photoionization data...\n");
   // reserve memory
   for (int Z = 0; Z < numb_xcom_elements; Z++) {
     photoion_data[Z].reserve(100);
@@ -247,7 +247,7 @@ __host__ __device__ auto choose_gamma_ray(const int nucindex) -> double {
     }
   }
 
-  printoutf("Failure to choose line (pellet_nucindex %d). Abort. zrand %g runtot %g\n", nucindex, zrand, runtot);
+  printout("Failure to choose line (pellet_nucindex %d). Abort. zrand %g runtot %g\n", nucindex, zrand, runtot);
   assert_always(false);
 }
 
@@ -296,13 +296,13 @@ auto choose_f(const double xx, const double zrand) -> double
   int count = 0;
   double err = 1e20;
 
-  // printoutf("new\n");
+  // printout("new\n");
 
   double ftry = (f_max + f_min) / 2;
   while ((err > 1.e-4) && (count < 1000)) {
     ftry = (f_max + f_min) / 2;
     const double sigma_try = sigma_compton_partial(xx, ftry);
-    // printoutf("ftry %g %g %g %g %g\n",ftry, f_min, f_max, try, norm);
+    // printout("ftry %g %g %g %g %g\n",ftry, f_min, f_max, try, norm);
     if (sigma_try > norm) {
       f_max = ftry;
       err = (sigma_try - norm) / norm;
@@ -310,10 +310,10 @@ auto choose_f(const double xx, const double zrand) -> double
       f_min = ftry;
       err = (norm - sigma_try) / norm;
     }
-    //      printoutf("error %g\n",err);
+    //      printout("error %g\n",err);
     count++;
     if (count == 1000) {
-      printoutf("Compton hit 1000 tries. %g %g %g %g %g\n", f_max, f_min, ftry, sigma_try, norm);
+      printout("Compton hit 1000 tries. %g %g %g %g %g\n", f_max, f_min, ftry, sigma_try, norm);
     }
   }
 
@@ -373,7 +373,7 @@ auto thomson_angle() -> double {
 
 // handle physical Compton scattering event
 void compton_scatter(Packet &pkt) {
-  //  printoutf("Compton scattering.\n");
+  //  printout("Compton scattering.\n");
 
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
 
@@ -605,7 +605,7 @@ auto get_chi_pair_prod_rf(const Packet &pkt) -> double {
   double chi_rf = chi_cmf * calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
   if (chi_rf < 0) {
-    printoutf("Negative pair production sigma. Setting to zero. Abort? %g\n", chi_rf);
+    printout("Negative pair production sigma. Setting to zero. Abort? %g\n", chi_rf);
     chi_rf = 0.;
   }
 
@@ -730,19 +730,19 @@ void transport_gamma(Packet &pkt, const double t2) {
                               ? globals::rmax * pkt.prop_time / globals::tmin
                               : 2 * globals::rmax * (pkt.prop_time + sdist / CLIGHT_PROP) / globals::tmin;
   if (sdist > maxsdist) {
-    printoutf("Unreasonably large sdist (gamma). Abort. %g %g %g\n", globals::rmax, pkt.prop_time / globals::tmin,
-              sdist);
+    printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", globals::rmax, pkt.prop_time / globals::tmin,
+             sdist);
     assert_always(false);
   }
 
   if (sdist < 0) {
-    printoutf("Negative distance (sdist). Abort?\n");
+    printout("Negative distance (sdist). Abort?\n");
     sdist = 0;
   }
 
   if (((snext < 0) && (snext != -99)) || (snext >= grid::ngrid)) {
-    printoutf("Heading for inappropriate grid cell. Abort.\n");
-    printoutf("Current cell %d, target cell %d.\n", pkt.where, snext);
+    printout("Heading for inappropriate grid cell. Abort.\n");
+    printout("Current cell %d, target cell %d.\n", pkt.where, snext);
     assert_always(false);
   }
 
@@ -780,7 +780,7 @@ void transport_gamma(Packet &pkt, const double t2) {
 
   assert_always(tdist >= 0);
 
-  // printoutf("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
+  // printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
 
   if ((sdist < tdist) && (sdist < edist)) {
     move_pkt_withtime(pkt, sdist / 2.);
@@ -976,8 +976,8 @@ void guttman_thermalisation(Packet &pkt) {
   for (int i = 0; i < numb_rnd_dirs; i++) {
     const double summand =
         width * (1 - std::exp(-std::pow(t_gamma, 2.) / std::pow(t, 2.) * column_densities[i] / avg_column_density));
-    printoutf("width: %f t_gamma: %f t: %f column_densities[i]: %f avg_column_density: %f summand: %f", width, t_gamma,
-              t, column_densities[i], avg_column_density, summand);
+    printout("width: %f t_gamma: %f t: %f column_densities[i]: %f avg_column_density: %f summand: %f", width, t_gamma,
+             t, column_densities[i], avg_column_density, summand);
     f_gamma += summand;
   }
   f_gamma /= (4 * PI);
@@ -1056,9 +1056,9 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   }
 
   pkt.pol_dir = vec_norm(pkt.pol_dir);
-  // printoutf("initialise pol state of packet %g, %g, %g, %g,
+  // printout("initialise pol state of packet %g, %g, %g, %g,
   // %g\n",pkt.stokes_qu[0],pkt.stokes_qu[1],pkt.pol_dir[0],pkt.pol_dir[1],pkt.pol_dir[2]);
-  // printoutf("pkt direction %g, %g, %g\n",pkt.dir[0],pkt.dir[1],pkt.dir[2]);
+  // printout("pkt direction %g, %g, %g\n",pkt.dir[0],pkt.dir[1],pkt.dir[2]);
 }
 
 __host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {

@@ -91,7 +91,7 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
       intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &bfheating, &error);
 
   if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning)) {
-    printoutf(
+    printout(
         "bf_heating integrator gsl warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d "
         "integral %g error %g\n",
         status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level, phixstargetindex,
@@ -127,7 +127,7 @@ auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, con
     }
   }
   // const double nnion = get_nnion(modelgridindex, element, ion);
-  // printoutf("ion_col_deexc_heating: T_e %g nne %g Z=%d ionstage %d nnion %g heating_contrib %g contrib/nnion %g\n",
+  // printout("ion_col_deexc_heating: T_e %g nne %g Z=%d ionstage %d nnion %g heating_contrib %g contrib/nnion %g\n",
   // T_e, nne, get_atomicnumber(element), get_ionstage(element, ion), nnion, C_deexc, C_deexc / nnion);
   return C_deexc;
 }
@@ -218,7 +218,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   const double volumetmin = grid::get_modelcell_assocvolume_tmin(modelgridindex);
   const double dV = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);  // really dV/dt
   const double V = volumetmin * pow(t_current / globals::tmin, 3);
-  // printoutf("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
+  // printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
   heatingcoolingrates->cooling_adiabatic = p * dV / V;
 
   const double total_heating_rate = heatingcoolingrates->heating_ff + heatingcoolingrates->heating_bf +
@@ -263,7 +263,7 @@ void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatin
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(modelgridindex, element) <= minelfrac && !USE_LUT_BFHEATING) {
-      printoutf("skipping Z=%d X=%g, ", get_atomicnumber(element), grid::get_elem_abundance(modelgridindex, element));
+      printout("skipping Z=%d X=%g, ", get_atomicnumber(element), grid::get_elem_abundance(modelgridindex, element));
     }
 
     const int nions = get_nions(element);
@@ -306,7 +306,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
                      const double T_max, HeatingCoolingRates *heatingcoolingrates,
                      const std::vector<double> &bfheatingcoeffs) {
   const double T_e_old = grid::get_Te(modelgridindex);
-  printoutf("Finding T_e in cell %d at timestep %d...", modelgridindex, timestep);
+  printout("Finding T_e in cell %d at timestep %d...", modelgridindex, timestep);
 
   Te_solution_paras paras = {.t_current = t_current,
                              .modelgridindex = modelgridindex,
@@ -319,7 +319,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   double thermalmax = T_e_eqn_heating_minus_cooling(T_max, find_T_e_f.params);
 
   if (!std::isfinite(thermalmin) || !std::isfinite(thermalmax)) {
-    printoutf(
+    printout(
         "[abort request] call_T_e_finder: non-finite results in modelcell %d (T_R=%g, W=%g). T_e forced to be "
         "MINTEMP\n",
         modelgridindex, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
@@ -343,15 +343,15 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
       const double T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
       const double T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
       status = gsl_root_test_interval(T_e_min, T_e_max, 0, TEMPERATURE_SOLVER_ACCURACY);
-      // printoutf("iter %d, T_e interval [%g, %g], guess %g, status %d\n", iternum, T_e_min, T_e_max, T_e, status);
+      // printout("iter %d, T_e interval [%g, %g], guess %g, status %d\n", iternum, T_e_min, T_e_max, T_e, status);
       if (status != GSL_CONTINUE) {
-        printoutf("after %d iterations, T_e = %g K, interval [%g, %g]\n", iternum + 1, T_e, T_e_min, T_e_max);
+        printout("after %d iterations, T_e = %g K, interval [%g, %g]\n", iternum + 1, T_e, T_e_min, T_e_max);
         break;
       }
     }
 
     if (status == GSL_CONTINUE) {
-      printoutf("[warning] call_T_e_finder: T_e did not converge within %d iterations\n", maxit);
+      printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n", maxit);
     }
 
     gsl_root_fsolver_free(T_e_solver);
@@ -361,14 +361,14 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   else if (thermalmax < 0) {
     // Thermal balance equation always negative ===> T_e = T_min
     T_e = MINTEMP;
-    printoutf(
+    printout(
         "[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in modelcell %d "
         "(T_R=%g,W=%g). T_e forced to be MINTEMP\n",
         MINTEMP, modelgridindex, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
   } else {
     // Thermal balance equation always negative ===> T_e = T_max
     T_e = MAXTEMP;
-    printoutf(
+    printout(
         "[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in modelcell %d "
         "(T_R=%g,W=%g). T_e forced to be MAXTEMP\n",
         MINTEMP, MAXTEMP, modelgridindex, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
@@ -376,11 +376,11 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 
   if (T_e > 2 * T_e_old) {
     T_e = 2 * T_e_old;
-    printoutf("use T_e damping in cell %d\n", modelgridindex);
+    printout("use T_e damping in cell %d\n", modelgridindex);
     T_e = std::min(T_e, MAXTEMP);
   } else if (T_e < 0.5 * T_e_old) {
     T_e = 0.5 * T_e_old;
-    printoutf("use T_e damping in cell %d\n", modelgridindex);
+    printout("use T_e damping in cell %d\n", modelgridindex);
     T_e = std::max(T_e, MINTEMP);
   }
 

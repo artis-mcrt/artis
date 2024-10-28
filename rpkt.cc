@@ -138,13 +138,13 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
 
         const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * prop_time);
 
-        // printoutf("[debug] get_event:     tau_line %g\n", tau_line);
-        // printoutf("[debug] get_event:       tau_rnd - tau > tau_cont\n");
+        // printout("[debug] get_event:     tau_line %g\n", tau_line);
+        // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
 
         if (tau_rnd - tau > tau_cont + tau_line) {
           // total optical depth still below tau_rnd: propagate to the line and continue
 
-          // printoutf(
+          // printout(
           //     "[debug] get_event: tau_rnd - tau > tau_cont + tau_line ... proceed this packets "
           //     "propagation\n");
 
@@ -168,7 +168,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
 
         } else {
           // bound-bound process occurs
-          // printoutf("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
+          // printout("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
 
           mastate = {.element = element, .ion = ion, .level = upper, .activatingline = lineindex};
 
@@ -178,7 +178,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
           }
 
           // the line and its parameters were already selected by closest_transition!
-          // printoutf("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop
+          // printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop
           // %d\n",edist,abort_dist,edist-abort_dist,endloop);
 
           return {dist + ldist, next_trans, true};
@@ -431,8 +431,8 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
 
   // continuum process happens. select due to its probabilities sigma/chi_cont, chi_ff/chi_cont,
   // chi_bf/chi_cont
-  // printoutf("[debug] rpkt_event:   r-pkt undergoes a continuum transition\n");
-  // printoutf("[debug] rpkt_event:   zrand*chi_cont %g, sigma %g, chi_ff %g, chi_bf %g\n", zrand * chi_cont,
+  // printout("[debug] rpkt_event:   r-pkt undergoes a continuum transition\n");
+  // printout("[debug] rpkt_event:   zrand*chi_cont %g, sigma %g, chi_ff %g, chi_bf %g\n", zrand * chi_cont,
   // sigma, chi_ff, chi_bf);
 
   const auto chi_rnd = rng_uniform() * chi_cont;
@@ -441,7 +441,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     // electron scattering occurs
     // in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
     // but with different direction
-    // printoutf("[debug] rpkt_event:   electron scattering\n");
+    // printout("[debug] rpkt_event:   electron scattering\n");
     stats::increment(stats::COUNTER_INTERACTIONS);
     pkt.nscatterings += 1;
     pkt.last_event = LASTEVENT_ELECTRONSCATTERING;
@@ -462,7 +462,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
 
   } else if (chi_rnd < chi_escatter + chi_ff) {
     // ff: transform to k-pkt
-    // printoutf("[debug] rpkt_event:   free-free transition\n");
+    // printout("[debug] rpkt_event:   free-free transition\n");
     stats::increment(stats::COUNTER_K_STAT_FROM_FF);
     stats::increment(stats::COUNTER_INTERACTIONS);
     pkt.last_event = 5;
@@ -470,7 +470,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     pkt.absorptiontype = -1;
   } else if (chi_rnd < chi_escatter + chi_ff + chi_bf) {
     // bf: transform to k-pkt or activate macroatom corresponding to probabilities
-    // printoutf("[debug] rpkt_event:   bound-free transition\n");
+    // printout("[debug] rpkt_event:   bound-free transition\n");
 
     const auto &phixslist = *chi_rpkt_cont.phixslist;
 
@@ -494,8 +494,8 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     const int level = globals::allcont[allcontindex].level;
     const int phixstargetindex = globals::allcont[allcontindex].phixstargetindex;
 
-    // printoutf("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n", element, ion +
-    // 1, 0, ion, level); printoutf("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
+    // printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n", element, ion +
+    // 1, 0, ion, level); printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
 
     if constexpr (TRACK_ION_STATS) {
       stats::increment_ion_stats_contabsorption(pkt, modelgridindex, element, ion);
@@ -519,7 +519,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     // or to the thermal pool
     else {
       // transform to k-pkt
-      // printoutf("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
+      // printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
       stats::increment(stats::COUNTER_K_STAT_FROM_BF);
       stats::increment(stats::COUNTER_INTERACTIONS);
       pkt.last_event = 4;
@@ -565,7 +565,7 @@ void rpkt_event_boundbound(Packet &pkt, const MacroAtomState &pktmastate, const 
 // Handle r-packet interaction in thick cell (grey opacity).
 // The packet stays an RPKT of same nu_cmf as before (coherent scattering) but with a different direction.
 void rpkt_event_thickcell(Packet &pkt) {
-  // printoutf("[debug] rpkt_event_thickcell:   electron scattering\n");
+  // printout("[debug] rpkt_event_thickcell:   electron scattering\n");
   stats::increment(stats::COUNTER_INTERACTIONS);
   pkt.nscatterings += 1;
   pkt.last_event = LASTEVENT_ELECTRONSCATTERING;
@@ -674,27 +674,27 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
                               ? globals::rmax * pkt.prop_time / globals::tmin
                               : 2 * globals::rmax * (pkt.prop_time + sdist / CLIGHT_PROP) / globals::tmin;
   if (sdist > maxsdist) {
-    printoutf("[fatal] do_rpkt: Unreasonably large sdist for packet %d. Rpkt. Abort. %g %g %g\n", pkt.number,
-              globals::rmax, pkt.prop_time / globals::tmin, sdist);
+    printout("[fatal] do_rpkt: Unreasonably large sdist for packet %d. Rpkt. Abort. %g %g %g\n", pkt.number,
+             globals::rmax, pkt.prop_time / globals::tmin, sdist);
     std::abort();
   }
 
   if (sdist < 0) {
     const int cellindexnew = pkt.where;
-    printoutf("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
-    printoutf("[warning] r_pkt: cell %d snext %d\n", cellindexnew, snext);
-    printoutf("[warning] r_pkt: pos %g %g %g\n", pkt.pos[0], pkt.pos[1], pkt.pos[2]);
-    printoutf("[warning] r_pkt: dir %g %g %g\n", pkt.dir[0], pkt.dir[1], pkt.dir[2]);
-    printoutf("[warning] r_pkt: cell corner %g %g %g\n",
-              grid::get_cellcoordmin(cellindexnew, 0) * pkt.prop_time / globals::tmin,
-              grid::get_cellcoordmin(cellindexnew, 1) * pkt.prop_time / globals::tmin,
-              grid::get_cellcoordmin(cellindexnew, 2) * pkt.prop_time / globals::tmin);
-    printoutf("[warning] r_pkt: cell width %g\n", grid::wid_init(cellindexnew, 0) * pkt.prop_time / globals::tmin);
+    printout("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
+    printout("[warning] r_pkt: cell %d snext %d\n", cellindexnew, snext);
+    printout("[warning] r_pkt: pos %g %g %g\n", pkt.pos[0], pkt.pos[1], pkt.pos[2]);
+    printout("[warning] r_pkt: dir %g %g %g\n", pkt.dir[0], pkt.dir[1], pkt.dir[2]);
+    printout("[warning] r_pkt: cell corner %g %g %g\n",
+             grid::get_cellcoordmin(cellindexnew, 0) * pkt.prop_time / globals::tmin,
+             grid::get_cellcoordmin(cellindexnew, 1) * pkt.prop_time / globals::tmin,
+             grid::get_cellcoordmin(cellindexnew, 2) * pkt.prop_time / globals::tmin);
+    printout("[warning] r_pkt: cell width %g\n", grid::wid_init(cellindexnew, 0) * pkt.prop_time / globals::tmin);
     assert_always(false);
   }
   if (((snext != -99) && (snext < 0)) || (snext >= grid::ngrid)) {
-    printoutf("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
-    printoutf("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt.where, snext);
+    printout("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
+    printout("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt.where, snext);
     std::abort();
   }
 
@@ -812,9 +812,9 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     return false;
   }
 
-  printoutf("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist,
-            tdist);
-  printoutf("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt.number);
+  printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist,
+           tdist);
+  printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt.number);
   std::abort();
 }
 
@@ -1066,7 +1066,7 @@ __host__ __device__ void emit_rpkt(Packet &pkt) {
   // negative time since we want the backwards transformation here
 
   pkt.dir = angle_ab(dir_cmf, vel_vec);
-  // printoutf("[debug] pkt.dir in RF: %g %g %g\n",pkt.dir[0],pkt.dir[1],pkt.dir[2]);
+  // printout("[debug] pkt.dir in RF: %g %g %g\n",pkt.dir[0],pkt.dir[1],pkt.dir[2]);
 
   // Finally we want to put in the rest frame energy and frequency. And record
   // that it's now a r-pkt.
@@ -1135,11 +1135,11 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   chi_rpkt_cont.total = chi_rpkt_cont.ffescat + chi_rpkt_cont.bf + chi_rpkt_cont.ffheat;
 
   if (!std::isfinite(chi_rpkt_cont.total)) {
-    printoutf("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
-    printoutf("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont.ffescat, chi_rpkt_cont.ffheat, chi_rpkt_cont.bf);
-    printoutf("[fatal] nbfcontinua %d\n", globals::nbfcontinua);
-    printoutf("[fatal] in cell %d with density %g\n", modelgridindex, grid::get_rho(modelgridindex));
-    printoutf("[fatal] pkt.nu_cmf %g\n", nu_cmf);
+    printout("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
+    printout("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont.ffescat, chi_rpkt_cont.ffheat, chi_rpkt_cont.bf);
+    printout("[fatal] nbfcontinua %d\n", globals::nbfcontinua);
+    printout("[fatal] in cell %d with density %g\n", modelgridindex, grid::get_rho(modelgridindex));
+    printout("[fatal] pkt.nu_cmf %g\n", nu_cmf);
     if (std::isfinite(chi_rpkt_cont.ffescat)) {
       chi_rpkt_cont.ffheat = 0.;
       chi_rpkt_cont.bf = 0.;
@@ -1175,7 +1175,7 @@ void calculate_expansion_opacities(const int modelgridindex) {
   const auto sys_time_start_calc = std::time(nullptr);
   const auto temperature = grid::get_TR(modelgridindex);
 
-  printoutf("calculating expansion opacities for cell %d...", modelgridindex);
+  printout("calculating expansion opacities for cell %d...", modelgridindex);
 
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
@@ -1222,5 +1222,5 @@ void calculate_expansion_opacities(const int modelgridindex) {
       expansionopacity_planck_cumulative[(nonemptymgi * expopac_nbins) + binindex] = kappa_planck_cumulative;
     }
   }
-  printoutf("took %ld seconds\n", std::time(nullptr) - sys_time_start_calc);
+  printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calc);
 }

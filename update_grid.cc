@@ -46,7 +46,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
 
   const auto sys_time_start_write_estimators = std::time(nullptr);
 
-  printoutf("writing to estimators file timestep %d cell %d...\n", timestep, mgi);
+  printout("writing to estimators file timestep %d cell %d...\n", timestep, mgi);
 
   const auto T_e = grid::get_Te(mgi);
   const auto nne = grid::get_nne(mgi);
@@ -671,7 +671,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
 
   const auto write_estim_duration = std::time(nullptr) - sys_time_start_write_estimators;
   if (write_estim_duration >= 1) {
-    printoutf("writing estimators for timestep %d cell %d took %ld seconds\n", timestep, mgi, write_estim_duration);
+    printout("writing estimators for timestep %d cell %d took %ld seconds\n", timestep, mgi, write_estim_duration);
   }
 }
 
@@ -681,12 +681,12 @@ void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, cons
 {
   // bfheating coefficients are needed for the T_e solver, but
   // they only depend on the radiation field, which is fixed during the iterations below
-  printoutf("calculate_bfheatingcoeffs for timestep %d cell %d...", nts, mgi);
+  printout("calculate_bfheatingcoeffs for timestep %d cell %d...", nts, mgi);
   const auto sys_time_start_calculate_bfheatingcoeffs = std::time(nullptr);
   thread_local static auto bfheatingcoeffs = std::vector<double>(get_includedlevels());
 
   calculate_bfheatingcoeffs(mgi, bfheatingcoeffs);
-  printoutf("took %ld seconds\n", std::time(nullptr) - sys_time_start_calculate_bfheatingcoeffs);
+  printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calculate_bfheatingcoeffs);
 
   const double convergence_tolerance = 0.04;
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++) {
@@ -727,7 +727,7 @@ void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, cons
       calculate_ion_balance_nne(mgi);
       const int duration_solve_pops = std::time(nullptr) - sys_time_start_pops;
 
-      printoutf(
+      printout(
           "Grid solver cell %d timestep %d: time spent on: Spencer-Fano %ds, partfuncs/gamma "
           "%ds, T_e %ds, populations %ds\n",
           mgi, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
@@ -751,24 +751,24 @@ void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, cons
     const double nne_prev = grid::get_nne(mgi);
     calculate_ion_balance_nne(mgi);  // sets nne
     fracdiff_nne = fabs((grid::get_nne(mgi) / nne_prev) - 1);
-    printoutf(
+    printout(
         "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e "
         "%ds, NLTE populations %ds\n",
         mgi, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
-    printoutf(
+    printout(
         "NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: prev_iter nne "
         "%g, new nne is %g, fracdiff %g, prev T_e %g new T_e %g fracdiff %g\n",
         mgi, nts, nlte_iter, nne_prev, grid::get_nne(mgi), fracdiff_nne, prev_T_e, grid::get_Te(mgi), fracdiff_T_e);
 
     if (fracdiff_nne <= convergence_tolerance && fracdiff_T_e <= convergence_tolerance) {
-      printoutf(
+      printout(
           "NLTE (Spencer-Fano/Te/pops) solver nne converged to tolerance %g <= %g and T_e to "
           "tolerance %g <= %g after %d iterations.\n",
           fracdiff_nne, convergence_tolerance, fracdiff_T_e, convergence_tolerance, nlte_iter + 1);
       break;
     }
     if (nlte_iter == NLTEITER) {
-      printoutf(
+      printout(
           "WARNING: NLTE solver failed to converge after %d iterations. Keeping solution from "
           "last iteration\n",
           nlte_iter + 1);
@@ -802,7 +802,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
             globals::gammaestimator[ionestimindex] / get_corrphotoioncoeff_ana(element, ion, 0, 0, mgi);
 
         if (!std::isfinite(globals::corrphotoionrenorm[ionestimindex])) {
-          printoutf(
+          printout(
               "[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / "
               "get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
               element, ion, 0, 0, mgi, globals::gammaestimator[ionestimindex],
@@ -853,7 +853,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
           globals::bfheatingestimator[ionestimindex] = globals::bfheatingestimator[ionestimindex] / bfheatingcoeff_ana;
 
           if (!std::isfinite(globals::bfheatingestimator[ionestimindex])) {
-            printoutf(
+            printout(
                 "[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / "
                 "get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
                 element, ion, 0, 0, mgi, globals::bfheatingestimator[ionestimindex], bfheatingcoeff_ana);
@@ -899,7 +899,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
   const auto sys_time_start_update_cell = std::time(nullptr);
 
-  printoutf("update_grid_cell: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
+  printout("update_grid_cell: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
 
   // Update current mass density of cell
   grid::set_rho(mgi, grid::get_rho_tmin(mgi) / pow(tratmid, 3));
@@ -920,7 +920,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     grid::modelgrid[mgi].thick = 1;
 
     if (globals::opacity_case == 3) {
-      // printoutf("update_grid: opacity_case 3 ... updating globals::cell[n].chi_grey"); //MK
+      // printout("update_grid: opacity_case 3 ... updating globals::cell[n].chi_grey"); //MK
       if (grid::get_rho(mgi) > globals::rho_crit) {
         grid::set_kappagrey(mgi, globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1) * globals::rho_crit /
                                      grid::get_rho(mgi));
@@ -944,15 +944,15 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     // last timestep. Therefore it has no valid Gamma estimators and must
     // be treated in LTE at restart.
     if (grid::modelgrid[mgi].thick != 1 && grid::get_W(mgi) == 1) {
-      printoutf(
+      printout(
           "force modelgrid cell %d to grey/LTE thick = 1 for update grid since existing W == 1. (will not have "
           "gamma estimators)\n",
           mgi);
       grid::modelgrid[mgi].thick = 1;
     }
 
-    printoutf("lte_iteration %d\n", globals::lte_iteration ? 1 : 0);
-    printoutf("mgi %d modelgrid.thick: %d (during grid update)\n", mgi, grid::modelgrid[mgi].thick);
+    printout("lte_iteration %d\n", globals::lte_iteration ? 1 : 0);
+    printout("mgi %d modelgrid.thick: %d (during grid update)\n", mgi, grid::modelgrid[mgi].thick);
 
     for (int element = 0; element < get_nelements(); element++) {
       calculate_cellpartfuncts(mgi, element);
@@ -1026,8 +1026,8 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
       solve_Te_nltepops(mgi, nonemptymgi, nts, titer, heatingcoolingrates);
     }
-    printoutf("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", mgi, nts,
-              std::time(nullptr) - sys_time_start_temperature_corrections);
+    printout("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", mgi, nts,
+             std::time(nullptr) - sys_time_start_temperature_corrections);
   }
 
   const float nne = grid::get_nne(mgi);
@@ -1038,19 +1038,19 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
   // cube corners will have radial pos > rmax, so clamp to 0.
   const double dist_to_obs = std::max(0., (globals::rmax * tratmid) - radial_pos);
   const double grey_optical_depth = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * dist_to_obs;
-  printoutf(
+  printout(
       "modelgridcell %d, compton optical depth (/propgridcell) %g, grey optical depth "
       "(/propgridcell) %g\n",
       mgi, compton_optical_depth, grey_optical_deptha);
-  printoutf("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, dist_to_obs, grey_optical_depth);
+  printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, dist_to_obs, grey_optical_depth);
 
   grid::modelgrid[mgi].grey_depth = grey_optical_depth;
 
   // grey_optical_depth = compton_optical_depth;
 
   if ((grey_optical_depth >= globals::cell_is_optically_thick) && (nts < globals::num_grey_timesteps)) {
-    printoutf("timestep %d cell %d is treated in grey approximation (chi_grey %g [cm2/g], tau %g >= %g)\n", nts, mgi,
-              grid::get_kappagrey(mgi), grey_optical_depth, globals::cell_is_optically_thick);
+    printout("timestep %d cell %d is treated in grey approximation (chi_grey %g [cm2/g], tau %g >= %g)\n", nts, mgi,
+             grid::get_kappagrey(mgi), grey_optical_depth, globals::cell_is_optically_thick);
     grid::modelgrid[mgi].thick = 1;
   } else if (VPKT_ON && (grey_optical_depth > cell_is_optically_thick_vpkt)) {
     grid::modelgrid[mgi].thick = 2;
@@ -1066,7 +1066,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
   } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial) {
     // cooling rates were read from the gridsave file for this timestep
     // make sure they are valid
-    printoutf("cooling rates read from gridsave file for timestep %d cell %d...", nts, mgi);
+    printout("cooling rates read from gridsave file for timestep %d cell %d...", nts, mgi);
     assert_always(grid::modelgrid[mgi].totalcooling >= 0.);
     assert_always(grid::modelgrid[mgi].ion_cooling_contribs[0] >= 0.);
   } else {
@@ -1074,13 +1074,13 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     // and ion contributions inside update grid and communicate between MPI tasks
     const auto sys_time_start_calc_kpkt_rates = std::time(nullptr);
 
-    printoutf("calculating cooling_rates for timestep %d cell %d...", nts, mgi);
+    printout("calculating cooling_rates for timestep %d cell %d...", nts, mgi);
 
     // don't pass pointer to heatingcoolingrates because current populations and rates weren't
     // used to determine T_e
     kpkt::calculate_cooling_rates(mgi, nullptr);
 
-    printoutf("took %ld seconds\n", std::time(nullptr) - sys_time_start_calc_kpkt_rates);
+    printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calc_kpkt_rates);
   }
 
   if constexpr (EXPANSIONOPACITIES_ON || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
@@ -1091,7 +1091,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
   const int update_grid_cell_seconds = std::time(nullptr) - sys_time_start_update_cell;
   if (update_grid_cell_seconds > 0) {
-    printoutf("update_grid_cell for cell %d timestep %d took %d seconds\n", mgi, nts, update_grid_cell_seconds);
+    printout("update_grid_cell for cell %d timestep %d took %d seconds\n", mgi, nts, update_grid_cell_seconds);
   }
 }
 
@@ -1104,12 +1104,11 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 // nts timestep
 {
   const auto sys_time_start_update_grid = std::time(nullptr);
-  printoutf("\n");
-  printoutf("timestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g days\n", nts,
-            sys_time_start_update_grid, sys_time_start_update_grid - real_time_start,
-            globals::timesteps[nts].mid / DAY);
+  printout("\n");
+  printout("timestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g days\n", nts,
+           sys_time_start_update_grid, sys_time_start_update_grid - real_time_start, globals::timesteps[nts].mid / DAY);
 
-  // printoutf("[debug] update_grid: starting update for timestep %d...\n",m);
+  // printout("[debug] update_grid: starting update for timestep %d...\n",m);
   const double tratmid = globals::timesteps[nts].mid / globals::tmin;
 
   // Calculate the critical opacity at which opacity_case 3 switches from a
@@ -1119,14 +1118,14 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // globals::timesteps[m].mid;
   globals::rho_crit = ME * CLIGHT * decay::nucmass(28, 56) /
                       (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::timesteps[nts].mid);
-  printoutf("update_grid: rho_crit = %g\n", globals::rho_crit);
+  printout("update_grid: rho_crit = %g\n", globals::rho_crit);
 
   // These values will not be used if nts == 0, but set them anyway
   // nts_prev is the previous timestep, unless this is timestep zero
   const double deltat = globals::timesteps[nts_prev].width;
 
-  // printoutf("timestep %d, titer %d\n", nts, titer);
-  // printoutf("deltat %g\n", deltat);
+  // printout("timestep %d, titer %d\n", nts, titer);
+  // printout("deltat %g\n", deltat);
 
   cellcache_change_cell(-99);
 
@@ -1175,15 +1174,15 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // #endif
 
   globals::max_path_step = std::min(1.e35, globals::rmax / 10.);
-  printoutf("max_path_step %g\n", globals::max_path_step);
+  printout("max_path_step %g\n", globals::max_path_step);
 
   const auto time_update_grid_end_thisrank = std::time(nullptr);
-  printoutf("finished update grid on this rank at time %ld\n", time_update_grid_end_thisrank);
+  printout("finished update grid on this rank at time %ld\n", time_update_grid_end_thisrank);
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
-  printoutf(
+  printout(
       "timestep %d: time after update grid for all processes %ld (rank %d took %lds, waited "
       "%lds, total %lds)\n",
       nts, std::time(nullptr), my_rank, time_update_grid_end_thisrank - sys_time_start_update_grid,

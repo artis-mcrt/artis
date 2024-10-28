@@ -230,8 +230,8 @@ inline auto get_elementindex(const int Z) -> int {
     return static_cast<int>(elem - globals::elements.begin());
   }
 
-  // printoutf("[debug] get_elementindex: element Z=%d was not found in atomic data ... skip readin of cross sections
-  // for this element\n",Z); printoutf("[fatal] get_elementindex: element Z=%d was not found in atomic data ...
+  // printout("[debug] get_elementindex: element Z=%d was not found in atomic data ... skip readin of cross sections
+  // for this element\n",Z); printout("[fatal] get_elementindex: element Z=%d was not found in atomic data ...
   // abort\n"); abort();;
   return -100;
 }
