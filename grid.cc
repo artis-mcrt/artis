@@ -451,7 +451,7 @@ void allocate_nonemptymodelcells() {
   const auto ionestimcount = nonempty_npts_model * globals::nbfcontinua_ground;
   const auto ionestimsize = ionestimcount * sizeof(double);
 
-  if (USE_LUT_PHOTOION && ionestimsize > 0) {
+  if (ionestimsize > 0) {
 #ifdef MPI_ON
     const auto [_, noderank_nonemptycellcount] =
         get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
@@ -1385,7 +1385,6 @@ void setup_grid_cartesian_3d() {
     for (int axis = 0; axis < 3; axis++) {
       assert_always(nxyz[axis] == get_cellcoordpointnum(n, axis));
       cell[n].pos_min[axis] = -globals::rmax + (2 * nxyz[axis] * globals::rmax / ncoordgrid[axis]);
-      // cell[n].xyz[axis] = nxyz[axis];
     }
 
     assert_always(n == nxyz[2] * ncoordgrid[1] * ncoordgrid[2] + nxyz[1] * ncoordgrid[0] + nxyz[0]);

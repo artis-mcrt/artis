@@ -68,7 +68,7 @@ inline auto get_nlevels(const int element, const int ion) -> int {
 }
 
 // Return the number of levels associated with an ion that have energies below the ionisation threshold.
-[[nodiscard]] inline auto get_ionisinglevels(const int element, const int ion) -> int {
+[[nodiscard]] inline auto get_nlevels_ionising(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].ionisinglevels;
@@ -81,7 +81,7 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
   assert_testmodeonly(ion < get_nions(element));
   const auto nphixstargets = globals::elements[element].ions[ion].levels[level].nphixstargets;
   assert_testmodeonly(nphixstargets == 0 ||
-                      ((ion < (get_nions(element) - 1)) && (level < get_ionisinglevels(element, ion))));
+                      ((ion < (get_nions(element) - 1)) && (level < get_nlevels_ionising(element, ion))));
   return nphixstargets;
 }
 

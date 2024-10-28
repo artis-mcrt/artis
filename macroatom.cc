@@ -106,9 +106,7 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   double sum_radrecomb = 0.;
   double sum_colrecomb = 0.;
   if (ion > 0 && level <= get_maxrecombininglevel(element, ion)) {
-    // nlevels = get_nlevels(element,ion-1);
-    const int nlevels = get_ionisinglevels(element, ion - 1);
-    // nlevels = get_ionisinglevels(element,ion-1);
+    const int nlevels = get_nlevels_ionising(element, ion - 1);
     for (int lower = 0; lower < nlevels; lower++) {
       const double epsilon_target = epsilon(element, ion - 1, lower);
       const double epsilon_trans = epsilon_current - epsilon_target;
@@ -129,7 +127,7 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   // Transitions to higher ionisation stages
   double sum_up_highernt = 0.;
   double sum_up_higher = 0.;
-  const int ionisinglevels = get_ionisinglevels(element, ion);
+  const int ionisinglevels = get_nlevels_ionising(element, ion);
   if (ion < get_nions(element) - 1 && level < ionisinglevels) {
     if (NT_ON) {
       sum_up_highernt = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
@@ -231,7 +229,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   // Randomly select a continuum
   const double targetval = rng_uniform() * rad_recomb;
   double rate = 0;
-  const int nlevels = get_ionisinglevels(element, upperion - 1);
+  const int nlevels = get_nlevels_ionising(element, upperion - 1);
   int lowerionlevel = 0;
   for (lowerionlevel = 0; lowerionlevel < nlevels; lowerionlevel++) {
     const double epsilon_trans = epsilon_current - epsilon(element, upperion - 1, lowerionlevel);
@@ -496,8 +494,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         double rate = 0.;
         // nlevels = get_nlevels(element,ion-1);
 
-        const int nlevels = get_ionisinglevels(element, ion - 1);
-        // nlevels = get_ionisinglevels(element,ion-1);
+        const int nlevels = get_nlevels_ionising(element, ion - 1);
+        // nlevels = get_nlevels_ionising(element,ion-1);
         int lower = 0;
         for (lower = 0; lower < nlevels; lower++) {
           const double epsilon_target = epsilon(element, ion - 1, lower);
