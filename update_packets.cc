@@ -413,7 +413,7 @@ void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
         packets, [ts_end](const auto &pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
 
     const int cellcacheresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
-    printout(
+    printoutf(
         "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellcacheresets %7d (took %lds)\n",
         nts, passnumber, std::time(nullptr), count_pktupdates, cellcacheresets,
         std::time(nullptr) - sys_time_start_pass);
