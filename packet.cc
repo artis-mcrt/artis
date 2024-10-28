@@ -133,14 +133,10 @@ void packet_init(Packet *pkt)
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
-  if (globals::npkts > MPKTS) {
-    printout("Too many packets. Abort.\n");
-    std::abort();
-  }
-
   printout("Placing pellets...\n");
   auto allpkts = std::ranges::iota_view{0, globals::npkts};
   std::ranges::for_each(allpkts, [&, norm, e0](const int n) {
+    pkt[n] = Packet{};
     const double targetval = rng_uniform() * norm;
 
     // first i such that en_cumulative[i] > targetval

@@ -883,7 +883,7 @@ auto main(int argc, char *argv[]) -> int {
     }
   }
 
-  auto *const packets = static_cast<Packet *>(malloc(MPKTS * sizeof(Packet)));
+  auto *const packets = static_cast<Packet *>(malloc(globals::npkts * sizeof(Packet)));
 
   assert_always(packets != nullptr);
 
@@ -965,7 +965,7 @@ auto main(int argc, char *argv[]) -> int {
   printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts,
            1. * globals::npkts * globals::nprocs, globals::nprocs);
 
-  printout("[info] mem_usage: packets occupy %.3f MB\n", MPKTS * sizeof(Packet) / 1024. / 1024.);
+  printout("[info] mem_usage: packets occupy %.3f MB\n", globals::npkts * sizeof(Packet) / 1024. / 1024.);
 
   if (!globals::simulation_continued_from_saved) {
     std::remove("deposition.out");
