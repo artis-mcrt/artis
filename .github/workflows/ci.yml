@@ -140,7 +140,7 @@ jobs:
 
             - name: Checksum job0 output files
               #if: always()
-              if: always() && matrix.testmode == 'OFF'
+              if: always()
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   md5sum *.out job0/*.out | tee ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
@@ -205,7 +205,7 @@ jobs:
 
             - name: Checksum job1 output files
               #if: always()
-              if: always() && matrix.testmode == 'OFF'
+              if: always()
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   md5sum *.out job1/*.out | tee ../${{ matrix.testname }}_inputfiles/results_md5_final.txt
