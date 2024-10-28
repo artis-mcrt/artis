@@ -62,8 +62,7 @@ CXXFLAGS += -std=c++20 -fstrict-aliasing
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
 
 ifneq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -MD -MP
-	# add -ftrivial-auto-var-init=zero when we drop gcc 11 support
+	CXXFLAGS += -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -MD -MP -ftrivial-auto-var-init=pattern
 endif
 
 # profile-guided optimisation
