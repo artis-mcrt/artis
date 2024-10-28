@@ -127,9 +127,6 @@ auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, con
       C_deexc += C;
     }
   }
-  // const double nnion = get_nnion(modelgridindex, element, ion);
-  // printout("ion_col_deexc_heating: T_e %g nne %g Z=%d ionstage %d nnion %g heating_contrib %g contrib/nnion %g\n",
-  // T_e, nne, get_atomicnumber(element), get_ionstage(element, ion), nnion, C_deexc, C_deexc / nnion);
   return C_deexc;
 }
 
@@ -233,7 +230,6 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   const double volumetmin = grid::get_modelcell_assocvolume_tmin(modelgridindex);
   const double dV = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);  // really dV/dt
   const double V = volumetmin * pow(t_current / globals::tmin, 3);
-  // printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
   heatingcoolingrates->cooling_adiabatic = p * dV / V;
 
   const double total_heating_rate = heatingcoolingrates->heating_ff + heatingcoolingrates->heating_bf +

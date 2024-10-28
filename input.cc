@@ -219,12 +219,9 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
       // the photoionisation cross-sections in the database are given in Mbarn = 1e6 * 1e-28m^2
       // to convert to cgs units multiply by 1e-18
       levelphixstable[i] = phixs * 1e-18;
-      // fprintf(database_file,"%g %g\n", nutable[i], phixstable[i]);
     }
   }
 
-  // nbfcontinua++;
-  // printout("[debug] element %d, ion %d, level %d: phixs exists %g\n",element,lowerion,lowerlevel,phixs*1e-18);
   globals::nbfcontinua += get_nphixstargets(element, lowerion, lowerlevel);
   if (lowerlevel == 0 && get_nphixstargets(element, lowerion, lowerlevel) > 0) {
     globals::nbfcontinua_ground++;
@@ -446,8 +443,6 @@ void read_ion_transitions(std::fstream &ftransitiondata, const int tottransition
           if (tmplevel == prev_lower) {
             continue;
           }
-          // printout("+adding transition index %d Z=%02d ionstage %d lower %d upper %d\n", i, Z, ionstage, prev_lower,
-          // tmplevel);
           tottransitions++;
           assert_always(tmplevel >= 0);
           iontransitiontable.push_back(
@@ -457,9 +452,6 @@ void read_ion_transitions(std::fstream &ftransitiondata, const int tottransition
 
       iontransitiontable.push_back(
           {.lower = lower, .upper = upper, .A = A, .coll_str = coll_str, .forbidden = (intforbidden == 1)});
-      // printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
-      //  printout("reading transition index %d lower %d upper %d\n", i, transitiontable[i].lower,
-      //  transitiontable[i].upper);
       prev_lower = lower;
       prev_upper = upper;
     }
@@ -1013,7 +1005,6 @@ void read_atomicdata_files() {
     double ionpot = 0.;
     for (int ion = 0; ion < nions; ion++) {
       int nlevelsmax = nlevelsmax_readin;
-      // printout("element %d ion %d\n", element, ion);
       // calculate the current levels ground level energy
       assert_always(ionpot >= 0);
       energyoffset += ionpot;
@@ -1643,8 +1634,6 @@ void input(int rank) {
 auto get_noncommentline(std::fstream &input, std::string &line) -> bool {
   while (true) {
     const bool linefound = !(!std::getline(input, line));
-    // printout("LINE: >%s<  linefound: %s commentonly: %s \n", line.c_str(), linefound ? "true" : "false",
-    // lineiscommentonly(line) ? "true" : "false");
     if (!linefound) {
       return false;
     }

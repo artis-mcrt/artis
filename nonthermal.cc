@@ -452,7 +452,6 @@ void read_auger_data() {
           assert_always(fabs(prob_sum - 1.0) < 0.001);
 
           printout("\n");
-          // printout("ionpot %g %g, g %d\n", colliondata[i].ionpot_ev, ionpot_ev, g);
           const bool found_existing_data = (collionrow.auger_g_accumulated > 0.);
 
           // keep existing data but update according to statistical weight represented by existing and new data
@@ -642,9 +641,6 @@ void read_collion_data() {
     collionrow.n_auger_elec_avg = 0.;
 
     colliondata.push_back(collionrow);
-
-    // printout("ci row: %2d %2d %1d %1d %lg %lg %lg %lg %lg\n", collionrow.Z, collionrow.nelec, collionrow.n,
-    //          collionrow.l, collionrow.ionpot_ev, collionrow.A, collionrow.B, collionrow.C, collionrow.D);
   }
   printout("Stored %zu of %d input shell cross sections\n", colliondata.size(), colliondatacount);
   for (int element = 0; element < get_nelements(); element++) {
@@ -1900,9 +1896,6 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrixuppertri, const int Z,
 
       assert_always(ionpot_ev >= SF_EMIN);
 
-      // printout("Z=%2d ionstage %d n %d l %d ionpot %g eV\n",
-      //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
-
       const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, collionrow);
       assert_always(xsstartindex >= 0);
       // Luke Shingles: the use of min and max on the epsilon limits keeps energies
@@ -2012,15 +2005,12 @@ auto sfmatrix_solve(const std::vector<double> &sfmatrix) -> std::array<double, S
   const auto &gsl_sfmatrix_LU = gsl_sfmatrix;
 
   // if the matrix is not upper triangular, then do a decomposition
-  // printout("Doing LU decomposition of SF matrix\n");
   // make a copy of the matrix for the LU decomp
   // std::array<double, SFPTS> sfmatrix_LU{};
   // auto gsl_sfmatrix_LU = gsl_matrix_view_array(sfmatrix_LU.data(), SFPTS, SFPTS).matrix;
   // gsl_matrix_memcpy(&gsl_sfmatrix_LU, &gsl_sfmatrix);
   // int s{};  // sign of the transformation
   // gsl_linalg_LU_decomp(&gsl_sfmatrix_LU, &p, &s);
-
-  // printout("Solving SF matrix equation\n");
 
   std::array<double, SFPTS> yvec_arr{};
   auto gsl_yvec = gsl_vector_view_array(yvec_arr.data(), SFPTS).vector;
@@ -2029,7 +2019,8 @@ auto sfmatrix_solve(const std::vector<double> &sfmatrix) -> std::array<double, S
 
   // solve matrix equation: sf_matrix * y_vec = rhsvec for yvec
   gsl_linalg_LU_solve(&gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec);
-  // printout("Refining solution\n");
+
+  // refine the solution
 
   double error_best = -1.;
   std::array<double, SFPTS> yvec_best{};
@@ -2057,7 +2048,7 @@ auto sfmatrix_solve(const std::vector<double> &sfmatrix) -> std::array<double, S
       gsl_vector_memcpy(&gsl_yvec_best, &gsl_yvec);
       error_best = error;
     }
-    // printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
+    // printout("Linear algebra solver iteration %d has a maximum residual of %g\n", iteration, error);
   }
   if (error_best >= 0.) {
     if (error_best > 1e-10) {
@@ -2370,9 +2361,6 @@ __host__ __device__ auto nt_ionization_ratecoeff(const int modelgridindex, const
       // probably because eff_ionpot = 0 because the solver hasn't been run yet, or no impact ionization cross sections
       // exist
       const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
-      // printout("Warning: Spencer-Fano solver gives non-finite ionization rate (%g) for element %d ionstage %d for
-      // cell %d. Using WF approx instead = %g\n",
-      //          Y_nt, get_atomicnumber(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
       return Y_nt_wfapprox;
     }
     if (Y_nt <= 0) {
@@ -2474,9 +2462,6 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
                                    pkt.e_cmf);
       }
 
-      // printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d to %d\n",
-      //          modelgridindex, get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element,
-      //          upperion));
       do_macroatom(pkt, {.element = element, .ion = upperion, .level = 0, .activatingline = -99});
       return;
     }
@@ -2505,9 +2490,6 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
           pkt.trueemissionvelocity = -1;
 
           stats::increment(stats::COUNTER_NT_STAT_TO_EXCITATION);
-
-          // printout("NTLEPTON packet selected in cell %d excitation of Z=%d ionstage %d level %d upperlevel %d\n",
-          //          modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), lower, upper);
 
           do_macroatom(pkt, {.element = element, .ion = ion, .level = upper, .activatingline = -99});
           return;
@@ -2664,10 +2646,8 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   }
 
   // printout("SF matrix | RHS vector:\n");
-  // for (int row = 0; row < 10; row++)
-  // {
-  //   for (int column = 0; column < 10; column++)
-  //   {
+  // for (int row = 0; row < 10; row++) {
+  //   for (int column = 0; column < 10; column++) {
   //     char str[15];
   //     snprintf(str, 15, "%+.1e ", gsl_matrix_get(sfmatrix, row, column));
   //     printout(str);
@@ -2802,11 +2782,6 @@ void nt_MPI_Bcast(const int modelgridindex, const int root, const int root_node_
   if (grid::get_numassociatedcells(modelgridindex) == 0) {
     return;
   }
-
-  // printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ionstage %d): %g, eff_ionpot %g eV\n",
-  //          modelgridindex, logged_element_z, logged_ionstage,
-  //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
-  //          get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
 
   MPI_Bcast(&deposition_rate_density_all_cells[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 

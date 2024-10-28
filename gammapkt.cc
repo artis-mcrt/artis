@@ -296,13 +296,10 @@ auto choose_f(const double xx, const double zrand) -> double
   int count = 0;
   double err = 1e20;
 
-  // printout("new\n");
-
   double ftry = (f_max + f_min) / 2;
   while ((err > 1.e-4) && (count < 1000)) {
     ftry = (f_max + f_min) / 2;
     const double sigma_try = sigma_compton_partial(xx, ftry);
-    // printout("ftry %g %g %g %g %g\n",ftry, f_min, f_max, try, norm);
     if (sigma_try > norm) {
       f_max = ftry;
       err = (sigma_try - norm) / norm;
@@ -780,8 +777,6 @@ void transport_gamma(Packet &pkt, const double t2) {
 
   assert_always(tdist >= 0);
 
-  // printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
-
   if ((sdist < tdist) && (sdist < edist)) {
     move_pkt_withtime(pkt, sdist / 2.);
 
@@ -1056,9 +1051,6 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   }
 
   pkt.pol_dir = vec_norm(pkt.pol_dir);
-  // printout("initialise pol state of packet %g, %g, %g, %g,
-  // %g\n",pkt.stokes_qu[0],pkt.stokes_qu[1],pkt.pol_dir[0],pkt.pol_dir[1],pkt.pol_dir[2]);
-  // printout("pkt direction %g, %g, %g\n",pkt.dir[0],pkt.dir[1],pkt.dir[2]);
 }
 
 __host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {

@@ -1094,7 +1094,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   printout("timestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g days\n", nts,
            sys_time_start_update_grid, sys_time_start_update_grid - real_time_start, globals::timesteps[nts].mid / DAY);
 
-  // printout("[debug] update_grid: starting update for timestep %d...\n",m);
   const double tratmid = globals::timesteps[nts].mid / globals::tmin;
 
   // Calculate the critical opacity at which opacity_case 3 switches from a
@@ -1109,9 +1108,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // These values will not be used if nts == 0, but set them anyway
   // nts_prev is the previous timestep, unless this is timestep zero
   const double deltat = globals::timesteps[nts_prev].width;
-
-  // printout("timestep %d, titer %d\n", nts, titer);
-  // printout("deltat %g\n", deltat);
 
   cellcache_change_cell(-99);
 

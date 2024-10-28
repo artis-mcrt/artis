@@ -111,9 +111,6 @@ void read_possible_yefile() {
     const int mgi = mgiplusone - 1;
     if (mgi >= 0 && mgi < get_npts_model()) {
       set_initelectronfrac(mgi, initelecfrac);
-      // printout("Ye.txt: setting mgi %d init_ye %g\n", mgi, initelecfrac);
-    } else {
-      // printout("Ye.txt: ignoring mgi %d init_ye %g\n", mgi, initelecfrac);
     }
   }
   fclose(filein);
@@ -1021,8 +1018,6 @@ void read_3d_model() {
     std::istringstream ssline(line);
 
     assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model);
-    // printout("cell %d, posz %g, posy %g, posx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model*
-    // pow( (t_model/globals::tmin), 3.));
 
     if (mgi == 0) {
       first_cellindex = cellnumberin;
@@ -2378,7 +2373,6 @@ void grid_init(const int my_rank) {
 
       if (totmassradionuclide_actual > 0.) {
         const double ratio = totmassradionuclide[nucindex] / totmassradionuclide_actual;
-        // printout("nuclide %d ratio %g\n", nucindex, ratio);
         for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
           const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
           const double prev_abund = get_modelinitnucmassfrac(mgi, nucindex);
@@ -2469,7 +2463,6 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   const auto negdirections = std::array<enum cell_boundary, 3>{COORD0_MIN, COORD1_MIN, COORD2_MIN};
   const auto posdirections = std::array<enum cell_boundary, 3>{COORD0_MAX, COORD1_MAX, COORD2_MAX};
 
-  // printout("checking inside cell boundary\n");
   for (int d = 0; d < ndim; d++) {
     // flip is either zero or one to indicate +ve and -ve boundaries along the selected axis
     for (int flip = 0; flip < 2; flip++) {
@@ -2524,14 +2517,6 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
       }
     }
   }
-
-  // printout("pkt.number %d\n", pkt.number);
-  // printout("delta1x %g delta2x %g\n",  (initpos[0] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 0),
-  // cellcoordmax[0] - (initpos[0] * globals::tmin/tstart)); printout("delta1y %g delta2y %g\n",  (initpos[1] *
-  // globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 1), cellcoordmax[1] - (initpos[1] *
-  // globals::tmin/tstart)); printout("delta1z %g delta2z %g\n",  (initpos[2] *
-  // globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 2), cellcoordmax[2] - (initpos[2] *
-  // globals::tmin/tstart)); printout("dir [%g, %g, %g]\n", dir[0],dir[1],dir[2]);
 
   // distance to reach the cell's upper boundary on each coordinate
   auto d_coordmaxboundary = std::array<double, 3>{-1};

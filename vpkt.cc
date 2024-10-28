@@ -313,7 +313,6 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
           // the excluded line
 
           vpkt.next_trans -= 1;
-          // printout("ldist > sdist : line in the next cell\n");
           break;
         }
 
