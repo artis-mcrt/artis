@@ -114,15 +114,6 @@ inline void print_line_start() {
   }
 }
 
-#define printout(...)                                                       \
-  {                                                                         \
-    print_line_start();                                                     \
-    snprintf(outputlinebuf, sizeof(outputlinebuf), __VA_ARGS__);            \
-    outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n'); \
-    output_file << outputlinebuf;                                           \
-    output_file.flush();                                                    \
-  }
-
 __attribute__((__format__(__printf__, 1, 2))) inline auto printoutf(const char *format, ...) -> void {
   print_line_start();
   va_list args{};
