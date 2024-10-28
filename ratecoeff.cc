@@ -536,8 +536,6 @@ void read_recombrate_file() {
   int tablerows = 0;
 
   while (fscanf(recombrate_file, "%d %d %d\n", &atomicnumber, &upperionstage, &tablerows) > 0) {
-    // printout("%d %d %d\n", atomicnumber, upperionstage, tablerows);
-
     RRCRow T_highestbelow = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
     RRCRow T_lowestabove = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
     T_highestbelow.log_Te = -1;
@@ -984,8 +982,6 @@ __host__ __device__ auto get_spontrecombcoeff(int element, const int ion, const 
 
     const double f_upper = spontrecombcoeffs[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
     const double f_lower = spontrecombcoeffs[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
-    // printout("interpolate_spontrecombcoeff element %d, ion %d, level %d, upper %g, lower %g\n",
-    //          element,ion,level,f_upper,f_lower);
     Alpha_sp = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   } else {
     Alpha_sp = spontrecombcoeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
@@ -1310,7 +1306,6 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
       }
 
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-      // printout("%g %g %g\n", get_levelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
 
       if (nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) > 0) {
         return false;
@@ -1348,8 +1343,6 @@ auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, c
       Col_ion += nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
     }
   }
-  // printout("element %d ion %d: col/gamma %g Te %g ne %g\n", element, ion, Col_ion/Gamma, grid::get_Te(n),
-  // grid::get_nne(n));
   Gamma += Col_ion;
   Gamma /= get_groundlevelpop(modelgridindex, element, ion);
   return Gamma;

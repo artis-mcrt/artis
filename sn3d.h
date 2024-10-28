@@ -17,6 +17,7 @@
 #include <atomic>
 #include <cassert>
 #include <csignal>
+#include <cstdarg>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
@@ -112,14 +113,17 @@ inline void print_line_start() {
   }
 }
 
-#define printout(...)                                                       \
-  {                                                                         \
-    print_line_start();                                                     \
-    snprintf(outputlinebuf, sizeof(outputlinebuf), __VA_ARGS__);            \
-    outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n'); \
-    output_file << outputlinebuf;                                           \
-    output_file.flush();                                                    \
-  }
+__attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *format, ...) -> void {
+  print_line_start();
+  va_list args{};
+  va_start(args, format);
+  vsnprintf(outputlinebuf, sizeof(outputlinebuf), format, args);
+  va_end(args);
+
+  outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n');
+  output_file << outputlinebuf;
+  output_file.flush();
+}
 
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \

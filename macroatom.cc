@@ -682,8 +682,8 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
     }
 
     // printout("[debug] rad_rates_down: Z=%d, ionstage %d, upper %d, lower %d\n", get_atomicnumber(element),
-    // get_ionstage(element, ion), upper, lower); printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n", A_ul,
-    // tau_sobolev, n_u);
+    // get_ionstage(element, ion), upper, lower); printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n",
+    // A_ul, tau_sobolev, n_u);
     assert_testmodeonly(std::isfinite(R));
   }
 

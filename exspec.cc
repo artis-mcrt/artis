@@ -82,7 +82,6 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
     int nesc_gamma = 0;
     int nesc_rpkt = 0;
     for (int ii = 0; ii < globals::npkts; ii++) {
-      // printout("packet %d escape_type %d type %d", ii, pkts[ii].escape_type, pkts[ii].type);
       if (pkts_start[ii].type == TYPE_ESCAPE) {
         nesc_tot++;
         if (pkts_start[ii].escape_type == TYPE_RPKT) {

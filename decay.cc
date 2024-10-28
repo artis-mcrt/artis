@@ -973,9 +973,6 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
         nuclides[alphanucindex].endecay_q[DECAYTYPE_BETAMINUS] = Q_total_betadec * MEV;
         nuclides[alphanucindex].branchprobs[DECAYTYPE_ALPHA] = branch_alpha;
         nuclides[alphanucindex].endecay_q[DECAYTYPE_ALPHA] = Q_total_alphadec * MEV;
-
-        // printout("alphadecay file: Adding (Z=%d)%s%d endecay_alpha %g endecay_gamma %g tau_s %g\n",
-        //          z, get_elname(z), a, e_alpha_mev, e_gamma_mev, tau_sec);
       }
     }
   }

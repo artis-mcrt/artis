@@ -1175,11 +1175,6 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
           }
 
           nnlevelnlte = slpopfactor * superlevel_partfunc;
-
-          // printout("nltepop_write_to_file: The Z=%d ionstage %d superlevel population is %g with rho %g and
-          // superlevel_partfunc %g Te %g scaled pop stored as %g\n", get_atomicnumber(element), get_ionstage(element,
-          // ion), nnlevelnlte, grid::modelgrid[modelgridindex].rho, superlevel_partfunc, grid::get_Te(modelgridindex),
-          // grid::modelgrid[modelgridindex].nlte_pops[ion_first_nlte + nlevels_nlte]);
         }
 
         const double ion_popfrac = nnlevelnlte / get_nnion(modelgridindex, element, ion);
