@@ -79,7 +79,6 @@ jobs:
               uses: actions/setup-python@v5
               with:
                   cache: pip
-                  python-version: '3.12'
 
             - name: Generate compile_commands.json
               run: |
@@ -103,7 +102,6 @@ jobs:
             matrix:
                 compiler:
                     [
-                        {name: gcc, ver: 11},
                         {name: gcc, ver: 12},
                         {name: gcc, ver: 13},
                         {name: gcc, ver: 14},
