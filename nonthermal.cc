@@ -47,31 +47,6 @@ namespace nonthermal {
 
 namespace {
 
-// THESE OPTIONS ARE USED TO TEST THE SF SOLVER
-// Compare to Kozma & Fransson (1992) pure-oxygen plasma, nne = 1e8, x_e = 0.01
-// #define yscalefactoroverride(mgi) (1e10)
-// #define get_nnion_tot(x) (1e10)
-// #define get_nnion(modelgridindex, element, ion) get_nnion_override(modelgridindex, element, ion)
-// #define grid::get_nne(x) (1e8)
-// #define SFPTS 10000  // number of energy points in the Spencer-Fano solution vector
-// #define SF_EMAX 3000. // eV
-// #define SF_EMIN 1. // eV
-//
-// double get_nnion_override(const int modelgridindex, const int element, const int ion)
-// Fake the composition to test the NT solver
-// {
-//   const double nntot = get_nnion_tot(modelgridindex);
-//   if (get_atomicnumber(element) == 8)
-//   {
-//     const int ionstage = get_ionstage(element, ion);
-//     if (ionstage == 1)
-//       return 0.99 * nntot;
-//     else if (ionstage == 2)
-//       return 0.01 * nntot;
-//   }
-//   return 0.;
-// }
-
 // minimum number fraction of the total population to include in SF solution
 constexpr double minionfraction = 1.e-8;
 
@@ -847,11 +822,7 @@ void nt_write_to_file(const int modelgridindex, const int timestep, const int it
       }
     }
 
-#ifndef yscalefactoroverride  // manual override can be defined
-    const double yscalefactor = (get_deposition_rate_density(modelgridindex) / (E_init_ev * EV));
-#else
-  const double yscalefactor = yscalefactoroverride(modelgridindex);
-#endif
+    const double yscalefactor = get_deposition_rate_density(modelgridindex) / (E_init_ev * EV);
 
     for (int s = 0; s < SFPTS; s++) {
       fprintf(nonthermalfile, "%d %d %d %.5e %.5e %.5e\n", timestep, modelgridindex, s, engrid(s), sourcevec(s),
