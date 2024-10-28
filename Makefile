@@ -63,7 +63,6 @@ CXXFLAGS += -std=c++20 -fstrict-aliasing
 
 ifneq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -MD -MP
-	# add -ftrivial-auto-var-init=zero when we drop gcc 11 support
 endif
 
 # profile-guided optimisation
@@ -209,17 +208,19 @@ ifneq ($(MAX_NODE_SIZE),)
 endif
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0
+	CXXFLAGS += -DTESTMODE=true
 
+	CXXFLAGS += -fno-omit-frame-pointer
+	CXXFLAGS += -ftrivial-auto-var-init=pattern
+	CXXFLAGS += -fsanitize=undefined,address
+
+	# libstdc++ (GNU)
 	CXXFLAGS += -D_GLIBCXX_ASSERTIONS
 	# CXXFLAGS += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_BACKTRACE=1
 
-	CXXFLAGS +=  -fno-omit-frame-pointer
-
+	# libc++ (LLVM)
 	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
 	CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG
-
-	CXXFLAGS += -fsanitize=undefined,address
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
@@ -241,7 +242,7 @@ else
 			ifeq ($(COMPILER_NAME),NVHPC)
 				CXXFLAGS += -fast
 			else
-				CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only -fopenmp-simd
+				CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only -ffp-contract=fast -fopenmp-simd
 			endif
 		endif
 	# endif
