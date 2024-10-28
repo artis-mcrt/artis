@@ -374,7 +374,7 @@ void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
 
     std::ranges::SORT_OR_STABLE_SORT(packets, std_compare_packets_bymodelgriddensity);
 
-    printout("  update_packets timestep %d pass %3d: started at %ld\n", nts, passnumber, sys_time_start_pass);
+    printoutf("  update_packets timestep %d pass %3d: started at %ld\n", nts, passnumber, sys_time_start_pass);
 
     const int count_pktupdates = static_cast<int>(std::ranges::count_if(
         packets, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
