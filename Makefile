@@ -32,7 +32,7 @@ else
 endif
 
 ifeq ($(REPRODUCIBLE),ON)
-	CXXFLAGS += -DREPRODUCIBLE=true
+	CXXFLAGS += -DREPRODUCIBLE=true -ffp-contract=off
 	BUILD_DIR := $(BUILD_DIR)_reproducible
 else ifeq ($(REPRODUCIBLE),OFF)
 else ifeq ($(REPRODUCIBLE),)
