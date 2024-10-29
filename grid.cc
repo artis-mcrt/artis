@@ -1851,7 +1851,8 @@ void set_elem_abundance(const int nonemptymgi, const int element, const float ne
 
 // mass fraction of an element (all isotopes combined)
 __host__ __device__ auto get_elem_numberdens(const int modelgridindex, const int element) -> double {
-  const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
+  const auto nonemptymgi = get_modelcell_nonemptymgi(modelgridindex);
+  const double elem_meanweight = grid::get_element_meanweight(nonemptymgi, element);
   return get_elem_abundance(modelgridindex, element) / elem_meanweight * grid::get_rho(modelgridindex);
 }
 
@@ -2002,11 +2003,10 @@ auto get_stable_initabund(const int nonemptymgi, const int element) -> float {
   return initmassfracuntrackedstable_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element];
 }
 
-auto get_element_meanweight(const int mgi, const int element) -> float
+auto get_element_meanweight(const int nonemptymgi, const int element) -> float
 // weight is in grams
 {
   if (USE_CALCULATED_MEANATOMICWEIGHT) {
-    const ptrdiff_t nonemptymgi = get_modelcell_nonemptymgi(mgi);
     const double mu = elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element];
     if (mu > 0) {
       return mu;
@@ -2022,20 +2022,18 @@ void set_element_meanweight(const int nonemptymgi, const int element, const floa
 }
 
 auto get_electronfrac(const int modelgridindex) -> double {
+  const auto nonemptymgi = get_modelcell_nonemptymgi(modelgridindex);
   double nucleondens = 0.;
   for (int element = 0; element < get_nelements(); element++) {
-    nucleondens += get_elem_numberdens(modelgridindex, element) * get_element_meanweight(modelgridindex, element) / MH;
+    nucleondens += get_elem_numberdens(modelgridindex, element) * get_element_meanweight(nonemptymgi, element) / MH;
   }
   return get_nnetot(modelgridindex) / nucleondens;
 }
 
 auto get_initelectronfrac(const int modelgridindex) -> double { return modelgrid[modelgridindex].initelectronfrac; }
 
-auto get_initenergyq(const int modelgridindex) -> double {
-  // q: energy in the model at tmin per gram to use with USE_MODEL_INITIAL_ENERGY option [erg/g]
-
-  return modelgrid[modelgridindex].initenergyq;
-}
+// q: energy in the model at tmin per gram to use with USE_MODEL_INITIAL_ENERGY option [erg/g]
+auto get_initenergyq(const int modelgridindex) -> double { return modelgrid[modelgridindex].initenergyq; }
 
 // get the radial distance from the origin to the centre of the cell at time tmin
 auto get_cellradialposmid(const int cellindex) -> double {
