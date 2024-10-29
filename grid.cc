@@ -155,9 +155,7 @@ void allocate_initradiobund() {
   for (ptrdiff_t mgi = 0; mgi < (npts_model + 1); mgi++) {
     modelgrid[mgi].initnucmassfrac = &initnucmassfrac_allcells[mgi * num_nuclides];
     if (mgi % static_cast<ptrdiff_t>(globals::node_nprocs) == globals::rank_in_node) {
-      for (int i = 0; i < decay::get_num_nuclides(); i++) {
-        modelgrid[mgi].initnucmassfrac[i] = 0.;
-      }
+      std::fill_n(modelgrid[mgi].initnucmassfrac, num_nuclides, 0.);
     }
   }
 #ifdef MPI_ON
