@@ -15,7 +15,7 @@ void solve_spencerfano(int modelgridindex, int timestep, int iteration);
                                                       bool energyweighted) -> double;
 [[nodiscard]] auto nt_ionisation_maxupperion(int element, int lowerion) -> int;
 [[nodiscard]] auto nt_random_upperion(int modelgridindex, int element, int lowerion, bool energyweighted) -> int;
-void calculate_deposition_rate_density(int modelgridindex, int timestep, HeatingCoolingRates *heatingcoolingrates);
+void calculate_deposition_rate_density(int nonemptymgi, int timestep, HeatingCoolingRates *heatingcoolingrates);
 [[nodiscard]] auto get_deposition_rate_density(int modelgridindex) -> double;
 [[nodiscard]] auto get_nt_frac_heating(int modelgridindex) -> float;
 #pragma omp declare simd

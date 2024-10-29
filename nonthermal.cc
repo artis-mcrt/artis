@@ -2185,9 +2185,9 @@ void init(const int my_rank, const int ndo_nonempty) {
 
 // set total non-thermal deposition rate from individual gamma/positron/electron/alpha rates. This should be called
 // after packet propagation is finished for this timestep and normalise_deposition_estimators() has been done
-void calculate_deposition_rate_density(const int modelgridindex, const int timestep,
+void calculate_deposition_rate_density(const int nonemptymgi, const int timestep,
                                        HeatingCoolingRates *heatingcoolingrates) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   heatingcoolingrates->dep_gamma = globals::dep_estimator_gamma[nonemptymgi];
 
   const double tmid = globals::timesteps[timestep].mid;
@@ -2223,9 +2223,8 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
       (heatingcoolingrates->dep_gamma + heatingcoolingrates->dep_positron + heatingcoolingrates->dep_electron);
 }
 
-__host__ __device__ auto get_deposition_rate_density(const int modelgridindex) -> double
 // get non-thermal deposition rate density in erg / s / cm^3 previously stored by calculate_deposition_rate_density()
-{
+__host__ __device__ auto get_deposition_rate_density(const int modelgridindex) -> double {
   assert_always(deposition_rate_density_all_cells[modelgridindex] >= 0);
   return deposition_rate_density_all_cells[modelgridindex];
 }
