@@ -1321,9 +1321,11 @@ void setup_nstart_ndo() {
       if (rank < get_npts_model()) {
         const int mgi = rank;
         ranks_nstart[rank] = mgi;
-        ranks_nstart_nonempty[rank] = get_next_nonemptymgi(mgi);
         ranks_ndo[rank] = 1;
-        ranks_ndo_nonempty[rank] = (get_numassociatedcells(mgi) > 0) ? 1 : 0;
+        if (get_numassociatedcells(mgi) > 0) {
+          ranks_nstart_nonempty[rank] = get_next_nonemptymgi(mgi);
+          ranks_ndo_nonempty[rank] = 1;
+        }
       }
     }
   } else {
