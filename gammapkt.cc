@@ -274,7 +274,8 @@ auto get_chi_compton_rf(const Packet &pkt) -> double {
   const double sigma_cmf = (xx < THOMSON_LIMIT) ? SIGMA_T : sigma_compton_partial(xx, 1 + (2 * xx));
 
   // Now need to multiply by the electron number density.
-  const double chi_cmf = sigma_cmf * grid::get_nnetot(grid::get_cell_modelgridindex(pkt.where));
+  const auto mgi = grid::get_cell_modelgridindex(pkt.where);
+  const double chi_cmf = sigma_cmf * grid::get_nnetot(mgi);
 
   // convert between frames
   const double chi_rf = chi_cmf * calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
