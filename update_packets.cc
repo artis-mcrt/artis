@@ -356,7 +356,7 @@ void do_cell_packet_updates(std::span<Packet> packets, const int nts, const doub
 }  // anonymous namespace
 
 // Move and update packets during the current timestep (nts)
-void update_packets(const int my_rank, const int nts, std::span<Packet> packets) {
+void update_packets(const int nts, std::span<Packet> packets) {
   // At the start, the packets have all either just been initialised or have already been
   // processed for one or more timesteps. Those that are pellets will just be sitting in the
   // matter. Those that are photons (or one sort or another) will already have a position and
@@ -431,6 +431,6 @@ void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
 #endif
   printout(
       "timestep %d: time after update packets for all processes %ld (rank %d took %lds, waited %lds, total %lds)\n",
-      nts, std::time(nullptr), my_rank, time_update_packets_end_thisrank - time_update_packets_start,
+      nts, std::time(nullptr), globals::my_rank, time_update_packets_end_thisrank - time_update_packets_start,
       std::time(nullptr) - time_update_packets_end_thisrank, std::time(nullptr) - time_update_packets_start);
 }

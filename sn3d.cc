@@ -518,10 +518,11 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
   return do_this_full_loop;
 }
 
-void save_grid_and_packets(const int nts, const int my_rank, const Packet *packets) {
+void save_grid_and_packets(const int nts, const Packet *packets) {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
+  const auto my_rank = globals::my_rank;
 
   bool write_successful = false;
   while (!write_successful) {
@@ -529,9 +530,9 @@ void save_grid_and_packets(const int nts, const int my_rank, const Packet *packe
     printout("time before write temporary packets file %ld\n", time_write_packets_file_start);
 
     // save packet state at start of current timestep (before propagation)
-    write_temp_packetsfile(nts, my_rank, packets);
+    write_temp_packetsfile(nts, globals::my_rank, packets);
 
-    vpkt_write_timestep(nts, my_rank, false);
+    vpkt_write_timestep(nts, globals::my_rank, false);
 
     const auto time_write_packets_finished_thisrank = std::time(nullptr);
 
@@ -659,12 +660,12 @@ void normalise_deposition_estimators(int nts) {
 }
 
 auto do_timestep(const int nts, const int titer, Packet *packets, const int walltimelimitseconds) -> bool {
-  bool do_this_full_loop = true;
   const auto my_rank = globals::my_rank;
+  bool do_this_full_loop = true;
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
   if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
     // Read the packets file to reset before each additional iteration on the timestep
-    read_temp_packetsfile(nts, my_rank, packets);
+    read_temp_packetsfile(nts, globals::my_rank, packets);
   }
 
   // Some counters on pkt-actions need to be reset to do statistics
@@ -684,7 +685,7 @@ auto do_timestep(const int nts, const int titer, Packet *packets, const int wall
 
   // Update the matter quantities in the grid for the new timestep.
 
-  update_grid(estimators_file, nts, nts_prev, my_rank, titer, real_time_start);
+  update_grid(estimators_file, nts, nts_prev, titer, real_time_start);
 
   const auto sys_time_start_communicate_grid = std::time(nullptr);
 
@@ -700,7 +701,7 @@ auto do_timestep(const int nts, const int titer, Packet *packets, const int wall
   // write out a snapshot of the grid properties for further restarts
   // and update input.txt accordingly
   if (((nts - globals::timestep_initial) != 0)) {
-    save_grid_and_packets(nts, my_rank, packets);
+    save_grid_and_packets(nts, packets);
     do_this_full_loop = walltime_sufficient_to_continue(nts, nts_prev, walltimelimitseconds);
   }
   time_timestep_start = std::time(nullptr);
@@ -716,7 +717,7 @@ auto do_timestep(const int nts, const int titer, Packet *packets, const int wall
   if ((nts < globals::timestep_finish) && do_this_full_loop) {
     // Now process the packets.
 
-    update_packets(my_rank, nts, std::span{packets, static_cast<size_t>(globals::npkts)});
+    update_packets(nts, std::span{packets, static_cast<size_t>(globals::npkts)});
 
 #ifdef MPI_ON
     // All the processes have their own versions of the estimators for this time step now.

@@ -1083,12 +1083,13 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
 }  // anonymous namespace
 
-void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int titer,
+void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int titer,
                  const std::time_t real_time_start)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
 // nts timestep
 {
+  const auto my_rank = globals::my_rank;
   const auto sys_time_start_update_grid = std::time(nullptr);
   printout("\n");
   printout("timestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g days\n", nts,
