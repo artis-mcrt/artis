@@ -1322,10 +1322,8 @@ void setup_nstart_ndo() {
         const int mgi = rank;
         ranks_nstart[rank] = mgi;
         ranks_ndo[rank] = 1;
-        if (get_numassociatedcells(mgi) > 0) {
-          ranks_nstart_nonempty[rank] = get_next_nonemptymgi(mgi);
-          ranks_ndo_nonempty[rank] = 1;
-        }
+        ranks_nstart_nonempty[rank] = (get_numassociatedcells(mgi) > 0) ? get_next_nonemptymgi(mgi) : 0;
+        ranks_ndo_nonempty[rank] = (get_numassociatedcells(mgi) > 0) ? 1 : 0;
       }
     }
   } else {
@@ -1339,6 +1337,7 @@ void setup_nstart_ndo() {
         rank++;
         ranks_nstart[rank] = mgi;
         ranks_nstart_nonempty[rank] = get_next_nonemptymgi(mgi);
+        assert_always(ranks_nstart_nonempty[rank] >= 0);
       }
 
       ranks_ndo[rank]++;
