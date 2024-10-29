@@ -664,9 +664,9 @@ auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const i
       min_meanlife = meanlife;
     }
   }
+  // min steps across the meanlifetime
+  const int nsteps = static_cast<int>(ceil((tstart - grid::get_t_model()) / min_meanlife) * 100000);
 
-  const int nsteps = static_cast<int>(ceil((tstart - grid::get_t_model()) / min_meanlife) *
-                                      100000);  // min steps across the meanlifetime
   double chain_endecay = 0.;
   double last_chain_endecay = -1.;
   double last_t = -1.;
@@ -721,10 +721,9 @@ auto calculate_simtime_endecay_per_ejectamass(const int mgi, const int decaypath
   }
 }
 
-auto get_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex) -> double
+auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypathindex) -> double
 // get the decay energy released during the simulation time per unit mass [erg/g]
 {
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
   const double chainendecay = decaypath_energy_per_mass[(nonemptymgi * get_num_decaypaths()) + decaypathindex];
   assert_testmodeonly(chainendecay >= 0.);
   assert_testmodeonly(std::isfinite(chainendecay));
@@ -1038,10 +1037,10 @@ auto get_endecay_per_ejectamass_t0_to_time_withexpansion(const int nonemptymgi, 
 }
 
 // get the density at time tmin of decay energy that will be released during the simulation time range [erg/cm3]
-auto get_modelcell_simtime_endecay_per_mass(const int mgi) -> double {
+auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi) -> double {
   double endecay_per_mass = 0.;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
-    endecay_per_mass += get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
+    endecay_per_mass += get_simtime_endecay_per_ejectamass(nonemptymgi, decaypathindex);
   }
   return endecay_per_mass;
 }
@@ -1352,6 +1351,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
 }
 
 void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
+  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
   const int num_decaypaths = get_num_decaypaths();
 
   // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel
@@ -1362,7 +1362,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
 
   // add the radioactive decay paths
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
-    energysum += get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
+    energysum += get_simtime_endecay_per_ejectamass(nonemptymgi, decaypathindex);
     cumulative_en_sum[decaypathindex] = energysum;
   }
 
@@ -1418,7 +1418,8 @@ void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
     // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
     // e0 is the average energy per packet for this cell and decaypath, so we scale this up or down
     // according to: decay power at this time relative to the average decay power
-    const double avgpower = get_simtime_endecay_per_ejectamass(mgi, decaypathindex) / (globals::tmax - tdecaymin);
+    const double avgpower =
+        get_simtime_endecay_per_ejectamass(nonemptymgi, decaypathindex) / (globals::tmax - tdecaymin);
     assert_always(avgpower > 0.);
     assert_always(std::isfinite(avgpower));
     pkt.e_cmf = e0 * get_decaypath_power_per_ejectamass(decaypathindex, mgi, pkt.tdecay) / avgpower;
