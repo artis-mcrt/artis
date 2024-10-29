@@ -121,56 +121,50 @@ void write_deposition_file(const int nts, const int my_rank) {
   const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
 
   // calculate analytical decay rates
-  // for (int i = 0; i <= nts; i++)
-  {
-    const int i = nts;
-    const double t_mid = globals::timesteps[i].mid;
+  const double t_mid_nts = globals::timesteps[nts].mid;
 
-    // power in [erg/s]
-    globals::timesteps[i].eps_positron_ana_power = 0.;
-    globals::timesteps[i].eps_electron_ana_power = 0.;
-    globals::timesteps[i].eps_alpha_ana_power = 0.;
-    globals::timesteps[i].qdot_betaminus = 0.;
-    globals::timesteps[i].qdot_alpha = 0.;
-    globals::timesteps[i].qdot_total = 0.;
+  // power in [erg/s]
+  globals::timesteps[nts].eps_positron_ana_power = 0.;
+  globals::timesteps[nts].eps_electron_ana_power = 0.;
+  globals::timesteps[nts].eps_alpha_ana_power = 0.;
+  globals::timesteps[nts].qdot_betaminus = 0.;
+  globals::timesteps[nts].qdot_alpha = 0.;
+  globals::timesteps[nts].qdot_total = 0.;
 
-    for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
-      const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-      const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
+  for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+    const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
 
-      globals::timesteps[i].eps_positron_ana_power +=
-          cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAPLUS);
-      globals::timesteps[i].eps_electron_ana_power +=
-          cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAMINUS);
-      globals::timesteps[i].eps_alpha_ana_power +=
-          cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_ALPHA);
+    globals::timesteps[nts].eps_positron_ana_power +=
+        cellmass * decay::get_particle_injection_rate(mgi, t_mid_nts, decay::DECAYTYPE_BETAPLUS);
+    globals::timesteps[nts].eps_electron_ana_power +=
+        cellmass * decay::get_particle_injection_rate(mgi, t_mid_nts, decay::DECAYTYPE_BETAMINUS);
+    globals::timesteps[nts].eps_alpha_ana_power +=
+        cellmass * decay::get_particle_injection_rate(mgi, t_mid_nts, decay::DECAYTYPE_ALPHA);
 
-      if (i == nts) {
-        mtot += cellmass;
-      }
+    mtot += cellmass;
 
-      for (const auto decaytype : decay::all_decaytypes) {
-        // Qdot here has been multiplied by mass, so it is in units of [erg/s]
-        const double qdot_cell = decay::get_qdot_modelcell(mgi, t_mid, decaytype) * cellmass;
-        globals::timesteps[i].qdot_total += qdot_cell;
-        if (decaytype == decay::DECAYTYPE_BETAMINUS) {
-          globals::timesteps[i].qdot_betaminus += qdot_cell;
-        } else if (decaytype == decay::DECAYTYPE_ALPHA) {
-          globals::timesteps[i].qdot_alpha += qdot_cell;
-        }
+    for (const auto decaytype : decay::all_decaytypes) {
+      // Qdot here has been multiplied by mass, so it is in units of [erg/s]
+      const double qdot_cell = decay::get_qdot_modelcell(mgi, t_mid_nts, decaytype) * cellmass;
+      globals::timesteps[nts].qdot_total += qdot_cell;
+      if (decaytype == decay::DECAYTYPE_BETAMINUS) {
+        globals::timesteps[nts].qdot_betaminus += qdot_cell;
+      } else if (decaytype == decay::DECAYTYPE_ALPHA) {
+        globals::timesteps[nts].qdot_alpha += qdot_cell;
       }
     }
+  }
 
 #ifdef MPI_ON
-    // in MPI mode, each process only did some fraction of the cells
-    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].eps_positron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].eps_electron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].eps_alpha_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].qdot_betaminus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].qdot_alpha, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].qdot_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  // in MPI mode, each process only calculated the contribution of a subset of cells
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_positron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_electron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_alpha_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_betaminus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_alpha, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
-  }
 
 #ifdef MPI_ON
   MPI_Allreduce(MPI_IN_PLACE, &mtot, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
