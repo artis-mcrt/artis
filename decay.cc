@@ -1244,7 +1244,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
       isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(2, 4);
     }
 
-    const double stable_init_massfrac = grid::get_stable_initabund(modelgridindex, element);
+    const double stable_init_massfrac = grid::get_stable_initabund(nonemptymgi, element);
     isomassfracsum += stable_init_massfrac;
     isomassfrac_on_nucmass_sum += stable_init_massfrac / globals::elements[element].initstablemeannucmass;
 
@@ -1301,6 +1301,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 
 void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, const double t_current, const int element) {
   const double rho = grid::get_rho(modelgridindex);
+  const auto nonemptmgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
   const int atomic_number = get_atomicnumber(element);
   std::set<int> a_isotopes;  // ensure we don't repeat isotopes
@@ -1339,7 +1340,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
   }
 
   // factor to convert convert mass fraction to number density
-  const double otherstablemassfrac = grid::get_stable_initabund(modelgridindex, element);
+  const double otherstablemassfrac = grid::get_stable_initabund(nonemptmgi, element);
   if (otherstablemassfrac > 0) {
     const double meannucmass = globals::elements[element].initstablemeannucmass;
     const double otherstable_numberdens = otherstablemassfrac / meannucmass * grid::get_rho(modelgridindex);
