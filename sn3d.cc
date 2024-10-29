@@ -113,7 +113,9 @@ void initialise_linestat_file() {
   fflush(linestat_file);
 }
 
-void write_deposition_file(const int nts, const int my_rank) {
+void write_deposition_file() {
+  const int my_rank = globals::rank_global;
+  const int nts = globals::timestep;
   printout("Calculating deposition rates...\n");
   auto const time_write_deposition_file_start = std::time(nullptr);
   double mtot = 0.;
@@ -735,7 +737,7 @@ auto do_timestep(const int nts, const int titer, Packet *packets, const int wall
 
     normalise_deposition_estimators(nts);
 
-    write_deposition_file(nts, my_rank);
+    write_deposition_file();
 
     write_partial_lightcurve_spectra(my_rank, nts, packets);
 
