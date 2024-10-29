@@ -148,7 +148,7 @@ void write_deposition_file() {
 
     for (const auto decaytype : decay::all_decaytypes) {
       // Qdot here has been multiplied by mass, so it is in units of [erg/s]
-      const double qdot_cell = decay::get_qdot_modelcell(mgi, t_mid_nts, decaytype) * cellmass;
+      const double qdot_cell = decay::get_qdot_modelcell(nonemptymgi, t_mid_nts, decaytype) * cellmass;
       globals::timesteps[nts].qdot_total += qdot_cell;
       if (decaytype == decay::DECAYTYPE_BETAMINUS) {
         globals::timesteps[nts].qdot_betaminus += qdot_cell;

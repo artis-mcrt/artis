@@ -1159,8 +1159,9 @@ void free_decaypath_energy_per_mass() {
 }
 
 // energy release rate [erg/s/g] including everything (even neutrinos that are ignored elsewhere)
-[[nodiscard]] auto get_qdot_modelcell(const int modelgridindex, const double t, const int decaytype) -> double {
+[[nodiscard]] auto get_qdot_modelcell(const int nonemptymgi, const double t, const int decaytype) -> double {
   double qdot = 0.;
+  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const auto num_nuclides = get_num_nuclides();
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const auto [z, a] = get_nuc_z_a(nucindex);

@@ -40,7 +40,7 @@ void update_abundances(int modelgridindex, int timestep, double t_current);
 [[nodiscard]] auto get_modelcell_simtime_endecay_per_mass(int mgi) -> double;
 void setup_decaypath_energy_per_mass();
 void free_decaypath_energy_per_mass();
-[[nodiscard]] auto get_qdot_modelcell(int modelgridindex, double t, int decaytype) -> double;
+[[nodiscard]] auto get_qdot_modelcell(int nonemptymgi, double t, int decaytype) -> double;
 [[nodiscard]] auto get_particle_injection_rate(int modelgridindex, double t, int decaytype) -> double;
 [[nodiscard]] auto get_gamma_emission_rate(int modelgridindex, double t) -> double;
 [[nodiscard]] auto get_global_etot_t0_tinf() -> double;
