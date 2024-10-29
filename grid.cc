@@ -1309,8 +1309,8 @@ void setup_nstart_ndo() {
   ranks_ndo_nonempty.resize(nprocesses, 0);
 
   // begin with no cell assignments
-  std::ranges::fill(ranks_nstart, -1);
-  std::ranges::fill(ranks_nstart_nonempty, -1);
+  std::ranges::fill(ranks_nstart, 0);
+  std::ranges::fill(ranks_nstart_nonempty, 0);
   std::ranges::fill(ranks_ndo, 0);
   std::ranges::fill(ranks_ndo_nonempty, 0);
 
