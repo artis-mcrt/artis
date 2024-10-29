@@ -36,7 +36,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
 [[nodiscard]] auto nucdecayenergygamma(int z, int a) -> double;
 void set_nucdecayenergygamma(int nucindex, double value);
 void update_abundances(int nonemptymgi, int timestep, double t_current);
-[[nodiscard]] auto get_endecay_per_ejectamass_t0_to_time_withexpansion(int modelgridindex, double tstart) -> double;
+[[nodiscard]] auto get_endecay_per_ejectamass_t0_to_time_withexpansion(int nonemptymgi, double tstart) -> double;
 [[nodiscard]] auto get_modelcell_simtime_endecay_per_mass(int mgi) -> double;
 void setup_decaypath_energy_per_mass();
 void free_decaypath_energy_per_mass();

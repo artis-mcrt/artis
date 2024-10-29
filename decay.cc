@@ -652,12 +652,11 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
   return endecay;
 }
 
-auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const int modelgridindex,
+// Simple Euler integration as a check on the analytic result from get_endecay_per_ejectamass_t0_to_time_withexpansion()
+auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const int nonemptymgi,
                                                                          const int decaypathindex, const double tstart)
-    -> double
-// just here as as check on the analytic result from get_endecay_per_ejectamass_t0_to_time_withexpansion()
-// this version does an Euler integration
-{
+    -> double {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double min_meanlife = -1;
   for (int i = 0; i < get_decaypathlength(decaypathindex); i++) {
     const double meanlife = get_meanlife(decaypaths[decaypathindex].nucindex[i]);
@@ -1015,7 +1014,8 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
 
 // calculate the decay energy per unit mass [erg/g] released from time t_model to tstart, accounting for
 // the photon energy loss due to expansion between time of decays and tstart (equation 18 of Lucy 2005)
-auto get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridindex, const double tstart) -> double {
+auto get_endecay_per_ejectamass_t0_to_time_withexpansion(const int nonemptymgi, const double tstart) -> double {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double tot_endecay = 0.;
   for (const auto &decaypath : decaypaths) {
     const int decaypathlength = get_decaypathlength(decaypath);

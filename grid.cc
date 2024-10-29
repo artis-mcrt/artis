@@ -1257,7 +1257,7 @@ void assign_initial_temperatures() {
   for (int nonempymgi = 0; nonempymgi < get_nonempty_npts_model(); nonempymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonempymgi);
 
-    double decayedenergy_per_mass = decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(mgi, tstart);
+    double decayedenergy_per_mass = decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(nonempymgi, tstart);
     if constexpr (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) {
       decayedenergy_per_mass += get_initenergyq(mgi);
     }
