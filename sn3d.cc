@@ -247,7 +247,7 @@ void mpi_communicate_grid_properties() {
       if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
         assert_always(globals::corrphotoionrenorm != nullptr);
         if (globals::rank_in_node == 0) {
-          MPI_Bcast(globals::corrphotoionrenorm + (nonemptymgi * globals::nbfcontinua_ground),
+          MPI_Bcast(&globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua_ground],
                     globals::nbfcontinua_ground, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
         }
 
