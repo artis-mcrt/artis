@@ -989,7 +989,7 @@ auto main(int argc, char *argv[]) -> int {
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  int nts = globals::timestep_initial;
+  globals::timestep = globals::timestep_initial;
 
   macroatom_open_file(my_rank);
   if (ndo > 0) {
@@ -1003,10 +1003,9 @@ auto main(int argc, char *argv[]) -> int {
   }
 
   // initialise or read in virtual packet spectra
-  vpkt_init(nts, my_rank, globals::simulation_continued_from_saved);
+  vpkt_init(globals::timestep, my_rank, globals::simulation_continued_from_saved);
 
-  while (nts < globals::timestep_finish && !terminate_early) {
-    globals::timestep = nts;
+  while (globals::timestep < globals::timestep_finish && !terminate_early) {
 #ifdef MPI_ON
     //        const auto time_before_barrier = std::time(nullptr);
     MPI_Barrier(MPI_COMM_WORLD);
@@ -1019,18 +1018,18 @@ auto main(int argc, char *argv[]) -> int {
     // globals::n_titer = (nts < 6) ? 3: 1;
 
     globals::n_titer = 1;
-    globals::lte_iteration = (nts < globals::num_lte_timesteps);
+    globals::lte_iteration = (globals::timestep < globals::num_lte_timesteps);
     assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 
     for (int titer = 0; titer < globals::n_titer; titer++) {
-      terminate_early = do_timestep(nts, titer, packets, walltimelimitseconds);
+      terminate_early = do_timestep(globals::timestep, titer, packets, walltimelimitseconds);
 #ifdef DO_TITER
       // No iterations over the zeroth timestep, set titer > n_titer
-      if (nts == 0) titer = globals::n_titer + 1;
+      if (globals::timestep == 0) titer = globals::n_titer + 1;
 #endif
     }
 
-    nts++;
+    globals::timestep++;
   }
 
   // The main calculation is now over. The packets now have all stored the time, place and direction
