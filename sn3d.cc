@@ -235,6 +235,7 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
 
     for (int nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
          nonemptymgi++) {
+      assert_always(root_ndo_nonempty > 0);
       const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
       radfield::do_MPI_Bcast(modelgridindex, root, root_node_id);
