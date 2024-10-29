@@ -1288,7 +1288,7 @@ void assign_initial_temperatures() {
 
 // start at mgi_start and find the next non-empty cell, or return -1 if none found
 [[nodiscard]] auto get_next_nonemptymgi(const int mgi_start) -> int {
-  for (int mgi = mgi_start + 1; mgi < get_npts_model(); mgi++) {
+  for (int mgi = mgi_start; mgi < get_npts_model(); mgi++) {
     if (get_numassociatedcells(mgi) > 0) {
       return nonemptymgi_of_mgi[mgi];
     }
