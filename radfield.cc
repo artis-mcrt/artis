@@ -1178,12 +1178,7 @@ void reduce_estimators()
 
 // broadcast computed radfield results including parameters
 // from the cells belonging to root process to all processes
-void do_MPI_Bcast(const int modelgridindex, const int root, const int root_node_id) {
-  if (grid::get_numassociatedcells(modelgridindex) == 0) {
-    return;
-  }
-
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_node_id) {
   MPI_Bcast(&J_normfactor[nonemptymgi], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -1197,6 +1192,7 @@ void do_MPI_Bcast(const int modelgridindex, const int root, const int root_node_
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
       MPI_Bcast(&prev_Jb_lu_normed[modelgridindex][jblueindex].value, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
       MPI_Bcast(&prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);

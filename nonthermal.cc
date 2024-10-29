@@ -2778,10 +2778,8 @@ void read_restart_data(FILE *gridsave_file) {
 }
 
 #ifdef MPI_ON
-void nt_MPI_Bcast(const int modelgridindex, const int root, const int root_node_id) {
-  if (grid::get_numassociatedcells(modelgridindex) == 0) {
-    return;
-  }
+void nt_MPI_Bcast(const int nonemptymgi, const int root, const int root_node_id) {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   MPI_Bcast(&deposition_rate_density_all_cells[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 

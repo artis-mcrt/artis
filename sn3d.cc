@@ -230,13 +230,13 @@ void mpi_communicate_grid_properties() {
     for (int nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
          nonemptymgi++) {
       assert_always(root_ndo_nonempty > 0);
-      const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-      radfield::do_MPI_Bcast(modelgridindex, root, root_node_id);
+      radfield::do_MPI_Bcast(nonemptymgi, root, root_node_id);
 
-      nonthermal::nt_MPI_Bcast(modelgridindex, root, root_node_id);
+      nonthermal::nt_MPI_Bcast(nonemptymgi, root, root_node_id);
 
       if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
+        const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
         MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops.data(), globals::total_nlte_levels, MPI_DOUBLE,
                   root_node_id, globals::mpi_comm_internode);
       }
@@ -258,7 +258,7 @@ void mpi_communicate_grid_properties() {
                   globals::mpi_comm_internode);
       }
 
-      MPI_Bcast_binned_opacities(modelgridindex, root_node_id);
+      MPI_Bcast_binned_opacities(nonemptymgi, root_node_id);
     }
 
     if (root == globals::my_rank) {

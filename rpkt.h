@@ -1,6 +1,7 @@
 #ifndef RPKT_H
 #define RPKT_H
 
+#include <cstddef>
 #include <ctime>
 #include <span>
 #include <vector>
@@ -36,7 +37,7 @@ void calculate_chi_rpkt_cont(double nu_cmf, Rpkt_continuum_absorptioncoeffs &chi
 [[nodiscard]] auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
 void allocate_expansionopacities();
 void calculate_expansion_opacities(int modelgridindex);
-void MPI_Bcast_binned_opacities(int modelgridindex, int root_node_id);
+void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);
 
 [[nodiscard]] constexpr auto get_linedistance(const double prop_time, const double nu_cmf, const double nu_trans,
                                               const double d_nu_on_d_l) -> double {

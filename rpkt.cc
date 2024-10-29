@@ -1150,10 +1150,9 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
 }
 
 #ifdef MPI_ON
-void MPI_Bcast_binned_opacities(const int modelgridindex, const int root_node_id) {
+void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node_id) {
   if constexpr (EXPANSIONOPACITIES_ON) {
     if (globals::rank_in_node == 0) {
-      const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
       assert_always(nonemptymgi >= 0);
       MPI_Bcast(&expansionopacities[nonemptymgi * expopac_nbins], expopac_nbins, MPI_FLOAT, root_node_id,
                 globals::mpi_comm_internode);
