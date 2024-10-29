@@ -1135,7 +1135,7 @@ void ratecoefficients_init() {
 #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
-    if (globals::rank_global == 0) {
+    if (globals::my_rank == 0) {
       write_ratecoeff_dat();
     }
   }

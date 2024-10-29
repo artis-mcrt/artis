@@ -114,7 +114,7 @@ void initialise_linestat_file() {
 }
 
 void write_deposition_file() {
-  const int my_rank = globals::rank_global;
+  const int my_rank = globals::my_rank;
   const int nts = globals::timestep;
   printout("Calculating deposition rates...\n");
   auto const time_write_deposition_file_start = std::time(nullptr);
@@ -261,7 +261,7 @@ void mpi_communicate_grid_properties() {
       MPI_Bcast_binned_opacities(modelgridindex, root_node_id);
     }
 
-    if (root == globals::rank_global) {
+    if (root == globals::my_rank) {
       int position = 0;
       for (int nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
            nonemptymgi++) {
@@ -660,7 +660,7 @@ void normalise_deposition_estimators(int nts) {
 
 auto do_timestep(const int nts, const int titer, Packet *packets, const int walltimelimitseconds) -> bool {
   bool do_this_full_loop = true;
-  const auto my_rank = globals::rank_global;
+  const auto my_rank = globals::my_rank;
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
   if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
     // Read the packets file to reset before each additional iteration on the timestep
@@ -820,7 +820,7 @@ auto main(int argc, char *argv[]) -> int {
 
   check_already_running();
 
-  const int my_rank = globals::rank_global;
+  const int my_rank = globals::my_rank;
 
 #if defined(_OPENMP) && !defined(GPU_ON)
   // Explicitly turn off dynamic threads because we use the threadprivate directive!!!
@@ -891,7 +891,7 @@ auto main(int argc, char *argv[]) -> int {
 #ifdef MPI_ON
   printout("process id (pid): %d\n", getpid());
   printout("MPI enabled:\n");
-  printout("  rank %d of [0..%d] in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs - 1);
+  printout("  rank %d of [0..%d] in MPI_COMM_WORLD\n", globals::my_rank, globals::nprocs - 1);
   printout("  rank %d of [0..%d] in node %d of [0..%d]\n", globals::rank_in_node, globals::node_nprocs - 1,
            globals::node_id, globals::node_count - 1);
 #ifdef MAX_NODE_SIZE

@@ -1443,7 +1443,7 @@ void write_bflist_file() {
   globals::bflist.resize(globals::nbfcontinua);
 
   FILE *bflist_file{};
-  if (globals::rank_global == 0) {
+  if (globals::my_rank == 0) {
     bflist_file = fopen_required("bflist.out", "w");
     fprintf(bflist_file, "%d\n", globals::nbfcontinua);
   }
@@ -1461,7 +1461,7 @@ void write_bflist_file() {
           globals::bflist[i].levelindex = level;
           globals::bflist[i].phixstargetindex = phixstargetindex;
 
-          if (globals::rank_global == 0) {
+          if (globals::my_rank == 0) {
             fprintf(bflist_file, "%d %d %d %d %d\n", i, element, ion, level, upperionlevel);
           }
 
@@ -1479,7 +1479,7 @@ void write_bflist_file() {
     }
   }
   assert_always(i == globals::nbfcontinua);
-  if (globals::rank_global == 0) {
+  if (globals::my_rank == 0) {
     fclose(bflist_file);
   }
 }
@@ -1867,7 +1867,7 @@ void read_parameterfile(int rank) {
 void update_parameterfile(int nts)
 // Subroutine to read in input parameters from input.txt.
 {
-  assert_always(globals::rank_global == 0);
+  assert_always(globals::my_rank == 0);
   if (nts >= 0) {
     printout("Update input.txt for restart at timestep %d...", nts);
   } else {

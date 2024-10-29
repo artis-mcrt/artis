@@ -1349,7 +1349,7 @@ void setup_nstart_ndo() {
   assert_always(npts_assigned == get_npts_model());
   assert_always(npts_nonempty_assigned == get_nonempty_npts_model());
 
-  if (globals::rank_global == 0) {
+  if (globals::my_rank == 0) {
     auto fileout = std::ofstream("modelgridrankassignments.out");
     assert_always(fileout.is_open());
     fileout << "#rank nstart ndo ndo_nonempty\n";
@@ -2343,7 +2343,7 @@ void grid_init(const int my_rank) {
     std::abort();
   }
 
-  if (globals::rank_global == 0) {
+  if (globals::my_rank == 0) {
     FILE *grid_file = fopen_required("grid.out", "w");
     for (int n = 0; n < ngrid; n++) {
       const int mgi = get_cell_modelgridindex(n);

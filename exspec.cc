@@ -73,7 +73,7 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-    if (p % globals::nprocs != globals::rank_global) {
+    if (p % globals::nprocs != globals::my_rank) {
       printout("skipping packets file %d %d\n", p + 1, globals::nprocs);
       continue;
     }
@@ -173,7 +173,7 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
   check_already_running();
 
   char filename[MAXFILENAMELENGTH];
-  if (globals::rank_global == 0) {
+  if (globals::my_rank == 0) {
     snprintf(filename, MAXFILENAMELENGTH, "exspec.txt");
     output_file = std::ofstream(filename);
     assert_always(output_file.is_open());
@@ -194,7 +194,7 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
 #ifdef MPI_ON
   printout("process id (pid): %d\n", getpid());
   printout("MPI enabled:\n");
-  printout("  rank_global %d of [0..%d] in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs - 1);
+  printout("  rank_global %d of [0..%d] in MPI_COMM_WORLD\n", globals::my_rank, globals::nprocs - 1);
   printout("  rank_in_node %d of [0..%d] in node %d of [0..%d]\n", globals::rank_in_node, globals::node_nprocs - 1,
            globals::node_id, globals::node_count - 1);
 #else
@@ -202,14 +202,14 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
 #endif
 
   // single rank only for now
-  assert_always(globals::rank_global == 0);
+  assert_always(globals::my_rank == 0);
   assert_always(globals::nprocs == 1);
 
   printout("Beginning exspec.\n");
 
   // Get input stuff
   printout("time before input %ld\n", std::time(nullptr));
-  input(globals::rank_global);
+  input(globals::my_rank);
   printout("time after input %ld\n", std::time(nullptr));
 
   // nprocs_exspec is the number of rank output files to process with expec
