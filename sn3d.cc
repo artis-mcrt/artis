@@ -219,7 +219,6 @@ void write_deposition_file(const int nts) {
 void mpi_communicate_grid_properties() {
   const auto nincludedions = get_includedions();
   const auto nelements = get_nelements();
-  int position = 0;
   for (int root = 0; root < globals::nprocs; root++) {
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -264,7 +263,7 @@ void mpi_communicate_grid_properties() {
     }
 
     if (root == globals::rank_global) {
-      position = 0;
+      int position = 0;
       for (int nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
            nonemptymgi++) {
         const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -309,10 +308,13 @@ void mpi_communicate_grid_properties() {
     MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
 
-    position = 0;
-    for (int nn = 0; nn < root_ndo_nonempty; nn++) {
-      int mgi = 0;
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
+    int position = 0;
+    for (int nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
+         nonemptymgi++) {
+      const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+      int mgi_check = -1;
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi_check, 1, MPI_INT, MPI_COMM_WORLD);
+      assert_always(mgi == mgi_check);
 
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].Te, 1, MPI_FLOAT,
                  MPI_COMM_WORLD);
