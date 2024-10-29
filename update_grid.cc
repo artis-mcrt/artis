@@ -892,7 +892,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
   grid::set_rho(mgi, grid::get_rho_tmin(mgi) / pow(tratmid, 3));
 
   // Update elemental abundances with radioactive decays
-  decay::update_abundances(mgi, nts, globals::timesteps[nts].mid);
+  decay::update_abundances(nonemptymgi, nts, globals::timesteps[nts].mid);
   nonthermal::calculate_deposition_rate_density(mgi, nts, heatingcoolingrates);
 
   if (globals::opacity_case == 6) {

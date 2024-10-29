@@ -1195,9 +1195,9 @@ auto get_global_etot_t0_tinf() -> double {
 }
 
 // Update the mass fractions of elements using the current abundances of nuclides
-void update_abundances(const int modelgridindex, const int timestep, const double t_current) {
+void update_abundances(const int nonemptymgi, const int timestep, const double t_current) {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   printout("update_abundances for cell %d timestep %d\n", modelgridindex, timestep);
-  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
   for (int element = get_nelements() - 1; element >= 0; element--) {
     const int atomic_number = get_atomicnumber(element);
