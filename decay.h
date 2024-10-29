@@ -26,7 +26,7 @@ constexpr std::array<enum decaytypes, 5> all_decaytypes = {
 void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist);
 [[nodiscard]] auto get_nucstring_z(const std::string &strnuc) -> int;
 [[nodiscard]] auto get_nucstring_a(const std::string &strnuc) -> int;
-[[nodiscard]] auto get_num_nuclides() -> int;
+[[nodiscard]] auto get_num_nuclides() -> ptrdiff_t;
 [[nodiscard]] auto get_elname(int z) -> std::string;
 [[nodiscard]] auto get_nuc_z(int nucindex) -> int;
 [[nodiscard]] auto get_nuc_a(int nucindex) -> int;

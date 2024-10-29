@@ -771,7 +771,7 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int mode
 }
 }  // anonymous namespace
 
-[[nodiscard]] auto get_num_nuclides() -> int { return static_cast<int>(nuclides.size()); }
+[[nodiscard]] auto get_num_nuclides() -> ptrdiff_t { return std::ssize(nuclides); }
 
 [[nodiscard]] auto get_elname(const int z) -> std::string {
   assert_testmodeonly(z <= Z_MAX);
@@ -987,11 +987,11 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
     }
   }
 
-  printout("Number of nuclides before filtering: %d\n", get_num_nuclides());
+  printout("Number of nuclides before filtering: %td\n", get_num_nuclides());
   find_decaypaths(custom_zlist, custom_alist, standard_nuclides);
   filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
 
-  printout("Number of nuclides:  %d\n", get_num_nuclides());
+  printout("Number of nuclides:  %td\n", get_num_nuclides());
 
   const int maxdecaypathlength = std::accumulate(
       decaypaths.cbegin(), decaypaths.cend(), 0,
@@ -1196,6 +1196,7 @@ auto get_global_etot_t0_tinf() -> double {
 // Update the mass fractions of elements using the current abundances of nuclides
 void update_abundances(const int modelgridindex, const int timestep, const double t_current) {
   printout("update_abundances for cell %d timestep %d\n", modelgridindex, timestep);
+  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
   for (int element = get_nelements() - 1; element >= 0; element--) {
     const int atomic_number = get_atomicnumber(element);
@@ -1247,12 +1248,12 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
     isomassfracsum += stable_init_massfrac;
     isomassfrac_on_nucmass_sum += stable_init_massfrac / globals::elements[element].initstablemeannucmass;
 
-    grid::set_elem_abundance(modelgridindex, element, isomassfracsum);
+    grid::set_elem_abundance(nonemptymgi, element, isomassfracsum);
     if (isomassfrac_on_nucmass_sum > 0.) {
-      grid::set_element_meanweight(modelgridindex, element, isomassfracsum / isomassfrac_on_nucmass_sum);
+      grid::set_element_meanweight(nonemptymgi, element, isomassfracsum / isomassfrac_on_nucmass_sum);
     } else {
       // avoid a divide by zero
-      grid::set_element_meanweight(modelgridindex, element, globals::elements[element].initstablemeannucmass);
+      grid::set_element_meanweight(nonemptymgi, element, globals::elements[element].initstablemeannucmass);
     }
   }
 

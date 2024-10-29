@@ -263,7 +263,7 @@ void mpi_communicate_grid_properties() {
 
     if (root == globals::my_rank) {
       int position = 0;
-      for (int nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
+      for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
            nonemptymgi++) {
         const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
         MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
@@ -289,8 +289,8 @@ void mpi_communicate_grid_properties() {
         MPI_Pack(&grid::modelgrid[mgi].thick, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
                  MPI_COMM_WORLD);
 
-        MPI_Pack(grid::modelgrid[mgi].elem_massfracs, nelements, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size,
-                 &position, MPI_COMM_WORLD);
+        MPI_Pack(&grid::elem_massfracs_allcells[(nonemptymgi * get_nelements())], nelements, MPI_FLOAT, mpi_grid_buffer,
+                 mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
 
         MPI_Pack(grid::modelgrid[mgi].ion_groundlevelpops, nincludedions, MPI_FLOAT, mpi_grid_buffer,
                  mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
@@ -308,7 +308,7 @@ void mpi_communicate_grid_properties() {
     MPI_Barrier(MPI_COMM_WORLD);
 
     int position = 0;
-    for (int nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
+    for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
          nonemptymgi++) {
       const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
       int mgi_check = -1;
@@ -336,8 +336,8 @@ void mpi_communicate_grid_properties() {
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].thick, 1, MPI_INT,
                  MPI_COMM_WORLD);
 
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].elem_massfracs, nelements,
-                 MPI_FLOAT, MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                 &grid::elem_massfracs_allcells[(nonemptymgi * get_nelements())], nelements, MPI_FLOAT, MPI_COMM_WORLD);
 
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_groundlevelpops,
                  nincludedions, MPI_FLOAT, MPI_COMM_WORLD);

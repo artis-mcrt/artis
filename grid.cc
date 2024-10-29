@@ -79,6 +79,10 @@ MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
 MPI_Win win_initnucmassfrac_allcells = MPI_WIN_NULL;
 #endif
 
+float *initnucmassfrac_allcells{};
+float *initmassfracuntrackedstable_allcells{};
+int *elements_uppermost_ion_allcells{};  // Highest ion index that has a significant population
+
 std::vector<int> ranks_nstart;
 std::vector<int> ranks_nstart_nonempty;
 std::vector<int> ranks_ndo;
@@ -153,9 +157,8 @@ void allocate_initradiobund() {
   assert_always(initnucmassfrac_allcells != nullptr);
 
   for (ptrdiff_t mgi = 0; mgi < (npts_model + 1); mgi++) {
-    modelgrid[mgi].initnucmassfrac = &initnucmassfrac_allcells[mgi * num_nuclides];
     if (mgi % static_cast<ptrdiff_t>(globals::node_nprocs) == globals::rank_in_node) {
-      std::fill_n(modelgrid[mgi].initnucmassfrac, num_nuclides, 0.);
+      std::fill_n(&initnucmassfrac_allcells[mgi * num_nuclides], num_nuclides, 0.);
     }
   }
 #ifdef MPI_ON
@@ -216,21 +219,22 @@ void set_modelinitnucmassfrac(const int modelgridindex, const int nucindex, floa
 
   assert_always(abund >= 0.);
   assert_always(abund <= 1.);
+  const ptrdiff_t num_nuclides = decay::get_num_nuclides();
 
-  assert_always(modelgrid[modelgridindex].initnucmassfrac != nullptr);
-  modelgrid[modelgridindex].initnucmassfrac[nucindex] = abund;
+  initnucmassfrac_allcells[(modelgridindex * num_nuclides) + nucindex] = abund;
 }
 
 void set_initenergyq(const int modelgridindex, const double initenergyq) {
   modelgrid[modelgridindex].initenergyq = initenergyq;
 }
 
-void set_elem_untrackedstable_abund_from_total(const int mgi, const int element, const float elemabundance) {
+void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int element, const float elemabundance) {
   // set the stable mass fraction of an element from the total element mass fraction
   // by subtracting the abundances of radioactive isotopes.
   // if the element Z=anumber has no specific stable abundance variable then the function does nothing
 
   const int atomic_number = get_atomicnumber(element);
+  const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
   double isofracsum = 0.;  // mass fraction sum of radioactive isotopes
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
@@ -250,31 +254,32 @@ void set_elem_untrackedstable_abund_from_total(const int mgi, const int element,
       printout("  massfrac(Z) %g massfrac_radioisotopes(Z) %g\n", elemabundance, isofracsum);
       printout("  increasing elemental abundance to %g and setting stable isotopic abundance to zero\n", isofracsum);
     }
-    assert_always(massfrac_untrackedstable >=
-                  -1e-2);           // result is allowed to be slightly negative due to roundoff error
+    // result is allowed to be slightly negative due to roundoff error
+    assert_always(massfrac_untrackedstable >= -1e-2);
     massfrac_untrackedstable = 0.;  // bring up to zero if negative
   }
 
   // if (globals::rank_in_node == 0)
   {
-    modelgrid[mgi].initmassfracuntrackedstable[element] = massfrac_untrackedstable;
+    initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element] = massfrac_untrackedstable;
   }
 
   // (isofracsum + massfracstable) might not exactly match elemabundance if we had to boost it to reach isofracsum
-  set_elem_abundance(mgi, element, isofracsum + massfrac_untrackedstable);
+  set_elem_abundance(nonemptymgi, element, isofracsum + massfrac_untrackedstable);
 }
 
 void allocate_nonemptycells_composition_cooling()
 // Initialise composition dependent cell data for the given cell
 {
   const ptrdiff_t npts_nonempty = get_nonempty_npts_model();
+  const auto nelements = get_nelements();
 
 #ifdef MPI_ON
   const auto [_, noderank_nonemptycellcount] =
       get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
 
   {
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * get_nelements() * sizeof(float));
+    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * nelements * sizeof(float));
     int disp_unit = sizeof(float);
     MPI_Win mpiwin = MPI_WIN_NULL;
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
@@ -284,7 +289,7 @@ void allocate_nonemptycells_composition_cooling()
   }
 
   {
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * get_nelements() * sizeof(float));
+    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * nelements * sizeof(float));
     int disp_unit = sizeof(float);
     MPI_Win mpiwin = MPI_WIN_NULL;
 
@@ -293,9 +298,33 @@ void allocate_nonemptycells_composition_cooling()
     assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elem_meanweight_allcells) == MPI_SUCCESS);
     MPI_Barrier(globals::mpi_comm_node);
   }
+
+  {
+    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * nelements * sizeof(int));
+    int disp_unit = sizeof(int);
+    MPI_Win mpiwin = MPI_WIN_NULL;
+
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &elements_uppermost_ion_allcells, &mpiwin) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elements_uppermost_ion_allcells) == MPI_SUCCESS);
+    MPI_Barrier(globals::mpi_comm_node);
+  }
+
+  {
+    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * nelements * sizeof(float));
+    int disp_unit = sizeof(float);
+    MPI_Win mpiwin = MPI_WIN_NULL;
+
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &elem_massfracs_allcells, &mpiwin) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elem_massfracs_allcells) == MPI_SUCCESS);
+    MPI_Barrier(globals::mpi_comm_node);
+  }
 #else
-  initmassfracuntrackedstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
-  elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
+  initmassfracuntrackedstable_allcells = static_cast<float *>(malloc(npts_nonempty * nelements * sizeof(float)));
+  elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * nelements * sizeof(float)));
+  elements_uppermost_ion_allcells = static_cast<int *>(malloc(npts_nonempty * nelements * sizeof(int)));
+  elem_massfracs_allcells = static_cast<float *>(malloc(npts_nonempty * nelements * sizeof(float)));
 #endif
 
   if (globals::total_nlte_levels > 0) {
@@ -317,32 +346,17 @@ void allocate_nonemptycells_composition_cooling()
   for (ptrdiff_t nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-    modelgrid[modelgridindex].elements_uppermost_ion = static_cast<int *>(malloc(get_nelements() * sizeof(int)));
-
-    assert_always(modelgrid[modelgridindex].elements_uppermost_ion != nullptr);
-
-    modelgrid[modelgridindex].elem_massfracs = static_cast<float *>(malloc(get_nelements() * sizeof(float)));
-
-    if (modelgrid[modelgridindex].elem_massfracs == nullptr) {
-      printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n", modelgridindex);
-      std::abort();
-    }
-
-    modelgrid[modelgridindex].initmassfracuntrackedstable =
-        &initmassfracuntrackedstable_allcells[nonemptymgi * get_nelements()];
-
-    assert_always(modelgrid[modelgridindex].initmassfracuntrackedstable != nullptr);
-
     if (globals::total_nlte_levels > 0) {
       modelgrid[modelgridindex].nlte_pops =
           std::span(&nltepops_allcells[nonemptymgi * globals::total_nlte_levels], globals::total_nlte_levels);
       assert_always(modelgrid[modelgridindex].nlte_pops.data() != nullptr);
 
       // -1 indicates that there is currently no information on the nlte populations
-      std::ranges::fill(modelgrid[modelgridindex].nlte_pops, -1.);
+      std::ranges::fill_n(&nltepops_allcells[nonemptymgi * globals::total_nlte_levels], globals::total_nlte_levels,
+                          -1.);
     }
 
-    std::fill_n(modelgrid[modelgridindex].elem_massfracs, get_nelements(), -1.);
+    std::fill_n(&elem_massfracs_allcells[nonemptymgi * nelements], nelements, -1.);
 
     modelgrid[modelgridindex].ion_groundlevelpops = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
     if (modelgrid[modelgridindex].ion_groundlevelpops == nullptr) {
@@ -420,10 +434,8 @@ void allocate_nonemptymodelcells() {
       nonemptymgi_of_mgi[mgi] = -1;
       set_rho_tmin(mgi, 0.);
       set_rho(mgi, 0.);
-      if (modelgrid[mgi].initnucmassfrac != nullptr) {
-        for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-          set_modelinitnucmassfrac(mgi, nucindex, 0.);
-        }
+      for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
+        set_modelinitnucmassfrac(mgi, nucindex, 0.);
       }
     }
   }
@@ -616,6 +628,7 @@ void abundances_read() {
       if (threedimensional || normfactor <= 0.) {
         normfactor = 1.;
       }
+      const int nonemptymgi = get_modelcell_nonemptymgi(mgi);
 
       for (int element = 0; element < get_nelements(); element++) {
         // now set the abundances (by mass) of included elements, i.e.
@@ -625,7 +638,7 @@ void abundances_read() {
         assert_always(elemabundance >= 0.);
 
         // radioactive nuclide abundances should have already been set by read_??_model
-        set_elem_untrackedstable_abund_from_total(mgi, element, elemabundance);
+        set_elem_untrackedstable_abund_from_total(nonemptymgi, element, elemabundance);
       }
     }
   }
@@ -1822,9 +1835,18 @@ __host__ __device__ auto get_nnetot(const int modelgridindex) -> float {
 
 __host__ __device__ auto get_ffegrp(const int modelgridindex) -> float { return modelgrid[modelgridindex].ffegrp; }
 
+auto get_elem_abundance(int modelgridindex, int element) -> float
 // mass fraction of an element (all isotopes combined)
-void set_elem_abundance(const int modelgridindex, const int element, const float newabundance) {
-  modelgrid[modelgridindex].elem_massfracs[element] = newabundance;
+{
+  const int nonemptymgi = get_modelcell_nonemptymgi(modelgridindex);
+  const auto massfrac = elem_massfracs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element];
+  assert_testmodeonly(massfrac >= 0.0);
+  return massfrac;
+}
+
+// mass fraction of an element (all isotopes combined)
+void set_elem_abundance(const int nonemptymgi, const int element, const float newabundance) {
+  elem_massfracs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] = newabundance;
 }
 
 // mass fraction of an element (all isotopes combined)
@@ -1971,20 +1993,20 @@ __host__ __device__ auto get_mgi_of_nonemptymgi(const int nonemptymgi) -> int {
 
 // get the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
 auto get_modelinitnucmassfrac(const int modelgridindex, const int nucindex) -> float {
-  assert_testmodeonly(modelgrid[modelgridindex].initnucmassfrac != nullptr);
-  return modelgrid[modelgridindex].initnucmassfrac[nucindex];
+  const ptrdiff_t num_nuclides = decay::get_num_nuclides();
+
+  return initnucmassfrac_allcells[(modelgridindex * num_nuclides) + nucindex];
 }
 
-auto get_stable_initabund(const int mgi, const int element) -> float {
-  assert_testmodeonly(modelgrid[mgi].initmassfracuntrackedstable != nullptr);
-  return modelgrid[mgi].initmassfracuntrackedstable[element];
+auto get_stable_initabund(const int nonemptymgi, const int element) -> float {
+  return initmassfracuntrackedstable_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element];
 }
 
 auto get_element_meanweight(const int mgi, const int element) -> float
 // weight is in grams
 {
   if (USE_CALCULATED_MEANATOMICWEIGHT) {
-    const auto nonemptymgi = get_modelcell_nonemptymgi(mgi);
+    const ptrdiff_t nonemptymgi = get_modelcell_nonemptymgi(mgi);
     const double mu = elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element];
     if (mu > 0) {
       return mu;
@@ -1994,10 +2016,9 @@ auto get_element_meanweight(const int mgi, const int element) -> float
 }
 
 // set element weight in grams
-void set_element_meanweight(const int mgi, const int element, const float meanweight) {
+void set_element_meanweight(const int nonemptymgi, const int element, const float meanweight) {
   assert_always(meanweight > 0.);
-  const auto nonemptymgi = get_modelcell_nonemptymgi(mgi);
-  elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element] = meanweight;
+  elem_meanweight_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] = meanweight;
 }
 
 auto get_electronfrac(const int modelgridindex) -> double {
@@ -2042,12 +2063,14 @@ auto get_cellradialposmid(const int cellindex) -> double {
   return vec_len(dcen);
 }
 
-auto get_elements_uppermost_ion(const int modelgridindex, const int element) -> int {
-  return modelgrid[modelgridindex].elements_uppermost_ion[element];
+[[nodiscard]] auto get_elements_uppermost_ion(const int modelgridindex, const int element) -> int {
+  const ptrdiff_t nonemptymgi = get_modelcell_nonemptymgi(modelgridindex);
+  return elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element];
 }
 
 void set_elements_uppermost_ion(const int modelgridindex, const int element, const int newvalue) {
-  modelgrid[modelgridindex].elements_uppermost_ion[element] = newvalue;
+  const ptrdiff_t nonemptymgi = get_modelcell_nonemptymgi(modelgridindex);
+  elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element] = newvalue;
 }
 
 void calculate_kappagrey() {
