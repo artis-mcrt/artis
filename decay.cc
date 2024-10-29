@@ -1135,7 +1135,8 @@ void free_decaypath_energy_per_mass() {
 }
 
 // energy release rate in form of gamma-rays in [erg/s/g]
-[[nodiscard]] auto get_gamma_emission_rate(const int modelgridindex, const double t) -> double {
+[[nodiscard]] auto get_gamma_emission_rate(const int nonemptymgi, const double t) -> double {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double eps_gamma_sum = 0.;
   const auto num_nuclides = get_num_nuclides();
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
