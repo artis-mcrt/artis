@@ -113,10 +113,12 @@ void initialise_linestat_file() {
   fflush(linestat_file);
 }
 
-void write_deposition_file(const int nts, const int my_rank, const int nstart_nonempty, const int ndo_nonempty) {
+void write_deposition_file(const int nts, const int my_rank) {
   printout("Calculating deposition rates...\n");
   auto const time_write_deposition_file_start = std::time(nullptr);
   double mtot = 0.;
+  const int nstart_nonempty = grid::get_nstart_nonempty(my_rank);
+  const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
 
   // calculate analytical decay rates
   // for (int i = 0; i <= nts; i++)
@@ -694,8 +696,6 @@ auto do_timestep(const int nts, const int titer, Packet *packets, const int wall
 
   // Each process has now updated its own set of cells. The results now need to be communicated between processes.
 #ifdef MPI_ON
-  const int nstart_nonempty = grid::get_nstart_nonempty(my_rank);
-  const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
   mpi_communicate_grid_properties();
 #endif
 
@@ -743,7 +743,7 @@ auto do_timestep(const int nts, const int titer, Packet *packets, const int wall
 
     normalise_deposition_estimators(nts);
 
-    write_deposition_file(nts, my_rank, nstart_nonempty, ndo_nonempty);
+    write_deposition_file(nts, my_rank);
 
     write_partial_lightcurve_spectra(my_rank, nts, packets);
 
