@@ -958,7 +958,6 @@ auto main(int argc, char *argv[]) -> int {
     write_timestep_file();
   }
 
-  // Initialise the grid. Set up the initial positions and sizes of the grid cells.
   printout("time grid_init %ld\n", std::time(nullptr));
   grid::grid_init(my_rank);
 
@@ -969,9 +968,6 @@ auto main(int argc, char *argv[]) -> int {
 
   if (!globals::simulation_continued_from_saved) {
     std::remove("deposition.out");
-    // Next we want to initialise the packets.
-    // Create a bunch of npkts packets
-    // and write them to a binary file for later readin.
     packet_init(packets);
     zero_estimators();
   }

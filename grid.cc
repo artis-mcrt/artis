@@ -84,6 +84,7 @@ float *initmassfracuntrackedstable_allcells{};
 float *elem_meanweight_allcells{};
 
 std::vector<int> ranks_nstart;
+std::vector<int> ranks_nstart_nonempty;
 std::vector<int> ranks_ndo;
 std::vector<int> ranks_ndo_nonempty;
 int maxndo = -1;
@@ -1285,6 +1286,16 @@ void assign_initial_temperatures() {
   printout("  cells above MAXTEMP %g: %d\n", MAXTEMP, cells_above_maxtemp);
 }
 
+// start at mgi_start and find the next non-empty cell, or return -1 if none found
+[[nodiscard]] auto get_next_nonemptymgi(const int mgi_start) -> int {
+  for (int mgi = mgi_start + 1; mgi < get_npts_model(); mgi++) {
+    if (get_numassociatedcells(mgi) > 0) {
+      return nonemptymgi_of_mgi[mgi];
+    }
+  }
+  return -1;
+}
+
 void setup_nstart_ndo() {
   const int nprocesses = globals::nprocs;
   const int npts_nonempty = get_nonempty_npts_model();
@@ -1293,23 +1304,26 @@ void setup_nstart_ndo() {
   maxndo = 0;
 
   ranks_nstart.resize(nprocesses, -1);
+  ranks_nstart_nonempty.resize(nprocesses, -1);
   ranks_ndo.resize(nprocesses, 0);
   ranks_ndo_nonempty.resize(nprocesses, 0);
 
   // begin with no cell assignments
   std::ranges::fill(ranks_nstart, 0);
+  std::ranges::fill(ranks_nstart_nonempty, 0);
   std::ranges::fill(ranks_ndo, 0);
   std::ranges::fill(ranks_ndo_nonempty, 0);
 
   if (nprocesses >= get_npts_model()) {
     // for convenience, rank == mgi when there is at least one rank per cell
     maxndo = 1;
-    for (int r = 0; r < nprocesses; r++) {
-      if (r < get_npts_model()) {
-        const int mgi = r;
-        ranks_nstart[r] = mgi;
-        ranks_ndo[r] = 1;
-        ranks_ndo_nonempty[r] = (get_numassociatedcells(mgi) > 0) ? 1 : 0;
+    for (int rank = 0; rank < nprocesses; rank++) {
+      if (rank < get_npts_model()) {
+        const int mgi = rank;
+        ranks_nstart[rank] = mgi;
+        ranks_nstart_nonempty[rank] = get_next_nonemptymgi(mgi);
+        ranks_ndo[rank] = 1;
+        ranks_ndo_nonempty[rank] = (get_numassociatedcells(mgi) > 0) ? 1 : 0;
       }
     }
   } else {
@@ -1322,6 +1336,7 @@ void setup_nstart_ndo() {
         // current rank has enough non-empty cells, so start assigning cells to the next rank
         rank++;
         ranks_nstart[rank] = mgi;
+        ranks_nstart_nonempty[rank] = get_next_nonemptymgi(mgi);
       }
 
       ranks_ndo[rank]++;
@@ -2258,6 +2273,13 @@ auto get_nstart(const int rank) -> int {
     setup_nstart_ndo();
   }
   return ranks_nstart[rank];
+}
+
+auto get_nstart_nonempty(const int rank) -> int {
+  if (ranks_ndo.empty()) {
+    setup_nstart_ndo();
+  }
+  return ranks_nstart_nonempty[rank];
 }
 
 auto get_ndo(const int rank) -> int {
