@@ -273,6 +273,7 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
 
       MPI_Pack(&root_ndo_nonempty, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
       for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+        assert_always(ndo_nonempty > 0);
         const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
         MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
 
