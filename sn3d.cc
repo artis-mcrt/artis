@@ -217,21 +217,18 @@ void write_deposition_file(const int nts, const int my_rank, const int nstart_no
 }
 
 #ifdef MPI_ON
-void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart_nonempty,
-                                     const int ndo_nonempty) {
+void mpi_communicate_grid_properties() {
   const auto nincludedions = get_includedions();
   const auto nelements = get_nelements();
   int position = 0;
-  for (int root = 0; root < nprocs; root++) {
+  for (int root = 0; root < globals::nprocs; root++) {
     MPI_Barrier(MPI_COMM_WORLD);
 
     int root_node_id = globals::node_id;
     MPI_Bcast(&root_node_id, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-    int root_nstart_nonempty = nstart_nonempty;
-    MPI_Bcast(&root_nstart_nonempty, 1, MPI_INT, root, MPI_COMM_WORLD);
-    int root_ndo_nonempty = ndo_nonempty;
-    MPI_Bcast(&root_ndo_nonempty, 1, MPI_INT, root, MPI_COMM_WORLD);
+    const int root_nstart_nonempty = grid::get_nstart_nonempty(root);
+    const int root_ndo_nonempty = grid::get_ndo_nonempty(root);
 
     for (int nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
          nonemptymgi++) {
@@ -269,12 +266,10 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
       MPI_Bcast_binned_opacities(modelgridindex, root_node_id);
     }
 
-    if (root == my_rank) {
+    if (root == globals::rank_global) {
       position = 0;
-
-      MPI_Pack(&ndo_nonempty, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-      for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
-        assert_always(ndo_nonempty > 0);
+      for (int nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
+           nonemptymgi++) {
         const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
         MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
 
@@ -318,9 +313,7 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
     MPI_Barrier(MPI_COMM_WORLD);
 
     position = 0;
-    int numcellspacked = 0;
-    MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &numcellspacked, 1, MPI_INT, MPI_COMM_WORLD);
-    for (int nn = 0; nn < numcellspacked; nn++) {
+    for (int nn = 0; nn < root_ndo_nonempty; nn++) {
       int mgi = 0;
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
 
@@ -667,10 +660,9 @@ void normalise_deposition_estimators(int nts) {
   }
 }
 
-auto do_timestep(const int nts, const int titer, const int my_rank, Packet *packets, const int walltimelimitseconds)
-    -> bool {
+auto do_timestep(const int nts, const int titer, Packet *packets, const int walltimelimitseconds) -> bool {
   bool do_this_full_loop = true;
-
+  const auto my_rank = globals::rank_global;
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
   if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
     // Read the packets file to reset before each additional iteration on the timestep
@@ -704,7 +696,7 @@ auto do_timestep(const int nts, const int titer, const int my_rank, Packet *pack
 #ifdef MPI_ON
   const int nstart_nonempty = grid::get_nstart_nonempty(my_rank);
   const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
-  mpi_communicate_grid_properties(my_rank, globals::nprocs, nstart_nonempty, ndo_nonempty);
+  mpi_communicate_grid_properties();
 #endif
 
   printout("timestep %d: time after grid properties have been communicated %ld (took %ld seconds)\n", nts,
@@ -1037,7 +1029,7 @@ auto main(int argc, char *argv[]) -> int {
     assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 
     for (int titer = 0; titer < globals::n_titer; titer++) {
-      terminate_early = do_timestep(nts, titer, my_rank, packets, walltimelimitseconds);
+      terminate_early = do_timestep(nts, titer, packets, walltimelimitseconds);
 #ifdef DO_TITER
       // No iterations over the zeroth timestep, set titer > n_titer
       if (nts == 0) titer = globals::n_titer + 1;
