@@ -2201,13 +2201,13 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
   heatingcoolingrates->eps_gamma_ana = rho * decay::get_gamma_emission_rate(nonemptymgi, tmid);
 
   heatingcoolingrates->eps_positron_ana =
-      rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAPLUS);
+      rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_BETAPLUS);
 
   heatingcoolingrates->eps_electron_ana =
-      (rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAMINUS));
+      (rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_BETAMINUS));
 
   heatingcoolingrates->eps_alpha_ana =
-      rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_ALPHA);
+      rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_ALPHA);
 
   if (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
     heatingcoolingrates->dep_positron = heatingcoolingrates->eps_positron_ana;

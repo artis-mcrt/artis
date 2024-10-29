@@ -41,7 +41,7 @@ void update_abundances(int nonemptymgi, int timestep, double t_current);
 void setup_decaypath_energy_per_mass();
 void free_decaypath_energy_per_mass();
 [[nodiscard]] auto get_qdot_modelcell(int nonemptymgi, double t, int decaytype) -> double;
-[[nodiscard]] auto get_particle_injection_rate(int modelgridindex, double t, int decaytype) -> double;
+[[nodiscard]] auto get_particle_injection_rate(int nonemptymgi, double t, int decaytype) -> double;
 [[nodiscard]] auto get_gamma_emission_rate(int nonemptymgi, double t) -> double;
 [[nodiscard]] auto get_global_etot_t0_tinf() -> double;
 void fprint_nuc_abundances(FILE *estimators_file, int modelgridindex, double t_current, int element);

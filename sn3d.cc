@@ -138,11 +138,11 @@ void write_deposition_file() {
     const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
 
     globals::timesteps[nts].eps_positron_ana_power +=
-        cellmass * decay::get_particle_injection_rate(mgi, t_mid_nts, decay::DECAYTYPE_BETAPLUS);
+        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_BETAPLUS);
     globals::timesteps[nts].eps_electron_ana_power +=
-        cellmass * decay::get_particle_injection_rate(mgi, t_mid_nts, decay::DECAYTYPE_BETAMINUS);
+        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_BETAMINUS);
     globals::timesteps[nts].eps_alpha_ana_power +=
-        cellmass * decay::get_particle_injection_rate(mgi, t_mid_nts, decay::DECAYTYPE_ALPHA);
+        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_ALPHA);
 
     mtot += cellmass;
 

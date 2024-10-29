@@ -1109,8 +1109,8 @@ void free_decaypath_energy_per_mass() {
 }
 
 // energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in [erg/s/g]
-[[nodiscard]] auto get_particle_injection_rate(const int modelgridindex, const double t, const int decaytype)
-    -> double {
+[[nodiscard]] auto get_particle_injection_rate(const int nonemptymgi, const double t, const int decaytype) -> double {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double dep_sum = 0.;
   const auto num_nuclides = get_num_nuclides();
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
