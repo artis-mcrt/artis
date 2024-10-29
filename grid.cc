@@ -79,10 +79,6 @@ MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
 MPI_Win win_initnucmassfrac_allcells = MPI_WIN_NULL;
 #endif
 
-float *initnucmassfrac_allcells{};
-float *initmassfracuntrackedstable_allcells{};
-float *elem_meanweight_allcells{};
-
 std::vector<int> ranks_nstart;
 std::vector<int> ranks_nstart_nonempty;
 std::vector<int> ranks_ndo;
@@ -338,10 +334,6 @@ void allocate_nonemptycells_composition_cooling()
         &initmassfracuntrackedstable_allcells[nonemptymgi * get_nelements()];
 
     assert_always(modelgrid[modelgridindex].initmassfracuntrackedstable != nullptr);
-
-    modelgrid[modelgridindex].elem_meanweight = &elem_meanweight_allcells[nonemptymgi * get_nelements()];
-
-    assert_always(modelgrid[modelgridindex].elem_meanweight != nullptr);
 
     if (globals::total_nlte_levels > 0) {
       modelgrid[modelgridindex].nlte_pops =
@@ -1994,7 +1986,8 @@ auto get_element_meanweight(const int mgi, const int element) -> float
 // weight is in grams
 {
   if (USE_CALCULATED_MEANATOMICWEIGHT) {
-    const double mu = modelgrid[mgi].elem_meanweight[element];
+    const auto nonemptymgi = get_modelcell_nonemptymgi(mgi);
+    const double mu = elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element];
     if (mu > 0) {
       return mu;
     }
@@ -2005,7 +1998,8 @@ auto get_element_meanweight(const int mgi, const int element) -> float
 // set element weight in grams
 void set_element_meanweight(const int mgi, const int element, const float meanweight) {
   assert_always(meanweight > 0.);
-  modelgrid[mgi].elem_meanweight[element] = meanweight;
+  const auto nonemptymgi = get_modelcell_nonemptymgi(mgi);
+  elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element] = meanweight;
 }
 
 auto get_electronfrac(const int modelgridindex) -> double {

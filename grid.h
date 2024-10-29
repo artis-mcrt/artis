@@ -26,7 +26,6 @@ struct ModelGridCell {
   float nnetot = -1.;  // total electron density (free + bound).
   float *initnucmassfrac{};
   float *initmassfracuntrackedstable{};
-  float *elem_meanweight{};
   float initelectronfrac = -1;  // Ye: electrons (or protons) per nucleon
   float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
   float ffegrp = 0.;
@@ -66,6 +65,10 @@ inline std::span<ModelGridCell> modelgrid{};
 inline int ngrid{0};
 
 inline double mtot_input{0.};
+
+inline float *initnucmassfrac_allcells{};
+inline float *initmassfracuntrackedstable_allcells{};
+inline float *elem_meanweight_allcells{};
 
 [[nodiscard]] auto get_elements_uppermost_ion(int modelgridindex, int element) -> int;
 void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);

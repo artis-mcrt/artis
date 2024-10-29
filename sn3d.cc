@@ -256,10 +256,8 @@ void mpi_communicate_grid_properties() {
         MPI_Bcast(&globals::gammaestimator[nonemptymgi * globals::nbfcontinua_ground], globals::nbfcontinua_ground,
                   MPI_DOUBLE, root, MPI_COMM_WORLD);
       }
-
-      assert_always(grid::modelgrid[modelgridindex].elem_meanweight != nullptr);
       if (globals::rank_in_node == 0) {
-        MPI_Bcast(grid::modelgrid[modelgridindex].elem_meanweight, nelements, MPI_FLOAT, root_node_id,
+        MPI_Bcast(&grid::elem_meanweight_allcells[nonemptymgi * nelements], nelements, MPI_FLOAT, root_node_id,
                   globals::mpi_comm_internode);
       }
 
