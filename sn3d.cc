@@ -665,8 +665,7 @@ void normalise_deposition_estimators(int nts) {
   }
 }
 
-auto do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo,
-                 const int nstart_nonempty, const int ndo_nonempty, Packet *packets, const int walltimelimitseconds)
+auto do_timestep(const int nts, const int titer, const int my_rank, Packet *packets, const int walltimelimitseconds)
     -> bool {
   bool do_this_full_loop = true;
 
@@ -693,12 +692,16 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
 
   // Update the matter quantities in the grid for the new timestep.
 
+  const int nstart = grid::get_nstart(my_rank);
+  const int ndo = grid::get_ndo(my_rank);
   update_grid(estimators_file, nts, nts_prev, my_rank, nstart, ndo, titer, real_time_start);
 
   const auto sys_time_start_communicate_grid = std::time(nullptr);
 
-// Each process has now updated its own set of cells. The results now need to be communicated between processes.
+  // Each process has now updated its own set of cells. The results now need to be communicated between processes.
 #ifdef MPI_ON
+  const int nstart_nonempty = grid::get_nstart_nonempty(my_rank);
+  const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
   mpi_communicate_grid_properties(my_rank, globals::nprocs, nstart_nonempty, ndo_nonempty);
 #endif
 
@@ -976,7 +979,6 @@ auto main(int argc, char *argv[]) -> int {
   // cells are sent to processes 0 ... process n_leftover -1.
   const int nstart = grid::get_nstart(my_rank);
   const int ndo = grid::get_ndo(my_rank);
-  const int nstart_nonempty = grid::get_nstart_nonempty(my_rank);
   const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
   printout("process rank %d (global max rank %d) assigned %d modelgrid cells (%d nonempty)", my_rank,
            globals::nprocs - 1, ndo, ndo_nonempty);
@@ -1033,8 +1035,7 @@ auto main(int argc, char *argv[]) -> int {
     assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 
     for (int titer = 0; titer < globals::n_titer; titer++) {
-      terminate_early =
-          do_timestep(nts, titer, my_rank, nstart, ndo, nstart_nonempty, ndo_nonempty, packets, walltimelimitseconds);
+      terminate_early = do_timestep(nts, titer, my_rank, packets, walltimelimitseconds);
 #ifdef DO_TITER
       // No iterations over the zeroth timestep, set titer > n_titer
       if (nts == 0) titer = globals::n_titer + 1;
