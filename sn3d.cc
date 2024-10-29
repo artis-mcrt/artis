@@ -113,7 +113,7 @@ void initialise_linestat_file() {
   fflush(linestat_file);
 }
 
-void write_deposition_file(const int nts, const int my_rank, const int nstart, const int ndo) {
+void write_deposition_file(const int nts, const int my_rank, const int nstart_nonempty, const int ndo_nonempty) {
   printout("Calculating deposition rates...\n");
   auto const time_write_deposition_file_start = std::time(nullptr);
   double mtot = 0.;
@@ -132,32 +132,29 @@ void write_deposition_file(const int nts, const int my_rank, const int nstart, c
     globals::timesteps[i].qdot_alpha = 0.;
     globals::timesteps[i].qdot_total = 0.;
 
-    for (int mgi = nstart; mgi < (nstart + ndo); mgi++)
-    // for (int mgi = 0; mgi < grid::get_npts_model(); mgi++)
-    {
-      if (grid::get_numassociatedcells(mgi) > 0) {
-        const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
+    for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+      const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+      const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
 
-        globals::timesteps[i].eps_positron_ana_power +=
-            cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAPLUS);
-        globals::timesteps[i].eps_electron_ana_power +=
-            cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAMINUS);
-        globals::timesteps[i].eps_alpha_ana_power +=
-            cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_ALPHA);
+      globals::timesteps[i].eps_positron_ana_power +=
+          cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAPLUS);
+      globals::timesteps[i].eps_electron_ana_power +=
+          cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAMINUS);
+      globals::timesteps[i].eps_alpha_ana_power +=
+          cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_ALPHA);
 
-        if (i == nts) {
-          mtot += cellmass;
-        }
+      if (i == nts) {
+        mtot += cellmass;
+      }
 
-        for (const auto decaytype : decay::all_decaytypes) {
-          // Qdot here has been multiplied by mass, so it is in units of [erg/s]
-          const double qdot_cell = decay::get_qdot_modelcell(mgi, t_mid, decaytype) * cellmass;
-          globals::timesteps[i].qdot_total += qdot_cell;
-          if (decaytype == decay::DECAYTYPE_BETAMINUS) {
-            globals::timesteps[i].qdot_betaminus += qdot_cell;
-          } else if (decaytype == decay::DECAYTYPE_ALPHA) {
-            globals::timesteps[i].qdot_alpha += qdot_cell;
-          }
+      for (const auto decaytype : decay::all_decaytypes) {
+        // Qdot here has been multiplied by mass, so it is in units of [erg/s]
+        const double qdot_cell = decay::get_qdot_modelcell(mgi, t_mid, decaytype) * cellmass;
+        globals::timesteps[i].qdot_total += qdot_cell;
+        if (decaytype == decay::DECAYTYPE_BETAMINUS) {
+          globals::timesteps[i].qdot_betaminus += qdot_cell;
+        } else if (decaytype == decay::DECAYTYPE_ALPHA) {
+          globals::timesteps[i].qdot_alpha += qdot_cell;
         }
       }
     }
@@ -751,7 +748,7 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
 
     normalise_deposition_estimators(nts);
 
-    write_deposition_file(nts, my_rank, nstart, ndo);
+    write_deposition_file(nts, my_rank, nstart_nonempty, ndo_nonempty);
 
     write_partial_lightcurve_spectra(my_rank, nts, packets);
 
