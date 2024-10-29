@@ -408,7 +408,6 @@ void mpi_reduce_estimators(const int nts) {
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // Communicate gamma and positron deposition and write to file
   MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].cmf_lum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].cmf_lum /= globals::nprocs;
 
@@ -581,7 +580,7 @@ void save_grid_and_packets(const int nts, const int my_rank, const Packet *packe
   }
 
   if (!KEEP_ALL_RESTART_FILES) {
-// ensure new packets files have been written by all processes before we remove the old set
+    // ensure new packets files have been written by all processes before we remove the old set
 #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
