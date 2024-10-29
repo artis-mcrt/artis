@@ -222,6 +222,8 @@ void write_deposition_file(const int nts, const int my_rank, const int nstart, c
 #ifdef MPI_ON
 void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart_nonempty,
                                      const int ndo_nonempty) {
+  const auto nincludedions = get_includedions();
+  const auto nelements = get_nelements();
   int position = 0;
   for (int root = 0; root < nprocs; root++) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -262,7 +264,7 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
 
       assert_always(grid::modelgrid[modelgridindex].elem_meanweight != nullptr);
       if (globals::rank_in_node == 0) {
-        MPI_Bcast(grid::modelgrid[modelgridindex].elem_meanweight, get_nelements(), MPI_FLOAT, root_node_id,
+        MPI_Bcast(grid::modelgrid[modelgridindex].elem_meanweight, nelements, MPI_FLOAT, root_node_id,
                   globals::mpi_comm_internode);
       }
 
@@ -299,14 +301,14 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
         MPI_Pack(&grid::modelgrid[mgi].thick, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
                  MPI_COMM_WORLD);
 
-        MPI_Pack(grid::modelgrid[mgi].elem_massfracs, get_nelements(), MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size,
+        MPI_Pack(grid::modelgrid[mgi].elem_massfracs, nelements, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size,
                  &position, MPI_COMM_WORLD);
 
-        MPI_Pack(grid::modelgrid[mgi].ion_groundlevelpops, get_includedions(), MPI_FLOAT, mpi_grid_buffer,
+        MPI_Pack(grid::modelgrid[mgi].ion_groundlevelpops, nincludedions, MPI_FLOAT, mpi_grid_buffer,
                  mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-        MPI_Pack(grid::modelgrid[mgi].ion_partfuncts, get_includedions(), MPI_FLOAT, mpi_grid_buffer,
-                 mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-        MPI_Pack(grid::modelgrid[mgi].ion_cooling_contribs, get_includedions(), MPI_DOUBLE, mpi_grid_buffer,
+        MPI_Pack(grid::modelgrid[mgi].ion_partfuncts, nincludedions, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size,
+                 &position, MPI_COMM_WORLD);
+        MPI_Pack(grid::modelgrid[mgi].ion_cooling_contribs, nincludedions, MPI_DOUBLE, mpi_grid_buffer,
                  mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
       }
       printout("[info] mem_usage: MPI_BUFFER: used %d of %zu bytes allocated to mpi_grid_buffer\n", position,
@@ -317,8 +319,6 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
     MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
 
-    const auto nincludedions = get_includedions();
-    const auto nelements = get_nelements();
     position = 0;
     int numcellspacked = 0;
     MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &numcellspacked, 1, MPI_INT, MPI_COMM_WORLD);
@@ -361,7 +361,7 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void mpi_reduce_estimators(int nts) {
+void mpi_reduce_estimators(const int nts) {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
   radfield::reduce_estimators();
   MPI_Barrier(MPI_COMM_WORLD);
