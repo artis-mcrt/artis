@@ -1300,9 +1300,9 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
   // assert_always(fabs(nucfracsum - initnucfracsum) < 0.001); // decays shouldn't change nuclear mass fraction sum
 }
 
-void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, const double t_current, const int element) {
+void fprint_nuc_abundances(FILE *estimators_file, const int nonemptmgi, const double t_current, const int element) {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptmgi);
   const double rho = grid::get_rho(modelgridindex);
-  const auto nonemptmgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
   const int atomic_number = get_atomicnumber(element);
   std::set<int> a_isotopes;  // ensure we don't repeat isotopes
