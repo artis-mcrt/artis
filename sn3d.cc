@@ -317,10 +317,12 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
     MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
 
+    const auto nincludedions = get_includedions();
+    const auto nelements = get_nelements();
     position = 0;
-    int nlp = 0;
-    MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
-    for (int nn = 0; nn < nlp; nn++) {
+    int numcellspacked = 0;
+    MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &numcellspacked, 1, MPI_INT, MPI_COMM_WORLD);
+    for (int nn = 0; nn < numcellspacked; nn++) {
       int mgi = 0;
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
 
@@ -345,15 +347,15 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].thick, 1, MPI_INT,
                  MPI_COMM_WORLD);
 
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].elem_massfracs, get_nelements(),
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].elem_massfracs, nelements,
                  MPI_FLOAT, MPI_COMM_WORLD);
 
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_groundlevelpops,
-                 get_includedions(), MPI_FLOAT, MPI_COMM_WORLD);
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_partfuncts,
-                 get_includedions(), MPI_FLOAT, MPI_COMM_WORLD);
+                 nincludedions, MPI_FLOAT, MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_partfuncts, nincludedions,
+                 MPI_FLOAT, MPI_COMM_WORLD);
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_cooling_contribs,
-                 get_includedions(), MPI_DOUBLE, MPI_COMM_WORLD);
+                 nincludedions, MPI_DOUBLE, MPI_COMM_WORLD);
     }
   }
   MPI_Barrier(MPI_COMM_WORLD);
