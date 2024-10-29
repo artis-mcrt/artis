@@ -675,8 +675,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
   }
 }
 
-void solve_Te_nltepops(const int mgi, const int nts, const int nts_prev, const int titer,
-                       HeatingCoolingRates *heatingcoolingrates)
+void solve_Te_nltepops(const int mgi, const int nts, const int nts_prev, HeatingCoolingRates *heatingcoolingrates)
 // nts is the timestep number
 {
   // bfheating coefficients are needed for the T_e solver, but
@@ -707,12 +706,9 @@ void solve_Te_nltepops(const int mgi, const int nts, const int nts_prev, const i
 
     const double prev_T_e = grid::get_Te(mgi);
     const auto sys_time_start_Te = std::time(nullptr);
-    const int nts_for_te = (titer == 0) ? nts - 1 : nts;
-    assert_always(nts == nts_prev);
 
     // Find T_e as solution for thermal balance
-    call_T_e_finder(mgi, nts, globals::timesteps[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates,
-                    bfheatingcoeffs);
+    call_T_e_finder(mgi, globals::timesteps[nts_prev].mid, MINTEMP, MAXTEMP, heatingcoolingrates, bfheatingcoeffs);
 
     const int duration_solve_T_e = std::time(nullptr) - sys_time_start_Te;
 
@@ -1012,7 +1008,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       // full-spectrum and binned J and nuJ estimators
       radfield::fit_parameters(mgi, nts);
 
-      solve_Te_nltepops(mgi, nts, nts_prev, titer, heatingcoolingrates);
+      solve_Te_nltepops(mgi, nts, nts_prev, heatingcoolingrates);
     }
     printout("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", mgi, nts,
              std::time(nullptr) - sys_time_start_temperature_corrections);
