@@ -1083,8 +1083,8 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
 }  // anonymous namespace
 
-void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int nstart,
-                 const int ndo, const int titer, const std::time_t real_time_start)
+void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int titer,
+                 const std::time_t real_time_start)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
 // nts timestep
@@ -1118,6 +1118,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     radfield::normalise_bf_estimators(nts, nts_prev, titer, deltat);
   }
 
+  const int nstart = grid::get_nstart(my_rank);
+  const int ndo = grid::get_ndo(my_rank);
 #ifdef _OPENMP
 #pragma omp parallel
 #endif

@@ -688,9 +688,7 @@ auto do_timestep(const int nts, const int titer, Packet *packets, const int wall
 
   // Update the matter quantities in the grid for the new timestep.
 
-  const int nstart = grid::get_nstart(my_rank);
-  const int ndo = grid::get_ndo(my_rank);
-  update_grid(estimators_file, nts, nts_prev, my_rank, nstart, ndo, titer, real_time_start);
+  update_grid(estimators_file, nts, nts_prev, my_rank, titer, real_time_start);
 
   const auto sys_time_start_communicate_grid = std::time(nullptr);
 
