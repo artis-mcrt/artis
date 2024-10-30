@@ -236,9 +236,8 @@ void mpi_communicate_grid_properties() {
       nonthermal::nt_MPI_Bcast(nonemptymgi, root, root_node_id);
 
       if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
-        const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-        MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops.data(), globals::total_nlte_levels, MPI_DOUBLE,
-                  root_node_id, globals::mpi_comm_internode);
+        MPI_Bcast(&grid::nltepops_allcells[nonemptymgi * globals::total_nlte_levels], globals::total_nlte_levels,
+                  MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
       }
 
       if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
