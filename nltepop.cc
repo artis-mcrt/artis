@@ -1163,8 +1163,8 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
           }
         } else {
           // superlevel, so add the populations of all other levels in the superlevel
-          const double slpopfactor = (grid::modelgrid[modelgridindex].nlte_pops[ion_first_nlte + nlevels_nlte] *
-                                      grid::modelgrid[modelgridindex].rho);
+          const double slpopfactor =
+              (get_nlte_superlevelpop_over_rho(modelgridindex, element, ion) * grid::modelgrid[modelgridindex].rho);
 
           nnlevellte = 0;
           double superlevel_partfunc = 0;
