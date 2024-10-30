@@ -1023,12 +1023,11 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       //          gsl_vector_get(x, index_gs), gsl_vector_get(pop_norm_factor_vec, index_gs));
 
       // store the NLTE level populations
-      const int nlte_start = globals::elements[element].ions[ion].first_nlte;
       // double solution_ion_pop = 0.;
       for (int level = 1; level <= nlevels_nlte; level++) {
         const int index = get_nlte_vector_index(element, ion, level);
-        grid::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] =
-            gsl_vector_get(&popvec, index) / grid::get_rho(modelgridindex);
+        set_nlte_levelpop_over_rho(modelgridindex, element, ion, level,
+                                   gsl_vector_get(&popvec, index) / grid::get_rho(modelgridindex));
         // solution_ion_pop += gsl_vector_get(popvec, index);
       }
 
@@ -1036,8 +1035,9 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       if (ion_has_superlevel(element, ion))  // a superlevel exists
       {
         const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1);
-        grid::modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte] =
-            (gsl_vector_get(&popvec, index_sl) / grid::modelgrid[modelgridindex].rho / superlevel_partfunc[ion]);
+        set_nlte_superlevelpop_over_rho(
+            modelgridindex, element, ion,
+            gsl_vector_get(&popvec, index_sl) / grid::get_rho(modelgridindex) / superlevel_partfunc[ion]);
       }
 
       // store the ground level population
