@@ -1142,7 +1142,6 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
 
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
-      const int ion_first_nlte = globals::elements[element].ions[ion].first_nlte;
       const int ionstage = get_ionstage(element, ion);
 
       const int nsuperlevels = ion_has_superlevel(element, ion) ? 1 : 0;
@@ -1158,13 +1157,13 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
           if (level == 0) {
             nnlevelnlte = get_groundlevelpop(modelgridindex, element, ion);
           } else {
-            nnlevelnlte = (grid::modelgrid[modelgridindex].nlte_pops[ion_first_nlte + level - 1] *
-                           grid::modelgrid[modelgridindex].rho);
+            nnlevelnlte =
+                get_nlte_levelpop_over_rho(modelgridindex, element, ion, level) * grid::modelgrid[modelgridindex].rho;
           }
         } else {
           // superlevel, so add the populations of all other levels in the superlevel
           const double slpopfactor =
-              (get_nlte_superlevelpop_over_rho(modelgridindex, element, ion) * grid::modelgrid[modelgridindex].rho);
+              get_nlte_superlevelpop_over_rho(modelgridindex, element, ion) * grid::modelgrid[modelgridindex].rho;
 
           nnlevellte = 0;
           double superlevel_partfunc = 0;
