@@ -1274,7 +1274,7 @@ auto get_nlte_levelpop_over_rho(const int modelgridindex, const int element, con
 }
 
 auto get_nlte_superlevelpop_over_rho(const int modelgridindex, const int element, const int ion) -> double {
-  assert_testmodeonly(ion_has_superlevel(int element, int ion));
+  assert_testmodeonly(ion_has_superlevel(element, ion));
   const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const int sl_nlte_index = globals::elements[element].ions[ion].first_nlte + get_nlevels_nlte(element, ion);
   return grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + sl_nlte_index];
@@ -1289,7 +1289,7 @@ void set_nlte_levelpop_over_rho(const int modelgridindex, const int element, con
 }
 
 void set_nlte_superlevelpop_over_rho(const int modelgridindex, const int element, const int ion, const double value) {
-  assert_testmodeonly(ion_has_superlevel(int element, int ion));
+  assert_testmodeonly(ion_has_superlevel(element, ion));
   const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const int sl_nlte_index = globals::elements[element].ions[ion].first_nlte + get_nlevels_nlte(element, ion);
   grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + sl_nlte_index] = value;
