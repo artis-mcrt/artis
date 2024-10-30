@@ -384,10 +384,10 @@ void print_level_rates(const int modelgridindex, const int timestep, const int e
 }
 
 void nltepop_reset_element(const int modelgridindex, const int element) {
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++) {
-    const int nlte_start = globals::elements[element].ions[ion].first_nlte;
-    std::fill_n(&grid::modelgrid[modelgridindex].nlte_pops[nlte_start],
+    std::fill_n(&grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels)],
                 get_nlevels_nlte(element, ion) + (ion_has_superlevel(element, ion) ? 1 : 0), -1.);
   }
 }
@@ -1207,7 +1207,7 @@ void nltepop_write_restart_data(FILE *restart_file) {
       }
     }
     for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
-      fprintf(restart_file, "%la ", grid::modelgrid[modelgridindex].nlte_pops[nlteindex]);
+      fprintf(restart_file, "%la ", grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]);
     }
   }
 }
@@ -1260,7 +1260,8 @@ void nltepop_read_restart_data(FILE *restart_file) {
         assert_always(fscanf(restart_file, "%*a ") == 0);  // discard value (master rank of this node will set it)
       } else
 #endif
-        assert_always(fscanf(restart_file, "%la ", &grid::modelgrid[modelgridindex].nlte_pops[nlteindex]) == 1);
+        assert_always(fscanf(restart_file, "%la ",
+                             &grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]) == 1);
     }
   }
 }
