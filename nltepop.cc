@@ -1270,6 +1270,7 @@ auto get_nlte_levelpop_over_rho(int modelgridindex, int element, int ion, int le
 }
 
 auto get_nlte_superlevelpop_over_rho(int modelgridindex, int element, int ion) -> double {
+  assert_testmodeonly(ion_has_superlevel(const int element, const int ion));
   const int sl_nlte_index = globals::elements[element].ions[ion].first_nlte + get_nlevels_nlte(element, ion);
   return grid::modelgrid[modelgridindex].nlte_pops[sl_nlte_index];
 }
@@ -1279,6 +1280,7 @@ void set_nlte_levelpop_over_rho(int modelgridindex, int element, int ion, int le
 }
 
 void set_nlte_superlevelpop_over_rho(int modelgridindex, int element, int ion, double value) {
+  assert_testmodeonly(ion_has_superlevel(const int element, const int ion));
   const int sl_nlte_index = globals::elements[element].ions[ion].first_nlte + get_nlevels_nlte(element, ion);
   grid::modelgrid[modelgridindex].nlte_pops[sl_nlte_index] = value;
 }
