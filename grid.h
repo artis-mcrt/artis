@@ -64,6 +64,8 @@ inline double mtot_input{0.};
 inline float *elem_meanweight_allcells{};
 inline float *elem_massfracs_allcells;  // mass fractions of elements in each cell for the current timestep
 
+inline double *nltepops_allcells{};
+
 [[nodiscard]] auto get_elements_uppermost_ion(int modelgridindex, int element) -> int;
 void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
 [[nodiscard]] auto wid_init(int cellindex, int axis) -> double;

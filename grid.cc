@@ -72,8 +72,6 @@ std::vector<int> mgi_of_nonemptymgi;
 
 std::span<double> totmassradionuclide{};  // total mass of each radionuclide in the ejecta
 
-double *nltepops_allcells{};
-
 #ifdef MPI_ON
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
 MPI_Win win_initnucmassfrac_allcells = MPI_WIN_NULL;

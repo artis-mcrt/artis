@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -1266,7 +1267,9 @@ void nltepop_read_restart_data(FILE *restart_file) {
 
 auto get_nlte_levelpop_over_rho(int modelgridindex, int element, int ion, int level) -> double {
   assert_testmodeonly(level <= get_nlevels_nlte(element, ion));
-  return grid::modelgrid[modelgridindex].nlte_pops[globals::elements[element].ions[ion].first_nlte + level - 1];
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  return grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) +
+                                 globals::elements[element].ions[ion].first_nlte + level - 1];
 }
 
 auto get_nlte_superlevelpop_over_rho(int modelgridindex, int element, int ion) -> double {
