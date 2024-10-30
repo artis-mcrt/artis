@@ -2154,7 +2154,7 @@ void init(const int my_rank, const int ndo_nonempty) {
       nt_solution[modelgridindex].allions =
           static_cast<NonThermalSolutionIon *>(malloc(get_includedions() * sizeof(NonThermalSolutionIon)));
 
-      const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+      const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
       nt_solution[modelgridindex].frac_excitations_list =
           NT_EXCITATION_ON ? &excitations_list_all_cells[nonemptymgi * nt_excitations_stored] : nullptr;
@@ -2185,9 +2185,9 @@ void init(const int my_rank, const int ndo_nonempty) {
 
 // set total non-thermal deposition rate from individual gamma/positron/electron/alpha rates. This should be called
 // after packet propagation is finished for this timestep and normalise_deposition_estimators() has been done
-void calculate_deposition_rate_density(const int modelgridindex, const int timestep,
+void calculate_deposition_rate_density(const int nonemptymgi, const int timestep,
                                        HeatingCoolingRates *heatingcoolingrates) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   heatingcoolingrates->dep_gamma = globals::dep_estimator_gamma[nonemptymgi];
 
   const double tmid = globals::timesteps[timestep].mid;
@@ -2198,16 +2198,16 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   // with time-dependent deposition, we don't have an analytic rate, so we use the Monte Carlo rate
   assert_always(heatingcoolingrates != nullptr);
 
-  heatingcoolingrates->eps_gamma_ana = rho * decay::get_gamma_emission_rate(modelgridindex, tmid);
+  heatingcoolingrates->eps_gamma_ana = rho * decay::get_gamma_emission_rate(nonemptymgi, tmid);
 
   heatingcoolingrates->eps_positron_ana =
-      rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAPLUS);
+      rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_BETAPLUS);
 
   heatingcoolingrates->eps_electron_ana =
-      (rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_BETAMINUS));
+      (rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_BETAMINUS));
 
   heatingcoolingrates->eps_alpha_ana =
-      rho * decay::get_particle_injection_rate(modelgridindex, tmid, decay::DECAYTYPE_ALPHA);
+      rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_ALPHA);
 
   if (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
     heatingcoolingrates->dep_positron = heatingcoolingrates->eps_positron_ana;
@@ -2223,9 +2223,8 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
       (heatingcoolingrates->dep_gamma + heatingcoolingrates->dep_positron + heatingcoolingrates->dep_electron);
 }
 
-__host__ __device__ auto get_deposition_rate_density(const int modelgridindex) -> double
 // get non-thermal deposition rate density in erg / s / cm^3 previously stored by calculate_deposition_rate_density()
-{
+__host__ __device__ auto get_deposition_rate_density(const int modelgridindex) -> double {
   assert_always(deposition_rate_density_all_cells[modelgridindex] >= 0);
   return deposition_rate_density_all_cells[modelgridindex];
 }
@@ -2778,10 +2777,8 @@ void read_restart_data(FILE *gridsave_file) {
 }
 
 #ifdef MPI_ON
-void nt_MPI_Bcast(const int modelgridindex, const int root, const int root_node_id) {
-  if (grid::get_numassociatedcells(modelgridindex) == 0) {
-    return;
-  }
+void nt_MPI_Bcast(const int nonemptymgi, const int root, const int root_node_id) {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   MPI_Bcast(&deposition_rate_density_all_cells[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 

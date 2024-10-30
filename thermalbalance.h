@@ -24,7 +24,7 @@ struct HeatingCoolingRates {
   double eps_alpha_ana{0};
 };
 
-void call_T_e_finder(int modelgridindex, int timestep, double t_current, double T_min, double T_max,
+void call_T_e_finder(int modelgridindex, double t_current, double T_min, double T_max,
                      HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs);
 [[nodiscard]] auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T_R, double W)
     -> double;

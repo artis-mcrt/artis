@@ -26,7 +26,7 @@ constexpr std::array<enum decaytypes, 5> all_decaytypes = {
 void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist);
 [[nodiscard]] auto get_nucstring_z(const std::string &strnuc) -> int;
 [[nodiscard]] auto get_nucstring_a(const std::string &strnuc) -> int;
-[[nodiscard]] auto get_num_nuclides() -> int;
+[[nodiscard]] auto get_num_nuclides() -> ptrdiff_t;
 [[nodiscard]] auto get_elname(int z) -> std::string;
 [[nodiscard]] auto get_nuc_z(int nucindex) -> int;
 [[nodiscard]] auto get_nuc_a(int nucindex) -> int;
@@ -35,16 +35,16 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
 [[nodiscard]] auto nucdecayenergygamma(int nucindex) -> double;
 [[nodiscard]] auto nucdecayenergygamma(int z, int a) -> double;
 void set_nucdecayenergygamma(int nucindex, double value);
-void update_abundances(int modelgridindex, int timestep, double t_current);
-[[nodiscard]] auto get_endecay_per_ejectamass_t0_to_time_withexpansion(int modelgridindex, double tstart) -> double;
-[[nodiscard]] auto get_modelcell_simtime_endecay_per_mass(int mgi) -> double;
+void update_abundances(int nonemptymgi, int timestep, double t_current);
+[[nodiscard]] auto get_endecay_per_ejectamass_t0_to_time_withexpansion(int nonemptymgi, double tstart) -> double;
+[[nodiscard]] auto get_modelcell_simtime_endecay_per_mass(int nonemptymgi) -> double;
 void setup_decaypath_energy_per_mass();
 void free_decaypath_energy_per_mass();
-[[nodiscard]] auto get_qdot_modelcell(int modelgridindex, double t, int decaytype) -> double;
-[[nodiscard]] auto get_particle_injection_rate(int modelgridindex, double t, int decaytype) -> double;
-[[nodiscard]] auto get_gamma_emission_rate(int modelgridindex, double t) -> double;
+[[nodiscard]] auto get_qdot_modelcell(int nonemptymgi, double t, int decaytype) -> double;
+[[nodiscard]] auto get_particle_injection_rate(int nonemptymgi, double t, int decaytype) -> double;
+[[nodiscard]] auto get_gamma_emission_rate(int nonemptymgi, double t) -> double;
 [[nodiscard]] auto get_global_etot_t0_tinf() -> double;
-void fprint_nuc_abundances(FILE *estimators_file, int modelgridindex, double t_current, int element);
+void fprint_nuc_abundances(FILE *estimators_file, int nonemptmgi, double t_current, int element);
 void setup_radioactive_pellet(double e0, int mgi, Packet &pkt);
 void cleanup();
 

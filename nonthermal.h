@@ -15,7 +15,7 @@ void solve_spencerfano(int modelgridindex, int timestep, int iteration);
                                                       bool energyweighted) -> double;
 [[nodiscard]] auto nt_ionisation_maxupperion(int element, int lowerion) -> int;
 [[nodiscard]] auto nt_random_upperion(int modelgridindex, int element, int lowerion, bool energyweighted) -> int;
-void calculate_deposition_rate_density(int modelgridindex, int timestep, HeatingCoolingRates *heatingcoolingrates);
+void calculate_deposition_rate_density(int nonemptymgi, int timestep, HeatingCoolingRates *heatingcoolingrates);
 [[nodiscard]] auto get_deposition_rate_density(int modelgridindex) -> double;
 [[nodiscard]] auto get_nt_frac_heating(int modelgridindex) -> float;
 #pragma omp declare simd
@@ -25,7 +25,7 @@ void do_ntalpha_deposit(Packet &pkt);
 void do_ntlepton_deposit(Packet &pkt);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);
-void nt_MPI_Bcast(int modelgridindex, int root, int root_node_id);
+void nt_MPI_Bcast(int nonemptymgi, int root, int root_node_id);
 void nt_reset_stats();
 void nt_print_stats(double modelvolume, double deltat);
 }  // namespace nonthermal

@@ -130,11 +130,11 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
     const bool assertpass = static_cast<bool>(e);                                                                      \
     if (!assertpass) {                                                                                                 \
       if (output_file) {                                                                                               \
-        output_file << "\n[rank " << globals::rank_global << "] " << __FILE__ << ":" << __LINE__                       \
-                    << ": failed assertion `" << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                \
+        output_file << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
+                    << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                                          \
         output_file.flush();                                                                                           \
       }                                                                                                                \
-      std::cerr << "\n[rank " << globals::rank_global << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
+      std::cerr << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `"     \
                 << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                                              \
       std::abort();                                                                                                    \
     }                                                                                                                  \
@@ -289,7 +289,7 @@ inline auto rng_uniform_pos() -> float {
 }
 
 inline void check_already_running() {
-  if (globals::rank_global == 0) {
+  if (globals::my_rank == 0) {
     const pid_t artispid = getpid();
 
     if (std::filesystem::exists("artis.pid")) {

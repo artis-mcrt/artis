@@ -625,7 +625,7 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
 auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   const int cellindex = pkt.where;
   const int mgi = grid::get_cell_modelgridindex(cellindex);
-  const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
+  const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
 
   MacroAtomState pktmastate{};
 
@@ -1150,10 +1150,9 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
 }
 
 #ifdef MPI_ON
-void MPI_Bcast_binned_opacities(const int modelgridindex, const int root_node_id) {
+void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node_id) {
   if constexpr (EXPANSIONOPACITIES_ON) {
     if (globals::rank_in_node == 0) {
-      const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
       assert_always(nonemptymgi >= 0);
       MPI_Bcast(&expansionopacities[nonemptymgi * expopac_nbins], expopac_nbins, MPI_FLOAT, root_node_id,
                 globals::mpi_comm_internode);
@@ -1168,7 +1167,7 @@ void MPI_Bcast_binned_opacities(const int modelgridindex, const int root_node_id
 #endif
 
 void calculate_expansion_opacities(const int modelgridindex) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto rho = grid::get_rho(modelgridindex);
 
   const auto sys_time_start_calc = std::time(nullptr);

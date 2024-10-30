@@ -191,7 +191,7 @@ void add_detailed_line(const int lineindex) {
 
 // get the normalised J_nu
 auto get_bin_J(const int modelgridindex, const int binindex) -> double {
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(binindex >= 0);
@@ -200,7 +200,7 @@ auto get_bin_J(const int modelgridindex, const int binindex) -> double {
 }
 
 auto get_bin_nuJ(const int modelgridindex, const int binindex) -> double {
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(binindex >= 0);
@@ -216,17 +216,17 @@ auto get_bin_nu_bar(const int modelgridindex, const int binindex) -> double {
 }
 
 auto get_bin_contribcount(const int modelgridindex, const int binindex) -> int {
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   return radfieldbins[(nonemptymgi * RADFIELDBINCOUNT) + binindex].contribcount;
 }
 
 auto get_bin_W(const int modelgridindex, const int binindex) -> float {
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   return radfieldbin_solutions[(nonemptymgi * RADFIELDBINCOUNT) + binindex].W;
 }
 
 auto get_bin_T_R(const int modelgridindex, const int binindex) -> float {
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   return radfieldbin_solutions[(nonemptymgi * RADFIELDBINCOUNT) + binindex].T_R;
 }
 
@@ -409,7 +409,7 @@ auto find_T_R(const int modelgridindex, const int binindex) -> float {
 }  // namespace radfield
 
 void set_params_fullspec(const int modelgridindex, const int timestep) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const double nubar = nuJ[nonemptymgi] / J[nonemptymgi];
   if (!std::isfinite(nubar) || nubar == 0.) {
     printout("[warning] T_R estimator infinite in cell %d, keep T_R, T_J, W of last timestep. J = %g. nuJ = %g\n",
@@ -646,7 +646,7 @@ void init(const int my_rank, const int ndo_nonempty) {
 void initialise_prev_titer_photoionestimators() {
 #ifdef DO_TITER
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+    const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
     globals::ffheatingestimator_save[nonemptymgi] = -1.;
     globals::colheatingestimator_save[nonemptymgi] = -1.;
     J_reduced_save[nonemptymgi] = -1.;
@@ -704,7 +704,7 @@ auto get_Jb_lu_contribcount(const int modelgridindex, const int jblueindex) -> i
 
 void write_to_file(const int modelgridindex, const int timestep) {
   assert_always(MULTIBIN_RADFIELD_MODEL_ON);
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 #ifdef _OPENMP
 #pragma omp critical(out_file)
   {
@@ -881,7 +881,7 @@ __host__ __device__ auto radfield(const double nu, const int modelgridindex) -> 
       const int binindex = select_bin(nu);
       if (binindex >= 0) {
         const auto &bin =
-            radfieldbin_solutions[(grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT) + binindex];
+            radfieldbin_solutions[(grid::get_nonemptymgi_of_mgi(modelgridindex) * RADFIELDBINCOUNT) + binindex];
         if (bin.W >= 0.) {
           const double J_nu = dbb(nu, bin.T_R, bin.W);
           return J_nu;
@@ -939,7 +939,7 @@ auto planck_integral_analytic(const double T_R, const double nu_lower, const dou
 void fit_parameters(const int modelgridindex, const int timestep) {
   set_params_fullspec(modelgridindex, timestep);
 
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (J_normfactor[nonemptymgi] <= 0) {
@@ -1020,7 +1020,7 @@ void fit_parameters(const int modelgridindex, const int timestep) {
 void set_J_normfactor(const int nonemptymgi, const double normfactor) { J_normfactor[nonemptymgi] = normfactor; }
 
 void normalise_J(const int modelgridindex, const double estimator_normfactor_over4pi) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   assert_always(std::isfinite(J[nonemptymgi]));
   J[nonemptymgi] *= estimator_normfactor_over4pi;
   for (int i = 0; i < detailed_linecount; i++) {
@@ -1063,7 +1063,7 @@ auto get_bfrate_estimator(const int element, const int lowerion, const int lower
     if (allcontindex >= 0) {
       const auto bfestimindex = globals::allcont[allcontindex].bfestimindex;
       if (bfestimindex >= 0) {
-        const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+        const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
         return prev_bfrate_normed[(nonemptymgi * globals::bfestimcount) + bfestimindex];
       }
     }
@@ -1073,13 +1073,13 @@ auto get_bfrate_estimator(const int element, const int lowerion, const int lower
 }
 
 void normalise_nuJ(const int modelgridindex, const double estimator_normfactor_over4pi) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   assert_always(std::isfinite(nuJ[nonemptymgi]));
   nuJ[nonemptymgi] *= estimator_normfactor_over4pi;
 }
 
 auto get_T_J_from_J(const int modelgridindex) -> double {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const double T_J = pow(J[nonemptymgi] * PI / STEBO, 1. / 4.);
   if (!std::isfinite(T_J)) {
     // keep old value of T_J
@@ -1101,7 +1101,7 @@ auto get_T_J_from_J(const int modelgridindex) -> double {
 
 #ifdef DO_TITER
 void titer_J(const int modelgridindex) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   if (J_reduced_save[nonemptymgi] >= 0) {
     J[nonemptymgi] = (J[nonemptymgi] + J_reduced_save[nonemptymgi]) / 2;
   }
@@ -1109,7 +1109,7 @@ void titer_J(const int modelgridindex) {
 }
 
 void titer_nuJ(const int modelgridindex) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   if (nuJ_reduced_save[nonemptymgi] >= 0) {
     nuJ[nonemptymgi] = (nuJ[nonemptymgi] + nuJ_reduced_save[nonemptymgi]) / 2;
   }
@@ -1178,12 +1178,7 @@ void reduce_estimators()
 
 // broadcast computed radfield results including parameters
 // from the cells belonging to root process to all processes
-void do_MPI_Bcast(const int modelgridindex, const int root, const int root_node_id) {
-  if (grid::get_numassociatedcells(modelgridindex) == 0) {
-    return;
-  }
-
-  const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_node_id) {
   MPI_Bcast(&J_normfactor[nonemptymgi], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -1197,6 +1192,7 @@ void do_MPI_Bcast(const int modelgridindex, const int root, const int root_node_
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
       MPI_Bcast(&prev_Jb_lu_normed[modelgridindex][jblueindex].value, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
       MPI_Bcast(&prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
@@ -1230,7 +1226,7 @@ void write_restart_data(FILE *gridsave_file) {
 
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
       if (grid::get_numassociatedcells(modelgridindex) > 0) {
-        const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+        const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
         fprintf(gridsave_file, "%d\n", modelgridindex);
         for (int i = 0; i < bfestimcount; i++) {
           fprintf(gridsave_file, "%a ", prev_bfrate_normed[(nonemptymgi * bfestimcount) + i]);
@@ -1249,7 +1245,7 @@ void write_restart_data(FILE *gridsave_file) {
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+      const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
       assert_testmodeonly(nonemptymgi >= 0);
       fprintf(gridsave_file, "%d %la\n", modelgridindex, J_normfactor[nonemptymgi]);
 
@@ -1333,7 +1329,7 @@ void read_restart_data(FILE *gridsave_file) {
 
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
       if (grid::get_numassociatedcells(modelgridindex) > 0) {
-        const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+        const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
         int mgi_in = 0;
         assert_always(fscanf(gridsave_file, "%d\n", &mgi_in) == 1);
         assert_always(mgi_in == modelgridindex);
@@ -1366,7 +1362,7 @@ void read_restart_data(FILE *gridsave_file) {
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+      const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
       int mgi_in = 0;
       assert_always(fscanf(gridsave_file, "%d %la\n", &mgi_in, &J_normfactor[nonemptymgi]) == 2);
       if (mgi_in != modelgridindex) {

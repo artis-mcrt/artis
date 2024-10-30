@@ -113,65 +113,60 @@ void initialise_linestat_file() {
   fflush(linestat_file);
 }
 
-void write_deposition_file(const int nts, const int my_rank, const int nstart, const int ndo) {
+void write_deposition_file() {
+  const int my_rank = globals::my_rank;
+  const int nts = globals::timestep;
   printout("Calculating deposition rates...\n");
   auto const time_write_deposition_file_start = std::time(nullptr);
   double mtot = 0.;
+  const int nstart_nonempty = grid::get_nstart_nonempty(my_rank);
+  const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
 
   // calculate analytical decay rates
-  // for (int i = 0; i <= nts; i++)
-  {
-    const int i = nts;
-    const double t_mid = globals::timesteps[i].mid;
+  const double t_mid_nts = globals::timesteps[nts].mid;
 
-    // power in [erg/s]
-    globals::timesteps[i].eps_positron_ana_power = 0.;
-    globals::timesteps[i].eps_electron_ana_power = 0.;
-    globals::timesteps[i].eps_alpha_ana_power = 0.;
-    globals::timesteps[i].qdot_betaminus = 0.;
-    globals::timesteps[i].qdot_alpha = 0.;
-    globals::timesteps[i].qdot_total = 0.;
+  // power in [erg/s]
+  globals::timesteps[nts].eps_positron_ana_power = 0.;
+  globals::timesteps[nts].eps_electron_ana_power = 0.;
+  globals::timesteps[nts].eps_alpha_ana_power = 0.;
+  globals::timesteps[nts].qdot_betaminus = 0.;
+  globals::timesteps[nts].qdot_alpha = 0.;
+  globals::timesteps[nts].qdot_total = 0.;
 
-    for (int mgi = nstart; mgi < (nstart + ndo); mgi++)
-    // for (int mgi = 0; mgi < grid::get_npts_model(); mgi++)
-    {
-      if (grid::get_numassociatedcells(mgi) > 0) {
-        const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
+  for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+    const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
 
-        globals::timesteps[i].eps_positron_ana_power +=
-            cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAPLUS);
-        globals::timesteps[i].eps_electron_ana_power +=
-            cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAMINUS);
-        globals::timesteps[i].eps_alpha_ana_power +=
-            cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_ALPHA);
+    globals::timesteps[nts].eps_positron_ana_power +=
+        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_BETAPLUS);
+    globals::timesteps[nts].eps_electron_ana_power +=
+        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_BETAMINUS);
+    globals::timesteps[nts].eps_alpha_ana_power +=
+        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_ALPHA);
 
-        if (i == nts) {
-          mtot += cellmass;
-        }
+    mtot += cellmass;
 
-        for (const auto decaytype : decay::all_decaytypes) {
-          // Qdot here has been multiplied by mass, so it is in units of [erg/s]
-          const double qdot_cell = decay::get_qdot_modelcell(mgi, t_mid, decaytype) * cellmass;
-          globals::timesteps[i].qdot_total += qdot_cell;
-          if (decaytype == decay::DECAYTYPE_BETAMINUS) {
-            globals::timesteps[i].qdot_betaminus += qdot_cell;
-          } else if (decaytype == decay::DECAYTYPE_ALPHA) {
-            globals::timesteps[i].qdot_alpha += qdot_cell;
-          }
-        }
+    for (const auto decaytype : decay::all_decaytypes) {
+      // Qdot here has been multiplied by mass, so it is in units of [erg/s]
+      const double qdot_cell = decay::get_qdot_modelcell(nonemptymgi, t_mid_nts, decaytype) * cellmass;
+      globals::timesteps[nts].qdot_total += qdot_cell;
+      if (decaytype == decay::DECAYTYPE_BETAMINUS) {
+        globals::timesteps[nts].qdot_betaminus += qdot_cell;
+      } else if (decaytype == decay::DECAYTYPE_ALPHA) {
+        globals::timesteps[nts].qdot_alpha += qdot_cell;
       }
     }
+  }
 
 #ifdef MPI_ON
-    // in MPI mode, each process only did some fraction of the cells
-    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].eps_positron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].eps_electron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].eps_alpha_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].qdot_betaminus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].qdot_alpha, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].qdot_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  // in MPI mode, each process only calculated the contribution of a subset of cells
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_positron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_electron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_alpha_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_betaminus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_alpha, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
-  }
 
 #ifdef MPI_ON
   MPI_Allreduce(MPI_IN_PLACE, &mtot, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -220,36 +215,35 @@ void write_deposition_file(const int nts, const int my_rank, const int nstart, c
 }
 
 #ifdef MPI_ON
-void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart, const int ndo) {
-  int position = 0;
-  for (int root = 0; root < nprocs; root++) {
+void mpi_communicate_grid_properties() {
+  const auto nincludedions = get_includedions();
+  const auto nelements = get_nelements();
+  for (int root = 0; root < globals::nprocs; root++) {
     MPI_Barrier(MPI_COMM_WORLD);
-    int root_nstart = nstart;
-    MPI_Bcast(&root_nstart, 1, MPI_INT, root, MPI_COMM_WORLD);
-    int root_ndo = ndo;
-    MPI_Bcast(&root_ndo, 1, MPI_INT, root, MPI_COMM_WORLD);
+
     int root_node_id = globals::node_id;
     MPI_Bcast(&root_node_id, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-    for (int modelgridindex = root_nstart; modelgridindex < (root_nstart + root_ndo); modelgridindex++) {
-      if (grid::get_numassociatedcells(modelgridindex) < 1) {
-        continue;
-      }
+    const int root_nstart_nonempty = grid::get_nstart_nonempty(root);
+    const int root_ndo_nonempty = grid::get_ndo_nonempty(root);
 
-      radfield::do_MPI_Bcast(modelgridindex, root, root_node_id);
+    for (int nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
+         nonemptymgi++) {
+      assert_always(root_ndo_nonempty > 0);
 
-      nonthermal::nt_MPI_Bcast(modelgridindex, root, root_node_id);
+      radfield::do_MPI_Bcast(nonemptymgi, root, root_node_id);
+
+      nonthermal::nt_MPI_Bcast(nonemptymgi, root, root_node_id);
 
       if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
-        MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops.data(), globals::total_nlte_levels, MPI_DOUBLE,
-                  root_node_id, globals::mpi_comm_internode);
+        MPI_Bcast(&grid::nltepops_allcells[nonemptymgi * globals::total_nlte_levels], globals::total_nlte_levels,
+                  MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
       }
 
       if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
-        const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         assert_always(globals::corrphotoionrenorm != nullptr);
         if (globals::rank_in_node == 0) {
-          MPI_Bcast(globals::corrphotoionrenorm + (nonemptymgi * globals::nbfcontinua_ground),
+          MPI_Bcast(&globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua_ground],
                     globals::nbfcontinua_ground, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
         }
 
@@ -258,54 +252,51 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
         MPI_Bcast(&globals::gammaestimator[nonemptymgi * globals::nbfcontinua_ground], globals::nbfcontinua_ground,
                   MPI_DOUBLE, root, MPI_COMM_WORLD);
       }
-
-      assert_always(grid::modelgrid[modelgridindex].elem_meanweight != nullptr);
       if (globals::rank_in_node == 0) {
-        MPI_Bcast(grid::modelgrid[modelgridindex].elem_meanweight, get_nelements(), MPI_FLOAT, root_node_id,
+        MPI_Bcast(&grid::elem_meanweight_allcells[nonemptymgi * nelements], nelements, MPI_FLOAT, root_node_id,
                   globals::mpi_comm_internode);
       }
 
-      MPI_Bcast_binned_opacities(modelgridindex, root_node_id);
+      MPI_Bcast_binned_opacities(nonemptymgi, root_node_id);
     }
 
-    if (root == my_rank) {
-      position = 0;
-      MPI_Pack(&ndo, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-      for (int mgi = nstart; mgi < (nstart + ndo); mgi++) {
+    if (root == globals::my_rank) {
+      int position = 0;
+      for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
+           nonemptymgi++) {
+        const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
         MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
 
-        if (grid::get_numassociatedcells(mgi) > 0) {
-          MPI_Pack(&grid::modelgrid[mgi].Te, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                   MPI_COMM_WORLD);
-          MPI_Pack(&grid::modelgrid[mgi].TR, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                   MPI_COMM_WORLD);
-          MPI_Pack(&grid::modelgrid[mgi].TJ, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                   MPI_COMM_WORLD);
-          MPI_Pack(&grid::modelgrid[mgi].W, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                   MPI_COMM_WORLD);
-          MPI_Pack(&grid::modelgrid[mgi].rho, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                   MPI_COMM_WORLD);
-          MPI_Pack(&grid::modelgrid[mgi].nne, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                   MPI_COMM_WORLD);
-          MPI_Pack(&grid::modelgrid[mgi].nnetot, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                   MPI_COMM_WORLD);
-          MPI_Pack(&grid::modelgrid[mgi].kappagrey, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                   MPI_COMM_WORLD);
-          MPI_Pack(&grid::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                   MPI_COMM_WORLD);
-          MPI_Pack(&grid::modelgrid[mgi].thick, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                   MPI_COMM_WORLD);
+        MPI_Pack(&grid::modelgrid[mgi].Te, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                 MPI_COMM_WORLD);
+        MPI_Pack(&grid::modelgrid[mgi].TR, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                 MPI_COMM_WORLD);
+        MPI_Pack(&grid::modelgrid[mgi].TJ, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                 MPI_COMM_WORLD);
+        MPI_Pack(&grid::modelgrid[mgi].W, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                 MPI_COMM_WORLD);
+        MPI_Pack(&grid::modelgrid[mgi].rho, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                 MPI_COMM_WORLD);
+        MPI_Pack(&grid::modelgrid[mgi].nne, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                 MPI_COMM_WORLD);
+        MPI_Pack(&grid::modelgrid[mgi].nnetot, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                 MPI_COMM_WORLD);
+        MPI_Pack(&grid::modelgrid[mgi].kappagrey, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                 MPI_COMM_WORLD);
+        MPI_Pack(&grid::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                 MPI_COMM_WORLD);
+        MPI_Pack(&grid::modelgrid[mgi].thick, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                 MPI_COMM_WORLD);
 
-          MPI_Pack(grid::modelgrid[mgi].elem_massfracs, get_nelements(), MPI_FLOAT, mpi_grid_buffer,
-                   mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+        MPI_Pack(&grid::elem_massfracs_allcells[(nonemptymgi * nelements)], nelements, MPI_FLOAT, mpi_grid_buffer,
+                 mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
 
-          MPI_Pack(grid::modelgrid[mgi].ion_groundlevelpops, get_includedions(), MPI_FLOAT, mpi_grid_buffer,
-                   mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(grid::modelgrid[mgi].ion_partfuncts, get_includedions(), MPI_FLOAT, mpi_grid_buffer,
-                   mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(grid::modelgrid[mgi].ion_cooling_contribs, get_includedions(), MPI_DOUBLE, mpi_grid_buffer,
-                   mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-        }
+        MPI_Pack(grid::modelgrid[mgi].ion_groundlevelpops, nincludedions, MPI_FLOAT, mpi_grid_buffer,
+                 mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+        MPI_Pack(grid::modelgrid[mgi].ion_partfuncts, nincludedions, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size,
+                 &position, MPI_COMM_WORLD);
+        MPI_Pack(grid::modelgrid[mgi].ion_cooling_contribs, nincludedions, MPI_DOUBLE, mpi_grid_buffer,
+                 mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
       }
       printout("[info] mem_usage: MPI_BUFFER: used %d of %zu bytes allocated to mpi_grid_buffer\n", position,
                mpi_grid_buffer_size);
@@ -315,51 +306,50 @@ void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const 
     MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
 
-    position = 0;
-    int nlp = 0;
-    MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
-    for (int nn = 0; nn < nlp; nn++) {
-      int mgi = 0;
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
+    int position = 0;
+    for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
+         nonemptymgi++) {
+      const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+      int mgi_check = -1;
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi_check, 1, MPI_INT, MPI_COMM_WORLD);
+      assert_always(mgi == mgi_check);
 
-      if (grid::get_numassociatedcells(mgi) > 0) {
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].Te, 1, MPI_FLOAT,
-                   MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].TR, 1, MPI_FLOAT,
-                   MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].TJ, 1, MPI_FLOAT,
-                   MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].W, 1, MPI_FLOAT,
-                   MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].rho, 1, MPI_FLOAT,
-                   MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].nne, 1, MPI_FLOAT,
-                   MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].nnetot, 1, MPI_FLOAT,
-                   MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].kappagrey, 1, MPI_FLOAT,
-                   MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE,
-                   MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].thick, 1, MPI_INT,
-                   MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].Te, 1, MPI_FLOAT,
+                 MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].TR, 1, MPI_FLOAT,
+                 MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].TJ, 1, MPI_FLOAT,
+                 MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].W, 1, MPI_FLOAT,
+                 MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].rho, 1, MPI_FLOAT,
+                 MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].nne, 1, MPI_FLOAT,
+                 MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].nnetot, 1, MPI_FLOAT,
+                 MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].kappagrey, 1, MPI_FLOAT,
+                 MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE,
+                 MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].thick, 1, MPI_INT,
+                 MPI_COMM_WORLD);
 
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].elem_massfracs,
-                   get_nelements(), MPI_FLOAT, MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                 &grid::elem_massfracs_allcells[(nonemptymgi * nelements)], nelements, MPI_FLOAT, MPI_COMM_WORLD);
 
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_groundlevelpops,
-                   get_includedions(), MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_partfuncts,
-                   get_includedions(), MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_cooling_contribs,
-                   get_includedions(), MPI_DOUBLE, MPI_COMM_WORLD);
-      }
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_groundlevelpops,
+                 nincludedions, MPI_FLOAT, MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_partfuncts, nincludedions,
+                 MPI_FLOAT, MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_cooling_contribs,
+                 nincludedions, MPI_DOUBLE, MPI_COMM_WORLD);
     }
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void mpi_reduce_estimators(int nts) {
+void mpi_reduce_estimators(const int nts) {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
   radfield::reduce_estimators();
   MPI_Barrier(MPI_COMM_WORLD);
@@ -410,7 +400,6 @@ void mpi_reduce_estimators(int nts) {
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // Communicate gamma and positron deposition and write to file
   MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].cmf_lum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].cmf_lum /= globals::nprocs;
 
@@ -528,10 +517,11 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
   return do_this_full_loop;
 }
 
-void save_grid_and_packets(const int nts, const int my_rank, const Packet *packets) {
+void save_grid_and_packets(const int nts, const Packet *packets) {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
+  const auto my_rank = globals::my_rank;
 
   bool write_successful = false;
   while (!write_successful) {
@@ -539,9 +529,9 @@ void save_grid_and_packets(const int nts, const int my_rank, const Packet *packe
     printout("time before write temporary packets file %ld\n", time_write_packets_file_start);
 
     // save packet state at start of current timestep (before propagation)
-    write_temp_packetsfile(nts, my_rank, packets);
+    write_temp_packetsfile(nts, globals::my_rank, packets);
 
-    vpkt_write_timestep(nts, my_rank, false);
+    vpkt_write_timestep(nts, globals::my_rank, false);
 
     const auto time_write_packets_finished_thisrank = std::time(nullptr);
 
@@ -583,7 +573,7 @@ void save_grid_and_packets(const int nts, const int my_rank, const Packet *packe
   }
 
   if (!KEEP_ALL_RESTART_FILES) {
-// ensure new packets files have been written by all processes before we remove the old set
+    // ensure new packets files have been written by all processes before we remove the old set
 #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -668,14 +658,13 @@ void normalise_deposition_estimators(int nts) {
   }
 }
 
-auto do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo, Packet *packets,
-                 const int walltimelimitseconds) -> bool {
+auto do_timestep(const int nts, const int titer, Packet *packets, const int walltimelimitseconds) -> bool {
+  const auto my_rank = globals::my_rank;
   bool do_this_full_loop = true;
-
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
   if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
     // Read the packets file to reset before each additional iteration on the timestep
-    read_temp_packetsfile(nts, my_rank, packets);
+    read_temp_packetsfile(nts, globals::my_rank, packets);
   }
 
   // Some counters on pkt-actions need to be reset to do statistics
@@ -695,13 +684,13 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
 
   // Update the matter quantities in the grid for the new timestep.
 
-  update_grid(estimators_file, nts, nts_prev, my_rank, nstart, ndo, titer, real_time_start);
+  update_grid(estimators_file, nts, nts_prev, titer, real_time_start);
 
   const auto sys_time_start_communicate_grid = std::time(nullptr);
 
-// Each process has now updated its own set of cells. The results now need to be communicated between processes.
+  // Each process has now updated its own set of cells. The results now need to be communicated between processes.
 #ifdef MPI_ON
-  mpi_communicate_grid_properties(my_rank, globals::nprocs, nstart, ndo);
+  mpi_communicate_grid_properties();
 #endif
 
   printout("timestep %d: time after grid properties have been communicated %ld (took %ld seconds)\n", nts,
@@ -711,7 +700,7 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
   // write out a snapshot of the grid properties for further restarts
   // and update input.txt accordingly
   if (((nts - globals::timestep_initial) != 0)) {
-    save_grid_and_packets(nts, my_rank, packets);
+    save_grid_and_packets(nts, packets);
     do_this_full_loop = walltime_sufficient_to_continue(nts, nts_prev, walltimelimitseconds);
   }
   time_timestep_start = std::time(nullptr);
@@ -727,7 +716,7 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
   if ((nts < globals::timestep_finish) && do_this_full_loop) {
     // Now process the packets.
 
-    update_packets(my_rank, nts, std::span{packets, static_cast<size_t>(globals::npkts)});
+    update_packets(nts, std::span{packets, static_cast<size_t>(globals::npkts)});
 
 #ifdef MPI_ON
     // All the processes have their own versions of the estimators for this time step now.
@@ -748,7 +737,7 @@ auto do_timestep(const int nts, const int titer, const int my_rank, const int ns
 
     normalise_deposition_estimators(nts);
 
-    write_deposition_file(nts, my_rank, nstart, ndo);
+    write_deposition_file();
 
     write_partial_lightcurve_spectra(my_rank, nts, packets);
 
@@ -831,7 +820,7 @@ auto main(int argc, char *argv[]) -> int {
 
   check_already_running();
 
-  const int my_rank = globals::rank_global;
+  const int my_rank = globals::my_rank;
 
 #if defined(_OPENMP) && !defined(GPU_ON)
   // Explicitly turn off dynamic threads because we use the threadprivate directive!!!
@@ -902,7 +891,7 @@ auto main(int argc, char *argv[]) -> int {
 #ifdef MPI_ON
   printout("process id (pid): %d\n", getpid());
   printout("MPI enabled:\n");
-  printout("  rank %d of [0..%d] in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs - 1);
+  printout("  rank %d of [0..%d] in MPI_COMM_WORLD\n", globals::my_rank, globals::nprocs - 1);
   printout("  rank %d of [0..%d] in node %d of [0..%d]\n", globals::rank_in_node, globals::node_nprocs - 1,
            globals::node_id, globals::node_count - 1);
 #ifdef MAX_NODE_SIZE
@@ -958,7 +947,6 @@ auto main(int argc, char *argv[]) -> int {
     write_timestep_file();
   }
 
-  // Initialise the grid. Set up the initial positions and sizes of the grid cells.
   printout("time grid_init %ld\n", std::time(nullptr));
   grid::grid_init(my_rank);
 
@@ -969,9 +957,6 @@ auto main(int argc, char *argv[]) -> int {
 
   if (!globals::simulation_continued_from_saved) {
     std::remove("deposition.out");
-    // Next we want to initialise the packets.
-    // Create a bunch of npkts packets
-    // and write them to a binary file for later readin.
     packet_init(packets);
     zero_estimators();
   }
@@ -1004,7 +989,7 @@ auto main(int argc, char *argv[]) -> int {
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  int nts = globals::timestep_initial;
+  globals::timestep = globals::timestep_initial;
 
   macroatom_open_file(my_rank);
   if (ndo > 0) {
@@ -1018,10 +1003,9 @@ auto main(int argc, char *argv[]) -> int {
   }
 
   // initialise or read in virtual packet spectra
-  vpkt_init(nts, my_rank, globals::simulation_continued_from_saved);
+  vpkt_init(globals::timestep, my_rank, globals::simulation_continued_from_saved);
 
-  while (nts < globals::timestep_finish && !terminate_early) {
-    globals::timestep = nts;
+  while (globals::timestep < globals::timestep_finish && !terminate_early) {
 #ifdef MPI_ON
     //        const auto time_before_barrier = std::time(nullptr);
     MPI_Barrier(MPI_COMM_WORLD);
@@ -1034,18 +1018,18 @@ auto main(int argc, char *argv[]) -> int {
     // globals::n_titer = (nts < 6) ? 3: 1;
 
     globals::n_titer = 1;
-    globals::lte_iteration = (nts < globals::num_lte_timesteps);
+    globals::lte_iteration = (globals::timestep < globals::num_lte_timesteps);
     assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 
     for (int titer = 0; titer < globals::n_titer; titer++) {
-      terminate_early = do_timestep(nts, titer, my_rank, nstart, ndo, packets, walltimelimitseconds);
+      terminate_early = do_timestep(globals::timestep, titer, packets, walltimelimitseconds);
 #ifdef DO_TITER
       // No iterations over the zeroth timestep, set titer > n_titer
-      if (nts == 0) titer = globals::n_titer + 1;
+      if (globals::timestep == 0) titer = globals::n_titer + 1;
 #endif
     }
 
-    nts++;
+    globals::timestep++;
   }
 
   // The main calculation is now over. The packets now have all stored the time, place and direction

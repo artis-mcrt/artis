@@ -111,9 +111,11 @@ void packet_init(Packet *pkt)
 
   double norm = 0.;
   for (int m = 0; m < grid::ngrid; m++) {
-    if (const int mgi = grid::get_cell_modelgridindex(m); mgi < grid::get_npts_model())  // some grid cells are empty
+    const int mgi = grid::get_cell_modelgridindex(m);
+    if (mgi < grid::get_npts_model() && grid::get_numassociatedcells(mgi) > 0)  // some grid cells are empty
     {
-      double q = decay::get_modelcell_simtime_endecay_per_mass(mgi);
+      const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+      double q = decay::get_modelcell_simtime_endecay_per_mass(nonemptymgi);
       if constexpr (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) {
         q += grid::get_initenergyq(mgi);
       }

@@ -170,7 +170,7 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
 
   // Free-free heating (from estimators)
 
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   ffheating = globals::ffheatingestimator[nonemptymgi];
 
   if constexpr (DIRECT_COL_HEAT) {
@@ -196,7 +196,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   grid::set_Te(modelgridindex, T_e);
 
   if constexpr (!USE_LUT_PHOTOION && !LTEPOP_EXCITATION_USE_TJ) {
-    const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
     for (int element = 0; element < get_nelements(); element++) {
       if (!elem_has_nlte_levels(element)) {
         // recalculate the Gammas using the current population estimates
@@ -270,7 +270,7 @@ auto get_bfheatingcoeff_ana(const int element, const int ion, const int level, c
 // depends only the radiation field - no dependence on T_e or populations
 void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatingcoeffs) {
   bfheatingcoeffs.resize(get_includedlevels());
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(modelgridindex, element) <= minelfrac && !USE_LUT_BFHEATING) {
@@ -313,11 +313,10 @@ void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatin
   }
 }
 
-void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min,
-                     const double T_max, HeatingCoolingRates *heatingcoolingrates,
-                     const std::vector<double> &bfheatingcoeffs) {
+void call_T_e_finder(const int modelgridindex, const double t_current, const double T_min, const double T_max,
+                     HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
   const double T_e_old = grid::get_Te(modelgridindex);
-  printout("Finding T_e in cell %d at timestep %d...", modelgridindex, timestep);
+  printout("Finding T_e in cell %d at timestep %d...", modelgridindex, globals::timestep);
 
   Te_solution_paras paras = {.t_current = t_current,
                              .modelgridindex = modelgridindex,

@@ -1135,7 +1135,7 @@ void ratecoefficients_init() {
 #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
-    if (globals::rank_global == 0) {
+    if (globals::my_rank == 0) {
       write_ratecoeff_dat();
     }
   }
@@ -1253,7 +1253,7 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
       } else {
         const double W = grid::get_W(modelgridindex);
         const double T_R = grid::get_TR(modelgridindex);
-        const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+        const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
         gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
         const int index_in_groundlevelcontestimator =

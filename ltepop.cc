@@ -177,8 +177,7 @@ auto calculate_levelpop_nominpop(const int modelgridindex, const int element, co
   } else if (elem_has_nlte_levels(element)) {
     if (is_nlte(element, ion, level)) {
       // first_nlte refers to the first excited state (level=1)
-      const double nltepop_over_rho =
-          grid::modelgrid[modelgridindex].nlte_pops[globals::elements[element].ions[ion].first_nlte + level - 1];
+      const double nltepop_over_rho = get_nlte_levelpop_over_rho(modelgridindex, element, ion, level);
       if (nltepop_over_rho < -0.9) {
         // Case for when no NLTE level information is available yet
         nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
@@ -198,9 +197,7 @@ auto calculate_levelpop_nominpop(const int modelgridindex, const int element, co
       // level is in the superlevel
       assert_testmodeonly(level_isinsuperlevel(element, ion, level));
 
-      const int sl_nlte_index = globals::elements[element].ions[ion].first_nlte + get_nlevels_nlte(element, ion);
-
-      const double superlevelpop_over_rho = grid::modelgrid[modelgridindex].nlte_pops[sl_nlte_index];
+      const double superlevelpop_over_rho = get_nlte_superlevelpop_over_rho(modelgridindex, element, ion);
       if (superlevelpop_over_rho < -0.9)  // TODO: should change this to less than zero?
       {
         // Case for when no NLTE level information is available yet
@@ -283,7 +280,7 @@ auto find_uppermost_ion(const int modelgridindex, const int element, const doubl
   if (!force_lte && elem_has_nlte_levels(element)) {
     return nions - 1;
   }
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   const bool use_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
   int uppermost_ion = 0;
@@ -378,8 +375,8 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
       if constexpr (USE_LUT_PHOTOION) {
         for (int ion = 0; ion <= grid::get_elements_uppermost_ion(modelgridindex, element); ion++) {
           printout("element %d, ion %d, gammaionest %g\n", element, ion,
-                   globals::gammaestimator[get_ionestimindex_nonemptymgi(
-                       grid::get_modelcell_nonemptymgi(modelgridindex), element, ion)]);
+                   globals::gammaestimator[get_ionestimindex_nonemptymgi(grid::get_nonemptymgi_of_mgi(modelgridindex),
+                                                                         element, ion)]);
         }
       }
     }
@@ -423,7 +420,7 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   if (uppermost_ion < 0) {
     return {};

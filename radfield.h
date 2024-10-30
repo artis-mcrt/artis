@@ -30,7 +30,7 @@ void normalise_nuJ(int modelgridindex, double estimator_normfactor_over4pi);
 void titer_J(int modelgridindex);
 void titer_nuJ(int modelgridindex);
 void reduce_estimators();
-void do_MPI_Bcast(int modelgridindex, int root, int root_node_id);
+void do_MPI_Bcast(ptrdiff_t nonemptymgi, int root, int root_node_id);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);
 void normalise_bf_estimators(int nts, int nts_prev, int titer, double deltat);

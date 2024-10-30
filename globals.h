@@ -289,7 +289,7 @@ inline MPI_Comm mpi_comm_internode{MPI_COMM_NULL};
 #endif
 
 inline int nprocs{-1};
-inline int rank_global{-1};
+inline int my_rank{-1};
 
 inline int node_nprocs{-1};
 inline int rank_in_node{-1};
@@ -328,12 +328,11 @@ inline std::deque<std::mutex> mutex_cellcachemacroatom;
 
 inline void setup_mpi_vars() {
 #ifdef MPI_ON
-  MPI_Comm_rank(MPI_COMM_WORLD, &globals::rank_global);
+  MPI_Comm_rank(MPI_COMM_WORLD, &globals::my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
 
   // make an intra-node communicator (group ranks that can share memory)
-  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, globals::rank_global, MPI_INFO_NULL,
-                      &globals::mpi_comm_node);
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, globals::my_rank, MPI_INFO_NULL, &globals::mpi_comm_node);
 
   // get the local rank within this node
   MPI_Comm_rank(globals::mpi_comm_node, &globals::rank_in_node);
@@ -346,7 +345,7 @@ inline void setup_mpi_vars() {
 #ifdef MAX_NODE_SIZE
   if (MAX_NODE_SIZE > 0 && globals::node_nprocs > MAX_NODE_SIZE) {
     // limit the number of ranks that can share memory
-    MPI_Comm_split(globals::mpi_comm_node, globals::rank_in_node / MAX_NODE_SIZE, globals::rank_global,
+    MPI_Comm_split(globals::mpi_comm_node, globals::rank_in_node / MAX_NODE_SIZE, globals::my_rank,
                    &globals::mpi_comm_node);
 
     MPI_Comm_rank(globals::mpi_comm_node, &globals::rank_in_node);
@@ -357,7 +356,7 @@ inline void setup_mpi_vars() {
 #endif
 
   // make an inter-node communicator (using local rank as the key for group membership)
-  MPI_Comm_split(MPI_COMM_WORLD, globals::rank_in_node, globals::rank_global, &globals::mpi_comm_internode);
+  MPI_Comm_split(MPI_COMM_WORLD, globals::rank_in_node, globals::my_rank, &globals::mpi_comm_internode);
 
   // take the node id from the local rank 0 (node master) and broadcast it
   if (globals::rank_in_node == 0) {
@@ -369,7 +368,7 @@ inline void setup_mpi_vars() {
   MPI_Bcast(&globals::node_count, 1, MPI_INT, 0, globals::mpi_comm_node);
 
 #else
-  globals::rank_global = 0;
+  globals::my_rank = 0;
   globals::nprocs = 1;
   globals::rank_in_node = 0;
   globals::node_nprocs = 1;

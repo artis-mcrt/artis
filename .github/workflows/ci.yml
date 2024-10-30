@@ -171,21 +171,10 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: cat job1/output_0-0.txt
 
-            - name: Set up Python
-              if: always() && matrix.testmode == 'OFF'
-              uses: actions/setup-python@v5
-
-            - name: Install artistools
-              if: always() && matrix.testmode == 'OFF'
-              run: |
-                  python3 -m pip install --upgrade pip uv
-                  uv pip install --system -U artistools
-
             - name: show deposition.out
               if: always() && matrix.testmode == 'OFF'
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
-                  echo -e "import artistools as at; import polars as pl;\nwith pl.Config(tbl_rows=-1,tbl_cols=-1,tbl_width_chars=300,tbl_formatting='NOTHING'):\n    df = at.get_deposition('.')\n    print(df.select(['timestep', 'tmid_days'] + [c for c in sorted(df.columns, key=lambda x: x.lower().lstrip('eps_')) if c not in ['timestep', 'tmid_days', 'tmid_s']]))" | python3 -
                   cat deposition.out
 
             - name: Run exspec
@@ -231,6 +220,16 @@ jobs:
               with:
                   name: ${{ matrix.testname }}_inputfiles
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
+
+            - name: Set up Python
+              if: always() && matrix.testmode == 'OFF'
+              uses: actions/setup-python@v5
+
+            - name: Install artistools
+              if: always() && matrix.testmode == 'OFF'
+              run: |
+                  python3 -m pip install --upgrade pip uv
+                  uv pip install --system -U artistools
 
             - name: Plot light curve
               if: always() && matrix.testmode == 'OFF'

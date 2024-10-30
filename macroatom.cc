@@ -307,7 +307,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
 // handle activated macro atoms
 __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate) {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
-  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   assert_testmodeonly(nonemptymgi >= 0);
   const auto T_e = grid::get_Te(modelgridindex);
 

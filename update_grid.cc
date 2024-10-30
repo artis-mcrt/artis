@@ -42,7 +42,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     return;
   }
 
-  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
   const auto sys_time_start_write_estimators = std::time(nullptr);
 
@@ -90,7 +90,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     }
     fprintf(estimators_file, "  SUM: %9.3e", elpop);
 
-    decay::fprint_nuc_abundances(estimators_file, mgi, globals::timesteps[timestep].mid, element);
+    decay::fprint_nuc_abundances(estimators_file, nonemptymgi, globals::timesteps[timestep].mid, element);
 
     if (nions == 0 || elpop <= 0.) {
       // dummy element for nuclear abundances only
@@ -675,7 +675,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
   }
 }
 
-void solve_Te_nltepops(const int mgi, const int nts, const int titer, HeatingCoolingRates *heatingcoolingrates)
+void solve_Te_nltepops(const int mgi, const int nts, const int nts_prev, HeatingCoolingRates *heatingcoolingrates)
 // nts is the timestep number
 {
   // bfheating coefficients are needed for the T_e solver, but
@@ -706,11 +706,9 @@ void solve_Te_nltepops(const int mgi, const int nts, const int titer, HeatingCoo
 
     const double prev_T_e = grid::get_Te(mgi);
     const auto sys_time_start_Te = std::time(nullptr);
-    const int nts_for_te = (titer == 0) ? nts - 1 : nts;
 
     // Find T_e as solution for thermal balance
-    call_T_e_finder(mgi, nts, globals::timesteps[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates,
-                    bfheatingcoeffs);
+    call_T_e_finder(mgi, globals::timesteps[nts_prev].mid, MINTEMP, MAXTEMP, heatingcoolingrates, bfheatingcoeffs);
 
     const int duration_solve_T_e = std::time(nullptr) - sys_time_start_Te;
 
@@ -769,7 +767,7 @@ void solve_Te_nltepops(const int mgi, const int nts, const int titer, HeatingCoo
 }
 
 void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const double estimator_normfactor) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   if constexpr (USE_LUT_PHOTOION) {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -882,7 +880,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     return;
   }
 
-  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
   const double deltaV =
       grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
@@ -894,8 +892,8 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
   grid::set_rho(mgi, grid::get_rho_tmin(mgi) / pow(tratmid, 3));
 
   // Update elemental abundances with radioactive decays
-  decay::update_abundances(mgi, nts, globals::timesteps[nts].mid);
-  nonthermal::calculate_deposition_rate_density(mgi, nts, heatingcoolingrates);
+  decay::update_abundances(nonemptymgi, nts, globals::timesteps[nts].mid);
+  nonthermal::calculate_deposition_rate_density(nonemptymgi, nts, heatingcoolingrates);
 
   if (globals::opacity_case == 6) {
     grid::calculate_kappagrey();
@@ -1010,7 +1008,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       // full-spectrum and binned J and nuJ estimators
       radfield::fit_parameters(mgi, nts);
 
-      solve_Te_nltepops(mgi, nts, titer, heatingcoolingrates);
+      solve_Te_nltepops(mgi, nts, nts_prev, heatingcoolingrates);
     }
     printout("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", mgi, nts,
              std::time(nullptr) - sys_time_start_temperature_corrections);
@@ -1083,12 +1081,13 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
 }  // anonymous namespace
 
-void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int nstart,
-                 const int ndo, const int titer, const std::time_t real_time_start)
+void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int titer,
+                 const std::time_t real_time_start)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
 // nts timestep
 {
+  const auto my_rank = globals::my_rank;
   const auto sys_time_start_update_grid = std::time(nullptr);
   printout("\n");
   printout("timestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g days\n", nts,
@@ -1118,6 +1117,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     radfield::normalise_bf_estimators(nts, nts_prev, titer, deltat);
   }
 
+  const int nstart = grid::get_nstart(my_rank);
+  const int ndo = grid::get_ndo(my_rank);
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
