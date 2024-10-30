@@ -783,7 +783,7 @@ void transport_gamma(Packet &pkt, const double t2) {
 
     // Move it into the new cell.
     const int mgi = grid::get_cell_modelgridindex(pkt.where);
-    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
+    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
     if (chi_tot > 0 && nonemptymgi >= 0) {
       update_gamma_dep(pkt, sdist, mgi, nonemptymgi);
     }
@@ -797,7 +797,7 @@ void transport_gamma(Packet &pkt, const double t2) {
     // Doesn't reach boundary.
     move_pkt_withtime(pkt, tdist / 2.);
     const int mgi = grid::get_cell_modelgridindex(pkt.where);
-    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
+    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
 
     if (chi_tot > 0 && nonemptymgi >= 0) {
       update_gamma_dep(pkt, tdist, mgi, nonemptymgi);
@@ -807,7 +807,7 @@ void transport_gamma(Packet &pkt, const double t2) {
   } else if ((edist < sdist) && (edist < tdist)) {
     move_pkt_withtime(pkt, edist / 2.);
     const int mgi = grid::get_cell_modelgridindex(pkt.where);
-    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
+    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
     if (chi_tot > 0 && nonemptymgi >= 0) {
       update_gamma_dep(pkt, edist, mgi, nonemptymgi);
     }
@@ -1076,7 +1076,7 @@ __host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {
                   GAMMA_THERMALISATION_SCHEME != ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
       // no transport, so the path-based gamma deposition estimator won't get updated unless we do it here
       const int mgi = grid::get_cell_modelgridindex(pkt.where);
-      const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+      const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       atomicadd(globals::dep_estimator_gamma[nonemptymgi], pkt.e_cmf);
     }
   }

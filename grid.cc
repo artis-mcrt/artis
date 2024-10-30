@@ -628,7 +628,7 @@ void abundances_read() {
       if (threedimensional || normfactor <= 0.) {
         normfactor = 1.;
       }
-      const int nonemptymgi = get_modelcell_nonemptymgi(mgi);
+      const int nonemptymgi = get_nonemptymgi_of_mgi(mgi);
 
       for (int element = 0; element < get_nelements(); element++) {
         // now set the abundances (by mass) of included elements, i.e.
@@ -1325,7 +1325,7 @@ void setup_nstart_ndo() {
         const int mgi = rank;
         ranks_nstart[rank] = mgi;
         ranks_ndo[rank] = 1;
-        ranks_nstart_nonempty[rank] = (get_numassociatedcells(mgi) > 0) ? get_modelcell_nonemptymgi(mgi) : 0;
+        ranks_nstart_nonempty[rank] = (get_numassociatedcells(mgi) > 0) ? get_nonemptymgi_of_mgi(mgi) : 0;
         ranks_ndo_nonempty[rank] = (get_numassociatedcells(mgi) > 0) ? 1 : 0;
       }
     }
@@ -1838,7 +1838,7 @@ __host__ __device__ auto get_ffegrp(const int modelgridindex) -> float { return 
 auto get_elem_abundance(int modelgridindex, int element) -> float
 // mass fraction of an element (all isotopes combined)
 {
-  const int nonemptymgi = get_modelcell_nonemptymgi(modelgridindex);
+  const int nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   const auto massfrac = elem_massfracs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element];
   assert_testmodeonly(massfrac >= 0.0);
   return massfrac;
@@ -1851,7 +1851,7 @@ void set_elem_abundance(const int nonemptymgi, const int element, const float ne
 
 // mass fraction of an element (all isotopes combined)
 __host__ __device__ auto get_elem_numberdens(const int modelgridindex, const int element) -> double {
-  const auto nonemptymgi = get_modelcell_nonemptymgi(modelgridindex);
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   const double elem_meanweight = grid::get_element_meanweight(nonemptymgi, element);
   return get_elem_abundance(modelgridindex, element) / elem_meanweight * grid::get_rho(modelgridindex);
 }
@@ -1966,7 +1966,7 @@ __host__ __device__ auto get_numassociatedcells(const int modelgridindex) -> int
 }
 
 // get the index in the list of non-empty cells for a given model grid cell
-__host__ __device__ auto get_modelcell_nonemptymgi(const int mgi) -> int {
+__host__ __device__ auto get_nonemptymgi_of_mgi(const int mgi) -> int {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
   assert_testmodeonly(mgi < get_npts_model());
 
@@ -2022,7 +2022,7 @@ void set_element_meanweight(const int nonemptymgi, const int element, const floa
 }
 
 auto get_electronfrac(const int modelgridindex) -> double {
-  const auto nonemptymgi = get_modelcell_nonemptymgi(modelgridindex);
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   double nucleondens = 0.;
   for (int element = 0; element < get_nelements(); element++) {
     nucleondens += get_elem_numberdens(modelgridindex, element) * get_element_meanweight(nonemptymgi, element) / MH;
@@ -2062,12 +2062,12 @@ auto get_cellradialposmid(const int cellindex) -> double {
 }
 
 [[nodiscard]] auto get_elements_uppermost_ion(const int modelgridindex, const int element) -> int {
-  const ptrdiff_t nonemptymgi = get_modelcell_nonemptymgi(modelgridindex);
+  const ptrdiff_t nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   return elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element];
 }
 
 void set_elements_uppermost_ion(const int modelgridindex, const int element, const int newvalue) {
-  const ptrdiff_t nonemptymgi = get_modelcell_nonemptymgi(modelgridindex);
+  const ptrdiff_t nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element] = newvalue;
 }
 

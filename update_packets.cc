@@ -30,7 +30,7 @@ namespace {
 void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   double en_deposited = pkt.e_cmf;
   const auto mgi = grid::get_cell_modelgridindex(pkt.where);
-  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   const auto priortype = pkt.type;
   const double ts = pkt.prop_time;
   const auto deposit_type =

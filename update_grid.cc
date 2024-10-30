@@ -42,7 +42,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     return;
   }
 
-  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
   const auto sys_time_start_write_estimators = std::time(nullptr);
 
@@ -767,7 +767,7 @@ void solve_Te_nltepops(const int mgi, const int nts, const int nts_prev, Heating
 }
 
 void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const double estimator_normfactor) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   if constexpr (USE_LUT_PHOTOION) {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -880,7 +880,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     return;
   }
 
-  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
   const double deltaV =
       grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);

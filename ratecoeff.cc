@@ -1253,7 +1253,7 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
       } else {
         const double W = grid::get_W(modelgridindex);
         const double T_R = grid::get_TR(modelgridindex);
-        const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+        const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
         gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
         const int index_in_groundlevelcontestimator =

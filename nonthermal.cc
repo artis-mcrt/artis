@@ -2154,7 +2154,7 @@ void init(const int my_rank, const int ndo_nonempty) {
       nt_solution[modelgridindex].allions =
           static_cast<NonThermalSolutionIon *>(malloc(get_includedions() * sizeof(NonThermalSolutionIon)));
 
-      const ptrdiff_t nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+      const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
       nt_solution[modelgridindex].frac_excitations_list =
           NT_EXCITATION_ON ? &excitations_list_all_cells[nonemptymgi * nt_excitations_stored] : nullptr;

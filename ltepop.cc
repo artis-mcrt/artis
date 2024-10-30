@@ -283,7 +283,7 @@ auto find_uppermost_ion(const int modelgridindex, const int element, const doubl
   if (!force_lte && elem_has_nlte_levels(element)) {
     return nions - 1;
   }
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   const bool use_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
   int uppermost_ion = 0;
@@ -378,8 +378,8 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
       if constexpr (USE_LUT_PHOTOION) {
         for (int ion = 0; ion <= grid::get_elements_uppermost_ion(modelgridindex, element); ion++) {
           printout("element %d, ion %d, gammaionest %g\n", element, ion,
-                   globals::gammaestimator[get_ionestimindex_nonemptymgi(
-                       grid::get_modelcell_nonemptymgi(modelgridindex), element, ion)]);
+                   globals::gammaestimator[get_ionestimindex_nonemptymgi(grid::get_nonemptymgi_of_mgi(modelgridindex),
+                                                                         element, ion)]);
         }
       }
     }
@@ -423,7 +423,7 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   if (uppermost_ion < 0) {
     return {};

@@ -1351,7 +1351,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int nonemptmgi, const do
 }
 
 void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
-  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   const int num_decaypaths = get_num_decaypaths();
 
   // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel
