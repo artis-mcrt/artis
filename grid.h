@@ -35,7 +35,6 @@ struct ModelGridCell {
                                  // estimatorsfile so there is no need to communicate it via MPI so far!
   float *ion_groundlevelpops{};  // groundlevel populations of all included ions
   float *ion_partfuncts{};       // partition functions for all included ions
-  std::span<double> nlte_pops;   // Pointer to an array that contains the nlte-level populations for this cell
   double totalcooling = -1;
   double *ion_cooling_contribs{};
   int thick = 0;
