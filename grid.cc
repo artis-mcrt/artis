@@ -345,13 +345,9 @@ void allocate_nonemptycells_composition_cooling()
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
     if (globals::total_nlte_levels > 0) {
-      modelgrid[modelgridindex].nlte_pops =
-          std::span(&nltepops_allcells[nonemptymgi * globals::total_nlte_levels], globals::total_nlte_levels);
-      assert_always(modelgrid[modelgridindex].nlte_pops.data() != nullptr);
-
       // -1 indicates that there is currently no information on the nlte populations
-      std::ranges::fill_n(&nltepops_allcells[nonemptymgi * globals::total_nlte_levels], globals::total_nlte_levels,
-                          -1.);
+      std::ranges::fill_n(&grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels)],
+                          globals::total_nlte_levels, -1.);
     }
 
     std::fill_n(&elem_massfracs_allcells[nonemptymgi * nelements], nelements, -1.);
