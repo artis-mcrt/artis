@@ -1264,3 +1264,21 @@ void nltepop_read_restart_data(FILE *restart_file) {
     }
   }
 }
+
+auto get_nlte_levelpop_over_rho(int modelgridindex, int element, int ion, int level) -> double {
+  return grid::modelgrid[modelgridindex].nlte_pops[globals::elements[element].ions[ion].first_nlte + level - 1];
+}
+
+auto get_nlte_superlevelpop_over_rho(int modelgridindex, int element, int ion) -> double {
+  const int sl_nlte_index = globals::elements[element].ions[ion].first_nlte + get_nlevels_nlte(element, ion);
+  return grid::modelgrid[modelgridindex].nlte_pops[sl_nlte_index];
+}
+
+void set_nlte_levelpop_over_rho(int modelgridindex, int element, int ion, int level, double value) {
+  grid::modelgrid[modelgridindex].nlte_pops[globals::elements[element].ions[ion].first_nlte + level - 1] = value;
+}
+
+void set_nlte_superlevelpop_over_rho(int modelgridindex, int element, int ion, double value) {
+  const int sl_nlte_index = globals::elements[element].ions[ion].first_nlte + get_nlevels_nlte(element, ion);
+  grid::modelgrid[modelgridindex].nlte_pops[sl_nlte_index] = value;
+}

@@ -177,8 +177,7 @@ auto calculate_levelpop_nominpop(const int modelgridindex, const int element, co
   } else if (elem_has_nlte_levels(element)) {
     if (is_nlte(element, ion, level)) {
       // first_nlte refers to the first excited state (level=1)
-      const double nltepop_over_rho =
-          grid::modelgrid[modelgridindex].nlte_pops[globals::elements[element].ions[ion].first_nlte + level - 1];
+      const double nltepop_over_rho = get_nlte_levelpop_over_rho(modelgridindex, element, ion, level);
       if (nltepop_over_rho < -0.9) {
         // Case for when no NLTE level information is available yet
         nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
@@ -198,9 +197,7 @@ auto calculate_levelpop_nominpop(const int modelgridindex, const int element, co
       // level is in the superlevel
       assert_testmodeonly(level_isinsuperlevel(element, ion, level));
 
-      const int sl_nlte_index = globals::elements[element].ions[ion].first_nlte + get_nlevels_nlte(element, ion);
-
-      const double superlevelpop_over_rho = grid::modelgrid[modelgridindex].nlte_pops[sl_nlte_index];
+      const double superlevelpop_over_rho = get_nlte_superlevelpop_over_rho(modelgridindex, element, ion);
       if (superlevelpop_over_rho < -0.9)  // TODO: should change this to less than zero?
       {
         // Case for when no NLTE level information is available yet
