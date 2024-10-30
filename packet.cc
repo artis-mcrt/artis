@@ -114,7 +114,7 @@ void packet_init(Packet *pkt)
     const int mgi = grid::get_cell_modelgridindex(m);
     if (mgi < grid::get_npts_model() && grid::get_numassociatedcells(mgi) > 0)  // some grid cells are empty
     {
-      const auto nonemptymgi = grid::get_mgi_of_nonemptymgi(mgi);
+      const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
       double q = decay::get_modelcell_simtime_endecay_per_mass(nonemptymgi);
       if constexpr (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) {
         q += grid::get_initenergyq(mgi);
