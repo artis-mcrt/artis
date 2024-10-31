@@ -35,7 +35,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
                               const HeatingCoolingRates *heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
 
-  if (grid::get_numassociatedcells(mgi) < 1) {
+  if (grid::get_numpropcells(mgi) < 1) {
     // modelgrid cells that are not represented in the simulation grid
     fprintf(estimators_file, "timestep %d modelgridindex %d EMPTYCELL\n\n", timestep, mgi);
     fflush(estimators_file);
@@ -872,7 +872,7 @@ static void titer_average_estimators(const int nonemptymgi) {
 
 void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
                       const double deltat, HeatingCoolingRates *heatingcoolingrates) {
-  const int assoc_cells = grid::get_numassociatedcells(mgi);
+  const int assoc_cells = grid::get_numpropcells(mgi);
   if (assoc_cells < 1) {
     // For modelgrid cells that are not represented in the simulation grid,
     // Set grid properties to zero

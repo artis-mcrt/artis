@@ -104,7 +104,7 @@ void grid_init(int my_rank);
 [[nodiscard]] auto get_elem_abundance(int modelgridindex, int element) -> float;
 void set_element_meanweight(int nonemptymgi, int element, float meanweight);
 [[nodiscard]] auto get_electronfrac(int nonemptymgi) -> double;
-[[nodiscard]] auto get_numassociatedcells(int modelgridindex) -> int;
+[[nodiscard]] auto get_numpropcells(int modelgridindex) -> int;
 [[nodiscard]] auto get_nonemptymgi_of_mgi(int mgi) -> int;
 [[nodiscard]] auto get_mgi_of_nonemptymgi(int nonemptymgi) -> int;
 [[nodiscard]] auto get_model_type() -> GridType;
@@ -149,7 +149,7 @@ inline auto get_ejecta_kinetic_energy() {
   double E_kin = 0.;
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    const int assoc_cells = grid::get_numassociatedcells(mgi);
+    const int assoc_cells = grid::get_numpropcells(mgi);
     double M_cell = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
     const double radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum / assoc_cells;
     E_kin += 0.5 * M_cell * std::pow(radial_pos / globals::tmin, 2);

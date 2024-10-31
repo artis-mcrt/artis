@@ -152,7 +152,7 @@ void realloc_detailed_lines(const int new_size) {
   detailed_lineindicies = newptr;
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-    if (grid::get_numassociatedcells(modelgridindex) > 0) {
+    if (grid::get_numpropcells(modelgridindex) > 0) {
       prev_Jb_lu_normed[modelgridindex] = static_cast<Jb_lu_estimator *>(
           realloc(prev_Jb_lu_normed[modelgridindex], new_size * sizeof(Jb_lu_estimator)));
 
@@ -176,7 +176,7 @@ void add_detailed_line(const int lineindex) {
   }
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-    if (grid::get_numassociatedcells(modelgridindex) > 0) {
+    if (grid::get_numpropcells(modelgridindex) > 0) {
       prev_Jb_lu_normed[modelgridindex][detailed_linecount].value = 0;
       prev_Jb_lu_normed[modelgridindex][detailed_linecount].contribcount = 0;
 
@@ -1161,7 +1161,7 @@ void reduce_estimators()
     printout("Reducing detailed line estimators");
 
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-      if (grid::get_numassociatedcells(modelgridindex) > 0) {
+      if (grid::get_numpropcells(modelgridindex) > 0) {
         for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
           MPI_Allreduce(MPI_IN_PLACE, &Jb_lu_raw[modelgridindex][jblueindex].value, 1, MPI_DOUBLE, MPI_SUM,
                         MPI_COMM_WORLD);
@@ -1225,7 +1225,7 @@ void write_restart_data(FILE *gridsave_file) {
     fprintf(gridsave_file, "%d\n", bfestimcount);
 
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-      if (grid::get_numassociatedcells(modelgridindex) > 0) {
+      if (grid::get_numpropcells(modelgridindex) > 0) {
         const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
         fprintf(gridsave_file, "%d\n", modelgridindex);
         for (int i = 0; i < bfestimcount; i++) {
@@ -1244,7 +1244,7 @@ void write_restart_data(FILE *gridsave_file) {
   }
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-    if (grid::get_numassociatedcells(modelgridindex) > 0) {
+    if (grid::get_numpropcells(modelgridindex) > 0) {
       const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
       assert_testmodeonly(nonemptymgi >= 0);
       fprintf(gridsave_file, "%d %la\n", modelgridindex, J_normfactor[nonemptymgi]);
@@ -1328,7 +1328,7 @@ void read_restart_data(FILE *gridsave_file) {
     assert_always(gridsave_nbfestim_in == globals::bfestimcount);
 
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-      if (grid::get_numassociatedcells(modelgridindex) > 0) {
+      if (grid::get_numpropcells(modelgridindex) > 0) {
         const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
         int mgi_in = 0;
         assert_always(fscanf(gridsave_file, "%d\n", &mgi_in) == 1);
@@ -1361,7 +1361,7 @@ void read_restart_data(FILE *gridsave_file) {
   }
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-    if (grid::get_numassociatedcells(modelgridindex) > 0) {
+    if (grid::get_numpropcells(modelgridindex) > 0) {
       const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
       int mgi_in = 0;
       assert_always(fscanf(gridsave_file, "%d %la\n", &mgi_in, &J_normfactor[nonemptymgi]) == 2);

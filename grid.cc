@@ -408,7 +408,7 @@ void allocate_nonemptymodelcells() {
   // find number of non-empty cells and allocate nonempty list
   nonempty_npts_model = 0;
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    if (get_numassociatedcells(mgi) > 0) {
+    if (get_numpropcells(mgi) > 0) {
       nonempty_npts_model++;
     }
   }
@@ -419,7 +419,7 @@ void allocate_nonemptymodelcells() {
   int nonemptymgi = 0;  // index within list of non-empty modelgrid cells
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    if (get_numassociatedcells(mgi) > 0) {
+    if (get_numpropcells(mgi) > 0) {
       if (get_rho_tmin(mgi) <= 0) {
         printout("Error: negative or zero density. Abort.\n");
         std::abort();
@@ -609,7 +609,7 @@ void abundances_read() {
       abundances_in[anumber - 1] = 0.;
       if (!(ssline >> abund_in)) {
         // at least one element (hydrogen) should have been specified for nonempty cells
-        assert_always(anumber > 1 || get_numassociatedcells(mgi) == 0);
+        assert_always(anumber > 1 || get_numpropcells(mgi) == 0);
         break;
       }
 
@@ -621,7 +621,7 @@ void abundances_read() {
       normfactor += abundances_in[anumber - 1];
     }
 
-    if (get_numassociatedcells(mgi) > 0) {
+    if (get_numpropcells(mgi) > 0) {
       if (threedimensional || normfactor <= 0.) {
         normfactor = 1.;
       }
@@ -1280,7 +1280,7 @@ void assign_initial_temperatures() {
 // start at mgi_start and find the next non-empty cell, or return -1 if none found
 [[nodiscard]] auto get_next_nonemptymgi(const int mgi_start) -> int {
   for (int mgi = mgi_start; mgi < get_npts_model(); mgi++) {
-    if (get_numassociatedcells(mgi) > 0) {
+    if (get_numpropcells(mgi) > 0) {
       return nonemptymgi_of_mgi[mgi];
     }
   }
@@ -1313,8 +1313,8 @@ void setup_nstart_ndo() {
         const int mgi = rank;
         ranks_nstart[rank] = mgi;
         ranks_ndo[rank] = 1;
-        ranks_nstart_nonempty[rank] = (get_numassociatedcells(mgi) > 0) ? get_nonemptymgi_of_mgi(mgi) : 0;
-        ranks_ndo_nonempty[rank] = (get_numassociatedcells(mgi) > 0) ? 1 : 0;
+        ranks_nstart_nonempty[rank] = (get_numpropcells(mgi) > 0) ? get_nonemptymgi_of_mgi(mgi) : 0;
+        ranks_ndo_nonempty[rank] = (get_numpropcells(mgi) > 0) ? 1 : 0;
       }
     }
   } else {
@@ -1333,7 +1333,7 @@ void setup_nstart_ndo() {
 
       ranks_ndo[rank]++;
       maxndo = std::max(maxndo, ranks_ndo[rank]);
-      if (get_numassociatedcells(mgi) > 0) {
+      if (get_numpropcells(mgi) > 0) {
         ranks_ndo_nonempty[rank]++;
       }
     }
@@ -1686,7 +1686,7 @@ auto wid_init(const int cellindex, const int axis) -> double
 auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return (wid_init(modelgridindex, 0) * wid_init(modelgridindex, 1) * wid_init(modelgridindex, 2)) *
-           get_numassociatedcells(modelgridindex);
+           get_numpropcells(modelgridindex);
   }
 
   if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
@@ -1948,7 +1948,7 @@ __host__ __device__ auto get_cell_modelgridindex(const int cellindex) -> int {
 }
 
 // number of propagation cells associated with each modelgrid cell
-__host__ __device__ auto get_numassociatedcells(const int modelgridindex) -> int {
+__host__ __device__ auto get_numpropcells(const int modelgridindex) -> int {
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return mg_associated_cells[modelgridindex];
 }
@@ -1959,7 +1959,7 @@ __host__ __device__ auto get_nonemptymgi_of_mgi(const int mgi) -> int {
   assert_testmodeonly(mgi < get_npts_model());
 
   const int nonemptymgi = nonemptymgi_of_mgi[mgi];
-  // assert_testmodeonly(nonemptymgi >= 0 || get_numassociatedcells(mgi) == 0);
+  // assert_testmodeonly(nonemptymgi >= 0 || get_numpropcells(mgi) == 0);
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
 
