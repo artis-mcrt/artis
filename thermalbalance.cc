@@ -268,9 +268,9 @@ auto get_bfheatingcoeff_ana(const int element, const int ion, const int level, c
 }
 
 // depends only the radiation field - no dependence on T_e or populations
-void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatingcoeffs) {
+void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingcoeffs) {
   bfheatingcoeffs.resize(get_includedlevels());
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(modelgridindex, element) <= minelfrac && !USE_LUT_BFHEATING) {

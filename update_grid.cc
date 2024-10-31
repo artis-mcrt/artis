@@ -686,7 +686,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   const auto sys_time_start_calculate_bfheatingcoeffs = std::time(nullptr);
   thread_local static auto bfheatingcoeffs = std::vector<double>(get_includedlevels());
 
-  calculate_bfheatingcoeffs(mgi, bfheatingcoeffs);
+  calculate_bfheatingcoeffs(nonemptymgi, bfheatingcoeffs);
   printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calculate_bfheatingcoeffs);
 
   const double convergence_tolerance = 0.04;
