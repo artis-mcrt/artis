@@ -294,12 +294,6 @@ void allocate_nonemptycells_composition_cooling()
     // -1 indicates that there is currently no information on the nlte populations
     std::ranges::fill_n(grid::nltepops_allcells, npts_nonempty * globals::total_nlte_levels, -1.);
   }
-
-  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
-    const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-
-    modelgrid[modelgridindex].ion_partfuncts = &ion_partfuncts_allcells[nonemptymgi * get_includedions()];
-  }
 }
 
 void allocate_nonemptymodelcells() {

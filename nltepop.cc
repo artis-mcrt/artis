@@ -1043,8 +1043,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       }
 
       // store the ground level population
-      grid::ion_groundlevelpops_allcells[(nonemptymgi * get_includedions()) + get_uniqueionindex(element, ion)] =
-          gsl_vector_get(&popvec, index_gs);
+      grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
+                                         get_uniqueionindex(element, ion)] = gsl_vector_get(&popvec, index_gs);
       // solution_ion_pop += gsl_vector_get(popvec, index_gs);
 
       calculate_cellpartfuncts(modelgridindex, element);
@@ -1201,10 +1201,13 @@ void nltepop_write_restart_data(FILE *restart_file) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
         const int uniqueionindex = get_uniqueionindex(element, ion);
-        fprintf(restart_file, "%d %a %a %la\n", ion,
-                grid::ion_groundlevelpops_allcells[(nonemptymgi * get_includedions()) + uniqueionindex],
-                grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex],
-                grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + uniqueionindex]);
+        fprintf(
+            restart_file, "%d %a %a %la\n", ion,
+            grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
+                                               uniqueionindex],
+            grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex],
+            grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
+                                                uniqueionindex]);
       }
     }
     for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
@@ -1247,9 +1250,12 @@ void nltepop_read_restart_data(FILE *restart_file) {
         const int uniqueionindex = get_uniqueionindex(element, ion);
         assert_always(
             fscanf(restart_file, "%d %a %a %la\n", &ion_in,
-                   &grid::ion_groundlevelpops_allcells[(nonemptymgi * get_includedions()) + uniqueionindex],
-                   &grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex],
-                   &grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + uniqueionindex]) == 4);
+                   &grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
+                                                       uniqueionindex],
+                   &grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
+                                                  uniqueionindex],
+                   &grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
+                                                        uniqueionindex]) == 4);
         if (ion_in != ion) {
           printout("ERROR: expected data for ion %d but found ion %d\n", ion, ion_in);
           std::abort();
