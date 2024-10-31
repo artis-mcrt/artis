@@ -800,6 +800,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 // (ionisation balance follows from this too)
 {
   const int atomic_number = get_atomicnumber(element);
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   if (grid::get_elem_abundance(modelgridindex, element) <= 0.) {
     // abundance of this element is zero, so do not store any NLTE populations
@@ -1042,8 +1043,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       }
 
       // store the ground level population
-      grid::modelgrid[modelgridindex].ion_groundlevelpops[get_uniqueionindex(element, ion)] =
-          gsl_vector_get(&popvec, index_gs);
+      grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
+                                         get_uniqueionindex(element, ion)] = gsl_vector_get(&popvec, index_gs);
       // solution_ion_pop += gsl_vector_get(popvec, index_gs);
 
       calculate_cellpartfuncts(modelgridindex, element);
@@ -1192,8 +1193,9 @@ void nltepop_write_restart_data(FILE *restart_file) {
   fprintf(restart_file, "%d\n", 75618527);  // special number marking the beginning of nlte data
 
   fprintf(restart_file, "%d\n", globals::total_nlte_levels);
+  const auto nincludedions = get_includedions();
 
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     fprintf(restart_file, "%d %la\n", modelgridindex, grid::modelgrid[modelgridindex].totalcooling);
     for (int element = 0; element < get_nelements(); element++) {
@@ -1201,9 +1203,9 @@ void nltepop_write_restart_data(FILE *restart_file) {
       for (int ion = 0; ion < nions; ion++) {
         const int uniqueionindex = get_uniqueionindex(element, ion);
         fprintf(restart_file, "%d %a %a %la\n", ion,
-                grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex],
-                grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex],
-                grid::modelgrid[modelgridindex].ion_cooling_contribs[uniqueionindex]);
+                grid::ion_groundlevelpops_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
+                grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
+                grid::ion_cooling_contribs_allcells[(nonemptymgi * nincludedions) + uniqueionindex]);
       }
     }
     for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
@@ -1229,8 +1231,9 @@ void nltepop_read_restart_data(FILE *restart_file) {
              total_nlte_levels_in);
     std::abort();
   }
+  const auto nincludedions = get_includedions();
 
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     int mgi_in = 0;
     assert_always(fscanf(restart_file, "%d %la\n", &mgi_in, &grid::modelgrid[modelgridindex].totalcooling) == 2);
@@ -1245,9 +1248,10 @@ void nltepop_read_restart_data(FILE *restart_file) {
         int ion_in = 0;
         const int uniqueionindex = get_uniqueionindex(element, ion);
         assert_always(fscanf(restart_file, "%d %a %a %la\n", &ion_in,
-                             &grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex],
-                             &grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex],
-                             &grid::modelgrid[modelgridindex].ion_cooling_contribs[uniqueionindex]) == 4);
+                             &grid::ion_groundlevelpops_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
+                             &grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
+                             &grid::ion_cooling_contribs_allcells[(nonemptymgi * nincludedions) + uniqueionindex]) ==
+                      4);
         if (ion_in != ion) {
           printout("ERROR: expected data for ion %d but found ion %d\n", ion, ion_in);
           std::abort();

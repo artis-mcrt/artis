@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -35,7 +36,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
                               const HeatingCoolingRates *heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
 
-  if (grid::get_numassociatedcells(mgi) < 1) {
+  if (grid::get_numpropcells(mgi) < 1) {
     // modelgrid cells that are not represented in the simulation grid
     fprintf(estimators_file, "timestep %d modelgridindex %d EMPTYCELL\n\n", timestep, mgi);
     fflush(estimators_file);
@@ -50,7 +51,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
 
   const auto T_e = grid::get_Te(mgi);
   const auto nne = grid::get_nne(mgi);
-  const auto Y_e = grid::get_electronfrac(mgi);
+  const auto Y_e = grid::get_electronfrac(nonemptymgi);
   // fprintf(estimators_file,"%d %g %g %g %g %d
   // ",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grid::modelgrid[n].thick); fprintf(estimators_file,"%d %g %g %g
   // %g %g ",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);
@@ -675,16 +676,18 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
   }
 }
 
-void solve_Te_nltepops(const int mgi, const int nts, const int nts_prev, HeatingCoolingRates *heatingcoolingrates)
+void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
+                       HeatingCoolingRates *heatingcoolingrates)
 // nts is the timestep number
 {
+  const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   // bfheating coefficients are needed for the T_e solver, but
   // they only depend on the radiation field, which is fixed during the iterations below
   printout("calculate_bfheatingcoeffs for timestep %d cell %d...", nts, mgi);
   const auto sys_time_start_calculate_bfheatingcoeffs = std::time(nullptr);
   thread_local static auto bfheatingcoeffs = std::vector<double>(get_includedlevels());
 
-  calculate_bfheatingcoeffs(mgi, bfheatingcoeffs);
+  calculate_bfheatingcoeffs(nonemptymgi, bfheatingcoeffs);
   printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calculate_bfheatingcoeffs);
 
   const double convergence_tolerance = 0.04;
@@ -708,7 +711,8 @@ void solve_Te_nltepops(const int mgi, const int nts, const int nts_prev, Heating
     const auto sys_time_start_Te = std::time(nullptr);
 
     // Find T_e as solution for thermal balance
-    call_T_e_finder(mgi, globals::timesteps[nts_prev].mid, MINTEMP, MAXTEMP, heatingcoolingrates, bfheatingcoeffs);
+    call_T_e_finder(nonemptymgi, globals::timesteps[nts_prev].mid, MINTEMP, MAXTEMP, heatingcoolingrates,
+                    bfheatingcoeffs);
 
     const int duration_solve_T_e = std::time(nullptr) - sys_time_start_Te;
 
@@ -869,18 +873,7 @@ static void titer_average_estimators(const int nonemptymgi) {
 
 void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
                       const double deltat, HeatingCoolingRates *heatingcoolingrates) {
-  const int assoc_cells = grid::get_numassociatedcells(mgi);
-  if (assoc_cells < 1) {
-    // For modelgrid cells that are not represented in the simulation grid,
-    // Set grid properties to zero
-    grid::set_TR(mgi, 0.);
-    grid::set_TJ(mgi, 0.);
-    grid::set_Te(mgi, 0.);
-    grid::set_W(mgi, 0.);
-    return;
-  }
-
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
   const double deltaV =
       grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
@@ -1008,7 +1001,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       // full-spectrum and binned J and nuJ estimators
       radfield::fit_parameters(mgi, nts);
 
-      solve_Te_nltepops(mgi, nts, nts_prev, heatingcoolingrates);
+      solve_Te_nltepops(nonemptymgi, nts, nts_prev, heatingcoolingrates);
     }
     printout("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", mgi, nts,
              std::time(nullptr) - sys_time_start_temperature_corrections);
@@ -1017,6 +1010,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
   const float nne = grid::get_nne(mgi);
   const double compton_optical_depth = SIGMA_T * nne * grid::wid_init(mgi, 0) * tratmid;
 
+  const int assoc_cells = grid::get_numpropcells(mgi);
   const double radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum * tratmid / assoc_cells;
   const double grey_optical_deptha = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * grid::wid_init(mgi, 0) * tratmid;
   // cube corners will have radial pos > rmax, so clamp to 0.
@@ -1046,13 +1040,13 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     // cooling rates calculation can be skipped for thick cells
     // flag with negative numbers to indicate that the rates are invalid
     grid::modelgrid[mgi].totalcooling = -1.;
-    grid::modelgrid[mgi].ion_cooling_contribs[0] = -1.;
+    grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + 0] = -1.;
   } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial) {
     // cooling rates were read from the gridsave file for this timestep
     // make sure they are valid
     printout("cooling rates read from gridsave file for timestep %d cell %d...", nts, mgi);
     assert_always(grid::modelgrid[mgi].totalcooling >= 0.);
-    assert_always(grid::modelgrid[mgi].ion_cooling_contribs[0] >= 0.);
+    assert_always(grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + 0] >= 0.);
   } else {
     // Cooling rates depend only on cell properties, precalculate total cooling
     // and ion contributions inside update grid and communicate between MPI tasks
@@ -1062,7 +1056,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
     // don't pass pointer to heatingcoolingrates because current populations and rates weren't
     // used to determine T_e
-    kpkt::calculate_cooling_rates(mgi, nullptr);
+    kpkt::calculate_cooling_rates(nonemptymgi, nullptr);
 
     printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calc_kpkt_rates);
   }
@@ -1132,7 +1126,10 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       // Check if this task should work on the current model grid cell.
       // If yes, update the cell and write out the estimators
       HeatingCoolingRates heatingcoolingrates{};
-      update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates);
+      const int assoc_cells = grid::get_numpropcells(mgi);
+      if (assoc_cells > 0) {
+        update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates);
+      }
 
       // maybe want to add omp ordered here if the modelgrid cells should be output in order
 #ifdef _OPENMP

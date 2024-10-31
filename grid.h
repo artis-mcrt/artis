@@ -30,13 +30,10 @@ struct ModelGridCell {
   float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
   float ffegrp = 0.;
   float kappagrey = 0.;
-  float grey_depth = 0.;         // Grey optical depth to surface of the modelgridcell
-                                 // This is only stored to print it outside the OpenMP loop in update_grid to the
-                                 // estimatorsfile so there is no need to communicate it via MPI so far!
-  float *ion_groundlevelpops{};  // groundlevel populations of all included ions
-  float *ion_partfuncts{};       // partition functions for all included ions
+  float grey_depth = 0.;  // Grey optical depth to surface of the modelgridcell
+                          // This is only stored to print it outside the OpenMP loop in update_grid to the
+                          // estimatorsfile so there is no need to communicate it via MPI so far!
   double totalcooling = -1;
-  double *ion_cooling_contribs{};
   int thick = 0;
 };
 
@@ -64,6 +61,9 @@ inline float *elem_meanweight_allcells{};
 inline float *elem_massfracs_allcells;  // mass fractions of elements in each cell for the current timestep
 
 inline double *nltepops_allcells{};
+inline float *ion_groundlevelpops_allcells{};
+inline float *ion_partfuncts_allcells{};
+inline double *ion_cooling_contribs_allcells{};
 
 [[nodiscard]] auto get_elements_uppermost_ion(int modelgridindex, int element) -> int;
 void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
@@ -103,8 +103,8 @@ void grid_init(int my_rank);
 [[nodiscard]] auto get_element_meanweight(int nonemptymgi, int element) -> float;
 [[nodiscard]] auto get_elem_abundance(int modelgridindex, int element) -> float;
 void set_element_meanweight(int nonemptymgi, int element, float meanweight);
-[[nodiscard]] auto get_electronfrac(int modelgridindex) -> double;
-[[nodiscard]] auto get_numassociatedcells(int modelgridindex) -> int;
+[[nodiscard]] auto get_electronfrac(int nonemptymgi) -> double;
+[[nodiscard]] auto get_numpropcells(int modelgridindex) -> int;
 [[nodiscard]] auto get_nonemptymgi_of_mgi(int mgi) -> int;
 [[nodiscard]] auto get_mgi_of_nonemptymgi(int nonemptymgi) -> int;
 [[nodiscard]] auto get_model_type() -> GridType;
@@ -116,7 +116,6 @@ void set_model_type(GridType model_type_value);
 [[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> &pos, double time) -> int;
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);
-[[nodiscard]] auto get_maxndo() -> int;
 [[nodiscard]] auto get_nstart(int rank) -> int;
 [[nodiscard]] auto get_nstart_nonempty(int rank) -> int;
 [[nodiscard]] auto get_ndo(int rank) -> int;
@@ -149,7 +148,7 @@ inline auto get_ejecta_kinetic_energy() {
   double E_kin = 0.;
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    const int assoc_cells = grid::get_numassociatedcells(mgi);
+    const int assoc_cells = grid::get_numpropcells(mgi);
     double M_cell = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
     const double radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum / assoc_cells;
     E_kin += 0.5 * M_cell * std::pow(radial_pos / globals::tmin, 2);

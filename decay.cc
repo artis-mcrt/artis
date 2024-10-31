@@ -730,7 +730,7 @@ auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypa
   return chainendecay;
 }
 
-auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int modelgridindex, const double time) -> double
+auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int nonemptymgi, const double time) -> double
 // total decay power per mass [erg/s/g] for a given decaypath
 {
   // only decays at the end of the chain contributed from the initial abundance of the top of the chain are counted
@@ -739,6 +739,7 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int mode
   const int z_top = decaypaths[decaypathindex].z[0];
   const int a_top = decaypaths[decaypathindex].a[0];
   const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
+  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top);
   assert_always(top_initabund >= 0.);
@@ -1053,15 +1054,8 @@ void setup_decaypath_energy_per_mass() {
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
   double *decaypath_energy_per_mass_data{nullptr};
 #ifdef MPI_ON
-  const auto [_, noderank_nonemptycellcount] =
-      get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
-  auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * get_num_decaypaths() * sizeof(double));
-  int disp_unit = sizeof(double);
-  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                        &decaypath_energy_per_mass_data,
-                                        &win_decaypath_energy_per_mass) == MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(win_decaypath_energy_per_mass, 0, &size, &disp_unit,
-                                     &decaypath_energy_per_mass_data) == MPI_SUCCESS);
+  std::tie(decaypath_energy_per_mass_data, win_decaypath_energy_per_mass) =
+      MPI_shared_malloc_keepwin<double>(nonempty_npts_model * get_num_decaypaths());
 #else
   decaypath_energy_per_mass_data =
       static_cast<double *>(malloc(nonempty_npts_model * get_num_decaypaths() * sizeof(double)));
@@ -1422,7 +1416,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
         get_simtime_endecay_per_ejectamass(nonemptymgi, decaypathindex) / (globals::tmax - tdecaymin);
     assert_always(avgpower > 0.);
     assert_always(std::isfinite(avgpower));
-    pkt.e_cmf = e0 * get_decaypath_power_per_ejectamass(decaypathindex, mgi, pkt.tdecay) / avgpower;
+    pkt.e_cmf = e0 * get_decaypath_power_per_ejectamass(decaypathindex, nonemptymgi, pkt.tdecay) / avgpower;
     assert_always(pkt.e_cmf >= 0);
     assert_always(std::isfinite(pkt.e_cmf));
   }

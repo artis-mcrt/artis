@@ -987,35 +987,22 @@ void allocate_expansionopacities() {
   double *expansionopacity_planck_cumulative_data{};
 
 #ifdef MPI_ON
-  const auto [_, noderank_nonemptycellcount] =
-      get_range_chunk(npts_nonempty, globals::node_nprocs, globals::rank_in_node);
-
-  {
-    MPI_Aint size = noderank_nonemptycellcount * expopac_nbins * static_cast<MPI_Aint>(sizeof(float));
-    int disp_unit = sizeof(float);
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &expansionopacities_data, &win_expansionopacities) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win_expansionopacities, 0, &size, &disp_unit, &expansionopacities_data) ==
-                  MPI_SUCCESS);
-  }
-
-  if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
-    MPI_Aint size = noderank_nonemptycellcount * expopac_nbins * static_cast<MPI_Aint>(sizeof(double));
-    int disp_unit = sizeof(double);
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &expansionopacity_planck_cumulative_data,
-                                          &win_expansionopacity_planck_cumulative) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win_expansionopacity_planck_cumulative, 0, &size, &disp_unit,
-                                       &expansionopacity_planck_cumulative_data) == MPI_SUCCESS);
-  }
-
+  std::tie(expansionopacities_data, win_expansionopacities) =
+      MPI_shared_malloc_keepwin<float>(npts_nonempty * expopac_nbins);
 #else
   expansionopacities_data = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
+#endif
+
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
+#ifdef MPI_ON
+    std::tie(expansionopacity_planck_cumulative_data, win_expansionopacity_planck_cumulative) =
+        MPI_shared_malloc_keepwin<double>(npts_nonempty * expopac_nbins);
+#else
     expansionopacity_planck_cumulative_data =
         static_cast<double *>(malloc(npts_nonempty * expopac_nbins * sizeof(double)));
-  }
 #endif
+  }
+
   expansionopacities = std::span(expansionopacities_data, npts_nonempty * expopac_nbins);
   expansionopacity_planck_cumulative =
       std::span(expansionopacity_planck_cumulative_data,

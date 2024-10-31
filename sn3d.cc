@@ -72,11 +72,6 @@ auto real_time_start = -1;
 auto time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
 FILE *estimators_file{};
 
-#ifdef MPI_ON
-size_t mpi_grid_buffer_size = 0;
-char *mpi_grid_buffer{};
-#endif
-
 void initialise_linestat_file() {
   if (globals::simulation_continued_from_saved && !RECORD_LINESTAT) {
     // only write linestat.out on the first run, unless it contains statistics for each timestep
@@ -216,18 +211,18 @@ void write_deposition_file() {
 
 #ifdef MPI_ON
 void mpi_communicate_grid_properties() {
-  const auto nincludedions = get_includedions();
-  const auto nelements = get_nelements();
+  const ptrdiff_t nincludedions = get_includedions();
+  const ptrdiff_t nelements = get_nelements();
   for (int root = 0; root < globals::nprocs; root++) {
     MPI_Barrier(MPI_COMM_WORLD);
 
     int root_node_id = globals::node_id;
     MPI_Bcast(&root_node_id, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-    const int root_nstart_nonempty = grid::get_nstart_nonempty(root);
-    const int root_ndo_nonempty = grid::get_ndo_nonempty(root);
+    const ptrdiff_t root_nstart_nonempty = grid::get_nstart_nonempty(root);
+    const ptrdiff_t root_ndo_nonempty = grid::get_ndo_nonempty(root);
 
-    for (int nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
+    for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
          nonemptymgi++) {
       assert_always(root_ndo_nonempty > 0);
 
@@ -252,100 +247,32 @@ void mpi_communicate_grid_properties() {
         MPI_Bcast(&globals::gammaestimator[nonemptymgi * globals::nbfcontinua_ground], globals::nbfcontinua_ground,
                   MPI_DOUBLE, root, MPI_COMM_WORLD);
       }
+
       if (globals::rank_in_node == 0) {
-        MPI_Bcast(&grid::elem_meanweight_allcells[nonemptymgi * nelements], nelements, MPI_FLOAT, root_node_id,
-                  globals::mpi_comm_internode);
+        MPI_Bcast(&grid::modelgrid[grid::get_mgi_of_nonemptymgi(nonemptymgi)], sizeof(grid::ModelGridCell), MPI_BYTE,
+                  root_node_id, globals::mpi_comm_internode);
       }
 
       MPI_Bcast_binned_opacities(nonemptymgi, root_node_id);
     }
 
-    if (root == globals::my_rank) {
-      int position = 0;
-      for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
-           nonemptymgi++) {
-        const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-        MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-
-        MPI_Pack(&grid::modelgrid[mgi].Te, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 MPI_COMM_WORLD);
-        MPI_Pack(&grid::modelgrid[mgi].TR, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 MPI_COMM_WORLD);
-        MPI_Pack(&grid::modelgrid[mgi].TJ, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 MPI_COMM_WORLD);
-        MPI_Pack(&grid::modelgrid[mgi].W, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 MPI_COMM_WORLD);
-        MPI_Pack(&grid::modelgrid[mgi].rho, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 MPI_COMM_WORLD);
-        MPI_Pack(&grid::modelgrid[mgi].nne, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 MPI_COMM_WORLD);
-        MPI_Pack(&grid::modelgrid[mgi].nnetot, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 MPI_COMM_WORLD);
-        MPI_Pack(&grid::modelgrid[mgi].kappagrey, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 MPI_COMM_WORLD);
-        MPI_Pack(&grid::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 MPI_COMM_WORLD);
-        MPI_Pack(&grid::modelgrid[mgi].thick, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 MPI_COMM_WORLD);
-
-        MPI_Pack(&grid::elem_massfracs_allcells[(nonemptymgi * nelements)], nelements, MPI_FLOAT, mpi_grid_buffer,
-                 mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-
-        MPI_Pack(grid::modelgrid[mgi].ion_groundlevelpops, nincludedions, MPI_FLOAT, mpi_grid_buffer,
-                 mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-        MPI_Pack(grid::modelgrid[mgi].ion_partfuncts, nincludedions, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size,
-                 &position, MPI_COMM_WORLD);
-        MPI_Pack(grid::modelgrid[mgi].ion_cooling_contribs, nincludedions, MPI_DOUBLE, mpi_grid_buffer,
-                 mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-      }
-      printout("[info] mem_usage: MPI_BUFFER: used %d of %zu bytes allocated to mpi_grid_buffer\n", position,
-               mpi_grid_buffer_size);
-      assert_always(static_cast<size_t>(position) <= mpi_grid_buffer_size);
-    }
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    int position = 0;
-    for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
-         nonemptymgi++) {
-      const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-      int mgi_check = -1;
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi_check, 1, MPI_INT, MPI_COMM_WORLD);
-      assert_always(mgi == mgi_check);
-
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].Te, 1, MPI_FLOAT,
-                 MPI_COMM_WORLD);
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].TR, 1, MPI_FLOAT,
-                 MPI_COMM_WORLD);
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].TJ, 1, MPI_FLOAT,
-                 MPI_COMM_WORLD);
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].W, 1, MPI_FLOAT,
-                 MPI_COMM_WORLD);
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].rho, 1, MPI_FLOAT,
-                 MPI_COMM_WORLD);
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].nne, 1, MPI_FLOAT,
-                 MPI_COMM_WORLD);
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].nnetot, 1, MPI_FLOAT,
-                 MPI_COMM_WORLD);
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].kappagrey, 1, MPI_FLOAT,
-                 MPI_COMM_WORLD);
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE,
-                 MPI_COMM_WORLD);
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].thick, 1, MPI_INT,
-                 MPI_COMM_WORLD);
-
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 &grid::elem_massfracs_allcells[(nonemptymgi * nelements)], nelements, MPI_FLOAT, MPI_COMM_WORLD);
-
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_groundlevelpops,
-                 nincludedions, MPI_FLOAT, MPI_COMM_WORLD);
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_partfuncts, nincludedions,
-                 MPI_FLOAT, MPI_COMM_WORLD);
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_cooling_contribs,
-                 nincludedions, MPI_DOUBLE, MPI_COMM_WORLD);
+    if (globals::rank_in_node == 0) {
+      MPI_Bcast(&grid::elem_meanweight_allcells[root_nstart_nonempty * nelements], root_ndo_nonempty * nelements,
+                MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast(&grid::elem_massfracs_allcells[root_nstart_nonempty * nelements], root_ndo_nonempty * nelements,
+                MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast(&grid::ion_groundlevelpops_allcells[root_nstart_nonempty * nincludedions],
+                root_ndo_nonempty * nincludedions, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast(&grid::ion_partfuncts_allcells[root_nstart_nonempty * nincludedions], root_ndo_nonempty * nincludedions,
+                MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast(&grid::ion_cooling_contribs_allcells[root_nstart_nonempty * nincludedions],
+                root_ndo_nonempty * nincludedions, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
     }
+
+    MPI_Barrier(MPI_COMM_WORLD);
   }
+
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -978,15 +905,6 @@ auto main(int argc, char *argv[]) -> int {
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-  const size_t maxndo = grid::get_maxndo();
-  // Initialise the exchange buffer
-  // The factor 4 comes from the fact that our buffer should contain elements of 4 byte
-  // instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
-  mpi_grid_buffer_size = 4 * ((12 + 4 * get_includedions() + get_nelements()) * (maxndo) + 1);
-  printout("reserve mpi_grid_buffer_size %zu space for MPI communication buffer\n", mpi_grid_buffer_size);
-  mpi_grid_buffer = static_cast<char *>(malloc(mpi_grid_buffer_size * sizeof(char)));
-  assert_always(mpi_grid_buffer != nullptr);
-  MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
   globals::timestep = globals::timestep_initial;
@@ -1039,7 +957,6 @@ auto main(int argc, char *argv[]) -> int {
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-  free(mpi_grid_buffer);
 #endif
 
   if (linestat_file != nullptr) {

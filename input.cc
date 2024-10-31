@@ -899,18 +899,7 @@ void read_phixs_data() {
 
     // copy the photoionisation tables into one contiguous block of memory
 #ifdef MPI_ON
-    MPI_Win win_allphixsblock = MPI_WIN_NULL;
-
-    const auto [_, noderank_points] =
-        get_range_chunk(std::ssize(tmpallphixs), globals::node_nprocs, globals::rank_in_node);
-
-    auto size = static_cast<MPI_Aint>(noderank_points * sizeof(float));
-    int disp_unit = sizeof(float);
-    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &globals::allphixs,
-                            &win_allphixsblock);
-    MPI_Win_shared_query(win_allphixsblock, MPI_PROC_NULL, &size, &disp_unit, &globals::allphixs);
-
-    MPI_Barrier(MPI_COMM_WORLD);
+    globals::allphixs = MPI_shared_malloc<float>(tmpallphixs.size());
 #else
     globals::allphixs = static_cast<float *>(malloc(tmpallphixs.size() * sizeof(float)));
 #endif
@@ -1189,16 +1178,8 @@ void read_atomicdata_files() {
     assert_always(totupdowntrans == static_cast<int>(temp_alltranslist_size));
 #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Win win_alltransblock = MPI_WIN_NULL;
 
-    const auto [_, noderank_trans] = get_range_chunk(totupdowntrans, globals::node_nprocs, globals::rank_in_node);
-
-    auto size = static_cast<MPI_Aint>(noderank_trans * sizeof(LevelTransition));
-    int disp_unit = sizeof(LevelTransition);
-    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &globals::alltrans,
-                            &win_alltransblock);
-
-    MPI_Win_shared_query(win_alltransblock, 0, &size, &disp_unit, &globals::alltrans);
+    globals::alltrans = MPI_shared_malloc<LevelTransition>(totupdowntrans);
 #else
     globals::alltrans = static_cast<LevelTransition *>(malloc(totupdowntrans * sizeof(LevelTransition)));
 #endif
@@ -1211,22 +1192,11 @@ void read_atomicdata_files() {
 
   // create a linelist shared on node and then copy data across, freeing the local copy
   TransitionLine *nonconstlinelist{};
-  {
 #ifdef MPI_ON
-    MPI_Win win_nonconstlinelist = MPI_WIN_NULL;
-
-    const auto [_, noderank_lines] = get_range_chunk(globals::nlines, globals::node_nprocs, globals::rank_in_node);
-
-    MPI_Aint size = noderank_lines * static_cast<MPI_Aint>(sizeof(TransitionLine));
-    int disp_unit = sizeof(TransitionLine);
-    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nonconstlinelist,
-                            &win_nonconstlinelist);
-
-    MPI_Win_shared_query(win_nonconstlinelist, 0, &size, &disp_unit, &nonconstlinelist);
+  nonconstlinelist = MPI_shared_malloc<TransitionLine>(globals::nlines);
 #else
-    nonconstlinelist = static_cast<TransitionLine *>(malloc(globals::nlines * sizeof(TransitionLine)));
+  nonconstlinelist = static_cast<TransitionLine *>(malloc(globals::nlines * sizeof(TransitionLine)));
 #endif
-  }
 
   if (globals::rank_in_node == 0) {
     memcpy(static_cast<void *>(nonconstlinelist), temp_linelist.data(), globals::nlines * sizeof(TransitionLine));
@@ -1241,22 +1211,6 @@ void read_atomicdata_files() {
   nonconstlinelist = nullptr;
   printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
            globals::nlines * sizeof(TransitionLine) / 1024. / 1024);
-
-  // Save sorted linelist into a file
-  // if (rank_global == 0)
-  // {
-  //   FILE *linelist_file = fopen_required("linelist.dat", "w");
-  //   fprintf(linelist_file,"%d\n",nlines);
-  //   for (int i = 0; i < nlines; i++)
-  //   {
-  //     fprintf(linelist_file,"%d %d %d %d %d %lg %lg %lg %lg %d\n",
-  //             i, globals::linelist[i].elementindex, globals::linelist[i].ionindex,
-  //             globals::linelist[i].upperlevelindex, globals::linelist[i].lowerlevelindex,
-  //             globals::linelist[i].nu, globals::linelist[i].einstein_A, globals::linelist[i].osc_strength,
-  //             globals::linelist[i].coll_str, globals::linelist[i].forbidden);
-  //   }
-  //   fclose(linelist_file);
-  // }
 
   printout("establishing connection between transitions and sorted linelist...\n");
 

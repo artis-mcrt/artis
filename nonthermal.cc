@@ -1387,7 +1387,7 @@ auto get_eff_ionpot(const int modelgridindex, const int element, const int ion) 
 // Kozma & Fransson 1992 equation 13
 // returns the rate coefficient in s^-1
 auto nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, const int ion) -> double {
-  assert_testmodeonly(grid::get_numassociatedcells(modelgridindex) > 0);
+  assert_testmodeonly(grid::get_numpropcells(modelgridindex) > 0);
 
   const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
   if (deposition_rate_density > 0.) {
@@ -2111,32 +2111,9 @@ void init(const int my_rank, const int ndo_nonempty) {
              nt_excitations_stored,
              grid::get_nonempty_npts_model() * sizeof(NonThermalExcitation) * nt_excitations_stored / 1024. / 1024.);
 
-    const auto nonempty_npts_model = grid::get_nonempty_npts_model();
+    const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
-#ifdef MPI_ON
-
-    MPI_Win win_shared_excitations_list{};
-
-    const auto [_, noderank_nonemptycellcount] =
-        get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
-
-    auto size =
-        static_cast<MPI_Aint>(noderank_nonemptycellcount * sizeof(NonThermalExcitation) * nt_excitations_stored);
-
-    int disp_unit = sizeof(NonThermalExcitation);
-    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &excitations_list_all_cells,
-                            &win_shared_excitations_list);
-
-    MPI_Win_shared_query(win_shared_excitations_list, 0, &size, &disp_unit, &excitations_list_all_cells);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-#else
-
-    excitations_list_all_cells = static_cast<NonThermalExcitation *>(
-        malloc(nonempty_npts_model * sizeof(NonThermalExcitation) * nt_excitations_stored));
-
-#endif
+    excitations_list_all_cells = MPI_shared_malloc<NonThermalExcitation>(nonempty_npts_model * nt_excitations_stored);
   }
 
   nt_solution.resize(grid::get_npts_model());
@@ -2150,7 +2127,7 @@ void init(const int my_rank, const int ndo_nonempty) {
     nt_solution[modelgridindex].nneperion_when_solved = -1.;
     nt_solution[modelgridindex].timestep_last_solved = -1;
 
-    if (grid::get_numassociatedcells(modelgridindex) > 0) {
+    if (grid::get_numpropcells(modelgridindex) > 0) {
       nt_solution[modelgridindex].allions =
           static_cast<NonThermalSolutionIon *>(malloc(get_includedions() * sizeof(NonThermalSolutionIon)));
 
@@ -2241,7 +2218,7 @@ void close_file() {
     nonthermalfile = nullptr;
   }
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-    if (grid::get_numassociatedcells(modelgridindex) > 0) {
+    if (grid::get_numpropcells(modelgridindex) > 0) {
       free(nt_solution[modelgridindex].allions);
     }
   }
@@ -2352,7 +2329,7 @@ __host__ __device__ auto nt_random_upperion(const int modelgridindex, const int 
 
 __host__ __device__ auto nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion) -> double {
   assert_always(NT_ON);
-  assert_always(grid::get_numassociatedcells(modelgridindex) > 0);
+  assert_always(grid::get_numpropcells(modelgridindex) > 0);
 
   if (NT_SOLVE_SPENCERFANO) {
     const double Y_nt = nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
@@ -2392,7 +2369,7 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const
     return 0.;
   }
 
-  assert_testmodeonly(grid::get_numassociatedcells(modelgridindex) > 0);
+  assert_testmodeonly(grid::get_numpropcells(modelgridindex) > 0);
 
   // binary search, assuming the excitation list is sorted by lineindex ascending
   const auto ntexclist = std::span(nt_solution[modelgridindex].frac_excitations_list,
@@ -2509,7 +2486,7 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
 // based on Equation (2) of Li et al. (2012)
 void solve_spencerfano(const int modelgridindex, const int timestep, const int iteration) {
   bool skip_solution = false;
-  if (grid::get_numassociatedcells(modelgridindex) < 1) {
+  if (grid::get_numpropcells(modelgridindex) < 1) {
     printout("Associated_cells < 1 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex,
              timestep);
 

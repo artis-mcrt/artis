@@ -85,7 +85,6 @@ std::vector<int> ranks_nstart;
 std::vector<int> ranks_nstart_nonempty;
 std::vector<int> ranks_ndo;
 std::vector<int> ranks_ndo_nonempty;
-int maxndo = -1;
 
 void set_rho_tmin(const int modelgridindex, const float x) { modelgrid[modelgridindex].rhoinit = x; }
 
@@ -119,8 +118,13 @@ void set_npts_model(const int new_npts_model) {
   npts_model = new_npts_model;
 
   assert_always(modelgrid.data() == nullptr);
-  modelgrid = std::span(static_cast<ModelGridCell *>(calloc(npts_model + 1, sizeof(ModelGridCell))), npts_model + 1);
-  assert_always(modelgrid.data() != nullptr);
+  modelgrid = MPI_shared_malloc_span<ModelGridCell>(npts_model + 1);
+  if (globals::rank_in_node == 0) {
+    std::ranges::fill(modelgrid, ModelGridCell{});
+  }
+#ifdef MPI_ON
+  MPI_Barrier(globals::mpi_comm_node);
+#endif
   mg_associated_cells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 }
@@ -130,23 +134,16 @@ void allocate_initradiobund() {
 
   const ptrdiff_t num_nuclides = decay::get_num_nuclides();
 
-  const size_t totalradioabundsize = (npts_model + 1) * num_nuclides * sizeof(float);
+  const size_t totalradioabundcount = (npts_model + 1) * num_nuclides;
 #ifdef MPI_ON
-  const auto [_, noderank_cells] = get_range_chunk(npts_model + 1, globals::node_nprocs, globals::rank_in_node);
-
-  auto size = static_cast<MPI_Aint>(noderank_cells * num_nuclides * sizeof(float));
-
-  int disp_unit = sizeof(float);
-  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                        &initnucmassfrac_allcells, &win_initnucmassfrac_allcells) == MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(win_initnucmassfrac_allcells, 0, &size, &disp_unit, &initnucmassfrac_allcells) ==
-                MPI_SUCCESS);
+  std::tie(initnucmassfrac_allcells, win_initnucmassfrac_allcells) =
+      MPI_shared_malloc_keepwin<float>(totalradioabundcount);
 #else
-  initnucmassfrac_allcells = static_cast<float *>(malloc(totalradioabundsize));
+  initnucmassfrac_allcells = static_cast<float *>(malloc(totalradioabundcount * sizeof(float)));
 #endif
   printout(
       "[info] mem_usage: radioabundance data for %td nuclides for %td cells occupies %.3f MB (node shared memory)\n",
-      num_nuclides, npts_model, static_cast<double>(totalradioabundsize) / 1024. / 1024.);
+      num_nuclides, npts_model, static_cast<double>(totalradioabundcount * sizeof(float)) / 1024. / 1024.);
 
 #ifdef MPI_ON
   MPI_Barrier(globals::mpi_comm_node);
@@ -272,107 +269,34 @@ void allocate_nonemptycells_composition_cooling()
   const ptrdiff_t npts_nonempty = get_nonempty_npts_model();
   const auto nelements = get_nelements();
 
-#ifdef MPI_ON
-  const auto [_, noderank_nonemptycellcount] =
-      get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
-
-  {
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * nelements * sizeof(float));
-    int disp_unit = sizeof(float);
-    MPI_Win mpiwin = MPI_WIN_NULL;
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &initmassfracuntrackedstable_allcells, &mpiwin) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &initmassfracuntrackedstable_allcells) ==
-                  MPI_SUCCESS);
-  }
-
-  {
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * nelements * sizeof(float));
-    int disp_unit = sizeof(float);
-    MPI_Win mpiwin = MPI_WIN_NULL;
-
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &elem_meanweight_allcells, &mpiwin) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elem_meanweight_allcells) == MPI_SUCCESS);
-    MPI_Barrier(globals::mpi_comm_node);
-  }
-
-  {
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * nelements * sizeof(int));
-    int disp_unit = sizeof(int);
-    MPI_Win mpiwin = MPI_WIN_NULL;
-
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &elements_uppermost_ion_allcells, &mpiwin) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elements_uppermost_ion_allcells) == MPI_SUCCESS);
-    MPI_Barrier(globals::mpi_comm_node);
-  }
-
-  {
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * nelements * sizeof(float));
-    int disp_unit = sizeof(float);
-    MPI_Win mpiwin = MPI_WIN_NULL;
-
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &elem_massfracs_allcells, &mpiwin) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elem_massfracs_allcells) == MPI_SUCCESS);
-    MPI_Barrier(globals::mpi_comm_node);
-  }
-#else
-  initmassfracuntrackedstable_allcells = static_cast<float *>(malloc(npts_nonempty * nelements * sizeof(float)));
-  elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * nelements * sizeof(float)));
-  elements_uppermost_ion_allcells = static_cast<int *>(malloc(npts_nonempty * nelements * sizeof(int)));
-  elem_massfracs_allcells = static_cast<float *>(malloc(npts_nonempty * nelements * sizeof(float)));
-#endif
+  initmassfracuntrackedstable_allcells = MPI_shared_malloc<float>(npts_nonempty * nelements);
+  elem_meanweight_allcells = MPI_shared_malloc<float>(npts_nonempty * nelements);
+  elements_uppermost_ion_allcells = MPI_shared_malloc<int>(npts_nonempty * nelements);
+  elem_massfracs_allcells = MPI_shared_malloc<float>(npts_nonempty * nelements);
+  ion_groundlevelpops_allcells = MPI_shared_malloc<float>(npts_nonempty * get_includedions());
+  ion_partfuncts_allcells = MPI_shared_malloc<float>(npts_nonempty * get_includedions());
+  ion_cooling_contribs_allcells = MPI_shared_malloc<double>(npts_nonempty * get_includedions());
 
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * globals::total_nlte_levels * sizeof(double));
-    int disp_unit = sizeof(double);
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
-                                          &win_nltepops_allcells) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win_nltepops_allcells, 0, &size, &disp_unit, &nltepops_allcells) == MPI_SUCCESS);
-
-    MPI_Barrier(globals::mpi_comm_node);
+    std::tie(nltepops_allcells, win_nltepops_allcells) =
+        MPI_shared_malloc_keepwin<double>(npts_nonempty * globals::total_nlte_levels);
 #else
     nltepops_allcells = static_cast<double *>(malloc(npts_nonempty * globals::total_nlte_levels * sizeof(double)));
 #endif
 
     assert_always(nltepops_allcells != nullptr);
+  } else {
+    nltepops_allcells = nullptr;
   }
 
-  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
-    const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-
-    if (globals::total_nlte_levels > 0) {
-      // -1 indicates that there is currently no information on the nlte populations
-      std::ranges::fill_n(&grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels)],
-                          globals::total_nlte_levels, -1.);
-    }
-
-    std::fill_n(&elem_massfracs_allcells[nonemptymgi * nelements], nelements, -1.);
-
-    modelgrid[modelgridindex].ion_groundlevelpops = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
-    if (modelgrid[modelgridindex].ion_groundlevelpops == nullptr) {
-      printout("[fatal] input: not enough memory to initialize ion_groundlevelpops in cell %d... abort\n",
-               modelgridindex);
-      std::abort();
-    }
-
-    modelgrid[modelgridindex].ion_partfuncts = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
-
-    if (modelgrid[modelgridindex].ion_partfuncts == nullptr) {
-      printout("[fatal] input: not enough memory to initialize partfunctlist in cell %d... abort\n", modelgridindex);
-      std::abort();
-    }
-
-    modelgrid[modelgridindex].ion_cooling_contribs = static_cast<double *>(malloc(get_includedions() * sizeof(double)));
-
-    if (modelgrid[modelgridindex].ion_cooling_contribs == nullptr) {
-      printout("[fatal] input: not enough memory to initialize ion_cooling_contribs for cell %d... abort\n",
-               modelgridindex);
-      std::abort();
-    }
+  if (globals::rank_in_node == 0) {
+    std::fill_n(initmassfracuntrackedstable_allcells, npts_nonempty * nelements, -1.);
+    std::fill_n(elem_meanweight_allcells, npts_nonempty * nelements, -1.);
+    std::fill_n(elements_uppermost_ion_allcells, npts_nonempty * nelements, -1);
+    std::fill_n(elem_massfracs_allcells, npts_nonempty * nelements, -1.);
+    // -1 indicates that there is currently no information on the nlte populations
+    std::ranges::fill_n(grid::nltepops_allcells, npts_nonempty * globals::total_nlte_levels, -1.);
   }
 }
 
@@ -380,7 +304,9 @@ void allocate_nonemptymodelcells() {
   // Determine the number of simulation cells associated with the model cells
   for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++) {
     mg_associated_cells[mgi] = 0;
-    modelgrid[mgi].initial_radial_pos_sum = 0.;
+    if (globals::rank_in_node == 0) {
+      modelgrid[mgi].initial_radial_pos_sum = 0.;
+    }
   }
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
@@ -396,7 +322,9 @@ void allocate_nonemptymodelcells() {
     assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (get_rho_tmin(mgi) > 0) || (mgi == get_npts_model()));
 
     mg_associated_cells[mgi] += 1;
-    modelgrid[mgi].initial_radial_pos_sum += radial_pos_mid;
+    if (globals::rank_in_node == 0) {
+      modelgrid[mgi].initial_radial_pos_sum += radial_pos_mid;
+    }
 
     assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (mg_associated_cells[mgi] == 1) ||
                   (mgi == get_npts_model()));
@@ -405,7 +333,7 @@ void allocate_nonemptymodelcells() {
   // find number of non-empty cells and allocate nonempty list
   nonempty_npts_model = 0;
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    if (get_numassociatedcells(mgi) > 0) {
+    if (get_numpropcells(mgi) > 0) {
       nonempty_npts_model++;
     }
   }
@@ -416,7 +344,7 @@ void allocate_nonemptymodelcells() {
   int nonemptymgi = 0;  // index within list of non-empty modelgrid cells
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    if (get_numassociatedcells(mgi) > 0) {
+    if (get_numpropcells(mgi) > 0) {
       if (get_rho_tmin(mgi) <= 0) {
         printout("Error: negative or zero density. Abort.\n");
         std::abort();
@@ -450,16 +378,8 @@ void allocate_nonemptymodelcells() {
 
   if (ionestimsize > 0) {
 #ifdef MPI_ON
-    const auto [_, noderank_nonemptycellcount] =
-        get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
-
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * globals::nbfcontinua_ground * sizeof(double));
-    int disp_unit = sizeof(double);
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &globals::corrphotoionrenorm,
-                                          &globals::win_corrphotoionrenorm) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(globals::win_corrphotoionrenorm, 0, &size, &disp_unit,
-                                       &globals::corrphotoionrenorm) == MPI_SUCCESS);
+    std::tie(globals::corrphotoionrenorm, globals::win_corrphotoionrenorm) =
+        MPI_shared_malloc_keepwin<double>(ionestimcount);
 #else
     globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
 #endif
@@ -606,7 +526,7 @@ void abundances_read() {
       abundances_in[anumber - 1] = 0.;
       if (!(ssline >> abund_in)) {
         // at least one element (hydrogen) should have been specified for nonempty cells
-        assert_always(anumber > 1 || get_numassociatedcells(mgi) == 0);
+        assert_always(anumber > 1 || get_numpropcells(mgi) == 0);
         break;
       }
 
@@ -618,7 +538,7 @@ void abundances_read() {
       normfactor += abundances_in[anumber - 1];
     }
 
-    if (get_numassociatedcells(mgi) > 0) {
+    if (get_numpropcells(mgi) > 0) {
       if (threedimensional || normfactor <= 0.) {
         normfactor = 1.;
       }
@@ -1085,6 +1005,26 @@ void read_3d_model() {
   printout("min_den %g [g/cm3]\n", min_den);
 }
 
+auto get_inputcellvolume(const int mgi) -> double {
+  if (get_model_type() == GridType::SPHERICAL1D) {
+    const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
+    // mass_in_shell = rho_model[mgi] * (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(t_model, 3) / 3.;
+    return (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
+  }
+  if (get_model_type() == GridType::CYLINDRICAL2D) {
+    const int n_r = mgi % ncoord_model[0];
+    const double dcoord_rcyl = globals::vmax * t_model / ncoord_model[0];    // dr 2D for input model
+    const double dcoord_z = 2. * globals::vmax * t_model / ncoord_model[1];  // dz 2D for input model
+    return pow(globals::tmin / t_model, 3) * dcoord_z * PI *
+           (pow((n_r + 1) * dcoord_rcyl, 2.) - pow(n_r * dcoord_rcyl, 2.));
+  }
+  if (get_model_type() == GridType::CARTESIAN3D) {
+    // Assumes cells are cubes here - all same volume.
+    return pow((2 * globals::vmax * globals::tmin), 3.) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
+  }
+  assert_always(false);
+}
+
 void calc_modelinit_totmassradionuclides() {
   mtot_input = 0.;
   mfegroup = 0.;
@@ -1098,47 +1038,18 @@ void calc_modelinit_totmassradionuclides() {
     totmassradionuclide[nucindex] = 0.;
   }
 
-  const double dcoord_rcyl = globals::vmax * t_model / ncoord_model[0];    // dr for input model
-  const double dcoord_z = 2. * globals::vmax * t_model / ncoord_model[1];  // dz for input model
-
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    if (get_rho_tmin(mgi) <= 0.) {
-      continue;
+    const double mass_in_shell = get_rho_tmin(mgi) * get_inputcellvolume(mgi);
+    if (mass_in_shell > 0) {
+      mtot_input += mass_in_shell;
+
+      for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
+        totmassradionuclide[nucindex] += mass_in_shell * get_modelinitnucmassfrac(mgi, nucindex);
+      }
+
+      mfegroup += mass_in_shell * get_ffegrp(mgi);
     }
-    double cellvolume = 0.;
-    if (get_model_type() == GridType::SPHERICAL1D) {
-      const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
-      // mass_in_shell = rho_model[mgi] * (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(t_model, 3) / 3.;
-      cellvolume = (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
-    } else if (get_model_type() == GridType::CYLINDRICAL2D) {
-      const int n_r = mgi % ncoord_model[0];
-      cellvolume = pow(globals::tmin / t_model, 3) * dcoord_z * PI *
-                   (pow((n_r + 1) * dcoord_rcyl, 2.) - pow(n_r * dcoord_rcyl, 2.));
-    } else if (get_model_type() == GridType::CARTESIAN3D) {
-      // Assumes cells are cubes here - all same volume.
-      cellvolume = pow((2 * globals::vmax * globals::tmin), 3.) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
-    } else {
-      assert_always(false);
-    }
-
-    const double mass_in_shell = get_rho_tmin(mgi) * cellvolume;
-
-    mtot_input += mass_in_shell;
-
-    for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-      totmassradionuclide[nucindex] += mass_in_shell * get_modelinitnucmassfrac(mgi, nucindex);
-    }
-
-    mfegroup += mass_in_shell * get_ffegrp(mgi);
   }
-
-  printout("Total input model mass: %9.3e [Msun]\n", mtot_input / MSUN);
-  printout("Nuclide masses at t=t_model_init [Msun]:");
-  printout("  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n", get_totmassradionuclide(28, 56) / MSUN,
-           get_totmassradionuclide(27, 56) / MSUN, get_totmassradionuclide(26, 52) / MSUN,
-           get_totmassradionuclide(24, 48) / MSUN);
-  printout("  Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n", mfegroup / MSUN, get_totmassradionuclide(28, 57) / MSUN,
-           get_totmassradionuclide(27, 57) / MSUN);
 }
 
 void read_grid_restart_data(const int timestep) {
@@ -1286,7 +1197,7 @@ void assign_initial_temperatures() {
 // start at mgi_start and find the next non-empty cell, or return -1 if none found
 [[nodiscard]] auto get_next_nonemptymgi(const int mgi_start) -> int {
   for (int mgi = mgi_start; mgi < get_npts_model(); mgi++) {
-    if (get_numassociatedcells(mgi) > 0) {
+    if (get_numpropcells(mgi) > 0) {
       return nonemptymgi_of_mgi[mgi];
     }
   }
@@ -1298,7 +1209,6 @@ void setup_nstart_ndo() {
   const int npts_nonempty = get_nonempty_npts_model();
   const int min_nonempty_perproc = npts_nonempty / nprocesses;  // integer division, minimum non-empty cells per process
   const int n_remainder = npts_nonempty % nprocesses;
-  maxndo = 0;
 
   ranks_nstart.resize(nprocesses, -1);
   ranks_nstart_nonempty.resize(nprocesses, -1);
@@ -1313,14 +1223,13 @@ void setup_nstart_ndo() {
 
   if (nprocesses >= get_npts_model()) {
     // for convenience, rank == mgi when there is at least one rank per cell
-    maxndo = 1;
     for (int rank = 0; rank < nprocesses; rank++) {
       if (rank < get_npts_model()) {
         const int mgi = rank;
         ranks_nstart[rank] = mgi;
         ranks_ndo[rank] = 1;
-        ranks_nstart_nonempty[rank] = (get_numassociatedcells(mgi) > 0) ? get_nonemptymgi_of_mgi(mgi) : 0;
-        ranks_ndo_nonempty[rank] = (get_numassociatedcells(mgi) > 0) ? 1 : 0;
+        ranks_nstart_nonempty[rank] = (get_numpropcells(mgi) > 0) ? get_nonemptymgi_of_mgi(mgi) : 0;
+        ranks_ndo_nonempty[rank] = (get_numpropcells(mgi) > 0) ? 1 : 0;
       }
     }
   } else {
@@ -1338,8 +1247,7 @@ void setup_nstart_ndo() {
       }
 
       ranks_ndo[rank]++;
-      maxndo = std::max(maxndo, ranks_ndo[rank]);
-      if (get_numassociatedcells(mgi) > 0) {
+      if (get_numpropcells(mgi) > 0) {
         ranks_ndo_nonempty[rank]++;
       }
     }
@@ -1692,7 +1600,7 @@ auto wid_init(const int cellindex, const int axis) -> double
 auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return (wid_init(modelgridindex, 0) * wid_init(modelgridindex, 1) * wid_init(modelgridindex, 2)) *
-           get_numassociatedcells(modelgridindex);
+           get_numpropcells(modelgridindex);
   }
 
   if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
@@ -1954,7 +1862,7 @@ __host__ __device__ auto get_cell_modelgridindex(const int cellindex) -> int {
 }
 
 // number of propagation cells associated with each modelgrid cell
-__host__ __device__ auto get_numassociatedcells(const int modelgridindex) -> int {
+__host__ __device__ auto get_numpropcells(const int modelgridindex) -> int {
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return mg_associated_cells[modelgridindex];
 }
@@ -1965,7 +1873,7 @@ __host__ __device__ auto get_nonemptymgi_of_mgi(const int mgi) -> int {
   assert_testmodeonly(mgi < get_npts_model());
 
   const int nonemptymgi = nonemptymgi_of_mgi[mgi];
-  // assert_testmodeonly(nonemptymgi >= 0 || get_numassociatedcells(mgi) == 0);
+  // assert_testmodeonly(nonemptymgi >= 0 || get_numpropcells(mgi) == 0);
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
 
@@ -2015,8 +1923,8 @@ void set_element_meanweight(const int nonemptymgi, const int element, const floa
   elem_meanweight_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] = meanweight;
 }
 
-auto get_electronfrac(const int modelgridindex) -> double {
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+auto get_electronfrac(const int nonemptymgi) -> double {
+  const auto modelgridindex = get_mgi_of_nonemptymgi(nonemptymgi);
   double nucleondens = 0.;
   for (int element = 0; element < get_nelements(); element++) {
     nucleondens += get_elem_numberdens(modelgridindex, element) * get_element_meanweight(nonemptymgi, element) / MH;
@@ -2211,6 +2119,14 @@ void read_ejecta_model() {
 
   calc_modelinit_totmassradionuclides();
 
+  printout("Total input model mass: %9.3e [Msun]\n", mtot_input / MSUN);
+  printout("Nuclide masses at t=t_model_init [Msun]:");
+  printout("  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n", get_totmassradionuclide(28, 56) / MSUN,
+           get_totmassradionuclide(27, 56) / MSUN, get_totmassradionuclide(26, 52) / MSUN,
+           get_totmassradionuclide(24, 48) / MSUN);
+  printout("  Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n", mfegroup / MSUN, get_totmassradionuclide(28, 57) / MSUN,
+           get_totmassradionuclide(27, 57) / MSUN);
+
   read_possible_yefile();
 }
 
@@ -2267,13 +2183,6 @@ void write_grid_restart_data(const int timestep) {
   nltepop_write_restart_data(gridsave_file);
   fclose(gridsave_file);
   printout("done in %ld seconds.\n", std::time(nullptr) - sys_time_start_write_restart);
-}
-
-auto get_maxndo() -> int {
-  if (ranks_ndo.empty()) {
-    setup_nstart_ndo();
-  }
-  return maxndo;
 }
 
 auto get_nstart(const int rank) -> int {
