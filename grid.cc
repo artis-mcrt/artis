@@ -318,11 +318,23 @@ void allocate_nonemptycells_composition_cooling()
     assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elem_massfracs_allcells) == MPI_SUCCESS);
     MPI_Barrier(globals::mpi_comm_node);
   }
+
+  {
+    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * get_includedions() * sizeof(float));
+    int disp_unit = sizeof(float);
+    MPI_Win mpiwin = MPI_WIN_NULL;
+
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &ion_groundlevelpops_allcells, &mpiwin) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &ion_groundlevelpops_allcells) == MPI_SUCCESS);
+    MPI_Barrier(globals::mpi_comm_node);
+  }
 #else
   initmassfracuntrackedstable_allcells = static_cast<float *>(malloc(npts_nonempty * nelements * sizeof(float)));
   elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * nelements * sizeof(float)));
   elements_uppermost_ion_allcells = static_cast<int *>(malloc(npts_nonempty * nelements * sizeof(int)));
   elem_massfracs_allcells = static_cast<float *>(malloc(npts_nonempty * nelements * sizeof(float)));
+  ion_groundlevelpops_allcells = static_cast<float *>(malloc(npts_nonempty * get_includedions() * sizeof(float)));
 #endif
 
   if (globals::total_nlte_levels > 0) {
@@ -355,12 +367,7 @@ void allocate_nonemptycells_composition_cooling()
   for (ptrdiff_t nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-    modelgrid[modelgridindex].ion_groundlevelpops = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
-    if (modelgrid[modelgridindex].ion_groundlevelpops == nullptr) {
-      printout("[fatal] input: not enough memory to initialize ion_groundlevelpops in cell %d... abort\n",
-               modelgridindex);
-      std::abort();
-    }
+    modelgrid[modelgridindex].ion_groundlevelpops = &ion_groundlevelpops_allcells[nonemptymgi * get_includedions()];
 
     modelgrid[modelgridindex].ion_partfuncts = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
 
