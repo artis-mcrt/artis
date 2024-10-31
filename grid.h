@@ -116,6 +116,7 @@ void set_model_type(GridType model_type_value);
 [[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> &pos, double time) -> int;
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);
+[[nodiscard]] auto get_maxndo() -> int;
 [[nodiscard]] auto get_nstart(int rank) -> int;
 [[nodiscard]] auto get_nstart_nonempty(int rank) -> int;
 [[nodiscard]] auto get_ndo(int rank) -> int;
