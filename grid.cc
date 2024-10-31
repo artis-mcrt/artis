@@ -324,12 +324,6 @@ void allocate_nonemptycells_composition_cooling()
   elements_uppermost_ion_allcells = static_cast<int *>(malloc(npts_nonempty * nelements * sizeof(int)));
   elem_massfracs_allcells = static_cast<float *>(malloc(npts_nonempty * nelements * sizeof(float)));
 #endif
-  if (globals::rank_in_node == 0) {
-    std::fill_n(initmassfracuntrackedstable_allcells, npts_nonempty * nelements, -1.);
-    std::fill_n(elem_meanweight_allcells, npts_nonempty * nelements, -1.);
-    std::fill_n(elements_uppermost_ion_allcells, npts_nonempty * nelements, -1);
-    std::fill_n(elem_massfracs_allcells, npts_nonempty * nelements, -1.);
-  }
 
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
@@ -345,16 +339,21 @@ void allocate_nonemptycells_composition_cooling()
 #endif
 
     assert_always(nltepops_allcells != nullptr);
+  } else {
+    nltepops_allcells = nullptr;
+  }
+
+  if (globals::rank_in_node == 0) {
+    std::fill_n(initmassfracuntrackedstable_allcells, npts_nonempty * nelements, -1.);
+    std::fill_n(elem_meanweight_allcells, npts_nonempty * nelements, -1.);
+    std::fill_n(elements_uppermost_ion_allcells, npts_nonempty * nelements, -1);
+    std::fill_n(elem_massfracs_allcells, npts_nonempty * nelements, -1.);
+    // -1 indicates that there is currently no information on the nlte populations
+    std::ranges::fill_n(grid::nltepops_allcells, npts_nonempty * globals::total_nlte_levels, -1.);
   }
 
   for (ptrdiff_t nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-
-    if (globals::total_nlte_levels > 0) {
-      // -1 indicates that there is currently no information on the nlte populations
-      std::ranges::fill_n(&grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels)],
-                          globals::total_nlte_levels, -1.);
-    }
 
     modelgrid[modelgridindex].ion_groundlevelpops = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
     if (modelgrid[modelgridindex].ion_groundlevelpops == nullptr) {
@@ -1089,6 +1088,26 @@ void read_3d_model() {
   printout("min_den %g [g/cm3]\n", min_den);
 }
 
+auto get_inputcellvolume(const int mgi) -> double {
+  if (get_model_type() == GridType::SPHERICAL1D) {
+    const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
+    // mass_in_shell = rho_model[mgi] * (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(t_model, 3) / 3.;
+    return (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
+  }
+  if (get_model_type() == GridType::CYLINDRICAL2D) {
+    const int n_r = mgi % ncoord_model[0];
+    const double dcoord_rcyl = globals::vmax * t_model / ncoord_model[0];    // dr 2D for input model
+    const double dcoord_z = 2. * globals::vmax * t_model / ncoord_model[1];  // dz 2D for input model
+    return pow(globals::tmin / t_model, 3) * dcoord_z * PI *
+           (pow((n_r + 1) * dcoord_rcyl, 2.) - pow(n_r * dcoord_rcyl, 2.));
+  }
+  if (get_model_type() == GridType::CARTESIAN3D) {
+    // Assumes cells are cubes here - all same volume.
+    return pow((2 * globals::vmax * globals::tmin), 3.) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
+  }
+  assert_always(false);
+}
+
 void calc_modelinit_totmassradionuclides() {
   mtot_input = 0.;
   mfegroup = 0.;
@@ -1102,47 +1121,18 @@ void calc_modelinit_totmassradionuclides() {
     totmassradionuclide[nucindex] = 0.;
   }
 
-  const double dcoord_rcyl = globals::vmax * t_model / ncoord_model[0];    // dr for input model
-  const double dcoord_z = 2. * globals::vmax * t_model / ncoord_model[1];  // dz for input model
-
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    if (get_rho_tmin(mgi) <= 0.) {
-      continue;
+    const double mass_in_shell = get_rho_tmin(mgi) * get_inputcellvolume(mgi);
+    if (mass_in_shell > 0) {
+      mtot_input += mass_in_shell;
+
+      for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
+        totmassradionuclide[nucindex] += mass_in_shell * get_modelinitnucmassfrac(mgi, nucindex);
+      }
+
+      mfegroup += mass_in_shell * get_ffegrp(mgi);
     }
-    double cellvolume = 0.;
-    if (get_model_type() == GridType::SPHERICAL1D) {
-      const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
-      // mass_in_shell = rho_model[mgi] * (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(t_model, 3) / 3.;
-      cellvolume = (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
-    } else if (get_model_type() == GridType::CYLINDRICAL2D) {
-      const int n_r = mgi % ncoord_model[0];
-      cellvolume = pow(globals::tmin / t_model, 3) * dcoord_z * PI *
-                   (pow((n_r + 1) * dcoord_rcyl, 2.) - pow(n_r * dcoord_rcyl, 2.));
-    } else if (get_model_type() == GridType::CARTESIAN3D) {
-      // Assumes cells are cubes here - all same volume.
-      cellvolume = pow((2 * globals::vmax * globals::tmin), 3.) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
-    } else {
-      assert_always(false);
-    }
-
-    const double mass_in_shell = get_rho_tmin(mgi) * cellvolume;
-
-    mtot_input += mass_in_shell;
-
-    for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-      totmassradionuclide[nucindex] += mass_in_shell * get_modelinitnucmassfrac(mgi, nucindex);
-    }
-
-    mfegroup += mass_in_shell * get_ffegrp(mgi);
   }
-
-  printout("Total input model mass: %9.3e [Msun]\n", mtot_input / MSUN);
-  printout("Nuclide masses at t=t_model_init [Msun]:");
-  printout("  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n", get_totmassradionuclide(28, 56) / MSUN,
-           get_totmassradionuclide(27, 56) / MSUN, get_totmassradionuclide(26, 52) / MSUN,
-           get_totmassradionuclide(24, 48) / MSUN);
-  printout("  Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n", mfegroup / MSUN, get_totmassradionuclide(28, 57) / MSUN,
-           get_totmassradionuclide(27, 57) / MSUN);
 }
 
 void read_grid_restart_data(const int timestep) {
@@ -2214,6 +2204,14 @@ void read_ejecta_model() {
   printout("rmax %g [cm] (at t=tmin)\n", globals::rmax);
 
   calc_modelinit_totmassradionuclides();
+
+  printout("Total input model mass: %9.3e [Msun]\n", mtot_input / MSUN);
+  printout("Nuclide masses at t=t_model_init [Msun]:");
+  printout("  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n", get_totmassradionuclide(28, 56) / MSUN,
+           get_totmassradionuclide(27, 56) / MSUN, get_totmassradionuclide(26, 52) / MSUN,
+           get_totmassradionuclide(24, 48) / MSUN);
+  printout("  Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n", mfegroup / MSUN, get_totmassradionuclide(28, 57) / MSUN,
+           get_totmassradionuclide(27, 57) / MSUN);
 
   read_possible_yefile();
 }
