@@ -30,11 +30,10 @@ struct ModelGridCell {
   float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
   float ffegrp = 0.;
   float kappagrey = 0.;
-  float grey_depth = 0.;         // Grey optical depth to surface of the modelgridcell
-                                 // This is only stored to print it outside the OpenMP loop in update_grid to the
-                                 // estimatorsfile so there is no need to communicate it via MPI so far!
-  float *ion_groundlevelpops{};  // groundlevel populations of all included ions
-  float *ion_partfuncts{};       // partition functions for all included ions
+  float grey_depth = 0.;    // Grey optical depth to surface of the modelgridcell
+                            // This is only stored to print it outside the OpenMP loop in update_grid to the
+                            // estimatorsfile so there is no need to communicate it via MPI so far!
+  float *ion_partfuncts{};  // partition functions for all included ions
   double totalcooling = -1;
   int thick = 0;
 };

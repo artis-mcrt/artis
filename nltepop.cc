@@ -800,6 +800,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 // (ionisation balance follows from this too)
 {
   const int atomic_number = get_atomicnumber(element);
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   if (grid::get_elem_abundance(modelgridindex, element) <= 0.) {
     // abundance of this element is zero, so do not store any NLTE populations
@@ -1042,7 +1043,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       }
 
       // store the ground level population
-      grid::modelgrid[modelgridindex].ion_groundlevelpops[get_uniqueionindex(element, ion)] =
+      grid::ion_groundlevelpops_allcells[(nonemptymgi * get_includedions()) + get_uniqueionindex(element, ion)] =
           gsl_vector_get(&popvec, index_gs);
       // solution_ion_pop += gsl_vector_get(popvec, index_gs);
 
@@ -1201,7 +1202,7 @@ void nltepop_write_restart_data(FILE *restart_file) {
       for (int ion = 0; ion < nions; ion++) {
         const int uniqueionindex = get_uniqueionindex(element, ion);
         fprintf(restart_file, "%d %a %a %la\n", ion,
-                grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex],
+                grid::ion_groundlevelpops_allcells[(nonemptymgi * get_includedions()) + uniqueionindex],
                 grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex],
                 grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + uniqueionindex]);
       }
@@ -1246,7 +1247,7 @@ void nltepop_read_restart_data(FILE *restart_file) {
         const int uniqueionindex = get_uniqueionindex(element, ion);
         assert_always(
             fscanf(restart_file, "%d %a %a %la\n", &ion_in,
-                   &grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex],
+                   &grid::ion_groundlevelpops_allcells[(nonemptymgi * get_includedions()) + uniqueionindex],
                    &grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex],
                    &grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + uniqueionindex]) == 4);
         if (ion_in != ion) {

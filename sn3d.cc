@@ -291,8 +291,8 @@ void mpi_communicate_grid_properties() {
         MPI_Pack(&grid::elem_massfracs_allcells[(nonemptymgi * nelements)], nelements, MPI_FLOAT, mpi_grid_buffer,
                  mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
 
-        MPI_Pack(grid::modelgrid[mgi].ion_groundlevelpops, nincludedions, MPI_FLOAT, mpi_grid_buffer,
-                 mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+        MPI_Pack(&grid::ion_groundlevelpops_allcells[nonemptymgi * get_includedions()], nincludedions, MPI_FLOAT,
+                 mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
         MPI_Pack(grid::modelgrid[mgi].ion_partfuncts, nincludedions, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size,
                  &position, MPI_COMM_WORLD);
         MPI_Pack(&grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions())], nincludedions, MPI_DOUBLE,
@@ -338,8 +338,9 @@ void mpi_communicate_grid_properties() {
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
                  &grid::elem_massfracs_allcells[(nonemptymgi * nelements)], nelements, MPI_FLOAT, MPI_COMM_WORLD);
 
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_groundlevelpops,
-                 nincludedions, MPI_FLOAT, MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                 &grid::ion_groundlevelpops_allcells[nonemptymgi * get_includedions()], nincludedions, MPI_FLOAT,
+                 MPI_COMM_WORLD);
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].ion_partfuncts, nincludedions,
                  MPI_FLOAT, MPI_COMM_WORLD);
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,

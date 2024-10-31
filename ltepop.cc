@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdlib>
 #include <vector>
 
@@ -228,9 +229,11 @@ auto calculate_partfunct(const int element, const int ion, const int modelgridin
 // Calculates the partition function for ion=ion of element=element in
 // cell modelgridindex
 {
+  ;
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   double pop_store{NAN};
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
@@ -242,7 +245,7 @@ auto calculate_partfunct(const int element, const int ion, const int modelgridin
     // of groundlevelpop for this calculation doesn't matter, so long as it's not zero!
     pop_store = get_groundlevelpop(modelgridindex, element, ion);
     initial = true;
-    grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex] = 1.;
+    grid::ion_groundlevelpops_allcells[(nonemptymgi * get_includedions()) + uniqueionindex] = 1.;
   }
 
   double U = 1.;
@@ -266,7 +269,7 @@ auto calculate_partfunct(const int element, const int ion, const int modelgridin
 
   if (initial) {
     // put back the zero, just in case it matters for something
-    grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex] = pop_store;
+    grid::ion_groundlevelpops_allcells[(nonemptymgi * get_includedions()) + uniqueionindex] = pop_store;
   }
 
   return U;
@@ -329,6 +332,7 @@ void set_calculated_nne(const int modelgridindex) {
 
 // Special case of only neutral ions, set nne to some finite value so that packets are not lost in kpkts
 void set_groundlevelpops_neutral(const int modelgridindex) {
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   printout("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n", modelgridindex);
   for (int element = 0; element < get_nelements(); element++) {
     const auto nnelement = grid::get_elem_numberdens(modelgridindex, element);
@@ -347,7 +351,7 @@ void set_groundlevelpops_neutral(const int modelgridindex) {
       const double groundpop =
           (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].ion_partfuncts[uniqueionindex]);
 
-      grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex] = groundpop;
+      grid::ion_groundlevelpops_allcells[(nonemptymgi * get_includedions()) + uniqueionindex] = groundpop;
     }
   }
 }
@@ -457,8 +461,9 @@ auto get_groundlevelpop(const int modelgridindex, const int element, const int i
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-
-  const double nn = grid::modelgrid[modelgridindex].ion_groundlevelpops[get_uniqueionindex(element, ion)];
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const double nn =
+      grid::ion_groundlevelpops_allcells[(nonemptymgi * get_includedions()) + get_uniqueionindex(element, ion)];
   if (nn < MINPOP) {
     if (grid::get_elem_abundance(modelgridindex, element) > 0) {
       return MINPOP;
@@ -562,6 +567,7 @@ void set_groundlevelpops(const int modelgridindex, const int element, const floa
   if (nions <= 0) {
     return;
   }
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   // calculate number density of the current element (abundances are given by mass)
   const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
@@ -594,7 +600,7 @@ void set_groundlevelpops(const int modelgridindex, const int element, const floa
       printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
     }
 
-    grid::modelgrid[modelgridindex].ion_groundlevelpops[uniqueionindex] = groundpop;
+    grid::ion_groundlevelpops_allcells[(nonemptymgi * get_includedions()) + uniqueionindex] = groundpop;
   }
 }
 

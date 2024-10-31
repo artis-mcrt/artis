@@ -298,7 +298,6 @@ void allocate_nonemptycells_composition_cooling()
   for (ptrdiff_t nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-    modelgrid[modelgridindex].ion_groundlevelpops = &ion_groundlevelpops_allcells[nonemptymgi * get_includedions()];
     modelgrid[modelgridindex].ion_partfuncts = &ion_partfuncts_allcells[nonemptymgi * get_includedions()];
   }
 }
