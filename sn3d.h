@@ -374,7 +374,7 @@ template <typename T>
 
 template <typename T>
 [[nodiscard]] auto MPI_shared_malloc_span(const ptrdiff_t num_allranks) -> std::span<T> {
-  return std::span(MPI_shared_malloc<T>(num_allranks), num_allranks);
+  return {MPI_shared_malloc<T>(num_allranks), num_allranks};
 }
 
 #endif  // SN3D_H
