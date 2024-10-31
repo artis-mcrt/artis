@@ -884,7 +884,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     return;
   }
 
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
   const double deltaV =
       grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
@@ -1050,14 +1050,13 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     // cooling rates calculation can be skipped for thick cells
     // flag with negative numbers to indicate that the rates are invalid
     grid::modelgrid[mgi].totalcooling = -1.;
-    grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + 0] = -1.;
+    grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + 0] = -1.;
   } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial) {
     // cooling rates were read from the gridsave file for this timestep
     // make sure they are valid
     printout("cooling rates read from gridsave file for timestep %d cell %d...", nts, mgi);
     assert_always(grid::modelgrid[mgi].totalcooling >= 0.);
-    assert_always(grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + 0] >=
-                  0.);
+    assert_always(grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + 0] >= 0.);
   } else {
     // Cooling rates depend only on cell properties, precalculate total cooling
     // and ion contributions inside update grid and communicate between MPI tasks
