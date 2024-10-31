@@ -873,17 +873,6 @@ static void titer_average_estimators(const int nonemptymgi) {
 
 void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
                       const double deltat, HeatingCoolingRates *heatingcoolingrates) {
-  const int assoc_cells = grid::get_numpropcells(mgi);
-  if (assoc_cells < 1) {
-    // For modelgrid cells that are not represented in the simulation grid,
-    // Set grid properties to zero
-    grid::set_TR(mgi, 0.);
-    grid::set_TJ(mgi, 0.);
-    grid::set_Te(mgi, 0.);
-    grid::set_W(mgi, 0.);
-    return;
-  }
-
   const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
   const double deltaV =
@@ -1021,6 +1010,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
   const float nne = grid::get_nne(mgi);
   const double compton_optical_depth = SIGMA_T * nne * grid::wid_init(mgi, 0) * tratmid;
 
+  const int assoc_cells = grid::get_numpropcells(mgi);
   const double radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum * tratmid / assoc_cells;
   const double grey_optical_deptha = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * grid::wid_init(mgi, 0) * tratmid;
   // cube corners will have radial pos > rmax, so clamp to 0.
@@ -1136,7 +1126,17 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       // Check if this task should work on the current model grid cell.
       // If yes, update the cell and write out the estimators
       HeatingCoolingRates heatingcoolingrates{};
-      update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates);
+      const int assoc_cells = grid::get_numpropcells(mgi);
+      if (assoc_cells < 0) {
+        // For modelgrid cells that are not represented in the simulation grid,
+        // Set grid properties to zero
+        grid::set_TR(mgi, 0.);
+        grid::set_TJ(mgi, 0.);
+        grid::set_Te(mgi, 0.);
+        grid::set_W(mgi, 0.);
+      } else {
+        update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates);
+      }
 
       // maybe want to add omp ordered here if the modelgrid cells should be output in order
 #ifdef _OPENMP
