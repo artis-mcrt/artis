@@ -255,6 +255,16 @@ void mpi_communicate_grid_properties() {
       if (globals::rank_in_node == 0) {
         MPI_Bcast(&grid::elem_meanweight_allcells[nonemptymgi * nelements], nelements, MPI_FLOAT, root_node_id,
                   globals::mpi_comm_internode);
+        MPI_Bcast(&grid::elem_massfracs_allcells[nonemptymgi * nelements], nelements, MPI_FLOAT, root_node_id,
+                  globals::mpi_comm_internode);
+        MPI_Bcast(&grid::ion_groundlevelpops_allcells[nonemptymgi * nincludedions], nincludedions, MPI_FLOAT,
+                  root_node_id, globals::mpi_comm_internode);
+        MPI_Bcast(&grid::ion_partfuncts_allcells[nonemptymgi * nincludedions], nincludedions, MPI_FLOAT, root_node_id,
+                  globals::mpi_comm_internode);
+        MPI_Bcast(&grid::ion_cooling_contribs_allcells[nonemptymgi * nincludedions], nincludedions, MPI_DOUBLE,
+                  root_node_id, globals::mpi_comm_internode);
+        // MPI_Bcast(&grid::modelgrid[grid::get_mgi_of_nonemptymgi(nonemptymgi)], sizeof(grid::ModelGridCell), MPI_BYTE,
+        //           root_node_id, globals::mpi_comm_internode);
       }
 
       MPI_Bcast_binned_opacities(nonemptymgi, root_node_id);
@@ -291,16 +301,6 @@ void mpi_communicate_grid_properties() {
                  MPI_COMM_WORLD);
         MPI_Pack(&grid::modelgrid[mgi].thick, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position,
                  MPI_COMM_WORLD);
-
-        MPI_Pack(&grid::elem_massfracs_allcells[(nonemptymgi * nelements)], nelements, MPI_FLOAT, mpi_grid_buffer,
-                 mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-
-        MPI_Pack(&grid::ion_groundlevelpops_allcells[nonemptymgi * get_includedions()], nincludedions, MPI_FLOAT,
-                 mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-        MPI_Pack(&grid::ion_partfuncts_allcells[nonemptymgi * get_includedions()], nincludedions, MPI_FLOAT,
-                 mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-        MPI_Pack(&grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions())], nincludedions, MPI_DOUBLE,
-                 mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
       }
       printout("[info] mem_usage: MPI_BUFFER: used %d of %zu bytes allocated to mpi_grid_buffer\n", position,
                mpi_grid_buffer_size);
@@ -337,19 +337,6 @@ void mpi_communicate_grid_properties() {
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE,
                  MPI_COMM_WORLD);
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].thick, 1, MPI_INT,
-                 MPI_COMM_WORLD);
-
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 &grid::elem_massfracs_allcells[(nonemptymgi * nelements)], nelements, MPI_FLOAT, MPI_COMM_WORLD);
-
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 &grid::ion_groundlevelpops_allcells[nonemptymgi * get_includedions()], nincludedions, MPI_FLOAT,
-                 MPI_COMM_WORLD);
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 &grid::ion_partfuncts_allcells[nonemptymgi * get_includedions()], nincludedions, MPI_FLOAT,
-                 MPI_COMM_WORLD);
-      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                 &grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions())], nincludedions, MPI_DOUBLE,
                  MPI_COMM_WORLD);
     }
   }
