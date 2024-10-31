@@ -120,7 +120,9 @@ void set_npts_model(const int new_npts_model) {
 
   assert_always(modelgrid.data() == nullptr);
   modelgrid = MPI_shared_malloc_span<ModelGridCell>(npts_model + 1);
-  std::ranges::fill(modelgrid, ModelGridCell{});
+  if (globals::rank_in_node == 0) {
+    std::ranges::fill(modelgrid, ModelGridCell{});
+  }
 #ifdef MPI_ON
   MPI_Barrier(globals::mpi_comm_node);
 #endif
@@ -303,7 +305,9 @@ void allocate_nonemptymodelcells() {
   // Determine the number of simulation cells associated with the model cells
   for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++) {
     mg_associated_cells[mgi] = 0;
-    modelgrid[mgi].initial_radial_pos_sum = 0.;
+    if (globals::rank_in_node == 0) {
+      modelgrid[mgi].initial_radial_pos_sum = 0.;
+    }
   }
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
@@ -319,7 +323,9 @@ void allocate_nonemptymodelcells() {
     assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (get_rho_tmin(mgi) > 0) || (mgi == get_npts_model()));
 
     mg_associated_cells[mgi] += 1;
-    modelgrid[mgi].initial_radial_pos_sum += radial_pos_mid;
+    if (globals::rank_in_node == 0) {
+      modelgrid[mgi].initial_radial_pos_sum += radial_pos_mid;
+    }
 
     assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (mg_associated_cells[mgi] == 1) ||
                   (mgi == get_npts_model()));
