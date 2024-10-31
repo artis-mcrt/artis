@@ -103,7 +103,7 @@ void grid_init(int my_rank);
 [[nodiscard]] auto get_element_meanweight(int nonemptymgi, int element) -> float;
 [[nodiscard]] auto get_elem_abundance(int modelgridindex, int element) -> float;
 void set_element_meanweight(int nonemptymgi, int element, float meanweight);
-[[nodiscard]] auto get_electronfrac(int modelgridindex) -> double;
+[[nodiscard]] auto get_electronfrac(int nonemptymgi) -> double;
 [[nodiscard]] auto get_numassociatedcells(int modelgridindex) -> int;
 [[nodiscard]] auto get_nonemptymgi_of_mgi(int mgi) -> int;
 [[nodiscard]] auto get_mgi_of_nonemptymgi(int nonemptymgi) -> int;

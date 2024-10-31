@@ -50,7 +50,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
 
   const auto T_e = grid::get_Te(mgi);
   const auto nne = grid::get_nne(mgi);
-  const auto Y_e = grid::get_electronfrac(mgi);
+  const auto Y_e = grid::get_electronfrac(nonemptymgi);
   // fprintf(estimators_file,"%d %g %g %g %g %d
   // ",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grid::modelgrid[n].thick); fprintf(estimators_file,"%d %g %g %g
   // %g %g ",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);

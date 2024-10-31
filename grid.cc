@@ -2015,8 +2015,8 @@ void set_element_meanweight(const int nonemptymgi, const int element, const floa
   elem_meanweight_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] = meanweight;
 }
 
-auto get_electronfrac(const int modelgridindex) -> double {
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+auto get_electronfrac(const int nonemptymgi) -> double {
+  const auto modelgridindex = get_mgi_of_nonemptymgi(nonemptymgi);
   double nucleondens = 0.;
   for (int element = 0; element < get_nelements(); element++) {
     nucleondens += get_elem_numberdens(modelgridindex, element) * get_element_meanweight(nonemptymgi, element) / MH;
