@@ -324,6 +324,12 @@ void allocate_nonemptycells_composition_cooling()
   elements_uppermost_ion_allcells = static_cast<int *>(malloc(npts_nonempty * nelements * sizeof(int)));
   elem_massfracs_allcells = static_cast<float *>(malloc(npts_nonempty * nelements * sizeof(float)));
 #endif
+  if (globals::rank_in_node == 0) {
+    std::fill_n(initmassfracuntrackedstable_allcells, npts_nonempty * nelements, -1.);
+    std::fill_n(elem_meanweight_allcells, npts_nonempty * nelements, -1.);
+    std::fill_n(elements_uppermost_ion_allcells, npts_nonempty * nelements, -1);
+    std::fill_n(elem_massfracs_allcells, npts_nonempty * nelements, -1.);
+  }
 
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
@@ -349,8 +355,6 @@ void allocate_nonemptycells_composition_cooling()
       std::ranges::fill_n(&grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels)],
                           globals::total_nlte_levels, -1.);
     }
-
-    std::fill_n(&elem_massfracs_allcells[nonemptymgi * nelements], nelements, -1.);
 
     modelgrid[modelgridindex].ion_groundlevelpops = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
     if (modelgrid[modelgridindex].ion_groundlevelpops == nullptr) {
