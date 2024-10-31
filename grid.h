@@ -65,6 +65,8 @@ inline float *elem_massfracs_allcells;  // mass fractions of elements in each ce
 
 inline double *nltepops_allcells{};
 inline float *ion_groundlevelpops_allcells{};
+inline float *ion_partfuncts_allcells{};
+inline double *ion_cooling_contribs_allcells{};
 
 [[nodiscard]] auto get_elements_uppermost_ion(int modelgridindex, int element) -> int;
 void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);

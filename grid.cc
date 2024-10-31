@@ -270,6 +270,8 @@ void allocate_nonemptycells_composition_cooling()
   elements_uppermost_ion_allcells = MPI_shared_malloc<int>(npts_nonempty * nelements);
   elem_massfracs_allcells = MPI_shared_malloc<float>(npts_nonempty * nelements);
   ion_groundlevelpops_allcells = MPI_shared_malloc<float>(npts_nonempty * get_includedions());
+  ion_partfuncts_allcells = MPI_shared_malloc<float>(npts_nonempty * get_includedions());
+  ion_cooling_contribs_allcells = MPI_shared_malloc<double>(npts_nonempty * get_includedions());
 
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
@@ -297,21 +299,8 @@ void allocate_nonemptycells_composition_cooling()
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
     modelgrid[modelgridindex].ion_groundlevelpops = &ion_groundlevelpops_allcells[nonemptymgi * get_includedions()];
-
-    modelgrid[modelgridindex].ion_partfuncts = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
-
-    if (modelgrid[modelgridindex].ion_partfuncts == nullptr) {
-      printout("[fatal] input: not enough memory to initialize partfunctlist in cell %d... abort\n", modelgridindex);
-      std::abort();
-    }
-
-    modelgrid[modelgridindex].ion_cooling_contribs = static_cast<double *>(malloc(get_includedions() * sizeof(double)));
-
-    if (modelgrid[modelgridindex].ion_cooling_contribs == nullptr) {
-      printout("[fatal] input: not enough memory to initialize ion_cooling_contribs for cell %d... abort\n",
-               modelgridindex);
-      std::abort();
-    }
+    modelgrid[modelgridindex].ion_partfuncts = &ion_partfuncts_allcells[nonemptymgi * get_includedions()];
+    modelgrid[modelgridindex].ion_cooling_contribs = &ion_cooling_contribs_allcells[nonemptymgi * get_includedions()];
   }
 }
 

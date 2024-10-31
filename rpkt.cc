@@ -987,7 +987,6 @@ void allocate_expansionopacities() {
   double *expansionopacity_planck_cumulative_data{};
 
 #ifdef MPI_ON
-
   std::tie(expansionopacities_data, win_expansionopacities) =
       MPI_shared_malloc_keepwin<float>(npts_nonempty * expopac_nbins);
 #else
