@@ -300,7 +300,6 @@ void allocate_nonemptycells_composition_cooling()
 
     modelgrid[modelgridindex].ion_groundlevelpops = &ion_groundlevelpops_allcells[nonemptymgi * get_includedions()];
     modelgrid[modelgridindex].ion_partfuncts = &ion_partfuncts_allcells[nonemptymgi * get_includedions()];
-    modelgrid[modelgridindex].ion_cooling_contribs = &ion_cooling_contribs_allcells[nonemptymgi * get_includedions()];
   }
 }
 

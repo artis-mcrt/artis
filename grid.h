@@ -36,7 +36,6 @@ struct ModelGridCell {
   float *ion_groundlevelpops{};  // groundlevel populations of all included ions
   float *ion_partfuncts{};       // partition functions for all included ions
   double totalcooling = -1;
-  double *ion_cooling_contribs{};
   int thick = 0;
 };
 

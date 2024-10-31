@@ -213,7 +213,8 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   const auto nne = grid::get_nne(modelgridindex);
 
   // Then calculate heating and cooling rates
-  kpkt::calculate_cooling_rates(modelgridindex, heatingcoolingrates);
+  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  kpkt::calculate_cooling_rates(nonemptymgi, heatingcoolingrates);
   calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
