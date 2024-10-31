@@ -259,7 +259,11 @@ void mpi_communicate_grid_properties() {
 
       MPI_Bcast_binned_opacities(nonemptymgi, root_node_id);
     }
+  }
 
+  for (int root = 0; root < globals::nprocs; root++) {
+    const int root_nstart_nonempty = grid::get_nstart_nonempty(root);
+    const int root_ndo_nonempty = grid::get_ndo_nonempty(root);
     if (root == globals::my_rank) {
       int position = 0;
       for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
