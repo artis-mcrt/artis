@@ -120,9 +120,10 @@ void set_npts_model(const int new_npts_model) {
 
   assert_always(modelgrid.data() == nullptr);
   modelgrid = std::span(static_cast<ModelGridCell *>(malloc((npts_model + 1) * sizeof(ModelGridCell))), npts_model + 1);
-  std::fill(modelgrid.begin(), modelgrid.end(), ModelGridCell{});
-  // memset(static_cast<void *>(modelgrid.data()), 0, (npts_model + 1) * sizeof(ModelGridCell));
-  assert_always(modelgrid.data() != nullptr);
+  std::ranges::fill(modelgrid, ModelGridCell{});
+#ifdef MPI_ON
+  MPI_Barrier(globals::mpi_comm_node);
+#endif
   mg_associated_cells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 }
