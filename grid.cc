@@ -119,7 +119,7 @@ void set_npts_model(const int new_npts_model) {
   npts_model = new_npts_model;
 
   assert_always(modelgrid.data() == nullptr);
-  modelgrid = std::span(static_cast<ModelGridCell *>(malloc((npts_model + 1) * sizeof(ModelGridCell))), npts_model + 1);
+  modelgrid = MPI_shared_malloc_span<ModelGridCell>(npts_model + 1);
   std::ranges::fill(modelgrid, ModelGridCell{});
 #ifdef MPI_ON
   MPI_Barrier(globals::mpi_comm_node);
