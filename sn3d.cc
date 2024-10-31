@@ -211,8 +211,8 @@ void write_deposition_file() {
 
 #ifdef MPI_ON
 void mpi_communicate_grid_properties() {
-  const auto nincludedions = get_includedions();
-  const auto nelements = get_nelements();
+  const ptrdiff_t nincludedions = get_includedions();
+  const ptrdiff_t nelements = get_nelements();
   for (int root = 0; root < globals::nprocs; root++) {
     MPI_Barrier(MPI_COMM_WORLD);
 
