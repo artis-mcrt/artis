@@ -1127,14 +1127,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       // If yes, update the cell and write out the estimators
       HeatingCoolingRates heatingcoolingrates{};
       const int assoc_cells = grid::get_numpropcells(mgi);
-      if (assoc_cells < 0) {
-        // For modelgrid cells that are not represented in the simulation grid,
-        // Set grid properties to zero
-        grid::set_TR(mgi, 0.);
-        grid::set_TJ(mgi, 0.);
-        grid::set_Te(mgi, 0.);
-        grid::set_W(mgi, 0.);
-      } else {
+      if (assoc_cells > 0) {
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates);
       }
 
