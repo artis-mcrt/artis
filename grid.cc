@@ -85,7 +85,6 @@ std::vector<int> ranks_nstart;
 std::vector<int> ranks_nstart_nonempty;
 std::vector<int> ranks_ndo;
 std::vector<int> ranks_ndo_nonempty;
-int maxndo = -1;
 
 void set_rho_tmin(const int modelgridindex, const float x) { modelgrid[modelgridindex].rhoinit = x; }
 
@@ -1210,7 +1209,6 @@ void setup_nstart_ndo() {
   const int npts_nonempty = get_nonempty_npts_model();
   const int min_nonempty_perproc = npts_nonempty / nprocesses;  // integer division, minimum non-empty cells per process
   const int n_remainder = npts_nonempty % nprocesses;
-  maxndo = 0;
 
   ranks_nstart.resize(nprocesses, -1);
   ranks_nstart_nonempty.resize(nprocesses, -1);
@@ -1225,7 +1223,6 @@ void setup_nstart_ndo() {
 
   if (nprocesses >= get_npts_model()) {
     // for convenience, rank == mgi when there is at least one rank per cell
-    maxndo = 1;
     for (int rank = 0; rank < nprocesses; rank++) {
       if (rank < get_npts_model()) {
         const int mgi = rank;
@@ -1250,7 +1247,6 @@ void setup_nstart_ndo() {
       }
 
       ranks_ndo[rank]++;
-      maxndo = std::max(maxndo, ranks_ndo[rank]);
       if (get_numpropcells(mgi) > 0) {
         ranks_ndo_nonempty[rank]++;
       }
@@ -2187,13 +2183,6 @@ void write_grid_restart_data(const int timestep) {
   nltepop_write_restart_data(gridsave_file);
   fclose(gridsave_file);
   printout("done in %ld seconds.\n", std::time(nullptr) - sys_time_start_write_restart);
-}
-
-auto get_maxndo() -> int {
-  if (ranks_ndo.empty()) {
-    setup_nstart_ndo();
-  }
-  return maxndo;
 }
 
 auto get_nstart(const int rank) -> int {
