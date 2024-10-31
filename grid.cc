@@ -130,23 +130,16 @@ void allocate_initradiobund() {
 
   const ptrdiff_t num_nuclides = decay::get_num_nuclides();
 
-  const size_t totalradioabundsize = (npts_model + 1) * num_nuclides * sizeof(float);
+  const size_t totalradioabundcount = (npts_model + 1) * num_nuclides;
 #ifdef MPI_ON
-  const auto [_, noderank_cells] = get_range_chunk(npts_model + 1, globals::node_nprocs, globals::rank_in_node);
-
-  auto size = static_cast<MPI_Aint>(noderank_cells * num_nuclides * sizeof(float));
-
-  int disp_unit = sizeof(float);
-  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                        &initnucmassfrac_allcells, &win_initnucmassfrac_allcells) == MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(win_initnucmassfrac_allcells, 0, &size, &disp_unit, &initnucmassfrac_allcells) ==
-                MPI_SUCCESS);
+  std::tie(initnucmassfrac_allcells, win_initnucmassfrac_allcells) =
+      MPI_shared_malloc_keepwin<float>(totalradioabundcount);
 #else
-  initnucmassfrac_allcells = static_cast<float *>(malloc(totalradioabundsize));
+  initnucmassfrac_allcells = static_cast<float *>(malloc(totalradioabundcount * sizeof(float)));
 #endif
   printout(
       "[info] mem_usage: radioabundance data for %td nuclides for %td cells occupies %.3f MB (node shared memory)\n",
-      num_nuclides, npts_model, static_cast<double>(totalradioabundsize) / 1024. / 1024.);
+      num_nuclides, npts_model, static_cast<double>(totalradioabundcount * sizeof(float)) / 1024. / 1024.);
 
 #ifdef MPI_ON
   MPI_Barrier(globals::mpi_comm_node);
@@ -272,80 +265,16 @@ void allocate_nonemptycells_composition_cooling()
   const ptrdiff_t npts_nonempty = get_nonempty_npts_model();
   const auto nelements = get_nelements();
 
-#ifdef MPI_ON
-  const auto [_, noderank_nonemptycellcount] =
-      get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
-
-  {
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * nelements * sizeof(float));
-    int disp_unit = sizeof(float);
-    MPI_Win mpiwin = MPI_WIN_NULL;
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &initmassfracuntrackedstable_allcells, &mpiwin) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &initmassfracuntrackedstable_allcells) ==
-                  MPI_SUCCESS);
-  }
-
-  {
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * nelements * sizeof(float));
-    int disp_unit = sizeof(float);
-    MPI_Win mpiwin = MPI_WIN_NULL;
-
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &elem_meanweight_allcells, &mpiwin) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elem_meanweight_allcells) == MPI_SUCCESS);
-    MPI_Barrier(globals::mpi_comm_node);
-  }
-
-  {
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * nelements * sizeof(int));
-    int disp_unit = sizeof(int);
-    MPI_Win mpiwin = MPI_WIN_NULL;
-
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &elements_uppermost_ion_allcells, &mpiwin) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elements_uppermost_ion_allcells) == MPI_SUCCESS);
-    MPI_Barrier(globals::mpi_comm_node);
-  }
-
-  {
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * nelements * sizeof(float));
-    int disp_unit = sizeof(float);
-    MPI_Win mpiwin = MPI_WIN_NULL;
-
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &elem_massfracs_allcells, &mpiwin) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elem_massfracs_allcells) == MPI_SUCCESS);
-    MPI_Barrier(globals::mpi_comm_node);
-  }
-
-  {
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * get_includedions() * sizeof(float));
-    int disp_unit = sizeof(float);
-    MPI_Win mpiwin = MPI_WIN_NULL;
-
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &ion_groundlevelpops_allcells, &mpiwin) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &ion_groundlevelpops_allcells) == MPI_SUCCESS);
-    MPI_Barrier(globals::mpi_comm_node);
-  }
-#else
-  initmassfracuntrackedstable_allcells = static_cast<float *>(malloc(npts_nonempty * nelements * sizeof(float)));
-  elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * nelements * sizeof(float)));
-  elements_uppermost_ion_allcells = static_cast<int *>(malloc(npts_nonempty * nelements * sizeof(int)));
-  elem_massfracs_allcells = static_cast<float *>(malloc(npts_nonempty * nelements * sizeof(float)));
-  ion_groundlevelpops_allcells = static_cast<float *>(malloc(npts_nonempty * get_includedions() * sizeof(float)));
-#endif
+  initmassfracuntrackedstable_allcells = MPI_shared_malloc<float>(npts_nonempty * nelements);
+  elem_meanweight_allcells = MPI_shared_malloc<float>(npts_nonempty * nelements);
+  elements_uppermost_ion_allcells = MPI_shared_malloc<int>(npts_nonempty * nelements);
+  elem_massfracs_allcells = MPI_shared_malloc<float>(npts_nonempty * nelements);
+  ion_groundlevelpops_allcells = MPI_shared_malloc<float>(npts_nonempty * get_includedions());
 
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * globals::total_nlte_levels * sizeof(double));
-    int disp_unit = sizeof(double);
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
-                                          &win_nltepops_allcells) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win_nltepops_allcells, 0, &size, &disp_unit, &nltepops_allcells) == MPI_SUCCESS);
-
-    MPI_Barrier(globals::mpi_comm_node);
+    std::tie(nltepops_allcells, win_nltepops_allcells) =
+        MPI_shared_malloc_keepwin<double>(npts_nonempty * globals::total_nlte_levels);
 #else
     nltepops_allcells = static_cast<double *>(malloc(npts_nonempty * globals::total_nlte_levels * sizeof(double)));
 #endif
@@ -460,16 +389,8 @@ void allocate_nonemptymodelcells() {
 
   if (ionestimsize > 0) {
 #ifdef MPI_ON
-    const auto [_, noderank_nonemptycellcount] =
-        get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
-
-    auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * globals::nbfcontinua_ground * sizeof(double));
-    int disp_unit = sizeof(double);
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &globals::corrphotoionrenorm,
-                                          &globals::win_corrphotoionrenorm) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(globals::win_corrphotoionrenorm, 0, &size, &disp_unit,
-                                       &globals::corrphotoionrenorm) == MPI_SUCCESS);
+    std::tie(globals::corrphotoionrenorm, globals::win_corrphotoionrenorm) =
+        MPI_shared_malloc_keepwin<double>(ionestimcount);
 #else
     globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
 #endif

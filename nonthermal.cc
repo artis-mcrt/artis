@@ -2111,32 +2111,9 @@ void init(const int my_rank, const int ndo_nonempty) {
              nt_excitations_stored,
              grid::get_nonempty_npts_model() * sizeof(NonThermalExcitation) * nt_excitations_stored / 1024. / 1024.);
 
-    const auto nonempty_npts_model = grid::get_nonempty_npts_model();
+    const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
-#ifdef MPI_ON
-
-    MPI_Win win_shared_excitations_list{};
-
-    const auto [_, noderank_nonemptycellcount] =
-        get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
-
-    auto size =
-        static_cast<MPI_Aint>(noderank_nonemptycellcount * sizeof(NonThermalExcitation) * nt_excitations_stored);
-
-    int disp_unit = sizeof(NonThermalExcitation);
-    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &excitations_list_all_cells,
-                            &win_shared_excitations_list);
-
-    MPI_Win_shared_query(win_shared_excitations_list, 0, &size, &disp_unit, &excitations_list_all_cells);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-#else
-
-    excitations_list_all_cells = static_cast<NonThermalExcitation *>(
-        malloc(nonempty_npts_model * sizeof(NonThermalExcitation) * nt_excitations_stored));
-
-#endif
+    excitations_list_all_cells = MPI_shared_malloc<NonThermalExcitation>(nonempty_npts_model * nt_excitations_stored);
   }
 
   nt_solution.resize(grid::get_npts_model());

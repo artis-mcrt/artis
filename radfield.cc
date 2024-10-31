@@ -549,10 +549,6 @@ void init(const int my_rank, const int ndo_nonempty) {
   } else {
     printout("\n");
   }
-#ifdef MPI_ON
-  const auto [_, noderank_nonemptycellcount] =
-      get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
-#endif
 
   if (MULTIBIN_RADFIELD_MODEL_ON) {
     printout("The multibin radiation field is being used from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);
@@ -575,19 +571,11 @@ void init(const int my_rank, const int ndo_nonempty) {
     const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
 
 #ifdef MPI_ON
-    {
-      auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution));
-      int disp_unit = sizeof(RadFieldBinSolution);
-      MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions,
-                              &win_radfieldbin_solutions);
-
-      MPI_Win_shared_query(win_radfieldbin_solutions, 0, &size, &disp_unit, &radfieldbin_solutions);
-    }
+    std::tie(radfieldbin_solutions, win_radfieldbin_solutions) =
+        MPI_shared_malloc_keepwin<RadFieldBinSolution>(nonempty_npts_model * RADFIELDBINCOUNT);
 #else
-    {
-      radfieldbin_solutions = static_cast<RadFieldBinSolution *>(
-          malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution)));
-    }
+    radfieldbin_solutions = static_cast<RadFieldBinSolution *>(
+        malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution)));
 #endif
 
     printout("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy %.3f MB\n",
@@ -602,11 +590,8 @@ void init(const int my_rank, const int ndo_nonempty) {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     {
 #ifdef MPI_ON
-      auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * globals::bfestimcount * sizeof(float));
-      int disp_unit = sizeof(float);
-      MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed,
-                              &win_prev_bfrate_normed);
-      MPI_Win_shared_query(win_prev_bfrate_normed, 0, &size, &disp_unit, &prev_bfrate_normed);
+      std::tie(prev_bfrate_normed, win_prev_bfrate_normed) =
+          MPI_shared_malloc_keepwin<float>(nonempty_npts_model * globals::bfestimcount);
 #else
       prev_bfrate_normed = static_cast<float *>(malloc(nonempty_npts_model * globals::bfestimcount * sizeof(float)));
 #endif

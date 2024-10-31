@@ -857,54 +857,26 @@ void setup_photoion_luts() {
   assert_always(globals::nbfcontinua > 0);
   size_t mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
 
-#ifdef MPI_ON
-  MPI_Win win = MPI_WIN_NULL;
-  MPI_Aint size =
-      (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
-  int disp_unit = sizeof(double);
-  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &spontrecombcoeffs,
-                                        &win) == MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &spontrecombcoeffs) == MPI_SUCCESS);
-#else
-  spontrecombcoeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
-#endif
+  spontrecombcoeffs = MPI_shared_malloc<double>(TABLESIZE * globals::nbfcontinua);
   assert_always(spontrecombcoeffs != nullptr);
 
   if constexpr (USE_LUT_PHOTOION) {
-#ifdef MPI_ON
-    size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &corrphotoioncoeffs,
-                                          &win) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &corrphotoioncoeffs) == MPI_SUCCESS);
-#else
-    corrphotoioncoeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
-#endif
+    corrphotoioncoeffs = MPI_shared_malloc<double>(TABLESIZE * globals::nbfcontinua);
     assert_always(corrphotoioncoeffs != nullptr);
     mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
   }
 
   if constexpr (USE_LUT_BFHEATING) {
-#ifdef MPI_ON
-    size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &globals::bfheating_coeff, &win) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::bfheating_coeff) == MPI_SUCCESS);
-#else
-    globals::bfheating_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
-#endif
+    globals::bfheating_coeff = MPI_shared_malloc<double>(TABLESIZE * globals::nbfcontinua);
     assert_always(globals::bfheating_coeff != nullptr);
     mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
   }
 
 #ifdef MPI_ON
-  size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(double)) : 0;
-  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &bfcooling_coeffs,
-                                        &win) == MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &bfcooling_coeffs) == MPI_SUCCESS);
+  bfcooling_coeffs = MPI_shared_malloc<double>(TABLESIZE * globals::nbfcontinua);
 #else
   bfcooling_coeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
 #endif
-  assert_always(bfcooling_coeffs != nullptr);
 
   printout(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "

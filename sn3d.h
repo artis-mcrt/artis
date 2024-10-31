@@ -1,6 +1,7 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#include <span>
 #ifndef __host__
 #define __host__
 #endif
@@ -331,6 +332,49 @@ constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks, co
   assert_testmodeonly(nsize >= 0);
   assert_testmodeonly((nstart + nsize) <= size);
   return std::tuple{nstart, nsize};
+}
+
+#ifdef MPI_ON
+template <typename T>
+[[nodiscard]] auto MPI_shared_malloc_keepwin(const ptrdiff_t num_allranks) -> std::tuple<T *, MPI_Win> {
+  if (num_allranks == 0) {
+    return {nullptr, MPI_WIN_NULL};
+  }
+  assert_always(num_allranks >= 0);
+
+  const auto [_, num_thisnoderank] = get_range_chunk(num_allranks, globals::node_nprocs, globals::rank_in_node);
+  assert_always(num_thisnoderank >= 0);
+
+  auto size = static_cast<MPI_Aint>(num_thisnoderank * sizeof(T));
+  int disp_unit = sizeof(T);
+  MPI_Win mpiwin{MPI_WIN_NULL};
+  T *ptr{};
+
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &ptr, &mpiwin) ==
+                MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &ptr) == MPI_SUCCESS);
+  MPI_Barrier(globals::mpi_comm_node);
+  return {ptr, mpiwin};
+}
+#endif
+
+template <typename T>
+[[nodiscard]] auto MPI_shared_malloc(const ptrdiff_t num_allranks) -> T * {
+  if (num_allranks == 0) {
+    return nullptr;
+  }
+#ifdef MPI_ON
+  T *ptr = std::get<0>(MPI_shared_malloc_keepwin<T>(num_allranks));
+#else
+  T *ptr = static_cast<T *>(malloc(num_allranks * sizeof(T)));
+#endif
+  assert_always(ptr != nullptr);
+  return ptr;
+}
+
+template <typename T>
+[[nodiscard]] auto MPI_shared_malloc_span(const ptrdiff_t num_allranks) -> std::span<T> {
+  return {MPI_shared_malloc<T>(num_allranks), num_allranks};
 }
 
 #endif  // SN3D_H

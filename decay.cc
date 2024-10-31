@@ -1054,15 +1054,8 @@ void setup_decaypath_energy_per_mass() {
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
   double *decaypath_energy_per_mass_data{nullptr};
 #ifdef MPI_ON
-  const auto [_, noderank_nonemptycellcount] =
-      get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
-  auto size = static_cast<MPI_Aint>(noderank_nonemptycellcount * get_num_decaypaths() * sizeof(double));
-  int disp_unit = sizeof(double);
-  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                        &decaypath_energy_per_mass_data,
-                                        &win_decaypath_energy_per_mass) == MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(win_decaypath_energy_per_mass, 0, &size, &disp_unit,
-                                     &decaypath_energy_per_mass_data) == MPI_SUCCESS);
+  std::tie(decaypath_energy_per_mass_data, win_decaypath_energy_per_mass) =
+      MPI_shared_malloc_keepwin<double>(nonempty_npts_model * get_num_decaypaths());
 #else
   decaypath_energy_per_mass_data =
       static_cast<double *>(malloc(nonempty_npts_model * get_num_decaypaths() * sizeof(double)));
