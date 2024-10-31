@@ -730,7 +730,7 @@ auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypa
   return chainendecay;
 }
 
-auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int modelgridindex, const double time) -> double
+auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int nonemptymgi, const double time) -> double
 // total decay power per mass [erg/s/g] for a given decaypath
 {
   // only decays at the end of the chain contributed from the initial abundance of the top of the chain are counted
@@ -739,6 +739,7 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int mode
   const int z_top = decaypaths[decaypathindex].z[0];
   const int a_top = decaypaths[decaypathindex].a[0];
   const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
+  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top);
   assert_always(top_initabund >= 0.);
@@ -1422,7 +1423,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
         get_simtime_endecay_per_ejectamass(nonemptymgi, decaypathindex) / (globals::tmax - tdecaymin);
     assert_always(avgpower > 0.);
     assert_always(std::isfinite(avgpower));
-    pkt.e_cmf = e0 * get_decaypath_power_per_ejectamass(decaypathindex, mgi, pkt.tdecay) / avgpower;
+    pkt.e_cmf = e0 * get_decaypath_power_per_ejectamass(decaypathindex, nonemptymgi, pkt.tdecay) / avgpower;
     assert_always(pkt.e_cmf >= 0);
     assert_always(std::isfinite(pkt.e_cmf));
   }
