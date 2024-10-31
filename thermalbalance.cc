@@ -313,8 +313,9 @@ void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatin
   }
 }
 
-void call_T_e_finder(const int modelgridindex, const double t_current, const double T_min, const double T_max,
+void call_T_e_finder(const int nonemptymgi, const double t_current, const double T_min, const double T_max,
                      HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
+  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::get_Te(modelgridindex);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, globals::timestep);
 
