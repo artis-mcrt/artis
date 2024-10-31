@@ -219,10 +219,10 @@ void mpi_communicate_grid_properties() {
     int root_node_id = globals::node_id;
     MPI_Bcast(&root_node_id, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-    const int root_nstart_nonempty = grid::get_nstart_nonempty(root);
-    const int root_ndo_nonempty = grid::get_ndo_nonempty(root);
+    const ptrdiff_t root_nstart_nonempty = grid::get_nstart_nonempty(root);
+    const ptrdiff_t root_ndo_nonempty = grid::get_ndo_nonempty(root);
 
-    for (int nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
+    for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
          nonemptymgi++) {
       assert_always(root_ndo_nonempty > 0);
 
