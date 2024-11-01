@@ -1033,7 +1033,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       for (int level = 1; level <= nlevels_nlte; level++) {
         const int index = get_nlte_vector_index(element, ion, level);
         set_nlte_levelpop_over_rho(modelgridindex, element, ion, level,
-                                   gsl_vector_get(&popvec, index) / grid::get_rho(modelgridindex));
+                                   gsl_vector_get(&popvec, index) / grid::get_rho(nonemptymgi));
         // solution_ion_pop += gsl_vector_get(popvec, index);
       }
 
@@ -1043,7 +1043,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
         const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1);
         set_nlte_superlevelpop_over_rho(
             modelgridindex, element, ion,
-            gsl_vector_get(&popvec, index_sl) / grid::get_rho(modelgridindex) / superlevel_partfunc[ion]);
+            gsl_vector_get(&popvec, index_sl) / grid::get_rho(nonemptymgi) / superlevel_partfunc[ion]);
       }
 
       // store the ground level population

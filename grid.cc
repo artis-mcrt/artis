@@ -1734,8 +1734,9 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
 
 auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[modelgridindex].rhoinit; }
 
-__host__ __device__ auto get_rho(const int modelgridindex) -> float {
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+__host__ __device__ auto get_rho(const int nonemptymgi) -> float {
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return modelgrid[nonemptymgi].rho;
 }
 
@@ -1783,7 +1784,7 @@ void set_elem_abundance(const int nonemptymgi, const int element, const float ne
 __host__ __device__ auto get_elem_numberdens(const int modelgridindex, const int element) -> double {
   const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   const double elem_meanweight = grid::get_element_meanweight(nonemptymgi, element);
-  return get_elem_abundance(nonemptymgi, element) / elem_meanweight * grid::get_rho(modelgridindex);
+  return get_elem_abundance(nonemptymgi, element) / elem_meanweight * grid::get_rho(nonemptymgi);
 }
 
 __host__ __device__ auto get_kappagrey(const int modelgridindex) -> float {

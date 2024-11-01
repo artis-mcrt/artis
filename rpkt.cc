@@ -237,7 +237,7 @@ auto get_event_expansion_opacity(
     double chi_bb_expansionopac = 0.;
     if (binindex >= 0) {
       const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
-      chi_bb_expansionopac = kappa * grid::get_rho(modelgridindex) * doppler;
+      chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * doppler;
     }
 
     const double chi_tot = chi_cont + chi_bb_expansionopac;
@@ -723,7 +723,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   } else if (thickcell) [[unlikely]] {
     // In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
-    const double chi_grey = grid::get_kappagrey(mgi) * grid::get_rho(mgi) *
+    const double chi_grey = grid::get_kappagrey(mgi) * grid::get_rho(nonemptymgi) *
                             calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
     edist = tau_next / chi_grey;
@@ -1125,7 +1125,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
     printout("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
     printout("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont.ffescat, chi_rpkt_cont.ffheat, chi_rpkt_cont.bf);
     printout("[fatal] nbfcontinua %d\n", globals::nbfcontinua);
-    printout("[fatal] in cell %d with density %g\n", modelgridindex, grid::get_rho(modelgridindex));
+    printout("[fatal] in cell %d with density %g\n", modelgridindex, grid::get_rho(nonemptymgi));
     printout("[fatal] pkt.nu_cmf %g\n", nu_cmf);
     if (std::isfinite(chi_rpkt_cont.ffescat)) {
       chi_rpkt_cont.ffheat = 0.;
@@ -1156,7 +1156,7 @@ void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node
 
 void calculate_expansion_opacities(const int modelgridindex) {
   const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-  const auto rho = grid::get_rho(modelgridindex);
+  const auto rho = grid::get_rho(nonemptymgi);
 
   const auto sys_time_start_calc = std::time(nullptr);
   const auto temperature = grid::get_TR(nonemptymgi);

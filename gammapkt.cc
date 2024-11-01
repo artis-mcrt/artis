@@ -465,8 +465,9 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
   if (mgi >= grid::get_npts_model()) {
     return 0.;  // empty cell
   }
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
-  const double rho = grid::get_rho(mgi);
+  const double rho = grid::get_rho(nonemptymgi);
 
   if (globals::gamma_kappagrey < 0) {
     chi_cmf = 0.;
@@ -558,7 +559,8 @@ auto get_chi_pair_prod_rf(const Packet &pkt) -> double {
     return 0.;  // empty cell
   }
 
-  const double rho = grid::get_rho(mgi);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+  const double rho = grid::get_rho(nonemptymgi);
 
   if (globals::gamma_kappagrey >= 0.) {
     return 0.;
@@ -894,7 +896,8 @@ void wollaeger_thermalisation(Packet &pkt) {
     const double s_cont = sdist * t_current * t_current * t_current / std::pow(pkt_copy.prop_time, 3);
     const int mgi = grid::get_cell_modelgridindex(pkt_copy.where);
     if (mgi != grid::get_npts_model()) {
-      tau += grid::get_rho(mgi) * s_cont * mean_gamma_opac;  // contribution to the integral
+      const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+      tau += grid::get_rho(nonemptymgi) * s_cont * mean_gamma_opac;  // contribution to the integral
     }
     // move packet copy now
     move_pkt_withtime(pkt_copy, sdist);

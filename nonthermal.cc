@@ -2170,7 +2170,7 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
   heatingcoolingrates->dep_gamma = globals::dep_estimator_gamma[nonemptymgi];
 
   const double tmid = globals::timesteps[timestep].mid;
-  const double rho = grid::get_rho(modelgridindex);
+  const double rho = grid::get_rho(nonemptymgi);
 
   // if INSTANT_PARTICLE_DEPOSITION, use the analytic rate at t_mid since it will have no Monte Carlo noise (although
   // strictly, it should be an integral from the timestep start to the end)

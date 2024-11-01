@@ -177,6 +177,7 @@ auto calculate_levelpop_nominpop(const int modelgridindex, const int element, co
   assert_testmodeonly(level < get_nlevels(element, ion));
 
   double nn{NAN};
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   if (level == 0) {
     nn = get_groundlevelpop(modelgridindex, element, ion);
@@ -188,11 +189,11 @@ auto calculate_levelpop_nominpop(const int modelgridindex, const int element, co
         // Case for when no NLTE level information is available yet
         nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
       } else {
-        nn = nltepop_over_rho * grid::get_rho(modelgridindex);
+        nn = nltepop_over_rho * grid::get_rho(nonemptymgi);
         if (!std::isfinite(nn)) {
           printout("[fatal] NLTE population failure.\n");
           printout("element %d ion %d level %d\n", element, ion, level);
-          printout("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, grid::get_rho(modelgridindex));
+          printout("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, grid::get_rho(nonemptymgi));
           printout("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
           std::abort();
         }
@@ -209,13 +210,12 @@ auto calculate_levelpop_nominpop(const int modelgridindex, const int element, co
         // Case for when no NLTE level information is available yet
         nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
       } else {
-        nn = superlevelpop_over_rho * grid::get_rho(modelgridindex) *
+        nn = superlevelpop_over_rho * grid::get_rho(nonemptymgi) *
              superlevel_boltzmann(modelgridindex, element, ion, level);
         if (!std::isfinite(nn)) {
           printout("[fatal] NLTE population failure.\n");
           printout("element %d ion %d level %d\n", element, ion, level);
-          printout("nn %g superlevelpop_over_rho %g rho %g\n", nn, superlevelpop_over_rho,
-                   grid::get_rho(modelgridindex));
+          printout("nn %g superlevelpop_over_rho %g rho %g\n", nn, superlevelpop_over_rho, grid::get_rho(nonemptymgi));
           printout("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
           std::abort();
         }
@@ -378,7 +378,7 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
     const auto T_e = grid::get_Te(nonemptymgi);
     const auto W = grid::get_W(nonemptymgi);
     printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi, T_R,
-             T_e, W, grid::get_rho(modelgridindex));
+             T_e, W, grid::get_rho(nonemptymgi));
     printout("nne@x_lo %g\n", nne_solution_f(nne_lo, f.params));
     printout("nne@x_hi %g\n", nne_solution_f(nne_hi, f.params));
 
@@ -628,7 +628,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const bool force_lte = globals::lte_iteration || grid::modelgrid[nonemptymgi].thick == 1;
 
-  const double nne_hi = grid::get_rho(modelgridindex) / MH;
+  const double nne_hi = grid::get_rho(nonemptymgi) / MH;
 
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {

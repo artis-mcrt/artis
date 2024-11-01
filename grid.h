@@ -71,7 +71,7 @@ void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
 [[nodiscard]] auto get_cellradialposmid(int cellindex) -> double;
 [[nodiscard]] auto get_coordcellindexincrement(int axis) -> int;
 [[nodiscard]] auto get_rho_tmin(int modelgridindex) -> float;
-[[nodiscard]] auto get_rho(int modelgridindex) -> float;
+[[nodiscard]] auto get_rho(int nonemptymgi) -> float;
 [[nodiscard]] auto get_nne(int modelgridindex) -> float;
 [[nodiscard]] auto get_nnetot(int modelgridindex) -> float;
 [[nodiscard]] auto get_ffegrp(int modelgridindex) -> float;
