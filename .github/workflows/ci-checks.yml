@@ -52,6 +52,14 @@ jobs:
             - name: Set up Python
               uses: actions/setup-python@v5
 
+            - name: install gsl and openmpi
+              run: |
+                  sudo apt-get update
+                  sudo apt install -y libgsl-dev
+                  sudo apt install -y openmpi-bin libopenmpi-dev
+                  echo "CXX=clang++" >> $GITHUB_ENV
+                  echo "OMPI_CXX=clang++" >> $GITHUB_ENV
+
             - name: Generate compile_commands.json
               run: |
                   python3 -m pip install compiledb
