@@ -45,7 +45,6 @@ auto integrand_bfheatingcoeff_custom_radfield(const double nu, void *const voidp
   const auto *const params = static_cast<const BFHeatingIntegralParams *>(voidparas);
 
   const int nonemptymgi = params->nonemptymgi;
-  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double nu_edge = params->nu_edge;
   const float T_R = params->T_R;
   // const double Te_TR_factor = params->Te_TR_factor; // = sqrt(T_e/T_R) * sahafac(Te) / sahafac(TR)
@@ -53,10 +52,10 @@ auto integrand_bfheatingcoeff_custom_radfield(const double nu, void *const voidp
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
   // const auto T_e = grid::get_Te(modelgridindex);
-  // return sigma_bf * (1 - nu_edge/nu) * radfield::radfield(nu,modelgridindex) * (1 - Te_TR_factor * exp(-HOVERKB * nu
+  // return sigma_bf * (1 - nu_edge/nu) * radfield::radfield(nu,nonemptymgi) * (1 - Te_TR_factor * exp(-HOVERKB * nu
   // / T_e));
 
-  return sigma_bf * (1 - nu_edge / nu) * radfield::radfield(nu, modelgridindex) * (1 - exp(-HOVERKB * nu / T_R));
+  return sigma_bf * (1 - nu_edge / nu) * radfield::radfield(nu, nonemptymgi) * (1 - exp(-HOVERKB * nu / T_R));
 }
 
 auto calculate_bfheatingcoeff(const int element, const int ion, const int level, const int phixstargetindex,

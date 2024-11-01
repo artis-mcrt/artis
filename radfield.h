@@ -18,7 +18,7 @@ void close_file();
 void update_estimators(int nonemptymgi, double distance_e_cmf, double nu_cmf, double doppler_nucmf_on_nurf,
                        const Phixslist &phixslist, bool thickcell);
 void update_lineestimator(int modelgridindex, int lineindex, double increment);
-[[nodiscard]] auto radfield(double nu, int modelgridindex) -> double;
+[[nodiscard]] auto radfield(double nu, int nonemptymgi) -> double;
 void fit_parameters(int modelgridindex, int timestep);
 void set_J_normfactor(int nonemptymgi, double normfactor);
 void normalise_J(int modelgridindex, double estimator_normfactor_over4pi);

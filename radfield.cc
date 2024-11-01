@@ -860,8 +860,7 @@ __host__ __device__ void update_lineestimator(const int modelgridindex, const in
 }
 
 // mean intensity J_nu [ergs/s/sr/cm2/Hz]
-__host__ __device__ auto radfield(const double nu, const int modelgridindex) -> double {
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+__host__ __device__ auto radfield(const double nu, const int nonemptymgi) -> double {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP) {
       const int binindex = select_bin(nu);

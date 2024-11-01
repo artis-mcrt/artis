@@ -40,12 +40,12 @@ double *corrphotoioncoeffs{};
 
 double *bfcooling_coeffs{};
 
-struct GSLIntegralParas_GammaCorr {
+struct GSLIntegralParasGammaCorr {
   double nu_edge;
   double departure_ratio;
   const float *photoion_xs;
   float T_e;
-  int modelgridindex;
+  int nonemptymgi;
 };
 
 char adatafile_hash[33];
@@ -668,13 +668,13 @@ void precalculate_ion_alpha_sp() {
 }
 
 auto integrand_stimrecombination_custom_radfield(const double nu, void *const voidparas) -> double {
-  const auto *const params = static_cast<const GSLIntegralParas_GammaCorr *>(voidparas);
-  const int modelgridindex = params->modelgridindex;
+  const auto *const params = static_cast<const GSLIntegralParasGammaCorr *>(voidparas);
+  const int nonemptymgi = params->nonemptymgi;
   const float T_e = params->T_e;
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
 
-  const double Jnu = radfield::radfield(nu, modelgridindex);
+  const double Jnu = radfield::radfield(nu, nonemptymgi);
 
   // TODO: MK thesis page 41, use population ratios and Te?
   return ONEOVERH * sigma_bf / nu * Jnu * exp(-HOVERKB * nu / T_e);
@@ -690,11 +690,12 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
   const auto T_e = grid::get_Te(modelgridindex);
-  const auto intparas = GSLIntegralParas_GammaCorr{
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto intparas = GSLIntegralParasGammaCorr{
       .nu_edge = nu_threshold,
       .photoion_xs = get_phixs_table(element, lowerion, level),
       .T_e = T_e,
-      .modelgridindex = modelgridindex,
+      .nonemptymgi = nonemptymgi,
   };
 
   const int upperionlevel = get_phixsupperlevel(element, lowerion, level, phixstargetindex);
@@ -729,8 +730,8 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const vo
 // Integrand to calculate the rate coefficient for photoionization
 // using gsl integrators. Corrected for stimulated recombination.
 {
-  const GSLIntegralParas_GammaCorr *const params = static_cast<GSLIntegralParas_GammaCorr *>(voidparas);
-  const int modelgridindex = params->modelgridindex;
+  const GSLIntegralParasGammaCorr *const params = static_cast<GSLIntegralParasGammaCorr *>(voidparas);
+  const int nonemptymgi = params->nonemptymgi;
 
 #if (SEPARATE_STIMRECOMB)
   const double corrfactor = 1.;
@@ -744,7 +745,7 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const vo
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
 
-  const double Jnu = radfield::radfield(nu, modelgridindex);
+  const double Jnu = radfield::radfield(nu, nonemptymgi);
 
   // TODO: MK thesis page 41, use population ratios and Te?
   return ONEOVERH * sigma_bf / nu * Jnu * corrfactor;
@@ -752,6 +753,7 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const vo
 
 auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int level, const int phixstargetindex,
                                           int modelgridindex) -> double {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   constexpr double epsrel = 1e-3;
   constexpr double epsrelwarning = 1e-1;
   constexpr double epsabs = 0.;
@@ -776,12 +778,12 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
     departure_ratio = 0.;
   }
 #endif
-  const auto intparas = GSLIntegralParas_GammaCorr{
+  const auto intparas = GSLIntegralParasGammaCorr{
       .nu_edge = nu_threshold,
       .departure_ratio = departure_ratio,
       .photoion_xs = get_phixs_table(element, ion, level),
       .T_e = T_e,
-      .modelgridindex = modelgridindex,
+      .nonemptymgi = nonemptymgi,
   };
 
   double error = 0.;

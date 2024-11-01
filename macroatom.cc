@@ -693,6 +693,7 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
 auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
                               const int uptransindex, const double epsilon_trans, const double nnlevel_lower,
                               const int lineindex, const double t_current) -> double {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto &uptr = get_uptranslist(element, ion, lower)[uptransindex];
   const int upper = uptr.targetlevelindex;
 
@@ -719,7 +720,7 @@ auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const
       }
     }
 
-    const double R = R_over_J_nu * radfield::radfield(nu_trans, modelgridindex);
+    const double R = R_over_J_nu * radfield::radfield(nu_trans, nonemptymgi);
 
     assert_testmodeonly(R >= 0.);
     assert_testmodeonly(std::isfinite(R));
