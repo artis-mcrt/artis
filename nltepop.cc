@@ -949,7 +949,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_vector_set(&balance_vector, 0, nnelement);
 
   if (FORCE_SAHA_ION_BALANCE(atomic_number)) {
-    const auto ionfractions = calculate_ionfractions(element, modelgridindex, grid::get_nne(modelgridindex), true);
+    const auto ionfractions = calculate_ionfractions(element, nonemptymgi, grid::get_nne(modelgridindex), true);
     const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
     for (int ion = 1; ion <= uppermost_ion; ion++) {
       // replace matrix row for ion's ground state with sum of this ion's level populations is equal to the ion

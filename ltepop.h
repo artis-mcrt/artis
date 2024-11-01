@@ -15,7 +15,7 @@
 [[nodiscard]] auto get_nnion(int modelgridindex, int element, int ion) -> double;
 void calculate_ion_balance_nne(int modelgridindex);
 void calculate_cellpartfuncts(int nonemptymgi, int element);
-[[nodiscard]] auto calculate_ionfractions(int element, int modelgridindex, double nne, bool use_phi_lte)
+[[nodiscard]] auto calculate_ionfractions(int element, int nonemptymgi, double nne, bool use_phi_lte)
     -> std::vector<double>;
 void set_groundlevelpops(int modelgridindex, int element, float nne, bool force_lte);
 

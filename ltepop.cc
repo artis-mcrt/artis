@@ -142,6 +142,7 @@ auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double {
   const auto *paras = static_cast<const nneSolutionParas *>(voidparas);
   const int modelgridindex = paras->modelgridindex;
   const bool force_lte = paras->force_lte;
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   double nne_after = 0.;  // the resulting nne after setting the ion balance with nne_assumed
   for (int element = 0; element < get_nelements(); element++) {
@@ -152,7 +153,7 @@ auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double {
         nne_after += get_element_nne_contrib(modelgridindex, element);
       } else {
         const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
-        const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed, use_phi_lte);
+        const auto ionfractions = calculate_ionfractions(element, nonemptymgi, nne_assumed, use_phi_lte);
         const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
         for (int ion = 0; ion <= uppermost_ion; ion++) {
           const double nnion = nnelement * ionfractions[ion];
@@ -425,13 +426,12 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
 
 // Calculate the fractions of an element's population in each ionization stage based on Saha LTE or ionisation
 // equilibrium
-[[nodiscard]] auto calculate_ionfractions(const int element, const int modelgridindex, const double nne,
+[[nodiscard]] auto calculate_ionfractions(const int element, const int nonemptymgi, const double nne,
                                           const bool use_phi_lte) -> std::vector<double> {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   if (uppermost_ion < 0) {
     return {};
@@ -587,7 +587,7 @@ void set_groundlevelpops(const int modelgridindex, const int element, const floa
   const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
 
   const auto ionfractions =
-      (nnelement > 0) ? calculate_ionfractions(element, modelgridindex, nne, use_phi_lte) : std::vector<double>();
+      (nnelement > 0) ? calculate_ionfractions(element, nonemptymgi, nne, use_phi_lte) : std::vector<double>();
 
   const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
 
