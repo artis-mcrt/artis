@@ -646,7 +646,7 @@ void set_element_pops_lte(const int modelgridindex, const int element) {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   nltepop_reset_element(modelgridindex, element);  // set NLTE pops as invalid so that LTE pops will be used instead
   calculate_cellpartfuncts(nonemptymgi, element);
-  set_groundlevelpops(modelgridindex, element, grid::get_nne(modelgridindex), true);
+  set_groundlevelpops(nonemptymgi, element, grid::get_nne(modelgridindex), true);
 }
 
 [[nodiscard]] auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {

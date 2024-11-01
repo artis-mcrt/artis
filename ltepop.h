@@ -17,6 +17,6 @@ void calculate_ion_balance_nne(int modelgridindex);
 void calculate_cellpartfuncts(int nonemptymgi, int element);
 [[nodiscard]] auto calculate_ionfractions(int element, int nonemptymgi, double nne, bool use_phi_lte)
     -> std::vector<double>;
-void set_groundlevelpops(int modelgridindex, int element, float nne, bool force_lte);
+void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_lte);
 
 #endif  // LTEPOP_H

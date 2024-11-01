@@ -573,13 +573,13 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
 
 // If not already set by the NLTE solver, set the ground level populations from either Saha LTE or
 // ionization/recombination balance (Photoionization Equilibrium)
-void set_groundlevelpops(const int modelgridindex, const int element, const float nne, const bool force_lte) {
+void set_groundlevelpops(const int nonemptymgi, const int element, const float nne, const bool force_lte) {
   const int nions = get_nions(element);
 
   if (nions <= 0) {
     return;
   }
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   // calculate number density of the current element (abundances are given by mass)
   const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
@@ -590,6 +590,7 @@ void set_groundlevelpops(const int modelgridindex, const int element, const floa
       (nnelement > 0) ? calculate_ionfractions(element, nonemptymgi, nne, use_phi_lte) : std::vector<double>();
 
   const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
+  const ptrdiff_t nincludedions = get_includedions();
 
   // Use ion fractions to calculate the groundlevel populations
   for (int ion = 0; ion < nions; ion++) {
@@ -605,16 +606,14 @@ void set_groundlevelpops(const int modelgridindex, const int element, const floa
       nnion = MINPOP;
     }
 
-    const double groundpop =
-        nnion * stat_weight(element, ion, 0) /
-        grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex];
+    const double groundpop = nnion * stat_weight(element, ion, 0) /
+                             grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex];
 
     if (!std::isfinite(groundpop)) {
       printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
     }
 
-    grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex] =
-        groundpop;
+    grid::ion_groundlevelpops_allcells[(nonemptymgi * nincludedions) + uniqueionindex] = groundpop;
   }
 }
 
@@ -648,7 +647,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void {
       // avoid overwriting the ground level populations set by the NLTE pop solver
       const bool already_set_by_nlte_solver = !force_lte && elem_has_nlte_levels(element);
       if (!already_set_by_nlte_solver) {
-        set_groundlevelpops(modelgridindex, element, nne_solution, force_lte);
+        set_groundlevelpops(nonemptymgi, element, nne_solution, force_lte);
       }
     }
   }
