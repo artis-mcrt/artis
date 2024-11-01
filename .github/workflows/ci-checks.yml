@@ -45,20 +45,18 @@ jobs:
                   check-path: .
 
     clang-tidy:
-        runs-on: ubuntu-24.04
+        runs-on: macos-15
         steps:
             - uses: actions/checkout@v4
 
-            - name: Set up Python
-              uses: actions/setup-python@v5
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: 'latest-stable'
 
-            - name: install gsl and openmpi
+            - name: install dependencies
               run: |
-                  sudo apt-get update
-                  sudo apt install -y libgsl-dev
-                  sudo apt install -y openmpi-bin libopenmpi-dev
-                  echo "CXX=clang++" >> $GITHUB_ENV
-                  echo "OMPI_CXX=clang++" >> $GITHUB_ENV
+                  brew update
+                  brew install openmpi gsl || true
 
             - name: Generate compile_commands.json
               run: |
@@ -66,14 +64,6 @@ jobs:
                   cp artisoptions_nltenebular.h artisoptions.h
                   make clean
                   python3 -m compiledb -n --full-path make TESTMODE=ON
-
-            - name: cat compile_commands.json
-              run: cat compile_commands.json
-
-            # - name: run-clang-tidy
-            #   run: |
-            #       clang-tidy --version
-            #       run-clang-tidy
 
             - name: run-clang-tidy from pip
               run: |
