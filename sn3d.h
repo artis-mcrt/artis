@@ -126,26 +126,17 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
   output_file.flush();
 }
 
-// #ifdef __cpp_lib_stacktrace
-#include <stacktrace>
-#define STACKTRACEIFSUPPORTED std::stacktrace::current()
-// #else
-// #define STACKTRACEIFSUPPORTED ""
-// #endif
-
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
     const bool assertpass = static_cast<bool>(e);                                                                      \
     if (!assertpass) {                                                                                                 \
       if (output_file) {                                                                                               \
         output_file << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
-                    << #e << "` in function " << __PRETTY_FUNCTION__ << "\n"                                           \
-                    << STACKTRACEIFSUPPORTED;                                                                          \
+                    << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                                          \
         output_file.flush();                                                                                           \
       }                                                                                                                \
       std::cerr << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `"     \
-                << #e << "` in function " << __PRETTY_FUNCTION__ << "\n"                                               \
-                << STACKTRACEIFSUPPORTED;                                                                              \
+                << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                                              \
       std::abort();                                                                                                    \
     }                                                                                                                  \
     assert(assertpass);                                                                                                \
