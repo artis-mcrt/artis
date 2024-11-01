@@ -1105,8 +1105,8 @@ auto N_e(const int modelgridindex, const double energy, const std::array<double,
 auto calculate_frac_heating(const int modelgridindex, const std::array<double, SFPTS> &yfunc) -> float {
   // frac_heating multiplied by E_init, which will be divided out at the end
   double frac_heating_Einit = 0.;
-
-  const float nne = grid::get_nne(modelgridindex);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const float nne = grid::get_nne(nonemptymgi);
 
   for (int i = 0; i < SFPTS; i++) {
     const double endash = engrid(i);
@@ -1562,7 +1562,7 @@ auto get_uptransindex(const int element, const int ion, const int lower, const i
 void analyse_sf_solution(const int modelgridindex, const int timestep, const bool enable_sfexcitation,
                          const std::array<double, SFPTS> &yfunc) {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-  const float nne = grid::get_nne(modelgridindex);
+  const float nne = grid::get_nne(nonemptymgi);
   const double nntot = get_nnion_tot(modelgridindex);
   const double nnetot = grid::get_nnetot(nonemptymgi);
 
@@ -2487,6 +2487,7 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
 void solve_spencerfano(const int modelgridindex, const int timestep, const int iteration) {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   bool skip_solution = false;
   if (grid::get_numpropcells(modelgridindex) < 1) {
     printout("Associated_cells < 1 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex,
@@ -2521,7 +2522,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
     return;
   }
 
-  const auto nne = grid::get_nne(modelgridindex);  // electrons per cm^3
+  const auto nne = grid::get_nne(nonemptymgi);  // electrons per cm^3
   const double nne_per_ion = nne / get_nnion_tot(modelgridindex);
   const double nne_per_ion_last = nt_solution[modelgridindex].nneperion_when_solved;
   const double nne_per_ion_fracdiff = fabs((nne_per_ion_last / nne_per_ion) - 1.);

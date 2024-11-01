@@ -852,7 +852,7 @@ auto calculate_chi_ffheating(const int modelgridindex, const double nu) -> doubl
   assert_always(nu > 0.);
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
-  const auto nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
   const double chi_ff = get_chi_ff_nnionpart(modelgridindex) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
 
@@ -875,7 +875,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   const auto T_e = grid::get_Te(nonemptymgi);
-  const auto nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(nonemptymgi);
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   const auto &allcont_nu_edge = globals::allcont_nu_edge;
 
@@ -1085,7 +1085,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
     return;
   }
 
-  const auto nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(nonemptymgi);
 
   double chi_escat = 0.;
   // free-free absorption

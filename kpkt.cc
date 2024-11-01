@@ -48,7 +48,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
                                  const int cellcacheslotid, double *const C_ff, double *const C_fb, double *const C_exc,
                                  double *const C_ionization) -> double {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-  const auto nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
 
   if constexpr (update_cooling_contrib_list) {
@@ -455,8 +455,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     printout("do_kpkt: modelgridindex %d element %d ion %d\n", modelgridindex, element, ion);
     printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool_ion %g\n", grid::modelgrid[nonemptymgi].totalcooling,
              coolingsum, rndcool_ion);
-    printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n", modelgridindex, pkt.where,
-             grid::get_nne(modelgridindex));
+    printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n", modelgridindex, pkt.where, grid::get_nne(nonemptymgi));
     for (element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (ion = 0; ion < nions; ion++) {
@@ -579,7 +578,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   } else if (rndcoolingtype == CoolingType::COLLEXC) {
     // the k-packet activates a macro-atom due to collisional excitation
     // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
-    const float nne = grid::get_nne(modelgridindex);
+    const float nne = grid::get_nne(nonemptymgi);
 
     // if the previous entry belongs to the same ion, then pick up the cumulative sum from
     // the previous entry, otherwise start from zero

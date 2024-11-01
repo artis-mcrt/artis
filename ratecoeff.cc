@@ -769,7 +769,7 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
 #else
   // stimulated recombination is negative photoionisation
   const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
-  const double nne = grid::get_nne(modelgridindex);
+  const double nne = grid::get_nne(nonemptymgi);
   const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
   const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
   const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upperionlevel);
@@ -974,8 +974,10 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
 
   double alpha = 0.;
   if (lowerion < get_nions(element) - 1) {
+    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+
     // this gets divided and cancelled out in the radiative case anyway
-    const double nne = (modelgridindex >= 0) ? grid::get_nne(modelgridindex) : 1.;
+    const double nne = (modelgridindex >= 0) ? grid::get_nne(nonemptymgi) : 1.;
 
     double nnupperion = 0;
     // nnupperion = get_groundmultiplet_pop(modelgridindex, T_e, element, upperion, assume_lte);
@@ -1264,7 +1266,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
   }
 
   const auto T_e = grid::get_Te(nonemptymgi);
-  const auto nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(nonemptymgi);
 
   for (int level = 0; level < get_nlevels(element, ion); level++) {
     const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
@@ -1299,7 +1301,7 @@ auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, c
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   const auto T_e = grid::get_Te(nonemptymgi);
-  const float nne = grid::get_nne(modelgridindex);
+  const float nne = grid::get_nne(nonemptymgi);
 
   // const auto [nlevels_important, _] = get_nlevels_important(modelgridindex, element, ion, false, T_e);
   const int nlevels_important = get_nlevels(element, ion);
@@ -1330,8 +1332,9 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
                                    const bool force_bfest, const bool force_bfintegral) -> double {
   assert_always(lowerion < get_nions(element) - 1);
   assert_always(!force_bfest || !force_bfintegral);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
-  const float nne = (modelgridindex >= 0) ? grid::get_nne(modelgridindex) : 1.;
+  const float nne = (modelgridindex >= 0) ? grid::get_nne(nonemptymgi) : 1.;
 
   const auto [nlevels_important, nnlowerion] =
       get_nlevels_important(modelgridindex, element, lowerion, assume_lte, T_e);

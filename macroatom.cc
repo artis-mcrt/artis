@@ -40,7 +40,7 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
 
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto T_e = grid::get_Te(nonemptymgi);
-  const auto nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(nonemptymgi);
   const double epsilon_current = epsilon(element, ion, level);
   const double statweight = stat_weight(element, ion, level);
   const auto nnlevel = get_levelpop(modelgridindex, element, ion, level);
@@ -225,7 +225,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
                                           const int upperionlevel, const double rad_recomb) -> int {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto T_e = grid::get_Te(nonemptymgi);
-  const auto nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(nonemptymgi);
   const double epsilon_current = epsilon(element, upperion, upperionlevel);
   // Randomly select a continuum
   const double targetval = rng_uniform() * rad_recomb;
@@ -284,7 +284,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
                                            const double epsilon_current, const double internal_up_higher) -> int {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto T_e = grid::get_Te(nonemptymgi);
-  const auto nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(nonemptymgi);
 
   // Randomly select the occurring transition
   const double targetrate = rng_uniform() * internal_up_higher;
@@ -317,7 +317,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
   // printout("[debug] do MA\n");
 
-  const auto nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(nonemptymgi);
 
   assert_testmodeonly(grid::modelgrid[nonemptymgi].thick != 1);  // macroatom should not be used in thick cells
 
@@ -796,7 +796,7 @@ auto col_recombination_ratecoeff(const int modelgridindex, const int element, co
   const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {
-      const float nne = grid::get_nne(modelgridindex);
+      const float nne = grid::get_nne(nonemptymgi);
       const auto T_e = grid::get_Te(nonemptymgi);
       const double fac1 = epsilon_trans / KB / T_e;
       const int ionstage = get_ionstage(element, upperion);

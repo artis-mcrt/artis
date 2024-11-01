@@ -112,8 +112,8 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
              stat_weight(element, ion, 0));
     printout("[fatal] phi: upperionpartfunct %g, upperionstatweight %g\n", partfunc_upperion,
              stat_weight(element, ion + 1, 0));
-    printout("[fatal] phi: gamma_nt %g Col_rec %g grid::get_nne(modelgridindex) %g\n", gamma_nt, Col_rec,
-             grid::get_nne(modelgridindex));
+    printout("[fatal] phi: gamma_nt %g Col_rec %g grid::get_nne(nonemptymgi) %g\n", gamma_nt, Col_rec,
+             grid::get_nne(nonemptymgi));
     std::abort();
   }
 

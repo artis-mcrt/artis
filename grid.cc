@@ -1740,10 +1740,9 @@ __host__ __device__ auto get_rho(const int nonemptymgi) -> float {
   return modelgrid[nonemptymgi].rho;
 }
 
-__host__ __device__ auto get_nne(const int modelgridindex) -> float {
-  assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex < get_npts_model());
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+__host__ __device__ auto get_nne(const int nonemptymgi) -> float {
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   const double nne = modelgrid[nonemptymgi].nne;
   assert_testmodeonly(std::isfinite(nne));
   return nne;

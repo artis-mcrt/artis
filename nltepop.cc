@@ -256,7 +256,7 @@ void print_element_rates_summary(const int element, const int modelgridindex, co
     for (int level = 0; (level < max_printed_levels) && (level < nlevels) && (level <= nlevels_nlte + 1); level++) {
       if (level == 0) {
         printout("  modelgridindex %d timestep %d NLTE iteration %d Te %g nne %g: NLTE summary for Z=%d ionstage %d:\n",
-                 modelgridindex, timestep, nlte_iter, grid::get_Te(nonemptymgi), grid::get_nne(modelgridindex),
+                 modelgridindex, timestep, nlte_iter, grid::get_Te(nonemptymgi), grid::get_nne(nonemptymgi),
                  atomic_number, ionstage);
         printout(
             "                         pop       rates     bb_rad     bb_col   bb_ntcol     bf_rad     bf_col   "
@@ -306,8 +306,8 @@ void print_level_rates(const int modelgridindex, const int timestep, const int e
   printout(
       "timestep %d cell %d Te %g nne %g NLTE level diagnostics for Z=%d ionstage %d level %d rates into and out of "
       "this level\n",
-      timestep, modelgridindex, grid::get_Te(nonemptymgi), grid::get_nne(modelgridindex), atomic_number,
-      selected_ionstage, selected_level);
+      timestep, modelgridindex, grid::get_Te(nonemptymgi), grid::get_nne(nonemptymgi), atomic_number, selected_ionstage,
+      selected_level);
 
   const double rad_bb_in_total = get_total_rate_in(selected_index, rate_matrix_rad_bb, popvec);
   const double coll_bb_in_total = get_total_rate_in(selected_index, rate_matrix_coll_bb, popvec);
@@ -440,7 +440,7 @@ void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, 
                                    gsl_matrix *rate_matrix_coll_bb, gsl_matrix *rate_matrix_ntcoll_bb) {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto T_e = grid::get_Te(nonemptymgi);
-  const float nne = grid::get_nne(modelgridindex);
+  const float nne = grid::get_nne(nonemptymgi);
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
     const int level_index = get_nlte_vector_index(element, ion, level);
@@ -522,7 +522,7 @@ void nltepop_matrix_add_ionisation(const int modelgridindex, const int element, 
   assert_always((ion + 1) < get_nions(element));  // can't ionise the top ion
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto T_e = grid::get_Te(nonemptymgi);
-  const float nne = grid::get_nne(modelgridindex);
+  const float nne = grid::get_nne(nonemptymgi);
   const int nionisinglevels = get_nlevels_ionising(element, ion);
   const int maxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
 
@@ -644,8 +644,7 @@ void nltepop_matrix_normalise(const int modelgridindex, const int element, gsl_m
 void set_element_pops_lte(const int nonemptymgi, const int element) {
   nltepop_reset_element(nonemptymgi, element);  // set NLTE pops as invalid so that LTE pops will be used instead
   calculate_cellpartfuncts(nonemptymgi, element);
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  set_groundlevelpops(nonemptymgi, element, grid::get_nne(modelgridindex), true);
+  set_groundlevelpops(nonemptymgi, element, grid::get_nne(nonemptymgi), true);
 }
 
 [[nodiscard]] auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {
@@ -948,7 +947,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_vector_set(&balance_vector, 0, nnelement);
 
   if (FORCE_SAHA_ION_BALANCE(atomic_number)) {
-    const auto ionfractions = calculate_ionfractions(element, nonemptymgi, grid::get_nne(modelgridindex), true);
+    const auto ionfractions = calculate_ionfractions(element, nonemptymgi, grid::get_nne(nonemptymgi), true);
     const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
     for (int ion = 1; ion <= uppermost_ion; ion++) {
       // replace matrix row for ion's ground state with sum of this ion's level populations is equal to the ion

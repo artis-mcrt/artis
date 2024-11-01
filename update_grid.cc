@@ -50,7 +50,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
   printout("writing to estimators file timestep %d cell %d...\n", timestep, mgi);
 
   const auto T_e = grid::get_Te(nonemptymgi);
-  const auto nne = grid::get_nne(mgi);
+  const auto nne = grid::get_nne(nonemptymgi);
   const auto Y_e = grid::get_electronfrac(nonemptymgi);
   // fprintf(estimators_file,"%d %g %g %g %g %d
   // ",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grid::modelgrid[n].thick); fprintf(estimators_file,"%d %g %g %g
@@ -742,9 +742,9 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     }
     const int duration_solve_nltepops = std::time(nullptr) - sys_time_start_nltepops;
 
-    const double nne_prev = grid::get_nne(mgi);
+    const double nne_prev = grid::get_nne(nonemptymgi);
     calculate_ion_balance_nne(mgi);  // sets nne
-    fracdiff_nne = fabs((grid::get_nne(mgi) / nne_prev) - 1);
+    fracdiff_nne = fabs((grid::get_nne(nonemptymgi) / nne_prev) - 1);
     printout(
         "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e "
         "%ds, NLTE populations %ds\n",
@@ -752,7 +752,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     printout(
         "NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: prev_iter nne "
         "%g, new nne is %g, fracdiff %g, prev T_e %g new T_e %g fracdiff %g\n",
-        mgi, nts, nlte_iter, nne_prev, grid::get_nne(mgi), fracdiff_nne, prev_T_e, grid::get_Te(nonemptymgi),
+        mgi, nts, nlte_iter, nne_prev, grid::get_nne(nonemptymgi), fracdiff_nne, prev_T_e, grid::get_Te(nonemptymgi),
         fracdiff_T_e);
 
     if (fracdiff_nne <= convergence_tolerance && fracdiff_T_e <= convergence_tolerance) {
@@ -1008,7 +1008,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
              std::time(nullptr) - sys_time_start_temperature_corrections);
   }
 
-  const float nne = grid::get_nne(mgi);
+  const float nne = grid::get_nne(nonemptymgi);
   const double compton_optical_depth = SIGMA_T * nne * grid::wid_init(mgi, 0) * tratmid;
 
   const int assoc_cells = grid::get_numpropcells(mgi);

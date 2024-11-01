@@ -191,12 +191,12 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   const int modelgridindex = params->modelgridindex;
   const double t_current = params->t_current;
   auto *const heatingcoolingrates = params->heatingcoolingrates;
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   // Set new T_e guess for the current cell and update populations
   grid::set_Te(modelgridindex, T_e);
 
   if constexpr (!USE_LUT_PHOTOION && !LTEPOP_EXCITATION_USE_TJ) {
-    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
     for (int element = 0; element < get_nelements(); element++) {
       if (!elem_has_nlte_levels(element)) {
         // recalculate the Gammas using the current population estimates
@@ -210,10 +210,9 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   }
 
   calculate_ion_balance_nne(modelgridindex);
-  const auto nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(nonemptymgi);
 
   // Then calculate heating and cooling rates
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   kpkt::calculate_cooling_rates(nonemptymgi, heatingcoolingrates);
   calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
 
