@@ -791,7 +791,6 @@ void read_1d_model() {
 
       const double rho_tmin = pow(10., log_rho) * pow(t_model / globals::tmin, 3);
       set_rho_tmin(mgi, rho_tmin);
-      set_rho(mgi, rho_tmin);
     } else {
       printout("Unexpected number of values in model.txt\n");
       printout("line: %s\n", line.c_str());
@@ -872,7 +871,6 @@ void read_2d_model() {
     const bool keepcell = (rho_tmodel > 0);
     const double rho_tmin = rho_tmodel * pow(t_model / globals::tmin, 3);
     set_rho_tmin(mgi, rho_tmin);
-    set_rho(mgi, rho_tmin);
 
     read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
 
@@ -973,7 +971,6 @@ void read_3d_model() {
     const bool keepcell = (rho_model > 0);
     const double rho_tmin = rho_model * pow(t_model / globals::tmin, 3);
     set_rho_tmin(mgi, rho_tmin);
-    set_rho(mgi, rho_tmin);
 
     if (min_den < 0. || min_den > rho_model) {
       min_den = rho_model;
