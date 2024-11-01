@@ -92,7 +92,7 @@ jobs:
                   clang-tidy --version
                   #   clang-tidy *.cc
                   #   run-clang-tidy
-                  ./run-clang-tidy.py
+                  python3 run-clang-tidy.py
 
     compile:
         env:
