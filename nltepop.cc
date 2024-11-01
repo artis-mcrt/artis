@@ -385,8 +385,7 @@ void print_level_rates(const int modelgridindex, const int timestep, const int e
   printout("\n");
 }
 
-void nltepop_reset_element(const int modelgridindex, const int element) {
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+void nltepop_reset_element(const int nonemptymgi, const int element) {
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++) {
     std::fill_n(&grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels)],
@@ -642,10 +641,10 @@ void nltepop_matrix_normalise(const int modelgridindex, const int element, gsl_m
   }
 }
 
-void set_element_pops_lte(const int modelgridindex, const int element) {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-  nltepop_reset_element(modelgridindex, element);  // set NLTE pops as invalid so that LTE pops will be used instead
+void set_element_pops_lte(const int nonemptymgi, const int element) {
+  nltepop_reset_element(nonemptymgi, element);  // set NLTE pops as invalid so that LTE pops will be used instead
   calculate_cellpartfuncts(nonemptymgi, element);
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   set_groundlevelpops(nonemptymgi, element, grid::get_nne(modelgridindex), true);
 }
 
@@ -811,7 +810,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     printout("Not solving for NLTE populations in cell %d at timestep %d for element Z=%d due to zero abundance\n",
              modelgridindex, timestep, atomic_number);
 
-    nltepop_reset_element(modelgridindex, element);
+    nltepop_reset_element(nonemptymgi, element);
     return;
   }
 
@@ -821,7 +820,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     printout(
         "Not solving for NLTE populations in cell %d at timestep %d for element Z=%d due to low temperature Te=%g\n",
         modelgridindex, timestep, atomic_number, cell_Te);
-    set_element_pops_lte(modelgridindex, element);
+    set_element_pops_lte(nonemptymgi, element);
     return;
   }
 
@@ -1009,7 +1008,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
         "WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular matrix. "
         "Attempting to use LTE solution instead\n",
         modelgridindex, timestep, atomic_number);
-    set_element_pops_lte(modelgridindex, element);
+    set_element_pops_lte(nonemptymgi, element);
   } else {
     // check calculated NLTE populations are valid
     for (int index = 0; index < nlte_dimension; index++) {
@@ -1061,7 +1060,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
           "  WARNING: The Z=%d element population is: %g (from abundance) and %g (from matrix solution sum of level "
           "pops), error: %.1f%%. Forcing element pops to LTE.\n",
           atomic_number, nnelement, elem_pop_matrix, elem_pop_error_percent);
-      set_element_pops_lte(modelgridindex, element);
+      set_element_pops_lte(nonemptymgi, element);
     }
 
     if (individual_process_matrices && (timestep % 5 == 0) &&
