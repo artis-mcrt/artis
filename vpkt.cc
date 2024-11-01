@@ -358,11 +358,13 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     end_packet = (vpkt.type == TYPE_ESCAPE);
 
     mgi = grid::get_cell_modelgridindex(vpkt.where);
-    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+    if (mgi < grid::get_npts_model()) {
+      const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
-    // kill vpkt with pass through a thick cell
-    if (grid::modelgrid[nonemptymgi].thick != 0) {
-      return false;
+      // kill vpkt with pass through a thick cell
+      if (grid::modelgrid[nonemptymgi].thick != 0) {
+        return false;
+      }
     }
   }
 
