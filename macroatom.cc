@@ -672,7 +672,7 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
       // printout("[warning] rad_deexcitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
       // printout("[warning] rad_deexcitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
       // printout("[warning] rad_deexcitation: T_e %g, T_R %g, W %g in model cell
-      // %d\n",grid::get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex),modelgridindex);
+      // %d\n",grid::get_Te(modelgridindex),get_TR(nonemptymgi),get_W(modelgridindex),modelgridindex);
       R = 0.;
       // printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
       // abort();

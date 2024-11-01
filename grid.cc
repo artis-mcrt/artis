@@ -1800,10 +1800,9 @@ __host__ __device__ auto get_Te(const int modelgridindex) -> float {
   return modelgrid[nonemptymgi].Te;
 }
 
-__host__ __device__ auto get_TR(const int modelgridindex) -> float {
-  assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex < get_npts_model());
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+__host__ __device__ auto get_TR(const int nonemptymgi) -> float {
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return modelgrid[nonemptymgi].TR;
 }
 

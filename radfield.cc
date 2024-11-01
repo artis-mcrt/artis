@@ -724,7 +724,7 @@ void write_to_file(const int modelgridindex, const int timestep) {
       } else if (binindex == -1) {  // bin -1 is the full spectrum fit
         nuJ_out = nuJ[nonemptymgi];
         J_out = J[nonemptymgi];
-        T_R = grid::get_TR(modelgridindex);
+        T_R = grid::get_TR(nonemptymgi);
         W = grid::get_W(modelgridindex);
         contribcount = totalcontribs;
       } else  // use binindex < -1 for detailed line Jb_lu estimators
@@ -861,12 +861,12 @@ __host__ __device__ void update_lineestimator(const int modelgridindex, const in
 
 // mean intensity J_nu [ergs/s/sr/cm2/Hz]
 __host__ __device__ auto radfield(const double nu, const int modelgridindex) -> double {
+  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP) {
       const int binindex = select_bin(nu);
       if (binindex >= 0) {
-        const auto &bin =
-            radfieldbin_solutions[(grid::get_nonemptymgi_of_mgi(modelgridindex) * RADFIELDBINCOUNT) + binindex];
+        const auto &bin = radfieldbin_solutions[(nonemptymgi * RADFIELDBINCOUNT) + binindex];
         if (bin.W >= 0.) {
           const double J_nu = dbb(nu, bin.T_R, bin.W);
           return J_nu;
@@ -876,7 +876,7 @@ __host__ __device__ auto radfield(const double nu, const int modelgridindex) -> 
     }
   }
 
-  const float T_R_fullspec = grid::get_TR(modelgridindex);
+  const float T_R_fullspec = grid::get_TR(nonemptymgi);
   const float W_fullspec = grid::get_W(modelgridindex);
   const double J_nu_fullspec = dbb(nu, T_R_fullspec, W_fullspec);
   return J_nu_fullspec;
@@ -1070,7 +1070,7 @@ auto get_T_J_from_J(const int modelgridindex) -> double {
     // keep old value of T_J
     printout("[warning] get_T_J_from_J: T_J estimator infinite in cell %d, use value of last timestep\n",
              modelgridindex);
-    return grid::get_TR(modelgridindex);
+    return grid::get_TR(nonemptymgi);
   }
   // Make sure that T is in the allowed temperature range.
   if (T_J > MAXTEMP) {

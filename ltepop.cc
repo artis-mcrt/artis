@@ -368,12 +368,13 @@ void set_groundlevelpops_neutral(const int modelgridindex) {
 auto find_converged_nne(const int modelgridindex, double nne_hi, const bool force_lte) -> float {
   // Search solution for nne in [nne_lo,nne_hi]
 
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   nneSolutionParas paras = {.modelgridindex = modelgridindex, .force_lte = force_lte};
   gsl_function f = {.function = &nne_solution_f, .params = &paras};
 
   double nne_lo = 0.;  // MINPOP;
   if (nne_solution_f(nne_lo, f.params) * nne_solution_f(nne_hi, f.params) > 0) {
-    const auto T_R = grid::get_TR(modelgridindex);
+    const auto T_R = grid::get_TR(nonemptymgi);
     const auto T_e = grid::get_Te(modelgridindex);
     const auto W = grid::get_W(modelgridindex);
     printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi, T_R,
@@ -457,7 +458,7 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
     if (normfactor == 0. || !std::isfinite(ionfractions[ion])) {
       printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
                get_ionstage(element, ion), get_atomicnumber(element), modelgridindex, grid::get_Te(modelgridindex),
-               grid::get_TR(modelgridindex));
+               grid::get_TR(nonemptymgi));
       ionfractions[ion] = 0;
     }
   }

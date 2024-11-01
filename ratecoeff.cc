@@ -1141,11 +1141,12 @@ auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, cons
 // Returns the for stimulated emission corrected photoionisation rate coefficient.
 {
   assert_always(USE_LUT_PHOTOION);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   // The correction factor for stimulated emission in gammacorr is set to its
   // LTE value. Because the T_e dependence of gammacorr is weak, this correction
   // correction may be evaluated at T_R!
   const double W = grid::get_W(modelgridindex);
-  const double T_R = grid::get_TR(modelgridindex);
+  const double T_R = grid::get_TR(nonemptymgi);
 
   return W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
 }
@@ -1223,9 +1224,9 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
       if constexpr (!USE_LUT_PHOTOION) {
         gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
       } else {
-        const double W = grid::get_W(modelgridindex);
-        const double T_R = grid::get_TR(modelgridindex);
         const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+        const double W = grid::get_W(modelgridindex);
+        const double T_R = grid::get_TR(nonemptymgi);
 
         gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
         const int index_in_groundlevelcontestimator =

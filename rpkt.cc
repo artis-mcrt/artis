@@ -1156,7 +1156,7 @@ void calculate_expansion_opacities(const int modelgridindex) {
   const auto rho = grid::get_rho(modelgridindex);
 
   const auto sys_time_start_calc = std::time(nullptr);
-  const auto temperature = grid::get_TR(modelgridindex);
+  const auto temperature = grid::get_TR(nonemptymgi);
 
   printout("calculating expansion opacities for cell %d...", modelgridindex);
 
