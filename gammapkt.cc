@@ -269,8 +269,7 @@ auto get_chi_compton_rf(const Packet &pkt) -> double {
 
   const auto mgi = grid::get_cell_modelgridindex(pkt.where);
   if (mgi >= grid::get_npts_model()) {
-    // empty cell
-    return 0.;
+    return 0.;  // empty cell
   }
 
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
@@ -464,8 +463,7 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
   const int mgi = grid::get_cell_modelgridindex(pkt.where);
 
   if (mgi >= grid::get_npts_model()) {
-    // empty cell
-    return 0.;
+    return 0.;  // empty cell
   }
 
   const double rho = grid::get_rho(mgi);
@@ -556,6 +554,10 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
 // calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
 auto get_chi_pair_prod_rf(const Packet &pkt) -> double {
   const int mgi = grid::get_cell_modelgridindex(pkt.where);
+  if (mgi >= grid::get_npts_model()) {
+    return 0.;  // empty cell
+  }
+
   const double rho = grid::get_rho(mgi);
 
   if (globals::gamma_kappagrey >= 0.) {

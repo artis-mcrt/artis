@@ -59,10 +59,10 @@ endif
 $(info detected compiler is $(COMPILER_NAME))
 
 
-ifneq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -std=c++23 -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -MD -MP -ftrivial-auto-var-init=pattern
-else
+ifeq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -std=c++20
+else
+	CXXFLAGS += -std=c++23 -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -MD -MP -ftrivial-auto-var-init=pattern
 endif
 
 CXXFLAGS += -fstrict-aliasing
