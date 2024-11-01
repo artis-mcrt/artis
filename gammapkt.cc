@@ -267,6 +267,12 @@ auto get_chi_compton_rf(const Packet &pkt) -> double {
   // calculate the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
   // Start by working out the compton x-section in the co-moving frame.
 
+  const auto mgi = grid::get_cell_modelgridindex(pkt.where);
+  if (mgi >= grid::get_npts_model()) {
+    // empty cell
+    return 0.;
+  }
+
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
 
   // Use this to decide whether the Thompson limit is acceptable.
@@ -274,7 +280,6 @@ auto get_chi_compton_rf(const Packet &pkt) -> double {
   const double sigma_cmf = (xx < THOMSON_LIMIT) ? SIGMA_T : sigma_compton_partial(xx, 1 + (2 * xx));
 
   // Now need to multiply by the electron number density.
-  const auto mgi = grid::get_cell_modelgridindex(pkt.where);
   const double chi_cmf = sigma_cmf * grid::get_nnetot(mgi);
 
   // convert between frames
