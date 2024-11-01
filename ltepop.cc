@@ -622,7 +622,7 @@ void set_groundlevelpops(const int modelgridindex, const int element, const floa
 // Determine the electron number density for a given cell using one of
 // libgsl's root_solvers and calculates the depending level populations.
 auto calculate_ion_balance_nne(const int modelgridindex) -> void {
-  const bool force_lte = globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1;
+  const bool force_lte = globals::lte_iteration || (grid::modelgrid[modelgridindex].thick == 1);
 
   const double nne_hi = grid::get_rho(modelgridindex) / MH;
 
