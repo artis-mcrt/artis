@@ -85,11 +85,12 @@ std::vector<int> ranks_nstart;
 std::vector<int> ranks_nstart_nonempty;
 std::vector<int> ranks_ndo;
 std::vector<int> ranks_ndo_nonempty;
+inline std::span<ModelGridCellInput> modelgrid_input{};
 
-void set_rho_tmin(const int modelgridindex, const float x) { modelgrid[modelgridindex].rhoinit = x; }
+void set_rho_tmin(const int modelgridindex, const float x) { modelgrid_input[modelgridindex].rhoinit = x; }
 
 void set_initelectronfrac(const int modelgridindex, const double electronfrac) {
-  modelgrid[modelgridindex].initelectronfrac = electronfrac;
+  modelgrid_input[modelgridindex].initelectronfrac = electronfrac;
 }
 
 void read_possible_yefile() {
@@ -117,10 +118,10 @@ void read_possible_yefile() {
 void set_npts_model(const int new_npts_model) {
   npts_model = new_npts_model;
 
-  assert_always(modelgrid.data() == nullptr);
-  modelgrid = MPI_shared_malloc_span<ModelGridCell>(npts_model + 1);
+  assert_always(modelgrid_input.data() == nullptr);
+  modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model);
   if (globals::rank_in_node == 0) {
-    std::ranges::fill(modelgrid, ModelGridCell{});
+    std::ranges::fill(modelgrid_input, ModelGridCellInput{});
   }
 #ifdef MPI_ON
   MPI_Barrier(globals::mpi_comm_node);
@@ -192,7 +193,7 @@ void set_ffegrp(const int modelgridindex, float x) {
 
   assert_always(x >= 0);
   assert_always(x <= 1.001);
-  modelgrid[modelgridindex].ffegrp = x;
+  modelgrid_input[modelgridindex].ffegrp = x;
 }
 
 void set_cell_modelgridindex(const int cellindex, const int new_modelgridindex) {
@@ -220,7 +221,7 @@ void set_modelinitnucmassfrac(const int modelgridindex, const int nucindex, floa
 }
 
 void set_initenergyq(const int modelgridindex, const double initenergyq) {
-  modelgrid[modelgridindex].initenergyq = initenergyq;
+  modelgrid_input[modelgridindex].initenergyq = initenergyq;
 }
 
 void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int element, const float elemabundance) {
@@ -302,10 +303,10 @@ void allocate_nonemptycells_composition_cooling()
 
 void allocate_nonemptymodelcells() {
   // Determine the number of simulation cells associated with the model cells
-  for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++) {
-    mg_associated_cells[mgi] = 0;
-    if (globals::rank_in_node == 0) {
-      modelgrid[mgi].initial_radial_pos_sum = 0.;
+  std::ranges::fill(mg_associated_cells, 0);
+  if (globals::rank_in_node == 0) {
+    for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++) {
+      modelgrid_input[mgi].initial_radial_pos_sum = 0.;
     }
   }
 
@@ -323,12 +324,16 @@ void allocate_nonemptymodelcells() {
 
     mg_associated_cells[mgi] += 1;
     if (globals::rank_in_node == 0) {
-      modelgrid[mgi].initial_radial_pos_sum += radial_pos_mid;
+      modelgrid_input[mgi].initial_radial_pos_sum += radial_pos_mid;
     }
 
     assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (mg_associated_cells[mgi] == 1) ||
                   (mgi == get_npts_model()));
   }
+
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
   // find number of non-empty cells and allocate nonempty list
   nonempty_npts_model = 0;
@@ -355,12 +360,14 @@ void allocate_nonemptymodelcells() {
     } else {
       nonemptymgi_of_mgi[mgi] = -1;
       set_rho_tmin(mgi, 0.);
-      set_rho(mgi, 0.);
       for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
         set_modelinitnucmassfrac(mgi, nucindex, 0.);
       }
     }
   }
+
+  assert_always(modelgrid.data() == nullptr);
+  modelgrid = MPI_shared_malloc_span<ModelGridCell>(npts_model + 1);
 
   allocate_nonemptycells_composition_cooling();
 
@@ -438,7 +445,7 @@ void map_1dmodelto3dgrid()
     const double cellvmid = get_cellradialposmid(cellindex) / globals::tmin;
     const int mgi = static_cast<int>(std::ranges::lower_bound(vout_model, cellvmid) - vout_model.begin());
 
-    if (mgi < get_npts_model() && modelgrid[mgi].rhoinit > 0) {
+    if (mgi < get_npts_model() && modelgrid_input[mgi].rhoinit > 0) {
       set_cell_modelgridindex(cellindex, mgi);
       assert_always(vout_model[mgi] >= cellvmid);
       assert_always((mgi > 0 ? vout_model[mgi - 1] : 0.0) <= cellvmid);
@@ -469,7 +476,7 @@ void map_2dmodelto3dgrid()
     if (n_rcyl >= 0 && n_rcyl < ncoord_model[0] && n_z >= 0 && n_z < ncoord_model[1]) {
       const int mgi = (n_z * ncoord_model[0]) + n_rcyl;
 
-      if (modelgrid[mgi].rhoinit > 0) {
+      if (modelgrid_input[mgi].rhoinit > 0) {
         set_cell_modelgridindex(cellindex, mgi);
       } else {
         set_cell_modelgridindex(cellindex, get_npts_model());
@@ -484,7 +491,7 @@ void map_2dmodelto3dgrid()
 // get_npts_model())
 void map_modeltogrid_direct() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    const int mgi = (modelgrid[cellindex].rhoinit > 0) ? cellindex : get_npts_model();
+    const int mgi = (modelgrid_input[cellindex].rhoinit > 0) ? cellindex : get_npts_model();
     set_cell_modelgridindex(cellindex, mgi);
   }
 }
@@ -1710,7 +1717,7 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
   assert_always(false);
 }
 
-auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid[modelgridindex].rhoinit; }
+auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[modelgridindex].rhoinit; }
 
 __host__ __device__ auto get_rho(const int modelgridindex) -> float { return modelgrid[modelgridindex].rho; }
 
@@ -1732,10 +1739,12 @@ __host__ __device__ auto get_nnetot(const int modelgridindex) -> float {
   return nnetot;
 }
 
-__host__ __device__ auto get_ffegrp(const int modelgridindex) -> float { return modelgrid[modelgridindex].ffegrp; }
+__host__ __device__ auto get_ffegrp(const int modelgridindex) -> float {
+  return modelgrid_input[modelgridindex].ffegrp;
+}
 
 __host__ __device__ auto get_initial_radial_pos_sum(const int modelgridindex) -> float {
-  return modelgrid[modelgridindex].initial_radial_pos_sum;
+  return modelgrid_input[modelgridindex].initial_radial_pos_sum;
 }
 
 auto get_elem_abundance(int nonemptymgi, int element) -> float
@@ -1932,10 +1941,12 @@ auto get_electronfrac(const int nonemptymgi) -> double {
   return get_nnetot(modelgridindex) / nucleondens;
 }
 
-auto get_initelectronfrac(const int modelgridindex) -> double { return modelgrid[modelgridindex].initelectronfrac; }
+auto get_initelectronfrac(const int modelgridindex) -> double {
+  return modelgrid_input[modelgridindex].initelectronfrac;
+}
 
 // q: energy in the model at tmin per gram to use with USE_MODEL_INITIAL_ENERGY option [erg/g]
-auto get_initenergyq(const int modelgridindex) -> double { return modelgrid[modelgridindex].initenergyq; }
+auto get_initenergyq(const int modelgridindex) -> double { return modelgrid_input[modelgridindex].initenergyq; }
 
 // get the radial distance from the origin to the centre of the cell at time tmin
 auto get_cellradialposmid(const int cellindex) -> double {

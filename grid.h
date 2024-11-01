@@ -21,20 +21,23 @@ struct ModelGridCell {
   float TJ = -1.;
   float W = -1.;
   float nne = -1.;
-  float initial_radial_pos_sum = 0.;
-  float rhoinit = -1.;
   float rho = -1.;
   // modelgrid nn_tot
-  float nnetot = -1.;           // total electron density (free + bound).
-  float initelectronfrac = -1;  // Ye: electrons (or protons) per nucleon
-  float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
-  float ffegrp = 0.;
+  float nnetot = -1.;  // total electron density (free + bound).
   float kappagrey = 0.;
   float grey_depth = 0.;  // Grey optical depth to surface of the modelgridcell
                           // This is only stored to print it outside the OpenMP loop in update_grid to the
                           // estimatorsfile so there is no need to communicate it via MPI so far!
   double totalcooling = -1;
   int thick = 0;
+};
+
+struct ModelGridCellInput {
+  float rhoinit = -1.;
+  float ffegrp = 0.;
+  float initial_radial_pos_sum = 0.;
+  float initelectronfrac = -1;  // Ye: electrons (or protons) per nucleon
+  float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
 };
 
 consteval auto get_ngriddimensions() -> int {
