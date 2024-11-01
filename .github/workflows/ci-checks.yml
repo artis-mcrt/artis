@@ -78,7 +78,7 @@ jobs:
                   brew update
                   brew install openmpi gsl || true
                   python3 -m pip install compiledb
-                  python3 -m pip clang-tidy
+                  python3 -m pip install clang-tidy
                   wget https://raw.githubusercontent.com/llvm/llvm-project/refs/heads/main/clang-tools-extra/clang-tidy/tool/run-clang-tidy.py
 
             - name: Generate compile_commands.json
