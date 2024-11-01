@@ -12,7 +12,7 @@ on:
 
 jobs:
     cppcheck:
-        runs-on: macos-14
+        runs-on: macos-15
         steps:
             - uses: actions/checkout@v4
 
@@ -29,7 +29,7 @@ jobs:
                   cppcheck --force --error-exitcode=1 --language=c++ --std=c++20 --enable=all --inconclusive --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --suppress=knownArgument --suppress=missingIncludeSystem --suppress=unusedFunction --check-level=exhaustive .
 
     clang-format:
-        runs-on: macos-14
+        runs-on: macos-15
         steps:
             - uses: actions/checkout@v4
 
@@ -45,7 +45,7 @@ jobs:
                   check-path: .
 
     clang-tidy:
-        runs-on: macos-14
+        runs-on: macos-15
         steps:
             - uses: actions/checkout@v4
 
@@ -95,6 +95,28 @@ jobs:
                   clang-tidy --version
                   run-clang-tidy
 
+    clang-tidy-ubuntu:
+        runs-on: ubuntu-22.04
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+
+            - name: Generate compile_commands.json
+              run: |
+                  python3 -m pip install compiledb
+                  cp artisoptions_nltenebular.h artisoptions.h
+                  make version.h
+                  python3 -m compiledb -n --full-path make TESTMODE=ON
+
+            - name: cat compile_commands.json
+              run: cat compile_commands.json
+
+            - name: run-clang-tidy
+              run: |
+                  clang-tidy --version
+                  run-clang-tidy
     compile:
         env:
             CXX: g++
@@ -224,7 +246,7 @@ jobs:
                   make MPI=${{matrix.mpi}} STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
     mac-llvm:
-        runs-on: macos-14
+        runs-on: macos-15
         env:
             CXX: clang++
         strategy:
