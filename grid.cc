@@ -1788,35 +1788,35 @@ __host__ __device__ auto get_elem_numberdens(const int modelgridindex, const int
 
 __host__ __device__ auto get_kappagrey(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model());
+  assert_testmodeonly(modelgridindex < get_npts_model());
   const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   return modelgrid[nonemptymgi].kappagrey;
 }
 
 __host__ __device__ auto get_Te(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model());
+  assert_testmodeonly(modelgridindex < get_npts_model());
   const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   return modelgrid[nonemptymgi].Te;
 }
 
 __host__ __device__ auto get_TR(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model());
+  assert_testmodeonly(modelgridindex < get_npts_model());
   const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   return modelgrid[nonemptymgi].TR;
 }
 
 __host__ __device__ auto get_TJ(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model());
+  assert_testmodeonly(modelgridindex < get_npts_model());
   const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   return modelgrid[nonemptymgi].TJ;
 }
 
 __host__ __device__ auto get_W(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model());
+  assert_testmodeonly(modelgridindex < get_npts_model());
   const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   return modelgrid[nonemptymgi].W;
 }
