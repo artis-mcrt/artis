@@ -151,7 +151,7 @@ inline auto get_ejecta_kinetic_energy() {
     const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     const int assoc_cells = grid::get_numpropcells(mgi);
     double M_cell = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
-    const double radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum / assoc_cells;
+    const double radial_pos = get_initial_radial_pos_sum(mgi) / assoc_cells;
     E_kin += 0.5 * M_cell * std::pow(radial_pos / globals::tmin, 2);
   }
 
