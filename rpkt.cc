@@ -729,7 +729,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     edist = tau_next / chi_grey;
     pkt.next_trans = -1;
   } else {
-    calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, mgi, nonemptymgi);
+    calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, nonemptymgi);
 
     // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
     // the frequency change from start to abort (cell boundary/timestep end)
@@ -1073,7 +1073,8 @@ __host__ __device__ void emit_rpkt(Packet &pkt) {
 }
 
 void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                             const int modelgridindex, const int nonemptymgi) {
+                             const int nonemptymgi) {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   assert_testmodeonly(grid::modelgrid[nonemptymgi].thick != 1);
   if ((modelgridindex == chi_rpkt_cont.modelgridindex) && (globals::timestep == chi_rpkt_cont.timestep) &&
       (fabs((chi_rpkt_cont.nu / nu_cmf) - 1.0) < 1e-4)) {
