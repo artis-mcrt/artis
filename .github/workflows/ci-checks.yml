@@ -53,6 +53,9 @@ jobs:
               with:
                   xcode-version: 'latest-stable'
 
+            - name: Set up Python
+              uses: actions/setup-python@v5
+
             - name: install dependencies
               run: |
                   brew update
