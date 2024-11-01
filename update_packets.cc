@@ -388,7 +388,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
         const int mgi = grid::get_cell_modelgridindex(pkt.where);
         const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
         const bool cellcache_change_cell_required =
-            (nonemptymgi >= 0 && globals::cellcache[cellcacheslotid].cellnumber != mgi &&
+            (nonemptymgi >= 0 && globals::cellcache[cellcacheslotid].modelgridindex != mgi &&
              grid::modelgrid[nonemptymgi].thick != 1);
 
         if (cellcache_change_cell_required) {

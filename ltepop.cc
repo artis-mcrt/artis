@@ -521,7 +521,7 @@ __host__ __device__ auto get_levelpop(const int modelgridindex, const int elemen
     -> double {
   double nn = 0.;
   if (use_cellcache) {
-    assert_testmodeonly(modelgridindex == globals::cellcache[cellcacheslotid].cellnumber);
+    assert_testmodeonly(globals::cellcache[cellcacheslotid].modelgridindex == modelgridindex);
     nn = globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].population;
   } else {
     nn = calculate_levelpop(modelgridindex, element, ion, level);

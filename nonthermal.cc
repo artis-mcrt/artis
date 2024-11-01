@@ -1107,7 +1107,6 @@ auto calculate_frac_heating(const int modelgridindex, const std::array<double, S
   double frac_heating_Einit = 0.;
 
   const float nne = grid::get_nne(modelgridindex);
-  // const float nnetot = grid::get_nnetot(modelgridindex);
 
   for (int i = 0; i < SFPTS; i++) {
     const double endash = engrid(i);
@@ -1562,9 +1561,10 @@ auto get_uptransindex(const int element, const int ion, const int lower, const i
 
 void analyse_sf_solution(const int modelgridindex, const int timestep, const bool enable_sfexcitation,
                          const std::array<double, SFPTS> &yfunc) {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
   const double nntot = get_nnion_tot(modelgridindex);
-  const double nnetot = grid::get_nnetot(modelgridindex);
+  const double nnetot = grid::get_nnetot(nonemptymgi);
 
   double frac_excitation_total = 0.;
   double frac_ionization_total = 0.;
@@ -1752,7 +1752,6 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
              nt_solution[modelgridindex].frac_excitations_list_size *
                  sizeof(nt_solution[modelgridindex].frac_excitations_list[0]) / 1024. / 1024.);
 
-    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
     const auto T_e = grid::get_Te(nonemptymgi);
     printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
              nt_solution[modelgridindex].frac_excitations_list_size);

@@ -364,7 +364,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           std::lock_guard<std::mutex>(globals::mutex_cellcachemacroatom[get_uniquelevelindex(element, ion, level)]);
 #endif
 
-      assert_testmodeonly(globals::cellcache[cellcacheslotid].cellnumber == modelgridindex);
+      assert_testmodeonly(globals::cellcache[cellcacheslotid].modelgridindex == modelgridindex);
 
       // If there are no precalculated rates available then calculate them
       if (chlevel.processrates[MA_ACTION_INTERNALUPHIGHER] < 0) {

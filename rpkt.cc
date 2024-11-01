@@ -220,7 +220,7 @@ auto get_event_expansion_opacity(
   // with thermalisation, we don't keep track of line interactions
   auto next_trans = RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0. ? -1 : pkt.next_trans;
 
-  assert_always(globals::cellcache[cellcacheslotid].cellnumber == modelgridindex);
+  assert_always(globals::cellcache[cellcacheslotid].modelgridindex == modelgridindex);
   double dist = 0.;
   double tau = 0.;
   auto binindex_start = static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
@@ -835,7 +835,7 @@ auto calculate_chi_ffheat_nnionpart(const int modelgridindex) -> double {
 }
 
 auto get_chi_ff_nnionpart(const int modelgridindex) -> double {
-  if (!use_cellcache || globals::cellcache[cellcacheslotid].cellnumber != modelgridindex) {
+  if (!use_cellcache || globals::cellcache[cellcacheslotid].modelgridindex != modelgridindex) {
     return calculate_chi_ffheat_nnionpart(modelgridindex);
   }
 
@@ -876,7 +876,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
 
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(modelgridindex);
-  const auto nnetot = grid::get_nnetot(modelgridindex);
+  const auto nnetot = grid::get_nnetot(nonemptymgi);
   const auto &allcont_nu_edge = globals::allcont_nu_edge;
 
   // The phixslist is sorted by nu_edge in ascending order (longest to shortest wavelength)

@@ -1286,7 +1286,7 @@ void setup_cellcache() {
 
     printout("[info] input: initializing cellcache for thread %d ...\n", cellcachenum);
 
-    globals::cellcache[cellcachenum].cellnumber = -99;
+    globals::cellcache[cellcachenum].modelgridindex = -99;
 
     const auto ncoolingterms = kpkt::ncoolingterms;
     mem_usage_cellcache += ncoolingterms * sizeof(double);

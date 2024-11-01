@@ -271,6 +271,7 @@ auto get_chi_compton_rf(const Packet &pkt) -> double {
   if (mgi >= grid::get_npts_model()) {
     return 0.;  // empty cell
   }
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
 
@@ -279,7 +280,7 @@ auto get_chi_compton_rf(const Packet &pkt) -> double {
   const double sigma_cmf = (xx < THOMSON_LIMIT) ? SIGMA_T : sigma_compton_partial(xx, 1 + (2 * xx));
 
   // Now need to multiply by the electron number density.
-  const double chi_cmf = sigma_cmf * grid::get_nnetot(mgi);
+  const double chi_cmf = sigma_cmf * grid::get_nnetot(nonemptymgi);
 
   // convert between frames
   const double chi_rf = chi_cmf * calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
@@ -635,8 +636,8 @@ constexpr auto meanf_sigma(const double x) -> double {
 }
 
 // update the energy deposition estimator for gamma ray path increment
-void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const int nonemptymgi) {
-  if (!(dist > 0) || nonemptymgi < 0) {
+void update_gamma_dep(const Packet &pkt, const double dist, const int nonemptymgi) {
+  if (!(dist > 0)) {
     return;
   }
   if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
@@ -646,7 +647,7 @@ void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const
   const double doppler_sq = doppler_squared_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
-  double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + get_chi_photo_electric_rf(pkt) +
+  double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + get_chi_photo_electric_rf(pkt) +
                          (get_chi_pair_prod_rf(pkt) * (1. - (2.46636e+20 / pkt.nu_cmf))));
   heating_cont = heating_cont * pkt.e_rf * dist * doppler_sq;
 
@@ -789,7 +790,7 @@ void transport_gamma(Packet &pkt, const double t2) {
     const int mgi = grid::get_cell_modelgridindex(pkt.where);
     const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
     if (chi_tot > 0 && nonemptymgi >= 0) {
-      update_gamma_dep(pkt, sdist, mgi, nonemptymgi);
+      update_gamma_dep(pkt, sdist, nonemptymgi);
     }
 
     move_pkt_withtime(pkt, sdist / 2.);
@@ -804,7 +805,7 @@ void transport_gamma(Packet &pkt, const double t2) {
     const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
 
     if (chi_tot > 0 && nonemptymgi >= 0) {
-      update_gamma_dep(pkt, tdist, mgi, nonemptymgi);
+      update_gamma_dep(pkt, tdist, nonemptymgi);
     }
     move_pkt_withtime(pkt, tdist / 2.);
     pkt.prop_time = t2;  // prevent roundoff error
@@ -813,7 +814,7 @@ void transport_gamma(Packet &pkt, const double t2) {
     const int mgi = grid::get_cell_modelgridindex(pkt.where);
     const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
     if (chi_tot > 0 && nonemptymgi >= 0) {
-      update_gamma_dep(pkt, edist, mgi, nonemptymgi);
+      update_gamma_dep(pkt, edist, nonemptymgi);
     }
     move_pkt_withtime(pkt, edist / 2.);
 

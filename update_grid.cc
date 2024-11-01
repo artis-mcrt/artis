@@ -1177,11 +1177,12 @@ void cellcache_change_cell(const int modelgridindex) {
   // Calculate the level populations for this cell, and flag the other entries
   // as empty.
   auto &cacheslot = globals::cellcache[cellcacheslotid];
-  if (modelgridindex == cacheslot.cellnumber) {
+  if (modelgridindex == cacheslot.modelgridindex) {
     return;
   }
+  const auto nonemptymgi = (modelgridindex >= 0) ? grid::get_nonemptymgi_of_mgi(modelgridindex) : -1;
 
-  cacheslot.cellnumber = modelgridindex;
+  cacheslot.modelgridindex = modelgridindex;
   cacheslot.chi_ff_nnionpart = -1.;
 
   const int nelements = get_nelements();
@@ -1226,7 +1227,7 @@ void cellcache_change_cell(const int modelgridindex) {
   if (modelgridindex >= 0) {
     std::ranges::fill(cacheslot.ch_allcont_departureratios, -1.);
 
-    const auto nnetot = grid::get_nnetot(modelgridindex);
+    const auto nnetot = grid::get_nnetot(nonemptymgi);
     for (int i = 0; i < globals::nbfcontinua; i++) {
       const int element = globals::allcont[i].element;
       const int ion = globals::allcont[i].ion;

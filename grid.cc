@@ -1749,13 +1749,10 @@ __host__ __device__ auto get_nne(const int modelgridindex) -> float {
   return nne;
 }
 
-__host__ __device__ auto get_nnetot(const int modelgridindex) -> float {
-  assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex < get_npts_model());
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
-
+__host__ __device__ auto get_nnetot(const int nonemptymgi) -> float {
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   const double nnetot = modelgrid[nonemptymgi].nnetot;
-  assert_always(std::isfinite(nnetot));
   return nnetot;
 }
 
@@ -1975,7 +1972,7 @@ auto get_electronfrac(const int nonemptymgi) -> double {
   for (int element = 0; element < get_nelements(); element++) {
     nucleondens += get_elem_numberdens(modelgridindex, element) * get_element_meanweight(nonemptymgi, element) / MH;
   }
-  return get_nnetot(modelgridindex) / nucleondens;
+  return get_nnetot(nonemptymgi) / nucleondens;
 }
 
 auto get_initelectronfrac(const int modelgridindex) -> double {
