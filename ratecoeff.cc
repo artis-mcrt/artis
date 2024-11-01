@@ -974,7 +974,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
 
   double alpha = 0.;
   if (lowerion < get_nions(element) - 1) {
-    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+    const auto nonemptymgi = (modelgridindex >= 0) ? grid::get_nonemptymgi_of_mgi(modelgridindex) : -1;
 
     // this gets divided and cancelled out in the radiative case anyway
     const double nne = (modelgridindex >= 0) ? grid::get_nne(nonemptymgi) : 1.;
