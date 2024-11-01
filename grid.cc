@@ -1738,9 +1738,9 @@ __host__ __device__ auto get_rho(const int modelgridindex) -> float { return mod
 
 __host__ __device__ auto get_nne(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
 
   const double nne = modelgrid[modelgridindex].nne;
+  assert_testmodeonly(modelgridindex < get_npts_model());
   assert_testmodeonly(std::isfinite(nne));
   return nne;
 }
