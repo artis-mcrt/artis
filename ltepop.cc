@@ -68,7 +68,7 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
   assert_testmodeonly(ion < get_nions(element));
 
   assert_testmodeonly(!globals::lte_iteration);
-  assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);  // should use use phi_lte instead
+  assert_testmodeonly(grid::modelgrid[nonemptymgi].thick != 1);  // should use use phi_lte instead
 
   assert_testmodeonly(!elem_has_nlte_levels(element));  // don't use this function if the NLTE solver is active
 
@@ -623,13 +623,13 @@ void set_groundlevelpops(const int modelgridindex, const int element, const floa
 // Determine the electron number density for a given cell using one of
 // libgsl's root_solvers and calculates the depending level populations.
 auto calculate_ion_balance_nne(const int modelgridindex) -> void {
-  const bool force_lte = globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1;
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const bool force_lte = globals::lte_iteration || grid::modelgrid[nonemptymgi].thick == 1;
 
   const double nne_hi = grid::get_rho(modelgridindex) / MH;
 
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
-    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
     if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
       const int uppermost_ion = find_uppermost_ion(modelgridindex, element, nne_hi, force_lte);
       grid::set_elements_uppermost_ion(modelgridindex, element, uppermost_ion);

@@ -276,7 +276,7 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates *heating
     C_total +=
         grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + allionindex];
   }
-  grid::modelgrid[modelgridindex].totalcooling = C_total;
+  grid::modelgrid[nonemptymgi].totalcooling = C_total;
 
   // only used in the T_e solver and write_to_estimators file
   if (heatingcoolingrates != nullptr) {
@@ -374,9 +374,9 @@ __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
-  if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0. && grid::modelgrid[modelgridindex].thick != 1) {
-    const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0. && grid::modelgrid[nonemptymgi].thick != 1) {
     pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
   } else {
     pkt.nu_cmf = sample_planck_montecarlo(grid::get_Te(modelgridindex));
@@ -425,8 +425,8 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   pkt.pos = vec_scale(pkt.pos, t_current / t1);
   pkt.prop_time = t_current;
 
-  assert_always(grid::modelgrid[modelgridindex].totalcooling > 0.);
-  const double rndcool_ion = rng_uniform() * grid::modelgrid[modelgridindex].totalcooling;
+  assert_always(grid::modelgrid[nonemptymgi].totalcooling > 0.);
+  const double rndcool_ion = rng_uniform() * grid::modelgrid[nonemptymgi].totalcooling;
 
   // Randomly select the occurring cooling process
   double coolingsum = 0.;
@@ -452,7 +452,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   if (element >= get_nelements() || element < 0 || ion >= get_nions(element) || ion < 0) {
     printout("do_kpkt: problem selecting a cooling process ... abort\n");
     printout("do_kpkt: modelgridindex %d element %d ion %d\n", modelgridindex, element, ion);
-    printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool_ion %g\n", grid::modelgrid[modelgridindex].totalcooling,
+    printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool_ion %g\n", grid::modelgrid[nonemptymgi].totalcooling,
              coolingsum, rndcool_ion);
     printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n", modelgridindex, pkt.where,
              grid::get_nne(modelgridindex));

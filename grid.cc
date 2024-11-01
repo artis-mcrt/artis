@@ -378,7 +378,7 @@ void allocate_nonemptymodelcells() {
 #endif
 
   assert_always(modelgrid.data() == nullptr);
-  modelgrid = MPI_shared_malloc_span<ModelGridCell>(npts_model + 1);
+  modelgrid = MPI_shared_malloc_span<ModelGridCell>(nonempty_npts_model);
   std::ranges::fill(modelgrid, ModelGridCell{});
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
@@ -1119,8 +1119,8 @@ void read_grid_restart_data(const int timestep) {
     assert_always(fscanf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", &mgi_in, &T_R, &T_e, &W, &T_J,
                          &thick, &globals::dep_estimator_gamma[nonemptymgi],
                          &globals::dep_estimator_positron[nonemptymgi], &globals::dep_estimator_electron[nonemptymgi],
-                         &globals::dep_estimator_alpha[nonemptymgi], &modelgrid[mgi].nne,
-                         &modelgrid[mgi].nnetot) == 12);
+                         &globals::dep_estimator_alpha[nonemptymgi], &modelgrid[nonemptymgi].nne,
+                         &modelgrid[nonemptymgi].nnetot) == 12);
 
     if (mgi_in != mgi) {
       printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
@@ -1141,7 +1141,7 @@ void read_grid_restart_data(const int timestep) {
     set_Te(mgi, T_e);
     set_W(mgi, W);
     set_TJ(mgi, T_J);
-    modelgrid[mgi].thick = thick;
+    modelgrid[nonemptymgi].thick = thick;
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
@@ -1207,7 +1207,7 @@ void assign_initial_temperatures() {
     set_TR(mgi, T_initial);
 
     set_W(mgi, 1.);
-    modelgrid[mgi].thick = 0;
+    modelgrid[nonemptymgi].thick = 0;
   }
   printout("  cells below MINTEMP %g: %d\n", MINTEMP, cells_below_mintemp);
   printout("  cells above MAXTEMP %g: %d\n", MAXTEMP, cells_above_maxtemp);
@@ -1734,13 +1734,16 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
 
 auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[modelgridindex].rhoinit; }
 
-__host__ __device__ auto get_rho(const int modelgridindex) -> float { return modelgrid[modelgridindex].rho; }
+__host__ __device__ auto get_rho(const int modelgridindex) -> float {
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+  return modelgrid[nonemptymgi].rho;
+}
 
 __host__ __device__ auto get_nne(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
-
-  const double nne = modelgrid[modelgridindex].nne;
   assert_testmodeonly(modelgridindex < get_npts_model());
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+  const double nne = modelgrid[nonemptymgi].nne;
   assert_testmodeonly(std::isfinite(nne));
   return nne;
 }
@@ -1748,8 +1751,9 @@ __host__ __device__ auto get_nne(const int modelgridindex) -> float {
 __host__ __device__ auto get_nnetot(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex < get_npts_model());
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
 
-  const double nnetot = modelgrid[modelgridindex].nnetot;
+  const double nnetot = modelgrid[nonemptymgi].nnetot;
   assert_always(std::isfinite(nnetot));
   return nnetot;
 }
@@ -1785,52 +1789,63 @@ __host__ __device__ auto get_elem_numberdens(const int modelgridindex, const int
 __host__ __device__ auto get_kappagrey(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
-  return modelgrid[modelgridindex].kappagrey;
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+  return modelgrid[nonemptymgi].kappagrey;
 }
 
 __host__ __device__ auto get_Te(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
-  return modelgrid[modelgridindex].Te;
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+  return modelgrid[nonemptymgi].Te;
 }
 
 __host__ __device__ auto get_TR(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
-  return modelgrid[modelgridindex].TR;
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+  return modelgrid[nonemptymgi].TR;
 }
 
 __host__ __device__ auto get_TJ(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
-  return modelgrid[modelgridindex].TJ;
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+  return modelgrid[nonemptymgi].TJ;
 }
 
 __host__ __device__ auto get_W(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
-  return modelgrid[modelgridindex].W;
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+  return modelgrid[nonemptymgi].W;
 }
 
 void set_rho(const int modelgridindex, const float rho) {
   assert_always(rho >= 0.);
   assert_always(std::isfinite(rho));
-  modelgrid[modelgridindex].rho = rho;
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+  modelgrid[nonemptymgi].rho = rho;
 }
 
 void set_nne(const int modelgridindex, const float nne) {
   assert_always(nne >= 0.);
   assert_always(std::isfinite(nne));
-  modelgrid[modelgridindex].nne = nne;
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+  modelgrid[nonemptymgi].nne = nne;
 }
 
 void set_nnetot(const int modelgridindex, const float nnetot) {
   assert_always(nnetot >= 0.);
   assert_always(std::isfinite(nnetot));
-  modelgrid[modelgridindex].nnetot = nnetot;
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+  modelgrid[nonemptymgi].nnetot = nnetot;
 }
 
-void set_kappagrey(const int modelgridindex, const float kappagrey) { modelgrid[modelgridindex].kappagrey = kappagrey; }
+void set_kappagrey(const int modelgridindex, const float kappagrey) {
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+  modelgrid[nonemptymgi].kappagrey = kappagrey;
+}
 
 void set_Te(const int modelgridindex, const float Te) {
   if (Te > 0.) {
@@ -1843,15 +1858,25 @@ void set_Te(const int modelgridindex, const float Te) {
           modelgridindex, Te, nu_peak, NU_MIN_R, NU_MAX_R);
     }
   }
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
 
-  modelgrid[modelgridindex].Te = Te;
+  modelgrid[nonemptymgi].Te = Te;
 }
 
-void set_TR(const int modelgridindex, const float TR) { modelgrid[modelgridindex].TR = TR; }
+void set_TR(const int modelgridindex, const float TR) {
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+  modelgrid[nonemptymgi].TR = TR;
+}
 
-void set_TJ(const int modelgridindex, const float TJ) { modelgrid[modelgridindex].TJ = TJ; }
+void set_TJ(const int modelgridindex, const float TJ) {
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+  modelgrid[nonemptymgi].TJ = TJ;
+}
 
-void set_W(const int modelgridindex, const float W) { modelgrid[modelgridindex].W = W; }
+void set_W(const int modelgridindex, const float W) {
+  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+  modelgrid[nonemptymgi].W = W;
+}
 
 auto get_model_type() -> GridType { return model_type; }
 
@@ -2189,9 +2214,9 @@ void write_grid_restart_data(const int timestep) {
 
     assert_always(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
     fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", mgi, get_TR(mgi), get_Te(mgi), get_W(mgi),
-            get_TJ(mgi), modelgrid[mgi].thick, globals::dep_estimator_gamma[nonemptymgi],
+            get_TJ(mgi), modelgrid[nonemptymgi].thick, globals::dep_estimator_gamma[nonemptymgi],
             globals::dep_estimator_positron[nonemptymgi], globals::dep_estimator_electron[nonemptymgi],
-            globals::dep_estimator_alpha[nonemptymgi], modelgrid[mgi].nne, modelgrid[mgi].nnetot);
+            globals::dep_estimator_alpha[nonemptymgi], modelgrid[nonemptymgi].nne, modelgrid[nonemptymgi].nnetot);
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {

@@ -2400,9 +2400,10 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
   atomicadd(nt_energy_deposited, pkt.e_cmf);
 
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   // macroatom should not be activated in thick cells
-  if (NT_ON && NT_SOLVE_SPENCERFANO && grid::modelgrid[modelgridindex].thick != 1) {
+  if (NT_ON && NT_SOLVE_SPENCERFANO && grid::modelgrid[nonemptymgi].thick != 1) {
     // here there is some probability to cause ionisation or excitation to a macroatom packet
     // instead of converting directly to k-packet (unless the heating channel is selected)
 

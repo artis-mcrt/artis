@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #if defined(STDPAR_ON) || defined(_OPENMP_ON)
@@ -317,7 +316,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
   const auto nne = grid::get_nne(modelgridindex);
 
-  assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);  // macroatom should not be used in thick cells
+  assert_testmodeonly(grid::modelgrid[nonemptymgi].thick != 1);  // macroatom should not be used in thick cells
 
   // calculate occupation number for active MA level ////////////////////////////////////
   // general QUESTION: is it better to calculate the n_1 (later the n_ionstage and

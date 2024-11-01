@@ -357,9 +357,10 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     end_packet = (vpkt.type == TYPE_ESCAPE);
 
     mgi = grid::get_cell_modelgridindex(vpkt.where);
+    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
     // kill vpkt with pass through a thick cell
-    if (grid::modelgrid[mgi].thick != 0) {
+    if (grid::modelgrid[nonemptymgi].thick != 0) {
       return false;
     }
   }
@@ -901,8 +902,9 @@ auto vpkt_call_estimators(const Packet &pkt, const enum packet_type type_before_
 
   // Cut on vpkts
   const int mgi = grid::get_cell_modelgridindex(pkt.where);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
-  if (grid::modelgrid[mgi].thick != 0) {
+  if (grid::modelgrid[nonemptymgi].thick != 0) {
     return;
   }
 

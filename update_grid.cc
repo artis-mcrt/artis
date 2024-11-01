@@ -59,7 +59,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
           "timestep %d modelgridindex %d titeration %d TR %g Te %g W %g TJ %g grey_depth %g thick %d nne %g Ye %g "
           "tdays %7.2f\n",
           timestep, mgi, titer, grid::get_TR(mgi), T_e, grid::get_W(mgi), grid::get_TJ(mgi),
-          grid::modelgrid[mgi].grey_depth, grid::modelgrid[mgi].thick, nne, Y_e,
+          grid::modelgrid[nonemptymgi].grey_depth, grid::modelgrid[nonemptymgi].thick, nne, Y_e,
           globals::timesteps[timestep].mid / DAY);
   // fprintf(estimators_file,"%d %g %g %g %g %g %g %g
   //",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
@@ -897,7 +897,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
   if (globals::opacity_case < 4) {
     // various forms of grey opacity
-    grid::modelgrid[mgi].thick = 1;
+    grid::modelgrid[nonemptymgi].thick = 1;
 
     if (globals::opacity_case == 3) {
       if (grid::get_rho(mgi) > globals::rho_crit) {
@@ -922,16 +922,16 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     // W == 1 indicates that this modelgrid cell was treated grey in the
     // last timestep. Therefore it has no valid Gamma estimators and must
     // be treated in LTE at restart.
-    if (grid::modelgrid[mgi].thick != 1 && grid::get_W(mgi) == 1) {
+    if (grid::modelgrid[nonemptymgi].thick != 1 && grid::get_W(mgi) == 1) {
       printout(
           "force modelgrid cell %d to grey/LTE thick = 1 for update grid since existing W == 1. (will not have "
           "gamma estimators)\n",
           mgi);
-      grid::modelgrid[mgi].thick = 1;
+      grid::modelgrid[nonemptymgi].thick = 1;
     }
 
     printout("lte_iteration %d\n", globals::lte_iteration ? 1 : 0);
-    printout("mgi %d modelgrid.thick: %d (during grid update)\n", mgi, grid::modelgrid[mgi].thick);
+    printout("mgi %d modelgrid.thick: %d (during grid update)\n", mgi, grid::modelgrid[nonemptymgi].thick);
 
     for (int element = 0; element < get_nelements(); element++) {
       calculate_cellpartfuncts(mgi, element);
@@ -963,7 +963,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     }
 
     // lte_iteration really means either ts 0 or nts < globals::num_lte_timesteps
-    if (globals::lte_iteration || grid::modelgrid[mgi].thick == 1) {
+    if (globals::lte_iteration || grid::modelgrid[nonemptymgi].thick == 1) {
       // LTE mode or grey mode (where temperature doesn't matter but is calculated anyway)
 
       const double T_J = radfield::get_T_J_from_J(mgi);
@@ -1022,30 +1022,30 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       mgi, compton_optical_depth, grey_optical_deptha);
   printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, dist_to_obs, grey_optical_depth);
 
-  grid::modelgrid[mgi].grey_depth = grey_optical_depth;
+  grid::modelgrid[nonemptymgi].grey_depth = grey_optical_depth;
 
   // grey_optical_depth = compton_optical_depth;
 
   if ((grey_optical_depth >= globals::cell_is_optically_thick) && (nts < globals::num_grey_timesteps)) {
     printout("timestep %d cell %d is treated in grey approximation (chi_grey %g [cm2/g], tau %g >= %g)\n", nts, mgi,
              grid::get_kappagrey(mgi), grey_optical_depth, globals::cell_is_optically_thick);
-    grid::modelgrid[mgi].thick = 1;
+    grid::modelgrid[nonemptymgi].thick = 1;
   } else if (VPKT_ON && (grey_optical_depth > cell_is_optically_thick_vpkt)) {
-    grid::modelgrid[mgi].thick = 2;
+    grid::modelgrid[nonemptymgi].thick = 2;
   } else {
-    grid::modelgrid[mgi].thick = 0;
+    grid::modelgrid[nonemptymgi].thick = 0;
   }
 
-  if (grid::modelgrid[mgi].thick == 1) {
+  if (grid::modelgrid[nonemptymgi].thick == 1) {
     // cooling rates calculation can be skipped for thick cells
     // flag with negative numbers to indicate that the rates are invalid
-    grid::modelgrid[mgi].totalcooling = -1.;
+    grid::modelgrid[nonemptymgi].totalcooling = -1.;
     grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + 0] = -1.;
   } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial) {
     // cooling rates were read from the gridsave file for this timestep
     // make sure they are valid
     printout("cooling rates read from gridsave file for timestep %d cell %d...", nts, mgi);
-    assert_always(grid::modelgrid[mgi].totalcooling >= 0.);
+    assert_always(grid::modelgrid[nonemptymgi].totalcooling >= 0.);
     assert_always(grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + 0] >= 0.);
   } else {
     // Cooling rates depend only on cell properties, precalculate total cooling
@@ -1062,7 +1062,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
   }
 
   if constexpr (EXPANSIONOPACITIES_ON || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
-    if (grid::modelgrid[mgi].thick != 1) {
+    if (grid::modelgrid[nonemptymgi].thick != 1) {
       calculate_expansion_opacities(mgi);
     }
   }

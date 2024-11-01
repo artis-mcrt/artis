@@ -35,7 +35,7 @@ FILE *nlte_file{};
 constexpr bool individual_process_matrices = true;
 
 // this is the index for the NLTE solver that is handling all ions of a single element
-// This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
+// This is NOT an index into grid::modelgrid[nonemptymgi].nlte_pops that contains all elements
 auto get_nlte_vector_index(const int element, const int ion, const int level) -> int {
   // have to convert from nlte_pops index to nlte_vector index
   // the difference is that nlte vectors apply to a single element and include ground states
@@ -1127,7 +1127,8 @@ void nltepop_close_file() {
 }
 
 void nltepop_write_to_file(const int modelgridindex, const int timestep) {
-  if (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1) {  // NLTE solver hasn't been run yet
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  if (globals::lte_iteration || grid::modelgrid[nonemptymgi].thick == 1) {  // NLTE solver hasn't been run yet
     return;
   }
 
@@ -1160,12 +1161,12 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
             nnlevelnlte = get_groundlevelpop(modelgridindex, element, ion);
           } else {
             nnlevelnlte =
-                get_nlte_levelpop_over_rho(modelgridindex, element, ion, level) * grid::modelgrid[modelgridindex].rho;
+                get_nlte_levelpop_over_rho(modelgridindex, element, ion, level) * grid::modelgrid[nonemptymgi].rho;
           }
         } else {
           // superlevel, so add the populations of all other levels in the superlevel
           const double slpopfactor =
-              get_nlte_superlevelpop_over_rho(modelgridindex, element, ion) * grid::modelgrid[modelgridindex].rho;
+              get_nlte_superlevelpop_over_rho(modelgridindex, element, ion) * grid::modelgrid[nonemptymgi].rho;
 
           nnlevellte = 0;
           double superlevel_partfunc = 0;
@@ -1197,7 +1198,7 @@ void nltepop_write_restart_data(FILE *restart_file) {
 
   for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    fprintf(restart_file, "%d %la\n", modelgridindex, grid::modelgrid[modelgridindex].totalcooling);
+    fprintf(restart_file, "%d %la\n", modelgridindex, grid::modelgrid[nonemptymgi].totalcooling);
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
@@ -1236,7 +1237,7 @@ void nltepop_read_restart_data(FILE *restart_file) {
   for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     int mgi_in = 0;
-    assert_always(fscanf(restart_file, "%d %la\n", &mgi_in, &grid::modelgrid[modelgridindex].totalcooling) == 2);
+    assert_always(fscanf(restart_file, "%d %la\n", &mgi_in, &grid::modelgrid[nonemptymgi].totalcooling) == 2);
     if (mgi_in != modelgridindex) {
       printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
       std::abort();

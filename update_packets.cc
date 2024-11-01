@@ -256,7 +256,8 @@ void do_packet(Packet &pkt, const double t2, const int nts)
     }
 
     case TYPE_KPKT: {
-      if (grid::modelgrid[grid::get_cell_modelgridindex(pkt.where)].thick == 1 ||
+      const int nonemptymgi = grid::get_nonemptymgi_of_mgi(grid::get_cell_modelgridindex(pkt.where));
+      if (grid::modelgrid[nonemptymgi].thick == 1 ||
           (EXPANSIONOPACITIES_ON && RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.)) {
         kpkt::do_kpkt_blackbody(pkt);
       } else {
@@ -386,7 +387,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
         const int mgi = grid::get_cell_modelgridindex(pkt.where);
         const bool cellcache_change_cell_required =
             (mgi != grid::get_npts_model() && globals::cellcache[cellcacheslotid].cellnumber != mgi &&
-             grid::modelgrid[mgi].thick != 1);
+             grid::modelgrid[grid::get_nonemptymgi_of_mgi(mgi)].thick != 1);
 
         if (cellcache_change_cell_required) {
           if (packetgroupstart != &pkt) {

@@ -1028,7 +1028,7 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
   for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
     const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    if (grid::modelgrid[mgi].thick == 1) {
+    if (grid::modelgrid[nonemptymgi].thick == 1) {
       continue;
     }
     const double deltaV =
