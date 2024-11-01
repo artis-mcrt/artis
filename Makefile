@@ -216,7 +216,7 @@ ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -D_GLIBCXX_ASSERTIONS
 	# CXXFLAGS += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_BACKTRACE=1
 
-	CXXFLAGS +=  -fno-omit-frame-pointer
+	CXXFLAGS +=  -fno-omit-frame-pointer -g
 
 	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
 	CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG
@@ -307,7 +307,7 @@ sn3d: $(BUILD_DIR)/sn3d
 	ln -sf $(BUILD_DIR)/sn3d sn3d
 
 $(BUILD_DIR)/sn3dwhole: $(sn3d_files) version.h artisoptions.h Makefile $(BUILD_DIR)/compiler.txt
-	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(gsl_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
+	$(CXX) $(CXXFLAGS) $(sn3d_files) $(gsl_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
 -include $(sn3d_dep)
 
 sn3dwhole: $(BUILD_DIR)/sn3dwhole

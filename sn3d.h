@@ -128,7 +128,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
 
 // #ifdef __cpp_lib_stacktrace
 #include <stacktrace>
-#define STACKTRACEIFSUPPORTED std::stacktrace::current().as_string()
+#define STACKTRACEIFSUPPORTED std::stacktrace::current()
 // #else
 // #define STACKTRACEIFSUPPORTED ""
 // #endif
