@@ -169,22 +169,21 @@ auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double {
   return nne_after - nne_assumed;
 }
 
-auto calculate_levelpop_nominpop(const int modelgridindex, const int element, const int ion, const int level,
+auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const int ion, const int level,
                                  bool *const skipminpop) -> double {
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
 
   double nn{NAN};
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   if (level == 0) {
     nn = get_groundlevelpop(modelgridindex, element, ion);
   } else if (elem_has_nlte_levels(element)) {
     if (is_nlte(element, ion, level)) {
       // first_nlte refers to the first excited state (level=1)
-      const double nltepop_over_rho = get_nlte_levelpop_over_rho(modelgridindex, element, ion, level);
+      const double nltepop_over_rho = get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level);
       if (nltepop_over_rho < -0.9) {
         // Case for when no NLTE level information is available yet
         nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
@@ -230,15 +229,13 @@ auto calculate_levelpop_nominpop(const int modelgridindex, const int element, co
   return nn;
 }
 
-auto calculate_partfunct(const int element, const int ion, const int modelgridindex) -> double
+auto calculate_partfunct(const int element, const int ion, const int nonemptymgi) -> double
 // Calculates the partition function for ion=ion of element=element in
 // cell modelgridindex
 {
-  ;
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double pop_store{NAN};
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
@@ -260,7 +257,7 @@ auto calculate_partfunct(const int element, const int ion, const int modelgridin
   const double groundpop = get_groundlevelpop(modelgridindex, element, ion);
   for (int level = 1; level < nlevels; level++) {
     bool skipminpop = false;
-    const double nn = calculate_levelpop_nominpop(modelgridindex, element, ion, level, &skipminpop) / groundpop;
+    const double nn = calculate_levelpop_nominpop(nonemptymgi, element, ion, level, &skipminpop) / groundpop;
     U += nn;
   }
   U *= stat_weight(element, ion, 0);
@@ -506,9 +503,9 @@ auto calculate_levelpop_lte(const int modelgridindex, const int element, const i
 
 auto calculate_levelpop(const int modelgridindex, const int element, const int ion, const int level) -> double {
   bool skipminpop = false;
-  double nn = calculate_levelpop_nominpop(modelgridindex, element, ion, level, &skipminpop);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  double nn = calculate_levelpop_nominpop(nonemptymgi, element, ion, level, &skipminpop);
   if (!skipminpop && nn < MINPOP) {
-    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
     if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
       nn = MINPOP;
     } else {
@@ -540,12 +537,11 @@ __host__ __device__ auto get_levelpop(const int modelgridindex, const int elemen
 // change during any iteration on T_e. Therefore their precalculation was
 // taken out of calculate_ion_balance_nne to save runtime.
 // TODO: not true if LTEPOP_EXCITATION_USE_TJ is true unless LTE mode only (TJ=TR=Te)
-void calculate_cellpartfuncts(const int modelgridindex, const int element) {
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+void calculate_cellpartfuncts(const int nonemptymgi, const int element) {
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++) {
     grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                  get_uniqueionindex(element, ion)] = calculate_partfunct(element, ion, modelgridindex);
+                                  get_uniqueionindex(element, ion)] = calculate_partfunct(element, ion, nonemptymgi);
   }
 }
 
