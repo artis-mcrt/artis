@@ -53,6 +53,23 @@ jobs:
               with:
                   xcode-version: 'latest-stable'
 
+            # - name: install llvm from brew
+            #   run: |
+            #       brew install llvm || true
+            #       echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
+
+            #       echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib" >> $GITHUB_ENV
+            #       echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
+
+            #       echo "CXXFLAGS=-I/opt/homebrew/opt/libomp/include" >> $GITHUB_ENV
+
+            #       echo "LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
+            #       echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
+
+            #       echo "CPATH=/opt/homebrew/opt/include" >> $GITHUB_ENV
+
+            #       echo "compiledb" > requirements.txt
+
             - name: Set up Python
               uses: actions/setup-python@v5
 
@@ -61,7 +78,7 @@ jobs:
                   brew update
                   brew install openmpi gsl || true
                   python3 -m pip install compiledb
-                  python3 -m pip install clang-tidy
+                  python3 -m pip clang-tidy
 
             - name: Generate compile_commands.json
               run: |
@@ -69,10 +86,11 @@ jobs:
                   make clean
                   python3 -m compiledb -n --full-path make TESTMODE=ON
 
-            - name: run-clang-tidy from pip
+            - name: run-clang-tidy
               run: |
                   clang-tidy --version
-                  run-clang-tidy
+                  clang-tidy *.cc
+                #   run-clang-tidy
 
     compile:
         env:
