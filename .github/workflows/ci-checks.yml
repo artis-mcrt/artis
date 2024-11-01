@@ -86,7 +86,7 @@ jobs:
             - name: run-clang-tidy
               run: |
                   clang-tidy --version
-                  run-clang-tidy || true
+                  xcrun run-clang-tidy
 
     compile:
         env:
