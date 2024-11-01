@@ -39,7 +39,7 @@ constexpr bool individual_process_matrices = true;
 auto get_nlte_vector_index(const int element, const int ion, const int level) -> int {
   // have to convert from nlte_pops index to nlte_vector index
   // the difference is that nlte vectors apply to a single element and include ground states
-  // The (+ ion) term accounts for the ground state population indicies that are not counted in the NLTE array
+  // The (+ ion) term accounts for the ground state population indices that are not counted in the NLTE array
   const int gs_index =
       globals::elements[element].ions[ion].first_nlte - globals::elements[element].ions[0].first_nlte + ion;
 

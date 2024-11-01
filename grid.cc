@@ -483,7 +483,7 @@ void map_2dmodelto3dgrid()
 
     const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
 
-    // 2D grid is uniform so rcyl and z indicies can be calculated with no lookup
+    // 2D grid is uniform so rcyl and z indices can be calculated with no lookup
     const int n_rcyl = static_cast<int>(rcylindrical / globals::tmin / globals::vmax * ncoord_model[0]);
     const int n_z =
         static_cast<int>((pos_mid[2] / globals::tmin + globals::vmax) / (2 * globals::vmax) * ncoord_model[1]);
@@ -2536,7 +2536,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
     // cartesian coordinates may be taken in turn. For x, the packet
     // trajectory is
     // x = x0 + (dir.x) * c * (t - tstart)
-    // the boundries follow
+    // the boundaries follow
     // x+/- = x+/-(tmin) * (t/tmin)
     // so the crossing occurs when
     // t = (x0 - (dir.x)*c*tstart)/(x+/-(tmin)/tmin - (dir.x)c)
