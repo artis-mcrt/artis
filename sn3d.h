@@ -36,12 +36,6 @@
 #ifdef STDPAR_ON
 #include <execution>
 
-// #ifndef __cpp_lib_execution
-// // homebrew llvm doesn't support execution policy yet, so brew install onedpl tbb
-// #include <oneapi/dpl/algorithm>
-// #include <oneapi/dpl/execution>
-// #endif
-
 #define EXEC_PAR_UNSEQ std::execution::par_unseq,
 #define EXEC_PAR std::execution::par,
 #else

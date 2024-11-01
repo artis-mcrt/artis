@@ -269,14 +269,6 @@ jobs:
               run: |
                   brew install openmpi || true
 
-            - name: install onedpl and tbb
-              run: |
-                  brew install onedpl tbb
-
-                  echo "LIBRARY_PATH=$HOMEBREW_PREFIX/lib:$LIBRARY_PATH" >> $GITHUB_ENV
-                  echo "LD_LIBRARY_PATH=$HOMEBREW_PREFIX/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-                  echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
-
             - name: Compile classic mode
               run: |
                   $CXX -v
