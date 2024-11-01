@@ -643,9 +643,9 @@ void nltepop_matrix_normalise(const int modelgridindex, const int element, gsl_m
 }
 
 void set_element_pops_lte(const int modelgridindex, const int element) {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   nltepop_reset_element(modelgridindex, element);  // set NLTE pops as invalid so that LTE pops will be used instead
-
-  calculate_cellpartfuncts(modelgridindex, element);
+  calculate_cellpartfuncts(nonemptymgi, element);
   set_groundlevelpops(modelgridindex, element, grid::get_nne(modelgridindex), true);
 }
 
@@ -1051,7 +1051,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
                                          get_uniqueionindex(element, ion)] = gsl_vector_get(&popvec, index_gs);
       // solution_ion_pop += gsl_vector_get(popvec, index_gs);
 
-      calculate_cellpartfuncts(modelgridindex, element);
+      calculate_cellpartfuncts(nonemptymgi, element);
     }
 
     const double elem_pop_matrix = gsl_blas_dasum(&popvec);
@@ -1166,7 +1166,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
             nnlevelnlte = get_groundlevelpop(modelgridindex, element, ion);
           } else {
             nnlevelnlte =
-                get_nlte_levelpop_over_rho(modelgridindex, element, ion, level) * grid::modelgrid[nonemptymgi].rho;
+                get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level) * grid::modelgrid[nonemptymgi].rho;
           }
         } else {
           // superlevel, so add the populations of all other levels in the superlevel
@@ -1276,10 +1276,9 @@ void nltepop_read_restart_data(FILE *restart_file) {
   }
 }
 
-auto get_nlte_levelpop_over_rho(const int modelgridindex, const int element, const int ion, const int level) -> double {
+auto get_nlte_levelpop_over_rho(const int nonemptymgi, const int element, const int ion, const int level) -> double {
   assert_testmodeonly(level <= get_nlevels_nlte(element, ion));
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-  return grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) +
+  return grid::nltepops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) +
                                  globals::elements[element].ions[ion].first_nlte + level - 1];
 }
 

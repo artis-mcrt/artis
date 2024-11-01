@@ -702,7 +702,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     const auto sys_time_start_partfuncs_or_gamma = std::time(nullptr);
     for (int element = 0; element < get_nelements(); element++) {
       if (!elem_has_nlte_levels(element)) {
-        calculate_cellpartfuncts(mgi, element);
+        calculate_cellpartfuncts(nonemptymgi, element);
       }
     }
     const int duration_solve_partfuncs_or_gamma = std::time(nullptr) - sys_time_start_partfuncs_or_gamma;
@@ -737,7 +737,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     for (int element = 0; element < get_nelements(); element++) {
       if (get_nions(element) > 0 && elem_has_nlte_levels(element)) {
         solve_nlte_pops_element(element, mgi, nts, nlte_iter);
-        calculate_cellpartfuncts(mgi, element);
+        calculate_cellpartfuncts(nonemptymgi, element);
       }
     }
     const int duration_solve_nltepops = std::time(nullptr) - sys_time_start_nltepops;
@@ -935,7 +935,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     printout("mgi %d modelgrid.thick: %d (during grid update)\n", mgi, grid::modelgrid[nonemptymgi].thick);
 
     for (int element = 0; element < get_nelements(); element++) {
-      calculate_cellpartfuncts(mgi, element);
+      calculate_cellpartfuncts(nonemptymgi, element);
     }
     if (!globals::simulation_continued_from_saved) {
       calculate_ion_balance_nne(mgi);
@@ -979,7 +979,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       }
 
       for (int element = 0; element < get_nelements(); element++) {
-        calculate_cellpartfuncts(mgi, element);
+        calculate_cellpartfuncts(nonemptymgi, element);
       }
       calculate_ion_balance_nne(mgi);
     } else {
