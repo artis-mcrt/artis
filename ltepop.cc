@@ -474,7 +474,7 @@ auto get_groundlevelpop(const int modelgridindex, const int element, const int i
   const double nn = grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
                                                        get_uniqueionindex(element, ion)];
   if (nn < MINPOP) {
-    if (grid::get_elem_abundance(modelgridindex, element) > 0) {
+    if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
       return MINPOP;
     }
     return 0.;
@@ -506,7 +506,8 @@ auto calculate_levelpop(const int modelgridindex, const int element, const int i
   bool skipminpop = false;
   double nn = calculate_levelpop_nominpop(modelgridindex, element, ion, level, &skipminpop);
   if (!skipminpop && nn < MINPOP) {
-    if (grid::get_elem_abundance(modelgridindex, element) > 0) {
+    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+    if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
       nn = MINPOP;
     } else {
       nn = 0.;
@@ -628,7 +629,8 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void {
 
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
-    if (grid::get_elem_abundance(modelgridindex, element) > 0) {
+    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+    if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
       const int uppermost_ion = find_uppermost_ion(modelgridindex, element, nne_hi, force_lte);
       grid::set_elements_uppermost_ion(modelgridindex, element, uppermost_ion);
 

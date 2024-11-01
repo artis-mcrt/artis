@@ -69,7 +69,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
   }
 
   for (int element = 0; element < get_nelements(); element++) {
-    if (grid::get_elem_abundance(mgi, element) <= 0.) {  // skip elements with no abundance
+    if (grid::get_elem_abundance(nonemptymgi, element) <= 0.) {  // skip elements with no abundance
       continue;
     }
 

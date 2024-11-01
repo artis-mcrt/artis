@@ -802,7 +802,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   const int atomic_number = get_atomicnumber(element);
   const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
-  if (grid::get_elem_abundance(modelgridindex, element) <= 0.) {
+  if (grid::get_elem_abundance(nonemptymgi, element) <= 0.) {
     // abundance of this element is zero, so do not store any NLTE populations
     printout("Not solving for NLTE populations in cell %d at timestep %d for element Z=%d due to zero abundance\n",
              modelgridindex, timestep, atomic_number);
@@ -830,7 +830,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   printout(
       "Solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d (mass fraction %.2e, "
       "nnelement %.2e cm^-3)\n",
-      modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_abundance(modelgridindex, element), nnelement);
+      modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_abundance(nonemptymgi, element), nnelement);
 
   const auto superlevel_partfunc = get_element_superlevelpartfuncs(modelgridindex, element);
   const int nlte_dimension = get_element_nlte_dimension(element);

@@ -1755,7 +1755,7 @@ void set_elem_abundance(const int nonemptymgi, const int element, const float ne
 __host__ __device__ auto get_elem_numberdens(const int modelgridindex, const int element) -> double {
   const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   const double elem_meanweight = grid::get_element_meanweight(nonemptymgi, element);
-  return get_elem_abundance(modelgridindex, element) / elem_meanweight * grid::get_rho(modelgridindex);
+  return get_elem_abundance(nonemptymgi, element) / elem_meanweight * grid::get_rho(modelgridindex);
 }
 
 __host__ __device__ auto get_kappagrey(const int modelgridindex) -> float {
@@ -2050,7 +2050,7 @@ void calculate_kappagrey() {
         for (int element = 0; element < get_nelements(); element++) {
           const int z = get_atomicnumber(element);
           if (z >= 57 && z <= 71) {
-            X_lan += get_elem_abundance(mgi, element);
+            X_lan += get_elem_abundance(nonemptymgi, element);
           }
         }
         // first step: temperature-independent factor

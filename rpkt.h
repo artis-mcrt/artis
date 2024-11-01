@@ -115,7 +115,8 @@ constexpr auto closest_transition(const double nu_cmf, const int next_trans, con
 inline auto keep_this_cont(int element, const int ion, const int level, const int modelgridindex, const float nnetot)
     -> bool {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    return grid::get_elem_abundance(modelgridindex, element) > 0;
+    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+    return grid::get_elem_abundance(nonemptymgi, element) > 0;
   }
   return ((get_nnion(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0));
 }

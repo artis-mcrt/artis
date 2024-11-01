@@ -274,8 +274,8 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
-    if (grid::get_elem_abundance(modelgridindex, element) <= minelfrac && !USE_LUT_BFHEATING) {
-      printout("skipping Z=%d X=%g, ", get_atomicnumber(element), grid::get_elem_abundance(modelgridindex, element));
+    if (grid::get_elem_abundance(nonemptymgi, element) <= minelfrac && !USE_LUT_BFHEATING) {
+      printout("skipping Z=%d X=%g, ", get_atomicnumber(element), grid::get_elem_abundance(nonemptymgi, element));
     }
 
     const int nions = get_nions(element);
@@ -283,7 +283,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         double bfheatingcoeff = 0.;
-        if (grid::get_elem_abundance(modelgridindex, element) > minelfrac || USE_LUT_BFHEATING) {
+        if (grid::get_elem_abundance(nonemptymgi, element) > minelfrac || USE_LUT_BFHEATING) {
           const auto nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             if constexpr (!USE_LUT_BFHEATING) {

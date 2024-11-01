@@ -1186,9 +1186,10 @@ auto get_oneoverw(const int element, const int ion, const int modelgridindex) ->
   // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
   // denominator is extremely simplified. Need to get the mean Z value.
 
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   double Zbar = 0.;  // mass-weighted average atomic number
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
-    Zbar += grid::get_elem_abundance(modelgridindex, ielement) * get_atomicnumber(ielement);
+    Zbar += grid::get_elem_abundance(nonemptymgi, ielement) * get_atomicnumber(ielement);
   }
 
   const double binding = get_sum_q_over_binding_energy(element, ion);
