@@ -121,12 +121,12 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
 }
 
 // calculate the free electron contribution from an element
-auto get_element_nne_contrib(const int modelgridindex, const int element) -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+auto get_element_nne_contrib(const int nonemptymgi, const int element) -> double {
   if (grid::get_elem_numberdens(nonemptymgi, element) <= 0.) {
     return 0.;
   }
 
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double nne = 0.;
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++) {
@@ -151,7 +151,7 @@ auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double {
     if (nnelement > 0 && get_nions(element) > 0) {
       if (!force_lte && elem_has_nlte_levels(element)) {
         // populations from the NLTE solver are fixed during the nne solver
-        nne_after += get_element_nne_contrib(modelgridindex, element);
+        nne_after += get_element_nne_contrib(nonemptymgi, element);
       } else {
         const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
         const auto ionfractions = calculate_ionfractions(element, nonemptymgi, nne_assumed, use_phi_lte);
@@ -328,9 +328,9 @@ auto find_uppermost_ion(const int modelgridindex, const int element, const doubl
 
 void set_calculated_nne(const int modelgridindex) {
   double nne = 0.;  // free electron density
-
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   for (int element = 0; element < get_nelements(); element++) {
-    nne += get_element_nne_contrib(modelgridindex, element);
+    nne += get_element_nne_contrib(nonemptymgi, element);
   }
 
   grid::set_nne(modelgridindex, std::max(MINPOP, nne));
