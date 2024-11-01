@@ -41,6 +41,14 @@ namespace grid {
 
 namespace {
 
+struct ModelGridCellInput {
+  float rhoinit = -1.;
+  float ffegrp = 0.;
+  float initial_radial_pos_sum = 0.;
+  float initelectronfrac = -1;  // Ye: electrons (or protons) per nucleon
+  float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
+};
+
 std::array<char, 3> coordlabel{'?', '?', '?'};
 
 std::array<int, 3> ncoordgrid{0};  // propagation grid dimensions
@@ -119,7 +127,7 @@ void set_npts_model(const int new_npts_model) {
   npts_model = new_npts_model;
 
   assert_always(modelgrid_input.data() == nullptr);
-  modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model);
+  modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model + 1);
   if (globals::rank_in_node == 0) {
     std::ranges::fill(modelgrid_input, ModelGridCellInput{});
   }
@@ -365,9 +373,16 @@ void allocate_nonemptymodelcells() {
       }
     }
   }
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
   assert_always(modelgrid.data() == nullptr);
   modelgrid = MPI_shared_malloc_span<ModelGridCell>(npts_model + 1);
+  std::ranges::fill(modelgrid, ModelGridCell{});
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
   allocate_nonemptycells_composition_cooling();
 

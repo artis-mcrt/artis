@@ -32,14 +32,6 @@ struct ModelGridCell {
   int thick = 0;
 };
 
-struct ModelGridCellInput {
-  float rhoinit = -1.;
-  float ffegrp = 0.;
-  float initial_radial_pos_sum = 0.;
-  float initelectronfrac = -1;  // Ye: electrons (or protons) per nucleon
-  float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
-};
-
 consteval auto get_ngriddimensions() -> int {
   switch (GRID_TYPE) {
     case GridType::SPHERICAL1D:
