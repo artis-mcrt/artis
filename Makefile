@@ -156,8 +156,6 @@ ifeq ($(shell uname -s),Darwin)
 #	CXXFLAGS += -Rpass-missed=loop-vectorize
 #	CXXFLAGS += -Rpass-analysis=loop-vectorize
 
-	# CXXFLAGS += -fopenmp-simd
-
 	# add -lprofiler for gperftools
 	# LDFLAGS += $(LIB)
 	# LDFLAGS += -lprofiler
@@ -233,20 +231,17 @@ ifeq ($(OPTIMIZE),OFF)
 	BUILD_DIR := $(BUILD_DIR)_optimizeoff
 	CXXFLAGS += -O0
 else
-	# ifeq ($(TESTMODE),ON)
-	# 	CXXFLAGS += -Og
-	# else
-		CXXFLAGS += -O3
-		ifeq ($(FASTMATH),OFF)
-			BUILD_DIR := $(BUILD_DIR)_nofastmath
+	CXXFLAGS += -O3
+	ifeq ($(FASTMATH),OFF)
+		BUILD_DIR := $(BUILD_DIR)_nofastmath
+		CXXFLAGS += -Wno-unknown-pragmas
+	else
+		ifeq ($(COMPILER_NAME),NVHPC)
+			CXXFLAGS += -fast
 		else
-			ifeq ($(COMPILER_NAME),NVHPC)
-				CXXFLAGS += -fast
-			else
-				CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only -fopenmp-simd
-			endif
+			CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only -fopenmp-simd
 		endif
-	# endif
+	endif
 endif
 
 CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare -Wshadow
