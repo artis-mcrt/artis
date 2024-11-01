@@ -637,7 +637,7 @@ constexpr auto meanf_sigma(const double x) -> double {
 // The intention is that dep_estimator_gamma will contain the emissivity of r-packets
 // in the co-moving frame (which is going to be isotropic).
 void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const int nonemptymgi) {
-  if (!(dist > 0)) {
+  if (!(dist > 0) || nonemptymgi < 0) {
     return;
   }
   if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
