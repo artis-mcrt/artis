@@ -1728,7 +1728,7 @@ __host__ __device__ auto get_nne(const int modelgridindex) -> float {
 
 __host__ __device__ auto get_nnetot(const int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
+  assert_testmodeonly(modelgridindex < get_npts_model());
 
   const double nnetot = modelgrid[modelgridindex].nnetot;
   assert_always(std::isfinite(nnetot));
