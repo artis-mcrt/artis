@@ -58,12 +58,15 @@ endif
 
 $(info detected compiler is $(COMPILER_NAME))
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing
-# CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
 
 ifneq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -MD -MP -ftrivial-auto-var-init=pattern
+	CXXFLAGS += -std=c++23 -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -MD -MP -ftrivial-auto-var-init=pattern
+else
+	CXXFLAGS += -std=c++20
 endif
+
+CXXFLAGS += -fstrict-aliasing
+# CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
 
 # profile-guided optimisation
 # generate profile:
