@@ -58,7 +58,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
   fprintf(estimators_file,
           "timestep %d modelgridindex %d titeration %d TR %g Te %g W %g TJ %g grey_depth %g thick %d nne %g Ye %g "
           "tdays %7.2f\n",
-          timestep, mgi, titer, grid::get_TR(mgi), T_e, grid::get_W(mgi), grid::get_TJ(nonemptymgi),
+          timestep, mgi, titer, grid::get_TR(nonemptymgi), T_e, grid::get_W(mgi), grid::get_TJ(nonemptymgi),
           grid::modelgrid[nonemptymgi].grey_depth, grid::modelgrid[nonemptymgi].thick, nne, Y_e,
           globals::timesteps[timestep].mid / DAY);
   // fprintf(estimators_file,"%d %g %g %g %g %g %g %g
@@ -841,7 +841,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
         // contributions are added up.
 
         const double bfheatingcoeff_ana =
-            get_bfheatingcoeff_ana(element, ion, 0, 0, grid::get_TR(mgi), grid::get_W(mgi));
+            get_bfheatingcoeff_ana(element, ion, 0, 0, grid::get_TR(nonemptymgi), grid::get_W(mgi));
         globals::bfheatingestimator[ionestimindex] = globals::bfheatingestimator[ionestimindex] / bfheatingcoeff_ana;
 
         if (!std::isfinite(globals::bfheatingestimator[ionestimindex])) {

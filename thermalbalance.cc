@@ -25,16 +25,16 @@
 
 namespace {
 
-struct Te_solution_paras {
+struct TeSolutionParams {
   double t_current;
   int modelgridindex;
   HeatingCoolingRates *heatingcoolingrates;
   const std::vector<double> *bfheatingcoeffs;
 };
 
-struct gsl_integral_paras_bfheating {
+struct BFHeatingIntegralParams {
   double nu_edge;
-  int modelgridindex;
+  int nonemptymgi;
   float T_R;
   const float *photoion_xs;
 };
@@ -42,9 +42,10 @@ struct gsl_integral_paras_bfheating {
 auto integrand_bfheatingcoeff_custom_radfield(const double nu, void *const voidparas) -> double
 // Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
-  const auto *const params = static_cast<const gsl_integral_paras_bfheating *>(voidparas);
+  const auto *const params = static_cast<const BFHeatingIntegralParams *>(voidparas);
 
-  const int modelgridindex = params->modelgridindex;
+  const int nonemptymgi = params->nonemptymgi;
+  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double nu_edge = params->nu_edge;
   const float T_R = params->T_R;
   // const double Te_TR_factor = params->Te_TR_factor; // = sqrt(T_e/T_R) * sahafac(Te) / sahafac(TR)
@@ -77,10 +78,10 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-  const gsl_integral_paras_bfheating intparas = {.nu_edge = nu_threshold,
-                                                 .modelgridindex = modelgridindex,
-                                                 .T_R = grid::get_TR(nonemptymgi),
-                                                 .photoion_xs = get_phixs_table(element, ion, level)};
+  const BFHeatingIntegralParams intparas = {.nu_edge = nu_threshold,
+                                            .nonemptymgi = nonemptymgi,
+                                            .T_R = grid::get_TR(nonemptymgi),
+                                            .photoion_xs = get_phixs_table(element, ion, level)};
 
   // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
 
@@ -186,7 +187,7 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
 
 // Thermal balance equation on which we have to iterate to get T_e
 auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
-  const Te_solution_paras *const params = static_cast<Te_solution_paras *>(paras);
+  const TeSolutionParams *const params = static_cast<TeSolutionParams *>(paras);
 
   const int modelgridindex = params->modelgridindex;
   const double t_current = params->t_current;
@@ -320,10 +321,10 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
   const double T_e_old = grid::get_Te(modelgridindex);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, globals::timestep);
 
-  Te_solution_paras paras = {.t_current = t_current,
-                             .modelgridindex = modelgridindex,
-                             .heatingcoolingrates = heatingcoolingrates,
-                             .bfheatingcoeffs = &bfheatingcoeffs};
+  TeSolutionParams paras = {.t_current = t_current,
+                            .modelgridindex = modelgridindex,
+                            .heatingcoolingrates = heatingcoolingrates,
+                            .bfheatingcoeffs = &bfheatingcoeffs};
 
   gsl_function find_T_e_f = {.function = &T_e_eqn_heating_minus_cooling, .params = &paras};
 

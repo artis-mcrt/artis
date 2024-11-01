@@ -40,7 +40,7 @@ double *corrphotoioncoeffs{};
 
 double *bfcooling_coeffs{};
 
-struct gsl_integral_paras_gammacorr {
+struct GSLIntegralParas_GammaCorr {
   double nu_edge;
   double departure_ratio;
   const float *photoion_xs;
@@ -668,7 +668,7 @@ void precalculate_ion_alpha_sp() {
 }
 
 auto integrand_stimrecombination_custom_radfield(const double nu, void *const voidparas) -> double {
-  const auto *const params = static_cast<const gsl_integral_paras_gammacorr *>(voidparas);
+  const auto *const params = static_cast<const GSLIntegralParas_GammaCorr *>(voidparas);
   const int modelgridindex = params->modelgridindex;
   const float T_e = params->T_e;
 
@@ -690,7 +690,7 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
   const auto T_e = grid::get_Te(modelgridindex);
-  const auto intparas = gsl_integral_paras_gammacorr{
+  const auto intparas = GSLIntegralParas_GammaCorr{
       .nu_edge = nu_threshold,
       .photoion_xs = get_phixs_table(element, lowerion, level),
       .T_e = T_e,
@@ -729,7 +729,7 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const vo
 // Integrand to calculate the rate coefficient for photoionization
 // using gsl integrators. Corrected for stimulated recombination.
 {
-  const gsl_integral_paras_gammacorr *const params = static_cast<gsl_integral_paras_gammacorr *>(voidparas);
+  const GSLIntegralParas_GammaCorr *const params = static_cast<GSLIntegralParas_GammaCorr *>(voidparas);
   const int modelgridindex = params->modelgridindex;
 
 #if (SEPARATE_STIMRECOMB)
@@ -776,7 +776,7 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
     departure_ratio = 0.;
   }
 #endif
-  const auto intparas = gsl_integral_paras_gammacorr{
+  const auto intparas = GSLIntegralParas_GammaCorr{
       .nu_edge = nu_threshold,
       .departure_ratio = departure_ratio,
       .photoion_xs = get_phixs_table(element, ion, level),

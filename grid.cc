@@ -2094,7 +2094,7 @@ void calculate_kappagrey() {
         // grey opacity used in Just+2022, https://ui.adsabs.harvard.edu/abs/2022MNRAS.510.2820J/abstract
         // kappa is a simple analytic function of temperature and lanthanide mass fraction
         // adapted to best fit lightcurves from Kasen+2017 in ALCAR simulations
-        const double T_rad = get_TR(mgi);
+        const double T_rad = get_TR(nonemptymgi);
         double X_lan = 0.;
         for (int element = 0; element < get_nelements(); element++) {
           const int z = get_atomicnumber(element);
@@ -2211,7 +2211,7 @@ void write_grid_restart_data(const int timestep) {
     const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
     assert_always(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
-    fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", mgi, get_TR(mgi), get_Te(mgi), get_W(mgi),
+    fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", mgi, get_TR(nonemptymgi), get_Te(mgi), get_W(mgi),
             get_TJ(nonemptymgi), modelgrid[nonemptymgi].thick, globals::dep_estimator_gamma[nonemptymgi],
             globals::dep_estimator_positron[nonemptymgi], globals::dep_estimator_electron[nonemptymgi],
             globals::dep_estimator_alpha[nonemptymgi], modelgrid[nonemptymgi].nne, modelgrid[nonemptymgi].nnetot);
