@@ -70,10 +70,10 @@ jobs:
             - name: cat compile_commands.json
               run: cat compile_commands.json
 
-            - name: run-clang-tidy
-              run: |
-                  clang-tidy --version
-                  run-clang-tidy
+            # - name: run-clang-tidy
+            #   run: |
+            #       clang-tidy --version
+            #       run-clang-tidy
 
             - name: run-clang-tidy from pip
               run: |
