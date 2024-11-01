@@ -57,17 +57,17 @@ jobs:
               run: |
                   brew update
                   brew install openmpi gsl || true
+                  python3 -m pip install compiledb
+                  python3 -m pip install clang-tidy
 
             - name: Generate compile_commands.json
               run: |
-                  python3 -m pip install compiledb
                   cp artisoptions_nltenebular.h artisoptions.h
                   make clean
                   python3 -m compiledb -n --full-path make TESTMODE=ON
 
             - name: run-clang-tidy from pip
               run: |
-                  python3 -m pip install clang-tidy
                   clang-tidy --version
                   run-clang-tidy
 
