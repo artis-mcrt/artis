@@ -73,8 +73,6 @@ jobs:
 
                   echo "CPATH=/opt/homebrew/opt/include" >> $GITHUB_ENV
 
-                  echo "compiledb" > requirements.txt
-
             - name: Set up Python
               uses: actions/setup-python@v5
               with:
@@ -96,7 +94,7 @@ jobs:
                   run-clang-tidy
 
     clang-tidy-ubuntu:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         steps:
             - uses: actions/checkout@v4
 
@@ -107,7 +105,7 @@ jobs:
               run: |
                   python3 -m pip install compiledb
                   cp artisoptions_nltenebular.h artisoptions.h
-                  make version.h
+                  make clean
                   python3 -m compiledb -n --full-path make TESTMODE=ON
 
             - name: cat compile_commands.json
