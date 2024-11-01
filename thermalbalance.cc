@@ -294,7 +294,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
               // LTE value. Because the T_e dependence of gammacorr is weak, this correction
               // correction may be evaluated at T_R!
               const double T_R = grid::get_TR(nonemptymgi);
-              const double W = grid::get_W(modelgridindex);
+              const double W = grid::get_W(nonemptymgi);
               bfheatingcoeff += get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
             }
           }
@@ -335,7 +335,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
     printout(
         "[abort request] call_T_e_finder: non-finite results in modelcell %d (T_R=%g, W=%g). T_e forced to be "
         "MINTEMP\n",
-        modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(modelgridindex));
+        modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
     thermalmax = thermalmin = -1;
   }
 
@@ -377,14 +377,14 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
     printout(
         "[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in modelcell %d "
         "(T_R=%g,W=%g). T_e forced to be MINTEMP\n",
-        MINTEMP, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(modelgridindex));
+        MINTEMP, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
   } else {
     // Thermal balance equation always negative ===> T_e = T_max
     T_e = MAXTEMP;
     printout(
         "[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in modelcell %d "
         "(T_R=%g,W=%g). T_e forced to be MAXTEMP\n",
-        MINTEMP, MAXTEMP, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(modelgridindex));
+        MINTEMP, MAXTEMP, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
   }
 
   if (T_e > 2 * T_e_old) {

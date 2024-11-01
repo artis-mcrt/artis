@@ -725,7 +725,7 @@ void write_to_file(const int modelgridindex, const int timestep) {
         nuJ_out = nuJ[nonemptymgi];
         J_out = J[nonemptymgi];
         T_R = grid::get_TR(nonemptymgi);
-        W = grid::get_W(modelgridindex);
+        W = grid::get_W(nonemptymgi);
         contribcount = totalcontribs;
       } else  // use binindex < -1 for detailed line Jb_lu estimators
       {
@@ -877,7 +877,7 @@ __host__ __device__ auto radfield(const double nu, const int modelgridindex) -> 
   }
 
   const float T_R_fullspec = grid::get_TR(nonemptymgi);
-  const float W_fullspec = grid::get_W(modelgridindex);
+  const float W_fullspec = grid::get_W(nonemptymgi);
   const double J_nu_fullspec = dbb(nu, T_R_fullspec, W_fullspec);
   return J_nu_fullspec;
 }

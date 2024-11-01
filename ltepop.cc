@@ -376,7 +376,7 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
   if (nne_solution_f(nne_lo, f.params) * nne_solution_f(nne_hi, f.params) > 0) {
     const auto T_R = grid::get_TR(nonemptymgi);
     const auto T_e = grid::get_Te(modelgridindex);
-    const auto W = grid::get_W(modelgridindex);
+    const auto W = grid::get_W(nonemptymgi);
     printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi, T_R,
              T_e, W, grid::get_rho(modelgridindex));
     printout("nne@x_lo %g\n", nne_solution_f(nne_lo, f.params));
