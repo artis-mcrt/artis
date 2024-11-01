@@ -83,7 +83,7 @@ void set_elem_abundance(int nonemptymgi, int element, float newabundance);
 [[nodiscard]] auto get_kappagrey(int modelgridindex) -> float;
 [[nodiscard]] auto get_Te(int modelgridindex) -> float;
 [[nodiscard]] auto get_TR(int modelgridindex) -> float;
-[[nodiscard]] auto get_TJ(int modelgridindex) -> float;
+[[nodiscard]] auto get_TJ(int nonemptymgi) -> float;
 [[nodiscard]] auto get_W(int modelgridindex) -> float;
 void set_nne(int modelgridindex, float nne);
 void set_nnetot(int modelgridindex, float nnetot);

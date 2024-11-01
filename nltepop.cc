@@ -1103,7 +1103,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 __host__ __device__ auto superlevel_boltzmann(const int modelgridindex, const int element, const int ion,
                                               const int level) -> double {
   const int superlevel_index = get_nlevels_nlte(element, ion) + 1;
-  const double T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(modelgridindex) : grid::get_Te(modelgridindex);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const double T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(nonemptymgi) : grid::get_Te(modelgridindex);
   const double E_level = epsilon(element, ion, level);
   const double E_superlevel = epsilon(element, ion, superlevel_index);
 

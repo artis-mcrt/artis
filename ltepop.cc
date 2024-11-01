@@ -484,6 +484,7 @@ auto get_groundlevelpop(const int modelgridindex, const int element, const int i
 
 // Calculate occupation population of a level assuming LTE excitation
 auto calculate_levelpop_lte(const int modelgridindex, const int element, const int ion, const int level) -> double {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
@@ -494,7 +495,7 @@ auto calculate_levelpop_lte(const int modelgridindex, const int element, const i
     return nnground;
   }
 
-  const auto T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(modelgridindex) : grid::get_Te(modelgridindex);
+  const auto T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(nonemptymgi) : grid::get_Te(modelgridindex);
 
   const double E_aboveground = epsilon(element, ion, level) - epsilon(element, ion, 0);
 
