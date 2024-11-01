@@ -505,7 +505,7 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
         if (numb_energies == 0) {
           continue;
         }
-        const double n_i = grid::get_elem_numberdens(mgi, i);  // number density in the current cell
+        const double n_i = grid::get_elem_numberdens(nonemptymgi, i);  // number density in the current cell
         if (n_i == 0) {
           continue;
         }

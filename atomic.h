@@ -30,9 +30,10 @@ constexpr std::array<const char *, 3> phixsdata_filenames = {"version0ignore", "
 
 // total density of nuclei
 inline auto get_nnion_tot(int modelgridindex) -> double {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   double nntot = 0.;
   for (int element = 0; element < get_nelements(); element++) {
-    nntot += grid::get_elem_numberdens(modelgridindex, element);
+    nntot += grid::get_elem_numberdens(nonemptymgi, element);
   }
 
   return nntot;

@@ -87,7 +87,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), get_nnion(mgi, element, ion));
     }
     if (nions == 0) {
-      elpop = grid::get_elem_numberdens(mgi, element);
+      elpop = grid::get_elem_numberdens(nonemptymgi, element);
     }
     fprintf(estimators_file, "  SUM: %9.3e", elpop);
 

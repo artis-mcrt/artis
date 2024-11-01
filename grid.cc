@@ -1777,8 +1777,7 @@ void set_elem_abundance(const int nonemptymgi, const int element, const float ne
 }
 
 // mass fraction of an element (all isotopes combined)
-__host__ __device__ auto get_elem_numberdens(const int modelgridindex, const int element) -> double {
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+__host__ __device__ auto get_elem_numberdens(const int nonemptymgi, const int element) -> double {
   const double elem_meanweight = grid::get_element_meanweight(nonemptymgi, element);
   return get_elem_abundance(nonemptymgi, element) / elem_meanweight * grid::get_rho(nonemptymgi);
 }
@@ -1966,10 +1965,9 @@ void set_element_meanweight(const int nonemptymgi, const int element, const floa
 }
 
 auto get_electronfrac(const int nonemptymgi) -> double {
-  const auto modelgridindex = get_mgi_of_nonemptymgi(nonemptymgi);
   double nucleondens = 0.;
   for (int element = 0; element < get_nelements(); element++) {
-    nucleondens += get_elem_numberdens(modelgridindex, element) * get_element_meanweight(nonemptymgi, element) / MH;
+    nucleondens += get_elem_numberdens(nonemptymgi, element) * get_element_meanweight(nonemptymgi, element) / MH;
   }
   return get_nnetot(nonemptymgi) / nucleondens;
 }

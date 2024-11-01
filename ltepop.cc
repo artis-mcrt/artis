@@ -122,7 +122,8 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
 
 // calculate the free electron contribution from an element
 auto get_element_nne_contrib(const int modelgridindex, const int element) -> double {
-  if (grid::get_elem_numberdens(modelgridindex, element) <= 0.) {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  if (grid::get_elem_numberdens(nonemptymgi, element) <= 0.) {
     return 0.;
   }
 
@@ -146,7 +147,7 @@ auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double {
 
   double nne_after = 0.;  // the resulting nne after setting the ion balance with nne_assumed
   for (int element = 0; element < get_nelements(); element++) {
-    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+    const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
     if (nnelement > 0 && get_nions(element) > 0) {
       if (!force_lte && elem_has_nlte_levels(element)) {
         // populations from the NLTE solver are fixed during the nne solver
@@ -340,7 +341,7 @@ void set_groundlevelpops_neutral(const int modelgridindex) {
   const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   printout("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n", modelgridindex);
   for (int element = 0; element < get_nelements(); element++) {
-    const auto nnelement = grid::get_elem_numberdens(modelgridindex, element);
+    const auto nnelement = grid::get_elem_numberdens(nonemptymgi, element);
     const int nions = get_nions(element);
     // Assign the species population to the neutral ion and set higher ions to MINPOP
     for (int ion = 0; ion < nions; ion++) {
@@ -579,10 +580,9 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
   if (nions <= 0) {
     return;
   }
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   // calculate number density of the current element (abundances are given by mass)
-  const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+  const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
 
   const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
 

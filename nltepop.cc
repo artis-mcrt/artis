@@ -827,7 +827,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   const double t_mid = globals::timesteps[timestep].mid;
   const int nions = get_nions(element);
-  const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+  const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
 
   printout(
       "Solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d (mass fraction %.2e, "

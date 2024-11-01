@@ -1256,7 +1256,7 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
   double nnetot = 0.;
   const auto nelements = get_nelements();
   for (int element = 0; element < nelements; element++) {
-    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+    const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
     nnetot += nnelement * get_atomicnumber(element);
   }
   grid::set_nnetot(modelgridindex, nnetot);
