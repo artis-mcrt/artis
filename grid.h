@@ -80,6 +80,7 @@ void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
 [[nodiscard]] auto get_nne(int modelgridindex) -> float;
 [[nodiscard]] auto get_nnetot(int modelgridindex) -> float;
 [[nodiscard]] auto get_ffegrp(int modelgridindex) -> float;
+[[nodiscard]] auto get_initial_radial_pos_sum(const int modelgridindex) -> float;
 void set_elem_abundance(int nonemptymgi, int element, float newabundance);
 [[nodiscard]] auto get_elem_numberdens(int modelgridindex, int element) -> double;
 [[nodiscard]] auto get_initelectronfrac(int modelgridindex) -> double;

@@ -1011,7 +1011,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
   const double compton_optical_depth = SIGMA_T * nne * grid::wid_init(mgi, 0) * tratmid;
 
   const int assoc_cells = grid::get_numpropcells(mgi);
-  const double radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum * tratmid / assoc_cells;
+  const double radial_pos = grid::get_initial_radial_pos_sum(mgi) * tratmid / assoc_cells;
   const double grey_optical_deptha = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * grid::wid_init(mgi, 0) * tratmid;
   // cube corners will have radial pos > rmax, so clamp to 0.
   const double dist_to_obs = std::max(0., (globals::rmax * tratmid) - radial_pos);

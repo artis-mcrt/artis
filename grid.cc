@@ -1737,6 +1737,10 @@ __host__ __device__ auto get_nnetot(const int modelgridindex) -> float {
 
 __host__ __device__ auto get_ffegrp(const int modelgridindex) -> float { return modelgrid[modelgridindex].ffegrp; }
 
+__host__ __device__ auto get_initial_radial_pos_sum(const int modelgridindex) -> float {
+  return modelgrid[modelgridindex].initial_radial_pos_sum;
+}
+
 auto get_elem_abundance(int modelgridindex, int element) -> float
 // mass fraction of an element (all isotopes combined)
 {
