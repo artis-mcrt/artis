@@ -817,6 +817,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
 }
 
 auto calculate_chi_ffheat_nnionpart(const int modelgridindex) -> double {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const double g_ff = 1;
   double chi_ff_nnionpart = 0.;
   const int nelements = get_nelements();
@@ -828,7 +829,7 @@ auto calculate_chi_ffheat_nnionpart(const int modelgridindex) -> double {
       chi_ff_nnionpart += ioncharge * ioncharge * g_ff * nnion;
     }
   }
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
 
   return chi_ff_nnionpart * 3.69255e8 / sqrt(T_e);
 }
@@ -849,9 +850,10 @@ auto get_chi_ff_nnionpart(const int modelgridindex) -> double {
 // = kappa(free-free) * nne
 auto calculate_chi_ffheating(const int modelgridindex, const double nu) -> double {
   assert_always(nu > 0.);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   const auto nne = grid::get_nne(modelgridindex);
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
   const double chi_ff = get_chi_ff_nnionpart(modelgridindex) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
 
   assert_testmodeonly(std::isfinite(chi_ff));
@@ -870,8 +872,9 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
       std::ranges::fill(phixslist->groundcont_gamma_contr, 0.);
     }
   }
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(modelgridindex);
   const auto nnetot = grid::get_nnetot(modelgridindex);
   const auto &allcont_nu_edge = globals::allcont_nu_edge;

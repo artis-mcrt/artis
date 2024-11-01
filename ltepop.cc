@@ -54,7 +54,7 @@ auto phi_lte(const int element, const int ion, const int modelgridindex) -> doub
   const auto partfunc_upperion =
       grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex + 1];
 
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
   const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);
   const double partfunct_ratio = partfunc_ion / partfunc_upperion;
   return partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
@@ -76,7 +76,7 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
   const auto partfunc_ion =
       grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex];
 
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
 
   // photoionisation plus collisional ionisation rate coefficient per ground level pop
   const double Gamma = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
@@ -375,7 +375,7 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
   double nne_lo = 0.;  // MINPOP;
   if (nne_solution_f(nne_lo, f.params) * nne_solution_f(nne_hi, f.params) > 0) {
     const auto T_R = grid::get_TR(nonemptymgi);
-    const auto T_e = grid::get_Te(modelgridindex);
+    const auto T_e = grid::get_Te(nonemptymgi);
     const auto W = grid::get_W(nonemptymgi);
     printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi, T_R,
              T_e, W, grid::get_rho(modelgridindex));
@@ -457,7 +457,7 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
 
     if (normfactor == 0. || !std::isfinite(ionfractions[ion])) {
       printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
-               get_ionstage(element, ion), get_atomicnumber(element), modelgridindex, grid::get_Te(modelgridindex),
+               get_ionstage(element, ion), get_atomicnumber(element), modelgridindex, grid::get_Te(nonemptymgi),
                grid::get_TR(nonemptymgi));
       ionfractions[ion] = 0;
     }
@@ -496,7 +496,7 @@ auto calculate_levelpop_lte(const int modelgridindex, const int element, const i
     return nnground;
   }
 
-  const auto T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(nonemptymgi) : grid::get_Te(modelgridindex);
+  const auto T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(nonemptymgi) : grid::get_Te(nonemptymgi);
 
   const double E_aboveground = epsilon(element, ion, level) - epsilon(element, ion, 0);
 

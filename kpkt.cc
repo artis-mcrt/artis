@@ -47,8 +47,9 @@ template <bool update_cooling_contrib_list>
 auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion, const int indexionstart,
                                  const int cellcacheslotid, double *const C_ff, double *const C_fb, double *const C_exc,
                                  double *const C_ionization) -> double {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
 
   if constexpr (update_cooling_contrib_list) {
     assert_always(indexionstart >= 0);
@@ -379,9 +380,9 @@ __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
   if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0. && grid::modelgrid[nonemptymgi].thick != 1) {
     pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
   } else {
-    pkt.nu_cmf = sample_planck_montecarlo(grid::get_Te(modelgridindex));
+    pkt.nu_cmf = sample_planck_montecarlo(grid::get_Te(nonemptymgi));
     // TODO: is this alternative method faster or more accurate or neither?
-    // pkt.nu_cmf = sample_planck_analytic(grid::get_Te(modelgridindex));
+    // pkt.nu_cmf = sample_planck_analytic(grid::get_Te(nonemptymgi));
   }
 
   assert_always(std::isfinite(pkt.nu_cmf));
@@ -506,7 +507,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
 
   // printout("do_kpkt: selected process %d, coolingsum %g\n", i, coolingsum);
   const auto rndcoolingtype = coolinglist[i].type;
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
 
   if (rndcoolingtype == CoolingType::FREEFREE) {
     // The k-packet converts directly into a r-packet by free-free-emission.

@@ -51,7 +51,7 @@ auto integrand_bfheatingcoeff_custom_radfield(const double nu, void *const voidp
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
-  // const auto T_e = grid::get_Te(modelgridindex);
+  // const auto T_e = grid::get_Te(nonemptymgi);
   // return sigma_bf * (1 - nu_edge/nu) * radfield::radfield(nu,nonemptymgi) * (1 - Te_TR_factor * exp(-HOVERKB * nu
   // / T_e));
 
@@ -72,7 +72,7 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  // const auto T_e = grid::get_Te(modelgridindex);
+  // const auto T_e = grid::get_Te(nonemptymgi);
   // const double T_R = grid::get_TR(nonemptymgi);
   // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
@@ -317,7 +317,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
 void call_T_e_finder(const int nonemptymgi, const double t_current, const double T_min, const double T_max,
                      HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  const double T_e_old = grid::get_Te(modelgridindex);
+  const double T_e_old = grid::get_Te(nonemptymgi);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, globals::timestep);
 
   TeSolutionParams paras = {.t_current = t_current,

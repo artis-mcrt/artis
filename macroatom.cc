@@ -38,7 +38,8 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
   auto processrates = std::array<double, MA_ACTION_COUNT>{};
 
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, ion, level);
   const double statweight = stat_weight(element, ion, level);
@@ -222,7 +223,8 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
 // counters
 [[nodiscard]] auto do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int element, const int upperion,
                                           const int upperionlevel, const double rad_recomb) -> int {
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, upperion, upperionlevel);
   // Randomly select a continuum
@@ -280,7 +282,8 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
 // ionisation and update counters
 [[nodiscard]] auto do_macroatom_ionisation(const int modelgridindex, const int element, const int ion, const int level,
                                            const double epsilon_current, const double internal_up_higher) -> int {
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(modelgridindex);
 
   // Randomly select the occurring transition
@@ -308,7 +311,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   assert_testmodeonly(nonemptymgi >= 0);
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
 
   const double t_mid = globals::timesteps[globals::timestep].mid;
 
@@ -672,7 +675,7 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
       // printout("[warning] rad_deexcitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
       // printout("[warning] rad_deexcitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
       // printout("[warning] rad_deexcitation: T_e %g, T_R %g, W %g in model cell
-      // %d\n",grid::get_Te(modelgridindex),get_TR(nonemptymgi),get_W(nonemptymgi),modelgridindex);
+      // %d\n",grid::get_Te(nonemptymgi),get_TR(nonemptymgi),get_W(nonemptymgi),modelgridindex);
       R = 0.;
       // printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
       // abort();
@@ -789,11 +792,12 @@ auto col_recombination_ratecoeff(const int modelgridindex, const int element, co
   // if (upper > get_maxrecombininglevel(element, upperion))
   //   return 0.;
 
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {
       const float nne = grid::get_nne(modelgridindex);
-      const auto T_e = grid::get_Te(modelgridindex);
+      const auto T_e = grid::get_Te(nonemptymgi);
       const double fac1 = epsilon_trans / KB / T_e;
       const int ionstage = get_ionstage(element, upperion);
 

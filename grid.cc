@@ -1793,10 +1793,9 @@ __host__ __device__ auto get_kappagrey(const int modelgridindex) -> float {
   return modelgrid[nonemptymgi].kappagrey;
 }
 
-__host__ __device__ auto get_Te(const int modelgridindex) -> float {
-  assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex < get_npts_model());
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+__host__ __device__ auto get_Te(const int nonemptymgi) -> float {
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return modelgrid[nonemptymgi].Te;
 }
 
@@ -2210,7 +2209,7 @@ void write_grid_restart_data(const int timestep) {
     const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
     assert_always(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
-    fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", mgi, get_TR(nonemptymgi), get_Te(mgi),
+    fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", mgi, get_TR(nonemptymgi), get_Te(nonemptymgi),
             get_W(nonemptymgi), get_TJ(nonemptymgi), modelgrid[nonemptymgi].thick,
             globals::dep_estimator_gamma[nonemptymgi], globals::dep_estimator_positron[nonemptymgi],
             globals::dep_estimator_electron[nonemptymgi], globals::dep_estimator_alpha[nonemptymgi],

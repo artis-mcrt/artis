@@ -49,7 +49,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
 
   printout("writing to estimators file timestep %d cell %d...\n", timestep, mgi);
 
-  const auto T_e = grid::get_Te(mgi);
+  const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(mgi);
   const auto Y_e = grid::get_electronfrac(nonemptymgi);
   // fprintf(estimators_file,"%d %g %g %g %g %d
@@ -707,7 +707,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     }
     const int duration_solve_partfuncs_or_gamma = std::time(nullptr) - sys_time_start_partfuncs_or_gamma;
 
-    const double prev_T_e = grid::get_Te(mgi);
+    const double prev_T_e = grid::get_Te(nonemptymgi);
     const auto sys_time_start_Te = std::time(nullptr);
 
     // Find T_e as solution for thermal balance
@@ -729,7 +729,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
       break;  // no iteration is needed without nlte pops
     }
 
-    const double fracdiff_T_e = fabs((grid::get_Te(mgi) / prev_T_e) - 1);
+    const double fracdiff_T_e = fabs((grid::get_Te(nonemptymgi) / prev_T_e) - 1);
     const auto sys_time_start_nltepops = std::time(nullptr);
     // fractional difference between previous and current iteration's (nne or max(ground state
     // population change))
@@ -752,7 +752,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     printout(
         "NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: prev_iter nne "
         "%g, new nne is %g, fracdiff %g, prev T_e %g new T_e %g fracdiff %g\n",
-        mgi, nts, nlte_iter, nne_prev, grid::get_nne(mgi), fracdiff_nne, prev_T_e, grid::get_Te(mgi), fracdiff_T_e);
+        mgi, nts, nlte_iter, nne_prev, grid::get_nne(mgi), fracdiff_nne, prev_T_e, grid::get_Te(nonemptymgi),
+        fracdiff_T_e);
 
     if (fracdiff_nne <= convergence_tolerance && fracdiff_T_e <= convergence_tolerance) {
       printout(

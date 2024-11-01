@@ -689,8 +689,8 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  const auto T_e = grid::get_Te(modelgridindex);
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
   const auto intparas = GSLIntegralParasGammaCorr{
       .nu_edge = nu_threshold,
       .photoion_xs = get_phixs_table(element, lowerion, level),
@@ -762,7 +762,7 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
 
 #if SEPARATE_STIMRECOMB
   const double departure_ratio = 0.;  // zero the stimulated recomb contribution
@@ -1263,7 +1263,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
     return (globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] == 0);
   }
 
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(modelgridindex);
 
   for (int level = 0; level < get_nlevels(element, ion); level++) {
@@ -1296,8 +1296,9 @@ auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, c
   if (ion >= nions - 1) {
     return 0.;
   }
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
   const float nne = grid::get_nne(modelgridindex);
 
   // const auto [nlevels_important, _] = get_nlevels_important(modelgridindex, element, ion, false, T_e);

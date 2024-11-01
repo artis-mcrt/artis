@@ -1752,7 +1752,8 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
              nt_solution[modelgridindex].frac_excitations_list_size *
                  sizeof(nt_solution[modelgridindex].frac_excitations_list[0]) / 1024. / 1024.);
 
-    const auto T_e = grid::get_Te(modelgridindex);
+    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+    const auto T_e = grid::get_Te(nonemptymgi);
     printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
              nt_solution[modelgridindex].frac_excitations_list_size);
     const int ntransdisplayed = std::min(50, nt_solution[modelgridindex].frac_excitations_list_size);
