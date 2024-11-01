@@ -257,8 +257,6 @@ void do_packet(Packet &pkt, const double t2, const int nts)
 
     case TYPE_KPKT: {
       const int mgi = grid::get_cell_modelgridindex(pkt.where);
-      assert_always(mgi >= 0);
-      assert_always(mgi < grid::get_npts_model());
       const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       if (grid::modelgrid[nonemptymgi].thick == 1 ||
           (EXPANSIONOPACITIES_ON && RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.)) {
