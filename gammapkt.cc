@@ -630,12 +630,7 @@ constexpr auto meanf_sigma(const double x) -> double {
   return tot;
 }
 
-// Subroutine to record the heating rate in a cell due to gamma rays.
-// By heating rate I mean, for now, really the rate at which the code is making
-// k-packets in that cell which will then convert into r-packets. This is (going
-// to be) used for the new light_curve syn-style calculation.
-// The intention is that dep_estimator_gamma will contain the emissivity of r-packets
-// in the co-moving frame (which is going to be isotropic).
+// update the energy deposition estimator for gamma ray path increment
 void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const int nonemptymgi) {
   if (!(dist > 0) || nonemptymgi < 0) {
     return;
