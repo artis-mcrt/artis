@@ -817,7 +817,7 @@ auto get_nlevels_important(const int modelgridindex, const int element, const in
                            const float T_e) -> std::tuple<int, double> {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   // get the stored ion population for comparison with the cumulative sum of level pops
-  const double nnion_real = get_nnion(modelgridindex, element, ion);
+  const double nnion_real = get_nnion(nonemptymgi, element, ion);
 
   if (IONGAMMA_POPFRAC_LEVELS_INCLUDED >= 1.) {
     return {get_nlevels(element, ion), nnion_real};

@@ -1033,7 +1033,7 @@ auto N_e(const int modelgridindex, const double energy, const std::array<double,
     for (int ion = 0; ion < nions; ion++) {
       double N_e_ion = 0.;
       const int ionstage = get_ionstage(element, ion);
-      const double nnion = get_nnion(modelgridindex, element, ion);
+      const double nnion = get_nnion(nonemptymgi, element, ion);
 
       if (nnion < minionfraction * tot_nion) {  // skip negligible ions
         continue;
@@ -1200,10 +1200,10 @@ auto get_oneoverw(const int element, const int ion, const int modelgridindex) ->
 }
 
 // the fraction of deposited energy that goes into ionising electrons in a particular shell
-auto calculate_nt_frac_ionization_shell(const int modelgridindex, const int element, const int ion,
+auto calculate_nt_frac_ionization_shell(const int nonemptymgi, const int element, const int ion,
                                         const collionrow &collionrow, const std::array<double, SFPTS> &yfunc)
     -> double {
-  const double nnion = get_nnion(modelgridindex, element, ion);
+  const double nnion = get_nnion(nonemptymgi, element, ion);
   const double ionpot_ev = collionrow.ionpot_ev;
 
   std::array<double, SFPTS> cross_section_vec{};
@@ -1275,10 +1275,11 @@ void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int elemen
 // Kozma & Fransson 1992 equation 12, except modified to be a sum over all shells of an ion
 // the result is in ergs
 {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const int Z = get_atomicnumber(element);
   const int ionstage = get_ionstage(element, ion);
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  const double nnion = get_nnion(modelgridindex, element, ion);  // ions/cm^3
+  const double nnion = get_nnion(nonemptymgi, element, ion);  // ions/cm^3
   const double tot_nion = get_nnion_tot(modelgridindex);
   const double X_ion = nnion / tot_nion;  // molar fraction of this ion
 
@@ -1303,7 +1304,7 @@ void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int elemen
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       matching_nlsubshell_count++;
       const double frac_ionization_shell =
-          calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow, yfunc);
+          calculate_nt_frac_ionization_shell(nonemptymgi, element, ion, collionrow, yfunc);
       eta_sum += frac_ionization_shell;
       const double ionpot_shell = collionrow.ionpot_ev * EV;
 
@@ -1481,7 +1482,8 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
 
 // returns the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
 auto ion_ntion_energyrate(const int modelgridindex, const int element, const int lowerion) -> double {
-  const double nnlowerion = get_nnion(modelgridindex, element, lowerion);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const double nnlowerion = get_nnion(nonemptymgi, element, lowerion);
   double enrate = 0.;
   const auto maxupperion = nt_ionisation_maxupperion(element, lowerion);
   for (int upperion = lowerion + 1; upperion <= maxupperion; upperion++) {
@@ -1582,7 +1584,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
       const int uniqueionindex = get_uniqueionindex(element, ion);
 
       const int ionstage = get_ionstage(element, ion);
-      const double nnion = get_nnion(modelgridindex, element, ion);
+      const double nnion = get_nnion(nonemptymgi, element, ion);
 
       // if (nnion < minionfraction * get_nnion_tot(modelgridindex)) // skip negligible ions
       if (nnion <= 0.) {  // skip zero-abundance ions
@@ -1601,7 +1603,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
       for (const auto &collionrow : colliondata) {
         if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
           const double frac_ionization_ion_shell =
-              calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow, yfunc);
+              calculate_nt_frac_ionization_shell(nonemptymgi, element, ion, collionrow, yfunc);
           frac_ionization_ion += frac_ionization_ion_shell;
           matching_subshell_count++;
           printout("      shell ");
@@ -2593,7 +2595,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
       const int nions = get_nions(element);
       bool first_included_ion_of_element = true;
       for (int ion = 0; ion < nions; ion++) {
-        const double nnion = get_nnion(modelgridindex, element, ion);
+        const double nnion = get_nnion(nonemptymgi, element, ion);
 
         // skip negligible ions
         if (nnion < minionfraction * get_nnion_tot(modelgridindex)) {

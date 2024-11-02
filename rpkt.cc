@@ -825,7 +825,7 @@ auto calculate_chi_ffheat_nnionpart(const int modelgridindex) -> double {
   for (int element = 0; element < nelements; element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      const double nnion = get_nnion(modelgridindex, element, ion);
+      const double nnion = get_nnion(nonemptymgi, element, ion);
       const int ioncharge = get_ionstage(element, ion) - 1;
       chi_ff_nnionpart += ioncharge * ioncharge * g_ff * nnion;
     }
@@ -926,7 +926,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
     // the involved atomic species
     const bool should_keep_this_cont = USECELLHISTANDUPDATEPHIXSLIST
                                            ? globals::cellcache[cellcacheslotid].ch_keep_this_cont[i]
-                                           : keep_this_cont(element, ion, level, modelgridindex, nnetot);
+                                           : keep_this_cont(element, ion, level, nonemptymgi, nnetot);
 
     if (should_keep_this_cont) [[likely]] {
       const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? globals::cellcache[cellcacheslotid].ch_allcont_nnlevel[i]

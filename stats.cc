@@ -140,6 +140,7 @@ void reset_ion_stats(int modelgridindex) {
 }
 
 void normalise_ion_estimators(const int mgi, const double deltat, const double deltaV) {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
       for (int i = 0; i < ION_STAT_COUNT; i++) {
@@ -150,7 +151,7 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
         if (i < nstatcounters_ratecoeff) {
           // convert photon event counters into rate coefficients
           set_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i),
-                        ratedensity / get_nnion(mgi, element, ion));
+                        ratedensity / get_nnion(nonemptymgi, element, ion));
         } else {
           set_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i), ratedensity);
         }

@@ -126,11 +126,10 @@ auto get_element_nne_contrib(const int nonemptymgi, const int element) -> double
     return 0.;
   }
 
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double nne = 0.;
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++) {
-    const auto nnion = get_nnion(modelgridindex, element, ion);
+    const auto nnion = get_nnion(nonemptymgi, element, ion);
     const int ioncharge = get_ionstage(element, ion) - 1;
     nne += ioncharge * nnion;
   }
@@ -563,8 +562,8 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
 }
 
 // Use the ground level population and partition function to get an ion population
-[[nodiscard]] __host__ __device__ auto get_nnion(const int modelgridindex, const int element, const int ion) -> double {
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+[[nodiscard]] __host__ __device__ auto get_nnion(const int nonemptymgi, const int element, const int ion) -> double {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   return get_groundlevelpop(modelgridindex, element, ion) *
          grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +

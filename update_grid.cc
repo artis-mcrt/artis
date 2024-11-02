@@ -83,8 +83,8 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     }
     double elpop = 0.;
     for (int ion = 0; ion < nions; ion++) {
-      elpop += get_nnion(mgi, element, ion);
-      fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), get_nnion(mgi, element, ion));
+      elpop += get_nnion(nonemptymgi, element, ion);
+      fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), get_nnion(nonemptymgi, element, ion));
     }
     if (nions == 0) {
       elpop = grid::get_elem_numberdens(nonemptymgi, element);
@@ -1234,7 +1234,7 @@ void cellcache_change_cell(const int modelgridindex) {
       const int level = globals::allcont[i].level;
       const auto nnlevel = get_levelpop(nonemptymgi, element, ion, level);
       cacheslot.ch_allcont_nnlevel[i] = nnlevel;
-      cacheslot.ch_keep_this_cont[i] = nnlevel > 0 && keep_this_cont(element, ion, level, modelgridindex, nnetot);
+      cacheslot.ch_keep_this_cont[i] = nnlevel > 0 && keep_this_cont(element, ion, level, nonemptymgi, nnetot);
     }
   }
 }

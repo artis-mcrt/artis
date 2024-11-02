@@ -1180,7 +1180,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
           nnlevelnlte = slpopfactor * superlevel_partfunc;
         }
 
-        const double ion_popfrac = nnlevelnlte / get_nnion(modelgridindex, element, ion);
+        const double ion_popfrac = nnlevelnlte / get_nnion(nonemptymgi, element, ion);
         fprintf(nlte_file, "%.5e %.5e %.5e\n", nnlevellte, nnlevelnlte, ion_popfrac);
       }
     }
