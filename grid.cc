@@ -1807,10 +1807,9 @@ __host__ __device__ auto get_W(const int nonemptymgi) -> float {
   return modelgrid[nonemptymgi].W;
 }
 
-void set_rho(const int modelgridindex, const float rho) {
+void set_rho(const int nonemptymgi, const float rho) {
   assert_always(rho >= 0.);
   assert_always(std::isfinite(rho));
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   modelgrid[nonemptymgi].rho = rho;
 }
 

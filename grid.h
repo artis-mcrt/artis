@@ -88,7 +88,7 @@ void set_elem_abundance(int nonemptymgi, int element, float newabundance);
 void set_nne(int nonemptymgi, float nne);
 void set_nnetot(int modelgridindex, float nnetot);
 void set_kappagrey(int modelgridindex, float kappagrey);
-void set_rho(int modelgridindex, float rho);
+void set_rho(int nonemptymgi, float rho);
 void set_Te(int nonemptymgi, float Te);
 void set_TR(int nonemptymgi, float TR);
 void set_TJ(int nonemptymgi, float TJ);
