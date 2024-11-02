@@ -1137,10 +1137,10 @@ void read_grid_restart_data(const int timestep) {
     assert_always(globals::dep_estimator_electron[nonemptymgi] >= 0.);
     assert_always(globals::dep_estimator_alpha[nonemptymgi] >= 0.);
 
-    set_TR(mgi, T_R);
-    set_Te(mgi, T_e);
-    set_W(mgi, W);
-    set_TJ(mgi, T_J);
+    set_TR(nonemptymgi, T_R);
+    set_Te(nonemptymgi, T_e);
+    set_W(nonemptymgi, W);
+    set_TJ(nonemptymgi, T_J);
     modelgrid[nonemptymgi].thick = thick;
 
     if constexpr (USE_LUT_PHOTOION) {
@@ -1202,11 +1202,10 @@ void assign_initial_temperatures() {
     }
     assert_always(std::isfinite(T_initial));
 
-    set_Te(mgi, T_initial);
-    set_TJ(mgi, T_initial);
-    set_TR(mgi, T_initial);
-
-    set_W(mgi, 1.);
+    set_Te(nonemptymgi, T_initial);
+    set_TJ(nonemptymgi, T_initial);
+    set_TR(nonemptymgi, T_initial);
+    set_W(nonemptymgi, 1.);
     modelgrid[nonemptymgi].thick = 0;
   }
   printout("  cells below MINTEMP %g: %d\n", MINTEMP, cells_below_mintemp);
@@ -1833,36 +1832,27 @@ void set_kappagrey(const int modelgridindex, const float kappagrey) {
   modelgrid[nonemptymgi].kappagrey = kappagrey;
 }
 
-void set_Te(const int modelgridindex, const float Te) {
+void set_Te(const int nonemptymgi, const float Te) {
   if (Te > 0.) {
     // ignore the zero initialisation value for this check
     const double nu_peak = 5.879e10 * Te;
     if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
+      const auto modelgridindex = get_mgi_of_nonemptymgi(nonemptymgi);
       printout(
           "[warning] modelgridindex %d B_planck(Te=%g K) peak at %g Hz is outside frequency range NU_MIN_R %g NU_MAX_R "
           "%g\n",
           modelgridindex, Te, nu_peak, NU_MIN_R, NU_MAX_R);
     }
   }
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
 
   modelgrid[nonemptymgi].Te = Te;
 }
 
-void set_TR(const int modelgridindex, const float TR) {
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
-  modelgrid[nonemptymgi].TR = TR;
-}
+void set_TR(const int nonemptymgi, const float TR) { modelgrid[nonemptymgi].TR = TR; }
 
-void set_TJ(const int modelgridindex, const float TJ) {
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
-  modelgrid[nonemptymgi].TJ = TJ;
-}
+void set_TJ(const int nonemptymgi, const float TJ) { modelgrid[nonemptymgi].TJ = TJ; }
 
-void set_W(const int modelgridindex, const float W) {
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
-  modelgrid[nonemptymgi].W = W;
-}
+void set_W(const int nonemptymgi, const float W) { modelgrid[nonemptymgi].W = W; }
 
 auto get_model_type() -> GridType { return model_type; }
 

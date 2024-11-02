@@ -195,7 +195,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   // Set new T_e guess for the current cell and update populations
-  grid::set_Te(modelgridindex, T_e);
+  grid::set_Te(nonemptymgi, T_e);
 
   if constexpr (!USE_LUT_PHOTOION && !LTEPOP_EXCITATION_USE_TJ) {
     for (int element = 0; element < get_nelements(); element++) {
@@ -396,7 +396,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
     T_e = std::max(T_e, MINTEMP);
   }
 
-  grid::set_Te(modelgridindex, T_e);
+  grid::set_Te(nonemptymgi, T_e);
 
   // this call with make sure heating/cooling rates and populations are updated for the final T_e
   // in case T_e got modified after the T_e solver finished

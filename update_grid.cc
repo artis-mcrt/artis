@@ -967,11 +967,11 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     if (globals::lte_iteration || grid::modelgrid[nonemptymgi].thick == 1) {
       // LTE mode or grey mode (where temperature doesn't matter but is calculated anyway)
 
-      const double T_J = radfield::get_T_J_from_J(mgi);
-      grid::set_TR(mgi, T_J);
-      grid::set_Te(mgi, T_J);
-      grid::set_TJ(mgi, T_J);
-      grid::set_W(mgi, 1);
+      const double T_J = radfield::get_T_J_from_J(nonemptymgi);
+      grid::set_TR(nonemptymgi, T_J);
+      grid::set_Te(nonemptymgi, T_J);
+      grid::set_TJ(nonemptymgi, T_J);
+      grid::set_W(nonemptymgi, 1);
 
       if constexpr (USE_LUT_PHOTOION) {
         std::fill_n(globals::corrphotoionrenorm + (nonemptymgi * globals::nbfcontinua_ground),

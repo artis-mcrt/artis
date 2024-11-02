@@ -1058,11 +1058,11 @@ void normalise_nuJ(const int modelgridindex, const double estimator_normfactor_o
   nuJ[nonemptymgi] *= estimator_normfactor_over4pi;
 }
 
-auto get_T_J_from_J(const int modelgridindex) -> double {
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+auto get_T_J_from_J(const int nonemptymgi) -> double {
   const double T_J = pow(J[nonemptymgi] * PI / STEBO, 1. / 4.);
   if (!std::isfinite(T_J)) {
     // keep old value of T_J
+    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     printout("[warning] get_T_J_from_J: T_J estimator infinite in cell %d, use value of last timestep\n",
              modelgridindex);
     return grid::get_TR(nonemptymgi);
