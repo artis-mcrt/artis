@@ -865,7 +865,7 @@ __host__ __device__ auto radfield(const double nu, const int nonemptymgi) -> dou
     if (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP) {
       const int binindex = select_bin(nu);
       if (binindex >= 0) {
-        const auto &bin = radfieldbin_solutions[(nonemptymgi * RADFIELDBINCOUNT) + binindex];
+        const auto &bin = radfieldbin_solutions[(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex];
         if (bin.W >= 0.) {
           const double J_nu = dbb(nu, bin.T_R, bin.W);
           return J_nu;
