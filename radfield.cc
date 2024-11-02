@@ -844,13 +844,14 @@ __host__ __device__ void update_estimators(const int nonemptymgi, const double d
   }
 }
 
-__host__ __device__ void update_lineestimator(const int modelgridindex, const int lineindex, const double increment) {
+__host__ __device__ void update_lineestimator(const int nonemptymgi, const int lineindex, const double increment) {
   if constexpr (!DETAILED_LINE_ESTIMATORS_ON) {
     return;
   }
 
   const int jblueindex = get_Jblueindex(lineindex);
   if (jblueindex >= 0) {
+    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     Jb_lu_raw[modelgridindex][jblueindex].value += increment;
     Jb_lu_raw[modelgridindex][jblueindex].contribcount += 1;
   }

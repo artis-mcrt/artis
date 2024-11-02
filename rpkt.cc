@@ -78,13 +78,12 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
 
 // return edist, the distance to the next physical event (continuum or bound-bound) and is_boundbound_event, a
 // boolean BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
-auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
                MacroAtomState &mastate,
                const double tau_rnd,     // random optical depth until which the packet travels
                const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
                const double nu_cmf_abort, const double d_nu_on_d_l, const double doppler, const auto *const linelist,
                const int nlines) -> std::tuple<double, int, bool> {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   auto pos = pkt.pos;
   auto nu_cmf = pkt.nu_cmf;
   auto e_cmf = pkt.e_cmf;
@@ -163,7 +162,9 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
             assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
           }
 
-          radfield::update_lineestimator(modelgridindex, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
+          if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+            radfield::update_lineestimator(nonemptymgi, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
+          }
 
         } else {
           // bound-bound process occurs
@@ -173,7 +174,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
 
           if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
             move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
-            radfield::update_lineestimator(modelgridindex, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
+            radfield::update_lineestimator(nonemptymgi, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
           }
 
           // the line and its parameters were already selected by closest_transition!
@@ -263,7 +264,7 @@ auto get_event_expansion_opacity(
         double edist_after_bin = 0.;
         bool event_is_boundbound = false;
         std::tie(edist_after_bin, next_trans, event_is_boundbound) =
-            get_event(modelgridindex, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
+            get_event(nonemptymgi, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
                       std::numeric_limits<double>::max(), 0., d_nu_on_d_l, doppler, globals::linelist, globals::nlines);
         // assert_always(edist_after_bin <= 1.1 * binedgedist);
         dist = dist + edist_after_bin;
@@ -744,8 +745,8 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
           mgi, nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, nu_cmf_abort, d_nu_on_d_l, doppler);
     } else {
       std::tie(edist, pkt.next_trans, event_is_boundbound) =
-          get_event(mgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l, doppler,
-                    globals::linelist, globals::nlines);
+          get_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l,
+                    doppler, globals::linelist, globals::nlines);
     }
   }
   assert_always(edist >= 0);
@@ -1155,8 +1156,8 @@ void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node
 }
 #endif
 
-void calculate_expansion_opacities(const int modelgridindex) {
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+void calculate_expansion_opacities(const int nonemptymgi) {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const auto rho = grid::get_rho(nonemptymgi);
 
   const auto sys_time_start_calc = std::time(nullptr);
