@@ -112,7 +112,7 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
       const double epsilon_trans = epsilon_current - epsilon_target;
 
       const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, nonemptymgi);
-      const double C = col_recombination_ratecoeff(nonemptymgi, element, ion, level, lower, epsilon_trans);
+      const double C = col_recombination_ratecoeff(T_e, nne, element, ion, level, lower, epsilon_trans);
 
       sum_internal_down_lower += (R + C) * epsilon_target;
 
@@ -503,7 +503,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           const double epsilon_target = epsilon(element, ion - 1, lower);
           const double epsilon_trans = epsilon_current - epsilon_target;
           const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, nonemptymgi);
-          const double C = col_recombination_ratecoeff(nonemptymgi, element, ion, level, lower, epsilon_trans);
+          const double C = col_recombination_ratecoeff(T_e, nne, element, ion, level, lower, epsilon_trans);
           rate += (R + C) * epsilon_target;
           if (targetrate < rate) {
             break;
@@ -781,8 +781,8 @@ auto stim_recombination_ratecoeff(const float nne, const int element, const int 
 
 // multiply by upper level population to get a rate per second
 #pragma omp declare simd
-auto col_recombination_ratecoeff(const int nonemptymgi, const int element, const int upperion, const int upper,
-                                 const int lower, const double epsilon_trans) -> double {
+auto col_recombination_ratecoeff(const float T_e, const float nne, const int element, const int upperion,
+                                 const int upper, const int lower, const double epsilon_trans) -> double {
   // it's probably faster to only check this condition outside this function
   // in a case where this wasn't checked, the function will return zero anyway
   // if (upper > get_maxrecombininglevel(element, upperion))
@@ -791,8 +791,6 @@ auto col_recombination_ratecoeff(const int nonemptymgi, const int element, const
   const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {
-      const float nne = grid::get_nne(nonemptymgi);
-      const auto T_e = grid::get_Te(nonemptymgi);
       const double fac1 = epsilon_trans / KB / T_e;
       const int ionstage = get_ionstage(element, upperion);
 

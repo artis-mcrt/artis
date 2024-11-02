@@ -27,7 +27,7 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate);
                                                 int nonemptymgi) -> double;
 
 #pragma omp declare simd
-[[nodiscard]] auto col_recombination_ratecoeff(int nonemptymgi, int element, int upperion, int upper, int lower,
+[[nodiscard]] auto col_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upper, int lower,
                                                double epsilon_trans) -> double;
 #pragma omp declare simd
 [[nodiscard]] auto col_ionization_ratecoeff(float T_e, float nne, int element, int ion, int lower, int phixstargetindex,

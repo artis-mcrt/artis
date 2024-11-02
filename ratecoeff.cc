@@ -1036,7 +1036,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
         double recomb_coeff = 0.;
         if (collisional_not_radiative) {
           const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-          recomb_coeff += col_recombination_ratecoeff(nonemptymgi, element, upperion, upper, lower, epsilon_trans);
+          recomb_coeff += col_recombination_ratecoeff(T_e, nne, element, upperion, upper, lower, epsilon_trans);
         } else if (!stimonly) {
           recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower, nonemptymgi);
         } else {
