@@ -603,7 +603,7 @@ void nltepop_matrix_add_nt_ionisation(const int modelgridindex, const int elemen
   }
 }
 
-void nltepop_matrix_normalise(const int modelgridindex, const int element, gsl_matrix *rate_matrix,
+void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matrix *rate_matrix,
                               gsl_vector *pop_norm_factor_vec) {
   const size_t nlte_dimension = pop_norm_factor_vec->size;
   assert_always(pop_norm_factor_vec->size == nlte_dimension);
@@ -615,21 +615,20 @@ void nltepop_matrix_normalise(const int modelgridindex, const int element, gsl_m
   for (size_t column = 0; column < nlte_dimension; column++) {
     const auto [ion, level] = get_ion_level_of_nlte_vector_index(column, element);
 
-    gsl_vector_set(pop_norm_factor_vec, column, calculate_levelpop_lte(modelgridindex, element, ion, level));
+    gsl_vector_set(pop_norm_factor_vec, column, calculate_levelpop_lte(nonemptymgi, element, ion, level));
 
     if ((level != 0) && (!is_nlte(element, ion, level))) {
       // level is a superlevel, so add populations of higher levels to the norm factor
       for (int dummylevel = level + 1; dummylevel < get_nlevels(element, ion); dummylevel++) {
         if (!is_nlte(element, ion, dummylevel)) {
-          *gsl_vector_ptr(pop_norm_factor_vec, column) +=
-              calculate_levelpop_lte(modelgridindex, element, ion, dummylevel);
+          *gsl_vector_ptr(pop_norm_factor_vec, column) += calculate_levelpop_lte(nonemptymgi, element, ion, dummylevel);
         }
       }
       // NOTE: above calculation is not always equal to the sum of LTE populations
       // since calculate_levelpop_lte imposes MINPOP minimum
       // printout("superlevel norm factor index %d is %g, partfunc is %g, partfunc*levelpop(SL)/g(SL) %g\n",
       //          column, gsl_vector_get(pop_norm_factor_vec, column), superlevel_partfunc[ion],
-      //          superlevel_partfunc[ion] * calculate_levelpop_lte(modelgridindex,element,ion,level) /
+      //          superlevel_partfunc[ion] * calculate_levelpop_lte(nonemptymgi,element,ion,level) /
       //          stat_weight(element,ion,level));
     }
 
@@ -970,7 +969,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   auto pop_norm_factor_vec = gsl_vector_view_array(vec_pop_norm_factor_vec.data(), nlte_dimension).vector;
   gsl_vector_set_all(&pop_norm_factor_vec, 1.0);
 
-  nltepop_matrix_normalise(modelgridindex, element, &rate_matrix, &pop_norm_factor_vec);
+  nltepop_matrix_normalise(nonemptymgi, element, &rate_matrix, &pop_norm_factor_vec);
 
   // printout("Rate matrix | balance vector:\n");
   // for (int row = 0; row < nlte_dimension; row++)
@@ -1021,14 +1020,14 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       //
       // printout("    For ionstage %d, the ground state populations are %g (function) and %g (matrix result with
       // normed pop %g, ltepopnormfactor %g)\n",get_ionstage(element,ion),
-      //          get_groundlevelpop(modelgridindex, element, ion), gsl_vector_get(popvec, index_gs),
+      //          get_groundlevelpop(nonemptymgi, element, ion), gsl_vector_get(popvec, index_gs),
       //          gsl_vector_get(x, index_gs), gsl_vector_get(pop_norm_factor_vec, index_gs));
 
       // store the NLTE level populations
       // double solution_ion_pop = 0.;
       for (int level = 1; level <= nlevels_nlte; level++) {
         const int index = get_nlte_vector_index(element, ion, level);
-        set_nlte_levelpop_over_rho(modelgridindex, element, ion, level,
+        set_nlte_levelpop_over_rho(nonemptymgi, element, ion, level,
                                    gsl_vector_get(&popvec, index) / grid::get_rho(nonemptymgi));
         // solution_ion_pop += gsl_vector_get(popvec, index);
       }
@@ -1038,7 +1037,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       {
         const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1);
         set_nlte_superlevelpop_over_rho(
-            modelgridindex, element, ion,
+            nonemptymgi, element, ion,
             gsl_vector_get(&popvec, index_sl) / grid::get_rho(nonemptymgi) / superlevel_partfunc[ion]);
       }
 
@@ -1127,8 +1126,8 @@ void nltepop_close_file() {
   }
 }
 
-void nltepop_write_to_file(const int modelgridindex, const int timestep) {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   if (globals::lte_iteration || grid::modelgrid[nonemptymgi].thick == 1) {  // NLTE solver hasn't been run yet
     return;
   }
@@ -1151,7 +1150,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
       const int nsuperlevels = ion_has_superlevel(element, ion) ? 1 : 0;
 
       for (int level = 0; level <= nlevels_nlte + nsuperlevels; level++) {
-        double nnlevellte = calculate_levelpop_lte(modelgridindex, element, ion, level);
+        double nnlevellte = calculate_levelpop_lte(nonemptymgi, element, ion, level);
         double nnlevelnlte{NAN};
 
         fprintf(nlte_file, "%d %d %d %d ", timestep, modelgridindex, atomic_number, ionstage);
@@ -1159,7 +1158,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
           fprintf(nlte_file, "%d ", level);
 
           if (level == 0) {
-            nnlevelnlte = get_groundlevelpop(modelgridindex, element, ion);
+            nnlevelnlte = get_groundlevelpop(nonemptymgi, element, ion);
           } else {
             nnlevelnlte =
                 get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level) * grid::modelgrid[nonemptymgi].rho;
@@ -1173,7 +1172,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
           double superlevel_partfunc = 0;
           fprintf(nlte_file, "%d ", -1);
           for (int level_sl = nlevels_nlte + 1; level_sl < get_nlevels(element, ion); level_sl++) {
-            nnlevellte += calculate_levelpop_lte(modelgridindex, element, ion, level_sl);
+            nnlevellte += calculate_levelpop_lte(nonemptymgi, element, ion, level_sl);
             superlevel_partfunc += superlevel_boltzmann(modelgridindex, element, ion, level_sl);
           }
 
@@ -1285,17 +1284,15 @@ auto get_nlte_superlevelpop_over_rho(const int modelgridindex, const int element
   return grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + sl_nlte_index];
 }
 
-void set_nlte_levelpop_over_rho(const int modelgridindex, const int element, const int ion, const int level,
+void set_nlte_levelpop_over_rho(const int nonemptymgi, const int element, const int ion, const int level,
                                 const double value) {
   assert_testmodeonly(level <= get_nlevels_nlte(element, ion));
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + globals::elements[element].ions[ion].first_nlte +
                           level - 1] = value;
 }
 
-void set_nlte_superlevelpop_over_rho(const int modelgridindex, const int element, const int ion, const double value) {
+void set_nlte_superlevelpop_over_rho(const int nonemptymgi, const int element, const int ion, const double value) {
   assert_testmodeonly(ion_has_superlevel(element, ion));
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const int sl_nlte_index = globals::elements[element].ions[ion].first_nlte + get_nlevels_nlte(element, ion);
   grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + sl_nlte_index] = value;
 }

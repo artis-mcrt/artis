@@ -65,7 +65,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
   //",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
   if (globals::total_nlte_levels > 0) {
-    nltepop_write_to_file(mgi, timestep);
+    nltepop_write_to_file(nonemptymgi, timestep);
   }
 
   for (int element = 0; element < get_nelements(); element++) {

@@ -180,21 +180,21 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   if (level == 0) {
-    nn = get_groundlevelpop(modelgridindex, element, ion);
+    nn = get_groundlevelpop(nonemptymgi, element, ion);
   } else if (elem_has_nlte_levels(element)) {
     if (is_nlte(element, ion, level)) {
       // first_nlte refers to the first excited state (level=1)
       const double nltepop_over_rho = get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level);
       if (nltepop_over_rho < -0.9) {
         // Case for when no NLTE level information is available yet
-        nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
+        nn = calculate_levelpop_lte(nonemptymgi, element, ion, level);
       } else {
         nn = nltepop_over_rho * grid::get_rho(nonemptymgi);
         if (!std::isfinite(nn)) {
           printout("[fatal] NLTE population failure.\n");
           printout("element %d ion %d level %d\n", element, ion, level);
           printout("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, grid::get_rho(nonemptymgi));
-          printout("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
+          printout("ground level %g\n", get_groundlevelpop(nonemptymgi, element, ion));
           std::abort();
         }
         *skipminpop = true;
@@ -208,7 +208,7 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
       if (superlevelpop_over_rho < -0.9)  // TODO: should change this to less than zero?
       {
         // Case for when no NLTE level information is available yet
-        nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
+        nn = calculate_levelpop_lte(nonemptymgi, element, ion, level);
       } else {
         nn = superlevelpop_over_rho * grid::get_rho(nonemptymgi) *
              superlevel_boltzmann(modelgridindex, element, ion, level);
@@ -216,7 +216,7 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
           printout("[fatal] NLTE population failure.\n");
           printout("element %d ion %d level %d\n", element, ion, level);
           printout("nn %g superlevelpop_over_rho %g rho %g\n", nn, superlevelpop_over_rho, grid::get_rho(nonemptymgi));
-          printout("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
+          printout("ground level %g\n", get_groundlevelpop(nonemptymgi, element, ion));
           std::abort();
         }
         *skipminpop = true;
@@ -224,7 +224,7 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
       }
     }
   } else {
-    nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
+    nn = calculate_levelpop_lte(nonemptymgi, element, ion, level);
   }
   *skipminpop = false;
   return nn;
@@ -242,11 +242,11 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   const int uniqueionindex = get_uniqueionindex(element, ion);
 
   bool initial = false;
-  if (get_groundlevelpop(modelgridindex, element, ion) < MINPOP) {
+  if (get_groundlevelpop(nonemptymgi, element, ion) < MINPOP) {
     // either there really is none of this ion or this is a first pass through
     // in either case, we won't have any real nlte_populations so the actual value of
     // of groundlevelpop for this calculation doesn't matter, so long as it's not zero!
-    pop_store = get_groundlevelpop(modelgridindex, element, ion);
+    pop_store = get_groundlevelpop(nonemptymgi, element, ion);
     initial = true;
     grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex] =
         1.;
@@ -255,7 +255,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   double U = 1.;
 
   const int nlevels = get_nlevels(element, ion);
-  const double groundpop = get_groundlevelpop(modelgridindex, element, ion);
+  const double groundpop = get_groundlevelpop(nonemptymgi, element, ion);
   for (int level = 1; level < nlevels; level++) {
     bool skipminpop = false;
     const double nn = calculate_levelpop_nominpop(nonemptymgi, element, ion, level, &skipminpop) / groundpop;
@@ -464,11 +464,9 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
 
 // Return the given ions groundlevel population for modelgridindex which was precalculated
 // during update_grid and stored to the grid.
-auto get_groundlevelpop(const int modelgridindex, const int element, const int ion) -> double {
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
+auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const double nn = grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
                                                        get_uniqueionindex(element, ion)];
   if (nn < MINPOP) {
@@ -481,14 +479,11 @@ auto get_groundlevelpop(const int modelgridindex, const int element, const int i
 }
 
 // Calculate occupation population of a level assuming LTE excitation
-auto calculate_levelpop_lte(const int modelgridindex, const int element, const int ion, const int level) -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
+auto calculate_levelpop_lte(const int nonemptymgi, const int element, const int ion, const int level) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-
-  const auto nnground = get_groundlevelpop(modelgridindex, element, ion);
+  const auto nnground = get_groundlevelpop(nonemptymgi, element, ion);
   if (level == 0) {
     return nnground;
   }
@@ -563,9 +558,7 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
 
 // Use the ground level population and partition function to get an ion population
 [[nodiscard]] __host__ __device__ auto get_nnion(const int nonemptymgi, const int element, const int ion) -> double {
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-
-  return get_groundlevelpop(modelgridindex, element, ion) *
+  return get_groundlevelpop(nonemptymgi, element, ion) *
          grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
                                        get_uniqueionindex(element, ion)] /
          stat_weight(element, ion, 0);

@@ -836,7 +836,7 @@ auto get_nlevels_important(const int modelgridindex, const int element, const in
       const double T_exc = T_e;  // remember, other parts of the code in LTE mode use TJ, not T_e
       const double E_level = epsilon(element, ion, lower);
       const double E_ground = epsilon(element, ion, 0);
-      const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, ion) : 1.;
+      const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(nonemptymgi, element, ion) : 1.;
 
       nnlowerlevel = (nnground * stat_weight(element, ion, lower) / stat_weight(element, ion, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
@@ -998,7 +998,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
         const double T_exc = T_e;
         const double E_level = epsilon(element, lowerion + 1, upper);
         const double E_ground = epsilon(element, lowerion + 1, 0);
-        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, lowerion + 1) : 1.;
+        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
 
         nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                         exp(-(E_level - E_ground) / KB / T_exc));
@@ -1020,7 +1020,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
         const double T_exc = T_e;
         const double E_level = epsilon(element, lowerion + 1, upper);
         const double E_ground = epsilon(element, lowerion + 1, 0);
-        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, lowerion + 1) : 1.;
+        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
 
         nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                         exp(-(E_level - E_ground) / KB / T_exc));
@@ -1322,7 +1322,7 @@ auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, c
     }
   }
   Gamma += Col_ion;
-  Gamma /= get_groundlevelpop(modelgridindex, element, ion);
+  Gamma /= get_groundlevelpop(nonemptymgi, element, ion);
   return Gamma;
 }
 
@@ -1352,7 +1352,7 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
       const double T_exc = T_e;
       const double E_level = epsilon(element, lowerion, lower);
       const double E_ground = epsilon(element, lowerion, 0);
-      const double nnground = get_groundlevelpop(modelgridindex, element, lowerion);
+      const double nnground = get_groundlevelpop(nonemptymgi, element, lowerion);
 
       nnlowerlevel = (nnground * stat_weight(element, lowerion, lower) / stat_weight(element, lowerion, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
