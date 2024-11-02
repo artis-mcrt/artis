@@ -210,7 +210,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
     }
   }
 
-  calculate_ion_balance_nne(modelgridindex);
+  calculate_ion_balance_nne(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
 
   // Then calculate heating and cooling rates
