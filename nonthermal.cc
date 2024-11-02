@@ -1103,10 +1103,9 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
 
 // fraction of deposited energy that goes into heating the thermal electrons
 // Kozma & Fransson equation 3
-auto calculate_frac_heating(const int modelgridindex, const std::array<double, SFPTS> &yfunc) -> float {
+auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPTS> &yfunc) -> float {
   // frac_heating multiplied by E_init, which will be divided out at the end
   double frac_heating_Einit = 0.;
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const float nne = grid::get_nne(nonemptymgi);
 
   for (int i = 0; i < SFPTS; i++) {
@@ -1826,7 +1825,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
   printout("  nne_nt/nne < %9.3e\n", nne_nt_max / nne);
 
   // store the solution properties now while the NT spectrum is in memory (in case we free before packet prop)
-  nt_solution[modelgridindex].frac_heating = calculate_frac_heating(modelgridindex, yfunc);
+  nt_solution[modelgridindex].frac_heating = calculate_frac_heating(nonemptymgi, yfunc);
 
   printout("  frac_heating_tot:    %g\n", nt_solution[modelgridindex].frac_heating);
   printout("  frac_excitation_tot: %g\n", frac_excitation_total);
