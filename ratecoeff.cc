@@ -768,11 +768,11 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
   const double departure_ratio = 0.;  // zero the stimulated recomb contribution
 #else
   // stimulated recombination is negative photoionisation
-  const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+  const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
   const double nne = grid::get_nne(nonemptymgi);
   const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
   const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
-  const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upperionlevel);
+  const double nnupperionlevel = get_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
   double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.;  // put that to phixslist
   if (!std::isfinite(departure_ratio)) {
     departure_ratio = 0.;
@@ -816,6 +816,7 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
 // of at least IONGAMMA_POPFRAC_LEVELS_INCLUDED
 auto get_nlevels_important(const int modelgridindex, const int element, const int ion, const bool assume_lte,
                            const float T_e) -> std::tuple<int, double> {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   // get the stored ion population for comparison with the cumulative sum of level pops
   const double nnion_real = get_nnion(modelgridindex, element, ion);
 
@@ -841,7 +842,7 @@ auto get_nlevels_important(const int modelgridindex, const int element, const in
       nnlowerlevel = (nnground * stat_weight(element, ion, lower) / stat_weight(element, ion, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
     } else {
-      nnlowerlevel = get_levelpop(modelgridindex, element, ion, lower);
+      nnlowerlevel = get_levelpop(nonemptymgi, element, ion, lower);
     }
     nnlevelsum += nnlowerlevel;
     nlevels_important = lower + 1;
@@ -1003,7 +1004,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
         nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                         exp(-(E_level - E_ground) / KB / T_exc));
       } else {
-        nnupperlevel = get_levelpop(modelgridindex, element, lowerion + 1, upper);
+        nnupperlevel = get_levelpop(nonemptymgi, element, lowerion + 1, upper);
       }
       nnupperion += nnupperlevel;
     }
@@ -1025,7 +1026,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
         nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                         exp(-(E_level - E_ground) / KB / T_exc));
       } else {
-        nnupperlevel = get_levelpop(modelgridindex, element, lowerion + 1, upper);
+        nnupperlevel = get_levelpop(nonemptymgi, element, lowerion + 1, upper);
       }
       nnupperlevel_so_far += nnupperlevel;
       for (int lower = 0; lower < get_nlevels(element, lowerion); lower++) {
@@ -1269,7 +1270,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
   const auto nne = grid::get_nne(nonemptymgi);
 
   for (int level = 0; level < get_nlevels(element, ion); level++) {
-    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
     if (nnlevel == 0.) {
       continue;
     }
@@ -1356,7 +1357,7 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
       nnlowerlevel = (nnground * stat_weight(element, lowerion, lower) / stat_weight(element, lowerion, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
     } else {
-      nnlowerlevel = get_levelpop(modelgridindex, element, lowerion, lower);
+      nnlowerlevel = get_levelpop(nonemptymgi, element, lowerion, lower);
     }
 
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lower); phixstargetindex++) {

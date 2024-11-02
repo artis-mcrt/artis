@@ -67,7 +67,7 @@ struct Jb_lu_estimator {
 constexpr int BLOCKSIZEJBLUE = 128;
 int detailed_linecount = 0;
 
-// array of indicies into the linelist[] array for selected lines
+// array of indices into the linelist[] array for selected lines
 int *detailed_lineindicies;
 
 Jb_lu_estimator **prev_Jb_lu_normed{};  // value from the previous timestep

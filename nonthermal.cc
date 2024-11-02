@@ -1021,6 +1021,7 @@ constexpr auto xs_impactionization(const double energy_ev, const collionrow &col
 // Something related to a number of electrons, needed to calculate the heating fraction in equation 3
 // not valid for energy > SF_EMIN
 auto N_e(const int modelgridindex, const double energy, const std::array<double, SFPTS> &yfunc) -> double {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const double energy_ev = energy / EV;
   const double tot_nion = get_nnion_tot(modelgridindex);
   double N_e = 0.;
@@ -1046,7 +1047,7 @@ auto N_e(const int modelgridindex, const double energy, const std::array<double,
       for (int lower = 0; lower < nlevels; lower++) {
         const int nuptrans = get_nuptrans(element, ion, lower);
         const auto *const uptranslist = get_uptranslist(element, ion, lower);
-        const double nnlevel = get_levelpop(modelgridindex, element, ion, lower);
+        const double nnlevel = get_levelpop(nonemptymgi, element, ion, lower);
         const double epsilon_lower = epsilon(element, ion, lower);
         const auto statweight_lower = stat_weight(element, ion, lower);
         for (int t = 0; t < nuptrans; t++) {
@@ -1489,7 +1490,7 @@ auto ion_ntion_energyrate(const int modelgridindex, const int element, const int
     // for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
     // {
     //   const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, lower);
-    //   const double nnlower = get_levelpop(modelgridindex, element, lowerion, lower);
+    //   const double nnlower = get_levelpop(nonemptymgi, element, lowerion, lower);
     //   enrate += nnlower * upperionprobfrac * epsilon_trans;
     // }
     const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
@@ -1644,7 +1645,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
         const double statweight_lower = stat_weight(element, ion, lower);
         const int nuptrans = get_nuptrans(element, ion, lower);
         const auto *const uptranslist = get_uptranslist(element, ion, lower);
-        const double nnlevel = get_levelpop(modelgridindex, element, ion, lower);
+        const double nnlevel = get_levelpop(nonemptymgi, element, ion, lower);
         const double epsilon_lower = epsilon(element, ion, lower);
 
         for (int t = 0; t < nuptrans; t++) {
@@ -1766,7 +1767,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
         const int ion = line.ionindex;
         const int lower = line.lowerlevelindex;
         const int upper = line.upperlevelindex;
-        const auto nnlevel_lower = get_levelpop(modelgridindex, element, ion, lower);
+        const auto nnlevel_lower = get_levelpop(nonemptymgi, element, ion, lower);
 
         const auto uptransindex = get_uptransindex(element, ion, lower, upper);
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon(element, ion, lower);
@@ -1838,13 +1839,14 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
 void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int modelgridindex, const int element,
                              const int ion) {
   // excitation terms
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   const int nlevels_all = get_nlevels(element, ion);
   const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
 
   for (int lower = 0; lower < nlevels; lower++) {
     const double statweight_lower = stat_weight(element, ion, lower);
-    const double nnlevel = get_levelpop(modelgridindex, element, ion, lower);
+    const double nnlevel = get_levelpop(nonemptymgi, element, ion, lower);
     const double epsilon_lower = epsilon(element, ion, lower);
     const int nuptrans = get_nuptrans(element, ion, lower);
     const auto *const uptranslist = get_uptranslist(element, ion, lower);

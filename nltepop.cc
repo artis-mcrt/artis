@@ -446,7 +446,7 @@ void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, 
     const int level_index = get_nlte_vector_index(element, ion, level);
     const double epsilon_level = epsilon(element, ion, level);
     const double statweight = stat_weight(element, ion, level);
-    const auto nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    const auto nnlevel = get_levelpop(nonemptymgi, element, ion, level);
 
     // de-excitation
     const int ndowntrans = get_ndowntrans(element, ion, level);

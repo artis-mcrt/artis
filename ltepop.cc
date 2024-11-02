@@ -517,14 +517,14 @@ auto calculate_levelpop(const int nonemptymgi, const int element, const int ion,
 }
 
 // Calculate the population of a level from either LTE or NLTE information
-__host__ __device__ auto get_levelpop(const int modelgridindex, const int element, const int ion, const int level)
+__host__ __device__ auto get_levelpop(const int nonemptymgi, const int element, const int ion, const int level)
     -> double {
   double nn = 0.;
   if (use_cellcache) {
-    assert_testmodeonly(globals::cellcache[cellcacheslotid].modelgridindex == modelgridindex);
+    assert_testmodeonly(globals::cellcache[cellcacheslotid].modelgridindex ==
+                        grid::get_mgi_of_nonemptymgi(nonemptymgi));
     nn = globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].population;
   } else {
-    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
     nn = calculate_levelpop(nonemptymgi, element, ion, level);
   }
 

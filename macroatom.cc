@@ -43,7 +43,7 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   const auto nne = grid::get_nne(nonemptymgi);
   const double epsilon_current = epsilon(element, ion, level);
   const double statweight = stat_weight(element, ion, level);
-  const auto nnlevel = get_levelpop(modelgridindex, element, ion, level);
+  const auto nnlevel = get_levelpop(nonemptymgi, element, ion, level);
 
   // Downward transitions within the current ionisation stage:
   // radiative/collisional deexcitation and internal downward jumps
@@ -652,8 +652,9 @@ void macroatom_close_file() {
 auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
                                 const double epsilon_trans, const float A_ul, const double upperstatweight,
                                 const double nnlevelupper, const double t_current) -> double {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto &n_u = nnlevelupper;
-  const double n_l = get_levelpop(modelgridindex, element, ion, lower);
+  const double n_l = get_levelpop(nonemptymgi, element, ion, lower);
 
   double R = 0.;
 
@@ -700,7 +701,7 @@ auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const
   const auto &uptr = get_uptranslist(element, ion, lower)[uptransindex];
   const int upper = uptr.targetlevelindex;
 
-  const double n_u = get_levelpop(modelgridindex, element, ion, upper);
+  const double n_u = get_levelpop(nonemptymgi, element, ion, upper);
   const auto &n_l = nnlevel_lower;
   const double nu_trans = epsilon_trans / H;
   const double A_ul = uptr.einstein_A;

@@ -84,6 +84,7 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
                const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
                const double nu_cmf_abort, const double d_nu_on_d_l, const double doppler, const auto *const linelist,
                const int nlines) -> std::tuple<double, int, bool> {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   auto pos = pkt.pos;
   auto nu_cmf = pkt.nu_cmf;
   auto e_cmf = pkt.e_cmf;
@@ -131,8 +132,8 @@ auto get_event(const int modelgridindex, const Packet &pkt, const Rpkt_continuum
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-        const double n_u = get_levelpop(modelgridindex, element, ion, upper);
-        const double n_l = get_levelpop(modelgridindex, element, ion, lower);
+        const double n_u = get_levelpop(nonemptymgi, element, ion, upper);
+        const double n_l = get_levelpop(nonemptymgi, element, ion, lower);
 
         const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * prop_time);
 
@@ -941,7 +942,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
           if (!USECELLHISTANDUPDATEPHIXSLIST || departure_ratio < 0) {
             const int upper = allcont[i].upperlevel;
             const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
-                                               ? get_levelpop(modelgridindex, element, ion + 1, upper)
+                                               ? get_levelpop(nonemptymgi, element, ion + 1, upper)
                                                : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
             const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
             departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist

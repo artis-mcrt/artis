@@ -1232,7 +1232,7 @@ void cellcache_change_cell(const int modelgridindex) {
       const int element = globals::allcont[i].element;
       const int ion = globals::allcont[i].ion;
       const int level = globals::allcont[i].level;
-      const auto nnlevel = get_levelpop(modelgridindex, element, ion, level);
+      const auto nnlevel = get_levelpop(nonemptymgi, element, ion, level);
       cacheslot.ch_allcont_nnlevel[i] = nnlevel;
       cacheslot.ch_keep_this_cont[i] = nnlevel > 0 && keep_this_cont(element, ion, level, modelgridindex, nnetot);
     }

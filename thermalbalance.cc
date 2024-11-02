@@ -107,11 +107,12 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
 
 auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, const int ion, const double T_e,
                                 const double nne) -> double {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   double C_deexc = 0.;
   const int nlevels = get_nlevels(element, ion);
 
   for (int level = 0; level < nlevels; level++) {
-    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
     const double epsilon_level = epsilon(element, ion, level);
 
     // Collisional heating: deexcitation to same ionization stage
@@ -134,6 +135,7 @@ auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, con
 // structure.
 void calculate_heating_rates(const int modelgridindex, const double T_e, const double nne,
                              HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   double C_deexc = 0.;
 
   // double C_recomb = 0.;
@@ -162,7 +164,7 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
     for (int ion = 0; ion < nions - 1; ion++) {
       const int nbflevels = get_nlevels_ionising(element, ion);
       for (int level = 0; level < nbflevels; level++) {
-        const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+        const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
         bfheating += nnlevel * bfheatingcoeffs[get_uniquelevelindex(element, ion, level)];
       }
     }
@@ -170,7 +172,6 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
 
   // Free-free heating (from estimators)
 
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   ffheating = globals::ffheatingestimator[nonemptymgi];
 
   if constexpr (DIRECT_COL_HEAT) {

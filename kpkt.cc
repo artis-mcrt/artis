@@ -83,7 +83,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
     // printout("[debug] do_kpkt: element %d, ion %d, level %d\n", element, ion, level);
-    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
     const double epsilon_current = epsilon(element, ion, level);
     const double statweight = stat_weight(element, ion, level);
 
@@ -117,7 +117,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
     // ionization to higher ionization stage
     for (int level = 0; level < nionisinglevels; level++) {
       const double epsilon_current = epsilon(element, ion, level);
-      const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+      const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
       const int nphixstargets = get_nphixstargets(element, ion, level);
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
         const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
@@ -148,7 +148,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
       const int nphixstargets = get_nphixstargets(element, ion, level);
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
         const double pop =
-            (BFCOOLING_USELEVELPOPNOTIONPOP ? get_levelpop(modelgridindex, element, ion + 1,
+            (BFCOOLING_USELEVELPOPNOTIONPOP ? get_levelpop(nonemptymgi, element, ion + 1,
                                                            get_phixsupperlevel(element, ion, level, phixstargetindex))
                                             : nnupperion);
         const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * pop * nne;
@@ -587,7 +587,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     double contrib = contrib_low;
     const int level = coolinglist[i].level;
     const double epsilon_current = epsilon(element, ion, level);
-    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
     const double statweight = stat_weight(element, ion, level);
     int upper = -1;
     // excitation to same ionization stage
