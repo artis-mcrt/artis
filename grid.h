@@ -80,7 +80,7 @@ void set_elem_abundance(int nonemptymgi, int element, float newabundance);
 [[nodiscard]] auto get_elem_numberdens(int nonemptymgi, int element) -> double;
 [[nodiscard]] auto get_initelectronfrac(int modelgridindex) -> double;
 [[nodiscard]] auto get_initenergyq(int modelgridindex) -> double;
-[[nodiscard]] auto get_kappagrey(int modelgridindex) -> float;
+[[nodiscard]] auto get_kappagrey(int nonemptymgi) -> float;
 [[nodiscard]] auto get_Te(int nonemptymgi) -> float;
 [[nodiscard]] auto get_TR(int nonemptymgi) -> float;
 [[nodiscard]] auto get_TJ(int nonemptymgi) -> float;

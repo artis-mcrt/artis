@@ -1782,12 +1782,7 @@ __host__ __device__ auto get_elem_numberdens(const int nonemptymgi, const int el
   return get_elem_abundance(nonemptymgi, element) / elem_meanweight * grid::get_rho(nonemptymgi);
 }
 
-__host__ __device__ auto get_kappagrey(const int modelgridindex) -> float {
-  assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex < get_npts_model());
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
-  return modelgrid[nonemptymgi].kappagrey;
-}
+__host__ __device__ auto get_kappagrey(const int nonemptymgi) -> float { return modelgrid[nonemptymgi].kappagrey; }
 
 __host__ __device__ auto get_Te(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
@@ -2019,8 +2014,8 @@ void calculate_kappagrey() {
   double opcase3_sum = 0.;
   const int empty_cells = 0;
 
-  for (int n = 0; n < ngrid; n++) {
-    const int mgi = get_cell_modelgridindex(n);
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     rho_sum += get_rho_tmin(mgi);
     fe_sum += get_ffegrp(mgi);
 
@@ -2039,7 +2034,7 @@ void calculate_kappagrey() {
         printout("Error: negative density. Abort.\n");
         std::abort();
       }
-      opcase3_sum += get_kappagrey(mgi) * get_rho_tmin(mgi);
+      opcase3_sum += get_kappagrey(nonemptymgi) * get_rho_tmin(mgi);
     }
   }
 
@@ -2060,7 +2055,7 @@ void calculate_kappagrey() {
         kappa = opcase2_normal / get_rho_tmin(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1);
       } else if (globals::opacity_case == 3) {
         globals::opcase3_normal = globals::GREY_OP * rho_sum / opcase3_sum;
-        kappa = get_kappagrey(mgi) * globals::opcase3_normal;
+        kappa = get_kappagrey(nonemptymgi) * globals::opcase3_normal;
       } else if (globals::opacity_case == 5) {
         // electron-fraction-dependent opacities
         // values from table 1 of Tanaka et al. (2020).
@@ -2120,7 +2115,7 @@ void calculate_kappagrey() {
       std::abort();
     }
 
-    check1 = check1 + (get_kappagrey(mgi) * get_rho_tmin(mgi));
+    check1 = check1 + (get_kappagrey(nonemptymgi) * get_rho_tmin(mgi));
     check2 = check2 + get_rho_tmin(mgi);
   }
 

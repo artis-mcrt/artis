@@ -725,7 +725,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   } else if (thickcell) [[unlikely]] {
     // In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
-    const double chi_grey = grid::get_kappagrey(mgi) * grid::get_rho(nonemptymgi) *
+    const double chi_grey = grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) *
                             calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
     edist = tau_next / chi_grey;
@@ -1186,7 +1186,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     const auto delta_nu = nu_upper - nu_lower;
 
     while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= nu_lower) {
-      const float tau_line = get_tau_sobolev(modelgridindex, lineindex, t_mid, false);
+      const float tau_line = get_tau_sobolev(nonemptymgi, lineindex, t_mid, false);
       const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
       bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
       lineindex++;

@@ -184,9 +184,8 @@ inline auto get_phixs_table(const int element, const int ion, const int level) -
   return sigma_bf;
 }
 
-[[nodiscard]] inline auto get_tau_sobolev(const int modelgridindex, const int lineindex, const double t_current,
+[[nodiscard]] inline auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current,
                                           bool sub_updown) -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const int element = globals::linelist[lineindex].elementindex;
   const int ion = globals::linelist[lineindex].ionindex;
   const int lower = globals::linelist[lineindex].lowerlevelindex;
