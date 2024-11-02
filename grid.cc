@@ -1820,10 +1820,9 @@ void set_rho(const int modelgridindex, const float rho) {
   modelgrid[nonemptymgi].rho = rho;
 }
 
-void set_nne(const int modelgridindex, const float nne) {
+void set_nne(const int nonemptymgi, const float nne) {
   assert_always(nne >= 0.);
   assert_always(std::isfinite(nne));
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   modelgrid[nonemptymgi].nne = nne;
 }
 
