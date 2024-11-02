@@ -999,10 +999,10 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
 
 void set_J_normfactor(const int nonemptymgi, const double normfactor) { J_normfactor[nonemptymgi] = normfactor; }
 
-void normalise_J(const int modelgridindex, const double estimator_normfactor_over4pi) {
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+void normalise_J(const int nonemptymgi, const double estimator_normfactor_over4pi) {
   assert_always(std::isfinite(J[nonemptymgi]));
   J[nonemptymgi] *= estimator_normfactor_over4pi;
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   for (int i = 0; i < detailed_linecount; i++) {
     prev_Jb_lu_normed[modelgridindex][i].value = Jb_lu_raw[modelgridindex][i].value * estimator_normfactor_over4pi;
     prev_Jb_lu_normed[modelgridindex][i].contribcount = Jb_lu_raw[modelgridindex][i].contribcount;

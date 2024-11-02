@@ -951,7 +951,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
     const auto sys_time_start_temperature_corrections = std::time(nullptr);
 
-    radfield::normalise_J(mgi, estimator_normfactor_over4pi);  // this applies normalisation to the fullspec J
+    radfield::normalise_J(nonemptymgi, estimator_normfactor_over4pi);  // this applies normalisation to the fullspec J
     // this stores the factor that will be applied later for the J bins but not fullspec J
     radfield::set_J_normfactor(nonemptymgi, estimator_normfactor_over4pi);
 
@@ -1065,7 +1065,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
   if constexpr (EXPANSIONOPACITIES_ON || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
     if (grid::modelgrid[nonemptymgi].thick != 1) {
-      calculate_expansion_opacities(mgi);
+      calculate_expansion_opacities(nonemptymgi);
     }
   }
 
