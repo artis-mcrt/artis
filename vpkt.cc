@@ -328,8 +328,8 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-        const auto n_u = calculate_levelpop(mgi, element, ion, upper);
-        const auto n_l = calculate_levelpop(mgi, element, ion, lower);
+        const auto n_u = calculate_levelpop(nonemptymgi, element, ion, upper);
+        const auto n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
         const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line);
 
         // Check on the element to exclude (or -1 for no line opacity)

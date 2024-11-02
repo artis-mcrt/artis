@@ -1308,7 +1308,7 @@ auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, c
 
   double Col_ion = 0.;
   for (int level = 0; level < nlevels_important; level++) {
-    const double nnlevel = calculate_levelpop(modelgridindex, element, ion, level);
+    const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
     const int nphixstargets = get_nphixstargets(element, ion, level);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);

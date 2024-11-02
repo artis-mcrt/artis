@@ -1200,7 +1200,7 @@ void cellcache_change_cell(const int modelgridindex) {
 #pragma omp parallel for
 #endif
         for (int level = 0; level < nlevels; level++) {
-          chion.chlevels[level].population = calculate_levelpop(modelgridindex, element, ion, level);
+          chion.chlevels[level].population = calculate_levelpop(nonemptymgi, element, ion, level);
         }
       }
     }

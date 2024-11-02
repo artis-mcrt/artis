@@ -929,7 +929,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
 
     if (should_keep_this_cont) [[likely]] {
       const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? globals::cellcache[cellcacheslotid].ch_allcont_nnlevel[i]
-                                                           : calculate_levelpop(modelgridindex, element, ion, level);
+                                                           : calculate_levelpop(nonemptymgi, element, ion, level);
 
       if (USECELLHISTANDUPDATEPHIXSLIST || nnlevel > 0) {
         const double nu_edge = allcont[i].nu_edge;
@@ -942,7 +942,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
             const int upper = allcont[i].upperlevel;
             const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
                                                ? get_levelpop(modelgridindex, element, ion + 1, upper)
-                                               : calculate_levelpop(modelgridindex, element, ion + 1, upper);
+                                               : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
             const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
             departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
             if (USECELLHISTANDUPDATEPHIXSLIST) {

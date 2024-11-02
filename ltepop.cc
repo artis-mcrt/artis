@@ -502,9 +502,8 @@ auto calculate_levelpop_lte(const int modelgridindex, const int element, const i
           exp(-E_aboveground / KB / T_exc));
 }
 
-auto calculate_levelpop(const int modelgridindex, const int element, const int ion, const int level) -> double {
+auto calculate_levelpop(const int nonemptymgi, const int element, const int ion, const int level) -> double {
   bool skipminpop = false;
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   double nn = calculate_levelpop_nominpop(nonemptymgi, element, ion, level, &skipminpop);
   if (!skipminpop && nn < MINPOP) {
     if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
@@ -525,7 +524,8 @@ __host__ __device__ auto get_levelpop(const int modelgridindex, const int elemen
     assert_testmodeonly(globals::cellcache[cellcacheslotid].modelgridindex == modelgridindex);
     nn = globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].population;
   } else {
-    nn = calculate_levelpop(modelgridindex, element, ion, level);
+    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+    nn = calculate_levelpop(nonemptymgi, element, ion, level);
   }
 
   assert_testmodeonly(nn >= 0.);
