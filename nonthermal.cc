@@ -1021,8 +1021,7 @@ constexpr auto xs_impactionization(const double energy_ev, const collionrow &col
 // Kozma & Fransson equation 6.
 // Something related to a number of electrons, needed to calculate the heating fraction in equation 3
 // not valid for energy > SF_EMIN
-auto N_e(const int modelgridindex, const double energy, const std::array<double, SFPTS> &yfunc) -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+auto N_e(const int nonemptymgi, const double energy, const std::array<double, SFPTS> &yfunc) -> double {
   const double energy_ev = energy / EV;
   const double tot_nion = get_nnion_tot(nonemptymgi);
   double N_e = 0.;
@@ -1127,7 +1126,7 @@ auto calculate_frac_heating(const int modelgridindex, const std::array<double, S
   constexpr double delta_endash = SF_EMIN / nsteps;
   for (int j = 1; j < nsteps; j++) {
     const double endash = delta_endash * j;
-    N_e_contrib += N_e(modelgridindex, endash * EV, yfunc) * endash * delta_endash;
+    N_e_contrib += N_e(nonemptymgi, endash * EV, yfunc) * endash * delta_endash;
   }
   frac_heating_Einit += N_e_contrib;
   printout(" heating N_e contrib (en < EMIN) %g nsteps %d\n", N_e_contrib / E_init_ev, nsteps);
