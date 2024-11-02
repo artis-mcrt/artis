@@ -95,8 +95,8 @@ struct gsl_planck_integral_paras {
   bool times_nu;
 };
 
-struct gsl_T_R_solver_paras {
-  int modelgridindex;
+struct GSLT_RSolverParams {
+  int nonemptymgi;
   int binindex;
 };
 
@@ -190,28 +190,26 @@ void add_detailed_line(const int lineindex) {
 }
 
 // get the normalised J_nu
-auto get_bin_J(const int modelgridindex, const int binindex) -> double {
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+auto get_bin_J(const int nonemptymgi, const int binindex) -> double {
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
-  return radfieldbins[(nonemptymgi * RADFIELDBINCOUNT) + binindex].J_raw * J_normfactor[nonemptymgi];
+  return radfieldbins[(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex].J_raw *
+         J_normfactor[nonemptymgi];
 }
 
-auto get_bin_nuJ(const int modelgridindex, const int binindex) -> double {
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+auto get_bin_nuJ(const int nonemptymgi, const int binindex) -> double {
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
-  return radfieldbins[(nonemptymgi * RADFIELDBINCOUNT) + binindex].nuJ_raw * J_normfactor[nonemptymgi];
+  return radfieldbins[(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex].nuJ_raw *
+         J_normfactor[nonemptymgi];
 }
 
 // get <nuJ> / <J> for a bin
-auto get_bin_nu_bar(const int modelgridindex, const int binindex) -> double {
-  const double nuJ_sum = get_bin_nuJ(modelgridindex, binindex);
-  const double J_sum = get_bin_J(modelgridindex, binindex);
+auto get_bin_nu_bar(const int nonemptymgi, const int binindex) -> double {
+  const double nuJ_sum = get_bin_nuJ(nonemptymgi, binindex);
+  const double J_sum = get_bin_J(nonemptymgi, binindex);
   return nuJ_sum / J_sum;
 }
 
@@ -300,14 +298,13 @@ auto delta_nu_bar(const double T_R, void *const paras) -> double
 // difference between the average nu and the average nu of a Planck function
 // at temperature T_R, in the frequency range corresponding to a bin
 {
-  const auto *params = static_cast<const gsl_T_R_solver_paras *>(paras);
-  const int modelgridindex = params->modelgridindex;
+  const auto *params = static_cast<const GSLT_RSolverParams *>(paras);
+  const auto nonemptymgi = params->nonemptymgi;
   const int binindex = params->binindex;
 
   const double nu_lower = get_bin_nu_lower(binindex);
   const double nu_upper = get_bin_nu_upper(binindex);
-
-  const double nu_bar_estimator = get_bin_nu_bar(modelgridindex, binindex);
+  const double nu_bar_estimator = get_bin_nu_bar(nonemptymgi, binindex);
 
   const double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
   const double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
@@ -341,11 +338,11 @@ auto delta_nu_bar(const double T_R, void *const paras) -> double
   return delta_nu_bar;
 }
 
-auto find_T_R(const int modelgridindex, const int binindex) -> float {
+auto find_T_R(const int nonemptymgi, const int binindex) -> float {
   double T_R = 0.;
 
-  gsl_T_R_solver_paras paras{};
-  paras.modelgridindex = modelgridindex;
+  GSLT_RSolverParams paras{};
+  paras.nonemptymgi = nonemptymgi;
   paras.binindex = binindex;
 
   // Check whether the equation has a root in [T_min,T_max]
@@ -396,20 +393,20 @@ auto find_T_R(const int modelgridindex, const int binindex) -> float {
   } else if (delta_nu_bar_max < 0) {
     // Thermal balance equation always negative ===> T_R = T_min
     // Calculate the rates again at this T_e to print them to file
+    printout("find_T_R: cell %d bin %4d no solution in interval, clamping to T_R_max=%g\n",
+             grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_max);
     T_R = T_R_max;
-    printout("find_T_R: cell %d bin %4d no solution in interval, clamping to T_R_max=%g\n", modelgridindex, binindex,
-             T_R_max);
   } else {
+    printout("find_T_R: cell %d bin %4d no solution in interval, clamping to T_R_min=%g\n",
+             grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_min);
     T_R = T_R_min;
-    printout("find_T_R: cell %d bin %4d no solution in interval, clamping to T_R_min=%g\n", modelgridindex, binindex,
-             T_R_min);
   }
 
   return T_R;
 }  // namespace radfield
 
-void set_params_fullspec(const int modelgridindex, const int timestep) {
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+void set_params_fullspec(const int nonemptymgi, const int timestep) {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double nubar = nuJ[nonemptymgi] / J[nonemptymgi];
   if (!std::isfinite(nubar) || nubar == 0.) {
     printout("[warning] T_R estimator infinite in cell %d, keep T_R, T_J, W of last timestep. J = %g. nuJ = %g\n",
@@ -715,8 +712,8 @@ void write_to_file(const int modelgridindex, const int timestep) {
       if (binindex >= 0) {
         nu_lower = get_bin_nu_lower(binindex);
         nu_upper = get_bin_nu_upper(binindex);
-        nuJ_out = get_bin_nuJ(modelgridindex, binindex);
-        J_out = get_bin_J(modelgridindex, binindex);
+        nuJ_out = get_bin_nuJ(nonemptymgi, binindex);
+        J_out = get_bin_J(nonemptymgi, binindex);
         T_R = get_bin_T_R(modelgridindex, binindex);
         W = get_bin_W(modelgridindex, binindex);
         J_nu_bar = J_out / (nu_upper - nu_lower);
@@ -920,11 +917,9 @@ auto planck_integral_analytic(const double T_R, const double nu_lower, const dou
 }
 
 // finds the best fitting W and temperature parameters in each spectral bin using J and nuJ
-void fit_parameters(const int modelgridindex, const int timestep) {
-  set_params_fullspec(modelgridindex, timestep);
-
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-
+void fit_parameters(const int nonemptymgi, const int timestep) {
+  set_params_fullspec(nonemptymgi, timestep);
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (J_normfactor[nonemptymgi] <= 0) {
       printout("radfield: FATAL J_normfactor = %g in cell %d at call to fit_parameters", J_normfactor[nonemptymgi],
@@ -934,7 +929,7 @@ void fit_parameters(const int modelgridindex, const int timestep) {
 
     double J_bin_sum = 0.;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      J_bin_sum += get_bin_J(modelgridindex, binindex);
+      J_bin_sum += get_bin_J(nonemptymgi, binindex);
     }
 
     printout("radfield bins sum to J of %g (%.1f%% of total J).\n", J_bin_sum, 100. * J_bin_sum / J[nonemptymgi]);
@@ -942,21 +937,21 @@ void fit_parameters(const int modelgridindex, const int timestep) {
 
     double J_bin_max = 0.;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      const double J_bin = get_bin_J(modelgridindex, binindex);
+      const double J_bin = get_bin_J(nonemptymgi, binindex);
       J_bin_max = std::max(J_bin_max, J_bin);
     }
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       const double nu_lower = get_bin_nu_lower(binindex);
       const double nu_upper = get_bin_nu_upper(binindex);
-      const double J_bin = get_bin_J(modelgridindex, binindex);
+      const double J_bin = get_bin_J(nonemptymgi, binindex);
       float T_R_bin = -1.;
       double W_bin = -1.;
       const int contribcount = get_bin_contribcount(modelgridindex, binindex);
 
       if (contribcount > 0) {
         {
-          T_R_bin = find_T_R(modelgridindex, binindex);
+          T_R_bin = find_T_R(nonemptymgi, binindex);
 
           if (binindex == RADFIELDBINCOUNT - 1) {
             const auto T_e = grid::get_Te(nonemptymgi);

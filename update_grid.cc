@@ -1000,7 +1000,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
       // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the
       // full-spectrum and binned J and nuJ estimators
-      radfield::fit_parameters(mgi, nts);
+      radfield::fit_parameters(nonemptymgi, nts);
 
       solve_Te_nltepops(nonemptymgi, nts, nts_prev, heatingcoolingrates);
     }
