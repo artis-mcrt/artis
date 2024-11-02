@@ -718,7 +718,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
     if (globals::total_nlte_levels == 0) {
       const auto sys_time_start_pops = std::time(nullptr);
-      calculate_ion_balance_nne(mgi);
+      calculate_ion_balance_nne(nonemptymgi);
       const int duration_solve_pops = std::time(nullptr) - sys_time_start_pops;
 
       printout(
@@ -743,7 +743,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     const int duration_solve_nltepops = std::time(nullptr) - sys_time_start_nltepops;
 
     const double nne_prev = grid::get_nne(nonemptymgi);
-    calculate_ion_balance_nne(mgi);  // sets nne
+    calculate_ion_balance_nne(nonemptymgi);  // sets nne
     fracdiff_nne = fabs((grid::get_nne(nonemptymgi) / nne_prev) - 1);
     printout(
         "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e "
@@ -938,7 +938,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       calculate_cellpartfuncts(nonemptymgi, element);
     }
     if (!globals::simulation_continued_from_saved) {
-      calculate_ion_balance_nne(mgi);
+      calculate_ion_balance_nne(nonemptymgi);
     }
   } else {
     // For all other timesteps temperature corrections have to be applied
@@ -981,7 +981,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       for (int element = 0; element < get_nelements(); element++) {
         calculate_cellpartfuncts(nonemptymgi, element);
       }
-      calculate_ion_balance_nne(mgi);
+      calculate_ion_balance_nne(nonemptymgi);
     } else {
       // not lte_iteration and not a thick cell
       // non-LTE timesteps with T_e from heating/cooling

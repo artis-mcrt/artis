@@ -25,7 +25,7 @@
 namespace {
 
 struct nneSolutionParas {
-  int modelgridindex;
+  int nonemptymgi;
   bool force_lte;
 };
 
@@ -140,9 +140,8 @@ auto get_element_nne_contrib(const int nonemptymgi, const int element) -> double
 // the difference between the assumed and calculated nne is returned
 auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double {
   const auto *paras = static_cast<const nneSolutionParas *>(voidparas);
-  const int modelgridindex = paras->modelgridindex;
+  const int nonemptymgi = paras->nonemptymgi;
   const bool force_lte = paras->force_lte;
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   double nne_after = 0.;  // the resulting nne after setting the ion balance with nne_assumed
   for (int element = 0; element < get_nelements(); element++) {
@@ -324,14 +323,13 @@ auto find_uppermost_ion(const int nonemptymgi, const int element, const double n
   return uppermost_ion;
 }
 
-void set_calculated_nne(const int modelgridindex) {
+void set_calculated_nne(const int nonemptymgi) {
   double nne = 0.;  // free electron density
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   for (int element = 0; element < get_nelements(); element++) {
     nne += get_element_nne_contrib(nonemptymgi, element);
   }
 
-  grid::set_nne(modelgridindex, std::max(MINPOP, nne));
+  grid::set_nne(nonemptymgi, std::max(MINPOP, nne));
 }
 
 // Special case of only neutral ions, set nne to some finite value so that packets are not lost in kpkts
@@ -362,11 +360,10 @@ void set_groundlevelpops_neutral(const int nonemptymgi) {
   }
 }
 
-auto find_converged_nne(const int modelgridindex, double nne_hi, const bool force_lte) -> float {
+auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_lte) -> float {
   // Search solution for nne in [nne_lo,nne_hi]
 
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-  nneSolutionParas paras = {.modelgridindex = modelgridindex, .force_lte = force_lte};
+  nneSolutionParas paras = {.nonemptymgi = nonemptymgi, .force_lte = force_lte};
   gsl_function f = {.function = &nne_solution_f, .params = &paras};
 
   double nne_lo = 0.;  // MINPOP;
@@ -374,6 +371,7 @@ auto find_converged_nne(const int modelgridindex, double nne_hi, const bool forc
     const auto T_R = grid::get_TR(nonemptymgi);
     const auto T_e = grid::get_Te(nonemptymgi);
     const auto W = grid::get_W(nonemptymgi);
+    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi, T_R,
              T_e, W, grid::get_rho(nonemptymgi));
     printout("nne@x_lo %g\n", nne_solution_f(nne_lo, f.params));
@@ -610,8 +608,7 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
 
 // Determine the electron number density for a given cell using one of
 // libgsl's root_solvers and calculates the depending level populations.
-auto calculate_ion_balance_nne(const int modelgridindex) -> void {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
   const bool force_lte = globals::lte_iteration || grid::modelgrid[nonemptymgi].thick == 1;
 
   const double nne_hi = grid::get_rho(nonemptymgi) / MH;
@@ -631,8 +628,8 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void {
   if (only_lowest_ionstage) {
     set_groundlevelpops_neutral(nonemptymgi);
   } else {
-    const auto nne_solution = find_converged_nne(modelgridindex, nne_hi, force_lte);
-    grid::set_nne(modelgridindex, nne_solution);
+    const auto nne_solution = find_converged_nne(nonemptymgi, nne_hi, force_lte);
+    grid::set_nne(nonemptymgi, nne_solution);
 
     for (int element = 0; element < get_nelements(); element++) {
       // avoid overwriting the ground level populations set by the NLTE pop solver
@@ -643,5 +640,5 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void {
     }
   }
 
-  set_calculated_nne(modelgridindex);
+  set_calculated_nne(nonemptymgi);
 }
