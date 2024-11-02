@@ -29,8 +29,7 @@ constexpr std::array<const char *, 3> phixsdata_filenames = {"version0ignore", "
 [[nodiscard]] inline auto get_nelements() -> int { return static_cast<int>(globals::elements.size()); }
 
 // total density of nuclei
-inline auto get_nnion_tot(int modelgridindex) -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+inline auto get_nnion_tot(int nonemptymgi) -> double {
   double nntot = 0.;
   for (int element = 0; element < get_nelements(); element++) {
     nntot += grid::get_elem_numberdens(nonemptymgi, element);

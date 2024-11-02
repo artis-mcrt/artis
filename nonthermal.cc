@@ -1024,7 +1024,7 @@ constexpr auto xs_impactionization(const double energy_ev, const collionrow &col
 auto N_e(const int modelgridindex, const double energy, const std::array<double, SFPTS> &yfunc) -> double {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const double energy_ev = energy / EV;
-  const double tot_nion = get_nnion_tot(modelgridindex);
+  const double tot_nion = get_nnion_tot(nonemptymgi);
   double N_e = 0.;
 
   for (int element = 0; element < get_nelements(); element++) {
@@ -1223,7 +1223,7 @@ auto nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int elemen
   // to get the non-thermal ionization rate we need to divide the energy deposited
   // per unit volume per unit time in the grid cell (sum of terms above)
   // by the total ion number density and the "work per ion pair"
-  return deposition_rate_density / get_nnion_tot(modelgridindex) * get_oneoverw(element, ion, modelgridindex);
+  return deposition_rate_density / get_nnion_tot(nonemptymgi) * get_oneoverw(element, ion, modelgridindex);
 }
 
 // Integrate the ionization cross section over the electron degradation function to get the ionization rate
@@ -1282,7 +1282,7 @@ void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int elemen
   const int ionstage = get_ionstage(element, ion);
   const int uniqueionindex = get_uniqueionindex(element, ion);
   const double nnion = get_nnion(nonemptymgi, element, ion);  // ions/cm^3
-  const double tot_nion = get_nnion_tot(modelgridindex);
+  const double tot_nion = get_nnion_tot(nonemptymgi);
   const double X_ion = nnion / tot_nion;  // molar fraction of this ion
 
   // The ionization rates of all shells of an ion add to make the ion's total ionization rate,
@@ -1395,7 +1395,7 @@ auto nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, con
 
   const double deposition_rate_density = get_deposition_rate_density(nonemptymgi);
   if (deposition_rate_density > 0.) {
-    return deposition_rate_density / get_nnion_tot(modelgridindex) / get_eff_ionpot(modelgridindex, element, ion);
+    return deposition_rate_density / get_nnion_tot(nonemptymgi) / get_eff_ionpot(modelgridindex, element, ion);
     // alternatively, if the y vector is still in memory:
     // return calculate_nt_ionization_ratecoeff(modelgridindex, element, ion);
   }
@@ -1568,7 +1568,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
                          const std::array<double, SFPTS> &yfunc) {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const float nne = grid::get_nne(nonemptymgi);
-  const double nntot = get_nnion_tot(modelgridindex);
+  const double nntot = get_nnion_tot(nonemptymgi);
   const double nnetot = grid::get_nnetot(nonemptymgi);
 
   double frac_excitation_total = 0.;
@@ -1588,7 +1588,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
       const int ionstage = get_ionstage(element, ion);
       const double nnion = get_nnion(nonemptymgi, element, ion);
 
-      // if (nnion < minionfraction * get_nnion_tot(modelgridindex)) // skip negligible ions
+      // if (nnion < minionfraction * get_nnion_tot(nonemptymgi)) // skip negligible ions
       if (nnion <= 0.) {  // skip zero-abundance ions
         continue;
       }
@@ -1643,7 +1643,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
       if (!enable_sfexcitation) {
         nlevels = -1;  // disable all excitations
       }
-      const bool above_minionfraction = (nnion >= minionfraction * get_nnion_tot(modelgridindex));
+      const bool above_minionfraction = (nnion >= minionfraction * get_nnion_tot(nonemptymgi));
 
       for (int lower = 0; lower < nlevels; lower++) {
         const double statweight_lower = stat_weight(element, ion, lower);
@@ -2529,7 +2529,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   }
 
   const auto nne = grid::get_nne(nonemptymgi);  // electrons per cm^3
-  const double nne_per_ion = nne / get_nnion_tot(modelgridindex);
+  const double nne_per_ion = nne / get_nnion_tot(nonemptymgi);
   const double nne_per_ion_last = nt_solution[modelgridindex].nneperion_when_solved;
   const double nne_per_ion_fracdiff = fabs((nne_per_ion_last / nne_per_ion) - 1.);
   const int timestep_last_solved = nt_solution[modelgridindex].timestep_last_solved;
@@ -2601,7 +2601,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
         const double nnion = get_nnion(nonemptymgi, element, ion);
 
         // skip negligible ions
-        if (nnion < minionfraction * get_nnion_tot(modelgridindex)) {
+        if (nnion < minionfraction * get_nnion_tot(nonemptymgi)) {
           continue;
         }
 
