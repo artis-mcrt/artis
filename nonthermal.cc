@@ -1270,12 +1270,11 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
   return yscalefactor * y_xs_de;
 }
 
-void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int element, const int ion,
+void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, const int ion,
                                       const std::array<double, SFPTS> &yfunc)
 // Kozma & Fransson 1992 equation 12, except modified to be a sum over all shells of an ion
 // the result is in ergs
 {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const int Z = get_atomicnumber(element);
   const int ionstage = get_ionstage(element, ion);
   const int uniqueionindex = get_uniqueionindex(element, ion);
@@ -1292,7 +1291,7 @@ void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int elemen
 
   std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionize_over_ionpot_sum{};
   std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionize_sum{};
-
+  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   std::ranges::fill(nt_solution[modelgridindex].allions[uniqueionindex].prob_num_auger, 0.);
   std::ranges::fill(nt_solution[modelgridindex].allions[uniqueionindex].ionenfrac_num_auger, 0.);
 
@@ -1562,12 +1561,12 @@ auto get_uptransindex(const int element, const int ion, const int lower, const i
   return -1;
 }
 
-void analyse_sf_solution(const int modelgridindex, const int timestep, const bool enable_sfexcitation,
+void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool enable_sfexcitation,
                          const std::array<double, SFPTS> &yfunc) {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-  const float nne = grid::get_nne(nonemptymgi);
-  const double nntot = get_nnion_tot(nonemptymgi);
-  const double nnetot = grid::get_nnetot(nonemptymgi);
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+  const auto nne = grid::get_nne(nonemptymgi);
+  const auto nntot = get_nnion_tot(nonemptymgi);
+  const auto nnetot = grid::get_nnetot(nonemptymgi);
 
   double frac_excitation_total = 0.;
   double frac_ionization_total = 0.;
@@ -1597,7 +1596,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
       // printout("    nnion: %g\n", nnion);
       printout("    nnion/nntot: %g\n", nnion / nntot);
 
-      calculate_eff_ionpot_auger_rates(modelgridindex, element, ion, yfunc);
+      calculate_eff_ionpot_auger_rates(nonemptymgi, element, ion, yfunc);
 
       int matching_subshell_count = 0;
       for (const auto &collionrow : colliondata) {
@@ -2649,7 +2648,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
     nt_write_to_file(modelgridindex, timestep, iteration, yfunc);
   }
 
-  analyse_sf_solution(modelgridindex, timestep, enable_sfexcitation, yfunc);
+  analyse_sf_solution(nonemptymgi, timestep, enable_sfexcitation, yfunc);
 }
 
 void write_restart_data(FILE *gridsave_file) {
