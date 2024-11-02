@@ -422,7 +422,7 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
                MINTEMP, modelgridindex);
       T_J = MINTEMP;
     }
-    grid::set_TJ(modelgridindex, T_J);
+    grid::set_TJ(nonemptymgi, T_J);
 
     float T_R = H * nubar / KB / 3.832229494;
     if (T_R > MAXTEMP) {
@@ -434,10 +434,10 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
                MINTEMP, modelgridindex);
       T_R = MINTEMP;
     }
-    grid::set_TR(modelgridindex, T_R);
+    grid::set_TR(nonemptymgi, T_R);
 
     const float W = J[nonemptymgi] * PI / STEBO / pow(T_R, 4);
-    grid::set_W(modelgridindex, W);
+    grid::set_W(nonemptymgi, W);
 
     printout(
         "Full-spectrum fit radfield for cell %d at timestep %d: J %g, nubar %5.1f Angstrom, T_J %g, T_R %g, W %g\n",
