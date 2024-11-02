@@ -557,9 +557,8 @@ void nltepop_matrix_add_ionisation(const int modelgridindex, const int element, 
       // recombination
       if (upper <= maxrecombininglevel)  // we can skip this part if the functions below will return zero anyway
       {
-        const double R_recomb = rad_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, modelgridindex);
-        const double C_recomb =
-            col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);
+        const double R_recomb = rad_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, nonemptymgi);
+        const double C_recomb = col_recombination_ratecoeff(nonemptymgi, element, ion + 1, upper, level, epsilon_trans);
 
         *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, upper_index) -= R_recomb * s_renorm[upper];
         *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, upper_index) += R_recomb * s_renorm[upper];

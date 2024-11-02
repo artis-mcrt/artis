@@ -111,8 +111,8 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
       const double epsilon_target = epsilon(element, ion - 1, lower);
       const double epsilon_trans = epsilon_current - epsilon_target;
 
-      const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, modelgridindex);
-      const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
+      const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, nonemptymgi);
+      const double C = col_recombination_ratecoeff(nonemptymgi, element, ion, level, lower, epsilon_trans);
 
       sum_internal_down_lower += (R + C) * epsilon_target;
 
@@ -235,7 +235,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   for (lowerionlevel = 0; lowerionlevel < nlevels; lowerionlevel++) {
     const double epsilon_trans = epsilon_current - epsilon(element, upperion - 1, lowerionlevel);
     const double R =
-        rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, lowerionlevel, modelgridindex);
+        rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, lowerionlevel, nonemptymgi);
 
     rate += R * epsilon_trans;
 
@@ -502,8 +502,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         for (lower = 0; lower < nlevels; lower++) {
           const double epsilon_target = epsilon(element, ion - 1, lower);
           const double epsilon_trans = epsilon_current - epsilon_target;
-          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, modelgridindex);
-          const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
+          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, nonemptymgi);
+          const double C = col_recombination_ratecoeff(nonemptymgi, element, ion, level, lower, epsilon_trans);
           rate += (R + C) * epsilon_target;
           if (targetrate < rate) {
             break;
@@ -737,7 +737,7 @@ auto rad_excitation_ratecoeff(const int nonemptymgi, const int element, const in
 // multiply by upper level population to get a rate per second
 #pragma omp declare simd
 auto rad_recombination_ratecoeff(const float T_e, const float nne, const int element, const int upperion,
-                                 const int upperionlevel, const int lowerionlevel, const int modelgridindex) -> double {
+                                 const int upperionlevel, const int lowerionlevel, const int nonemptymgi) -> double {
   // it's probably faster to only check this condition outside this function
   // in a case where this wasn't checked, the function will return zero anyway
   // if (upperionlevel > get_maxrecombininglevel(element, upperion))
@@ -751,9 +751,7 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
       R = nne * get_spontrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, T_e);
 
       if constexpr (SEPARATE_STIMRECOMB) {
-        if (modelgridindex >= 0) {
-          R += nne * get_stimrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, modelgridindex);
-        }
+        R += nne * get_stimrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, nonemptymgi);
       }
       break;
     }
@@ -765,19 +763,17 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
 }
 
 auto stim_recombination_ratecoeff(const float nne, const int element, const int upperion, const int upper,
-                                  const int lower, const int modelgridindex) -> double {
+                                  const int lower, const int nonemptymgi) -> double {
   double R = 0.;
 
   if constexpr (SEPARATE_STIMRECOMB) {
     const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {
-        R = nne * get_stimrecombcoeff(element, upperion - 1, lower, phixstargetindex, modelgridindex);
+        R = nne * get_stimrecombcoeff(element, upperion - 1, lower, phixstargetindex, nonemptymgi);
         break;
       }
     }
-
-    assert_always(std::isfinite(R));
   }
 
   return R;
@@ -785,14 +781,13 @@ auto stim_recombination_ratecoeff(const float nne, const int element, const int 
 
 // multiply by upper level population to get a rate per second
 #pragma omp declare simd
-auto col_recombination_ratecoeff(const int modelgridindex, const int element, const int upperion, const int upper,
+auto col_recombination_ratecoeff(const int nonemptymgi, const int element, const int upperion, const int upper,
                                  const int lower, const double epsilon_trans) -> double {
   // it's probably faster to only check this condition outside this function
   // in a case where this wasn't checked, the function will return zero anyway
   // if (upper > get_maxrecombininglevel(element, upperion))
   //   return 0.;
 
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {

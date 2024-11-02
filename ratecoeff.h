@@ -21,7 +21,7 @@ void setup_photoion_luts();
     -> double;
 
 [[nodiscard]] auto get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double;
-[[nodiscard]] auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int modelgridindex)
+[[nodiscard]] auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int nonemptymgi)
     -> double;
 
 [[nodiscard]] auto get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double;

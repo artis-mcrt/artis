@@ -681,7 +681,7 @@ auto integrand_stimrecombination_custom_radfield(const double nu, void *const vo
 }
 
 auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, const int level,
-                                        const int phixstargetindex, const int modelgridindex) -> double {
+                                        const int phixstargetindex, const int nonemptymgi) -> double {
   const double epsrel = 1e-3;
   const double epsabs = 0.;
 
@@ -689,7 +689,6 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto intparas = GSLIntegralParasGammaCorr{
       .nu_edge = nu_threshold,
@@ -1037,11 +1036,11 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
         double recomb_coeff = 0.;
         if (collisional_not_radiative) {
           const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-          recomb_coeff += col_recombination_ratecoeff(modelgridindex, element, upperion, upper, lower, epsilon_trans);
+          recomb_coeff += col_recombination_ratecoeff(nonemptymgi, element, upperion, upper, lower, epsilon_trans);
         } else if (!stimonly) {
-          recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower, modelgridindex);
+          recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower, nonemptymgi);
         } else {
-          recomb_coeff += stim_recombination_ratecoeff(nne, element, upperion, upper, lower, modelgridindex);
+          recomb_coeff += stim_recombination_ratecoeff(nne, element, upperion, upper, lower, nonemptymgi);
         }
 
         const double alpha_level = recomb_coeff / nne;
@@ -1158,7 +1157,7 @@ auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, cons
 
 // Returns the stimulated recombination rate coefficient. multiply by upper level population and nne to get rate
 auto get_stimrecombcoeff(int element, const int lowerion, const int level, const int phixstargetindex,
-                         const int modelgridindex) -> double {
+                         const int nonemptymgi) -> double {
   double stimrecombcoeff = -1.;
 #if (SEPARATE_STIMRECOMB)
   if (use_cellcache) {
@@ -1172,7 +1171,7 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
 #endif
 
   if (!use_cellcache || stimrecombcoeff < 0) {
-    stimrecombcoeff = calculate_stimrecombcoeff_integral(element, lowerion, level, phixstargetindex, modelgridindex);
+    stimrecombcoeff = calculate_stimrecombcoeff_integral(element, lowerion, level, phixstargetindex, nonemptymgi);
 
 #if (SEPARATE_STIMRECOMB)
     if (use_cellcache) {
@@ -1185,6 +1184,7 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
     }
 #endif
   }
+  assert_always(std::isfinite(stimrecombcoeff));
 
   return stimrecombcoeff;
 }
