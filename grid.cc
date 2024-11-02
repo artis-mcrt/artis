@@ -2010,8 +2010,7 @@ auto get_cellradialposmid(const int cellindex) -> double {
   return elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element];
 }
 
-void set_elements_uppermost_ion(const int modelgridindex, const int element, const int newvalue) {
-  const ptrdiff_t nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+void set_elements_uppermost_ion(const int nonemptymgi, const int element, const int newvalue) {
   elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element] = newvalue;
 }
 

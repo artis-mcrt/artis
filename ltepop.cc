@@ -280,7 +280,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   return U;
 }
 
-auto find_uppermost_ion(const int modelgridindex, const int element, const double nne_hi, const bool force_lte) -> int {
+auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi, const bool force_lte) -> int {
   const int nions = get_nions(element);
   if (nions == 0) {
     return -1;
@@ -288,8 +288,7 @@ auto find_uppermost_ion(const int modelgridindex, const int element, const doubl
   if (!force_lte && elem_has_nlte_levels(element)) {
     return nions - 1;
   }
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const bool use_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
   int uppermost_ion = 0;
 
@@ -336,9 +335,9 @@ void set_calculated_nne(const int modelgridindex) {
 }
 
 // Special case of only neutral ions, set nne to some finite value so that packets are not lost in kpkts
-void set_groundlevelpops_neutral(const int modelgridindex) {
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-  printout("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n", modelgridindex);
+void set_groundlevelpops_neutral(const int nonemptymgi) {
+  printout("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n",
+           grid::get_mgi_of_nonemptymgi(nonemptymgi));
   for (int element = 0; element < get_nelements(); element++) {
     const auto nnelement = grid::get_elem_numberdens(nonemptymgi, element);
     const int nions = get_nions(element);
@@ -620,17 +619,17 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void {
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
-      const int uppermost_ion = find_uppermost_ion(modelgridindex, element, nne_hi, force_lte);
-      grid::set_elements_uppermost_ion(modelgridindex, element, uppermost_ion);
+      const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_lte);
+      grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
 
       only_lowest_ionstage = only_lowest_ionstage && (uppermost_ion <= 0);
     } else {
-      grid::set_elements_uppermost_ion(modelgridindex, element, get_nions(element) - 1);
+      grid::set_elements_uppermost_ion(nonemptymgi, element, get_nions(element) - 1);
     }
   }
 
   if (only_lowest_ionstage) {
-    set_groundlevelpops_neutral(modelgridindex);
+    set_groundlevelpops_neutral(nonemptymgi);
   } else {
     const auto nne_solution = find_converged_nne(modelgridindex, nne_hi, force_lte);
     grid::set_nne(modelgridindex, nne_solution);
