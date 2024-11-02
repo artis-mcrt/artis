@@ -435,10 +435,9 @@ auto get_element_superlevelpartfuncs(const int modelgridindex, const int element
   return max_nlte_dimension;
 }
 
-void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, const int ion, const double t_mid,
+void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, const int ion, const double t_mid,
                                    const std::vector<double> &s_renorm, gsl_matrix *rate_matrix_rad_bb,
                                    gsl_matrix *rate_matrix_coll_bb, gsl_matrix *rate_matrix_ntcoll_bb) {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto T_e = grid::get_Te(nonemptymgi);
   const float nne = grid::get_nne(nonemptymgi);
   const int nlevels = get_nlevels(element, ion);
@@ -458,7 +457,7 @@ void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, 
 
       const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
 
-      const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, lower, epsilon_trans, A_ul, statweight,
+      const double R = rad_deexcitation_ratecoeff(nonemptymgi, element, ion, lower, epsilon_trans, A_ul, statweight,
                                                   nnlevel, t_mid) *
                        s_renorm[level];
       const double C =
@@ -486,7 +485,7 @@ void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, 
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
 
       const double R =
-          rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, nnlevel, lineindex, t_mid) *
+          rad_excitation_ratecoeff(nonemptymgi, element, ion, level, i, epsilon_trans, nnlevel, lineindex, t_mid) *
           s_renorm[level];
       assert_always(R >= 0);
       assert_always(std::isfinite(R));
@@ -497,7 +496,7 @@ void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, 
       assert_always(std::isfinite(C));
 
       const double NTC =
-          nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, i, lineindex) * s_renorm[level];
+          nonthermal::nt_excitation_ratecoeff(nonemptymgi, element, ion, level, i, lineindex) * s_renorm[level];
 
       const int lower_index = level_index;
       const int upper_index = get_nlte_vector_index(element, ion, upper);
@@ -911,8 +910,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       s_renorm[level] = superlevel_boltzmann(modelgridindex, element, ion, level) / superlevel_partfunc[ion];
     }
 
-    nltepop_matrix_add_boundbound(modelgridindex, element, ion, t_mid, s_renorm, &rate_matrix_rad_bb,
-                                  &rate_matrix_coll_bb, &rate_matrix_ntcoll_bb);
+    nltepop_matrix_add_boundbound(nonemptymgi, element, ion, t_mid, s_renorm, &rate_matrix_rad_bb, &rate_matrix_coll_bb,
+                                  &rate_matrix_ntcoll_bb);
 
     if (ion < nions - 1) {
       // this is the slowest component

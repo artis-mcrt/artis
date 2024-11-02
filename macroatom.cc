@@ -61,8 +61,8 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
     const double epsilon_target = epsilon(element, ion, lower);
     const double epsilon_trans = epsilon_current - epsilon_target;
 
-    const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, lower, epsilon_trans, A_ul, statweight,
-                                                nnlevel, t_mid);
+    const double R =
+        rad_deexcitation_ratecoeff(nonemptymgi, element, ion, lower, epsilon_trans, A_ul, statweight, nnlevel, t_mid);
     const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtrans);
 
     sum_raddeexc += R * epsilon_trans;
@@ -87,10 +87,10 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
     const auto &uptrans = uptranslist[i];
     const double epsilon_trans = epsilon(element, ion, uptrans.targetlevelindex) - epsilon_current;
 
-    const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, nnlevel,
-                                              uptrans.lineindex, t_mid);
+    const double R =
+        rad_excitation_ratecoeff(nonemptymgi, element, ion, level, i, epsilon_trans, nnlevel, uptrans.lineindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, statweight);
-    const double NT = nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, i, uptrans.lineindex);
+    const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, element, ion, level, i, uptrans.lineindex);
 
     sum_internal_up_same += (R + C + NT) * epsilon_current;
     chlevel.sum_internal_up_same[i] = sum_internal_up_same;
@@ -649,10 +649,9 @@ void macroatom_close_file() {
 // radiative deexcitation rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
 #pragma omp declare simd
-auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
+auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int element, const int ion, const int lower,
                                 const double epsilon_trans, const float A_ul, const double upperstatweight,
                                 const double nnlevelupper, const double t_current) -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto &n_u = nnlevelupper;
   const double n_l = get_levelpop(nonemptymgi, element, ion, lower);
 
@@ -694,10 +693,9 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
 // radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
 #pragma omp declare simd
-auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
+auto rad_excitation_ratecoeff(const int nonemptymgi, const int element, const int ion, const int lower,
                               const int uptransindex, const double epsilon_trans, const double nnlevel_lower,
                               const int lineindex, const double t_current) -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto &uptr = get_uptranslist(element, ion, lower)[uptransindex];
   const int upper = uptr.targetlevelindex;
 
@@ -719,6 +717,7 @@ auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const
       if (!globals::lte_iteration) {
         // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
         if (const int jblueindex = radfield::get_Jblueindex(lineindex); jblueindex >= 0) {
+          const auto modelgridindex = grid::get_cell_modelgridindex(nonemptymgi);
           return R_over_J_nu * radfield::get_Jb_lu(modelgridindex, jblueindex);
         }
       }

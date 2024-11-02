@@ -1775,7 +1775,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
         const double ntcollexc_ratecoeff = ntexc.ratecoeffperdeposition * deposition_rate_density;
 
         const double t_mid = globals::timesteps[timestep].mid;
-        const double radexc_ratecoeff = rad_excitation_ratecoeff(modelgridindex, element, ion, lower, uptransindex,
+        const double radexc_ratecoeff = rad_excitation_ratecoeff(nonemptymgi, element, ion, lower, uptransindex,
                                                                  epsilon_trans, nnlevel_lower, lineindex, t_mid);
 
         const double collexc_ratecoeff = col_excitation_ratecoeff(T_e, nne, element, ion, lower, uptransindex,
@@ -2358,7 +2358,7 @@ __host__ __device__ auto nt_ionization_ratecoeff(const int modelgridindex, const
 }
 
 #pragma omp declare simd
-__host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const int ion,
+__host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const int element, const int ion,
                                                  const int lowerlevel, const int uptransindex, const int lineindex)
     -> double {
   if constexpr (!NT_EXCITATION_ON) {
@@ -2372,8 +2372,7 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int modelgridindex, const
     return 0.;
   }
 
-  assert_testmodeonly(grid::get_numpropcells(modelgridindex) > 0);
-
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   // binary search, assuming the excitation list is sorted by lineindex ascending
   const auto ntexclist = std::span(nt_solution[modelgridindex].frac_excitations_list,
                                    nt_solution[modelgridindex].frac_excitations_list_size);

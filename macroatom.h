@@ -10,12 +10,12 @@ void macroatom_close_file();
 void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate);
 
 #pragma omp declare simd
-[[nodiscard]] auto rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int lower, double epsilon_trans,
+[[nodiscard]] auto rad_deexcitation_ratecoeff(int nonemptymgi, int element, int ion, int lower, double epsilon_trans,
                                               float A_ul, double upperstatweight, double nnlevelupper, double t_current)
     -> double;
 
 #pragma omp declare simd
-[[nodiscard]] auto rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int uptransindex,
+[[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, int element, int ion, int lower, int uptransindex,
                                             double epsilon_trans, double nnlevel_lower, int lineindex, double t_current)
     -> double;
 
