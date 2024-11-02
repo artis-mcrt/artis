@@ -818,7 +818,8 @@ void nt_write_to_file(const int modelgridindex, const int timestep, const int it
       }
     }
 
-    const double yscalefactor = get_deposition_rate_density(modelgridindex) / (E_init_ev * EV);
+    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+    const double yscalefactor = get_deposition_rate_density(nonemptymgi) / (E_init_ev * EV);
 
     for (int s = 0; s < SFPTS; s++) {
       fprintf(nonthermalfile, "%d %d %d %.5e %.5e %.5e\n", timestep, modelgridindex, s, engrid(s), sourcevec(s),
@@ -1217,21 +1218,22 @@ auto calculate_nt_frac_ionization_shell(const int nonemptymgi, const int element
 auto nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int element, const int ion) -> double
 // non-thermal ionization rate coefficient (multiply by population to get rate)
 {
-  const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const double deposition_rate_density = get_deposition_rate_density(nonemptymgi);
   // to get the non-thermal ionization rate we need to divide the energy deposited
   // per unit volume per unit time in the grid cell (sum of terms above)
   // by the total ion number density and the "work per ion pair"
   return deposition_rate_density / get_nnion_tot(modelgridindex) * get_oneoverw(element, ion, modelgridindex);
 }
 
-auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion,
-                                       const bool assumeshellpotentialisvalence, const std::array<double, SFPTS> &yfunc)
-    -> double
 // Integrate the ionization cross section over the electron degradation function to get the ionization rate
 // coefficient i.e. multiply this by ion population to get a rate of ionizations per second Do not call during packet
 // propagation, as the y vector may not be in memory! IMPORTANT: we are dividing by the shell potential, not the
 // valence potential here! To change this set assumeshellpotentialisvalence to true
-{
+auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion,
+                                       const bool assumeshellpotentialisvalence, const std::array<double, SFPTS> &yfunc)
+    -> double {
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   std::array<double, SFPTS> cross_section_vec{};
   auto gsl_cross_section_vec = gsl_vector_view_array(cross_section_vec.data(), SFPTS).vector;
   std::array<double, SFPTS> cross_section_vec_allshells{};
@@ -1264,7 +1266,7 @@ auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int eleme
 
   const double y_xs_de = cblas_ddot(SFPTS, yfunc.data(), 1, cross_section_vec_allshells.data(), 1) * DELTA_E;
 
-  const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
+  const double deposition_rate_density_ev = get_deposition_rate_density(nonemptymgi) / EV;
   const double yscalefactor = deposition_rate_density_ev / E_init_ev;
 
   return yscalefactor * y_xs_de;
@@ -1389,9 +1391,9 @@ auto get_eff_ionpot(const int modelgridindex, const int element, const int ion) 
 // Kozma & Fransson 1992 equation 13
 // returns the rate coefficient in s^-1
 auto nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, const int ion) -> double {
-  assert_testmodeonly(grid::get_numpropcells(modelgridindex) > 0);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
-  const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
+  const double deposition_rate_density = get_deposition_rate_density(nonemptymgi);
   if (deposition_rate_density > 0.) {
     return deposition_rate_density / get_nnion_tot(modelgridindex) / get_eff_ionpot(modelgridindex, element, ion);
     // alternatively, if the y vector is still in memory:
@@ -1738,7 +1740,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
                                      &NonThermalExcitation::frac_deposition);
 
     // the excitation list is now sorted by frac_deposition descending
-    const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
+    const double deposition_rate_density = get_deposition_rate_density(nonemptymgi);
 
     if (std::ssize(tmp_excitation_list) > nt_excitations_stored) {
       // truncate the sorted list to save memory
@@ -1803,7 +1805,7 @@ void analyse_sf_solution(const int modelgridindex, const int timestep, const boo
   }  // NT_EXCITATION_ON
 
   // calculate number density of non-thermal electrons
-  const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
+  const double deposition_rate_density_ev = get_deposition_rate_density(nonemptymgi) / EV;
   const double yscalefactor = deposition_rate_density_ev / E_init_ev;
 
   double nne_nt_max = 0.;
@@ -2206,7 +2208,8 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
 }
 
 // get non-thermal deposition rate density in erg / s / cm^3 previously stored by calculate_deposition_rate_density()
-__host__ __device__ auto get_deposition_rate_density(const int modelgridindex) -> double {
+__host__ __device__ auto get_deposition_rate_density(const int nonemptymgi) -> double {
+  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   assert_always(deposition_rate_density_all_cells[modelgridindex] >= 0);
   return deposition_rate_density_all_cells[modelgridindex];
 }
@@ -2332,9 +2335,9 @@ __host__ __device__ auto nt_random_upperion(const int modelgridindex, const int 
   }
 }
 
-__host__ __device__ auto nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion) -> double {
+__host__ __device__ auto nt_ionization_ratecoeff(const int nonemptymgi, const int element, const int ion) -> double {
   assert_always(NT_ON);
-  assert_always(grid::get_numpropcells(modelgridindex) > 0);
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   if (NT_SOLVE_SPENCERFANO) {
     const double Y_nt = nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
@@ -2383,7 +2386,7 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const in
     return 0.;
   }
 
-  const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
+  const double deposition_rate_density = get_deposition_rate_density(nonemptymgi);
   const double ratecoeffperdeposition = ntexcitation->ratecoeffperdeposition;
 
   return ratecoeffperdeposition * deposition_rate_density;
@@ -2416,7 +2419,7 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
     // until we end and select transition_ij when zrand < dep_frac_transition_ij
 
     // const double frac_ionization = get_nt_frac_ionization(modelgridindex);
-    const double frac_ionization = get_ntion_energyrate(modelgridindex) / get_deposition_rate_density(modelgridindex);
+    const double frac_ionization = get_ntion_energyrate(modelgridindex) / get_deposition_rate_density(nonemptymgi);
     // printout("frac_ionization compare %g and %g\n", frac_ionization, get_nt_frac_ionization(modelgridindex));
     // const double frac_ionization = 0.;
 
@@ -2489,8 +2492,8 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
 
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
-void solve_spencerfano(const int modelgridindex, const int timestep, const int iteration) {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+void solve_spencerfano(const int nonemptymgi, const int timestep, const int iteration) {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   bool skip_solution = false;
   if (grid::get_numpropcells(modelgridindex) < 1) {
     printout("Associated_cells < 1 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex,
@@ -2501,11 +2504,11 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   if (timestep < globals::num_lte_timesteps + 1) {
     printout("Skipping Spencer-Fano solution for first NLTE timestep\n");
     skip_solution = true;
-  } else if (get_deposition_rate_density(modelgridindex) / EV < MINDEPRATE) {
+  } else if (get_deposition_rate_density(nonemptymgi) / EV < MINDEPRATE) {
     printout(
         "Non-thermal deposition rate of %g eV/cm/s/cm^3 below  MINDEPRATE %g in cell %d at timestep %d. Skipping "
         "Spencer-Fano solution.\n",
-        get_deposition_rate_density(modelgridindex) / EV, MINDEPRATE, modelgridindex, timestep);
+        get_deposition_rate_density(nonemptymgi) / EV, MINDEPRATE, modelgridindex, timestep);
 
     skip_solution = true;
   }

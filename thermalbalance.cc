@@ -218,7 +218,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
-  const auto ntlepton_dep = nonthermal::get_deposition_rate_density(modelgridindex);
+  const auto ntlepton_dep = nonthermal::get_deposition_rate_density(nonemptymgi);
   const auto ntalpha_frac_heating = 1.;
   const auto ntalpha_dep = heatingcoolingrates->dep_alpha;
   heatingcoolingrates->heating_dep = ntlepton_dep * ntlepton_frac_heating + ntalpha_dep * ntalpha_frac_heating;
