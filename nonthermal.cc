@@ -745,12 +745,13 @@ auto get_possible_nt_excitation_count() -> int {
 void zero_all_effionpot(const int modelgridindex) {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
-    get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot = 0.;
+    auto &ion_data = get_cell_ion_data(nonemptymgi)[uniqueionindex];
+    ion_data.eff_ionpot = 0.;
 
     std::ranges::fill(get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger, 0.);
     std::ranges::fill(get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger, 0.);
-    get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[0] = 1.;
-    get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[0] = 1.;
+    ion_data.prob_num_auger[0] = 1.;
+    ion_data.ionenfrac_num_auger[0] = 1.;
 
     const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
     assert_always(fabs(get_auger_probability(nonemptymgi, element, ion, 0) - 1.0) < 1e-3);
@@ -2138,7 +2139,9 @@ void init(const int my_rank, const int ndo_nonempty) {
     nt_solution[nonemptymgi].nneperion_when_solved = -1.;
     nt_solution[nonemptymgi].timestep_last_solved = -1;
 
-    zero_all_effionpot(modelgridindex);
+    if (globals::rank_in_node == 0) {
+      zero_all_effionpot(modelgridindex);
+    }
 
     nt_solution[nonemptymgi].frac_excitations_list_size = 0;
   }
