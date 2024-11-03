@@ -2072,7 +2072,7 @@ auto sfmatrix_solve(const std::vector<double> &sfmatrix) -> std::array<double, S
 void init(const int my_rank, const int ndo_nonempty) {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
-  resize_exactly(deposition_rate_density_all_cells, grid::get_npts_model());
+  resize_exactly(deposition_rate_density_all_cells, nonempty_npts_model);
 
   std::ranges::fill(deposition_rate_density_all_cells, -1.);
 
@@ -2156,7 +2156,6 @@ void init(const int my_rank, const int ndo_nonempty) {
 // after packet propagation is finished for this timestep and normalise_deposition_estimators() has been done
 void calculate_deposition_rate_density(const int nonemptymgi, const int timestep,
                                        HeatingCoolingRates *heatingcoolingrates) {
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   heatingcoolingrates->dep_gamma = globals::dep_estimator_gamma[nonemptymgi];
 
   const double tmid = globals::timesteps[timestep].mid;
@@ -2188,15 +2187,14 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
     heatingcoolingrates->dep_alpha = globals::dep_estimator_alpha[nonemptymgi];
   }
 
-  deposition_rate_density_all_cells[modelgridindex] =
+  deposition_rate_density_all_cells[nonemptymgi] =
       (heatingcoolingrates->dep_gamma + heatingcoolingrates->dep_positron + heatingcoolingrates->dep_electron);
 }
 
 // get non-thermal deposition rate density in erg / s / cm^3 previously stored by calculate_deposition_rate_density()
 __host__ __device__ auto get_deposition_rate_density(const int nonemptymgi) -> double {
-  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  assert_always(deposition_rate_density_all_cells[modelgridindex] >= 0);
-  return deposition_rate_density_all_cells[modelgridindex];
+  assert_always(deposition_rate_density_all_cells[nonemptymgi] >= 0);
+  return deposition_rate_density_all_cells[nonemptymgi];
 }
 
 void close_file() {
@@ -2641,7 +2639,7 @@ void write_restart_data(FILE *gridsave_file) {
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    fprintf(gridsave_file, "%d %la ", modelgridindex, deposition_rate_density_all_cells[modelgridindex]);
+    fprintf(gridsave_file, "%d %la ", modelgridindex, deposition_rate_density_all_cells[nonemptymgi]);
 
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
       check_auger_probabilities(modelgridindex);
@@ -2698,7 +2696,7 @@ void read_restart_data(FILE *gridsave_file) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
     int mgi_in = 0;
-    assert_always(fscanf(gridsave_file, "%d %la ", &mgi_in, &deposition_rate_density_all_cells[modelgridindex]) == 2);
+    assert_always(fscanf(gridsave_file, "%d %la ", &mgi_in, &deposition_rate_density_all_cells[nonemptymgi]) == 2);
 
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
       assert_always(fscanf(gridsave_file, "%a %a %a %a\n", &nt_solution[nonemptymgi].nneperion_when_solved,
@@ -2744,7 +2742,7 @@ void read_restart_data(FILE *gridsave_file) {
 void nt_MPI_Bcast(const int nonemptymgi, const int root, const int root_node_id) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-  MPI_Bcast(&deposition_rate_density_all_cells[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+  MPI_Bcast(&deposition_rate_density_all_cells[nonemptymgi], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
   if (NT_ON && NT_SOLVE_SPENCERFANO) {
     MPI_Bcast(&nt_solution[nonemptymgi].nneperion_when_solved, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
