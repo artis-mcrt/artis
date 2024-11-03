@@ -93,7 +93,6 @@ struct collionrow {
 std::vector<collionrow> colliondata;
 
 FILE *nonthermalfile{};
-bool nonthermal_initialized = false;
 
 static_assert(SF_EMIN > 0.);
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
@@ -802,10 +801,7 @@ void nt_write_to_file(const int modelgridindex, const int timestep, const int it
 #pragma omp critical(nonthermal_out_file)
   {
 #endif
-    if (!nonthermal_initialized || nonthermalfile == nullptr) {
-      printout("Call to nonthermal_write_to_file before nonthermal_init");
-      std::abort();
-    }
+    assert_always(nonthermalfile != nullptr);
 
     static int64_t nonthermalfile_offset_iteration_zero = 0;
 #ifdef _OPENMP
@@ -2074,8 +2070,7 @@ auto sfmatrix_solve(const std::vector<double> &sfmatrix) -> std::array<double, S
 }  // anonymous namespace
 
 void init(const int my_rank, const int ndo_nonempty) {
-  assert_always(nonthermal_initialized == false);
-  nonthermal_initialized = true;
+  const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
   resize_exactly(deposition_rate_density_all_cells, grid::get_npts_model());
 
@@ -2116,16 +2111,14 @@ void init(const int my_rank, const int ndo_nonempty) {
     nt_excitations_stored = std::min(MAX_NT_EXCITATIONS_STORED, get_possible_nt_excitation_count());
     printout("[info] mem_usage: storing %d non-thermal excitations for non-empty cells occupies %.3f MB\n",
              nt_excitations_stored,
-             grid::get_nonempty_npts_model() * sizeof(NonThermalExcitation) * nt_excitations_stored / 1024. / 1024.);
-
-    const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
+             nonempty_npts_model * sizeof(NonThermalExcitation) * nt_excitations_stored / 1024. / 1024.);
 
     excitations_list_all_cells = MPI_shared_malloc<NonThermalExcitation>(nonempty_npts_model * nt_excitations_stored);
   }
 
-  resize_exactly(nt_solution, grid::get_nonempty_npts_model());
+  resize_exactly(nt_solution, nonempty_npts_model);
 
-  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
     // should make these negative?
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     nt_solution[nonemptymgi].frac_heating = 0.97;
@@ -2156,7 +2149,6 @@ void init(const int my_rank, const int ndo_nonempty) {
 
   read_collion_data();
 
-  nonthermal_initialized = true;
   printout("Finished initializing non-thermal solver\n");
 }
 
@@ -2208,8 +2200,6 @@ __host__ __device__ auto get_deposition_rate_density(const int nonemptymgi) -> d
 }
 
 void close_file() {
-  nonthermal_initialized = false;
-
   if (!NT_ON || !NT_SOLVE_SPENCERFANO) {
     return;
   }
@@ -2757,7 +2747,6 @@ void nt_MPI_Bcast(const int nonemptymgi, const int root, const int root_node_id)
   MPI_Bcast(&deposition_rate_density_all_cells[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
   if (NT_ON && NT_SOLVE_SPENCERFANO) {
-    assert_always(nonthermal_initialized);
     MPI_Bcast(&nt_solution[nonemptymgi].nneperion_when_solved, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
     MPI_Bcast(&nt_solution[nonemptymgi].timestep_last_solved, 1, MPI_INT, root, MPI_COMM_WORLD);
     MPI_Bcast(&nt_solution[nonemptymgi].frac_heating, 1, MPI_FLOAT, root, MPI_COMM_WORLD);

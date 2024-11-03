@@ -985,13 +985,13 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
 }  // anonymous namespace
 
 void allocate_expansionopacities() {
-  const auto npts_nonempty = grid::get_nonempty_npts_model();
+  const auto nonempty_npts_model = grid::get_nonempty_npts_model();
   float *expansionopacities_data{};
   double *expansionopacity_planck_cumulative_data{};
 
 #ifdef MPI_ON
   std::tie(expansionopacities_data, win_expansionopacities) =
-      MPI_shared_malloc_keepwin<float>(npts_nonempty * expopac_nbins);
+      MPI_shared_malloc_keepwin<float>(nonempty_npts_model * expopac_nbins);
 #else
   expansionopacities_data = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
 #endif
@@ -999,17 +999,17 @@ void allocate_expansionopacities() {
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
 #ifdef MPI_ON
     std::tie(expansionopacity_planck_cumulative_data, win_expansionopacity_planck_cumulative) =
-        MPI_shared_malloc_keepwin<double>(npts_nonempty * expopac_nbins);
+        MPI_shared_malloc_keepwin<double>(nonempty_npts_model * expopac_nbins);
 #else
     expansionopacity_planck_cumulative_data =
         static_cast<double *>(malloc(npts_nonempty * expopac_nbins * sizeof(double)));
 #endif
   }
 
-  expansionopacities = std::span(expansionopacities_data, npts_nonempty * expopac_nbins);
+  expansionopacities = std::span(expansionopacities_data, nonempty_npts_model * expopac_nbins);
   expansionopacity_planck_cumulative =
       std::span(expansionopacity_planck_cumulative_data,
-                expansionopacity_planck_cumulative_data == nullptr ? 0 : npts_nonempty * expopac_nbins);
+                expansionopacity_planck_cumulative_data == nullptr ? 0 : nonempty_npts_model * expopac_nbins);
 }
 
 // return a randomly chosen frequency with a distribution of Planck function times the expansion opacity
