@@ -474,8 +474,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
       int alltransindex = temp_alltranslist_size;
       temp_alltranslist_size += totupdowntrans;
       if (globals::rank_in_node == 0) {
-        temp_alltranslist.reserve(temp_alltranslist_size);
-        temp_alltranslist.resize(temp_alltranslist_size);
+        resize_exactly(temp_alltranslist, temp_alltranslist_size);
         assert_always(temp_alltranslist_size >= temp_linelist.size());
         temp_linelist.reserve(temp_alltranslist_size);
       }
@@ -1321,8 +1320,8 @@ void setup_cellcache() {
       }
     }
     assert_always(chlevelcount > 0);
-    globals::cellcache[cellcachenum].ch_all_levels.reserve(chlevelcount);
-    globals::cellcache[cellcachenum].ch_all_levels.resize(chlevelcount);
+    resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, chlevelcount);
+
     chphixstargetsblock =
         chphixsblocksize > 0 ? static_cast<CellCachePhixsTargets *>(malloc(chphixsblocksize)) : nullptr;
     mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + chphixsblocksize;
@@ -1379,12 +1378,9 @@ void setup_cellcache() {
     assert_always(chtransindex == chtransblocksize);
 
     assert_always(globals::nbfcontinua >= 0);
-    globals::cellcache[cellcachenum].ch_allcont_departureratios.reserve(globals::nbfcontinua);
-    globals::cellcache[cellcachenum].ch_allcont_departureratios.resize(globals::nbfcontinua);
-    globals::cellcache[cellcachenum].ch_allcont_nnlevel.reserve(globals::nbfcontinua);
-    globals::cellcache[cellcachenum].ch_allcont_nnlevel.resize(globals::nbfcontinua);
-    globals::cellcache[cellcachenum].ch_keep_this_cont.reserve(globals::nbfcontinua);
-    globals::cellcache[cellcachenum].ch_keep_this_cont.resize(globals::nbfcontinua);
+    resize_exactly(globals::cellcache[cellcachenum].ch_allcont_departureratios, globals::nbfcontinua);
+    resize_exactly(globals::cellcache[cellcachenum].ch_allcont_nnlevel, globals::nbfcontinua);
+    resize_exactly(globals::cellcache[cellcachenum].ch_keep_this_cont, globals::nbfcontinua);
     mem_usage_cellcache += 2 * globals::nbfcontinua * sizeof(double);
 
     printout("[info] mem_usage: cellcache for thread %d occupies %.3f MB\n", cellcachenum,
@@ -1393,8 +1389,7 @@ void setup_cellcache() {
 }
 
 void write_bflist_file() {
-  globals::bflist.reserve(globals::nbfcontinua);
-  globals::bflist.resize(globals::nbfcontinua);
+  resize_exactly(globals::bflist, globals::nbfcontinua);
 
   FILE *bflist_file{};
   if (globals::my_rank == 0) {
