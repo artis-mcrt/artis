@@ -1560,6 +1560,10 @@ auto get_uptransindex(const int element, const int ion, const int lower, const i
   return -1;
 }
 
+[[nodiscard]] auto get_cell_ntexcitations(const int nonemptymgi) {
+  return std::span(nt_solution[nonemptymgi].frac_excitations_list, nt_solution[nonemptymgi].frac_excitations_list_size);
+}
+
 void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool enable_sfexcitation,
                          const std::array<double, SFPTS> &yfunc) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -1793,9 +1797,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
     }
 
     // sort the excitation list by ascending lineindex for fast lookup with a binary search
-    std::ranges::SORT_OR_STABLE_SORT(
-        std::span(nt_solution[nonemptymgi].frac_excitations_list, nt_solution[nonemptymgi].frac_excitations_list_size),
-        std::ranges::less{}, &NonThermalExcitation::lineindex);
+    std::ranges::SORT_OR_STABLE_SORT(get_cell_ntexcitations(nonemptymgi), std::ranges::less{},
+                                     &NonThermalExcitation::lineindex);
 
   }  // NT_EXCITATION_ON
 
@@ -2356,8 +2359,7 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const in
   }
 
   // binary search, assuming the excitation list is sorted by lineindex ascending
-  const auto ntexclist =
-      std::span(nt_solution[nonemptymgi].frac_excitations_list, nt_solution[nonemptymgi].frac_excitations_list_size);
+  const auto ntexclist = get_cell_ntexcitations(nonemptymgi);
   const auto ntexcitation = std::ranges::lower_bound(ntexclist, lineindex, {}, &NonThermalExcitation::lineindex);
   if (ntexcitation == ntexclist.end() || ntexcitation->lineindex != lineindex) {
     return 0.;
@@ -2433,8 +2435,7 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
       zrand -= frac_ionization;
       // now zrand is between zero and frac_excitation
       // the selection algorithm is the same as for the ionization transitions
-      for (const auto &ntexcitation : std::span(nt_solution[nonemptymgi].frac_excitations_list,
-                                                nt_solution[nonemptymgi].frac_excitations_list_size)) {
+      for (const auto &ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
         const double frac_deposition_exc = ntexcitation.frac_deposition;
         if (zrand < frac_deposition_exc) {
           const int lineindex = ntexcitation.lineindex;
@@ -2661,8 +2662,7 @@ void write_restart_data(FILE *gridsave_file) {
       // write NT excitations
       fprintf(gridsave_file, "%d\n", nt_solution[nonemptymgi].frac_excitations_list_size);
 
-      for (const auto &excitation : std::span(nt_solution[nonemptymgi].frac_excitations_list,
-                                              nt_solution[nonemptymgi].frac_excitations_list_size)) {
+      for (const auto &excitation : get_cell_ntexcitations(nonemptymgi)) {
         fprintf(gridsave_file, "%la %la %d\n", excitation.frac_deposition, excitation.ratecoeffperdeposition,
                 excitation.lineindex);
       }
