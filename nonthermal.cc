@@ -2749,6 +2749,9 @@ void nt_MPI_Bcast(const int nonemptymgi, const int root, const int root_node_id)
     MPI_Bcast(&nt_solution[nonemptymgi].frac_ionization, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
     MPI_Bcast(&nt_solution[nonemptymgi].frac_excitation, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
 
+    MPI_Bcast(get_cell_ion_data(nonemptymgi).data(),
+              static_cast<size_t>(get_includedions()) * sizeof(NonThermalSolutionIon), MPI_BYTE, root, MPI_COMM_WORLD);
+
     // communicate NT excitations
     MPI_Bcast(&nt_solution[nonemptymgi].frac_excitations_list_size, 1, MPI_INT, root, MPI_COMM_WORLD);
 
@@ -2757,10 +2760,6 @@ void nt_MPI_Bcast(const int nonemptymgi, const int root, const int root_node_id)
       MPI_Bcast(get_cell_ntexcitations(nonemptymgi).data(),
                 static_cast<size_t>(nt_solution[nonemptymgi].frac_excitations_list_size) * sizeof(NonThermalExcitation),
                 MPI_BYTE, root_node_id, globals::mpi_comm_internode);
-
-      const auto ion_data = get_cell_ion_data(nonemptymgi);
-      MPI_Bcast(ion_data.data(), ion_data.size() * sizeof(NonThermalSolutionIon), MPI_BYTE, root_node_id,
-                globals::mpi_comm_internode);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
