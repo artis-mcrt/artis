@@ -370,4 +370,11 @@ template <typename T>
   return std::span(MPI_shared_malloc<T>(num_allranks), num_allranks);
 }
 
+template <typename T>
+void resize_exactly(std::vector<T> &vec, const ptrdiff_t size) {
+  // just resizing can (only with libstdc++?) allocate a larger capacity than needed
+  vec.reserve(size);
+  vec.resize(size);
+}
+
 #endif  // SN3D_H

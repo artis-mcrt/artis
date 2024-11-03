@@ -2077,7 +2077,7 @@ void init(const int my_rank, const int ndo_nonempty) {
   assert_always(nonthermal_initialized == false);
   nonthermal_initialized = true;
 
-  deposition_rate_density_all_cells.resize(grid::get_npts_model());
+  resize_exactly(deposition_rate_density_all_cells, grid::get_npts_model());
 
   std::ranges::fill(deposition_rate_density_all_cells, -1.);
 
@@ -2123,7 +2123,7 @@ void init(const int my_rank, const int ndo_nonempty) {
     excitations_list_all_cells = MPI_shared_malloc<NonThermalExcitation>(nonempty_npts_model * nt_excitations_stored);
   }
 
-  nt_solution.resize(grid::get_npts_model());
+  resize_exactly(nt_solution, grid::get_nonempty_npts_model());
 
   for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     // should make these negative?
