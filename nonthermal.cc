@@ -2238,31 +2238,30 @@ __host__ __device__ auto nt_ionization_upperion_probability(const int modelgridi
     const int numaugerelec = upperion - lowerion - 1;  // number of Auger electrons to go from lowerin to upper ion
     const int uniqueionindex = get_uniqueionindex(element, lowerion);
     const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+    const auto &cell_ion_data = get_cell_ion_data(nonemptymgi)[uniqueionindex];
     if (numaugerelec < NT_MAX_AUGER_ELECTRONS) {
       if (energyweighted) {
-        return get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[numaugerelec];
+        return cell_ion_data.ionenfrac_num_auger[numaugerelec];
       }
-      return get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[numaugerelec];
+      return cell_ion_data.prob_num_auger[numaugerelec];
     }
     if (numaugerelec == NT_MAX_AUGER_ELECTRONS) {
       double prob_remaining = 1.;
       for (int a = 0; a < NT_MAX_AUGER_ELECTRONS; a++) {
         if (energyweighted) {
-          prob_remaining -= get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[a];
+          prob_remaining -= cell_ion_data.ionenfrac_num_auger[a];
         } else {
-          prob_remaining -= get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[a];
+          prob_remaining -= cell_ion_data.prob_num_auger[a];
         }
       }
       if (energyweighted) {
-        assert_always(fabs(prob_remaining -
-                           get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[numaugerelec]) < 0.001);
+        assert_always(fabs(prob_remaining - cell_ion_data.ionenfrac_num_auger[numaugerelec]) < 0.001);
       } else {
-        if (fabs(prob_remaining - get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[numaugerelec]) >=
-            0.001) {
+        if (fabs(prob_remaining - cell_ion_data.prob_num_auger[numaugerelec]) >= 0.001) {
           printout("Auger probabilities issue for cell %d Z=%02d ionstage %d to %d\n", modelgridindex,
                    get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element, upperion));
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-            printout("  a %d prob %g\n", a, get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[a]);
+            printout("  a %d prob %g\n", a, cell_ion_data.prob_num_auger[a]);
           }
           std::abort();
         }
