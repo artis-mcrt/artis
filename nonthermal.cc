@@ -171,6 +171,8 @@ struct NonThermalSolutionIon {
   std::array<float, NT_MAX_AUGER_ELECTRONS + 1> ionenfrac_num_auger{};
 };
 
+std::span<NonThermalSolutionIon> ion_data_all_cells{};
+
 struct NonThermalCellSolution {
   float frac_heating = 1.;     // energy fractions should add up to 1.0 if the solution is good
   float frac_ionization = 0.;  // fraction of deposition energy going to ionization
@@ -305,12 +307,12 @@ void read_binding_energies() {
 }
 
 [[nodiscard]] auto get_cell_ntexcitations(const int nonemptymgi) {
-  return std::span(&excitations_list_all_cells[nonemptymgi * nt_excitations_stored],
-                   nt_solution[nonemptymgi].frac_excitations_list_size);
+  return excitations_list_all_cells.subspan(nonemptymgi * nt_excitations_stored,
+                                            nt_solution[nonemptymgi].frac_excitations_list_size);
 }
 
 [[nodiscard]] auto get_cell_ion_data(const int nonemptymgi) {
-  return std::span(nt_solution[nonemptymgi].allions, get_includedions());
+  return ion_data_all_cells.subspan(nonemptymgi * get_includedions(), get_includedions());
 }
 
 auto get_auger_probability(const int nonemptymgi, const int element, const int ion, const int naugerelec) {
@@ -2122,6 +2124,8 @@ void init(const int my_rank, const int ndo_nonempty) {
         MPI_shared_malloc_span<NonThermalExcitation>(nonempty_npts_model * nt_excitations_stored);
   }
 
+  ion_data_all_cells = MPI_shared_malloc_span<NonThermalSolutionIon>(nonempty_npts_model * get_includedions());
+
   resize_exactly(nt_solution, nonempty_npts_model);
 
   for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
@@ -2133,9 +2137,6 @@ void init(const int my_rank, const int ndo_nonempty) {
 
     nt_solution[nonemptymgi].nneperion_when_solved = -1.;
     nt_solution[nonemptymgi].timestep_last_solved = -1;
-
-    nt_solution[nonemptymgi].allions =
-        static_cast<NonThermalSolutionIon *>(malloc(get_includedions() * sizeof(NonThermalSolutionIon)));
 
     zero_all_effionpot(modelgridindex);
 
