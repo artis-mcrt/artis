@@ -127,7 +127,7 @@ void set_npts_model(const int new_npts_model) {
   npts_model = new_npts_model;
 
   assert_always(modelgrid_input.data() == nullptr);
-  modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model + 1);
+  modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model);
   if (globals::rank_in_node == 0) {
     std::ranges::fill(modelgrid_input, ModelGridCellInput{});
   }
@@ -313,7 +313,7 @@ void allocate_nonemptymodelcells() {
   // Determine the number of simulation cells associated with the model cells
   std::ranges::fill(mg_associated_cells, 0);
   if (globals::rank_in_node == 0) {
-    for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++) {
+    for (int mgi = 0; mgi < get_npts_model(); mgi++) {
       modelgrid_input[mgi].initial_radial_pos_sum = 0.;
     }
   }
