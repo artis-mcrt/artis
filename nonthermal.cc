@@ -179,7 +179,6 @@ struct NonThermalCellSolution {
   NonThermalSolutionIon *allions{};
 
   int frac_excitations_list_size = 0;
-  NonThermalExcitation *frac_excitations_list{};
 
   int timestep_last_solved = -1;     // the quantities above were calculated for this timestep
   float nneperion_when_solved{NAN};  // the nne when the solver was last run
@@ -1751,11 +1750,10 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
     }
 
     nt_solution[nonemptymgi].frac_excitations_list_size = tmp_excitation_list.size();
-    std::copy(tmp_excitation_list.begin(), tmp_excitation_list.end(), nt_solution[nonemptymgi].frac_excitations_list);
+    std::copy(tmp_excitation_list.begin(), tmp_excitation_list.end(), get_cell_ntexcitations(nonemptymgi).begin());
 
     printout("[info] mem_usage: non-thermal excitations for cell %d at this timestep occupy %.3f MB\n", modelgridindex,
-             nt_solution[nonemptymgi].frac_excitations_list_size *
-                 sizeof(nt_solution[nonemptymgi].frac_excitations_list[0]) / 1024. / 1024.);
+             nt_solution[nonemptymgi].frac_excitations_list_size * sizeof(NonThermalExcitation) / 1024. / 1024.);
 
     const auto T_e = grid::get_Te(nonemptymgi);
     printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
@@ -2134,9 +2132,6 @@ void init(const int my_rank, const int ndo_nonempty) {
 
     nt_solution[nonemptymgi].allions =
         static_cast<NonThermalSolutionIon *>(malloc(get_includedions() * sizeof(NonThermalSolutionIon)));
-
-    nt_solution[nonemptymgi].frac_excitations_list =
-        NT_EXCITATION_ON ? &excitations_list_all_cells[nonemptymgi * nt_excitations_stored] : nullptr;
 
     zero_all_effionpot(modelgridindex);
 
@@ -2728,12 +2723,12 @@ void read_restart_data(FILE *gridsave_file) {
       assert_always(fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in) == 1);
 
       nt_solution[nonemptymgi].frac_excitations_list_size = frac_excitations_list_size_in;
+      const auto ntexclist = get_cell_ntexcitations(nonemptymgi);
 
       for (int excitationindex = 0; excitationindex < frac_excitations_list_size_in; excitationindex++) {
-        assert_always(fscanf(gridsave_file, "%la %la %d\n",
-                             &nt_solution[nonemptymgi].frac_excitations_list[excitationindex].frac_deposition,
-                             &nt_solution[nonemptymgi].frac_excitations_list[excitationindex].ratecoeffperdeposition,
-                             &nt_solution[nonemptymgi].frac_excitations_list[excitationindex].lineindex) == 3);
+        assert_always(fscanf(gridsave_file, "%la %la %d\n", &ntexclist[excitationindex].frac_deposition,
+                             &ntexclist[excitationindex].ratecoeffperdeposition,
+                             &ntexclist[excitationindex].lineindex) == 3);
       }
     }
   }
@@ -2760,7 +2755,7 @@ void nt_MPI_Bcast(const int nonemptymgi, const int root, const int root_node_id)
 
     if (globals::rank_in_node == 0) {
       // communicate NT excitation list via inter-node communication
-      MPI_Bcast(nt_solution[nonemptymgi].frac_excitations_list,
+      MPI_Bcast(get_cell_ntexcitations(nonemptymgi).data(),
                 static_cast<size_t>(nt_solution[nonemptymgi].frac_excitations_list_size) * sizeof(NonThermalExcitation),
                 MPI_BYTE, root_node_id, globals::mpi_comm_internode);
     }
