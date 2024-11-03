@@ -155,7 +155,7 @@ struct NonThermalExcitation {
 };
 
 // pointer to either local or node-shared memory excitation list of all cells
-NonThermalExcitation *excitations_list_all_cells{};
+std::span<NonThermalExcitation> excitations_list_all_cells{};
 
 // the minimum of MAX_NT_EXCITATIONS_STORED and the number of included excitation transitions in the atomic dataset
 int nt_excitations_stored = 0;
@@ -2113,7 +2113,8 @@ void init(const int my_rank, const int ndo_nonempty) {
              nt_excitations_stored,
              nonempty_npts_model * sizeof(NonThermalExcitation) * nt_excitations_stored / 1024. / 1024.);
 
-    excitations_list_all_cells = MPI_shared_malloc<NonThermalExcitation>(nonempty_npts_model * nt_excitations_stored);
+    excitations_list_all_cells =
+        MPI_shared_malloc_span<NonThermalExcitation>(nonempty_npts_model * nt_excitations_stored);
   }
 
   resize_exactly(nt_solution, nonempty_npts_model);
