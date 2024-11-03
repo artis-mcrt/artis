@@ -161,7 +161,6 @@ std::span<NonThermalExcitation> excitations_list_all_cells{};
 int nt_excitations_stored = 0;
 
 struct NonThermalSolutionIon {
-  // these points arrays of length includedions. TODO: move to NonThermalSolutionIon
   float eff_ionpot{0.};               // these are used to calculate the non-thermal ionization rate
   double fracdep_ionization_ion{0.};  // the fraction of the non-thermal deposition energy going to ionizing each ion
 
