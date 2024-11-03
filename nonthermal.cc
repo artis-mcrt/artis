@@ -1561,7 +1561,8 @@ auto get_uptransindex(const int element, const int ion, const int lower, const i
 }
 
 [[nodiscard]] auto get_cell_ntexcitations(const int nonemptymgi) {
-  return std::span(nt_solution[nonemptymgi].frac_excitations_list, nt_solution[nonemptymgi].frac_excitations_list_size);
+  return std::span(&excitations_list_all_cells[nonemptymgi * nt_excitations_stored],
+                   nt_solution[nonemptymgi].frac_excitations_list_size);
 }
 
 void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool enable_sfexcitation,
