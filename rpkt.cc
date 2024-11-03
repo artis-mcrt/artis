@@ -993,7 +993,7 @@ void allocate_expansionopacities() {
   std::tie(expansionopacities_data, win_expansionopacities) =
       MPI_shared_malloc_keepwin<float>(nonempty_npts_model * expopac_nbins);
 #else
-  expansionopacities_data = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
+  expansionopacities_data = static_cast<float *>(malloc(nonempty_npts_model * expopac_nbins * sizeof(float)));
 #endif
 
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
