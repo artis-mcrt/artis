@@ -2122,8 +2122,9 @@ void init(const int my_rank, const int ndo_nonempty) {
 
   nt_solution.resize(grid::get_npts_model());
 
-  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
+  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     // should make these negative?
+    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     nt_solution[modelgridindex].frac_heating = 0.97;
     nt_solution[modelgridindex].frac_ionization = 0.03;
     nt_solution[modelgridindex].frac_excitation = 0.;
@@ -2131,21 +2132,13 @@ void init(const int my_rank, const int ndo_nonempty) {
     nt_solution[modelgridindex].nneperion_when_solved = -1.;
     nt_solution[modelgridindex].timestep_last_solved = -1;
 
-    if (grid::get_numpropcells(modelgridindex) > 0) {
-      nt_solution[modelgridindex].allions =
-          static_cast<NonThermalSolutionIon *>(malloc(get_includedions() * sizeof(NonThermalSolutionIon)));
+    nt_solution[modelgridindex].allions =
+        static_cast<NonThermalSolutionIon *>(malloc(get_includedions() * sizeof(NonThermalSolutionIon)));
 
-      const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+    nt_solution[modelgridindex].frac_excitations_list =
+        NT_EXCITATION_ON ? &excitations_list_all_cells[nonemptymgi * nt_excitations_stored] : nullptr;
 
-      nt_solution[modelgridindex].frac_excitations_list =
-          NT_EXCITATION_ON ? &excitations_list_all_cells[nonemptymgi * nt_excitations_stored] : nullptr;
-
-      zero_all_effionpot(modelgridindex);
-    } else {
-      nt_solution[modelgridindex].allions = nullptr;
-
-      nt_solution[modelgridindex].frac_excitations_list = nullptr;
-    }
+    zero_all_effionpot(modelgridindex);
 
     nt_solution[modelgridindex].frac_excitations_list_size = 0;
   }
