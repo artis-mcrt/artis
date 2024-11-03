@@ -203,7 +203,7 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
       // level is in the superlevel
       assert_testmodeonly(level_isinsuperlevel(element, ion, level));
 
-      const double superlevelpop_over_rho = get_nlte_superlevelpop_over_rho(modelgridindex, element, ion);
+      const double superlevelpop_over_rho = get_nlte_superlevelpop_over_rho(nonemptymgi, element, ion);
       if (superlevelpop_over_rho < -0.9)  // TODO: should change this to less than zero?
       {
         // Case for when no NLTE level information is available yet

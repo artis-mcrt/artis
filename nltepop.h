@@ -6,7 +6,7 @@
 void solve_nlte_pops_element(int element, int modelgridindex, int timestep, int nlte_iter);
 [[nodiscard]] auto superlevel_boltzmann(int modelgridindex, int element, int ion, int level) -> double;
 [[nodiscard]] auto get_nlte_levelpop_over_rho(int nonemptymgi, int element, int ion, int level) -> double;
-[[nodiscard]] auto get_nlte_superlevelpop_over_rho(int modelgridindex, int element, int ion) -> double;
+[[nodiscard]] auto get_nlte_superlevelpop_over_rho(int nonemptymgi, int element, int ion) -> double;
 void set_nlte_levelpop_over_rho(int nonemptymgi, int element, int ion, int level, double value);
 void set_nlte_superlevelpop_over_rho(int nonemptymgi, int element, int ion, double value);
 void nltepop_write_to_file(int nonemptymgi, int timestep);
