@@ -327,10 +327,9 @@ auto get_ion_auger_enfrac(const int nonemptymgi, const int element, const int io
   return get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[naugerelec];
 }
 
-void check_auger_probabilities(int modelgridindex) {
+void check_auger_probabilities(int nonemptymgi) {
   bool problem_found = false;
 
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element) - 1; ion++) {
       double prob_sum = 0.;
@@ -341,8 +340,9 @@ void check_auger_probabilities(int modelgridindex) {
       }
 
       if (fabs(prob_sum - 1.0) > 0.001) {
-        printout("Problem with Auger probabilities for cell %d Z=%d ionstage %d prob_sum %g\n", modelgridindex,
-                 get_atomicnumber(element), get_ionstage(element, ion), prob_sum);
+        printout("Problem with Auger probabilities for cell %d Z=%d ionstage %d prob_sum %g\n",
+                 grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
+                 prob_sum);
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
           printout("%d: %g\n", a, get_auger_probability(nonemptymgi, element, ion, a));
         }
@@ -350,8 +350,9 @@ void check_auger_probabilities(int modelgridindex) {
       }
 
       if (fabs(ionenfrac_sum - 1.0) > 0.001) {
-        printout("Problem with Auger energy frac sum for cell %d Z=%d ionstage %d ionenfrac_sum %g\n", modelgridindex,
-                 get_atomicnumber(element), get_ionstage(element, ion), ionenfrac_sum);
+        printout("Problem with Auger energy frac sum for cell %d Z=%d ionstage %d ionenfrac_sum %g\n",
+                 grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
+                 ionenfrac_sum);
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
           printout("%d: %g\n", a, get_ion_auger_enfrac(nonemptymgi, element, ion, a));
         }
@@ -360,9 +361,7 @@ void check_auger_probabilities(int modelgridindex) {
     }
   }
 
-  if (problem_found) {
-    std::abort();
-  }
+  assert_always(!problem_found);
 }
 
 void read_auger_data() {
@@ -742,8 +741,7 @@ auto get_possible_nt_excitation_count() -> int {
   return ntexcitationcount;
 }
 
-void zero_all_effionpot(const int modelgridindex) {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+void zero_all_effionpot(const int nonemptymgi) {
   for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
     auto &ion_data = get_cell_ion_data(nonemptymgi)[uniqueionindex];
     ion_data.eff_ionpot = 0.;
@@ -757,7 +755,7 @@ void zero_all_effionpot(const int modelgridindex) {
     assert_always(fabs(get_auger_probability(nonemptymgi, element, ion, 0) - 1.0) < 1e-3);
     assert_always(fabs(get_ion_auger_enfrac(nonemptymgi, element, ion, 0) - 1.0) < 1e-3);
   }
-  check_auger_probabilities(modelgridindex);
+  check_auger_probabilities(nonemptymgi);
 }
 
 [[nodiscard]] constexpr auto get_energyindex_ev_lteq(const double energy_ev) -> int
@@ -2131,7 +2129,6 @@ void init(const int my_rank, const int ndo_nonempty) {
 
   for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
     // should make these negative?
-    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     nt_solution[nonemptymgi].frac_heating = 0.97;
     nt_solution[nonemptymgi].frac_ionization = 0.03;
     nt_solution[nonemptymgi].frac_excitation = 0.;
@@ -2140,7 +2137,7 @@ void init(const int my_rank, const int ndo_nonempty) {
     nt_solution[nonemptymgi].timestep_last_solved = -1;
 
     if (globals::rank_in_node == 0) {
-      zero_all_effionpot(modelgridindex);
+      zero_all_effionpot(nonemptymgi);
     }
 
     nt_solution[nonemptymgi].frac_excitations_list_size = 0;
@@ -2502,7 +2499,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 
     nt_solution[nonemptymgi].frac_excitations_list_size = 0;
 
-    zero_all_effionpot(modelgridindex);
+    zero_all_effionpot(nonemptymgi);
     return;
   }
 
@@ -2643,7 +2640,7 @@ void write_restart_data(FILE *gridsave_file) {
     fprintf(gridsave_file, "%d %la ", modelgridindex, deposition_rate_density_all_cells[nonemptymgi]);
 
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
-      check_auger_probabilities(modelgridindex);
+      check_auger_probabilities(nonemptymgi);
 
       fprintf(gridsave_file, "%a %a %a %a\n", nt_solution[nonemptymgi].nneperion_when_solved,
               nt_solution[nonemptymgi].frac_heating, nt_solution[nonemptymgi].frac_ionization,
@@ -2720,7 +2717,7 @@ void read_restart_data(FILE *gridsave_file) {
         }
       }
 
-      check_auger_probabilities(modelgridindex);
+      check_auger_probabilities(nonemptymgi);
 
       // read NT excitations
       int frac_excitations_list_size_in = 0;
@@ -2740,8 +2737,6 @@ void read_restart_data(FILE *gridsave_file) {
 
 #ifdef MPI_ON
 void nt_MPI_Bcast(const int nonemptymgi, const int root, const int root_node_id) {
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-
   MPI_Bcast(&deposition_rate_density_all_cells[nonemptymgi], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
   if (NT_ON && NT_SOLVE_SPENCERFANO) {
@@ -2767,7 +2762,7 @@ void nt_MPI_Bcast(const int nonemptymgi, const int root, const int root_node_id)
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    check_auger_probabilities(modelgridindex);
+    check_auger_probabilities(nonemptymgi);
   }
 }
 #endif
