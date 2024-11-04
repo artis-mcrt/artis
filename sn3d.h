@@ -123,7 +123,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
     const bool assertpass = static_cast<bool>(e);                                                                      \
-    if (!assertpass) {                                                                                                 \
+    if (!assertpass) [[unlikely]] {                                                                                    \
       if (output_file) {                                                                                               \
         output_file << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
                     << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                                          \
