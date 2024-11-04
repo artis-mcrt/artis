@@ -1249,20 +1249,12 @@ void nltepop_read_restart_data(FILE *restart_file) {
                              &grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
                              &grid::ion_cooling_contribs_allcells[(nonemptymgi * nincludedions) + uniqueionindex]) ==
                       4);
-        if (ion_in != ion) {
-          printout("ERROR: expected data for ion %d but found ion %d\n", ion, ion_in);
-          std::abort();
-        }
+        assert_always(ion_in == ion);
       }
     }
     for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
-#ifdef MPI_ON
-      if (globals::rank_in_node != 0) {
-        assert_always(fscanf(restart_file, "%*a ") == 0);  // discard value (master rank of this node will set it)
-      } else
-#endif
-        assert_always(fscanf(restart_file, "%la ",
-                             &grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]) == 1);
+      assert_always(fscanf(restart_file, "%la ",
+                           &grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]) == 1);
     }
   }
 }
