@@ -2473,12 +2473,6 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
 void solve_spencerfano(const int nonemptymgi, const int timestep, const int iteration) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   bool skip_solution = false;
-  if (grid::get_numpropcells(modelgridindex) < 1) {
-    printout("Associated_cells < 1 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex,
-             timestep);
-
-    return;
-  }
   if (timestep < globals::num_lte_timesteps + 1) {
     printout("Skipping Spencer-Fano solution for first NLTE timestep\n");
     skip_solution = true;

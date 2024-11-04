@@ -96,7 +96,7 @@ inline thread_local auto gslworkspace =
 #define __artis_assert(e)                         \
   {                                               \
     const bool assertpass = static_cast<bool>(e); \
-    \assert(e);                                   \
+    assert(e);                                    \
   }
 
 #else
