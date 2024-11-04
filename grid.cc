@@ -74,6 +74,8 @@ struct PropGridCell {
 
 std::vector<PropGridCell> cell{};
 
+std::vector<int> nonemptymgi_of_propcell;
+
 std::vector<int> mg_associated_cells;
 std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
@@ -339,15 +341,13 @@ void allocate_nonemptymodelcells() {
   assert_always(nonempty_npts_model > 0);
 
   mgi_of_nonemptymgi.resize(nonempty_npts_model, -2);
+  nonemptymgi_of_propcell.resize(ngrid, -1);
 
   int nonemptymgi = 0;  // index within list of non-empty modelgrid cells
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     if (get_numpropcells(mgi) > 0) {
-      if (get_rho_tmin(mgi) <= 0) {
-        printout("Error: negative or zero density. Abort.\n");
-        std::abort();
-      }
+      assert_always(get_rho_tmin(mgi) >= 0);
       nonemptymgi_of_mgi[mgi] = nonemptymgi;
       mgi_of_nonemptymgi[nonemptymgi] = mgi;
       nonemptymgi++;
@@ -362,6 +362,15 @@ void allocate_nonemptymodelcells() {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
+
+  for (int cellindex = 0; cellindex < ngrid; cellindex++) {
+    const int mgi = get_cell_modelgridindex(cellindex);
+    if (mgi >= get_npts_model()) {
+      nonemptymgi_of_propcell[cellindex] = -1;
+    } else {
+      nonemptymgi_of_propcell[cellindex] = get_nonemptymgi_of_mgi(mgi);
+    }
+  }
 
   assert_always(modelgrid.data() == nullptr);
   modelgrid = MPI_shared_malloc_span<ModelGridCell>(nonempty_npts_model);
