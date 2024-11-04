@@ -881,7 +881,10 @@ void read_grid_restart_data(const int timestep) {
   // the order of these calls is very important!
   radfield::read_restart_data(gridsave_file);
   nonthermal::read_restart_data(gridsave_file);
-  nltepop_read_restart_data(gridsave_file);
+  if (globals::rank_in_node == 0) {
+    // all data is shared on the node
+    nltepop_read_restart_data(gridsave_file);
+  }
   fclose(gridsave_file);
 }
 
