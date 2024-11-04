@@ -1105,8 +1105,8 @@ void setup_grid_cylindrical_2d() {
   }
 }
 
-auto get_grid_type_name() -> std::string {
-  switch (GRID_TYPE) {
+auto get_grid_type_name(const GridType gridtype) -> std::string {
+  switch (gridtype) {
     case GridType::SPHERICAL1D:
       return "spherical";
     case GridType::CYLINDRICAL2D:
@@ -1404,8 +1404,6 @@ auto get_cellcoordmin(const int cellindex, const int axis) -> double {
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r
 // direction)
 auto get_coordcellindexincrement(const int axis) -> int {
-  // assert_testmodeonly(axis < get_ngriddimensions());
-
   switch (axis) {
     case 0:
       return 1;
@@ -1878,13 +1876,13 @@ void read_ejecta_model() {
   if (get_model_type() == GridType::SPHERICAL1D) {
     printout("Read 1D model\n");
 
-    vout_model.resize(get_npts_model(), NAN);
-
     // Now read the time (in days) at which the model is specified.
     double t_model_days{NAN};
     assert_always(get_noncommentline(fmodel, line));
     std::istringstream(line) >> t_model_days;
     t_model = t_model_days * DAY;
+
+    vout_model.resize(get_npts_model(), NAN);
 
     // Now read in the lines of the model. Each line has 5 entries: the
     // cell number (integer) the velocity at outer boundary of cell (float),
@@ -1994,14 +1992,14 @@ void read_ejecta_model() {
   } else if (get_model_type() == GridType::CARTESIAN3D) {
     printout("Read 3D model\n");
 
-    // for a 3D input model, the propagation cells will match the input cells exactly
-    ncoordgrid = ncoord_model;
-    ngrid = npts_model;
-
     double t_model_days{NAN};
     assert_always(get_noncommentline(fmodel, line));
     std::istringstream(line) >> t_model_days;
     t_model = t_model_days * DAY;
+
+    // for a 3D input model, the propagation cells will match the input cells exactly
+    ncoordgrid = ncoord_model;
+    ngrid = npts_model;
 
     // Now read in vmax for the model (in cm s^-1).
     assert_always(get_noncommentline(fmodel, line));
@@ -2217,9 +2215,10 @@ void grid_init(const int my_rank) {
     std::abort();
   }
 
-  printout("propagation grid: %d-dimensional %s\n", get_ngriddimensions(), get_grid_type_name().c_str());
+  printout("propagation grid: %d-dimensional %s\n", get_ngriddimensions(GRID_TYPE),
+           get_grid_type_name(GRID_TYPE).c_str());
 
-  for (int d = 0; d < get_ngriddimensions(); d++) {
+  for (int d = 0; d < get_ngriddimensions(GRID_TYPE); d++) {
     printout("    coordinate %d '%c': cells have %d position values\n", d, coordlabel[d], ncoordgrid[d]);
   }
   printout("    total propagation cells: %d\n", ngrid);
@@ -2330,13 +2329,13 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 [[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> &pos, const double time) -> int {
   auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
-  for (int d = 0; d < get_ngriddimensions(); d++) {
+  for (int d = 0; d < get_ngriddimensions(GRID_TYPE); d++) {
     cellindex += get_coordcellindexincrement(d) * get_poscoordpointnum(posgridcoords[d], time, d);
   }
 
   // do a check that the position is within the cell
   const double trat = time / globals::tmin;
-  for (int n = 0; n < grid::get_ngriddimensions(); n++) {
+  for (int n = 0; n < grid::get_ngriddimensions(GRID_TYPE); n++) {
     assert_always(posgridcoords[n] >= grid::get_cellcoordmin(cellindex, n) * trat);
     assert_always(posgridcoords[n] <= grid::get_cellcoordmax(cellindex, n) * trat);
   }
@@ -2358,7 +2357,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   // d is used to loop over the coordinate indicies 0,1,2 for x,y,z
 
   // the following four vectors are in grid coordinates, so either x,y,z or r
-  const int ndim = grid::get_ngriddimensions();
+  const int ndim = grid::get_ngriddimensions(GRID_TYPE);
   assert_testmodeonly(ndim <= 3);
   auto cellcoordmax = std::array<double, 3>{0};
   auto pktvelgridcoord = std::array<double, 3>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
