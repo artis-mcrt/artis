@@ -102,8 +102,9 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
     // returns negative value if nu_cmf > nu_trans
     if (const int lineindex = closest_transition(nu_cmf, next_trans, nlines, linelist); lineindex >= 0) [[likely]] {
       // line interaction is possible (nu_cmf > nu_trans)
+      const auto &line = globals::linelist[lineindex];
 
-      const double nu_trans = linelist[lineindex].nu;
+      const double nu_trans = line.nu;
 
       // helper variable to overcome numerical problems after line scattering
       // further scattering events should be located at lower frequencies to prevent
@@ -123,19 +124,7 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
           return {std::numeric_limits<double>::max(), next_trans - 1, false};
         }
 
-        const auto &line = globals::linelist[lineindex];
-        const int element = line.elementindex;
-        const int ion = line.ionindex;
-        const int upper = line.upperlevelindex;
-        const int lower = line.lowerlevelindex;
-        const double A_ul = linelist[lineindex].einstein_A;
-        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
-        const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
-
-        const double n_u = get_levelpop(nonemptymgi, element, ion, upper);
-        const double n_l = get_levelpop(nonemptymgi, element, ion, lower);
-
-        const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * prop_time);
+        const double tau_line = get_tau_sobolev_subupdown(nonemptymgi, line, prop_time);
 
         // printout("[debug] get_event:     tau_line %g\n", tau_line);
         // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
@@ -171,7 +160,10 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
           // bound-bound process occurs
           // printout("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
 
-          mastate = {.element = element, .ion = ion, .level = upper, .activatingline = lineindex};
+          mastate = {.element = line.elementindex,
+                     .ion = line.ionindex,
+                     .level = line.upperlevelindex,
+                     .activatingline = lineindex};
 
           if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
             move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
