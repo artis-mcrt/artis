@@ -305,8 +305,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
 
 // handle activated macro atoms
 __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate) {
-  const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
   assert_testmodeonly(nonemptymgi >= 0);
   const auto T_e = grid::get_Te(nonemptymgi);
 
@@ -410,6 +409,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         }
 
         if constexpr (LOG_MACROATOM) {
+          const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
           fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %9d %11.5e %11.5e %11.5e %11.5e\n", globals::timestep,
                   modelgridindex, get_atomicnumber(element), get_ionstage(element, ion_in), get_ionstage(element, ion),
                   level_in, level, activatingline, nu_cmf_in, pkt.nu_cmf, nu_rf_in, pkt.nu_rf);
