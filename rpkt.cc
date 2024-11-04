@@ -760,7 +760,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
 
     pkt.last_event = pkt.last_event + 100;
 
-    return (pkt.type == TYPE_RPKT && (nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
+    return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
   }
 
   if ((edist <= sdist) && (edist <= tdist)) [[likely]] {
