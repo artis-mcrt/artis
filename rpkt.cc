@@ -123,10 +123,11 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
           return {std::numeric_limits<double>::max(), next_trans - 1, false};
         }
 
-        const int element = linelist[lineindex].elementindex;
-        const int ion = linelist[lineindex].ionindex;
-        const int upper = linelist[lineindex].upperlevelindex;
-        const int lower = linelist[lineindex].lowerlevelindex;
+        const auto &line = globals::linelist[lineindex];
+        const int element = line.elementindex;
+        const int ion = line.ionindex;
+        const int upper = line.upperlevelindex;
+        const int lower = line.lowerlevelindex;
         const double A_ul = linelist[lineindex].einstein_A;
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
