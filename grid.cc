@@ -1559,17 +1559,13 @@ void set_nne(const int nonemptymgi, const float nne) {
   modelgrid[nonemptymgi].nne = nne;
 }
 
-void set_nnetot(const int modelgridindex, const float nnetot) {
+void set_nnetot(const int nonemptymgi, const float nnetot) {
   assert_always(nnetot >= 0.);
   assert_always(std::isfinite(nnetot));
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   modelgrid[nonemptymgi].nnetot = nnetot;
 }
 
-void set_kappagrey(const int modelgridindex, const float kappagrey) {
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
-  modelgrid[nonemptymgi].kappagrey = kappagrey;
-}
+void set_kappagrey(const int nonemptymgi, const float kappagrey) { modelgrid[nonemptymgi].kappagrey = kappagrey; }
 
 void set_Te(const int nonemptymgi, const float Te) {
   if (Te > 0.) {
@@ -1763,9 +1759,9 @@ void calculate_kappagrey() {
           kappagrey *= globals::rho_crit / get_rho_tmin(mgi);
         }
 
-        set_kappagrey(mgi, kappagrey);
+        set_kappagrey(nonemptymgi, kappagrey);
       } else if (get_rho_tmin(mgi) == 0.) {
-        set_kappagrey(mgi, 0.);
+        set_kappagrey(nonemptymgi, 0.);
       } else if (get_rho_tmin(mgi) < 0.) {
         printout("Error: negative density. Abort.\n");
         std::abort();
@@ -1843,9 +1839,9 @@ void calculate_kappagrey() {
         std::abort();
       }
 
-      set_kappagrey(mgi, kappa);
+      set_kappagrey(nonemptymgi, kappa);
     } else if (get_rho_tmin(mgi) == 0.) {
-      set_kappagrey(mgi, 0.);
+      set_kappagrey(nonemptymgi, 0.);
     } else if (get_rho_tmin(mgi) < 0.) {
       printout("Error: negative density. Abort.\n");
       std::abort();

@@ -903,10 +903,10 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
     if (globals::opacity_case == 3) {
       if (grid::get_rho(nonemptymgi) > globals::rho_crit) {
-        grid::set_kappagrey(mgi, globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1) * globals::rho_crit /
-                                     grid::get_rho(nonemptymgi));
+        grid::set_kappagrey(nonemptymgi, globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1) *
+                                             globals::rho_crit / grid::get_rho(nonemptymgi));
       } else {
-        grid::set_kappagrey(mgi, globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1));
+        grid::set_kappagrey(nonemptymgi, globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1));
       }
     }
   }
