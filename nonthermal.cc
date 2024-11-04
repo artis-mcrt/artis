@@ -2633,8 +2633,7 @@ void write_restart_data(FILE *gridsave_file) {
   fprintf(gridsave_file, "%d %la %la\n", SFPTS, SF_EMIN, SF_EMAX);
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    fprintf(gridsave_file, "%d %la ", modelgridindex, deposition_rate_density_all_cells[nonemptymgi]);
+    fprintf(gridsave_file, "%d %la ", nonemptymgi, deposition_rate_density_all_cells[nonemptymgi]);
 
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
       check_auger_probabilities(nonemptymgi);
@@ -2687,15 +2686,15 @@ void read_restart_data(FILE *gridsave_file) {
   }
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    int mgi_in = 0;
-    assert_always(fscanf(gridsave_file, "%d %la ", &mgi_in, &deposition_rate_density_all_cells[nonemptymgi]) == 2);
+    int nonemptymgi_in = 0;
+    assert_always(fscanf(gridsave_file, "%d %la ", &nonemptymgi_in, &deposition_rate_density_all_cells[nonemptymgi]) ==
+                  2);
+    assert_always(nonemptymgi_in == nonemptymgi);
 
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
       assert_always(fscanf(gridsave_file, "%a %a %a %a\n", &nt_solution[nonemptymgi].nneperion_when_solved,
                            &nt_solution[nonemptymgi].frac_heating, &nt_solution[nonemptymgi].frac_ionization,
                            &nt_solution[nonemptymgi].frac_excitation) == 4);
-
-      assert_always(mgi_in == grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
       for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
         assert_always(
