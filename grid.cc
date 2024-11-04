@@ -764,266 +764,6 @@ auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<std::str
   return {colnames, nucindexlist, one_line_per_cell};
 }
 
-// Read in a 1D spherical model
-void read_1d_model() {
-  auto fmodel = fstream_required("model.txt", std::ios::in);
-
-  std::string line;
-
-  // 1st read the number of data points in the table of input model.
-  int npts_model_in = 0;
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> npts_model_in;
-
-  set_npts_model(npts_model_in);
-  ncoord_model[0] = npts_model_in;
-
-  vout_model.resize(get_npts_model(), NAN);
-
-  // Now read the time (in days) at which the model is specified.
-  double t_model_days{NAN};
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> t_model_days;
-  t_model = t_model_days * DAY;
-
-  // Now read in the lines of the model. Each line has 5 entries: the
-  // cell number (integer) the velocity at outer boundary of cell (float),
-  // the mass density in the cell (float), the abundance of Ni56 by mass
-  // in the cell (float) and the total abundance of all Fe-grp elements
-  // in the cell (float). For now, the last number is recorded but never
-  // used.
-
-  const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
-
-  int mgi = 0;
-  while (std::getline(fmodel, line)) {
-    double vout_kmps{NAN};
-    double log_rho{NAN};
-    int cellnumberin = 0;
-    std::istringstream ssline(line);
-
-    if (ssline >> cellnumberin >> vout_kmps >> log_rho) {
-      if (mgi == 0) {
-        first_cellindex = cellnumberin;
-        printout("first_cellindex %d\n", first_cellindex);
-      }
-      assert_always(cellnumberin == mgi + first_cellindex);
-
-      vout_model[mgi] = vout_kmps * 1.e5;
-
-      const double rho_tmin = pow(10., log_rho) * pow(t_model / globals::tmin, 3);
-      set_rho_tmin(mgi, rho_tmin);
-    } else {
-      printout("Unexpected number of values in model.txt\n");
-      printout("line: %s\n", line.c_str());
-      assert_always(false);
-    }
-    read_model_radioabundances(fmodel, ssline, mgi, true, colnames, nucindexlist, one_line_per_cell);
-
-    mgi += 1;
-    if (mgi == get_npts_model()) {
-      break;
-    }
-  }
-
-  if (mgi != get_npts_model()) {
-    printout("ERROR in model.txt. Found only %d cells instead of %d expected.\n", mgi - 1, get_npts_model());
-    std::abort();
-  }
-
-  globals::vmax = vout_model[get_npts_model() - 1];
-}
-
-// Read in a 2D axisymmetric cylindrical model
-void read_2d_model() {
-  auto fmodel = fstream_required("model.txt", std::ios::in);
-
-  std::string line;
-
-  // 1st read the number of data points in the table of input model.
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> ncoord_model[0] >> ncoord_model[1];  // r and z (cylindrical polar)
-  ncoord_model[2] = 0.;
-
-  set_npts_model(ncoord_model[0] * ncoord_model[1]);
-
-  // Now read the time (in days) at which the model is specified.
-  double t_model_days{NAN};
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> t_model_days;
-  t_model = t_model_days * DAY;
-
-  // Now read in vmax for the model (in cm s^-1).
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> globals::vmax;
-
-  const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
-
-  // Now read in the model. Each point in the model has two lines of input.
-  // First is an index for the cell then its r-mid point then its z-mid point
-  // then its total mass density.
-  // Second is the total FeG mass, initial 56Ni mass, initial 56Co mass
-
-  int mgi = 0;
-  while (std::getline(fmodel, line)) {
-    int cellnumberin = 0;
-    float cell_r_in{NAN};
-    float cell_z_in{NAN};
-    double rho_tmodel{NAN};
-    std::istringstream ssline(line);
-    assert_always(ssline >> cellnumberin >> cell_r_in >> cell_z_in >> rho_tmodel);
-
-    if (mgi == 0) {
-      first_cellindex = cellnumberin;
-    }
-    assert_always(cellnumberin == mgi + first_cellindex);
-
-    const int n_rcyl = (mgi % ncoord_model[0]);
-    const double pos_r_cyl_mid = (n_rcyl + 0.5) * globals::vmax * t_model / ncoord_model[0];
-    assert_always(fabs((cell_r_in / pos_r_cyl_mid) - 1) < 1e-3);
-    const int n_z = (mgi / ncoord_model[0]);
-    const double pos_z_mid = globals::vmax * t_model * (-1 + 2 * (n_z + 0.5) / ncoord_model[1]);
-    assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
-
-    if (rho_tmodel < 0) {
-      printout("negative input density %g %d\n", rho_tmodel, mgi);
-      std::abort();
-    }
-
-    const bool keepcell = (rho_tmodel > 0);
-    const double rho_tmin = rho_tmodel * pow(t_model / globals::tmin, 3);
-    set_rho_tmin(mgi, rho_tmin);
-
-    read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
-
-    mgi++;
-  }
-
-  if (mgi != get_npts_model()) {
-    printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, get_npts_model());
-    std::abort();
-  }
-}
-
-// read a 3D Cartesian model
-void read_3d_model() {
-  auto fmodel = fstream_required("model.txt", std::ios::in);
-
-  std::string line;
-
-  // 1st read the number of data points in the table of input model.
-  // This MUST be the same number as the maximum number of points used in the grid - if not, abort.
-  int npts_model_in = 0;
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> npts_model_in;
-  set_npts_model(npts_model_in);
-
-  ncoord_model[0] = ncoord_model[1] = ncoord_model[2] = static_cast<int>(round(pow(npts_model_in, 1 / 3.)));
-  assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_model_in);
-
-  // for a 3D input model, the propagation cells will match the input cells exactly
-  ncoordgrid = ncoord_model;
-  ngrid = npts_model_in;
-
-  double t_model_days{NAN};
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> t_model_days;
-  t_model = t_model_days * DAY;
-
-  // Now read in vmax for the model (in cm s^-1).
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> globals::vmax;
-
-  const double xmax_tmodel = globals::vmax * t_model;
-
-  // Now read in the lines of the model.
-  min_den = -1.;
-
-  // check if expected positions match in either xyz or zyx column order
-  // set false if a problem is detected
-  bool posmatch_xyz = true;
-  bool posmatch_zyx = true;
-
-  const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
-
-  // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
-  // otherwise each input cell is one modelgrid cell
-  int mgi = 0;  // corresponds to model.txt index column, but zero indexed! (model.txt might be 1-indexed)
-  while (std::getline(fmodel, line)) {
-    int cellnumberin = 0;
-    std::array<float, 3> cellpos_in{};
-    float rho_model{NAN};
-    std::istringstream ssline(line);
-
-    assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model);
-
-    if (mgi == 0) {
-      first_cellindex = cellnumberin;
-    }
-    assert_always(cellnumberin == mgi + first_cellindex);
-
-    if (mgi % (ncoord_model[1] * ncoord_model[2]) == 0) {
-      printout("read up to cell mgi %d\n", mgi);
-    }
-
-    // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
-    // however, the cellindex always should increment X first, then Y, then Z
-
-    for (int axis = 0; axis < 3; axis++) {
-      const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
-      const double cellpos_expected = -xmax_tmodel + (cellwidth * get_cellcoordpointnum(mgi, axis));
-      //   printout("mgi %d coord %d expected %g found %g or %g rmax %g get_cellcoordpointnum(mgi, axis) %d ncoordgrid
-      //   %d\n",
-      //            mgi, axis, cellpos_expected, cellpos_in[axis], cellpos_in[2 - axis], xmax_tmodel,
-      //            get_cellcoordpointnum(mgi, axis), ncoordgrid[axis]);
-      if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth) {
-        posmatch_xyz = false;
-      }
-      if (fabs(cellpos_expected - cellpos_in[2 - axis]) > 0.5 * cellwidth) {
-        posmatch_zyx = false;
-      }
-    }
-
-    if (rho_model < 0) {
-      printout("negative input density %g %d\n", rho_model, mgi);
-      std::abort();
-    }
-
-    // in 3D cartesian, cellindex and modelgridindex are interchangeable
-    const bool keepcell = (rho_model > 0);
-    const double rho_tmin = rho_model * pow(t_model / globals::tmin, 3);
-    set_rho_tmin(mgi, rho_tmin);
-
-    if (min_den < 0. || min_den > rho_model) {
-      min_den = rho_model;
-    }
-
-    read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
-
-    mgi++;
-  }
-  if (mgi != npts_model_in) {
-    printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", mgi, npts_model_in);
-    std::abort();
-  }
-
-  //   assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
-  if (posmatch_xyz) {
-    printout("Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.\n");
-  }
-  if (posmatch_zyx) {
-    printout("Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.\n");
-  }
-
-  if (!posmatch_xyz && !posmatch_zyx) {
-    printout(
-        "WARNING: Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
-        "order.\n");
-  }
-
-  printout("min_den %g [g/cm3]\n", min_den);
-}
-
 auto get_inputcellvolume(const int mgi) -> double {
   if (get_model_type() == GridType::SPHERICAL1D) {
     const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
@@ -2112,26 +1852,261 @@ void calculate_kappagrey() {
 }
 
 void read_ejecta_model() {
-  switch (get_model_type()) {
-    case GridType::SPHERICAL1D: {
-      printout("Read 1D model\n");
-      read_1d_model();
-      break;
+  if (get_model_type() == GridType::SPHERICAL1D) {
+    printout("Read 1D model\n");
+
+    auto fmodel = fstream_required("model.txt", std::ios::in);
+
+    std::string line;
+
+    // 1st read the number of data points in the table of input model.
+    int npts_model_in = 0;
+    assert_always(get_noncommentline(fmodel, line));
+    std::istringstream(line) >> npts_model_in;
+
+    set_npts_model(npts_model_in);
+    ncoord_model[0] = npts_model_in;
+
+    vout_model.resize(get_npts_model(), NAN);
+
+    // Now read the time (in days) at which the model is specified.
+    double t_model_days{NAN};
+    assert_always(get_noncommentline(fmodel, line));
+    std::istringstream(line) >> t_model_days;
+    t_model = t_model_days * DAY;
+
+    // Now read in the lines of the model. Each line has 5 entries: the
+    // cell number (integer) the velocity at outer boundary of cell (float),
+    // the mass density in the cell (float), the abundance of Ni56 by mass
+    // in the cell (float) and the total abundance of all Fe-grp elements
+    // in the cell (float). For now, the last number is recorded but never
+    // used.
+
+    const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
+
+    int mgi = 0;
+    while (std::getline(fmodel, line)) {
+      double vout_kmps{NAN};
+      double log_rho{NAN};
+      int cellnumberin = 0;
+      std::istringstream ssline(line);
+
+      if (ssline >> cellnumberin >> vout_kmps >> log_rho) {
+        if (mgi == 0) {
+          first_cellindex = cellnumberin;
+          printout("first_cellindex %d\n", first_cellindex);
+        }
+        assert_always(cellnumberin == mgi + first_cellindex);
+
+        vout_model[mgi] = vout_kmps * 1.e5;
+
+        const double rho_tmin = pow(10., log_rho) * pow(t_model / globals::tmin, 3);
+        set_rho_tmin(mgi, rho_tmin);
+      } else {
+        printout("Unexpected number of values in model.txt\n");
+        printout("line: %s\n", line.c_str());
+        assert_always(false);
+      }
+      read_model_radioabundances(fmodel, ssline, mgi, true, colnames, nucindexlist, one_line_per_cell);
+
+      mgi += 1;
+      if (mgi == get_npts_model()) {
+        break;
+      }
     }
 
-    case GridType::CYLINDRICAL2D: {
-      printout("Read 2D model\n");
-
-      read_2d_model();
-      break;
+    if (mgi != get_npts_model()) {
+      printout("ERROR in model.txt. Found only %d cells instead of %d expected.\n", mgi - 1, get_npts_model());
+      std::abort();
     }
 
-    case GridType::CARTESIAN3D: {
-      printout("Read 3D model\n");
+    globals::vmax = vout_model[get_npts_model() - 1];
+  } else if (get_model_type() == GridType::CYLINDRICAL2D) {
+    printout("Read 2D model\n");
+    auto fmodel = fstream_required("model.txt", std::ios::in);
 
-      read_3d_model();
-      break;
+    std::string line;
+
+    // 1st read the number of data points in the table of input model.
+    assert_always(get_noncommentline(fmodel, line));
+    std::istringstream(line) >> ncoord_model[0] >> ncoord_model[1];  // r and z (cylindrical polar)
+    ncoord_model[2] = 0.;
+
+    set_npts_model(ncoord_model[0] * ncoord_model[1]);
+
+    // Now read the time (in days) at which the model is specified.
+    double t_model_days{NAN};
+    assert_always(get_noncommentline(fmodel, line));
+    std::istringstream(line) >> t_model_days;
+    t_model = t_model_days * DAY;
+
+    // Now read in vmax for the model (in cm s^-1).
+    assert_always(get_noncommentline(fmodel, line));
+    std::istringstream(line) >> globals::vmax;
+
+    const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
+
+    // Now read in the model. Each point in the model has two lines of input.
+    // First is an index for the cell then its r-mid point then its z-mid point
+    // then its total mass density.
+    // Second is the total FeG mass, initial 56Ni mass, initial 56Co mass
+
+    int mgi = 0;
+    while (std::getline(fmodel, line)) {
+      int cellnumberin = 0;
+      float cell_r_in{NAN};
+      float cell_z_in{NAN};
+      double rho_tmodel{NAN};
+      std::istringstream ssline(line);
+      assert_always(ssline >> cellnumberin >> cell_r_in >> cell_z_in >> rho_tmodel);
+
+      if (mgi == 0) {
+        first_cellindex = cellnumberin;
+      }
+      assert_always(cellnumberin == mgi + first_cellindex);
+
+      const int n_rcyl = (mgi % ncoord_model[0]);
+      const double pos_r_cyl_mid = (n_rcyl + 0.5) * globals::vmax * t_model / ncoord_model[0];
+      assert_always(fabs((cell_r_in / pos_r_cyl_mid) - 1) < 1e-3);
+      const int n_z = (mgi / ncoord_model[0]);
+      const double pos_z_mid = globals::vmax * t_model * (-1 + 2 * (n_z + 0.5) / ncoord_model[1]);
+      assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
+
+      if (rho_tmodel < 0) {
+        printout("negative input density %g %d\n", rho_tmodel, mgi);
+        std::abort();
+      }
+
+      const bool keepcell = (rho_tmodel > 0);
+      const double rho_tmin = rho_tmodel * pow(t_model / globals::tmin, 3);
+      set_rho_tmin(mgi, rho_tmin);
+
+      read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
+
+      mgi++;
     }
+
+    if (mgi != get_npts_model()) {
+      printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, get_npts_model());
+      std::abort();
+    }
+  } else if (get_model_type() == GridType::CARTESIAN3D) {
+    printout("Read 3D model\n");
+    auto fmodel = fstream_required("model.txt", std::ios::in);
+
+    std::string line;
+
+    // 1st read the number of data points in the table of input model.
+    // This MUST be the same number as the maximum number of points used in the grid - if not, abort.
+    int npts_model_in = 0;
+    assert_always(get_noncommentline(fmodel, line));
+    std::istringstream(line) >> npts_model_in;
+    set_npts_model(npts_model_in);
+
+    ncoord_model[0] = ncoord_model[1] = ncoord_model[2] = static_cast<int>(round(pow(npts_model_in, 1 / 3.)));
+    assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_model_in);
+
+    // for a 3D input model, the propagation cells will match the input cells exactly
+    ncoordgrid = ncoord_model;
+    ngrid = npts_model_in;
+
+    double t_model_days{NAN};
+    assert_always(get_noncommentline(fmodel, line));
+    std::istringstream(line) >> t_model_days;
+    t_model = t_model_days * DAY;
+
+    // Now read in vmax for the model (in cm s^-1).
+    assert_always(get_noncommentline(fmodel, line));
+    std::istringstream(line) >> globals::vmax;
+
+    const double xmax_tmodel = globals::vmax * t_model;
+
+    // Now read in the lines of the model.
+    min_den = -1.;
+
+    // check if expected positions match in either xyz or zyx column order
+    // set false if a problem is detected
+    bool posmatch_xyz = true;
+    bool posmatch_zyx = true;
+
+    const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
+
+    // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
+    // otherwise each input cell is one modelgrid cell
+    int mgi = 0;  // corresponds to model.txt index column, but zero indexed! (model.txt might be 1-indexed)
+    while (std::getline(fmodel, line)) {
+      int cellnumberin = 0;
+      std::array<float, 3> cellpos_in{};
+      float rho_model{NAN};
+      std::istringstream ssline(line);
+
+      assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model);
+
+      if (mgi == 0) {
+        first_cellindex = cellnumberin;
+      }
+      assert_always(cellnumberin == mgi + first_cellindex);
+
+      if (mgi % (ncoord_model[1] * ncoord_model[2]) == 0) {
+        printout("read up to cell mgi %d\n", mgi);
+      }
+
+      // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
+      // however, the cellindex always should increment X first, then Y, then Z
+
+      for (int axis = 0; axis < 3; axis++) {
+        const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
+        const double cellpos_expected = -xmax_tmodel + (cellwidth * get_cellcoordpointnum(mgi, axis));
+        //   printout("mgi %d coord %d expected %g found %g or %g rmax %g get_cellcoordpointnum(mgi, axis) %d ncoordgrid
+        //   %d\n",
+        //            mgi, axis, cellpos_expected, cellpos_in[axis], cellpos_in[2 - axis], xmax_tmodel,
+        //            get_cellcoordpointnum(mgi, axis), ncoordgrid[axis]);
+        if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth) {
+          posmatch_xyz = false;
+        }
+        if (fabs(cellpos_expected - cellpos_in[2 - axis]) > 0.5 * cellwidth) {
+          posmatch_zyx = false;
+        }
+      }
+
+      if (rho_model < 0) {
+        printout("negative input density %g %d\n", rho_model, mgi);
+        std::abort();
+      }
+
+      // in 3D cartesian, cellindex and modelgridindex are interchangeable
+      const bool keepcell = (rho_model > 0);
+      const double rho_tmin = rho_model * pow(t_model / globals::tmin, 3);
+      set_rho_tmin(mgi, rho_tmin);
+
+      if (min_den < 0. || min_den > rho_model) {
+        min_den = rho_model;
+      }
+
+      read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
+
+      mgi++;
+    }
+    if (mgi != npts_model_in) {
+      printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", mgi, npts_model_in);
+      std::abort();
+    }
+
+    //   assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
+    if (posmatch_xyz) {
+      printout("Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.\n");
+    }
+    if (posmatch_zyx) {
+      printout("Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.\n");
+    }
+
+    if (!posmatch_xyz && !posmatch_zyx) {
+      printout(
+          "WARNING: Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
+          "order.\n");
+    }
+
+    printout("min_den %g [g/cm3]\n", min_den);
   }
 
   printout("npts_model: %d\n", get_npts_model());
