@@ -178,8 +178,6 @@ struct NonThermalCellSolution {
   float frac_ionization = 0.;  // fraction of deposition energy going to ionization
   float frac_excitation = 0.;  // fraction of deposition energy going to excitation
 
-  NonThermalSolutionIon *allions{};
-
   int frac_excitations_list_size = 0;
 
   int timestep_last_solved = -1;     // the quantities above were calculated for this timestep
