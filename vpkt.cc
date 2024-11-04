@@ -904,8 +904,7 @@ auto vpkt_call_estimators(const Packet &pkt, const enum packet_type type_before_
   }
 
   // Cut on vpkts
-  const int mgi = grid::get_cell_modelgridindex(pkt.where);
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
   if (grid::modelgrid[nonemptymgi].thick != 0) {
     return;
