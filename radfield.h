@@ -22,7 +22,7 @@ void update_lineestimator(int nonemptymgi, int lineindex, double increment);
 void fit_parameters(int nonemptymgi, int timestep);
 void set_J_normfactor(int nonemptymgi, double normfactor);
 void normalise_J(int nonemptymgi, double estimator_normfactor_over4pi);
-void normalise_nuJ(int modelgridindex, double estimator_normfactor_over4pi);
+void normalise_nuJ(int nonemptymgi, double estimator_normfactor_over4pi);
 [[nodiscard]] auto get_T_J_from_J(int nonemptymgi) -> double;
 [[nodiscard]] auto get_Jblueindex(int lineindex) -> int;
 [[nodiscard]] auto get_Jb_lu(int nonemptymgi, int jblueindex) -> double;

@@ -424,8 +424,8 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     //     const bool printdebug_gammar = false;
     //     fprintf(estimators_file, "  %d: %9.3e",
     //             get_ionstage(element, ion),
-    //             calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false,
-    //             false));
+    //             calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug_gammar,
+    //             false, false));
     //   }
     //   fprintf(estimators_file, "\n");
     // }
@@ -438,9 +438,9 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       for (int ion = 0; ion < nions - 1; ion++) {
         // const bool printdebug_gammar = (get_atomicnumber(element) == 26 && get_ionstage(element, ion) == 2);
         const bool printdebug_gammar = false;
-        fprintf(
-            estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-            calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false, true));
+        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
+                calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug_gammar,
+                                              false, true));
       }
       fprintf(estimators_file, "\n");
     }
@@ -454,9 +454,9 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
         // const bool printdebug_gammar = ((get_atomicnumber(element) == 26 || get_atomicnumber(element) == 28) &&
         // get_ionstage(element, ion) >= 2); const bool printdebug_gammar = (get_atomicnumber(element) >= 26);
         const bool printdebug_gammar = false;
-        fprintf(
-            estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-            calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, true, false));
+        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
+                calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug_gammar,
+                                              true, false));
       }
       fprintf(estimators_file, "\n");
     }
@@ -599,7 +599,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     // {
     //   fprintf(estimators_file, "  %d: %9.3e",
     //           get_ionstage(element, ion),
-    //           calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, true,
+    //           calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, true,
     //           printdebug));
     // }
     // fprintf(estimators_file, "\n");
@@ -771,8 +771,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   }
 }
 
-void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const double estimator_normfactor) {
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi, const double estimator_normfactor) {
   if constexpr (USE_LUT_PHOTOION) {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -793,14 +792,15 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
 #endif
 
         globals::corrphotoionrenorm[ionestimindex] =
-            globals::gammaestimator[ionestimindex] / get_corrphotoioncoeff_ana(element, ion, 0, 0, mgi);
+            globals::gammaestimator[ionestimindex] / get_corrphotoioncoeff_ana(element, ion, 0, 0, nonemptymgi);
 
         if (!std::isfinite(globals::corrphotoionrenorm[ionestimindex])) {
+          const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
           printout(
               "[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / "
               "get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
               element, ion, 0, 0, mgi, globals::gammaestimator[ionestimindex],
-              get_corrphotoioncoeff_ana(element, ion, 0, 0, mgi));
+              get_corrphotoioncoeff_ana(element, ion, 0, 0, nonemptymgi));
           std::abort();
         }
       }
@@ -825,7 +825,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
       const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 
       if (!elem_has_nlte_levels(element)) {
-        globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(mgi, element, ion);
+        globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
       }
 
       if constexpr (USE_LUT_BFHEATING) {
@@ -846,6 +846,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
         globals::bfheatingestimator[ionestimindex] = globals::bfheatingestimator[ionestimindex] / bfheatingcoeff_ana;
 
         if (!std::isfinite(globals::bfheatingestimator[ionestimindex])) {
+          const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
           printout(
               "[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / "
               "get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
@@ -984,9 +985,9 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       calculate_ion_balance_nne(nonemptymgi);
     } else {
       // not lte_iteration and not a thick cell
-      // non-LTE timesteps with T_e from heating/cooling
+      // non-pure-LTE timesteps with T_e from heating/cooling
 
-      radfield::normalise_nuJ(mgi, estimator_normfactor_over4pi);
+      radfield::normalise_nuJ(nonemptymgi, estimator_normfactor_over4pi);
 
       globals::ffheatingestimator[nonemptymgi] *= estimator_normfactor;
       globals::colheatingestimator[nonemptymgi] *= estimator_normfactor;
@@ -996,7 +997,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       titer_average_estimators(mgi);
 #endif
 
-      update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
+      update_gamma_corrphotoionrenorm_bfheating_estimators(nonemptymgi, estimator_normfactor);
 
       // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the
       // full-spectrum and binned J and nuJ estimators

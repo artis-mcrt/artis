@@ -989,8 +989,7 @@ auto get_bfrate_estimator(const int element, const int lowerion, const int lower
   return -1.;
 }
 
-void normalise_nuJ(const int modelgridindex, const double estimator_normfactor_over4pi) {
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+void normalise_nuJ(const int nonemptymgi, const double estimator_normfactor_over4pi) {
   assert_always(std::isfinite(nuJ[nonemptymgi]));
   nuJ[nonemptymgi] *= estimator_normfactor_over4pi;
 }

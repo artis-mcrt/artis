@@ -812,9 +812,8 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
 
 // get the number of levels that make up a fraction of the ion population
 // of at least IONGAMMA_POPFRAC_LEVELS_INCLUDED
-auto get_nlevels_important(const int modelgridindex, const int element, const int ion, const bool assume_lte,
+auto get_nlevels_important(const int nonemptymgi, const int element, const int ion, const bool assume_lte,
                            const float T_e) -> std::tuple<int, double> {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   // get the stored ion population for comparison with the cumulative sum of level pops
   const double nnion_real = get_nnion(nonemptymgi, element, ion);
 
@@ -835,7 +834,7 @@ auto get_nlevels_important(const int modelgridindex, const int element, const in
       const double T_exc = T_e;  // remember, other parts of the code in LTE mode use TJ, not T_e
       const double E_level = epsilon(element, ion, lower);
       const double E_ground = epsilon(element, ion, 0);
-      const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(nonemptymgi, element, ion) : 1.;
+      const double nnground = get_groundlevelpop(nonemptymgi, element, ion);
 
       nnlowerlevel = (nnground * stat_weight(element, ion, lower) / stat_weight(element, ion, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
@@ -1140,11 +1139,10 @@ auto interpolate_corrphotoioncoeff(const int element, const int ion, const int l
 }
 
 auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex,
-                               const int modelgridindex) -> double
+                               const int nonemptymgi) -> double
 // Returns the for stimulated emission corrected photoionisation rate coefficient.
 {
   assert_always(USE_LUT_PHOTOION);
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   // The correction factor for stimulated emission in gammacorr is set to its
   // LTE value. Because the T_e dependence of gammacorr is weak, this correction
   // correction may be evaluated at T_R!
@@ -1290,18 +1288,17 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
 }
 
 // ionisation rate coefficient. multiply by get_groundlevelpop to get a rate [s^-1]
-auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, const int ion) -> double {
+auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, const int ion) -> double {
   const int nions = get_nions(element);
   double Gamma = 0.;
   if (ion >= nions - 1) {
     return 0.;
   }
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   const auto T_e = grid::get_Te(nonemptymgi);
   const float nne = grid::get_nne(nonemptymgi);
 
-  // const auto [nlevels_important, _] = get_nlevels_important(modelgridindex, element, ion, false, T_e);
+  // const auto [nlevels_important, _] = get_nlevels_important(nonemptymgi, element, ion, false, T_e);
   const int nlevels_important = get_nlevels(element, ion);
 
   double Col_ion = 0.;
@@ -1325,17 +1322,15 @@ auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, c
 
 // ionisation rate coefficient. multiply by the lower ion pop to get a rate.
 // Currently only used for the estimator output file, not the simulation
-auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, const int element, const int lowerion,
+auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const int element, const int lowerion,
                                    const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
                                    const bool force_bfest, const bool force_bfintegral) -> double {
   assert_always(lowerion < get_nions(element) - 1);
   assert_always(!force_bfest || !force_bfintegral);
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
-  const float nne = (modelgridindex >= 0) ? grid::get_nne(nonemptymgi) : 1.;
+  const auto nne = grid::get_nne(nonemptymgi);
 
-  const auto [nlevels_important, nnlowerion] =
-      get_nlevels_important(modelgridindex, element, lowerion, assume_lte, T_e);
+  const auto [nlevels_important, nnlowerion] = get_nlevels_important(nonemptymgi, element, lowerion, assume_lte, T_e);
 
   if (nnlowerion <= 0.) {
     return 0.;
