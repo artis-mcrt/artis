@@ -524,7 +524,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
 }
 
 // handle bound-bound transition and activate macro-atom in corresponding upper-level
-void rpkt_event_boundbound(Packet &pkt, const MacroAtomState &pktmastate, const int mgi) {
+void rpkt_event_boundbound(Packet &pkt, const MacroAtomState &pktmastate, const int nonemptymgi) {
   stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BB);
   stats::increment(stats::COUNTER_INTERACTIONS);
   pkt.last_event = 1;
@@ -537,13 +537,13 @@ void rpkt_event_boundbound(Packet &pkt, const MacroAtomState &pktmastate, const 
   if constexpr (TRACK_ION_STATS) {
     const int element = pktmastate.element;
     const int ion = pktmastate.ion;
-    stats::increment_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_RADEXC, pkt.e_cmf);
+    stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_RADEXC, pkt.e_cmf);
 
     const int et = pkt.emissiontype;
     if (et >= 0) {
       const int emissionelement = globals::linelist[et].elementindex;
       const int emissionion = globals::linelist[et].ionindex;
-      stats::increment_ion_stats(mgi, emissionelement, emissionion, stats::ION_BOUNDBOUND_ABSORBED,
+      stats::increment_ion_stats(nonemptymgi, emissionelement, emissionion, stats::ION_BOUNDBOUND_ABSORBED,
                                  pkt.e_cmf / H / pkt.nu_cmf);
     }
   }
@@ -617,7 +617,6 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
 // reached end of timestep, otherwise false
 auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
-  const auto mgi = grid::get_cell_modelgridindex(pkt.where);
 
   MacroAtomState pktmastate{};
 
@@ -657,10 +656,9 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
 
   if (sdist == 0) {
     grid::change_cell(pkt, snext);
-    const int cellindexnew = pkt.where;
-    const int newmgi = grid::get_cell_modelgridindex(cellindexnew);
+    const int new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
-    return (pkt.type == TYPE_RPKT && (newmgi == grid::get_npts_model() || newmgi == mgi));
+    return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
   }
   const double maxsdist = (GRID_TYPE == GridType::CARTESIAN3D)
                               ? globals::rmax * pkt.prop_time / globals::tmin
@@ -754,8 +752,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     int new_nonemptymgi = nonemptymgi;
     if (snext != pkt.where) {
       grid::change_cell(pkt, snext);
-      const int cellindexnew = pkt.where;
-      new_nonemptymgi = grid::get_propcell_nonemptymgi(cellindexnew);
+      new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
     }
 
     pkt.last_event = pkt.last_event + 100;
@@ -774,7 +771,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
       rpkt_event_thickcell(pkt);
     } else if (event_is_boundbound) {
       if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY < 0.) {
-        rpkt_event_boundbound(pkt, pktmastate, mgi);
+        rpkt_event_boundbound(pkt, pktmastate, nonemptymgi);
       } else {
         // Probability based thermalisation (i.e. redistibution of the packet frequency) or scattering
         if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 1. ||
@@ -785,7 +782,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
         rpkt_event_thickcell(pkt);
       }
     } else {
-      rpkt_event_continuum(pkt, chi_rpkt_cont, mgi);
+      rpkt_event_continuum(pkt, chi_rpkt_cont, nonemptymgi);
     }
 
     return (pkt.type == TYPE_RPKT);
