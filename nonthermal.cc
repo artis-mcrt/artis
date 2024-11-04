@@ -184,9 +184,9 @@ struct NonThermalCellSolution {
   float nneperion_when_solved{NAN};  // the nne when the solver was last run
 };
 
-std::vector<NonThermalCellSolution> nt_solution;
+std::span<NonThermalCellSolution> nt_solution;
 
-std::vector<double> deposition_rate_density_all_cells;
+std::span<double> deposition_rate_density_all_cells;
 
 constexpr auto uppertriangular(const int i, const int j) -> int {
   assert_testmodeonly(i >= 0);
@@ -2076,9 +2076,11 @@ auto sfmatrix_solve(const std::vector<double> &sfmatrix) -> std::array<double, S
 void init(const int my_rank, const int ndo_nonempty) {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
-  resize_exactly(deposition_rate_density_all_cells, nonempty_npts_model);
+  deposition_rate_density_all_cells = MPI_shared_malloc_span<double>(nonempty_npts_model);
 
-  std::ranges::fill(deposition_rate_density_all_cells, -1.);
+  if (globals::rank_in_node == 0) {
+    std::ranges::fill(deposition_rate_density_all_cells, -1.);
+  }
 
   if (!NT_ON) {
     return;
@@ -2123,26 +2125,26 @@ void init(const int my_rank, const int ndo_nonempty) {
 
   ion_data_all_cells = MPI_shared_malloc_span<NonThermalSolutionIon>(nonempty_npts_model * get_includedions());
 
-  resize_exactly(nt_solution, nonempty_npts_model);
+  nt_solution = MPI_shared_malloc_span<NonThermalCellSolution>(nonempty_npts_model);
 
-  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-    // should make these negative?
-    nt_solution[nonemptymgi].frac_heating = 0.97;
-    nt_solution[nonemptymgi].frac_ionization = 0.03;
-    nt_solution[nonemptymgi].frac_excitation = 0.;
+  if (globals::rank_in_node == 0) {
+    for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
+      // should make these negative?
+      nt_solution[nonemptymgi].frac_heating = 0.97;
+      nt_solution[nonemptymgi].frac_ionization = 0.03;
+      nt_solution[nonemptymgi].frac_excitation = 0.;
 
-    nt_solution[nonemptymgi].nneperion_when_solved = -1.;
-    nt_solution[nonemptymgi].timestep_last_solved = -1;
+      nt_solution[nonemptymgi].nneperion_when_solved = -1.;
+      nt_solution[nonemptymgi].timestep_last_solved = -1;
 
-    if (globals::rank_in_node == 0) {
       zero_all_effionpot(nonemptymgi);
-#ifdef MPI_ON
-      MPI_Barrier(globals::mpi_comm_node);
-#endif
-    }
 
-    nt_solution[nonemptymgi].frac_excitations_list_size = 0;
+      nt_solution[nonemptymgi].frac_excitations_list_size = 0;
+    }
   }
+#ifdef MPI_ON
+  MPI_Barrier(globals::mpi_comm_node);
+#endif
 
   double sourceintegral = 0.;  // integral of S(e) dE
   for (int s = 0; s < SFPTS; s++) {
@@ -2691,8 +2693,6 @@ void read_restart_data(FILE *gridsave_file) {
   }
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-
     int mgi_in = 0;
     assert_always(fscanf(gridsave_file, "%d %la ", &mgi_in, &deposition_rate_density_all_cells[nonemptymgi]) == 2);
 
@@ -2701,10 +2701,7 @@ void read_restart_data(FILE *gridsave_file) {
                            &nt_solution[nonemptymgi].frac_heating, &nt_solution[nonemptymgi].frac_ionization,
                            &nt_solution[nonemptymgi].frac_excitation) == 4);
 
-      if (mgi_in != modelgridindex) {
-        printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
-        std::abort();
-      }
+      assert_always(mgi_in == grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
       for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
         assert_always(
@@ -2737,21 +2734,21 @@ void read_restart_data(FILE *gridsave_file) {
 }
 
 #ifdef MPI_ON
-void nt_MPI_Bcast(const int nonemptymgi, const int root, const int root_node_id) {
-  MPI_Bcast(&deposition_rate_density_all_cells[nonemptymgi], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+void nt_MPI_Bcast(const int nonemptymgi, const int root_node_id) {
+  MPI_Bcast(&deposition_rate_density_all_cells[nonemptymgi], 1, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
 
   if (NT_ON && NT_SOLVE_SPENCERFANO) {
-    MPI_Bcast(&nt_solution[nonemptymgi].nneperion_when_solved, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-    MPI_Bcast(&nt_solution[nonemptymgi].timestep_last_solved, 1, MPI_INT, root, MPI_COMM_WORLD);
-    MPI_Bcast(&nt_solution[nonemptymgi].frac_heating, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-    MPI_Bcast(&nt_solution[nonemptymgi].frac_ionization, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-    MPI_Bcast(&nt_solution[nonemptymgi].frac_excitation, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-
-    // communicate NT excitations
-    MPI_Bcast(&nt_solution[nonemptymgi].frac_excitations_list_size, 1, MPI_INT, root, MPI_COMM_WORLD);
-
     if (globals::rank_in_node == 0) {
-      // communicate NT excitation list via inter-node communication
+      MPI_Bcast(&nt_solution[nonemptymgi].nneperion_when_solved, 1, MPI_FLOAT, root_node_id,
+                globals::mpi_comm_internode);
+      MPI_Bcast(&nt_solution[nonemptymgi].timestep_last_solved, 1, MPI_INT, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast(&nt_solution[nonemptymgi].frac_heating, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast(&nt_solution[nonemptymgi].frac_ionization, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast(&nt_solution[nonemptymgi].frac_excitation, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+
+      MPI_Bcast(&nt_solution[nonemptymgi].frac_excitations_list_size, 1, MPI_INT, root_node_id,
+                globals::mpi_comm_internode);
+
       MPI_Bcast(get_cell_ntexcitations(nonemptymgi).data(),
                 static_cast<size_t>(nt_solution[nonemptymgi].frac_excitations_list_size) * sizeof(NonThermalExcitation),
                 MPI_BYTE, root_node_id, globals::mpi_comm_internode);
