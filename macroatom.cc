@@ -220,9 +220,8 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
 
 // get the level index of the lower ionisation stage after a randomly selected radiative recombination and update
 // counters
-[[nodiscard]] auto do_macroatom_radrecomb(Packet &pkt, const int modelgridindex, const int element, const int upperion,
+[[nodiscard]] auto do_macroatom_radrecomb(Packet &pkt, const int nonemptymgi, const int element, const int upperion,
                                           const int upperionlevel, const double rad_recomb) -> int {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
   const double epsilon_current = epsilon(element, upperion, upperionlevel);
@@ -279,9 +278,8 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
 
 // get the level index of the upper ionisation stage after randomly-selected photoionisation or thermal collisional
 // ionisation and update counters
-[[nodiscard]] auto do_macroatom_ionisation(const int modelgridindex, const int element, const int ion, const int level,
+[[nodiscard]] auto do_macroatom_ionisation(const int nonemptymgi, const int element, const int ion, const int level,
                                            const double epsilon_current, const double internal_up_higher) -> int {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
 
@@ -458,7 +456,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           // stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
         }
 
-        level = do_macroatom_radrecomb(pkt, modelgridindex, element, ion, level, processrates[MA_ACTION_RADRECOMB]);
+        level = do_macroatom_radrecomb(pkt, nonemptymgi, element, ion, level, processrates[MA_ACTION_RADRECOMB]);
         ion -= 1;
         end_packet = true;
         break;
@@ -566,7 +564,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
         }
 
-        level = do_macroatom_ionisation(modelgridindex, element, ion, level, epsilon_current,
+        level = do_macroatom_ionisation(nonemptymgi, element, ion, level, epsilon_current,
                                         processrates[MA_ACTION_INTERNALUPHIGHER]);
         ion += 1;
 
