@@ -717,8 +717,7 @@ auto rad_excitation_ratecoeff(const int nonemptymgi, const int element, const in
       if (!globals::lte_iteration) {
         // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
         if (const int jblueindex = radfield::get_Jblueindex(lineindex); jblueindex >= 0) {
-          const auto modelgridindex = grid::get_cell_modelgridindex(nonemptymgi);
-          return R_over_J_nu * radfield::get_Jb_lu(modelgridindex, jblueindex);
+          return R_over_J_nu * radfield::get_Jb_lu(nonemptymgi, jblueindex);
         }
       }
     }
