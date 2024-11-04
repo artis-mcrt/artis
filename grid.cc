@@ -1844,13 +1844,14 @@ void read_ejecta_model() {
   int npts_0 = 0;  // total model points for 1D/3D, and number of points in r for 2D
   int npts_1 = 0;  // number of points in z for 2D
   assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> npts_0;
+  auto ssline = std::istringstream(line);
+  ssline >> npts_0;
   if (get_model_type() == GridType::SPHERICAL1D) {
     ncoord_model[0] = npts_0;
     ncoord_model[1] = 0;
     ncoord_model[2] = 0;
   } else if (get_model_type() == GridType::CYLINDRICAL2D) {
-    std::istringstream(line) >> npts_1;  // r and z (cylindrical polar)
+    ssline >> npts_1;  // r and z (cylindrical polar)
     ncoord_model[0] = npts_0;
     ncoord_model[1] = npts_1;
     ncoord_model[2] = 0;
@@ -1898,7 +1899,7 @@ void read_ejecta_model() {
       double vout_kmps{NAN};
       double log_rho{NAN};
       int cellnumberin = 0;
-      std::istringstream ssline(line);
+      ssline = std::istringstream(line);
 
       if (ssline >> cellnumberin >> vout_kmps >> log_rho) {
         if (mgi == 0) {
@@ -1956,7 +1957,7 @@ void read_ejecta_model() {
       float cell_r_in{NAN};
       float cell_z_in{NAN};
       double rho_tmodel{NAN};
-      std::istringstream ssline(line);
+      ssline = std::istringstream(line);
       assert_always(ssline >> cellnumberin >> cell_r_in >> cell_z_in >> rho_tmodel);
 
       if (mgi == 0) {
@@ -2024,7 +2025,7 @@ void read_ejecta_model() {
       int cellnumberin = 0;
       std::array<float, 3> cellpos_in{};
       float rho_model{NAN};
-      std::istringstream ssline(line);
+      ssline = std::istringstream(line);
 
       assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model);
 
