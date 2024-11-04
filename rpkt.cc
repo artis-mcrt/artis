@@ -995,7 +995,7 @@ void allocate_expansionopacities() {
         MPI_shared_malloc_keepwin<double>(nonempty_npts_model * expopac_nbins);
 #else
     expansionopacity_planck_cumulative_data =
-        static_cast<double *>(malloc(npts_nonempty * expopac_nbins * sizeof(double)));
+        static_cast<double *>(malloc(nonempty_npts_model * expopac_nbins * sizeof(double)));
 #endif
   }
 

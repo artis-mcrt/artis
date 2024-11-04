@@ -275,23 +275,24 @@ void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int 
 void allocate_nonemptycells_composition_cooling()
 // Initialise composition dependent cell data for the given cell
 {
-  const ptrdiff_t npts_nonempty = get_nonempty_npts_model();
+  const ptrdiff_t nonempty_npts_model_ptrdifft = get_nonempty_npts_model();
   const auto nelements = get_nelements();
 
-  initmassfracuntrackedstable_allcells = MPI_shared_malloc<float>(npts_nonempty * nelements);
-  elem_meanweight_allcells = MPI_shared_malloc<float>(npts_nonempty * nelements);
-  elements_uppermost_ion_allcells = MPI_shared_malloc<int>(npts_nonempty * nelements);
-  elem_massfracs_allcells = MPI_shared_malloc<float>(npts_nonempty * nelements);
-  ion_groundlevelpops_allcells = MPI_shared_malloc<float>(npts_nonempty * get_includedions());
-  ion_partfuncts_allcells = MPI_shared_malloc<float>(npts_nonempty * get_includedions());
-  ion_cooling_contribs_allcells = MPI_shared_malloc<double>(npts_nonempty * get_includedions());
+  initmassfracuntrackedstable_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * nelements);
+  elem_meanweight_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * nelements);
+  elements_uppermost_ion_allcells = MPI_shared_malloc<int>(nonempty_npts_model_ptrdifft * nelements);
+  elem_massfracs_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * nelements);
+  ion_groundlevelpops_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * get_includedions());
+  ion_partfuncts_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * get_includedions());
+  ion_cooling_contribs_allcells = MPI_shared_malloc<double>(nonempty_npts_model_ptrdifft * get_includedions());
 
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
     std::tie(nltepops_allcells, win_nltepops_allcells) =
-        MPI_shared_malloc_keepwin<double>(npts_nonempty * globals::total_nlte_levels);
+        MPI_shared_malloc_keepwin<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels);
 #else
-    nltepops_allcells = static_cast<double *>(malloc(npts_nonempty * globals::total_nlte_levels * sizeof(double)));
+    nltepops_allcells =
+        static_cast<double *>(malloc(nonempty_npts_model * globals::total_nlte_levels * sizeof(double)));
 #endif
 
     assert_always(nltepops_allcells != nullptr);
@@ -300,12 +301,12 @@ void allocate_nonemptycells_composition_cooling()
   }
 
   if (globals::rank_in_node == 0) {
-    std::fill_n(initmassfracuntrackedstable_allcells, npts_nonempty * nelements, -1.);
-    std::fill_n(elem_meanweight_allcells, npts_nonempty * nelements, -1.);
-    std::fill_n(elements_uppermost_ion_allcells, npts_nonempty * nelements, -1);
-    std::fill_n(elem_massfracs_allcells, npts_nonempty * nelements, -1.);
+    std::fill_n(initmassfracuntrackedstable_allcells, nonempty_npts_model_ptrdifft * nelements, -1.);
+    std::fill_n(elem_meanweight_allcells, nonempty_npts_model_ptrdifft * nelements, -1.);
+    std::fill_n(elements_uppermost_ion_allcells, nonempty_npts_model_ptrdifft * nelements, -1);
+    std::fill_n(elem_massfracs_allcells, nonempty_npts_model_ptrdifft * nelements, -1.);
     // -1 indicates that there is currently no information on the nlte populations
-    std::ranges::fill_n(grid::nltepops_allcells, npts_nonempty * globals::total_nlte_levels, -1.);
+    std::ranges::fill_n(grid::nltepops_allcells, nonempty_npts_model_ptrdifft * globals::total_nlte_levels, -1.);
   }
 }
 
@@ -964,9 +965,10 @@ void assign_initial_temperatures() {
 
 void setup_nstart_ndo() {
   const int nprocesses = globals::nprocs;
-  const int npts_nonempty = get_nonempty_npts_model();
-  const int min_nonempty_perproc = npts_nonempty / nprocesses;  // integer division, minimum non-empty cells per process
-  const int n_remainder = npts_nonempty % nprocesses;
+  assert_always(nonempty_npts_model > 0);
+  const int min_nonempty_perproc =
+      nonempty_npts_model / nprocesses;  // integer division, minimum non-empty cells per process
+  const int n_remainder = nonempty_npts_model % nprocesses;
 
   ranks_nstart.resize(nprocesses, -1);
   ranks_nstart_nonempty.resize(nprocesses, -1);
@@ -1012,13 +1014,13 @@ void setup_nstart_ndo() {
   }
 
   int npts_assigned = 0;
-  int npts_nonempty_assigned = 0;
+  int nonempty_npts_model_assigned = 0;
   for (int r = 0; r < nprocesses; r++) {
     npts_assigned += ranks_ndo[r];
-    npts_nonempty_assigned += ranks_ndo_nonempty[r];
+    nonempty_npts_model_assigned += ranks_ndo_nonempty[r];
   }
   assert_always(npts_assigned == get_npts_model());
-  assert_always(npts_nonempty_assigned == get_nonempty_npts_model());
+  assert_always(nonempty_npts_model_assigned == get_nonempty_npts_model());
 
   if (globals::my_rank == 0) {
     auto fileout = std::ofstream("modelgridrankassignments.out");
