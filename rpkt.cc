@@ -642,7 +642,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
       .ffescat = NAN,
       .ffheat = NAN,
       .bf = NAN,
-      .modelgridindex = -1,
+      .nonemptymgi = -1,
       .timestep = -1,
       .phixslist = &phixslist,
   };
@@ -811,8 +811,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   std::abort();
 }
 
-auto calculate_chi_ffheat_nnionpart(const int modelgridindex) -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+auto calculate_chi_ffheat_nnionpart(const int nonemptymgi) -> double {
   const double g_ff = 1;
   double chi_ff_nnionpart = 0.;
   const int nelements = get_nelements();
@@ -829,13 +828,14 @@ auto calculate_chi_ffheat_nnionpart(const int modelgridindex) -> double {
   return chi_ff_nnionpart * 3.69255e8 / sqrt(T_e);
 }
 
-auto get_chi_ff_nnionpart(const int modelgridindex) -> double {
-  if (!use_cellcache || globals::cellcache[cellcacheslotid].modelgridindex != modelgridindex) {
-    return calculate_chi_ffheat_nnionpart(modelgridindex);
+auto get_chi_ff_nnionpart(const int nonemptymgi) -> double {
+  if (!use_cellcache ||
+      globals::cellcache[cellcacheslotid].modelgridindex != grid::get_mgi_of_nonemptymgi(nonemptymgi)) {
+    return calculate_chi_ffheat_nnionpart(nonemptymgi);
   }
 
   if (globals::cellcache[cellcacheslotid].chi_ff_nnionpart < 0.) {
-    globals::cellcache[cellcacheslotid].chi_ff_nnionpart = calculate_chi_ffheat_nnionpart(modelgridindex);
+    globals::cellcache[cellcacheslotid].chi_ff_nnionpart = calculate_chi_ffheat_nnionpart(nonemptymgi);
   }
 
   return globals::cellcache[cellcacheslotid].chi_ff_nnionpart;
@@ -843,13 +843,12 @@ auto get_chi_ff_nnionpart(const int modelgridindex) -> double {
 
 // calculate the free-free absorption (to kpkt heating) coefficient [cm^-1]
 // = kappa(free-free) * nne
-auto calculate_chi_ffheating(const int modelgridindex, const double nu) -> double {
+auto calculate_chi_ffheating(const int nonemptymgi, const double nu) -> double {
   assert_always(nu > 0.);
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   const auto nne = grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
-  const double chi_ff = get_chi_ff_nnionpart(modelgridindex) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
+  const double chi_ff = get_chi_ff_nnionpart(nonemptymgi) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
 
   assert_testmodeonly(std::isfinite(chi_ff));
 
@@ -1072,9 +1071,8 @@ __host__ __device__ void emit_rpkt(Packet &pkt) {
 
 void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
                              const int nonemptymgi) {
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   assert_testmodeonly(grid::modelgrid[nonemptymgi].thick != 1);
-  if ((modelgridindex == chi_rpkt_cont.modelgridindex) && (globals::timestep == chi_rpkt_cont.timestep) &&
+  if ((nonemptymgi == chi_rpkt_cont.nonemptymgi) && (globals::timestep == chi_rpkt_cont.timestep) &&
       (fabs((chi_rpkt_cont.nu / nu_cmf) - 1.0) < 1e-4)) {
     // calculated values are a match already
     return;
@@ -1084,7 +1082,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
 
   double chi_escat = 0.;
   // free-free absorption
-  const double chi_ff = calculate_chi_ffheating(modelgridindex, nu_cmf);
+  const double chi_ff = calculate_chi_ffheating(nonemptymgi, nu_cmf);
   double chi_bf = 0.;
 
   if (globals::opacity_case >= 4) {
@@ -1093,8 +1091,8 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
 
     // Third contribution: bound-free absorption
     chi_bf = chi_rpkt_cont.phixslist != nullptr
-                 ? calculate_chi_bf_gammacontr<true>(modelgridindex, nu_cmf, chi_rpkt_cont.phixslist)
-                 : calculate_chi_bf_gammacontr<false>(modelgridindex, nu_cmf, nullptr);
+                 ? calculate_chi_bf_gammacontr<true>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist)
+                 : calculate_chi_bf_gammacontr<false>(nonemptymgi, nu_cmf, nullptr);
 
   } else {
     // in the other cases chi_grey is an mass absorption coefficient
@@ -1108,7 +1106,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
     chi_bf = 0.;
   }
 
-  chi_rpkt_cont.modelgridindex = modelgridindex;
+  chi_rpkt_cont.nonemptymgi = nonemptymgi;
   chi_rpkt_cont.timestep = globals::timestep;
   chi_rpkt_cont.nu = nu_cmf;
   chi_rpkt_cont.ffescat = chi_escat;
@@ -1120,7 +1118,8 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
     printout("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
     printout("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont.ffescat, chi_rpkt_cont.ffheat, chi_rpkt_cont.bf);
     printout("[fatal] nbfcontinua %d\n", globals::nbfcontinua);
-    printout("[fatal] in cell %d with density %g\n", modelgridindex, grid::get_rho(nonemptymgi));
+    printout("[fatal] in cell %d with density %g\n", grid::get_mgi_of_nonemptymgi(nonemptymgi),
+             grid::get_rho(nonemptymgi));
     printout("[fatal] pkt.nu_cmf %g\n", nu_cmf);
     if (std::isfinite(chi_rpkt_cont.ffescat)) {
       chi_rpkt_cont.ffheat = 0.;
@@ -1191,9 +1190,9 @@ void calculate_expansion_opacities(const int nonemptymgi) {
 
     if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
       // thread_local Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
-      // calculate_chi_rpkt_cont(nu_mid, chi_rpkt_cont, nullptr, modelgridindex);
+      // calculate_chi_rpkt_cont(nu_mid, chi_rpkt_cont, nullptr, nonemptymgi);
       // const auto bin_kappa_cont = chi_rpkt_cont.total / rho;
-      const auto bin_kappa_cont = calculate_chi_ffheating(modelgridindex, nu_mid) / rho;
+      const auto bin_kappa_cont = calculate_chi_ffheating(nonemptymgi, nu_mid) / rho;
 
       const auto planck_val = radfield::dbb(nu_mid, temperature, 1);
       const auto kappa_planck = (bin_kappa_bb + bin_kappa_cont) * planck_val;
