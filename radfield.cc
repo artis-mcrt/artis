@@ -1200,13 +1200,10 @@ void write_restart_data(FILE *gridsave_file) {
     const int bfestimcount = globals::bfestimcount;
     fprintf(gridsave_file, "%d\n", bfestimcount);
 
-    for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-      if (grid::get_numpropcells(modelgridindex) > 0) {
-        const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-        fprintf(gridsave_file, "%d\n", modelgridindex);
-        for (int i = 0; i < bfestimcount; i++) {
-          fprintf(gridsave_file, "%a ", prev_bfrate_normed[(nonemptymgi * bfestimcount) + i]);
-        }
+    for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+      fprintf(gridsave_file, "%d\n", nonemptymgi);
+      for (int i = 0; i < bfestimcount; i++) {
+        fprintf(gridsave_file, "%a ", prev_bfrate_normed[(nonemptymgi * bfestimcount) + i]);
       }
     }
   }
