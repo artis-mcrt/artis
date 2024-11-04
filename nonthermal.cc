@@ -2138,6 +2138,9 @@ void init(const int my_rank, const int ndo_nonempty) {
 
     if (globals::rank_in_node == 0) {
       zero_all_effionpot(nonemptymgi);
+#ifdef MPI_ON
+      MPI_Barrier(globals::mpi_comm_node);
+#endif
     }
 
     nt_solution[nonemptymgi].frac_excitations_list_size = 0;
