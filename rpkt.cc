@@ -616,9 +616,8 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
 // Update an r-packet and return true if no mgi change (or it goes into an empty cell) and no pkttype change and not
 // reached end of timestep, otherwise false
 auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
-  const int cellindex = pkt.where;
-  const int mgi = grid::get_cell_modelgridindex(cellindex);
-  const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  const auto mgi = grid::get_cell_modelgridindex(pkt.where);
 
   MacroAtomState pktmastate{};
 
