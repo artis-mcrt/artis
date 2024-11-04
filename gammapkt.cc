@@ -471,7 +471,7 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
 
   if (globals::gamma_kappagrey < 0) {
     chi_cmf = 0.;
-    if (!USE_XCOM_GAMMAPHOTOION) {
+    if constexpr (!USE_XCOM_GAMMAPHOTOION) {
       // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
 
       // 2.41326e19 Hz = 100 keV / H
