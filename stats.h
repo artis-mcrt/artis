@@ -89,13 +89,13 @@ void increment_ion_stats(int nonemptymgi, int element, int ion, enum ionstattype
 
 void increment_ion_stats_contabsorption(const Packet &pkt, int nonemptymgi, int element, int ion);
 
-[[nodiscard]] auto get_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype) -> double;
+[[nodiscard]] auto get_ion_stats(int nonemptymgi, int element, int ion, enum ionstattypes ionstattype) -> double;
 
-void set_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype, double newvalue);
+void set_ion_stats(int nonemptymgi, int element, int ion, enum ionstattypes ionstattype, double newvalue);
 
-void reset_ion_stats(int modelgridindex);
+void reset_ion_stats(int nonemptymgi);
 
-void normalise_ion_estimators(int mgi, double deltat, double deltaV);
+void normalise_ion_estimators(int nonemptymgi, double deltat, double deltaV);
 
 void increment(enum eventcounters);
 

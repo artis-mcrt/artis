@@ -108,49 +108,47 @@ void increment_ion_stats_contabsorption(const Packet &pkt, const int nonemptymgi
   }
 }
 
-auto get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype)
-    -> double {
+auto get_ion_stats(const int nonemptymgi, const int element, const int ion, enum ionstattypes ionstattype) -> double {
   assert_always(ion < get_nions(element));
   assert_always(ionstattype < ION_STAT_COUNT);
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  return ionstats[(modelgridindex * get_includedions() * ION_STAT_COUNT) + (uniqueionindex * ION_STAT_COUNT) +
+  return ionstats[(nonemptymgi * get_includedions() * ION_STAT_COUNT) + (uniqueionindex * ION_STAT_COUNT) +
                   ionstattype];
 }
 
-void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype,
+void set_ion_stats(const int nonemptymgi, const int element, const int ion, enum ionstattypes ionstattype,
                    const double newvalue) {
   assert_always(ion < get_nions(element));
   assert_always(ionstattype < ION_STAT_COUNT);
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  ionstats[(modelgridindex * get_includedions() * ION_STAT_COUNT) + (uniqueionindex * ION_STAT_COUNT) + ionstattype] =
+  ionstats[(nonemptymgi * get_includedions() * ION_STAT_COUNT) + (uniqueionindex * ION_STAT_COUNT) + ionstattype] =
       newvalue;
 }
 
-void reset_ion_stats(int modelgridindex) {
+void reset_ion_stats(int nonemptymgi) {
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
       for (int i = 0; i < ION_STAT_COUNT; i++) {
-        set_ion_stats(modelgridindex, element, ion, static_cast<enum stats::ionstattypes>(i), 0.);
+        set_ion_stats(nonemptymgi, element, ion, static_cast<enum stats::ionstattypes>(i), 0.);
       }
     }
   }
 }
 
-void normalise_ion_estimators(const int mgi, const double deltat, const double deltaV) {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+void normalise_ion_estimators(const int nonemptymgi, const double deltat, const double deltaV) {
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
       for (int i = 0; i < ION_STAT_COUNT; i++) {
         // energy or event count per volume per second
-        const double ratedensity = get_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i)) / deltaV /
-                                   deltat / globals::nprocs;
+        const double ratedensity = get_ion_stats(nonemptymgi, element, ion, static_cast<enum stats::ionstattypes>(i)) /
+                                   deltaV / deltat / globals::nprocs;
 
         if (i < nstatcounters_ratecoeff) {
           // convert photon event counters into rate coefficients
-          set_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i),
+          set_ion_stats(nonemptymgi, element, ion, static_cast<enum stats::ionstattypes>(i),
                         ratedensity / get_nnion(nonemptymgi, element, ion));
         } else {
-          set_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i), ratedensity);
+          set_ion_stats(nonemptymgi, element, ion, static_cast<enum stats::ionstattypes>(i), ratedensity);
         }
       }
     }

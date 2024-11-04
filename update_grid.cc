@@ -142,7 +142,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       double ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_RADEXC);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_RADEXC);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -154,7 +154,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -166,7 +166,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -178,7 +178,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLDEEXC);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLDEEXC);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -190,7 +190,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_PHOTOION);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_PHOTOION);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -202,7 +202,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADRECOMB);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADRECOMB);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -214,7 +214,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLION);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLION);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -226,7 +226,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLRECOMB);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLRECOMB);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -238,7 +238,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_NTCOLLION);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_NTCOLLION);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -250,7 +250,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_in_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_TOTAL);
+        const double ma_in_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_TOTAL);
         ma_el += ma_in_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_in_ion);
       }
@@ -262,7 +262,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -274,7 +274,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -286,7 +286,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -332,7 +332,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
     //     fprintf(estimators_file, "              ");
     //   for (int ion = 0; ion < nions; ion++) {
-    //     const double alpha_r_mc = get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_MACROATOM);
+    //     const double alpha_r_mc = get_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_MACROATOM);
     //     fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), alpha_r_mc);
     //   }
     //   fprintf(estimators_file, "\n");
@@ -343,7 +343,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
     //     fprintf(estimators_file, "              ");
     //   for (int ion = 0; ion < nions; ion++) {
-    //     const double alpha_r_mc = get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_KPKT);
+    //     const double alpha_r_mc = get_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_KPKT);
     //     fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), alpha_r_mc);
     //   }
     //   fprintf(estimators_file, "\n");
@@ -355,8 +355,8 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
         fprintf(estimators_file, "              ");
       }
       for (int ion = 0; ion < nions; ion++) {
-        const double alpha_r_mc = get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_MACROATOM) +
-                                  get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_KPKT);
+        const double alpha_r_mc = get_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_MACROATOM) +
+                                  get_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_KPKT);
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), alpha_r_mc);
       }
       fprintf(estimators_file, "\n");
@@ -366,9 +366,9 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
         fprintf(estimators_file, "              ");
       }
       for (int ion = 0; ion < nions; ion++) {
-        const double alpha_r_mc = get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_MACROATOM) +
-                                  get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_KPKT);
-        const double alpha_r_mc_abs = get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_ABSORBED);
+        const double alpha_r_mc = get_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_MACROATOM) +
+                                  get_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_KPKT);
+        const double alpha_r_mc_abs = get_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_ABSORBED);
         fprintf(estimators_file, "  %d: %9.3f", get_ionstage(element, ion), 1. - (alpha_r_mc_abs / alpha_r_mc));
       }
       fprintf(estimators_file, "\n");
@@ -378,8 +378,8 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
         fprintf(estimators_file, "              ");
       }
       for (int ion = 0; ion < nions; ion++) {
-        const double bb_emitted = get_ion_stats(mgi, element, ion, stats::ION_BOUNDBOUND_MACROATOM);
-        const double bb_abs = get_ion_stats(mgi, element, ion, stats::ION_BOUNDBOUND_ABSORBED);
+        const double bb_emitted = get_ion_stats(nonemptymgi, element, ion, stats::ION_BOUNDBOUND_MACROATOM);
+        const double bb_abs = get_ion_stats(nonemptymgi, element, ion, stats::ION_BOUNDBOUND_ABSORBED);
         fprintf(estimators_file, "  %d: %9.3f", get_ionstage(element, ion), 1. - (bb_abs / bb_emitted));
       }
       fprintf(estimators_file, "\n");
@@ -468,7 +468,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION));
       }
       fprintf(estimators_file, "\n");
     }
@@ -480,7 +480,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBOUNDFREE));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDFREE));
       }
       fprintf(estimators_file, "\n");
     }
@@ -492,7 +492,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     // {
     //   fprintf(estimators_file, "  %d: %9.3e",
     //           get_ionstage(element, ion),
-    //           get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBFSAMEELEMENT]);
+    //           get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFSAMEELEMENT]);
     // }
     // fprintf(estimators_file, "\n");
 
@@ -503,7 +503,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSONE));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSONE));
       }
       fprintf(estimators_file, "\n");
     }
@@ -515,7 +515,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSTWO));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSTWO));
       }
       fprintf(estimators_file, "\n");
     }
@@ -527,7 +527,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSTHREE));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSTHREE));
       }
       fprintf(estimators_file, "\n");
     }
@@ -539,7 +539,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBFLOWERSUPERLEVEL));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFLOWERSUPERLEVEL));
       }
       fprintf(estimators_file, "\n");
     }
@@ -551,7 +551,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUND));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUND));
       }
       fprintf(estimators_file, "\n");
     }
@@ -563,7 +563,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSONE));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSONE));
       }
       fprintf(estimators_file, "\n");
     }
@@ -575,7 +575,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO));
       }
       fprintf(estimators_file, "\n");
     }
@@ -587,7 +587,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE));
       }
       fprintf(estimators_file, "\n");
     }
@@ -622,7 +622,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
         }
         for (int ion = 0; ion < nions - 1; ion++) {
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                  get_ion_stats(mgi, element, ion, stats::ION_NTION));
+                  get_ion_stats(nonemptymgi, element, ion, stats::ION_NTION));
         }
         fprintf(estimators_file, "\n");
       }
@@ -961,7 +961,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 #endif
 
     if constexpr (TRACK_ION_STATS) {
-      stats::normalise_ion_estimators(mgi, deltat, deltaV);
+      stats::normalise_ion_estimators(nonemptymgi, deltat, deltaV);
     }
 
     // lte_iteration really means either ts 0 or nts < globals::num_lte_timesteps
