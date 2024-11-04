@@ -1307,19 +1307,16 @@ void read_restart_data(FILE *gridsave_file) {
     assert_always(fscanf(gridsave_file, "%d\n", &gridsave_nbfestim_in) == 1);
     assert_always(gridsave_nbfestim_in == globals::bfestimcount);
 
-    for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-      if (grid::get_numpropcells(modelgridindex) > 0) {
-        const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-        int mgi_in = 0;
-        assert_always(fscanf(gridsave_file, "%d\n", &mgi_in) == 1);
-        assert_always(mgi_in == modelgridindex);
-        for (int i = 0; i < globals::bfestimcount; i++) {
-          float bfrate_normed = 0;
-          assert_always(fscanf(gridsave_file, "%a ", &bfrate_normed) == 1);
+    for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+      int mgi_in = 0;
+      assert_always(fscanf(gridsave_file, "%d\n", &mgi_in) == 1);
+      assert_always(mgi_in == grid::get_mgi_of_nonemptymgi(nonemptymgi));
+      for (int i = 0; i < globals::bfestimcount; i++) {
+        float bfrate_normed = 0;
+        assert_always(fscanf(gridsave_file, "%a ", &bfrate_normed) == 1);
 
-          if (globals::rank_in_node == 0) {
-            prev_bfrate_normed[(nonemptymgi * globals::bfestimcount) + i] = bfrate_normed;
-          }
+        if (globals::rank_in_node == 0) {
+          prev_bfrate_normed[(nonemptymgi * globals::bfestimcount) + i] = bfrate_normed;
         }
       }
     }
@@ -1340,39 +1337,34 @@ void read_restart_data(FILE *gridsave_file) {
     }
   }
 
-  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-    if (grid::get_numpropcells(modelgridindex) > 0) {
-      const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-      int mgi_in = 0;
-      assert_always(fscanf(gridsave_file, "%d %la\n", &mgi_in, &J_normfactor[nonemptymgi]) == 2);
-      if (mgi_in != modelgridindex) {
-        printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
-        std::abort();
-      }
+  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    int mgi_in = 0;
+    assert_always(fscanf(gridsave_file, "%d %la\n", &mgi_in, &J_normfactor[nonemptymgi]) == 2);
+    assert_always(mgi_in == grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
-      if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-          const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
-          float W = 0;
-          float T_R = 0;
-          assert_always(fscanf(gridsave_file, "%la %la %a %a %d\n", &radfieldbins[mgibinindex].J_raw,
-                               &radfieldbins[mgibinindex].nuJ_raw, &W, &T_R,
-                               &radfieldbins[mgibinindex].contribcount) == 5);
+    if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
+        const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
+        float W = 0;
+        float T_R = 0;
+        assert_always(fscanf(gridsave_file, "%la %la %a %a %d\n", &radfieldbins[mgibinindex].J_raw,
+                             &radfieldbins[mgibinindex].nuJ_raw, &W, &T_R,
+                             &radfieldbins[mgibinindex].contribcount) == 5);
 #ifdef MPI_ON
-          if (globals::rank_in_node == 0)
+        if (globals::rank_in_node == 0)
 #endif
-          {
-            radfieldbin_solutions[mgibinindex].W = W;
-            radfieldbin_solutions[mgibinindex].T_R = T_R;
-          }
+        {
+          radfieldbin_solutions[mgibinindex].W = W;
+          radfieldbin_solutions[mgibinindex].T_R = T_R;
         }
       }
+    }
 
-      if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-        for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-          assert_always(fscanf(gridsave_file, "%la %d\n", &Jb_lu_raw[modelgridindex][jblueindex].value,
-                               &Jb_lu_raw[modelgridindex][jblueindex].contribcount) == 2);
-        }
+    if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+      const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
+        assert_always(fscanf(gridsave_file, "%la %d\n", &Jb_lu_raw[modelgridindex][jblueindex].value,
+                             &Jb_lu_raw[modelgridindex][jblueindex].contribcount) == 2);
       }
     }
   }
