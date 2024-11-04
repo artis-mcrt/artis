@@ -44,10 +44,9 @@ float kpktdiffusion_timescale{0.};
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
 template <bool update_cooling_contrib_list>
-auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion, const int indexionstart,
+auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const int ion, const int indexionstart,
                                  const int cellcacheslotid, double *const C_ff, double *const C_fb, double *const C_exc,
                                  double *const C_ionization) -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto nne = grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
 
@@ -258,7 +257,6 @@ auto sample_planck_montecarlo(const double T) -> double {
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates *heatingcoolingrates) {
-  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double C_ff_all = 0.;          // free-free creation of rpkts
   double C_fb_all = 0.;          // free-bound creation of rpkt
   double C_exc_all = 0.;         // collisional excitation of macroatoms
@@ -266,7 +264,7 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates *heating
   for (int allionindex = 0; allionindex < get_includedions(); allionindex++) {
     const auto [element, ion] = get_ionfromuniqueionindex(allionindex);
     grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + allionindex] =
-        calculate_cooling_rates_ion<false>(modelgridindex, element, ion, -1, cellcacheslotid, &C_ff_all, &C_fb_all,
+        calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, -1, cellcacheslotid, &C_ff_all, &C_fb_all,
                                            &C_exc_all, &C_ionization_all);
   }
 
@@ -374,8 +372,7 @@ void setup_coolinglist() {
 __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 {
-  const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
   if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0. && grid::modelgrid[nonemptymgi].thick != 1) {
     pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
@@ -403,8 +400,7 @@ __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
 // handle a k-packet (kinetic energy of the free electrons)
 __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   const double t1 = pkt.prop_time;
-  const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
   // don't calculate cooling rates after each cell crossings any longer
   // but only if we really get a kpkt and they hadn't been calculated already
@@ -451,6 +447,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   }
 
   if (element >= get_nelements() || element < 0 || ion >= get_nions(element) || ion < 0) {
+    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     printout("do_kpkt: problem selecting a cooling process ... abort\n");
     printout("do_kpkt: modelgridindex %d element %d ion %d\n", modelgridindex, element, ion);
     printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool_ion %g\n", grid::modelgrid[nonemptymgi].totalcooling,
@@ -477,7 +474,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
     // oldcoolingsum %g\n",
     //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
-    C_ion_procsum = calculate_cooling_rates_ion<true>(modelgridindex, element, ion, ilow, cellcacheslotid, nullptr,
+    C_ion_procsum = calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ilow, cellcacheslotid, nullptr,
                                                       nullptr, nullptr, nullptr);
     assert_testmodeonly(
         (std::fabs(C_ion_procsum -
