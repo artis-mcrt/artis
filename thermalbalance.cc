@@ -27,7 +27,7 @@ namespace {
 
 struct TeSolutionParams {
   double t_current;
-  int modelgridindex;
+  int nonemptymgi;
   HeatingCoolingRates *heatingcoolingrates;
   const std::vector<double> *bfheatingcoeffs;
 };
@@ -105,9 +105,8 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   return bfheating;
 }
 
-auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, const int ion, const double T_e,
+auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const double T_e,
                                 const double nne) -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   double C_deexc = 0.;
   const int nlevels = get_nlevels(element, ion);
 
@@ -133,9 +132,8 @@ auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, con
 
 // Calculate the heating rates for a given cell. Results are returned via the elements of the heatingrates data
 // structure.
-void calculate_heating_rates(const int modelgridindex, const double T_e, const double nne,
+void calculate_heating_rates(const int nonemptymgi, const double T_e, const double nne,
                              HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   double C_deexc = 0.;
 
   // double C_recomb = 0.;
@@ -146,7 +144,7 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
     const int nions = get_nions(element);
     if constexpr (DIRECT_COL_HEAT) {
       for (int ion = 0; ion < nions; ion++) {
-        C_deexc += get_heating_ion_coll_deexc(modelgridindex, element, ion, T_e, nne);
+        C_deexc += get_heating_ion_coll_deexc(nonemptymgi, element, ion, T_e, nne);
       }
     }
 
@@ -189,10 +187,9 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
 auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   const TeSolutionParams *const params = static_cast<TeSolutionParams *>(paras);
 
-  const int modelgridindex = params->modelgridindex;
+  const auto nonemptymgi = params->nonemptymgi;
   const double t_current = params->t_current;
   auto *const heatingcoolingrates = params->heatingcoolingrates;
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   // Set new T_e guess for the current cell and update populations
   grid::set_Te(nonemptymgi, T_e);
@@ -215,7 +212,8 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
 
   // Then calculate heating and cooling rates
   kpkt::calculate_cooling_rates(nonemptymgi, heatingcoolingrates);
-  calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
+  calculate_heating_rates(nonemptymgi, T_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
   const auto ntlepton_dep = nonthermal::get_deposition_rate_density(nonemptymgi);
@@ -321,7 +319,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, globals::timestep);
 
   TeSolutionParams paras = {.t_current = t_current,
-                            .modelgridindex = modelgridindex,
+                            .nonemptymgi = nonemptymgi,
                             .heatingcoolingrates = heatingcoolingrates,
                             .bfheatingcoeffs = &bfheatingcoeffs};
 
