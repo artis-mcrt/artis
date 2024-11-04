@@ -90,7 +90,7 @@ auto phi_ion_equilib(const int element, const int ion, const int modelgridindex,
   // false);
   const double Col_rec = 0.;
 
-  const double gamma_nt = NT_ON ? nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion) : 0.;
+  const double gamma_nt = NT_ON ? nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion) : 0.;
 
   if ((Gamma + gamma_nt) == 0) {
     printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);

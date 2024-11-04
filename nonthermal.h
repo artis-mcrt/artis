@@ -11,10 +11,10 @@ void init(int my_rank, int ndo_nonempty);
 void close_file();
 void solve_spencerfano(int nonemptymgi, int timestep, int iteration);
 [[nodiscard]] auto nt_ionization_ratecoeff(int nonemptymgi, int element, int ion) -> double;
-[[nodiscard]] auto nt_ionization_upperion_probability(int modelgridindex, int element, int lowerion, int upperion,
+[[nodiscard]] auto nt_ionization_upperion_probability(int nonemptymgi, int element, int lowerion, int upperion,
                                                       bool energyweighted) -> double;
 [[nodiscard]] auto nt_ionisation_maxupperion(int element, int lowerion) -> int;
-[[nodiscard]] auto nt_random_upperion(int modelgridindex, int element, int lowerion, bool energyweighted) -> int;
+[[nodiscard]] auto nt_random_upperion(int nonemptymgi, int element, int lowerion, bool energyweighted) -> int;
 void calculate_deposition_rate_density(int nonemptymgi, int timestep, HeatingCoolingRates *heatingcoolingrates);
 [[nodiscard]] auto get_deposition_rate_density(int nonemptymgi) -> double;
 [[nodiscard]] auto get_nt_frac_heating(int modelgridindex) -> float;

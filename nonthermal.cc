@@ -1384,8 +1384,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
 
 // get the effective ion potential from the stored value
 // a value of 0. should be treated as invalid
-auto get_eff_ionpot(const int modelgridindex, const int element, const int ion) {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+auto get_eff_ionpot(const int nonemptymgi, const int element, const int ion) {
   return get_cell_ion_data(nonemptymgi)[get_uniqueionindex(element, ion)].eff_ionpot;
   // OR
   // return calculate_eff_ionpot(modelgridindex, element, ion);
@@ -1393,14 +1392,12 @@ auto get_eff_ionpot(const int modelgridindex, const int element, const int ion) 
 
 // Kozma & Fransson 1992 equation 13
 // returns the rate coefficient in s^-1
-auto nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, const int ion) -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-
+auto nt_ionization_ratecoeff_sf(const int nonemptymgi, const int element, const int ion) -> double {
   const double deposition_rate_density = get_deposition_rate_density(nonemptymgi);
   if (deposition_rate_density > 0.) {
-    return deposition_rate_density / get_nnion_tot(nonemptymgi) / get_eff_ionpot(modelgridindex, element, ion);
+    return deposition_rate_density / get_nnion_tot(nonemptymgi) / get_eff_ionpot(nonemptymgi, element, ion);
     // alternatively, if the y vector is still in memory:
-    // return calculate_nt_ionization_ratecoeff(modelgridindex, element, ion);
+    // return calculate_nt_ionization_ratecoeff(nonemptymgi, element, ion);
   }
 
   return 0.;
@@ -1492,8 +1489,7 @@ auto ion_ntion_energyrate(const int modelgridindex, const int element, const int
   double enrate = 0.;
   const auto maxupperion = nt_ionisation_maxupperion(element, lowerion);
   for (int upperion = lowerion + 1; upperion <= maxupperion; upperion++) {
-    const double upperionprobfrac =
-        nt_ionization_upperion_probability(modelgridindex, element, lowerion, upperion, false);
+    const double upperionprobfrac = nt_ionization_upperion_probability(nonemptymgi, element, lowerion, upperion, false);
     // for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
     // {
     //   const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, lower);
@@ -1504,7 +1500,7 @@ auto ion_ntion_energyrate(const int modelgridindex, const int element, const int
     enrate += nnlowerion * upperionprobfrac * epsilon_trans;
   }
 
-  const double gamma_nt = nt_ionization_ratecoeff(modelgridindex, element, lowerion);
+  const double gamma_nt = nt_ionization_ratecoeff(nonemptymgi, element, lowerion);
   return gamma_nt * enrate;
 }
 
@@ -1694,24 +1690,24 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
       frac_excitation_total += frac_excitation_ion;
       printout("    workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, modelgridindex)) / EV);
       printout("    eff_ionpot:   %9.2f eV  (always use valence potential is %s)\n",
-               get_eff_ionpot(modelgridindex, element, ion) / EV, (NT_USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
+               get_eff_ionpot(nonemptymgi, element, ion) / EV, (NT_USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
 
       printout("    workfn approx Gamma:     %9.3e\n", nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion));
 
       printout("    SF integral Gamma:       %9.3e\n",
-               calculate_nt_ionization_ratecoeff(modelgridindex, element, ion, false, yfunc));
+               calculate_nt_ionization_ratecoeff(nonemptymgi, element, ion, false, yfunc));
 
       printout("    SF integral(I=Iv) Gamma: %9.3e  (if always use valence potential)\n",
-               calculate_nt_ionization_ratecoeff(modelgridindex, element, ion, true, yfunc));
+               calculate_nt_ionization_ratecoeff(nonemptymgi, element, ion, true, yfunc));
 
-      printout("    ARTIS using Gamma:       %9.3e\n", nt_ionization_ratecoeff(modelgridindex, element, ion));
+      printout("    ARTIS using Gamma:       %9.3e\n", nt_ionization_ratecoeff(nonemptymgi, element, ion));
 
       // the ion values (unlike shell ones) have been collapsed down to ensure that upperion < nions
       if (ion < nions - 1) {
         printout("    probability to ionstage:");
         double prob_sum = 0.;
         for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
-          const double probability = nt_ionization_upperion_probability(modelgridindex, element, ion, upperion, false);
+          const double probability = nt_ionization_upperion_probability(nonemptymgi, element, ion, upperion, false);
           prob_sum += probability;
           if (probability > 0.) {
             printout(" %d: %.3f", get_ionstage(element, upperion), probability);
@@ -1719,12 +1715,12 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         }
         printout("\n");
         assert_always((fabs(prob_sum - 1.0) <= 1e-2) ||
-                      (nt_ionization_ratecoeff_sf(modelgridindex, element, ion) < 1e-20));
+                      (nt_ionization_ratecoeff_sf(nonemptymgi, element, ion) < 1e-20));
 
         printout("         enfrac to ionstage:");
         double enfrac_sum = 0.;
         for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
-          const double probability = nt_ionization_upperion_probability(modelgridindex, element, ion, upperion, true);
+          const double probability = nt_ionization_upperion_probability(nonemptymgi, element, ion, upperion, true);
           enfrac_sum += probability;
           if (probability > 0.) {
             printout(" %d: %.3f", get_ionstage(element, upperion), probability);
@@ -1732,7 +1728,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         }
         printout("\n");
         assert_always(fabs(enfrac_sum - 1.0) <= 1e-2 ||
-                      (nt_ionization_ratecoeff_sf(modelgridindex, element, ion) < 1e-20));
+                      (nt_ionization_ratecoeff_sf(nonemptymgi, element, ion) < 1e-20));
       }
     }
   }
@@ -2228,7 +2224,7 @@ auto get_nt_frac_heating(const int modelgridindex) -> float {
   return frac_heating;
 }
 
-__host__ __device__ auto nt_ionization_upperion_probability(const int modelgridindex, const int element,
+__host__ __device__ auto nt_ionization_upperion_probability(const int nonemptymgi, const int element,
                                                             const int lowerion, const int upperion,
                                                             const bool energyweighted) -> double {
   assert_always(upperion > lowerion);
@@ -2237,7 +2233,6 @@ __host__ __device__ auto nt_ionization_upperion_probability(const int modelgridi
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
     const int numaugerelec = upperion - lowerion - 1;  // number of Auger electrons to go from lowerin to upper ion
     const int uniqueionindex = get_uniqueionindex(element, lowerion);
-    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
     const auto &cell_ion_data = get_cell_ion_data(nonemptymgi)[uniqueionindex];
     if (numaugerelec < NT_MAX_AUGER_ELECTRONS) {
       if (energyweighted) {
@@ -2258,8 +2253,9 @@ __host__ __device__ auto nt_ionization_upperion_probability(const int modelgridi
         assert_always(fabs(prob_remaining - cell_ion_data.ionenfrac_num_auger[numaugerelec]) < 0.001);
       } else {
         if (fabs(prob_remaining - cell_ion_data.prob_num_auger[numaugerelec]) >= 0.001) {
-          printout("Auger probabilities issue for cell %d Z=%02d ionstage %d to %d\n", modelgridindex,
-                   get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element, upperion));
+          printout("Auger probabilities issue for cell %d Z=%02d ionstage %d to %d\n",
+                   grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
+                   get_ionstage(element, lowerion), get_ionstage(element, upperion));
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
             printout("  a %d prob %g\n", a, cell_ion_data.prob_num_auger[a]);
           }
@@ -2289,7 +2285,7 @@ __host__ __device__ auto nt_ionisation_maxupperion(const int element, const int 
   return maxupper;
 }
 
-__host__ __device__ auto nt_random_upperion(const int modelgridindex, const int element, const int lowerion,
+__host__ __device__ auto nt_random_upperion(const int nonemptymgi, const int element, const int lowerion,
                                             const bool energyweighted) -> int {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
@@ -2298,7 +2294,7 @@ __host__ __device__ auto nt_random_upperion(const int modelgridindex, const int 
 
       double prob_sum = 0.;
       for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
-        prob_sum += nt_ionization_upperion_probability(modelgridindex, element, lowerion, upperion, energyweighted);
+        prob_sum += nt_ionization_upperion_probability(nonemptymgi, element, lowerion, upperion, energyweighted);
 
         if (zrand <= prob_sum) {
           return upperion;
@@ -2321,7 +2317,7 @@ __host__ __device__ auto nt_ionization_ratecoeff(const int nonemptymgi, const in
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   if (NT_SOLVE_SPENCERFANO) {
-    const double Y_nt = nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
+    const double Y_nt = nt_ionization_ratecoeff_sf(nonemptymgi, element, ion);
     if (!std::isfinite(Y_nt)) {
       // probably because eff_ionpot = 0 because the solver hasn't been run yet, or no impact ionization cross sections
       // exist
@@ -2404,7 +2400,7 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
 
     if (zrand < frac_ionization) {
       const auto [element, lowerion] = select_nt_ionization(modelgridindex);
-      const int upperion = nt_random_upperion(modelgridindex, element, lowerion, true);
+      const int upperion = nt_random_upperion(nonemptymgi, element, lowerion, true);
       // const int upperion = lowerion + 1;
 
       pkt.type = TYPE_MA;

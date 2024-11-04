@@ -751,8 +751,7 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const vo
 }
 
 auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int level, const int phixstargetindex,
-                                          int modelgridindex) -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+                                          int nonemptymgi) -> double {
   constexpr double epsrel = 1e-3;
   constexpr double epsrelwarning = 1e-1;
   constexpr double epsabs = 0.;
@@ -799,8 +798,8 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
     printout(
         "corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d "
         "integral %g error %g\n",
-        status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level, phixstargetindex,
-        gammacorr, error);
+        status, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion), level,
+        phixstargetindex, gammacorr, error);
     if (!std::isfinite(gammacorr)) {
       gammacorr = 0.;
     }
@@ -1207,7 +1206,7 @@ __host__ __device__ auto get_bfcoolingcoeff(const int element, const int ion, co
 
 // Return the photoionisation rate coefficient (corrected for stimulated emission)
 __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion, const int level,
-                                               const int phixstargetindex, const int modelgridindex) -> double {
+                                               const int phixstargetindex, const int nonemptymgi) -> double {
   // The correction factor for stimulated emission in gammacorr is set to its
   // LTE value. Because the T_e dependence of gammacorr is weak, this correction
   // correction may be evaluated at T_R!
@@ -1221,15 +1220,14 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
 
   if (!use_cellcache || gammacorr < 0) {
     if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {
-      gammacorr = radfield::get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
+      gammacorr = radfield::get_bfrate_estimator(element, ion, level, phixstargetindex, nonemptymgi);
       // gammacorr will be -1 if no estimators available
     }
 
     if (!DETAILED_BF_ESTIMATORS_ON || gammacorr < 0) {
       if constexpr (!USE_LUT_PHOTOION) {
-        gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
+        gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, nonemptymgi);
       } else {
-        const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
         const double W = grid::get_W(nonemptymgi);
         const double T_R = grid::get_TR(nonemptymgi);
 
@@ -1260,7 +1258,6 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
   if (ion >= nions - 1) {
     return true;
   }
-  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   if (USE_LUT_PHOTOION || !elem_has_nlte_levels(element)) {
     return (globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] == 0);
@@ -1278,7 +1275,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-      if (nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex) > 0.) {
+      if (nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi) > 0.) {
         return false;
       }
 
@@ -1314,7 +1311,7 @@ auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, c
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-      Gamma += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+      Gamma += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi);
 
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
 
@@ -1371,18 +1368,17 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
         gamma_coeff_used +=
             col_ionization_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex, epsilon_trans);
       } else {
-        gamma_coeff_used = get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex,
-                                                 modelgridindex);  // whatever ARTIS uses internally
+        // whatever ARTIS uses internally
+        gamma_coeff_used = get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, nonemptymgi);
 
         if (force_bfest || printdebug) {
-          gamma_coeff_bfest =
-              radfield::get_bfrate_estimator(element, lowerion, lower, phixstargetindex, modelgridindex);
+          gamma_coeff_bfest = radfield::get_bfrate_estimator(element, lowerion, lower, phixstargetindex, nonemptymgi);
         }
 
         if (force_bfintegral || printdebug) {
           // use the cellcache but not the detailed bf estimators
           gamma_coeff_integral +=
-              calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
+              calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, nonemptymgi);
           // double gamma_coeff_integral_level_ch = globals::cellcache[cellcacheslotid]
           //                                            .chelements[element]
           //                                            .chions[lowerion]

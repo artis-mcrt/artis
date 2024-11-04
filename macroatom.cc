@@ -33,12 +33,11 @@ constexpr bool LOG_MACROATOM = false;
 
 FILE *macroatom_file{};
 
-auto calculate_macroatom_transitionrates(const int modelgridindex, const int element, const int ion, const int level,
+auto calculate_macroatom_transitionrates(const int nonemptymgi, const int element, const int ion, const int level,
                                          const double t_mid, CellCacheLevels &chlevel) {
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
   auto processrates = std::array<double, MA_ACTION_COUNT>{};
 
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
   const double epsilon_current = epsilon(element, ion, level);
@@ -130,14 +129,14 @@ auto calculate_macroatom_transitionrates(const int modelgridindex, const int ele
   const int ionisinglevels = get_nlevels_ionising(element, ion);
   if (ion < get_nions(element) - 1 && level < ionisinglevels) {
     if (NT_ON) {
-      sum_up_highernt = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
+      sum_up_highernt = nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion) * epsilon_current;
     }
 
     const auto nphixstargets = get_nphixstargets(element, ion, level);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
 
-      const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+      const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi);
       const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
       sum_up_higher += (R + C) * epsilon_current;
@@ -292,7 +291,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   const int nphixstargets = get_nphixstargets(element, ion, level);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
-    const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+    const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi);
     const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
     rate += (R + C) * epsilon_current;
     if (rate > targetrate) {
@@ -368,7 +367,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
       // If there are no precalculated rates available then calculate them
       if (chlevel.processrates[MA_ACTION_INTERNALUPHIGHER] < 0) {
-        chlevel.processrates = calculate_macroatom_transitionrates(modelgridindex, element, ion, level, t_mid, chlevel);
+        chlevel.processrates = calculate_macroatom_transitionrates(nonemptymgi, element, ion, level, t_mid, chlevel);
       }
     }
 
@@ -586,7 +585,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
         }
 
-        ion = nonthermal::nt_random_upperion(modelgridindex, element, ion, false);
+        ion = nonthermal::nt_random_upperion(nonemptymgi, element, ion, false);
         level = 0;
         stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHERNT);
 

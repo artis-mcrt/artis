@@ -975,13 +975,12 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
 }
 
 auto get_bfrate_estimator(const int element, const int lowerion, const int lower, const int phixstargetindex,
-                          const int modelgridindex) -> double {
+                          const int nonemptymgi) -> double {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {
       const auto bfestimindex = globals::allcont[allcontindex].bfestimindex;
       if (bfestimindex >= 0) {
-        const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
         return prev_bfrate_normed[(nonemptymgi * globals::bfestimcount) + bfestimindex];
       }
     }

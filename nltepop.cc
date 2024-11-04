@@ -540,7 +540,7 @@ void nltepop_matrix_add_ionisation(const int modelgridindex, const int element, 
       // ionization
 
       // the R part is slow!
-      const double R_ionisation = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+      const double R_ionisation = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi);
       const double C_ionisation =
           col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
@@ -574,12 +574,12 @@ void nltepop_matrix_add_ionisation(const int modelgridindex, const int element, 
   }
 }
 
-void nltepop_matrix_add_nt_ionisation(const int modelgridindex, const int element, const int ion,
+void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, const int ion,
                                       const std::vector<double> &s_renorm, gsl_matrix *rate_matrix_ntcoll_bf) {
   // collisional ionization by non-thermal electrons
 
   assert_always(ion + 1 < get_nions(element));  // can't ionise the top ion
-  const double Y_nt = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion);
+  const double Y_nt = nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion);
   if (Y_nt < 0.) {
     printout("  WARNING: Negative NT_ionization rate from ionstage %d\n", get_ionstage(element, ion));
   }
@@ -588,7 +588,7 @@ void nltepop_matrix_add_nt_ionisation(const int modelgridindex, const int elemen
 
   for (int upperion = ion + 1; upperion <= nonthermal::nt_ionisation_maxupperion(element, ion); upperion++) {
     const double Y_nt_thisupperion =
-        Y_nt * nonthermal::nt_ionization_upperion_probability(modelgridindex, element, ion, upperion, false);
+        Y_nt * nonthermal::nt_ionization_upperion_probability(nonemptymgi, element, ion, upperion, false);
 
     if (Y_nt_thisupperion > 0.) {
       const int upper_groundstate_index = get_nlte_vector_index(element, upperion, 0);
@@ -915,7 +915,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       // this is the slowest component
       nltepop_matrix_add_ionisation(modelgridindex, element, ion, s_renorm, &rate_matrix_rad_bf, &rate_matrix_coll_bf);
       if (NT_ON) {
-        nltepop_matrix_add_nt_ionisation(modelgridindex, element, ion, s_renorm, &rate_matrix_ntcoll_bf);
+        nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, &rate_matrix_ntcoll_bf);
       }
     }
   }

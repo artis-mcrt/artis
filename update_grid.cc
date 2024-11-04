@@ -610,7 +610,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
         fprintf(estimators_file, "              ");
       }
       for (int ion = 0; ion < nions - 1; ion++) {
-        const double Y_nt = nonthermal::nt_ionization_ratecoeff(mgi, element, ion);
+        const double Y_nt = nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion);
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), Y_nt);
       }
       fprintf(estimators_file, "\n");
