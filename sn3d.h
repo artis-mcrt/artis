@@ -134,6 +134,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
     }                                                                                                                  \
     assert(assertpass);                                                                                                \
   }
+
 #endif
 
 #define assert_always(e) __artis_assert(e)
