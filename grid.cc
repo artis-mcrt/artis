@@ -1857,16 +1857,31 @@ void read_ejecta_model() {
   auto fmodel = fstream_required("model.txt", std::ios::in);
   std::string line;
 
+  // two integers on the first line of the model file
+  int npts_0 = 0;  // total model points for 1D/3D, and number of points in r for 2D
+  int npts_1 = 0;  // number of points in z for 2D
+  assert_always(get_noncommentline(fmodel, line));
+  std::istringstream(line) >> npts_0;
+  if (get_model_type() == GridType::SPHERICAL1D) {
+    ncoord_model[0] = npts_0;
+    ncoord_model[1] = 0;
+    ncoord_model[2] = 0;
+  } else if (get_model_type() == GridType::CYLINDRICAL2D) {
+    std::istringstream(line) >> npts_1;  // r and z (cylindrical polar)
+    ncoord_model[0] = npts_0;
+    ncoord_model[1] = npts_1;
+    ncoord_model[2] = 0;
+  } else if (get_model_type() == GridType::CARTESIAN3D) {
+    ncoord_model[0] = static_cast<int>(round(pow(npts_0, 1 / 3.)));
+    ncoord_model[1] = ncoord_model[0];
+    ncoord_model[2] = ncoord_model[0];
+    assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_0);
+  }
+  const int npts_model_in = std::max(1, ncoord_model[0]) * std::max(1, ncoord_model[1]) * std::max(1, ncoord_model[2]);
+  set_npts_model(npts_model_in);
+
   if (get_model_type() == GridType::SPHERICAL1D) {
     printout("Read 1D model\n");
-
-    // 1st read the number of data points in the table of input model.
-    int npts_model_in = 0;
-    assert_always(get_noncommentline(fmodel, line));
-    std::istringstream(line) >> npts_model_in;
-
-    set_npts_model(npts_model_in);
-    ncoord_model[0] = npts_model_in;
 
     vout_model.resize(get_npts_model(), NAN);
 
@@ -1924,13 +1939,6 @@ void read_ejecta_model() {
     globals::vmax = vout_model[get_npts_model() - 1];
   } else if (get_model_type() == GridType::CYLINDRICAL2D) {
     printout("Read 2D model\n");
-
-    // 1st read the number of data points in the table of input model.
-    assert_always(get_noncommentline(fmodel, line));
-    std::istringstream(line) >> ncoord_model[0] >> ncoord_model[1];  // r and z (cylindrical polar)
-    ncoord_model[2] = 0.;
-
-    set_npts_model(ncoord_model[0] * ncoord_model[1]);
 
     // Now read the time (in days) at which the model is specified.
     double t_model_days{NAN};
@@ -1990,16 +1998,6 @@ void read_ejecta_model() {
     }
   } else if (get_model_type() == GridType::CARTESIAN3D) {
     printout("Read 3D model\n");
-
-    // 1st read the number of data points in the table of input model.
-    // This MUST be the same number as the maximum number of points used in the grid - if not, abort.
-    int npts_model_in = 0;
-    assert_always(get_noncommentline(fmodel, line));
-    std::istringstream(line) >> npts_model_in;
-    set_npts_model(npts_model_in);
-
-    ncoord_model[0] = ncoord_model[1] = ncoord_model[2] = static_cast<int>(round(pow(npts_model_in, 1 / 3.)));
-    assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_model_in);
 
     // for a 3D input model, the propagation cells will match the input cells exactly
     ncoordgrid = ncoord_model;
