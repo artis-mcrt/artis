@@ -751,16 +751,16 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     }
     move_pkt_withtime(pkt, sdist / 2.);
 
-    int newmgi = mgi;
+    int new_nonemptymgi = nonemptymgi;
     if (snext != pkt.where) {
       grid::change_cell(pkt, snext);
       const int cellindexnew = pkt.where;
-      newmgi = grid::get_cell_modelgridindex(cellindexnew);
+      new_nonemptymgi = grid::get_propcell_nonemptymgi(cellindexnew);
     }
 
     pkt.last_event = pkt.last_event + 100;
 
-    return (pkt.type == TYPE_RPKT && (newmgi == grid::get_npts_model() || newmgi == mgi));
+    return (pkt.type == TYPE_RPKT && (nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
   }
 
   if ((edist <= sdist) && (edist <= tdist)) [[likely]] {
