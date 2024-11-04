@@ -123,21 +123,6 @@ void read_possible_yefile() {
   fclose(filein);
 }
 
-void set_npts_model(const int new_npts_model) {
-  npts_model = new_npts_model;
-
-  assert_always(modelgrid_input.data() == nullptr);
-  modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model + 1);
-  if (globals::rank_in_node == 0) {
-    std::ranges::fill(modelgrid_input, ModelGridCellInput{});
-  }
-#ifdef MPI_ON
-  MPI_Barrier(globals::mpi_comm_node);
-#endif
-  mg_associated_cells.resize(npts_model + 1, 0);
-  nonemptymgi_of_mgi.resize(npts_model + 1, -1);
-}
-
 void allocate_initradiobund() {
   assert_always(npts_model > 0);
 
@@ -1877,8 +1862,18 @@ void read_ejecta_model() {
     ncoord_model[2] = ncoord_model[0];
     assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_0);
   }
-  const int npts_model_in = std::max(1, ncoord_model[0]) * std::max(1, ncoord_model[1]) * std::max(1, ncoord_model[2]);
-  set_npts_model(npts_model_in);
+  npts_model = std::max(1, ncoord_model[0]) * std::max(1, ncoord_model[1]) * std::max(1, ncoord_model[2]);
+
+  assert_always(modelgrid_input.data() == nullptr);
+  modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model + 1);
+  if (globals::rank_in_node == 0) {
+    std::ranges::fill(modelgrid_input, ModelGridCellInput{});
+  }
+#ifdef MPI_ON
+  MPI_Barrier(globals::mpi_comm_node);
+#endif
+  mg_associated_cells.resize(npts_model + 1, 0);
+  nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 
   if (get_model_type() == GridType::SPHERICAL1D) {
     printout("Read 1D model\n");
@@ -2001,7 +1996,7 @@ void read_ejecta_model() {
 
     // for a 3D input model, the propagation cells will match the input cells exactly
     ncoordgrid = ncoord_model;
-    ngrid = npts_model_in;
+    ngrid = npts_model;
 
     double t_model_days{NAN};
     assert_always(get_noncommentline(fmodel, line));
@@ -2080,8 +2075,8 @@ void read_ejecta_model() {
 
       mgi++;
     }
-    if (mgi != npts_model_in) {
-      printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", mgi, npts_model_in);
+    if (mgi != npts_model) {
+      printout("ERROR in model.txt. Found %d cells instead of %td expected.\n", mgi, npts_model);
       std::abort();
     }
 
