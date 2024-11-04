@@ -1219,26 +1219,23 @@ void write_restart_data(FILE *gridsave_file) {
     }
   }
 
-  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-    if (grid::get_numpropcells(modelgridindex) > 0) {
-      const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-      assert_testmodeonly(nonemptymgi >= 0);
-      fprintf(gridsave_file, "%d %la\n", modelgridindex, J_normfactor[nonemptymgi]);
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    assert_testmodeonly(nonemptymgi >= 0);
+    fprintf(gridsave_file, "%d %la\n", nonemptymgi, J_normfactor[nonemptymgi]);
 
-      if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-          const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
-          fprintf(gridsave_file, "%la %la %a %a %d\n", radfieldbins[mgibinindex].J_raw,
-                  radfieldbins[mgibinindex].nuJ_raw, radfieldbin_solutions[mgibinindex].W,
-                  radfieldbin_solutions[mgibinindex].T_R, radfieldbins[mgibinindex].contribcount);
-        }
+    if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
+        const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
+        fprintf(gridsave_file, "%la %la %a %a %d\n", radfieldbins[mgibinindex].J_raw, radfieldbins[mgibinindex].nuJ_raw,
+                radfieldbin_solutions[mgibinindex].W, radfieldbin_solutions[mgibinindex].T_R,
+                radfieldbins[mgibinindex].contribcount);
       }
+    }
 
-      if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-        for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-          fprintf(gridsave_file, "%la %d\n", Jb_lu_raw[modelgridindex][jblueindex].value,
-                  Jb_lu_raw[modelgridindex][jblueindex].contribcount);
-        }
+    if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
+        fprintf(gridsave_file, "%la %d\n", Jb_lu_raw[nonemptymgi][jblueindex].value,
+                Jb_lu_raw[nonemptymgi][jblueindex].contribcount);
       }
     }
   }
