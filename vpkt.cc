@@ -16,7 +16,6 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
-#include "ltepop.h"
 #include "packet.h"
 #include "rpkt.h"
 #include "sn3d.h"
@@ -303,7 +302,8 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
           vpkt.next_trans = globals::nlines + 1;
           break;
         }
-        const double nutrans = globals::linelist[lineindex].nu;
+        const auto &line = globals::linelist[lineindex];
+        const double nutrans = line.nu;
 
         vpkt.next_trans = lineindex + 1;
 
@@ -319,21 +319,10 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
         const double t_line = vpkt.prop_time + (ldist / CLIGHT);
 
-        const int element = globals::linelist[lineindex].elementindex;
-        const int ion = globals::linelist[lineindex].ionindex;
-        const int upper = globals::linelist[lineindex].upperlevelindex;
-        const int lower = globals::linelist[lineindex].lowerlevelindex;
-        const auto A_ul = globals::linelist[lineindex].einstein_A;
-
-        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
-        const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
-
-        const auto n_u = calculate_levelpop(nonemptymgi, element, ion, upper);
-        const auto n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
-        const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line);
+        const double tau_line = get_tau_sobolev_subupdown(nonemptymgi, line, t_line);
 
         // Check on the element to exclude (or -1 for no line opacity)
-        const int anumber = get_atomicnumber(element);
+        const int anumber = get_atomicnumber(line.elementindex);
         for (int ind = 0; ind < Nspectra; ind++) {
           if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
             tau_vpkt[ind] += tau_line;
