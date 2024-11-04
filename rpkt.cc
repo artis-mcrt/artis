@@ -857,7 +857,7 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu) -> double {
 
 // get bound-free opacity
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
-auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phixslist *phixslist) -> double {
+auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixslist *phixslist) -> double {
   assert_always(!USECELLHISTANDUPDATEPHIXSLIST || phixslist != nullptr);
 
   double chi_bf_sum = 0.;
@@ -866,7 +866,6 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, Phix
       std::ranges::fill(phixslist->groundcont_gamma_contr, 0.);
     }
   }
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
