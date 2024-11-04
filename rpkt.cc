@@ -201,7 +201,7 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
 }
 
 auto get_event_expansion_opacity(
-    const int modelgridindex, const int nonemptymgi, const Packet &pkt,
+    const int nonemptymgi, const Packet &pkt,
     const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
     MacroAtomState &mastate, const double tau_rnd, const double nu_cmf_abort, const double d_nu_on_d_l,
     const double doppler) -> std::tuple<double, int, bool> {
@@ -215,7 +215,7 @@ auto get_event_expansion_opacity(
   // with thermalisation, we don't keep track of line interactions
   auto next_trans = RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0. ? -1 : pkt.next_trans;
 
-  assert_always(globals::cellcache[cellcacheslotid].modelgridindex == modelgridindex);
+  assert_always(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
   double dist = 0.;
   double tau = 0.;
   auto binindex_start = static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
@@ -735,7 +735,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
 
     if constexpr (EXPANSIONOPACITIES_ON) {
       std::tie(edist, pkt.next_trans, event_is_boundbound) = get_event_expansion_opacity(
-          mgi, nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, nu_cmf_abort, d_nu_on_d_l, doppler);
+          nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, nu_cmf_abort, d_nu_on_d_l, doppler);
     } else {
       std::tie(edist, pkt.next_trans, event_is_boundbound) =
           get_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l,
@@ -829,8 +829,7 @@ auto calculate_chi_ffheat_nnionpart(const int nonemptymgi) -> double {
 }
 
 auto get_chi_ff_nnionpart(const int nonemptymgi) -> double {
-  if (!use_cellcache ||
-      globals::cellcache[cellcacheslotid].modelgridindex != grid::get_mgi_of_nonemptymgi(nonemptymgi)) {
+  if (!use_cellcache || globals::cellcache[cellcacheslotid].nonemptymgi != nonemptymgi) {
     return calculate_chi_ffheat_nnionpart(nonemptymgi);
   }
 

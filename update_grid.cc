@@ -1105,7 +1105,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // nts_prev is the previous timestep, unless this is timestep zero
   const double deltat = globals::timesteps[nts_prev].width;
 
-  cellcache_change_cell(-99);
+  cellcache_change_cell(-1);
 
   // Do not use values which are saved in the cellcache within update_grid
   use_cellcache = false;
@@ -1172,18 +1172,17 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       std::time(nullptr) - time_update_grid_end_thisrank, std::time(nullptr) - sys_time_start_update_grid);
 }
 
-void cellcache_change_cell(const int modelgridindex) {
+void cellcache_change_cell(const int nonemptymgi) {
   // All entries of the cellcache stack must be flagged as empty at the
   // onset of the new timestep. Also, boundary crossing?
   // Calculate the level populations for this cell, and flag the other entries
   // as empty.
   auto &cacheslot = globals::cellcache[cellcacheslotid];
-  if (modelgridindex == cacheslot.modelgridindex) {
+  if (nonemptymgi == cacheslot.nonemptymgi) {
     return;
   }
-  const auto nonemptymgi = (modelgridindex >= 0) ? grid::get_nonemptymgi_of_mgi(modelgridindex) : -1;
 
-  cacheslot.modelgridindex = modelgridindex;
+  cacheslot.nonemptymgi = nonemptymgi;
   cacheslot.chi_ff_nnionpart = -1.;
 
   const int nelements = get_nelements();
@@ -1194,7 +1193,7 @@ void cellcache_change_cell(const int modelgridindex) {
           .cooling_contrib[kpkt::get_coolinglistoffset(element, ion) + kpkt::get_ncoolingterms_ion(element, ion) - 1] =
           COOLING_UNDEFINED;
 
-      if (modelgridindex >= 0) {
+      if (nonemptymgi >= 0) {
         const int nlevels = get_nlevels(element, ion);
         auto &chion = cacheslot.chelements[element].chions[ion];
 #ifdef _OPENMP
@@ -1225,7 +1224,7 @@ void cellcache_change_cell(const int modelgridindex) {
     }
   }
 
-  if (modelgridindex >= 0) {
+  if (nonemptymgi >= 0) {
     std::ranges::fill(cacheslot.ch_allcont_departureratios, -1.);
 
     const auto nnetot = grid::get_nnetot(nonemptymgi);
