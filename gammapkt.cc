@@ -267,11 +267,10 @@ auto get_chi_compton_rf(const Packet &pkt) -> double {
   // calculate the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
   // Start by working out the compton x-section in the co-moving frame.
 
-  const auto mgi = grid::get_cell_modelgridindex(pkt.where);
-  if (mgi >= grid::get_npts_model()) {
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  if (nonemptymgi < 0) {
     return 0.;  // empty cell
   }
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
 
