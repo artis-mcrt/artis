@@ -85,9 +85,9 @@ enum eventcounters {
 
 void init();
 
-void increment_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype, double increment);
+void increment_ion_stats(int nonemptymgi, int element, int ion, enum ionstattypes ionstattype, double increment);
 
-void increment_ion_stats_contabsorption(const Packet &pkt, int modelgridindex, int element, int ion);
+void increment_ion_stats_contabsorption(const Packet &pkt, int nonemptymgi, int element, int ion);
 
 [[nodiscard]] auto get_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype) -> double;
 

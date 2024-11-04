@@ -559,7 +559,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     emit_rpkt(pkt);
 
     if constexpr (TRACK_ION_STATS) {
-      stats::increment_ion_stats(modelgridindex, element, lowerion + 1, stats::ION_RADRECOMB_KPKT,
+      stats::increment_ion_stats(nonemptymgi, element, lowerion + 1, stats::ION_RADRECOMB_KPKT,
                                  pkt.e_cmf / H / pkt.nu_cmf);
     }
 
@@ -610,7 +610,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     assert_always(upper >= 0);
 
     if constexpr (TRACK_ION_STATS) {
-      stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC, pkt.e_cmf);
+      stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC, pkt.e_cmf);
     }
 
     pkt.type = TYPE_MA;
@@ -630,7 +630,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     const int upper = coolinglist[i].upperlevel;
 
     if constexpr (TRACK_ION_STATS) {
-      stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_MACROATOM_ENERGYIN_COLLION, pkt.e_cmf);
+      stats::increment_ion_stats(nonemptymgi, element, upperion, stats::ION_MACROATOM_ENERGYIN_COLLION, pkt.e_cmf);
     }
 
     pkt.type = TYPE_MA;

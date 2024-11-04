@@ -413,7 +413,7 @@ void electron_scatter_rpkt(Packet &pkt) {
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 }
 
-void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const int modelgridindex) {
+void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const int nonemptymgi) {
   const double nu = pkt.nu_cmf;
 
   const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
@@ -491,7 +491,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     // 1, 0, ion, level); printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
 
     if constexpr (TRACK_ION_STATS) {
-      stats::increment_ion_stats_contabsorption(pkt, modelgridindex, element, ion);
+      stats::increment_ion_stats_contabsorption(pkt, nonemptymgi, element, ion);
     }
 
     // and decide whether we go to ionisation energy
@@ -501,7 +501,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
       pkt.last_event = 3;
 
       if constexpr (TRACK_ION_STATS) {
-        stats::increment_ion_stats(modelgridindex, element, ion + 1, stats::ION_MACROATOM_ENERGYIN_PHOTOION, pkt.e_cmf);
+        stats::increment_ion_stats(nonemptymgi, element, ion + 1, stats::ION_MACROATOM_ENERGYIN_PHOTOION, pkt.e_cmf);
       }
 
       pkt.type = TYPE_MA;

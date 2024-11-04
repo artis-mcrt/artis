@@ -265,7 +265,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   emit_rpkt(pkt);
 
   if constexpr (TRACK_ION_STATS) {
-    stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_RADRECOMB_MACROATOM,
+    stats::increment_ion_stats(nonemptymgi, element, upperion, stats::ION_RADRECOMB_MACROATOM,
                                pkt.e_cmf / H / pkt.nu_cmf);
   }
 
@@ -339,7 +339,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
   const double nu_rf_in = pkt.nu_rf;
 
   if constexpr (TRACK_ION_STATS) {
-    stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_TOTAL, pkt.e_cmf);
+    stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_TOTAL, pkt.e_cmf);
   }
 
   bool end_packet = false;
@@ -403,12 +403,12 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         do_macroatom_raddeexcitation(pkt, element, ion, level, activatingline, chlevel);
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC, pkt.e_cmf);
+          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC, pkt.e_cmf);
 
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_BOUNDBOUND_MACROATOM,
+          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_BOUNDBOUND_MACROATOM,
                                      pkt.e_cmf / H / pkt.nu_cmf);
 
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
+          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
         }
 
         if constexpr (LOG_MACROATOM) {
@@ -430,8 +430,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         pkt.last_event = 10;
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLDEEXC, pkt.e_cmf);
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
+          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLDEEXC, pkt.e_cmf);
+          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
         }
 
         pkt.type = TYPE_KPKT;
@@ -453,8 +453,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         // printout("[debug] do_ma:   element %d, ion %d, level %d\n", element, ion, level);
 
         if constexpr (TRACK_ION_STATS) {
-          // stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADRECOMB,
-          // pkt.e_cmf); stats::increment_ion_stats(modelgridindex, element, ion,
+          // stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADRECOMB,
+          // pkt.e_cmf); stats::increment_ion_stats(nonemptymgi, element, ion,
           // stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
         }
 
@@ -472,9 +472,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         pkt.last_event = 11;
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLRECOMB,
-                                     pkt.e_cmf);
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
+          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLRECOMB, pkt.e_cmf);
+          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
         }
 
         pkt.type = TYPE_KPKT;
@@ -511,14 +510,14 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         // and set the macroatom's new state
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
+          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
         }
 
         ion -= 1;
         level = lower;
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
+          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
         }
 
         if (lower >= nlevels) {
@@ -564,7 +563,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHER);
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
+          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
         }
 
         level = do_macroatom_ionisation(modelgridindex, element, ion, level, epsilon_current,
@@ -572,7 +571,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         ion += 1;
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
+          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
         }
 
         break;
@@ -582,7 +581,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         stats::increment(stats::COUNTER_INTERACTIONS);
         // ion += 1;
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
+          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
         }
 
         ion = nonthermal::nt_random_upperion(nonemptymgi, element, ion, false);
@@ -590,7 +589,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHERNT);
 
         if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
+          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
         }
         break;
       }
