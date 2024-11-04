@@ -1852,12 +1852,11 @@ void calculate_kappagrey() {
 }
 
 void read_ejecta_model() {
+  auto fmodel = fstream_required("model.txt", std::ios::in);
+  std::string line;
+
   if (get_model_type() == GridType::SPHERICAL1D) {
     printout("Read 1D model\n");
-
-    auto fmodel = fstream_required("model.txt", std::ios::in);
-
-    std::string line;
 
     // 1st read the number of data points in the table of input model.
     int npts_model_in = 0;
@@ -1923,9 +1922,6 @@ void read_ejecta_model() {
     globals::vmax = vout_model[get_npts_model() - 1];
   } else if (get_model_type() == GridType::CYLINDRICAL2D) {
     printout("Read 2D model\n");
-    auto fmodel = fstream_required("model.txt", std::ios::in);
-
-    std::string line;
 
     // 1st read the number of data points in the table of input model.
     assert_always(get_noncommentline(fmodel, line));
@@ -1992,9 +1988,6 @@ void read_ejecta_model() {
     }
   } else if (get_model_type() == GridType::CARTESIAN3D) {
     printout("Read 3D model\n");
-    auto fmodel = fstream_required("model.txt", std::ios::in);
-
-    std::string line;
 
     // 1st read the number of data points in the table of input model.
     // This MUST be the same number as the maximum number of points used in the grid - if not, abort.
