@@ -1187,7 +1187,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     const auto delta_nu = nu_upper - nu_lower;
 
     while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= nu_lower) {
-      const float tau_line = get_tau_sobolev(nonemptymgi, lineindex, t_mid, false);
+      const float tau_line = get_tau_sobolev(nonemptymgi, lineindex, t_mid);
       const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
       bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
       lineindex++;
