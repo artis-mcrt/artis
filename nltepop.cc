@@ -1235,13 +1235,9 @@ void nltepop_read_restart_data(FILE *restart_file) {
   const auto nincludedions = get_includedions();
 
   for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     int mgi_in = 0;
     assert_always(fscanf(restart_file, "%d %la\n", &mgi_in, &grid::modelgrid[nonemptymgi].totalcooling) == 2);
-    if (mgi_in != modelgridindex) {
-      printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
-      std::abort();
-    }
+    assert_always(mgi_in == grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
