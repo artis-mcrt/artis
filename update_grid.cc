@@ -49,8 +49,8 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
 
   printout("writing to estimators file timestep %d cell %d...\n", timestep, mgi);
 
-  const auto T_e = grid::get_Te(mgi);
-  const auto nne = grid::get_nne(mgi);
+  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto nne = grid::get_nne(nonemptymgi);
   const auto Y_e = grid::get_electronfrac(nonemptymgi);
   // fprintf(estimators_file,"%d %g %g %g %g %d
   // ",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grid::modelgrid[n].thick); fprintf(estimators_file,"%d %g %g %g
@@ -58,18 +58,18 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
   fprintf(estimators_file,
           "timestep %d modelgridindex %d titeration %d TR %g Te %g W %g TJ %g grey_depth %g thick %d nne %g Ye %g "
           "tdays %7.2f\n",
-          timestep, mgi, titer, grid::get_TR(mgi), T_e, grid::get_W(mgi), grid::get_TJ(mgi),
-          grid::modelgrid[mgi].grey_depth, grid::modelgrid[mgi].thick, nne, Y_e,
+          timestep, mgi, titer, grid::get_TR(nonemptymgi), T_e, grid::get_W(nonemptymgi), grid::get_TJ(nonemptymgi),
+          grid::modelgrid[nonemptymgi].grey_depth, grid::modelgrid[nonemptymgi].thick, nne, Y_e,
           globals::timesteps[timestep].mid / DAY);
   // fprintf(estimators_file,"%d %g %g %g %g %g %g %g
   //",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
   if (globals::total_nlte_levels > 0) {
-    nltepop_write_to_file(mgi, timestep);
+    nltepop_write_to_file(nonemptymgi, timestep);
   }
 
   for (int element = 0; element < get_nelements(); element++) {
-    if (grid::get_elem_abundance(mgi, element) <= 0.) {  // skip elements with no abundance
+    if (grid::get_elem_abundance(nonemptymgi, element) <= 0.) {  // skip elements with no abundance
       continue;
     }
 
@@ -83,11 +83,11 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     }
     double elpop = 0.;
     for (int ion = 0; ion < nions; ion++) {
-      elpop += get_nnion(mgi, element, ion);
-      fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), get_nnion(mgi, element, ion));
+      elpop += get_nnion(nonemptymgi, element, ion);
+      fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), get_nnion(nonemptymgi, element, ion));
     }
     if (nions == 0) {
-      elpop = grid::get_elem_numberdens(mgi, element);
+      elpop = grid::get_elem_numberdens(nonemptymgi, element);
     }
     fprintf(estimators_file, "  SUM: %9.3e", elpop);
 
@@ -142,7 +142,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       double ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_RADEXC);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_RADEXC);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -154,7 +154,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -166,7 +166,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -178,7 +178,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLDEEXC);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLDEEXC);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -190,7 +190,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_PHOTOION);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_PHOTOION);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -202,7 +202,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADRECOMB);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADRECOMB);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -214,7 +214,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLION);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLION);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -226,7 +226,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLRECOMB);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLRECOMB);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -238,7 +238,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_NTCOLLION);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_NTCOLLION);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -250,7 +250,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_in_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_TOTAL);
+        const double ma_in_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_TOTAL);
         ma_el += ma_in_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_in_ion);
       }
@@ -262,7 +262,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -274,7 +274,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -286,7 +286,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        const double ma_ion = get_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL);
+        const double ma_ion = get_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ma_ion);
       }
@@ -332,7 +332,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
     //     fprintf(estimators_file, "              ");
     //   for (int ion = 0; ion < nions; ion++) {
-    //     const double alpha_r_mc = get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_MACROATOM);
+    //     const double alpha_r_mc = get_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_MACROATOM);
     //     fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), alpha_r_mc);
     //   }
     //   fprintf(estimators_file, "\n");
@@ -343,7 +343,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
     //     fprintf(estimators_file, "              ");
     //   for (int ion = 0; ion < nions; ion++) {
-    //     const double alpha_r_mc = get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_KPKT);
+    //     const double alpha_r_mc = get_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_KPKT);
     //     fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), alpha_r_mc);
     //   }
     //   fprintf(estimators_file, "\n");
@@ -355,8 +355,8 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
         fprintf(estimators_file, "              ");
       }
       for (int ion = 0; ion < nions; ion++) {
-        const double alpha_r_mc = get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_MACROATOM) +
-                                  get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_KPKT);
+        const double alpha_r_mc = get_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_MACROATOM) +
+                                  get_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_KPKT);
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), alpha_r_mc);
       }
       fprintf(estimators_file, "\n");
@@ -366,9 +366,9 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
         fprintf(estimators_file, "              ");
       }
       for (int ion = 0; ion < nions; ion++) {
-        const double alpha_r_mc = get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_MACROATOM) +
-                                  get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_KPKT);
-        const double alpha_r_mc_abs = get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_ABSORBED);
+        const double alpha_r_mc = get_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_MACROATOM) +
+                                  get_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_KPKT);
+        const double alpha_r_mc_abs = get_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_ABSORBED);
         fprintf(estimators_file, "  %d: %9.3f", get_ionstage(element, ion), 1. - (alpha_r_mc_abs / alpha_r_mc));
       }
       fprintf(estimators_file, "\n");
@@ -378,8 +378,8 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
         fprintf(estimators_file, "              ");
       }
       for (int ion = 0; ion < nions; ion++) {
-        const double bb_emitted = get_ion_stats(mgi, element, ion, stats::ION_BOUNDBOUND_MACROATOM);
-        const double bb_abs = get_ion_stats(mgi, element, ion, stats::ION_BOUNDBOUND_ABSORBED);
+        const double bb_emitted = get_ion_stats(nonemptymgi, element, ion, stats::ION_BOUNDBOUND_MACROATOM);
+        const double bb_abs = get_ion_stats(nonemptymgi, element, ion, stats::ION_BOUNDBOUND_ABSORBED);
         fprintf(estimators_file, "  %d: %9.3f", get_ionstage(element, ion), 1. - (bb_abs / bb_emitted));
       }
       fprintf(estimators_file, "\n");
@@ -424,8 +424,8 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     //     const bool printdebug_gammar = false;
     //     fprintf(estimators_file, "  %d: %9.3e",
     //             get_ionstage(element, ion),
-    //             calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false,
-    //             false));
+    //             calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug_gammar,
+    //             false, false));
     //   }
     //   fprintf(estimators_file, "\n");
     // }
@@ -438,9 +438,9 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       for (int ion = 0; ion < nions - 1; ion++) {
         // const bool printdebug_gammar = (get_atomicnumber(element) == 26 && get_ionstage(element, ion) == 2);
         const bool printdebug_gammar = false;
-        fprintf(
-            estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-            calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false, true));
+        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
+                calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug_gammar,
+                                              false, true));
       }
       fprintf(estimators_file, "\n");
     }
@@ -454,9 +454,9 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
         // const bool printdebug_gammar = ((get_atomicnumber(element) == 26 || get_atomicnumber(element) == 28) &&
         // get_ionstage(element, ion) >= 2); const bool printdebug_gammar = (get_atomicnumber(element) >= 26);
         const bool printdebug_gammar = false;
-        fprintf(
-            estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-            calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, true, false));
+        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
+                calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug_gammar,
+                                              true, false));
       }
       fprintf(estimators_file, "\n");
     }
@@ -468,7 +468,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION));
       }
       fprintf(estimators_file, "\n");
     }
@@ -480,7 +480,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBOUNDFREE));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDFREE));
       }
       fprintf(estimators_file, "\n");
     }
@@ -492,7 +492,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     // {
     //   fprintf(estimators_file, "  %d: %9.3e",
     //           get_ionstage(element, ion),
-    //           get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBFSAMEELEMENT]);
+    //           get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFSAMEELEMENT]);
     // }
     // fprintf(estimators_file, "\n");
 
@@ -503,7 +503,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSONE));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSONE));
       }
       fprintf(estimators_file, "\n");
     }
@@ -515,7 +515,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSTWO));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSTWO));
       }
       fprintf(estimators_file, "\n");
     }
@@ -527,7 +527,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSTHREE));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSTHREE));
       }
       fprintf(estimators_file, "\n");
     }
@@ -539,7 +539,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBFLOWERSUPERLEVEL));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFLOWERSUPERLEVEL));
       }
       fprintf(estimators_file, "\n");
     }
@@ -551,7 +551,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUND));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUND));
       }
       fprintf(estimators_file, "\n");
     }
@@ -563,7 +563,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSONE));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSONE));
       }
       fprintf(estimators_file, "\n");
     }
@@ -575,7 +575,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO));
       }
       fprintf(estimators_file, "\n");
     }
@@ -587,7 +587,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                get_ion_stats(mgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE));
+                get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE));
       }
       fprintf(estimators_file, "\n");
     }
@@ -599,7 +599,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
     // {
     //   fprintf(estimators_file, "  %d: %9.3e",
     //           get_ionstage(element, ion),
-    //           calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, true,
+    //           calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, true,
     //           printdebug));
     // }
     // fprintf(estimators_file, "\n");
@@ -610,7 +610,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
         fprintf(estimators_file, "              ");
       }
       for (int ion = 0; ion < nions - 1; ion++) {
-        const double Y_nt = nonthermal::nt_ionization_ratecoeff(mgi, element, ion);
+        const double Y_nt = nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion);
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), Y_nt);
       }
       fprintf(estimators_file, "\n");
@@ -622,7 +622,7 @@ void write_to_estimators_file(FILE *estimators_file, const int mgi, const int ti
         }
         for (int ion = 0; ion < nions - 1; ion++) {
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                  get_ion_stats(mgi, element, ion, stats::ION_NTION));
+                  get_ion_stats(nonemptymgi, element, ion, stats::ION_NTION));
         }
         fprintf(estimators_file, "\n");
       }
@@ -702,12 +702,12 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     const auto sys_time_start_partfuncs_or_gamma = std::time(nullptr);
     for (int element = 0; element < get_nelements(); element++) {
       if (!elem_has_nlte_levels(element)) {
-        calculate_cellpartfuncts(mgi, element);
+        calculate_cellpartfuncts(nonemptymgi, element);
       }
     }
     const int duration_solve_partfuncs_or_gamma = std::time(nullptr) - sys_time_start_partfuncs_or_gamma;
 
-    const double prev_T_e = grid::get_Te(mgi);
+    const double prev_T_e = grid::get_Te(nonemptymgi);
     const auto sys_time_start_Te = std::time(nullptr);
 
     // Find T_e as solution for thermal balance
@@ -718,7 +718,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
     if (globals::total_nlte_levels == 0) {
       const auto sys_time_start_pops = std::time(nullptr);
-      calculate_ion_balance_nne(mgi);
+      calculate_ion_balance_nne(nonemptymgi);
       const int duration_solve_pops = std::time(nullptr) - sys_time_start_pops;
 
       printout(
@@ -729,7 +729,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
       break;  // no iteration is needed without nlte pops
     }
 
-    const double fracdiff_T_e = fabs((grid::get_Te(mgi) / prev_T_e) - 1);
+    const double fracdiff_T_e = fabs((grid::get_Te(nonemptymgi) / prev_T_e) - 1);
     const auto sys_time_start_nltepops = std::time(nullptr);
     // fractional difference between previous and current iteration's (nne or max(ground state
     // population change))
@@ -737,14 +737,14 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     for (int element = 0; element < get_nelements(); element++) {
       if (get_nions(element) > 0 && elem_has_nlte_levels(element)) {
         solve_nlte_pops_element(element, mgi, nts, nlte_iter);
-        calculate_cellpartfuncts(mgi, element);
+        calculate_cellpartfuncts(nonemptymgi, element);
       }
     }
     const int duration_solve_nltepops = std::time(nullptr) - sys_time_start_nltepops;
 
-    const double nne_prev = grid::get_nne(mgi);
-    calculate_ion_balance_nne(mgi);  // sets nne
-    fracdiff_nne = fabs((grid::get_nne(mgi) / nne_prev) - 1);
+    const double nne_prev = grid::get_nne(nonemptymgi);
+    calculate_ion_balance_nne(nonemptymgi);  // sets nne
+    fracdiff_nne = fabs((grid::get_nne(nonemptymgi) / nne_prev) - 1);
     printout(
         "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e "
         "%ds, NLTE populations %ds\n",
@@ -752,7 +752,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     printout(
         "NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: prev_iter nne "
         "%g, new nne is %g, fracdiff %g, prev T_e %g new T_e %g fracdiff %g\n",
-        mgi, nts, nlte_iter, nne_prev, grid::get_nne(mgi), fracdiff_nne, prev_T_e, grid::get_Te(mgi), fracdiff_T_e);
+        mgi, nts, nlte_iter, nne_prev, grid::get_nne(nonemptymgi), fracdiff_nne, prev_T_e, grid::get_Te(nonemptymgi),
+        fracdiff_T_e);
 
     if (fracdiff_nne <= convergence_tolerance && fracdiff_T_e <= convergence_tolerance) {
       printout(
@@ -770,8 +771,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   }
 }
 
-void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const double estimator_normfactor) {
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi, const double estimator_normfactor) {
   if constexpr (USE_LUT_PHOTOION) {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -792,14 +792,15 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
 #endif
 
         globals::corrphotoionrenorm[ionestimindex] =
-            globals::gammaestimator[ionestimindex] / get_corrphotoioncoeff_ana(element, ion, 0, 0, mgi);
+            globals::gammaestimator[ionestimindex] / get_corrphotoioncoeff_ana(element, ion, 0, 0, nonemptymgi);
 
         if (!std::isfinite(globals::corrphotoionrenorm[ionestimindex])) {
+          const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
           printout(
               "[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / "
               "get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
               element, ion, 0, 0, mgi, globals::gammaestimator[ionestimindex],
-              get_corrphotoioncoeff_ana(element, ion, 0, 0, mgi));
+              get_corrphotoioncoeff_ana(element, ion, 0, 0, nonemptymgi));
           std::abort();
         }
       }
@@ -824,7 +825,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
       const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 
       if (!elem_has_nlte_levels(element)) {
-        globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(mgi, element, ion);
+        globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
       }
 
       if constexpr (USE_LUT_BFHEATING) {
@@ -841,10 +842,11 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const d
         // contributions are added up.
 
         const double bfheatingcoeff_ana =
-            get_bfheatingcoeff_ana(element, ion, 0, 0, grid::get_TR(mgi), grid::get_W(mgi));
+            get_bfheatingcoeff_ana(element, ion, 0, 0, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
         globals::bfheatingestimator[ionestimindex] = globals::bfheatingestimator[ionestimindex] / bfheatingcoeff_ana;
 
         if (!std::isfinite(globals::bfheatingestimator[ionestimindex])) {
+          const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
           printout(
               "[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / "
               "get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
@@ -882,7 +884,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
   printout("update_grid_cell: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
 
   // Update current mass density of cell
-  grid::set_rho(mgi, grid::get_rho_tmin(mgi) / pow(tratmid, 3));
+  grid::set_rho(nonemptymgi, grid::get_rho_tmin(mgi) / pow(tratmid, 3));
 
   // Update elemental abundances with radioactive decays
   decay::update_abundances(nonemptymgi, nts, globals::timesteps[nts].mid);
@@ -897,14 +899,14 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
   if (globals::opacity_case < 4) {
     // various forms of grey opacity
-    grid::modelgrid[mgi].thick = 1;
+    grid::modelgrid[nonemptymgi].thick = 1;
 
     if (globals::opacity_case == 3) {
-      if (grid::get_rho(mgi) > globals::rho_crit) {
-        grid::set_kappagrey(mgi, globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1) * globals::rho_crit /
-                                     grid::get_rho(mgi));
+      if (grid::get_rho(nonemptymgi) > globals::rho_crit) {
+        grid::set_kappagrey(nonemptymgi, globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1) *
+                                             globals::rho_crit / grid::get_rho(nonemptymgi));
       } else {
-        grid::set_kappagrey(mgi, globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1));
+        grid::set_kappagrey(nonemptymgi, globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1));
       }
     }
   }
@@ -922,22 +924,22 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
     // W == 1 indicates that this modelgrid cell was treated grey in the
     // last timestep. Therefore it has no valid Gamma estimators and must
     // be treated in LTE at restart.
-    if (grid::modelgrid[mgi].thick != 1 && grid::get_W(mgi) == 1) {
+    if (grid::modelgrid[nonemptymgi].thick != 1 && grid::get_W(nonemptymgi) == 1) {
       printout(
           "force modelgrid cell %d to grey/LTE thick = 1 for update grid since existing W == 1. (will not have "
           "gamma estimators)\n",
           mgi);
-      grid::modelgrid[mgi].thick = 1;
+      grid::modelgrid[nonemptymgi].thick = 1;
     }
 
     printout("lte_iteration %d\n", globals::lte_iteration ? 1 : 0);
-    printout("mgi %d modelgrid.thick: %d (during grid update)\n", mgi, grid::modelgrid[mgi].thick);
+    printout("mgi %d modelgrid.thick: %d (during grid update)\n", mgi, grid::modelgrid[nonemptymgi].thick);
 
     for (int element = 0; element < get_nelements(); element++) {
-      calculate_cellpartfuncts(mgi, element);
+      calculate_cellpartfuncts(nonemptymgi, element);
     }
     if (!globals::simulation_continued_from_saved) {
-      calculate_ion_balance_nne(mgi);
+      calculate_ion_balance_nne(nonemptymgi);
     }
   } else {
     // For all other timesteps temperature corrections have to be applied
@@ -950,7 +952,7 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 
     const auto sys_time_start_temperature_corrections = std::time(nullptr);
 
-    radfield::normalise_J(mgi, estimator_normfactor_over4pi);  // this applies normalisation to the fullspec J
+    radfield::normalise_J(nonemptymgi, estimator_normfactor_over4pi);  // this applies normalisation to the fullspec J
     // this stores the factor that will be applied later for the J bins but not fullspec J
     radfield::set_J_normfactor(nonemptymgi, estimator_normfactor_over4pi);
 
@@ -959,18 +961,18 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
 #endif
 
     if constexpr (TRACK_ION_STATS) {
-      stats::normalise_ion_estimators(mgi, deltat, deltaV);
+      stats::normalise_ion_estimators(nonemptymgi, deltat, deltaV);
     }
 
     // lte_iteration really means either ts 0 or nts < globals::num_lte_timesteps
-    if (globals::lte_iteration || grid::modelgrid[mgi].thick == 1) {
+    if (globals::lte_iteration || grid::modelgrid[nonemptymgi].thick == 1) {
       // LTE mode or grey mode (where temperature doesn't matter but is calculated anyway)
 
-      const double T_J = radfield::get_T_J_from_J(mgi);
-      grid::set_TR(mgi, T_J);
-      grid::set_Te(mgi, T_J);
-      grid::set_TJ(mgi, T_J);
-      grid::set_W(mgi, 1);
+      const double T_J = radfield::get_T_J_from_J(nonemptymgi);
+      grid::set_TR(nonemptymgi, T_J);
+      grid::set_Te(nonemptymgi, T_J);
+      grid::set_TJ(nonemptymgi, T_J);
+      grid::set_W(nonemptymgi, 1);
 
       if constexpr (USE_LUT_PHOTOION) {
         std::fill_n(globals::corrphotoionrenorm + (nonemptymgi * globals::nbfcontinua_ground),
@@ -978,14 +980,14 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       }
 
       for (int element = 0; element < get_nelements(); element++) {
-        calculate_cellpartfuncts(mgi, element);
+        calculate_cellpartfuncts(nonemptymgi, element);
       }
-      calculate_ion_balance_nne(mgi);
+      calculate_ion_balance_nne(nonemptymgi);
     } else {
       // not lte_iteration and not a thick cell
-      // non-LTE timesteps with T_e from heating/cooling
+      // non-pure-LTE timesteps with T_e from heating/cooling
 
-      radfield::normalise_nuJ(mgi, estimator_normfactor_over4pi);
+      radfield::normalise_nuJ(nonemptymgi, estimator_normfactor_over4pi);
 
       globals::ffheatingestimator[nonemptymgi] *= estimator_normfactor;
       globals::colheatingestimator[nonemptymgi] *= estimator_normfactor;
@@ -995,11 +997,11 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
       titer_average_estimators(mgi);
 #endif
 
-      update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
+      update_gamma_corrphotoionrenorm_bfheating_estimators(nonemptymgi, estimator_normfactor);
 
       // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the
       // full-spectrum and binned J and nuJ estimators
-      radfield::fit_parameters(mgi, nts);
+      radfield::fit_parameters(nonemptymgi, nts);
 
       solve_Te_nltepops(nonemptymgi, nts, nts_prev, heatingcoolingrates);
     }
@@ -1007,45 +1009,46 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
              std::time(nullptr) - sys_time_start_temperature_corrections);
   }
 
-  const float nne = grid::get_nne(mgi);
+  const float nne = grid::get_nne(nonemptymgi);
   const double compton_optical_depth = SIGMA_T * nne * grid::wid_init(mgi, 0) * tratmid;
 
   const int assoc_cells = grid::get_numpropcells(mgi);
-  const double radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum * tratmid / assoc_cells;
-  const double grey_optical_deptha = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * grid::wid_init(mgi, 0) * tratmid;
+  const double radial_pos = grid::get_initial_radial_pos_sum(mgi) * tratmid / assoc_cells;
+  const double grey_optical_deptha =
+      grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) * grid::wid_init(mgi, 0) * tratmid;
   // cube corners will have radial pos > rmax, so clamp to 0.
   const double dist_to_obs = std::max(0., (globals::rmax * tratmid) - radial_pos);
-  const double grey_optical_depth = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * dist_to_obs;
+  const double grey_optical_depth = grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) * dist_to_obs;
   printout(
       "modelgridcell %d, compton optical depth (/propgridcell) %g, grey optical depth "
       "(/propgridcell) %g\n",
       mgi, compton_optical_depth, grey_optical_deptha);
   printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, dist_to_obs, grey_optical_depth);
 
-  grid::modelgrid[mgi].grey_depth = grey_optical_depth;
+  grid::modelgrid[nonemptymgi].grey_depth = grey_optical_depth;
 
   // grey_optical_depth = compton_optical_depth;
 
   if ((grey_optical_depth >= globals::cell_is_optically_thick) && (nts < globals::num_grey_timesteps)) {
     printout("timestep %d cell %d is treated in grey approximation (chi_grey %g [cm2/g], tau %g >= %g)\n", nts, mgi,
-             grid::get_kappagrey(mgi), grey_optical_depth, globals::cell_is_optically_thick);
-    grid::modelgrid[mgi].thick = 1;
+             grid::get_kappagrey(nonemptymgi), grey_optical_depth, globals::cell_is_optically_thick);
+    grid::modelgrid[nonemptymgi].thick = 1;
   } else if (VPKT_ON && (grey_optical_depth > cell_is_optically_thick_vpkt)) {
-    grid::modelgrid[mgi].thick = 2;
+    grid::modelgrid[nonemptymgi].thick = 2;
   } else {
-    grid::modelgrid[mgi].thick = 0;
+    grid::modelgrid[nonemptymgi].thick = 0;
   }
 
-  if (grid::modelgrid[mgi].thick == 1) {
+  if (grid::modelgrid[nonemptymgi].thick == 1) {
     // cooling rates calculation can be skipped for thick cells
     // flag with negative numbers to indicate that the rates are invalid
-    grid::modelgrid[mgi].totalcooling = -1.;
+    grid::modelgrid[nonemptymgi].totalcooling = -1.;
     grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + 0] = -1.;
   } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial) {
     // cooling rates were read from the gridsave file for this timestep
     // make sure they are valid
     printout("cooling rates read from gridsave file for timestep %d cell %d...", nts, mgi);
-    assert_always(grid::modelgrid[mgi].totalcooling >= 0.);
+    assert_always(grid::modelgrid[nonemptymgi].totalcooling >= 0.);
     assert_always(grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + 0] >= 0.);
   } else {
     // Cooling rates depend only on cell properties, precalculate total cooling
@@ -1062,8 +1065,8 @@ void update_grid_cell(const int mgi, const int nts, const int nts_prev, const in
   }
 
   if constexpr (EXPANSIONOPACITIES_ON || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
-    if (grid::modelgrid[mgi].thick != 1) {
-      calculate_expansion_opacities(mgi);
+    if (grid::modelgrid[nonemptymgi].thick != 1) {
+      calculate_expansion_opacities(nonemptymgi);
     }
   }
 
@@ -1102,7 +1105,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // nts_prev is the previous timestep, unless this is timestep zero
   const double deltat = globals::timesteps[nts_prev].width;
 
-  cellcache_change_cell(-99);
+  cellcache_change_cell(-1);
 
   // Do not use values which are saved in the cellcache within update_grid
   use_cellcache = false;
@@ -1169,17 +1172,17 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       std::time(nullptr) - time_update_grid_end_thisrank, std::time(nullptr) - sys_time_start_update_grid);
 }
 
-void cellcache_change_cell(const int modelgridindex) {
+void cellcache_change_cell(const int nonemptymgi) {
   // All entries of the cellcache stack must be flagged as empty at the
   // onset of the new timestep. Also, boundary crossing?
   // Calculate the level populations for this cell, and flag the other entries
   // as empty.
   auto &cacheslot = globals::cellcache[cellcacheslotid];
-  if (modelgridindex == cacheslot.cellnumber) {
+  if (nonemptymgi == cacheslot.nonemptymgi) {
     return;
   }
 
-  cacheslot.cellnumber = modelgridindex;
+  cacheslot.nonemptymgi = nonemptymgi;
   cacheslot.chi_ff_nnionpart = -1.;
 
   const int nelements = get_nelements();
@@ -1190,14 +1193,14 @@ void cellcache_change_cell(const int modelgridindex) {
           .cooling_contrib[kpkt::get_coolinglistoffset(element, ion) + kpkt::get_ncoolingterms_ion(element, ion) - 1] =
           COOLING_UNDEFINED;
 
-      if (modelgridindex >= 0) {
+      if (nonemptymgi >= 0) {
         const int nlevels = get_nlevels(element, ion);
         auto &chion = cacheslot.chelements[element].chions[ion];
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
         for (int level = 0; level < nlevels; level++) {
-          chion.chlevels[level].population = calculate_levelpop(modelgridindex, element, ion, level);
+          chion.chlevels[level].population = calculate_levelpop(nonemptymgi, element, ion, level);
         }
       }
     }
@@ -1221,17 +1224,17 @@ void cellcache_change_cell(const int modelgridindex) {
     }
   }
 
-  if (modelgridindex >= 0) {
+  if (nonemptymgi >= 0) {
     std::ranges::fill(cacheslot.ch_allcont_departureratios, -1.);
 
-    const auto nnetot = grid::get_nnetot(modelgridindex);
+    const auto nnetot = grid::get_nnetot(nonemptymgi);
     for (int i = 0; i < globals::nbfcontinua; i++) {
       const int element = globals::allcont[i].element;
       const int ion = globals::allcont[i].ion;
       const int level = globals::allcont[i].level;
-      const auto nnlevel = get_levelpop(modelgridindex, element, ion, level);
+      const auto nnlevel = get_levelpop(nonemptymgi, element, ion, level);
       cacheslot.ch_allcont_nnlevel[i] = nnlevel;
-      cacheslot.ch_keep_this_cont[i] = nnlevel > 0 && keep_this_cont(element, ion, level, modelgridindex, nnetot);
+      cacheslot.ch_keep_this_cont[i] = nnlevel > 0 && keep_this_cont(element, ion, level, nonemptymgi, nnetot);
     }
   }
 }

@@ -548,12 +548,13 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::vect
   return lastabund;
 }
 
-auto get_nuc_massfrac(const int modelgridindex, const int z, const int a, const double time) -> double
+auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const double time) -> double
 // Get the mass fraction of a nuclide accounting for all decays including those of its parent and grandparent.
 // e.g., Co56 abundance may first increase with time due to Ni56 decays, then decease due to Co56 decay
 // Can be called for stable nuclides that are one daughters of the radioactive nuclide list e.g., Fe56
 // For stable nuclides, abundance returned only comes from other decays (some could be included in init model elem frac)
 {
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   assert_always(time >= 0.);
 
   const double t_afterinit = time - grid::get_t_model();
@@ -1103,7 +1104,6 @@ void free_decaypath_energy_per_mass() {
 
 // energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in [erg/s/g]
 [[nodiscard]] auto get_particle_injection_rate(const int nonemptymgi, const double t, const int decaytype) -> double {
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double dep_sum = 0.;
   const auto num_nuclides = get_num_nuclides();
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
@@ -1116,7 +1116,7 @@ void free_decaypath_energy_per_mass() {
     const double en_particles = nucdecayenergyparticle(nucindex, decaytype);
     if (en_particles > 0.) {
       const double nucdecayrate =
-          get_nuc_massfrac(modelgridindex, z, a, t) / meanlife * get_nuc_decaybranchprob(nucindex, decaytype);
+          get_nuc_massfrac(nonemptymgi, z, a, t) / meanlife * get_nuc_decaybranchprob(nucindex, decaytype);
       assert_testmodeonly(nucdecayrate >= 0);
       dep_sum += nucdecayrate * en_particles / nucmass(z, a);
     }
@@ -1129,7 +1129,6 @@ void free_decaypath_energy_per_mass() {
 
 // energy release rate in form of gamma-rays in [erg/s/g]
 [[nodiscard]] auto get_gamma_emission_rate(const int nonemptymgi, const double t) -> double {
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double eps_gamma_sum = 0.;
   const auto num_nuclides = get_num_nuclides();
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
@@ -1141,7 +1140,7 @@ void free_decaypath_energy_per_mass() {
     }
     const double en_gamma = nucdecayenergygamma(nucindex);
     if (en_gamma > 0.) {
-      const double nucdecayrate = get_nuc_massfrac(modelgridindex, z, a, t) / meanlife;
+      const double nucdecayrate = get_nuc_massfrac(nonemptymgi, z, a, t) / meanlife;
       assert_testmodeonly(nucdecayrate >= 0);
       eps_gamma_sum += nucdecayrate * en_gamma / nucmass(z, a);
     }
@@ -1155,7 +1154,6 @@ void free_decaypath_energy_per_mass() {
 // energy release rate [erg/s/g] including everything (even neutrinos that are ignored elsewhere)
 [[nodiscard]] auto get_qdot_modelcell(const int nonemptymgi, const double t, const int decaytype) -> double {
   double qdot = 0.;
-  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const auto num_nuclides = get_num_nuclides();
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const auto [z, a] = get_nuc_z_a(nucindex);
@@ -1167,7 +1165,7 @@ void free_decaypath_energy_per_mass() {
     if (q_decay <= 0.) {
       continue;
     }
-    const double nucdecayrate = get_nuc_massfrac(modelgridindex, z, a, t) / meanlife;
+    const double nucdecayrate = get_nuc_massfrac(nonemptymgi, z, a, t) / meanlife;
     assert_always(nucdecayrate >= 0);
     qdot += nucdecayrate * q_decay / nucmass(z, a);
   }
@@ -1207,7 +1205,7 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
         // this nucleus is an isotope of the element
         if (!a_isotopes.contains(a)) {
           a_isotopes.insert(a);
-          const double nuc_massfrac = get_nuc_massfrac(modelgridindex, atomic_number, a, t_current);
+          const double nuc_massfrac = get_nuc_massfrac(nonemptymgi, atomic_number, a, t_current);
           isomassfracsum += nuc_massfrac;
           isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(atomic_number, a);
         }
@@ -1223,7 +1221,7 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
               // nuclide decays into correct atomic number but outside of the radionuclide list
               // note: there could also be stable isotopes of this element included in stable_initabund(z), but
               // here we only count the contribution from decays
-              const double nuc_massfrac = get_nuc_massfrac(modelgridindex, atomic_number, daughter_a, t_current);
+              const double nuc_massfrac = get_nuc_massfrac(nonemptymgi, atomic_number, daughter_a, t_current);
               isomassfracsum += nuc_massfrac;
               isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(atomic_number, daughter_a);
             }
@@ -1234,7 +1232,7 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
 
     if (atomic_number == 2 && !nuc_exists(2, 4) && (!a_isotopes.contains(4))) {
       // 4He will not be identified as a daughter nucleus of above decays, so add it in
-      const double nuc_massfrac = get_nuc_massfrac(modelgridindex, 2, 4, t_current);
+      const double nuc_massfrac = get_nuc_massfrac(nonemptymgi, 2, 4, t_current);
       isomassfracsum += nuc_massfrac;
       isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(2, 4);
     }
@@ -1256,10 +1254,10 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
   double nnetot = 0.;
   const auto nelements = get_nelements();
   for (int element = 0; element < nelements; element++) {
-    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+    const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
     nnetot += nnelement * get_atomicnumber(element);
   }
-  grid::set_nnetot(modelgridindex, nnetot);
+  grid::set_nnetot(nonemptymgi, nnetot);
 
   // double initnucfracsum = 0.;
   // double nucfracsum = 0.;
@@ -1267,11 +1265,11 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
   // {
   //   const auto [z, a] = get_nuc_z_a(nucindex);
   //   initnucfracsum += grid::get_modelinitnucmassfrac(modelgridindex, z, a);
-  //   nucfracsum += get_nuc_massfrac(modelgridindex, z, a, t_current);
+  //   nucfracsum += get_nuc_massfrac(nonemptymgi, z, a, t_current);
   //
   //   // printout_nuclidename(z, a);
   //   // printout(" init: %g now: %g\n", grid::get_modelinitnucmassfrac(modelgridindex, z, a),
-  //   get_nuc_massfrac(modelgridindex, z, a, t_current));
+  //   get_nuc_massfrac(nonemptymgi, z, a, t_current));
   //
   //   for (int dectypeindex = 0; dectypeindex < decaytypes::DECAYTYPE_COUNT; dectypeindex++)
   //   {
@@ -1279,10 +1277,10 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
   //         get_nuc_decaybranchprob(z, a, dectypeindex) > 0.)
   //     {
   //       // printout_nuclidename(decay_daughter_z(z, a), decay_daughter_a(z, a));
-  //       // printout("(stable) init: 0 now: %g\n", get_nuc_massfrac(modelgridindex, decay_daughter_z(z, a),
+  //       // printout("(stable) init: 0 now: %g\n", get_nuc_massfrac(nonemptymgi, decay_daughter_z(z, a),
   //       decay_daughter_a(z, a), t_current));
   //       // this decay steps off the nuclide list, so add its daughter abundance to the total
-  //       nucfracsum += get_nuc_massfrac(modelgridindex, decay_daughter_z(z, a, dectypeindex), decay_daughter_a(z, a,
+  //       nucfracsum += get_nuc_massfrac(nonemptymgi, decay_daughter_z(z, a, dectypeindex), decay_daughter_a(z, a,
   //       dectypeindex), t_current);
   //     }
   //   }
@@ -1294,9 +1292,8 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
   // assert_always(fabs(nucfracsum - initnucfracsum) < 0.001); // decays shouldn't change nuclear mass fraction sum
 }
 
-void fprint_nuc_abundances(FILE *estimators_file, const int nonemptmgi, const double t_current, const int element) {
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptmgi);
-  const double rho = grid::get_rho(modelgridindex);
+void fprint_nuc_abundances(FILE *estimators_file, const int nonemptymgi, const double t_current, const int element) {
+  const double rho = grid::get_rho(nonemptymgi);
 
   const int atomic_number = get_atomicnumber(element);
   std::set<int> a_isotopes;  // ensure we don't repeat isotopes
@@ -1307,7 +1304,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int nonemptmgi, const do
       if (!a_isotopes.contains(nuc_a)) {
         a_isotopes.insert(nuc_a);
         // radioactive isotope of the element
-        const double massfrac = get_nuc_massfrac(modelgridindex, atomic_number, nuc_a, t_current);
+        const double massfrac = get_nuc_massfrac(nonemptymgi, atomic_number, nuc_a, t_current);
         if (massfrac > 0) {
           const double numberdens = massfrac / nucmass(atomic_number, nuc_a) * rho;
 
@@ -1325,7 +1322,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int nonemptmgi, const do
             a_isotopes.insert(nuc_a);
             // nuclide decays into correct atomic number but outside of the radionuclide list. Daughter is assumed
             // stable
-            const double massfrac = get_nuc_massfrac(modelgridindex, atomic_number, nuc_a, t_current);
+            const double massfrac = get_nuc_massfrac(nonemptymgi, atomic_number, nuc_a, t_current);
             const double numberdens = massfrac / nucmass(nuc_z, nuc_a) * rho;
             fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number).c_str(), nuc_a, numberdens);
           }
@@ -1335,10 +1332,10 @@ void fprint_nuc_abundances(FILE *estimators_file, const int nonemptmgi, const do
   }
 
   // factor to convert convert mass fraction to number density
-  const double otherstablemassfrac = grid::get_stable_initabund(nonemptmgi, element);
+  const double otherstablemassfrac = grid::get_stable_initabund(nonemptymgi, element);
   if (otherstablemassfrac > 0) {
     const double meannucmass = globals::elements[element].initstablemeannucmass;
-    const double otherstable_numberdens = otherstablemassfrac / meannucmass * grid::get_rho(modelgridindex);
+    const double otherstable_numberdens = otherstablemassfrac / meannucmass * grid::get_rho(nonemptymgi);
     fprintf(estimators_file, "  %s_otherstable: %9.3e", get_elname(atomic_number).c_str(), otherstable_numberdens);
   }
   fprintf(estimators_file, "\n");

@@ -267,6 +267,11 @@ auto get_chi_compton_rf(const Packet &pkt) -> double {
   // calculate the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
   // Start by working out the compton x-section in the co-moving frame.
 
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  if (nonemptymgi < 0) {
+    return 0.;  // empty cell
+  }
+
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
 
   // Use this to decide whether the Thompson limit is acceptable.
@@ -274,8 +279,7 @@ auto get_chi_compton_rf(const Packet &pkt) -> double {
   const double sigma_cmf = (xx < THOMSON_LIMIT) ? SIGMA_T : sigma_compton_partial(xx, 1 + (2 * xx));
 
   // Now need to multiply by the electron number density.
-  const auto mgi = grid::get_cell_modelgridindex(pkt.where);
-  const double chi_cmf = sigma_cmf * grid::get_nnetot(mgi);
+  const double chi_cmf = sigma_cmf * grid::get_nnetot(nonemptymgi);
 
   // convert between frames
   const double chi_rf = chi_cmf * calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
@@ -459,15 +463,15 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
   const int mgi = grid::get_cell_modelgridindex(pkt.where);
 
   if (mgi >= grid::get_npts_model()) {
-    // empty cell
-    return 0.;
+    return 0.;  // empty cell
   }
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
-  const double rho = grid::get_rho(mgi);
+  const double rho = grid::get_rho(nonemptymgi);
 
   if (globals::gamma_kappagrey < 0) {
     chi_cmf = 0.;
-    if (!USE_XCOM_GAMMAPHOTOION) {
+    if constexpr (!USE_XCOM_GAMMAPHOTOION) {
       // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
 
       // 2.41326e19 Hz = 100 keV / H
@@ -500,7 +504,7 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
         if (numb_energies == 0) {
           continue;
         }
-        const double n_i = grid::get_elem_numberdens(mgi, i);  // number density in the current cell
+        const double n_i = grid::get_elem_numberdens(nonemptymgi, i);  // number density in the current cell
         if (n_i == 0) {
           continue;
         }
@@ -551,7 +555,12 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
 // calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
 auto get_chi_pair_prod_rf(const Packet &pkt) -> double {
   const int mgi = grid::get_cell_modelgridindex(pkt.where);
-  const double rho = grid::get_rho(mgi);
+  if (mgi >= grid::get_npts_model()) {
+    return 0.;  // empty cell
+  }
+
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+  const double rho = grid::get_rho(nonemptymgi);
 
   if (globals::gamma_kappagrey >= 0.) {
     return 0.;
@@ -625,13 +634,8 @@ constexpr auto meanf_sigma(const double x) -> double {
   return tot;
 }
 
-// Subroutine to record the heating rate in a cell due to gamma rays.
-// By heating rate I mean, for now, really the rate at which the code is making
-// k-packets in that cell which will then convert into r-packets. This is (going
-// to be) used for the new light_curve syn-style calculation.
-// The intention is that dep_estimator_gamma will contain the emissivity of r-packets
-// in the co-moving frame (which is going to be isotropic).
-void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const int nonemptymgi) {
+// update the energy deposition estimator for gamma ray path increment
+void update_gamma_dep(const Packet &pkt, const double dist, const int nonemptymgi) {
   if (!(dist > 0)) {
     return;
   }
@@ -642,7 +646,7 @@ void update_gamma_dep(const Packet &pkt, const double dist, const int mgi, const
   const double doppler_sq = doppler_squared_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
-  double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + get_chi_photo_electric_rf(pkt) +
+  double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + get_chi_photo_electric_rf(pkt) +
                          (get_chi_pair_prod_rf(pkt) * (1. - (2.46636e+20 / pkt.nu_cmf))));
   heating_cont = heating_cont * pkt.e_rf * dist * doppler_sq;
 
@@ -782,10 +786,9 @@ void transport_gamma(Packet &pkt, const double t2) {
     move_pkt_withtime(pkt, sdist / 2.);
 
     // Move it into the new cell.
-    const int mgi = grid::get_cell_modelgridindex(pkt.where);
-    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
+    const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
     if (chi_tot > 0 && nonemptymgi >= 0) {
-      update_gamma_dep(pkt, sdist, mgi, nonemptymgi);
+      update_gamma_dep(pkt, sdist, nonemptymgi);
     }
 
     move_pkt_withtime(pkt, sdist / 2.);
@@ -796,20 +799,18 @@ void transport_gamma(Packet &pkt, const double t2) {
   } else if ((tdist < sdist) && (tdist < edist)) {
     // Doesn't reach boundary.
     move_pkt_withtime(pkt, tdist / 2.);
-    const int mgi = grid::get_cell_modelgridindex(pkt.where);
-    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
+    const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
     if (chi_tot > 0 && nonemptymgi >= 0) {
-      update_gamma_dep(pkt, tdist, mgi, nonemptymgi);
+      update_gamma_dep(pkt, tdist, nonemptymgi);
     }
     move_pkt_withtime(pkt, tdist / 2.);
     pkt.prop_time = t2;  // prevent roundoff error
   } else if ((edist < sdist) && (edist < tdist)) {
     move_pkt_withtime(pkt, edist / 2.);
-    const int mgi = grid::get_cell_modelgridindex(pkt.where);
-    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
+    const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
     if (chi_tot > 0 && nonemptymgi >= 0) {
-      update_gamma_dep(pkt, edist, mgi, nonemptymgi);
+      update_gamma_dep(pkt, edist, nonemptymgi);
     }
     move_pkt_withtime(pkt, edist / 2.);
 
@@ -892,7 +893,8 @@ void wollaeger_thermalisation(Packet &pkt) {
     const double s_cont = sdist * t_current * t_current * t_current / std::pow(pkt_copy.prop_time, 3);
     const int mgi = grid::get_cell_modelgridindex(pkt_copy.where);
     if (mgi != grid::get_npts_model()) {
-      tau += grid::get_rho(mgi) * s_cont * mean_gamma_opac;  // contribution to the integral
+      const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+      tau += grid::get_rho(nonemptymgi) * s_cont * mean_gamma_opac;  // contribution to the integral
     }
     // move packet copy now
     move_pkt_withtime(pkt_copy, sdist);

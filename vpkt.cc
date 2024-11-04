@@ -261,7 +261,8 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     if (mgi == grid::get_npts_model()) {
       vpkt.next_trans = -1;
     } else {
-      calculate_chi_rpkt_cont(vpkt.nu_cmf, chi_vpkt_cont, mgi);
+      const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+      calculate_chi_rpkt_cont(vpkt.nu_cmf, chi_vpkt_cont, nonemptymgi);
 
       const double chi_cont = chi_vpkt_cont.total;
 
@@ -327,8 +328,8 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-        const auto n_u = calculate_levelpop(mgi, element, ion, upper);
-        const auto n_l = calculate_levelpop(mgi, element, ion, lower);
+        const auto n_u = calculate_levelpop(nonemptymgi, element, ion, upper);
+        const auto n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
         const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line);
 
         // Check on the element to exclude (or -1 for no line opacity)
@@ -357,10 +358,13 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     end_packet = (vpkt.type == TYPE_ESCAPE);
 
     mgi = grid::get_cell_modelgridindex(vpkt.where);
+    if (mgi < grid::get_npts_model()) {
+      const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
-    // kill vpkt with pass through a thick cell
-    if (grid::modelgrid[mgi].thick != 0) {
-      return false;
+      // kill vpkt with pass through a thick cell
+      if (grid::modelgrid[nonemptymgi].thick != 0) {
+        return false;
+      }
     }
   }
 
@@ -900,9 +904,9 @@ auto vpkt_call_estimators(const Packet &pkt, const enum packet_type type_before_
   }
 
   // Cut on vpkts
-  const int mgi = grid::get_cell_modelgridindex(pkt.where);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
-  if (grid::modelgrid[mgi].thick != 0) {
+  if (grid::modelgrid[nonemptymgi].thick != 0) {
     return;
   }
 

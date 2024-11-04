@@ -25,16 +25,16 @@
 
 namespace {
 
-struct Te_solution_paras {
+struct TeSolutionParams {
   double t_current;
-  int modelgridindex;
+  int nonemptymgi;
   HeatingCoolingRates *heatingcoolingrates;
   const std::vector<double> *bfheatingcoeffs;
 };
 
-struct gsl_integral_paras_bfheating {
+struct BFHeatingIntegralParams {
   double nu_edge;
-  int modelgridindex;
+  int nonemptymgi;
   float T_R;
   const float *photoion_xs;
 };
@@ -42,20 +42,20 @@ struct gsl_integral_paras_bfheating {
 auto integrand_bfheatingcoeff_custom_radfield(const double nu, void *const voidparas) -> double
 // Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
-  const auto *const params = static_cast<const gsl_integral_paras_bfheating *>(voidparas);
+  const auto *const params = static_cast<const BFHeatingIntegralParams *>(voidparas);
 
-  const int modelgridindex = params->modelgridindex;
+  const int nonemptymgi = params->nonemptymgi;
   const double nu_edge = params->nu_edge;
   const float T_R = params->T_R;
   // const double Te_TR_factor = params->Te_TR_factor; // = sqrt(T_e/T_R) * sahafac(Te) / sahafac(TR)
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
-  // const auto T_e = grid::get_Te(modelgridindex);
-  // return sigma_bf * (1 - nu_edge/nu) * radfield::radfield(nu,modelgridindex) * (1 - Te_TR_factor * exp(-HOVERKB * nu
+  // const auto T_e = grid::get_Te(nonemptymgi);
+  // return sigma_bf * (1 - nu_edge/nu) * radfield::radfield(nu,nonemptymgi) * (1 - Te_TR_factor * exp(-HOVERKB * nu
   // / T_e));
 
-  return sigma_bf * (1 - nu_edge / nu) * radfield::radfield(nu, modelgridindex) * (1 - exp(-HOVERKB * nu / T_R));
+  return sigma_bf * (1 - nu_edge / nu) * radfield::radfield(nu, nonemptymgi) * (1 - exp(-HOVERKB * nu / T_R));
 }
 
 auto calculate_bfheatingcoeff(const int element, const int ion, const int level, const int phixstargetindex,
@@ -72,15 +72,15 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  // const auto T_e = grid::get_Te(modelgridindex);
-  // const double T_R = grid::get_TR(modelgridindex);
+  // const auto T_e = grid::get_Te(nonemptymgi);
+  // const double T_R = grid::get_TR(nonemptymgi);
   // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
-
-  const gsl_integral_paras_bfheating intparas = {.nu_edge = nu_threshold,
-                                                 .modelgridindex = modelgridindex,
-                                                 .T_R = grid::get_TR(modelgridindex),
-                                                 .photoion_xs = get_phixs_table(element, ion, level)};
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const BFHeatingIntegralParams intparas = {.nu_edge = nu_threshold,
+                                            .nonemptymgi = nonemptymgi,
+                                            .T_R = grid::get_TR(nonemptymgi),
+                                            .photoion_xs = get_phixs_table(element, ion, level)};
 
   // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
 
@@ -105,13 +105,13 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   return bfheating;
 }
 
-auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, const int ion, const double T_e,
+auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const double T_e,
                                 const double nne) -> double {
   double C_deexc = 0.;
   const int nlevels = get_nlevels(element, ion);
 
   for (int level = 0; level < nlevels; level++) {
-    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
     const double epsilon_level = epsilon(element, ion, level);
 
     // Collisional heating: deexcitation to same ionization stage
@@ -132,7 +132,7 @@ auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, con
 
 // Calculate the heating rates for a given cell. Results are returned via the elements of the heatingrates data
 // structure.
-void calculate_heating_rates(const int modelgridindex, const double T_e, const double nne,
+void calculate_heating_rates(const int nonemptymgi, const double T_e, const double nne,
                              HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
   double C_deexc = 0.;
 
@@ -144,7 +144,7 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
     const int nions = get_nions(element);
     if constexpr (DIRECT_COL_HEAT) {
       for (int ion = 0; ion < nions; ion++) {
-        C_deexc += get_heating_ion_coll_deexc(modelgridindex, element, ion, T_e, nne);
+        C_deexc += get_heating_ion_coll_deexc(nonemptymgi, element, ion, T_e, nne);
       }
     }
 
@@ -162,7 +162,7 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
     for (int ion = 0; ion < nions - 1; ion++) {
       const int nbflevels = get_nlevels_ionising(element, ion);
       for (int level = 0; level < nbflevels; level++) {
-        const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+        const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
         bfheating += nnlevel * bfheatingcoeffs[get_uniquelevelindex(element, ion, level)];
       }
     }
@@ -170,7 +170,6 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
 
   // Free-free heating (from estimators)
 
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   ffheating = globals::ffheatingestimator[nonemptymgi];
 
   if constexpr (DIRECT_COL_HEAT) {
@@ -186,39 +185,38 @@ void calculate_heating_rates(const int modelgridindex, const double T_e, const d
 
 // Thermal balance equation on which we have to iterate to get T_e
 auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
-  const Te_solution_paras *const params = static_cast<Te_solution_paras *>(paras);
+  const TeSolutionParams *const params = static_cast<TeSolutionParams *>(paras);
 
-  const int modelgridindex = params->modelgridindex;
+  const auto nonemptymgi = params->nonemptymgi;
   const double t_current = params->t_current;
   auto *const heatingcoolingrates = params->heatingcoolingrates;
 
   // Set new T_e guess for the current cell and update populations
-  grid::set_Te(modelgridindex, T_e);
+  grid::set_Te(nonemptymgi, T_e);
 
   if constexpr (!USE_LUT_PHOTOION && !LTEPOP_EXCITATION_USE_TJ) {
-    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
     for (int element = 0; element < get_nelements(); element++) {
       if (!elem_has_nlte_levels(element)) {
         // recalculate the Gammas using the current population estimates
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions - 1; ion++) {
           globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] =
-              calculate_iongamma_per_gspop(modelgridindex, element, ion);
+              calculate_iongamma_per_gspop(nonemptymgi, element, ion);
         }
       }
     }
   }
 
-  calculate_ion_balance_nne(modelgridindex);
-  const auto nne = grid::get_nne(modelgridindex);
+  calculate_ion_balance_nne(nonemptymgi);
+  const auto nne = grid::get_nne(nonemptymgi);
 
   // Then calculate heating and cooling rates
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   kpkt::calculate_cooling_rates(nonemptymgi, heatingcoolingrates);
-  calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
+  calculate_heating_rates(nonemptymgi, T_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
-  const auto ntlepton_dep = nonthermal::get_deposition_rate_density(modelgridindex);
+  const auto ntlepton_dep = nonthermal::get_deposition_rate_density(nonemptymgi);
   const auto ntalpha_frac_heating = 1.;
   const auto ntalpha_dep = heatingcoolingrates->dep_alpha;
   heatingcoolingrates->heating_dep = ntlepton_dep * ntlepton_frac_heating + ntalpha_dep * ntalpha_frac_heating;
@@ -226,7 +224,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
       (ntalpha_dep > 0) ? heatingcoolingrates->heating_dep / (ntlepton_dep + ntalpha_dep) : ntlepton_frac_heating;
 
   // Adiabatic cooling term
-  const double nntot = get_nnion_tot(modelgridindex) + nne;
+  const double nntot = get_nnion_tot(nonemptymgi) + nne;
   const double p = nntot * KB * T_e;  // pressure in [erg/cm^3]
   const double volumetmin = grid::get_modelcell_assocvolume_tmin(modelgridindex);
   const double dV = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);  // really dV/dt
@@ -274,8 +272,8 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
-    if (grid::get_elem_abundance(modelgridindex, element) <= minelfrac && !USE_LUT_BFHEATING) {
-      printout("skipping Z=%d X=%g, ", get_atomicnumber(element), grid::get_elem_abundance(modelgridindex, element));
+    if (grid::get_elem_abundance(nonemptymgi, element) <= minelfrac && !USE_LUT_BFHEATING) {
+      printout("skipping Z=%d X=%g, ", get_atomicnumber(element), grid::get_elem_abundance(nonemptymgi, element));
     }
 
     const int nions = get_nions(element);
@@ -283,7 +281,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         double bfheatingcoeff = 0.;
-        if (grid::get_elem_abundance(modelgridindex, element) > minelfrac || USE_LUT_BFHEATING) {
+        if (grid::get_elem_abundance(nonemptymgi, element) > minelfrac || USE_LUT_BFHEATING) {
           const auto nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             if constexpr (!USE_LUT_BFHEATING) {
@@ -292,8 +290,8 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
               // The correction factor for stimulated emission in gammacorr is set to its
               // LTE value. Because the T_e dependence of gammacorr is weak, this correction
               // correction may be evaluated at T_R!
-              const double T_R = grid::get_TR(modelgridindex);
-              const double W = grid::get_W(modelgridindex);
+              const double T_R = grid::get_TR(nonemptymgi);
+              const double W = grid::get_W(nonemptymgi);
               bfheatingcoeff += get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
             }
           }
@@ -317,13 +315,13 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
 void call_T_e_finder(const int nonemptymgi, const double t_current, const double T_min, const double T_max,
                      HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  const double T_e_old = grid::get_Te(modelgridindex);
+  const double T_e_old = grid::get_Te(nonemptymgi);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, globals::timestep);
 
-  Te_solution_paras paras = {.t_current = t_current,
-                             .modelgridindex = modelgridindex,
-                             .heatingcoolingrates = heatingcoolingrates,
-                             .bfheatingcoeffs = &bfheatingcoeffs};
+  TeSolutionParams paras = {.t_current = t_current,
+                            .nonemptymgi = nonemptymgi,
+                            .heatingcoolingrates = heatingcoolingrates,
+                            .bfheatingcoeffs = &bfheatingcoeffs};
 
   gsl_function find_T_e_f = {.function = &T_e_eqn_heating_minus_cooling, .params = &paras};
 
@@ -334,7 +332,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
     printout(
         "[abort request] call_T_e_finder: non-finite results in modelcell %d (T_R=%g, W=%g). T_e forced to be "
         "MINTEMP\n",
-        modelgridindex, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
+        modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
     thermalmax = thermalmin = -1;
   }
 
@@ -376,14 +374,14 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
     printout(
         "[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in modelcell %d "
         "(T_R=%g,W=%g). T_e forced to be MINTEMP\n",
-        MINTEMP, modelgridindex, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
+        MINTEMP, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
   } else {
     // Thermal balance equation always negative ===> T_e = T_max
     T_e = MAXTEMP;
     printout(
         "[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in modelcell %d "
         "(T_R=%g,W=%g). T_e forced to be MAXTEMP\n",
-        MINTEMP, MAXTEMP, modelgridindex, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
+        MINTEMP, MAXTEMP, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
   }
 
   if (T_e > 2 * T_e_old) {
@@ -396,7 +394,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
     T_e = std::max(T_e, MINTEMP);
   }
 
-  grid::set_Te(modelgridindex, T_e);
+  grid::set_Te(nonemptymgi, T_e);
 
   // this call with make sure heating/cooling rates and populations are updated for the final T_e
   // in case T_e got modified after the T_e solver finished

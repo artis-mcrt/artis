@@ -196,7 +196,7 @@ struct CellCache {
   std::vector<double> ch_allcont_nnlevel;
   std::vector<bool> ch_keep_this_cont;
   double chi_ff_nnionpart{-1};
-  int cellnumber{-1};  // Identifies the cell the data is valid for.
+  int nonemptymgi{-1};  // Identifies the cell the data is valid for.
 };
 
 namespace globals {

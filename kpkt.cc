@@ -44,11 +44,11 @@ float kpktdiffusion_timescale{0.};
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
 template <bool update_cooling_contrib_list>
-auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion, const int indexionstart,
+auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const int ion, const int indexionstart,
                                  const int cellcacheslotid, double *const C_ff, double *const C_fb, double *const C_exc,
                                  double *const C_ionization) -> double {
-  const auto nne = grid::get_nne(modelgridindex);
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto nne = grid::get_nne(nonemptymgi);
+  const auto T_e = grid::get_Te(nonemptymgi);
 
   if constexpr (update_cooling_contrib_list) {
     assert_always(indexionstart >= 0);
@@ -58,7 +58,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
   int i = indexionstart;  // NOLINT(misc-const-correctness)
 
   const int nionisinglevels = get_nlevels_ionising(element, ion);
-  const double nncurrention = get_nnion(modelgridindex, element, ion);
+  const double nncurrention = get_nnion(nonemptymgi, element, ion);
 
   // ff creation of rpkt
   const int ioncharge = get_ionstage(element, ion) - 1;
@@ -82,7 +82,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
     // printout("[debug] do_kpkt: element %d, ion %d, level %d\n", element, ion, level);
-    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
     const double epsilon_current = epsilon(element, ion, level);
     const double statweight = stat_weight(element, ion, level);
 
@@ -111,12 +111,12 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
   }
 
   if (ion < (get_nions(element) - 1)) {
-    const double nnupperion = get_nnion(modelgridindex, element, ion + 1);
+    const double nnupperion = get_nnion(nonemptymgi, element, ion + 1);
 
     // ionization to higher ionization stage
     for (int level = 0; level < nionisinglevels; level++) {
       const double epsilon_current = epsilon(element, ion, level);
-      const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+      const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
       const int nphixstargets = get_nphixstargets(element, ion, level);
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
         const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
@@ -147,7 +147,7 @@ auto calculate_cooling_rates_ion(const int modelgridindex, const int element, co
       const int nphixstargets = get_nphixstargets(element, ion, level);
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
         const double pop =
-            (BFCOOLING_USELEVELPOPNOTIONPOP ? get_levelpop(modelgridindex, element, ion + 1,
+            (BFCOOLING_USELEVELPOPNOTIONPOP ? get_levelpop(nonemptymgi, element, ion + 1,
                                                            get_phixsupperlevel(element, ion, level, phixstargetindex))
                                             : nnupperion);
         const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * pop * nne;
@@ -257,7 +257,6 @@ auto sample_planck_montecarlo(const double T) -> double {
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates *heatingcoolingrates) {
-  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double C_ff_all = 0.;          // free-free creation of rpkts
   double C_fb_all = 0.;          // free-bound creation of rpkt
   double C_exc_all = 0.;         // collisional excitation of macroatoms
@@ -265,7 +264,7 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates *heating
   for (int allionindex = 0; allionindex < get_includedions(); allionindex++) {
     const auto [element, ion] = get_ionfromuniqueionindex(allionindex);
     grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + allionindex] =
-        calculate_cooling_rates_ion<false>(modelgridindex, element, ion, -1, cellcacheslotid, &C_ff_all, &C_fb_all,
+        calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, -1, cellcacheslotid, &C_ff_all, &C_fb_all,
                                            &C_exc_all, &C_ionization_all);
   }
 
@@ -276,7 +275,7 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates *heating
     C_total +=
         grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + allionindex];
   }
-  grid::modelgrid[modelgridindex].totalcooling = C_total;
+  grid::modelgrid[nonemptymgi].totalcooling = C_total;
 
   // only used in the T_e solver and write_to_estimators file
   if (heatingcoolingrates != nullptr) {
@@ -373,15 +372,14 @@ void setup_coolinglist() {
 __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 {
-  const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
-  if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0. && grid::modelgrid[modelgridindex].thick != 1) {
-    const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0. && grid::modelgrid[nonemptymgi].thick != 1) {
     pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
   } else {
-    pkt.nu_cmf = sample_planck_montecarlo(grid::get_Te(modelgridindex));
+    pkt.nu_cmf = sample_planck_montecarlo(grid::get_Te(nonemptymgi));
     // TODO: is this alternative method faster or more accurate or neither?
-    // pkt.nu_cmf = sample_planck_analytic(grid::get_Te(modelgridindex));
+    // pkt.nu_cmf = sample_planck_analytic(grid::get_Te(nonemptymgi));
   }
 
   assert_always(std::isfinite(pkt.nu_cmf));
@@ -402,8 +400,7 @@ __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
 // handle a k-packet (kinetic energy of the free electrons)
 __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   const double t1 = pkt.prop_time;
-  const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
   // don't calculate cooling rates after each cell crossings any longer
   // but only if we really get a kpkt and they hadn't been calculated already
@@ -425,8 +422,8 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   pkt.pos = vec_scale(pkt.pos, t_current / t1);
   pkt.prop_time = t_current;
 
-  assert_always(grid::modelgrid[modelgridindex].totalcooling > 0.);
-  const double rndcool_ion = rng_uniform() * grid::modelgrid[modelgridindex].totalcooling;
+  assert_always(grid::modelgrid[nonemptymgi].totalcooling > 0.);
+  const double rndcool_ion = rng_uniform() * grid::modelgrid[nonemptymgi].totalcooling;
 
   // Randomly select the occurring cooling process
   double coolingsum = 0.;
@@ -450,12 +447,12 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   }
 
   if (element >= get_nelements() || element < 0 || ion >= get_nions(element) || ion < 0) {
+    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     printout("do_kpkt: problem selecting a cooling process ... abort\n");
     printout("do_kpkt: modelgridindex %d element %d ion %d\n", modelgridindex, element, ion);
-    printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool_ion %g\n", grid::modelgrid[modelgridindex].totalcooling,
+    printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool_ion %g\n", grid::modelgrid[nonemptymgi].totalcooling,
              coolingsum, rndcool_ion);
-    printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n", modelgridindex, pkt.where,
-             grid::get_nne(modelgridindex));
+    printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n", modelgridindex, pkt.where, grid::get_nne(nonemptymgi));
     for (element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (ion = 0; ion < nions; ion++) {
@@ -477,7 +474,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
     // oldcoolingsum %g\n",
     //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
-    C_ion_procsum = calculate_cooling_rates_ion<true>(modelgridindex, element, ion, ilow, cellcacheslotid, nullptr,
+    C_ion_procsum = calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ilow, cellcacheslotid, nullptr,
                                                       nullptr, nullptr, nullptr);
     assert_testmodeonly(
         (std::fabs(C_ion_procsum -
@@ -506,7 +503,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
 
   // printout("do_kpkt: selected process %d, coolingsum %g\n", i, coolingsum);
   const auto rndcoolingtype = coolinglist[i].type;
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
 
   if (rndcoolingtype == CoolingType::FREEFREE) {
     // The k-packet converts directly into a r-packet by free-free-emission.
@@ -559,7 +556,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     emit_rpkt(pkt);
 
     if constexpr (TRACK_ION_STATS) {
-      stats::increment_ion_stats(modelgridindex, element, lowerion + 1, stats::ION_RADRECOMB_KPKT,
+      stats::increment_ion_stats(nonemptymgi, element, lowerion + 1, stats::ION_RADRECOMB_KPKT,
                                  pkt.e_cmf / H / pkt.nu_cmf);
     }
 
@@ -578,7 +575,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   } else if (rndcoolingtype == CoolingType::COLLEXC) {
     // the k-packet activates a macro-atom due to collisional excitation
     // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
-    const float nne = grid::get_nne(modelgridindex);
+    const float nne = grid::get_nne(nonemptymgi);
 
     // if the previous entry belongs to the same ion, then pick up the cumulative sum from
     // the previous entry, otherwise start from zero
@@ -587,7 +584,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     double contrib = contrib_low;
     const int level = coolinglist[i].level;
     const double epsilon_current = epsilon(element, ion, level);
-    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
     const double statweight = stat_weight(element, ion, level);
     int upper = -1;
     // excitation to same ionization stage
@@ -610,7 +607,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     assert_always(upper >= 0);
 
     if constexpr (TRACK_ION_STATS) {
-      stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC, pkt.e_cmf);
+      stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC, pkt.e_cmf);
     }
 
     pkt.type = TYPE_MA;
@@ -630,7 +627,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     const int upper = coolinglist[i].upperlevel;
 
     if constexpr (TRACK_ION_STATS) {
-      stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_MACROATOM_ENERGYIN_COLLION, pkt.e_cmf);
+      stats::increment_ion_stats(nonemptymgi, element, upperion, stats::ION_MACROATOM_ENERGYIN_COLLION, pkt.e_cmf);
     }
 
     pkt.type = TYPE_MA;

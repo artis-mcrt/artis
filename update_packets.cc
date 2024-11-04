@@ -59,7 +59,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::WOLLAEGER) {
     // particle thermalisation from Wollaeger+2018, similar to Barnes but using a slightly different expression
     const double A = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 1.2 * 1.e-11 : 1.3 * 1.e-11;
-    const double aux_term = 2 * A / (ts * grid::get_rho(mgi));
+    const double aux_term = 2 * A / (ts * grid::get_rho(nonemptymgi));
     // In Bulla 2023 (arXiv:2211.14348), the following line contains (<-> eq. 7) contains a typo. The way implemented
     // here is the original from Wollaeger paper without the typo
     const double f_p = std::log1p(aux_term) / aux_term;
@@ -75,7 +75,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   } else {
     // ThermalisationScheme::DETAILED or ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS
     // local, detailed absorption following Shingles+2023
-    const double rho = grid::get_rho(grid::get_cell_modelgridindex(pkt.where));
+    const double rho = grid::get_rho(nonemptymgi);
 
     // endot is energy loss rate (positive) in [erg/s]
     // endot [erg/s] from Barnes et al. (2016). see their figure 6.
@@ -256,7 +256,9 @@ void do_packet(Packet &pkt, const double t2, const int nts)
     }
 
     case TYPE_KPKT: {
-      if (grid::modelgrid[grid::get_cell_modelgridindex(pkt.where)].thick == 1 ||
+      const int mgi = grid::get_cell_modelgridindex(pkt.where);
+      const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+      if (grid::modelgrid[nonemptymgi].thick == 1 ||
           (EXPANSIONOPACITIES_ON && RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.)) {
         kpkt::do_kpkt_blackbody(pkt);
       } else {
@@ -305,8 +307,8 @@ auto std_compare_packets_bymodelgriddensity(const Packet &p1, const Packet &p2) 
   // for both non-escaped packets, order by descending cell density
   const int mgi1 = grid::get_cell_modelgridindex(p1.where);
   const int mgi2 = grid::get_cell_modelgridindex(p2.where);
-  const auto rho1 = mgi1 < grid::get_npts_model() ? grid::get_rho(mgi1) : 0.0;
-  const auto rho2 = mgi2 < grid::get_npts_model() ? grid::get_rho(mgi2) : 0.0;
+  const auto rho1 = mgi1 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi1)) : 0.0;
+  const auto rho2 = mgi2 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi2)) : 0.0;
 
   if (rho1 > rho2) {
     return true;
@@ -384,9 +386,10 @@ void update_packets(const int nts, std::span<Packet> packets) {
     for (auto &pkt : packets) {
       if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
         const int mgi = grid::get_cell_modelgridindex(pkt.where);
+        const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
         const bool cellcache_change_cell_required =
-            (mgi != grid::get_npts_model() && globals::cellcache[cellcacheslotid].cellnumber != mgi &&
-             grid::modelgrid[mgi].thick != 1);
+            (nonemptymgi >= 0 && globals::cellcache[cellcacheslotid].nonemptymgi != nonemptymgi &&
+             grid::modelgrid[nonemptymgi].thick != 1);
 
         if (cellcache_change_cell_required) {
           if (packetgroupstart != &pkt) {
@@ -398,7 +401,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
 #endif
           {
             stats::increment(stats::COUNTER_UPDATECELL);
-            cellcache_change_cell(mgi);
+            cellcache_change_cell(nonemptymgi);
           }
           packetgroupstart = &pkt;
         }

@@ -21,14 +21,9 @@ struct ModelGridCell {
   float TJ = -1.;
   float W = -1.;
   float nne = -1.;
-  float initial_radial_pos_sum = 0.;
-  float rhoinit = -1.;
   float rho = -1.;
   // modelgrid nn_tot
-  float nnetot = -1.;           // total electron density (free + bound).
-  float initelectronfrac = -1;  // Ye: electrons (or protons) per nucleon
-  float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
-  float ffegrp = 0.;
+  float nnetot = -1.;  // total electron density (free + bound).
   float kappagrey = 0.;
   float grey_depth = 0.;  // Grey optical depth to surface of the modelgridcell
                           // This is only stored to print it outside the OpenMP loop in update_grid to the
@@ -37,8 +32,8 @@ struct ModelGridCell {
   int thick = 0;
 };
 
-consteval auto get_ngriddimensions() -> int {
-  switch (GRID_TYPE) {
+consteval auto get_ngriddimensions(const GridType gridtype) -> int {
+  switch (gridtype) {
     case GridType::SPHERICAL1D:
       return 1;
     case GridType::CYLINDRICAL2D:
@@ -66,7 +61,7 @@ inline float *ion_partfuncts_allcells{};
 inline double *ion_cooling_contribs_allcells{};
 
 [[nodiscard]] auto get_elements_uppermost_ion(int modelgridindex, int element) -> int;
-void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
+void set_elements_uppermost_ion(int nonemptymgi, int element, int newvalue);
 [[nodiscard]] auto wid_init(int cellindex, int axis) -> double;
 [[nodiscard]] auto get_modelcell_assocvolume_tmin(int modelgridindex) -> double;
 [[nodiscard]] auto get_gridcell_volume_tmin(int cellindex) -> double;
@@ -76,32 +71,33 @@ void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
 [[nodiscard]] auto get_cellradialposmid(int cellindex) -> double;
 [[nodiscard]] auto get_coordcellindexincrement(int axis) -> int;
 [[nodiscard]] auto get_rho_tmin(int modelgridindex) -> float;
-[[nodiscard]] auto get_rho(int modelgridindex) -> float;
-[[nodiscard]] auto get_nne(int modelgridindex) -> float;
-[[nodiscard]] auto get_nnetot(int modelgridindex) -> float;
+[[nodiscard]] auto get_rho(int nonemptymgi) -> float;
+[[nodiscard]] auto get_nne(int nonemptymgi) -> float;
+[[nodiscard]] auto get_nnetot(int nonemptymgi) -> float;
 [[nodiscard]] auto get_ffegrp(int modelgridindex) -> float;
+[[nodiscard]] auto get_initial_radial_pos_sum(int modelgridindex) -> float;
 void set_elem_abundance(int nonemptymgi, int element, float newabundance);
-[[nodiscard]] auto get_elem_numberdens(int modelgridindex, int element) -> double;
+[[nodiscard]] auto get_elem_numberdens(int nonemptymgi, int element) -> double;
 [[nodiscard]] auto get_initelectronfrac(int modelgridindex) -> double;
 [[nodiscard]] auto get_initenergyq(int modelgridindex) -> double;
-[[nodiscard]] auto get_kappagrey(int modelgridindex) -> float;
-[[nodiscard]] auto get_Te(int modelgridindex) -> float;
-[[nodiscard]] auto get_TR(int modelgridindex) -> float;
-[[nodiscard]] auto get_TJ(int modelgridindex) -> float;
-[[nodiscard]] auto get_W(int modelgridindex) -> float;
-void set_nne(int modelgridindex, float nne);
-void set_nnetot(int modelgridindex, float nnetot);
-void set_kappagrey(int modelgridindex, float kappagrey);
-void set_rho(int modelgridindex, float rho);
-void set_Te(int modelgridindex, float Te);
-void set_TR(int modelgridindex, float TR);
-void set_TJ(int modelgridindex, float TJ);
-void set_W(int modelgridindex, float W);
+[[nodiscard]] auto get_kappagrey(int nonemptymgi) -> float;
+[[nodiscard]] auto get_Te(int nonemptymgi) -> float;
+[[nodiscard]] auto get_TR(int nonemptymgi) -> float;
+[[nodiscard]] auto get_TJ(int nonemptymgi) -> float;
+[[nodiscard]] auto get_W(int nonemptymgi) -> float;
+void set_nne(int nonemptymgi, float nne);
+void set_nnetot(int nonemptymgi, float nnetot);
+void set_kappagrey(int nonemptymgi, float kappagrey);
+void set_rho(int nonemptymgi, float rho);
+void set_Te(int nonemptymgi, float Te);
+void set_TR(int nonemptymgi, float TR);
+void set_TJ(int nonemptymgi, float TJ);
+void set_W(int nonemptymgi, float W);
 void grid_init(int my_rank);
 [[nodiscard]] auto get_modelinitnucmassfrac(int modelgridindex, int nucindex) -> float;
 [[nodiscard]] auto get_stable_initabund(int nonemptymgi, int element) -> float;
 [[nodiscard]] auto get_element_meanweight(int nonemptymgi, int element) -> float;
-[[nodiscard]] auto get_elem_abundance(int modelgridindex, int element) -> float;
+[[nodiscard]] auto get_elem_abundance(int nonemptymgi, int element) -> float;
 void set_element_meanweight(int nonemptymgi, int element, float meanweight);
 [[nodiscard]] auto get_electronfrac(int nonemptymgi) -> double;
 [[nodiscard]] auto get_numpropcells(int modelgridindex) -> int;
@@ -113,6 +109,7 @@ void set_model_type(GridType model_type_value);
 [[nodiscard]] auto get_nonempty_npts_model() -> int;
 [[nodiscard]] auto get_t_model() -> double;
 [[nodiscard]] auto get_cell_modelgridindex(int cellindex) -> int;
+[[nodiscard]] auto get_propcell_nonemptymgi(int cellindex) -> int;
 [[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> &pos, double time) -> int;
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);
@@ -146,11 +143,11 @@ inline void change_cell(Packet &pkt, const int snext)
 
 inline auto get_ejecta_kinetic_energy() {
   double E_kin = 0.;
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    const int assoc_cells = grid::get_numpropcells(mgi);
-    double M_cell = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
-    const double radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum / assoc_cells;
+  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
+    const int assoc_cells = get_numpropcells(mgi);
+    double M_cell = get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
+    const double radial_pos = get_initial_radial_pos_sum(mgi) / assoc_cells;
     E_kin += 0.5 * M_cell * std::pow(radial_pos / globals::tmin, 2);
   }
 

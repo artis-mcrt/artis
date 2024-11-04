@@ -29,10 +29,10 @@ constexpr std::array<const char *, 3> phixsdata_filenames = {"version0ignore", "
 [[nodiscard]] inline auto get_nelements() -> int { return static_cast<int>(globals::elements.size()); }
 
 // total density of nuclei
-inline auto get_nnion_tot(int modelgridindex) -> double {
+inline auto get_nnion_tot(int nonemptymgi) -> double {
   double nntot = 0.;
   for (int element = 0; element < get_nelements(); element++) {
-    nntot += grid::get_elem_numberdens(modelgridindex, element);
+    nntot += grid::get_elem_numberdens(nonemptymgi, element);
   }
 
   return nntot;
@@ -184,25 +184,40 @@ inline auto get_phixs_table(const int element, const int ion, const int level) -
   return sigma_bf;
 }
 
-[[nodiscard]] inline auto get_tau_sobolev(const int modelgridindex, const int lineindex, const double t_current,
-                                          bool sub_updown) -> double {
-  const int element = globals::linelist[lineindex].elementindex;
-  const int ion = globals::linelist[lineindex].ionindex;
-  const int lower = globals::linelist[lineindex].lowerlevelindex;
-  const int upper = globals::linelist[lineindex].upperlevelindex;
+[[nodiscard]] inline auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current)
+    -> double {
+  const auto &line = globals::linelist[lineindex];
+  const int element = line.elementindex;
+  const int ion = line.ionindex;
+  const int lower = line.lowerlevelindex;
+  const int upper = line.upperlevelindex;
 
-  const double n_l = get_levelpop(modelgridindex, element, ion, lower);
+  const double n_l = get_levelpop(nonemptymgi, element, ion, lower);
 
   const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
-  const double A_ul = globals::linelist[lineindex].einstein_A;
+  const double A_ul = line.einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
   const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-  if (sub_updown) {
-    const double n_u = get_levelpop(modelgridindex, element, ion, upper);
-    return std::max((B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current, 0.);
-  }
   return std::max(B_lu * n_l * HCLIGHTOVERFOURPI * t_current, 0.);
+}
+
+[[nodiscard]] inline auto get_tau_sobolev_subupdown(const int nonemptymgi, const TransitionLine &line,
+                                                    const double t_current) -> double {
+  const int element = line.elementindex;
+  const int ion = line.ionindex;
+  const int lower = line.lowerlevelindex;
+  const int upper = line.upperlevelindex;
+
+  const double n_l = get_levelpop(nonemptymgi, element, ion, lower);
+
+  const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
+  const double A_ul = line.einstein_A;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
+  const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+
+  const double n_u = get_levelpop(nonemptymgi, element, ion, upper);
+  return std::max((B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current, 0.);
 }
 
 // Returns the atomic number associated with a given elementindex.

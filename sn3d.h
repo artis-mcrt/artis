@@ -36,12 +36,6 @@
 #ifdef STDPAR_ON
 #include <execution>
 
-// #ifndef __cpp_lib_execution
-// // homebrew llvm doesn't support execution policy yet, so brew install onedpl tbb
-// #include <oneapi/dpl/algorithm>
-// #include <oneapi/dpl/execution>
-// #endif
-
 #define EXEC_PAR_UNSEQ std::execution::par_unseq,
 #define EXEC_PAR std::execution::par,
 #else
@@ -129,7 +123,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
     const bool assertpass = static_cast<bool>(e);                                                                      \
-    if (!assertpass) {                                                                                                 \
+    if (!assertpass) [[unlikely]] {                                                                                    \
       if (output_file) {                                                                                               \
         output_file << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
                     << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                                          \
@@ -137,10 +131,10 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
       }                                                                                                                \
       std::cerr << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `"     \
                 << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                                              \
-      std::abort();                                                                                                    \
     }                                                                                                                  \
     assert(assertpass);                                                                                                \
   }
+
 #endif
 
 #define assert_always(e) __artis_assert(e)
@@ -375,6 +369,13 @@ template <typename T>
 template <typename T>
 [[nodiscard]] auto MPI_shared_malloc_span(const ptrdiff_t num_allranks) -> std::span<T> {
   return std::span(MPI_shared_malloc<T>(num_allranks), num_allranks);
+}
+
+template <typename T>
+void resize_exactly(std::vector<T> &vec, const ptrdiff_t size) {
+  // just resizing can (only with libstdc++?) allocate a larger capacity than needed
+  vec.reserve(size);
+  vec.resize(size);
 }
 
 #endif  // SN3D_H

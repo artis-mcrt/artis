@@ -58,12 +58,15 @@ endif
 
 $(info detected compiler is $(COMPILER_NAME))
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing
-# CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
 
-ifneq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -MD -MP -ftrivial-auto-var-init=pattern
+ifeq ($(COMPILER_NAME),NVHPC)
+	CXXFLAGS += -std=c++20
+else
+	CXXFLAGS += -std=c++23 -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -MD -MP -ftrivial-auto-var-init=pattern
 endif
+
+CXXFLAGS += -fstrict-aliasing
+# CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
 
 # profile-guided optimisation
 # generate profile:
@@ -153,8 +156,6 @@ ifeq ($(shell uname -s),Darwin)
 #	CXXFLAGS += -Rpass-missed=loop-vectorize
 #	CXXFLAGS += -Rpass-analysis=loop-vectorize
 
-	# CXXFLAGS += -fopenmp-simd
-
 	# add -lprofiler for gperftools
 	# LDFLAGS += $(LIB)
 	# LDFLAGS += -lprofiler
@@ -213,7 +214,7 @@ ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -D_GLIBCXX_ASSERTIONS
 	# CXXFLAGS += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_BACKTRACE=1
 
-	CXXFLAGS +=  -fno-omit-frame-pointer
+	CXXFLAGS +=  -fno-omit-frame-pointer -g
 
 	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
 	CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG
@@ -230,20 +231,17 @@ ifeq ($(OPTIMIZE),OFF)
 	BUILD_DIR := $(BUILD_DIR)_optimizeoff
 	CXXFLAGS += -O0
 else
-	# ifeq ($(TESTMODE),ON)
-	# 	CXXFLAGS += -Og
-	# else
-		CXXFLAGS += -O3
-		ifeq ($(FASTMATH),OFF)
-			BUILD_DIR := $(BUILD_DIR)_nofastmath
+	CXXFLAGS += -O3
+	ifeq ($(FASTMATH),OFF)
+		BUILD_DIR := $(BUILD_DIR)_nofastmath
+		CXXFLAGS += -Wno-unknown-pragmas
+	else
+		ifeq ($(COMPILER_NAME),NVHPC)
+			CXXFLAGS += -fast
 		else
-			ifeq ($(COMPILER_NAME),NVHPC)
-				CXXFLAGS += -fast
-			else
-				CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only -fopenmp-simd
-			endif
+			CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only -fopenmp-simd
 		endif
-	# endif
+	endif
 endif
 
 CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare -Wshadow
@@ -304,7 +302,7 @@ sn3d: $(BUILD_DIR)/sn3d
 	ln -sf $(BUILD_DIR)/sn3d sn3d
 
 $(BUILD_DIR)/sn3dwhole: $(sn3d_files) version.h artisoptions.h Makefile $(BUILD_DIR)/compiler.txt
-	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(gsl_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
+	$(CXX) $(CXXFLAGS) $(sn3d_files) $(gsl_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
 -include $(sn3d_dep)
 
 sn3dwhole: $(BUILD_DIR)/sn3dwhole

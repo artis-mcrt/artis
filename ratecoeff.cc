@@ -40,12 +40,12 @@ double *corrphotoioncoeffs{};
 
 double *bfcooling_coeffs{};
 
-struct gsl_integral_paras_gammacorr {
+struct GSLIntegralParasGammaCorr {
   double nu_edge;
   double departure_ratio;
   const float *photoion_xs;
   float T_e;
-  int modelgridindex;
+  int nonemptymgi;
 };
 
 char adatafile_hash[33];
@@ -668,20 +668,20 @@ void precalculate_ion_alpha_sp() {
 }
 
 auto integrand_stimrecombination_custom_radfield(const double nu, void *const voidparas) -> double {
-  const auto *const params = static_cast<const gsl_integral_paras_gammacorr *>(voidparas);
-  const int modelgridindex = params->modelgridindex;
+  const auto *const params = static_cast<const GSLIntegralParasGammaCorr *>(voidparas);
+  const int nonemptymgi = params->nonemptymgi;
   const float T_e = params->T_e;
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
 
-  const double Jnu = radfield::radfield(nu, modelgridindex);
+  const double Jnu = radfield::radfield(nu, nonemptymgi);
 
   // TODO: MK thesis page 41, use population ratios and Te?
   return ONEOVERH * sigma_bf / nu * Jnu * exp(-HOVERKB * nu / T_e);
 }
 
 auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, const int level,
-                                        const int phixstargetindex, const int modelgridindex) -> double {
+                                        const int phixstargetindex, const int nonemptymgi) -> double {
   const double epsrel = 1e-3;
   const double epsabs = 0.;
 
@@ -689,12 +689,12 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  const auto T_e = grid::get_Te(modelgridindex);
-  const auto intparas = gsl_integral_paras_gammacorr{
+  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto intparas = GSLIntegralParasGammaCorr{
       .nu_edge = nu_threshold,
       .photoion_xs = get_phixs_table(element, lowerion, level),
       .T_e = T_e,
-      .modelgridindex = modelgridindex,
+      .nonemptymgi = nonemptymgi,
   };
 
   const int upperionlevel = get_phixsupperlevel(element, lowerion, level, phixstargetindex);
@@ -729,8 +729,8 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const vo
 // Integrand to calculate the rate coefficient for photoionization
 // using gsl integrators. Corrected for stimulated recombination.
 {
-  const gsl_integral_paras_gammacorr *const params = static_cast<gsl_integral_paras_gammacorr *>(voidparas);
-  const int modelgridindex = params->modelgridindex;
+  const GSLIntegralParasGammaCorr *const params = static_cast<GSLIntegralParasGammaCorr *>(voidparas);
+  const int nonemptymgi = params->nonemptymgi;
 
 #if (SEPARATE_STIMRECOMB)
   const double corrfactor = 1.;
@@ -744,14 +744,14 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const vo
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
 
-  const double Jnu = radfield::radfield(nu, modelgridindex);
+  const double Jnu = radfield::radfield(nu, nonemptymgi);
 
   // TODO: MK thesis page 41, use population ratios and Te?
   return ONEOVERH * sigma_bf / nu * Jnu * corrfactor;
 }
 
 auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int level, const int phixstargetindex,
-                                          int modelgridindex) -> double {
+                                          int nonemptymgi) -> double {
   constexpr double epsrel = 1e-3;
   constexpr double epsrelwarning = 1e-1;
   constexpr double epsabs = 0.;
@@ -760,28 +760,28 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  const auto T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
 
 #if SEPARATE_STIMRECOMB
   const double departure_ratio = 0.;  // zero the stimulated recomb contribution
 #else
   // stimulated recombination is negative photoionisation
-  const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
-  const double nne = grid::get_nne(modelgridindex);
+  const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
+  const double nne = grid::get_nne(nonemptymgi);
   const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
   const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
-  const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upperionlevel);
+  const double nnupperionlevel = get_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
   double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.;  // put that to phixslist
   if (!std::isfinite(departure_ratio)) {
     departure_ratio = 0.;
   }
 #endif
-  const auto intparas = gsl_integral_paras_gammacorr{
+  const auto intparas = GSLIntegralParasGammaCorr{
       .nu_edge = nu_threshold,
       .departure_ratio = departure_ratio,
       .photoion_xs = get_phixs_table(element, ion, level),
       .T_e = T_e,
-      .modelgridindex = modelgridindex,
+      .nonemptymgi = nonemptymgi,
   };
 
   double error = 0.;
@@ -798,8 +798,8 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
     printout(
         "corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d "
         "integral %g error %g\n",
-        status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level, phixstargetindex,
-        gammacorr, error);
+        status, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion), level,
+        phixstargetindex, gammacorr, error);
     if (!std::isfinite(gammacorr)) {
       gammacorr = 0.;
     }
@@ -812,10 +812,10 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
 
 // get the number of levels that make up a fraction of the ion population
 // of at least IONGAMMA_POPFRAC_LEVELS_INCLUDED
-auto get_nlevels_important(const int modelgridindex, const int element, const int ion, const bool assume_lte,
+auto get_nlevels_important(const int nonemptymgi, const int element, const int ion, const bool assume_lte,
                            const float T_e) -> std::tuple<int, double> {
   // get the stored ion population for comparison with the cumulative sum of level pops
-  const double nnion_real = get_nnion(modelgridindex, element, ion);
+  const double nnion_real = get_nnion(nonemptymgi, element, ion);
 
   if (IONGAMMA_POPFRAC_LEVELS_INCLUDED >= 1.) {
     return {get_nlevels(element, ion), nnion_real};
@@ -834,12 +834,12 @@ auto get_nlevels_important(const int modelgridindex, const int element, const in
       const double T_exc = T_e;  // remember, other parts of the code in LTE mode use TJ, not T_e
       const double E_level = epsilon(element, ion, lower);
       const double E_ground = epsilon(element, ion, 0);
-      const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, ion) : 1.;
+      const double nnground = get_groundlevelpop(nonemptymgi, element, ion);
 
       nnlowerlevel = (nnground * stat_weight(element, ion, lower) / stat_weight(element, ion, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
     } else {
-      nnlowerlevel = get_levelpop(modelgridindex, element, ion, lower);
+      nnlowerlevel = get_levelpop(nonemptymgi, element, ion, lower);
     }
     nnlevelsum += nnlowerlevel;
     nlevels_important = lower + 1;
@@ -972,8 +972,10 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
 
   double alpha = 0.;
   if (lowerion < get_nions(element) - 1) {
+    const auto nonemptymgi = (modelgridindex >= 0) ? grid::get_nonemptymgi_of_mgi(modelgridindex) : -1;
+
     // this gets divided and cancelled out in the radiative case anyway
-    const double nne = (modelgridindex >= 0) ? grid::get_nne(modelgridindex) : 1.;
+    const double nne = (modelgridindex >= 0) ? grid::get_nne(nonemptymgi) : 1.;
 
     double nnupperion = 0;
     // nnupperion = get_groundmultiplet_pop(modelgridindex, T_e, element, upperion, assume_lte);
@@ -994,12 +996,12 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
         const double T_exc = T_e;
         const double E_level = epsilon(element, lowerion + 1, upper);
         const double E_ground = epsilon(element, lowerion + 1, 0);
-        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, lowerion + 1) : 1.;
+        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
 
         nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                         exp(-(E_level - E_ground) / KB / T_exc));
       } else {
-        nnupperlevel = get_levelpop(modelgridindex, element, lowerion + 1, upper);
+        nnupperlevel = get_levelpop(nonemptymgi, element, lowerion + 1, upper);
       }
       nnupperion += nnupperlevel;
     }
@@ -1016,12 +1018,12 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
         const double T_exc = T_e;
         const double E_level = epsilon(element, lowerion + 1, upper);
         const double E_ground = epsilon(element, lowerion + 1, 0);
-        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, lowerion + 1) : 1.;
+        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
 
         nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                         exp(-(E_level - E_ground) / KB / T_exc));
       } else {
-        nnupperlevel = get_levelpop(modelgridindex, element, lowerion + 1, upper);
+        nnupperlevel = get_levelpop(nonemptymgi, element, lowerion + 1, upper);
       }
       nnupperlevel_so_far += nnupperlevel;
       for (int lower = 0; lower < get_nlevels(element, lowerion); lower++) {
@@ -1032,11 +1034,11 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
         double recomb_coeff = 0.;
         if (collisional_not_radiative) {
           const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-          recomb_coeff += col_recombination_ratecoeff(modelgridindex, element, upperion, upper, lower, epsilon_trans);
+          recomb_coeff += col_recombination_ratecoeff(T_e, nne, element, upperion, upper, lower, epsilon_trans);
         } else if (!stimonly) {
-          recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower, modelgridindex);
+          recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower, nonemptymgi);
         } else {
-          recomb_coeff += stim_recombination_ratecoeff(nne, element, upperion, upper, lower, modelgridindex);
+          recomb_coeff += stim_recombination_ratecoeff(nne, element, upperion, upper, lower, nonemptymgi);
         }
 
         const double alpha_level = recomb_coeff / nne;
@@ -1137,22 +1139,22 @@ auto interpolate_corrphotoioncoeff(const int element, const int ion, const int l
 }
 
 auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex,
-                               const int modelgridindex) -> double
+                               const int nonemptymgi) -> double
 // Returns the for stimulated emission corrected photoionisation rate coefficient.
 {
   assert_always(USE_LUT_PHOTOION);
   // The correction factor for stimulated emission in gammacorr is set to its
   // LTE value. Because the T_e dependence of gammacorr is weak, this correction
   // correction may be evaluated at T_R!
-  const double W = grid::get_W(modelgridindex);
-  const double T_R = grid::get_TR(modelgridindex);
+  const double W = grid::get_W(nonemptymgi);
+  const double T_R = grid::get_TR(nonemptymgi);
 
   return W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
 }
 
 // Returns the stimulated recombination rate coefficient. multiply by upper level population and nne to get rate
 auto get_stimrecombcoeff(int element, const int lowerion, const int level, const int phixstargetindex,
-                         const int modelgridindex) -> double {
+                         const int nonemptymgi) -> double {
   double stimrecombcoeff = -1.;
 #if (SEPARATE_STIMRECOMB)
   if (use_cellcache) {
@@ -1166,7 +1168,7 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
 #endif
 
   if (!use_cellcache || stimrecombcoeff < 0) {
-    stimrecombcoeff = calculate_stimrecombcoeff_integral(element, lowerion, level, phixstargetindex, modelgridindex);
+    stimrecombcoeff = calculate_stimrecombcoeff_integral(element, lowerion, level, phixstargetindex, nonemptymgi);
 
 #if (SEPARATE_STIMRECOMB)
     if (use_cellcache) {
@@ -1179,6 +1181,7 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
     }
 #endif
   }
+  assert_always(std::isfinite(stimrecombcoeff));
 
   return stimrecombcoeff;
 }
@@ -1201,7 +1204,7 @@ __host__ __device__ auto get_bfcoolingcoeff(const int element, const int ion, co
 
 // Return the photoionisation rate coefficient (corrected for stimulated emission)
 __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion, const int level,
-                                               const int phixstargetindex, const int modelgridindex) -> double {
+                                               const int phixstargetindex, const int nonemptymgi) -> double {
   // The correction factor for stimulated emission in gammacorr is set to its
   // LTE value. Because the T_e dependence of gammacorr is weak, this correction
   // correction may be evaluated at T_R!
@@ -1215,17 +1218,16 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
 
   if (!use_cellcache || gammacorr < 0) {
     if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {
-      gammacorr = radfield::get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
+      gammacorr = radfield::get_bfrate_estimator(element, ion, level, phixstargetindex, nonemptymgi);
       // gammacorr will be -1 if no estimators available
     }
 
     if (!DETAILED_BF_ESTIMATORS_ON || gammacorr < 0) {
       if constexpr (!USE_LUT_PHOTOION) {
-        gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
+        gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, nonemptymgi);
       } else {
-        const double W = grid::get_W(modelgridindex);
-        const double T_R = grid::get_TR(modelgridindex);
-        const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+        const double W = grid::get_W(nonemptymgi);
+        const double T_R = grid::get_TR(nonemptymgi);
 
         gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
         const int index_in_groundlevelcontestimator =
@@ -1254,17 +1256,16 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
   if (ion >= nions - 1) {
     return true;
   }
-  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   if (USE_LUT_PHOTOION || !elem_has_nlte_levels(element)) {
     return (globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] == 0);
   }
 
-  const auto T_e = grid::get_Te(modelgridindex);
-  const auto nne = grid::get_nne(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto nne = grid::get_nne(nonemptymgi);
 
   for (int level = 0; level < get_nlevels(element, ion); level++) {
-    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
     if (nnlevel == 0.) {
       continue;
     }
@@ -1272,7 +1273,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-      if (nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex) > 0.) {
+      if (nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi) > 0.) {
         return false;
       }
 
@@ -1287,27 +1288,27 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
 }
 
 // ionisation rate coefficient. multiply by get_groundlevelpop to get a rate [s^-1]
-auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, const int ion) -> double {
+auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, const int ion) -> double {
   const int nions = get_nions(element);
   double Gamma = 0.;
   if (ion >= nions - 1) {
     return 0.;
   }
 
-  const auto T_e = grid::get_Te(modelgridindex);
-  const float nne = grid::get_nne(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
+  const float nne = grid::get_nne(nonemptymgi);
 
-  // const auto [nlevels_important, _] = get_nlevels_important(modelgridindex, element, ion, false, T_e);
+  // const auto [nlevels_important, _] = get_nlevels_important(nonemptymgi, element, ion, false, T_e);
   const int nlevels_important = get_nlevels(element, ion);
 
   double Col_ion = 0.;
   for (int level = 0; level < nlevels_important; level++) {
-    const double nnlevel = calculate_levelpop(modelgridindex, element, ion, level);
+    const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
     const int nphixstargets = get_nphixstargets(element, ion, level);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-      Gamma += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+      Gamma += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi);
 
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
 
@@ -1315,22 +1316,21 @@ auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, c
     }
   }
   Gamma += Col_ion;
-  Gamma /= get_groundlevelpop(modelgridindex, element, ion);
+  Gamma /= get_groundlevelpop(nonemptymgi, element, ion);
   return Gamma;
 }
 
 // ionisation rate coefficient. multiply by the lower ion pop to get a rate.
 // Currently only used for the estimator output file, not the simulation
-auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, const int element, const int lowerion,
+auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const int element, const int lowerion,
                                    const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
                                    const bool force_bfest, const bool force_bfintegral) -> double {
   assert_always(lowerion < get_nions(element) - 1);
   assert_always(!force_bfest || !force_bfintegral);
 
-  const float nne = (modelgridindex >= 0) ? grid::get_nne(modelgridindex) : 1.;
+  const auto nne = grid::get_nne(nonemptymgi);
 
-  const auto [nlevels_important, nnlowerion] =
-      get_nlevels_important(modelgridindex, element, lowerion, assume_lte, T_e);
+  const auto [nlevels_important, nnlowerion] = get_nlevels_important(nonemptymgi, element, lowerion, assume_lte, T_e);
 
   if (nnlowerion <= 0.) {
     return 0.;
@@ -1344,12 +1344,12 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
       const double T_exc = T_e;
       const double E_level = epsilon(element, lowerion, lower);
       const double E_ground = epsilon(element, lowerion, 0);
-      const double nnground = get_groundlevelpop(modelgridindex, element, lowerion);
+      const double nnground = get_groundlevelpop(nonemptymgi, element, lowerion);
 
       nnlowerlevel = (nnground * stat_weight(element, lowerion, lower) / stat_weight(element, lowerion, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
     } else {
-      nnlowerlevel = get_levelpop(modelgridindex, element, lowerion, lower);
+      nnlowerlevel = get_levelpop(nonemptymgi, element, lowerion, lower);
     }
 
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lower); phixstargetindex++) {
@@ -1363,18 +1363,17 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
         gamma_coeff_used +=
             col_ionization_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex, epsilon_trans);
       } else {
-        gamma_coeff_used = get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex,
-                                                 modelgridindex);  // whatever ARTIS uses internally
+        // whatever ARTIS uses internally
+        gamma_coeff_used = get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, nonemptymgi);
 
         if (force_bfest || printdebug) {
-          gamma_coeff_bfest =
-              radfield::get_bfrate_estimator(element, lowerion, lower, phixstargetindex, modelgridindex);
+          gamma_coeff_bfest = radfield::get_bfrate_estimator(element, lowerion, lower, phixstargetindex, nonemptymgi);
         }
 
         if (force_bfintegral || printdebug) {
           // use the cellcache but not the detailed bf estimators
           gamma_coeff_integral +=
-              calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
+              calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, nonemptymgi);
           // double gamma_coeff_integral_level_ch = globals::cellcache[cellcacheslotid]
           //                                            .chelements[element]
           //                                            .chions[lowerion]

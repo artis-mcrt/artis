@@ -41,6 +41,14 @@ namespace grid {
 
 namespace {
 
+struct ModelGridCellInput {
+  float rhoinit = -1.;
+  float ffegrp = 0.;
+  float initial_radial_pos_sum = 0.;
+  float initelectronfrac = -1;  // Ye: electrons (or protons) per nucleon
+  float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
+};
+
 std::array<char, 3> coordlabel{'?', '?', '?'};
 
 std::array<int, 3> ncoordgrid{0};  // propagation grid dimensions
@@ -66,6 +74,8 @@ struct PropGridCell {
 
 std::vector<PropGridCell> cell{};
 
+std::vector<int> nonemptymgi_of_propcell;
+
 std::vector<int> mg_associated_cells;
 std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
@@ -85,11 +95,12 @@ std::vector<int> ranks_nstart;
 std::vector<int> ranks_nstart_nonempty;
 std::vector<int> ranks_ndo;
 std::vector<int> ranks_ndo_nonempty;
+inline std::span<ModelGridCellInput> modelgrid_input{};
 
-void set_rho_tmin(const int modelgridindex, const float x) { modelgrid[modelgridindex].rhoinit = x; }
+void set_rho_tmin(const int modelgridindex, const float x) { modelgrid_input[modelgridindex].rhoinit = x; }
 
 void set_initelectronfrac(const int modelgridindex, const double electronfrac) {
-  modelgrid[modelgridindex].initelectronfrac = electronfrac;
+  modelgrid_input[modelgridindex].initelectronfrac = electronfrac;
 }
 
 void read_possible_yefile() {
@@ -112,21 +123,6 @@ void read_possible_yefile() {
     }
   }
   fclose(filein);
-}
-
-void set_npts_model(const int new_npts_model) {
-  npts_model = new_npts_model;
-
-  assert_always(modelgrid.data() == nullptr);
-  modelgrid = MPI_shared_malloc_span<ModelGridCell>(npts_model + 1);
-  if (globals::rank_in_node == 0) {
-    std::ranges::fill(modelgrid, ModelGridCell{});
-  }
-#ifdef MPI_ON
-  MPI_Barrier(globals::mpi_comm_node);
-#endif
-  mg_associated_cells.resize(npts_model + 1, 0);
-  nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 }
 
 void allocate_initradiobund() {
@@ -192,7 +188,7 @@ void set_ffegrp(const int modelgridindex, float x) {
 
   assert_always(x >= 0);
   assert_always(x <= 1.001);
-  modelgrid[modelgridindex].ffegrp = x;
+  modelgrid_input[modelgridindex].ffegrp = x;
 }
 
 void set_cell_modelgridindex(const int cellindex, const int new_modelgridindex) {
@@ -220,7 +216,7 @@ void set_modelinitnucmassfrac(const int modelgridindex, const int nucindex, floa
 }
 
 void set_initenergyq(const int modelgridindex, const double initenergyq) {
-  modelgrid[modelgridindex].initenergyq = initenergyq;
+  modelgrid_input[modelgridindex].initenergyq = initenergyq;
 }
 
 void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int element, const float elemabundance) {
@@ -266,23 +262,24 @@ void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int 
 void allocate_nonemptycells_composition_cooling()
 // Initialise composition dependent cell data for the given cell
 {
-  const ptrdiff_t npts_nonempty = get_nonempty_npts_model();
+  const ptrdiff_t nonempty_npts_model_ptrdifft = get_nonempty_npts_model();
   const auto nelements = get_nelements();
 
-  initmassfracuntrackedstable_allcells = MPI_shared_malloc<float>(npts_nonempty * nelements);
-  elem_meanweight_allcells = MPI_shared_malloc<float>(npts_nonempty * nelements);
-  elements_uppermost_ion_allcells = MPI_shared_malloc<int>(npts_nonempty * nelements);
-  elem_massfracs_allcells = MPI_shared_malloc<float>(npts_nonempty * nelements);
-  ion_groundlevelpops_allcells = MPI_shared_malloc<float>(npts_nonempty * get_includedions());
-  ion_partfuncts_allcells = MPI_shared_malloc<float>(npts_nonempty * get_includedions());
-  ion_cooling_contribs_allcells = MPI_shared_malloc<double>(npts_nonempty * get_includedions());
+  initmassfracuntrackedstable_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * nelements);
+  elem_meanweight_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * nelements);
+  elements_uppermost_ion_allcells = MPI_shared_malloc<int>(nonempty_npts_model_ptrdifft * nelements);
+  elem_massfracs_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * nelements);
+  ion_groundlevelpops_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * get_includedions());
+  ion_partfuncts_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * get_includedions());
+  ion_cooling_contribs_allcells = MPI_shared_malloc<double>(nonempty_npts_model_ptrdifft * get_includedions());
 
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
     std::tie(nltepops_allcells, win_nltepops_allcells) =
-        MPI_shared_malloc_keepwin<double>(npts_nonempty * globals::total_nlte_levels);
+        MPI_shared_malloc_keepwin<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels);
 #else
-    nltepops_allcells = static_cast<double *>(malloc(npts_nonempty * globals::total_nlte_levels * sizeof(double)));
+    nltepops_allcells =
+        static_cast<double *>(malloc(nonempty_npts_model * globals::total_nlte_levels * sizeof(double)));
 #endif
 
     assert_always(nltepops_allcells != nullptr);
@@ -291,21 +288,21 @@ void allocate_nonemptycells_composition_cooling()
   }
 
   if (globals::rank_in_node == 0) {
-    std::fill_n(initmassfracuntrackedstable_allcells, npts_nonempty * nelements, -1.);
-    std::fill_n(elem_meanweight_allcells, npts_nonempty * nelements, -1.);
-    std::fill_n(elements_uppermost_ion_allcells, npts_nonempty * nelements, -1);
-    std::fill_n(elem_massfracs_allcells, npts_nonempty * nelements, -1.);
+    std::fill_n(initmassfracuntrackedstable_allcells, nonempty_npts_model_ptrdifft * nelements, -1.);
+    std::fill_n(elem_meanweight_allcells, nonempty_npts_model_ptrdifft * nelements, -1.);
+    std::fill_n(elements_uppermost_ion_allcells, nonempty_npts_model_ptrdifft * nelements, -1);
+    std::fill_n(elem_massfracs_allcells, nonempty_npts_model_ptrdifft * nelements, -1.);
     // -1 indicates that there is currently no information on the nlte populations
-    std::ranges::fill_n(grid::nltepops_allcells, npts_nonempty * globals::total_nlte_levels, -1.);
+    std::ranges::fill_n(grid::nltepops_allcells, nonempty_npts_model_ptrdifft * globals::total_nlte_levels, -1.);
   }
 }
 
 void allocate_nonemptymodelcells() {
   // Determine the number of simulation cells associated with the model cells
-  for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++) {
-    mg_associated_cells[mgi] = 0;
-    if (globals::rank_in_node == 0) {
-      modelgrid[mgi].initial_radial_pos_sum = 0.;
+  std::ranges::fill(mg_associated_cells, 0);
+  if (globals::rank_in_node == 0) {
+    for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++) {
+      modelgrid_input[mgi].initial_radial_pos_sum = 0.;
     }
   }
 
@@ -323,12 +320,16 @@ void allocate_nonemptymodelcells() {
 
     mg_associated_cells[mgi] += 1;
     if (globals::rank_in_node == 0) {
-      modelgrid[mgi].initial_radial_pos_sum += radial_pos_mid;
+      modelgrid_input[mgi].initial_radial_pos_sum += radial_pos_mid;
     }
 
     assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (mg_associated_cells[mgi] == 1) ||
                   (mgi == get_npts_model()));
   }
+
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
   // find number of non-empty cells and allocate nonempty list
   nonempty_npts_model = 0;
@@ -340,27 +341,43 @@ void allocate_nonemptymodelcells() {
   assert_always(nonempty_npts_model > 0);
 
   mgi_of_nonemptymgi.resize(nonempty_npts_model, -2);
+  nonemptymgi_of_propcell.resize(ngrid, -1);
 
   int nonemptymgi = 0;  // index within list of non-empty modelgrid cells
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     if (get_numpropcells(mgi) > 0) {
-      if (get_rho_tmin(mgi) <= 0) {
-        printout("Error: negative or zero density. Abort.\n");
-        std::abort();
-      }
+      assert_always(get_rho_tmin(mgi) >= 0);
       nonemptymgi_of_mgi[mgi] = nonemptymgi;
       mgi_of_nonemptymgi[nonemptymgi] = mgi;
       nonemptymgi++;
     } else {
       nonemptymgi_of_mgi[mgi] = -1;
       set_rho_tmin(mgi, 0.);
-      set_rho(mgi, 0.);
       for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
         set_modelinitnucmassfrac(mgi, nucindex, 0.);
       }
     }
   }
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
+  for (int cellindex = 0; cellindex < ngrid; cellindex++) {
+    const int mgi = get_cell_modelgridindex(cellindex);
+    if (mgi >= get_npts_model()) {
+      nonemptymgi_of_propcell[cellindex] = -1;
+    } else {
+      nonemptymgi_of_propcell[cellindex] = get_nonemptymgi_of_mgi(mgi);
+    }
+  }
+
+  assert_always(modelgrid.data() == nullptr);
+  modelgrid = MPI_shared_malloc_span<ModelGridCell>(nonempty_npts_model);
+  std::ranges::fill(modelgrid, ModelGridCell{});
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
   allocate_nonemptycells_composition_cooling();
 
@@ -438,7 +455,7 @@ void map_1dmodelto3dgrid()
     const double cellvmid = get_cellradialposmid(cellindex) / globals::tmin;
     const int mgi = static_cast<int>(std::ranges::lower_bound(vout_model, cellvmid) - vout_model.begin());
 
-    if (mgi < get_npts_model() && modelgrid[mgi].rhoinit > 0) {
+    if (mgi < get_npts_model() && modelgrid_input[mgi].rhoinit > 0) {
       set_cell_modelgridindex(cellindex, mgi);
       assert_always(vout_model[mgi] >= cellvmid);
       assert_always((mgi > 0 ? vout_model[mgi - 1] : 0.0) <= cellvmid);
@@ -461,7 +478,7 @@ void map_2dmodelto3dgrid()
 
     const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
 
-    // 2D grid is uniform so rcyl and z indicies can be calculated with no lookup
+    // 2D grid is uniform so rcyl and z indices can be calculated with no lookup
     const int n_rcyl = static_cast<int>(rcylindrical / globals::tmin / globals::vmax * ncoord_model[0]);
     const int n_z =
         static_cast<int>((pos_mid[2] / globals::tmin + globals::vmax) / (2 * globals::vmax) * ncoord_model[1]);
@@ -469,7 +486,7 @@ void map_2dmodelto3dgrid()
     if (n_rcyl >= 0 && n_rcyl < ncoord_model[0] && n_z >= 0 && n_z < ncoord_model[1]) {
       const int mgi = (n_z * ncoord_model[0]) + n_rcyl;
 
-      if (modelgrid[mgi].rhoinit > 0) {
+      if (modelgrid_input[mgi].rhoinit > 0) {
         set_cell_modelgridindex(cellindex, mgi);
       } else {
         set_cell_modelgridindex(cellindex, get_npts_model());
@@ -484,7 +501,7 @@ void map_2dmodelto3dgrid()
 // get_npts_model())
 void map_modeltogrid_direct() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    const int mgi = (modelgrid[cellindex].rhoinit > 0) ? cellindex : get_npts_model();
+    const int mgi = (modelgrid_input[cellindex].rhoinit > 0) ? cellindex : get_npts_model();
     set_cell_modelgridindex(cellindex, mgi);
   }
 }
@@ -742,269 +759,6 @@ auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<std::str
   return {colnames, nucindexlist, one_line_per_cell};
 }
 
-// Read in a 1D spherical model
-void read_1d_model() {
-  auto fmodel = fstream_required("model.txt", std::ios::in);
-
-  std::string line;
-
-  // 1st read the number of data points in the table of input model.
-  int npts_model_in = 0;
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> npts_model_in;
-
-  set_npts_model(npts_model_in);
-  ncoord_model[0] = npts_model_in;
-
-  vout_model.resize(get_npts_model(), NAN);
-
-  // Now read the time (in days) at which the model is specified.
-  double t_model_days{NAN};
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> t_model_days;
-  t_model = t_model_days * DAY;
-
-  // Now read in the lines of the model. Each line has 5 entries: the
-  // cell number (integer) the velocity at outer boundary of cell (float),
-  // the mass density in the cell (float), the abundance of Ni56 by mass
-  // in the cell (float) and the total abundance of all Fe-grp elements
-  // in the cell (float). For now, the last number is recorded but never
-  // used.
-
-  const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
-
-  int mgi = 0;
-  while (std::getline(fmodel, line)) {
-    double vout_kmps{NAN};
-    double log_rho{NAN};
-    int cellnumberin = 0;
-    std::istringstream ssline(line);
-
-    if (ssline >> cellnumberin >> vout_kmps >> log_rho) {
-      if (mgi == 0) {
-        first_cellindex = cellnumberin;
-        printout("first_cellindex %d\n", first_cellindex);
-      }
-      assert_always(cellnumberin == mgi + first_cellindex);
-
-      vout_model[mgi] = vout_kmps * 1.e5;
-
-      const double rho_tmin = pow(10., log_rho) * pow(t_model / globals::tmin, 3);
-      set_rho_tmin(mgi, rho_tmin);
-      set_rho(mgi, rho_tmin);
-    } else {
-      printout("Unexpected number of values in model.txt\n");
-      printout("line: %s\n", line.c_str());
-      assert_always(false);
-    }
-    read_model_radioabundances(fmodel, ssline, mgi, true, colnames, nucindexlist, one_line_per_cell);
-
-    mgi += 1;
-    if (mgi == get_npts_model()) {
-      break;
-    }
-  }
-
-  if (mgi != get_npts_model()) {
-    printout("ERROR in model.txt. Found only %d cells instead of %d expected.\n", mgi - 1, get_npts_model());
-    std::abort();
-  }
-
-  globals::vmax = vout_model[get_npts_model() - 1];
-}
-
-// Read in a 2D axisymmetric cylindrical model
-void read_2d_model() {
-  auto fmodel = fstream_required("model.txt", std::ios::in);
-
-  std::string line;
-
-  // 1st read the number of data points in the table of input model.
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> ncoord_model[0] >> ncoord_model[1];  // r and z (cylindrical polar)
-  ncoord_model[2] = 0.;
-
-  set_npts_model(ncoord_model[0] * ncoord_model[1]);
-
-  // Now read the time (in days) at which the model is specified.
-  double t_model_days{NAN};
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> t_model_days;
-  t_model = t_model_days * DAY;
-
-  // Now read in vmax for the model (in cm s^-1).
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> globals::vmax;
-
-  const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
-
-  // Now read in the model. Each point in the model has two lines of input.
-  // First is an index for the cell then its r-mid point then its z-mid point
-  // then its total mass density.
-  // Second is the total FeG mass, initial 56Ni mass, initial 56Co mass
-
-  int mgi = 0;
-  while (std::getline(fmodel, line)) {
-    int cellnumberin = 0;
-    float cell_r_in{NAN};
-    float cell_z_in{NAN};
-    double rho_tmodel{NAN};
-    std::istringstream ssline(line);
-    assert_always(ssline >> cellnumberin >> cell_r_in >> cell_z_in >> rho_tmodel);
-
-    if (mgi == 0) {
-      first_cellindex = cellnumberin;
-    }
-    assert_always(cellnumberin == mgi + first_cellindex);
-
-    const int n_rcyl = (mgi % ncoord_model[0]);
-    const double pos_r_cyl_mid = (n_rcyl + 0.5) * globals::vmax * t_model / ncoord_model[0];
-    assert_always(fabs((cell_r_in / pos_r_cyl_mid) - 1) < 1e-3);
-    const int n_z = (mgi / ncoord_model[0]);
-    const double pos_z_mid = globals::vmax * t_model * (-1 + 2 * (n_z + 0.5) / ncoord_model[1]);
-    assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
-
-    if (rho_tmodel < 0) {
-      printout("negative input density %g %d\n", rho_tmodel, mgi);
-      std::abort();
-    }
-
-    const bool keepcell = (rho_tmodel > 0);
-    const double rho_tmin = rho_tmodel * pow(t_model / globals::tmin, 3);
-    set_rho_tmin(mgi, rho_tmin);
-    set_rho(mgi, rho_tmin);
-
-    read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
-
-    mgi++;
-  }
-
-  if (mgi != get_npts_model()) {
-    printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, get_npts_model());
-    std::abort();
-  }
-}
-
-// read a 3D Cartesian model
-void read_3d_model() {
-  auto fmodel = fstream_required("model.txt", std::ios::in);
-
-  std::string line;
-
-  // 1st read the number of data points in the table of input model.
-  // This MUST be the same number as the maximum number of points used in the grid - if not, abort.
-  int npts_model_in = 0;
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> npts_model_in;
-  set_npts_model(npts_model_in);
-
-  ncoord_model[0] = ncoord_model[1] = ncoord_model[2] = static_cast<int>(round(pow(npts_model_in, 1 / 3.)));
-  assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_model_in);
-
-  // for a 3D input model, the propagation cells will match the input cells exactly
-  ncoordgrid = ncoord_model;
-  ngrid = npts_model_in;
-
-  double t_model_days{NAN};
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> t_model_days;
-  t_model = t_model_days * DAY;
-
-  // Now read in vmax for the model (in cm s^-1).
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> globals::vmax;
-
-  const double xmax_tmodel = globals::vmax * t_model;
-
-  // Now read in the lines of the model.
-  min_den = -1.;
-
-  // check if expected positions match in either xyz or zyx column order
-  // set false if a problem is detected
-  bool posmatch_xyz = true;
-  bool posmatch_zyx = true;
-
-  const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
-
-  // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
-  // otherwise each input cell is one modelgrid cell
-  int mgi = 0;  // corresponds to model.txt index column, but zero indexed! (model.txt might be 1-indexed)
-  while (std::getline(fmodel, line)) {
-    int cellnumberin = 0;
-    std::array<float, 3> cellpos_in{};
-    float rho_model{NAN};
-    std::istringstream ssline(line);
-
-    assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model);
-
-    if (mgi == 0) {
-      first_cellindex = cellnumberin;
-    }
-    assert_always(cellnumberin == mgi + first_cellindex);
-
-    if (mgi % (ncoord_model[1] * ncoord_model[2]) == 0) {
-      printout("read up to cell mgi %d\n", mgi);
-    }
-
-    // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
-    // however, the cellindex always should increment X first, then Y, then Z
-
-    for (int axis = 0; axis < 3; axis++) {
-      const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
-      const double cellpos_expected = -xmax_tmodel + (cellwidth * get_cellcoordpointnum(mgi, axis));
-      //   printout("mgi %d coord %d expected %g found %g or %g rmax %g get_cellcoordpointnum(mgi, axis) %d ncoordgrid
-      //   %d\n",
-      //            mgi, axis, cellpos_expected, cellpos_in[axis], cellpos_in[2 - axis], xmax_tmodel,
-      //            get_cellcoordpointnum(mgi, axis), ncoordgrid[axis]);
-      if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth) {
-        posmatch_xyz = false;
-      }
-      if (fabs(cellpos_expected - cellpos_in[2 - axis]) > 0.5 * cellwidth) {
-        posmatch_zyx = false;
-      }
-    }
-
-    if (rho_model < 0) {
-      printout("negative input density %g %d\n", rho_model, mgi);
-      std::abort();
-    }
-
-    // in 3D cartesian, cellindex and modelgridindex are interchangeable
-    const bool keepcell = (rho_model > 0);
-    const double rho_tmin = rho_model * pow(t_model / globals::tmin, 3);
-    set_rho_tmin(mgi, rho_tmin);
-    set_rho(mgi, rho_tmin);
-
-    if (min_den < 0. || min_den > rho_model) {
-      min_den = rho_model;
-    }
-
-    read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
-
-    mgi++;
-  }
-  if (mgi != npts_model_in) {
-    printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", mgi, npts_model_in);
-    std::abort();
-  }
-
-  //   assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
-  if (posmatch_xyz) {
-    printout("Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.\n");
-  }
-  if (posmatch_zyx) {
-    printout("Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.\n");
-  }
-
-  if (!posmatch_xyz && !posmatch_zyx) {
-    printout(
-        "WARNING: Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
-        "order.\n");
-  }
-
-  printout("min_den %g [g/cm3]\n", min_den);
-}
-
 auto get_inputcellvolume(const int mgi) -> double {
   if (get_model_type() == GridType::SPHERICAL1D) {
     const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
@@ -1100,8 +854,8 @@ void read_grid_restart_data(const int timestep) {
     assert_always(fscanf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", &mgi_in, &T_R, &T_e, &W, &T_J,
                          &thick, &globals::dep_estimator_gamma[nonemptymgi],
                          &globals::dep_estimator_positron[nonemptymgi], &globals::dep_estimator_electron[nonemptymgi],
-                         &globals::dep_estimator_alpha[nonemptymgi], &modelgrid[mgi].nne,
-                         &modelgrid[mgi].nnetot) == 12);
+                         &globals::dep_estimator_alpha[nonemptymgi], &modelgrid[nonemptymgi].nne,
+                         &modelgrid[nonemptymgi].nnetot) == 12);
 
     if (mgi_in != mgi) {
       printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
@@ -1118,11 +872,11 @@ void read_grid_restart_data(const int timestep) {
     assert_always(globals::dep_estimator_electron[nonemptymgi] >= 0.);
     assert_always(globals::dep_estimator_alpha[nonemptymgi] >= 0.);
 
-    set_TR(mgi, T_R);
-    set_Te(mgi, T_e);
-    set_W(mgi, W);
-    set_TJ(mgi, T_J);
-    modelgrid[mgi].thick = thick;
+    set_TR(nonemptymgi, T_R);
+    set_Te(nonemptymgi, T_e);
+    set_W(nonemptymgi, W);
+    set_TJ(nonemptymgi, T_J);
+    modelgrid[nonemptymgi].thick = thick;
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
@@ -1135,8 +889,14 @@ void read_grid_restart_data(const int timestep) {
 
   // the order of these calls is very important!
   radfield::read_restart_data(gridsave_file);
-  nonthermal::read_restart_data(gridsave_file);
-  nltepop_read_restart_data(gridsave_file);
+  if (globals::rank_in_node == 0) {
+    // all data is shared on the node
+    nonthermal::read_restart_data(gridsave_file);
+    nltepop_read_restart_data(gridsave_file);
+  }
+#ifdef MPI_ON
+  MPI_Barrier(globals::mpi_comm_node);
+#endif
   fclose(gridsave_file);
 }
 
@@ -1159,10 +919,10 @@ void assign_initial_temperatures() {
   int cells_below_mintemp = 0;
   int cells_above_maxtemp = 0;
 
-  for (int nonempymgi = 0; nonempymgi < get_nonempty_npts_model(); nonempymgi++) {
-    const int mgi = get_mgi_of_nonemptymgi(nonempymgi);
+  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
-    double decayedenergy_per_mass = decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(nonempymgi, tstart);
+    double decayedenergy_per_mass = decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(nonemptymgi, tstart);
     if constexpr (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) {
       decayedenergy_per_mass += get_initenergyq(mgi);
     }
@@ -1183,12 +943,11 @@ void assign_initial_temperatures() {
     }
     assert_always(std::isfinite(T_initial));
 
-    set_Te(mgi, T_initial);
-    set_TJ(mgi, T_initial);
-    set_TR(mgi, T_initial);
-
-    set_W(mgi, 1.);
-    modelgrid[mgi].thick = 0;
+    set_Te(nonemptymgi, T_initial);
+    set_TJ(nonemptymgi, T_initial);
+    set_TR(nonemptymgi, T_initial);
+    set_W(nonemptymgi, 1.);
+    modelgrid[nonemptymgi].thick = 0;
   }
   printout("  cells below MINTEMP %g: %d\n", MINTEMP, cells_below_mintemp);
   printout("  cells above MAXTEMP %g: %d\n", MAXTEMP, cells_above_maxtemp);
@@ -1206,9 +965,10 @@ void assign_initial_temperatures() {
 
 void setup_nstart_ndo() {
   const int nprocesses = globals::nprocs;
-  const int npts_nonempty = get_nonempty_npts_model();
-  const int min_nonempty_perproc = npts_nonempty / nprocesses;  // integer division, minimum non-empty cells per process
-  const int n_remainder = npts_nonempty % nprocesses;
+  assert_always(nonempty_npts_model > 0);
+  const int min_nonempty_perproc =
+      nonempty_npts_model / nprocesses;  // integer division, minimum non-empty cells per process
+  const int n_remainder = nonempty_npts_model % nprocesses;
 
   ranks_nstart.resize(nprocesses, -1);
   ranks_nstart_nonempty.resize(nprocesses, -1);
@@ -1254,13 +1014,13 @@ void setup_nstart_ndo() {
   }
 
   int npts_assigned = 0;
-  int npts_nonempty_assigned = 0;
+  int nonempty_npts_model_assigned = 0;
   for (int r = 0; r < nprocesses; r++) {
     npts_assigned += ranks_ndo[r];
-    npts_nonempty_assigned += ranks_ndo_nonempty[r];
+    nonempty_npts_model_assigned += ranks_ndo_nonempty[r];
   }
   assert_always(npts_assigned == get_npts_model());
-  assert_always(npts_nonempty_assigned == get_nonempty_npts_model());
+  assert_always(nonempty_npts_model_assigned == get_nonempty_npts_model());
 
   if (globals::my_rank == 0) {
     auto fileout = std::ofstream("modelgridrankassignments.out");
@@ -1360,8 +1120,8 @@ void setup_grid_cylindrical_2d() {
   }
 }
 
-auto get_grid_type_name() -> std::string {
-  switch (GRID_TYPE) {
+auto get_grid_type_name(const GridType gridtype) -> std::string {
+  switch (gridtype) {
     case GridType::SPHERICAL1D:
       return "spherical";
     case GridType::CYLINDRICAL2D:
@@ -1659,8 +1419,6 @@ auto get_cellcoordmin(const int cellindex, const int axis) -> double {
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r
 // direction)
 auto get_coordcellindexincrement(const int axis) -> int {
-  // assert_testmodeonly(axis < get_ngriddimensions());
-
   switch (axis) {
     case 0:
       return 1;
@@ -1713,34 +1471,40 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
   assert_always(false);
 }
 
-auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid[modelgridindex].rhoinit; }
+auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[modelgridindex].rhoinit; }
 
-__host__ __device__ auto get_rho(const int modelgridindex) -> float { return modelgrid[modelgridindex].rho; }
+__host__ __device__ auto get_rho(const int nonemptymgi) -> float {
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
+  return modelgrid[nonemptymgi].rho;
+}
 
-__host__ __device__ auto get_nne(const int modelgridindex) -> float {
-  assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
-
-  const double nne = modelgrid[modelgridindex].nne;
+__host__ __device__ auto get_nne(const int nonemptymgi) -> float {
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
+  const double nne = modelgrid[nonemptymgi].nne;
   assert_testmodeonly(std::isfinite(nne));
   return nne;
 }
 
-__host__ __device__ auto get_nnetot(const int modelgridindex) -> float {
-  assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
-
-  const double nnetot = modelgrid[modelgridindex].nnetot;
-  assert_always(std::isfinite(nnetot));
+__host__ __device__ auto get_nnetot(const int nonemptymgi) -> float {
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
+  const double nnetot = modelgrid[nonemptymgi].nnetot;
   return nnetot;
 }
 
-__host__ __device__ auto get_ffegrp(const int modelgridindex) -> float { return modelgrid[modelgridindex].ffegrp; }
+__host__ __device__ auto get_ffegrp(const int modelgridindex) -> float {
+  return modelgrid_input[modelgridindex].ffegrp;
+}
 
-auto get_elem_abundance(int modelgridindex, int element) -> float
+__host__ __device__ auto get_initial_radial_pos_sum(const int modelgridindex) -> float {
+  return modelgrid_input[modelgridindex].initial_radial_pos_sum;
+}
+
+auto get_elem_abundance(int nonemptymgi, int element) -> float
 // mass fraction of an element (all isotopes combined)
 {
-  const int nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
   const auto massfrac = elem_massfracs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element];
   assert_testmodeonly(massfrac >= 0.0);
   return massfrac;
@@ -1752,67 +1516,63 @@ void set_elem_abundance(const int nonemptymgi, const int element, const float ne
 }
 
 // mass fraction of an element (all isotopes combined)
-__host__ __device__ auto get_elem_numberdens(const int modelgridindex, const int element) -> double {
-  const auto nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+__host__ __device__ auto get_elem_numberdens(const int nonemptymgi, const int element) -> double {
   const double elem_meanweight = grid::get_element_meanweight(nonemptymgi, element);
-  return get_elem_abundance(modelgridindex, element) / elem_meanweight * grid::get_rho(modelgridindex);
+  return get_elem_abundance(nonemptymgi, element) / elem_meanweight * grid::get_rho(nonemptymgi);
 }
 
-__host__ __device__ auto get_kappagrey(const int modelgridindex) -> float {
-  assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model());
-  return modelgrid[modelgridindex].kappagrey;
+__host__ __device__ auto get_kappagrey(const int nonemptymgi) -> float { return modelgrid[nonemptymgi].kappagrey; }
+
+__host__ __device__ auto get_Te(const int nonemptymgi) -> float {
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
+  return modelgrid[nonemptymgi].Te;
 }
 
-__host__ __device__ auto get_Te(const int modelgridindex) -> float {
-  assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model());
-  return modelgrid[modelgridindex].Te;
+__host__ __device__ auto get_TR(const int nonemptymgi) -> float {
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
+  return modelgrid[nonemptymgi].TR;
 }
 
-__host__ __device__ auto get_TR(const int modelgridindex) -> float {
-  assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model());
-  return modelgrid[modelgridindex].TR;
+__host__ __device__ auto get_TJ(const int nonemptymgi) -> float {
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
+  return modelgrid[nonemptymgi].TJ;
 }
 
-__host__ __device__ auto get_TJ(const int modelgridindex) -> float {
-  assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model());
-  return modelgrid[modelgridindex].TJ;
+__host__ __device__ auto get_W(const int nonemptymgi) -> float {
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
+  return modelgrid[nonemptymgi].W;
 }
 
-__host__ __device__ auto get_W(const int modelgridindex) -> float {
-  assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model());
-  return modelgrid[modelgridindex].W;
-}
-
-void set_rho(const int modelgridindex, const float rho) {
+void set_rho(const int nonemptymgi, const float rho) {
   assert_always(rho >= 0.);
   assert_always(std::isfinite(rho));
-  modelgrid[modelgridindex].rho = rho;
+  modelgrid[nonemptymgi].rho = rho;
 }
 
-void set_nne(const int modelgridindex, const float nne) {
+void set_nne(const int nonemptymgi, const float nne) {
   assert_always(nne >= 0.);
   assert_always(std::isfinite(nne));
-  modelgrid[modelgridindex].nne = nne;
+  modelgrid[nonemptymgi].nne = nne;
 }
 
-void set_nnetot(const int modelgridindex, const float nnetot) {
+void set_nnetot(const int nonemptymgi, const float nnetot) {
   assert_always(nnetot >= 0.);
   assert_always(std::isfinite(nnetot));
-  modelgrid[modelgridindex].nnetot = nnetot;
+  modelgrid[nonemptymgi].nnetot = nnetot;
 }
 
-void set_kappagrey(const int modelgridindex, const float kappagrey) { modelgrid[modelgridindex].kappagrey = kappagrey; }
+void set_kappagrey(const int nonemptymgi, const float kappagrey) { modelgrid[nonemptymgi].kappagrey = kappagrey; }
 
-void set_Te(const int modelgridindex, const float Te) {
+void set_Te(const int nonemptymgi, const float Te) {
   if (Te > 0.) {
     // ignore the zero initialisation value for this check
     const double nu_peak = 5.879e10 * Te;
     if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
+      const auto modelgridindex = get_mgi_of_nonemptymgi(nonemptymgi);
       printout(
           "[warning] modelgridindex %d B_planck(Te=%g K) peak at %g Hz is outside frequency range NU_MIN_R %g NU_MAX_R "
           "%g\n",
@@ -1820,14 +1580,14 @@ void set_Te(const int modelgridindex, const float Te) {
     }
   }
 
-  modelgrid[modelgridindex].Te = Te;
+  modelgrid[nonemptymgi].Te = Te;
 }
 
-void set_TR(const int modelgridindex, const float TR) { modelgrid[modelgridindex].TR = TR; }
+void set_TR(const int nonemptymgi, const float TR) { modelgrid[nonemptymgi].TR = TR; }
 
-void set_TJ(const int modelgridindex, const float TJ) { modelgrid[modelgridindex].TJ = TJ; }
+void set_TJ(const int nonemptymgi, const float TJ) { modelgrid[nonemptymgi].TJ = TJ; }
 
-void set_W(const int modelgridindex, const float W) { modelgrid[modelgridindex].W = W; }
+void set_W(const int nonemptymgi, const float W) { modelgrid[nonemptymgi].W = W; }
 
 auto get_model_type() -> GridType { return model_type; }
 
@@ -1852,13 +1612,20 @@ auto get_t_model() -> double {
   return t_model;
 }
 
-__host__ __device__ auto get_cell_modelgridindex(const int cellindex) -> int {
+[[nodiscard]] __host__ __device__ auto get_cell_modelgridindex(const int cellindex) -> int {
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
-  const int mgi = cell[cellindex].modelgridindex;
+  const auto mgi = cell[cellindex].modelgridindex;
   assert_testmodeonly(mgi >= 0);
   assert_testmodeonly(mgi < (get_npts_model() + 1));
   return mgi;
+}
+
+[[nodiscard]] __host__ __device__ auto get_propcell_nonemptymgi(const int cellindex) -> int {
+  const auto nonemptymgi = nonemptymgi_of_propcell[cellindex];
+  assert_testmodeonly(nonemptymgi >= -1);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
+  return nonemptymgi;
 }
 
 // number of propagation cells associated with each modelgrid cell
@@ -1924,18 +1691,19 @@ void set_element_meanweight(const int nonemptymgi, const int element, const floa
 }
 
 auto get_electronfrac(const int nonemptymgi) -> double {
-  const auto modelgridindex = get_mgi_of_nonemptymgi(nonemptymgi);
   double nucleondens = 0.;
   for (int element = 0; element < get_nelements(); element++) {
-    nucleondens += get_elem_numberdens(modelgridindex, element) * get_element_meanweight(nonemptymgi, element) / MH;
+    nucleondens += get_elem_numberdens(nonemptymgi, element) * get_element_meanweight(nonemptymgi, element) / MH;
   }
-  return get_nnetot(modelgridindex) / nucleondens;
+  return get_nnetot(nonemptymgi) / nucleondens;
 }
 
-auto get_initelectronfrac(const int modelgridindex) -> double { return modelgrid[modelgridindex].initelectronfrac; }
+auto get_initelectronfrac(const int modelgridindex) -> double {
+  return modelgrid_input[modelgridindex].initelectronfrac;
+}
 
 // q: energy in the model at tmin per gram to use with USE_MODEL_INITIAL_ENERGY option [erg/g]
-auto get_initenergyq(const int modelgridindex) -> double { return modelgrid[modelgridindex].initenergyq; }
+auto get_initenergyq(const int modelgridindex) -> double { return modelgrid_input[modelgridindex].initenergyq; }
 
 // get the radial distance from the origin to the centre of the cell at time tmin
 auto get_cellradialposmid(const int cellindex) -> double {
@@ -1968,8 +1736,7 @@ auto get_cellradialposmid(const int cellindex) -> double {
   return elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element];
 }
 
-void set_elements_uppermost_ion(const int modelgridindex, const int element, const int newvalue) {
-  const ptrdiff_t nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+void set_elements_uppermost_ion(const int nonemptymgi, const int element, const int newvalue) {
   elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element] = newvalue;
 }
 
@@ -1979,8 +1746,8 @@ void calculate_kappagrey() {
   double opcase3_sum = 0.;
   const int empty_cells = 0;
 
-  for (int n = 0; n < ngrid; n++) {
-    const int mgi = get_cell_modelgridindex(n);
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     rho_sum += get_rho_tmin(mgi);
     fe_sum += get_ffegrp(mgi);
 
@@ -1992,14 +1759,14 @@ void calculate_kappagrey() {
           kappagrey *= globals::rho_crit / get_rho_tmin(mgi);
         }
 
-        set_kappagrey(mgi, kappagrey);
+        set_kappagrey(nonemptymgi, kappagrey);
       } else if (get_rho_tmin(mgi) == 0.) {
-        set_kappagrey(mgi, 0.);
+        set_kappagrey(nonemptymgi, 0.);
       } else if (get_rho_tmin(mgi) < 0.) {
         printout("Error: negative density. Abort.\n");
         std::abort();
       }
-      opcase3_sum += get_kappagrey(mgi) * get_rho_tmin(mgi);
+      opcase3_sum += get_kappagrey(nonemptymgi) * get_rho_tmin(mgi);
     }
   }
 
@@ -2020,7 +1787,7 @@ void calculate_kappagrey() {
         kappa = opcase2_normal / get_rho_tmin(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1);
       } else if (globals::opacity_case == 3) {
         globals::opcase3_normal = globals::GREY_OP * rho_sum / opcase3_sum;
-        kappa = get_kappagrey(mgi) * globals::opcase3_normal;
+        kappa = get_kappagrey(nonemptymgi) * globals::opcase3_normal;
       } else if (globals::opacity_case == 5) {
         // electron-fraction-dependent opacities
         // values from table 1 of Tanaka et al. (2020).
@@ -2045,12 +1812,12 @@ void calculate_kappagrey() {
         // grey opacity used in Just+2022, https://ui.adsabs.harvard.edu/abs/2022MNRAS.510.2820J/abstract
         // kappa is a simple analytic function of temperature and lanthanide mass fraction
         // adapted to best fit lightcurves from Kasen+2017 in ALCAR simulations
-        const double T_rad = get_TR(mgi);
+        const double T_rad = get_TR(nonemptymgi);
         double X_lan = 0.;
         for (int element = 0; element < get_nelements(); element++) {
           const int z = get_atomicnumber(element);
           if (z >= 57 && z <= 71) {
-            X_lan += get_elem_abundance(mgi, element);
+            X_lan += get_elem_abundance(nonemptymgi, element);
           }
         }
         // first step: temperature-independent factor
@@ -2072,15 +1839,15 @@ void calculate_kappagrey() {
         std::abort();
       }
 
-      set_kappagrey(mgi, kappa);
+      set_kappagrey(nonemptymgi, kappa);
     } else if (get_rho_tmin(mgi) == 0.) {
-      set_kappagrey(mgi, 0.);
+      set_kappagrey(nonemptymgi, 0.);
     } else if (get_rho_tmin(mgi) < 0.) {
       printout("Error: negative density. Abort.\n");
       std::abort();
     }
 
-    check1 = check1 + (get_kappagrey(mgi) * get_rho_tmin(mgi));
+    check1 = check1 + (get_kappagrey(nonemptymgi) * get_rho_tmin(mgi));
     check2 = check2 + get_rho_tmin(mgi);
   }
 
@@ -2088,26 +1855,263 @@ void calculate_kappagrey() {
 }
 
 void read_ejecta_model() {
-  switch (get_model_type()) {
-    case GridType::SPHERICAL1D: {
-      printout("Read 1D model\n");
-      read_1d_model();
-      break;
+  auto fmodel = fstream_required("model.txt", std::ios::in);
+  std::string line;
+
+  // two integers on the first line of the model file
+  int npts_0 = 0;  // total model points for 1D/3D, and number of points in r for 2D
+  int npts_1 = 0;  // number of points in z for 2D
+  assert_always(get_noncommentline(fmodel, line));
+  auto ssline = std::istringstream(line);
+  ssline >> npts_0;
+  if (get_model_type() == GridType::SPHERICAL1D) {
+    ncoord_model[0] = npts_0;
+    ncoord_model[1] = 0;
+    ncoord_model[2] = 0;
+  } else if (get_model_type() == GridType::CYLINDRICAL2D) {
+    ssline >> npts_1;  // r and z (cylindrical polar)
+    ncoord_model[0] = npts_0;
+    ncoord_model[1] = npts_1;
+    ncoord_model[2] = 0;
+  } else if (get_model_type() == GridType::CARTESIAN3D) {
+    ncoord_model[0] = static_cast<int>(round(pow(npts_0, 1 / 3.)));
+    ncoord_model[1] = ncoord_model[0];
+    ncoord_model[2] = ncoord_model[0];
+    assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_0);
+  }
+  npts_model = std::max(1, ncoord_model[0]) * std::max(1, ncoord_model[1]) * std::max(1, ncoord_model[2]);
+
+  assert_always(modelgrid_input.data() == nullptr);
+  modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model + 1);
+  if (globals::rank_in_node == 0) {
+    std::ranges::fill(modelgrid_input, ModelGridCellInput{});
+  }
+#ifdef MPI_ON
+  MPI_Barrier(globals::mpi_comm_node);
+#endif
+  mg_associated_cells.resize(npts_model + 1, 0);
+  nonemptymgi_of_mgi.resize(npts_model + 1, -1);
+
+  if (get_model_type() == GridType::SPHERICAL1D) {
+    printout("Read 1D model\n");
+
+    // Now read the time (in days) at which the model is specified.
+    double t_model_days{NAN};
+    assert_always(get_noncommentline(fmodel, line));
+    std::istringstream(line) >> t_model_days;
+    t_model = t_model_days * DAY;
+
+    vout_model.resize(get_npts_model(), NAN);
+
+    // Now read in the lines of the model. Each line has 5 entries: the
+    // cell number (integer) the velocity at outer boundary of cell (float),
+    // the mass density in the cell (float), the abundance of Ni56 by mass
+    // in the cell (float) and the total abundance of all Fe-grp elements
+    // in the cell (float). For now, the last number is recorded but never
+    // used.
+
+    const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
+
+    int mgi = 0;
+    while (std::getline(fmodel, line)) {
+      double vout_kmps{NAN};
+      double log_rho{NAN};
+      int cellnumberin = 0;
+      ssline = std::istringstream(line);
+
+      if (ssline >> cellnumberin >> vout_kmps >> log_rho) {
+        if (mgi == 0) {
+          first_cellindex = cellnumberin;
+          printout("first_cellindex %d\n", first_cellindex);
+        }
+        assert_always(cellnumberin == mgi + first_cellindex);
+
+        vout_model[mgi] = vout_kmps * 1.e5;
+
+        const double rho_tmin = pow(10., log_rho) * pow(t_model / globals::tmin, 3);
+        set_rho_tmin(mgi, rho_tmin);
+      } else {
+        printout("Unexpected number of values in model.txt\n");
+        printout("line: %s\n", line.c_str());
+        assert_always(false);
+      }
+      read_model_radioabundances(fmodel, ssline, mgi, true, colnames, nucindexlist, one_line_per_cell);
+
+      mgi += 1;
+      if (mgi == get_npts_model()) {
+        break;
+      }
     }
 
-    case GridType::CYLINDRICAL2D: {
-      printout("Read 2D model\n");
-
-      read_2d_model();
-      break;
+    if (mgi != get_npts_model()) {
+      printout("ERROR in model.txt. Found only %d cells instead of %d expected.\n", mgi - 1, get_npts_model());
+      std::abort();
     }
 
-    case GridType::CARTESIAN3D: {
-      printout("Read 3D model\n");
+    globals::vmax = vout_model[get_npts_model() - 1];
+  } else if (get_model_type() == GridType::CYLINDRICAL2D) {
+    printout("Read 2D model\n");
 
-      read_3d_model();
-      break;
+    // Now read the time (in days) at which the model is specified.
+    double t_model_days{NAN};
+    assert_always(get_noncommentline(fmodel, line));
+    std::istringstream(line) >> t_model_days;
+    t_model = t_model_days * DAY;
+
+    // Now read in vmax for the model (in cm s^-1).
+    assert_always(get_noncommentline(fmodel, line));
+    std::istringstream(line) >> globals::vmax;
+
+    const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
+
+    // Now read in the model. Each point in the model has two lines of input.
+    // First is an index for the cell then its r-mid point then its z-mid point
+    // then its total mass density.
+    // Second is the total FeG mass, initial 56Ni mass, initial 56Co mass
+
+    int mgi = 0;
+    while (std::getline(fmodel, line)) {
+      int cellnumberin = 0;
+      float cell_r_in{NAN};
+      float cell_z_in{NAN};
+      double rho_tmodel{NAN};
+      ssline = std::istringstream(line);
+      assert_always(ssline >> cellnumberin >> cell_r_in >> cell_z_in >> rho_tmodel);
+
+      if (mgi == 0) {
+        first_cellindex = cellnumberin;
+      }
+      assert_always(cellnumberin == mgi + first_cellindex);
+
+      const int n_rcyl = (mgi % ncoord_model[0]);
+      const double pos_r_cyl_mid = (n_rcyl + 0.5) * globals::vmax * t_model / ncoord_model[0];
+      assert_always(fabs((cell_r_in / pos_r_cyl_mid) - 1) < 1e-3);
+      const int n_z = (mgi / ncoord_model[0]);
+      const double pos_z_mid = globals::vmax * t_model * (-1 + 2 * (n_z + 0.5) / ncoord_model[1]);
+      assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
+
+      if (rho_tmodel < 0) {
+        printout("negative input density %g %d\n", rho_tmodel, mgi);
+        std::abort();
+      }
+
+      const bool keepcell = (rho_tmodel > 0);
+      const double rho_tmin = rho_tmodel * pow(t_model / globals::tmin, 3);
+      set_rho_tmin(mgi, rho_tmin);
+
+      read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
+
+      mgi++;
     }
+
+    if (mgi != get_npts_model()) {
+      printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, get_npts_model());
+      std::abort();
+    }
+  } else if (get_model_type() == GridType::CARTESIAN3D) {
+    printout("Read 3D model\n");
+
+    double t_model_days{NAN};
+    assert_always(get_noncommentline(fmodel, line));
+    std::istringstream(line) >> t_model_days;
+    t_model = t_model_days * DAY;
+
+    // for a 3D input model, the propagation cells will match the input cells exactly
+    ncoordgrid = ncoord_model;
+    ngrid = npts_model;
+
+    // Now read in vmax for the model (in cm s^-1).
+    assert_always(get_noncommentline(fmodel, line));
+    std::istringstream(line) >> globals::vmax;
+
+    const double xmax_tmodel = globals::vmax * t_model;
+
+    // Now read in the lines of the model.
+    min_den = -1.;
+
+    // check if expected positions match in either xyz or zyx column order
+    // set false if a problem is detected
+    bool posmatch_xyz = true;
+    bool posmatch_zyx = true;
+
+    const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
+
+    // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
+    // otherwise each input cell is one modelgrid cell
+    int mgi = 0;  // corresponds to model.txt index column, but zero indexed! (model.txt might be 1-indexed)
+    while (std::getline(fmodel, line)) {
+      int cellnumberin = 0;
+      std::array<float, 3> cellpos_in{};
+      float rho_model{NAN};
+      ssline = std::istringstream(line);
+
+      assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model);
+
+      if (mgi == 0) {
+        first_cellindex = cellnumberin;
+      }
+      assert_always(cellnumberin == mgi + first_cellindex);
+
+      if (mgi % (ncoord_model[1] * ncoord_model[2]) == 0) {
+        printout("read up to cell mgi %d\n", mgi);
+      }
+
+      // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
+      // however, the cellindex always should increment X first, then Y, then Z
+
+      for (int axis = 0; axis < 3; axis++) {
+        const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
+        const double cellpos_expected = -xmax_tmodel + (cellwidth * get_cellcoordpointnum(mgi, axis));
+        //   printout("mgi %d coord %d expected %g found %g or %g rmax %g get_cellcoordpointnum(mgi, axis) %d ncoordgrid
+        //   %d\n",
+        //            mgi, axis, cellpos_expected, cellpos_in[axis], cellpos_in[2 - axis], xmax_tmodel,
+        //            get_cellcoordpointnum(mgi, axis), ncoordgrid[axis]);
+        if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth) {
+          posmatch_xyz = false;
+        }
+        if (fabs(cellpos_expected - cellpos_in[2 - axis]) > 0.5 * cellwidth) {
+          posmatch_zyx = false;
+        }
+      }
+
+      if (rho_model < 0) {
+        printout("negative input density %g %d\n", rho_model, mgi);
+        std::abort();
+      }
+
+      // in 3D cartesian, cellindex and modelgridindex are interchangeable
+      const bool keepcell = (rho_model > 0);
+      const double rho_tmin = rho_model * pow(t_model / globals::tmin, 3);
+      set_rho_tmin(mgi, rho_tmin);
+
+      if (min_den < 0. || min_den > rho_model) {
+        min_den = rho_model;
+      }
+
+      read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
+
+      mgi++;
+    }
+    if (mgi != npts_model) {
+      printout("ERROR in model.txt. Found %d cells instead of %td expected.\n", mgi, npts_model);
+      std::abort();
+    }
+
+    //   assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
+    if (posmatch_xyz) {
+      printout("Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.\n");
+    }
+    if (posmatch_zyx) {
+      printout("Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.\n");
+    }
+
+    if (!posmatch_xyz && !posmatch_zyx) {
+      printout(
+          "WARNING: Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
+          "order.\n");
+    }
+
+    printout("min_den %g [g/cm3]\n", min_den);
   }
 
   printout("npts_model: %d\n", get_npts_model());
@@ -2162,10 +2166,11 @@ void write_grid_restart_data(const int timestep) {
     const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
     assert_always(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
-    fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", mgi, get_TR(mgi), get_Te(mgi), get_W(mgi),
-            get_TJ(mgi), modelgrid[mgi].thick, globals::dep_estimator_gamma[nonemptymgi],
-            globals::dep_estimator_positron[nonemptymgi], globals::dep_estimator_electron[nonemptymgi],
-            globals::dep_estimator_alpha[nonemptymgi], modelgrid[mgi].nne, modelgrid[mgi].nnetot);
+    fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", mgi, get_TR(nonemptymgi), get_Te(nonemptymgi),
+            get_W(nonemptymgi), get_TJ(nonemptymgi), modelgrid[nonemptymgi].thick,
+            globals::dep_estimator_gamma[nonemptymgi], globals::dep_estimator_positron[nonemptymgi],
+            globals::dep_estimator_electron[nonemptymgi], globals::dep_estimator_alpha[nonemptymgi],
+            modelgrid[nonemptymgi].nne, modelgrid[nonemptymgi].nnetot);
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
@@ -2229,9 +2234,10 @@ void grid_init(const int my_rank) {
     std::abort();
   }
 
-  printout("propagation grid: %d-dimensional %s\n", get_ngriddimensions(), get_grid_type_name().c_str());
+  printout("propagation grid: %d-dimensional %s\n", get_ngriddimensions(GRID_TYPE),
+           get_grid_type_name(GRID_TYPE).c_str());
 
-  for (int d = 0; d < get_ngriddimensions(); d++) {
+  for (int d = 0; d < get_ngriddimensions(GRID_TYPE); d++) {
     printout("    coordinate %d '%c': cells have %d position values\n", d, coordlabel[d], ncoordgrid[d]);
   }
   printout("    total propagation cells: %d\n", ngrid);
@@ -2342,13 +2348,13 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 [[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> &pos, const double time) -> int {
   auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
-  for (int d = 0; d < get_ngriddimensions(); d++) {
+  for (int d = 0; d < get_ngriddimensions(GRID_TYPE); d++) {
     cellindex += get_coordcellindexincrement(d) * get_poscoordpointnum(posgridcoords[d], time, d);
   }
 
   // do a check that the position is within the cell
   const double trat = time / globals::tmin;
-  for (int n = 0; n < grid::get_ngriddimensions(); n++) {
+  for (int n = 0; n < grid::get_ngriddimensions(GRID_TYPE); n++) {
     assert_always(posgridcoords[n] >= grid::get_cellcoordmin(cellindex, n) * trat);
     assert_always(posgridcoords[n] <= grid::get_cellcoordmax(cellindex, n) * trat);
   }
@@ -2370,7 +2376,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   // d is used to loop over the coordinate indicies 0,1,2 for x,y,z
 
   // the following four vectors are in grid coordinates, so either x,y,z or r
-  const int ndim = grid::get_ngriddimensions();
+  const int ndim = grid::get_ngriddimensions(GRID_TYPE);
   assert_testmodeonly(ndim <= 3);
   auto cellcoordmax = std::array<double, 3>{0};
   auto pktvelgridcoord = std::array<double, 3>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
@@ -2488,7 +2494,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
     // cartesian coordinates may be taken in turn. For x, the packet
     // trajectory is
     // x = x0 + (dir.x) * c * (t - tstart)
-    // the boundries follow
+    // the boundaries follow
     // x+/- = x+/-(tmin) * (t/tmin)
     // so the crossing occurs when
     // t = (x0 - (dir.x)*c*tstart)/(x+/-(tmin)/tmin - (dir.x)c)

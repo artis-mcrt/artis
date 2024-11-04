@@ -12,7 +12,7 @@ on:
 
 jobs:
     cppcheck:
-        runs-on: macos-14
+        runs-on: macos-15
         steps:
             - uses: actions/checkout@v4
 
@@ -29,7 +29,7 @@ jobs:
                   cppcheck --force --error-exitcode=1 --language=c++ --std=c++20 --enable=all --inconclusive --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --suppress=knownArgument --suppress=missingIncludeSystem --suppress=unusedFunction --check-level=exhaustive .
 
     clang-format:
-        runs-on: macos-14
+        runs-on: macos-15
         steps:
             - uses: actions/checkout@v4
 
@@ -45,7 +45,7 @@ jobs:
                   check-path: .
 
     clang-tidy:
-        runs-on: macos-14
+        runs-on: macos-15
         steps:
             - uses: actions/checkout@v4
 
@@ -53,12 +53,7 @@ jobs:
               with:
                   xcode-version: 'latest-stable'
 
-            - name: install dependencies
-              run: |
-                  brew update
-                  brew install openmpi gsl || true
-
-            - name: install llvm
+            - name: install llvm from brew
               run: |
                   brew install llvm || true
                   echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
@@ -73,22 +68,20 @@ jobs:
 
                   echo "CPATH=/opt/homebrew/opt/include" >> $GITHUB_ENV
 
-                  echo "compiledb" > requirements.txt
-
             - name: Set up Python
               uses: actions/setup-python@v5
-              with:
-                  cache: pip
+
+            - name: install dependencies
+              run: |
+                  brew update
+                  brew install openmpi gsl || true
+                  python3 -m pip install compiledb
 
             - name: Generate compile_commands.json
               run: |
-                  python3 -m pip install compiledb
                   cp artisoptions_nltenebular.h artisoptions.h
-                  make version.h
-                  python3 -m compiledb -n --full-path make
-
-            - name: cat compile_commands.json
-              run: cat compile_commands.json
+                  make clean
+                  python3 -m compiledb -n --full-path make TESTMODE=ON
 
             - name: run-clang-tidy
               run: |
@@ -224,7 +217,7 @@ jobs:
                   make MPI=${{matrix.mpi}} STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
     mac-llvm:
-        runs-on: macos-14
+        runs-on: macos-15
         env:
             CXX: clang++
         strategy:
@@ -275,14 +268,6 @@ jobs:
               if: matrix.mpi == 'ON'
               run: |
                   brew install openmpi || true
-
-            - name: install onedpl and tbb
-              run: |
-                  brew install onedpl tbb
-
-                  echo "LIBRARY_PATH=$HOMEBREW_PREFIX/lib:$LIBRARY_PATH" >> $GITHUB_ENV
-                  echo "LD_LIBRARY_PATH=$HOMEBREW_PREFIX/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-                  echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
 
             - name: Compile classic mode
               run: |

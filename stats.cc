@@ -31,11 +31,11 @@ std::array<ptrdiff_t, COUNTER_COUNT> eventstats{};
 
 void init() {
   if constexpr (TRACK_ION_STATS) {
-    ionstats.resize(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT, 0.);
+    ionstats.resize(static_cast<ptrdiff_t>(grid::get_nonempty_npts_model()) * get_includedions() * ION_STAT_COUNT, 0.);
   }
 }
 
-void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype,
+void increment_ion_stats(const int nonemptymgi, const int element, const int ion, enum ionstattypes ionstattype,
                          const double increment) {
   if (ionstattype >= 18) {
     return;
@@ -45,40 +45,40 @@ void increment_ion_stats(const int modelgridindex, const int element, const int 
   assert_testmodeonly(ionstattype < ION_STAT_COUNT);
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  atomicadd(ionstats[(modelgridindex * get_includedions() * ION_STAT_COUNT) + (uniqueionindex * ION_STAT_COUNT) +
-                     ionstattype],
+  atomicadd(ionstats[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions() * ION_STAT_COUNT) +
+                     (uniqueionindex * ION_STAT_COUNT) + ionstattype],
             increment);
 }
 
-void increment_ion_stats_contabsorption(const Packet &pkt, const int modelgridindex, const int element, const int ion) {
+void increment_ion_stats_contabsorption(const Packet &pkt, const int nonemptymgi, const int element, const int ion) {
   const double n_photons_absorbed = pkt.e_cmf / H / pkt.nu_cmf;
 
-  stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION, n_photons_absorbed);
+  stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION, n_photons_absorbed);
 
   const int et = pkt.emissiontype;
   if (et >= 0) {
     // r-packet is from bound-bound emission
-    stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUND, n_photons_absorbed);
+    stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUND, n_photons_absorbed);
     const int emissionelement = globals::linelist[et].elementindex;
     const int emissionion = globals::linelist[et].ionindex;
 
-    stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_BOUNDBOUND_ABSORBED, n_photons_absorbed);
+    stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_BOUNDBOUND_ABSORBED, n_photons_absorbed);
 
     if (emissionelement == element) {
       if (emissionion == ion + 1) {
-        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSONE,
+        stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSONE,
                                    n_photons_absorbed);
       } else if (emissionion == ion + 2) {
-        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO,
+        stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO,
                                    n_photons_absorbed);
       } else if (emissionion == ion + 3) {
-        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE,
+        stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE,
                                    n_photons_absorbed);
       }
     }
   } else if (et != EMTYPE_FREEFREE && et != EMTYPE_NOTSET) {
     // r-pkt is from bound-free emission (not free-free scattering)
-    stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBOUNDFREE, n_photons_absorbed);
+    stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBOUNDFREE, n_photons_absorbed);
 
     const int bfindex = (-1 * et) - 1;
     assert_always(bfindex >= 0);
@@ -88,71 +88,67 @@ void increment_ion_stats_contabsorption(const Packet &pkt, const int modelgridin
     const int emissionupperion = emissionlowerion + 1;
     const int emissionlowerlevel = globals::bflist[bfindex].levelindex;
 
-    stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_RADRECOMB_ABSORBED, n_photons_absorbed);
+    stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_RADRECOMB_ABSORBED, n_photons_absorbed);
 
     if (emissionelement == element) {
-      stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBFSAMEELEMENT,
-                                 n_photons_absorbed);
+      stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFSAMEELEMENT, n_photons_absorbed);
       if (emissionupperion == ion + 1) {
-        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSONE,
-                                   n_photons_absorbed);
+        stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSONE, n_photons_absorbed);
       } else if (emissionupperion == ion + 2) {
-        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSTWO,
-                                   n_photons_absorbed);
+        stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSTWO, n_photons_absorbed);
       } else if (emissionupperion == ion + 3) {
-        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSTHREE,
+        stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFIONPLUSTHREE,
                                    n_photons_absorbed);
       }
     }
     if (level_isinsuperlevel(emissionelement, emissionlowerion, emissionlowerlevel)) {
-      stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBFLOWERSUPERLEVEL,
+      stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFLOWERSUPERLEVEL,
                                  n_photons_absorbed);
     }
   }
 }
 
-auto get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype)
-    -> double {
+auto get_ion_stats(const int nonemptymgi, const int element, const int ion, enum ionstattypes ionstattype) -> double {
   assert_always(ion < get_nions(element));
   assert_always(ionstattype < ION_STAT_COUNT);
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  return ionstats[(modelgridindex * get_includedions() * ION_STAT_COUNT) + (uniqueionindex * ION_STAT_COUNT) +
+  return ionstats[(nonemptymgi * get_includedions() * ION_STAT_COUNT) + (uniqueionindex * ION_STAT_COUNT) +
                   ionstattype];
 }
 
-void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype,
+void set_ion_stats(const int nonemptymgi, const int element, const int ion, enum ionstattypes ionstattype,
                    const double newvalue) {
   assert_always(ion < get_nions(element));
   assert_always(ionstattype < ION_STAT_COUNT);
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  ionstats[(modelgridindex * get_includedions() * ION_STAT_COUNT) + (uniqueionindex * ION_STAT_COUNT) + ionstattype] =
+  ionstats[(nonemptymgi * get_includedions() * ION_STAT_COUNT) + (uniqueionindex * ION_STAT_COUNT) + ionstattype] =
       newvalue;
 }
 
-void reset_ion_stats(int modelgridindex) {
+void reset_ion_stats(int nonemptymgi) {
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
       for (int i = 0; i < ION_STAT_COUNT; i++) {
-        set_ion_stats(modelgridindex, element, ion, static_cast<enum stats::ionstattypes>(i), 0.);
+        set_ion_stats(nonemptymgi, element, ion, static_cast<enum stats::ionstattypes>(i), 0.);
       }
     }
   }
 }
 
-void normalise_ion_estimators(const int mgi, const double deltat, const double deltaV) {
+void normalise_ion_estimators(const int nonemptymgi, const double deltat, const double deltaV) {
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
       for (int i = 0; i < ION_STAT_COUNT; i++) {
         // energy or event count per volume per second
-        const double ratedensity = get_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i)) / deltaV /
-                                   deltat / globals::nprocs;
+        const double ratedensity = get_ion_stats(nonemptymgi, element, ion, static_cast<enum stats::ionstattypes>(i)) /
+                                   deltaV / deltat / globals::nprocs;
 
         if (i < nstatcounters_ratecoeff) {
           // convert photon event counters into rate coefficients
-          set_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i),
-                        ratedensity / get_nnion(mgi, element, ion));
+          set_ion_stats(nonemptymgi, element, ion, static_cast<enum stats::ionstattypes>(i),
+                        ratedensity / get_nnion(nonemptymgi, element, ion));
         } else {
-          set_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i), ratedensity);
+          set_ion_stats(nonemptymgi, element, ion, static_cast<enum stats::ionstattypes>(i), ratedensity);
         }
       }
     }

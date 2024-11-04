@@ -228,7 +228,7 @@ void mpi_communicate_grid_properties() {
 
       radfield::do_MPI_Bcast(nonemptymgi, root, root_node_id);
 
-      nonthermal::nt_MPI_Bcast(nonemptymgi, root, root_node_id);
+      nonthermal::nt_MPI_Bcast(nonemptymgi, root_node_id);
 
       if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
         MPI_Bcast(&grid::nltepops_allcells[nonemptymgi * globals::total_nlte_levels], globals::total_nlte_levels,
@@ -249,8 +249,8 @@ void mpi_communicate_grid_properties() {
       }
 
       if (globals::rank_in_node == 0) {
-        MPI_Bcast(&grid::modelgrid[grid::get_mgi_of_nonemptymgi(nonemptymgi)], sizeof(grid::ModelGridCell), MPI_BYTE,
-                  root_node_id, globals::mpi_comm_internode);
+        MPI_Bcast(&grid::modelgrid[nonemptymgi], sizeof(grid::ModelGridCell), MPI_BYTE, root_node_id,
+                  globals::mpi_comm_internode);
       }
 
       MPI_Bcast_binned_opacities(nonemptymgi, root_node_id);
@@ -522,8 +522,7 @@ void zero_estimators() {
   radfield::zero_estimators();
   if constexpr (TRACK_ION_STATS) {
     for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-      const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-      stats::reset_ion_stats(modelgridindex);
+      stats::reset_ion_stats(nonemptymgi);
     }
   }
 

@@ -22,7 +22,7 @@ struct Rpkt_continuum_absorptioncoeffs {
   double ffescat{0.};
   double ffheat{0.};
   double bf{0.};
-  int modelgridindex{-1};
+  int nonemptymgi{-1};
   int timestep{-1};
   Phixslist *phixslist{nullptr};
 };
@@ -33,10 +33,10 @@ struct Rpkt_continuum_absorptioncoeffs {
 
 void do_rpkt(Packet &pkt, double t2);
 void emit_rpkt(Packet &pkt);
-void calculate_chi_rpkt_cont(double nu_cmf, Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, int modelgridindex);
+void calculate_chi_rpkt_cont(double nu_cmf, Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, int nonemptymgi);
 [[nodiscard]] auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
 void allocate_expansionopacities();
-void calculate_expansion_opacities(int modelgridindex);
+void calculate_expansion_opacities(int nonemptymgi);
 void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);
 
 [[nodiscard]] constexpr auto get_linedistance(const double prop_time, const double nu_cmf, const double nu_trans,
@@ -112,12 +112,12 @@ constexpr auto closest_transition(const double nu_cmf, const int next_trans, con
   return (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 }
 
-inline auto keep_this_cont(int element, const int ion, const int level, const int modelgridindex, const float nnetot)
+inline auto keep_this_cont(int element, const int ion, const int level, const int nonemptymgi, const float nnetot)
     -> bool {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    return grid::get_elem_abundance(modelgridindex, element) > 0;
+    return grid::get_elem_abundance(nonemptymgi, element) > 0;
   }
-  return ((get_nnion(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0));
+  return ((get_nnion(nonemptymgi, element, ion) / nnetot > 1.e-6) || (level == 0));
 }
 
 #endif  // RPKT_H
