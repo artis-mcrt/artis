@@ -109,6 +109,7 @@ void set_model_type(GridType model_type_value);
 [[nodiscard]] auto get_nonempty_npts_model() -> int;
 [[nodiscard]] auto get_t_model() -> double;
 [[nodiscard]] auto get_cell_modelgridindex(int cellindex) -> int;
+[[nodiscard]] auto get_propcell_nonemptymgi(int cellindex) -> int;
 [[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> &pos, double time) -> int;
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);

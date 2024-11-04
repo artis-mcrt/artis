@@ -787,8 +787,7 @@ void transport_gamma(Packet &pkt, const double t2) {
     move_pkt_withtime(pkt, sdist / 2.);
 
     // Move it into the new cell.
-    const int mgi = grid::get_cell_modelgridindex(pkt.where);
-    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
+    const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
     if (chi_tot > 0 && nonemptymgi >= 0) {
       update_gamma_dep(pkt, sdist, nonemptymgi);
     }
@@ -801,8 +800,7 @@ void transport_gamma(Packet &pkt, const double t2) {
   } else if ((tdist < sdist) && (tdist < edist)) {
     // Doesn't reach boundary.
     move_pkt_withtime(pkt, tdist / 2.);
-    const int mgi = grid::get_cell_modelgridindex(pkt.where);
-    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
+    const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
     if (chi_tot > 0 && nonemptymgi >= 0) {
       update_gamma_dep(pkt, tdist, nonemptymgi);
@@ -811,8 +809,7 @@ void transport_gamma(Packet &pkt, const double t2) {
     pkt.prop_time = t2;  // prevent roundoff error
   } else if ((edist < sdist) && (edist < tdist)) {
     move_pkt_withtime(pkt, edist / 2.);
-    const int mgi = grid::get_cell_modelgridindex(pkt.where);
-    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
+    const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
     if (chi_tot > 0 && nonemptymgi >= 0) {
       update_gamma_dep(pkt, edist, nonemptymgi);
     }

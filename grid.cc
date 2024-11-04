@@ -1616,13 +1616,20 @@ auto get_t_model() -> double {
   return t_model;
 }
 
-__host__ __device__ auto get_cell_modelgridindex(const int cellindex) -> int {
+[[nodiscard]] __host__ __device__ auto get_cell_modelgridindex(const int cellindex) -> int {
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
-  const int mgi = cell[cellindex].modelgridindex;
+  const auto mgi = cell[cellindex].modelgridindex;
   assert_testmodeonly(mgi >= 0);
   assert_testmodeonly(mgi < (get_npts_model() + 1));
   return mgi;
+}
+
+[[nodiscard]] __host__ __device__ auto get_propcell_nonemptymgi(const int cellindex) -> int {
+  const auto nonemptymgi = nonemptymgi_of_propcell[cellindex];
+  assert_testmodeonly(nonemptymgi >= -1);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
+  return nonemptymgi;
 }
 
 // number of propagation cells associated with each modelgrid cell
