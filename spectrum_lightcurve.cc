@@ -197,16 +197,17 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
     const double deltaE = pkt.e_rf / globals::timesteps[nt].width / spectra.delta_freq[nnu] / 4.e12 / PI / PARSEC /
                           PARSEC / globals::nprocs_exspec * anglefactor;
 
-    spectra.fluxalltimesteps[(nt * MNUBINS) + nnu] += deltaE;
+    const ptrdiff_t fluxindex = (nt * MNUBINS) + nnu;
+    spectra.fluxalltimesteps[fluxindex] += deltaE;
 
     if (stokes_i != nullptr) {
-      stokes_i->fluxalltimesteps[(nt * MNUBINS) + nnu] += pkt.stokes[0] * deltaE;
+      stokes_i->fluxalltimesteps[fluxindex] += pkt.stokes[0] * deltaE;
     }
     if (stokes_q != nullptr) {
-      stokes_q->fluxalltimesteps[(nt * MNUBINS) + nnu] += pkt.stokes[1] * deltaE;
+      stokes_q->fluxalltimesteps[fluxindex] += pkt.stokes[1] * deltaE;
     }
     if (stokes_u != nullptr) {
-      stokes_u->fluxalltimesteps[(nt * MNUBINS) + nnu] += pkt.stokes[2] * deltaE;
+      stokes_u->fluxalltimesteps[fluxindex] += pkt.stokes[2] * deltaE;
     }
 
     if (spectra.do_emission_res) {
@@ -221,16 +222,17 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
       const int nproc = columnindex_from_emissiontype(pkt.emissiontype);
       assert_always(nproc < proccount);
       if (nproc >= 0) {  // -1 means not set
-        spectra.timesteps[nt].emission[(nnu * proccount) + nproc] += deltaE;
+        const ptrdiff_t emindex = (nnu * proccount) + nproc;
+        spectra.timesteps[nt].emission[emindex] += deltaE;
 
         if (stokes_i != nullptr && stokes_i->do_emission_res) {
-          stokes_i->timesteps[nt].emission[(nnu * proccount) + nproc] += pkt.stokes[0] * deltaE;
+          stokes_i->timesteps[nt].emission[emindex] += pkt.stokes[0] * deltaE;
         }
         if (stokes_q != nullptr && stokes_q->do_emission_res) {
-          stokes_q->timesteps[nt].emission[(nnu * proccount) + nproc] += pkt.stokes[1] * deltaE;
+          stokes_q->timesteps[nt].emission[emindex] += pkt.stokes[1] * deltaE;
         }
         if (stokes_u != nullptr && stokes_u->do_emission_res) {
-          stokes_u->timesteps[nt].emission[(nnu * proccount) + nproc] += pkt.stokes[2] * deltaE;
+          stokes_u->timesteps[nt].emission[emindex] += pkt.stokes[2] * deltaE;
         }
       }
 
@@ -253,7 +255,6 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
                               ? static_cast<int>((log(pkt.absorptionfreq) - log(nu_min)) / dlognu)
                               : -1;
       if (nnu_abs >= 0 && nnu_abs < MNUBINS) {
-        const int ioncount = get_nelements() * get_max_nions();
         const double deltaE_absorption = pkt.e_rf / globals::timesteps[nt].width / spectra.delta_freq[nnu_abs] / 4.e12 /
                                          PI / PARSEC / PARSEC / globals::nprocs_exspec * anglefactor;
         const int at = pkt.absorptiontype;
@@ -261,20 +262,17 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
           // bb-emission
           const int element = globals::linelist[at].elementindex;
           const int ion = globals::linelist[at].ionindex;
-          spectra.timesteps[nt].absorption[(nnu_abs * ioncount) + (element * get_max_nions()) + ion] +=
-              deltaE_absorption;
+          const ptrdiff_t absindex = (nnu_abs * get_nelements() * get_max_nions()) + (element * get_max_nions()) + ion;
+          spectra.timesteps[nt].absorption[absindex] += deltaE_absorption;
 
           if (stokes_i != nullptr && stokes_i->do_emission_res) {
-            stokes_i->timesteps[nt].absorption[(nnu_abs * ioncount) + (element * get_max_nions()) + ion] +=
-                pkt.stokes[0] * deltaE_absorption;
+            stokes_i->timesteps[nt].absorption[absindex] += pkt.stokes[0] * deltaE_absorption;
           }
           if (stokes_q != nullptr && stokes_q->do_emission_res) {
-            stokes_q->timesteps[nt].absorption[(nnu_abs * ioncount) + (element * get_max_nions()) + ion] +=
-                pkt.stokes[1] * deltaE_absorption;
+            stokes_q->timesteps[nt].absorption[absindex] += pkt.stokes[1] * deltaE_absorption;
           }
           if (stokes_u != nullptr && stokes_u->do_emission_res) {
-            stokes_u->timesteps[nt].absorption[(nnu_abs * ioncount) + (element * get_max_nions()) + ion] +=
-                pkt.stokes[2] * deltaE_absorption;
+            stokes_u->timesteps[nt].absorption[absindex] += pkt.stokes[2] * deltaE_absorption;
           }
 
           if (TRACE_EMISSION_ABSORPTION_REGION_ON && t_arrive >= traceemissabs_timemin &&
