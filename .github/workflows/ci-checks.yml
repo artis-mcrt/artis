@@ -218,12 +218,8 @@ jobs:
         runs-on: macos-15
         env:
             CXX: clang++
-        strategy:
-            matrix:
-                openmp: [ON, OFF]
-            fail-fast: false
 
-        name: macOS llvm clang ${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
+        name: macOS llvm clang
 
         steps:
             - uses: actions/checkout@v4
@@ -253,7 +249,6 @@ jobs:
                   echo "CXX=clang++" >> $GITHUB_ENV
 
             - name: install OpenMP
-              if: matrix.openmp == 'ON'
               run: |
                   brew install libomp || true
                   brew link --force libomp
@@ -270,10 +265,14 @@ jobs:
                   $CXX -v
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile classic mode OPENMP=ON
+              run: |
+                  make clean
+                  make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile classic mode STDPAR=ON
-              if: matrix.openmp != 'ON'
               run: |
                   $CXX -v
                   cp -v -p artisoptions_classic.h artisoptions.h
@@ -284,10 +283,15 @@ jobs:
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode OPENMP=ON
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
-              if: matrix.openmp != 'ON'
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
