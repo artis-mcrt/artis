@@ -151,5 +151,9 @@ constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
 
 constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
 
+constexpr float BETAMINUS_ENERGY_GAMMA_SPLITUP = 0.45;
+
+constexpr float BETAMINUS_ENERGY_ELECTRON_SPLITUP = 0.2;
+
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
