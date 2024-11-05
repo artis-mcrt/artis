@@ -1864,27 +1864,37 @@ void read_ejecta_model() {
   assert_always(get_noncommentline(fmodel, line));
   auto ssline = std::istringstream(line);
   ssline >> npts_0;
-  if (get_model_type() == GridType::SPHERICAL1D) {
-    npts_model = npts_0;
-    ncoord_model[0] = npts_0;
-    ncoord_model[1] = 0;
-    ncoord_model[2] = 0;
-  } else if (get_model_type() == GridType::CYLINDRICAL2D) {
+  if (ssline >> npts_1) {
+    printout("Read 2D model\n");
+    assert_always(get_model_type() == GridType::CYLINDRICAL2D);
     ssline >> npts_1;  // r and z (cylindrical polar)
     npts_model = npts_0 * npts_1;
     ncoord_model[0] = npts_0;
     ncoord_model[1] = npts_1;
     ncoord_model[2] = 0;
-  } else if (get_model_type() == GridType::CARTESIAN3D) {
-    npts_model = npts_0;
-    ncoord_model[0] = static_cast<int>(round(pow(npts_0, 1 / 3.)));
-    ncoord_model[1] = ncoord_model[0];
-    ncoord_model[2] = ncoord_model[0];
-    assert_always(GRID_TYPE == GridType::CARTESIAN3D);
-    // for a 3D input model, the propagation cells will match the input cells exactly
-    ncoordgrid = ncoord_model;
-    ngrid = npts_model;
+  } else {
+    if (get_model_type() == GridType::SPHERICAL1D) {
+      npts_model = npts_0;
+      ncoord_model[0] = npts_0;
+      ncoord_model[1] = 0;
+      ncoord_model[2] = 0;
+    } else if (get_model_type() == GridType::CARTESIAN3D) {
+      npts_model = npts_0;
+      ncoord_model[0] = static_cast<int>(round(pow(npts_0, 1 / 3.)));
+      ncoord_model[1] = ncoord_model[0];
+      ncoord_model[2] = ncoord_model[0];
+      assert_always(GRID_TYPE == GridType::CARTESIAN3D);
+      // for a 3D input model, the propagation cells will match the input cells exactly
+      ncoordgrid = ncoord_model;
+      ngrid = npts_model;
+    }
   }
+
+  // Now read the time (in days) at which the model is specified.
+  double t_model_days{NAN};
+  assert_always(get_noncommentline(fmodel, line));
+  std::istringstream(line) >> t_model_days;
+  t_model = t_model_days * DAY;
 
   assert_always(modelgrid_input.data() == nullptr);
   modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model + 1);
@@ -1896,12 +1906,6 @@ void read_ejecta_model() {
 #endif
   mg_associated_cells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
-
-  // Now read the time (in days) at which the model is specified.
-  double t_model_days{NAN};
-  assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> t_model_days;
-  t_model = t_model_days * DAY;
 
   if (get_model_type() == GridType::SPHERICAL1D) {
     printout("Read 1D model\n");
@@ -1955,8 +1959,6 @@ void read_ejecta_model() {
 
     globals::vmax = vout_model[get_npts_model() - 1];
   } else if (get_model_type() == GridType::CYLINDRICAL2D) {
-    printout("Read 2D model\n");
-
     // Now read in vmax for the model (in cm s^-1).
     assert_always(get_noncommentline(fmodel, line));
     std::istringstream(line) >> globals::vmax;
