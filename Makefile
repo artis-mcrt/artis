@@ -5,24 +5,8 @@
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
 
-ifeq ($(MPI),)
-	# MPI option not specified. set to true if mpicxx exists
-	ifneq (, $(shell command -v mpicxx 2> /dev/null))
-		MPI := ON
-	else
-		MPI := OFF
-	endif
-endif
-
-ifeq ($(MPI),ON)
-	CXX := mpicxx
-	CXXFLAGS += -DMPI_ON=true
-	BUILD_DIR := $(BUILD_DIR)_mpi
+CXX := mpicxx
 $(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
-else ifeq ($(MPI),OFF)
-else
-  $(error bad value for MPI option. Should be ON or OFF)
-endif
 
 ifeq ($(TESTMODE),ON)
 else ifeq ($(TESTMODE),OFF)
@@ -65,7 +49,7 @@ else
 	CXXFLAGS += -std=c++23 -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -MD -MP -ftrivial-auto-var-init=pattern
 endif
 
-CXXFLAGS += -fstrict-aliasing
+CXXFLAGS += -fstrict-aliasing -DMPI_ON=true
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
 
 # profile-guided optimisation
