@@ -1857,6 +1857,7 @@ void calculate_kappagrey() {
 void read_ejecta_model() {
   auto fmodel = fstream_required("model.txt", std::ios::in);
   std::string line;
+  int detected_dim = -1;
 
   // two integers on the first line of the model file
   int npts_0 = 0;  // total model points for 1D/3D, and number of points in r for 2D
@@ -1865,7 +1866,8 @@ void read_ejecta_model() {
   auto ssline = std::istringstream(line);
   ssline >> npts_0;
   if (ssline >> npts_1) {
-    printout("Read 2D model\n");
+    detected_dim = 2;
+    printout("Detected 2D model\n");
     assert_always(get_model_type() == GridType::CYLINDRICAL2D);
     ssline >> npts_1;  // r and z (cylindrical polar)
     npts_model = npts_0 * npts_1;
@@ -1896,6 +1898,36 @@ void read_ejecta_model() {
   std::istringstream(line) >> t_model_days;
   t_model = t_model_days * DAY;
 
+  const auto pos_after_t_model = fmodel.tellg();
+  std::getline(fmodel, line);
+  if (line.starts_with("#")) {
+    // no vmax, so not 2D or 3D
+    assert_always(detected_dim == -1);
+    detected_dim = 1;
+    printout("Detected 1D model\n");
+  } else {
+    double num0{NAN};
+    double num1{NAN};
+    auto sslinevmax = std::istringstream(line);
+    if ((sslinevmax >> num0) && !(sslinevmax >> num1)) {
+      // single value on the line is a vmax,  so 2D or 3D
+      if (detected_dim != 2) {
+        assert_always(detected_dim == -1);
+        detected_dim = 3;
+
+        printout("Detected 3D model\n");
+      }
+    } else {
+      assert_always(detected_dim == -1);
+      detected_dim = 1;
+      printout("Detected 1D model\n");
+    }
+  }
+
+  fmodel.seekg(pos_after_t_model);
+
+  printout("Read %dD model\n", get_ngriddimensions(get_model_type()));
+
   assert_always(modelgrid_input.data() == nullptr);
   modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model + 1);
   if (globals::rank_in_node == 0) {
@@ -1908,8 +1940,6 @@ void read_ejecta_model() {
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 
   if (get_model_type() == GridType::SPHERICAL1D) {
-    printout("Read 1D model\n");
-
     vout_model.resize(get_npts_model(), NAN);
 
     // Now read in the lines of the model. Each line has 5 entries: the
@@ -2010,8 +2040,6 @@ void read_ejecta_model() {
       std::abort();
     }
   } else if (get_model_type() == GridType::CARTESIAN3D) {
-    printout("Read 3D model\n");
-
     // Now read in vmax for the model (in cm s^-1).
     assert_always(get_noncommentline(fmodel, line));
     std::istringstream(line) >> globals::vmax;
