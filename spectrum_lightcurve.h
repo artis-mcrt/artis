@@ -7,13 +7,6 @@
 #include "exspec.h"
 #include "packet.h"
 
-struct TimeStepSpecrum {
-  double *flux{};
-  double *absorption{};
-  double *emission{};
-  double *trueemission{};
-};
-
 struct Spectra {
   double nu_min = -1.;
   double nu_max = -1.;
@@ -23,7 +16,6 @@ struct Spectra {
   std::vector<double> absorptionalltimesteps;
   std::vector<double> emissionalltimesteps;
   std::vector<double> trueemissionalltimesteps;
-  std::vector<TimeStepSpecrum> timesteps;
   bool do_emission_res = false;
 };
 
@@ -35,8 +27,8 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
                    const std::string &absorption_filename, const Spectra *stokes_i, const Spectra *stokes_q,
                    const Spectra *stokes_u);
 
-void add_to_spec_res(const Packet &pkt, int current_abin, Spectra &spectra, const Spectra *stokes_i,
-                     const Spectra *stokes_q, const Spectra *stokes_u);
+void add_to_spec_res(const Packet &pkt, int current_abin, Spectra &spectra, Spectra *stokes_i, Spectra *stokes_q,
+                     Spectra *stokes_u);
 
 void init_spectra(Spectra &spectra, double nu_min, double nu_max, bool do_emission_res);
 void init_spectrum_trace();

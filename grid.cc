@@ -16,6 +16,7 @@
 #ifdef MPI_ON
 #include <mpi.h>
 #endif
+#include <optional>
 #include <span>
 #include <sstream>
 #include <string>
@@ -1857,6 +1858,7 @@ void calculate_kappagrey() {
 void read_ejecta_model() {
   auto fmodel = fstream_required("model.txt", std::ios::in);
   std::string line;
+  std::optional<GridType> detected_dim{};
 
   // two integers on the first line of the model file
   int npts_0 = 0;  // total model points for 1D/3D, and number of points in r for 2D
@@ -1864,22 +1866,48 @@ void read_ejecta_model() {
   assert_always(get_noncommentline(fmodel, line));
   auto ssline = std::istringstream(line);
   ssline >> npts_0;
-  if (get_model_type() == GridType::SPHERICAL1D) {
-    ncoord_model[0] = npts_0;
-    ncoord_model[1] = 0;
-    ncoord_model[2] = 0;
-  } else if (get_model_type() == GridType::CYLINDRICAL2D) {
+  if (ssline >> npts_1) {
+    // second number on the line for 2D means the line was n_r n_z
+    detected_dim = GridType::CYLINDRICAL2D;
+    printout("Detected 2D model\n");
     ssline >> npts_1;  // r and z (cylindrical polar)
-    ncoord_model[0] = npts_0;
-    ncoord_model[1] = npts_1;
-    ncoord_model[2] = 0;
-  } else if (get_model_type() == GridType::CARTESIAN3D) {
-    ncoord_model[0] = static_cast<int>(round(pow(npts_0, 1 / 3.)));
-    ncoord_model[1] = ncoord_model[0];
-    ncoord_model[2] = ncoord_model[0];
-    assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_0);
+    npts_model = npts_0 * npts_1;
+  } else {
+    // for 1D and 3D, this was the total number of model cells
+    npts_model = npts_0;
   }
-  npts_model = std::max(1, ncoord_model[0]) * std::max(1, ncoord_model[1]) * std::max(1, ncoord_model[2]);
+
+  // Now read the time (in days) at which the model is specified.
+  double t_model_days{NAN};
+  assert_always(get_noncommentline(fmodel, line));
+  std::istringstream(line) >> t_model_days;
+  t_model = t_model_days * DAY;
+
+  const auto pos_after_t_model = fmodel.tellg();
+  // if the next line is a single float, it is the vmax (so 2D or 3D)
+  // otherwise, it is the first line of the model or a header comment (so 1D)
+  std::getline(fmodel, line);
+  if (!line.starts_with("#")) {
+    double num_after_vmax{NAN};
+    auto sslinevmax = std::istringstream(line);
+    if ((sslinevmax >> globals::vmax) && !(sslinevmax >> num_after_vmax)) {
+      // single value on the line is a vmax, so 2D or 3D
+      // if it's not already know to be 2D (based on n_r n_z line), then it's 3D
+      if (detected_dim != GridType::CYLINDRICAL2D) {
+        assert_always(!detected_dim.has_value());
+        detected_dim = GridType::CARTESIAN3D;
+        printout("Detected 3D model\n");
+      }
+    }
+  }
+  if (!detected_dim.has_value()) {
+    assert_always(!detected_dim.has_value());
+    detected_dim = GridType::SPHERICAL1D;
+    printout("Detected 1D model\n");
+    fmodel.seekg(pos_after_t_model);
+  }
+
+  set_model_type(detected_dim.value());
 
   assert_always(modelgrid_input.data() == nullptr);
   modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model + 1);
@@ -1893,14 +1921,9 @@ void read_ejecta_model() {
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 
   if (get_model_type() == GridType::SPHERICAL1D) {
-    printout("Read 1D model\n");
-
-    // Now read the time (in days) at which the model is specified.
-    double t_model_days{NAN};
-    assert_always(get_noncommentline(fmodel, line));
-    std::istringstream(line) >> t_model_days;
-    t_model = t_model_days * DAY;
-
+    ncoord_model[0] = npts_0;
+    ncoord_model[1] = 0;
+    ncoord_model[2] = 0;
     vout_model.resize(get_npts_model(), NAN);
 
     // Now read in the lines of the model. Each line has 5 entries: the
@@ -1950,18 +1973,9 @@ void read_ejecta_model() {
 
     globals::vmax = vout_model[get_npts_model() - 1];
   } else if (get_model_type() == GridType::CYLINDRICAL2D) {
-    printout("Read 2D model\n");
-
-    // Now read the time (in days) at which the model is specified.
-    double t_model_days{NAN};
-    assert_always(get_noncommentline(fmodel, line));
-    std::istringstream(line) >> t_model_days;
-    t_model = t_model_days * DAY;
-
-    // Now read in vmax for the model (in cm s^-1).
-    assert_always(get_noncommentline(fmodel, line));
-    std::istringstream(line) >> globals::vmax;
-
+    ncoord_model[0] = npts_0;
+    ncoord_model[1] = npts_1;
+    ncoord_model[2] = 0;
     const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
 
     // Now read in the model. Each point in the model has two lines of input.
@@ -2009,20 +2023,12 @@ void read_ejecta_model() {
       std::abort();
     }
   } else if (get_model_type() == GridType::CARTESIAN3D) {
-    printout("Read 3D model\n");
-
-    double t_model_days{NAN};
-    assert_always(get_noncommentline(fmodel, line));
-    std::istringstream(line) >> t_model_days;
-    t_model = t_model_days * DAY;
-
+    ncoord_model[0] = static_cast<int>(round(pow(npts_0, 1 / 3.)));
+    ncoord_model[1] = ncoord_model[0];
+    ncoord_model[2] = ncoord_model[0];
     // for a 3D input model, the propagation cells will match the input cells exactly
     ncoordgrid = ncoord_model;
     ngrid = npts_model;
-
-    // Now read in vmax for the model (in cm s^-1).
-    assert_always(get_noncommentline(fmodel, line));
-    std::istringstream(line) >> globals::vmax;
 
     const double xmax_tmodel = globals::vmax * t_model;
 
@@ -2062,8 +2068,8 @@ void read_ejecta_model() {
       for (int axis = 0; axis < 3; axis++) {
         const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
         const double cellpos_expected = -xmax_tmodel + (cellwidth * get_cellcoordpointnum(mgi, axis));
-        //   printout("mgi %d coord %d expected %g found %g or %g rmax %g get_cellcoordpointnum(mgi, axis) %d ncoordgrid
-        //   %d\n",
+        //   printout("mgi %d coord %d expected %g found %g or %g rmax %g get_cellcoordpointnum(mgi, axis) %d
+        //   ncoordgrid %d\n",
         //            mgi, axis, cellpos_expected, cellpos_in[axis], cellpos_in[2 - axis], xmax_tmodel,
         //            get_cellcoordpointnum(mgi, axis), ncoordgrid[axis]);
         if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth) {
@@ -2114,6 +2120,8 @@ void read_ejecta_model() {
     printout("min_den %g [g/cm3]\n", min_den);
   }
 
+  assert_always(get_npts_model() ==
+                std::max(1, ncoord_model[0]) * std::max(1, ncoord_model[1]) * std::max(1, ncoord_model[2]));
   printout("npts_model: %d\n", get_npts_model());
   globals::rmax = globals::vmax * globals::tmin;
   printout("vmax %g [cm/s] (%.2fc)\n", globals::vmax, globals::vmax / CLIGHT);

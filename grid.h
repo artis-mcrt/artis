@@ -32,7 +32,7 @@ struct ModelGridCell {
   int thick = 0;
 };
 
-consteval auto get_ngriddimensions(const GridType gridtype) -> int {
+constexpr auto get_ngriddimensions(const GridType gridtype) -> int {
   switch (gridtype) {
     case GridType::SPHERICAL1D:
       return 1;
