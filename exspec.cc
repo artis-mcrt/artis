@@ -1,6 +1,7 @@
 #include "exspec.h"
 
 #include <mpi.h>
+#include <unistd.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -161,9 +162,7 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
 auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
   const auto sys_time_start = std::time(nullptr);
 
-#if (true)
   MPI_Init(&argc, &argv);
-#endif
 
   globals::setup_mpi_vars();
 
@@ -188,15 +187,11 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
   printout("TESTMODE is ON\n");
 #endif
 
-#if (true)
   printout("process id (pid): %d\n", getpid());
   printout("MPI enabled:\n");
   printout("  rank_global %d of [0..%d] in MPI_COMM_WORLD\n", globals::my_rank, globals::nprocs - 1);
   printout("  rank_in_node %d of [0..%d] in node %d of [0..%d]\n", globals::rank_in_node, globals::node_nprocs - 1,
            globals::node_id, globals::node_count - 1);
-#else
-  printout("MPI is disabled in this build\n");
-#endif
 
   // single rank only for now
   assert_always(globals::my_rank == 0);
@@ -250,9 +245,7 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
   decay::cleanup();
   printout("exspec finished at %ld (tstart + %ld seconds)\n", std::time(nullptr), std::time(nullptr) - sys_time_start);
 
-#if (true)
   MPI_Finalize();
-#endif
 
   if (std::filesystem::exists("artis.pid")) {
     std::filesystem::remove("artis.pid");
