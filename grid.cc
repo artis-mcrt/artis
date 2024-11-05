@@ -1865,21 +1865,26 @@ void read_ejecta_model() {
   auto ssline = std::istringstream(line);
   ssline >> npts_0;
   if (get_model_type() == GridType::SPHERICAL1D) {
+    npts_model = npts_0;
     ncoord_model[0] = npts_0;
     ncoord_model[1] = 0;
     ncoord_model[2] = 0;
   } else if (get_model_type() == GridType::CYLINDRICAL2D) {
     ssline >> npts_1;  // r and z (cylindrical polar)
+    npts_model = npts_0 * npts_1;
     ncoord_model[0] = npts_0;
     ncoord_model[1] = npts_1;
     ncoord_model[2] = 0;
   } else if (get_model_type() == GridType::CARTESIAN3D) {
+    npts_model = npts_0;
     ncoord_model[0] = static_cast<int>(round(pow(npts_0, 1 / 3.)));
     ncoord_model[1] = ncoord_model[0];
     ncoord_model[2] = ncoord_model[0];
-    assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_0);
+    assert_always(GRID_TYPE == GridType::CARTESIAN3D);
+    // for a 3D input model, the propagation cells will match the input cells exactly
+    ncoordgrid = ncoord_model;
+    ngrid = npts_model;
   }
-  npts_model = std::max(1, ncoord_model[0]) * std::max(1, ncoord_model[1]) * std::max(1, ncoord_model[2]);
 
   assert_always(modelgrid_input.data() == nullptr);
   modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model + 1);
@@ -2005,11 +2010,6 @@ void read_ejecta_model() {
   } else if (get_model_type() == GridType::CARTESIAN3D) {
     printout("Read 3D model\n");
 
-    assert_always(GRID_TYPE == GridType::CARTESIAN3D);
-    // for a 3D input model, the propagation cells will match the input cells exactly
-    ncoordgrid = ncoord_model;
-    ngrid = npts_model;
-
     // Now read in vmax for the model (in cm s^-1).
     assert_always(get_noncommentline(fmodel, line));
     std::istringstream(line) >> globals::vmax;
@@ -2104,6 +2104,8 @@ void read_ejecta_model() {
     printout("min_den %g [g/cm3]\n", min_den);
   }
 
+  assert_always(get_npts_model() ==
+                std::max(1, ncoord_model[0]) * std::max(1, ncoord_model[1]) * std::max(1, ncoord_model[2]));
   printout("npts_model: %d\n", get_npts_model());
   globals::rmax = globals::vmax * globals::tmin;
   printout("vmax %g [cm/s] (%.2fc)\n", globals::vmax, globals::vmax / CLIGHT);
