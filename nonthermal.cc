@@ -253,13 +253,9 @@ void read_shell_configs() {
 void read_binding_energies() {
   const bool binding_en_newformat_local = std::filesystem::exists("binding_energies_lotz_tab1and2.txt") ||
                                           std::filesystem::exists("data/binding_energies_lotz_tab1and2.txt");
-#if (true)
   bool binding_en_newformat = binding_en_newformat_local;
   // just in case the file system was faulty and the ranks disagree on the existence of the files
   MPI_Allreduce(MPI_IN_PLACE, &binding_en_newformat, 1, MPI_C_BOOL, MPI_LOR, MPI_COMM_WORLD);
-#else
-  const bool binding_en_newformat = binding_en_newformat_local;
-#endif
 
   int nshells = 0;      // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in binding energy file
@@ -2715,7 +2711,6 @@ void read_restart_data(FILE *gridsave_file) {
   }
 }
 
-#if (true)
 void nt_MPI_Bcast(const int nonemptymgi, const int root_node_id) {
   MPI_Bcast(&deposition_rate_density_all_cells[nonemptymgi], 1, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
 
@@ -2745,7 +2740,6 @@ void nt_MPI_Bcast(const int nonemptymgi, const int root_node_id) {
     check_auger_probabilities(nonemptymgi);
   }
 }
-#endif
 
 void nt_reset_stats() { nt_energy_deposited = 0.; }
 
