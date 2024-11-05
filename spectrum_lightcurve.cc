@@ -175,8 +175,8 @@ auto columnindex_from_emissiontype(const int et) -> int {
   return (get_nelements() * get_max_nions()) + (element * get_max_nions()) + ion;
 }
 
-void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, const Spectra *stokes_i,
-                 const Spectra *stokes_q, const Spectra *stokes_u)
+void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Spectra *stokes_i, Spectra *stokes_q,
+                 Spectra *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
@@ -572,8 +572,8 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
   }
 }
 
-void add_to_spec_res(const Packet &pkt, const int current_abin, Spectra &spectra, const Spectra *stokes_i,
-                     const Spectra *stokes_q, const Spectra *stokes_u)
+void add_to_spec_res(const Packet &pkt, const int current_abin, Spectra &spectra, Spectra *stokes_i, Spectra *stokes_q,
+                     Spectra *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
