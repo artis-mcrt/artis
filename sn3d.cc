@@ -150,20 +150,16 @@ void write_deposition_file() {
     }
   }
 
-#if (true)
-  // in MPI mode, each process only calculated the contribution of a subset of cells
+  // each MPI rank only calculated the contribution of a subset of cells
   MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_positron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_electron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_alpha_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_betaminus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_alpha, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-#endif
 
-#if (true)
   MPI_Allreduce(MPI_IN_PLACE, &mtot, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
 
   if (my_rank == 0) {
     FILE *dep_file = fopen_required("deposition.out.tmp", "w");
@@ -206,7 +202,6 @@ void write_deposition_file() {
            std::time(nullptr) - time_write_deposition_file_start);
 }
 
-#if (true)
 void mpi_communicate_grid_properties() {
   const ptrdiff_t nincludedions = get_includedions();
   const ptrdiff_t nelements = get_nelements();
@@ -357,7 +352,6 @@ void mpi_reduce_estimators(const int nts) {
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
-#endif
 
 void write_temp_packetsfile(const int timestep, const int my_rank, const Packet *pkt) {
   // write packets binary file (and retry if the write fails)
@@ -423,10 +417,8 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
     // This flag being false will make it update_grid, and then exit
     do_this_full_loop = (wallclock_remaining_seconds >= (1.5 * estimated_time_per_timestep));
 
-#if (true)
     // communicate whatever decision the rank 0 process decided, just in case they differ
     MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
-#endif
     if (do_this_full_loop) {
       printout("TIMED_RESTARTS: Going to continue since remaining time %d s >= 1.5 * time_per_timestep\n",
                wallclock_remaining_seconds);
@@ -463,9 +455,7 @@ void save_grid_and_packets(const int nts, const Packet *packets) {
              timenow - time_write_packets_finished_thisrank, timenow - time_write_packets_file_start);
 
     if constexpr (VERIFY_WRITTEN_PACKETS_FILES) {
-#if (true)
       MPI_Barrier(MPI_COMM_WORLD);
-#endif
 
       const auto time_readback_packets_start = std::time(nullptr);
 
@@ -474,9 +464,7 @@ void save_grid_and_packets(const int nts, const Packet *packets) {
       // read packets file back to check that the disk write didn't fail
       write_successful = verify_temp_packetsfile(nts, my_rank, packets);
 
-#if (true)
       MPI_Barrier(MPI_COMM_WORLD);
-#endif
 
       printout("Verifying packets files for all ranks took %ld seconds.\n",
                std::time(nullptr) - time_readback_packets_start);
@@ -600,9 +588,7 @@ auto do_timestep(const int nts, const int titer, Packet *packets, const int wall
   const auto sys_time_start_communicate_grid = std::time(nullptr);
 
   // Each process has now updated its own set of cells. The results now need to be communicated between processes.
-#if (true)
   mpi_communicate_grid_properties();
-#endif
 
   printout("timestep %d: time after grid properties have been communicated %ld (took %ld seconds)\n", nts,
            std::time(nullptr), std::time(nullptr) - sys_time_start_communicate_grid);
@@ -627,19 +613,15 @@ auto do_timestep(const int nts, const int titer, Packet *packets, const int wall
 
     update_packets(nts, std::span{packets, static_cast<size_t>(globals::npkts)});
 
-#if (true)
     // All the processes have their own versions of the estimators for this time step now.
     // Since these are going to be needed in the next time step, we will gather all the
     // estimators together now, sum them, and distribute the results
 
     const auto time_communicate_estimators_start = std::time(nullptr);
     mpi_reduce_estimators(nts);
-#endif
 
-#if (true)
     printout("timestep %d: time after estimators have been communicated %ld (took %ld seconds)\n", nts,
              std::time(nullptr), std::time(nullptr) - time_communicate_estimators_start);
-#endif
 
     // The estimators have been summed across all processes and distributed.
     // They will now be normalised independently on all processes.
@@ -721,9 +703,7 @@ auto main(int argc, char *argv[]) -> int {
     nvpkt_esc3 = 0;
   }
 
-#if (true)
   MPI_Init(&argc, &argv);
-#endif
 
   globals::setup_mpi_vars();
 
@@ -797,7 +777,6 @@ auto main(int argc, char *argv[]) -> int {
   printout("TESTMODE is ON\n");
 #endif
 
-#if (true)
   printout("process id (pid): %d\n", getpid());
   printout("MPI enabled:\n");
   printout("  rank %d of [0..%d] in MPI_COMM_WORLD\n", globals::my_rank, globals::nprocs - 1);
@@ -808,9 +787,6 @@ auto main(int argc, char *argv[]) -> int {
       "WARNING: Compiled with MAX_NODE_SIZE %d, which may mean mean that there are more nodes reported than physically "
       "present\n",
       MAX_NODE_SIZE);
-#endif
-#else
-  printout("MPI is disabled in this build\n");
 #endif
 
   input(my_rank);
@@ -834,11 +810,9 @@ auto main(int argc, char *argv[]) -> int {
 
   ratecoefficients_init();
 
-#if (true)
   printout("barrier after tabulation of rate coefficients: time before barrier %ld, ", std::time(nullptr));
   MPI_Barrier(MPI_COMM_WORLD);
   printout("time after barrier %ld\n", std::time(nullptr));
-#endif
 
   stats::init();
 
@@ -903,13 +877,7 @@ auto main(int argc, char *argv[]) -> int {
   vpkt_init(globals::timestep, my_rank, globals::simulation_continued_from_saved);
 
   while (globals::timestep < globals::timestep_finish && !terminate_early) {
-#if (true)
-    //        const auto time_before_barrier = std::time(nullptr);
     MPI_Barrier(MPI_COMM_WORLD);
-    //        const auto time_after_barrier = std::time(nullptr);
-    //        printout("timestep %d: time before barrier %d, time after barrier %d\n", nts, time_before_barrier,
-    //        time_after_barrier);
-#endif
 
     // titer example: Do 3 iterations on timestep 0-6
     // globals::n_titer = (nts < 6) ? 3: 1;
@@ -965,9 +933,7 @@ auto main(int argc, char *argv[]) -> int {
 
   decay::cleanup();
 
-#if (true)
   MPI_Finalize();
-#endif
 
   const std::filesystem::path pid_file_path("artis.pid");
   if (std::filesystem::exists(pid_file_path)) {
