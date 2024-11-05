@@ -227,10 +227,8 @@ void pkt_action_counters_printout(const int nts) {
 }
 
 void reduce_estimators() {
-#if (true)
   MPI_Allreduce(MPI_IN_PLACE, stats::ionstats.data(),
                 grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT, MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);
-#endif
 }
 }  // namespace stats
