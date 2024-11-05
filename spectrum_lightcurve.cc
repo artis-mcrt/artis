@@ -216,7 +216,8 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
       const int truenproc = columnindex_from_emissiontype(pkt.trueemissiontype);
       assert_always(truenproc < proccount);
       if (truenproc >= 0) {
-        spectra.timesteps[nt].trueemission[(nnu * proccount) + truenproc] += deltaE;
+        const auto emindex = (static_cast<ptrdiff_t>(nt) * MNUBINS * proccount) + (nnu * proccount) + truenproc;
+        spectra.trueemissionalltimesteps[emindex] += deltaE;
       }
 
       const int nproc = columnindex_from_emissiontype(pkt.emissiontype);
@@ -262,7 +263,8 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
           // bb-emission
           const int element = globals::linelist[at].elementindex;
           const int ion = globals::linelist[at].ionindex;
-          const ptrdiff_t absindex = (nnu_abs * get_nelements() * get_max_nions()) + (element * get_max_nions()) + ion;
+          const auto absindex =
+              (static_cast<ptrdiff_t>(nnu_abs) * get_nelements() * get_max_nions()) + (element * get_max_nions()) + ion;
           spectra.timesteps[nt].absorption[absindex] += deltaE_absorption;
 
           if (stokes_i != nullptr && stokes_i->do_emission_res) {
@@ -294,19 +296,20 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
 
 #ifdef MPI_ON
 void mpi_reduce_spectra(int my_rank, Spectra &spectra, const int numtimesteps) {
-  for (int n = 0; n < numtimesteps; n++) {
-    MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : &spectra.fluxalltimesteps[n * MNUBINS],
-               &spectra.fluxalltimesteps[n * MNUBINS], MNUBINS, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  for (int nts = 0; nts < numtimesteps; nts++) {
+    MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : &spectra.fluxalltimesteps[nts * MNUBINS],
+               &spectra.fluxalltimesteps[nts * MNUBINS], MNUBINS, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
     if (spectra.do_emission_res) {
       const int proccount = get_proccount();
-      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.timesteps[n].absorption, spectra.timesteps[n].absorption,
+      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.timesteps[nts].absorption, spectra.timesteps[nts].absorption,
                  MNUBINS * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : &spectra.emissionalltimesteps[n * MNUBINS * proccount],
-                 &spectra.emissionalltimesteps[n * MNUBINS * proccount], MNUBINS * proccount, MPI_DOUBLE, MPI_SUM, 0,
+      const auto emstart = static_cast<ptrdiff_t>(nts) * MNUBINS * proccount;
+      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : &spectra.emissionalltimesteps[emstart],
+                 &spectra.emissionalltimesteps[emstart], MNUBINS * proccount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : &spectra.trueemissionalltimesteps[emstart],
+                 &spectra.trueemissionalltimesteps[emstart], MNUBINS * proccount, MPI_DOUBLE, MPI_SUM, 0,
                  MPI_COMM_WORLD);
-      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.timesteps[n].trueemission, spectra.timesteps[n].trueemission,
-                 MNUBINS * proccount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     }
   }
 }
@@ -387,8 +390,9 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
         }
         fprintf(emission_file, "\n");
 
-        for (int i = 0; i < proccount; i++) {
-          fprintf(trueemission_file, "%g ", spectra.timesteps[nts].trueemission[(nnu * proccount) + i]);
+        for (int truenproc = 0; truenproc < proccount; truenproc++) {
+          const auto trueemindex = (static_cast<ptrdiff_t>(nts) * MNUBINS * proccount) + (nnu * proccount) + truenproc;
+          fprintf(trueemission_file, "%g ", spectra.trueemissionalltimesteps[trueemindex]);
         }
         fprintf(trueemission_file, "\n");
 
@@ -516,7 +520,6 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
     for (ptrdiff_t nts = 0; nts < std::ssize(spectra.timesteps); nts++) {
       spectra.timesteps[nts].absorption =
           &spectra.absorptionalltimesteps[nts * MNUBINS * get_nelements() * get_max_nions()];
-      spectra.timesteps[nts].trueemission = &spectra.trueemissionalltimesteps[nts * MNUBINS * proccount];
     }
     if (print_memusage) {
       printout("[info] mem_usage: set of emission/absorption spectra occupy %.3f MB (nnubins %d)\n",
@@ -526,7 +529,6 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
   } else {
     for (int nts = 0; nts < globals::ntimesteps; nts++) {
       spectra.timesteps[nts].absorption = nullptr;
-      spectra.timesteps[nts].trueemission = nullptr;
     }
 
     spectra.absorptionalltimesteps.clear();

@@ -9,7 +9,6 @@
 
 struct TimeStepSpecrum {
   double *absorption{};
-  double *trueemission{};
 };
 
 struct Spectra {
