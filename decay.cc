@@ -19,6 +19,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -1074,18 +1075,11 @@ void setup_decaypath_energy_per_mass() {
 }
 
 void free_decaypath_energy_per_mass() {
-#if (true)
   if (win_decaypath_energy_per_mass != MPI_WIN_NULL) {
     printout("[info] mem_usage: decaypath_energy_per_mass was freed\n");
     MPI_Win_free(&win_decaypath_energy_per_mass);
     win_decaypath_energy_per_mass = MPI_WIN_NULL;
   }
-#else
-  if (decaypath_energy_per_mass.data() != nullptr) {
-    printout("[info] mem_usage: decaypath_energy_per_mass was freed\n");
-    free(decaypath_energy_per_mass.data());
-  }
-#endif
   decaypath_energy_per_mass = {};
 }
 
