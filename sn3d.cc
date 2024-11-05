@@ -40,14 +40,12 @@
 #include "grid.h"
 #include "input.h"
 #include "macroatom.h"
-#if (true)
-#include "rpkt.h"
-#endif
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "packet.h"
 #include "radfield.h"
 #include "ratecoeff.h"
+#include "rpkt.h"
 #include "spectrum_lightcurve.h"
 #include "stats.h"
 #include "update_grid.h"
