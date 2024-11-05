@@ -503,10 +503,9 @@ void init_spectrum_trace() {
   }
 }
 
+// resize and initialize the spectra object
 void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, const bool do_emission_res) {
-  // start by setting up the time and frequency bins.
-  // it is all done interms of a logarithmic spacing in both t and nu - get the
-  // step sizes first.
+  // setup the time and frequency bins using a logarithmic spacing in both t and nu
 
   assert_always(MNUBINS > 0);
   size_t mem_usage = 0;
@@ -575,16 +574,9 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
   }
 }
 
+// Add a packet to the outgoing spectrum.
 void add_to_spec_res(const Packet &pkt, const int current_abin, Spectra &spectra, Spectra *stokes_i, Spectra *stokes_q,
-                     Spectra *stokes_u)
-// Routine to add a packet to the outgoing spectrum.
-{
-  // Need to (1) decide which time bin to put it in and (2) which frequency bin.
-
-  // Time bin - we know that it escaped at "escape_time". However, we have to allow
-  // for travel time. Use the formula in Leon's paper.
-  // The extra distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
-
+                     Spectra *stokes_u) {
   if (current_abin == -1 || get_escapedirectionbin(pkt.dir, globals::syn_dir) == current_abin) {
     // either angle average spectrum or packet matches the selected angle bin
     add_to_spec(pkt, current_abin, spectra, stokes_i, stokes_q, stokes_u);
@@ -656,8 +648,6 @@ void write_partial_lightcurve_spectra(const int my_rank, const int nts, const Pa
            time_mpireduction_end - time_mpireduction_start);
 }
 
-// Routine to make a MC light curve from the r-packets.
-
 void write_light_curve(const std::string &lc_filename, const int current_abin,
                        const std::vector<double> &light_curve_lum, const std::vector<double> &light_curve_lumcmf,
                        const int numtimesteps) {
@@ -689,10 +679,9 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
   }
 }
 
-void add_to_lc_res(const Packet &pkt, const int current_abin, std::vector<double> &light_curve_lum,
-                   std::vector<double> &light_curve_lumcmf)
 // add a packet to the outgoing light-curve.
-{
+void add_to_lc_res(const Packet &pkt, const int current_abin, std::vector<double> &light_curve_lum,
+                   std::vector<double> &light_curve_lumcmf) {
   if (current_abin == -1) {
     // Put this into the time grid
     const double arrive_time = get_arrive_time(pkt);
