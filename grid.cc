@@ -82,10 +82,8 @@ std::vector<int> mgi_of_nonemptymgi;
 
 std::span<double> totmassradionuclide{};  // total mass of each radionuclide in the ejecta
 
-#if (true)
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
 MPI_Win win_initnucmassfrac_allcells = MPI_WIN_NULL;
-#endif
 
 float *initnucmassfrac_allcells{};
 float *initmassfracuntrackedstable_allcells{};
@@ -131,12 +129,8 @@ void allocate_initradiobund() {
   const ptrdiff_t num_nuclides = decay::get_num_nuclides();
 
   const size_t totalradioabundcount = (npts_model + 1) * num_nuclides;
-#if (true)
   std::tie(initnucmassfrac_allcells, win_initnucmassfrac_allcells) =
       MPI_shared_malloc_keepwin<float>(totalradioabundcount);
-#else
-  initnucmassfrac_allcells = static_cast<float *>(malloc(totalradioabundcount * sizeof(float)));
-#endif
   printout(
       "[info] mem_usage: radioabundance data for %td nuclides for %td cells occupies %.3f MB (node shared memory)\n",
       num_nuclides, npts_model, static_cast<double>(totalradioabundcount * sizeof(float)) / 1024. / 1024.);
@@ -270,13 +264,8 @@ void allocate_nonemptycells_composition_cooling()
   ion_cooling_contribs_allcells = MPI_shared_malloc<double>(nonempty_npts_model_ptrdifft * get_includedions());
 
   if (globals::total_nlte_levels > 0) {
-#if (true)
     std::tie(nltepops_allcells, win_nltepops_allcells) =
         MPI_shared_malloc_keepwin<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels);
-#else
-    nltepops_allcells =
-        static_cast<double *>(malloc(nonempty_npts_model * globals::total_nlte_levels * sizeof(double)));
-#endif
 
     assert_always(nltepops_allcells != nullptr);
   } else {
@@ -381,12 +370,8 @@ void allocate_nonemptymodelcells() {
   const auto ionestimsize = ionestimcount * sizeof(double);
 
   if (ionestimsize > 0) {
-#if (true)
     std::tie(globals::corrphotoionrenorm, globals::win_corrphotoionrenorm) =
         MPI_shared_malloc_keepwin<double>(ionestimcount);
-#else
-    globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
-#endif
 
     globals::gammaestimator.resize(ionestimcount, 0.);
 #ifdef DO_TITER
@@ -419,10 +404,8 @@ void allocate_nonemptymodelcells() {
   globals::colheatingestimator_save.resize(nonempty_npts_model, 0.);
 #endif
 
-#if (true)
   // barrier to make sure node master has set abundance values to node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
 
   printout("[info] mem_usage: the modelgrid array occupies %.3f MB\n",
            (get_npts_model() + 1) * sizeof(modelgrid[0]) / 1024. / 1024.);
@@ -494,10 +477,8 @@ void map_modeltogrid_direct() {
 }
 
 void abundances_read() {
-#if (true)
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
   printout("reading abundances.txt...");
   const bool threedimensional = (get_model_type() == GridType::CARTESIAN3D);
 
@@ -561,10 +542,8 @@ void abundances_read() {
     }
   }
 
-#if (true)
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
   printout("done.\n");
 }
 
