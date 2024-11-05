@@ -55,7 +55,7 @@ jobs:
 
             - name: install llvm from brew
               run: |
-                  brew install llvm || true
+                  brew install llvm
                   echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
 
                   echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib" >> $GITHUB_ENV
@@ -68,7 +68,9 @@ jobs:
 
                   echo "CPATH=/opt/homebrew/opt/include" >> $GITHUB_ENV
 
-                  brew install openmpi || true
+                  brew install openmpi
+
+                  brew link openmpi
 
             - name: Set up Python
               uses: actions/setup-python@v5
