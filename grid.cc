@@ -1866,12 +1866,14 @@ void read_ejecta_model() {
   auto ssline = std::istringstream(line);
   ssline >> npts_0;
   if (ssline >> npts_1) {
+    // second number on the line for 2D means the line was n_r n_z
     detected_dim = GridType::CYLINDRICAL2D;
     printout("Detected 2D model\n");
     assert_always(get_model_type() == GridType::CYLINDRICAL2D);
     ssline >> npts_1;  // r and z (cylindrical polar)
     npts_model = npts_0 * npts_1;
   } else {
+    // for 1D and 3D, this was the total number of model cells
     npts_model = npts_0;
   }
 
@@ -1923,6 +1925,8 @@ void read_ejecta_model() {
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 
   if (get_model_type() == GridType::SPHERICAL1D) {
+    // direct mapping or 1D mapped to 3D
+    assert_always(GRID_TYPE == GridType::SPHERICAL1D || GRID_TYPE == GridType::CYLINDRICAL2D);
     ncoord_model[0] = npts_0;
     ncoord_model[1] = 0;
     ncoord_model[2] = 0;
@@ -1975,6 +1979,7 @@ void read_ejecta_model() {
 
     globals::vmax = vout_model[get_npts_model() - 1];
   } else if (get_model_type() == GridType::CYLINDRICAL2D) {
+    assert_always(GRID_TYPE == GridType::CYLINDRICAL2D);  // direct mapping only
     ncoord_model[0] = npts_0;
     ncoord_model[1] = npts_1;
     ncoord_model[2] = 0;
@@ -2025,10 +2030,10 @@ void read_ejecta_model() {
       std::abort();
     }
   } else if (get_model_type() == GridType::CARTESIAN3D) {
+    assert_always(GRID_TYPE == GridType::CARTESIAN3D);  // direct mapping only
     ncoord_model[0] = static_cast<int>(round(pow(npts_0, 1 / 3.)));
     ncoord_model[1] = ncoord_model[0];
     ncoord_model[2] = ncoord_model[0];
-    assert_always(GRID_TYPE == GridType::CARTESIAN3D);
     // for a 3D input model, the propagation cells will match the input cells exactly
     ncoordgrid = ncoord_model;
     ngrid = npts_model;
