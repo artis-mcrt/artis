@@ -484,7 +484,7 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
 void init_spectrum_trace() {
   if (TRACE_EMISSION_ABSORPTION_REGION_ON) {
     traceemission_totalenergy = 0.;
-    traceemissionabsorption.resize(globals::nlines);
+    resize_exactly(traceemissionabsorption, globals::nlines);
     traceabsorption_totalenergy = 0.;
     for (int i = 0; i < globals::nlines; i++) {
       traceemissionabsorption[i].energyemitted = 0.;
@@ -518,8 +518,8 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
 
   spectra.do_emission_res = do_emission_res;  // might be set true later by alloc_emissionabsorption_spectra
 
-  spectra.timesteps.resize(globals::ntimesteps);
-  spectra.fluxalltimesteps.resize(globals::ntimesteps * MNUBINS);
+  resize_exactly(spectra.timesteps, globals::ntimesteps);
+  resize_exactly(spectra.fluxalltimesteps, globals::ntimesteps * MNUBINS);
   std::ranges::fill(spectra.fluxalltimesteps, 0.0);
 
   mem_usage += globals::ntimesteps * sizeof(Spectra);
@@ -536,9 +536,9 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
     mem_usage += globals::ntimesteps * MNUBINS * get_nelements() * get_max_nions() * sizeof(double);
     mem_usage += 2 * globals::ntimesteps * MNUBINS * proccount * sizeof(double);
 
-    spectra.absorptionalltimesteps.resize(globals::ntimesteps * MNUBINS * get_nelements() * get_max_nions());
-    spectra.emissionalltimesteps.resize(globals::ntimesteps * MNUBINS * proccount);
-    spectra.trueemissionalltimesteps.resize(globals::ntimesteps * MNUBINS * proccount);
+    resize_exactly(spectra.absorptionalltimesteps, globals::ntimesteps * MNUBINS * get_nelements() * get_max_nions());
+    resize_exactly(spectra.emissionalltimesteps, globals::ntimesteps * MNUBINS * proccount);
+    resize_exactly(spectra.trueemissionalltimesteps, globals::ntimesteps * MNUBINS * proccount);
 
     std::ranges::fill(spectra.absorptionalltimesteps, 0.0);
     std::ranges::fill(spectra.emissionalltimesteps, 0.0);
