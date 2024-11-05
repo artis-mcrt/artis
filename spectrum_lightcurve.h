@@ -7,10 +7,6 @@
 #include "exspec.h"
 #include "packet.h"
 
-struct TimeStepSpecrum {
-  double *absorption{};
-};
-
 struct Spectra {
   double nu_min = -1.;
   double nu_max = -1.;
@@ -20,7 +16,6 @@ struct Spectra {
   std::vector<double> absorptionalltimesteps;
   std::vector<double> emissionalltimesteps;
   std::vector<double> trueemissionalltimesteps;
-  std::vector<TimeStepSpecrum> timesteps;
   bool do_emission_res = false;
 };
 
