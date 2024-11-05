@@ -7,7 +7,7 @@
 #include "thermalbalance.h"
 
 namespace nonthermal {
-void init(int my_rank, int ndo_nonempty);
+void init();
 void close_file();
 void solve_spencerfano(int nonemptymgi, int timestep, int iteration);
 [[nodiscard]] auto nt_ionization_ratecoeff(int nonemptymgi, int element, int ion) -> double;

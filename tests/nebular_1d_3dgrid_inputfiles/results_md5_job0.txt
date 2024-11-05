@@ -21,9 +21,6 @@ ce6db00706ebfd0ffd47a42b06dd63f9  packets00_0003.out
 db7b6f001f5b1115a36a9e5e99a7b8d1  job0/nlte_0000.out
 065e80e98b641952bce2db500aa8f8c0  job0/nlte_0001.out
 38f8a173a5c4e2acb4c6dc18fe6c2aac  job0/nlte_0002.out
-098fc87f14a17287756a3a4f2cadc922  job0/nonthermalspec_0000.out
-098fc87f14a17287756a3a4f2cadc922  job0/nonthermalspec_0001.out
-098fc87f14a17287756a3a4f2cadc922  job0/nonthermalspec_0002.out
 3eb872041047a946222d9e8896a3140f  job0/radfield_0000.out
 d364314ae61b485d9a05907342706167  job0/radfield_0001.out
 d33aa4018ec2f1adda99e9891562f002  job0/radfield_0002.out

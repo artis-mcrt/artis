@@ -22,9 +22,6 @@ abb88431c718b2898e817ad76e8a099b  job1/estimators_0002.out
 7fad386c6c6ad93e558954325e0a3b27  job1/nlte_0000.out
 af22d7b135926c5ddecab95db3be05c6  job1/nlte_0001.out
 6ddb80fd4753109834df1ac4ea15f44b  job1/nlte_0002.out
-098fc87f14a17287756a3a4f2cadc922  job1/nonthermalspec_0000.out
-098fc87f14a17287756a3a4f2cadc922  job1/nonthermalspec_0001.out
-098fc87f14a17287756a3a4f2cadc922  job1/nonthermalspec_0002.out
 9b775cd0c4a0ec68188ba6eb9395766e  job1/radfield_0000.out
 2f140f78ac85f4eca187c713c6a9b120  job1/radfield_0001.out
 966a4ad7b86bd21abc07064dde2a337c  job1/radfield_0002.out

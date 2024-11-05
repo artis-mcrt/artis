@@ -12,7 +12,6 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -87,8 +86,6 @@ struct collionrow {
 };
 
 std::vector<collionrow> colliondata;
-
-FILE *nonthermalfile{};
 
 static_assert(SF_EMIN > 0.);
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
@@ -791,40 +788,6 @@ void zero_all_effionpot(const int nonemptymgi) {
 
   // or return the nearest neighbour
   // return yfunc[index];
-}
-
-void nt_write_to_file(const int modelgridindex, const int timestep, const int iteration,
-                      const std::array<double, SFPTS> &yfunc) {
-#ifdef _OPENMP
-#pragma omp critical(nonthermal_out_file)
-  {
-#endif
-    assert_always(nonthermalfile != nullptr);
-
-    static int64_t nonthermalfile_offset_iteration_zero = 0;
-#ifdef _OPENMP
-#pragma omp threadprivate(nonthermalfile_offset_iteration_zero)
-#endif
-    {
-      if (iteration == 0) {
-        nonthermalfile_offset_iteration_zero = ftell(nonthermalfile);
-      } else {
-        // overwrite the non-thermal spectrum of a previous iteration of the same timestep and gridcell
-        assert_always(fseek(nonthermalfile, nonthermalfile_offset_iteration_zero, SEEK_SET) == 0);
-      }
-    }
-
-    const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-    const double yscalefactor = get_deposition_rate_density(nonemptymgi) / (E_init_ev * EV);
-
-    for (int s = 0; s < SFPTS; s++) {
-      fprintf(nonthermalfile, "%d %d %d %.5e %.5e %.5e\n", timestep, modelgridindex, s, engrid(s), sourcevec(s),
-              yscalefactor * yfunc[s]);
-    }
-    fflush(nonthermalfile);
-#ifdef _OPENMP
-  }
-#endif
 }
 
 auto xs_ionization_lotz(const double en_erg, const collionrow &colliondata_ion) -> double {
@@ -2061,7 +2024,7 @@ auto sfmatrix_solve(const std::vector<double> &sfmatrix) -> std::array<double, S
 
 }  // anonymous namespace
 
-void init(const int my_rank, const int ndo_nonempty) {
+void init() {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
   deposition_rate_density_all_cells = MPI_shared_malloc_span<double>(nonempty_npts_model);
@@ -2092,14 +2055,6 @@ void init(const int my_rank, const int ndo_nonempty) {
   printout("  NT_MAX_AUGER_ELECTRONS %d\n", NT_MAX_AUGER_ELECTRONS);
   printout("  SF_AUGER_CONTRIBUTION %s\n", SF_AUGER_CONTRIBUTION_ON ? "on" : "off");
   printout("  SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN %s\n", SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN ? "on" : "off");
-
-  if (ndo_nonempty > 0) {
-    char filename[MAXFILENAMELENGTH];
-    snprintf(filename, MAXFILENAMELENGTH, "nonthermalspec_%.4d.out", my_rank);
-    nonthermalfile = fopen_required(filename, "w");
-    fprintf(nonthermalfile, "timestep modelgridindex index energy_ev source y\n");
-    fflush(nonthermalfile);
-  }
 
   if (NT_EXCITATION_ON) {
     nt_excitations_stored = std::min(MAX_NT_EXCITATIONS_STORED, get_possible_nt_excitation_count());
@@ -2195,10 +2150,6 @@ void close_file() {
     return;
   }
 
-  if (nonthermalfile != nullptr) {
-    fclose(nonthermalfile);
-    nonthermalfile = nullptr;
-  }
   colliondata.clear();
 }
 
@@ -2603,10 +2554,6 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 
   decompactify_triangular_matrix(sfmatrix);
   const auto yfunc = sfmatrix_solve(sfmatrix);
-
-  if (timestep % 10 == 0) {
-    nt_write_to_file(modelgridindex, timestep, iteration, yfunc);
-  }
 
   analyse_sf_solution(nonemptymgi, timestep, enable_sfexcitation, yfunc);
 }
