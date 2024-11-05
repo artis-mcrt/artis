@@ -66,12 +66,6 @@ jobs:
                   echo "LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
                   echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
 
-                  echo "CPATH=/opt/homebrew/opt/include" >> $GITHUB_ENV
-
-                  brew install openmpi
-
-                  brew link openmpi
-
             - name: Set up Python
               uses: actions/setup-python@v5
 
@@ -79,6 +73,7 @@ jobs:
               run: |
                   brew update
                   brew install openmpi gsl || true
+                  brew link openmpi
                   python3 -m pip install compiledb
 
             - name: Generate compile_commands.json
