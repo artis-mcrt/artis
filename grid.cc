@@ -1884,34 +1884,30 @@ void read_ejecta_model() {
   t_model = t_model_days * DAY;
 
   const auto pos_after_t_model = fmodel.tellg();
+  // if the next line is a single float, it is the vmax (so 2D or 3D)
+  // otherwise, it is the first line of the model or a header comment (so 1D)
   std::getline(fmodel, line);
-  if (line.starts_with("#")) {
-    // no vmax line, so not 2D or 3D. Must be 1D
-    assert_always(!detected_dim.has_value());
-    detected_dim = GridType::SPHERICAL1D;
-    printout("Detected 1D model\n");
-    fmodel.seekg(pos_after_t_model);
-  } else {
+  if (!line.starts_with("#")) {
     double num_after_vmax{NAN};
     auto sslinevmax = std::istringstream(line);
     if ((sslinevmax >> globals::vmax) && !(sslinevmax >> num_after_vmax)) {
       // single value on the line is a vmax,  so 2D or 3D
+      // if it's not already know to be 2D (based on n_r n_z line), then it's 3D
       if (detected_dim != GridType::CYLINDRICAL2D) {
         assert_always(!detected_dim.has_value());
         detected_dim = GridType::CARTESIAN3D;
         printout("Detected 3D model\n");
       }
-    } else {
-      assert_always(!detected_dim.has_value());
-      detected_dim = GridType::SPHERICAL1D;
-      printout("Detected 1D model\n");
-      fmodel.seekg(pos_after_t_model);
     }
   }
-  assert_always(detected_dim.has_value());
-  set_model_type(detected_dim.value());
+  if (!detected_dim.has_value()) {
+    assert_always(!detected_dim.has_value());
+    detected_dim = GridType::SPHERICAL1D;
+    printout("Detected 1D model\n");
+    fmodel.seekg(pos_after_t_model);
+  }
 
-  printout("Read %dD model\n", get_ngriddimensions(get_model_type()));
+  set_model_type(detected_dim.value());
 
   assert_always(modelgrid_input.data() == nullptr);
   modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model + 1);
@@ -1925,8 +1921,6 @@ void read_ejecta_model() {
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 
   if (get_model_type() == GridType::SPHERICAL1D) {
-    // direct mapping or 1D mapped to 3D
-    assert_always(GRID_TYPE == GridType::SPHERICAL1D || GRID_TYPE == GridType::CYLINDRICAL2D);
     ncoord_model[0] = npts_0;
     ncoord_model[1] = 0;
     ncoord_model[2] = 0;
@@ -1979,7 +1973,6 @@ void read_ejecta_model() {
 
     globals::vmax = vout_model[get_npts_model() - 1];
   } else if (get_model_type() == GridType::CYLINDRICAL2D) {
-    assert_always(GRID_TYPE == GridType::CYLINDRICAL2D);  // direct mapping only
     ncoord_model[0] = npts_0;
     ncoord_model[1] = npts_1;
     ncoord_model[2] = 0;
@@ -2030,7 +2023,6 @@ void read_ejecta_model() {
       std::abort();
     }
   } else if (get_model_type() == GridType::CARTESIAN3D) {
-    assert_always(GRID_TYPE == GridType::CARTESIAN3D);  // direct mapping only
     ncoord_model[0] = static_cast<int>(round(pow(npts_0, 1 / 3.)));
     ncoord_model[1] = ncoord_model[0];
     ncoord_model[2] = ncoord_model[0];
@@ -2076,8 +2068,8 @@ void read_ejecta_model() {
       for (int axis = 0; axis < 3; axis++) {
         const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
         const double cellpos_expected = -xmax_tmodel + (cellwidth * get_cellcoordpointnum(mgi, axis));
-        //   printout("mgi %d coord %d expected %g found %g or %g rmax %g get_cellcoordpointnum(mgi, axis) %d ncoordgrid
-        //   %d\n",
+        //   printout("mgi %d coord %d expected %g found %g or %g rmax %g get_cellcoordpointnum(mgi, axis) %d
+        //   ncoordgrid %d\n",
         //            mgi, axis, cellpos_expected, cellpos_in[axis], cellpos_in[2 - axis], xmax_tmodel,
         //            get_cellcoordpointnum(mgi, axis), ncoordgrid[axis]);
         if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth) {
