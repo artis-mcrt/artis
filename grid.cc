@@ -1870,7 +1870,6 @@ void read_ejecta_model() {
     // second number on the line for 2D means the line was n_r n_z
     detected_dim = GridType::CYLINDRICAL2D;
     printout("Detected 2D model\n");
-    assert_always(get_model_type() == GridType::CYLINDRICAL2D);
     ssline >> npts_1;  // r and z (cylindrical polar)
     npts_model = npts_0 * npts_1;
   } else {
@@ -1892,7 +1891,7 @@ void read_ejecta_model() {
     double num_after_vmax{NAN};
     auto sslinevmax = std::istringstream(line);
     if ((sslinevmax >> globals::vmax) && !(sslinevmax >> num_after_vmax)) {
-      // single value on the line is a vmax,  so 2D or 3D
+      // single value on the line is a vmax, so 2D or 3D
       // if it's not already know to be 2D (based on n_r n_z line), then it's 3D
       if (detected_dim != GridType::CYLINDRICAL2D) {
         assert_always(!detected_dim.has_value());
