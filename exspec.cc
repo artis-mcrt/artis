@@ -1,13 +1,13 @@
 #include "exspec.h"
 
+#include <mpi.h>
+#include <unistd.h>
+
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
 #ifndef GPU_ON
 #include <random>
 #endif
@@ -51,7 +51,7 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
   const double nu_min_gamma = 0.05 * MEV / H;
   const double nu_max_gamma = 4. * MEV / H;
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
-
+  assert_always(globals::nprocs_exspec > 0);
   for (int p = 0; p < globals::nprocs_exspec; p++) {
     Packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
 
@@ -69,9 +69,7 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
       }
     }
 
-#ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
-#endif
 
     if (p % globals::nprocs != globals::my_rank) {
       printout("skipping packets file %d %d\n", p + 1, globals::nprocs);
@@ -164,9 +162,7 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
 auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
   const auto sys_time_start = std::time(nullptr);
 
-#ifdef MPI_ON
   MPI_Init(&argc, &argv);
-#endif
 
   globals::setup_mpi_vars();
 
@@ -191,15 +187,11 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
   printout("TESTMODE is ON\n");
 #endif
 
-#ifdef MPI_ON
   printout("process id (pid): %d\n", getpid());
   printout("MPI enabled:\n");
   printout("  rank_global %d of [0..%d] in MPI_COMM_WORLD\n", globals::my_rank, globals::nprocs - 1);
   printout("  rank_in_node %d of [0..%d] in node %d of [0..%d]\n", globals::rank_in_node, globals::node_nprocs - 1,
            globals::node_id, globals::node_count - 1);
-#else
-  printout("MPI is disabled in this build\n");
-#endif
 
   // single rank only for now
   assert_always(globals::my_rank == 0);
@@ -253,9 +245,7 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
   decay::cleanup();
   printout("exspec finished at %ld (tstart + %ld seconds)\n", std::time(nullptr), std::time(nullptr) - sys_time_start);
 
-#ifdef MPI_ON
   MPI_Finalize();
-#endif
 
   if (std::filesystem::exists("artis.pid")) {
     std::filesystem::remove("artis.pid");

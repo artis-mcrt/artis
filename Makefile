@@ -5,24 +5,8 @@
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
 
-ifeq ($(MPI),)
-	# MPI option not specified. set to true if mpicxx exists
-	ifneq (, $(shell command -v mpicxx 2> /dev/null))
-		MPI := ON
-	else
-		MPI := OFF
-	endif
-endif
-
-ifeq ($(MPI),ON)
-	CXX := mpicxx
-	CXXFLAGS += -DMPI_ON=true
-	BUILD_DIR := $(BUILD_DIR)_mpi
+CXX := mpicxx
 $(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
-else ifeq ($(MPI),OFF)
-else
-  $(error bad value for MPI option. Should be ON or OFF)
-endif
 
 ifeq ($(TESTMODE),ON)
 else ifeq ($(TESTMODE),OFF)
@@ -40,7 +24,6 @@ else
   $(error bad value for REPRODUCIBLE option. Should be ON or OFF)
 endif
 
-
 COMPILER_VERSION := $(shell $(CXX) --version)
 $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
@@ -57,7 +40,6 @@ else
 endif
 
 $(info detected compiler is $(COMPILER_NAME))
-
 
 ifeq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -std=c++20

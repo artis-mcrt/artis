@@ -1,8 +1,6 @@
 #include "ratecoeff.h"
 
-#ifdef MPI_ON
 #include <mpi.h>
-#endif
 
 #if !USE_SIMPSON_INTEGRATOR
 #include <gsl/gsl_integration.h>
@@ -872,11 +870,7 @@ void setup_photoion_luts() {
     mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
   }
 
-#ifdef MPI_ON
   bfcooling_coeffs = MPI_shared_malloc<double>(TABLESIZE * globals::nbfcontinua);
-#else
-  bfcooling_coeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
-#endif
 
   printout(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
@@ -1095,20 +1089,17 @@ void ratecoefficients_init() {
       printout("[info] ratecoefficients_init: ratecoeff.dat file not found. Creating a new one...\n");
     }
   }
-#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
   // all node-rank 0 should agree, but to be sure,
   // world rank 0 will decide if we need to regenerate rate coefficient tables
   MPI_Bcast(&ratecoeff_match, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
-#endif
 
   if (!ratecoeff_match) {
     precalculate_rate_coefficient_integrals();
 
     // And the master process writes them to file in a serial operation
-#ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
-#endif
+
     if (globals::my_rank == 0) {
       write_ratecoeff_dat();
     }

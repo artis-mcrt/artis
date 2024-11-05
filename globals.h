@@ -2,9 +2,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#ifdef MPI_ON
 #include <mpi.h>
-#endif
 
 #include <array>
 #include <cstddef>
@@ -216,9 +214,7 @@ inline int bfestimcount{0};
 
 // for USE_LUT_PHOTOION = true
 inline double *corrphotoionrenorm{};
-#ifdef MPI_ON
 inline MPI_Win win_corrphotoionrenorm{MPI_WIN_NULL};
-#endif
 
 inline std::vector<double> gammaestimator;
 
@@ -283,10 +279,8 @@ inline double NPHIXSNUINCREMENT{-1};
 
 inline std::vector<CellCache> cellcache{};
 
-#ifdef MPI_ON
 inline MPI_Comm mpi_comm_node{MPI_COMM_NULL};
 inline MPI_Comm mpi_comm_internode{MPI_COMM_NULL};
-#endif
 
 inline int nprocs{-1};
 inline int my_rank{-1};
@@ -327,7 +321,6 @@ inline bool lte_iteration;
 inline std::deque<std::mutex> mutex_cellcachemacroatom;
 
 inline void setup_mpi_vars() {
-#ifdef MPI_ON
   MPI_Comm_rank(MPI_COMM_WORLD, &globals::my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
 
@@ -366,15 +359,6 @@ inline void setup_mpi_vars() {
 
   MPI_Bcast(&globals::node_id, 1, MPI_INT, 0, globals::mpi_comm_node);
   MPI_Bcast(&globals::node_count, 1, MPI_INT, 0, globals::mpi_comm_node);
-
-#else
-  globals::my_rank = 0;
-  globals::nprocs = 1;
-  globals::rank_in_node = 0;
-  globals::node_nprocs = 1;
-  globals::node_id = 0;
-  globals::node_count = 0;
-#endif
 }
 
 }  // namespace globals

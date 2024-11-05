@@ -1,11 +1,8 @@
 #include "input.h"
 
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
-
 #include <gsl/gsl_interp.h>
 #include <gsl/gsl_spline.h>
+#include <mpi.h>
 
 #include <algorithm>
 #include <array>
@@ -605,9 +602,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
       }
     }
   }
-#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
 }
 
 auto calculate_nlevels_groundterm(const int element, const int ion) -> int {
@@ -836,10 +831,8 @@ void read_phixs_data() {
   phixs_file_version_exists[1] = std::filesystem::exists(phixsdata_filenames[1]);
   phixs_file_version_exists[2] = std::filesystem::exists(phixsdata_filenames[2]);
 
-#ifdef MPI_ON
   // just in case the file system was faulty and the ranks disagree on the existence of the files
   MPI_Allreduce(MPI_IN_PLACE, phixs_file_version_exists.data(), 3, MPI_C_BOOL, MPI_LOR, MPI_COMM_WORLD);
-#endif
   assert_always(phixs_file_version_exists[1] || phixs_file_version_exists[2]);  // at least one must exist
   if (phixs_file_version_exists[1] && phixs_file_version_exists[2]) {
     printout(
@@ -897,19 +890,14 @@ void read_phixs_data() {
     assert_always((nbftables * globals::NPHIXSPOINTS) == std::ssize(tmpallphixs));
 
     // copy the photoionisation tables into one contiguous block of memory
-#ifdef MPI_ON
     globals::allphixs = MPI_shared_malloc<float>(tmpallphixs.size());
-#else
-    globals::allphixs = static_cast<float *>(malloc(tmpallphixs.size() * sizeof(float)));
-#endif
 
     assert_always(globals::allphixs != nullptr);
 
     std::copy_n(tmpallphixs.cbegin(), tmpallphixs.size(), globals::allphixs);
 
-#ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
-#endif
+
     tmpallphixs.clear();
     tmpallphixs.shrink_to_fit();
   }
@@ -1175,13 +1163,9 @@ void read_atomicdata_files() {
     // create a shared all transitions list and then copy data across, freeing the local copy
     const auto totupdowntrans = totaluptrans + totaldowntrans;
     assert_always(totupdowntrans == static_cast<int>(temp_alltranslist_size));
-#ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
 
     globals::alltrans = MPI_shared_malloc<LevelTransition>(totupdowntrans);
-#else
-    globals::alltrans = static_cast<LevelTransition *>(malloc(totupdowntrans * sizeof(LevelTransition)));
-#endif
     if (globals::rank_in_node == 0) {
       std::copy_n(temp_alltranslist.data(), totupdowntrans, globals::alltrans);
     }
@@ -1191,11 +1175,7 @@ void read_atomicdata_files() {
 
   // create a linelist shared on node and then copy data across, freeing the local copy
   TransitionLine *nonconstlinelist{};
-#ifdef MPI_ON
   nonconstlinelist = MPI_shared_malloc<TransitionLine>(globals::nlines);
-#else
-  nonconstlinelist = static_cast<TransitionLine *>(malloc(globals::nlines * sizeof(TransitionLine)));
-#endif
 
   if (globals::rank_in_node == 0) {
     memcpy(static_cast<void *>(nonconstlinelist), temp_linelist.data(), globals::nlines * sizeof(TransitionLine));
@@ -1203,9 +1183,7 @@ void read_atomicdata_files() {
   temp_linelist.clear();
   temp_alltranslist.shrink_to_fit();
 
-#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
   globals::linelist = nonconstlinelist;
   nonconstlinelist = nullptr;
   printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
@@ -1250,10 +1228,7 @@ void read_atomicdata_files() {
   }
 
   printout("  took %lds\n", std::time(nullptr) - time_start_establish_linelist_connections);
-#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
-
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
@@ -1568,13 +1543,11 @@ void input(int rank) {
 
   read_atomicdata();
 
-#ifdef MPI_ON
   const auto time_before_barrier = std::time(nullptr);
   printout("barrier after read_atomicdata(): time before barrier %d, ", static_cast<int>(time_before_barrier));
   MPI_Barrier(MPI_COMM_WORLD);
   printout("time after barrier %d (waited %d seconds)\n", static_cast<int>(time(nullptr)),
            static_cast<int>(time(nullptr) - time_before_barrier));
-#endif
 
   grid::read_ejecta_model();
 }
@@ -1609,10 +1582,8 @@ void read_parameterfile(int rank) {
 #ifndef GPU_ON
     pre_zseed = std::random_device{}();
 #endif
-#ifdef MPI_ON
     // broadcast randomly-generated seed from rank 0 to all ranks
     MPI_Bcast(&pre_zseed, 1, MPI_INT64_T, 0, MPI_COMM_WORLD);
-#endif
     printout("randomly-generated random number seed is %" PRId64 "\n", pre_zseed);
 #if defined REPRODUCIBLE && REPRODUCIBLE
     printout("ERROR: reproducible mode is on, so random number seed is required.\n");

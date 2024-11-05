@@ -1,8 +1,6 @@
 #include "update_packets.h"
 
-#ifdef MPI_ON
 #include <mpi.h>
-#endif
 
 #include <algorithm>
 #include <cmath>
@@ -429,9 +427,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
   const auto time_update_packets_end_thisrank = std::time(nullptr);
   printout("timestep %d: end of update_packets for this rank at time %ld\n", nts, time_update_packets_end_thisrank);
 
-#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);  // hold all processes once the packets are updated
-#endif
   printout(
       "timestep %d: time after update packets for all processes %ld (rank %d took %lds, waited %lds, total %lds)\n",
       nts, std::time(nullptr), globals::my_rank, time_update_packets_end_thisrank - time_update_packets_start,

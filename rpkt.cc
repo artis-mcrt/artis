@@ -1,8 +1,6 @@
 #include "rpkt.h"
 
-#ifdef MPI_ON
 #include <mpi.h>
-#endif
 
 #include <algorithm>
 #include <array>
@@ -43,10 +41,8 @@ std::span<float> expansionopacities{};
 
 // kappa times Planck function for each bin of each non-empty cell
 std::span<double> expansionopacity_planck_cumulative{};
-#ifdef MPI_ON
 MPI_Win win_expansionopacities = MPI_WIN_NULL;
 MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
-#endif
 
 // get the frequency change per distance travelled assuming linear change to the abort distance
 // this is done is two parts to get identical results to do_rpkt_step()
@@ -975,21 +971,12 @@ void allocate_expansionopacities() {
   float *expansionopacities_data{};
   double *expansionopacity_planck_cumulative_data{};
 
-#ifdef MPI_ON
   std::tie(expansionopacities_data, win_expansionopacities) =
       MPI_shared_malloc_keepwin<float>(nonempty_npts_model * expopac_nbins);
-#else
-  expansionopacities_data = static_cast<float *>(malloc(nonempty_npts_model * expopac_nbins * sizeof(float)));
-#endif
 
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
-#ifdef MPI_ON
     std::tie(expansionopacity_planck_cumulative_data, win_expansionopacity_planck_cumulative) =
         MPI_shared_malloc_keepwin<double>(nonempty_npts_model * expopac_nbins);
-#else
-    expansionopacity_planck_cumulative_data =
-        static_cast<double *>(malloc(nonempty_npts_model * expopac_nbins * sizeof(double)));
-#endif
   }
 
   expansionopacities = std::span(expansionopacities_data, nonempty_npts_model * expopac_nbins);
@@ -1125,7 +1112,6 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   }
 }
 
-#ifdef MPI_ON
 void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node_id) {
   if constexpr (EXPANSIONOPACITIES_ON) {
     if (globals::rank_in_node == 0) {
@@ -1140,7 +1126,6 @@ void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node
     }
   }
 }
-#endif
 
 void calculate_expansion_opacities(const int nonemptymgi) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
