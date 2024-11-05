@@ -1905,11 +1905,11 @@ void read_ejecta_model() {
     assert_always(detected_dim == -1);
     detected_dim = 1;
     printout("Detected 1D model\n");
+    fmodel.seekg(pos_after_t_model);
   } else {
-    double num0{NAN};
-    double num1{NAN};
+    double num_after_vmax{NAN};
     auto sslinevmax = std::istringstream(line);
-    if ((sslinevmax >> num0) && !(sslinevmax >> num1)) {
+    if ((sslinevmax >> globals::vmax) && !(sslinevmax >> num_after_vmax)) {
       // single value on the line is a vmax,  so 2D or 3D
       if (detected_dim != 2) {
         assert_always(detected_dim == -1);
@@ -1921,10 +1921,9 @@ void read_ejecta_model() {
       assert_always(detected_dim == -1);
       detected_dim = 1;
       printout("Detected 1D model\n");
+      fmodel.seekg(pos_after_t_model);
     }
   }
-
-  fmodel.seekg(pos_after_t_model);
 
   if (detected_dim == 1) {
     grid::set_model_type(GridType::SPHERICAL1D);
@@ -1997,10 +1996,6 @@ void read_ejecta_model() {
 
     globals::vmax = vout_model[get_npts_model() - 1];
   } else if (get_model_type() == GridType::CYLINDRICAL2D) {
-    // Now read in vmax for the model (in cm s^-1).
-    assert_always(get_noncommentline(fmodel, line));
-    std::istringstream(line) >> globals::vmax;
-
     const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
 
     // Now read in the model. Each point in the model has two lines of input.
@@ -2048,10 +2043,6 @@ void read_ejecta_model() {
       std::abort();
     }
   } else if (get_model_type() == GridType::CARTESIAN3D) {
-    // Now read in vmax for the model (in cm s^-1).
-    assert_always(get_noncommentline(fmodel, line));
-    std::istringstream(line) >> globals::vmax;
-
     const double xmax_tmodel = globals::vmax * t_model;
 
     // Now read in the lines of the model.
