@@ -8,7 +8,6 @@
 #include "packet.h"
 
 struct TimeStepSpecrum {
-  double *flux{};
   double *absorption{};
   double *emission{};
   double *trueemission{};

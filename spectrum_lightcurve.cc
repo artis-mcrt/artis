@@ -197,16 +197,16 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
     const double deltaE = pkt.e_rf / globals::timesteps[nt].width / spectra.delta_freq[nnu] / 4.e12 / PI / PARSEC /
                           PARSEC / globals::nprocs_exspec * anglefactor;
 
-    spectra.timesteps[nt].flux[nnu] += deltaE;
+    spectra.fluxalltimesteps[(nt * MNUBINS) + nnu] += deltaE;
 
     if (stokes_i != nullptr) {
-      stokes_i->timesteps[nt].flux[nnu] += pkt.stokes[0] * deltaE;
+      stokes_i->fluxalltimesteps[(nt * MNUBINS) + nnu] += pkt.stokes[0] * deltaE;
     }
     if (stokes_q != nullptr) {
-      stokes_q->timesteps[nt].flux[nnu] += pkt.stokes[1] * deltaE;
+      stokes_q->fluxalltimesteps[(nt * MNUBINS) + nnu] += pkt.stokes[1] * deltaE;
     }
     if (stokes_u != nullptr) {
-      stokes_u->timesteps[nt].flux[nnu] += pkt.stokes[2] * deltaE;
+      stokes_u->fluxalltimesteps[(nt * MNUBINS) + nnu] += pkt.stokes[2] * deltaE;
     }
 
     if (spectra.do_emission_res) {
@@ -297,8 +297,8 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
 #ifdef MPI_ON
 void mpi_reduce_spectra(int my_rank, Spectra &spectra, const int numtimesteps) {
   for (int n = 0; n < numtimesteps; n++) {
-    MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.timesteps[n].flux, spectra.timesteps[n].flux, MNUBINS, MPI_DOUBLE,
-               MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : &spectra.fluxalltimesteps[n * MNUBINS],
+               &spectra.fluxalltimesteps[n * MNUBINS], MNUBINS, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
     if (spectra.do_emission_res) {
       const int proccount = get_proccount();
@@ -312,6 +312,28 @@ void mpi_reduce_spectra(int my_rank, Spectra &spectra, const int numtimesteps) {
   }
 }
 #endif
+
+void write_specpol_param(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpol_file, const Spectra &spec,
+                         const int nnu, const bool do_emission_res) {
+  const int proccount = get_proccount();
+  const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
+  // Stokes I, Q, or U
+  for (int p = 0; p < globals::ntimesteps; p++) {
+    fprintf(specpol_file, "%g ", spec.fluxalltimesteps[(p * MNUBINS) + nnu]);
+
+    if (do_emission_res) {
+      for (int i = 0; i < proccount; i++) {
+        fprintf(emissionpol_file, "%g ", spec.timesteps[p].emission[(nnu * proccount) + i]);
+      }
+      fprintf(emissionpol_file, "\n");
+
+      for (int i = 0; i < ioncount; i++) {
+        fprintf(absorptionpol_file, "%g ", spec.timesteps[p].absorption[(nnu * ioncount) + i]);
+      }
+      fprintf(absorptionpol_file, "\n");
+    }
+  }
+}
 
 }  // anonymous namespace
 
@@ -357,7 +379,7 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
     fprintf(spec_file, "%g ", ((spectra.lower_freq[nnu] + (spectra.delta_freq[nnu] / 2))));
 
     for (int nts = 0; nts < numtimesteps; nts++) {
-      fprintf(spec_file, "%g ", spectra.timesteps[nts].flux[nnu]);
+      fprintf(spec_file, "%g ", spectra.fluxalltimesteps[(nts * MNUBINS) + nnu]);
       if (do_emission_res) {
         for (int i = 0; i < proccount; i++) {
           fprintf(emission_file, "%g ", spectra.timesteps[nts].emission[(nnu * proccount) + i]);
@@ -420,26 +442,11 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
   for (ptrdiff_t m = 0; m < std::ssize(stokes_i->lower_freq); m++) {
     fprintf(specpol_file, "%g ", ((stokes_i->lower_freq[m] + (stokes_i->delta_freq[m] / 2))));
 
-    // Stokes I
-    for (int p = 0; p < globals::ntimesteps; p++) {
-      fprintf(specpol_file, "%g ", stokes_i->timesteps[p].flux[m]);
-
-      if (do_emission_res) {
-        for (int i = 0; i < proccount; i++) {
-          fprintf(emissionpol_file, "%g ", stokes_i->timesteps[p].emission[(m * proccount) + i]);
-        }
-        fprintf(emissionpol_file, "\n");
-
-        for (int i = 0; i < ioncount; i++) {
-          fprintf(absorptionpol_file, "%g ", stokes_i->timesteps[p].absorption[(m * ioncount) + i]);
-        }
-        fprintf(absorptionpol_file, "\n");
-      }
-    }
+    write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, *stokes_i, m, do_emission_res);
 
     // Stokes Q
     for (int p = 0; p < globals::ntimesteps; p++) {
-      fprintf(specpol_file, "%g ", stokes_q->timesteps[p].flux[m]);
+      fprintf(specpol_file, "%g ", stokes_q->fluxalltimesteps[(p * MNUBINS) + m]);
 
       if (do_emission_res) {
         for (int i = 0; i < proccount; i++) {
@@ -456,7 +463,7 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
 
     // Stokes U
     for (int p = 0; p < globals::ntimesteps; p++) {
-      fprintf(specpol_file, "%g ", stokes_u->timesteps[p].flux[m]);
+      fprintf(specpol_file, "%g ", stokes_u->fluxalltimesteps[(p * MNUBINS) + m]);
 
       if (do_emission_res) {
         for (int i = 0; i < proccount; i++) {
@@ -525,10 +532,6 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
   mem_usage += globals::ntimesteps * sizeof(Spectra);
   mem_usage += globals::ntimesteps * sizeof(TimeStepSpecrum);
   mem_usage += globals::ntimesteps * MNUBINS * sizeof(double);
-
-  for (int nts = 0; nts < globals::ntimesteps; nts++) {
-    spectra.timesteps[nts].flux = &spectra.fluxalltimesteps[nts * MNUBINS];
-  }
 
   if (do_emission_res) {
     const int proccount = get_proccount();
