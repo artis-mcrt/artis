@@ -100,11 +100,10 @@ jobs:
                         {name: gcc, ver: 14},
                         {name: nvc++, ver: '24.7'},
                     ]
-                mpi: [ON, OFF]
             fail-fast: false
 
         runs-on: ubuntu-24.04
-        name: ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}
+        name: ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
         steps:
             - uses: actions/checkout@v4
 
@@ -155,7 +154,6 @@ jobs:
                   sudo apt install libtbb-dev
 
             - name: install openmpi
-              if: matrix.mpi == 'ON'
               run: |
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
