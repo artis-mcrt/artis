@@ -299,7 +299,6 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
   }
 }
 
-#if (true)
 void mpi_reduce_spectra(int my_rank, Spectra &spectra) {
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.fluxalltimesteps.data(), spectra.fluxalltimesteps.data(),
              spectra.fluxalltimesteps.size(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -316,7 +315,6 @@ void mpi_reduce_spectra(int my_rank, Spectra &spectra) {
                MPI_COMM_WORLD);
   }
 }
-#endif
 
 void write_specpol_param(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpol_file, const Spectra &spec,
                          const int nnu, const bool do_emission_res) {
@@ -580,7 +578,6 @@ void write_partial_lightcurve_spectra(const int my_rank, const int nts, const Pa
   assert_always(numtimesteps <= globals::ntimesteps);
 
   const auto time_mpireduction_start = std::time(nullptr);
-#if (true)
   MPI_Barrier(MPI_COMM_WORLD);
   mpi_reduce_spectra(my_rank, rpkt_spectra);
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lum.data(), rpkt_light_curve_lum.data(), numtimesteps,
@@ -592,7 +589,6 @@ void write_partial_lightcurve_spectra(const int my_rank, const int nts, const Pa
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : gamma_light_curve_lumcmf.data(), gamma_light_curve_lumcmf.data(),
              numtimesteps, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
   const auto time_mpireduction_end = std::time(nullptr);
 
   if (my_rank == 0) {
