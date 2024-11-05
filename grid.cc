@@ -16,6 +16,7 @@
 #ifdef MPI_ON
 #include <mpi.h>
 #endif
+#include <optional>
 #include <span>
 #include <sstream>
 #include <string>
