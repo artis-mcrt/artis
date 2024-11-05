@@ -1857,7 +1857,7 @@ void calculate_kappagrey() {
 void read_ejecta_model() {
   auto fmodel = fstream_required("model.txt", std::ios::in);
   std::string line;
-  int detected_dim = -1;
+  std::optional<GridType> detected_dim{};
 
   // two integers on the first line of the model file
   int npts_0 = 0;  // total model points for 1D/3D, and number of points in r for 2D
@@ -1866,7 +1866,7 @@ void read_ejecta_model() {
   auto ssline = std::istringstream(line);
   ssline >> npts_0;
   if (ssline >> npts_1) {
-    detected_dim = 2;
+    detected_dim = GridType::CYLINDRICAL2D;
     printout("Detected 2D model\n");
     assert_always(get_model_type() == GridType::CYLINDRICAL2D);
     ssline >> npts_1;  // r and z (cylindrical polar)
@@ -1901,9 +1901,9 @@ void read_ejecta_model() {
   const auto pos_after_t_model = fmodel.tellg();
   std::getline(fmodel, line);
   if (line.starts_with("#")) {
-    // no vmax, so not 2D or 3D
-    assert_always(detected_dim == -1);
-    detected_dim = 1;
+    // no vmax line, so not 2D or 3D. Must be 1D
+    assert_always(!detected_dim.has_value());
+    detected_dim = GridType::SPHERICAL1D;
     printout("Detected 1D model\n");
     fmodel.seekg(pos_after_t_model);
   } else {
@@ -1911,27 +1911,21 @@ void read_ejecta_model() {
     auto sslinevmax = std::istringstream(line);
     if ((sslinevmax >> globals::vmax) && !(sslinevmax >> num_after_vmax)) {
       // single value on the line is a vmax,  so 2D or 3D
-      if (detected_dim != 2) {
-        assert_always(detected_dim == -1);
-        detected_dim = 3;
+      if (detected_dim != GridType::CYLINDRICAL2D) {
+        assert_always(!detected_dim.has_value());
+        detected_dim = GridType::CARTESIAN3D;
 
         printout("Detected 3D model\n");
       }
     } else {
-      assert_always(detected_dim == -1);
-      detected_dim = 1;
+      assert_always(!detected_dim.has_value());
+      detected_dim = GridType::SPHERICAL1D;
       printout("Detected 1D model\n");
       fmodel.seekg(pos_after_t_model);
     }
   }
-
-  if (detected_dim == 1) {
-    grid::set_model_type(GridType::SPHERICAL1D);
-  } else if (detected_dim == 2) {
-    grid::set_model_type(GridType::CYLINDRICAL2D);
-  } else if (detected_dim == 3) {
-    grid::set_model_type(GridType::CARTESIAN3D);
-  }
+  assert_always(detected_dim.has_value());
+  set_model_type(detected_dim.value());
 
   printout("Read %dD model\n", get_ngriddimensions(get_model_type()));
 
