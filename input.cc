@@ -63,7 +63,7 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     " 4: UNUSED nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]",
     " 5: UNUSED nsyn_time: number of times for synthesis",
     " 6: UNUSED start and end times for synthesis",
-    " 7: model_type: number of dimensions (1, 2, or 3)",
+    " 7: UNUSED (now auto-detected) input number of dimensions (1, 2, or 3)",
     " 8: UNUSED compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)",
     " 9: UNUSED n_out_it: number of iterations",
     "10: UNUSED: change speed of light by some factor. Change constants.h CLIGHT_PROP instead",
@@ -1669,16 +1669,9 @@ void read_parameterfile(int rank) {
 
   assert_always(get_noncommentline(file, line));  // UNUSED start and end times for synthesis
 
-  assert_always(get_noncommentline(file, line));  // model dimensions
+  assert_always(get_noncommentline(file, line));  // model dimensions (now autodetected)
   int dum1 = 0;
   std::istringstream(line) >> dum1;
-  if (dum1 == 1) {
-    grid::set_model_type(GridType::SPHERICAL1D);
-  } else if (dum1 == 2) {
-    grid::set_model_type(GridType::CYLINDRICAL2D);
-  } else if (dum1 == 3) {
-    grid::set_model_type(GridType::CARTESIAN3D);
-  }
 
   assert_always(get_noncommentline(file, line));  // UNUSED compute the r-light curve?
 

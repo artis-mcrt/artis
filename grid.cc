@@ -53,7 +53,7 @@ std::array<char, 3> coordlabel{'?', '?', '?'};
 
 std::array<int, 3> ncoordgrid{0};  // propagation grid dimensions
 
-auto model_type = GridType::SPHERICAL1D;
+GridType model_type = GridType::SPHERICAL1D;
 ptrdiff_t npts_model = 0;           // number of model grid cells
 ptrdiff_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
@@ -1926,6 +1926,14 @@ void read_ejecta_model() {
 
   fmodel.seekg(pos_after_t_model);
 
+  if (detected_dim == 1) {
+    grid::set_model_type(GridType::SPHERICAL1D);
+  } else if (detected_dim == 2) {
+    grid::set_model_type(GridType::CYLINDRICAL2D);
+  } else if (detected_dim == 3) {
+    grid::set_model_type(GridType::CARTESIAN3D);
+  }
+
   printout("Read %dD model\n", get_ngriddimensions(get_model_type()));
 
   assert_always(modelgrid_input.data() == nullptr);
@@ -2082,8 +2090,8 @@ void read_ejecta_model() {
       for (int axis = 0; axis < 3; axis++) {
         const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
         const double cellpos_expected = -xmax_tmodel + (cellwidth * get_cellcoordpointnum(mgi, axis));
-        //   printout("mgi %d coord %d expected %g found %g or %g rmax %g get_cellcoordpointnum(mgi, axis) %d ncoordgrid
-        //   %d\n",
+        //   printout("mgi %d coord %d expected %g found %g or %g rmax %g get_cellcoordpointnum(mgi, axis) %d
+        //   ncoordgrid %d\n",
         //            mgi, axis, cellpos_expected, cellpos_in[axis], cellpos_in[2 - axis], xmax_tmodel,
         //            get_cellcoordpointnum(mgi, axis), ncoordgrid[axis]);
         if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth) {
