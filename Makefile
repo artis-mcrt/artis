@@ -24,7 +24,6 @@ else
   $(error bad value for REPRODUCIBLE option. Should be ON or OFF)
 endif
 
-
 COMPILER_VERSION := $(shell $(CXX) --version)
 $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
@@ -41,7 +40,6 @@ else
 endif
 
 $(info detected compiler is $(COMPILER_NAME))
-
 
 ifeq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -std=c++20

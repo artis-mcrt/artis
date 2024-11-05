@@ -47,9 +47,7 @@
 #include <omp.h>
 #endif
 
-#ifdef MPI_ON
 #include <mpi.h>
-#endif
 
 #ifdef __NVCOMPILER_CUDA_ARCH__
 #define THREADLOCALONHOST
@@ -306,10 +304,8 @@ inline void check_already_running() {
     pidfile.close();
   }
 
-// make sure rank 0 checked for a pid file before we proceed
-#ifdef MPI_ON
+  // make sure rank 0 checked for a pid file before we proceed
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
 }
 
 constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks, const ptrdiff_t nchunk)
@@ -328,7 +324,6 @@ constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks, co
   return std::tuple{nstart, nsize};
 }
 
-#ifdef MPI_ON
 template <typename T>
 [[nodiscard]] auto MPI_shared_malloc_keepwin(const ptrdiff_t num_allranks) -> std::tuple<T *, MPI_Win> {
   if (num_allranks == 0) {
@@ -350,18 +345,13 @@ template <typename T>
   MPI_Barrier(globals::mpi_comm_node);
   return {ptr, mpiwin};
 }
-#endif
 
 template <typename T>
 [[nodiscard]] auto MPI_shared_malloc(const ptrdiff_t num_allranks) -> T * {
   if (num_allranks == 0) {
     return nullptr;
   }
-#ifdef MPI_ON
   T *ptr = std::get<0>(MPI_shared_malloc_keepwin<T>(num_allranks));
-#else
-  T *ptr = static_cast<T *>(malloc(num_allranks * sizeof(T)));
-#endif
   assert_always(ptr != nullptr);
   return ptr;
 }

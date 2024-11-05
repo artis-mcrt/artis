@@ -1,8 +1,6 @@
 #include "stats.h"
 
-#ifdef MPI_ON
 #include <mpi.h>
-#endif
 
 #include <array>
 #include <cmath>
@@ -229,7 +227,7 @@ void pkt_action_counters_printout(const int nts) {
 }
 
 void reduce_estimators() {
-#ifdef MPI_ON
+#if (true)
   MPI_Allreduce(MPI_IN_PLACE, stats::ionstats.data(),
                 grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT, MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);

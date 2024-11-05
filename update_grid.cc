@@ -1,8 +1,6 @@
 #include "update_grid.h"
 
-#ifdef MPI_ON
 #include <mpi.h>
-#endif
 
 #include <algorithm>
 #include <cmath>
@@ -1162,9 +1160,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   const auto time_update_grid_end_thisrank = std::time(nullptr);
   printout("finished update grid on this rank at time %ld\n", time_update_grid_end_thisrank);
 
-#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
   printout(
       "timestep %d: time after update grid for all processes %ld (rank %d took %lds, waited "
       "%lds, total %lds)\n",

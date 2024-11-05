@@ -1,14 +1,13 @@
 #include "spectrum_lightcurve.h"
 
+#include <mpi.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <ctime>
 #include <functional>
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
 #include <ios>
 #include <string>
 #include <vector>
@@ -300,7 +299,7 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
   }
 }
 
-#ifdef MPI_ON
+#if (true)
 void mpi_reduce_spectra(int my_rank, Spectra &spectra) {
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.fluxalltimesteps.data(), spectra.fluxalltimesteps.data(),
              spectra.fluxalltimesteps.size(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -581,7 +580,7 @@ void write_partial_lightcurve_spectra(const int my_rank, const int nts, const Pa
   assert_always(numtimesteps <= globals::ntimesteps);
 
   const auto time_mpireduction_start = std::time(nullptr);
-#ifdef MPI_ON
+#if (true)
   MPI_Barrier(MPI_COMM_WORLD);
   mpi_reduce_spectra(my_rank, rpkt_spectra);
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lum.data(), rpkt_light_curve_lum.data(), numtimesteps,
@@ -602,10 +601,7 @@ void write_partial_lightcurve_spectra(const int my_rank, const int nts, const Pa
     write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, numtimesteps);
   }
 
-#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
-
   printout("timestep %d: Saving partial light curves and %sspectra took %lds (%lds for MPI reduction)\n", nts,
            do_emission_res ? "emission/absorption " : "", std::time(nullptr) - time_func_start,
            time_mpireduction_end - time_mpireduction_start);

@@ -2,9 +2,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#ifdef MPI_ON
 #include <mpi.h>
-#endif
 
 #include <array>
 #include <cstddef>
@@ -216,7 +214,7 @@ inline int bfestimcount{0};
 
 // for USE_LUT_PHOTOION = true
 inline double *corrphotoionrenorm{};
-#ifdef MPI_ON
+#if (true)
 inline MPI_Win win_corrphotoionrenorm{MPI_WIN_NULL};
 #endif
 
@@ -283,7 +281,7 @@ inline double NPHIXSNUINCREMENT{-1};
 
 inline std::vector<CellCache> cellcache{};
 
-#ifdef MPI_ON
+#if (true)
 inline MPI_Comm mpi_comm_node{MPI_COMM_NULL};
 inline MPI_Comm mpi_comm_internode{MPI_COMM_NULL};
 #endif
@@ -327,7 +325,7 @@ inline bool lte_iteration;
 inline std::deque<std::mutex> mutex_cellcachemacroatom;
 
 inline void setup_mpi_vars() {
-#ifdef MPI_ON
+#if (true)
   MPI_Comm_rank(MPI_COMM_WORLD, &globals::my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
 

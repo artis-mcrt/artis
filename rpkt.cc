@@ -1,8 +1,6 @@
 #include "rpkt.h"
 
-#ifdef MPI_ON
 #include <mpi.h>
-#endif
 
 #include <algorithm>
 #include <array>
@@ -43,7 +41,7 @@ std::span<float> expansionopacities{};
 
 // kappa times Planck function for each bin of each non-empty cell
 std::span<double> expansionopacity_planck_cumulative{};
-#ifdef MPI_ON
+#if (true)
 MPI_Win win_expansionopacities = MPI_WIN_NULL;
 MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
 #endif
@@ -975,7 +973,7 @@ void allocate_expansionopacities() {
   float *expansionopacities_data{};
   double *expansionopacity_planck_cumulative_data{};
 
-#ifdef MPI_ON
+#if (true)
   std::tie(expansionopacities_data, win_expansionopacities) =
       MPI_shared_malloc_keepwin<float>(nonempty_npts_model * expopac_nbins);
 #else
@@ -983,7 +981,7 @@ void allocate_expansionopacities() {
 #endif
 
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
-#ifdef MPI_ON
+#if (true)
     std::tie(expansionopacity_planck_cumulative_data, win_expansionopacity_planck_cumulative) =
         MPI_shared_malloc_keepwin<double>(nonempty_npts_model * expopac_nbins);
 #else
@@ -1125,7 +1123,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   }
 }
 
-#ifdef MPI_ON
+#if (true)
 void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node_id) {
   if constexpr (EXPANSIONOPACITIES_ON) {
     if (globals::rank_in_node == 0) {

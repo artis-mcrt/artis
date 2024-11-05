@@ -1,19 +1,15 @@
 #include "radfield.h"
 
-#include <cstddef>
-
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
-
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_sf_debye.h>
+#include <mpi.h>
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -53,7 +49,7 @@ constexpr double radfieldbins_delta_nu =
 RadFieldBin *radfieldbins{};
 RadFieldBinSolution *radfieldbin_solutions{};
 
-#ifdef MPI_ON
+#if (true)
 MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
 MPI_Win win_prev_bfrate_normed = MPI_WIN_NULL;
 #endif
@@ -516,7 +512,7 @@ void init(const int my_rank, const int ndo_nonempty) {
 
     const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
 
-#ifdef MPI_ON
+#if (true)
     std::tie(radfieldbin_solutions, win_radfieldbin_solutions) =
         MPI_shared_malloc_keepwin<RadFieldBinSolution>(nonempty_npts_model * RADFIELDBINCOUNT);
 #else
@@ -535,7 +531,7 @@ void init(const int my_rank, const int ndo_nonempty) {
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     {
-#ifdef MPI_ON
+#if (true)
       std::tie(prev_bfrate_normed, win_prev_bfrate_normed) =
           MPI_shared_malloc_keepwin<float>(nonempty_npts_model * globals::bfestimcount);
 #else
@@ -554,7 +550,7 @@ void init(const int my_rank, const int ndo_nonempty) {
   zero_estimators();
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-#ifdef MPI_ON
+#if (true)
     MPI_Barrier(globals::mpi_comm_node);
 #endif
     if (globals::rank_in_node == 0) {
@@ -566,7 +562,7 @@ void init(const int my_rank, const int ndo_nonempty) {
         }
       }
     }
-#ifdef MPI_ON
+#if (true)
     MPI_Barrier(globals::mpi_comm_node);
 #endif
   }
@@ -708,7 +704,7 @@ void close_file() {
 
   if (MULTIBIN_RADFIELD_MODEL_ON) {
     free(radfieldbins);
-#ifdef MPI_ON
+#if (true)
     if (win_radfieldbin_solutions != MPI_WIN_NULL) {
       MPI_Win_free(&win_radfieldbin_solutions);
     }
@@ -720,7 +716,7 @@ void close_file() {
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-#ifdef MPI_ON
+#if (true)
     if (win_radfieldbin_solutions != MPI_WIN_NULL) {
       MPI_Win_free(&win_prev_bfrate_normed);
     }
@@ -1033,7 +1029,7 @@ void titer_nuJ(const int modelgridindex) {
 }
 #endif
 
-#ifdef MPI_ON
+#if (true)
 void reduce_estimators()
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
@@ -1276,7 +1272,7 @@ void read_restart_data(FILE *gridsave_file) {
         assert_always(fscanf(gridsave_file, "%la %la %a %a %d\n", &radfieldbins[mgibinindex].J_raw,
                              &radfieldbins[mgibinindex].nuJ_raw, &W, &T_R,
                              &radfieldbins[mgibinindex].contribcount) == 5);
-#ifdef MPI_ON
+#if (true)
         if (globals::rank_in_node == 0)
 #endif
         {

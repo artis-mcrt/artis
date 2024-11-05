@@ -1,5 +1,7 @@
 #include "grid.h"
 
+#include <mpi.h>
+
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -13,9 +15,6 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
 #include <optional>
 #include <span>
 #include <sstream>
@@ -83,7 +82,7 @@ std::vector<int> mgi_of_nonemptymgi;
 
 std::span<double> totmassradionuclide{};  // total mass of each radionuclide in the ejecta
 
-#ifdef MPI_ON
+#if (true)
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
 MPI_Win win_initnucmassfrac_allcells = MPI_WIN_NULL;
 #endif
@@ -132,7 +131,7 @@ void allocate_initradiobund() {
   const ptrdiff_t num_nuclides = decay::get_num_nuclides();
 
   const size_t totalradioabundcount = (npts_model + 1) * num_nuclides;
-#ifdef MPI_ON
+#if (true)
   std::tie(initnucmassfrac_allcells, win_initnucmassfrac_allcells) =
       MPI_shared_malloc_keepwin<float>(totalradioabundcount);
 #else
@@ -142,9 +141,7 @@ void allocate_initradiobund() {
       "[info] mem_usage: radioabundance data for %td nuclides for %td cells occupies %.3f MB (node shared memory)\n",
       num_nuclides, npts_model, static_cast<double>(totalradioabundcount * sizeof(float)) / 1024. / 1024.);
 
-#ifdef MPI_ON
   MPI_Barrier(globals::mpi_comm_node);
-#endif
 
   assert_always(initnucmassfrac_allcells != nullptr);
 
@@ -153,9 +150,7 @@ void allocate_initradiobund() {
       std::fill_n(&initnucmassfrac_allcells[mgi * num_nuclides], num_nuclides, 0.);
     }
   }
-#ifdef MPI_ON
   MPI_Barrier(globals::mpi_comm_node);
-#endif
 }
 
 auto get_cell_r_inner(const int cellindex) -> double {
@@ -275,7 +270,7 @@ void allocate_nonemptycells_composition_cooling()
   ion_cooling_contribs_allcells = MPI_shared_malloc<double>(nonempty_npts_model_ptrdifft * get_includedions());
 
   if (globals::total_nlte_levels > 0) {
-#ifdef MPI_ON
+#if (true)
     std::tie(nltepops_allcells, win_nltepops_allcells) =
         MPI_shared_malloc_keepwin<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels);
 #else
@@ -328,10 +323,7 @@ void allocate_nonemptymodelcells() {
                   (mgi == get_npts_model()));
   }
 
-#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
-
   // find number of non-empty cells and allocate nonempty list
   nonempty_npts_model = 0;
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
@@ -360,10 +352,7 @@ void allocate_nonemptymodelcells() {
       }
     }
   }
-#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
-
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = get_cell_modelgridindex(cellindex);
     if (mgi >= get_npts_model()) {
@@ -376,10 +365,7 @@ void allocate_nonemptymodelcells() {
   assert_always(modelgrid.data() == nullptr);
   modelgrid = MPI_shared_malloc_span<ModelGridCell>(nonempty_npts_model);
   std::ranges::fill(modelgrid, ModelGridCell{});
-#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
-
   allocate_nonemptycells_composition_cooling();
 
   if constexpr (EXPANSIONOPACITIES_ON || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
@@ -395,7 +381,7 @@ void allocate_nonemptymodelcells() {
   const auto ionestimsize = ionestimcount * sizeof(double);
 
   if (ionestimsize > 0) {
-#ifdef MPI_ON
+#if (true)
     std::tie(globals::corrphotoionrenorm, globals::win_corrphotoionrenorm) =
         MPI_shared_malloc_keepwin<double>(ionestimcount);
 #else
@@ -433,7 +419,7 @@ void allocate_nonemptymodelcells() {
   globals::colheatingestimator_save.resize(nonempty_npts_model, 0.);
 #endif
 
-#ifdef MPI_ON
+#if (true)
   // barrier to make sure node master has set abundance values to node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -508,7 +494,7 @@ void map_modeltogrid_direct() {
 }
 
 void abundances_read() {
-#ifdef MPI_ON
+#if (true)
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -575,7 +561,7 @@ void abundances_read() {
     }
   }
 
-#ifdef MPI_ON
+#if (true)
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -895,18 +881,13 @@ void read_grid_restart_data(const int timestep) {
     nonthermal::read_restart_data(gridsave_file);
     nltepop_read_restart_data(gridsave_file);
   }
-#ifdef MPI_ON
   MPI_Barrier(globals::mpi_comm_node);
-#endif
   fclose(gridsave_file);
 }
 
 // Assign temperatures to the grid cells at the start of the simulation
 void assign_initial_temperatures() {
-#ifdef MPI_ON
-  MPI_Barrier(MPI_COMM_WORLD);
-#endif
-  // For a simulation started from scratch we estimate the initial temperatures
+  MPI_Barrier(MPI_COMM_WORLD);  // For a simulation started from scratch we estimate the initial temperatures
 
   // We assume that for early times the material is so optically thick, that
   // all the radiation is trapped in the cell it originates from. This
@@ -1914,9 +1895,7 @@ void read_ejecta_model() {
   if (globals::rank_in_node == 0) {
     std::ranges::fill(modelgrid_input, ModelGridCellInput{});
   }
-#ifdef MPI_ON
   MPI_Barrier(globals::mpi_comm_node);
-#endif
   mg_associated_cells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 
@@ -2343,9 +2322,7 @@ void grid_init(const int my_rank) {
   printout("Total grid-mapped mass: %9.3e [Msun] (%.1f%% of input mass)\n", mtot_mapped / MSUN,
            mtot_mapped / mtot_input * 100.);
 
-#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
 }
 
 auto get_totmassradionuclide(const int z, const int a) -> double {

@@ -1,8 +1,6 @@
 #include "decay.h"
 
-#ifdef MPI_ON
 #include <mpi.h>
-#endif
 
 #include <algorithm>
 #include <array>
@@ -133,9 +131,7 @@ std::vector<DecayPath> decaypaths;
 // the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
 // during the simulation time range
 std::span<double> decaypath_energy_per_mass{};
-#ifdef MPI_ON
 MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
-#endif
 
 [[nodiscard]] auto get_nuc_decaybranchprob(const int nucindex, const int decaytype) -> double {
   assert_testmodeonly(nucindex >= 0);
@@ -1054,19 +1050,12 @@ void setup_decaypath_energy_per_mass() {
       "shared)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
   double *decaypath_energy_per_mass_data{nullptr};
-#ifdef MPI_ON
   std::tie(decaypath_energy_per_mass_data, win_decaypath_energy_per_mass) =
       MPI_shared_malloc_keepwin<double>(nonempty_npts_model * get_num_decaypaths());
-#else
-  decaypath_energy_per_mass_data =
-      static_cast<double *>(malloc(nonempty_npts_model * get_num_decaypaths() * sizeof(double)));
-#endif
   decaypath_energy_per_mass = std::span(decaypath_energy_per_mass_data, nonempty_npts_model * get_num_decaypaths());
   printout("done.\n");
 
-#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
 
   printout("Calculating decaypath_energy_per_mass for all cells...");
   const ptrdiff_t num_decaypaths = get_num_decaypaths();
@@ -1081,13 +1070,11 @@ void setup_decaypath_energy_per_mass() {
   }
   printout("done.\n");
 
-#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
 }
 
 void free_decaypath_energy_per_mass() {
-#ifdef MPI_ON
+#if (true)
   if (win_decaypath_energy_per_mass != MPI_WIN_NULL) {
     printout("[info] mem_usage: decaypath_energy_per_mass was freed\n");
     MPI_Win_free(&win_decaypath_energy_per_mass);

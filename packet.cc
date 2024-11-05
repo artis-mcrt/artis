@@ -1,8 +1,6 @@
 #include "packet.h"
 
-#ifdef MPI_ON
 #include <mpi.h>
-#endif
 
 #include <algorithm>
 #include <cmath>
@@ -88,9 +86,7 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
 void packet_init(Packet *pkt)
 // Subroutine that initialises the packets if we start a new simulation.
 {
-#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-#endif
   printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
 
   printout("INITIAL_PACKETS_ON is %s\n", (INITIAL_PACKETS_ON ? "on" : "off"));
