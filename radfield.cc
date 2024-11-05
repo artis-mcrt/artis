@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <tuple>
 #include <vector>
 
 #include "artisoptions.h"
@@ -49,10 +50,8 @@ constexpr double radfieldbins_delta_nu =
 RadFieldBin *radfieldbins{};
 RadFieldBinSolution *radfieldbin_solutions{};
 
-#if (true)
 MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
 MPI_Win win_prev_bfrate_normed = MPI_WIN_NULL;
-#endif
 
 struct Jb_lu_estimator {
   double value = 0.;
@@ -512,13 +511,8 @@ void init(const int my_rank, const int ndo_nonempty) {
 
     const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
 
-#if (true)
     std::tie(radfieldbin_solutions, win_radfieldbin_solutions) =
         MPI_shared_malloc_keepwin<RadFieldBinSolution>(nonempty_npts_model * RADFIELDBINCOUNT);
-#else
-    radfieldbin_solutions = static_cast<RadFieldBinSolution *>(
-        malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution)));
-#endif
 
     printout("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy %.3f MB\n",
              mem_usage_bins / 1024. / 1024.);
@@ -531,12 +525,8 @@ void init(const int my_rank, const int ndo_nonempty) {
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     {
-#if (true)
       std::tie(prev_bfrate_normed, win_prev_bfrate_normed) =
           MPI_shared_malloc_keepwin<float>(nonempty_npts_model * globals::bfestimcount);
-#else
-      prev_bfrate_normed = static_cast<float *>(malloc(nonempty_npts_model * globals::bfestimcount * sizeof(float)));
-#endif
     }
     printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
              nonempty_npts_model * globals::bfestimcount * sizeof(float) / 1024. / 1024.);
@@ -550,9 +540,7 @@ void init(const int my_rank, const int ndo_nonempty) {
   zero_estimators();
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-#if (true)
     MPI_Barrier(globals::mpi_comm_node);
-#endif
     if (globals::rank_in_node == 0) {
       for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
@@ -562,9 +550,7 @@ void init(const int my_rank, const int ndo_nonempty) {
         }
       }
     }
-#if (true)
     MPI_Barrier(globals::mpi_comm_node);
-#endif
   }
 }
 
@@ -704,27 +690,15 @@ void close_file() {
 
   if (MULTIBIN_RADFIELD_MODEL_ON) {
     free(radfieldbins);
-#if (true)
     if (win_radfieldbin_solutions != MPI_WIN_NULL) {
       MPI_Win_free(&win_radfieldbin_solutions);
     }
-#else
-    if (radfieldbin_solutions != nullptr) {
-      free(radfieldbin_solutions);
-    }
-#endif
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-#if (true)
     if (win_radfieldbin_solutions != MPI_WIN_NULL) {
       MPI_Win_free(&win_prev_bfrate_normed);
     }
-#else
-    if (prev_bfrate_normed != nullptr) {
-      free(prev_bfrate_normed);
-    }
-#endif
   }
 }
 
@@ -1029,7 +1003,6 @@ void titer_nuJ(const int modelgridindex) {
 }
 #endif
 
-#if (true)
 void reduce_estimators()
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
@@ -1109,7 +1082,6 @@ void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_no
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
-#endif
 
 void write_restart_data(FILE *gridsave_file) {
   printout("binned radiation field and detailed lines, ");
@@ -1272,10 +1244,7 @@ void read_restart_data(FILE *gridsave_file) {
         assert_always(fscanf(gridsave_file, "%la %la %a %a %d\n", &radfieldbins[mgibinindex].J_raw,
                              &radfieldbins[mgibinindex].nuJ_raw, &W, &T_R,
                              &radfieldbins[mgibinindex].contribcount) == 5);
-#if (true)
-        if (globals::rank_in_node == 0)
-#endif
-        {
+        if (globals::rank_in_node == 0) {
           radfieldbin_solutions[mgibinindex].W = W;
           radfieldbin_solutions[mgibinindex].T_R = T_R;
         }
