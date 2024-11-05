@@ -65,6 +65,7 @@ jobs:
 
                   echo "LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
                   echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
+                  echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
 
             - name: Set up Python
               uses: actions/setup-python@v5
