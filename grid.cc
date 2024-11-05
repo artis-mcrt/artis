@@ -1872,11 +1872,7 @@ void read_ejecta_model() {
     ssline >> npts_1;  // r and z (cylindrical polar)
     npts_model = npts_0 * npts_1;
   } else {
-    if (get_model_type() == GridType::SPHERICAL1D) {
-      npts_model = npts_0;
-    } else if (get_model_type() == GridType::CARTESIAN3D) {
-      npts_model = npts_0;
-    }
+    npts_model = npts_0;
   }
 
   // Now read the time (in days) at which the model is specified.
