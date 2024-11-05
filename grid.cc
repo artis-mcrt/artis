@@ -1871,24 +1871,11 @@ void read_ejecta_model() {
     assert_always(get_model_type() == GridType::CYLINDRICAL2D);
     ssline >> npts_1;  // r and z (cylindrical polar)
     npts_model = npts_0 * npts_1;
-    ncoord_model[0] = npts_0;
-    ncoord_model[1] = npts_1;
-    ncoord_model[2] = 0;
   } else {
     if (get_model_type() == GridType::SPHERICAL1D) {
       npts_model = npts_0;
-      ncoord_model[0] = npts_0;
-      ncoord_model[1] = 0;
-      ncoord_model[2] = 0;
     } else if (get_model_type() == GridType::CARTESIAN3D) {
       npts_model = npts_0;
-      ncoord_model[0] = static_cast<int>(round(pow(npts_0, 1 / 3.)));
-      ncoord_model[1] = ncoord_model[0];
-      ncoord_model[2] = ncoord_model[0];
-      assert_always(GRID_TYPE == GridType::CARTESIAN3D);
-      // for a 3D input model, the propagation cells will match the input cells exactly
-      ncoordgrid = ncoord_model;
-      ngrid = npts_model;
     }
   }
 
@@ -1940,6 +1927,9 @@ void read_ejecta_model() {
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 
   if (get_model_type() == GridType::SPHERICAL1D) {
+    ncoord_model[0] = npts_0;
+    ncoord_model[1] = 0;
+    ncoord_model[2] = 0;
     vout_model.resize(get_npts_model(), NAN);
 
     // Now read in the lines of the model. Each line has 5 entries: the
@@ -1989,6 +1979,9 @@ void read_ejecta_model() {
 
     globals::vmax = vout_model[get_npts_model() - 1];
   } else if (get_model_type() == GridType::CYLINDRICAL2D) {
+    ncoord_model[0] = npts_0;
+    ncoord_model[1] = npts_1;
+    ncoord_model[2] = 0;
     const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
 
     // Now read in the model. Each point in the model has two lines of input.
@@ -2036,6 +2029,14 @@ void read_ejecta_model() {
       std::abort();
     }
   } else if (get_model_type() == GridType::CARTESIAN3D) {
+    ncoord_model[0] = static_cast<int>(round(pow(npts_0, 1 / 3.)));
+    ncoord_model[1] = ncoord_model[0];
+    ncoord_model[2] = ncoord_model[0];
+    assert_always(GRID_TYPE == GridType::CARTESIAN3D);
+    // for a 3D input model, the propagation cells will match the input cells exactly
+    ncoordgrid = ncoord_model;
+    ngrid = npts_model;
+
     const double xmax_tmodel = globals::vmax * t_model;
 
     // Now read in the lines of the model.
