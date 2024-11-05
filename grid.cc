@@ -1892,14 +1892,14 @@ void read_ejecta_model() {
   mg_associated_cells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 
+  // Now read the time (in days) at which the model is specified.
+  double t_model_days{NAN};
+  assert_always(get_noncommentline(fmodel, line));
+  std::istringstream(line) >> t_model_days;
+  t_model = t_model_days * DAY;
+
   if (get_model_type() == GridType::SPHERICAL1D) {
     printout("Read 1D model\n");
-
-    // Now read the time (in days) at which the model is specified.
-    double t_model_days{NAN};
-    assert_always(get_noncommentline(fmodel, line));
-    std::istringstream(line) >> t_model_days;
-    t_model = t_model_days * DAY;
 
     vout_model.resize(get_npts_model(), NAN);
 
@@ -1951,12 +1951,6 @@ void read_ejecta_model() {
     globals::vmax = vout_model[get_npts_model() - 1];
   } else if (get_model_type() == GridType::CYLINDRICAL2D) {
     printout("Read 2D model\n");
-
-    // Now read the time (in days) at which the model is specified.
-    double t_model_days{NAN};
-    assert_always(get_noncommentline(fmodel, line));
-    std::istringstream(line) >> t_model_days;
-    t_model = t_model_days * DAY;
 
     // Now read in vmax for the model (in cm s^-1).
     assert_always(get_noncommentline(fmodel, line));
@@ -2011,11 +2005,7 @@ void read_ejecta_model() {
   } else if (get_model_type() == GridType::CARTESIAN3D) {
     printout("Read 3D model\n");
 
-    double t_model_days{NAN};
-    assert_always(get_noncommentline(fmodel, line));
-    std::istringstream(line) >> t_model_days;
-    t_model = t_model_days * DAY;
-
+    assert_always(GRID_TYPE == GridType::CARTESIAN3D);
     // for a 3D input model, the propagation cells will match the input cells exactly
     ncoordgrid = ncoord_model;
     ngrid = npts_model;
