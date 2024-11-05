@@ -47,7 +47,7 @@ else
 	CXXFLAGS += -std=c++23 -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -MD -MP -ftrivial-auto-var-init=pattern
 endif
 
-CXXFLAGS += -fstrict-aliasing -DMPI_ON=true
+CXXFLAGS += -fstrict-aliasing
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
 
 # profile-guided optimisation
