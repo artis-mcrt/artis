@@ -1684,11 +1684,14 @@ void read_parameterfile(int rank) {
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> continue_flag;
   globals::simulation_continued_from_saved = (continue_flag == 1);
+  if (globals::timestep_initial == 0) {
+    // it's not possible to resume from a saved point if we start from timestep zero, so override the flag
+    globals::simulation_continued_from_saved = false;
+  }
   if (globals::simulation_continued_from_saved) {
     printout("input: resuming simulation from saved point\n");
   } else {
     printout("input: starting a new simulation\n");
-    assert_always(globals::timestep_initial == 0);
   }
 
   // Wavelength (in Angstroms) at which the parameterisation of the radiation field
