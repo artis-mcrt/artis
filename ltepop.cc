@@ -71,16 +71,13 @@ auto phi_ion_equilib(const int element, const int ion, const int nonemptymgi) ->
   assert_testmodeonly(!elem_has_nlte_levels(element));  // don't use this function if the NLTE solver is active
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  const auto partfunc_ion =
-      grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex];
 
   const auto T_e = grid::get_Te(nonemptymgi);
 
-  // photoionisation plus collisional ionisation rate coefficient per ground level pop
-  const double Gamma = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
+  // photoionisation plus collisional ionisation rate coefficient
 
-  // Gamma is the photoionization rate per ground level pop
-  const double Gamma_ion = Gamma * stat_weight(element, ion, 0) / partfunc_ion;
+  // Gamma is the photoionization rate per ion pop
+  const double Gamma_ion = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
 
   const double Alpha_sp = interpolate_ions_spontrecombcoeff(uniqueionindex, T_e);
 
@@ -90,7 +87,7 @@ auto phi_ion_equilib(const int element, const int ion, const int nonemptymgi) ->
 
   const double gamma_nt = NT_ON ? nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion) : 0.;
 
-  if ((Gamma + gamma_nt) == 0) {
+  if ((Gamma_ion + gamma_nt) == 0) {
     printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);
     std::abort();
   }
@@ -106,7 +103,9 @@ auto phi_ion_equilib(const int element, const int ion, const int nonemptymgi) ->
         "[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g ... remove higher or "
         "lower ionisation stages\n",
         phi, element, ion, T_e);
-    printout("[fatal] phi: Alpha_sp %g, Gamma %g, partfunct %g, stat_weight %g\n", Alpha_sp, Gamma, partfunc_ion,
+    const auto partfunc_ion =
+        grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex];
+    printout("[fatal] phi: Alpha_sp %g, Gamma %g, partfunct %g, stat_weight %g\n", Alpha_sp, Gamma_ion, partfunc_ion,
              stat_weight(element, ion, 0));
     printout("[fatal] phi: upperionpartfunct %g, upperionstatweight %g\n", partfunc_upperion,
              stat_weight(element, ion + 1, 0));
