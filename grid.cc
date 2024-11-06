@@ -1098,9 +1098,9 @@ auto get_grid_type_name(const GridType gridtype) -> std::string {
   }
 }
 
+// Get the discrete index of the coordinate value (where pos must be position in grid coordinate system, not necessarily
+// xyz)
 auto get_poscoordpointnum(const double pos, const double time, const int axis) -> int {
-  // pos must be position in grid coordinate system, not necessarily xyz
-
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return static_cast<int>((pos / time + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
   } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
@@ -1124,6 +1124,8 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
   return -1;
 }
 
+// Convert a position in Cartesian xyz to the grid coordinate system (which might the same, or 2D cylindrical or 1D
+// spherical)
 constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return std::array<double, 3>{pos_xyz[0], pos_xyz[1], pos_xyz[2]};
@@ -1141,16 +1143,15 @@ constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) {
   return std::array<double, NDIM>{};
 }
 
+// find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
+// 2-vectors or 3-vectors) or expanding circle (2D vectors)
+// returns -1 if there are no forward intersections (or if the intersection
+// is tangential to the shell)
 template <size_t S1>
 [[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, S1> &pos,
                                                           const std::array<double, S1> &dir, const double speed,
                                                           const double shellradiuststart, const bool isinnerboundary,
-                                                          const double tstart) -> double
-// find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
-// 3-vectors) or expanding circle (2D vectors)
-// returns -1 if there are no forward intersections (or if the intersection
-// is tangential to the shell)
-{
+                                                          const double tstart) -> double {
   static_assert(S1 == 2 || S1 == 3);
   assert_always(shellradiuststart > 0);
 
