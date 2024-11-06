@@ -174,7 +174,6 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
   assert_testmodeonly(level < get_nlevels(element, ion));
 
   double nn{NAN};
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   if (level == 0) {
     nn = get_groundlevelpop(nonemptymgi, element, ion);
@@ -208,7 +207,7 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
         nn = calculate_levelpop_lte(nonemptymgi, element, ion, level);
       } else {
         nn = superlevelpop_over_rho * grid::get_rho(nonemptymgi) *
-             superlevel_boltzmann(modelgridindex, element, ion, level);
+             superlevel_boltzmann(nonemptymgi, element, ion, level);
         if (!std::isfinite(nn)) {
           printout("[fatal] NLTE population failure.\n");
           printout("element %d ion %d level %d\n", element, ion, level);

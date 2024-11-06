@@ -393,7 +393,7 @@ void nltepop_reset_element(const int nonemptymgi, const int element) {
   }
 }
 
-auto get_element_superlevelpartfuncs(const int modelgridindex, const int element) -> std::vector<double> {
+auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -> std::vector<double> {
   const int nions = get_nions(element);
   auto superlevel_partfuncs = std::vector<double>(nions, 0.);
   for (int ion = 0; ion < nions; ion++) {
@@ -401,7 +401,7 @@ auto get_element_superlevelpartfuncs(const int modelgridindex, const int element
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
       const int nlevels = get_nlevels(element, ion);
       for (int level = nlevels_nlte + 1; level < nlevels; level++) {
-        superlevel_partfuncs[ion] += superlevel_boltzmann(modelgridindex, element, ion, level);
+        superlevel_partfuncs[ion] += superlevel_boltzmann(nonemptymgi, element, ion, level);
       }
     }
   }
@@ -831,7 +831,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
       "nnelement %.2e cm^-3)\n",
       modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_abundance(nonemptymgi, element), nnelement);
 
-  const auto superlevel_partfunc = get_element_superlevelpartfuncs(modelgridindex, element);
+  const auto superlevel_partfunc = get_element_superlevelpartfuncs(nonemptymgi, element);
   const int nlte_dimension = get_element_nlte_dimension(element);
 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
@@ -905,7 +905,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     std::fill_n(s_renorm.begin(), nlevels_nlte + 1, 1.);
 
     for (int level = (nlevels_nlte + 1); level < nlevels; level++) {
-      s_renorm[level] = superlevel_boltzmann(modelgridindex, element, ion, level) / superlevel_partfunc[ion];
+      s_renorm[level] = superlevel_boltzmann(nonemptymgi, element, ion, level) / superlevel_partfunc[ion];
     }
 
     nltepop_matrix_add_boundbound(nonemptymgi, element, ion, t_mid, s_renorm, &rate_matrix_rad_bb, &rate_matrix_coll_bb,
@@ -1099,10 +1099,11 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   }
 }
 
-__host__ __device__ auto superlevel_boltzmann(const int modelgridindex, const int element, const int ion,
-                                              const int level) -> double {
+// Get a Boltzman factor for a level within the super level (combined Non-LTE level)
+__host__ __device__ auto superlevel_boltzmann(const int nonemptymgi, const int element, const int ion, const int level)
+    -> double {
+  assert_testmodeonly(level_isinsuperlevel(element, ion, level));
   const int superlevel_index = get_nlevels_nlte(element, ion) + 1;
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const double T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(nonemptymgi) : grid::get_Te(nonemptymgi);
   const double E_level = epsilon(element, ion, level);
   const double E_superlevel = epsilon(element, ion, superlevel_index);
@@ -1173,7 +1174,7 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
           fprintf(nlte_file, "%d ", -1);
           for (int level_sl = nlevels_nlte + 1; level_sl < get_nlevels(element, ion); level_sl++) {
             nnlevellte += calculate_levelpop_lte(nonemptymgi, element, ion, level_sl);
-            superlevel_partfunc += superlevel_boltzmann(modelgridindex, element, ion, level_sl);
+            superlevel_partfunc += superlevel_boltzmann(nonemptymgi, element, ion, level_sl);
           }
 
           nnlevelnlte = slpopfactor * superlevel_partfunc;
