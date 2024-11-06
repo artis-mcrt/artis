@@ -1877,7 +1877,6 @@ void read_ejecta_model() {
   MPI_Barrier(globals::mpi_comm_node);
   modelgrid_numassociated_propcells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
-  mgi_of_propcell.resize(ngrid, -1);
 
   if (get_model_type() == GridType::SPHERICAL1D) {
     ncoord_model[0] = npts_0;
@@ -2200,6 +2199,7 @@ void grid_init(const int my_rank) {
     printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
     std::abort();
   }
+  mgi_of_propcell.resize(ngrid, -1);
 
   printout("propagation grid: %d-dimensional %s\n", get_ngriddimensions(GRID_TYPE),
            get_grid_type_name(GRID_TYPE).c_str());
