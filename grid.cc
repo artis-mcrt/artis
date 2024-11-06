@@ -2341,7 +2341,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   // d is used to loop over the coordinate indicies 0,1,2 for x,y,z
 
   // the following four vectors are in grid coordinates, so either x,y,z or r
-  const int ndim = grid::get_ngriddimensions(GRID_TYPE);
+  constexpr int ndim = grid::get_ngriddimensions(GRID_TYPE);
   assert_testmodeonly(ndim <= 3);
   auto cellcoordmax = std::array<double, 3>{0};
   auto pktvelgridcoord = std::array<double, 3>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
