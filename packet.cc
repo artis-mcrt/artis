@@ -116,7 +116,7 @@ void packet_init(Packet *pkt)
         q += grid::get_initenergyq(mgi);
       }
 
-      norm += grid::get_gridcell_volume_tmin(m) * grid::get_rho_tmin(mgi) * q;
+      norm += grid::get_propcell_volume_tmin(m) * grid::get_rho_tmin(mgi) * q;
     }
     en_cumulative[m] = norm;
   }

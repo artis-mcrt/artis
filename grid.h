@@ -64,7 +64,7 @@ inline double *ion_cooling_contribs_allcells{};
 void set_elements_uppermost_ion(int nonemptymgi, int element, int newvalue);
 [[nodiscard]] auto wid_init(int cellindex, int axis) -> double;
 [[nodiscard]] auto get_modelcell_assocvolume_tmin(int modelgridindex) -> double;
-[[nodiscard]] auto get_gridcell_volume_tmin(int cellindex) -> double;
+[[nodiscard]] auto get_propcell_volume_tmin(int cellindex) -> double;
 [[nodiscard]] auto get_cellcoordmax(int cellindex, int axis) -> double;
 [[nodiscard]] auto get_cellcoordmin(int cellindex, int axis) -> double;
 [[nodiscard]] auto get_cellcoordpointnum(int cellindex, int axis) -> int;

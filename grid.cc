@@ -75,7 +75,7 @@ std::vector<std::array<double, 3>> propcell_pos_min{};
 std::vector<int> mgi_of_propcell;
 std::vector<int> nonemptymgi_of_propcell;
 
-std::vector<int> mg_associated_cells;
+std::vector<int> modelgrid_numassociated_propcells;
 std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
 
@@ -285,7 +285,7 @@ void allocate_nonemptycells_composition_cooling()
 
 void allocate_nonemptymodelcells() {
   // Determine the number of simulation cells associated with the model cells
-  std::ranges::fill(mg_associated_cells, 0);
+  std::ranges::fill(modelgrid_numassociated_propcells, 0);
   if (globals::rank_in_node == 0) {
     for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++) {
       modelgrid_input[mgi].initial_radial_pos_sum = 0.;
@@ -304,12 +304,12 @@ void allocate_nonemptymodelcells() {
     const int mgi = get_propcell_modelgridindex(cellindex);
     assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (get_rho_tmin(mgi) > 0) || (mgi == get_npts_model()));
 
-    mg_associated_cells[mgi] += 1;
+    modelgrid_numassociated_propcells[mgi] += 1;
     if (globals::rank_in_node == 0) {
       modelgrid_input[mgi].initial_radial_pos_sum += radial_pos_mid;
     }
 
-    assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (mg_associated_cells[mgi] == 1) ||
+    assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (modelgrid_numassociated_propcells[mgi] == 1) ||
                   (mgi == get_npts_model()));
   }
 
@@ -1337,7 +1337,7 @@ auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
   assert_always(false);
 }
 
-auto get_gridcell_volume_tmin(const int cellindex) -> double
+auto get_propcell_volume_tmin(const int cellindex) -> double
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 {
@@ -1593,7 +1593,7 @@ auto get_t_model() -> double {
 // number of propagation cells associated with each modelgrid cell
 __host__ __device__ auto get_numpropcells(const int modelgridindex) -> int {
   assert_testmodeonly(modelgridindex <= get_npts_model());
-  return mg_associated_cells[modelgridindex];
+  return modelgrid_numassociated_propcells[modelgridindex];
 }
 
 // get the index in the list of non-empty cells for a given model grid cell
@@ -1875,7 +1875,7 @@ void read_ejecta_model() {
     std::ranges::fill(modelgrid_input, ModelGridCellInput{});
   }
   MPI_Barrier(globals::mpi_comm_node);
-  mg_associated_cells.resize(npts_model + 1, 0);
+  modelgrid_numassociated_propcells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
   mgi_of_propcell.resize(ngrid, -1);
 
