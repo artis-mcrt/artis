@@ -690,6 +690,7 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto intparas = GSLIntegralParasGammaCorr{
       .nu_edge = nu_threshold,
+      .departure_ratio = 1.,  // not used, but must be set to something
       .photoion_xs = get_phixs_table(element, lowerion, level),
       .T_e = T_e,
       .nonemptymgi = nonemptymgi,

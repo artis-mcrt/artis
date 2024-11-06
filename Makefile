@@ -5,7 +5,6 @@
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
 
-CXX := mpicxx
 $(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
 
 ifeq ($(TESTMODE),ON)
@@ -18,12 +17,14 @@ endif
 ifeq ($(REPRODUCIBLE),ON)
 	CXXFLAGS += -DREPRODUCIBLE=true -ffp-contract=off
 	BUILD_DIR := $(BUILD_DIR)_reproducible
+    FASTMATH := OFF
 else ifeq ($(REPRODUCIBLE),OFF)
 else ifeq ($(REPRODUCIBLE),)
 else
   $(error bad value for REPRODUCIBLE option. Should be ON or OFF)
 endif
 
+CXX := mpicxx
 COMPILER_VERSION := $(shell $(CXX) --version)
 $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
@@ -44,7 +45,7 @@ $(info detected compiler is $(COMPILER_NAME))
 ifeq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -std=c++20
 else
-	CXXFLAGS += -std=c++23 -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -MD -MP -ftrivial-auto-var-init=pattern
+	CXXFLAGS += -std=c++23 -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -Wno-error=cast-function-type -MD -MP -ftrivial-auto-var-init=pattern
 endif
 
 CXXFLAGS += -fstrict-aliasing
@@ -226,7 +227,7 @@ else
 	endif
 endif
 
-CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare -Wshadow
+CXXFLAGS += -Winline -Wall -Wextra -pedantic  -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare -Wshadow
 
 # sn3d.cc and exspec.cc have main() defined
 common_files := $(filter-out sn3d.cc exspec.cc, $(wildcard *.cc))

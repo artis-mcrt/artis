@@ -384,7 +384,9 @@ void find_decaypaths(const std::vector<int> &custom_zlist, const std::vector<int
       decaypaths.push_back({.z = std::vector<int>(1, z),
                             .a = std::vector<int>(1, a),
                             .nucindex = std::vector<int>(1, startnucindex),
-                            .decaytypes = std::vector<int>(1, decaytype)});
+                            .decaytypes = std::vector<int>(1, decaytype),
+                            .lambdas = {},
+                            .branchproduct = 0.});
 
       extend_lastdecaypath();  // take this single step chain and find all descendants
     }
@@ -549,7 +551,8 @@ auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const dou
 // Get the mass fraction of a nuclide accounting for all decays including those of its parent and grandparent.
 // e.g., Co56 abundance may first increase with time due to Ni56 decays, then decease due to Co56 decay
 // Can be called for stable nuclides that are one daughters of the radioactive nuclide list e.g., Fe56
-// For stable nuclides, abundance returned only comes from other decays (some could be included in init model elem frac)
+// For stable nuclides, abundance returned only comes from other decays (some could be included in init model elem
+// frac)
 {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   assert_always(time >= 0.);
@@ -650,7 +653,8 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
   return endecay;
 }
 
-// Simple Euler integration as a check on the analytic result from get_endecay_per_ejectamass_t0_to_time_withexpansion()
+// Simple Euler integration as a check on the analytic result from
+// get_endecay_per_ejectamass_t0_to_time_withexpansion()
 auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const int nonemptymgi,
                                                                          const int decaypathindex, const double tstart)
     -> double {
