@@ -67,12 +67,11 @@ double mfegroup = 0.;  // Total mass of Fe group elements in ejecta
 
 int first_cellindex = -1;  // auto-determine first cell index in model.txt (usually 1 or 0)
 
-struct PropGridCell {
-  std::array<double, 3> pos_min{};  // Initial co-ordinates of inner most corner of cell.
-};
+// Initial co-ordinates of inner most corner of cell.
+std::vector<std::array<double, 3>> propcell_pos_min{};
 
-std::vector<PropGridCell> cell{};
-
+// associate each propagation cell with a model grid cell, or not, if the cell is empty (or doesn't get mapped to
+// anything such as 1D/2D to 3D)
 std::vector<int> mgi_of_propcell;
 std::vector<int> nonemptymgi_of_propcell;
 
@@ -1021,14 +1020,14 @@ void setup_grid_cartesian_3d() {
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell.resize(ngrid, {});
+  propcell_pos_min.resize(ngrid, {});
 
   coordlabel = {'X', 'Y', 'Z'};
   std::array<int, 3> nxyz = {0, 0, 0};
   for (int n = 0; n < ngrid; n++) {
     for (int axis = 0; axis < 3; axis++) {
       assert_always(nxyz[axis] == get_cellcoordpointnum(n, axis));
-      cell[n].pos_min[axis] = -globals::rmax + (2 * nxyz[axis] * globals::rmax / ncoordgrid[axis]);
+      propcell_pos_min[n][axis] = -globals::rmax + (2 * nxyz[axis] * globals::rmax / ncoordgrid[axis]);
     }
 
     assert_always(n == nxyz[2] * ncoordgrid[1] * ncoordgrid[2] + nxyz[1] * ncoordgrid[0] + nxyz[0]);
@@ -1052,12 +1051,12 @@ void setup_grid_spherical1d() {
   ncoordgrid = {get_npts_model(), 1, 1};
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell.resize(ngrid, {});
+  propcell_pos_min.resize(ngrid, {});
 
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
     const int mgi = cellindex;  // interchangeable in this mode
     const double v_inner = mgi > 0 ? vout_model[mgi - 1] : 0.;
-    cell[cellindex].pos_min = {v_inner * globals::tmin, 0., 0.};
+    propcell_pos_min[cellindex] = {v_inner * globals::tmin, 0., 0.};
   }
 }
 
@@ -1072,14 +1071,14 @@ void setup_grid_cylindrical_2d() {
   ncoordgrid = ncoord_model;
 
   ngrid = ncoordgrid[0] * ncoordgrid[1];
-  cell.resize(ngrid, {});
+  propcell_pos_min.resize(ngrid, {});
 
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
     const int n_rcyl = get_cellcoordpointnum(cellindex, 0);
     const int n_z = get_cellcoordpointnum(cellindex, 1);
 
-    cell[cellindex].pos_min = {n_rcyl * globals::rmax / ncoord_model[0],
-                               globals::rmax * (-1 + n_z * 2. / ncoord_model[1]), 0.};
+    propcell_pos_min[cellindex] = {n_rcyl * globals::rmax / ncoord_model[0],
+                                   globals::rmax * (-1 + n_z * 2. / ncoord_model[1]), 0.};
   }
 }
 
@@ -1375,7 +1374,7 @@ auto get_cellcoordmax(const int cellindex, const int axis) -> double
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 auto get_cellcoordmin(const int cellindex, const int axis) -> double {
-  return cell[cellindex].pos_min[axis];
+  return propcell_pos_min[cellindex][axis];
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
 
