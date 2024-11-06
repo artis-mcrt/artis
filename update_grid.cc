@@ -817,18 +817,13 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
       // the remaining part of the update_grid phase. Afterwards it is reset to record
       // the next timesteps gamma estimators.
       const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
-      const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
       if (groundcontindex < 0) {
-        globals::gammaestimator[ionestimindex] = 0.;
         continue;
       }
+      const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 
       if (!elem_has_nlte_levels(element)) {
-        const auto uniqueionindex = get_uniqueionindex(element, ion);
-        const auto partfunc_ion =
-            grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex];
-        globals::gammaestimator[ionestimindex] =
-            calculate_iongamma_per_gspop(nonemptymgi, element, ion) * stat_weight(element, ion, 0) / partfunc_ion;
+        globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
       }
 
       if constexpr (USE_LUT_BFHEATING) {
