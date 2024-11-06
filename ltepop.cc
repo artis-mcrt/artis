@@ -623,14 +623,24 @@ auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
   if (only_lowest_ionstage) {
     set_groundlevelpops_neutral(nonemptymgi);
   } else {
-    const auto nne_solution = find_converged_nne(nonemptymgi, nne_hi, force_lte);
-    grid::set_nne(nonemptymgi, nne_solution);
+    bool enable_nne_root_solver = true;  // with any NLTE populations, we will iterate separately for nne
+    for (int element = 0; element < get_nelements(); element++) {
+      if (elem_has_nlte_levels(element)) {
+        enable_nne_root_solver = false;
+        break;
+      }
+    }
+    if (enable_nne_root_solver) {
+      const auto nne_solution = find_converged_nne(nonemptymgi, nne_hi, force_lte);
+      grid::set_nne(nonemptymgi, nne_solution);
+    }
+    const auto nne = grid::get_nne(nonemptymgi);
 
     for (int element = 0; element < get_nelements(); element++) {
       // avoid overwriting the ground level populations set by the NLTE pop solver
       const bool already_set_by_nlte_solver = !force_lte && elem_has_nlte_levels(element);
       if (!already_set_by_nlte_solver) {
-        set_groundlevelpops(nonemptymgi, element, nne_solution, force_lte);
+        set_groundlevelpops(nonemptymgi, element, nne, force_lte);
       }
     }
   }
