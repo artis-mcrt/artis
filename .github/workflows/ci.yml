@@ -39,6 +39,7 @@ jobs:
                     - os: self-hosted
                       testmode: ON
             fail-fast: false
+            max-parallel: 10
 
         runs-on: ${{ matrix.os }}
         timeout-minutes: 120
