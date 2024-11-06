@@ -27,7 +27,7 @@ namespace {
 
 void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
   double en_deposited = pkt.e_cmf;
-  const auto mgi = grid::get_cell_modelgridindex(pkt.where);
+  const auto mgi = grid::get_propcell_modelgridindex(pkt.where);
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   const auto priortype = pkt.type;
   const double ts = pkt.prop_time;
@@ -254,7 +254,7 @@ void do_packet(Packet &pkt, const double t2, const int nts)
     }
 
     case TYPE_KPKT: {
-      const int mgi = grid::get_cell_modelgridindex(pkt.where);
+      const int mgi = grid::get_propcell_modelgridindex(pkt.where);
       const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       if (grid::modelgrid[nonemptymgi].thick == 1 ||
           (EXPANSIONOPACITIES_ON && RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.)) {
@@ -303,8 +303,8 @@ auto std_compare_packets_bymodelgriddensity(const Packet &p1, const Packet &p2) 
   // }
 
   // for both non-escaped packets, order by descending cell density
-  const int mgi1 = grid::get_cell_modelgridindex(p1.where);
-  const int mgi2 = grid::get_cell_modelgridindex(p2.where);
+  const int mgi1 = grid::get_propcell_modelgridindex(p1.where);
+  const int mgi2 = grid::get_propcell_modelgridindex(p2.where);
   const auto rho1 = mgi1 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi1)) : 0.0;
   const auto rho2 = mgi2 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi2)) : 0.0;
 
@@ -331,11 +331,11 @@ auto std_compare_packets_bymodelgriddensity(const Packet &p1, const Packet &p2) 
 
 void do_cell_packet_updates(std::span<Packet> packets, const int nts, const double ts_end) {
   auto update_packet = [ts_end, nts](auto &pkt) {
-    const int mgi = grid::get_cell_modelgridindex(pkt.where);
+    const int mgi = grid::get_propcell_modelgridindex(pkt.where);
     int newmgi = mgi;
     while (pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE && (newmgi == mgi || newmgi == grid::get_npts_model())) {
       do_packet(pkt, ts_end, nts);
-      newmgi = grid::get_cell_modelgridindex(pkt.where);
+      newmgi = grid::get_propcell_modelgridindex(pkt.where);
     }
   };
 
@@ -383,7 +383,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
 
     for (auto &pkt : packets) {
       if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
-        const int mgi = grid::get_cell_modelgridindex(pkt.where);
+        const int mgi = grid::get_propcell_modelgridindex(pkt.where);
         const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
         const bool cellcache_change_cell_required =
             (nonemptymgi >= 0 && globals::cellcache[cellcacheslotid].nonemptymgi != nonemptymgi &&

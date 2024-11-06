@@ -194,7 +194,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
       grid::set_Te(nonemptymgi, T_e);
       for (int element = 0; element < get_nelements(); element++) {
         if (!elem_has_nlte_levels(element)) {
-          // recalculate the Gammas using the current population estimates
+          // recalculate the Gammas using the current level populations
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions - 1; ion++) {
             globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] =
