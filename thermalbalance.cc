@@ -189,22 +189,23 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   const auto nonemptymgi = params->nonemptymgi;
   const double t_current = params->t_current;
   auto *const heatingcoolingrates = params->heatingcoolingrates;
-
-  // Set new T_e guess for the current cell and update populations
-  grid::set_Te(nonemptymgi, T_e);
-
-  if constexpr (!USE_LUT_PHOTOION && !LTEPOP_EXCITATION_USE_TJ) {
-    for (int element = 0; element < get_nelements(); element++) {
-      if (!elem_has_nlte_levels(element)) {
-        // recalculate the Gammas using the current population estimates
-        const int nions = get_nions(element);
-        for (int ion = 0; ion < nions - 1; ion++) {
-          globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] =
-              calculate_iongamma_per_gspop(nonemptymgi, element, ion);
+  if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
+    if (std::abs((T_e / grid::get_Te(nonemptymgi)) - 1.) > 0.1) {
+      grid::set_Te(nonemptymgi, T_e);
+      for (int element = 0; element < get_nelements(); element++) {
+        if (!elem_has_nlte_levels(element)) {
+          // recalculate the Gammas using the current population estimates
+          const int nions = get_nions(element);
+          for (int ion = 0; ion < nions - 1; ion++) {
+            globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] =
+                calculate_iongamma_per_gspop(nonemptymgi, element, ion);
+          }
         }
       }
     }
   }
+  // Set new T_e guess for the current cell and update populations
+  grid::set_Te(nonemptymgi, T_e);
 
   calculate_ion_balance_nne(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
