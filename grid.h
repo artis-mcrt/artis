@@ -60,7 +60,7 @@ inline float *ion_groundlevelpops_allcells{};
 inline float *ion_partfuncts_allcells{};
 inline double *ion_cooling_contribs_allcells{};
 
-[[nodiscard]] auto get_elements_uppermost_ion(int modelgridindex, int element) -> int;
+[[nodiscard]] auto get_elements_uppermost_ion(int nonemptymgi, int element) -> int;
 void set_elements_uppermost_ion(int nonemptymgi, int element, int newvalue);
 [[nodiscard]] auto wid_init(int cellindex, int axis) -> double;
 [[nodiscard]] auto get_modelcell_assocvolume_tmin(int modelgridindex) -> double;

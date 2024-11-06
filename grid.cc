@@ -1692,8 +1692,7 @@ auto get_cellradialposmid(const int cellindex) -> double {
   return vec_len(dcen);
 }
 
-[[nodiscard]] auto get_elements_uppermost_ion(const int modelgridindex, const int element) -> int {
-  const ptrdiff_t nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+[[nodiscard]] auto get_elements_uppermost_ion(const int nonemptymgi, const int element) -> int {
   return elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element];
 }
 
