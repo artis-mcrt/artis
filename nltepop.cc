@@ -794,12 +794,12 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
 }  // anonymous namespace
 
-void solve_nlte_pops_element(const int element, const int modelgridindex, const int timestep, const int nlte_iter)
+void solve_nlte_pops_element(const int element, const int nonemptymgi, const int timestep, const int nlte_iter)
 // solves the statistical balance equations to find NLTE level populations for all ions of an element
 // (ionisation balance follows from this too)
 {
   const int atomic_number = get_atomicnumber(element);
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   if (grid::get_elem_abundance(nonemptymgi, element) <= 0.) {
     // abundance of this element is zero, so do not store any NLTE populations
