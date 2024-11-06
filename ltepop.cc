@@ -90,7 +90,7 @@ auto phi_ion_equilib(const int element, const int ion, const int nonemptymgi) ->
 
   const double gamma_nt = NT_ON ? nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion) : 0.;
 
-  if ((Gamma + gamma_nt) == 0) {
+  if ((Gamma_ion + gamma_nt) == 0) {
     printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);
     std::abort();
   }
@@ -106,7 +106,7 @@ auto phi_ion_equilib(const int element, const int ion, const int nonemptymgi) ->
         "[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g ... remove higher or "
         "lower ionisation stages\n",
         phi, element, ion, T_e);
-    printout("[fatal] phi: Alpha_sp %g, Gamma %g, partfunct %g, stat_weight %g\n", Alpha_sp, Gamma, partfunc_ion,
+    printout("[fatal] phi: Alpha_sp %g, Gamma %g, partfunct %g, stat_weight %g\n", Alpha_sp, Gamma_ion, partfunc_ion,
              stat_weight(element, ion, 0));
     printout("[fatal] phi: upperionpartfunct %g, upperionstatweight %g\n", partfunc_upperion,
              stat_weight(element, ion + 1, 0));
