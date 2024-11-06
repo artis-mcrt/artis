@@ -1140,17 +1140,18 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 
 // Convert a position in Cartesian xyz to the grid coordinate system (which might the same, or 2D cylindrical or 1D
 // spherical)
-constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz)
-    -> std::array<double, get_ndim(GRID_TYPE)> {
-  if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
+template <GridType grid_type>
+[[nodiscard]] constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz)
+    -> std::array<double, get_ndim(grid_type)> {
+  if constexpr (grid_type == GridType::CARTESIAN3D) {
     return {pos_xyz[0], pos_xyz[1], pos_xyz[2]};
   }
 
-  if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
+  if constexpr (grid_type == GridType::CYLINDRICAL2D) {
     return {std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2]};
   }
 
-  if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
+  if constexpr (grid_type == GridType::SPHERICAL1D) {
     return {vec_len(pos_xyz)};
   }
 
@@ -2329,7 +2330,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 
 // identify the cell index from an (x,y,z) position and a time.
 [[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> &pos, const double time) -> int {
-  auto posgridcoords = get_gridcoords_from_xyz(pos);
+  auto posgridcoords = get_gridcoords_from_xyz<GRID_TYPE>(pos);
   int cellindex = 0;
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
     cellindex += get_coordcellindexincrement(d) * get_poscoordpointnum(posgridcoords[d], time, d);
@@ -2364,7 +2365,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   auto pktvelgridcoord =
       std::array<double, get_ndim(GRID_TYPE)>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
 
-  const auto pktposgridcoord = get_gridcoords_from_xyz(pos);
+  const auto pktposgridcoord = get_gridcoords_from_xyz<GRID_TYPE>(pos);
 
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
     cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
