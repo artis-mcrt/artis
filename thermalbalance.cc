@@ -59,7 +59,7 @@ auto integrand_bfheatingcoeff_custom_radfield(const double nu, void *const voidp
 }
 
 auto calculate_bfheatingcoeff(const int element, const int ion, const int level, const int phixstargetindex,
-                              const int modelgridindex) -> double {
+                              const int nonemptymgi) -> double {
   double error = 0.;
   const double epsrel = 1e-3;
   const double epsrelwarning = 1e-1;
@@ -76,7 +76,6 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   // const double T_R = grid::get_TR(nonemptymgi);
   // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const BFHeatingIntegralParams intparas = {.nu_edge = nu_threshold,
                                             .nonemptymgi = nonemptymgi,
                                             .T_R = grid::get_TR(nonemptymgi),
@@ -95,8 +94,8 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
     printout(
         "bf_heating integrator gsl warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d "
         "integral %g error %g\n",
-        status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level, phixstargetindex,
-        bfheating, error);
+        status, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion), level,
+        phixstargetindex, bfheating, error);
   }
   gsl_set_error_handler(previous_handler);
 
@@ -269,7 +268,6 @@ auto get_bfheatingcoeff_ana(const int element, const int ion, const int level, c
 // depends only the radiation field - no dependence on T_e or populations
 void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingcoeffs) {
   bfheatingcoeffs.resize(get_includedlevels());
-  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(nonemptymgi, element) <= minelfrac && !USE_LUT_BFHEATING) {
@@ -285,7 +283,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
           const auto nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             if constexpr (!USE_LUT_BFHEATING) {
-              bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
+              bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, nonemptymgi);
             } else {
               // The correction factor for stimulated emission in gammacorr is set to its
               // LTE value. Because the T_e dependence of gammacorr is weak, this correction
