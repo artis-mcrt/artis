@@ -249,6 +249,7 @@ __host__ __device__ auto choose_gamma_ray(const int nucindex) -> double {
 
   printout("Failure to choose line (pellet_nucindex %d). Abort. zrand %g runtot %g\n", nucindex, zrand, runtot);
   assert_always(false);
+  return NAN;
 }
 
 constexpr auto sigma_compton_partial(const double x, const double f_max) -> double

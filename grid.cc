@@ -746,6 +746,7 @@ auto get_inputcellvolume(const int mgi) -> double {
     return pow((2 * globals::vmax * globals::tmin), 3.) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
   }
   assert_always(false);
+  return NAN;
 }
 
 void calc_modelinit_totmassradionuclides() {
@@ -1126,21 +1127,21 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 
 // Convert a position in Cartesian xyz to the grid coordinate system (which might the same, or 2D cylindrical or 1D
 // spherical)
-constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) {
+constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) -> std::array<double, NDIM> {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
-    return std::array<double, 3>{pos_xyz[0], pos_xyz[1], pos_xyz[2]};
+    return {pos_xyz[0], pos_xyz[1], pos_xyz[2]};
   }
 
   if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
-    return std::array<double, 2>{std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2]};
+    return {std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2]};
   }
 
   if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
-    return std::array<double, 1>{vec_len(pos_xyz)};
+    return {vec_len(pos_xyz)};
   }
 
   assert_always(false);
-  return std::array<double, NDIM>{};
+  return {};
 }
 
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
