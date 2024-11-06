@@ -181,7 +181,7 @@ void set_ffegrp(const int modelgridindex, float x) {
 }
 
 void set_propcell_modelgridindex(const int cellindex, const int new_modelgridindex) {
-  assert_testmodeonly(cellindex > 0);
+  assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
   assert_testmodeonly(new_modelgridindex >= 0);
   assert_testmodeonly(new_modelgridindex <= get_npts_model());
