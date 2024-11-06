@@ -67,16 +67,15 @@ double mfegroup = 0.;  // Total mass of Fe group elements in ejecta
 
 int first_cellindex = -1;  // auto-determine first cell index in model.txt (usually 1 or 0)
 
-struct PropGridCell {
-  std::array<double, 3> pos_min{};  // Initial co-ordinates of inner most corner of cell.
-  int modelgridindex{-1};
-};
+// Initial co-ordinates of inner most corner of cell.
+std::vector<std::array<double, 3>> propcell_pos_min{};
 
-std::vector<PropGridCell> cell{};
-
+// associate each propagation cell with a model grid cell, or not, if the cell is empty (or doesn't get mapped to
+// anything such as 1D/2D to 3D)
+std::vector<int> mgi_of_propcell;
 std::vector<int> nonemptymgi_of_propcell;
 
-std::vector<int> mg_associated_cells;
+std::vector<int> modelgrid_numassociated_propcells;
 std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
 
@@ -94,6 +93,8 @@ std::vector<int> ranks_nstart_nonempty;
 std::vector<int> ranks_ndo;
 std::vector<int> ranks_ndo_nonempty;
 inline std::span<ModelGridCellInput> modelgrid_input{};
+
+constexpr auto NDIM = grid::get_ngriddimensions(GRID_TYPE);
 
 void set_rho_tmin(const int modelgridindex, const float x) { modelgrid_input[modelgridindex].rhoinit = x; }
 
@@ -181,10 +182,12 @@ void set_ffegrp(const int modelgridindex, float x) {
   modelgrid_input[modelgridindex].ffegrp = x;
 }
 
-void set_cell_modelgridindex(const int cellindex, const int new_modelgridindex) {
+void set_propcell_modelgridindex(const int cellindex, const int new_modelgridindex) {
+  assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
+  assert_testmodeonly(new_modelgridindex >= 0);
   assert_testmodeonly(new_modelgridindex <= get_npts_model());
-  cell[cellindex].modelgridindex = new_modelgridindex;
+  mgi_of_propcell[cellindex] = new_modelgridindex;
 }
 
 void set_modelinitnucmassfrac(const int modelgridindex, const int nucindex, float abund) {
@@ -284,7 +287,7 @@ void allocate_nonemptycells_composition_cooling()
 
 void allocate_nonemptymodelcells() {
   // Determine the number of simulation cells associated with the model cells
-  std::ranges::fill(mg_associated_cells, 0);
+  std::ranges::fill(modelgrid_numassociated_propcells, 0);
   if (globals::rank_in_node == 0) {
     for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++) {
       modelgrid_input[mgi].initial_radial_pos_sum = 0.;
@@ -296,19 +299,19 @@ void allocate_nonemptymodelcells() {
 
     if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
       // for 1D models, the final shell outer v should already be at vmax
-      assert_always(model_type != GridType::SPHERICAL1D || cell[cellindex].modelgridindex == get_npts_model());
-      cell[cellindex].modelgridindex = get_npts_model();
+      assert_always(model_type != GridType::SPHERICAL1D || mgi_of_propcell[cellindex] == get_npts_model());
+      set_propcell_modelgridindex(cellindex, get_npts_model());
     }
 
-    const int mgi = get_cell_modelgridindex(cellindex);
+    const int mgi = get_propcell_modelgridindex(cellindex);
     assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (get_rho_tmin(mgi) > 0) || (mgi == get_npts_model()));
 
-    mg_associated_cells[mgi] += 1;
+    modelgrid_numassociated_propcells[mgi] += 1;
     if (globals::rank_in_node == 0) {
       modelgrid_input[mgi].initial_radial_pos_sum += radial_pos_mid;
     }
 
-    assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (mg_associated_cells[mgi] == 1) ||
+    assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (modelgrid_numassociated_propcells[mgi] == 1) ||
                   (mgi == get_npts_model()));
   }
 
@@ -343,7 +346,7 @@ void allocate_nonemptymodelcells() {
   }
   MPI_Barrier(MPI_COMM_WORLD);
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    const int mgi = get_cell_modelgridindex(cellindex);
+    const int mgi = get_propcell_modelgridindex(cellindex);
     if (mgi >= get_npts_model()) {
       nonemptymgi_of_propcell[cellindex] = -1;
     } else {
@@ -426,13 +429,13 @@ void map_1dmodelto3dgrid()
     const int mgi = static_cast<int>(std::ranges::lower_bound(vout_model, cellvmid) - vout_model.begin());
 
     if (mgi < get_npts_model() && modelgrid_input[mgi].rhoinit > 0) {
-      set_cell_modelgridindex(cellindex, mgi);
+      set_propcell_modelgridindex(cellindex, mgi);
       assert_always(vout_model[mgi] >= cellvmid);
       assert_always((mgi > 0 ? vout_model[mgi - 1] : 0.0) <= cellvmid);
     } else {
       // corner cells outside of the outermost model shell are empty
       // and so are any shells with zero density
-      set_cell_modelgridindex(cellindex, get_npts_model());
+      set_propcell_modelgridindex(cellindex, get_npts_model());
     }
   }
 }
@@ -457,12 +460,12 @@ void map_2dmodelto3dgrid()
       const int mgi = (n_z * ncoord_model[0]) + n_rcyl;
 
       if (modelgrid_input[mgi].rhoinit > 0) {
-        set_cell_modelgridindex(cellindex, mgi);
+        set_propcell_modelgridindex(cellindex, mgi);
       } else {
-        set_cell_modelgridindex(cellindex, get_npts_model());
+        set_propcell_modelgridindex(cellindex, get_npts_model());
       }
     } else {
-      set_cell_modelgridindex(cellindex, get_npts_model());
+      set_propcell_modelgridindex(cellindex, get_npts_model());
     }
   }
 }
@@ -472,7 +475,7 @@ void map_2dmodelto3dgrid()
 void map_modeltogrid_direct() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = (modelgrid_input[cellindex].rhoinit > 0) ? cellindex : get_npts_model();
-    set_cell_modelgridindex(cellindex, mgi);
+    set_propcell_modelgridindex(cellindex, mgi);
   }
 }
 
@@ -1019,14 +1022,14 @@ void setup_grid_cartesian_3d() {
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell.resize(ngrid, {});
+  propcell_pos_min.resize(ngrid, {});
 
   coordlabel = {'X', 'Y', 'Z'};
   std::array<int, 3> nxyz = {0, 0, 0};
   for (int n = 0; n < ngrid; n++) {
     for (int axis = 0; axis < 3; axis++) {
       assert_always(nxyz[axis] == get_cellcoordpointnum(n, axis));
-      cell[n].pos_min[axis] = -globals::rmax + (2 * nxyz[axis] * globals::rmax / ncoordgrid[axis]);
+      propcell_pos_min[n][axis] = -globals::rmax + (2 * nxyz[axis] * globals::rmax / ncoordgrid[axis]);
     }
 
     assert_always(n == nxyz[2] * ncoordgrid[1] * ncoordgrid[2] + nxyz[1] * ncoordgrid[0] + nxyz[0]);
@@ -1050,12 +1053,12 @@ void setup_grid_spherical1d() {
   ncoordgrid = {get_npts_model(), 1, 1};
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell.resize(ngrid, {});
+  propcell_pos_min.resize(ngrid, {});
 
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
     const int mgi = cellindex;  // interchangeable in this mode
     const double v_inner = mgi > 0 ? vout_model[mgi - 1] : 0.;
-    cell[cellindex].pos_min = {v_inner * globals::tmin, 0., 0.};
+    propcell_pos_min[cellindex] = {v_inner * globals::tmin, 0., 0.};
   }
 }
 
@@ -1070,14 +1073,14 @@ void setup_grid_cylindrical_2d() {
   ncoordgrid = ncoord_model;
 
   ngrid = ncoordgrid[0] * ncoordgrid[1];
-  cell.resize(ngrid, {});
+  propcell_pos_min.resize(ngrid, {});
 
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
     const int n_rcyl = get_cellcoordpointnum(cellindex, 0);
     const int n_z = get_cellcoordpointnum(cellindex, 1);
 
-    cell[cellindex].pos_min = {n_rcyl * globals::rmax / ncoord_model[0],
-                               globals::rmax * (-1 + n_z * 2. / ncoord_model[1]), 0.};
+    propcell_pos_min[cellindex] = {n_rcyl * globals::rmax / ncoord_model[0],
+                                   globals::rmax * (-1 + n_z * 2. / ncoord_model[1]), 0.};
   }
 }
 
@@ -1095,9 +1098,9 @@ auto get_grid_type_name(const GridType gridtype) -> std::string {
   }
 }
 
+// Get the discrete index of the coordinate value (where pos must be position in grid coordinate system, not necessarily
+// xyz)
 auto get_poscoordpointnum(const double pos, const double time, const int axis) -> int {
-  // pos must be position in grid coordinate system, not necessarily xyz
-
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return static_cast<int>((pos / time + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
   } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
@@ -1121,33 +1124,34 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
   return -1;
 }
 
-constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) -> std::array<double, 3> {
+// Convert a position in Cartesian xyz to the grid coordinate system (which might the same, or 2D cylindrical or 1D
+// spherical)
+constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
-    return pos_xyz;
+    return std::array<double, 3>{pos_xyz[0], pos_xyz[1], pos_xyz[2]};
   }
 
   if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
-    return {std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2], 0.};
+    return std::array<double, 2>{std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2]};
   }
 
   if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
-    return {vec_len(pos_xyz), 0., 0.};
+    return std::array<double, 1>{vec_len(pos_xyz)};
   }
 
   assert_always(false);
-  return {0., 0., 0.};
+  return std::array<double, NDIM>{};
 }
 
+// find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
+// 2-vectors or 3-vectors) or expanding circle (2D vectors)
+// returns -1 if there are no forward intersections (or if the intersection
+// is tangential to the shell)
 template <size_t S1>
 [[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, S1> &pos,
                                                           const std::array<double, S1> &dir, const double speed,
                                                           const double shellradiuststart, const bool isinnerboundary,
-                                                          const double tstart) -> double
-// find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
-// 3-vectors) or expanding circle (2D vectors)
-// returns -1 if there are no forward intersections (or if the intersection
-// is tangential to the shell)
-{
+                                                          const double tstart) -> double {
   static_assert(S1 == 2 || S1 == 3);
   assert_always(shellradiuststart > 0);
 
@@ -1238,15 +1242,15 @@ template <size_t S1>
 
 auto get_coordboundary_distances_cylindrical2d(const std::array<double, 3> &pkt_pos,
                                                const std::array<double, 3> &pkt_dir,
-                                               const std::array<double, 3> &pktposgridcoord,
-                                               const std::array<double, 3> &pktvelgridcoord, const int cellindex,
-                                               const double tstart, const std::array<double, 3> &cellcoordmax)
-    -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
+                                               const std::array<double, NDIM> &pktposgridcoord,
+                                               const std::array<double, NDIM> &pktvelgridcoord, const int cellindex,
+                                               const double tstart, const std::array<double, NDIM> &cellcoordmax)
+    -> std::tuple<std::array<double, NDIM>, std::array<double, NDIM>> {
   // to get the cylindrical intersection, get the spherical intersection with Z components set to zero, and the
   // propagation speed set to the xy component of the 3-velocity
 
-  std::array<double, 3> d_coordminboundary{};
-  std::array<double, 3> d_coordmaxboundary{};
+  std::array<double, NDIM> d_coordminboundary{};
+  std::array<double, NDIM> d_coordmaxboundary{};
 
   const std::array<double, 2> posnoz = {pkt_pos[0], pkt_pos[1]};
 
@@ -1308,7 +1312,7 @@ auto wid_init(const int cellindex, const int axis) -> double
   }
 
   if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
-    const int modelgridindex = get_cell_modelgridindex(cellindex);
+    const int modelgridindex = get_propcell_modelgridindex(cellindex);
     const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
     return (vout_model[modelgridindex] - v_inner) * globals::tmin;
   }
@@ -1336,7 +1340,7 @@ auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
   assert_always(false);
 }
 
-auto get_gridcell_volume_tmin(const int cellindex) -> double
+auto get_propcell_volume_tmin(const int cellindex) -> double
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 {
@@ -1345,7 +1349,7 @@ auto get_gridcell_volume_tmin(const int cellindex) -> double
   }
 
   // 2D and 1D with direct mapping to propagation cells
-  const int mgi = get_cell_modelgridindex(cellindex);
+  const int mgi = get_propcell_modelgridindex(cellindex);
   return get_modelcell_assocvolume_tmin(mgi);
 }
 
@@ -1373,7 +1377,7 @@ auto get_cellcoordmax(const int cellindex, const int axis) -> double
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 auto get_cellcoordmin(const int cellindex, const int axis) -> double {
-  return cell[cellindex].pos_min[axis];
+  return propcell_pos_min[cellindex][axis];
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
 
@@ -1573,10 +1577,10 @@ auto get_t_model() -> double {
   return t_model;
 }
 
-[[nodiscard]] __host__ __device__ auto get_cell_modelgridindex(const int cellindex) -> int {
+[[nodiscard]] __host__ __device__ auto get_propcell_modelgridindex(const int cellindex) -> int {
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
-  const auto mgi = cell[cellindex].modelgridindex;
+  const auto mgi = mgi_of_propcell[cellindex];
   assert_testmodeonly(mgi >= 0);
   assert_testmodeonly(mgi < (get_npts_model() + 1));
   return mgi;
@@ -1592,7 +1596,7 @@ auto get_t_model() -> double {
 // number of propagation cells associated with each modelgrid cell
 __host__ __device__ auto get_numpropcells(const int modelgridindex) -> int {
   assert_testmodeonly(modelgridindex <= get_npts_model());
-  return mg_associated_cells[modelgridindex];
+  return modelgrid_numassociated_propcells[modelgridindex];
 }
 
 // get the index in the list of non-empty cells for a given model grid cell
@@ -1692,8 +1696,7 @@ auto get_cellradialposmid(const int cellindex) -> double {
   return vec_len(dcen);
 }
 
-[[nodiscard]] auto get_elements_uppermost_ion(const int modelgridindex, const int element) -> int {
-  const ptrdiff_t nonemptymgi = get_nonemptymgi_of_mgi(modelgridindex);
+[[nodiscard]] auto get_elements_uppermost_ion(const int nonemptymgi, const int element) -> int {
   return elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element];
 }
 
@@ -1875,7 +1878,7 @@ void read_ejecta_model() {
     std::ranges::fill(modelgrid_input, ModelGridCellInput{});
   }
   MPI_Barrier(globals::mpi_comm_node);
-  mg_associated_cells.resize(npts_model + 1, 0);
+  modelgrid_numassociated_propcells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 
   if (get_model_type() == GridType::SPHERICAL1D) {
@@ -2199,6 +2202,7 @@ void grid_init(const int my_rank) {
     printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
     std::abort();
   }
+  mgi_of_propcell.resize(ngrid, -1);
 
   printout("propagation grid: %d-dimensional %s\n", get_ngriddimensions(GRID_TYPE),
            get_grid_type_name(GRID_TYPE).c_str());
@@ -2240,7 +2244,7 @@ void grid_init(const int my_rank) {
   if (globals::my_rank == 0) {
     FILE *grid_file = fopen_required("grid.out", "w");
     for (int n = 0; n < ngrid; n++) {
-      const int mgi = get_cell_modelgridindex(n);
+      const int mgi = get_propcell_modelgridindex(n);
       if (mgi != get_npts_model()) {
         fprintf(grid_file, "%d %d\n", n, mgi);  // write only non-empty cells to grid file
       }
@@ -2339,20 +2343,19 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   auto last_cross = *pkt_last_cross;
   // d is used to loop over the coordinate indicies 0,1,2 for x,y,z
 
-  // the following four vectors are in grid coordinates, so either x,y,z or r
-  const int ndim = grid::get_ngriddimensions(GRID_TYPE);
-  assert_testmodeonly(ndim <= 3);
-  auto cellcoordmax = std::array<double, 3>{0};
-  auto pktvelgridcoord = std::array<double, 3>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
+  // the following vector are in grid coordinates, so either x,y,z (3D) or r (1D), or r_xy, z (2D)
+  assert_testmodeonly(NDIM <= 3);
+  auto cellcoordmax = std::array<double, NDIM>{0};
+  auto pktvelgridcoord = std::array<double, NDIM>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
 
   const auto pktposgridcoord = get_gridcoords_from_xyz(pos);
 
-  for (int d = 0; d < ndim; d++) {
+  for (int d = 0; d < NDIM; d++) {
     cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
   }
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     // keep xyz Cartesian coordinates
-    for (int d = 0; d < ndim; d++) {
+    for (int d = 0; d < NDIM; d++) {
       pktvelgridcoord[d] = dir[d] * CLIGHT_PROP;
     }
   } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
@@ -2372,7 +2375,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   const auto negdirections = std::array<enum cell_boundary, 3>{COORD0_MIN, COORD1_MIN, COORD2_MIN};
   const auto posdirections = std::array<enum cell_boundary, 3>{COORD0_MAX, COORD1_MAX, COORD2_MAX};
 
-  for (int d = 0; d < ndim; d++) {
+  for (int d = 0; d < NDIM; d++) {
     // flip is either zero or one to indicate +ve and -ve boundaries along the selected axis
     for (int flip = 0; flip < 2; flip++) {
       enum cell_boundary const direction = flip != 0 ? posdirections[d] : negdirections[d];
@@ -2428,10 +2431,10 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   }
 
   // distance to reach the cell's upper boundary on each coordinate
-  auto d_coordmaxboundary = std::array<double, 3>{-1};
+  auto d_coordmaxboundary = std::array<double, NDIM>{-1};
 
   // distance to reach the cell's lower boundary on each coordinate
-  auto d_coordminboundary = std::array<double, 3>{-1};
+  auto d_coordminboundary = std::array<double, NDIM>{-1};
 
   if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
     last_cross = BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
@@ -2487,7 +2490,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   enum cell_boundary choice = BOUNDARY_NONE;
   double distance = std::numeric_limits<double>::max();
   int snext = 0;
-  for (int d = 0; d < ndim; d++) {
+  for (int d = 0; d < NDIM; d++) {
     // upper d coordinate of the current cell
     if ((d_coordmaxboundary[d] > 0) && (d_coordmaxboundary[d] < distance) && (last_cross != negdirections[d])) {
       choice = posdirections[d];
@@ -2524,7 +2527,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
         printout("coord %d: initpos %g dir %g\n", d2, pos[d2], dir[d2]);
       }
       printout("|initpos| %g |dir| %g |pos.dir| %g\n", vec_len(pos), vec_len(dir), dot(pos, dir));
-      for (int d2 = 0; d2 < ndim; d2++) {
+      for (int d2 = 0; d2 < NDIM; d2++) {
         printout("coord %d: dist_posmax %g dist_posmin %g\n", d2, d_coordmaxboundary[d2], d_coordminboundary[d2]);
         printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2,
                  grid::get_cellcoordmin(cellindex, d2) * tstart / globals::tmin,

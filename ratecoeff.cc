@@ -1249,7 +1249,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
     return true;
   }
 
-  if (USE_LUT_PHOTOION || !elem_has_nlte_levels(element)) {
+  if (!elem_has_nlte_levels(element)) {
     return (globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] == 0);
   }
 

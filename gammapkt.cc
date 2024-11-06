@@ -460,7 +460,7 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
   double chi_cmf{NAN};
   // Start by working out the x-section in the co-moving frame.
 
-  const int mgi = grid::get_cell_modelgridindex(pkt.where);
+  const int mgi = grid::get_propcell_modelgridindex(pkt.where);
 
   if (mgi >= grid::get_npts_model()) {
     return 0.;  // empty cell
@@ -554,7 +554,7 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
 
 // calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
 auto get_chi_pair_prod_rf(const Packet &pkt) -> double {
-  const int mgi = grid::get_cell_modelgridindex(pkt.where);
+  const int mgi = grid::get_propcell_modelgridindex(pkt.where);
   if (mgi >= grid::get_npts_model()) {
     return 0.;  // empty cell
   }
@@ -891,7 +891,7 @@ void wollaeger_thermalisation(Packet &pkt) {
     const auto [sdist, snext] =
         grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where, &pkt_copy.last_cross);
     const double s_cont = sdist * t_current * t_current * t_current / std::pow(pkt_copy.prop_time, 3);
-    const int mgi = grid::get_cell_modelgridindex(pkt_copy.where);
+    const int mgi = grid::get_propcell_modelgridindex(pkt_copy.where);
     if (mgi != grid::get_npts_model()) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       tau += grid::get_rho(nonemptymgi) * s_cont * mean_gamma_opac;  // contribution to the integral
@@ -953,7 +953,7 @@ void guttman_thermalisation(Packet &pkt) {
       const auto [sdist, snext] =
           grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where, &pkt_copy.last_cross);
       const double s_cont = sdist * std::pow(t, 3.) / std::pow(pkt_copy.prop_time, 3.);
-      const int mgi = grid::get_cell_modelgridindex(pkt_copy.where);
+      const int mgi = grid::get_propcell_modelgridindex(pkt_copy.where);
       if (mgi != grid::get_npts_model()) {
         column_densities[i] += grid::get_rho_tmin(mgi) * s_cont;  // contribution to the integral
       }
@@ -1077,7 +1077,7 @@ __host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {
     if constexpr (GAMMA_THERMALISATION_SCHEME != ThermalisationScheme::DETAILED &&
                   GAMMA_THERMALISATION_SCHEME != ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
       // no transport, so the path-based gamma deposition estimator won't get updated unless we do it here
-      const int mgi = grid::get_cell_modelgridindex(pkt.where);
+      const int mgi = grid::get_propcell_modelgridindex(pkt.where);
       const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       atomicadd(globals::dep_estimator_gamma[nonemptymgi], pkt.e_cmf);
     }

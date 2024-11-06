@@ -3,8 +3,8 @@
 
 #include <cstdio>
 
-void solve_nlte_pops_element(int element, int modelgridindex, int timestep, int nlte_iter);
-[[nodiscard]] auto superlevel_boltzmann(int modelgridindex, int element, int ion, int level) -> double;
+void solve_nlte_pops_element(int element, int nonemptymgi, int timestep, int nlte_iter);
+[[nodiscard]] auto superlevel_boltzmann(int nonemptymgi, int element, int ion, int level) -> double;
 [[nodiscard]] auto get_nlte_levelpop_over_rho(int nonemptymgi, int element, int ion, int level) -> double;
 [[nodiscard]] auto get_nlte_superlevelpop_over_rho(int nonemptymgi, int element, int ion) -> double;
 void set_nlte_levelpop_over_rho(int nonemptymgi, int element, int ion, int level, double value);

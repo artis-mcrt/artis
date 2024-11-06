@@ -66,7 +66,7 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
   // ensure that the random position was inside the cell we selected
   assert_always(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == cellindex);
 
-  const int mgi = grid::get_cell_modelgridindex(cellindex);
+  const int mgi = grid::get_propcell_modelgridindex(cellindex);
 
   decay::setup_radioactive_pellet(e0, mgi, pkt);
 
@@ -107,7 +107,7 @@ void packet_init(Packet *pkt)
 
   double norm = 0.;
   for (int m = 0; m < grid::ngrid; m++) {
-    const int mgi = grid::get_cell_modelgridindex(m);
+    const int mgi = grid::get_propcell_modelgridindex(m);
     if (mgi < grid::get_npts_model() && grid::get_numpropcells(mgi) > 0)  // some grid cells are empty
     {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
@@ -116,7 +116,7 @@ void packet_init(Packet *pkt)
         q += grid::get_initenergyq(mgi);
       }
 
-      norm += grid::get_gridcell_volume_tmin(m) * grid::get_rho_tmin(mgi) * q;
+      norm += grid::get_propcell_volume_tmin(m) * grid::get_rho_tmin(mgi) * q;
     }
     en_cumulative[m] = norm;
   }
