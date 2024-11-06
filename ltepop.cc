@@ -61,7 +61,7 @@ auto phi_lte(const int element, const int ion, const int nonemptymgi) -> double 
 
 // Calculate population ratio (a saha factor) of two consecutive ionisation stages in nebular approximation phi_j,k* =
 // N_j,k*/(N_j+1,k* * nne)
-auto phi_ion_equilib(const int element, const int ion, const int nonemptymgi) -> double {
+auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
 
@@ -286,11 +286,11 @@ auto find_uppermost_ion(const int nonemptymgi, const int element, const double n
     return nions - 1;
   }
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  const bool use_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
+  const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
   int uppermost_ion = 0;
 
   uppermost_ion = nions - 1;
-  if (!use_lte) {
+  if (!use_phi_lte) {
     for (int ion = 0; ion < nions - 1; ion++) {
       if (iongamma_is_zero(nonemptymgi, element, ion) &&
           (!NT_ON || ((globals::dep_estimator_gamma[nonemptymgi] == 0.) &&
@@ -305,7 +305,8 @@ auto find_uppermost_ion(const int nonemptymgi, const int element, const double n
   double factor = 1.;
   int ion = 0;
   for (ion = 0; ion < uppermost_ion; ion++) {
-    const auto phifactor = use_lte ? phi_lte(element, ion, nonemptymgi) : phi_ion_equilib(element, ion, nonemptymgi);
+    const auto phifactor =
+        use_phi_lte ? phi_lte(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
     factor *= nne_hi * phifactor;
 
     if (!std::isfinite(factor)) {
@@ -437,7 +438,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 
   for (int ion = uppermost_ion - 1; ion >= 0; ion--) {
     const auto phifactor =
-        use_phi_lte ? phi_lte(element, ion, nonemptymgi) : phi_ion_equilib(element, ion, nonemptymgi);
+        use_phi_lte ? phi_lte(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
     ionfractions[ion] = ionfractions[ion + 1] * nne * phifactor;
     normfactor += ionfractions[ion];
   }
