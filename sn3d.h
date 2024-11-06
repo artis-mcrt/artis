@@ -27,6 +27,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <sstream>
 #ifndef GPU_ON
 #include <random>
 #endif
@@ -288,9 +289,16 @@ inline void check_already_running() {
     if (std::filesystem::exists("artis.pid")) {
       auto pidfile = std::fstream("artis.pid", std::ios::in);
       pid_t artispid_in = 0;
-      pidfile >> artispid_in;
+      std::string line;
+      std::getline(pidfile, line);
+      std::istringstream ssline1(line);
+      ssline1 >> artispid_in;
+      std::getline(pidfile, line);
+      std::istringstream ssline2(line);
+      std::string working_directory;
+      ssline2 >> working_directory;
       pidfile.close();
-      if (is_pid_running(artispid_in)) {
+      if (is_pid_running(artispid_in) && std::filesystem::current_path().generic_string() == working_directory) {
         fprintf(stderr,
                 "\nERROR: artis or exspec is already running in this folder with existing pid %d. Refusing to start. "
                 "(delete artis.pid if you are sure this is incorrect)\n",
@@ -300,7 +308,8 @@ inline void check_already_running() {
     }
 
     auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);
-    pidfile << artispid;
+    pidfile << artispid << '\n';
+    pidfile << std::filesystem::current_path().generic_string() << '\n';
     pidfile.close();
   }
 
