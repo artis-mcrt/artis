@@ -9,6 +9,10 @@ Diagnostics:
         FastCheckFilter: None
     UnusedIncludes: Strict
     MissingIncludes: Strict
+    Includes:
+        # std::ranges::upper_bound is triggering warning to include a private libc++ header __algorithm/ranges_upper_bound.h
+        # IgnoreHeader: '.*(ranges).*'
+        IgnoreHeader: '.*(__algorithm).*'
 
 Completion:
     AllScopes: true
