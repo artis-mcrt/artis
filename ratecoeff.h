@@ -3,6 +3,7 @@
 
 #include <algorithm>
 
+#include "globals.h"
 #include "sn3d.h"
 #if !USE_SIMPSON_INTEGRATOR
 #include <gsl/gsl_integration.h>

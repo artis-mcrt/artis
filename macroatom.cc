@@ -1,5 +1,7 @@
 #include "macroatom.h"
 
+#include <__algorithm/ranges_upper_bound.h>
+
 #include <algorithm>
 #include <array>
 #include <cmath>

@@ -1,4 +1,8 @@
+#include <cmath>
 #include <cstddef>
+
+#include "constants.h"
+#include "gsl/gsl_math.h"
 #ifndef RADFIELD_H
 #define RADFIELD_H
 

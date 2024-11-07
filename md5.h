@@ -11,6 +11,7 @@
 
 /*************************** HEADER FILES ***************************/
 #include <cstddef>
+#include <cstdint>
 
 /****************************** MACROS ******************************/
 constexpr int MD5_BLOCK_SIZE = 16;  // MD5 outputs a 16 byte digest
@@ -22,7 +23,7 @@ using WORD = unsigned int;   // 32-bit word, change to "long" for 16-bit machine
 using MD5_CTX = struct {
   BYTE data[64];
   WORD datalen;
-  unsigned long long bitlen;
+  std::uint64_t bitlen;
   WORD state[4];
 };
 

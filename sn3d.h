@@ -1,7 +1,12 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#include <cstdlib>
+#include <ctime>
 #include <span>
+#include <vector>
+
+#include "artisoptions.h"
 #ifndef __host__
 #define __host__
 #endif
@@ -15,7 +20,6 @@
 #include <unistd.h>
 
 #include <algorithm>
-#include <atomic>
 #include <cassert>
 #include <csignal>
 #include <cstdarg>

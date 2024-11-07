@@ -2,6 +2,7 @@
 #define DECAY_H
 
 #include <array>
+#include <cstddef>
 #include <cstdio>
 #include <string>
 #include <vector>

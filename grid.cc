@@ -1,5 +1,6 @@
 #include "grid.h"
 
+#include <__algorithm/ranges_lower_bound.h>
 #include <mpi.h>
 
 #include <algorithm>
@@ -72,10 +73,10 @@ std::vector<std::array<double, 3>> propcell_pos_min{};
 
 // associate each propagation cell with a model grid cell, or not, if the cell is empty (or doesn't get mapped to
 // anything such as 1D/2D to 3D)
-std::vector<int> mgi_of_propcell;
-std::vector<int> nonemptymgi_of_propcell;
+std::vector<int> propcell_mgi;
+std::vector<int> propcell_nonemptymgi;
 
-std::vector<int> modelgrid_numassociated_propcells;
+std::vector<int> modelgrid_numpropcells;
 std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
 
@@ -200,7 +201,7 @@ void set_propcell_modelgridindex(const int cellindex, const int new_modelgridind
   assert_testmodeonly(cellindex < ngrid);
   assert_testmodeonly(new_modelgridindex >= 0);
   assert_testmodeonly(new_modelgridindex <= get_npts_model());
-  mgi_of_propcell[cellindex] = new_modelgridindex;
+  propcell_mgi[cellindex] = new_modelgridindex;
 }
 
 void set_modelinitnucmassfrac(const int modelgridindex, const int nucindex, float abund) {
@@ -300,7 +301,7 @@ void allocate_nonemptycells_composition_cooling()
 
 void allocate_nonemptymodelcells() {
   // Determine the number of simulation cells associated with the model cells
-  std::ranges::fill(modelgrid_numassociated_propcells, 0);
+  std::ranges::fill(modelgrid_numpropcells, 0);
   if (globals::rank_in_node == 0) {
     for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++) {
       modelgrid_input[mgi].initial_radial_pos_sum = 0.;
@@ -312,19 +313,19 @@ void allocate_nonemptymodelcells() {
 
     if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
       // for 1D models, the final shell outer v should already be at vmax
-      assert_always(model_type != GridType::SPHERICAL1D || mgi_of_propcell[cellindex] == get_npts_model());
+      assert_always(model_type != GridType::SPHERICAL1D || propcell_mgi[cellindex] == get_npts_model());
       set_propcell_modelgridindex(cellindex, get_npts_model());
     }
 
     const int mgi = get_propcell_modelgridindex(cellindex);
     assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (get_rho_tmin(mgi) > 0) || (mgi == get_npts_model()));
 
-    modelgrid_numassociated_propcells[mgi] += 1;
+    modelgrid_numpropcells[mgi] += 1;
     if (globals::rank_in_node == 0) {
       modelgrid_input[mgi].initial_radial_pos_sum += radial_pos_mid;
     }
 
-    assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (modelgrid_numassociated_propcells[mgi] == 1) ||
+    assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (modelgrid_numpropcells[mgi] == 1) ||
                   (mgi == get_npts_model()));
   }
 
@@ -339,7 +340,7 @@ void allocate_nonemptymodelcells() {
   assert_always(nonempty_npts_model > 0);
 
   mgi_of_nonemptymgi.resize(nonempty_npts_model, -2);
-  nonemptymgi_of_propcell.resize(ngrid, -1);
+  propcell_nonemptymgi.resize(ngrid, -1);
 
   int nonemptymgi = 0;  // index within list of non-empty modelgrid cells
 
@@ -361,9 +362,9 @@ void allocate_nonemptymodelcells() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = get_propcell_modelgridindex(cellindex);
     if (mgi >= get_npts_model()) {
-      nonemptymgi_of_propcell[cellindex] = -1;
+      propcell_nonemptymgi[cellindex] = -1;
     } else {
-      nonemptymgi_of_propcell[cellindex] = get_nonemptymgi_of_mgi(mgi);
+      propcell_nonemptymgi[cellindex] = get_nonemptymgi_of_mgi(mgi);
     }
   }
 
@@ -1595,14 +1596,14 @@ auto get_t_model() -> double {
 [[nodiscard]] __host__ __device__ auto get_propcell_modelgridindex(const int cellindex) -> int {
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
-  const auto mgi = mgi_of_propcell[cellindex];
+  const auto mgi = propcell_mgi[cellindex];
   assert_testmodeonly(mgi >= 0);
   assert_testmodeonly(mgi < (get_npts_model() + 1));
   return mgi;
 }
 
 [[nodiscard]] __host__ __device__ auto get_propcell_nonemptymgi(const int cellindex) -> int {
-  const auto nonemptymgi = nonemptymgi_of_propcell[cellindex];
+  const auto nonemptymgi = propcell_nonemptymgi[cellindex];
   assert_testmodeonly(nonemptymgi >= -1);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return nonemptymgi;
@@ -1611,7 +1612,7 @@ auto get_t_model() -> double {
 // number of propagation cells associated with each modelgrid cell
 __host__ __device__ auto get_numpropcells(const int modelgridindex) -> int {
   assert_testmodeonly(modelgridindex <= get_npts_model());
-  return modelgrid_numassociated_propcells[modelgridindex];
+  return modelgrid_numpropcells[modelgridindex];
 }
 
 // get the index in the list of non-empty cells for a given model grid cell
@@ -1893,7 +1894,7 @@ void read_ejecta_model() {
     std::ranges::fill(modelgrid_input, ModelGridCellInput{});
   }
   MPI_Barrier(globals::mpi_comm_node);
-  modelgrid_numassociated_propcells.resize(npts_model + 1, 0);
+  modelgrid_numpropcells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 
   if (get_model_type() == GridType::SPHERICAL1D) {
@@ -2217,7 +2218,7 @@ void grid_init(const int my_rank) {
     printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
     std::abort();
   }
-  mgi_of_propcell.resize(ngrid, -1);
+  propcell_mgi.resize(ngrid, -1);
 
   printout("propagation grid: %d-dimensional %s\n", get_ndim(GRID_TYPE), get_grid_type_name(GRID_TYPE).c_str());
 
