@@ -1,6 +1,5 @@
 #include "nonthermal.h"
 
-#include <__algorithm/ranges_lower_bound.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cblas.h>
 #include <gsl/gsl_linalg.h>

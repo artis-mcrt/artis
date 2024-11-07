@@ -1,6 +1,5 @@
 #include "grid.h"
 
-#include <__algorithm/ranges_lower_bound.h>
 #include <mpi.h>
 
 #include <algorithm>
