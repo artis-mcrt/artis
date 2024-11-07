@@ -1,6 +1,5 @@
 #include "rpkt.h"
 
-#include <__algorithm/ranges_upper_bound.h>
 #include <mpi.h>
 
 #include <algorithm>
