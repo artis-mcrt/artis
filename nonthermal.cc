@@ -642,9 +642,9 @@ void read_collion_data() {
     const int Z = get_atomicnumber(element);
     for (int ion = 0; ion < get_nions(element); ion++) {
       const int ionstage = get_ionstage(element, ion);
-      const bool any_data_matched = std::any_of(
-          colliondata.cbegin(), colliondata.cend(),
-          [Z, ionstage](const collionrow &collionrow) { return collionrow.Z == Z && collionrow.ionstage == ionstage; });
+      const bool any_data_matched = std::ranges::any_of(colliondata, [Z, ionstage](const collionrow &collionrow) {
+        return collionrow.Z == Z && collionrow.ionstage == ionstage;
+      });
       if (!any_data_matched) {
         const double ionpot_ev = globals::elements[element].ions[ion].ionpot / EV;
         printout("No collisional ionisation data for Z=%d ionstage %d. Using Lotz approximation with ionpot = %g eV\n",
