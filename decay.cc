@@ -232,10 +232,8 @@ void printout_nuclidemeanlife(const int z, const int a) {
 
 // contributed energy release per decay [erg] for decaytype (e.g. decaytypes::DECAYTYPE_BETAPLUS) (excludes neutrinos!)
 [[nodiscard]] auto nucdecayenergy(const int nucindex, const int decaytype) -> double {
-  double endecay = nuclides[nucindex].endecay_gamma + nucdecayenergyparticle(nucindex, decaytype);
-  if(globals::packet_setup_phase && decaytype == DECAYTYPE_BETAMINUS) {
-    endecay = (BETAMINUS_ENERGY_GAMMA_SPLITUP + BETAMINUS_ENERGY_ELECTRON_SPLITUP) * nuclides[nucindex].endecay_q[decaytype];
-  }
+  const double endecay = nuclides[nucindex].endecay_gamma + nucdecayenergyparticle(nucindex, decaytype);
+
   return endecay;
 }
 
@@ -1001,6 +999,12 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   // Read in data for gamma ray lines and make a list of them in energy order.
   gammapkt::init_gamma_data();
 
+  // manipulate betaminus decay splitup ratios here
+  for (int i = 0; i < static_cast<int>(nuclides.size()); i++) {
+    nuclides[i].endecay_gamma = BETAMINUS_ENERGY_GAMMA_SPLITUP * nuclides[i].endecay_q[DECAYTYPE_BETAMINUS];
+    nuclides[i].endecay_electron = BETAMINUS_ENERGY_ELECTRON_SPLITUP * nuclides[i].endecay_q[DECAYTYPE_BETAMINUS];
+  }
+
   // TODO: generalise this to all included nuclides
   printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",
            nucdecayenergytotal(28, 56) / MEV, nucdecayenergytotal(27, 56) / MEV, nucdecayenergygamma(27, 56) / MEV);
@@ -1410,12 +1414,8 @@ void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
   pkt.pellet_nucindex = nucindex;
   pkt.pellet_decaytype = decaytype;
 
-  auto engamma = nucdecayenergygamma(nucindex);
-  auto enparticle = nucdecayenergyparticle(nucindex, decaytype);
-  if(pkt.pellet_decaytype == DECAYTYPE_BETAMINUS) {
-    engamma = BETAMINUS_ENERGY_GAMMA_SPLITUP * nuclides[nucindex].endecay_q[DECAYTYPE_BETAMINUS];
-    enparticle = BETAMINUS_ENERGY_ELECTRON_SPLITUP * nuclides[nucindex].endecay_q[DECAYTYPE_BETAMINUS];
-  }
+  const auto engamma = nucdecayenergygamma(nucindex);
+  const auto enparticle = nucdecayenergyparticle(nucindex, decaytype);
 
   pkt.originated_from_particlenotgamma = (rng_uniform() >= engamma / (engamma + enparticle));
   pkt.nu_cmf = enparticle / H;  // will be overwritten for gamma rays, but affects the thermalisation of particles

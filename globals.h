@@ -318,8 +318,6 @@ inline int num_grey_timesteps;
 inline int n_titer;
 inline bool lte_iteration;
 
-inline bool packet_setup_phase{false};
-
 inline std::deque<std::mutex> mutex_cellcachemacroatom;
 
 inline void setup_mpi_vars() {

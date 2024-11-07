@@ -100,9 +100,7 @@ void packet_init(Packet *pkt)
   const double e0_tinf = etot_tinf / globals::npkts;
   printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
 
-  globals::packet_setup_phase = true;
   decay::setup_decaypath_energy_per_mass();
-  globals::packet_setup_phase = false;
 
   // Need to get a normalisation factor
   auto en_cumulative = std::vector<double>(grid::ngrid);
