@@ -332,6 +332,7 @@ inline auto get_includedlevels() -> int { return includedlevels; }
     }
   }
   assert_always(false);  // allionsindex too high to be valid
+  return {-1, -1};
 }
 
 // Get an index for level of an ionstage of an element that is unique across every ion of every element
@@ -361,6 +362,7 @@ inline auto get_includedlevels() -> int { return includedlevels; }
     }
   }
   assert_always(false);  // alllevelsindex too high to be valid
+  return {-1, -1, -1};
 }
 
 [[nodiscard]] inline auto ion_has_superlevel(const int element, const int ion) -> bool {

@@ -63,12 +63,9 @@ vpkt.cc)
 
 add_executable(exspec ${EXSPEC_SOURCES})
 
-#if(UNIX AND NOT APPLE)
-if(UNIX AND NOT APPLE)
-  find_package(MPI)
-  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-  target_link_libraries(sn3d MPI_CXX)
-endif()
+find_package(MPI)
+include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+target_link_libraries(sn3d MPI_CXX)
 
 add_compile_options("-Wall" "-Wextra")
 

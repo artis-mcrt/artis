@@ -94,7 +94,20 @@ std::vector<int> ranks_ndo;
 std::vector<int> ranks_ndo_nonempty;
 inline std::span<ModelGridCellInput> modelgrid_input{};
 
-constexpr auto NDIM = grid::get_ngriddimensions(GRID_TYPE);
+// Get number of dimensions
+constexpr auto get_ndim(const GridType gridtype) -> int {
+  switch (gridtype) {
+    case GridType::SPHERICAL1D:
+      return 1;
+    case GridType::CYLINDRICAL2D:
+      return 2;
+    case GridType::CARTESIAN3D:
+      return 3;
+    default:
+      assert_always(false);
+      return -1;
+  }
+}
 
 void set_rho_tmin(const int modelgridindex, const float x) { modelgrid_input[modelgridindex].rhoinit = x; }
 
@@ -746,6 +759,7 @@ auto get_inputcellvolume(const int mgi) -> double {
     return pow((2 * globals::vmax * globals::tmin), 3.) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
   }
   assert_always(false);
+  return NAN;
 }
 
 void calc_modelinit_totmassradionuclides() {
@@ -1126,21 +1140,22 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 
 // Convert a position in Cartesian xyz to the grid coordinate system (which might the same, or 2D cylindrical or 1D
 // spherical)
-constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) {
-  if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
-    return std::array<double, 3>{pos_xyz[0], pos_xyz[1], pos_xyz[2]};
+template <GridType grid_type>
+[[nodiscard]] constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) -> std::array<double, 3> {
+  if constexpr (grid_type == GridType::CARTESIAN3D) {
+    return {pos_xyz[0], pos_xyz[1], pos_xyz[2]};
   }
 
-  if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
-    return std::array<double, 2>{std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2]};
+  if constexpr (grid_type == GridType::CYLINDRICAL2D) {
+    return {std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2], 0.};
   }
 
-  if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
-    return std::array<double, 1>{vec_len(pos_xyz)};
+  if constexpr (grid_type == GridType::SPHERICAL1D) {
+    return {vec_len(pos_xyz), 0., 0.};
   }
 
   assert_always(false);
-  return std::array<double, NDIM>{};
+  return {NAN, NAN, NAN};
 }
 
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
@@ -1242,15 +1257,15 @@ template <size_t S1>
 
 auto get_coordboundary_distances_cylindrical2d(const std::array<double, 3> &pkt_pos,
                                                const std::array<double, 3> &pkt_dir,
-                                               const std::array<double, NDIM> &pktposgridcoord,
-                                               const std::array<double, NDIM> &pktvelgridcoord, const int cellindex,
-                                               const double tstart, const std::array<double, NDIM> &cellcoordmax)
-    -> std::tuple<std::array<double, NDIM>, std::array<double, NDIM>> {
+                                               const std::array<double, 3> &pktposgridcoord,
+                                               const std::array<double, 3> &pktvelgridcoord, const int cellindex,
+                                               const double tstart, const std::array<double, 3> &cellcoordmax)
+    -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
   // to get the cylindrical intersection, get the spherical intersection with Z components set to zero, and the
   // propagation speed set to the xy component of the 3-velocity
 
-  std::array<double, NDIM> d_coordminboundary{};
-  std::array<double, NDIM> d_coordmaxboundary{};
+  std::array<double, 3> d_coordminboundary{};
+  std::array<double, 3> d_coordmaxboundary{};
 
   const std::array<double, 2> posnoz = {pkt_pos[0], pkt_pos[1]};
 
@@ -2204,10 +2219,9 @@ void grid_init(const int my_rank) {
   }
   mgi_of_propcell.resize(ngrid, -1);
 
-  printout("propagation grid: %d-dimensional %s\n", get_ngriddimensions(GRID_TYPE),
-           get_grid_type_name(GRID_TYPE).c_str());
+  printout("propagation grid: %d-dimensional %s\n", get_ndim(GRID_TYPE), get_grid_type_name(GRID_TYPE).c_str());
 
-  for (int d = 0; d < get_ngriddimensions(GRID_TYPE); d++) {
+  for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
     printout("    coordinate %d '%c': cells have %d position values\n", d, coordlabel[d], ncoordgrid[d]);
   }
   printout("    total propagation cells: %d\n", ngrid);
@@ -2314,15 +2328,15 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 
 // identify the cell index from an (x,y,z) position and a time.
 [[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> &pos, const double time) -> int {
-  auto posgridcoords = get_gridcoords_from_xyz(pos);
+  auto posgridcoords = get_gridcoords_from_xyz<GRID_TYPE>(pos);
   int cellindex = 0;
-  for (int d = 0; d < get_ngriddimensions(GRID_TYPE); d++) {
+  for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
     cellindex += get_coordcellindexincrement(d) * get_poscoordpointnum(posgridcoords[d], time, d);
   }
 
   // do a check that the position is within the cell
   const double trat = time / globals::tmin;
-  for (int n = 0; n < grid::get_ngriddimensions(GRID_TYPE); n++) {
+  for (int n = 0; n < get_ndim(GRID_TYPE); n++) {
     assert_always(posgridcoords[n] >= grid::get_cellcoordmin(cellindex, n) * trat);
     assert_always(posgridcoords[n] <= grid::get_cellcoordmax(cellindex, n) * trat);
   }
@@ -2344,18 +2358,18 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   // d is used to loop over the coordinate indicies 0,1,2 for x,y,z
 
   // the following vector are in grid coordinates, so either x,y,z (3D) or r (1D), or r_xy, z (2D)
-  assert_testmodeonly(NDIM <= 3);
-  auto cellcoordmax = std::array<double, NDIM>{0};
-  auto pktvelgridcoord = std::array<double, NDIM>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
+  assert_testmodeonly(get_ndim(GRID_TYPE) <= 3);
+  auto cellcoordmax = std::array<double, 3>{0};
+  auto pktvelgridcoord = std::array<double, 3>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
 
-  const auto pktposgridcoord = get_gridcoords_from_xyz(pos);
+  const auto pktposgridcoord = get_gridcoords_from_xyz<GRID_TYPE>(pos);
 
-  for (int d = 0; d < NDIM; d++) {
+  for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
     cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
   }
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     // keep xyz Cartesian coordinates
-    for (int d = 0; d < NDIM; d++) {
+    for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
       pktvelgridcoord[d] = dir[d] * CLIGHT_PROP;
     }
   } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
@@ -2375,7 +2389,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   const auto negdirections = std::array<enum cell_boundary, 3>{COORD0_MIN, COORD1_MIN, COORD2_MIN};
   const auto posdirections = std::array<enum cell_boundary, 3>{COORD0_MAX, COORD1_MAX, COORD2_MAX};
 
-  for (int d = 0; d < NDIM; d++) {
+  for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
     // flip is either zero or one to indicate +ve and -ve boundaries along the selected axis
     for (int flip = 0; flip < 2; flip++) {
       enum cell_boundary const direction = flip != 0 ? posdirections[d] : negdirections[d];
@@ -2431,10 +2445,10 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   }
 
   // distance to reach the cell's upper boundary on each coordinate
-  auto d_coordmaxboundary = std::array<double, NDIM>{-1};
+  auto d_coordmaxboundary = std::array<double, 3>{-1};
 
   // distance to reach the cell's lower boundary on each coordinate
-  auto d_coordminboundary = std::array<double, NDIM>{-1};
+  auto d_coordminboundary = std::array<double, 3>{-1};
 
   if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
     last_cross = BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
@@ -2490,7 +2504,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   enum cell_boundary choice = BOUNDARY_NONE;
   double distance = std::numeric_limits<double>::max();
   int snext = 0;
-  for (int d = 0; d < NDIM; d++) {
+  for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
     // upper d coordinate of the current cell
     if ((d_coordmaxboundary[d] > 0) && (d_coordmaxboundary[d] < distance) && (last_cross != negdirections[d])) {
       choice = posdirections[d];
@@ -2527,7 +2541,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
         printout("coord %d: initpos %g dir %g\n", d2, pos[d2], dir[d2]);
       }
       printout("|initpos| %g |dir| %g |pos.dir| %g\n", vec_len(pos), vec_len(dir), dot(pos, dir));
-      for (int d2 = 0; d2 < NDIM; d2++) {
+      for (int d2 = 0; d2 < get_ndim(GRID_TYPE); d2++) {
         printout("coord %d: dist_posmax %g dist_posmin %g\n", d2, d_coordmaxboundary[d2], d_coordminboundary[d2]);
         printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2,
                  grid::get_cellcoordmin(cellindex, d2) * tstart / globals::tmin,

@@ -32,20 +32,6 @@ struct ModelGridCell {
   int thick = 0;
 };
 
-constexpr auto get_ngriddimensions(const GridType gridtype) -> int {
-  switch (gridtype) {
-    case GridType::SPHERICAL1D:
-      return 1;
-    case GridType::CYLINDRICAL2D:
-      return 2;
-    case GridType::CARTESIAN3D:
-      return 3;
-    default:
-      assert_always(false);
-      return -1;
-  }
-}
-
 inline std::span<ModelGridCell> modelgrid{};
 
 inline int ngrid{0};
