@@ -1704,7 +1704,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
     }
 
     nt_solution[nonemptymgi].frac_excitations_list_size = tmp_excitation_list.size();
-    std::copy(tmp_excitation_list.begin(), tmp_excitation_list.end(), get_cell_ntexcitations(nonemptymgi).begin());
+    std::ranges::copy(tmp_excitation_list, get_cell_ntexcitations(nonemptymgi).begin());
 
     printout("[info] mem_usage: non-thermal excitations for cell %d at this timestep occupy %.3f MB\n", modelgridindex,
              nt_solution[nonemptymgi].frac_excitations_list_size * sizeof(NonThermalExcitation) / 1024. / 1024.);
