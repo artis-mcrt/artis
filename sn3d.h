@@ -158,6 +158,10 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
 #define SORT_OR_STABLE_SORT sort
 #endif
 
+#if defined(STDPAR_ON) && defined(__cpp_lib_atomic_ref)
+#include <atomic>
+#endif
+
 template <typename T>
 inline void atomicadd(T &var, const T &val) {
 #ifdef _OPENMP
@@ -165,7 +169,6 @@ inline void atomicadd(T &var, const T &val) {
   var += val;
 #else
 #ifdef STDPAR_ON
-#include <atomic>
 #ifdef __cpp_lib_atomic_ref
   static_assert(std::atomic<T>::is_always_lock_free);
   std::atomic_ref<T>(var).fetch_add(val, std::memory_order_relaxed);
