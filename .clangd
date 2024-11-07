@@ -2,4 +2,24 @@ CompileFlags:
     # to make the compilation database, pip install compiledb, then run:
     # compiledb -n --full-path make TESTMODE=ON
     CompilationDatabase: compile_commands.json
-    Add: [-std=c++20, -DTESTMODE=true]
+    Add: [-xc++, -std=c++20, -DTESTMODE=true]
+
+Diagnostics:
+    ClangTidy:
+        FastCheckFilter: None
+    UnusedIncludes: Strict
+    MissingIncludes: Strict
+    Includes:
+        # std::ranges::upper_bound is triggering warning to include a private libc++ header __algorithm/ranges_upper_bound.h
+        # IgnoreHeader: '.*(ranges).*'
+        IgnoreHeader: '.*(__algorithm).*'
+
+Completion:
+    AllScopes: true
+    #ArgumentListsPolicy: None  # added to LLVM 20?
+
+InlayHints:
+    BlockEnd: true
+    Designators: true
+    Enabled: true
+    ParameterNames: true

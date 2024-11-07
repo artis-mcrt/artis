@@ -642,9 +642,9 @@ void read_collion_data() {
     const int Z = get_atomicnumber(element);
     for (int ion = 0; ion < get_nions(element); ion++) {
       const int ionstage = get_ionstage(element, ion);
-      const bool any_data_matched = std::any_of(
-          colliondata.cbegin(), colliondata.cend(),
-          [Z, ionstage](const collionrow &collionrow) { return collionrow.Z == Z && collionrow.ionstage == ionstage; });
+      const bool any_data_matched = std::ranges::any_of(colliondata, [Z, ionstage](const collionrow &collionrow) {
+        return collionrow.Z == Z && collionrow.ionstage == ionstage;
+      });
       if (!any_data_matched) {
         const double ionpot_ev = globals::elements[element].ions[ion].ionpot / EV;
         printout("No collisional ionisation data for Z=%d ionstage %d. Using Lotz approximation with ionpot = %g eV\n",
@@ -1704,7 +1704,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
     }
 
     nt_solution[nonemptymgi].frac_excitations_list_size = tmp_excitation_list.size();
-    std::copy(tmp_excitation_list.begin(), tmp_excitation_list.end(), get_cell_ntexcitations(nonemptymgi).begin());
+    std::ranges::copy(tmp_excitation_list, get_cell_ntexcitations(nonemptymgi).begin());
 
     printout("[info] mem_usage: non-thermal excitations for cell %d at this timestep occupy %.3f MB\n", modelgridindex,
              nt_solution[nonemptymgi].frac_excitations_list_size * sizeof(NonThermalExcitation) / 1024. / 1024.);

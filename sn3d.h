@@ -1,7 +1,12 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#include <cstdlib>
+#include <ctime>
 #include <span>
+#include <vector>
+
+#include "artisoptions.h"
 #ifndef __host__
 #define __host__
 #endif
@@ -15,7 +20,6 @@
 #include <unistd.h>
 
 #include <algorithm>
-#include <atomic>
 #include <cassert>
 #include <csignal>
 #include <cstdarg>
@@ -152,6 +156,10 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
 #define SORT_OR_STABLE_SORT stable_sort
 #else
 #define SORT_OR_STABLE_SORT sort
+#endif
+
+#if defined(STDPAR_ON) && defined(__cpp_lib_atomic_ref)
+#include <atomic>
 #endif
 
 template <typename T>

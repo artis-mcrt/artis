@@ -6,6 +6,11 @@
 #include <span>
 #include <vector>
 
+#include "globals.h"
+#include "ltepop.h"
+#include "packet.h"
+#include "sn3d.h"
+
 struct Phixslist {
   std::span<double> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
   std::span<double> chi_bf_sum;

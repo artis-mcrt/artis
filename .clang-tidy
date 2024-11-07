@@ -72,5 +72,6 @@ CheckOptions:
       value: lower_case
     - key: bugprone-reserved-identifier.AllowedIdentifiers
       value: '__host__;__device__'
-    - key: misc-include-cleaner.IgnoreHeaders
-      value: '.*(ranges).*'
+    - key: misc-include-cleaner.IgnoreHeaders  # std::ranges::upper_bound is triggering warning to include a private libc++ header __algorithm/ranges_upper_bound.h
+    # value: '.*(ranges).*'
+      value: '.*(__algorithm).*'

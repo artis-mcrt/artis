@@ -4,9 +4,11 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <numeric>
 #include <tuple>
 
+#include "artisoptions.h"
 #include "constants.h"
 #include "exspec.h"
 #include "packet.h"

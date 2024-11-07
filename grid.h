@@ -1,3 +1,5 @@
+#include <array>
+#include <cmath>
 #include <cstddef>
 #include <span>
 
@@ -6,7 +8,6 @@
 
 #include <tuple>
 
-#include "artisoptions.h"
 #include "constants.h"
 #include "globals.h"
 #include "packet.h"
@@ -132,7 +133,7 @@ inline auto get_ejecta_kinetic_energy() {
   for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
     const int assoc_cells = get_numpropcells(mgi);
-    double M_cell = get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
+    double const M_cell = get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
     const double radial_pos = get_initial_radial_pos_sum(mgi) / assoc_cells;
     E_kin += 0.5 * M_cell * std::pow(radial_pos / globals::tmin, 2);
   }
