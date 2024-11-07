@@ -165,6 +165,7 @@ inline void atomicadd(T &var, const T &val) {
   var += val;
 #else
 #ifdef STDPAR_ON
+#include <atomic>
 #ifdef __cpp_lib_atomic_ref
   static_assert(std::atomic<T>::is_always_lock_free);
   std::atomic_ref<T>(var).fetch_add(val, std::memory_order_relaxed);
