@@ -130,6 +130,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
   output_file << outputlinebuf;
   output_file.flush();
 }
+
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
     const bool assertpass = static_cast<bool>(e);                                                                      \
