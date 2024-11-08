@@ -195,7 +195,7 @@ ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0
     LDFLAGS += -rdynamic -Wl,-export_dynamic -lstdc++exp
 
-	XXFLAGS += -D_GLIBCXX_ASSERTIONS
+	CXXFLAGS += -D_GLIBCXX_ASSERTIONS
 	# CXXFLAGS += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_BACKTRACE=1
 
 	CXXFLAGS +=  -fno-omit-frame-pointer -g
