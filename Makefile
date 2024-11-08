@@ -192,8 +192,8 @@ ifneq ($(MAX_NODE_SIZE),)
 endif
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0
-    LDFLAGS += -rdynamic -Wl,-export_dynamic -lstdc++exp
+	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0 -rdynamic
+    LDFLAGS += -lstdc++exp
 
 	CXXFLAGS += -D_GLIBCXX_ASSERTIONS
 	# CXXFLAGS += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_BACKTRACE=1
@@ -203,7 +203,7 @@ ifeq ($(TESTMODE),ON)
 	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
 	CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG
 
-	# CXXFLAGS += -fsanitize=undefined,address
+	CXXFLAGS += -fsanitize=undefined,address
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
