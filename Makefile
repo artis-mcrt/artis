@@ -34,6 +34,7 @@ else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
   COMPILER_NAME := GCC
   CXXFLAGS += -flto=auto
   # for std::stacktrace
+  CXXFLAGS += -rdynamic
   LDFLAGS += -lstdc++exp
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
   COMPILER_NAME := NVHPC
@@ -195,7 +196,6 @@ endif
 
 ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0
-    # CXXFLAGS += -rdynamic
 
 	CXXFLAGS += -D_GLIBCXX_ASSERTIONS
 	# CXXFLAGS += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_BACKTRACE=1
