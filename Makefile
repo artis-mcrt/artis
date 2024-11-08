@@ -192,10 +192,10 @@ ifneq ($(MAX_NODE_SIZE),)
 endif
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0 -rdynamic -Wl,-export_dynamic
+	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0
+    LDFLAGS += -rdynamic -Wl,-export_dynamic
 
-	CXXFLAGS += -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG_BACKTRACE=1
-	# CXXFLAGS += -D_GLIBCXX_DEBUG
+	CXXFLAGS += -D_GLIBCXX_ASSERTIONS=1 -dD_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_BACKTRACE=1
 
 	CXXFLAGS +=  -fno-omit-frame-pointer -g
 
