@@ -32,7 +32,12 @@
 #include <limits>
 #include <memory>
 #include <sstream>
+#ifdef __cpp_lib_stacktrace
 #include <stacktrace>
+#define STACKTRACEIFSUPPORTED std::to_string(std::stacktrace::current())
+#else
+#define STACKTRACEIFSUPPORTED ""
+#endif
 #ifndef GPU_ON
 #include <random>
 #endif
@@ -127,16 +132,15 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
   {                                                                                                                    \
     const bool assertpass = static_cast<bool>(e);                                                                      \
     if (!assertpass) [[unlikely]] {                                                                                    \
-      auto trace = std::stacktrace::current();                                                                         \
       if (output_file) {                                                                                               \
         output_file << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
                     << #e << "` in function " << __PRETTY_FUNCTION__ << "\n"                                           \
-                    << std::to_string(trace) << '\n';                                                                  \
+                    << STACKTRACEIFSUPPORTED << '\n';                                                                  \
         output_file.flush();                                                                                           \
       }                                                                                                                \
       std::cerr << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `"     \
                 << #e << "` in function " << __PRETTY_FUNCTION__ << "\n"                                               \
-                << std::to_string(trace) << '\n';                                                                      \
+                << STACKTRACEIFSUPPORTED << '\n';                                                                      \
     }                                                                                                                  \
     assert(assertpass);                                                                                                \
   }
