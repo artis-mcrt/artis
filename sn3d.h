@@ -32,18 +32,19 @@
 #include <limits>
 #include <memory>
 #include <sstream>
-#if defined REPRODUCIBLE && REPRODUCIBLE
-// not really related to reproducibility, but reproducibility is often used for testing
-#include <stacktrace>
-#define STACKTRACEIFSUPPORTED std::to_string(std::stacktrace::current())
-#else
-#define STACKTRACEIFSUPPORTED "std::stacktrace not supported"
-#endif
 #ifndef GPU_ON
 #include <random>
 #endif
 #include <string>
 #include <tuple>
+#include <version>
+
+#ifdef __cpp_lib_stacktrace
+#include <stacktrace>
+#define STACKTRACEIFSUPPORTED std::to_string(std::stacktrace::current())
+#else
+#define STACKTRACEIFSUPPORTED "std::stacktrace not supported"
+#endif
 
 #ifdef STDPAR_ON
 #include <execution>
