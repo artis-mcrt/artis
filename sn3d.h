@@ -36,7 +36,7 @@
 #include <stacktrace>
 #define STACKTRACEIFSUPPORTED std::to_string(std::stacktrace::current())
 #else
-#define STACKTRACEIFSUPPORTED ""
+#define STACKTRACEIFSUPPORTED "std::stacktrace not supported"
 #endif
 #ifndef GPU_ON
 #include <random>
