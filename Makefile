@@ -193,7 +193,7 @@ endif
 
 ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0
-    LDFLAGS += -rdynamic -Wl,-export_dynamic -lstdc++_libbacktrace
+    LDFLAGS += -rdynamic -Wl,-export_dynamic -lstdc++exp
 
 	CXXFLAGS += -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_DEBUG=1 -D_GLIBCXX_DEBUG_BACKTRACE=1
 
