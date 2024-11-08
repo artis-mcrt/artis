@@ -20,7 +20,6 @@
 #include <unistd.h>
 
 #include <algorithm>
-#include <backtrace>
 #include <cassert>
 #include <csignal>
 #include <cstdarg>
@@ -33,6 +32,7 @@
 #include <limits>
 #include <memory>
 #include <sstream>
+#include <stacktrace>
 #ifndef GPU_ON
 #include <random>
 #endif
