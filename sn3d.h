@@ -32,7 +32,8 @@
 #include <limits>
 #include <memory>
 #include <sstream>
-#ifdef __GLIBCXX__
+#if defined REPRODUCIBLE && REPRODUCIBLE
+// not really related to reproducibility, but reproducibility is often used for testing
 #include <stacktrace>
 #define STACKTRACEIFSUPPORTED std::to_string(std::stacktrace::current())
 #else
