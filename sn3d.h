@@ -32,7 +32,7 @@
 #include <limits>
 #include <memory>
 #include <sstream>
-#ifdef __cpp_lib_stacktrace
+#ifdef __GLIBCXX__
 #include <stacktrace>
 #define STACKTRACEIFSUPPORTED std::to_string(std::stacktrace::current())
 #else
