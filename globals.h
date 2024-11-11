@@ -4,6 +4,7 @@
 #include <mpi.h>
 
 #include <array>
+#include <cstddef>
 #include <deque>
 #include <mutex>
 #include <vector>
