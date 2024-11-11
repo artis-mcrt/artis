@@ -37,7 +37,6 @@
 #endif
 #include <string>
 #include <tuple>
-#include <version>
 
 #ifdef ENABLE_STACKTRACE
 #include <stacktrace>
