@@ -1,23 +1,20 @@
 ---
-name: CI slow test mode
+name: CI slow full test mode
 
 on:
     push:
-        branches-ignore:
-            - classic*
-    schedule:
-        - cron: 0 13 * * 1
+        branches:
+            - main
+            - develop
     workflow_dispatch:
-    # pull_request:
-    #     branches-ignore:
-    #         - classic*
+    pull_request:
 
 env:
     ASAN_OPTIONS: detect_stack_use_after_return=1:detect_leaks=0
 
 jobs:
     citestmode:
-        name: CI slow test mode
+        name: CI slow full test mode
         uses: artis-mcrt/artis/.github/workflows/ci.yml@cisplittestmode
         with:
             testmode: ON

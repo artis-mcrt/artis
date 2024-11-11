@@ -1,5 +1,5 @@
 ---
-name: CI
+name: CI tests
 
 on:
     push:
@@ -8,18 +8,13 @@ on:
     schedule:
         - cron: 0 13 * * 1
     workflow_dispatch:
-    # pull_request:
-    #     branches-ignore:
-    #         - classic*
-    workflow_call: # for manual triggering of the combine_checksums job
+    workflow_call: # for triggering the full test mode
         inputs:
+            # test mode enables the santizers and additional assertions
             testmode:
                 required: false
                 default: 'OFF'
                 type: string
-
-env:
-    ASAN_OPTIONS: detect_stack_use_after_return=1:detect_leaks=0
 
 jobs:
     testmodels:
@@ -41,7 +36,6 @@ jobs:
                         nebular_1d_3dgrid_limitbfest,
                     ]
             fail-fast: false
-            max-parallel: 12
 
         runs-on: ${{ matrix.os }}
         timeout-minutes: 120
@@ -274,7 +268,7 @@ jobs:
 
     combine_checksums:
         needs: testmodels
-        if: always()
+        if: always() && inputs.testmode == 'OFF'
         runs-on: ubuntu-24.04
         steps:
             - name: Download test output
