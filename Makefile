@@ -30,21 +30,21 @@ COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpversion -dumpfullversion)
 COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -f1 -d.)
 $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
-    COMPILER_NAME := CLANG
-    CXXFLAGS += -flto=thin
+	COMPILER_NAME := CLANG
+	CXXFLAGS += -flto=thin
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
-    COMPILER_NAME := GCC
-    CXXFLAGS += -flto=auto
-  	# std::stacktrace is available in GCC 14 and later
+	COMPILER_NAME := GCC
+	CXXFLAGS += -flto=auto
+	# std::stacktrace is available in GCC 14 and later
     ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \>= 14),1)
 		CXXFLAGS += -rdynamic -DENABLE_STACKTRACE=true
-        LDFLAGS += -lstdc++exp
+		LDFLAGS += -lstdc++exp
     endif
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
-  COMPILER_NAME := NVHPC
+	COMPILER_NAME := NVHPC
 else
-  $(warning Unknown compiler)
-  COMPILER_NAME := unknown
+	$(warning Unknown compiler)
+	COMPILER_NAME := unknown
 endif
 
 $(info detected compiler is $(COMPILER_NAME) major version $(COMPILER_VERSION_NUMBER_MAJOR))
