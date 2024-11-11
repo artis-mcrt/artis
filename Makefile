@@ -27,6 +27,7 @@ endif
 CXX := mpicxx
 COMPILER_VERSION := $(shell $(CXX) --version)
 COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpversion -dumpfullversion)
+COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -f1 -d.)
 $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
     COMPILER_NAME := CLANG
@@ -36,9 +37,7 @@ else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
     CXXFLAGS += -flto=auto
   # for std::stacktrace
     CXXFLAGS += -rdynamic
-	GCC_VERSION_GTE_14 = $(shell expr `echo $(COMPILER_VERSION_NUMBER) | cut -f1 -d.` \>= 14)
-
-    ifeq ($(GCC_VERSION_GTE_14),1)
+    ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \>= 14),1)
         LDFLAGS += -lstdc++exp
     endif
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
@@ -48,7 +47,7 @@ else
   COMPILER_NAME := unknown
 endif
 
-$(info detected compiler is $(COMPILER_NAME))
+$(info detected compiler is $(COMPILER_NAME) major version $(COMPILER_VERSION_NUMBER_MAJOR))
 
 ifeq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -std=c++20
