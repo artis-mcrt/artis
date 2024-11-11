@@ -475,7 +475,7 @@ void filter_unused_nuclides(const std::vector<int> &custom_zlist, const std::vec
   });
   nuclides.shrink_to_fit();
 
-  // update the nuclide indicies in the decay paths after we possibly removed some nuclides
+  // update the nuclide indices in the decay paths after we possibly removed some nuclides
   for (auto &decaypath : decaypaths) {
     std::ranges::transform(decaypath.z, decaypath.a, decaypath.nucindex.begin(),
                            [](const auto z, const auto a) { return get_nucindex(z, a); });
