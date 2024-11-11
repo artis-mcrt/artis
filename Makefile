@@ -28,14 +28,19 @@ CXX := mpicxx
 COMPILER_VERSION := $(shell $(CXX) --version)
 $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
-  COMPILER_NAME := CLANG
-  CXXFLAGS += -flto=thin
+    COMPILER_NAME := CLANG
+    CXXFLAGS += -flto=thin
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
-  COMPILER_NAME := GCC
-  CXXFLAGS += -flto=auto
+    COMPILER_NAME := GCC
+    CXXFLAGS += -flto=auto
   # for std::stacktrace
-  CXXFLAGS += -rdynamic
-  LDFLAGS += -lstdc++exp
+    CXXFLAGS += -rdynamic
+    GCC_VERSION_GT_14 = $(shell $(CXX) -dumpfullversion -dumpversion | awk -F. '$$1 > 14')
+    ifeq ($(GCC_VERSION_GT_14),1)
+        LDFLAGS += -lstdc++exp
+    else
+        LDFLAGS += -lstdc++_libbacktrace
+    endif
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
   COMPILER_NAME := NVHPC
 else
