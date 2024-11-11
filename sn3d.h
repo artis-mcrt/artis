@@ -39,7 +39,7 @@
 
 #ifdef ENABLE_STACKTRACE
 #include <stacktrace>
-#define STACKTRACEIFSUPPORTED std::stacktrace::current().to_string()
+#define STACKTRACEIFSUPPORTED std::to_string(std::stacktrace::current())
 #else
 #define STACKTRACEIFSUPPORTED "std::stacktrace not supported\n"
 #endif
