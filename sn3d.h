@@ -146,6 +146,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
                 << std::flush;                                                                                         \
       std::abort();                                                                                                    \
     }                                                                                                                  \
+    assert(assertpass);                                                                                                \
   }
 
 #endif
