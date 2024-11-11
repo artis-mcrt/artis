@@ -213,7 +213,6 @@ inline auto get_phixs_table(const int element, const int ion, const int level) -
   const int ion = line.ionindex;
   const int lower = line.lowerlevelindex;
   const int upper = line.upperlevelindex;
-  assert_always(false);
 
   const double n_l = get_levelpop(nonemptymgi, element, ion, lower);
 
