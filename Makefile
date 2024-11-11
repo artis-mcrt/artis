@@ -26,6 +26,7 @@ endif
 
 CXX := mpicxx
 COMPILER_VERSION := $(shell $(CXX) --version)
+COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpversion -dumpfullversion)
 $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
     COMPILER_NAME := CLANG
@@ -35,12 +36,10 @@ else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
     CXXFLAGS += -flto=auto
   # for std::stacktrace
     CXXFLAGS += -rdynamic
-	GCC_VERSION_GTE_14 = $(shell expr `$(CXX) -dumpversion | cut -f1 -d.` \>= 14)
+	GCC_VERSION_GTE_14 = $(shell expr `echo $(COMPILER_VERSION_NUMBER) | cut -f1 -d.` \>= 14)
 
     ifeq ($(GCC_VERSION_GTE_14),1)
         LDFLAGS += -lstdc++exp
-    else
-        LDFLAGS += -lstdc++_libbacktrace
     endif
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
   COMPILER_NAME := NVHPC
