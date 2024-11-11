@@ -12,7 +12,7 @@ on:
 jobs:
     citestmode:
         name: testmode ON
-        uses: artis-mcrt/artis/.github/workflows/ci.yml@cisplittestmode
+        uses: ./.github/workflows/ci.yml
         with:
             testmode: ON
         secrets: inherit
