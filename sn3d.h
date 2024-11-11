@@ -143,9 +143,10 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
       }                                                                                                                \
       std::cerr << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `"     \
                 << #e << "` in function " << __PRETTY_FUNCTION__ << "\n"                                               \
-                << STACKTRACEIFSUPPORTED << '\n';                                                                      \
+                << STACKTRACEIFSUPPORTED << '\n'                                                                       \
+                << std::flush;                                                                                         \
+      std::abort();                                                                                                    \
     }                                                                                                                  \
-    assert(assertpass);                                                                                                \
   }
 
 #endif
@@ -228,6 +229,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   }
   return file;
 }
+
 #include "globals.h"
 
 [[nodiscard]] inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
