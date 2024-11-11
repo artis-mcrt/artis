@@ -36,6 +36,7 @@ else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 	COMPILER_NAME := GCC
 	CXXFLAGS += -flto=auto
 	# std::stacktrace is available in GCC 14 and later
+	# but it is not enabled by default because it slowed down the GitHub CI by > 2x
 	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \>= 14),1)
 		ifeq ($(STACKTRACE),ON)
 			CXXFLAGS += -DSTACKTRACE_ON=true -rdynamic
