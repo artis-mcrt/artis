@@ -39,7 +39,7 @@ jobs:
 
         runs-on: ${{ matrix.os }}
         timeout-minutes: 120
-        name: ${{ matrix.testname }}${{ inputs.testmode == 'ON' && ' testmode ON' || ''}}
+        name: ${{ matrix.testname }}
 
         steps:
             - uses: actions/checkout@v4
