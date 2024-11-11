@@ -26,7 +26,8 @@ endif
 
 CXX := mpicxx
 COMPILER_VERSION := $(shell $(CXX) --version)
-COMPILER_VERSION_NUMBER_MAJOR := $(shell $(CXX) -dumpversion -dumpfullversion) | cut -f1 -d.)
+COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpversion -dumpfullversion)
+COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -f1 -d.)
 $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := CLANG
@@ -35,11 +36,11 @@ else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 	COMPILER_NAME := GCC
 	CXXFLAGS += -flto=auto
 	# std::stacktrace is available in GCC 14 and later
-	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \>= 14),1)
+    ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \>= 14),1)
 		# CXXFLAGS += -rdynamic
 		# CXXFLAGS += -DENABLE_STACKTRACE=true
 		# LDFLAGS += -lstdc++exp
-	endif
+    endif
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := NVHPC
 else
@@ -47,7 +48,7 @@ else
 	COMPILER_NAME := unknown
 endif
 
-$(info detected compiler is $(COMPILER_NAME))
+$(info detected compiler is $(COMPILER_NAME) major version $(COMPILER_VERSION_NUMBER_MAJOR))
 
 ifeq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -std=c++20
@@ -199,15 +200,16 @@ ifneq ($(MAX_NODE_SIZE),)
 endif
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0
+	CXXFLAGS += -DTESTMODE=true
+
+	CXXFLAGS += -fno-omit-frame-pointer -g
 
 	CXXFLAGS += -D_GLIBCXX_ASSERTIONS
-	# CXXFLAGS += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_BACKTRACE=1
+	# CXXFLAGS += -D_GLIBCXX_DEBUG
+	# CXXFLAGS += -D_GLIBCXX_DEBUG_BACKTRACE
 
-	CXXFLAGS +=  -fno-omit-frame-pointer -g
-
-	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
 	CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG
+	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
 
 	CXXFLAGS += -fsanitize=undefined,address
 
