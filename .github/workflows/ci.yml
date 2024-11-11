@@ -8,10 +8,13 @@ on:
     schedule:
         - cron: 0 13 * * 1
     workflow_dispatch:
-    # pull_request:
-    #     branches-ignore:
-    #         - classic*
-
+    workflow_call: # for triggering the full test mode
+        inputs:
+            # test mode enables the santizers and additional assertions
+            testmode:
+                required: false
+                default: 'OFF'
+                type: string
 env:
     ASAN_OPTIONS: detect_stack_use_after_return=1:detect_leaks=0
 
@@ -20,7 +23,6 @@ jobs:
         strategy:
             matrix:
                 os: [ubuntu-24.04]
-                testmode: [OFF, ON]
                 testname:
                     [
                         classicmode_1d_3dgrid,
@@ -35,15 +37,11 @@ jobs:
                         nebular_1d_3dgrid,
                         nebular_1d_3dgrid_limitbfest,
                     ]
-                exclude:
-                    - os: self-hosted
-                      testmode: ON
             fail-fast: false
-            max-parallel: 12
 
         runs-on: ${{ matrix.os }}
         timeout-minutes: 120
-        name: ${{ matrix.testname }}${{ matrix.testmode == 'ON' && ' testmode ON' || ''}}
+        name: ${{ matrix.testname }}
 
         steps:
             - uses: actions/checkout@v4
@@ -110,7 +108,7 @@ jobs:
 
             - name: Compile
               run: |
-                  make REPRODUCIBLE=ON TESTMODE=${{ matrix.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+                  make REPRODUCIBLE=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
                   cp sn3d tests/${{ matrix.testname }}_testrun/
                   cp exspec tests/${{ matrix.testname }}_testrun/
 
@@ -173,7 +171,7 @@ jobs:
               run: cat job1/output_0-0.txt
 
             - name: show deposition.out
-              if: always() && matrix.testmode == 'OFF'
+              if: always() && inputs.testmode == 'OFF'
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   cat deposition.out
@@ -210,61 +208,61 @@ jobs:
 
             - name: Upload output files
               uses: actions/upload-artifact@v4
-              if: always() && matrix.testmode == 'OFF'
+              if: always() && inputs.testmode == 'OFF'
               with:
                   name: test-${{ matrix.testname }}-output
                   path: tests/${{ matrix.testname }}_testrun
 
             - name: Upload checksum files
               uses: actions/upload-artifact@v4
-              if: always() && matrix.testmode == 'OFF'
+              if: always() && inputs.testmode == 'OFF'
               with:
                   name: ${{ matrix.testname }}_inputfiles
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
 
             - name: Set up Python
-              if: always() && matrix.testmode == 'OFF'
+              if: always() && inputs.testmode == 'OFF'
               uses: actions/setup-python@v5
 
             - name: Install artistools
-              if: always() && matrix.testmode == 'OFF'
+              if: always() && inputs.testmode == 'OFF'
               run: |
                   python3 -m pip install --upgrade pip uv
                   uv pip install --system -U artistools
 
             - name: Plot light curve
-              if: always() && matrix.testmode == 'OFF'
+              if: always() && inputs.testmode == 'OFF'
               working-directory: tests/
               run: |
                   at plotlightcurves ${{ matrix.testname }}_testrun
                   at plotlightcurves --frompackets ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum nebular
-              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'nebular')
+              if: always() && inputs.testmode == 'OFF' && startsWith(matrix.testname, 'nebular')
               working-directory: tests/
               run: |
                   at plotspectra --frompackets -ts 8 ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum classicmode
-              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_')
+              if: always() && inputs.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_')
               working-directory: tests/
               run: |
                   at plotspectra --frompackets -t 4-6 ${{ matrix.testname }}_testrun
 
             - name: Plot virtual packet spectrum classicmode_1d
-              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_1d')
+              if: always() && inputs.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_1d')
               working-directory: tests/
               run: |
                   at plotspectra -t 4-6 -plotvspecpol 0 1 2 3 12 13 14 --frompackets ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum kilonova
-              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'kilonova')
+              if: always() && inputs.testmode == 'OFF' && startsWith(matrix.testname, 'kilonova')
               working-directory: tests/
               run: |
                   at plotspectra --frompackets -t 2 ${{ matrix.testname }}_testrun
 
             - name: Upload plot files
-              if: always() && matrix.testmode == 'OFF'
+              if: always() && inputs.testmode == 'OFF'
               uses: actions/upload-artifact@v4
               with:
                   name: test-${{ matrix.testname }}-output-pdf
@@ -272,7 +270,7 @@ jobs:
 
     combine_checksums:
         needs: testmodels
-        if: always()
+        if: always() && inputs.testmode == 'OFF'
         runs-on: ubuntu-24.04
         steps:
             - name: Download test output

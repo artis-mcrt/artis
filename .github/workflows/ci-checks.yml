@@ -6,9 +6,6 @@ on:
         branches-ignore:
             - classic*
     workflow_dispatch:
-    # pull_request:
-    #     branches-ignore:
-    #         - classic*
 
 jobs:
     cppcheck:
