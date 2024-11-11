@@ -40,9 +40,9 @@
 
 #ifdef ENABLE_STACKTRACE
 #include <stacktrace>
-#define STACKTRACEIFSUPPORTED std::stacktrace::current()
+#define STACKTRACEIFSUPPORTED << std::stacktrace::current() << "\n"
 #else
-#define STACKTRACEIFSUPPORTED ""
+#define STACKTRACEIFSUPPORTED << "std::stacktrace not supported\n"
 #endif
 
 #ifdef STDPAR_ON
@@ -136,13 +136,11 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
     if (!assertpass) [[unlikely]] {                                                                                    \
       if (output_file) {                                                                                               \
         output_file << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
-                    << #e << "` in function " << __PRETTY_FUNCTION__ << "\n"                                           \
-                    << STACKTRACEIFSUPPORTED;                                                                          \
+                    << #e << "` in function " << __PRETTY_FUNCTION__ << "\n" STACKTRACEIFSUPPORTED;                    \
         output_file.flush();                                                                                           \
       }                                                                                                                \
       std::cerr << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `"     \
-                << #e << "` in function " << __PRETTY_FUNCTION__ << "\n"                                               \
-                << STACKTRACEIFSUPPORTED;                                                                              \
+                << #e << "` in function " << __PRETTY_FUNCTION__ << "\n" STACKTRACEIFSUPPORTED;                        \
     }                                                                                                                  \
     assert(assertpass);                                                                                                \
   }
