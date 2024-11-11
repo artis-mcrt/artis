@@ -22,7 +22,6 @@ jobs:
     testmodels:
         strategy:
             matrix:
-                os: [ubuntu-24.04]
                 testname:
                     [
                         classicmode_1d_3dgrid,
@@ -37,9 +36,9 @@ jobs:
                         nebular_1d_3dgrid,
                         nebular_1d_3dgrid_limitbfest,
                     ]
-            fail-fast: false
+            fail-fast: ${{ inputs.testmode == 'ON' }}
 
-        runs-on: ${{ matrix.os }}
+        runs-on: ubuntu-24.04
         timeout-minutes: 120
         name: ${{ matrix.testname }}
 
@@ -138,7 +137,6 @@ jobs:
               run: cat job0/output_0-0.txt
 
             - name: Checksum job0 output files
-              #if: always()
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
@@ -192,7 +190,6 @@ jobs:
                   cat exspec.txt
 
             - name: Checksum job1 output files
-              #if: always()
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
