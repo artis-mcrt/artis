@@ -14,7 +14,7 @@ env:
 
 jobs:
     citestmode:
-        name: CI slow full test mode
+        name: CI testmode
         uses: artis-mcrt/artis/.github/workflows/ci.yml@cisplittestmode
         with:
             testmode: ON
