@@ -14,7 +14,6 @@
 #define __device__
 #endif
 
-#include <getopt.h>
 #include <gsl/gsl_integration.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -40,9 +39,9 @@
 
 #ifdef ENABLE_STACKTRACE
 #include <stacktrace>
-#define STACKTRACEIFSUPPORTED << std::stacktrace::current() << "\n"
+#define STACKTRACEIFSUPPORTED std::stacktrace::current().to_string()
 #else
-#define STACKTRACEIFSUPPORTED << "std::stacktrace not supported\n"
+#define STACKTRACEIFSUPPORTED "std::stacktrace not supported\n"
 #endif
 
 #ifdef STDPAR_ON
@@ -136,11 +135,13 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
     if (!assertpass) [[unlikely]] {                                                                                    \
       if (output_file) {                                                                                               \
         output_file << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
-                    << #e << "` in function " << __PRETTY_FUNCTION__ << "\n" STACKTRACEIFSUPPORTED;                    \
+                    << #e << "` in function " << __PRETTY_FUNCTION__ << "\n"                                           \
+                    << STACKTRACEIFSUPPORTED;                                                                          \
         output_file.flush();                                                                                           \
       }                                                                                                                \
       std::cerr << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `"     \
-                << #e << "` in function " << __PRETTY_FUNCTION__ << "\n" STACKTRACEIFSUPPORTED;                        \
+                << #e << "` in function " << __PRETTY_FUNCTION__ << "\n"                                               \
+                << STACKTRACEIFSUPPORTED;                                                                              \
     }                                                                                                                  \
     assert(assertpass);                                                                                                \
   }

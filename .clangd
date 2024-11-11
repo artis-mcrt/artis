@@ -13,6 +13,7 @@ Diagnostics:
         # std::ranges::upper_bound is triggering warning to include a private libc++ header __algorithm/ranges_upper_bound.h
         # IgnoreHeader: '.*(ranges).*'
         IgnoreHeader: 'signal.h|(_).*(.h)|.*(__algorithm).*'
+        AnalyzeAngledIncludes: true
 
 Completion:
     AllScopes: true
@@ -23,3 +24,7 @@ InlayHints:
     Designators: true
     Enabled: true
     ParameterNames: true
+    DeducedTypes: false
+
+Hover:
+  ShowAKA: Yes
