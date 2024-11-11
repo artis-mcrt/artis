@@ -40,7 +40,7 @@
 
 #ifdef ENABLE_STACKTRACE
 #include <stacktrace>
-#define STACKTRACEIFSUPPORTED "Stacktrace:\n" << std::stacktrace::current()
+#define STACKTRACEIFSUPPORTED std::stacktrace::current()
 #else
 #define STACKTRACEIFSUPPORTED "std::stacktrace not supported"
 #endif
@@ -134,15 +134,18 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
   {                                                                                                                    \
     const bool assertpass = static_cast<bool>(e);                                                                      \
     if (!assertpass) [[unlikely]] {                                                                                    \
+      const std::string strstacktrace = STACKTRACEIFSUPPORTED;                                                         \
       if (output_file) {                                                                                               \
         output_file << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
                     << #e << "` in function " << __PRETTY_FUNCTION__ << "\n"                                           \
-                    << STACKTRACEIFSUPPORTED << '\n';                                                                  \
+                    << "Stacktrace:\n"                                                                                 \
+                    << strstacktrace << '\n';                                                                          \
         output_file.flush();                                                                                           \
       }                                                                                                                \
       std::cerr << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `"     \
                 << #e << "` in function " << __PRETTY_FUNCTION__ << "\n"                                               \
-                << STACKTRACEIFSUPPORTED << '\n'                                                                       \
+                << "Stacktrace:\n"                                                                                     \
+                << strstacktrace << '\n'                                                                               \
                 << std::flush;                                                                                         \
       std::abort();                                                                                                    \
     }                                                                                                                  \
