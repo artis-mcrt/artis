@@ -37,7 +37,7 @@
 #include <string>
 #include <tuple>
 
-#ifdef ENABLE_STACKTRACE
+#ifdef STACKTRACE_ON
 #include <stacktrace>
 #define STACKTRACEIFSUPPORTED << std::stacktrace::current()
 #else

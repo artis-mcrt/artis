@@ -37,9 +37,10 @@ else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 	CXXFLAGS += -flto=auto
 	# std::stacktrace is available in GCC 14 and later
 	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \>= 14),1)
-		CXXFLAGS += -rdynamic
-		CXXFLAGS += -DENABLE_STACKTRACE=true
-		LDFLAGS += -lstdc++exp
+		ifeq ($(STACKTRACE),ON)
+			CXXFLAGS += -DSTACKTRACE_ON=true -rdynamic
+			LDFLAGS += -lstdc++exp
+		endif
 	endif
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := NVHPC
