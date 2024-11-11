@@ -39,7 +39,7 @@
 #include <tuple>
 #include <version>
 
-#ifdef __cpp_lib_stacktrace
+#ifdef ENABLE_STACKTRACE
 #include <stacktrace>
 #define STACKTRACEIFSUPPORTED std::to_string(std::stacktrace::current())
 #else
