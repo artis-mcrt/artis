@@ -1417,7 +1417,6 @@ auto get_coordcellindexincrement(const int axis) -> int {
         __builtin_unreachable();
       }
   }
-  return -1;
 }
 
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
@@ -1450,7 +1449,6 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
   }
 
   assert_always(false);
-  return -1;
 }
 
 auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[modelgridindex].rhoinit; }
