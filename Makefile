@@ -35,8 +35,9 @@ else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
     CXXFLAGS += -flto=auto
   # for std::stacktrace
     CXXFLAGS += -rdynamic
-    GCC_VERSION_GT_14 = $(shell $(CXX) -dumpfullversion -dumpversion | awk -F. '$$1 > 14')
-    ifeq ($(GCC_VERSION_GT_14),1)
+	GCC_VERSION_GTE_14 = $(shell expr `$(CXX)  -dumpversion | cut -f1 -d.` \>= 14)
+
+    ifeq ($(GCC_VERSION_GTE_14),1)
         LDFLAGS += -lstdc++exp
     else
         LDFLAGS += -lstdc++_libbacktrace
@@ -235,7 +236,7 @@ else
 	endif
 endif
 
-CXXFLAGS += -Winline -Wall -Wextra -pedantic  -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare -Wshadow
+CXXFLAGS += -Winline -Wall -Wextra -pedantic -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare -Wshadow
 
 # sn3d.cc and exspec.cc have main() defined
 common_files := $(filter-out sn3d.cc exspec.cc, $(wildcard *.cc))
