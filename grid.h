@@ -1,5 +1,6 @@
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <span>
 
 #ifndef GRIDINIT_H
