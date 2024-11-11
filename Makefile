@@ -35,7 +35,7 @@ else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
     CXXFLAGS += -flto=auto
   # for std::stacktrace
     CXXFLAGS += -rdynamic
-	GCC_VERSION_GTE_14 = $(shell expr `$(CXX)  -dumpversion | cut -f1 -d.` \>= 14)
+	GCC_VERSION_GTE_14 = $(shell expr `$(CXX) -dumpversion | cut -f1 -d.` \>= 14)
 
     ifeq ($(GCC_VERSION_GTE_14),1)
         LDFLAGS += -lstdc++exp
@@ -203,7 +203,7 @@ endif
 ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true
 
-	CXXFLAGS +=  -fno-omit-frame-pointer -g
+	CXXFLAGS += -fno-omit-frame-pointer -g
 
 	CXXFLAGS += -D_GLIBCXX_ASSERTIONS
 	CXXFLAGS += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_BACKTRACE
