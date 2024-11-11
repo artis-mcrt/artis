@@ -7,11 +7,11 @@ on:
             - classic*
     workflow_dispatch:
 
-# concurrency:
-#   # Use github.run_id on main or develop branch (unlimited concurrency)
-#   # Use github.ref otherwise, so that it's unique per branch or PR
-#   group: ${{ github.workflow }}-${{ github.ref_protected && github.run_id || github.ref }}
-#   cancel-in-progress: false
+concurrency:
+  # Use github.run_id on main or develop branch (unlimited concurrency)
+  # Use github.ref otherwise, so that it's unique per branch or PR
+  group: ${{ github.workflow }}-${{ github.ref_protected && github.run_id || github.ref }}
+  cancel-in-progress: false
 
 jobs:
     citestmode:
