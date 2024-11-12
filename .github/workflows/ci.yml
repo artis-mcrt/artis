@@ -169,7 +169,7 @@ jobs:
               run: cat job1/output_0-0.txt
 
             - name: show deposition.out
-              if: always() && inputs.testmode == 'OFF'
+              if: always() && inputs.testmode != 'ON'
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   cat deposition.out
@@ -205,61 +205,61 @@ jobs:
 
             - name: Upload output files
               uses: actions/upload-artifact@v4
-              if: always() && inputs.testmode == 'OFF'
+              if: always() && inputs.testmode != 'ON'
               with:
                   name: test-${{ matrix.testname }}-output
                   path: tests/${{ matrix.testname }}_testrun
 
             - name: Upload checksum files
               uses: actions/upload-artifact@v4
-              if: always() && inputs.testmode == 'OFF'
+              if: always() && inputs.testmode != 'ON'
               with:
                   name: ${{ matrix.testname }}_inputfiles
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
 
             - name: Set up Python
-              if: always() && inputs.testmode == 'OFF'
+              if: always() && inputs.testmode != 'ON'
               uses: actions/setup-python@v5
 
             - name: Install artistools
-              if: always() && inputs.testmode == 'OFF'
+              if: always() && inputs.testmode != 'ON'
               run: |
                   python3 -m pip install --upgrade pip uv
                   uv pip install --system -U artistools
 
             - name: Plot light curve
-              if: always() && inputs.testmode == 'OFF'
+              if: always() && inputs.testmode != 'ON'
               working-directory: tests/
               run: |
                   at plotlightcurves ${{ matrix.testname }}_testrun
                   at plotlightcurves --frompackets ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum nebular
-              if: always() && inputs.testmode == 'OFF' && startsWith(matrix.testname, 'nebular')
+              if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'nebular')
               working-directory: tests/
               run: |
                   at plotspectra --frompackets -ts 8 ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum classicmode
-              if: always() && inputs.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_')
+              if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'classicmode_')
               working-directory: tests/
               run: |
                   at plotspectra --frompackets -t 4-6 ${{ matrix.testname }}_testrun
 
             - name: Plot virtual packet spectrum classicmode_1d
-              if: always() && inputs.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_1d')
+              if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'classicmode_1d')
               working-directory: tests/
               run: |
                   at plotspectra -t 4-6 -plotvspecpol 0 1 2 3 12 13 14 --frompackets ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum kilonova
-              if: always() && inputs.testmode == 'OFF' && startsWith(matrix.testname, 'kilonova')
+              if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'kilonova')
               working-directory: tests/
               run: |
                   at plotspectra --frompackets -t 2 ${{ matrix.testname }}_testrun
 
             - name: Upload plot files
-              if: always() && inputs.testmode == 'OFF'
+              if: always() && inputs.testmode != 'ON'
               uses: actions/upload-artifact@v4
               with:
                   name: test-${{ matrix.testname }}-output-pdf
@@ -267,7 +267,7 @@ jobs:
 
     combine_checksums:
         needs: testmodels
-        if: always() && inputs.testmode == 'OFF'
+        if: always() && inputs.testmode != 'ON'
         runs-on: ubuntu-24.04
         steps:
             - name: Download test output
