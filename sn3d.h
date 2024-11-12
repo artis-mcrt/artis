@@ -14,7 +14,6 @@
 #define __device__
 #endif
 
-#include <getopt.h>
 #include <gsl/gsl_integration.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -37,6 +36,13 @@
 #endif
 #include <string>
 #include <tuple>
+
+#ifdef STACKTRACE_ON
+#include <stacktrace>
+#define STACKTRACEIFSUPPORTED << std::stacktrace::current()
+#else
+#define STACKTRACEIFSUPPORTED
+#endif
 
 #ifdef STDPAR_ON
 #include <execution>
@@ -133,7 +139,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
         output_file.flush();                                                                                           \
       }                                                                                                                \
       std::cerr << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `"     \
-                << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                                              \
+                << #e << "` in function " << __PRETTY_FUNCTION__ << "\n" STACKTRACEIFSUPPORTED;                        \
     }                                                                                                                  \
     assert(assertpass);                                                                                                \
   }
@@ -218,6 +224,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   }
   return file;
 }
+
 #include "globals.h"
 
 [[nodiscard]] inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,

@@ -26,21 +26,31 @@ endif
 
 CXX := mpicxx
 COMPILER_VERSION := $(shell $(CXX) --version)
+COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpversion -dumpfullversion)
+COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -f1 -d.)
 $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
-  COMPILER_NAME := CLANG
-  CXXFLAGS += -flto=thin
+	COMPILER_NAME := CLANG
+	CXXFLAGS += -flto=thin
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
-  COMPILER_NAME := GCC
-  CXXFLAGS += -flto=auto
+	COMPILER_NAME := GCC
+	CXXFLAGS += -flto=auto
+	# std::stacktrace is available in GCC 14 and later
+	# but it is not enabled by default because it slowed down the GitHub CI by > 2x
+	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \>= 14),1)
+		ifeq ($(STACKTRACE),ON)
+			CXXFLAGS += -DSTACKTRACE_ON=true -rdynamic
+			LDFLAGS += -lstdc++exp
+		endif
+	endif
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
-  COMPILER_NAME := NVHPC
+	COMPILER_NAME := NVHPC
 else
-  $(warning Unknown compiler)
-  COMPILER_NAME := unknown
+	$(warning Unknown compiler)
+	COMPILER_NAME := unknown
 endif
 
-$(info detected compiler is $(COMPILER_NAME))
+$(info detected compiler is $(COMPILER_NAME) major version $(COMPILER_VERSION_NUMBER_MAJOR))
 
 ifeq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -std=c++20
@@ -192,15 +202,16 @@ ifneq ($(MAX_NODE_SIZE),)
 endif
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0
+	CXXFLAGS += -DTESTMODE=true
+
+	CXXFLAGS += -fno-omit-frame-pointer -g
 
 	CXXFLAGS += -D_GLIBCXX_ASSERTIONS
-	# CXXFLAGS += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_BACKTRACE=1
+	# CXXFLAGS += -D_GLIBCXX_DEBUG
+	# CXXFLAGS += -D_GLIBCXX_DEBUG_BACKTRACE
 
-	CXXFLAGS +=  -fno-omit-frame-pointer -g
-
-	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
 	CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG
+	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
 
 	CXXFLAGS += -fsanitize=undefined,address
 
@@ -227,7 +238,7 @@ else
 	endif
 endif
 
-CXXFLAGS += -Winline -Wall -Wextra -pedantic  -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare -Wshadow
+CXXFLAGS += -Winline -Wall -Wextra -pedantic -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare -Wshadow
 
 # sn3d.cc and exspec.cc have main() defined
 common_files := $(filter-out sn3d.cc exspec.cc, $(wildcard *.cc))

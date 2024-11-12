@@ -780,7 +780,7 @@ void setup_phixs_list() {
 
   globals::bfestimcount = 0;
   if (nbfcontinua > 0) {
-    // indicies above were temporary only. continuum index should be to the sorted list
+    // indices above were temporary only. continuum index should be to the sorted list
     std::ranges::SORT_OR_STABLE_SORT(std::span(nonconstallcont, nbfcontinua), std::ranges::less{},
                                      &FullPhotoionTransition::nu_edge);
 
