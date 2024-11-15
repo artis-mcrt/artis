@@ -7,6 +7,8 @@ CompileFlags:
 Diagnostics:
     ClangTidy:
         FastCheckFilter: None
+        Remove:
+            performance-enum-size
     UnusedIncludes: Strict
     MissingIncludes: Strict
     Includes:
