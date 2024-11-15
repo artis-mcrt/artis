@@ -53,7 +53,7 @@ endif
 $(info detected compiler is $(COMPILER_NAME) major version $(COMPILER_VERSION_NUMBER_MAJOR))
 
 ifeq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -std=c++20
+	CXXFLAGS += -std=c++23
 else
 	CXXFLAGS += -std=c++23 -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -Wno-error=cast-function-type -MD -MP -ftrivial-auto-var-init=pattern
 endif
