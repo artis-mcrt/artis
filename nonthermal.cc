@@ -51,9 +51,9 @@ constexpr double MINDEPRATE = 0.;
 // Bohr radius squared in cm^2
 constexpr double A_naught_squared = 2.800285203e-17;
 
-const std::array<std::string, 28> shellnames{"K ", "L1", "L2", "L3", "M1", "M2", "M3", "M4", "M5", "N1",
-                                             "N2", "N3", "N4", "N5", "N6", "N7", "O1", "O2", "O3", "O4",
-                                             "O5", "O6", "O7", "P1", "P2", "P3", "P4", "Q1"};
+constexpr std::array<std::string, 28> shellnames{"K ", "L1", "L2", "L3", "M1", "M2", "M3", "M4", "M5", "N1",
+                                                 "N2", "N3", "N4", "N5", "N6", "N7", "O1", "O2", "O3", "O4",
+                                                 "O5", "O6", "O7", "P1", "P2", "P3", "P4", "Q1"};
 
 std::vector<std::vector<double>> elements_electron_binding;
 std::vector<std::vector<int>> elements_shells_q;
