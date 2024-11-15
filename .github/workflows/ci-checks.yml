@@ -23,7 +23,7 @@ jobs:
             - name: run cppcheck
               run: |
                   cppcheck --version
-                  cppcheck --force --error-exitcode=1 --language=c++ --std=c++20 --enable=all --inconclusive --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --suppress=knownArgument --suppress=missingIncludeSystem --suppress=unusedFunction --check-level=exhaustive .
+                  cppcheck --force --error-exitcode=1 --language=c++ --std=c++23 --enable=all --inconclusive --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --suppress=negativeContainerIndex --suppress=missingIncludeSystem --suppress=unusedFunction --check-level=exhaustive .
 
     clang-format:
         runs-on: macos-15
