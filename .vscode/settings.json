@@ -1,18 +1,22 @@
 {
     "[cpp]": {
-        "editor.tabSize": 2,
         "editor.codeActionsOnSave": {
             "source.fixAll": "always"
         },
-        "editor.formatOnSave": true
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+        "editor.formatOnSave": true,
+        "editor.semanticHighlighting.enabled": true,
+        "editor.suggest.insertMode": "replace",
+        "editor.tabSize": 2,
+        "editor.wordBasedSuggestions": "off"
     },
     "[yaml]": {
         "editor.tabSize": 4
     },
-    "files.eol": "\n",
-    "files.trimFinalNewlines": true,
-    "files.insertFinalNewline": true,
-    "files.trimTrailingWhitespace": true,
+    "editor.formatOnSave": true,
     "editor.formatOnType": true,
-    "editor.formatOnSave": true
+    "files.eol": "\n",
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    "files.trimTrailingWhitespace": true
 }
