@@ -2,11 +2,13 @@ CompileFlags:
     # to make the compilation database, pip install compiledb, then run:
     # compiledb -n --full-path make TESTMODE=ON
     CompilationDatabase: compile_commands.json
-    Add: [-xc++, -std=c++20, -DTESTMODE=true]
+    Add: [-xc++, -std=c++23, -DTESTMODE=true]
 
 Diagnostics:
     ClangTidy:
         FastCheckFilter: None
+        Remove:
+            performance-enum-size
     UnusedIncludes: Strict
     MissingIncludes: Strict
     Includes:
