@@ -642,7 +642,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   } else if constexpr (TESTMODE) {
     assert_always(false);
   } else {
-    __builtin_unreachable();
+    std::unreachable();
   }
 }
 

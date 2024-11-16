@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <span>
+#include <utility>
 
 #include "artisoptions.h"
 #include "constants.h"
@@ -178,7 +179,7 @@ void update_pellet(Packet &pkt, const int nts, const double t2) {
                  pkt.pellet_decaytype);
         std::abort();
       } else {
-        __builtin_unreachable();
+        std::unreachable();
       }
       pkt.em_time = pkt.prop_time;
       pkt.absorptiontype = -10;
@@ -204,7 +205,7 @@ void update_pellet(Packet &pkt, const int nts, const double t2) {
     printout("ERROR: Something wrong with decaying pellets. tdecay %g ts %g (ts + tw) %g\n", tdecay, ts, t2);
     assert_testmodeonly(false);
   } else {
-    __builtin_unreachable();
+    std::unreachable();
   }
 }
 
@@ -270,7 +271,7 @@ void do_packet(Packet &pkt, const double t2, const int nts)
         printout("ERROR: Unknown packet type %d\n", pkt.type);
         assert_testmodeonly(false);
       } else {
-        __builtin_unreachable();
+        std::unreachable();
       }
     }
   }

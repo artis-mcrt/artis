@@ -1414,7 +1414,7 @@ auto get_coordcellindexincrement(const int axis) -> int {
         printout("invalid coordinate index %d", axis);
         assert_testmodeonly(false);
       } else {
-        __builtin_unreachable();
+        std::unreachable();
       }
   }
 }
@@ -1439,7 +1439,7 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
           printout("invalid coordinate index %d", axis);
           assert_testmodeonly(false);
         } else {
-          __builtin_unreachable();
+          std::unreachable();
         }
     }
   }
@@ -2551,7 +2551,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 
       assert_always(false);
     } else {
-      __builtin_unreachable();
+      std::unreachable();
     }
   }
 
