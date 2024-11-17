@@ -179,7 +179,7 @@ inline void atomicadd(T &var, const T &val) {
   static_assert(std::atomic<T>::is_always_lock_free);
   std::atomic_ref<T>(var).fetch_add(val, std::memory_order_relaxed);
 #else
-  // this works on clang but not gcc for doubles.
+  // needed for Apple clang
   __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
 #endif
 #else
