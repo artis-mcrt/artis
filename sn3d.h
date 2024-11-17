@@ -168,25 +168,27 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
 #include <atomic>
 #endif
 
-template <typename T>
-inline void atomicadd(T &var, const T &val) {
 #ifdef _OPENMP
-#pragma omp atomic update
-  var += val;
+#define atomicadd(var, val)                  \
+  {                                          \
+    _Pragma("omp atomic update") var += val; \
+  }
+
 #else
 #ifdef STDPAR_ON
+
 #ifdef __cpp_lib_atomic_ref
-  static_assert(std::atomic<T>::is_always_lock_free);
-  std::atomic_ref<T>(var).fetch_add(val, std::memory_order_relaxed);
+static_assert(std::atomic<T>::is_always_lock_free);
+#define atomicadd(var, val) std::atomic_ref<T>(var).fetch_add(val, std::memory_order_relaxed);
 #else
-  // needed for Apple clang
-  __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
+// needed for Apple clang
+#define atomicadd(var, val) __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
 #endif
+
 #else
-  var += val;
+#define atomicadd(var, val) var += (val);
 #endif
 #endif
-}
 
 inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
   if (gsl_errno != 18)  // roundoff error
