@@ -6,6 +6,7 @@
 #include <cmath>
 #include <span>
 #include <tuple>
+#include <utility>
 
 #include "artisoptions.h"
 #include "constants.h"
