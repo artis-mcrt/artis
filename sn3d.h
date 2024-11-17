@@ -175,8 +175,13 @@ inline void atomicadd(T &var, const T &val) {
   var += val;
 #else
 #ifdef STDPAR_ON
+#ifdef __cpp_lib_atomic_ref
   static_assert(std::atomic<T>::is_always_lock_free);
   std::atomic_ref<T>(var).fetch_add(val, std::memory_order_relaxed);
+#else
+  // this works on clang but not gcc for doubles.
+  __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
+#endif
 #else
   var += val;
 #endif
