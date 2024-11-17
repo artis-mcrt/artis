@@ -178,8 +178,8 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
 #ifdef STDPAR_ON
 
 #ifdef __cpp_lib_atomic_ref
-static_assert(std::atomic<T>::is_always_lock_free);
-#define atomicadd(var, val) std::atomic_ref<T>(var).fetch_add(val, std::memory_order_relaxed);
+#define atomicadd(var, val) \
+  std::atomic_ref<std::remove_const<decltype(val)>::type>(var).fetch_add(val, std::memory_order_relaxed);
 #else
 // needed for Apple clang
 #define atomicadd(var, val) __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
