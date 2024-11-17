@@ -1,5 +1,7 @@
 ---
 InheritParentConfig: true
+# modernize-use-ranges: things like sort and for_each don't support parallel execution policies
+# modernize-use-std-print: replace printout macro with a function when we want to autofix to use std::format gcc >=13
 Checks: >
     *,
     -*static-assert*,
@@ -40,8 +42,8 @@ Checks: >
     -hicpp-signed-bitwise,
     -misc-no-recursion,
     -misc-non-private-member-variables-in-classes,
-    -modernize-use-ranges,  # things like sort and for_each don't support parallel execution policies
-    -modernize-use-std-print, # replace printout macro with a function when we want to autofix to use std::format gcc >=13
+    -modernize-use-ranges,
+    -modernize-use-std-print,
     -performance-enum-size,
     -readability-identifier-length,
     -readability-function-cognitive-complexity,
