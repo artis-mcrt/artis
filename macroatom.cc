@@ -300,6 +300,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   }
 
   assert_always(false);
+  return -1;
 }
 
 }  // anonymous namespace

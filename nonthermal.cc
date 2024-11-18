@@ -1504,6 +1504,7 @@ auto select_nt_ionization(const int modelgridindex) -> std::tuple<int, int> {
     }
   }
   assert_always(false);
+  return {-1, -1};
 }
 
 auto get_uptransindex(const int element, const int ion, const int lower, const int upper) {
