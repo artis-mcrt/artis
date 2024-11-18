@@ -1,53 +1,53 @@
 ---
 InheritParentConfig: true
-Checks: >
-    *,
-    -*static-assert*,
-    -*avoid-c-arrays,
-    -cert-dcl03-c,
-    -abseil-*,
-    -android-*,
-    -altera-*,
-    -bugprone-casting-through-void,
-    -bugprone-easily-swappable-parameters,
-    -bugprone-exception-escape,
-    -bugprone-implicit-widening-of-multiplication-result,
-    -bugprone-multi-level-implicit-pointer-conversion,
-    -bugprone-narrowing-conversions,
-    -boost-use-ranges,
-    -llvmlibc-*,
-    -cert-dcl50-cpp,
-    -cert-err33-c,
-    -cert-err34-c,
-    -cert-err58-cpp,
-    -clang-analyzer-deadcode.DeadStores,
-    -cppcoreguidelines-avoid-magic-numbers,
-    -cppcoreguidelines-avoid-non-const-global-variables,
-    -cppcoreguidelines-macro-usage,
-    -cppcoreguidelines-no-malloc,
-    -cppcoreguidelines-owning-memory,
-    -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
-    -cppcoreguidelines-pro-bounds-constant-array-index,
-    -cppcoreguidelines-pro-bounds-pointer-arithmetic,
-    -cppcoreguidelines-pro-type-cstyle-cast,
-    -cppcoreguidelines-pro-type-vararg,
-    -fuchsia-*,
-    -google-objc*,
-    -google-readability-todo,
-    -hicpp-vararg,
-    -hicpp-no-array-decay,
-    -hicpp-no-malloc,
-    -hicpp-signed-bitwise,
-    -misc-no-recursion,
-    -misc-non-private-member-variables-in-classes,
-    -modernize-use-ranges,
-    -modernize-use-std-print, # replace printout macro with a function when we want to autofix to use std::format gcc >=13
-    -performance-enum-size,
-    -readability-identifier-length,
-    -readability-function-cognitive-complexity,
-    -readability-magic-numbers,
-WarningsAsErrors: >
-    *,
+Checks: [
+        '*',
+        -*static-assert*,
+        -*avoid-c-arrays,
+        -cert-dcl03-c,
+        -abseil-*,
+        -android-*,
+        -altera-*,
+        -bugprone-casting-through-void,
+        -bugprone-easily-swappable-parameters,
+        -bugprone-exception-escape,
+        -bugprone-implicit-widening-of-multiplication-result,
+        -bugprone-multi-level-implicit-pointer-conversion,
+        -bugprone-narrowing-conversions,
+        -boost-use-ranges,
+        -llvmlibc-*,
+        -cert-dcl50-cpp,
+        -cert-err33-c,
+        -cert-err34-c,
+        -cert-err58-cpp,
+        -clang-analyzer-deadcode.DeadStores,
+        -cppcoreguidelines-avoid-magic-numbers,
+        -cppcoreguidelines-avoid-non-const-global-variables,
+        -cppcoreguidelines-macro-usage,
+        -cppcoreguidelines-no-malloc,
+        -cppcoreguidelines-owning-memory,
+        -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+        -cppcoreguidelines-pro-bounds-constant-array-index,
+        -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+        -cppcoreguidelines-pro-type-cstyle-cast,
+        -cppcoreguidelines-pro-type-vararg,
+        -fuchsia-*,
+        -google-objc*,
+        -google-readability-todo,
+        -hicpp-vararg,
+        -hicpp-no-array-decay,
+        -hicpp-no-malloc,
+        -hicpp-signed-bitwise,
+        -misc-no-recursion,
+        -misc-non-private-member-variables-in-classes,
+        -modernize-use-ranges, # things like sort and for_each don't support parallel execution policies
+        -modernize-use-std-print, # replace printout macro with a function when we want to autofix to use std::format gcc >=13
+        -performance-enum-size,
+        -readability-identifier-length,
+        -readability-function-cognitive-complexity,
+        -readability-magic-numbers,
+    ]
+WarningsAsErrors: '*'
 FormatStyle: file
 ExtraArgs: [-std=c++23]
 CheckOptions:
@@ -73,6 +73,6 @@ CheckOptions:
       value: lower_case
     - key: bugprone-reserved-identifier.AllowedIdentifiers
       value: '__host__;__device__'
-    - key: misc-include-cleaner.IgnoreHeaders  # std::ranges::upper_bound is triggering warning to include a private libc++ header __algorithm/ranges_upper_bound.h
-    # value: '.*(ranges).*'
+    - key: misc-include-cleaner.IgnoreHeaders # std::ranges::upper_bound is triggering warning to include a private libc++ header __algorithm/ranges_upper_bound.h
+      # value: '.*(ranges).*'
       value: '.*(__algorithm).*'
