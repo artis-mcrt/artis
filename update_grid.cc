@@ -29,6 +29,7 @@
 #include "vpkt.h"
 
 namespace {
+std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
 void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer,
                               const HeatingCoolingRates *heatingcoolingrates) {
@@ -1114,6 +1115,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
   const int nstart = grid::get_nstart(my_rank);
   const int ndo = grid::get_ndo(my_rank);
+  heatingcoolingrates_thisrankcells.resize(ndo);
+  std::ranges::fill(heatingcoolingrates_thisrankcells, HeatingCoolingRates{});
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1126,10 +1129,9 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     for (int mgi = nstart; mgi < nstart + ndo; mgi++) {
       // Check if this task should work on the current model grid cell.
       // If yes, update the cell and write out the estimators
-      HeatingCoolingRates heatingcoolingrates{};
-      const int assoc_cells = grid::get_numpropcells(mgi);
-      if (assoc_cells > 0) {
-        update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates);
+      if (grid::get_numpropcells(mgi) > 0) {
+        update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat,
+                         &heatingcoolingrates_thisrankcells.at(mgi - nstart));
       }
 
       // maybe want to add omp ordered here if the modelgrid cells should be output in order
@@ -1137,7 +1139,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #pragma omp critical(estimators_file)
 #endif
       {
-        write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates);
+        write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates_thisrankcells.at(mgi - nstart));
       }
     }  // end parallel for loop over all modelgrid cells
 
