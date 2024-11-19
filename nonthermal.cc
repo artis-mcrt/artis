@@ -393,7 +393,7 @@ void read_auger_data() {
       float n_auger_elec_avg = 0;
       double prob_num_auger[NT_MAX_AUGER_ELECTRONS + 1];
       for (int a = 0; a < 9; a++) {
-        linepos = line + static_cast<ptrdiff_t>(26 + (a * 5));
+        linepos = line + 26 + (a * 5);
         // have to read out exactly 5 characters at a time because the columns are sometimes not separated by a space
         char strprob[6] = "00000";
         assert_always(sscanf(linepos, "%5c%n", strprob, &offset) == 1);
@@ -485,7 +485,7 @@ auto get_approx_shell_occupancies(const int nbound, const int ioncharge) {
   assert_always(ioncharge >= 0);
   const int Z = nbound + ioncharge;
   std::vector<int> q;
-  q.resize(std::max(static_cast<size_t>(10), elements_electron_binding[Z - 1].size()), 0);
+  q.resize(std::max(10UZ, elements_electron_binding[Z - 1].size()), 0);
 
   for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
     if (q[0] < 2) {
