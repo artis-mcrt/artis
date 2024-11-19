@@ -1,6 +1,8 @@
 CompileFlags:
     # to make the compilation database, pip install compiledb, then run:
-    # compiledb -n --full-path make TESTMODE=ON
+    # make clean && compiledb -n --full-path make TESTMODE=ON
+    # or brew install bear, then:
+    # make clean && bear -- make TESTMODE=ON
     CompilationDatabase: compile_commands.json
     Add: [-xc++, -std=c++23, -DTESTMODE=true]
 
