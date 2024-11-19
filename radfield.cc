@@ -527,6 +527,9 @@ void init(const int my_rank, const int ndo_nonempty) {
     {
       std::tie(prev_bfrate_normed, win_prev_bfrate_normed) =
           MPI_shared_malloc_keepwin<float>(nonempty_npts_model * globals::bfestimcount);
+      if (globals::rank_in_node == 0) {
+        std::ranges::fill_n(prev_bfrate_normed, nonempty_npts_model * globals::bfestimcount, 0.);
+      }
     }
     printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
              nonempty_npts_model * globals::bfestimcount * sizeof(float) / 1024. / 1024.);
