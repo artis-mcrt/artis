@@ -31,18 +31,10 @@
 namespace {
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
-void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer,
+void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, const int timestep, const int titer,
                               const HeatingCoolingRates &heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
-
-  if (grid::get_numpropcells(mgi) < 1) {
-    // modelgrid cells that are not represented in the simulation grid
-    fprintf(estimators_file, "timestep %d modelgridindex %d EMPTYCELL\n\n", timestep, mgi);
-    fflush(estimators_file);
-    return;
-  }
-
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+  const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const auto sys_time_start_write_estimators = std::time(nullptr);
 
@@ -872,9 +864,9 @@ static void titer_average_estimators(const int nonemptymgi) {
 }
 #endif
 
-void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
+void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, const int titer, const double tratmid,
                       const double deltat, HeatingCoolingRates &heatingcoolingrates) {
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+  const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const double deltaV =
       grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
@@ -1117,42 +1109,34 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   const int ndo = grid::get_ndo(my_rank);
   heatingcoolingrates_thisrankcells.resize(ndo);
   std::ranges::fill(heatingcoolingrates_thisrankcells, HeatingCoolingRates{});
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-  {
-// Updating cell information
-#ifdef _OPENMP
-#pragma omp for schedule(dynamic)
-#endif
 
-    for (int mgi = nstart; mgi < nstart + ndo; mgi++) {
-      auto &heatingcoolingrates = heatingcoolingrates_thisrankcells.at(mgi - nstart);
-      if (grid::get_numpropcells(mgi) > 0) {
-        update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, heatingcoolingrates);
-      }
-
-      // maybe want to add omp ordered here if the modelgrid cells should be output in order
 #ifdef _OPENMP
-#pragma omp critical(estimators_file)
+#pragma omp parallel for schedule(dynamic)
 #endif
-      {
-        write_to_estimators_file(estimators_file, mgi, nts, titer, heatingcoolingrates);
-      }
-    }  // end parallel for loop over all modelgrid cells
+  for (int mgi = nstart; mgi < nstart + ndo; mgi++) {
+    const auto nonemptymgi = (grid::get_numpropcells(mgi) > 0) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
+    if (nonemptymgi >= 0) {
+      update_grid_cell(nonemptymgi, nts, nts_prev, titer, tratmid, deltat,
+                       heatingcoolingrates_thisrankcells.at(mgi - nstart));
+    }
+  }  // end parallel for loop over all modelgrid cells
 
-  }  // end OpenMP parallel section
+  // serial output of estimator data to this ranks estimator file cell by cell
+  for (int mgi = nstart; mgi < nstart + ndo; mgi++) {
+    const auto nonemptymgi = (grid::get_numpropcells(mgi) > 0) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
+    if (nonemptymgi >= 0) {
+      write_to_estimators_file(estimators_file, nonemptymgi, nts, titer,
+                               heatingcoolingrates_thisrankcells.at(mgi - nstart));
+    } else {
+      // modelgrid cells that are not represented in the simulation grid
+      fprintf(estimators_file, "timestep %d modelgridindex %d EMPTYCELL\n\n", nts, mgi);
+      fflush(estimators_file);
+    }
+  }
 
   // Now after all the relevant tasks of update_grid have been finished activate
-  // the use of the cellcache for all OpenMP tasks, in what follows (update_packets)
+  // the use of the cellcache for what follows (update_packets)
   use_cellcache = true;
-
-  // alternative way to write out estimators. this keeps the modelgrid cells in order but
-  // heatingrates are not valid. #ifdef _OPENMP for (int n = nstart; n < nstart+nblock; n++)
-  // {
-  //   write_to_estimators_file(n,nts);
-  // }
-  // #endif
 
   globals::max_path_step = std::min(1.e35, globals::rmax / 10.);
   printout("max_path_step %g\n", globals::max_path_step);
