@@ -132,7 +132,7 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
 // Calculate the heating rates for a given cell. Results are returned via the elements of the heatingrates data
 // structure.
 void calculate_heating_rates(const int nonemptymgi, const double T_e, const double nne,
-                             HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
+                             HeatingCoolingRates &heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
   double C_deexc = 0.;
 
   // double C_recomb = 0.;
@@ -172,14 +172,14 @@ void calculate_heating_rates(const int nonemptymgi, const double T_e, const doub
   ffheating = globals::ffheatingestimator[nonemptymgi];
 
   if constexpr (DIRECT_COL_HEAT) {
-    heatingcoolingrates->heating_collisional = C_deexc;
+    heatingcoolingrates.heating_collisional = C_deexc;
   } else {
     // Collisional heating (from estimators)
-    heatingcoolingrates->heating_collisional = globals::colheatingestimator[nonemptymgi];  // C_deexc + C_recomb;
+    heatingcoolingrates.heating_collisional = globals::colheatingestimator[nonemptymgi];  // C_deexc + C_recomb;
   }
 
-  heatingcoolingrates->heating_bf = bfheating;
-  heatingcoolingrates->heating_ff = ffheating;
+  heatingcoolingrates.heating_bf = bfheating;
+  heatingcoolingrates.heating_ff = ffheating;
 }
 
 // Thermal balance equation on which we have to iterate to get T_e
@@ -188,7 +188,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
 
   const auto nonemptymgi = params->nonemptymgi;
   const double t_current = params->t_current;
-  auto *const heatingcoolingrates = params->heatingcoolingrates;
+  auto &heatingcoolingrates = *params->heatingcoolingrates;
   if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
     if (std::abs((T_e / grid::get_Te(nonemptymgi)) - 1.) > 0.1) {
       grid::set_Te(nonemptymgi, T_e);
@@ -211,17 +211,17 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   const auto nne = grid::get_nne(nonemptymgi);
 
   // Then calculate heating and cooling rates
-  kpkt::calculate_cooling_rates(nonemptymgi, heatingcoolingrates);
+  kpkt::calculate_cooling_rates(nonemptymgi, &heatingcoolingrates);
   calculate_heating_rates(nonemptymgi, T_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
   const auto ntlepton_dep = nonthermal::get_deposition_rate_density(nonemptymgi);
   const auto ntalpha_frac_heating = 1.;
-  const auto ntalpha_dep = heatingcoolingrates->dep_alpha;
-  heatingcoolingrates->heating_dep = ntlepton_dep * ntlepton_frac_heating + ntalpha_dep * ntalpha_frac_heating;
-  heatingcoolingrates->dep_frac_heating =
-      (ntalpha_dep > 0) ? heatingcoolingrates->heating_dep / (ntlepton_dep + ntalpha_dep) : ntlepton_frac_heating;
+  const auto ntalpha_dep = heatingcoolingrates.dep_alpha;
+  heatingcoolingrates.heating_dep = ntlepton_dep * ntlepton_frac_heating + ntalpha_dep * ntalpha_frac_heating;
+  heatingcoolingrates.dep_frac_heating =
+      (ntalpha_dep > 0) ? heatingcoolingrates.heating_dep / (ntlepton_dep + ntalpha_dep) : ntlepton_frac_heating;
 
   // Adiabatic cooling term
   const double nntot = get_nnion_tot(nonemptymgi) + nne;
@@ -229,12 +229,12 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   const double volumetmin = grid::get_modelcell_assocvolume_tmin(modelgridindex);
   const double dV = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);  // really dV/dt
   const double V = volumetmin * pow(t_current / globals::tmin, 3);
-  heatingcoolingrates->cooling_adiabatic = p * dV / V;
+  heatingcoolingrates.cooling_adiabatic = p * dV / V;
 
-  const double total_heating_rate = heatingcoolingrates->heating_ff + heatingcoolingrates->heating_bf +
-                                    heatingcoolingrates->heating_collisional + heatingcoolingrates->heating_dep;
-  const double total_coolingrate = heatingcoolingrates->cooling_ff + heatingcoolingrates->cooling_fb +
-                                   heatingcoolingrates->cooling_collisional + heatingcoolingrates->cooling_adiabatic;
+  const double total_heating_rate = heatingcoolingrates.heating_ff + heatingcoolingrates.heating_bf +
+                                    heatingcoolingrates.heating_collisional + heatingcoolingrates.heating_dep;
+  const double total_coolingrate = heatingcoolingrates.cooling_ff + heatingcoolingrates.cooling_fb +
+                                   heatingcoolingrates.cooling_collisional + heatingcoolingrates.cooling_adiabatic;
 
   return total_heating_rate - total_coolingrate;
 }
@@ -312,14 +312,14 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
 }
 
 void call_T_e_finder(const int nonemptymgi, const double t_current, const double T_min, const double T_max,
-                     HeatingCoolingRates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
+                     HeatingCoolingRates &heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::get_Te(nonemptymgi);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, globals::timestep);
 
   TeSolutionParams paras = {.t_current = t_current,
                             .nonemptymgi = nonemptymgi,
-                            .heatingcoolingrates = heatingcoolingrates,
+                            .heatingcoolingrates = &heatingcoolingrates,
                             .bfheatingcoeffs = &bfheatingcoeffs};
 
   gsl_function find_T_e_f = {.function = &T_e_eqn_heating_minus_cooling, .params = &paras};

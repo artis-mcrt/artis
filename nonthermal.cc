@@ -2104,8 +2104,8 @@ void init() {
 // set total non-thermal deposition rate from individual gamma/positron/electron/alpha rates. This should be called
 // after packet propagation is finished for this timestep and normalise_deposition_estimators() has been done
 void calculate_deposition_rate_density(const int nonemptymgi, const int timestep,
-                                       HeatingCoolingRates *heatingcoolingrates) {
-  heatingcoolingrates->dep_gamma = globals::dep_estimator_gamma[nonemptymgi];
+                                       HeatingCoolingRates &heatingcoolingrates) {
+  heatingcoolingrates.dep_gamma = globals::dep_estimator_gamma[nonemptymgi];
 
   const double tmid = globals::timesteps[timestep].mid;
   const double rho = grid::get_rho(nonemptymgi);
@@ -2113,31 +2113,30 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
   // if INSTANT_PARTICLE_DEPOSITION, use the analytic rate at t_mid since it will have no Monte Carlo noise (although
   // strictly, it should be an integral from the timestep start to the end)
   // with time-dependent deposition, we don't have an analytic rate, so we use the Monte Carlo rate
-  assert_always(heatingcoolingrates != nullptr);
 
-  heatingcoolingrates->eps_gamma_ana = rho * decay::get_gamma_emission_rate(nonemptymgi, tmid);
+  heatingcoolingrates.eps_gamma_ana = rho * decay::get_gamma_emission_rate(nonemptymgi, tmid);
 
-  heatingcoolingrates->eps_positron_ana =
+  heatingcoolingrates.eps_positron_ana =
       rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_BETAPLUS);
 
-  heatingcoolingrates->eps_electron_ana =
+  heatingcoolingrates.eps_electron_ana =
       (rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_BETAMINUS));
 
-  heatingcoolingrates->eps_alpha_ana =
+  heatingcoolingrates.eps_alpha_ana =
       rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_ALPHA);
 
   if (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
-    heatingcoolingrates->dep_positron = heatingcoolingrates->eps_positron_ana;
-    heatingcoolingrates->dep_electron = heatingcoolingrates->eps_electron_ana;
-    heatingcoolingrates->dep_alpha = heatingcoolingrates->eps_alpha_ana;
+    heatingcoolingrates.dep_positron = heatingcoolingrates.eps_positron_ana;
+    heatingcoolingrates.dep_electron = heatingcoolingrates.eps_electron_ana;
+    heatingcoolingrates.dep_alpha = heatingcoolingrates.eps_alpha_ana;
   } else {
-    heatingcoolingrates->dep_positron = globals::dep_estimator_positron[nonemptymgi];
-    heatingcoolingrates->dep_electron = globals::dep_estimator_electron[nonemptymgi];
-    heatingcoolingrates->dep_alpha = globals::dep_estimator_alpha[nonemptymgi];
+    heatingcoolingrates.dep_positron = globals::dep_estimator_positron[nonemptymgi];
+    heatingcoolingrates.dep_electron = globals::dep_estimator_electron[nonemptymgi];
+    heatingcoolingrates.dep_alpha = globals::dep_estimator_alpha[nonemptymgi];
   }
 
   deposition_rate_density_all_cells[nonemptymgi] =
-      (heatingcoolingrates->dep_gamma + heatingcoolingrates->dep_positron + heatingcoolingrates->dep_electron);
+      (heatingcoolingrates.dep_gamma + heatingcoolingrates.dep_positron + heatingcoolingrates.dep_electron);
 }
 
 // get non-thermal deposition rate density in erg / s / cm^3 previously stored by calculate_deposition_rate_density()
