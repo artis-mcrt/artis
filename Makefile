@@ -232,7 +232,7 @@ else
 		ifeq ($(COMPILER_NAME),NVHPC)
 			CXXFLAGS += -fast
 		else
-			CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only -fopenmp-simd
+			CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only
 		endif
 	endif
 endif
