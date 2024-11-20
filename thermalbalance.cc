@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <ranges>
 #include <vector>
 
 #include "artisoptions.h"
@@ -278,7 +279,8 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels = get_nlevels(element, ion);
-      for (int level = 0; level < nlevels; level++) {
+      const auto levels = std::ranges::iota_view{0, nlevels};
+      std::for_each(EXEC_PAR levels.begin(), levels.end(), [&](const int level) {
         double bfheatingcoeff = 0.;
         if (grid::get_elem_abundance(nonemptymgi, element) > minelfrac || USE_LUT_BFHEATING) {
           const auto nphixstargets = get_nphixstargets(element, ion, level);
@@ -306,7 +308,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
           }
         }
         bfheatingcoeffs[get_uniquelevelindex(element, ion, level)] = bfheatingcoeff;
-      }
+      });
     }
   }
 }
