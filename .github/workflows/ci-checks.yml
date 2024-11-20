@@ -205,6 +205,10 @@ jobs:
                   make clean
                   make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
+            - name: Compile all remaining option files
+              run: |
+                  find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nebular.h" -exec sh -c 'cp -v -p {} artisoptions.h && make sn3d' \;
+
     mac-llvm-clang:
         runs-on: macos-15
         name: macOS llvm clang
@@ -277,12 +281,9 @@ jobs:
                   make clean
                   make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: Compile all option files in repository
+            - name: Compile all remaining option files
               run: |
-                  for file in artisoptions_*.h; do
-                      cp -v -p $file artisoptions.h
-                      make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
-                  done
+                  find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nebular.h" -exec sh -c 'cp -v -p {} artisoptions.h && make sn3d' \;
 
     mac-apple-clang:
         runs-on: macos-15
@@ -352,3 +353,7 @@ jobs:
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
                   make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile all remaining option files
+              run: |
+                  find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nebular.h" -exec sh -c 'cp -v -p {} artisoptions.h && make sn3d' \;
