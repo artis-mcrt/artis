@@ -281,7 +281,6 @@ jobs:
               run: |
                   for file in artisoptions_*.h; do
                       cp -v -p $file artisoptions.h
-                      make clean
                       make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
                   done
 
