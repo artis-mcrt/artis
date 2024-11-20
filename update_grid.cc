@@ -1105,10 +1105,11 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     radfield::normalise_bf_estimators(nts, nts_prev, titer, deltat);
   }
 
-  const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
   const auto ndo_nonempty = grid::get_ndo_nonempty(my_rank);
   heatingcoolingrates_thisrankcells.resize(ndo_nonempty);
   std::ranges::fill(heatingcoolingrates_thisrankcells, HeatingCoolingRates{});
+
+  const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
@@ -1116,7 +1117,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
     update_grid_cell(nonemptymgi, nts, nts_prev, titer, tratmid, deltat,
                      heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
-  }  // end parallel for loop over all modelgrid cells
+  }
 
   // serial output of estimator data to this ranks estimator file cell by cell
   const auto nstart = grid::get_nstart(my_rank);

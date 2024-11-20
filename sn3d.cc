@@ -29,7 +29,7 @@
 #endif
 #include <span>
 #ifdef STDPAR_ON
-#include <thread>
+#include <ranges>
 #endif
 
 #include "artisoptions.h"
@@ -689,7 +689,6 @@ auto do_timestep(const int nts, const int titer, Packet *packets, const int wall
 
 auto main(int argc, char *argv[]) -> int {
   real_time_start = std::time(nullptr);
-  char filename[MAXFILENAMELENGTH];
 
   // if DETAILED_BF_ESTIMATORS_ON is true, USE_LUT_PHOTOION must be false
   assert_always(!DETAILED_BF_ESTIMATORS_ON || !USE_LUT_PHOTOION);
@@ -709,15 +708,25 @@ auto main(int argc, char *argv[]) -> int {
 
   const int my_rank = globals::my_rank;
 
+#ifdef STDPAR_ON
+  printout("C++ standard parallelism (stdpar) is enabled with %d hardware threads\n", get_max_threads());
+  for (int t = 1; t < get_max_threads(); t++) {
+    char outputfilename[MAXFILENAMELENGTH];
+    snprintf(outputfilename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, t);
+    std::filesystem::remove(outputfilename);
+  }
+#endif
+
 #if defined(_OPENMP) && !defined(GPU_ON)
   // Explicitly turn off dynamic threads because we use the threadprivate directive!!!
   omp_set_dynamic(0);
-#pragma omp parallel private(filename)
+#pragma omp parallel
 #endif
   {
     // initialise the thread and rank specific output file
-    snprintf(filename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, get_thread_num());
-    output_file = std::ofstream(filename);
+    char outputfilename[MAXFILENAMELENGTH];
+    snprintf(outputfilename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, get_thread_num());
+    output_file = std::ofstream(outputfilename);
     assert_always(output_file.is_open());
 
 #ifdef _OPENMP
@@ -726,11 +735,6 @@ auto main(int argc, char *argv[]) -> int {
     printout("OpenMP parallelisation is not enabled in this build (this is normal)\n");
 #endif
   }
-
-#ifdef STDPAR_ON
-  printout("C++ standard parallelism (stdpar) is enabled with %d hardware threads\n",
-           std::thread::hardware_concurrency());
-#endif
 
 #ifdef GPU_ON
   printout("GPU_ON is enabled\n");
@@ -863,6 +867,7 @@ auto main(int argc, char *argv[]) -> int {
   macroatom_open_file(my_rank);
   if (ndo > 0) {
     assert_always(estimators_file == nullptr);
+    char filename[MAXFILENAMELENGTH];
     snprintf(filename, MAXFILENAMELENGTH, "estimators_%.4d.out", my_rank);
     estimators_file = fopen_required(filename, "w");
 

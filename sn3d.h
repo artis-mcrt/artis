@@ -46,6 +46,7 @@
 
 #ifdef STDPAR_ON
 #include <execution>
+#include <thread>
 
 #define EXEC_PAR_UNSEQ std::execution::par_unseq,
 #define EXEC_PAR std::execution::par,
@@ -254,10 +255,14 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
 }
 
 [[nodiscard]] inline auto get_max_threads() -> int {
-#if defined _OPENMP
+#ifdef STDPAR_ON
+  return static_cast<int>(std::thread::hardware_concurrency());
+#else
+#ifdef _OPENMP
   return omp_get_max_threads();
 #else
   return 1;
+#endif
 #endif
 }
 
