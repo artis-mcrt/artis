@@ -277,6 +277,14 @@ jobs:
                   make clean
                   make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
+            - name: Compile all option files in repository
+              run: |
+                  for file in artisoptions_*.h; do
+                      cp -v -p $file artisoptions.h
+                      make clean
+                      make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  done
+
     mac-apple-clang:
         runs-on: macos-15
         name: macOS Apple clang
