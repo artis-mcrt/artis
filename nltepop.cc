@@ -14,6 +14,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <ranges>
+#include <span>
 #include <tuple>
 #include <vector>
 
@@ -441,7 +443,8 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
   const auto T_e = grid::get_Te(nonemptymgi);
   const float nne = grid::get_nne(nonemptymgi);
   const int nlevels = get_nlevels(element, ion);
-  for (int level = 0; level < nlevels; level++) {
+  const auto levels = std::ranges::iota_view{0, nlevels};
+  std::for_each(levels.begin(), levels.end(), [&](const auto level) {
     const int level_index = get_nlte_vector_index(element, ion, level);
     const double epsilon_level = epsilon(element, ion, level);
     const double statweight = stat_weight(element, ion, level);
@@ -449,9 +452,8 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
 
     // de-excitation
     const int ndowntrans = get_ndowntrans(element, ion, level);
-    const auto *const leveldowntranslist = get_downtranslist(element, ion, level);
-    for (int i = 0; i < ndowntrans; i++) {
-      const auto &downtransition = leveldowntranslist[i];
+    const auto leveldowntrans = std::span(get_downtranslist(element, ion, level), ndowntrans);
+    std::for_each(leveldowntrans.begin(), leveldowntrans.end(), [&](const auto &downtransition) {
       const double A_ul = downtransition.einstein_A;
       const int lower = downtransition.targetlevelindex;
 
@@ -466,20 +468,21 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const int upper_index = level_index;
       const int lower_index = get_nlte_vector_index(element, ion, lower);
 
-      *gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, upper_index) -= R;
-      *gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, upper_index) += R;
-      *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, upper_index) -= C;
-      *gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, upper_index) += C;
+      atomicadd(*gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, upper_index), -R);
+      atomicadd(*gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, upper_index), R);
+      atomicadd(*gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, upper_index), -C);
+      atomicadd(*gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, upper_index), C);
       if ((R < 0) || (C < 0)) {
         printout("  WARNING: Negative de-excitation rate from ionstage %d level %d to level %d\n",
                  get_ionstage(element, ion), level, lower);
       }
-    }
+    });
 
     // excitation
     const int nuptrans = get_nuptrans(element, ion, level);
     const auto *const leveluptranslist = get_uptranslist(element, ion, level);
-    for (int i = 0; i < nuptrans; i++) {
+    const auto nuptransindices = std::ranges::iota_view{0, nuptrans};
+    std::for_each(nuptransindices.begin(), nuptransindices.end(), [&](const auto i) {
       const int lineindex = leveluptranslist[i].lineindex;
       const int upper = leveluptranslist[i].targetlevelindex;
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
@@ -501,18 +504,19 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const int lower_index = level_index;
       const int upper_index = get_nlte_vector_index(element, ion, upper);
 
-      *gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, lower_index) -= R;
-      *gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, lower_index) += R;
-      *gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, lower_index) -= C;
-      *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, lower_index) += C;
-      *gsl_matrix_ptr(rate_matrix_ntcoll_bb, lower_index, lower_index) -= NTC;
-      *gsl_matrix_ptr(rate_matrix_ntcoll_bb, upper_index, lower_index) += NTC;
+      atomicadd(*gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, lower_index), -R);
+      atomicadd(*gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, lower_index), R);
+      atomicadd(*gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, lower_index), -C);
+      atomicadd(*gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, lower_index), C);
+      atomicadd(*gsl_matrix_ptr(rate_matrix_ntcoll_bb, lower_index, lower_index), -NTC);
+      atomicadd(*gsl_matrix_ptr(rate_matrix_ntcoll_bb, upper_index, lower_index), NTC);
+
       if ((R < 0) || (C < 0)) {
         printout("  WARNING: Negative excitation rate from ion %d level %d to level %d\n", get_ionstage(element, ion),
                  level, upper);
       }
-    }
-  }
+    });
+  });
 }
 
 void nltepop_matrix_add_ionisation(const int modelgridindex, const int element, const int ion,
@@ -525,7 +529,8 @@ void nltepop_matrix_add_ionisation(const int modelgridindex, const int element, 
   const int nionisinglevels = get_nlevels_ionising(element, ion);
   const int maxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
 
-  for (int level = 0; level < nionisinglevels; level++) {
+  const auto levels = std::ranges::iota_view{0, nionisinglevels};
+  std::for_each(EXEC_PAR levels.begin(), levels.end(), [&](const auto level) {
     const int lower_index = get_nlte_vector_index(element, ion, level);
 
     // thermal collisional ionization, photoionisation and recombination processes
@@ -544,10 +549,10 @@ void nltepop_matrix_add_ionisation(const int modelgridindex, const int element, 
       const double C_ionisation =
           col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
-      *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, lower_index) -= R_ionisation * s_renorm[level];
-      *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, lower_index) += R_ionisation * s_renorm[level];
-      *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, lower_index) -= C_ionisation * s_renorm[level];
-      *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, lower_index) += C_ionisation * s_renorm[level];
+      atomicadd(*gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, lower_index), -R_ionisation * s_renorm[level]);
+      atomicadd(*gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, lower_index), R_ionisation * s_renorm[level]);
+      atomicadd(*gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, lower_index), -C_ionisation * s_renorm[level]);
+      atomicadd(*gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, lower_index), C_ionisation * s_renorm[level]);
 
       if ((R_ionisation < 0) || (C_ionisation < 0)) {
         printout("  WARNING: Negative ionization rate from ionstage %d level %d phixstargetindex %d\n",
@@ -560,10 +565,10 @@ void nltepop_matrix_add_ionisation(const int modelgridindex, const int element, 
         const double R_recomb = rad_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, nonemptymgi);
         const double C_recomb = col_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, epsilon_trans);
 
-        *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, upper_index) -= R_recomb * s_renorm[upper];
-        *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, upper_index) += R_recomb * s_renorm[upper];
-        *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, upper_index) -= C_recomb * s_renorm[upper];
-        *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, upper_index) += C_recomb * s_renorm[upper];
+        atomicadd(*gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, upper_index), -R_recomb * s_renorm[upper]);
+        atomicadd(*gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, upper_index), R_recomb * s_renorm[upper]);
+        atomicadd(*gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, upper_index), -C_recomb * s_renorm[upper]);
+        atomicadd(*gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, upper_index), C_recomb * s_renorm[upper]);
 
         if ((R_recomb < 0) || (C_recomb < 0)) {
           printout("  WARNING: Negative recombination rate to ionstage %d level %d phixstargetindex %d\n",
@@ -571,7 +576,7 @@ void nltepop_matrix_add_ionisation(const int modelgridindex, const int element, 
         }
       }
     }
-  }
+  });
 }
 
 void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, const int ion,
@@ -595,9 +600,10 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
       for (int level = 0; level < nlevels; level++) {
         const int lower_index = get_nlte_vector_index(element, ion, level);
 
-        *gsl_matrix_ptr(rate_matrix_ntcoll_bf, lower_index, lower_index) -= Y_nt_thisupperion * s_renorm[level];
-        *gsl_matrix_ptr(rate_matrix_ntcoll_bf, upper_groundstate_index, lower_index) +=
-            Y_nt_thisupperion * s_renorm[level];
+        atomicadd(*gsl_matrix_ptr(rate_matrix_ntcoll_bf, lower_index, lower_index),
+                  -Y_nt_thisupperion * s_renorm[level]);
+        atomicadd(*gsl_matrix_ptr(rate_matrix_ntcoll_bf, upper_groundstate_index, lower_index),
+                  Y_nt_thisupperion * s_renorm[level]);
       }
     }
   }
@@ -894,7 +900,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   }
 
   // printout("  Adding rates for ion stages:");
-  for (int ion = 0; ion < nions; ion++) {
+  const auto ions = std::ranges::iota_view{0, nions};
+  std::for_each(EXEC_PAR ions.begin(), ions.end(), [&](const auto ion) {
     // const int ionstage = get_ionstage(element, ion);
     // printout(" %d", ionstage);
 
@@ -911,14 +918,14 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     nltepop_matrix_add_boundbound(nonemptymgi, element, ion, t_mid, s_renorm, &rate_matrix_rad_bb, &rate_matrix_coll_bb,
                                   &rate_matrix_ntcoll_bb);
 
-    if (ion < nions - 1) {
+    if (ion < (nions - 1)) {
       // this is the slowest component
       nltepop_matrix_add_ionisation(modelgridindex, element, ion, s_renorm, &rate_matrix_rad_bf, &rate_matrix_coll_bf);
       if (NT_ON) {
         nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, &rate_matrix_ntcoll_bf);
       }
     }
-  }
+  });
   // printout("\n");
 
   if (individual_process_matrices) {

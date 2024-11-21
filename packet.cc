@@ -132,8 +132,8 @@ void packet_init(Packet *pkt)
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
   printout("Placing pellets...\n");
-  auto allpkts = std::ranges::iota_view{0, globals::npkts};
-  std::ranges::for_each(allpkts, [&, norm, e0](const int n) {
+  const auto allpkts = std::ranges::iota_view{0, globals::npkts};
+  std::for_each(EXEC_PAR allpkts.begin(), allpkts.end(), [&, norm, e0](const int n) {
     pkt[n] = Packet{};
     const double targetval = rng_uniform() * norm;
 

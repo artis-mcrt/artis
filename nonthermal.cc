@@ -18,6 +18,7 @@
 #include <functional>
 #include <ios>
 #include <numeric>
+#include <ranges>
 #include <span>
 #include <sstream>
 #include <string>
@@ -1800,7 +1801,8 @@ void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int mo
   const int nlevels_all = get_nlevels(element, ion);
   const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
 
-  for (int lower = 0; lower < nlevels; lower++) {
+  const auto lowers = std::ranges::iota_view{0, nlevels};
+  std::for_each(lowers.begin(), lowers.end(), [&](const int lower) {
     const double statweight_lower = stat_weight(element, ion, lower);
     const double nnlevel = get_levelpop(nonemptymgi, element, ion, lower);
     const double epsilon_lower = epsilon(element, ion, lower);
@@ -1829,17 +1831,17 @@ void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int mo
 
           const int startindex = std::max(i, xsstartindex);
           for (int j = startindex; j < stopindex; j++) {
-            sfmatrixuppertri[rowoffset + j] += nnlevel * vec_xs_excitation_deltae[j];
+            atomicadd(sfmatrixuppertri[rowoffset + j], nnlevel * vec_xs_excitation_deltae[j]);
           }
 
           // do the last bit separately because we're not using the full delta_e interval
           const double delta_en_actual = (en + epsilon_trans_ev - engrid(stopindex));
-          sfmatrixuppertri[rowoffset + stopindex] +=
-              nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / DELTA_E;
+          atomicadd(sfmatrixuppertri[rowoffset + stopindex],
+                    nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / DELTA_E);
         }
       }
     }
-  }
+  });
 }
 
 void sfmatrix_add_ionization(std::vector<double> &sfmatrixuppertri, const int Z, const int ionstage, const double nnion)
@@ -2280,7 +2282,6 @@ __host__ __device__ auto nt_ionization_ratecoeff(const int nonemptymgi, const in
   return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
 }
 
-#pragma omp declare simd
 __host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const int element, const int ion,
                                                  const int lowerlevel, const int uptransindex, const int lineindex)
     -> double {

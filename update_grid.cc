@@ -1105,28 +1105,30 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     radfield::normalise_bf_estimators(nts, nts_prev, titer, deltat);
   }
 
-  const int nstart = grid::get_nstart(my_rank);
-  const int ndo = grid::get_ndo(my_rank);
-  heatingcoolingrates_thisrankcells.resize(ndo);
+  const auto ndo_nonempty = grid::get_ndo_nonempty(my_rank);
+  heatingcoolingrates_thisrankcells.resize(ndo_nonempty);
   std::ranges::fill(heatingcoolingrates_thisrankcells, HeatingCoolingRates{});
+
+  const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
-  for (int mgi = nstart; mgi < nstart + ndo; mgi++) {
-    const auto nonemptymgi = (grid::get_numpropcells(mgi) > 0) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
-    if (nonemptymgi >= 0) {
-      update_grid_cell(nonemptymgi, nts, nts_prev, titer, tratmid, deltat,
-                       heatingcoolingrates_thisrankcells.at(mgi - nstart));
-    }
-  }  // end parallel for loop over all modelgrid cells
+  for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+    update_grid_cell(nonemptymgi, nts, nts_prev, titer, tratmid, deltat,
+                     heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
+  }
 
   // serial output of estimator data to this ranks estimator file cell by cell
-  for (int mgi = nstart; mgi < nstart + ndo; mgi++) {
+  const auto nstart = grid::get_nstart(my_rank);
+  const auto ndo = grid::get_ndo(my_rank);
+  for (int mgi = nstart; mgi < (nstart + ndo); mgi++) {
     const auto nonemptymgi = (grid::get_numpropcells(mgi) > 0) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
     if (nonemptymgi >= 0) {
+      assert_always(nonemptymgi >= nstart_nonempty);
+      assert_always(nonemptymgi < (nstart_nonempty + ndo_nonempty));
       write_to_estimators_file(estimators_file, nonemptymgi, nts, titer,
-                               heatingcoolingrates_thisrankcells.at(mgi - nstart));
+                               heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
     } else {
       // modelgrid cells that are not represented in the simulation grid
       fprintf(estimators_file, "timestep %d modelgridindex %d EMPTYCELL\n\n", nts, mgi);
