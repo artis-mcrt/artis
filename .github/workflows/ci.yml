@@ -131,10 +131,10 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: cat job0/estimators*.out
 
-            - name: cat job0 output log
+            - name: cat job output logs
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat job0/output_0-0.txt
+              run: cat job0/output_*.txt
 
             - name: Checksum job0 output files
               if: always()
@@ -163,10 +163,10 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: cat job1/estimators*.out
 
-            - name: cat job1 output log
+            - name: cat job1 output logs
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat job1/output_0-0.txt
+              run: cat job1/output_*.txt
 
             - name: show deposition.out
               if: always() && inputs.testmode != 'ON'
