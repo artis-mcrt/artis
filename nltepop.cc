@@ -771,12 +771,16 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   gsl_vector_mul(popvec, pop_normfactor_vec);
   // popvec will be used contains the real population densities
 
+  size_t row_ground_state = 0;
   for (size_t row = 0; row < nlte_dimension; row++) {
     double recovered_balance_vector_elem = 0.;
     gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
     gsl_blas_ddot(&row_view.vector, &x, &recovered_balance_vector_elem);
 
     const auto [ion, level] = get_ion_level_of_nlte_vector_index(row, element);
+    if (level == 0) {
+      row_ground_state = row;
+    }
 
     // printout("index %4d (ionstage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e
     // departure ratio %.4f\n",
@@ -785,20 +789,38 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     //          gsl_vector_get(popvec, row),
     //          gsl_vector_get(x, row) / gsl_vector_get(x,get_nlte_vector_index(element,ion,0)));
 
-    if (gsl_vector_get(popvec, row) < 0.0) {
+    // Checking that groundpop is greater than MINPOP here - if it is then use LTE populations for element instead
+    if (gsl_vector_get(popvec, row) < MINPOP && row == row_ground_state) {
       printout(
-          "  WARNING: NLTE solver gave negative population to index %zud (Z=%d ionstage %d level %d), pop = %g. "
-          "Replacing with LTE pop of %g\n",
+          "  WARNING: NLTE solver gave ground population less than MINPOP for index %zud (Z=%d ionstage %d level %d), "
+          "pop = %g. "
+          "Returning nltepop_matrix_solve fail (using LTE pops instead)\n",
           row, get_atomicnumber(element), get_ionstage(element, ion), level,
-          gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row), gsl_vector_get(pop_normfactor_vec, row));
-      gsl_vector_set(popvec, row, gsl_vector_get(pop_normfactor_vec, row));
+          gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row));
+
+        return false;
+    }
+    if (gsl_vector_get(popvec, row) < 0.0) {
+      printout("  WARNING: NLTE solver gave negative population for index %zud (Z=%d ionstage %d level %d), pop = %g",
+               row, get_atomicnumber(element), get_ionstage(element, ion), level,
+               gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row));
+      if (gsl_vector_get(popvec, row) < -1*MINPOP) {
+          printout(
+              "  WARNING: negative pop = %g less than -1*MINPOP (-%g) unlikely a rounding error to zero so returning "
+              "nltepop_matrix_solve fail (using LTE pops instead)\n", gsl_vector_get(popvec, row), MINPOP);
+
+      return false;
+      }
+      printout(
+              "  WARNING: negative pop = %g greater than -1*MINPOP (-%g) likely a rounding error to zero so continue "
+              "with NLTE pops \n", gsl_vector_get(popvec, row), MINPOP);
     }
   }
 
   return true;
 }
 
-}  // anonymous namespace
+} // anonymous namespace
 
 void solve_nlte_pops_element(const int element, const int nonemptymgi, const int timestep, const int nlte_iter)
 // solves the statistical balance equations to find NLTE level populations for all ions of an element
