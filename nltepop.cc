@@ -815,6 +815,33 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
               "  WARNING: negative pop = %g greater than -1*MINPOP (-%g) likely a rounding error to zero so continue "
               "with NLTE pops \n", gsl_vector_get(popvec, row), MINPOP);
     }
+    if (row != row_ground_state &&
+        gsl_vector_get(popvec, row_ground_state) <
+        (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row)) {
+            printout("[debug] WARNING: pop inversion: (g_pop %g)/(e_pop %g) = %g is less than (g_sw %g)/(e_sw %g) = %g "
+            "for index %zud Z=%d ionstage %d level %d (factor %g inversion) - ",
+            gsl_vector_get(popvec, row_ground_state), gsl_vector_get(popvec, row),
+            gsl_vector_get(popvec, row_ground_state) / gsl_vector_get(popvec, row),
+            stat_weight(element, ion, 0), stat_weight(element, ion, level), stat_weight(element, ion, 0) / stat_weight(element, ion, level),
+            row, get_atomicnumber(element), get_ionstage(element, ion), level,
+            (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) / (gsl_vector_get(popvec, row_ground_state) / gsl_vector_get(popvec, row)));
+
+            if (gsl_vector_get(popvec, row_ground_state) * 10000. <
+                (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row)) {
+              printout(
+                  "large pop inversion (ground_pop * 10000 < ([g_gs / g_es] * excited_pop) - return matrix solve "
+                  "fail and use LTE pops for element \n");
+              return false;
+            }
+        if (gsl_vector_get(popvec, row_ground_state) * 10. < (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row)) {
+          printout("more substantial pop inversion (ground_pop * 10 < ([g_gs / g_es] * excited_pop) - "
+              "but continue with NLTE solution\n");
+        }
+        else {
+          printout("relatively small pop inversion (ground_pop * 10 > ([g_gs / g_es] * excited_pop) - "
+              "continue with NLTE solution\n");
+        }
+      }
   }
 
   return true;
