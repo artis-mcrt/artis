@@ -373,7 +373,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 
 }  // anonymous namespace
 
-[[nodiscard]] __host__ __device__ auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi, const bool force_lte) -> int {
+[[nodiscard]] __host__ __device__ auto find_uppermost_ion(const int nonemptymgi, const int element, const bool force_lte) -> int {
   const int nions = get_nions(element);
   if (nions == 0) {
     return -1;
@@ -611,7 +611,7 @@ auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
-      const auto uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_lte);
+      const auto uppermost_ion = find_uppermost_ion(nonemptymgi, element, force_lte);
       grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
 
       only_lowest_ionstage = only_lowest_ionstage && (uppermost_ion <= 0);
