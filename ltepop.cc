@@ -405,12 +405,12 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
         use_phi_lte ? phi_lte(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
     factor *= nne_hi * phifactor;
 
-    if (phifactor > 1e50) {
+    if (!std::isfinite(factor)) {
       printout(
           "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element "
-          "Z=%d, ionstage %d in cell %d (phifactor for ion %g greater than 1e50 setting ion %d as uppermost ion)\n",
-          get_atomicnumber(element), get_ionstage(element, ion), modelgridindex, phifactor, get_ionstage(element, ion - 1));
-      return ion - 1;
+          "Z=%d, ionstage %d in cell %d\n",
+          get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
+      return ion;
     }
   }
   uppermost_ion = ion;
