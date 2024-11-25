@@ -647,6 +647,12 @@ void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matr
 void set_element_pops_lte(const int nonemptymgi, const int element) {
   nltepop_reset_element(nonemptymgi, element);  // set NLTE pops as invalid so that LTE pops will be used instead
   calculate_cellpartfuncts(nonemptymgi, element);
+  // Recall find_uppermost_ion with force_lte = true so uppermost ion used in set_groundlevelpops
+  // is reset based on LTE phi factors instead of coming from NLTE phi factors
+  const double nne_hi = grid::get_rho(nonemptymgi) / MH;
+  const bool force_lte = true;
+  const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_lte);
+  grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
   set_groundlevelpops(nonemptymgi, element, grid::get_nne(nonemptymgi), true);
 }
 
@@ -1058,7 +1064,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   if (!matrix_solve_success) {
     printout(
         "WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular matrix. "
-        "Attempting to use LTE solution instead\n",
+        ", negative population or large population inversion. Attempting to use LTE solution instead\n",
         modelgridindex, timestep, atomic_number);
     set_element_pops_lte(nonemptymgi, element);
   } else {
