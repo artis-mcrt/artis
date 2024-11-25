@@ -649,9 +649,9 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   calculate_cellpartfuncts(nonemptymgi, element);
   // Recall find_uppermost_ion with force_lte = true so uppermost ion used in set_groundlevelpops
   // is reset based on LTE phi factors instead of coming from NLTE phi factors
-  // const double nne_hi = grid::get_rho(nonemptymgi) / MH;
+  const double nne_hi = grid::get_rho(nonemptymgi) / MH;
   const bool force_lte = true;
-  const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, force_lte);
+  const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_lte);
   grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
   set_groundlevelpops(nonemptymgi, element, grid::get_nne(nonemptymgi), true);
 }
