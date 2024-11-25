@@ -398,12 +398,12 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
     }
   }
 
-  // double factor = 1.;
+  double factor = 1.;
   int ion = 0;
   for (ion = 0; ion < uppermost_ion; ion++) {
     const auto phifactor =
         use_phi_lte ? phi_lte(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
-    // factor *= nne_hi * phifactor;
+    factor *= nne_hi * phifactor;
 
     if (phifactor > 1e50) {
       printout(
