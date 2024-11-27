@@ -925,20 +925,21 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
       // columns: # A, Z, Q[MeV], E_gamma[MeV], E_elec[MeV], E_neutrino[MeV], meanlife[s]
       int a = -1;
       int z = -1;
-      double q_mev = 0.;
+      double q_beta_mev = 0.;
       double e_gamma_mev = 0.;
       double e_elec_mev = 0.;
       double e_neutrino = 0.;
       double tau_sec = 0.;
-      std::stringstream(line) >> a >> z >> q_mev >> e_gamma_mev >> e_elec_mev >> e_neutrino >> tau_sec;
-
-      assert_always(!nuc_exists(z, a));
-      nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec});
-      nuclides.back().branchprobs[DECAYTYPE_BETAMINUS] = 1.;
-      nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = q_mev * MEV;
-      nuclides.back().endecay_electron = e_elec_mev * MEV;
-      nuclides.back().endecay_gamma = e_gamma_mev * MEV;
-      assert_always(e_elec_mev >= 0.);
+      std::stringstream(line) >> a >> z >> q_beta_mev >> e_gamma_mev >> e_elec_mev >> e_neutrino >> tau_sec;
+      if (q_beta_mev > 0.) {
+        assert_always(!nuc_exists(z, a));
+        nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec});
+        nuclides.back().branchprobs[DECAYTYPE_BETAMINUS] = 1.;
+        nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = q_beta_mev * MEV;
+        nuclides.back().endecay_electron = e_elec_mev * MEV;
+        nuclides.back().endecay_gamma = e_gamma_mev * MEV;
+        assert_always(e_elec_mev >= 0.);
+      }
     }
 
     auto falpha = fstream_required("alphadecays.txt", std::ios::in);
