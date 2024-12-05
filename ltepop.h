@@ -4,11 +4,11 @@
 #include <vector>
 
 [[nodiscard]] auto get_groundlevelpop(int nonemptymgi, int element, int ion) -> double;
-#pragma omp declare simd
+
 [[nodiscard]] auto calculate_levelpop(int nonemptymgi, int element, int ion, int level) -> double;
-#pragma omp declare simd
+
 [[nodiscard]] auto calculate_levelpop_lte(int nonemptymgi, int element, int ion, int level) -> double;
-#pragma omp declare simd
+
 [[nodiscard]] auto get_levelpop(int nonemptymgi, int element, int ion, int level) -> double;
 [[nodiscard]] auto calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold)
     -> double;

@@ -1005,6 +1005,7 @@ void setup_nstart_ndo() {
     assert_always(fileout.is_open());
     fileout << "#rank nstart ndo ndo_nonempty\n";
     for (int r = 0; r < nprocesses; r++) {
+      assert_always(ranks_ndo_nonempty[r] <= ranks_ndo[r]);
       fileout << r << " " << ranks_nstart[r] << " " << ranks_ndo[r] << " " << ranks_ndo_nonempty[r] << "\n";
     }
   }

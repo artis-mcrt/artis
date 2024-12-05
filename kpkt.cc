@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <ranges>
 #include <utility>
 #include <vector>
 
@@ -262,12 +263,14 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates *heating
   double C_fb_all = 0.;          // free-bound creation of rpkt
   double C_exc_all = 0.;         // collisional excitation of macroatoms
   double C_ionization_all = 0.;  // collisional ionisation of macroatoms
-  for (int allionindex = 0; allionindex < get_includedions(); allionindex++) {
+
+  const auto allionindices = std::ranges::iota_view{0, get_includedions()};
+  std::for_each(EXEC_PAR allionindices.begin(), allionindices.end(), [&](const int allionindex) {
     const auto [element, ion] = get_ionfromuniqueionindex(allionindex);
     grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + allionindex] =
         calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, -1, cellcacheslotid, &C_ff_all, &C_fb_all,
                                            &C_exc_all, &C_ionization_all);
-  }
+  });
 
   // this loop is made separate for future parallelisation of upper loop.
   // the ion contributions must be added in this exact order

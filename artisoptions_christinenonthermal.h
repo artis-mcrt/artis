@@ -62,6 +62,8 @@ constexpr double MINPOP = 1e-40;
 constexpr double NU_MIN_R = 1e13;
 constexpr double NU_MAX_R = 5e16;
 
+constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION = false;
+
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON = true;
 
 constexpr int RADFIELDBINCOUNT = 64;
@@ -117,6 +119,8 @@ constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
 
 constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
+
+constexpr bool NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE = false;
 
 constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3;
 

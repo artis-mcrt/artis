@@ -18,6 +18,7 @@
 #include <functional>
 #include <ios>
 #include <numeric>
+#include <ranges>
 #include <span>
 #include <sstream>
 #include <string>
@@ -393,7 +394,7 @@ void read_auger_data() {
       float n_auger_elec_avg = 0;
       double prob_num_auger[NT_MAX_AUGER_ELECTRONS + 1];
       for (int a = 0; a < 9; a++) {
-        linepos = line + static_cast<ptrdiff_t>(26 + (a * 5));
+        linepos = line + 26 + (a * 5);
         // have to read out exactly 5 characters at a time because the columns are sometimes not separated by a space
         char strprob[6] = "00000";
         assert_always(sscanf(linepos, "%5c%n", strprob, &offset) == 1);
@@ -485,7 +486,7 @@ auto get_approx_shell_occupancies(const int nbound, const int ioncharge) {
   assert_always(ioncharge >= 0);
   const int Z = nbound + ioncharge;
   std::vector<int> q;
-  q.resize(std::max(static_cast<size_t>(10), elements_electron_binding[Z - 1].size()), 0);
+  q.resize(std::max(10UZ, elements_electron_binding[Z - 1].size()), 0);
 
   for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
     if (q[0] < 2) {
@@ -1800,7 +1801,8 @@ void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int mo
   const int nlevels_all = get_nlevels(element, ion);
   const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
 
-  for (int lower = 0; lower < nlevels; lower++) {
+  const auto lowers = std::ranges::iota_view{0, nlevels};
+  std::for_each(lowers.begin(), lowers.end(), [&](const int lower) {
     const double statweight_lower = stat_weight(element, ion, lower);
     const double nnlevel = get_levelpop(nonemptymgi, element, ion, lower);
     const double epsilon_lower = epsilon(element, ion, lower);
@@ -1829,17 +1831,17 @@ void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int mo
 
           const int startindex = std::max(i, xsstartindex);
           for (int j = startindex; j < stopindex; j++) {
-            sfmatrixuppertri[rowoffset + j] += nnlevel * vec_xs_excitation_deltae[j];
+            atomicadd(sfmatrixuppertri[rowoffset + j], nnlevel * vec_xs_excitation_deltae[j]);
           }
 
           // do the last bit separately because we're not using the full delta_e interval
           const double delta_en_actual = (en + epsilon_trans_ev - engrid(stopindex));
-          sfmatrixuppertri[rowoffset + stopindex] +=
-              nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / DELTA_E;
+          atomicadd(sfmatrixuppertri[rowoffset + stopindex],
+                    nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / DELTA_E);
         }
       }
     }
-  }
+  });
 }
 
 void sfmatrix_add_ionization(std::vector<double> &sfmatrixuppertri, const int Z, const int ionstage, const double nnion)
@@ -2104,8 +2106,8 @@ void init() {
 // set total non-thermal deposition rate from individual gamma/positron/electron/alpha rates. This should be called
 // after packet propagation is finished for this timestep and normalise_deposition_estimators() has been done
 void calculate_deposition_rate_density(const int nonemptymgi, const int timestep,
-                                       HeatingCoolingRates *heatingcoolingrates) {
-  heatingcoolingrates->dep_gamma = globals::dep_estimator_gamma[nonemptymgi];
+                                       HeatingCoolingRates &heatingcoolingrates) {
+  heatingcoolingrates.dep_gamma = globals::dep_estimator_gamma[nonemptymgi];
 
   const double tmid = globals::timesteps[timestep].mid;
   const double rho = grid::get_rho(nonemptymgi);
@@ -2113,31 +2115,30 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
   // if INSTANT_PARTICLE_DEPOSITION, use the analytic rate at t_mid since it will have no Monte Carlo noise (although
   // strictly, it should be an integral from the timestep start to the end)
   // with time-dependent deposition, we don't have an analytic rate, so we use the Monte Carlo rate
-  assert_always(heatingcoolingrates != nullptr);
 
-  heatingcoolingrates->eps_gamma_ana = rho * decay::get_gamma_emission_rate(nonemptymgi, tmid);
+  heatingcoolingrates.eps_gamma_ana = rho * decay::get_gamma_emission_rate(nonemptymgi, tmid);
 
-  heatingcoolingrates->eps_positron_ana =
+  heatingcoolingrates.eps_positron_ana =
       rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_BETAPLUS);
 
-  heatingcoolingrates->eps_electron_ana =
+  heatingcoolingrates.eps_electron_ana =
       (rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_BETAMINUS));
 
-  heatingcoolingrates->eps_alpha_ana =
+  heatingcoolingrates.eps_alpha_ana =
       rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_ALPHA);
 
   if (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
-    heatingcoolingrates->dep_positron = heatingcoolingrates->eps_positron_ana;
-    heatingcoolingrates->dep_electron = heatingcoolingrates->eps_electron_ana;
-    heatingcoolingrates->dep_alpha = heatingcoolingrates->eps_alpha_ana;
+    heatingcoolingrates.dep_positron = heatingcoolingrates.eps_positron_ana;
+    heatingcoolingrates.dep_electron = heatingcoolingrates.eps_electron_ana;
+    heatingcoolingrates.dep_alpha = heatingcoolingrates.eps_alpha_ana;
   } else {
-    heatingcoolingrates->dep_positron = globals::dep_estimator_positron[nonemptymgi];
-    heatingcoolingrates->dep_electron = globals::dep_estimator_electron[nonemptymgi];
-    heatingcoolingrates->dep_alpha = globals::dep_estimator_alpha[nonemptymgi];
+    heatingcoolingrates.dep_positron = globals::dep_estimator_positron[nonemptymgi];
+    heatingcoolingrates.dep_electron = globals::dep_estimator_electron[nonemptymgi];
+    heatingcoolingrates.dep_alpha = globals::dep_estimator_alpha[nonemptymgi];
   }
 
   deposition_rate_density_all_cells[nonemptymgi] =
-      (heatingcoolingrates->dep_gamma + heatingcoolingrates->dep_positron + heatingcoolingrates->dep_electron);
+      (heatingcoolingrates.dep_gamma + heatingcoolingrates.dep_positron + heatingcoolingrates.dep_electron);
 }
 
 // get non-thermal deposition rate density in erg / s / cm^3 previously stored by calculate_deposition_rate_density()
@@ -2281,7 +2282,6 @@ __host__ __device__ auto nt_ionization_ratecoeff(const int nonemptymgi, const in
   return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
 }
 
-#pragma omp declare simd
 __host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const int element, const int ion,
                                                  const int lowerlevel, const int uptransindex, const int lineindex)
     -> double {

@@ -156,7 +156,7 @@ void normalise_ion_estimators(const int nonemptymgi, const double deltat, const 
 __host__ __device__ void increment(enum eventcounters i) {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < COUNTER_COUNT);
-  atomicadd(eventstats[i], static_cast<ptrdiff_t>(1));
+  atomicadd(eventstats[i], 1Z);
 }
 
 void pkt_action_counters_reset() {

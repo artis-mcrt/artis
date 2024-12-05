@@ -1014,8 +1014,8 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
            nucdecayenergytotal(25, 52) / MEV);
 }
 
-// calculate the decay energy per unit mass [erg/g] released from time t_model to tstart, accounting for
-// the photon energy loss due to expansion between time of decays and tstart (equation 18 of Lucy 2005)
+// calculate the decay energy per unit mass [erg/g] released from time t_model (can be before tmin) to tstart,
+// accounting for the photon energy loss due to expansion between time of decays and tstart (equation 18 of Lucy 2005)
 auto get_endecay_per_ejectamass_t0_to_time_withexpansion(const int nonemptymgi, const double tstart) -> double {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double tot_endecay = 0.;
@@ -1039,7 +1039,7 @@ auto get_endecay_per_ejectamass_t0_to_time_withexpansion(const int nonemptymgi, 
   return tot_endecay;
 }
 
-// get the density at time tmin of decay energy that will be released during the simulation time range [erg/cm3]
+// get the decay energy that will be released during the simulation time range [erg/g]
 auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi) -> double {
   double endecay_per_mass = 0.;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {

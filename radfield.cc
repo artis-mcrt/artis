@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <span>
 #include <tuple>
 #include <vector>
 
@@ -66,8 +67,8 @@ std::vector<int> detailed_lineindicies;
 std::vector<std::vector<Jb_lu_estimator>> prev_Jb_lu_normed{};  // value from the previous timestep
 std::vector<std::vector<Jb_lu_estimator>> Jb_lu_raw{};          // unnormalised estimator for the current timestep
 
-float *prev_bfrate_normed{};     // values from the previous timestep
-std::vector<double> bfrate_raw;  // unnormalised estimators for the current timestep
+std::span<float> prev_bfrate_normed{};  // values from the previous timestep
+std::vector<double> bfrate_raw;         // unnormalised estimators for the current timestep
 
 // expensive debugging mode to track the contributions to each bound-free rate estimator
 
@@ -111,7 +112,7 @@ constexpr auto get_bin_nu_lower(const int binindex) -> double {
 }
 
 // find the left-closed bin [nu_lower, nu_upper) that nu belongs to
-#pragma omp declare simd
+
 constexpr auto select_bin(const double nu) -> int {
   if (nu < nu_lower_first_initial) {
     return -2;  // out of range, nu lower than lowest bin's lower boundary
@@ -223,7 +224,7 @@ void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, con
                             globals::bfestim_nu_edge.data();
 
   const auto bfestimcount = globals::bfestimcount;
-#pragma omp simd
+
   for (auto bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
     atomicadd(bfrate_raw[(nonemptymgi * bfestimcount) + bfestimindex],
               phixslist.gamma_contr[bfestimindex] * distance_e_cmf_over_nu);
@@ -526,7 +527,10 @@ void init(const int my_rank, const int ndo_nonempty) {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     {
       std::tie(prev_bfrate_normed, win_prev_bfrate_normed) =
-          MPI_shared_malloc_keepwin<float>(nonempty_npts_model * globals::bfestimcount);
+          MPI_shared_malloc_keepwin_span<float>(nonempty_npts_model * globals::bfestimcount);
+      if (globals::rank_in_node == 0) {
+        std::ranges::fill(prev_bfrate_normed, 0.);
+      }
     }
     printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
              nonempty_npts_model * globals::bfestimcount * sizeof(float) / 1024. / 1024.);

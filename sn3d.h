@@ -46,6 +46,7 @@
 
 #ifdef STDPAR_ON
 #include <execution>
+#include <thread>
 
 #define EXEC_PAR_UNSEQ std::execution::par_unseq,
 #define EXEC_PAR std::execution::par,
@@ -179,7 +180,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
 
 #ifdef __cpp_lib_atomic_ref
 #define atomicadd(var, val) \
-  std::atomic_ref<std::remove_reference<decltype(var)>::type>(var).fetch_add(val, std::memory_order_relaxed);
+  std::atomic_ref<typename std::remove_reference<decltype(var)>::type>(var).fetch_add(val, std::memory_order_relaxed);
 #else
 // needed for Apple clang
 #define atomicadd(var, val) __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
@@ -254,10 +255,14 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
 }
 
 [[nodiscard]] inline auto get_max_threads() -> int {
-#if defined _OPENMP
+#ifdef STDPAR_ON
+  return static_cast<int>(std::thread::hardware_concurrency());
+#else
+#ifdef _OPENMP
   return omp_get_max_threads();
 #else
   return 1;
+#endif
 #endif
 }
 
@@ -341,8 +346,8 @@ constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks, co
   assert_always(nchunk >= 0);
   const auto minchunksize = size / nchunks;  // integer division, minimum non-empty cells per process
   const auto n_remainder = size % nchunks;
-  const auto nstart = ((minchunksize + 1) * std::min(n_remainder, nchunk)) +
-                      (minchunksize * std::max(static_cast<ptrdiff_t>(0), nchunk - n_remainder));
+  const auto nstart =
+      ((minchunksize + 1) * std::min(n_remainder, nchunk)) + (minchunksize * std::max(0Z, nchunk - n_remainder));
   const auto nsize = (nchunk < n_remainder) ? minchunksize + 1 : minchunksize;
   assert_testmodeonly(nstart >= 0);
   assert_testmodeonly(nsize >= 0);
@@ -370,6 +375,12 @@ template <typename T>
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &ptr) == MPI_SUCCESS);
   MPI_Barrier(globals::mpi_comm_node);
   return {ptr, mpiwin};
+}
+
+template <typename T>
+[[nodiscard]] auto MPI_shared_malloc_keepwin_span(const ptrdiff_t num_allranks) -> std::tuple<std::span<T>, MPI_Win> {
+  auto [ptr, mpiwin] = MPI_shared_malloc_keepwin<T>(num_allranks);
+  return {std::span(ptr, num_allranks), mpiwin};
 }
 
 template <typename T>
