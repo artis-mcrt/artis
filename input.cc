@@ -820,6 +820,128 @@ void setup_phixs_list() {
   nonconstallcont = nullptr;
 }
 
+void read_autoion_data() {
+// read in autoionisation rate data
+
+  std::vector<LevelAutoion> temp_allautoion;
+  int num_autoion = 0; //to keep track of total number of autoionization processes
+
+  
+  if (std::filesystem::exists("autoion.txt")) {
+      printout("Reading autoion.txt for autoionization data.\n");
+      auto autoionfile = fstream_required("autoion.txt", std::ios::in);
+      std::string autoionline;
+      int Z = -1;
+      int upperionstage = -1;
+      int upperlevel_in = -1;
+      int lowerionstage = -1;
+      int lowerlevel_in = -1;
+      double autoion_A = -1;  
+      while (true) {
+	if (!get_noncommentline(autoionfile, autoionline)) {
+	  break;
+	}
+	assert_always(std::istringstream(autoionline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >>
+                    lowerlevel_in >> autoion_A);
+   
+	assert_always(Z > 0);
+	assert_always(upperionstage >= 2);
+	assert_always(lowerionstage >= 1);
+
+	const int element = get_elementindex(Z);
+
+	if (element >= 0 && get_nions(element) > 0) {
+	  // translate readin ionstages to ion indices
+
+	  const int upperion = upperionstage - get_ionstage(element, 0);
+	  const int lowerion = lowerionstage - get_ionstage(element, 0);
+	  const int lowerlevel = lowerlevel_in - groundstate_index_in;
+	  const int upperlevel = upperlevel_in - groundstate_index_in;
+	  assert_always(lowerionstage >= 0);
+	  assert_always(lowerlevel >= 0);
+
+	  // store only for ions that are part of the current model atom
+	  if (lowerion >= 0 && upperion < get_nions(element)) {
+	    printout("Got to noting data for Z %d upperion %d upperlvl %d lowerion %d lowerlvl %d with A %g\n", Z, upperion, upperlevel, lowerion, lowerlevel, autoion_A);
+	    int nautoiondowntrans = get_nautoiondowntrans(element, lowerion, lowerlevel) + 1;
+	    set_nautoiondowntrans(element, lowerion, lowerlevel, nautoiondowntrans);
+	    int nautoionuptrans = get_nautoionuptrans(element, upperion, upperlevel) + 1;
+	    set_nautoionuptrans(element, upperion, upperlevel, nautoionuptrans);
+
+	    num_autoion += 1;
+	  }
+	}
+      }
+
+      if (globals::rank_in_node == 0) {
+        resize_exactly(temp_allautoion, num_autoion);
+      }
+      
+           
+      //2nd pass to store llist
+      printout("Reading autoion.txt for autoionization data (again!).\n");
+      autoionfile = fstream_required("autoion.txt", std::ios::in);
+      Z = -1;
+      upperionstage = -1;
+      upperlevel_in = -1;
+      lowerionstage = -1;
+      lowerlevel_in = -1;
+      autoion_A = -1;
+      num_autoion = 0;
+      while (true) {
+	if (!get_noncommentline(autoionfile, autoionline)) {
+	  break;
+	}
+	assert_always(std::istringstream(autoionline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >>
+                    lowerlevel_in >> autoion_A);
+   
+	assert_always(Z > 0);
+	assert_always(upperionstage >= 2);
+	assert_always(lowerionstage >= 1);
+
+	const int element = get_elementindex(Z);
+
+	if (element >= 0 && get_nions(element) > 0) {
+	  // translate readin ionstages to ion indices
+
+	  const int upperion = upperionstage - get_ionstage(element, 0);
+	  const int lowerion = lowerionstage - get_ionstage(element, 0);
+	  const int lowerlevel = lowerlevel_in - groundstate_index_in;
+	  const int upperlevel = upperlevel_in - groundstate_index_in;
+	  assert_always(lowerionstage >= 0);
+	  assert_always(lowerlevel >= 0);
+
+	  // store only for ions that are part of the current model atom
+	  if (lowerion >= 0 && upperion < get_nions(element)) {
+	    printout("Again got to noting data for Z %d upperion %d upperlvl %d lowerion %d lowerlvl %d with A %g\n", Z, upperion, upperlevel, lowerion, lowerlevel, autoion_A);
+
+	    globals::elements[element].ions[lowerion].levels[lowerlevel].allautoion_startdown = num_autoion;
+	    
+	    temp_allautoion[num_autoion].autoion_A = autoion_A;
+	    temp_allautoion[num_autoion].elementindex = element;
+	    temp_allautoion[num_autoion].lowerionindex = lowerion;
+	    temp_allautoion[num_autoion].lowerlevelindex = lowerlevel;
+	    temp_allautoion[num_autoion].upperionindex = upperion;
+	    temp_allautoion[num_autoion].upperlevelindex = upperlevel;
+
+	    num_autoion += 1;
+	  }
+	}
+      }    
+  }
+
+  globals::allautoion = MPI_shared_malloc<LevelAutoion>(num_autoion);
+  if (globals::rank_in_node == 0) {
+    std::copy_n(temp_allautoion.data(), num_autoion, globals::allautoion);
+  }
+  temp_allautoion.clear();
+  temp_allautoion.shrink_to_fit();
+
+}
+
+
+
+  
 void read_phixs_data() {
   globals::nbfcontinua_ground = 0;
   globals::nbfcontinua = 0;
@@ -1245,6 +1367,9 @@ void read_atomicdata_files() {
   read_phixs_data();
 
   update_includedionslevels_maxnions();
+
+  read_autoion_data();
+  
 }
 
 void setup_cellcache() {

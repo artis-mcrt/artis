@@ -389,6 +389,27 @@ inline auto get_includedlevels() -> int { return includedlevels; }
   return globals::alltrans + globals::elements[element].ions[ion].levels[level].alltrans_startdown;
 }
 
+// the number of downward autoionization transitions from the specified level
+[[nodiscard]] inline auto get_nautoiondowntrans(const int element, const int ion, const int level) -> int {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  return globals::elements[element].ions[ion].levels[level].nautoiondowntrans;
+}
+
+[[nodiscard]] inline auto get_autoiondowntranslist(const int element, const int ion, const int level) -> LevelAutoion * {
+  return globals::allautoion + globals::elements[element].ions[ion].levels[level].allautoion_startdown;
+}
+
+// the number of uward autoionization transitions from the specified level
+[[nodiscard]] inline auto get_nautoionuptrans(const int element, const int ion, const int level) -> int {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  return globals::elements[element].ions[ion].levels[level].nautoionuptrans;
+}
+
+
 // the number of upward bound-bound transitions from the specified level
 [[nodiscard]] inline auto get_nuptrans(const int element, const int ion, const int level) -> int {
   assert_testmodeonly(element < get_nelements());
@@ -421,6 +442,23 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
   assert_testmodeonly(level < get_nlevels(element, ion));
   globals::elements[element].ions[ion].levels[level].nuptrans = nuptrans;
 }
+
+// the number of autoion transitions from the specified level
+inline void set_nautoiondowntrans(const int element, const int ion, const int level, const int nautoiondowntrans) {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  globals::elements[element].ions[ion].levels[level].nautoiondowntrans = nautoiondowntrans;
+}
+
+// the number of autoion transitions from the specified level
+inline void set_nautoionuptrans(const int element, const int ion, const int level, const int nautoionuptrans) {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  globals::elements[element].ions[ion].levels[level].nautoionuptrans = nautoionuptrans;
+}
+
 
 [[nodiscard]] inline auto get_phixtargetindex(const int element, const int ion, const int level,
                                               const int upperionlevel) -> int {
