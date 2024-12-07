@@ -686,7 +686,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     const auto sys_time_start_spencerfano = std::time(nullptr);
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
       // SF solution depends on the ionization balance, and weakly on nne
-      nonthermal::solve_spencerfano(mgi, nts, nlte_iter);
+      nonthermal::solve_spencerfano(nonemptymgi, nts, nlte_iter);
     }
     const int duration_solve_spencerfano = std::time(nullptr) - sys_time_start_spencerfano;
 
