@@ -647,6 +647,12 @@ void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matr
 void set_element_pops_lte(const int nonemptymgi, const int element) {
   nltepop_reset_element(nonemptymgi, element);  // set NLTE pops as invalid so that LTE pops will be used instead
   calculate_cellpartfuncts(nonemptymgi, element);
+  // Recall find_uppermost_ion with force_lte = true so uppermost ion used in set_groundlevelpops
+  // is reset based on LTE phi factors instead of coming from NLTE phi factors
+  const double nne_hi = grid::get_rho(nonemptymgi) / MH;
+  const bool force_lte = true;
+  const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_lte);
+  grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
   set_groundlevelpops(nonemptymgi, element, grid::get_nne(nonemptymgi), true);
 }
 
@@ -771,12 +777,16 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   gsl_vector_mul(popvec, pop_normfactor_vec);
   // popvec will be used contains the real population densities
 
+  size_t row_ground_state = 0;
   for (size_t row = 0; row < nlte_dimension; row++) {
     double recovered_balance_vector_elem = 0.;
     gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
     gsl_blas_ddot(&row_view.vector, &x, &recovered_balance_vector_elem);
 
     const auto [ion, level] = get_ion_level_of_nlte_vector_index(row, element);
+    if (level == 0) {
+      row_ground_state = row;
+    }
 
     // printout("index %4d (ionstage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e
     // departure ratio %.4f\n",
@@ -785,20 +795,65 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     //          gsl_vector_get(popvec, row),
     //          gsl_vector_get(x, row) / gsl_vector_get(x,get_nlte_vector_index(element,ion,0)));
 
-    if (gsl_vector_get(popvec, row) < 0.0) {
+    // Checking that groundpop is greater than MINPOP here - if it is then use LTE populations for element instead
+    if (gsl_vector_get(popvec, row) < MINPOP && row == row_ground_state) {
       printout(
-          "  WARNING: NLTE solver gave negative population to index %zud (Z=%d ionstage %d level %d), pop = %g. "
-          "Replacing with LTE pop of %g\n",
+          "  WARNING: NLTE solver gave ground population less than MINPOP for index %zud (Z=%d ionstage %d level %d), "
+          "pop = %g. "
+          "Returning nltepop_matrix_solve fail (using LTE pops instead)\n",
           row, get_atomicnumber(element), get_ionstage(element, ion), level,
-          gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row), gsl_vector_get(pop_normfactor_vec, row));
-      gsl_vector_set(popvec, row, gsl_vector_get(pop_normfactor_vec, row));
+          gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row));
+
+        return false;
     }
+    if (gsl_vector_get(popvec, row) < 0.0) {
+      printout("  WARNING: NLTE solver gave negative population for index %zud (Z=%d ionstage %d level %d), pop = %g",
+               row, get_atomicnumber(element), get_ionstage(element, ion), level,
+               gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row));
+      if (gsl_vector_get(popvec, row) < -1*MINPOP) {
+          printout(
+              "  WARNING: negative pop = %g less than -1*MINPOP (-%g) unlikely a rounding error to zero so returning "
+              "nltepop_matrix_solve fail (using LTE pops instead)\n", gsl_vector_get(popvec, row), MINPOP);
+
+      return false;
+      }
+      printout(
+              "  WARNING: negative pop = %g greater than -1*MINPOP (-%g) likely a rounding error to zero so continue "
+              "with NLTE pops \n", gsl_vector_get(popvec, row), MINPOP);
+    }
+    if (row != row_ground_state &&
+        gsl_vector_get(popvec, row_ground_state) <
+        (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row)) {
+            printout("[debug] WARNING: pop inversion: (g_pop %g)/(e_pop %g) = %g is less than (g_sw %g)/(e_sw %g) = %g "
+            "for index %zud Z=%d ionstage %d level %d (factor %g inversion) - ",
+            gsl_vector_get(popvec, row_ground_state), gsl_vector_get(popvec, row),
+            gsl_vector_get(popvec, row_ground_state) / gsl_vector_get(popvec, row),
+            stat_weight(element, ion, 0), stat_weight(element, ion, level), stat_weight(element, ion, 0) / stat_weight(element, ion, level),
+            row, get_atomicnumber(element), get_ionstage(element, ion), level,
+            (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) / (gsl_vector_get(popvec, row_ground_state) / gsl_vector_get(popvec, row)));
+
+            if (gsl_vector_get(popvec, row_ground_state) * 10000. <
+                (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row)) {
+              printout(
+                  "large pop inversion (ground_pop * 10000 < ([g_gs / g_es] * excited_pop) - return matrix solve "
+                  "fail and use LTE pops for element \n");
+              return false;
+            }
+        if (gsl_vector_get(popvec, row_ground_state) * 10. < (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row)) {
+          printout("more substantial pop inversion (ground_pop * 10 < ([g_gs / g_es] * excited_pop) - "
+              "but continue with NLTE solution\n");
+        }
+        else {
+          printout("relatively small pop inversion (ground_pop * 10 > ([g_gs / g_es] * excited_pop) - "
+              "continue with NLTE solution\n");
+        }
+      }
   }
 
   return true;
 }
 
-}  // anonymous namespace
+} // anonymous namespace
 
 void solve_nlte_pops_element(const int element, const int nonemptymgi, const int timestep, const int nlte_iter)
 // solves the statistical balance equations to find NLTE level populations for all ions of an element
@@ -1009,7 +1064,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   if (!matrix_solve_success) {
     printout(
         "WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular matrix. "
-        "Attempting to use LTE solution instead\n",
+        ", negative population or large population inversion. Attempting to use LTE solution instead\n",
         modelgridindex, timestep, atomic_number);
     set_element_pops_lte(nonemptymgi, element);
   } else {
