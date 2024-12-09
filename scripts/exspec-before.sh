@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # packet output files outside the artis folder, so move them back to run exspec
-if [[ ! -f packets00_0000.out && ! -f packets00_0000.out.zst && -f packets/packets00_0000.out.zst ]]; then
+if [[ ! -f packets00_0000.out && ! -f packets00_0000.out.zst && (-f packets/packets00_0000.out || -f packets/packets00_0000.out.zst) ]]; then
   mv packets/packets*.out* .
 fi
 
