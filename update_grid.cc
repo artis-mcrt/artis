@@ -730,6 +730,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         solve_nlte_pops_element(element, nonemptymgi, nts, nlte_iter);
         calculate_cellpartfuncts(nonemptymgi, element);
       }
+    // assert_always(get_atomicnumber(element) < 26);
     }
     const int duration_solve_nltepops = std::time(nullptr) - sys_time_start_nltepops;
 

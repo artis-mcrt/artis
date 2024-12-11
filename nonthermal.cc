@@ -641,7 +641,9 @@ void read_collion_data() {
   printout("Stored %zu of %d input shell cross sections\n", colliondata.size(), colliondatacount);
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
-    for (int ion = 0; ion < get_nions(element); ion++) {
+    // change this so the top ionisation stage is removed from the loop - doesn't make sense
+    // to claculate ionisation for top ionisation stage
+    for (int ion = 0; ion < get_nions(element) - 1; ion++) {
       const int ionstage = get_ionstage(element, ion);
       const bool any_data_matched = std::ranges::any_of(colliondata, [Z, ionstage](const collionrow &collionrow) {
         return collionrow.Z == Z && collionrow.ionstage == ionstage;

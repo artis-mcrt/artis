@@ -130,6 +130,7 @@ auto get_element_nne_contrib(const int nonemptymgi, const int element) -> double
     const auto nnion = get_nnion(nonemptymgi, element, ion);
     const int ioncharge = get_ionstage(element, ion) - 1;
     nne += ioncharge * nnion;
+    printout("nne = %g", nne);
   }
   return nne;
 }
@@ -148,6 +149,8 @@ auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double {
       if (!force_lte && elem_has_nlte_levels(element)) {
         // populations from the NLTE solver are fixed during the nne solver
         nne_after += get_element_nne_contrib(nonemptymgi, element);
+        printout(" line 151 nne_solution f printout inne after = %g for element %d\n", nne_after, get_atomicnumber(element));
+
       } else {
         const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
         const auto ionfractions = calculate_ionfractions(element, nonemptymgi, nne_assumed, use_phi_lte);
@@ -156,9 +159,11 @@ auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double {
           const double nnion = nnelement * ionfractions[ion];
           const int ioncharge = get_ionstage(element, ion) - 1;
           nne_after += ioncharge * nnion;
+        printout(" line 161 nne_solution f printout inne after = %g for element %d\n", nne_after, get_atomicnumber(element));
+
         }
       }
-
+      printout("nne_solution f printout nne after = %g\n", nne_after);
       assert_always(std::isfinite(nne_after));
     }
   }
@@ -276,50 +281,6 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   return U;
 }
 
-auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi, const bool force_lte) -> int {
-  const int nions = get_nions(element);
-  if (nions == 0) {
-    return -1;
-  }
-  if (!force_lte && elem_has_nlte_levels(element)) {
-    return nions - 1;
-  }
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
-  int uppermost_ion = 0;
-
-  uppermost_ion = nions - 1;
-  if (!use_phi_lte) {
-    for (int ion = 0; ion < nions - 1; ion++) {
-      if (iongamma_is_zero(nonemptymgi, element, ion) &&
-          (!NT_ON || ((globals::dep_estimator_gamma[nonemptymgi] == 0.) &&
-                      (grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(24, 48)) == 0.) &&
-                      (grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(28, 56)) == 0.)))) {
-        uppermost_ion = ion;
-        break;
-      }
-    }
-  }
-
-  double factor = 1.;
-  int ion = 0;
-  for (ion = 0; ion < uppermost_ion; ion++) {
-    const auto phifactor =
-        use_phi_lte ? phi_lte(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
-    factor *= nne_hi * phifactor;
-
-    if (!std::isfinite(factor)) {
-      printout(
-          "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element "
-          "Z=%d, ionstage %d in cell %d\n",
-          get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
-      return ion;
-    }
-  }
-  uppermost_ion = ion;
-  return uppermost_ion;
-}
-
 void set_calculated_nne(const int nonemptymgi) {
   double nne = 0.;  // free electron density
   for (int element = 0; element < get_nelements(); element++) {
@@ -416,6 +377,50 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 }
 
 }  // anonymous namespace
+
+[[nodiscard]] __host__ __device__ auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi, const bool force_lte) -> int {
+  const int nions = get_nions(element);
+  if (nions == 0) {
+    return -1;
+  }
+  if (!force_lte && elem_has_nlte_levels(element)) {
+    return nions - 1;
+  }
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+  const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
+  int uppermost_ion = 0;
+
+  uppermost_ion = nions - 1;
+  if (!use_phi_lte) {
+    for (int ion = 0; ion < nions - 1; ion++) {
+      if (iongamma_is_zero(nonemptymgi, element, ion) &&
+          (!NT_ON || ((globals::dep_estimator_gamma[nonemptymgi] == 0.) &&
+                      (grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(24, 48)) == 0.) &&
+                      (grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(28, 56)) == 0.)))) {
+        uppermost_ion = ion;
+        break;
+      }
+    }
+  }
+
+  double factor = 1.;
+  int ion = 0;
+  for (ion = 0; ion < uppermost_ion; ion++) {
+    const auto phifactor =
+        use_phi_lte ? phi_lte(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
+    factor *= nne_hi * phifactor;
+
+    if (!std::isfinite(factor)) {
+      printout(
+          "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element "
+          "Z=%d, ionstage %d in cell %d\n",
+          get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
+      return ion;
+    }
+  }
+  uppermost_ion = ion;
+  return uppermost_ion;
+}
 
 // Calculate the fractions of an element's population in each ionization stage based on Saha LTE or ionisation
 // equilibrium
@@ -611,7 +616,7 @@ auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
-      const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_lte);
+      const auto uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_lte);
       grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
 
       only_lowest_ionstage = only_lowest_ionstage && (uppermost_ion <= 0);

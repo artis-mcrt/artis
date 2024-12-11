@@ -13,6 +13,7 @@
 [[nodiscard]] auto calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold)
     -> double;
 [[nodiscard]] auto get_nnion(int nonemptymgi, int element, int ion) -> double;
+[[nodiscard]] auto find_uppermost_ion(int nonemptymgi, int element, double nne_hi, bool force_lte) -> int;
 void calculate_ion_balance_nne(int nonemptymgi);
 void calculate_cellpartfuncts(int nonemptymgi, int element);
 [[nodiscard]] auto calculate_ionfractions(int element, int nonemptymgi, double nne, bool use_phi_lte)
