@@ -144,6 +144,9 @@ auto columnindex_from_emissiontype(const int et) -> int {
     // bb-emission
     const int element = globals::linelist[et].elementindex;
     const int ion = globals::linelist[et].ionindex;
+    if ((element == 41) && (ion == 2)) {
+      printout(" elements[element].ions[ion].ionpot %g elements[element].anumber %d \n celvl %d %d\n: ",globals::elements[element].ions[ion].ionpot / EV,globals::elements[element].anumber,globals::linelist[et].lowerlevelindex,globals::linelist[et].upperlevelindex);
+    }  
     return (element * get_max_nions()) + ion;
   }
   if (et == EMTYPE_FREEFREE) {
