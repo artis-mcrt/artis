@@ -148,30 +148,17 @@ ifeq ($(shell uname -s),Darwin)
 #	CXXFLAGS += -Rpass-missed=loop-vectorize
 #	CXXFLAGS += -Rpass-analysis=loop-vectorize
 
-	# add -lprofiler for gperftools
-	# LDFLAGS += $(LIB)
-	# LDFLAGS += -lprofiler
-
 else
-	# sometimes the login nodes have slightly different CPUs
-	# to the job nodes. Try to find the lowest common denominator here
-	# to enable vector extensions
-	# CXXFLAGS += -march=cascadelake
-	# CXXFLAGS += -march=skylake-avx512
-	# CXXFLAGS += -march=icelake-server
+	# sometimes the login nodes have different CPUs
+	# to the job nodes. march=native assumes that they are the same
+	# (or that the job CPUs support all features of the login CPUs)
 
 	# to get the current CPU architecture, run this:
 	# g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
-	ifneq (,$(shell hostname -A | grep gsi.de))
-		# virgo has some AMD nodes and some Intel.
-		# As of 6th July 2024, the login nodes are cascadelake, and we select zen3 nodes to run on.
-		CXXFLAGS += -march=x86-64-v3 -mtune=znver3
-	else
-		# for GitHub actions, checksums must match with different assigned CPUs, so avoid -march=native (use lowest common denominator)
-		# update: all zenver3 now?
 
-		CXXFLAGS += -march=native
-	endif
+	CXXFLAGS += -march=native
+
+	# CXXFLAGS += -march=icelake-server
 
 endif
 
