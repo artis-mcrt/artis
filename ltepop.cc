@@ -130,6 +130,7 @@ auto get_element_nne_contrib(const int nonemptymgi, const int element) -> double
     const auto nnion = get_nnion(nonemptymgi, element, ion);
     const int ioncharge = get_ionstage(element, ion) - 1;
     nne += ioncharge * nnion;
+    printout("nne = %g", nne);
   }
   return nne;
 }
@@ -148,6 +149,8 @@ auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double {
       if (!force_lte && elem_has_nlte_levels(element)) {
         // populations from the NLTE solver are fixed during the nne solver
         nne_after += get_element_nne_contrib(nonemptymgi, element);
+        printout(" line 151 nne_solution f printout inne after = %g for element %d\n", nne_after, get_atomicnumber(element));
+
       } else {
         const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
         const auto ionfractions = calculate_ionfractions(element, nonemptymgi, nne_assumed, use_phi_lte);
@@ -156,9 +159,11 @@ auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double {
           const double nnion = nnelement * ionfractions[ion];
           const int ioncharge = get_ionstage(element, ion) - 1;
           nne_after += ioncharge * nnion;
+        printout(" line 161 nne_solution f printout inne after = %g for element %d\n", nne_after, get_atomicnumber(element));
+
         }
       }
-
+      printout("nne_solution f printout nne after = %g\n", nne_after);
       assert_always(std::isfinite(nne_after));
     }
   }
