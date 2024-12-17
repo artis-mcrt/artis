@@ -1,5 +1,5 @@
 ---
-name: CI Slow
+name: CI Extensive Test Mode
 
 on:
     push:
