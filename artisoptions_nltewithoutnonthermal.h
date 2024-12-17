@@ -154,5 +154,7 @@ constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::INSTANT;
 
 constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
 
+constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE = false;
+
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
