@@ -609,6 +609,60 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
   }
 }
 
+
+void nltepop_matrix_add_autoionisation(const int modelgridindex, const int element, const int ion,
+                                      const std::vector<double> &s_renorm, gsl_matrix *rate_matrix_autoion) {
+  // Autoionization and inverse (i.e. collisional capture part of di-el)
+
+  assert_always(ion + 1 < get_nions(element));  // can't ionise the top ion
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto T_e = grid::get_Te(nonemptymgi);
+  const float nne = grid::get_nne(nonemptymgi);
+  const int nlevels = get_nlevels(element, ion);
+  for (int level = 0; level < nlevels; level++) {
+    const int level_index = get_nlte_vector_index(element, ion, level);
+    const double epsilon_level = epsilon(element, ion, level);
+    const double statweight = stat_weight(element, ion, level);
+
+    const int nautoiondowntrans = get_nautoiondowntrans(element, ion, level);
+    const auto *const levelautoiondowntranslist = get_autoiondowntranslist(element, ion, level);
+    for (int i = 0; i < nautoiondowntrans; i++) {
+      // autoionization (which is a de-excitation propcess)
+      const auto &autoiondowntransition = levelautoiondowntranslist[i];
+      const double A_a = autoiondowntransition.autoion_A;
+      const int target_ion = autoiondowntransition.upperionindex;
+      const int target_level = autoiondowntransition.upperlevelindex;
+
+      const double epsilon_trans = epsilon_level - epsilon(element, target_ion, target_level);
+
+      double R = A_a * s_renorm[level];
+
+      const int upper_index = level_index;
+      const int lower_index = get_nlte_vector_index(element, target_ion, target_level);
+
+      *gsl_matrix_ptr(rate_matrix_autoion, upper_index, upper_index) -= R;
+      *gsl_matrix_ptr(rate_matrix_autoion, lower_index, upper_index) += R;
+      if ((R < 0)) {
+        printout("  WARNING: Negative autoionization rate from ionstage %d level %d to level %d\n",
+                 get_ionstage(element, ion), level, target_level);
+      }
+      
+      // capture (which is an excitation process, and the first part of di-electronic recomb)
+      R = nne * A_a * statweight/stat_weight(element, target_ion, target_level) * SAHACONST * pow(T_e, -1.5) * exp(-1.*epsilon_trans / KB / T_e);
+      // renorm??
+      
+      *gsl_matrix_ptr(rate_matrix_autoion, lower_index, lower_index) -= R;
+      *gsl_matrix_ptr(rate_matrix_autoion, upper_index, lower_index) += R;
+      if ((R < 0)) {
+        printout("  WARNING: Negative autoionization rate from ionstage %d level %d to level %d\n",
+                 get_ionstage(element, ion), level, target_level);
+      }
+    }
+  }
+}
+
+
+  
 void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matrix *rate_matrix,
                               gsl_vector *pop_norm_factor_vec) {
   const size_t nlte_dimension = pop_norm_factor_vec->size;
@@ -855,6 +909,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   gsl_matrix rate_matrix_rad_bf;
   gsl_matrix rate_matrix_coll_bf;
   gsl_matrix rate_matrix_ntcoll_bf;
+  gsl_matrix rate_matrix_autoion;
 
   THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bb;
   THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bb;
@@ -862,6 +917,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bf;
   THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bf;
   THREADLOCALONHOST std::vector<double> vec_rate_matrix_ntcoll_bf;
+  THREADLOCALONHOST std::vector<double> vec_rate_matrix_autoion;
+
   if constexpr (individual_process_matrices) {
     vec_rate_matrix_rad_bb.resize(max_nlte_dimension * max_nlte_dimension, 0.);
     rate_matrix_rad_bb = gsl_matrix_view_array(vec_rate_matrix_rad_bb.data(), nlte_dimension, nlte_dimension).matrix;
@@ -888,6 +945,12 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     rate_matrix_ntcoll_bf =
         gsl_matrix_view_array(vec_rate_matrix_ntcoll_bf.data(), nlte_dimension, nlte_dimension).matrix;
     gsl_matrix_set_all(&rate_matrix_ntcoll_bf, 0.);
+
+    vec_rate_matrix_autoion.resize(max_nlte_dimension * max_nlte_dimension, 0.);
+    rate_matrix_autoion =
+        gsl_matrix_view_array(vec_rate_matrix_autoion.data(), nlte_dimension, nlte_dimension).matrix;
+    gsl_matrix_set_all(&rate_matrix_autoion, 0.);
+    
   } else {
     // if not individual_process_matrices, alias a single matrix for all transition types
     // the "gsl_matrix" structs are independent, but the data is shared
@@ -897,6 +960,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     rate_matrix_rad_bf = rate_matrix;
     rate_matrix_coll_bf = rate_matrix;
     rate_matrix_ntcoll_bf = rate_matrix;
+    rate_matrix_autoion = rate_matrix;
   }
 
   // printout("  Adding rates for ion stages:");
@@ -924,6 +988,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
       if (NT_ON) {
         nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, &rate_matrix_ntcoll_bf);
       }
+      nltepop_matrix_add_autoionisation(modelgridindex, element, ion, s_renorm, &rate_matrix_autoion);
     }
   });
   // printout("\n");
@@ -936,6 +1001,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     gsl_matrix_add(&rate_matrix, &rate_matrix_rad_bf);
     gsl_matrix_add(&rate_matrix, &rate_matrix_coll_bf);
     gsl_matrix_add(&rate_matrix, &rate_matrix_ntcoll_bf);
+    gsl_matrix_add(&rate_matrix, &rate_matrix_autoion);
   }
 
   // replace the first row of the matrix and balance vector with the normalisation

@@ -72,6 +72,17 @@ struct LevelTransition {
   bool forbidden;
 };
 
+struct LevelAutoion {
+  float autoion_A;      // Autoionization A-value
+  int elementindex;     // index (not atomic number) for the element involved
+  int lowerionindex;    // 
+  int lowerlevelindex;  // this will be for a level index of the lower ion
+  int upperionindex;    //
+  int upperlevelindex;  // this will be for a level index of the upper ion.
+                        // Note: level of the lower ion should also be at higher energy than of the higher ion
+};
+
+
 struct PhotoionTarget {
   double probability;  // fraction of phixs cross section leading to this final level
   int levelindex;      // index of upper ion level after photoionisation
@@ -89,6 +100,9 @@ struct EnergyLevel {
   int cont_index{-1};        // index of the bound-free continuum (for first target) sorted by
                              // element/ion/level/phixstargetindex
                              // (not an index into the nu_edge-sorted allcont list!)
+  int nautoiondowntrans{0};  // Number of autoionizing transition from this level
+  int nautoionuptrans{0};    // Number of di-el captures up from this level
+  int allautoion_startdown{};// index into globals::allautoion for first down autoion from this level
   int closestgroundlevelcont{-1};
 };
 
@@ -253,12 +267,13 @@ inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperatur
 
 inline float *allphixs{};
 inline LevelTransition *alltrans;
+inline LevelAutoion *allautoion;
 inline std::vector<PhotoionTarget> allphixstargets;
-
 inline std::vector<Element> elements;
 
 inline int nlines{-1};
 inline const TransitionLine *linelist{};
+ 
 inline std::vector<BFListEntry> bflist;
 
 inline double *bfheating_coeff{};  // for USE_LUT_BFHEATING = true
