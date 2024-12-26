@@ -165,8 +165,6 @@ else
 		CXXFLAGS += -march=native
 	endif
 
-	# CXXFLAGS += -march=icelake-server
-
 endif
 
 # GSL (GNU Scientific Library)
