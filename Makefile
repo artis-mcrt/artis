@@ -156,7 +156,14 @@ else
 	# to get the current CPU architecture, run this:
 	# g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
 
-	CXXFLAGS += -march=native
+	ifneq (,$(shell hostname -A | grep gsi.de))
+		# virgo has znver4 nodes in the new partition
+		# CXXFLAGS += -march=znver4
+		# and znver3 nodes in the other partitions and login nodes
+		CXXFLAGS += -march=native
+	else
+		CXXFLAGS += -march=native
+	endif
 
 	# CXXFLAGS += -march=icelake-server
 
