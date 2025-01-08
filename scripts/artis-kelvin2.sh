@@ -3,10 +3,6 @@
 #SBATCH --ntasks-per-node=128
 #SBATCH --time=24:00:00
 #SBATCH --partition=k2-math-physics
-#SBATCH --ntasks=128
-#SBATCH --ntasks-per-node=128
-#SBATCH --time=00:30:00
-#SBATCH --partition=k2-math-physics-debug
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=fmcneill07@qub.ac.uk
 
