@@ -1,8 +1,15 @@
 #!/bin/bash -x
+<<<<<<< HEAD
+#SBATCH --ntasks=1024
+#SBATCH --ntasks-per-node=128
+#SBATCH --time=24:00:00
+#SBATCH --partition=k2-math-physics
+=======
 #SBATCH --ntasks=128
 #SBATCH --ntasks-per-node=128
 #SBATCH --time=00:30:00
 #SBATCH --partition=k2-math-physics-debug
+>>>>>>> d2ba9af0c61e5a64f38d1b84b74df9573c1910b8
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=fmcneill07@qub.ac.uk
 
