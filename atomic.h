@@ -302,9 +302,16 @@ inline auto get_includedlevels() -> int { return includedlevels; }
   return globals::elements[element].ions[ion].nlevels_nlte;
 }
 
+//Returns the number of autoionising levels for an ion
+[[nodiscard]] inline auto get_nlevels_autoion(const int element, const int ion) -> int {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  return globals::elements[element].ions[ion].nlevels_autoion;
+}
+
 // ion has NLTE levels, but this one is not NLTE => is in the superlevel
 [[nodiscard]] inline auto level_isinsuperlevel(const int element, const int ion, const int level) -> bool {
-  return (!is_nlte(element, ion, level) && level != 0 && (get_nlevels_nlte(element, ion) > 0));
+  return (!is_nlte(element, ion, level) && level != 0 && (get_nlevels_nlte(element, ion) > 0) && level < get_nlevels(element, ion) - get_nlevels_autoion(element, ion));
 }
 
 [[nodiscard]] inline auto get_nlevels_groundterm(const int element, const int ion) -> int {
@@ -374,7 +381,7 @@ inline auto get_includedlevels() -> int { return includedlevels; }
 [[nodiscard]] inline auto ion_has_superlevel(const int element, const int ion) -> bool {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-  return (get_nlevels(element, ion) > get_nlevels_nlte(element, ion) + 1);
+  return (get_nlevels(element, ion) > get_nlevels_nlte(element, ion) + get_nlevels_autoion(element, ion) + 1);
 }
 
 // the number of downward bound-bound transitions from the specified level

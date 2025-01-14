@@ -937,6 +937,22 @@ void read_autoion_data() {
   temp_allautoion.clear();
   temp_allautoion.shrink_to_fit();
 
+  // Plan is that autoionizing levels will be explicitly included in the NLTE population solver, but that their level populations do not need to be accurately known - so if the ion has a superlevel already, then we will try to attach the autoionizing level populations to that for all purposes outside the NLTE solber. For this, the ions need to know how many autoionizing levels they have. So count those up now.
+
+  int checkautoall = 0;
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      const int nlevels = get_nlevels(element, ion);
+      int nauto = 0;
+      for (int level = 0; level < nlevels; level++) {
+	nauto += get_nautoiondowntrans(element, ion, level);
+      }
+      globals::elements[element].ions[ion].nlevels_autoion = nauto;
+      checkautoall += nauto;
+    }
+  }
+  assert_always(checkautoall == num_autoion);
 }
 
 

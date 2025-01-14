@@ -42,8 +42,20 @@ auto get_nlte_vector_index(const int element, const int ion, const int level) ->
   // have to convert from nlte_pops index to nlte_vector index
   // the difference is that nlte vectors apply to a single element and include ground states
   // The (+ ion) term accounts for the ground state population indices that are not counted in the NLTE array
+
+  int offset_autoion = 0;
+  for (int dion = 0; dion < ion; dion++) {
+    offset_autoion += get_nlevels_autoion(element,dion);
+  }
+  
   const int gs_index =
-      globals::elements[element].ions[ion].first_nlte - globals::elements[element].ions[0].first_nlte + ion;
+      globals::elements[element].ions[ion].first_nlte - globals::elements[element].ions[0].first_nlte + ion + offset_autoion;
+
+  const int first_autoion = get_nlevels(element,ion) - get_nlevels_autoion(element,ion);
+  
+  if (ion_has_superlevel(element, ion) && level > (first_autoion - 1)) {
+      return (gs_index + get_nlevels_nlte(element, ion) + level - first_autoion + 2);
+  }
 
   // add in level or superlevel number
   const int level_index = gs_index + (is_nlte(element, ion, level) ? level : (get_nlevels_nlte(element, ion) + 1));
@@ -60,6 +72,7 @@ auto get_nlte_vector_index(const int element, const int ion, const int level) ->
       }
     }
   }
+  printout("index %d element %d nions %d\n", index, element, get_nions(element));
   assert_always(false);
   return {-1, -1};
 }
@@ -402,7 +415,9 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
     if (ion_has_superlevel(element, ion)) {
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
       const int nlevels = get_nlevels(element, ion);
-      for (int level = nlevels_nlte + 1; level < nlevels; level++) {
+      const int nlevels_autoion = get_nlevels_autoion(element, ion);
+      //If a superlevel exists, the levels in it will be from nlevels_nlte up to the total-numautoion
+      for (int level = nlevels_nlte + 1; level < (nlevels - nlevels_autoion); level++) {
         superlevel_partfuncs[ion] += superlevel_boltzmann(nonemptymgi, element, ion, level);
       }
     }
@@ -417,11 +432,18 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
   for (int ion = 0; ion < nions; ion++) {
     const int nlevels_nlte = get_nlevels_nlte(element, ion);
 
-    nlte_dimension += nlevels_nlte + 1;  // ground state is not counted in nlevels_nlte
+    //   nlte_dimension += nlevels_nlte + 1;  // ground state is not counted in nlevels_nlte
 
     // add super level if it exists
     if (ion_has_superlevel(element, ion)) {
-      nlte_dimension++;
+      nlte_dimension += nlevels_nlte + get_nlevels_autoion(element, ion) + 2;
+      //printout("Here 1: For element %d ion %d adding %d to nlte_dimension. \n", element, ion, nlevels_nlte + get_nlevels_autoion(element, ion) + 2);
+      //printout("checks: %d %d\n", nlevels_nlte, get_nlevels_autoion(element, ion));
+      //if it has a superlevel then need + 2 for ground state and super and to add autionising levels
+    }
+    else { // if it doesn't have a superlevel
+      nlte_dimension += get_nlevels(element, ion);
+      //printout("Here 2: For element %d ion %d adding %d to nlte_dimension. \n", element, ion, get_nlevels(element,ion));
     }
   }
 
@@ -677,10 +699,10 @@ void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matr
 
     gsl_vector_set(pop_norm_factor_vec, column, calculate_levelpop_lte(nonemptymgi, element, ion, level));
 
-    if ((level != 0) && (!is_nlte(element, ion, level))) {
+    if (level_isinsuperlevel(element, ion, level)) {
       // level is a superlevel, so add populations of higher levels to the norm factor
       for (int dummylevel = level + 1; dummylevel < get_nlevels(element, ion); dummylevel++) {
-        if (!is_nlte(element, ion, dummylevel)) {
+        if (level_isinsuperlevel(element, ion, dummylevel)) {
           *gsl_vector_ptr(pop_norm_factor_vec, column) += calculate_levelpop_lte(nonemptymgi, element, ion, dummylevel);
         }
       }
@@ -976,7 +998,11 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     std::fill_n(s_renorm.begin(), nlevels_nlte + 1, 1.);
 
     for (int level = (nlevels_nlte + 1); level < nlevels; level++) {
-      s_renorm[level] = superlevel_boltzmann(nonemptymgi, element, ion, level) / superlevel_partfunc[ion];
+      if (level_isinsuperlevel(element, ion, level)) {
+	s_renorm[level] = superlevel_boltzmann(nonemptymgi, element, ion, level) / superlevel_partfunc[ion];
+      } else { //next clause is for any autoionising levels above the superlevel
+	s_renorm[level] = 1.;
+      }
     }
 
     nltepop_matrix_add_boundbound(nonemptymgi, element, ion, t_mid, s_renorm, &rate_matrix_rad_bb, &rate_matrix_coll_bb,
@@ -1246,8 +1272,10 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
           double superlevel_partfunc = 0;
           fprintf(nlte_file, "%d ", -1);
           for (int level_sl = nlevels_nlte + 1; level_sl < get_nlevels(element, ion); level_sl++) {
-            nnlevellte += calculate_levelpop_lte(nonemptymgi, element, ion, level_sl);
-            superlevel_partfunc += superlevel_boltzmann(nonemptymgi, element, ion, level_sl);
+	    if (level_isinsuperlevel(element, ion, level_sl)) {
+	      nnlevellte += calculate_levelpop_lte(nonemptymgi, element, ion, level_sl);
+	      superlevel_partfunc += superlevel_boltzmann(nonemptymgi, element, ion, level_sl);
+	    }
           }
 
           nnlevelnlte = slpopfactor * superlevel_partfunc;
