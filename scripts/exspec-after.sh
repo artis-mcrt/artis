@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # only compress the files if we successfully ran exspec
-if [[ -f emission.out || -f emission.out.zstd ]]; then
+if [[ -f emission.out || -f emission.out.zst ]]; then
 
   # zstd does decent compression at high speeds
   cmdcompress="zstd -T0 -16 -v --rm -f"
@@ -40,19 +40,17 @@ if [[ -f emission.out || -f emission.out.zstd ]]; then
   mkdir -p speclc_angle_res
   mv *_res_*.out* speclc_angle_res/ || true
 
-  python3 -m ensurepip
-
-  python3 -m pip install artistools
+  curl -LsSf https://astral.sh/uv/install.sh | sh
 
   # convert packets to parquet for fast reading
-  python3 -m artistools lc --frompackets || true
+  uvx artistools -- lc --frompackets || true
 
   if [ -f vpkt.txt ]; then
     # convert virtual packets to parquet
-    python3 -m artistools lc --frompackets -plotvspecpol 0 || true
+    uvx artistools -- lc --frompackets -plotvspecpol 0 || true
   fi
 
   # convert estimators to parquet. On JUWELS, you might need to limit the number of processes to 16 in artistools/artistools/configuration.py
-  python3 -c 'import artistools as at; at.estimators.scan_estimators()' || true
+  uvx --from artistools -- python3 -c 'import artistools as at; at.estimators.scan_estimators()' || true
 
 fi
