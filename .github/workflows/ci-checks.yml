@@ -26,14 +26,9 @@ jobs:
                   cppcheck --force --error-exitcode=1 --language=c++ --enable=all --inconclusive --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --suppress=knownArgument --suppress=missingIncludeSystem --suppress=unusedFunction --check-level=exhaustive .
 
     clang-format:
-        runs-on: macos-15
+        runs-on: ubuntu-24.04
         steps:
             - uses: actions/checkout@v4
-
-            - name: install clang-format
-              run: |
-                  brew update
-                  brew install clang-format || true
 
             - name: Run clang-format style check
               uses: jidicula/clang-format-action@v4.13.0
