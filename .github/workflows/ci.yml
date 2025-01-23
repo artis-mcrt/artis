@@ -231,32 +231,32 @@ jobs:
               if: always() && inputs.testmode != 'ON'
               working-directory: tests/
               run: |
-                  at plotlightcurves ${{ matrix.testname }}_testrun
-                  at plotlightcurves --frompackets ${{ matrix.testname }}_testrun
+                  artistools plotlightcurves ${{ matrix.testname }}_testrun
+                  artistools plotlightcurves --frompackets ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum nebular
               if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'nebular')
               working-directory: tests/
               run: |
-                  at plotspectra --frompackets -ts 8 ${{ matrix.testname }}_testrun
+                  artistools plotspectra --frompackets -ts 8 ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum classicmode
               if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'classicmode_')
               working-directory: tests/
               run: |
-                  at plotspectra --frompackets -t 4-6 ${{ matrix.testname }}_testrun
+                  artistools plotspectra --frompackets -t 4-6 ${{ matrix.testname }}_testrun
 
             - name: Plot virtual packet spectrum classicmode_1d
               if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'classicmode_1d')
               working-directory: tests/
               run: |
-                  at plotspectra -t 4-6 -plotvspecpol 0 1 2 3 12 13 14 --frompackets ${{ matrix.testname }}_testrun
+                  artistools plotspectra -t 4-6 -plotvspecpol 0 1 2 3 12 13 14 --frompackets ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum kilonova
               if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'kilonova')
               working-directory: tests/
               run: |
-                  at plotspectra --frompackets -t 2 ${{ matrix.testname }}_testrun
+                  artistools plotspectra --frompackets -t 2 ${{ matrix.testname }}_testrun
 
             - name: Upload plot files
               if: always() && inputs.testmode != 'ON'
