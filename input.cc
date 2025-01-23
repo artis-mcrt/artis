@@ -863,9 +863,9 @@ void read_autoion_data() {
 	  // store only for ions that are part of the current model atom
 	  if (lowerion >= 0 && upperion < get_nions(element)) {
 	    printout("Got to noting data for Z %d upperion %d upperlvl %d lowerion %d lowerlvl %d with A %g\n", Z, upperion, upperlevel, lowerion, lowerlevel, autoion_A);
-	    int nautoiondowntrans = get_nautoiondowntrans(element, lowerion, lowerlevel) + 1;
+	    const int nautoiondowntrans = get_nautoiondowntrans(element, lowerion, lowerlevel) + 1;
 	    set_nautoiondowntrans(element, lowerion, lowerlevel, nautoiondowntrans);
-	    int nautoionuptrans = get_nautoionuptrans(element, upperion, upperlevel) + 1;
+	    const int nautoionuptrans = get_nautoionuptrans(element, upperion, upperlevel) + 1;
 	    set_nautoionuptrans(element, upperion, upperlevel, nautoionuptrans);
 
 	    num_autoion += 1;
