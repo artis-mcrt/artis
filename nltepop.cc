@@ -45,16 +45,16 @@ auto get_nlte_vector_index(const int element, const int ion, const int level) ->
 
   int offset_autoion = 0;
   for (int dion = 0; dion < ion; dion++) {
-    offset_autoion += get_nlevels_autoion(element,dion);
+    offset_autoion += get_nlevels_autoion(element, dion);
   }
-  
-  const int gs_index =
-      globals::elements[element].ions[ion].first_nlte - globals::elements[element].ions[0].first_nlte + ion + offset_autoion;
 
-  const int first_autoion = get_nlevels(element,ion) - get_nlevels_autoion(element,ion);
-  
+  const int gs_index = globals::elements[element].ions[ion].first_nlte - globals::elements[element].ions[0].first_nlte +
+                       ion + offset_autoion;
+
+  const int first_autoion = get_nlevels(element, ion) - get_nlevels_autoion(element, ion);
+
   if (ion_has_superlevel(element, ion) && level > (first_autoion - 1)) {
-      return (gs_index + get_nlevels_nlte(element, ion) + level - first_autoion + 2);
+    return (gs_index + get_nlevels_nlte(element, ion) + level - first_autoion + 2);
   }
 
   // add in level or superlevel number
@@ -416,7 +416,7 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
       const int nlevels = get_nlevels(element, ion);
       const int nlevels_autoion = get_nlevels_autoion(element, ion);
-      //If a superlevel exists, the levels in it will be from nlevels_nlte up to the total-numautoion
+      // If a superlevel exists, the levels in it will be from nlevels_nlte up to the total-numautoion
       for (int level = nlevels_nlte + 1; level < (nlevels - nlevels_autoion); level++) {
         superlevel_partfuncs[ion] += superlevel_boltzmann(nonemptymgi, element, ion, level);
       }
@@ -437,13 +437,13 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
     // add super level if it exists
     if (ion_has_superlevel(element, ion)) {
       nlte_dimension += nlevels_nlte + get_nlevels_autoion(element, ion) + 2;
-      //printout("Here 1: For element %d ion %d adding %d to nlte_dimension. \n", element, ion, nlevels_nlte + get_nlevels_autoion(element, ion) + 2);
-      //printout("checks: %d %d\n", nlevels_nlte, get_nlevels_autoion(element, ion));
-      //if it has a superlevel then need + 2 for ground state and super and to add autionising levels
-    }
-    else { // if it doesn't have a superlevel
+      // printout("Here 1: For element %d ion %d adding %d to nlte_dimension. \n", element, ion, nlevels_nlte +
+      // get_nlevels_autoion(element, ion) + 2); printout("checks: %d %d\n", nlevels_nlte, get_nlevels_autoion(element,
+      // ion)); if it has a superlevel then need + 2 for ground state and super and to add autionising levels
+    } else {  // if it doesn't have a superlevel
       nlte_dimension += get_nlevels(element, ion);
-      //printout("Here 2: For element %d ion %d adding %d to nlte_dimension. \n", element, ion, get_nlevels(element,ion));
+      // printout("Here 2: For element %d ion %d adding %d to nlte_dimension. \n", element, ion,
+      // get_nlevels(element,ion));
     }
   }
 
@@ -631,9 +631,8 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
   }
 }
 
-
 void nltepop_matrix_add_autoionisation(const int modelgridindex, const int element, const int ion,
-                                      const std::vector<double> &s_renorm, gsl_matrix *rate_matrix_autoion) {
+                                       const std::vector<double> &s_renorm, gsl_matrix *rate_matrix_autoion) {
   // Autoionization and inverse (i.e. collisional capture part of di-el)
 
   assert_always(ion + 1 < get_nions(element));  // can't ionise the top ion
@@ -668,11 +667,12 @@ void nltepop_matrix_add_autoionisation(const int modelgridindex, const int eleme
         printout("  WARNING: Negative autoionization rate from ionstage %d level %d to level %d\n",
                  get_ionstage(element, ion), level, target_level);
       }
-      
+
       // capture (which is an excitation process, and the first part of di-electronic recomb)
-      R = nne * A_a * statweight/stat_weight(element, target_ion, target_level) * SAHACONST * pow(T_e, -1.5) * exp(-1.*epsilon_trans / KB / T_e);
+      R = nne * A_a * statweight / stat_weight(element, target_ion, target_level) * SAHACONST * pow(T_e, -1.5) *
+          exp(-1. * epsilon_trans / KB / T_e);
       // renorm??
-      
+
       *gsl_matrix_ptr(rate_matrix_autoion, lower_index, lower_index) -= R;
       *gsl_matrix_ptr(rate_matrix_autoion, upper_index, lower_index) += R;
       if ((R < 0)) {
@@ -683,8 +683,6 @@ void nltepop_matrix_add_autoionisation(const int modelgridindex, const int eleme
   }
 }
 
-
-  
 void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matrix *rate_matrix,
                               gsl_vector *pop_norm_factor_vec) {
   const size_t nlte_dimension = pop_norm_factor_vec->size;
@@ -969,10 +967,9 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     gsl_matrix_set_all(&rate_matrix_ntcoll_bf, 0.);
 
     vec_rate_matrix_autoion.resize(max_nlte_dimension * max_nlte_dimension, 0.);
-    rate_matrix_autoion =
-        gsl_matrix_view_array(vec_rate_matrix_autoion.data(), nlte_dimension, nlte_dimension).matrix;
+    rate_matrix_autoion = gsl_matrix_view_array(vec_rate_matrix_autoion.data(), nlte_dimension, nlte_dimension).matrix;
     gsl_matrix_set_all(&rate_matrix_autoion, 0.);
-    
+
   } else {
     // if not individual_process_matrices, alias a single matrix for all transition types
     // the "gsl_matrix" structs are independent, but the data is shared
@@ -999,9 +996,9 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
     for (int level = (nlevels_nlte + 1); level < nlevels; level++) {
       if (level_isinsuperlevel(element, ion, level)) {
-	s_renorm[level] = superlevel_boltzmann(nonemptymgi, element, ion, level) / superlevel_partfunc[ion];
-      } else { //next clause is for any autoionising levels above the superlevel
-	s_renorm[level] = 1.;
+        s_renorm[level] = superlevel_boltzmann(nonemptymgi, element, ion, level) / superlevel_partfunc[ion];
+      } else {  // next clause is for any autoionising levels above the superlevel
+        s_renorm[level] = 1.;
       }
     }
 
@@ -1272,10 +1269,10 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
           double superlevel_partfunc = 0;
           fprintf(nlte_file, "%d ", -1);
           for (int level_sl = nlevels_nlte + 1; level_sl < get_nlevels(element, ion); level_sl++) {
-	    if (level_isinsuperlevel(element, ion, level_sl)) {
-	      nnlevellte += calculate_levelpop_lte(nonemptymgi, element, ion, level_sl);
-	      superlevel_partfunc += superlevel_boltzmann(nonemptymgi, element, ion, level_sl);
-	    }
+            if (level_isinsuperlevel(element, ion, level_sl)) {
+              nnlevellte += calculate_levelpop_lte(nonemptymgi, element, ion, level_sl);
+              superlevel_partfunc += superlevel_boltzmann(nonemptymgi, element, ion, level_sl);
+            }
           }
 
           nnlevelnlte = slpopfactor * superlevel_partfunc;

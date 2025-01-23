@@ -75,13 +75,12 @@ struct LevelTransition {
 struct LevelAutoion {
   float autoion_A;      // Autoionization A-value
   int elementindex;     // index (not atomic number) for the element involved
-  int lowerionindex;    // 
+  int lowerionindex;    //
   int lowerlevelindex;  // this will be for a level index of the lower ion
   int upperionindex;    //
   int upperlevelindex;  // this will be for a level index of the upper ion.
                         // Note: level of the lower ion should also be at higher energy than of the higher ion
 };
-
 
 struct PhotoionTarget {
   double probability;  // fraction of phixs cross section leading to this final level
@@ -89,20 +88,20 @@ struct PhotoionTarget {
 };
 
 struct EnergyLevel {
-  double epsilon{-1};        // Excitation energy of this level relative to the neutral ground level.
-  int alltrans_startdown{};  // index into globals::alltrans for first down transition from this level
-  int ndowntrans{0};         // Number of down transitions from this level
-  int nuptrans{0};           // Number of up transitions to this level
-  int phixsstart{-1};        // index to start of photoionisation cross-sections table in global::allphixs
-  int nphixstargets{0};      // number of target levels for photoionisation
-  float stat_weight{0.};     // statistical weight of this level
-  int phixstargetstart{};    // index into globals::allphixstargets
-  int cont_index{-1};        // index of the bound-free continuum (for first target) sorted by
-                             // element/ion/level/phixstargetindex
-                             // (not an index into the nu_edge-sorted allcont list!)
-  int nautoiondowntrans{0};  // Number of autoionizing transition from this level
-  int nautoionuptrans{0};    // Number of di-el captures up from this level
-  int allautoion_startdown{};// index into globals::allautoion for first down autoion from this level
+  double epsilon{-1};          // Excitation energy of this level relative to the neutral ground level.
+  int alltrans_startdown{};    // index into globals::alltrans for first down transition from this level
+  int ndowntrans{0};           // Number of down transitions from this level
+  int nuptrans{0};             // Number of up transitions to this level
+  int phixsstart{-1};          // index to start of photoionisation cross-sections table in global::allphixs
+  int nphixstargets{0};        // number of target levels for photoionisation
+  float stat_weight{0.};       // statistical weight of this level
+  int phixstargetstart{};      // index into globals::allphixstargets
+  int cont_index{-1};          // index of the bound-free continuum (for first target) sorted by
+                               // element/ion/level/phixstargetindex
+                               // (not an index into the nu_edge-sorted allcont list!)
+  int nautoiondowntrans{0};    // Number of autoionizing transition from this level
+  int nautoionuptrans{0};      // Number of di-el captures up from this level
+  int allautoion_startdown{};  // index into globals::allautoion for first down autoion from this level
   int closestgroundlevelcont{-1};
 };
 
@@ -274,7 +273,7 @@ inline std::vector<Element> elements;
 
 inline int nlines{-1};
 inline const TransitionLine *linelist{};
- 
+
 inline std::vector<BFListEntry> bflist;
 
 inline double *bfheating_coeff{};  // for USE_LUT_BFHEATING = true
