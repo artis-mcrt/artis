@@ -1038,7 +1038,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial) {
     // cooling rates were read from the gridsave file for this timestep
     // make sure they are valid
-    printout("cooling rates read from gridsave file for timestep %d cell %d...", nts, mgi);
+    // printout("cooling rates read from gridsave file for timestep %d cell %d...\n", nts, mgi);
     assert_always(grid::modelgrid[nonemptymgi].totalcooling >= 0.);
     assert_always(grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + 0] >= 0.);
   } else {
