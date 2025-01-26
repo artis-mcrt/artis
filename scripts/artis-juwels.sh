@@ -10,7 +10,7 @@
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
 
-module load Stages/2024 GCC ParaStationMPI GSL
+module load Stages/2025 GCC ParaStationMPI GSL
 module load UCX-settings/plain
 
 module list
