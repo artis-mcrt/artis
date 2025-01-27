@@ -41,13 +41,14 @@ if [[ -f emission.out || -f emission.out.zst ]]; then
   mv *_res_*.out* speclc_angle_res/ || true
 
   curl -LsSf https://astral.sh/uv/install.sh | sh
+  uv tool install artistools
 
   # convert packets to parquet for fast reading
-  uvx artistools -- lc --frompackets || true
+  uvx artistools lc --frompackets || true
 
   if [ -f vpkt.txt ]; then
     # convert virtual packets to parquet
-    uvx artistools -- lc --frompackets -plotvspecpol 0 || true
+    uvx artistools lc --frompackets -plotvspecpol 0 || true
   fi
 
   # convert estimators to parquet. On JUWELS, you might need to limit the number of processes to 16 in artistools/artistools/configuration.py
