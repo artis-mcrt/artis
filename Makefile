@@ -31,7 +31,7 @@ COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -
 $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := CLANG
-	CXXFLAGS += -flto=thin
+	CXXFLAGS += -flto=thin -Wno-error=unused-command-line-argument
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 	COMPILER_NAME := GCC
 	CXXFLAGS += -flto=auto
