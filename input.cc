@@ -19,6 +19,7 @@
 #include <functional>
 #include <ios>
 #include <iterator>
+#include <utility>
 #ifndef GPU_ON
 #include <random>
 #endif
@@ -1118,7 +1119,7 @@ void read_atomicdata_files() {
   globals::nlines = lineindex;
   printout("nlines %d\n", globals::nlines);
   if (globals::rank_in_node == 0) {
-    assert_always(globals::nlines == static_cast<int>(temp_linelist.size()));
+    assert_always(globals::nlines == std::ssize(temp_linelist));
     temp_linelist.shrink_to_fit();
   }
 
@@ -1162,7 +1163,7 @@ void read_atomicdata_files() {
   {
     // create a shared all transitions list and then copy data across, freeing the local copy
     const auto totupdowntrans = totaluptrans + totaldowntrans;
-    assert_always(totupdowntrans == static_cast<int>(temp_alltranslist_size));
+    assert_always(std::cmp_equal(totupdowntrans, temp_alltranslist_size));
     MPI_Barrier(MPI_COMM_WORLD);
 
     globals::alltrans = MPI_shared_malloc<LevelTransition>(totupdowntrans);
@@ -1827,7 +1828,7 @@ void update_parameterfile(int nts)
         line.assign(c_line);
       }
 
-      if (noncomment_linenum < static_cast<int>(inputlinecomments.size())) {
+      if (noncomment_linenum < std::ssize(inputlinecomments)) {
         const int commentstart = 25;
 
         // truncate any existing comment on the line

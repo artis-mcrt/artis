@@ -980,7 +980,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   }
 
   // add any extra nuclides that were specified but not in the decay data files
-  for (int i = 0; i < static_cast<int>(custom_alist.size()); i++) {
+  for (auto i = 0; i < std::ssize(custom_alist); i++) {
     const int z = custom_zlist[i];
     const int a = custom_alist[i];
     if (!nuc_exists(z, a)) {

@@ -302,16 +302,16 @@ void mpi_reduce_estimators(const int nts) {
     MPI_Allreduce(MPI_IN_PLACE, globals::acounter.data(), globals::acounter.size(), MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   }
 
-  assert_always(static_cast<int>(globals::dep_estimator_gamma.size()) == nonempty_npts_model);
+  assert_always(std::ssize(globals::dep_estimator_gamma) == nonempty_npts_model);
   MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_gamma.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);
-  assert_always(static_cast<int>(globals::dep_estimator_positron.size()) == nonempty_npts_model);
+  assert_always(std::ssize(globals::dep_estimator_positron) == nonempty_npts_model);
   MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_positron.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);
-  assert_always(static_cast<int>(globals::dep_estimator_electron.size()) == nonempty_npts_model);
+  assert_always(std::ssize(globals::dep_estimator_electron) == nonempty_npts_model);
   MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_electron.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);
-  assert_always(static_cast<int>(globals::dep_estimator_alpha.size()) == nonempty_npts_model);
+  assert_always(std::ssize(globals::dep_estimator_alpha) == nonempty_npts_model);
   MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_alpha.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);
 
