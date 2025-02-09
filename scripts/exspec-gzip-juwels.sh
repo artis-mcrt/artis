@@ -9,7 +9,7 @@
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
 
-module load Stages/2025 ParaStationMPI GSL
+module load Stages/2025 ParaStationMPI GSL zstd/.1.5.6
 
 cd $SLURM_SUBMIT_DIR
 
