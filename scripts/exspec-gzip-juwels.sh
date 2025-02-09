@@ -14,10 +14,10 @@ module load Stages/2025 ParaStationMPI GSL
 cd $SLURM_SUBMIT_DIR
 
 if [[ -f emission.out || -f emission.out.zst ]]; then
+  echo 'Not running exspec because emission.out[.zst] was found'
+else
   ./artis/scripts/exspec-before.sh
   ./exspec
-else
-  echo 'Not running exspec because emission.out[.zst] was found'
 fi
 
 ./artis/scripts/exspec-after.sh
