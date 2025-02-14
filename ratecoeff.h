@@ -26,6 +26,8 @@ void setup_photoion_luts();
     -> double;
 
 [[nodiscard]] auto get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double;
+[[nodiscard]] auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T_R, double W)
+    -> double;
 
 [[nodiscard]] auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int nonemptymgi)
     -> double;

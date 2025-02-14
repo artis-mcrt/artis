@@ -262,8 +262,6 @@ inline int nlines{-1};
 inline const TransitionLine *linelist{};
 inline std::vector<BFListEntry> bflist;
 
-inline std::span<double> bfheating_coeff{};  // for USE_LUT_BFHEATING = true
-
 inline std::vector<double> bfestim_nu_edge;
 inline std::vector<double> allcont_nu_edge;
 inline const FullPhotoionTransition *allcont{};
