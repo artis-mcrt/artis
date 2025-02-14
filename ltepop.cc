@@ -232,7 +232,6 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
 {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double pop_store{NAN};
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
@@ -261,7 +260,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
 
   if (!std::isfinite(U)) {
     printout("element %d ion %d\n", element, ion);
-    printout("modelgridindex %d\n", modelgridindex);
+    printout("modelgridindex %d\n", grid::get_mgi_of_nonemptymgi(nonemptymgi));
     printout("nlevels %d\n", nlevels);
     printout("sw %g\n", stat_weight(element, ion, 0));
     std::abort();
