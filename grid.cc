@@ -387,14 +387,14 @@ void allocate_nonemptymodelcells() {
 
   if (ionestimsize > 0) {
     std::tie(globals::corrphotoionrenorm, globals::win_corrphotoionrenorm) =
-        MPI_shared_malloc_keepwin<double>(ionestimcount);
+        MPI_shared_malloc_keepwin_span<double>(ionestimcount);
 
     globals::gammaestimator.resize(ionestimcount, 0.);
 #ifdef DO_TITER
     globals::gammaestimator_save.resize(nonempty_npts_model, 0.);
 #endif
   } else {
-    globals::corrphotoionrenorm = nullptr;
+    globals::corrphotoionrenorm = {};
     globals::gammaestimator.clear();
 #ifdef DO_TITER
     globals::gammaestimator_save.clear();

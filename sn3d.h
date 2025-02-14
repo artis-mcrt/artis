@@ -374,6 +374,7 @@ template <typename T>
                 MPI_SUCCESS);
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &ptr) == MPI_SUCCESS);
   MPI_Barrier(globals::mpi_comm_node);
+  assert_always(ptr != nullptr);
   return {ptr, mpiwin};
 }
 

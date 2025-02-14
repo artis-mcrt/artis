@@ -2,6 +2,9 @@
 
 #include <mpi.h>
 
+#include <algorithm>
+#include <span>
+
 #if !USE_SIMPSON_INTEGRATOR
 #include <gsl/gsl_integration.h>
 #endif
@@ -31,12 +34,12 @@
 
 namespace {
 
-double *spontrecombcoeffs{};
+std::span<double> spontrecombcoeffs{};
 
 // for USE_LUT_PHOTOION = true
-double *corrphotoioncoeffs{};
+std::span<double> corrphotoioncoeffs{};
 
-double *bfcooling_coeffs{};
+std::span<double> bfcooling_coeffs{};
 
 struct GSLIntegralParasGammaCorr {
   double nu_edge;
@@ -856,22 +859,29 @@ void setup_photoion_luts() {
   assert_always(globals::nbfcontinua > 0);
   size_t mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
 
-  spontrecombcoeffs = MPI_shared_malloc<double>(TABLESIZE * globals::nbfcontinua);
-  assert_always(spontrecombcoeffs != nullptr);
+  spontrecombcoeffs = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua);
+  if (globals::rank_in_node == 0) {
+    std::ranges::fill(spontrecombcoeffs, 0.);
+  }
 
   if constexpr (USE_LUT_PHOTOION) {
-    corrphotoioncoeffs = MPI_shared_malloc<double>(TABLESIZE * globals::nbfcontinua);
-    assert_always(corrphotoioncoeffs != nullptr);
+    corrphotoioncoeffs = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua);
+
+    if (globals::rank_in_node == 0) {
+      std::ranges::fill(corrphotoioncoeffs, 0.);
+    }
     mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
   }
 
   if constexpr (USE_LUT_BFHEATING) {
-    globals::bfheating_coeff = MPI_shared_malloc<double>(TABLESIZE * globals::nbfcontinua);
-    assert_always(globals::bfheating_coeff != nullptr);
+    globals::bfheating_coeff = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua);
     mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
   }
 
-  bfcooling_coeffs = MPI_shared_malloc<double>(TABLESIZE * globals::nbfcontinua);
+  bfcooling_coeffs = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua);
+  if (globals::rank_in_node == 0) {
+    std::ranges::fill(bfcooling_coeffs, 0.);
+  }
 
   printout(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
