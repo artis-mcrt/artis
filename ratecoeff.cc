@@ -884,6 +884,7 @@ void setup_photoion_luts() {
   if (globals::rank_in_node == 0) {
     std::ranges::fill(bfcooling_coeffs, 0.);
   }
+  MPI_Barrier(globals::mpi_comm_node);
 
   printout(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "

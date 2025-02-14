@@ -298,6 +298,7 @@ void allocate_nonemptycells_composition_cooling()
     // -1 indicates that there is currently no information on the nlte populations
     std::ranges::fill(grid::nltepops_allcells, -1.);
   }
+  MPI_Barrier(globals::mpi_comm_node);
 }
 
 void allocate_nonemptymodelcells() {
@@ -308,6 +309,7 @@ void allocate_nonemptymodelcells() {
       modelgrid_input[mgi].initial_radial_pos_sum = 0.;
     }
   }
+  MPI_Barrier(globals::mpi_comm_node);
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const auto radial_pos_mid = get_cellradialposmid(cellindex);
@@ -330,7 +332,7 @@ void allocate_nonemptymodelcells() {
                   (mgi == get_npts_model()));
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(globals::mpi_comm_node);
   // find number of non-empty cells and allocate nonempty list
   nonempty_npts_model = 0;
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
@@ -371,8 +373,10 @@ void allocate_nonemptymodelcells() {
 
   assert_always(modelgrid.data() == nullptr);
   modelgrid = MPI_shared_malloc_span<ModelGridCell>(nonempty_npts_model);
-  std::ranges::fill(modelgrid, ModelGridCell{});
-  MPI_Barrier(MPI_COMM_WORLD);
+  if (globals::rank_in_node == 0) {
+    std::ranges::fill(modelgrid, ModelGridCell{});
+  }
+  MPI_Barrier(globals::mpi_comm_node);
   allocate_nonemptycells_composition_cooling();
 
   if constexpr (EXPANSIONOPACITIES_ON || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
@@ -390,6 +394,11 @@ void allocate_nonemptymodelcells() {
   if (ionestimsize > 0) {
     std::tie(globals::corrphotoionrenorm, globals::win_corrphotoionrenorm) =
         MPI_shared_malloc_keepwin_span<double>(ionestimcount);
+
+    if (globals::rank_in_node == 0) {
+      std::ranges::fill(globals::corrphotoionrenorm, 1.);
+    }
+    MPI_Barrier(globals::mpi_comm_node);
 
     globals::gammaestimator.resize(ionestimcount, 0.);
 #ifdef DO_TITER
@@ -2314,6 +2323,8 @@ void grid_init(const int my_rank) {
       }
     }
   }
+
+  MPI_Barrier(globals::mpi_comm_node);
 
   double mtot_mapped = 0.;
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
