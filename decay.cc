@@ -1055,10 +1055,8 @@ void setup_decaypath_energy_per_mass() {
       "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies %.1f MB (node "
       "shared)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
-  double *decaypath_energy_per_mass_data{nullptr};
-  std::tie(decaypath_energy_per_mass_data, win_decaypath_energy_per_mass) =
-      MPI_shared_malloc_keepwin<double>(nonempty_npts_model * get_num_decaypaths());
-  decaypath_energy_per_mass = std::span(decaypath_energy_per_mass_data, nonempty_npts_model * get_num_decaypaths());
+  std::tie(decaypath_energy_per_mass, win_decaypath_energy_per_mass) =
+      MPI_shared_malloc_keepwin_span<double>(nonempty_npts_model * get_num_decaypaths());
   printout("done.\n");
 
   MPI_Barrier(MPI_COMM_WORLD);
