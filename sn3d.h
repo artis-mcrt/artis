@@ -380,18 +380,13 @@ template <typename T>
 
 template <typename T>
 [[nodiscard]] auto MPI_shared_malloc_keepwin_span(const ptrdiff_t num_allranks) -> std::tuple<std::span<T>, MPI_Win> {
-  auto [ptr, mpiwin] = MPI_shared_malloc_keepwin<T>(num_allranks);
+  const auto [ptr, mpiwin] = MPI_shared_malloc_keepwin<T>(num_allranks);
   return {std::span(ptr, num_allranks), mpiwin};
 }
 
 template <typename T>
 [[nodiscard]] auto MPI_shared_malloc(const ptrdiff_t num_allranks) -> T * {
-  if (num_allranks == 0) {
-    return nullptr;
-  }
-  T *ptr = std::get<0>(MPI_shared_malloc_keepwin<T>(num_allranks));
-  assert_always(ptr != nullptr);
-  return ptr;
+  return std::get<0>(MPI_shared_malloc_keepwin<T>(num_allranks));
 }
 
 template <typename T>
