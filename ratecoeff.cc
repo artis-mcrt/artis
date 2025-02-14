@@ -866,7 +866,6 @@ void setup_photoion_luts() {
 
   if constexpr (USE_LUT_PHOTOION) {
     corrphotoioncoeffs = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua);
-
     if (globals::rank_in_node == 0) {
       std::ranges::fill(corrphotoioncoeffs, 0.);
     }
@@ -875,6 +874,9 @@ void setup_photoion_luts() {
 
   if constexpr (USE_LUT_BFHEATING) {
     globals::bfheating_coeff = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua);
+    if (globals::rank_in_node == 0) {
+      std::ranges::fill(globals::bfheating_coeff, 0.);
+    }
     mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
   }
 
