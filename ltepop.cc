@@ -151,7 +151,7 @@ auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double {
       } else {
         const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
         const auto ionfractions = calculate_ionfractions(element, nonemptymgi, nne_assumed, use_phi_lte);
-        const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
+        const int uppermost_ion = static_cast<int>(std::ssize(ionfractions) - 1);
         for (int ion = 0; ion <= uppermost_ion; ion++) {
           const double nnion = nnelement * ionfractions[ion];
           const int ioncharge = get_ionstage(element, ion) - 1;
@@ -550,10 +550,13 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
 
 // Use the ground level population and partition function to get an ion population
 [[nodiscard]] __host__ __device__ auto get_nnion(const int nonemptymgi, const int element, const int ion) -> double {
-  return get_groundlevelpop(nonemptymgi, element, ion) *
-         grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                       get_uniqueionindex(element, ion)] /
-         stat_weight(element, ion, 0);
+  const auto nnion = get_groundlevelpop(nonemptymgi, element, ion) *
+                     grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
+                                                   get_uniqueionindex(element, ion)] /
+                     stat_weight(element, ion, 0);
+  assert_testmodeonly(nnion >= 0.);
+  assert_testmodeonly(std::isfinite(nnion));
+  return nnion;
 }
 
 // If not already set by the NLTE solver, set the ground level populations from either Saha LTE or

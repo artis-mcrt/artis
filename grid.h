@@ -39,13 +39,13 @@ inline int ngrid{0};
 
 inline double mtot_input{0.};
 
-inline float *elem_meanweight_allcells{};
-inline float *elem_massfracs_allcells;  // mass fractions of elements in each cell for the current timestep
+inline std::span<float> elem_meanweight_allcells{};
+inline std::span<float> elem_massfracs_allcells;  // mass fractions of elements in each cell for the current timestep
 
-inline double *nltepops_allcells{};
-inline float *ion_groundlevelpops_allcells{};
-inline float *ion_partfuncts_allcells{};
-inline double *ion_cooling_contribs_allcells{};
+inline std::span<double> nltepops_allcells{};
+inline std::span<float> ion_groundlevelpops_allcells{};
+inline std::span<float> ion_partfuncts_allcells{};
+inline std::span<double> ion_cooling_contribs_allcells{};
 
 [[nodiscard]] auto get_elements_uppermost_ion(int nonemptymgi, int element) -> int;
 void set_elements_uppermost_ion(int nonemptymgi, int element, int newvalue);
