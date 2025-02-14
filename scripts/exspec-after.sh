@@ -28,7 +28,7 @@ if [[ -f emission.out || -f emission.out.zst ]]; then
   # do maxdepth 1 first in case job gets killed during run folder compression
   find . -maxdepth 1 -name '*.txt' ! -name "output_0-0.txt" -size +2M -exec $cmdcompress {} \;
   find . -maxdepth 1 -name '*.out' ! -name "slurm-*.out" -size +1M -exec $cmdcompress {} \;
-  find . -maxdepth 1 -name 'rateceoff.dat' ! -name "slurm-*.out" -size +1M -exec $cmdcompress {} \;
+  find . -maxdepth 1 -name 'ratecoeff.dat' -size +1M -exec $cmdcompress {} \;
 
   find packets/ -name 'packets*.out' -size +1M -exec $cmdcompress {} \;
 
