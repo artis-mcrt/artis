@@ -40,7 +40,7 @@ std::span<double> spontrecombcoeffs{};
 std::span<double> corrphotoioncoeffs{};
 
 std::span<double> bfcooling_coeffs{};
-std::span<double> bfheating_coeff{};  // for USE_LUT_BFHEATING = true
+std::span<double> bfheating_coeffs{};  // for USE_LUT_BFHEATING = true
 
 struct GSLIntegralParasGammaCorr {
   double nu_edge;
@@ -202,7 +202,7 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
             }
             if constexpr (USE_LUT_BFHEATING) {
               if (in_bfheating_coeff >= 0) {
-                bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = in_bfheating_coeff;
+                bfheating_coeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] = in_bfheating_coeff;
               } else {
                 printout(
                     "ERROR: USE_LUT_BFHEATING is on, but there are no bfheating_coeff values in the ratecoeff "
@@ -252,7 +252,7 @@ void write_ratecoeff_dat() {
 
             fprintf(ratecoeff_file, "%la %la %la %la\n", spontrecombcoeffs[bflutindex], bfcooling_coeffs[bflutindex],
                     USE_LUT_PHOTOION ? corrphotoioncoeffs[bflutindex] : -1,
-                    USE_LUT_BFHEATING ? bfheating_coeff[bflutindex] : -1);
+                    USE_LUT_BFHEATING ? bfheating_coeffs[bflutindex] : -1);
           }
         }
       }
@@ -445,7 +445,7 @@ void precalculate_rate_coefficient_integrals() {
                 printout("WARNING: bfheating_coeff was negative for level %d\n", level);
                 this_bfheating_coeff = 0;
               }
-              bfheating_coeff[bflutindex] = this_bfheating_coeff;
+              bfheating_coeffs[bflutindex] = this_bfheating_coeff;
             }
 
             double this_bfcooling_coeff = 0.;
@@ -499,7 +499,7 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
         }
 
         if constexpr (USE_LUT_BFHEATING) {
-          bfheating_coeff[bflutindex] *= factor;
+          bfheating_coeffs[bflutindex] *= factor;
         }
 
         bfcooling_coeffs[bflutindex] *= factor;
@@ -873,9 +873,9 @@ void setup_photoion_luts() {
   }
 
   if constexpr (USE_LUT_BFHEATING) {
-    bfheating_coeff = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua);
+    bfheating_coeffs = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua);
     if (globals::rank_in_node == 0) {
-      std::ranges::fill(bfheating_coeff, 0.);
+      std::ranges::fill(bfheating_coeffs, 0.);
     }
     mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
   }
@@ -1440,12 +1440,12 @@ auto get_bfheatingcoeff_ana(const int element, const int ion, const int level, c
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper = bfheating_coeff[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
-    const double f_lower = bfheating_coeff[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
+    const double f_upper = bfheating_coeffs[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
+    const double f_lower = bfheating_coeffs[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
 
     bfheatingcoeff = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_R - T_lower));
   } else {
-    bfheatingcoeff = bfheating_coeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
+    bfheatingcoeff = bfheating_coeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
   }
 
   return W * bfheatingcoeff;
