@@ -891,11 +891,11 @@ void read_phixs_data() {
     assert_always((nbftables * globals::NPHIXSPOINTS) == std::ssize(tmpallphixs));
 
     // copy the photoionisation tables into one contiguous block of memory
-    globals::allphixs = MPI_shared_malloc<float>(tmpallphixs.size());
+    globals::allphixs = MPI_shared_malloc_span<float>(tmpallphixs.size());
 
-    assert_always(globals::allphixs != nullptr);
+    assert_always(globals::allphixs.data() != nullptr);
 
-    std::copy_n(tmpallphixs.cbegin(), tmpallphixs.size(), globals::allphixs);
+    std::copy_n(tmpallphixs.cbegin(), tmpallphixs.size(), globals::allphixs.data());
 
     MPI_Barrier(MPI_COMM_WORLD);
 

@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <deque>
 #include <mutex>
+#include <span>
 #include <vector>
 
 #include "artisoptions.h"
@@ -212,7 +213,7 @@ inline std::vector<double> dep_estimator_alpha;
 inline int bfestimcount{0};
 
 // for USE_LUT_PHOTOION = true
-inline double *corrphotoionrenorm{};
+inline std::span<double> corrphotoionrenorm{};
 inline MPI_Win win_corrphotoionrenorm{MPI_WIN_NULL};
 
 inline std::vector<double> gammaestimator;
@@ -251,7 +252,7 @@ inline int opacity_case{};  // 0 grey, 1 for Fe-grp dependence.
 
 inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperature table value
 
-inline float *allphixs{};
+inline std::span<float> allphixs{};
 inline LevelTransition *alltrans;
 inline std::vector<PhotoionTarget> allphixstargets;
 
@@ -260,8 +261,6 @@ inline std::vector<Element> elements;
 inline int nlines{-1};
 inline const TransitionLine *linelist{};
 inline std::vector<BFListEntry> bflist;
-
-inline double *bfheating_coeff{};  // for USE_LUT_BFHEATING = true
 
 inline std::vector<double> bfestim_nu_edge;
 inline std::vector<double> allcont_nu_edge;

@@ -787,7 +787,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
     if (gsl_vector_get(popvec, row) < 0.0) {
       printout(
-          "  WARNING: NLTE solver gave negative population to index %zud (Z=%d ionstage %d level %d), pop = %g. "
+          "  WARNING: NLTE solver gave negative population to index %zu (Z=%d ionstage %d level %d), pop = %g. "
           "Replacing with LTE pop of %g\n",
           row, get_atomicnumber(element), get_ionstage(element, ion), level,
           gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row), gsl_vector_get(pop_normfactor_vec, row));

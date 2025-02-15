@@ -242,31 +242,6 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
 
 }  // anonymous namespace
 
-auto get_bfheatingcoeff_ana(const int element, const int ion, const int level, const int phixstargetindex,
-                            const double T_R, const double W) -> double {
-  // The correction factor for stimulated emission in gammacorr is set to its
-  // LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  // correction may be evaluated at T_R!
-  assert_always(USE_LUT_BFHEATING);
-  double bfheatingcoeff = 0.;
-
-  const int lowerindex = floor(log(T_R / MINTEMP) / T_step_log);
-  if (lowerindex < TABLESIZE - 1) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
-
-    const double f_upper = globals::bfheating_coeff[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
-    const double f_lower = globals::bfheating_coeff[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
-
-    bfheatingcoeff = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_R - T_lower));
-  } else {
-    bfheatingcoeff = globals::bfheating_coeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
-  }
-
-  return W * bfheatingcoeff;
-}
-
 // depends only the radiation field - no dependence on T_e or populations
 void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingcoeffs) {
   bfheatingcoeffs.resize(get_includedlevels());

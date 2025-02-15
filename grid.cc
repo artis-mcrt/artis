@@ -84,9 +84,9 @@ std::span<double> totmassradionuclide{};  // total mass of each radionuclide in 
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
 MPI_Win win_initnucmassfrac_allcells = MPI_WIN_NULL;
 
-float *initnucmassfrac_allcells{};
-float *initmassfracuntrackedstable_allcells{};
-int *elements_uppermost_ion_allcells{};  // Highest ion index that has a significant population
+std::span<float> initnucmassfrac_allcells{};
+std::span<float> initmassfracuntrackedstable_allcells{};
+std::span<int> elements_uppermost_ion_allcells{};  // Highest ion index that has a significant population
 
 std::vector<int> ranks_nstart;
 std::vector<int> ranks_nstart_nonempty;
@@ -144,14 +144,14 @@ void allocate_initradiobund() {
 
   const size_t totalradioabundcount = (npts_model + 1) * num_nuclides;
   std::tie(initnucmassfrac_allcells, win_initnucmassfrac_allcells) =
-      MPI_shared_malloc_keepwin<float>(totalradioabundcount);
+      MPI_shared_malloc_keepwin_span<float>(totalradioabundcount);
   printout(
       "[info] mem_usage: radioabundance data for %td nuclides for %td cells occupies %.3f MB (node shared memory)\n",
       num_nuclides, npts_model, static_cast<double>(totalradioabundcount * sizeof(float)) / 1024. / 1024.);
 
   MPI_Barrier(globals::mpi_comm_node);
 
-  assert_always(initnucmassfrac_allcells != nullptr);
+  assert_always(initnucmassfrac_allcells.data() != nullptr);
 
   for (ptrdiff_t mgi = 0; mgi < (npts_model + 1); mgi++) {
     if (mgi % static_cast<ptrdiff_t>(globals::node_nprocs) == globals::rank_in_node) {
@@ -271,31 +271,34 @@ void allocate_nonemptycells_composition_cooling()
   const ptrdiff_t nonempty_npts_model_ptrdifft = get_nonempty_npts_model();
   const auto nelements = get_nelements();
 
-  initmassfracuntrackedstable_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * nelements);
-  elem_meanweight_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * nelements);
-  elements_uppermost_ion_allcells = MPI_shared_malloc<int>(nonempty_npts_model_ptrdifft * nelements);
-  elem_massfracs_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * nelements);
-  ion_groundlevelpops_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * get_includedions());
-  ion_partfuncts_allcells = MPI_shared_malloc<float>(nonempty_npts_model_ptrdifft * get_includedions());
-  ion_cooling_contribs_allcells = MPI_shared_malloc<double>(nonempty_npts_model_ptrdifft * get_includedions());
+  initmassfracuntrackedstable_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * nelements);
+  elem_meanweight_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * nelements);
+  elements_uppermost_ion_allcells = MPI_shared_malloc_span<int>(nonempty_npts_model_ptrdifft * nelements);
+  elem_massfracs_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * nelements);
+  ion_groundlevelpops_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * get_includedions());
+  ion_partfuncts_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * get_includedions());
+  ion_cooling_contribs_allcells = MPI_shared_malloc_span<double>(nonempty_npts_model_ptrdifft * get_includedions());
 
   if (globals::total_nlte_levels > 0) {
     std::tie(nltepops_allcells, win_nltepops_allcells) =
-        MPI_shared_malloc_keepwin<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels);
+        MPI_shared_malloc_keepwin_span<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels);
 
-    assert_always(nltepops_allcells != nullptr);
   } else {
-    nltepops_allcells = nullptr;
+    nltepops_allcells = {};
   }
 
   if (globals::rank_in_node == 0) {
-    std::fill_n(initmassfracuntrackedstable_allcells, nonempty_npts_model_ptrdifft * nelements, -1.);
-    std::fill_n(elem_meanweight_allcells, nonempty_npts_model_ptrdifft * nelements, -1.);
-    std::fill_n(elements_uppermost_ion_allcells, nonempty_npts_model_ptrdifft * nelements, -1);
-    std::fill_n(elem_massfracs_allcells, nonempty_npts_model_ptrdifft * nelements, -1.);
+    std::ranges::fill(initmassfracuntrackedstable_allcells, 0.);
+    std::ranges::fill(elem_meanweight_allcells, 0.);
+    std::ranges::fill(elements_uppermost_ion_allcells, -1);
+    std::ranges::fill(elem_massfracs_allcells, -0.);
+    std::ranges::fill(ion_groundlevelpops_allcells, 0.);
+    std::ranges::fill(ion_partfuncts_allcells, 0.);
+    std::ranges::fill(ion_cooling_contribs_allcells, 0.);
     // -1 indicates that there is currently no information on the nlte populations
-    std::ranges::fill_n(grid::nltepops_allcells, nonempty_npts_model_ptrdifft * globals::total_nlte_levels, -1.);
+    std::ranges::fill(grid::nltepops_allcells, -1.);
   }
+  MPI_Barrier(globals::mpi_comm_node);
 }
 
 void allocate_nonemptymodelcells() {
@@ -306,6 +309,7 @@ void allocate_nonemptymodelcells() {
       modelgrid_input[mgi].initial_radial_pos_sum = 0.;
     }
   }
+  MPI_Barrier(globals::mpi_comm_node);
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const auto radial_pos_mid = get_cellradialposmid(cellindex);
@@ -328,7 +332,7 @@ void allocate_nonemptymodelcells() {
                   (mgi == get_npts_model()));
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(globals::mpi_comm_node);
   // find number of non-empty cells and allocate nonempty list
   nonempty_npts_model = 0;
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
@@ -369,8 +373,10 @@ void allocate_nonemptymodelcells() {
 
   assert_always(modelgrid.data() == nullptr);
   modelgrid = MPI_shared_malloc_span<ModelGridCell>(nonempty_npts_model);
-  std::ranges::fill(modelgrid, ModelGridCell{});
-  MPI_Barrier(MPI_COMM_WORLD);
+  if (globals::rank_in_node == 0) {
+    std::ranges::fill(modelgrid, ModelGridCell{});
+  }
+  MPI_Barrier(globals::mpi_comm_node);
   allocate_nonemptycells_composition_cooling();
 
   if constexpr (EXPANSIONOPACITIES_ON || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
@@ -387,14 +393,19 @@ void allocate_nonemptymodelcells() {
 
   if (ionestimsize > 0) {
     std::tie(globals::corrphotoionrenorm, globals::win_corrphotoionrenorm) =
-        MPI_shared_malloc_keepwin<double>(ionestimcount);
+        MPI_shared_malloc_keepwin_span<double>(ionestimcount);
+
+    if (globals::rank_in_node == 0) {
+      std::ranges::fill(globals::corrphotoionrenorm, 1.);
+    }
+    MPI_Barrier(globals::mpi_comm_node);
 
     globals::gammaestimator.resize(ionestimcount, 0.);
 #ifdef DO_TITER
     globals::gammaestimator_save.resize(nonempty_npts_model, 0.);
 #endif
   } else {
-    globals::corrphotoionrenorm = nullptr;
+    globals::corrphotoionrenorm = {};
     globals::gammaestimator.clear();
 #ifdef DO_TITER
     globals::gammaestimator_save.clear();
@@ -2312,6 +2323,8 @@ void grid_init(const int my_rank) {
       }
     }
   }
+
+  MPI_Barrier(globals::mpi_comm_node);
 
   double mtot_mapped = 0.;
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
