@@ -390,7 +390,8 @@ void print_level_rates(const int modelgridindex, const int timestep, const int e
 void nltepop_reset_element(const int nonemptymgi, const int element) {
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++) {
-    std::fill_n(&grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels)],
+    const int nlte_start = globals::elements[element].ions[ion].first_nlte;
+    std::fill_n(&grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlte_start],
                 get_nlevels_nlte(element, ion) + (ion_has_superlevel(element, ion) ? 1 : 0), -1.);
   }
 }
