@@ -1269,6 +1269,7 @@ void nltepop_read_restart_data(FILE *restart_file) {
 }
 
 auto get_nlte_levelpop_over_rho(const int nonemptymgi, const int element, const int ion, const int level) -> double {
+  assert_testmodeonly(level > 0);  // ground state is stored separately
   assert_testmodeonly(level <= get_nlevels_nlte(element, ion));
   return grid::nltepops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) +
                                  globals::elements[element].ions[ion].first_nlte + level - 1];
@@ -1282,6 +1283,7 @@ auto get_nlte_superlevelpop_over_rho(const int nonemptymgi, const int element, c
 
 void set_nlte_levelpop_over_rho(const int nonemptymgi, const int element, const int ion, const int level,
                                 const double value) {
+  assert_testmodeonly(level > 0);  // ground state is stored separately
   assert_testmodeonly(level <= get_nlevels_nlte(element, ion));
   grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + globals::elements[element].ions[ion].first_nlte +
                           level - 1] = value;
