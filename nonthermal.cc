@@ -1190,10 +1190,9 @@ auto nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int elemen
 // coefficient i.e. multiply this by ion population to get a rate of ionizations per second Do not call during packet
 // propagation, as the y vector may not be in memory! IMPORTANT: we are dividing by the shell potential, not the
 // valence potential here! To change this set assumeshellpotentialisvalence to true
-auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion,
+auto calculate_nt_ionization_ratecoeff(const int nonemptymgi, const int element, const int ion,
                                        const bool assumeshellpotentialisvalence, const std::array<double, SFPTS> &yfunc)
     -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   std::array<double, SFPTS> cross_section_vec{};
   auto gsl_cross_section_vec = gsl_vector_view_array(cross_section_vec.data(), SFPTS).vector;
   std::array<double, SFPTS> cross_section_vec_allshells{};
