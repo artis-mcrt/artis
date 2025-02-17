@@ -685,6 +685,12 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   assert_always(rate_matrix->size2 == nlte_dimension);
   assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
 
+  if (lumatrix_is_singular(rate_matrix, element)) {
+    printout("ERROR: NLTE matrix is singular for element Z=%d!\n", get_atomicnumber(element));
+    // abort();
+    return false;
+  }
+
   // backing storage for gsl vectors
   THREADLOCALONHOST std::vector<double> vec_x;
   resize_exactly(vec_x, max_nlte_dimension);
@@ -703,13 +709,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   gsl_permutation_init(&p);
 
   int s = 0;  // sign of the transformation
-  gsl_linalg_LU_decomp(&rate_matrix_LU_decomp, &p, &s);
-
-  if (lumatrix_is_singular(&rate_matrix_LU_decomp, element)) {
-    printout("ERROR: NLTE matrix is singular for element Z=%d!\n", get_atomicnumber(element));
-    // abort();
-    return false;
-  }
+  assert_always(gsl_linalg_LU_decomp(&rate_matrix_LU_decomp, &p, &s) == GSL_SUCCESS);
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
