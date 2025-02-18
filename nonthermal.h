@@ -17,7 +17,7 @@ void solve_spencerfano(int nonemptymgi, int timestep, int iteration);
 [[nodiscard]] auto nt_random_upperion(int nonemptymgi, int element, int lowerion, bool energyweighted) -> int;
 void calculate_deposition_rate_density(int nonemptymgi, int timestep, HeatingCoolingRates &heatingcoolingrates);
 [[nodiscard]] auto get_deposition_rate_density(int nonemptymgi) -> double;
-[[nodiscard]] auto get_nt_frac_heating(int modelgridindex) -> float;
+[[nodiscard]] auto get_nt_frac_heating(int nonemptymgi) -> float;
 
 [[nodiscard]] auto nt_excitation_ratecoeff(int nonemptymgi, int element, int ion, int lowerlevel, int uptransindex,
                                            int lineindex) -> double;

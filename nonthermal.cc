@@ -2150,14 +2150,13 @@ void close_file() {
   colliondata.clear();
 }
 
-auto get_nt_frac_heating(const int modelgridindex) -> float {
+auto get_nt_frac_heating(const int nonemptymgi) -> float {
   if (!NT_ON) {
     return 1.;
   }
   if (!NT_SOLVE_SPENCERFANO) {
     return 0.97;
   }
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const float frac_heating = nt_solution[nonemptymgi].frac_heating;
   return frac_heating;
 }
