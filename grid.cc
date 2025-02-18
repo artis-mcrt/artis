@@ -1070,7 +1070,7 @@ void setup_grid_cartesian_3d() {
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  propcell_pos_min.resize(ngrid, {});
+  resize_exactly(propcell_pos_min, ngrid);
 
   coordlabel = {'X', 'Y', 'Z'};
   std::array<int, 3> nxyz = {0, 0, 0};
@@ -1101,9 +1101,10 @@ void setup_grid_spherical1d() {
   ncoordgrid = {get_npts_model(), 1, 1};
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  propcell_pos_min.resize(ngrid, {});
 
-  for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
+  resize_exactly(propcell_pos_min, ngrid);
+
+  for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = cellindex;  // interchangeable in this mode
     const double v_inner = mgi > 0 ? vout_model[mgi - 1] : 0.;
     propcell_pos_min[cellindex] = {v_inner * globals::tmin, 0., 0.};
@@ -1121,9 +1122,11 @@ void setup_grid_cylindrical_2d() {
   ncoordgrid = ncoord_model;
 
   ngrid = ncoordgrid[0] * ncoordgrid[1];
-  propcell_pos_min.resize(ngrid, {});
+  assert_always(ngrid == get_npts_model());
 
-  for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
+  resize_exactly(propcell_pos_min, ngrid);
+
+  for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int n_rcyl = get_cellcoordpointnum(cellindex, 0);
     const int n_z = get_cellcoordpointnum(cellindex, 1);
 
