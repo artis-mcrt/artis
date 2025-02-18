@@ -84,7 +84,7 @@ auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -
 
   const double Alpha_sp = interpolate_ions_spontrecombcoeff(uniqueionindex, T_e);
 
-  // const double Col_rec = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, true, false, false,
+  // const double Col_rec = calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion + 1, false, true, false, false,
   // false);
   const double Col_rec = 0.;
 

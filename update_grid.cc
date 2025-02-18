@@ -119,8 +119,8 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
     // {
     //   fprintf(estimators_file, "  %d: %9.3e",
     //           get_ionstage(element, ion),
-    //           calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only,
-    //           per_gmpop) * nne);
+    //           calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug,
+    //           lower_superlevel_only, per_gmpop) * nne);
     // }
     // fprintf(estimators_file, "\n");
 
@@ -295,7 +295,7 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
     //
     //   fprintf(estimators_file, "  %d: %9.3e",
     //           get_ionstage(element, ion),
-    //           calculate_ionrecombcoeff(mgi, T_e, element, ion, assume_lte, false, printdebug,
+    //           calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug,
     //           lower_superlevel_only, per_gmpop, false) * nne);
     // }
     // fprintf(estimators_file, "\n");
@@ -312,8 +312,8 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
     //
     //     fprintf(estimators_file, "  %d: %9.3e",
     //             get_ionstage(element, ion),
-    //             calculate_ionrecombcoeff(mgi, T_e, element, ion, assume_lte, false, printdebug, true, per_gmpop,
-    //             false) * nne);
+    //             calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug, true,
+    //             per_gmpop, false) * nne);
     //   }
     //   fprintf(estimators_file, "\n");
     // }
@@ -387,7 +387,7 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
     //
     //   fprintf(estimators_file, "  %d: %9.3e",
     //           get_ionstage(element, ion),
-    //           calculate_ionrecombcoeff(mgi, T_e, element, ion, assume_lte, false, printdebug,
+    //           calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug,
     //           lower_superlevel_only, per_gmpop, true) * nne);
     // }
     // fprintf(estimators_file, "\n");
@@ -400,8 +400,8 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
     // {
     //   fprintf(estimators_file, "  %d: %9.3e",
     //           get_ionstage(element, ion),
-    //           calculate_ionrecombcoeff(mgi, T_e, element, ion, assume_lte, true, printdebug, lower_superlevel_only,
-    //           per_gmpop) * nne);
+    //           calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, true, printdebug,
+    //           lower_superlevel_only, per_gmpop) * nne);
     // }
     // fprintf(estimators_file, "\n");
 
