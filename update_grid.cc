@@ -948,7 +948,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     radfield::set_J_normfactor(nonemptymgi, estimator_normfactor_over4pi);
 
 #ifdef DO_TITER
-    radfield::titer_J(mgi);
+    radfield::titer_J(nonemptymgi);
 #endif
 
     if constexpr (TRACK_ION_STATS) {
@@ -984,8 +984,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       globals::colheatingestimator[nonemptymgi] *= estimator_normfactor;
 
 #ifdef DO_TITER
-      radfield::titer_nuJ(mgi);
-      titer_average_estimators(mgi);
+      radfield::titer_nuJ(nonemptymgi);
+      titer_average_estimators(nonemptymgi);
 #endif
 
       update_gamma_corrphotoionrenorm_bfheating_estimators(nonemptymgi, estimator_normfactor);

@@ -990,16 +990,14 @@ auto get_T_J_from_J(const int nonemptymgi) -> double {
 }
 
 #ifdef DO_TITER
-void titer_J(const int modelgridindex) {
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+void titer_J(const int nonemptymgi) {
   if (J_reduced_save[nonemptymgi] >= 0) {
     J[nonemptymgi] = (J[nonemptymgi] + J_reduced_save[nonemptymgi]) / 2;
   }
   J_reduced_save[nonemptymgi] = J[nonemptymgi];
 }
 
-void titer_nuJ(const int modelgridindex) {
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+void titer_nuJ(const int nonemptymgi) {
   if (nuJ_reduced_save[nonemptymgi] >= 0) {
     nuJ[nonemptymgi] = (nuJ[nonemptymgi] + nuJ_reduced_save[nonemptymgi]) / 2;
   }
