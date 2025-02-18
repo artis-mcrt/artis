@@ -1434,8 +1434,7 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
 }
 
 // returns the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
-auto ion_ntion_energyrate(const int modelgridindex, const int element, const int lowerion) -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+auto ion_ntion_energyrate(const int nonemptymgi, const int element, const int lowerion) -> double {
   const double nnlowerion = get_nnion(nonemptymgi, element, lowerion);
   double enrate = 0.;
   const auto maxupperion = nt_ionisation_maxupperion(element, lowerion);
@@ -1456,18 +1455,18 @@ auto ion_ntion_energyrate(const int modelgridindex, const int element, const int
 }
 
 // returns the energy rate [erg/s] going toward non-thermal ionisation in a modelgrid cell
-auto get_ntion_energyrate(const int modelgridindex) -> double {
+auto get_ntion_energyrate(const int nonemptymgi) -> double {
   double ratetotal = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
     const int nions = get_nions(ielement);
     for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++) {
-      ratetotal += ion_ntion_energyrate(modelgridindex, ielement, ilowerion);
+      ratetotal += ion_ntion_energyrate(nonemptymgi, ielement, ilowerion);
     }
   }
   return ratetotal;
 }
 
-auto select_nt_ionization(const int modelgridindex) -> std::tuple<int, int> {
+auto select_nt_ionization(const int nonemptymgi) -> std::tuple<int, int> {
   const double zrand = rng_uniform();
 
   // // select based on stored frac_deposition for each ion
@@ -1486,14 +1485,14 @@ auto select_nt_ionization(const int modelgridindex) -> std::tuple<int, int> {
   // }
   // assert_always(false);  // should not reach here
 
-  const double ratetotal = get_ntion_energyrate(modelgridindex);
+  const double ratetotal = get_ntion_energyrate(nonemptymgi);
 
   // select based on the calculated energy going to ionisation for each ion
   double ratesum = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
     const int nions = get_nions(ielement);
     for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++) {
-      ratesum += ion_ntion_energyrate(modelgridindex, ielement, ilowerion);
+      ratesum += ion_ntion_energyrate(nonemptymgi, ielement, ilowerion);
       if (ratesum >= zrand * ratetotal) {
         return {ielement, ilowerion};
       }
@@ -2329,13 +2328,13 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
     // component of the deposition fractions
     // until we end and select transition_ij when zrand < dep_frac_transition_ij
 
-    // const double frac_ionization = get_nt_frac_ionization(modelgridindex);
-    const double frac_ionization = get_ntion_energyrate(modelgridindex) / get_deposition_rate_density(nonemptymgi);
-    // printout("frac_ionization compare %g and %g\n", frac_ionization, get_nt_frac_ionization(modelgridindex));
+    // const double frac_ionization = get_nt_frac_ionization(nonemptymgi);
+    const double frac_ionization = get_ntion_energyrate(nonemptymgi) / get_deposition_rate_density(nonemptymgi);
+    // printout("frac_ionization compare %g and %g\n", frac_ionization, get_nt_frac_ionization(nonemptymgi));
     // const double frac_ionization = 0.;
 
     if (zrand < frac_ionization) {
-      const auto [element, lowerion] = select_nt_ionization(modelgridindex);
+      const auto [element, lowerion] = select_nt_ionization(nonemptymgi);
       const int upperion = nt_random_upperion(nonemptymgi, element, lowerion, true);
       // const int upperion = lowerion + 1;
 
