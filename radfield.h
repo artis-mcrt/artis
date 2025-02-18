@@ -43,7 +43,6 @@ void normalise_bf_estimators(int nts, int nts_prev, int titer, double deltat);
     -> double;
 void print_bfrate_contributions(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex,
                                 double nnlowerlevel, double nnlowerion);
-void reset_bfrate_contributions(int modelgridindex);
 [[nodiscard]] auto integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel,
                              size_t limit, int key, gsl_integration_workspace *workspace, double *result,
                              double *abserr) -> int;
