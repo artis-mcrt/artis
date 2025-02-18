@@ -1787,10 +1787,9 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
            nt_solution[nonemptymgi].frac_heating);
 }
 
-void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int modelgridindex, const int element,
+void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int nonemptymgi, const int element,
                              const int ion) {
   // excitation terms
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   const int nlevels_all = get_nlevels(element, ion);
   const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
@@ -2519,7 +2518,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
         printout("%d ", ionstage);
 
         if (enable_sfexcitation) {
-          sfmatrix_add_excitation(sfmatrix, modelgridindex, element, ion);
+          sfmatrix_add_excitation(sfmatrix, nonemptymgi, element, ion);
         }
 
         if (enable_sfionization && (ion < nions - 1)) {
