@@ -214,7 +214,6 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   // Then calculate heating and cooling rates
   kpkt::calculate_cooling_rates(nonemptymgi, &heatingcoolingrates);
   calculate_heating_rates(nonemptymgi, T_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(nonemptymgi);
   const auto ntlepton_dep = nonthermal::get_deposition_rate_density(nonemptymgi);
@@ -227,6 +226,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   // Adiabatic cooling term
   const double nntot = get_nnion_tot(nonemptymgi) + nne;
   const double p = nntot * KB * T_e;  // pressure in [erg/cm^3]
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double volumetmin = grid::get_modelcell_assocvolume_tmin(modelgridindex);
   const double dV = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);  // really dV/dt
   const double V = volumetmin * pow(t_current / globals::tmin, 3);
