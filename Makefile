@@ -231,8 +231,8 @@ endif
 
 CXXFLAGS += -Wall -Wextra -pedantic -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow
 
-ifneq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS +=  -Wno-unneeded-internal-declaration
+ifeq ($(COMPILER_NAME),CLANG)
+	CXXFLAGS += -Wno-unneeded-internal-declaration
 endif
 
 # sn3d.cc and exspec.cc have main() defined
