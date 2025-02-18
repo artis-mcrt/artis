@@ -46,7 +46,7 @@ void free_decaypath_energy_per_mass();
 [[nodiscard]] auto get_gamma_emission_rate(int nonemptymgi, double t) -> double;
 [[nodiscard]] auto get_global_etot_t0_tinf() -> double;
 void fprint_nuc_abundances(FILE *estimators_file, int nonemptymgi, double t_current, int element);
-void setup_radioactive_pellet(double e0, int mgi, Packet &pkt);
+void setup_radioactive_pellet(double e0, int nonemptymgi, Packet &pkt);
 void cleanup();
 
 [[nodiscard]] auto constexpr nucmass(int /*z*/, int a) -> double { return a * MH; }

@@ -53,7 +53,7 @@ std::array<char, 3> coordlabel{'?', '?', '?'};
 
 std::array<int, 3> ncoordgrid{0};  // propagation grid dimensions
 
-auto model_type = GridType::SPHERICAL1D;
+GridType model_type = GridType::CARTESIAN3D;
 ptrdiff_t npts_model = 0;           // number of model grid cells
 ptrdiff_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
@@ -342,8 +342,11 @@ void allocate_nonemptymodelcells() {
   }
   assert_always(nonempty_npts_model > 0);
 
-  mgi_of_nonemptymgi.resize(nonempty_npts_model, -2);
-  propcell_nonemptymgi.resize(ngrid, -1);
+  resize_exactly(mgi_of_nonemptymgi, nonempty_npts_model);
+  std::ranges::fill(mgi_of_nonemptymgi, -2);
+
+  resize_exactly(propcell_nonemptymgi, ngrid);
+  std::ranges::fill(propcell_nonemptymgi, -1);
 
   int nonemptymgi = 0;  // index within list of non-empty modelgrid cells
 
@@ -383,10 +386,17 @@ void allocate_nonemptymodelcells() {
     allocate_expansionopacities();
   }
 
-  globals::dep_estimator_gamma.resize(nonempty_npts_model, 0.);
-  globals::dep_estimator_positron.resize(nonempty_npts_model, 0.);
-  globals::dep_estimator_electron.resize(nonempty_npts_model, 0.);
-  globals::dep_estimator_alpha.resize(nonempty_npts_model, 0.);
+  resize_exactly(globals::dep_estimator_gamma, nonempty_npts_model);
+  std::ranges::fill(globals::dep_estimator_gamma, 0.);
+
+  resize_exactly(globals::dep_estimator_positron, nonempty_npts_model);
+  std::ranges::fill(globals::dep_estimator_positron, 0.);
+
+  resize_exactly(globals::dep_estimator_electron, nonempty_npts_model);
+  std::ranges::fill(globals::dep_estimator_electron, 0.);
+
+  resize_exactly(globals::dep_estimator_alpha, nonempty_npts_model);
+  std::ranges::fill(globals::dep_estimator_alpha, 0.);
 
   const auto ionestimcount = nonempty_npts_model * globals::nbfcontinua_ground;
   const auto ionestimsize = ionestimcount * sizeof(double);
@@ -400,9 +410,11 @@ void allocate_nonemptymodelcells() {
     }
     MPI_Barrier(globals::mpi_comm_node);
 
-    globals::gammaestimator.resize(ionestimcount, 0.);
+    resize_exactly(globals::gammaestimator, ionestimcount);
+    std::ranges::fill(globals::gammaestimator, 0.);
 #ifdef DO_TITER
-    globals::gammaestimator_save.resize(nonempty_npts_model, 0.);
+    resize_exactly(globals::gammaestimator_save, ionestimcount);
+    std::ranges::fill(globals::gammaestimator_save, 0.);
 #endif
   } else {
     globals::corrphotoionrenorm = {};
@@ -413,9 +425,11 @@ void allocate_nonemptymodelcells() {
   }
 
   if (USE_LUT_BFHEATING && ionestimsize > 0) {
-    globals::bfheatingestimator.resize(ionestimcount, 0.);
+    resize_exactly(globals::bfheatingestimator, ionestimcount);
+    std::ranges::fill(globals::bfheatingestimator, 0.);
 #ifdef DO_TITER
-    globals::bfheatingestimator_save.resize(nonempty_npts_model, 0.);
+    resize_exactly(globals::bfheatingestimator_save, ionestimcount);
+    std::ranges::fill(globals::bfheatingestimator_save, 0.);
 #endif
   } else {
     globals::bfheatingestimator.clear();
@@ -424,11 +438,19 @@ void allocate_nonemptymodelcells() {
 #endif
   }
 
-  globals::ffheatingestimator.resize(nonempty_npts_model, 0.);
-  globals::colheatingestimator.resize(nonempty_npts_model, 0.);
+  resize_exactly(globals::ffheatingestimator, nonempty_npts_model);
+  std::ranges::fill(globals::ffheatingestimator, 0.);
+
+  resize_exactly(globals::colheatingestimator, nonempty_npts_model);
+  std::ranges::fill(globals::colheatingestimator, 0.);
+
 #ifdef DO_TITER
-  globals::ffheatingestimator_save.resize(nonempty_npts_model, 0.);
-  globals::colheatingestimator_save.resize(nonempty_npts_model, 0.);
+  resize_exactly(globals::ffheatingestimator_save, nonempty_npts_model);
+  std::ranges::fill(globals::ffheatingestimator_save, 0.);
+
+  resize_exactly(globals::colheatingestimator_save, nonempty_npts_model);
+  std::ranges::fill(globals::colheatingestimator_save, 0.);
+
 #endif
 
   // barrier to make sure node master has set abundance values to node shared memory
@@ -1048,7 +1070,7 @@ void setup_grid_cartesian_3d() {
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  propcell_pos_min.resize(ngrid, {});
+  resize_exactly(propcell_pos_min, ngrid);
 
   coordlabel = {'X', 'Y', 'Z'};
   std::array<int, 3> nxyz = {0, 0, 0};
@@ -1079,9 +1101,10 @@ void setup_grid_spherical1d() {
   ncoordgrid = {get_npts_model(), 1, 1};
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  propcell_pos_min.resize(ngrid, {});
 
-  for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
+  resize_exactly(propcell_pos_min, ngrid);
+
+  for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = cellindex;  // interchangeable in this mode
     const double v_inner = mgi > 0 ? vout_model[mgi - 1] : 0.;
     propcell_pos_min[cellindex] = {v_inner * globals::tmin, 0., 0.};
@@ -1099,9 +1122,11 @@ void setup_grid_cylindrical_2d() {
   ncoordgrid = ncoord_model;
 
   ngrid = ncoordgrid[0] * ncoordgrid[1];
-  propcell_pos_min.resize(ngrid, {});
+  assert_always(ngrid == get_npts_model());
 
-  for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
+  resize_exactly(propcell_pos_min, ngrid);
+
+  for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int n_rcyl = get_cellcoordpointnum(cellindex, 0);
     const int n_z = get_cellcoordpointnum(cellindex, 1);
 

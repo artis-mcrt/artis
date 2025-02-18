@@ -119,8 +119,8 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
     // {
     //   fprintf(estimators_file, "  %d: %9.3e",
     //           get_ionstage(element, ion),
-    //           calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only,
-    //           per_gmpop) * nne);
+    //           calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug,
+    //           lower_superlevel_only, per_gmpop) * nne);
     // }
     // fprintf(estimators_file, "\n");
 
@@ -295,7 +295,7 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
     //
     //   fprintf(estimators_file, "  %d: %9.3e",
     //           get_ionstage(element, ion),
-    //           calculate_ionrecombcoeff(mgi, T_e, element, ion, assume_lte, false, printdebug,
+    //           calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug,
     //           lower_superlevel_only, per_gmpop, false) * nne);
     // }
     // fprintf(estimators_file, "\n");
@@ -312,8 +312,8 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
     //
     //     fprintf(estimators_file, "  %d: %9.3e",
     //             get_ionstage(element, ion),
-    //             calculate_ionrecombcoeff(mgi, T_e, element, ion, assume_lte, false, printdebug, true, per_gmpop,
-    //             false) * nne);
+    //             calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug, true,
+    //             per_gmpop, false) * nne);
     //   }
     //   fprintf(estimators_file, "\n");
     // }
@@ -387,7 +387,7 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
     //
     //   fprintf(estimators_file, "  %d: %9.3e",
     //           get_ionstage(element, ion),
-    //           calculate_ionrecombcoeff(mgi, T_e, element, ion, assume_lte, false, printdebug,
+    //           calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug,
     //           lower_superlevel_only, per_gmpop, true) * nne);
     // }
     // fprintf(estimators_file, "\n");
@@ -400,8 +400,8 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
     // {
     //   fprintf(estimators_file, "  %d: %9.3e",
     //           get_ionstage(element, ion),
-    //           calculate_ionrecombcoeff(mgi, T_e, element, ion, assume_lte, true, printdebug, lower_superlevel_only,
-    //           per_gmpop) * nne);
+    //           calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, true, printdebug,
+    //           lower_superlevel_only, per_gmpop) * nne);
     // }
     // fprintf(estimators_file, "\n");
 
@@ -948,7 +948,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     radfield::set_J_normfactor(nonemptymgi, estimator_normfactor_over4pi);
 
 #ifdef DO_TITER
-    radfield::titer_J(mgi);
+    radfield::titer_J(nonemptymgi);
 #endif
 
     if constexpr (TRACK_ION_STATS) {
@@ -984,8 +984,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       globals::colheatingestimator[nonemptymgi] *= estimator_normfactor;
 
 #ifdef DO_TITER
-      radfield::titer_nuJ(mgi);
-      titer_average_estimators(mgi);
+      radfield::titer_nuJ(nonemptymgi);
+      titer_average_estimators(nonemptymgi);
 #endif
 
       update_gamma_corrphotoionrenorm_bfheating_estimators(nonemptymgi, estimator_normfactor);

@@ -423,6 +423,72 @@ auto get_bfcontindex(const int element, const int lowerion, const int lower, con
   return -1;
 }
 
+void write_to_file(const int nonemptymgi, const int timestep) {
+  assert_always(MULTIBIN_RADFIELD_MODEL_ON);
+  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+#ifdef _OPENMP
+#pragma omp critical(out_file)
+  {
+#endif
+
+    int totalcontribs = 0;
+    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
+      totalcontribs += get_bin_contribcount(nonemptymgi, binindex);
+    }
+
+    for (int binindex = -1 - detailed_linecount; binindex < RADFIELDBINCOUNT; binindex++) {
+      double nu_lower = 0.;
+      double nu_upper = 0.;
+      double nuJ_out = 0.;
+      double J_out = 0.;
+      float T_R = 0.;
+      float W = 0.;
+      double J_nu_bar = 0.;
+      int contribcount = 0;
+
+      const bool skipoutput = false;
+
+      if (binindex >= 0) {
+        nu_lower = get_bin_nu_lower(binindex);
+        nu_upper = get_bin_nu_upper(binindex);
+        nuJ_out = get_bin_nuJ(nonemptymgi, binindex);
+        J_out = get_bin_J(nonemptymgi, binindex);
+        T_R = get_bin_T_R(nonemptymgi, binindex);
+        W = get_bin_W(nonemptymgi, binindex);
+        J_nu_bar = J_out / (nu_upper - nu_lower);
+        contribcount = get_bin_contribcount(nonemptymgi, binindex);
+      } else if (binindex == -1) {  // bin -1 is the full spectrum fit
+        nuJ_out = nuJ[nonemptymgi];
+        J_out = J[nonemptymgi];
+        T_R = grid::get_TR(nonemptymgi);
+        W = grid::get_W(nonemptymgi);
+        contribcount = totalcontribs;
+      } else  // use binindex < -1 for detailed line Jb_lu estimators
+      {
+        const int jblueindex = -2 - binindex;  // -2 is the first detailed line, -3 is the second, etc
+        const int lineindex = detailed_lineindicies[jblueindex];
+        const double nu_trans = globals::linelist[lineindex].nu;
+        nu_lower = nu_trans;
+        nu_upper = nu_trans;
+        nuJ_out = -1.;
+        J_out = -1.;
+        T_R = -1.;
+        W = -1.;
+        J_nu_bar = prev_Jb_lu_normed[nonemptymgi][jblueindex].value,
+        contribcount = prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount;
+      }
+
+      if (!skipoutput) {
+        fprintf(radfieldfile, "%d %d %d %.5e %.5e %.3e %.3e %.3e %d %.1f %.5e\n", timestep, modelgridindex, binindex,
+                nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, contribcount, T_R, W);
+      }
+    }
+    fflush(radfieldfile);
+#ifdef _OPENMP
+  }
+#endif
+}
+
 }  // anonymous namespace
 
 void init(const int my_rank, const int ndo_nonempty) {
@@ -618,72 +684,6 @@ auto get_Jb_lu_contribcount(const int nonemptymgi, const int jblueindex) -> int 
   assert_always(jblueindex >= 0);
   assert_always(jblueindex < detailed_linecount);
   return prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount;
-}
-
-void write_to_file(const int modelgridindex, const int timestep) {
-  assert_always(MULTIBIN_RADFIELD_MODEL_ON);
-  const ptrdiff_t nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-#ifdef _OPENMP
-#pragma omp critical(out_file)
-  {
-#endif
-
-    int totalcontribs = 0;
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      totalcontribs += get_bin_contribcount(nonemptymgi, binindex);
-    }
-
-    for (int binindex = -1 - detailed_linecount; binindex < RADFIELDBINCOUNT; binindex++) {
-      double nu_lower = 0.;
-      double nu_upper = 0.;
-      double nuJ_out = 0.;
-      double J_out = 0.;
-      float T_R = 0.;
-      float W = 0.;
-      double J_nu_bar = 0.;
-      int contribcount = 0;
-
-      const bool skipoutput = false;
-
-      if (binindex >= 0) {
-        nu_lower = get_bin_nu_lower(binindex);
-        nu_upper = get_bin_nu_upper(binindex);
-        nuJ_out = get_bin_nuJ(nonemptymgi, binindex);
-        J_out = get_bin_J(nonemptymgi, binindex);
-        T_R = get_bin_T_R(nonemptymgi, binindex);
-        W = get_bin_W(nonemptymgi, binindex);
-        J_nu_bar = J_out / (nu_upper - nu_lower);
-        contribcount = get_bin_contribcount(nonemptymgi, binindex);
-      } else if (binindex == -1) {  // bin -1 is the full spectrum fit
-        nuJ_out = nuJ[nonemptymgi];
-        J_out = J[nonemptymgi];
-        T_R = grid::get_TR(nonemptymgi);
-        W = grid::get_W(nonemptymgi);
-        contribcount = totalcontribs;
-      } else  // use binindex < -1 for detailed line Jb_lu estimators
-      {
-        const int jblueindex = -2 - binindex;  // -2 is the first detailed line, -3 is the second, etc
-        const int lineindex = detailed_lineindicies[jblueindex];
-        const double nu_trans = globals::linelist[lineindex].nu;
-        nu_lower = nu_trans;
-        nu_upper = nu_trans;
-        nuJ_out = -1.;
-        J_out = -1.;
-        T_R = -1.;
-        W = -1.;
-        J_nu_bar = prev_Jb_lu_normed[nonemptymgi][jblueindex].value,
-        contribcount = prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount;
-      }
-
-      if (!skipoutput) {
-        fprintf(radfieldfile, "%d %d %d %.5e %.5e %.3e %.3e %.3e %d %.1f %.5e\n", timestep, modelgridindex, binindex,
-                nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, contribcount, T_R, W);
-      }
-    }
-    fflush(radfieldfile);
-#ifdef _OPENMP
-  }
-#endif
 }
 
 void close_file() {
@@ -906,7 +906,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
       radfieldbin_solutions[mgibinindex].W = W_bin;
     }
 
-    write_to_file(modelgridindex, timestep);
+    write_to_file(nonemptymgi, timestep);
   }
 }
 
@@ -990,16 +990,14 @@ auto get_T_J_from_J(const int nonemptymgi) -> double {
 }
 
 #ifdef DO_TITER
-void titer_J(const int modelgridindex) {
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+void titer_J(const int nonemptymgi) {
   if (J_reduced_save[nonemptymgi] >= 0) {
     J[nonemptymgi] = (J[nonemptymgi] + J_reduced_save[nonemptymgi]) / 2;
   }
   J_reduced_save[nonemptymgi] = J[nonemptymgi];
 }
 
-void titer_nuJ(const int modelgridindex) {
-  const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+void titer_nuJ(const int nonemptymgi) {
   if (nuJ_reduced_save[nonemptymgi] >= 0) {
     nuJ[nonemptymgi] = (nuJ[nonemptymgi] + nuJ_reduced_save[nonemptymgi]) / 2;
   }

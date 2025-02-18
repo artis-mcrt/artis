@@ -969,7 +969,7 @@ __host__ __device__ auto get_spontrecombcoeff(int element, const int ion, const 
 }
 
 // multiply by upper ion population (or ground population if per_groundmultipletpop is true) and nne to get a rate
-auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const int element, const int upperion,
+auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int element, const int upperion,
                               const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
                               const bool lower_superlevel_only, const bool per_groundmultipletpop, const bool stimonly)
     -> double {
@@ -980,13 +980,10 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
 
   double alpha = 0.;
   if (lowerion < get_nions(element) - 1) {
-    const auto nonemptymgi = (modelgridindex >= 0) ? grid::get_nonemptymgi_of_mgi(modelgridindex) : -1;
-
     // this gets divided and cancelled out in the radiative case anyway
-    const double nne = (modelgridindex >= 0) ? grid::get_nne(nonemptymgi) : 1.;
+    const double nne = (nonemptymgi >= 0) ? grid::get_nne(nonemptymgi) : 1.;
 
     double nnupperion = 0;
-    // nnupperion = get_groundmultiplet_pop(modelgridindex, T_e, element, upperion, assume_lte);
     int upper_nlevels = 0;
     if (per_groundmultipletpop) {
       // assume that photoionisation of the ion below is only to the ground multiplet levels of the current ion
@@ -1004,7 +1001,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
         const double T_exc = T_e;
         const double E_level = epsilon(element, lowerion + 1, upper);
         const double E_ground = epsilon(element, lowerion + 1, 0);
-        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
+        const double nnground = (nonemptymgi >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
 
         nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                         exp(-(E_level - E_ground) / KB / T_exc));
@@ -1026,7 +1023,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
         const double T_exc = T_e;
         const double E_level = epsilon(element, lowerion + 1, upper);
         const double E_ground = epsilon(element, lowerion + 1, 0);
-        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
+        const double nnground = (nonemptymgi >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
 
         nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                         exp(-(E_level - E_ground) / KB / T_exc));
