@@ -66,9 +66,9 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
   // ensure that the random position was inside the cell we selected
   assert_always(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == cellindex);
 
-  const int mgi = grid::get_propcell_modelgridindex(cellindex);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
 
-  decay::setup_radioactive_pellet(e0, mgi, pkt);
+  decay::setup_radioactive_pellet(e0, nonemptymgi, pkt);
 
   // initial e_rf is probably never needed (e_rf is set at pellet decay time), but we
   // might as well give it a correct value since this code is fast and runs only once

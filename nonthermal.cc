@@ -1142,12 +1142,11 @@ auto get_nt_frac_excitation(const int modelgridindex) -> float {
 // compute the work per ion pair for doing the NT ionization calculation.
 // Makes use of EXTREMELY SIMPLE approximations - high energy limits only (can be used as an alternative to the
 // Spencer-Fano solver)
-auto get_oneoverw(const int element, const int ion, const int modelgridindex) -> double {
+auto get_oneoverw(const int element, const int ion, const int nonemptymgi) -> double {
   // Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec).
   // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
   // denominator is extremely simplified. Need to get the mean Z value.
 
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   double Zbar = 0.;  // mass-weighted average atomic number
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
     Zbar += grid::get_elem_abundance(nonemptymgi, ielement) * get_atomicnumber(ielement);
@@ -1175,15 +1174,13 @@ auto calculate_nt_frac_ionization_shell(const int nonemptymgi, const int element
   return nnion * ionpot_ev * y_dot_crosssection_de / E_init_ev;
 }
 
-auto nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int element, const int ion) -> double
 // non-thermal ionization rate coefficient (multiply by population to get rate)
-{
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+auto nt_ionization_ratecoeff_wfapprox(const int nonemptymgi, const int element, const int ion) -> double {
   const double deposition_rate_density = get_deposition_rate_density(nonemptymgi);
   // to get the non-thermal ionization rate we need to divide the energy deposited
   // per unit volume per unit time in the grid cell (sum of terms above)
   // by the total ion number density and the "work per ion pair"
-  return deposition_rate_density / get_nnion_tot(nonemptymgi) * get_oneoverw(element, ion, modelgridindex);
+  return deposition_rate_density / get_nnion_tot(nonemptymgi) * get_oneoverw(element, ion, nonemptymgi);
 }
 
 // Integrate the ionization cross section over the electron degradation function to get the ionization rate
@@ -1252,7 +1249,6 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
 
   std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionize_over_ionpot_sum{};
   std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionize_sum{};
-  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   std::ranges::fill(get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger, 0.);
   std::ranges::fill(get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger, 0.);
 
@@ -1333,7 +1329,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
         "-> Defaulting to work function approximation and ionisation energy is not accounted for in Spencer-Fano "
         "solution.\n");
 
-    get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot = 1. / get_oneoverw(element, ion, modelgridindex);
+    get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot = 1. / get_oneoverw(element, ion, nonemptymgi);
   }
 }
 
@@ -1438,8 +1434,7 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
 }
 
 // returns the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
-auto ion_ntion_energyrate(const int modelgridindex, const int element, const int lowerion) -> double {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+auto ion_ntion_energyrate(const int nonemptymgi, const int element, const int lowerion) -> double {
   const double nnlowerion = get_nnion(nonemptymgi, element, lowerion);
   double enrate = 0.;
   const auto maxupperion = nt_ionisation_maxupperion(element, lowerion);
@@ -1460,18 +1455,18 @@ auto ion_ntion_energyrate(const int modelgridindex, const int element, const int
 }
 
 // returns the energy rate [erg/s] going toward non-thermal ionisation in a modelgrid cell
-auto get_ntion_energyrate(const int modelgridindex) -> double {
+auto get_ntion_energyrate(const int nonemptymgi) -> double {
   double ratetotal = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
     const int nions = get_nions(ielement);
     for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++) {
-      ratetotal += ion_ntion_energyrate(modelgridindex, ielement, ilowerion);
+      ratetotal += ion_ntion_energyrate(nonemptymgi, ielement, ilowerion);
     }
   }
   return ratetotal;
 }
 
-auto select_nt_ionization(const int modelgridindex) -> std::tuple<int, int> {
+auto select_nt_ionization(const int nonemptymgi) -> std::tuple<int, int> {
   const double zrand = rng_uniform();
 
   // // select based on stored frac_deposition for each ion
@@ -1490,14 +1485,14 @@ auto select_nt_ionization(const int modelgridindex) -> std::tuple<int, int> {
   // }
   // assert_always(false);  // should not reach here
 
-  const double ratetotal = get_ntion_energyrate(modelgridindex);
+  const double ratetotal = get_ntion_energyrate(nonemptymgi);
 
   // select based on the calculated energy going to ionisation for each ion
   double ratesum = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
     const int nions = get_nions(ielement);
     for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++) {
-      ratesum += ion_ntion_energyrate(modelgridindex, ielement, ilowerion);
+      ratesum += ion_ntion_energyrate(nonemptymgi, ielement, ilowerion);
       if (ratesum >= zrand * ratetotal) {
         return {ielement, ilowerion};
       }
@@ -1644,11 +1639,11 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         frac_excitation_ion = 0.;
       }
       frac_excitation_total += frac_excitation_ion;
-      printout("    workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, modelgridindex)) / EV);
+      printout("    workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, nonemptymgi)) / EV);
       printout("    eff_ionpot:   %9.2f eV  (always use valence potential is %s)\n",
                get_eff_ionpot(nonemptymgi, element, ion) / EV, (NT_USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
 
-      printout("    workfn approx Gamma:     %9.3e\n", nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion));
+      printout("    workfn approx Gamma:     %9.3e\n", nt_ionization_ratecoeff_wfapprox(nonemptymgi, element, ion));
 
       printout("    SF integral Gamma:       %9.3e\n",
                calculate_nt_ionization_ratecoeff(nonemptymgi, element, ion, false, yfunc));
@@ -1792,10 +1787,9 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
            nt_solution[nonemptymgi].frac_heating);
 }
 
-void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int modelgridindex, const int element,
+void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int nonemptymgi, const int element,
                              const int ion) {
   // excitation terms
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   const int nlevels_all = get_nlevels(element, ion);
   const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
@@ -2154,14 +2148,13 @@ void close_file() {
   colliondata.clear();
 }
 
-auto get_nt_frac_heating(const int modelgridindex) -> float {
+auto get_nt_frac_heating(const int nonemptymgi) -> float {
   if (!NT_ON) {
     return 1.;
   }
   if (!NT_SOLVE_SPENCERFANO) {
     return 0.97;
   }
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const float frac_heating = nt_solution[nonemptymgi].frac_heating;
   return frac_heating;
 }
@@ -2263,11 +2256,11 @@ __host__ __device__ auto nt_ionization_ratecoeff(const int nonemptymgi, const in
     if (!std::isfinite(Y_nt)) {
       // probably because eff_ionpot = 0 because the solver hasn't been run yet, or no impact ionization cross sections
       // exist
-      const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
+      const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(nonemptymgi, element, ion);
       return Y_nt_wfapprox;
     }
     if (Y_nt <= 0) {
-      const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
+      const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(nonemptymgi, element, ion);
       if (Y_nt_wfapprox > 0) {
         printout(
             "Warning: Spencer-Fano solver gives negative or zero ionization rate (%g) for element Z=%d ionstage %d "
@@ -2278,7 +2271,7 @@ __host__ __device__ auto nt_ionization_ratecoeff(const int nonemptymgi, const in
     }
     return Y_nt;
   }
-  return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
+  return nt_ionization_ratecoeff_wfapprox(nonemptymgi, element, ion);
 }
 
 __host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const int element, const int ion,
@@ -2334,13 +2327,13 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
     // component of the deposition fractions
     // until we end and select transition_ij when zrand < dep_frac_transition_ij
 
-    // const double frac_ionization = get_nt_frac_ionization(modelgridindex);
-    const double frac_ionization = get_ntion_energyrate(modelgridindex) / get_deposition_rate_density(nonemptymgi);
-    // printout("frac_ionization compare %g and %g\n", frac_ionization, get_nt_frac_ionization(modelgridindex));
+    // const double frac_ionization = get_nt_frac_ionization(nonemptymgi);
+    const double frac_ionization = get_ntion_energyrate(nonemptymgi) / get_deposition_rate_density(nonemptymgi);
+    // printout("frac_ionization compare %g and %g\n", frac_ionization, get_nt_frac_ionization(nonemptymgi));
     // const double frac_ionization = 0.;
 
     if (zrand < frac_ionization) {
-      const auto [element, lowerion] = select_nt_ionization(modelgridindex);
+      const auto [element, lowerion] = select_nt_ionization(nonemptymgi);
       const int upperion = nt_random_upperion(nonemptymgi, element, lowerion, true);
       // const int upperion = lowerion + 1;
 
@@ -2525,7 +2518,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
         printout("%d ", ionstage);
 
         if (enable_sfexcitation) {
-          sfmatrix_add_excitation(sfmatrix, modelgridindex, element, ion);
+          sfmatrix_add_excitation(sfmatrix, nonemptymgi, element, ion);
         }
 
         if (enable_sfionization && (ion < nions - 1)) {
