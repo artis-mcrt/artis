@@ -984,7 +984,6 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
     const double nne = (nonemptymgi >= 0) ? grid::get_nne(nonemptymgi) : 1.;
 
     double nnupperion = 0;
-    // nnupperion = get_groundmultiplet_pop(modelgridindex, T_e, element, upperion, assume_lte);
     int upper_nlevels = 0;
     if (per_groundmultipletpop) {
       // assume that photoionisation of the ion below is only to the ground multiplet levels of the current ion
