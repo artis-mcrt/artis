@@ -1325,8 +1325,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int nonemptymgi, const d
   fprintf(estimators_file, "\n");
 }
 
-void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+void setup_radioactive_pellet(const double e0, const int nonemptymgi, Packet &pkt) {
   const int num_decaypaths = get_num_decaypaths();
 
   // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel
@@ -1344,6 +1343,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt) {
   if (num_decaychannels > num_decaypaths) {
     // the t_model / tmin expansion factor was already applied at model read in
     // so "init" here means at tmin
+    const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     energysum += grid::get_initenergyq(mgi);
     cumulative_en_sum[num_decaychannels - 1] = energysum;
   }
