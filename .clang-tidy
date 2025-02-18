@@ -21,6 +21,7 @@ Checks: [
         -cert-err34-c,
         -cert-err58-cpp,
         -clang-analyzer-deadcode.DeadStores,
+        -clang-diagnostic-unneeded-internal-declaration,
         -clang-diagnostic-unused-function,
         -cppcoreguidelines-avoid-magic-numbers,
         -cppcoreguidelines-avoid-non-const-global-variables,
