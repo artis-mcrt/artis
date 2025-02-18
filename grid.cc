@@ -53,7 +53,7 @@ std::array<char, 3> coordlabel{'?', '?', '?'};
 
 std::array<int, 3> ncoordgrid{0};  // propagation grid dimensions
 
-auto model_type = GridType::SPHERICAL1D;
+GridType model_type = GridType::CARTESIAN3D;
 ptrdiff_t npts_model = 0;           // number of model grid cells
 ptrdiff_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
