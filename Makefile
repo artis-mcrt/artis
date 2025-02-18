@@ -55,7 +55,7 @@ $(info detected compiler is $(COMPILER_NAME) major version $(COMPILER_VERSION_NU
 CXXFLAGS += -std=c++23 -fstrict-aliasing
 
 ifneq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -Wno-error=cast-function-type -MD -MP -ftrivial-auto-var-init=pattern
+	CXXFLAGS += -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -Wno-error=cast-function-type -Wno-error=unused-function -MD -MP -ftrivial-auto-var-init=pattern
 endif
 
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
@@ -229,7 +229,7 @@ else
 	endif
 endif
 
-CXXFLAGS += -Wall -Wextra -pedantic -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-error=unused-function -Wno-unneeded-internal-declaration -Wsign-compare -Wshadow
+CXXFLAGS += -Wall -Wextra -pedantic -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unneeded-internal-declaration -Wsign-compare -Wshadow
 
 # sn3d.cc and exspec.cc have main() defined
 common_files := $(filter-out sn3d.cc exspec.cc, $(wildcard *.cc))
