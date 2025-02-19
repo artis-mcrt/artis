@@ -95,7 +95,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
         const int upper = uptranslist[ii].targetlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
         const double C = nnlevel *
-                         col_excitation_ratecoeff(T_e, nne, element, ion, level, ii, epsilon_trans, statweight) *
+                         col_excitation_ratecoeff(T_e, nne, element, ion, uptranslist[ii], epsilon_trans, statweight) *
                          epsilon_trans;
         C_ion += C;
         if constexpr (!update_cooling_contrib_list) {
@@ -599,7 +599,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
       // printout("    excitation to level %d possible\n",upper);
       const double epsilon_trans = epsilon(element, ion, tmpupper) - epsilon_current;
       const double C = nnlevel *
-                       col_excitation_ratecoeff(T_e, nne, element, ion, level, ii, epsilon_trans, statweight) *
+                       col_excitation_ratecoeff(T_e, nne, element, ion, uptranslist[ii], epsilon_trans, statweight) *
                        epsilon_trans;
       contrib += C;
       if (contrib > rndcool_ion_process) {

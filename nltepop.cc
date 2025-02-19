@@ -495,7 +495,8 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       assert_always(std::isfinite(R));
 
       const double C =
-          col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, statweight) * s_renorm[level];
+          col_excitation_ratecoeff(T_e, nne, element, ion, leveluptranslist[i], epsilon_trans, statweight) *
+          s_renorm[level];
       assert_always(C >= 0);
       assert_always(std::isfinite(C));
 

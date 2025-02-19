@@ -1725,16 +1725,17 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon(element, ion, lower);
 
         const double ntcollexc_ratecoeff = ntexc.ratecoeffperdeposition * deposition_rate_density;
+        const auto uptrans = get_uptranslist(element, ion, lower)[uptransindex];
 
         const double t_mid = globals::timesteps[timestep].mid;
         const double radexc_ratecoeff = rad_excitation_ratecoeff(nonemptymgi, element, ion, lower, uptransindex,
                                                                  epsilon_trans, nnlevel_lower, lineindex, t_mid);
 
-        const double collexc_ratecoeff = col_excitation_ratecoeff(T_e, nne, element, ion, lower, uptransindex,
-                                                                  epsilon_trans, stat_weight(element, ion, lower));
+        const double collexc_ratecoeff =
+            col_excitation_ratecoeff(T_e, nne, element, ion, uptrans, epsilon_trans, stat_weight(element, ion, lower));
 
         const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
-        const auto coll_str = get_uptranslist(element, ion, lower)[uptransindex].coll_str;
+        const auto coll_str = uptrans.coll_str;
 
         printout(
             "    frac_deposition %.3e Z=%2d ionstage %d lower %4d upper %4d rad_exc %.1e coll_exc %.1e nt_exc %.1e "

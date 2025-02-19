@@ -89,7 +89,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
 
     const double R =
         rad_excitation_ratecoeff(nonemptymgi, element, ion, level, i, epsilon_trans, nnlevel, uptrans.lineindex, t_mid);
-    const double C = col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, statweight);
+    const double C = col_excitation_ratecoeff(T_e, nne, element, ion, uptrans, epsilon_trans, statweight);
     const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, element, ion, level, i, uptrans.lineindex);
 
     sum_internal_up_same += (R + C + NT) * epsilon_current;
@@ -902,10 +902,9 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
 
 // multiply by lower level population to get a rate per second
 
-auto col_excitation_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
-                              const int uptransindex, const double epsilon_trans, const double lowerstatweight)
+auto col_excitation_ratecoeff(const float T_e, const float nne, const int element, const int ion,
+                              const LevelTransition &uptr, const double epsilon_trans, const double lowerstatweight)
     -> double {
-  const auto &uptr = get_uptranslist(element, ion, lower)[uptransindex];
   const double coll_strength = uptr.coll_str;
   const double eoverkt = epsilon_trans / (KB * T_e);
 
