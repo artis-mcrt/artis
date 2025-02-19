@@ -157,10 +157,10 @@ else
 	# g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
 
 	ifneq (,$(shell hostname -A | grep gsi.de))
-		# virgo has znver4 nodes in the new partition
-		# CXXFLAGS += -march=znver4
+		# virgo has znver4 nodes in the amd,epyc,9654 feature group
+		CXXFLAGS += -march=znver4
 		# and znver3 nodes in the other partitions and login nodes
-		CXXFLAGS += -march=native
+		# CXXFLAGS += -march=native -mtune=znver4
 	else
 		CXXFLAGS += -march=native
 	endif
