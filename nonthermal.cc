@@ -541,13 +541,14 @@ auto get_approx_shell_occupancies(const int nbound, const int ioncharge) {
 }
 
 auto get_shell_occupancies(const int nbound, const int ioncharge) {
-  assert_always(nbound > 0);
-  assert_always(ioncharge >= 0);
-  const int Z = nbound + ioncharge;
+  assert_testmodeonly(nbound > 0);
+  assert_testmodeonly(ioncharge >= 0);
 
   if constexpr (!NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
     return get_approx_shell_occupancies(nbound, ioncharge);
   }
+
+  const int Z = nbound + ioncharge;
 
   const auto &element_shells_q_neutral = elements_shells_q.at(Z - 1);
   const size_t shellcount = std::min(element_shells_q_neutral.size(), elements_electron_binding[Z - 1].size());
@@ -1504,9 +1505,9 @@ auto select_nt_ionization(const int nonemptymgi) -> std::tuple<int, int> {
 
 auto get_uptransindex(const int element, const int ion, const int lower, const int upper) {
   const int nuptrans = get_nuptrans(element, ion, lower);
-  const auto *const leveluptrans = get_uptranslist(element, ion, lower);
+  const auto *const leveluptranslist = get_uptranslist(element, ion, lower);
   for (int t = 0; t < nuptrans; t++) {
-    if (upper == leveluptrans[t].targetlevelindex) {
+    if (upper == leveluptranslist[t].targetlevelindex) {
       return t;
     }
   }
@@ -1725,16 +1726,17 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon(element, ion, lower);
 
         const double ntcollexc_ratecoeff = ntexc.ratecoeffperdeposition * deposition_rate_density;
+        const auto &uptrans = get_uptranslist(element, ion, lower)[uptransindex];
 
         const double t_mid = globals::timesteps[timestep].mid;
-        const double radexc_ratecoeff = rad_excitation_ratecoeff(nonemptymgi, element, ion, lower, uptransindex,
+        const double radexc_ratecoeff = rad_excitation_ratecoeff(nonemptymgi, element, ion, lower, uptrans,
                                                                  epsilon_trans, nnlevel_lower, lineindex, t_mid);
 
-        const double collexc_ratecoeff = col_excitation_ratecoeff(T_e, nne, element, ion, lower, uptransindex,
-                                                                  epsilon_trans, stat_weight(element, ion, lower));
+        const double collexc_ratecoeff =
+            col_excitation_ratecoeff(T_e, nne, element, ion, uptrans, epsilon_trans, stat_weight(element, ion, lower));
 
         const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
-        const auto coll_str = get_uptranslist(element, ion, lower)[uptransindex].coll_str;
+        const auto coll_str = uptrans.coll_str;
 
         printout(
             "    frac_deposition %.3e Z=%2d ionstage %d lower %4d upper %4d rad_exc %.1e coll_exc %.1e nt_exc %.1e "

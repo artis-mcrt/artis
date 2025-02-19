@@ -13,9 +13,9 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate);
                                               float A_ul, double upperstatweight, double nnlevelupper, double t_current)
     -> double;
 
-[[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, int element, int ion, int lower, int uptransindex,
-                                            double epsilon_trans, double nnlevel_lower, int lineindex, double t_current)
-    -> double;
+[[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, int element, int ion, int lower,
+                                            const LevelTransition &uptrans, double epsilon_trans, double nnlevel_lower,
+                                            int lineindex, double t_current) -> double;
 
 [[nodiscard]] auto rad_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upperionlevel,
                                                int lowerionlevel, int nonemptymgi) -> double;
@@ -32,7 +32,7 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate);
 [[nodiscard]] auto col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, int element, int ion,
                                               int upper, const LevelTransition &downtransition) -> double;
 
-[[nodiscard]] auto col_excitation_ratecoeff(float T_e, float nne, int element, int ion, int lower, int uptransindex,
+[[nodiscard]] auto col_excitation_ratecoeff(float T_e, float nne, int element, int ion, const LevelTransition &uptrans,
                                             double epsilon_trans, double lowerstatweight) -> double;
 
 #endif  // MACROATOM_H
