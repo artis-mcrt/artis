@@ -484,19 +484,19 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
     const auto *const leveluptranslist = get_uptranslist(element, ion, level);
     const auto nuptransindices = std::ranges::iota_view{0, nuptrans};
     std::for_each(nuptransindices.begin(), nuptransindices.end(), [&](const auto i) {
-      const int lineindex = leveluptranslist[i].lineindex;
-      const int upper = leveluptranslist[i].targetlevelindex;
+      const auto &uptrans = leveluptranslist[i];
+      const int lineindex = uptrans.lineindex;
+      const int upper = uptrans.targetlevelindex;
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
 
-      const double R =
-          rad_excitation_ratecoeff(nonemptymgi, element, ion, level, i, epsilon_trans, nnlevel, lineindex, t_mid) *
-          s_renorm[level];
+      const double R = rad_excitation_ratecoeff(nonemptymgi, element, ion, level, uptrans, epsilon_trans, nnlevel,
+                                                lineindex, t_mid) *
+                       s_renorm[level];
       assert_always(R >= 0);
       assert_always(std::isfinite(R));
 
       const double C =
-          col_excitation_ratecoeff(T_e, nne, element, ion, leveluptranslist[i], epsilon_trans, statweight) *
-          s_renorm[level];
+          col_excitation_ratecoeff(T_e, nne, element, ion, uptrans, epsilon_trans, statweight) * s_renorm[level];
       assert_always(C >= 0);
       assert_always(std::isfinite(C));
 

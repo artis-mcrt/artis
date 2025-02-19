@@ -1504,9 +1504,9 @@ auto select_nt_ionization(const int nonemptymgi) -> std::tuple<int, int> {
 
 auto get_uptransindex(const int element, const int ion, const int lower, const int upper) {
   const int nuptrans = get_nuptrans(element, ion, lower);
-  const auto *const leveluptrans = get_uptranslist(element, ion, lower);
+  const auto *const leveluptranslist = get_uptranslist(element, ion, lower);
   for (int t = 0; t < nuptrans; t++) {
-    if (upper == leveluptrans[t].targetlevelindex) {
+    if (upper == leveluptranslist[t].targetlevelindex) {
       return t;
     }
   }
@@ -1725,10 +1725,10 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon(element, ion, lower);
 
         const double ntcollexc_ratecoeff = ntexc.ratecoeffperdeposition * deposition_rate_density;
-        const auto uptrans = get_uptranslist(element, ion, lower)[uptransindex];
+        const auto &uptrans = get_uptranslist(element, ion, lower)[uptransindex];
 
         const double t_mid = globals::timesteps[timestep].mid;
-        const double radexc_ratecoeff = rad_excitation_ratecoeff(nonemptymgi, element, ion, lower, uptransindex,
+        const double radexc_ratecoeff = rad_excitation_ratecoeff(nonemptymgi, element, ion, lower, uptrans,
                                                                  epsilon_trans, nnlevel_lower, lineindex, t_mid);
 
         const double collexc_ratecoeff =

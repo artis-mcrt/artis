@@ -87,8 +87,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     const auto &uptrans = uptranslist[i];
     const double epsilon_trans = epsilon(element, ion, uptrans.targetlevelindex) - epsilon_current;
 
-    const double R =
-        rad_excitation_ratecoeff(nonemptymgi, element, ion, level, i, epsilon_trans, nnlevel, uptrans.lineindex, t_mid);
+    const double R = rad_excitation_ratecoeff(nonemptymgi, element, ion, level, uptrans, epsilon_trans, nnlevel,
+                                              uptrans.lineindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, element, ion, uptrans, epsilon_trans, statweight);
     const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, element, ion, level, i, uptrans.lineindex);
 
@@ -692,15 +692,14 @@ auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int element, const 
 // multiply by lower level population to get a rate per second
 
 auto rad_excitation_ratecoeff(const int nonemptymgi, const int element, const int ion, const int lower,
-                              const int uptransindex, const double epsilon_trans, const double nnlevel_lower,
+                              const LevelTransition &uptrans, const double epsilon_trans, const double nnlevel_lower,
                               const int lineindex, const double t_current) -> double {
-  const auto &uptr = get_uptranslist(element, ion, lower)[uptransindex];
-  const int upper = uptr.targetlevelindex;
+  const int upper = uptrans.targetlevelindex;
 
   const double n_u = get_levelpop(nonemptymgi, element, ion, upper);
   const auto &n_l = nnlevel_lower;
   const double nu_trans = epsilon_trans / H;
-  const double A_ul = uptr.einstein_A;
+  const double A_ul = uptrans.einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
   const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
@@ -903,16 +902,16 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
 // multiply by lower level population to get a rate per second
 
 auto col_excitation_ratecoeff(const float T_e, const float nne, const int element, const int ion,
-                              const LevelTransition &uptr, const double epsilon_trans, const double lowerstatweight)
+                              const LevelTransition &uptrans, const double epsilon_trans, const double lowerstatweight)
     -> double {
-  const double coll_strength = uptr.coll_str;
+  const double coll_strength = uptrans.coll_str;
   const double eoverkt = epsilon_trans / (KB * T_e);
 
   if (coll_strength < 0) {
-    const bool forbidden = uptr.forbidden;
+    const bool forbidden = uptrans.forbidden;
     if (!forbidden) {
       // alternative condition: (coll_strength > -1.5) i.e. to catch -1
-      const double trans_osc_strength = uptr.osc_strength;
+      const double trans_osc_strength = uptrans.osc_strength;
       // permitted E1 electric dipole transitions
       // collisional excitation: formula valid only for atoms!!!!!!!!!!!
       // Rutten script eq. 3.32. p.50
@@ -936,7 +935,7 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, const int elemen
 
     // forbidden transitions: magnetic dipole, electric quadropole...
     // Axelrod's approximation (thesis 1980)
-    const int upper = uptr.targetlevelindex;
+    const int upper = uptrans.targetlevelindex;
     const double upperstatweight = stat_weight(element, ion, upper);
     return nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
   }
