@@ -541,13 +541,14 @@ auto get_approx_shell_occupancies(const int nbound, const int ioncharge) {
 }
 
 auto get_shell_occupancies(const int nbound, const int ioncharge) {
-  assert_always(nbound > 0);
-  assert_always(ioncharge >= 0);
-  const int Z = nbound + ioncharge;
+  assert_testmodeonly(nbound > 0);
+  assert_testmodeonly(ioncharge >= 0);
 
   if constexpr (!NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
     return get_approx_shell_occupancies(nbound, ioncharge);
   }
+
+  const int Z = nbound + ioncharge;
 
   const auto &element_shells_q_neutral = elements_shells_q.at(Z - 1);
   const size_t shellcount = std::min(element_shells_q_neutral.size(), elements_electron_binding[Z - 1].size());
