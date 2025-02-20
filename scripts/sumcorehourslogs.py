@@ -18,6 +18,10 @@ def main() -> None:
                 job_core_hours = float(last_line.split("CPU hours")[0].split()[-1])
                 total_core_hours += job_core_hours
                 print(f"{job_core_hours:8.1f} core-h")
+            elif "core hours" in last_line:
+                job_core_hours = float(last_line.split("core hours")[0].split()[-1])
+                total_core_hours += job_core_hours
+                print(f"{job_core_hours:8.1f} core-h")
             else:
                 print("  WARNING: sn3d didn't finish cleanly. Manually check log to get CPU time consumed.")
             print(f"  {last_line}")
@@ -25,7 +29,8 @@ def main() -> None:
             print("\n  ignored duplicate log")
         print()
 
-    print(f"CPU time [k core-h]: {total_core_hours / 1000:.2f}")
+    print(f"CPU time: {total_core_hours:12.3f}  core-h")
+    print(f"CPU time: {total_core_hours / 1000:12.3f}  k core-h")
 
 
 if __name__ == "__main__":

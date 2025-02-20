@@ -53,8 +53,10 @@ def main() -> None:
     print()
     if ntasks is not None:
         print(f"CPUs: {ntasks}")
-        print(f"Wallclock time [hrs]: {total_core_hours / float(ntasks):.1f}")
-    print(f"CPU time [k core-h]: {total_core_hours / 1000:.2f}")
+        print(f"Wallclock time: {total_core_hours / float(ntasks):.1f} hours")
+
+    print(f"CPU time: {total_core_hours:12.3f}  core-h")
+    print(f"CPU time: {total_core_hours / 1000:12.3f}  k core-h")
 
 
 if __name__ == "__main__":
