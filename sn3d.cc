@@ -918,9 +918,11 @@ auto main(int argc, char *argv[]) -> int {
 
   MPI_Barrier(MPI_COMM_WORLD);
   const auto real_time_end = std::time(nullptr);
-  printout("sn3d finished at %ld (this job wallclock hours %.2f * %d processes * %d threads = %.1f core hours)\n",
-           real_time_end, (real_time_end - real_time_start) / 3600., globals::nprocs, get_max_threads(),
-           (real_time_end - real_time_start) / 3600. * globals::nprocs * get_max_threads());
+  printout(
+      "sn3d finished at %ld (job: ts %d to %d, %.3f wallclock hours * %d processes * %d threads = %.3f core hours)\n",
+      real_time_end, globals::timestep_initial, globals::timestep - 1, (real_time_end - real_time_start) / 3600.,
+      globals::nprocs, get_max_threads(),
+      (real_time_end - real_time_start) / 3600. * globals::nprocs * get_max_threads());
 
   if (estimators_file != nullptr) {
     fclose(estimators_file);

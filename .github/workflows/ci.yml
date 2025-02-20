@@ -175,6 +175,12 @@ jobs:
               run: |
                   cat deposition.out
 
+            - name: Show CPU core time
+              if: always()
+              working-directory: tests/${{ matrix.testname }}_testrun/
+              run: |
+                  python3 ../../scripts/sumcorehourslogs.py
+
             - name: Run exspec
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
