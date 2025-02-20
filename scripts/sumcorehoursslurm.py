@@ -52,7 +52,7 @@ def main() -> None:
     print(f"{'Total:':20s} {total_core_hours:7.1f} core-h")
     print()
     if ntasks is not None:
-        print(f"CPUs: {ntasks}")
+        print(f"Tasks: {ntasks}")
         print(f"Wallclock time: {total_core_hours / float(ntasks):.1f} hours")
 
     print(f"CPU time: {total_core_hours:12.3f}  core-h")
