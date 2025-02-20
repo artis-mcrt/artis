@@ -811,8 +811,10 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
   if (grid::get_elem_abundance(nonemptymgi, element) <= 0.) {
     // abundance of this element is zero, so do not store any NLTE populations
-    printout("Not solving for NLTE populations in cell %d at timestep %d for element Z=%d due to zero abundance\n",
-             modelgridindex, timestep, atomic_number);
+    printout(
+        "Not solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d due to zero "
+        "abundance\n",
+        modelgridindex, timestep, nlte_iter, atomic_number);
 
     nltepop_reset_element(nonemptymgi, element);
     return;
@@ -822,8 +824,9 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
   if (cell_Te == MINTEMP) {
     printout(
-        "Not solving for NLTE populations in cell %d at timestep %d for element Z=%d due to low temperature Te=%g\n",
-        modelgridindex, timestep, atomic_number, cell_Te);
+        "Not solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d due to low "
+        "temperature Te=MINTEMP=%g K\n",
+        modelgridindex, timestep, atomic_number, nlte_iter, cell_Te);
     set_element_pops_lte(nonemptymgi, element);
     return;
   }
@@ -1063,9 +1066,9 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     const double elem_pop_error_percent = fabs((nnelement / elem_pop_matrix) - 1) * 100;
     if (elem_pop_error_percent > 1.0) {
       printout(
-          "  WARNING: The Z=%d element population is: %g (from abundance) and %g (from matrix solution sum of level "
-          "pops), error: %.1f%%. Forcing element pops to LTE.\n",
-          atomic_number, nnelement, elem_pop_matrix, elem_pop_error_percent);
+          "  WARNING: timestep %d nlteiter %d Z=%d element population is: %g (from abundance) and %g (from matrix "
+          "solution), error: %.2f%%. Forcing element pops to LTE.\n",
+          timestep, nlte_iter, atomic_number, nnelement, elem_pop_matrix, elem_pop_error_percent);
       set_element_pops_lte(nonemptymgi, element);
     }
 
