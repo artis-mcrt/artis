@@ -610,6 +610,41 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
   }
 }
 
+void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matrix *rate_matrix,
+                              gsl_vector *pop_norm_factor_vec) {
+  const size_t nlte_dimension = pop_norm_factor_vec->size;
+  assert_always(pop_norm_factor_vec->size == nlte_dimension);
+  assert_always(rate_matrix->size1 == nlte_dimension);
+  assert_always(rate_matrix->size2 == nlte_dimension);
+
+  // TODO: consider replacing normalisation by LTE populations with
+  // GSL's gsl_linalg_balance_matrix(gsl_matrix * A, gsl_vector * D) function instead
+  for (size_t column = 0; column < nlte_dimension; column++) {
+    const auto [ion, level] = get_ion_level_of_nlte_vector_index(column, element);
+
+    gsl_vector_set(pop_norm_factor_vec, column, calculate_levelpop_lte(nonemptymgi, element, ion, level));
+
+    if ((level != 0) && (!is_nlte(element, ion, level))) {
+      // level is a superlevel, so add populations of higher levels to the norm factor
+      for (int dummylevel = level + 1; dummylevel < get_nlevels(element, ion); dummylevel++) {
+        if (!is_nlte(element, ion, dummylevel)) {
+          *gsl_vector_ptr(pop_norm_factor_vec, column) += calculate_levelpop_lte(nonemptymgi, element, ion, dummylevel);
+        }
+      }
+      // NOTE: above calculation is not always equal to the sum of LTE populations
+      // since calculate_levelpop_lte imposes MINPOP minimum
+      // printout("superlevel norm factor index %d is %g, partfunc is %g, partfunc*levelpop(SL)/g(SL) %g\n",
+      //          column, gsl_vector_get(pop_norm_factor_vec, column), superlevel_partfunc[ion],
+      //          superlevel_partfunc[ion] * calculate_levelpop_lte(nonemptymgi,element,ion,level) /
+      //          stat_weight(element,ion,level));
+    }
+
+    // apply the normalisation factor to this column in the rate_matrix
+    gsl_vector_view column_view = gsl_matrix_column(rate_matrix, column);
+    gsl_vector_scale(&column_view.vector, gsl_vector_get(pop_norm_factor_vec, column));
+  }
+}
+
 void set_element_pops_lte(const int nonemptymgi, const int element) {
   nltepop_reset_element(nonemptymgi, element);  // set NLTE pops as invalid so that LTE pops will be used instead
   calculate_cellpartfuncts(nonemptymgi, element);
@@ -947,7 +982,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   auto pop_norm_factor_vec = gsl_vector_view_array(vec_pop_norm_factor_vec.data(), nlte_dimension).vector;
   gsl_vector_set_all(&pop_norm_factor_vec, 1.0);
 
-  gsl_linalg_balance_matrix(&rate_matrix, &pop_norm_factor_vec);
+  nltepop_matrix_normalise(nonemptymgi, element, &rate_matrix, &pop_norm_factor_vec);
 
   // printout("Rate matrix | balance vector:\n");
   // for (int row = 0; row < nlte_dimension; row++)
