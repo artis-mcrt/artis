@@ -639,6 +639,10 @@ void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matr
       //          stat_weight(element,ion,level));
     }
 
+    gsl_vector_set(pop_norm_factor_vec, column, 1. / gsl_vector_get(pop_norm_factor_vec, column));
+    if (!std::isfinite(gsl_vector_get(pop_norm_factor_vec, column))) {
+      gsl_vector_set(pop_norm_factor_vec, column, 1. / MINPOP);
+    }
     // apply the normalisation factor to this column in the rate_matrix
     gsl_vector_view column_view = gsl_matrix_column(rate_matrix, column);
     gsl_vector_scale(&column_view.vector, gsl_vector_get(pop_norm_factor_vec, column));
@@ -750,7 +754,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       gsl_vector_memcpy(&gsl_x_best, &x);
       error_best = error;
     }
-    // printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
+    // printout("Linear algebra solver iteration %d has a maximum residual of %g\n", iteration, error);
     if (error < TOLERANCE) {
       break;
     }
@@ -790,10 +794,11 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     if (gsl_vector_get(popvec, row) < 0.0) {
       printout(
           "  WARNING: NLTE solver gave negative population to index %zu (Z=%d ionstage %d level %d), pop = %g. "
-          "Replacing with LTE pop of %g\n",
+          "Replacing with MINPOP %g (LTE pop %g)\n",
           row, get_atomicnumber(element), get_ionstage(element, ion), level,
-          gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row), gsl_vector_get(pop_normfactor_vec, row));
-      gsl_vector_set(popvec, row, gsl_vector_get(pop_normfactor_vec, row));
+          gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row), MINPOP,
+          1. / gsl_vector_get(pop_normfactor_vec, row));
+      gsl_vector_set(popvec, row, 0.);
     }
   }
 
@@ -983,6 +988,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   gsl_vector_set_all(&pop_norm_factor_vec, 1.0);
 
   nltepop_matrix_normalise(nonemptymgi, element, &rate_matrix, &pop_norm_factor_vec);
+  // gsl_linalg_balance_matrix(&rate_matrix, &pop_norm_factor_vec);
 
   // printout("Rate matrix | balance vector:\n");
   // for (int row = 0; row < nlte_dimension; row++)
@@ -1067,7 +1073,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     if (elem_pop_error_percent > 1.0) {
       printout(
           "  WARNING: The Z=%d element population is: %g (from abundance) and %g (from matrix solution sum of level "
-          "pops), error: %.1f%%. Forcing element pops to LTE.\n",
+          "pops), error: %.2f%%. Forcing element pops to LTE.\n",
           atomic_number, nnelement, elem_pop_matrix, elem_pop_error_percent);
       set_element_pops_lte(nonemptymgi, element);
     }
