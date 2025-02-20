@@ -4,7 +4,7 @@ CompileFlags:
     # or brew install bear, then:
     # make clean && bear -- make TESTMODE=ON
     CompilationDatabase: compile_commands.json
-    Add: [-xc++, -std=c++23, -DTESTMODE=true, -Wall, -Wextra, -pedantic, -Wpedantic, -Wredundant-decls, -Wno-unused-parameter, -Wno-unused-function, -Wno-unneeded-internal-declaration, -Wno-unused-const-variable, -Wsign-compare, -Wshadow]
+    Add: [-xc++, -std=c++23, -DTESTMODE=true, -Wall, -Wextra, -pedantic, -Wpedantic, -Wredundant-decls, -Wno-unneeded-internal-declaration, -Wno-unused-parameter, -Wno-unused-const-variable, -Wsign-compare, -Wshadow]
 
 Diagnostics:
     ClangTidy:
