@@ -31,7 +31,7 @@ COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -
 $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := CLANG
-	CXXFLAGS += -flto=thin -Wno-error=unused-command-line-argument
+	CXXFLAGS += -flto=thin
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 	COMPILER_NAME := GCC
 	CXXFLAGS += -flto=auto
@@ -52,11 +52,7 @@ endif
 
 $(info detected compiler is $(COMPILER_NAME) major version $(COMPILER_VERSION_NUMBER_MAJOR))
 
-CXXFLAGS += -std=c++23 -fstrict-aliasing
-
-ifneq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -ftree-vectorize -Wunused-macros -Werror -Wno-error=unknown-pragmas -Wno-error=cast-function-type -Wno-error=unused-function -MD -MP -ftrivial-auto-var-init=pattern
-endif
+CXXFLAGS += -std=c++23
 
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
 
@@ -144,9 +140,12 @@ ifeq ($(shell uname -s),Darwin)
 	endif
 
 	CXXFLAGS += -fno-omit-frame-pointer -g
-#	CXXFLAGS += -Rpass=loop-vectorize
-#	CXXFLAGS += -Rpass-missed=loop-vectorize
-#	CXXFLAGS += -Rpass-analysis=loop-vectorize
+	# gcc
+	# CXXFLAGS += -fopt-info-vec-missed
+	# clang
+	CXXFLAGS += -Rpass=loop-vectorize
+	# CXXFLAGS += -Rpass-missed=loop-vectorize
+	# CXXFLAGS += -Rpass-analysis=loop-vectorize
 
 else
 	# sometimes the login nodes have different CPUs
@@ -231,8 +230,13 @@ endif
 
 CXXFLAGS += -Wall -Wextra -pedantic -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow
 
+ifneq ($(COMPILER_NAME),NVHPC)
+	CXXFLAGS += -Wunused-macros -Werror -Wno-error=unknown-pragmas -Wno-error=cast-function-type -MD -MP -ftrivial-auto-var-init=pattern -Wno-unused-function
+endif
+
 ifeq ($(COMPILER_NAME),CLANG)
 	CXXFLAGS += -Wno-unneeded-internal-declaration
+	LDFLAGS += -Wno-unused-command-line-argument
 endif
 
 # sn3d.cc and exspec.cc have main() defined
