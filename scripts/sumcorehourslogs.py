@@ -12,15 +12,18 @@ def main() -> None:
         prev_last_line = last_line
         with logfile.open("rt", encoding="utf-8") as flog:
             last_line = flog.readlines()[-1].strip()
-        print(f"{str(logfile):10s} ", end="")
+        print(f"{str(logfile)}: ", end="")
         if prev_last_line != last_line:
-            print(f"{last_line:>10s}")
             if "CPU hours" in last_line:
                 job_core_hours = float(last_line.split("CPU hours")[0].split()[-1])
                 total_core_hours += job_core_hours
-                print(f"   finished with {job_core_hours} core-h")
+                print(f"{job_core_hours:8.1f} core-h")
+            else:
+                print("  WARNING: sn3d didn't finish cleanly. Manually check log to get CPU time consumed.")
+            print(f"  {last_line}")
         else:
-            print("ignored duplicate log")
+            print("\n  ignored duplicate log")
+        print()
 
     print(f"CPU time [k core-h]: {total_core_hours / 1000:.2f}")
 
