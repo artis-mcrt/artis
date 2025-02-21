@@ -8,23 +8,6 @@ on:
     workflow_dispatch:
 
 jobs:
-    cppcheck:
-        runs-on: macos-15
-        steps:
-            - uses: actions/checkout@v4
-
-            - name: install dependencies
-              run: |
-                  brew update
-                  brew install gsl openmpi cppcheck || true
-                  cp artisoptions_nltenebular.h artisoptions.h
-                  make version.h
-
-            - name: run cppcheck
-              run: |
-                  cppcheck --version
-                  cppcheck --force --error-exitcode=1 --language=c++ --enable=all --inconclusive --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --suppress=knownArgument --suppress=missingIncludeSystem --suppress=unusedFunction --check-level=exhaustive .
-
     clang-format:
         runs-on: ubuntu-24.04
         steps:
@@ -36,10 +19,14 @@ jobs:
                   clang-format-version: '19'
                   check-path: .
 
-    clang-tidy:
+    clang-tidy-cppcheck:
+        name: clang-tidy and cppcheck
         runs-on: macos-15
         steps:
             - uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
 
             - uses: maxim-lobanov/setup-xcode@v1
               with:
@@ -47,6 +34,7 @@ jobs:
 
             - name: install llvm from brew
               run: |
+                  brew update
                   brew install llvm
                   echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
 
@@ -59,13 +47,7 @@ jobs:
                   echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
                   echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
 
-            - name: Set up Python
-              uses: actions/setup-python@v5
-
-            - name: install dependencies
-              run: |
-                  brew update
-                  brew install openmpi gsl || true
+                  brew install openmpi gsl cppcheck || true
                   python3 -m pip install compiledb
 
             - name: Generate compile_commands.json
@@ -74,10 +56,15 @@ jobs:
                   make clean
                   python3 -m compiledb -n --full-path make TESTMODE=ON
 
-            - name: run-clang-tidy
+            - name: run clang-tidy
               run: |
                   clang-tidy --version
                   xcrun run-clang-tidy
+
+            - name: run cppcheck
+              run: |
+                  cppcheck --version
+                  cppcheck --force --error-exitcode=1 --language=c++ --enable=all --inconclusive --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --suppress=knownArgument --suppress=missingIncludeSystem --suppress=unusedFunction --check-level=exhaustive .
 
     compile:
         strategy:
