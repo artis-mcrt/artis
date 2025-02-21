@@ -1756,7 +1756,6 @@ auto get_cellradialposmid(const int cellindex) -> double {
 }
 
 void set_elements_uppermost_ion(const int nonemptymgi, const int element, const int uppermost_ion) {
-  assert_testmodeonly(uppermost_ion >= 0);
   assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
   elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element] = uppermost_ion;
 }
