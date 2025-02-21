@@ -32,7 +32,7 @@ jobs:
               with:
                   xcode-version: 'latest-stable'
 
-            - name: install llvm from brew
+            - name: Install dependencies
               run: |
                   brew update
                   brew install llvm
@@ -56,12 +56,12 @@ jobs:
                   make clean
                   python3 -m compiledb -n --full-path make TESTMODE=ON
 
-            - name: run clang-tidy
+            - name: Run clang-tidy
               run: |
                   clang-tidy --version
                   xcrun run-clang-tidy
 
-            - name: run cppcheck
+            - name: Run cppcheck
               run: |
                   cppcheck --version
                   cppcheck --force --error-exitcode=1 --language=c++ --enable=all --inconclusive --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --suppress=knownArgument --suppress=missingIncludeSystem --suppress=unusedFunction --check-level=exhaustive .
@@ -83,16 +83,14 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: CPU type and core count
+            - name: Show CPU type and core count
               id: cpu-count
               run: |
                   g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
-                  #python3 -m pip install psutil
-                  #python3 -c 'import psutil; print(f"CPU count (physical only): {int(psutil.cpu_count(logical=False))}")'
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
-            - name: Install gcc
+            - name: Install GCC
               if: matrix.compiler.name == 'gcc'
               uses: fortran-lang/setup-fortran@v1
               with:
@@ -106,34 +104,26 @@ jobs:
                   compiler: nvidia-hpc
                   version: ${{ matrix.compiler.ver }}
 
-            # - name: Install CUDA Toolkit
-            #   uses: Jimver/cuda-toolkit@master
-            #   if: matrix.compiler.name == 'nvc++'
-            #   with:
-            #       log-file-suffix: '${{matrix.compiler.ver}}.txt'
-            #       method: 'network'
-            #       sub-packages: '"nvcc", "cudart"'
-
             - name: Set nvc++ as compiler
               if: matrix.compiler.name == 'nvc++'
               run: |
                   echo "CXX=nvc++" >> $GITHUB_ENV
                   echo "OMPI_CXX=nvc++" >> $GITHUB_ENV
 
-            - name: install gsl
+            - name: Install GSL
               run: |
                   sudo apt install libgsl-dev
 
-            - name: install tbb
+            - name: Install TBB
               if: matrix.compiler.name == 'gcc'
               run: |
                   sudo apt install libtbb-dev
 
-            - name: install openmpi
+            - name: Install OpenMPI
               run: |
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
-            - name: install OpenMP
+            - name: Install OpenMP
               run: |
                   sudo apt-get install -y libomp5 libomp-dev
 
@@ -191,90 +181,13 @@ jobs:
               run: |
                   find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nebular.h" -exec sh -c 'cp -v -p {} artisoptions.h && make sn3d' \;
 
-    mac-llvm-clang:
+    mac-clang:
         runs-on: macos-15
-        name: macOS llvm clang
-
+        name: Apple Clang and LLVM Clang
         steps:
             - uses: actions/checkout@v4
 
-            - name: CPU core count
-              id: cpu-count
-              run: |
-                  #python3 -m pip install psutil
-                  #python3 -c 'import psutil; print(f"CPU count (physical only): {int(psutil.cpu_count(logical=False))}")'
-                  python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
-                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
-
-            - uses: maxim-lobanov/setup-xcode@v1
-              with:
-                  xcode-version: 'latest-stable'
-
-            - name: install dependencies
-              run: |
-                  brew update
-                  brew install gsl || true
-
-            - name: install llvm
-              run: |
-                  brew install llvm || true
-                  echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
-                  echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib -L/opt/homebrew/opt/llvm/lib/c++ -L/opt/homebrew/opt/llvm/lib/unwind -lunwind" >> $GITHUB_ENV
-                  echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
-                  echo "CXX=clang++" >> $GITHUB_ENV
-
-            - name: install OpenMPI
-              run: |
-                  brew install openmpi || true
-
-            - name: Compile classic mode
-              run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
-                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
-
-            - name: Compile classic mode OPENMP=ON
-              run: |
-                  make clean
-                  make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
-
-            - name: Compile classic mode STDPAR=ON
-              run: |
-                  clang++ -v
-                  cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
-                  make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
-
-            - name: Compile nebular mode
-              run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
-                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
-
-            - name: Compile nebular mode OPENMP=ON
-              run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
-                  make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
-
-            - name: Compile nebular mode STDPAR=ON
-              run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
-                  make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
-
-            - name: Compile all remaining option files
-              run: |
-                  find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nebular.h" -exec sh -c 'cp -v -p {} artisoptions.h && make sn3d' \;
-
-    mac-apple-clang:
-        runs-on: macos-15
-        name: macOS Apple clang
-
-        steps:
-            - uses: actions/checkout@v4
-
-            - name: CPU core count
+            - name: Show CPU Core Count
               id: cpu-count
               run: |
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
@@ -284,12 +197,12 @@ jobs:
               with:
                   xcode-version: 'latest-stable'
 
-            - name: install dependencies
+            - name: Install dependencies
               run: |
                   brew update
-                  brew install gsl || true
+                  brew install gsl openmpi || true
 
-            - name: install OpenMP
+            - name: Install OpenMP
               run: |
                   brew install libomp || true
                   brew link --force libomp
@@ -297,45 +210,89 @@ jobs:
                   echo "LDFLAGS=-L/opt/homebrew/opt/libomp/lib $LDFLAGS" >> $GITHUB_ENV
                   echo "CXXFLAGS=-I/opt/homebrew/opt/libomp/include $CXXFLAGS" >> $GITHUB_ENV
 
-            - name: install OpenMPI
-              run: |
-                  brew install openmpi || true
-
-            - name: Compile classic mode
+            - name: Apple Clang Compile classic mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
                   make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: Compile classic mode OPENMP=ON
+            - name: Apple Clang Compile  classic mode OPENMP=ON
               run: |
                   make clean
                   make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: Compile classic mode STDPAR=ON
+            - name: Apple Clang Compile classic mode STDPAR=ON
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
                   make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: Compile nebular mode
+            - name: Apple Clang Compile nebular mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
                   make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: Compile nebular mode OPENMP=ON
+            - name: Apple Clang Compile nebular mode OPENMP=ON
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
                   make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: Compile nebular mode STDPAR=ON
+            - name: Apple Clang Compile nebular mode STDPAR=ON
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
                   make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: Compile all remaining option files
+            - name: Apple Clang Compile all remaining option files
+              run: |
+                  find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nebular.h" -exec sh -c 'cp -v -p {} artisoptions.h && make sn3d' \;
+
+            - name: Install LLVM
+              run: |
+                  brew install llvm || true
+                  echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
+                  echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib -L/opt/homebrew/opt/llvm/lib/c++ -L/opt/homebrew/opt/llvm/lib/unwind -lunwind" >> $GITHUB_ENV
+                  echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
+                  echo "CXX=clang++" >> $GITHUB_ENV
+
+            - name: LLVM Clang Compile classic mode
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: LLVM Clang Compile classic mode OPENMP=ON
+              run: |
+                  make clean
+                  make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: LLVM Clang Compile classic mode STDPAR=ON
+              run: |
+                  clang++ -v
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: LLVM Clang Compile nebular mode
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: LLVM Clang Compile nebular mode OPENMP=ON
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: LLVM Clang Compile nebular mode STDPAR=ON
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: LLVM Clang Compile all remaining option files
               run: |
                   find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nebular.h" -exec sh -c 'cp -v -p {} artisoptions.h && make sn3d' \;
