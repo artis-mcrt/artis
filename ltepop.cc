@@ -421,9 +421,8 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 [[nodiscard]] auto calculate_ionfractions(const int element, const int nonemptymgi, const double nne,
                                           const bool use_phi_lte) -> std::vector<double> {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  const int uppermost_ion = grid::get_elements_uppermost_ion(nonemptymgi, element);
   assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
+  const int uppermost_ion = grid::get_elements_uppermost_ion(nonemptymgi, element);
 
   if (uppermost_ion < 0) {
     return {};

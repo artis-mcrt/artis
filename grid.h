@@ -48,7 +48,7 @@ inline std::span<float> ion_partfuncts_allcells{};
 inline std::span<double> ion_cooling_contribs_allcells{};
 
 [[nodiscard]] auto get_elements_uppermost_ion(int nonemptymgi, int element) -> int;
-void set_elements_uppermost_ion(int nonemptymgi, int element, int newvalue);
+void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion);
 [[nodiscard]] auto wid_init(int cellindex, int axis) -> double;
 [[nodiscard]] auto get_modelcell_assocvolume_tmin(int modelgridindex) -> double;
 [[nodiscard]] auto get_propcell_volume_tmin(int cellindex) -> double;
