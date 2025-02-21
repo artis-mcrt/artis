@@ -564,20 +564,21 @@ void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matr
   for (size_t column = 0; column < nlte_dimension; column++) {
     const auto [ion, level] = get_ion_level_of_nlte_vector_index(column, element);
 
-    gsl_vector_set(pop_norm_factor_vec, column, calculate_levelpop_lte(nonemptymgi, element, ion, level));
+    gsl_vector_set(pop_norm_factor_vec, column, calculate_levelpop_boltzmann(nonemptymgi, element, ion, level));
 
     if ((level != 0) && (!is_nlte(element, ion, level))) {
       // level is a superlevel, so add populations of higher levels to the norm factor
       for (int dummylevel = level + 1; dummylevel < get_nlevels(element, ion); dummylevel++) {
         if (!is_nlte(element, ion, dummylevel)) {
-          *gsl_vector_ptr(pop_norm_factor_vec, column) += calculate_levelpop_lte(nonemptymgi, element, ion, dummylevel);
+          *gsl_vector_ptr(pop_norm_factor_vec, column) +=
+              calculate_levelpop_boltzmann(nonemptymgi, element, ion, dummylevel);
         }
       }
       // NOTE: above calculation is not always equal to the sum of LTE populations
-      // since calculate_levelpop_lte imposes MINPOP minimum
+      // since calculate_levelpop_boltzmann imposes MINPOP minimum
       // printout("superlevel norm factor index %d is %g, partfunc is %g, partfunc*levelpop(SL)/g(SL) %g\n",
       //          column, gsl_vector_get(pop_norm_factor_vec, column), superlevel_partfunc[ion],
-      //          superlevel_partfunc[ion] * calculate_levelpop_lte(nonemptymgi,element,ion,level) /
+      //          superlevel_partfunc[ion] * calculate_levelpop_boltzmann(nonemptymgi,element,ion,level) /
       //          stat_weight(element,ion,level));
     }
 
@@ -588,8 +589,10 @@ void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matr
 }
 
 void set_element_pops_lte(const int nonemptymgi, const int element) {
-  nltepop_reset_element(nonemptymgi, element);  // set NLTE pops as invalid so that LTE pops will be used instead
+  // set NLTE level pops as invalid so that Boltzmann pops will be used instead
+  nltepop_reset_element(nonemptymgi, element);
   calculate_cellpartfuncts(nonemptymgi, element);
+  // set ionisation to Saha
   set_groundlevelpops(nonemptymgi, element, grid::get_nne(nonemptymgi), true);
 }
 
@@ -1106,7 +1109,7 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
       const int nsuperlevels = ion_has_superlevel(element, ion) ? 1 : 0;
 
       for (int level = 0; level <= nlevels_nlte + nsuperlevels; level++) {
-        double nnlevellte = calculate_levelpop_lte(nonemptymgi, element, ion, level);
+        double nnlevellte = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
         double nnlevelnlte{NAN};
 
         fprintf(nlte_file, "%d %d %d %d ", timestep, modelgridindex, atomic_number, ionstage);
@@ -1128,7 +1131,7 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
           double superlevel_partfunc = 0;
           fprintf(nlte_file, "%d ", -1);
           for (int level_sl = nlevels_nlte + 1; level_sl < get_nlevels(element, ion); level_sl++) {
-            nnlevellte += calculate_levelpop_lte(nonemptymgi, element, ion, level_sl);
+            nnlevellte += calculate_levelpop_boltzmann(nonemptymgi, element, ion, level_sl);
             superlevel_partfunc += superlevel_boltzmann(nonemptymgi, element, ion, level_sl);
           }
 
