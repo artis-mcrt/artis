@@ -26,7 +26,7 @@ namespace {
 
 struct nneSolutionParas {
   int nonemptymgi;
-  bool force_lte;
+  bool force_saha;
 };
 
 auto interpolate_ions_spontrecombcoeff(const int uniqueionindex, const double T) -> double {
@@ -46,7 +46,7 @@ auto interpolate_ions_spontrecombcoeff(const int uniqueionindex, const double T)
 }
 
 // use Saha equation for LTE ionization balance
-auto phi_lte(const int element, const int ion, const int nonemptymgi) -> double {
+auto phi_saha(const int element, const int ion, const int nonemptymgi) -> double {
   const int uniqueionindex = get_uniqueionindex(element, ion);
   const auto partfunc_ion =
       grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex];
@@ -139,18 +139,18 @@ auto get_element_nne_contrib(const int nonemptymgi, const int element) -> double
 auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double {
   const auto *paras = static_cast<const nneSolutionParas *>(voidparas);
   const int nonemptymgi = paras->nonemptymgi;
-  const bool force_lte = paras->force_lte;
+  const bool force_saha = paras->force_saha;
 
   double nne_after = 0.;  // the resulting nne after setting the ion balance with nne_assumed
   for (int element = 0; element < get_nelements(); element++) {
     const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
     if (nnelement > 0 && get_nions(element) > 0) {
-      if (!force_lte && elem_has_nlte_levels(element)) {
+      if (!force_saha && elem_has_nlte_levels(element)) {
         // populations from the NLTE solver are fixed during the nne solver
         nne_after += get_element_nne_contrib(nonemptymgi, element);
       } else {
-        const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
-        const auto ionfractions = calculate_ionfractions(element, nonemptymgi, nne_assumed, use_phi_lte);
+        const bool use_phi_saha = force_saha || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
+        const auto ionfractions = calculate_ionfractions(element, nonemptymgi, nne_assumed, use_phi_saha);
         const int uppermost_ion = static_cast<int>(std::ssize(ionfractions) - 1);
         for (int ion = 0; ion <= uppermost_ion; ion++) {
           const double nnion = nnelement * ionfractions[ion];
@@ -183,7 +183,7 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
       const double nltepop_over_rho = get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level);
       if (nltepop_over_rho < -0.9) {
         // Case for when no NLTE level information is available yet
-        nn = calculate_levelpop_lte(nonemptymgi, element, ion, level);
+        nn = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
       } else {
         nn = nltepop_over_rho * grid::get_rho(nonemptymgi);
         if (!std::isfinite(nn)) {
@@ -204,7 +204,7 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
       if (superlevelpop_over_rho < -0.9)  // TODO: should change this to less than zero?
       {
         // Case for when no NLTE level information is available yet
-        nn = calculate_levelpop_lte(nonemptymgi, element, ion, level);
+        nn = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
       } else {
         nn = superlevelpop_over_rho * grid::get_rho(nonemptymgi) *
              superlevel_boltzmann(nonemptymgi, element, ion, level);
@@ -220,7 +220,7 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
       }
     }
   } else {
-    nn = calculate_levelpop_lte(nonemptymgi, element, ion, level);
+    nn = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
   }
   *skipminpop = false;
   return nn;
@@ -275,20 +275,20 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   return U;
 }
 
-auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi, const bool force_lte) -> int {
+auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi, const bool force_saha) -> int {
   const int nions = get_nions(element);
   if (nions == 0) {
     return -1;
   }
-  if (!force_lte && elem_has_nlte_levels(element)) {
+  if (!force_saha && elem_has_nlte_levels(element)) {
     return nions - 1;
   }
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
+  const bool use_phi_saha = force_saha || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
   int uppermost_ion = 0;
 
   uppermost_ion = nions - 1;
-  if (!use_phi_lte) {
+  if (!use_phi_saha) {
     for (int ion = 0; ion < nions - 1; ion++) {
       if (iongamma_is_zero(nonemptymgi, element, ion) &&
           (!NT_ON || ((globals::dep_estimator_gamma[nonemptymgi] == 0.) &&
@@ -304,7 +304,7 @@ auto find_uppermost_ion(const int nonemptymgi, const int element, const double n
   int ion = 0;
   for (ion = 0; ion < uppermost_ion; ion++) {
     const auto phifactor =
-        use_phi_lte ? phi_lte(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
+        use_phi_saha ? phi_saha(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
     factor *= nne_hi * phifactor;
 
     if (!std::isfinite(factor)) {
@@ -359,7 +359,7 @@ void set_groundlevelpops_neutral(const int nonemptymgi) {
 auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_lte) -> float {
   // Search solution for nne in [nne_lo,nne_hi]
 
-  nneSolutionParas paras = {.nonemptymgi = nonemptymgi, .force_lte = force_lte};
+  nneSolutionParas paras = {.nonemptymgi = nonemptymgi, .force_saha = force_lte};
   gsl_function f = {.function = &nne_solution_f, .params = &paras};
 
   double nne_lo = 0.;  // MINPOP;
@@ -419,7 +419,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 // Calculate the fractions of an element's population in each ionization stage based on Saha LTE or ionisation
 // equilibrium
 [[nodiscard]] auto calculate_ionfractions(const int element, const int nonemptymgi, const double nne,
-                                          const bool use_phi_lte) -> std::vector<double> {
+                                          const bool use_phi_saha) -> std::vector<double> {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   assert_testmodeonly(element < get_nelements());
   const int uppermost_ion = grid::get_elements_uppermost_ion(nonemptymgi, element);
@@ -435,7 +435,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 
   for (int ion = uppermost_ion - 1; ion >= 0; ion--) {
     const auto phifactor =
-        use_phi_lte ? phi_lte(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
+        use_phi_saha ? phi_saha(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
     ionfractions[ion] = ionfractions[ion + 1] * nne * phifactor;
     normfactor += ionfractions[ion];
   }
@@ -470,7 +470,7 @@ auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion)
 }
 
 // Calculate occupation population of a level assuming LTE excitation
-auto calculate_levelpop_lte(const int nonemptymgi, const int element, const int ion, const int level) -> double {
+auto calculate_levelpop_boltzmann(const int nonemptymgi, const int element, const int ion, const int level) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
@@ -559,7 +559,7 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
 
 // If not already set by the NLTE solver, set the ground level populations from either Saha LTE or
 // ionization/recombination balance (Photoionization Equilibrium)
-void set_groundlevelpops(const int nonemptymgi, const int element, const float nne, const bool force_lte) {
+void set_groundlevelpops(const int nonemptymgi, const int element, const float nne, const bool force_saha) {
   const int nions = get_nions(element);
 
   if (nions <= 0) {
@@ -569,10 +569,10 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
   // calculate number density of the current element (abundances are given by mass)
   const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
 
-  const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
+  const bool use_phi_saha = force_saha || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
 
   const auto ionfractions =
-      (nnelement > 0) ? calculate_ionfractions(element, nonemptymgi, nne, use_phi_lte) : std::vector<double>();
+      (nnelement > 0) ? calculate_ionfractions(element, nonemptymgi, nne, use_phi_saha) : std::vector<double>();
 
   const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
   const ptrdiff_t nincludedions = get_includedions();
