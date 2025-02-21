@@ -54,18 +54,16 @@ jobs:
                   compiler: gcc
                   version: 14
 
-            - name: install gsl and openmpi
+            - name: Install GSL and OpenMPI
               run: |
                   sudo apt-get update
                   sudo apt install -y libgsl-dev
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
-            - name: CPU type and core count
+            - name: Show CPU type and core count
               id: cpu-count
               run: |
                   g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
-                  #python3 -m pip install psutil
-                  #python3 -c 'import psutil; print(f"CPU count (physical only): {int(psutil.cpu_count(logical=False))}")'
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
