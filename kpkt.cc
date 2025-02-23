@@ -18,6 +18,7 @@
 #include "macroatom.h"
 #include "packet.h"
 #include "radfield.h"
+#include "random.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
 #include "sn3d.h"

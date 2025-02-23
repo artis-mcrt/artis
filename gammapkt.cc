@@ -23,6 +23,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "packet.h"
+#include "random.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"

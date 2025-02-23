@@ -23,6 +23,7 @@
 #include "macroatom.h"
 #include "packet.h"
 #include "radfield.h"
+#include "random.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"

@@ -12,6 +12,7 @@
 #include "constants.h"
 #include "exspec.h"
 #include "packet.h"
+#include "random.h"
 #include "sn3d.h"
 
 // return the the magnitude of a vector

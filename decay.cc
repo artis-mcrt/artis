@@ -31,6 +31,7 @@
 #include "grid.h"
 #include "input.h"
 #include "packet.h"
+#include "random.h"
 #include "sn3d.h"
 
 namespace decay {

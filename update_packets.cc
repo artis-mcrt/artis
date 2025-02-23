@@ -18,6 +18,7 @@
 #include "kpkt.h"
 #include "nonthermal.h"
 #include "packet.h"
+#include "random.h"
 #include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"

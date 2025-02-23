@@ -35,6 +35,7 @@
 #include "ltepop.h"
 #include "macroatom.h"
 #include "packet.h"
+#include "random.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"
