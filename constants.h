@@ -26,6 +26,7 @@ constexpr double KB = 1.38064852e-16;        // Boltzmann constant [erg/K]
 constexpr double STEBO = 5.670400e-5;        // Stefan-Boltzmann constant [erg cm^−2 s^−1 K^−4.]
                                              // (data from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
 constexpr double SAHACONST = 2.0706659e-16;  // Saha constant
+constexpr double BARN = 1e-24;               // barn in cgs units [cm2]
 
 constexpr double EULERGAMMA = std::numbers::egamma;
 

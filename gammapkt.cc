@@ -479,11 +479,11 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
       // 2.41326e19 Hz = 100 keV / H
       const double hnu_over_100kev = pkt.nu_cmf / 2.41326e+19;
 
-      // double sigma_cmf_cno = 0.0448e-24 * pow(hnu_over_100kev, -3.2);
+      // double sigma_cmf_cno = 0.0448 * BARN * pow(hnu_over_100kev, -3.2);
 
-      const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
+      const double sigma_cmf_si = 1.16 * BARN * pow(hnu_over_100kev, -3.13);
 
-      const double sigma_cmf_fe = 25.7e-24 * pow(hnu_over_100kev, -3.0);
+      const double sigma_cmf_fe = 25.7 * BARN * pow(hnu_over_100kev, -3.0);
 
       // Now need to multiply by the particle number density.
 
@@ -539,7 +539,7 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
         // interpolate or extrapolate, both linear in log10-log10 space
         const double log10_intpol = log10_E_smaller + ((log10_sigma_gtr - log10_sigma_lower) /
                                                        (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller));
-        const double sigma_intpol = pow(10., log10_intpol) * 1.0e-24;  // now in cm^2
+        const double sigma_intpol = pow(10., log10_intpol) * BARN;  // now in cm^2
         const double chi_cmf_contrib = sigma_intpol * n_i;
         chi_cmf += chi_cmf_contrib;
       }
@@ -859,7 +859,10 @@ void barnes_thermalisation(Packet &pkt)
   const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
 
   // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
-  const double t_ineff = 1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / v_ej);
+  double barnes_prefactor = 0.72;
+  if (USE_WRONG_BARNES_FACTOR) barnes_prefactor = 1.4;
+  const double t_ineff =
+      barnes_prefactor * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / v_ej);
   const double tau = pow(t_ineff / pkt.prop_time, 2.);
   const double f_gamma = 1. - exp(-tau);
   assert_always(f_gamma >= 0.);
@@ -1048,7 +1051,6 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   pkt.last_cross = BOUNDARY_NONE;
 
   // initialise polarisation information
-  // bla bla
   pkt.stokes = {1., 0., 0.};
 
   pkt.pol_dir = cross_prod(pkt.dir, std::array<double, 3>{0., 0., 1.});

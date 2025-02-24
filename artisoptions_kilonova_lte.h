@@ -151,5 +151,7 @@ constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
 
 constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
 
+constexpr bool USE_WRONG_BARNES_FACTOR = false;
+
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
