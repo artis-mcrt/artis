@@ -184,8 +184,11 @@ auto rng_seed(auto&& seedval) { rng.seed(seedval); }
 inline auto rng_uniform() -> float {
   while (true) {
 #ifndef GPU_ON
+    // use std::generate_canonical in CPU mode, because it seems to be faster
     const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(rng);
 #else
+    // std::random can't be used in device code on nvc++ (long double not supported)
+    // so use custom generator instead
     const auto zrand = utlrandom::generate_canonical_float(rng);
 #endif
     if (zrand != 1.) {
