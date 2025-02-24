@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <utility>
+
 #if defined(STDPAR_ON) || defined(_OPENMP_ON)
 #include <mutex>
 #endif
@@ -20,6 +21,7 @@
 #include "nonthermal.h"
 #include "packet.h"
 #include "radfield.h"
+#include "random.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
 #include "sn3d.h"

@@ -28,12 +28,8 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <limits>
 #include <memory>
 #include <sstream>
-#ifndef GPU_ON
-#include <random>
-#endif
 #include <string>
 #include <tuple>
 
@@ -72,10 +68,6 @@
 constexpr int cellcacheslotid = 0;
 inline bool use_cellcache = false;
 
-#ifndef GPU_ON
-extern std::mt19937 stdrng;
-#endif
-
 extern std::ofstream output_file;
 
 inline char outputlinebuf[1024] = "";
@@ -95,7 +87,7 @@ inline thread_local auto gslworkspace =
 #ifdef _OPENMP
 
 #ifndef GPU_ON
-#pragma omp threadprivate(stdrng, output_file, outputlinebuf, outputstartofline, timebuf)
+#pragma omp threadprivate(output_file, outputlinebuf, outputstartofline, timebuf)
 #endif
 
 #endif
@@ -272,28 +264,6 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
 #else
   return 0;
 #endif
-}
-
-inline auto rng_uniform() -> float {
-  while (true) {
-#ifndef GPU_ON
-    const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
-#else
-    const auto zrand = 0.5;
-#endif
-    if (zrand != 1.) {
-      return zrand;
-    }
-  }
-}
-
-inline auto rng_uniform_pos() -> float {
-  while (true) {
-    const auto zrand = rng_uniform();
-    if (zrand > 0) {
-      return zrand;
-    }
-  }
 }
 
 [[nodiscard]] inline auto is_pid_running(pid_t pid) -> bool {

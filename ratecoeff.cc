@@ -29,6 +29,7 @@
 #include "macroatom.h"
 #include "md5.h"
 #include "radfield.h"
+#include "random.h"
 #include "rpkt.h"
 #include "sn3d.h"
 

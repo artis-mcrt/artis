@@ -19,14 +19,11 @@
 #include <functional>
 #include <ios>
 #include <iterator>
-#include <utility>
-#ifndef GPU_ON
-#include <random>
-#endif
 #include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "artisoptions.h"
@@ -37,6 +34,7 @@
 #include "grid.h"
 #include "kpkt.h"
 #include "packet.h"
+#include "random.h"
 #include "ratecoeff.h"
 #include "sn3d.h"
 #include "vpkt.h"
@@ -1579,11 +1577,9 @@ void read_parameterfile(int rank) {
   std::istringstream(line) >> pre_zseed;
 
   if (pre_zseed > 0) {
-    printout("using input.txt specified random number seed of %" PRId64 "\n", pre_zseed);
+    printout("input.txt specified random number seed is %" PRId64 "\n", pre_zseed);
   } else {
-#ifndef GPU_ON
-    pre_zseed = std::random_device{}();
-#endif
+    pre_zseed = get_rng_random_seed();
     // broadcast randomly-generated seed from rank 0 to all ranks
     MPI_Bcast(&pre_zseed, 1, MPI_INT64_T, 0, MPI_COMM_WORLD);
     printout("randomly-generated random number seed is %" PRId64 "\n", pre_zseed);
@@ -1593,25 +1589,19 @@ void read_parameterfile(int rank) {
 #endif
   }
 
-#if defined(_OPENMP) && !defined(GPU_ON)
-#pragma omp parallel
-#endif
-  {
-    // For MPI parallelisation, the random seed is changed based on the rank of the process
-    // For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
-    // to the thread-ID tid.
-    const auto tid = get_thread_num();
-    auto rngseed = pre_zseed + static_cast<std::int64_t>(13 * (rank * get_max_threads() + tid));
-#ifndef GPU_ON
-    stdrng.seed(rngseed);
-#endif
-    printout("rank %d: thread %d has rngseed %" PRId64 "\n", rank, tid, rngseed);
-    printout("rng is a std::mt19937 generator\n");
+  // For MPI parallelisation, the random seed is changed based on the rank of the process
+  // Multi-threaded runs (OpenMP or stdpar) are not reproducible due to accumulation to shared memory, so the seed is
+  // randomly generated
+  const auto tid = get_thread_num();
+  auto rngseed =
+      (tid == 0) ? pre_zseed + static_cast<std::int64_t>(13 * (rank * get_max_threads() + tid)) : get_rng_random_seed();
 
-    // call it a few times
-    for (int n = 0; n < 100; n++) {
-      rng_uniform();
-    }
+  rng_seed(rngseed);
+  printout("rank %d: thread %d has rngseed %" PRId64 "\n", rank, tid, rngseed);
+
+  // call it a few times
+  for (int n = 0; n < 100; n++) {
+    rng_uniform();
   }
 
   assert_always(get_noncommentline(file, line));
