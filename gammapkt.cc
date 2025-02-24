@@ -1048,6 +1048,7 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   pkt.last_cross = BOUNDARY_NONE;
 
   // initialise polarisation information
+  // bla bla
   pkt.stokes = {1., 0., 0.};
 
   pkt.pol_dir = cross_prod(pkt.dir, std::array<double, 3>{0., 0., 1.});
