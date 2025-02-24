@@ -237,7 +237,14 @@ void init_xcom_photoion_data() {
 __host__ __device__ auto choose_gamma_ray(const int nucindex) -> double {
   // Routine to choose which gamma ray line it'll be.
 
-  const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
+  double E_gamma = 0.;
+  if (USE_CONSTANT_BETAMINUS_SPLITUPS) {
+    for (ptrdiff_t n = 0; n < std::ssize(gamma_spectra[nucindex]); n++) {
+      E_gamma += gamma_spectra[nucindex][n].probability * gamma_spectra[nucindex][n].energy;
+    }
+  } else {
+    E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
+  }
 
   const double zrand = rng_uniform();
   double runtot = 0.;
@@ -541,6 +548,11 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
                                                        (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller));
         const double sigma_intpol = pow(10., log10_intpol) * BARN;  // now in cm^2
         const double chi_cmf_contrib = sigma_intpol * n_i;
+        // catch errors in interpolation of the cross section
+        if (sigma_intpol > 5e6) {
+          printout("Dangerous XCOM interpolation at Z=%d, E=%g, sigma_interpol=%g\n", Z, hnu_over_1MeV, sigma_intpol);
+        }
+        assert_always(sigma_intpol < 1e7);  // maximum sigma from XCOM is 3.3e6, should never exceed that
         chi_cmf += chi_cmf_contrib;
       }
     }
@@ -860,9 +872,10 @@ void barnes_thermalisation(Packet &pkt)
 
   // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
   double barnes_prefactor = 0.72;
-  if (USE_WRONG_BARNES_FACTOR) barnes_prefactor = 1.4;
-  const double t_ineff =
-      barnes_prefactor * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / v_ej);
+  if (USE_WRONG_BARNES_FACTOR) {
+    barnes_prefactor = 1.4;
+  }
+  const double t_ineff = barnes_prefactor * DAY * sqrt(grid::mtot_input / (5.e-3 * MSUN)) * ((0.2 * CLIGHT) / v_ej);
   const double tau = pow(t_ineff / pkt.prop_time, 2.);
   const double f_gamma = 1. - exp(-tau);
   assert_always(f_gamma >= 0.);
