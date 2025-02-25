@@ -174,7 +174,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
 #define atomicadd(var, val) \
   std::atomic_ref<typename std::remove_reference<decltype(var)>::type>(var).fetch_add(val, std::memory_order_relaxed);
 #else
-// needed for Apple clang
+// needed for Apple clang until Xcode 16.3 is released
 #define atomicadd(var, val) __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
 #endif
 
