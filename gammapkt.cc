@@ -896,7 +896,7 @@ void barnes_thermalisation(Packet &pkt)
 void wollaeger_thermalisation(Packet &pkt) {
   // corresponds to a local version of the Barnes scheme, i.e. it takes into account the local mass
   // density rather than a value averaged over the ejecta
-  constexpr double mean_gamma_opac = 0.1;
+  constexpr double mean_gamma_opac = WOLLAEGER_OPACITY_VALUE;
   // integration: requires distances within single cells in radial direction and the corresponding densities
   // need to create a packet copy which is moved during the integration
   Packet pkt_copy = pkt;
