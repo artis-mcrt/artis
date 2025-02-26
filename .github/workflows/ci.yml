@@ -47,15 +47,10 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: Install gcc-14
-              if: always()
-              uses: fortran-lang/setup-fortran@v1
-              with:
-                  compiler: gcc
-                  version: 14
-
             - name: Install GSL and OpenMPI
               run: |
+                  echo "CXX=g++-14" >> $GITHUB_ENV
+                  echo "OMPI_CXX=g++-14" >> $GITHUB_ENV
                   sudo apt-get update
                   sudo apt install -y libgsl-dev
                   sudo apt install -y openmpi-bin libopenmpi-dev
