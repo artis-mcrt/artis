@@ -3,25 +3,28 @@
 
 #include <cstddef>
 #include <ctime>
-#include <span>
 #include <vector>
 
+#include "artisoptions.h"
+#include "atomic.h"
+#include "constants.h"
 #include "globals.h"
 #include "ltepop.h"
 #include "packet.h"
 #include "sn3d.h"
 
 struct Phixslist {
-  std::span<double> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-  std::span<double> chi_bf_sum;
-  std::span<double> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
+  std::vector<double> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or USE_LUT_BFHEATING = true
+  std::vector<double> chi_bf_sum;
+  std::vector<double> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
   int allcontend{-1};
   int allcontbegin{0};
   int bfestimend{-1};
   int bfestimbegin{0};
 };
 
-struct Rpkt_continuum_absorptioncoeffs {
+class Rpkt_continuum_absorptioncoeffs {
+ public:
   double nu{-1.};  // frequency at which opacity was calculated
   double total{0.};
   double ffescat{0.};
@@ -29,12 +32,17 @@ struct Rpkt_continuum_absorptioncoeffs {
   double bf{0.};
   int nonemptymgi{-1};
   int timestep{-1};
-  Phixslist *phixslist{nullptr};
-};
+  Phixslist phixslist{};
 
-#include "artisoptions.h"
-#include "atomic.h"
-#include "constants.h"
+  constexpr Rpkt_continuum_absorptioncoeffs(const int nbfcontinua_ground, const int nbfcontinua,
+                                            const int bfestimcount) {
+    resize_exactly(phixslist.groundcont_gamma_contr, nbfcontinua_ground);
+    resize_exactly(phixslist.chi_bf_sum, nbfcontinua);
+    resize_exactly(phixslist.gamma_contr, bfestimcount);
+  }
+
+  constexpr Rpkt_continuum_absorptioncoeffs() = default;
+};
 
 void do_rpkt(Packet &pkt, double t2);
 void emit_rpkt(Packet &pkt);

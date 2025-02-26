@@ -9,7 +9,6 @@
 #include <cstdlib>
 #include <ctime>
 #include <limits>
-#include <memory>
 #include <span>
 #include <tuple>
 #include <vector>
@@ -462,7 +461,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     // bf: transform to k-pkt or activate macroatom corresponding to probabilities
     // printout("[debug] rpkt_event:   bound-free transition\n");
 
-    const auto &phixslist = *chi_rpkt_cont.phixslist;
+    const auto &phixslist = chi_rpkt_cont.phixslist;
 
     pkt.absorptiontype = -2;
 
@@ -577,7 +576,7 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
   assert_testmodeonly(nonemptymgi >= 0);
   const double distance_e_cmf = distance * e_cmf;
 
-  radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf, *chi_rpkt_cont.phixslist,
+  radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf, chi_rpkt_cont.phixslist,
                               thickcell);
 
   if (thickcell) {
@@ -599,12 +598,12 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
 
       if constexpr (USE_LUT_PHOTOION) {
         atomicadd(globals::gammaestimator[ionestimindex],
-                  chi_rpkt_cont.phixslist->groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
+                  chi_rpkt_cont.phixslist.groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
       }
 
       if constexpr (USE_LUT_BFHEATING) {
         atomicadd(globals::bfheatingestimator[ionestimindex],
-                  chi_rpkt_cont.phixslist->groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
+                  chi_rpkt_cont.phixslist.groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
       }
     }
   }
@@ -617,30 +616,8 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
 
   MacroAtomState pktmastate{};
 
-  THREADLOCALONHOST auto groundcont_gamma_contr = std::make_unique<double[]>(globals::nbfcontinua_ground);
-  THREADLOCALONHOST auto chi_bf_sum = std::make_unique<double[]>(globals::nbfcontinua);
-  THREADLOCALONHOST auto gamma_contr = std::make_unique<double[]>(globals::bfestimcount);
-
-  THREADLOCALONHOST Phixslist phixslist{
-      .groundcont_gamma_contr = std::span(groundcont_gamma_contr.get(), globals::nbfcontinua_ground),
-      .chi_bf_sum = std::span(chi_bf_sum.get(), globals::nbfcontinua),
-      .gamma_contr = std::span(gamma_contr.get(), globals::bfestimcount),
-      .allcontend = 1,
-      .allcontbegin = 0,
-      .bfestimend = 1,
-      .bfestimbegin = 0,
-  };
-
-  THREADLOCALONHOST Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
-      .nu = NAN,
-      .total = NAN,
-      .ffescat = NAN,
-      .ffheat = NAN,
-      .bf = NAN,
-      .nonemptymgi = -1,
-      .timestep = -1,
-      .phixslist = &phixslist,
-  };
+  THREADLOCALONHOST auto chi_rpkt_cont =
+      Rpkt_continuum_absorptioncoeffs{globals::nbfcontinua_ground, globals::nbfcontinua, globals::bfestimcount};
 
   // Assign optical depth to next physical event
   const double zrand = rng_uniform_pos();
@@ -849,13 +826,13 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu) -> double {
 
 // get bound-free opacity
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
-auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixslist *phixslist) -> double {
-  assert_always(!USECELLHISTANDUPDATEPHIXSLIST || phixslist != nullptr);
+auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixslist &phixslist) -> double {
+  assert_always(!USECELLHISTANDUPDATEPHIXSLIST || !phixslist.chi_bf_sum.empty());
 
   double chi_bf_sum = 0.;
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-      std::ranges::fill(phixslist->groundcont_gamma_contr, 0.);
+      std::ranges::fill(phixslist.groundcont_gamma_contr, 0.);
     }
   }
 
@@ -885,15 +862,15 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const auto *const allcont = globals::allcont;
 
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-    phixslist->allcontbegin = allcontbegin;
-    phixslist->allcontend = allcontend;
+    phixslist.allcontbegin = allcontbegin;
+    phixslist.allcontend = allcontend;
 
-    phixslist->bfestimend =
+    phixslist.bfestimend =
         static_cast<int>(std::ranges::upper_bound(globals::bfestim_nu_edge, nu) - globals::bfestim_nu_edge.cbegin());
 
-    phixslist->bfestimbegin =
+    phixslist.bfestimbegin =
         std::lower_bound(
-            globals::bfestim_nu_edge.data(), globals::bfestim_nu_edge.data() + phixslist->bfestimend, nu,
+            globals::bfestim_nu_edge.data(), globals::bfestim_nu_edge.data() + phixslist.bfestimend, nu,
             [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }) -
         globals::bfestim_nu_edge.data();
   }
@@ -943,7 +920,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
           if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && level == 0 && allcont[i].phixstargetindex == 0) {
-            phixslist->groundcont_gamma_contr[allcont[i].index_in_groundphixslist] = sigma_contr;
+            phixslist.groundcont_gamma_contr[allcont[i].index_in_groundphixslist] = sigma_contr;
           }
         }
 
@@ -951,10 +928,10 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
       }
     }
     if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-      phixslist->chi_bf_sum[i] = chi_bf_sum;
+      phixslist.chi_bf_sum[i] = chi_bf_sum;
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
         if (bfestimindex >= 0) {
-          phixslist->gamma_contr[bfestimindex] = sigma_contr;
+          phixslist.gamma_contr[bfestimindex] = sigma_contr;
         }
       }
     }
@@ -969,21 +946,16 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 
 void allocate_expansionopacities() {
   const auto nonempty_npts_model = grid::get_nonempty_npts_model();
-  float *expansionopacities_data{};
-  double *expansionopacity_planck_cumulative_data{};
 
-  std::tie(expansionopacities_data, win_expansionopacities) =
-      MPI_shared_malloc_keepwin<float>(nonempty_npts_model * expopac_nbins);
+  assert_always(expansionopacities.data() == nullptr);
+  std::tie(expansionopacities, win_expansionopacities) =
+      MPI_shared_malloc_keepwin_span<float>(nonempty_npts_model * expopac_nbins);
 
+  assert_always(expansionopacity_planck_cumulative.data() == nullptr);
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
-    std::tie(expansionopacity_planck_cumulative_data, win_expansionopacity_planck_cumulative) =
-        MPI_shared_malloc_keepwin<double>(nonempty_npts_model * expopac_nbins);
+    std::tie(expansionopacity_planck_cumulative, win_expansionopacity_planck_cumulative) =
+        MPI_shared_malloc_keepwin_span<double>(nonempty_npts_model * expopac_nbins);
   }
-
-  expansionopacities = std::span(expansionopacities_data, nonempty_npts_model * expopac_nbins);
-  expansionopacity_planck_cumulative =
-      std::span(expansionopacity_planck_cumulative_data,
-                expansionopacity_planck_cumulative_data == nullptr ? 0 : nonempty_npts_model * expopac_nbins);
 }
 
 // return a randomly chosen frequency with a distribution of Planck function times the expansion opacity
@@ -1072,9 +1044,9 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
     chi_escat = SIGMA_T * nne;
 
     // Third contribution: bound-free absorption
-    chi_bf = chi_rpkt_cont.phixslist != nullptr
-                 ? calculate_chi_bf_gammacontr<true>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist)
-                 : calculate_chi_bf_gammacontr<false>(nonemptymgi, nu_cmf, nullptr);
+    chi_bf = chi_rpkt_cont.phixslist.chi_bf_sum.empty()
+                 ? calculate_chi_bf_gammacontr<false>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist)
+                 : calculate_chi_bf_gammacontr<true>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist);
 
   } else {
     // in the other cases chi_grey is an mass absorption coefficient
