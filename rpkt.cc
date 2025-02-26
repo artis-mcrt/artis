@@ -9,7 +9,6 @@
 #include <cstdlib>
 #include <ctime>
 #include <limits>
-#include <memory>
 #include <span>
 #include <tuple>
 #include <vector>
@@ -618,10 +617,6 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
 
   MacroAtomState pktmastate{};
 
-  THREADLOCALONHOST auto groundcont_gamma_contr = std::make_unique<double[]>(globals::nbfcontinua_ground);
-  THREADLOCALONHOST auto chi_bf_sum = std::make_unique<double[]>(globals::nbfcontinua);
-  THREADLOCALONHOST auto gamma_contr = std::make_unique<double[]>(globals::bfestimcount);
-
   THREADLOCALONHOST Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
       .nu = NAN,
       .total = NAN,
@@ -631,9 +626,9 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
       .nonemptymgi = -1,
       .timestep = -1,
       .phixslist = {
-          .groundcont_gamma_contr = std::span(groundcont_gamma_contr.get(), globals::nbfcontinua_ground),
-          .chi_bf_sum = std::span(chi_bf_sum.get(), globals::nbfcontinua),
-          .gamma_contr = std::span(gamma_contr.get(), globals::bfestimcount),
+          .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground),
+          .chi_bf_sum = std::vector<double>(globals::nbfcontinua),
+          .gamma_contr = std::vector<double>(globals::bfestimcount),
           .allcontend = 1,
           .allcontbegin = 0,
           .bfestimend = 1,
