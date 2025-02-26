@@ -250,7 +250,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
   // compute the optical depth to boundary
 
   mgi = grid::get_propcell_modelgridindex(vpkt.where);
-  Rpkt_continuum_absorptioncoeffs chi_vpkt_cont{};
+  THREADLOCALONHOST Rpkt_continuum_absorptioncoeffs chi_vpkt_cont{};
 
   while (!end_packet) {
     // distance to the next cell
