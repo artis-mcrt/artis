@@ -74,12 +74,13 @@ jobs:
                         {name: gcc, ver: 12},
                         {name: gcc, ver: 13},
                         {name: gcc, ver: 14},
+                        {name: clang, ver: 19},
                         {name: nvc++, ver: '25.1'},
                     ]
             fail-fast: false
 
         runs-on: ubuntu-24.04
-        name: ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
+        name: Ubuntu ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
         steps:
             - uses: actions/checkout@v4
 
@@ -92,10 +93,21 @@ jobs:
 
             - name: Install GCC
               if: matrix.compiler.name == 'gcc'
-              uses: fortran-lang/setup-fortran@v1
-              with:
-                  compiler: gcc
-                  version: ${{ matrix.compiler.ver }}
+              run: |
+                  echo "CXX=g++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
+                  echo "OMPI_CXX=g++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
+
+            - name: Install Clang
+              if: matrix.compiler.name == 'clang'
+              run: |
+                  sudo apt-get update
+                  sudo apt-get upgrade
+                  sudo apt-get install -y lld-${{ matrix.compiler.ver }} clang-${{ matrix.compiler.ver }} libomp-${{ matrix.compiler.ver }}-dev libomp5-${{ matrix.compiler.ver }}
+                  sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${{ matrix.compiler.ver }} 100
+                  sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${{ matrix.compiler.ver }} 100
+                  echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
+                  echo "OMPI_CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
+                  echo "LDFLAGS=-L/usr/lib/llvm-${{ matrix.compiler.ver }}/lib" >> $GITHUB_ENV
 
             - name: Install nvc++
               if: matrix.compiler.name == 'nvc++'
@@ -122,10 +134,6 @@ jobs:
             - name: Install OpenMPI
               run: |
                   sudo apt install -y openmpi-bin libopenmpi-dev
-
-            - name: Install OpenMP
-              run: |
-                  sudo apt-get install -y libomp5 libomp-dev
 
             - name: Compile classic mode
               run: |
