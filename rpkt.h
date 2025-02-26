@@ -5,6 +5,9 @@
 #include <ctime>
 #include <vector>
 
+#include "artisoptions.h"
+#include "atomic.h"
+#include "constants.h"
 #include "globals.h"
 #include "ltepop.h"
 #include "packet.h"
@@ -30,10 +33,6 @@ struct Rpkt_continuum_absorptioncoeffs {
   int timestep{-1};
   Phixslist phixslist{};
 };
-
-#include "artisoptions.h"
-#include "atomic.h"
-#include "constants.h"
 
 void do_rpkt(Packet &pkt, double t2);
 void emit_rpkt(Packet &pkt);
