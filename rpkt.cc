@@ -588,7 +588,6 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
   atomicadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.ffheat);
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-    const auto &phixslist = chi_rpkt_cont.phixslist;
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
       const double nu_edge = globals::groundcont[i].nu_edge;
       if (nu_cmf <= nu_edge) {
@@ -599,12 +598,12 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
 
       if constexpr (USE_LUT_PHOTOION) {
         atomicadd(globals::gammaestimator[ionestimindex],
-                  phixslist.groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
+                  chi_rpkt_cont.phixslist.groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
       }
 
       if constexpr (USE_LUT_BFHEATING) {
         atomicadd(globals::bfheatingestimator[ionestimindex],
-                  phixslist.groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
+                  chi_rpkt_cont.phixslist.groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
       }
     }
   }
