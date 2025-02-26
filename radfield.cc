@@ -211,19 +211,20 @@ void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, con
   // I think the nu_cmf slightly differs from when the phixslist was calculated
   // so the nu condition on this nu_cmf can truncate the list further compared to what was used in the calculation
   // of phixslist.gamma_contr
+  const auto bfestimcount = globals::bfestimcount;
 
+  assert_testmodeonly(phixslist.bfestimend <= bfestimcount);
   const auto bfestimend = std::upper_bound(globals::bfestim_nu_edge.data(),
                                            globals::bfestim_nu_edge.data() + phixslist.bfestimend, nu_cmf) -
                           globals::bfestim_nu_edge.data();
-
+  assert_testmodeonly(bfestimend <= bfestimcount);
+  assert_testmodeonly(phixslist.bfestimbegin >= 0);
   const auto bfestimbegin = std::lower_bound(globals::bfestim_nu_edge.data() + phixslist.bfestimbegin,
                                              globals::bfestim_nu_edge.data() + bfestimend, nu_cmf,
                                              [](const double nu_edge, const double find_nu_cmf) {
                                                return nu_edge * last_phixs_nuovernuedge < find_nu_cmf;
                                              }) -
                             globals::bfestim_nu_edge.data();
-
-  const auto bfestimcount = globals::bfestimcount;
 
   for (auto bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
     atomicadd(bfrate_raw[(nonemptymgi * bfestimcount) + bfestimindex],
