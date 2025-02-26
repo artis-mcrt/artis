@@ -32,6 +32,9 @@ $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := CLANG
 	CXXFLAGS += -flto=thin
+	ifeq ($(if $(shell command -v lld),'true','false'), 'true')
+    	LDFLAGS += -fuse-ld=lld
+	endif
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 	COMPILER_NAME := GCC
 	CXXFLAGS += -flto=auto
