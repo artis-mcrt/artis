@@ -23,7 +23,8 @@ struct Phixslist {
   int bfestimbegin{0};
 };
 
-struct Rpkt_continuum_absorptioncoeffs {
+class Rpkt_continuum_absorptioncoeffs {
+ public:
   double nu{-1.};  // frequency at which opacity was calculated
   double total{0.};
   double ffescat{0.};
@@ -32,6 +33,15 @@ struct Rpkt_continuum_absorptioncoeffs {
   int nonemptymgi{-1};
   int timestep{-1};
   Phixslist phixslist{};
+
+  constexpr Rpkt_continuum_absorptioncoeffs(const int nbfcontinua_ground, const int nbfcontinua,
+                                            const int bfestimcount) {
+    resize_exactly(phixslist.groundcont_gamma_contr, nbfcontinua_ground);
+    resize_exactly(phixslist.chi_bf_sum, nbfcontinua);
+    resize_exactly(phixslist.gamma_contr, bfestimcount);
+  }
+
+  constexpr Rpkt_continuum_absorptioncoeffs() = default;
 };
 
 void do_rpkt(Packet &pkt, double t2);

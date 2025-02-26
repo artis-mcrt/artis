@@ -617,23 +617,8 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
 
   MacroAtomState pktmastate{};
 
-  THREADLOCALONHOST Rpkt_continuum_absorptioncoeffs chi_rpkt_cont{
-      .nu = NAN,
-      .total = NAN,
-      .ffescat = NAN,
-      .ffheat = NAN,
-      .bf = NAN,
-      .nonemptymgi = -1,
-      .timestep = -1,
-      .phixslist = {
-          .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground),
-          .chi_bf_sum = std::vector<double>(globals::nbfcontinua),
-          .gamma_contr = std::vector<double>(globals::bfestimcount),
-          .allcontend = 1,
-          .allcontbegin = 0,
-          .bfestimend = 1,
-          .bfestimbegin = 0,
-      }};
+  THREADLOCALONHOST auto chi_rpkt_cont =
+      Rpkt_continuum_absorptioncoeffs{globals::nbfcontinua_ground, globals::nbfcontinua, globals::bfestimcount};
 
   // Assign optical depth to next physical event
   const double zrand = rng_uniform_pos();
