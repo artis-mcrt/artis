@@ -365,7 +365,7 @@ template <typename T>
 }
 
 template <typename T>
-void resize_exactly(std::vector<T> &vec, const ptrdiff_t size) {
+constexpr void resize_exactly(std::vector<T> &vec, const ptrdiff_t size) {
   // just resizing can (only with libstdc++?) allocate a larger capacity than needed
   vec.reserve(size);
   vec.resize(size);
