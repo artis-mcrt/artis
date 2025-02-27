@@ -154,5 +154,15 @@ constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::INSTANT;
 
 constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
 
+constexpr bool USE_WRONG_BARNES_FACTOR = false;
+
+constexpr float WOLLAEGER_OPACITY_VALUE = 0.1;
+
+constexpr bool USE_CONSTANT_BETAMINUS_SPLITUPS = false;
+
+constexpr float BETAMINUS_ENERGY_GAMMA_SPLITUP = 0.45;
+
+constexpr float BETAMINUS_ENERGY_ELECTRON_SPLITUP = 0.2;
+
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
