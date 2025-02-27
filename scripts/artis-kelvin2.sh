@@ -39,5 +39,5 @@ then
 fi
 
 if [ -f packets00_0000.out ]; then
-    sbatch ./artis/scripts/exspec-gzip-kelvin2.sh
+    sbatch ./artis/scripts/exspec-zip-kelvin2.sh
 fi

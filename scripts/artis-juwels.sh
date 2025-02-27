@@ -38,5 +38,5 @@ then
 fi
 
 if [ -f packets00_0000.out ]; then
-    sbatch --job-name="exspec_$SLURM_JOB_NAME" ./artis/scripts/exspec-gzip-juwels.sh
+    sbatch --job-name="exspec_$SLURM_JOB_NAME" ./artis/scripts/exspec-zip-juwels.sh
 fi

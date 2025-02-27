@@ -46,5 +46,5 @@ then
 fi
 
 if [ -f packets00_0000.out ]; then
-    sbatch ./artis/scripts/exspec-gzip-cosma8.sh
+    sbatch ./artis/scripts/exspec-zip-cosma8.sh
 fi

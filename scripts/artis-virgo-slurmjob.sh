@@ -42,5 +42,5 @@ then
 fi
 
 if [ -f packets00_0000.out ]; then
-    source ./artis/scripts/exspec-gzip-virgo-submit.sh
+    source ./artis/scripts/exspec-zip-virgo-submit.sh
 fi
