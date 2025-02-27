@@ -61,9 +61,8 @@ struct Nuclide {
   std::array<double, decaytypes::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
 };
 
-[[nodiscard]] constexpr auto decay_daughter_z(const int z_parent, const int /*a_parent*/, const int decaytype) -> int
 // check if (z_parent, a_parent) is a parent of (z, a)
-{
+[[nodiscard]] constexpr auto decay_daughter_z(const int z_parent, const int /*a_parent*/, const int decaytype) -> int {
   assert_always(decaytype >= 0);
   assert_always(decaytype < decaytypes::DECAYTYPE_COUNT);
 
@@ -88,9 +87,8 @@ struct Nuclide {
   return -1;  // no daughter
 }
 
-[[nodiscard]] constexpr auto decay_daughter_a(const int /*z_parent*/, const int a_parent, const int decaytype) -> int
 // check if (z_parent, a_parent) is a parent of (z, a)
-{
+[[nodiscard]] constexpr auto decay_daughter_a(const int /*z_parent*/, const int a_parent, const int decaytype) -> int {
   switch (static_cast<enum decaytypes>(decaytype)) {
     case decaytypes::DECAYTYPE_ALPHA: {
       return a_parent - 4;  // lose two protons and two neutrons
@@ -135,16 +133,13 @@ std::vector<DecayPath> decaypaths;
 std::span<double> decaypath_energy_per_mass{};
 MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
 
+// Get the probability that a decay of decaytype occurs
 [[nodiscard]] auto get_nuc_decaybranchprob(const int nucindex, const int decaytype) -> double {
   assert_testmodeonly(nucindex >= 0);
   assert_testmodeonly(nucindex < get_num_nuclides());
   assert_testmodeonly(decaytype >= 0);
   assert_testmodeonly(decaytype < decaytypes::DECAYTYPE_COUNT);
   return nuclides[nucindex].branchprobs[decaytype];
-}
-
-[[nodiscard]] auto get_nuc_decaybranchprob(const int z_parent, const int a_parent, const int decaytype) -> double {
-  return get_nuc_decaybranchprob(get_nucindex(z_parent, a_parent), decaytype);
 }
 
 // check if (z_parent, a_parent) is a parent of (z, a)
@@ -322,10 +317,9 @@ void printout_decaypath(const int decaypathindex) {
   printout("\n");
 }
 
-void extend_lastdecaypath()
-// follow decays at the ends of the current list of decaypaths,
+// follow decays at the ends of the current list of decaypaths
 // to get decaypaths from all descendants
-{
+void extend_lastdecaypath() {
   const int startdecaypathindex = static_cast<int>(decaypaths.size() - 1);
 
   const int daughter_z = decaypaths[startdecaypathindex].final_daughter_z();
@@ -486,7 +480,7 @@ void filter_unused_nuclides(const std::vector<int> &custom_zlist, const std::vec
 auto sample_decaytime(const int decaypathindex, const double tdecaymin, const double tdecaymax) -> double {
   double tdecay = -1;
   const double t_model = grid::get_t_model();
-  // rejection method. draw random times until they are within the correct range.
+  // rejection method. draw random times with the right distribution until they are within the correct range.
   while (tdecay <= tdecaymin || tdecay >= tdecaymax) {
     tdecay = t_model;  // can't decay before initial model snapshot time
 
@@ -494,27 +488,26 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
     for (int i = 0; i < decaypathlength; i++) {
       const int nucindex = decaypaths[decaypathindex].nucindex[i];
       const double zrand = rng_uniform_pos();
-      tdecay += -get_meanlife(nucindex) * log(zrand);
+      tdecay += -get_meanlife(nucindex) * std::log(zrand);
     }
   }
   return tdecay;
 }
 
+// calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
+// the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
+// are assumed to start with zero abundance)
+// note: first and last can be nuclide can be the same if num_nuclides==1, reducing to simple decay formula
+//
+// timediff:           time elapsed since firstinitabund was true [seconds]
+// numnuclides:        number of items in lambdas to use
+// lambdas:            array of 1/(mean lifetime) for nuc[0]..nuc[num_nuclides-1]  [seconds^-1]
+// useexpansionfactor: if true, return a modified 'abundance' at the end of the chain, with a weighting factor
+//                          accounting for photon energy loss from expansion since the decays occurred
+//                          (This is needed to get the initial temperature)
 constexpr auto calculate_decaychain(const double firstinitabund, const std::vector<double> &lambdas,
                                     const int num_nuclides, const double timediff, const bool useexpansionfactor)
     -> double {
-  // calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
-  // the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
-  // are assumed to start with zero abundance)
-  // note: first and last can be nuclide can be the same if num_nuclides==1, reducing to simple decay formula
-  //
-  // timediff:           time elapsed since firstinitabund was true [seconds]
-  // numnuclides:        number of items in lambdas to use
-  // lambdas:            array of 1/(mean lifetime) for nuc[0]..nuc[num_nuclides-1]  [seconds^-1]
-  // useexpansionfactor: if true, return a modified 'abundance' at the end of the chain, with a weighting factor
-  //                          accounting for photon energy loss from expansion since the decays occurred
-  //                          (This is needed to get the initial temperature)
-
   assert_always(num_nuclides >= 1);
 
   double lambdaproduct = 1.;
@@ -548,13 +541,12 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::vect
   return lastabund;
 }
 
-auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const double time) -> double
 // Get the mass fraction of a nuclide accounting for all decays including those of its parent and grandparent.
 // e.g., Co56 abundance may first increase with time due to Ni56 decays, then decease due to Co56 decay
 // Can be called for stable nuclides that are one daughters of the radioactive nuclide list e.g., Fe56
 // For stable nuclides, abundance returned only comes from other decays (some could be included in init model elem
 // frac)
-{
+auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const double time) -> double {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   assert_always(time >= 0.);
 
@@ -617,15 +609,11 @@ auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const dou
   return nuctotal;
 }
 
+// Get the decay energy [erg/g] that would be released from time tstart [s] to time infinity by a given decaypath
+// e.g. Ni56 -> Co56, represents the decays of Co56 nuclei that were produced from Ni56 in the initial abundance.
+// Decays from Co56 due to the initial abundance of Co56 are not counted here, nor is the energy from Ni56 decays
 auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const int decaypathindex, const double time)
-    -> double
-// returns decay energy [erg/g] that would be released from time tstart [s] to time infinity by a given decaypath
-{
-  // e.g. Ni56 -> Co56, represents the decay of Co56 nuclei
-  // that were produced from Ni56 in the initial abundance.
-  // Decays from Co56 due to the initial abundance of Co56 are not counted here,
-  // nor is the energy from Ni56 decays
-
+    -> double {
   assert_testmodeonly(decaypathindex >= 0);
   assert_testmodeonly(decaypathindex < get_num_decaypaths());
 
@@ -697,11 +685,11 @@ auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const i
   return chain_endecay;
 }
 
-auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypathindex, const double tlow,
-                                              const double thigh) -> double
 // get decay energy per mass [erg/g] released by a decaypath between times tlow [s] and thigh [s]
-{
-  assert_always(tlow <= thigh);
+auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypathindex, const double tlow,
+                                              const double thigh) -> double {
+  assert_testmodeonly(mgi < grid::get_npts_model());
+  assert_testmodeonly(tlow <= thigh);
   const double energy_tlow = get_endecay_to_tinf_per_ejectamass_at_time(mgi, decaypathindex, tlow);
   const double energy_thigh = get_endecay_to_tinf_per_ejectamass_at_time(mgi, decaypathindex, thigh);
   assert_always(energy_tlow >= energy_thigh);
@@ -710,23 +698,8 @@ auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypath
   return endiff;
 }
 
-auto calculate_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex) -> double
-// calculate the decay energy released during the simulation time per unit mass [erg/g]
-{
-  assert_testmodeonly(mgi < grid::get_npts_model());
-
-  if constexpr (!INITIAL_PACKETS_ON) {
-    // get decay energy released from t=tmin to tmax
-    return get_endecay_per_ejectamass_between_times(mgi, decaypathindex, globals::tmin, globals::tmax);
-  } else {
-    // get decay energy released from t=0 to tmax
-    return get_endecay_per_ejectamass_between_times(mgi, decaypathindex, grid::get_t_model(), globals::tmax);
-  }
-}
-
-auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypathindex) -> double
 // get the decay energy released during the simulation time per unit mass [erg/g]
-{
+auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypathindex) -> double {
   const double chainendecay = decaypath_energy_per_mass[(nonemptymgi * get_num_decaypaths()) + decaypathindex];
   assert_testmodeonly(chainendecay >= 0.);
   assert_testmodeonly(std::isfinite(chainendecay));
@@ -1061,7 +1034,7 @@ void setup_decaypath_energy_per_mass() {
   printout("done.\n");
 
   MPI_Barrier(MPI_COMM_WORLD);
-
+  const auto time_min_decay = INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin;
   printout("Calculating decaypath_energy_per_mass for all cells...");
   const ptrdiff_t num_decaypaths = get_num_decaypaths();
   for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
@@ -1069,7 +1042,7 @@ void setup_decaypath_energy_per_mass() {
       const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
       for (ptrdiff_t decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
         decaypath_energy_per_mass[(nonemptymgi * num_decaypaths) + decaypathindex] =
-            calculate_simtime_endecay_per_ejectamass(mgi, decaypathindex);
+            get_endecay_per_ejectamass_between_times(mgi, decaypathindex, time_min_decay, globals::tmax);
       }
     }
   }
@@ -1200,7 +1173,7 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
           const int daughter_z = decay_daughter_z(nuc_z, a, decaytype);
           const int daughter_a = decay_daughter_a(nuc_z, a, decaytype);
           if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
-              get_nuc_decaybranchprob(nuc_z, a, decaytype) > 0.) {
+              get_nuc_decaybranchprob(nucindex, decaytype) > 0.) {
             if (!a_isotopes.contains(daughter_a)) {
               a_isotopes.insert(daughter_a);
               // nuclide decays into correct atomic number but outside of the radionuclide list
