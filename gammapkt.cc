@@ -854,7 +854,7 @@ void transport_gamma(Packet &pkt, const double t2) {
   }
 }
 
-void barnes_thermalisation(Packet &pkt)
+void global_thermalisation(Packet &pkt, auto SCHEME)
 // Barnes treatment: packet is either getting absorbed immediately and locally
 // creating a k-packet or it escapes. The absorption probability matches the
 // Barnes thermalization efficiency, for expressions see the original paper:
@@ -866,18 +866,39 @@ void barnes_thermalisation(Packet &pkt)
   // packets.
   // constexpr double mean_gamma_opac = 0.1;
 
-  // determine average initial density via kinetic energy
-  const double E_kin = grid::get_ejecta_kinetic_energy();
-  const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
-
-  // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
-  double barnes_prefactor = 0.72;
-  if (USE_WRONG_BARNES_FACTOR) {
-    barnes_prefactor = 1.4;
+  double f_gamma = 0.;
+  if (SCHEME == ThermalisationScheme::BARNES) {
+    // determine average initial density via kinetic energy
+    const double E_kin = grid::get_ejecta_kinetic_energy();
+    const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
+    // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
+    double barnes_prefactor = 0.72;
+    if (USE_WRONG_BARNES_FACTOR) {
+      barnes_prefactor = 1.4;
+    }
+    const double t_ineff = barnes_prefactor * DAY * sqrt(grid::mtot_input / (5.e-3 * MSUN)) * ((0.2 * CLIGHT) / v_ej);
+    const double tau = pow(t_ineff / pkt.prop_time, 2.);
+    f_gamma = 1. - exp(-tau);
+  } else if (SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ34) {
+    // take the fit parameters closest to the e2e model for now
+    const double a = 0.27;
+    const double b = 0.1;
+    const double d = 0.6;
+    const double t_days = pkt.prop_time / DAY;
+    const double aux_term = 2 * b * pow(t_days, d);
+    f_gamma = 0.36 * (exp(-a * t_days) + std::log1p(aux_term) / (aux_term));
+  } else if (SCHEME == ThermalisationScheme::TOT_THERM_FIT_MRW) {
+    // take the fit parameters closest to the e2e model for now
+    const double a = 2.01e-3;
+    const double b = 1.78;
+    const double t_gamma = 2.79;
+    const double d = 1.28;
+    const double t_days = pkt.prop_time / DAY;
+    const double aux_term_1 = a * pow(t_days, b);
+    const double f_1 = std::log1p(aux_term_1) / aux_term_1;
+    const double f_2 = 1 - exp(-pow(t_gamma / t_days, d));
+    f_gamma = 0.25 * f_1 + 0.4 * f_2;
   }
-  const double t_ineff = barnes_prefactor * DAY * sqrt(grid::mtot_input / (5.e-3 * MSUN)) * ((0.2 * CLIGHT) / v_ej);
-  const double tau = pow(t_ineff / pkt.prop_time, 2.);
-  const double f_gamma = 1. - exp(-tau);
   assert_always(f_gamma >= 0.);
   assert_always(f_gamma <= 1.);
 
@@ -1078,11 +1099,15 @@ __host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {
   if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
-    barnes_thermalisation(pkt);
+    global_thermalisation(pkt, GAMMA_THERMALISATION_SCHEME);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::WOLLAEGER) {
     wollaeger_thermalisation(pkt);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::GUTTMAN) {
     guttman_thermalisation(pkt);
+  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ34) {
+    global_thermalisation(pkt, GAMMA_THERMALISATION_SCHEME);
+  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_MRW) {
+    global_thermalisation(pkt, GAMMA_THERMALISATION_SCHEME);
   } else {
     std::unreachable();
   }

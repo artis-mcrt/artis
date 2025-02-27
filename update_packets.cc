@@ -55,6 +55,43 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
       pkt.type = TYPE_ESCAPE;
       grid::change_cell(pkt, -99);
     }
+  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ34) {
+    // take the fit parameters closest to the e2e model for now
+    const double a = 0.27;
+    const double b = 0.1;
+    const double d = 0.6;
+    const double t_days = pkt.prop_time / DAY;
+    const double aux_term = 2 * b * pow(t_days, d);
+    const double f_p = 0.36 * (exp(-a * t_days) + std::log1p(aux_term) / (aux_term));
+    assert_always(f_p >= 0.);
+    assert_always(f_p <= 1.);
+    if (rng_uniform() < f_p) {
+      pkt.type = deposit_type;
+    } else {
+      en_deposited = 0.;
+      pkt.type = TYPE_ESCAPE;
+      grid::change_cell(pkt, -99);
+    }
+  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_MRW) {
+    // take the fit parameters closest to the e2e model for now
+    const double a = 2.01e-3;
+    const double b = 1.78;
+    const double t_gamma = 2.79;
+    const double d = 1.28;
+    const double t_days = pkt.prop_time / DAY;
+    const double aux_term_1 = a * pow(t_days, b);
+    const double f_1 = std::log1p(aux_term_1) / aux_term_1;
+    const double f_2 = 1 - exp(-pow(t_gamma / t_days, d));
+    const double f_p = 0.25 * f_1 + 0.4 * f_2;
+    assert_always(f_p >= 0.);
+    assert_always(f_p <= 1.);
+    if (rng_uniform() < f_p) {
+      pkt.type = deposit_type;
+    } else {
+      en_deposited = 0.;
+      pkt.type = TYPE_ESCAPE;
+      grid::change_cell(pkt, -99);
+    }
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::WOLLAEGER) {
     // particle thermalisation from Wollaeger+2018, similar to Barnes but using a slightly different expression
     const double A = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 1.2 * 1.e-11 : 1.3 * 1.e-11;
