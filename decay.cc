@@ -1005,9 +1005,11 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   gammapkt::init_gamma_data();
 
   // manipulate betaminus decay splitup ratios here
-  for (int i = 0; i < static_cast<int>(nuclides.size()); i++) {
-    nuclides[i].endecay_gamma = BETAMINUS_ENERGY_GAMMA_SPLITUP * nuclides[i].endecay_q[DECAYTYPE_BETAMINUS];
-    nuclides[i].endecay_electron = BETAMINUS_ENERGY_ELECTRON_SPLITUP * nuclides[i].endecay_q[DECAYTYPE_BETAMINUS];
+  if (USE_CONSTANT_BETAMINUS_SPLITUPS) {
+    for (int i = 0; i < static_cast<int>(nuclides.size()); i++) {
+      nuclides[i].endecay_gamma = BETAMINUS_ENERGY_GAMMA_SPLITUP * nuclides[i].endecay_q[DECAYTYPE_BETAMINUS];
+      nuclides[i].endecay_electron = BETAMINUS_ENERGY_ELECTRON_SPLITUP * nuclides[i].endecay_q[DECAYTYPE_BETAMINUS];
+    }
   }
 
   // TODO: generalise this to all included nuclides
