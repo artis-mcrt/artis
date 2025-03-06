@@ -10,7 +10,7 @@
 
 #! sbatch directives begin here ###############################
 #! Name of the job:
-#SBATCH -J exspec-gzip-cambridge.sh
+#SBATCH -J exspec-zip-cambridge.sh
 #! Which project should be charged:
 #SBATCH -A DIRAC-DP033-CPU
 #SBATCH -p icelake
