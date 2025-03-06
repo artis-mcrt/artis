@@ -251,17 +251,13 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, const Packet
 
 void read_packets(const char filename[], Packet *pkt) {
   // read packets*.out text format file
-  std::ifstream packets_file(filename);
+  std::fstream packets_file(filename, std::ios::in);
   assert_always(packets_file.is_open());
 
   std::string line;
 
   int packets_read = 0;
-  while (std::getline(packets_file, line)) {
-    if (lineiscommentonly(line)) {
-      continue;
-    }
-
+  while (get_noncommentline(packets_file, line)) {
     packets_read++;
     const int i = packets_read - 1;
 
