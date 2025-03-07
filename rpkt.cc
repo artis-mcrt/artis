@@ -292,7 +292,6 @@ auto get_event_expansion_opacity(
 void electron_scatter_rpkt(Packet &pkt) {
   // now make the packet a r-pkt and set further flags
   pkt.type = TYPE_RPKT;
-  pkt.last_cross = BOUNDARY_NONE;  // allow all further cell crossings
 
   const auto vel_vec = get_velocity(pkt.pos, pkt.prop_time);
 
@@ -626,7 +625,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   // Start by finding the distance to the crossing of the grid cell
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
-  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.where, &pkt.last_cross);
+  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.where);
 
   if (sdist == 0) {
     grid::change_cell(pkt, snext);
@@ -957,7 +956,6 @@ __host__ __device__ void do_rpkt(Packet &pkt, const double t2) {
 // make the packet an r-pkt and set further flags
 __host__ __device__ void emit_rpkt(Packet &pkt) {
   pkt.type = TYPE_RPKT;
-  pkt.last_cross = BOUNDARY_NONE;  // allow all further cell crossings
 
   // Need to assign a new direction. Assume isotropic emission in the cmf
 

@@ -106,7 +106,7 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_ndo_nonempty(int rank) -> int;
 [[nodiscard]] auto get_totmassradionuclide(int z, int a) -> double;
 [[nodiscard]] auto boundary_distance(const std::array<double, 3> &dir, const std::array<double, 3> &pos, double tstart,
-                                     int cellindex, enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>;
+                                     int cellindex) -> std::tuple<double, int>;
 
 void calculate_kappagrey();
 

@@ -443,8 +443,6 @@ void compton_scatter(Packet &pkt) {
     const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
     pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
     pkt.e_rf = pkt.e_cmf / dopplerfactor;
-
-    pkt.last_cross = BOUNDARY_NONE;  // allow it to re-cross a boundary
   } else {
     // energy loss of the gamma becomes energy of the electron (needed to calculate time-dependent thermalisation rate)
     if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
@@ -713,7 +711,6 @@ void pair_prod(Packet &pkt) {
     pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
     pkt.type = TYPE_GAMMA;
-    pkt.last_cross = BOUNDARY_NONE;
   }
 }
 
@@ -729,7 +726,7 @@ void transport_gamma(Packet &pkt, const double t2) {
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
 
-  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.where, &pkt.last_cross);
+  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.where);
 
   // Now consider the scattering/destruction processes.
   // Compton scattering - need to determine the scattering co-efficient.
@@ -866,8 +863,7 @@ void wollaeger_thermalisation(Packet &pkt) {
   bool end_packet = false;
   while (!end_packet) {
     // distance to the next cell
-    const auto [sdist, snext] =
-        grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where, &pkt_copy.last_cross);
+    const auto [sdist, snext] = grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where);
     const double s_cont = sdist * t_current * t_current * t_current / std::pow(pkt_copy.prop_time, 3);
     const int mgi = grid::get_propcell_modelgridindex(pkt_copy.where);
     if (mgi != grid::get_npts_model()) {
@@ -929,7 +925,7 @@ void guttman_thermalisation(Packet &pkt) {
     while (!end_packet) {
       // distance to the next cell
       const auto [sdist, snext] =
-          grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where, &pkt_copy.last_cross);
+          grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where);
       const double s_cont = sdist * std::pow(t, 3.) / std::pow(pkt_copy.prop_time, 3.);
       const int mgi = grid::get_propcell_modelgridindex(pkt_copy.where);
       if (mgi != grid::get_npts_model()) {
@@ -1021,7 +1017,6 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
   pkt.type = TYPE_GAMMA;
-  pkt.last_cross = BOUNDARY_NONE;
 
   // initialise polarisation information
   pkt.stokes = {1., 0., 0.};
