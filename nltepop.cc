@@ -65,7 +65,7 @@ auto get_nlte_vector_index(const int element, const int ion, const int level) ->
   return {-1, -1};
 }
 
-[[nodiscard]] auto get_total_rate(const int index_selected, const gsl_matrix *rate_matrix, const gsl_vector *popvec,
+[[nodiscard]] auto get_total_rate(const size_t index_selected, const gsl_matrix *rate_matrix, const gsl_vector *popvec,
                                   const bool into_level, const bool only_levels_below, const bool only_levels_above)
     -> double {
   double total_rate = 0.;
@@ -73,38 +73,38 @@ auto get_nlte_vector_index(const int element, const int ion, const int level) ->
 
   if (into_level) {
     // find rate into selected level
-    auto row_vec = gsl_matrix_const_row(rate_matrix, index_selected).vector;
+    const auto row_vec = gsl_matrix_const_row(rate_matrix, index_selected).vector;
 
     // multiply incoming rate coefficients by their corresponding populations to get rates
     if (!only_levels_above)  // add levels below
     {
-      for (int index = 0; index < index_selected; index++) {
+      for (size_t index = 0; index < index_selected; index++) {
         total_rate += gsl_vector_get(&row_vec, index) * gsl_vector_get(popvec, index);
       }
     }
 
     if (!only_levels_below)  // add levels above
     {
-      for (unsigned int index = index_selected + 1; index < rate_matrix->size1; index++) {
+      for (size_t index = index_selected + 1; index < rate_matrix->size1; index++) {
         total_rate += gsl_vector_get(&row_vec, index) * gsl_vector_get(popvec, index);
       }
     }
   } else {
     // find rate out of selected level
-    auto col_vec = gsl_matrix_const_column(rate_matrix, index_selected).vector;
+    const auto col_vec = gsl_matrix_const_column(rate_matrix, index_selected).vector;
 
     // multiply outgoing rate coefficients by the population of the selected level to get rates
 
     if (!only_levels_above)  // add levels below
     {
-      for (int index = 0; index < index_selected; index++) {
+      for (size_t index = 0; index < index_selected; index++) {
         total_rate += gsl_vector_get(&col_vec, index);
       }
     }
 
     if (!only_levels_below)  // add levels above
     {
-      for (unsigned int index = index_selected + 1; index < rate_matrix->size2; index++) {
+      for (size_t index = index_selected + 1; index < rate_matrix->size2; index++) {
         total_rate += gsl_vector_get(&col_vec, index);
       }
     }
