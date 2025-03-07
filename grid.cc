@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cctype>
 #include <cmath>
 #include <cstddef>
@@ -2596,6 +2597,19 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
     } else {
       std::unreachable();
     }
+  }
+
+  const double maxsdist = (GRID_TYPE == GridType::CARTESIAN3D)
+                              ? globals::rmax * tstart / globals::tmin
+                              : 2 * globals::rmax * (tstart + distance / CLIGHT_PROP) / globals::tmin;
+
+  assert_always(distance >= 0 && distance <= maxsdist);
+
+  assert_always((snext == -99) || ((snext >= 0) && (snext < grid::ngrid)));
+
+  if (distance > globals::max_path_step) {
+    distance = globals::max_path_step;
+    snext = cellindex;
   }
 
   return {distance, snext};

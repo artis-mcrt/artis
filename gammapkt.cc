@@ -729,32 +729,7 @@ void transport_gamma(Packet &pkt, const double t2) {
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
 
-  auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.where, &pkt.last_cross);
-
-  const double maxsdist = (GRID_TYPE == GridType::CARTESIAN3D)
-                              ? globals::rmax * pkt.prop_time / globals::tmin
-                              : 2 * globals::rmax * (pkt.prop_time + sdist / CLIGHT_PROP) / globals::tmin;
-  if (sdist > maxsdist) {
-    printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", globals::rmax, pkt.prop_time / globals::tmin,
-             sdist);
-    assert_always(false);
-  }
-
-  if (sdist < 0) {
-    printout("Negative distance (sdist). Abort?\n");
-    sdist = 0;
-  }
-
-  if (((snext < 0) && (snext != -99)) || (snext >= grid::ngrid)) {
-    printout("Heading for inappropriate grid cell. Abort.\n");
-    printout("Current cell %d, target cell %d.\n", pkt.where, snext);
-    assert_always(false);
-  }
-
-  if (sdist > globals::max_path_step) {
-    sdist = globals::max_path_step;
-    snext = pkt.where;
-  }
+  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.where, &pkt.last_cross);
 
   // Now consider the scattering/destruction processes.
   // Compton scattering - need to determine the scattering co-efficient.
