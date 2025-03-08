@@ -2438,36 +2438,34 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   const auto posdirections = std::array<enum cell_boundary, 3>{COORD0_MAX, COORD1_MAX, COORD2_MAX};
   if constexpr (TESTMODE) {
     for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
-      // flip is either zero or one to indicate +ve and -ve boundaries along the selected axis
       const bool pos_component_vel_relative_to_flow = (pktvelgridcoord[d] * tstart) > pktposgridcoord[d];
-      for (int flip = 0; flip < 2; flip++) {
-        bool isoutside_thisside = false;
-        double delta = 0.;
-        if (flip != 0) {
-          // packet pos below min
-          const double boundaryposmin = grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart;
-          delta = pktposgridcoord[d] - boundaryposmin;
-          isoutside_thisside = !pos_component_vel_relative_to_flow && (pktposgridcoord[d] < (boundaryposmin - 10.));
-        } else {
-          // packet pos above max
-          const double boundaryposmax = cellcoordmax[d] / globals::tmin * tstart;
-          delta = pktposgridcoord[d] - boundaryposmax;
-          isoutside_thisside = pos_component_vel_relative_to_flow && (pktposgridcoord[d] > (boundaryposmax + 10.));
-        }
 
-        if (isoutside_thisside) {
-          printout(
-              "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
-              "cellcoordmin %g, cellcoordmax %g\n",
-              d, flip != 0 ? '-' : '+', grid::coordlabel[d], cellindex, pktvelgridcoord[d], pktposgridcoord[d],
-              grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart, cellcoordmax[d] / globals::tmin * tstart);
-          printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart,
-                   tstart / globals::tmin);
-          printout(" delta %g\n", delta);
+      bool isoutside_error = false;
+      double delta = 0.;
+      if (pos_component_vel_relative_to_flow) {
+        // check if packet pos is above cell max while moving in the positive direction relative to the grid flow
+        const double boundaryposmax = cellcoordmax[d] / globals::tmin * tstart;
+        delta = pktposgridcoord[d] - boundaryposmax;
+        isoutside_error = pktposgridcoord[d] > (boundaryposmax + 10.);
+      } else {
+        // check if packet pos is below cell min while moving in the negative direction relative to the grid flow
+        const double boundaryposmin = grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart;
+        delta = pktposgridcoord[d] - boundaryposmin;
+        isoutside_error = pktposgridcoord[d] < (boundaryposmin - 10.);
+      }
 
-          printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
-          assert_always(false);
-        }
+      if (isoutside_error) {
+        printout(
+            "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
+            "cellcoordmin %g, cellcoordmax %g\n",
+            d, pos_component_vel_relative_to_flow ? '+' : '-', grid::coordlabel[d], cellindex, pktvelgridcoord[d],
+            pktposgridcoord[d], grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart,
+            cellcoordmax[d] / globals::tmin * tstart);
+        printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart, tstart / globals::tmin);
+        printout(" delta %g\n", delta);
+
+        printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
+        assert_always(false);
       }
     }
   }
