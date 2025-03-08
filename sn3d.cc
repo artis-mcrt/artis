@@ -400,7 +400,7 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
            estimated_time_per_timestep, nts_prev, nts);
 
   bool do_this_full_loop = true;
-  if (walltimelimitseconds > 0) {
+  if (walltimelimitseconds > 0 && nts < globals::timestep_finish) {
     const int wallclock_used_seconds = std::time(nullptr) - real_time_start;
     const int wallclock_remaining_seconds = walltimelimitseconds - wallclock_used_seconds;
     printout("TIMED_RESTARTS: Used %d of %d seconds of wall time.\n", wallclock_used_seconds, walltimelimitseconds);
@@ -903,7 +903,7 @@ auto main(int argc, char *argv[]) -> int {
     fclose(linestat_file);
   }
 
-  if ((globals::ntimesteps != globals::timestep_finish) || (terminate_early)) {
+  if ((globals::ntimesteps > globals::timestep_finish) || (terminate_early)) {
     printout("RESTART_NEEDED to continue model\n");
   } else {
     printout("No need for restart\n");
