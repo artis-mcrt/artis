@@ -19,6 +19,9 @@ cd $SLURM_SUBMIT_DIR
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
+# decompress any zipped input files
+source ./artis/scripts/exspec-before.sh
+
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): before srun sn3d. hours left: $hoursleft"
 time srun --hint=nomultithread -- ./sn3d -w $hoursleft > out.txt
