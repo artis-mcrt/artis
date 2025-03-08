@@ -1361,11 +1361,9 @@ auto get_coordboundary_distances_cylindrical2d(const std::array<double, 3> &pkt_
 
 }  // anonymous namespace
 
-auto wid_init(const int cellindex, const int axis) -> double
-// for a uniform grid this is the extent along the x,y,z coordinate (x_2 - x_1, etc.)
-// for spherical grid this is the radial extent (r_outer - r_inner)
-// these values are at time globals::tmin
-{
+// for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
+// for spherical grid get the radial extent (r_outer - r_inner) at time tmin
+auto wid_init(const int cellindex, const int axis) -> double {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return 2 * globals::rmax / ncoordgrid[axis];
   }
@@ -1403,10 +1401,9 @@ auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
   assert_always(false);
 }
 
-auto get_propcell_volume_tmin(const int cellindex) -> double
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
-{
+auto get_propcell_volume_tmin(const int cellindex) -> double {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return (wid_init(cellindex, 0) * wid_init(cellindex, 0) * wid_init(cellindex, 0));
   }
@@ -1416,10 +1413,9 @@ auto get_propcell_volume_tmin(const int cellindex) -> double
   return get_modelcell_assocvolume_tmin(mgi);
 }
 
-auto get_cellcoordmax(const int cellindex, const int axis) -> double
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
-{
+auto get_cellcoordmax(const int cellindex, const int axis) -> double {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return grid::get_cellcoordmin(cellindex, axis) + grid::wid_init(0, axis);
   }
@@ -2411,7 +2407,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 
   // the following vector are in grid coordinates, so either x,y,z (3D) or r (1D), or r_xy, z (2D)
   assert_testmodeonly(get_ndim(GRID_TYPE) <= 3);
-  auto cellcoordmax = std::array<double, 3>{0};
+  auto cellcoordmax = std::array<double, 3>{0};     // position at time tmin
   auto pktvelgridcoord = std::array<double, 3>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
 
   const auto pktposgridcoord = get_gridcoords_from_xyz<GRID_TYPE>(pos);
