@@ -2417,7 +2417,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   }
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     // keep xyz Cartesian coordinates
-    for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
+    for (int d = 0; d < 3; d++) {
       pktvelgridcoord[d] = dir[d] * CLIGHT_PROP;
     }
   } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
