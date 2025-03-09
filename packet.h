@@ -29,16 +29,6 @@ struct MacroAtomState {
   int activatingline;  // Linelistindex of the activating line for bb activated MAs, -99 else.
 };
 
-enum cell_boundary : int {
-  COORD0_MIN = 101,
-  COORD0_MAX = 102,
-  COORD1_MIN = 103,
-  COORD1_MAX = 104,
-  COORD2_MIN = 105,
-  COORD2_MAX = 106,
-  BOUNDARY_NONE = 107,
-};
-
 struct Packet {
   enum packet_type type {};           // type of packet (k-, r-, etc.)
   double prop_time{-1.};              // internal clock to track how far in time the packet has been propagated

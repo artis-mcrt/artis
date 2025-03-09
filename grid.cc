@@ -32,7 +32,6 @@
 #include "input.h"
 #include "nltepop.h"
 #include "nonthermal.h"
-#include "packet.h"
 #include "radfield.h"
 #include "rpkt.h"
 #include "sn3d.h"
@@ -2434,8 +2433,6 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
     assert_always(false);
   }
 
-  const auto negdirections = std::array<enum cell_boundary, 3>{COORD0_MIN, COORD1_MIN, COORD2_MIN};
-  const auto posdirections = std::array<enum cell_boundary, 3>{COORD0_MAX, COORD1_MAX, COORD2_MAX};
   if constexpr (TESTMODE) {
     for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
       const bool pos_component_vel_relative_to_flow = (pktvelgridcoord[d] * tstart) > pktposgridcoord[d];
@@ -2527,13 +2524,11 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   }
 
   // We now need to identify the shortest +ve distance - that's the one we want.
-  enum cell_boundary choice = BOUNDARY_NONE;
   double distance = std::numeric_limits<double>::max();
   int snext = 0;
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
     // upper d coordinate of the current cell
     if ((d_coordmaxboundary[d] > 0) && (d_coordmaxboundary[d] < distance)) {
-      choice = posdirections[d];
       distance = d_coordmaxboundary[d];
       if (grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1)) {
         snext = -99;
@@ -2544,7 +2539,6 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 
     // lower d coordinate of the current cell
     if ((d_coordminboundary[d] > 0) && (d_coordminboundary[d] < distance)) {
-      choice = negdirections[d];
       distance = d_coordminboundary[d];
       if (grid::get_cellcoordpointnum(cellindex, d) == 0) {
         snext = -99;
@@ -2554,11 +2548,10 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
     }
   }
 
-  if (choice == BOUNDARY_NONE) {
+  if (distance == std::numeric_limits<double>::max()) {
     if constexpr (TESTMODE) {
       printout("Something wrong in boundary crossing - didn't find anything.\n");
       printout("packet cell %d\n", cellindex);
-      printout("choice %d\n", choice);
       printout("globals::tmin %g tstart %g\n", globals::tmin, tstart);
       for (int d2 = 0; d2 < 3; d2++) {
         printout("coord %d: initpos %g dir %g\n", d2, pos[d2], dir[d2]);
