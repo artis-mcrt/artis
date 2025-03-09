@@ -95,7 +95,7 @@ std::vector<int> ranks_ndo_nonempty;
 inline std::span<ModelGridCellInput> modelgrid_input{};
 
 // Get number of dimensions
-constexpr auto get_ndim(const GridType gridtype) -> int {
+consteval auto get_ndim(const GridType gridtype) -> int {
   switch (gridtype) {
     case GridType::SPHERICAL1D:
       return 1;
@@ -1178,21 +1178,20 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 // Convert a position in Cartesian xyz to the grid coordinate system (which might the same, or 2D cylindrical or 1D
 // spherical)
 template <GridType grid_type>
-[[nodiscard]] constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) -> std::array<double, 3> {
+[[nodiscard]] constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) {
   if constexpr (grid_type == GridType::CARTESIAN3D) {
-    return {pos_xyz[0], pos_xyz[1], pos_xyz[2]};
+    return std::array<double, 3>{pos_xyz[0], pos_xyz[1], pos_xyz[2]};
   }
 
   if constexpr (grid_type == GridType::CYLINDRICAL2D) {
-    return {std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2], 0.};
+    return std::array<double, 2>{std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2]};
   }
 
   if constexpr (grid_type == GridType::SPHERICAL1D) {
-    return {vec_len(pos_xyz), 0., 0.};
+    return std::array<double, 1>{vec_len(pos_xyz)};
   }
 
   assert_always(false);
-  return {NAN, NAN, NAN};
 }
 
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
@@ -1294,15 +1293,16 @@ template <size_t S1>
 
 auto get_coordboundary_distances_cylindrical2d(const std::array<double, 3> &pkt_pos,
                                                const std::array<double, 3> &pkt_dir,
-                                               const std::array<double, 3> &pktposgridcoord,
-                                               const std::array<double, 3> &pktvelgridcoord, const int cellindex,
-                                               const double tstart, const std::array<double, 3> &cellcoordmax)
-    -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
+                                               const std::array<double, get_ndim(GRID_TYPE)> &pktposgridcoord,
+                                               const std::array<double, get_ndim(GRID_TYPE)> &pktvelgridcoord,
+                                               const int cellindex, const double tstart,
+                                               const std::array<double, get_ndim(GRID_TYPE)> &cellcoordmax)
+    -> std::tuple<std::array<double, get_ndim(GRID_TYPE)>, std::array<double, get_ndim(GRID_TYPE)>> {
   // to get the cylindrical intersection, get the spherical intersection with Z components set to zero, and the
   // propagation speed set to the xy component of the 3-velocity
 
-  std::array<double, 3> d_coordminboundary{};
-  std::array<double, 3> d_coordmaxboundary{};
+  std::array<double, get_ndim(GRID_TYPE)> d_coordminboundary{};
+  std::array<double, get_ndim(GRID_TYPE)> d_coordmaxboundary{};
 
   const std::array<double, 2> posnoz = {pkt_pos[0], pkt_pos[1]};
 
@@ -2406,8 +2406,9 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 
   // the following vector are in grid coordinates, so either x,y,z (3D) or r (1D), or r_xy, z (2D)
   assert_testmodeonly(get_ndim(GRID_TYPE) <= 3);
-  auto cellcoordmax = std::array<double, 3>{0};     // position at time tmin
-  auto pktvelgridcoord = std::array<double, 3>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
+  auto cellcoordmax = std::array<double, get_ndim(GRID_TYPE)>{0};  // position at time tmin
+  auto pktvelgridcoord =
+      std::array<double, get_ndim(GRID_TYPE)>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
 
   const auto pktposgridcoord = get_gridcoords_from_xyz<GRID_TYPE>(pos);
 
@@ -2468,10 +2469,10 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   }
 
   // distance to reach the cell's upper boundary on each coordinate
-  auto d_coordmaxboundary = std::array<double, 3>{-1};
+  auto d_coordmaxboundary = std::array<double, get_ndim(GRID_TYPE)>{-1};
 
   // distance to reach the cell's lower boundary on each coordinate
-  auto d_coordminboundary = std::array<double, 3>{-1};
+  auto d_coordminboundary = std::array<double, get_ndim(GRID_TYPE)>{-1};
 
   if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
     const double speed = vec_len(dir) * CLIGHT_PROP;  // just in case dir is not normalised
