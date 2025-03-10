@@ -168,7 +168,6 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
   vpkt.nu_rf = nu_rf;
   vpkt.e_rf = e_rf;
   vpkt.dir = obsdir;
-  vpkt.last_cross = BOUNDARY_NONE;
 
   bool end_packet = false;
   double t_future = t_current;
@@ -254,8 +253,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
   while (!end_packet) {
     // distance to the next cell
-    const auto [sdist, snext] =
-        grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where, &vpkt.last_cross);
+    const auto [sdist, snext] = grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where);
     const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
     if (mgi == grid::get_npts_model()) {

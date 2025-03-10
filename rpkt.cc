@@ -292,7 +292,6 @@ auto get_event_expansion_opacity(
 void electron_scatter_rpkt(Packet &pkt) {
   // now make the packet a r-pkt and set further flags
   pkt.type = TYPE_RPKT;
-  pkt.last_cross = BOUNDARY_NONE;  // allow all further cell crossings
 
   const auto vel_vec = get_velocity(pkt.pos, pkt.prop_time);
 
@@ -626,45 +625,13 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   // Start by finding the distance to the crossing of the grid cell
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
-  auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.where, &pkt.last_cross);
+  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.where);
 
   if (sdist == 0) {
     grid::change_cell(pkt, snext);
     const int new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
     return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
-  }
-  const double maxsdist = (GRID_TYPE == GridType::CARTESIAN3D)
-                              ? globals::rmax * pkt.prop_time / globals::tmin
-                              : 2 * globals::rmax * (pkt.prop_time + sdist / CLIGHT_PROP) / globals::tmin;
-  if (sdist > maxsdist) {
-    printout("[fatal] do_rpkt: Unreasonably large sdist for packet %d. Rpkt. Abort. %g %g %g\n", pkt.number,
-             globals::rmax, pkt.prop_time / globals::tmin, sdist);
-    std::abort();
-  }
-
-  if (sdist < 0) {
-    const int cellindexnew = pkt.where;
-    printout("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
-    printout("[warning] r_pkt: cell %d snext %d\n", cellindexnew, snext);
-    printout("[warning] r_pkt: pos %g %g %g\n", pkt.pos[0], pkt.pos[1], pkt.pos[2]);
-    printout("[warning] r_pkt: dir %g %g %g\n", pkt.dir[0], pkt.dir[1], pkt.dir[2]);
-    printout("[warning] r_pkt: cell corner %g %g %g\n",
-             grid::get_cellcoordmin(cellindexnew, 0) * pkt.prop_time / globals::tmin,
-             grid::get_cellcoordmin(cellindexnew, 1) * pkt.prop_time / globals::tmin,
-             grid::get_cellcoordmin(cellindexnew, 2) * pkt.prop_time / globals::tmin);
-    printout("[warning] r_pkt: cell width %g\n", grid::wid_init(cellindexnew, 0) * pkt.prop_time / globals::tmin);
-    assert_always(false);
-  }
-  if (((snext != -99) && (snext < 0)) || (snext >= grid::ngrid)) {
-    printout("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
-    printout("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt.where, snext);
-    std::abort();
-  }
-
-  if (sdist > globals::max_path_step) {
-    sdist = globals::max_path_step;
-    snext = pkt.where;
   }
 
   // At present there is no scattering/destruction process so all that needs to
@@ -989,7 +956,6 @@ __host__ __device__ void do_rpkt(Packet &pkt, const double t2) {
 // make the packet an r-pkt and set further flags
 __host__ __device__ void emit_rpkt(Packet &pkt) {
   pkt.type = TYPE_RPKT;
-  pkt.last_cross = BOUNDARY_NONE;  // allow all further cell crossings
 
   // Need to assign a new direction. Assume isotropic emission in the cmf
 

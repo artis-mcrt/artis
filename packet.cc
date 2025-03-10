@@ -32,7 +32,6 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
   pkt.where = cellindex;
   pkt.number = pktnumber;  // record the packets number for debugging
   pkt.prop_time = globals::tmin;
-  // pkt.last_cross = BOUNDARY_NONE;
   pkt.originated_from_particlenotgamma = false;
 
   if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
@@ -166,7 +165,7 @@ void packet_init(Packet *pkt)
 void write_packets(const char filename[], const Packet *const pkt) {
   FILE *packets_file = fopen_required(filename, "w");
   fprintf(packets_file,
-          "#number where type_id posx posy posz dirx diry dirz last_cross tdecay e_cmf e_rf nu_cmf nu_rf "
+          "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf "
           "escape_type_id escape_time next_trans last_event emissiontype trueemissiontype "
           "em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time absorptiondirx absorptiondiry "
           "absorptiondirz stokes1 stokes2 stokes3 pol_dirx pol_diry pol_dirz originated_from_positron "
@@ -177,7 +176,6 @@ void write_packets(const char filename[], const Packet *const pkt) {
     fprintf(packets_file, "%d ", static_cast<int>(pkt[i].type));
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].pos[0], pkt[i].pos[1], pkt[i].pos[2]);
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].dir[0], pkt[i].dir[1], pkt[i].dir[2]);
-    fprintf(packets_file, "%d ", static_cast<int>(pkt[i].last_cross));
     fprintf(packets_file, "%g ", pkt[i].tdecay);
     fprintf(packets_file, "%g ", pkt[i].e_cmf);
     fprintf(packets_file, "%g ", pkt[i].e_rf);
@@ -278,10 +276,6 @@ void read_packets(const char filename[], Packet *pkt) {
     ssline >> pkt[i].pos[0] >> pkt[i].pos[1] >> pkt[i].pos[2];
 
     ssline >> pkt[i].dir[0] >> pkt[i].dir[1] >> pkt[i].dir[2];
-
-    int last_cross_in = 0;
-    ssline >> last_cross_in;
-    pkt[i].last_cross = static_cast<enum cell_boundary>(last_cross_in);
 
     ssline >> pkt[i].tdecay;
 

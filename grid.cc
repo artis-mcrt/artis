@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cctype>
 #include <cmath>
 #include <cstddef>
@@ -31,7 +32,6 @@
 #include "input.h"
 #include "nltepop.h"
 #include "nonthermal.h"
-#include "packet.h"
 #include "radfield.h"
 #include "rpkt.h"
 #include "sn3d.h"
@@ -51,7 +51,7 @@ struct ModelGridCellInput {
 
 std::array<char, 3> coordlabel{'?', '?', '?'};
 
-std::array<int, 3> ncoordgrid{0};  // propagation grid dimensions
+std::array<int, 3> ncoordgrid{};  // propagation grid dimensions
 
 GridType model_type = GridType::CARTESIAN3D;
 ptrdiff_t npts_model = 0;           // number of model grid cells
@@ -59,7 +59,7 @@ ptrdiff_t nonempty_npts_model = 0;  // number of allocated non-empty model grid 
 
 double t_model = -1.;  // time at which densities in input model are correct.
 std::vector<double> vout_model{};
-std::array<int, 3> ncoord_model{0};  // the model.txt input grid dimensions
+std::array<int, 3> ncoord_model{};  // the model.txt input grid dimensions
 
 double min_den;  // minimum model density
 
@@ -95,7 +95,7 @@ std::vector<int> ranks_ndo_nonempty;
 inline std::span<ModelGridCellInput> modelgrid_input{};
 
 // Get number of dimensions
-constexpr auto get_ndim(const GridType gridtype) -> int {
+consteval auto get_ndim(const GridType gridtype) -> int {
   switch (gridtype) {
     case GridType::SPHERICAL1D:
       return 1;
@@ -1177,22 +1177,41 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 
 // Convert a position in Cartesian xyz to the grid coordinate system (which might the same, or 2D cylindrical or 1D
 // spherical)
-template <GridType grid_type>
-[[nodiscard]] constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) -> std::array<double, 3> {
-  if constexpr (grid_type == GridType::CARTESIAN3D) {
-    return {pos_xyz[0], pos_xyz[1], pos_xyz[2]};
+[[nodiscard]] constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) {
+  if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
+    return pos_xyz;
   }
 
-  if constexpr (grid_type == GridType::CYLINDRICAL2D) {
-    return {std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2], 0.};
+  if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
+    return std::array<double, 2>{std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2]};
   }
 
-  if constexpr (grid_type == GridType::SPHERICAL1D) {
-    return {vec_len(pos_xyz), 0., 0.};
+  if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
+    return std::array<double, 1>{vec_len(pos_xyz)};
   }
 
   assert_always(false);
-  return {NAN, NAN, NAN};
+}
+
+// get the velocity in the grid coordinate system from the xyz position and direction
+[[nodiscard]] constexpr auto get_gridcoords_vel_from_xyz_pos_dir(
+    const std::array<double, 3> &pos_xyz, const std::array<double, 3> &dir_xyz,
+    const std::array<double, get_ndim(GRID_TYPE)> &pktposgridcoord) {
+  if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
+    // keep xyz Cartesian coordinates
+    return std::array<double, 3>{dir_xyz[0] * CLIGHT_PROP, dir_xyz[1] * CLIGHT_PROP, dir_xyz[2] * CLIGHT_PROP};
+  } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
+    // xy plane radial velocity
+    // z velocity
+    return std::array<double, 2>{(pos_xyz[0] * dir_xyz[0] + pos_xyz[1] * dir_xyz[1]) / pktposgridcoord[0] * CLIGHT_PROP,
+                                 dir_xyz[2] * CLIGHT_PROP};
+
+  } else if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
+    // the only coordinate is radius from the origin
+    return std::array<double, 1>{dot(pos_xyz, dir_xyz) / pktposgridcoord[0] * CLIGHT_PROP};
+  } else {
+    assert_always(false);
+  }
 }
 
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
@@ -1292,69 +1311,11 @@ template <size_t S1>
   return -1.;
 }
 
-auto get_coordboundary_distances_cylindrical2d(const std::array<double, 3> &pkt_pos,
-                                               const std::array<double, 3> &pkt_dir,
-                                               const std::array<double, 3> &pktposgridcoord,
-                                               const std::array<double, 3> &pktvelgridcoord, const int cellindex,
-                                               const double tstart, const std::array<double, 3> &cellcoordmax)
-    -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
-  // to get the cylindrical intersection, get the spherical intersection with Z components set to zero, and the
-  // propagation speed set to the xy component of the 3-velocity
-
-  std::array<double, 3> d_coordminboundary{};
-  std::array<double, 3> d_coordmaxboundary{};
-
-  const std::array<double, 2> posnoz = {pkt_pos[0], pkt_pos[1]};
-
-  const double dirxylen = std::sqrt((pkt_dir[0] * pkt_dir[0]) + (pkt_dir[1] * pkt_dir[1]));
-  const double xyspeed = dirxylen * CLIGHT_PROP;  // r_cyl component of velocity
-
-  // make a normalised direction vector in the xy plane
-  const std::array<double, 2> dirnoz = {pkt_dir[0] / dirxylen, pkt_dir[1] / dirxylen};
-
-  const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
-  d_coordminboundary[0] = -1;
-  // don't try to calculate the intersection if the inner radius is zero
-  if (r_inner > 0) {
-    const double d_rcyl_coordminboundary = expanding_shell_intersection(posnoz, dirnoz, xyspeed, r_inner, true, tstart);
-    if (d_rcyl_coordminboundary >= 0) {
-      const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * pkt_dir[2] * CLIGHT_PROP;
-      d_coordminboundary[0] = std::sqrt((d_rcyl_coordminboundary * d_rcyl_coordminboundary) +
-                                        (d_z_coordminboundary * d_z_coordminboundary));
-    }
-  }
-
-  const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
-  const double d_rcyl_coordmaxboundary = expanding_shell_intersection(posnoz, dirnoz, xyspeed, r_outer, false, tstart);
-  d_coordmaxboundary[0] = -1;
-  if (d_rcyl_coordmaxboundary >= 0) {
-    const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * pkt_dir[2] * CLIGHT_PROP;
-    d_coordmaxboundary[0] =
-        std::sqrt((d_rcyl_coordmaxboundary * d_rcyl_coordmaxboundary) + (d_z_coordmaxboundary * d_z_coordmaxboundary));
-  }
-
-  // z boundaries are the same as Cartesian
-  const double t_zcoordminboundary =
-      ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
-       ((grid::get_cellcoordmin(cellindex, 1)) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
-      tstart;
-  d_coordminboundary[1] = CLIGHT_PROP * t_zcoordminboundary;
-
-  const double t_zcoordmaxboundary = ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
-                                      ((cellcoordmax[1]) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
-                                     tstart;
-  d_coordmaxboundary[1] = CLIGHT_PROP * t_zcoordmaxboundary;
-
-  return {d_coordminboundary, d_coordmaxboundary};
-}
-
 }  // anonymous namespace
 
-auto wid_init(const int cellindex, const int axis) -> double
-// for a uniform grid this is the extent along the x,y,z coordinate (x_2 - x_1, etc.)
-// for spherical grid this is the radial extent (r_outer - r_inner)
-// these values are at time globals::tmin
-{
+// for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
+// for spherical grid get the radial extent (r_outer - r_inner) at time tmin
+auto wid_init(const int cellindex, const int axis) -> double {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return 2 * globals::rmax / ncoordgrid[axis];
   }
@@ -1392,10 +1353,9 @@ auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
   assert_always(false);
 }
 
-auto get_propcell_volume_tmin(const int cellindex) -> double
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
-{
+auto get_propcell_volume_tmin(const int cellindex) -> double {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return (wid_init(cellindex, 0) * wid_init(cellindex, 0) * wid_init(cellindex, 0));
   }
@@ -1405,10 +1365,9 @@ auto get_propcell_volume_tmin(const int cellindex) -> double
   return get_modelcell_assocvolume_tmin(mgi);
 }
 
-auto get_cellcoordmax(const int cellindex, const int axis) -> double
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
-{
+auto get_cellcoordmax(const int cellindex, const int axis) -> double {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return grid::get_cellcoordmin(cellindex, axis) + grid::wid_init(0, axis);
   }
@@ -2371,7 +2330,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 
 // identify the cell index from an (x,y,z) position and a time.
 [[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> &pos, const double time) -> int {
-  auto posgridcoords = get_gridcoords_from_xyz<GRID_TYPE>(pos);
+  auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
     cellindex += get_coordcellindexincrement(d) * get_poscoordpointnum(posgridcoords[d], time, d);
@@ -2389,129 +2348,174 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 // compute distance to a cell boundary.
 [[nodiscard]] __host__ __device__ auto boundary_distance(const std::array<double, 3> &dir,
                                                          const std::array<double, 3> &pos, const double tstart,
-                                                         const int cellindex, enum cell_boundary *pkt_last_cross)
-    -> std::tuple<double, int> {
+                                                         const int cellindex) -> std::tuple<double, int> {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {
       return {0., -99};
     }
   }
 
-  auto last_cross = *pkt_last_cross;
   // d is used to loop over the coordinate indicies 0,1,2 for x,y,z
 
   // the following vector are in grid coordinates, so either x,y,z (3D) or r (1D), or r_xy, z (2D)
-  assert_testmodeonly(get_ndim(GRID_TYPE) <= 3);
-  auto cellcoordmax = std::array<double, 3>{0};
-  auto pktvelgridcoord = std::array<double, 3>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
+  static_assert(get_ndim(GRID_TYPE) <= 3);
 
-  const auto pktposgridcoord = get_gridcoords_from_xyz<GRID_TYPE>(pos);
+  const auto pktposgridcoord = get_gridcoords_from_xyz(pos);
 
-  for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
-    cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
-  }
-  if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
-    // keep xyz Cartesian coordinates
+  // dir * CLIGHT_PROP converted from xyz to grid coordinates
+  const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord);
+
+  const auto cellcoordmax = [cellindex] {
+    auto _cellcoordmax = std::array<double, get_ndim(GRID_TYPE)>{};  // position at time tmin
     for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
-      pktvelgridcoord[d] = dir[d] * CLIGHT_PROP;
+      _cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
     }
-  } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
-    // xy plane radial velocity
-    pktvelgridcoord[0] = (pos[0] * dir[0] + pos[1] * dir[1]) / pktposgridcoord[0] * CLIGHT_PROP;
+    return _cellcoordmax;
+  }();
 
-    // second cylindrical coordinate is z
-    pktvelgridcoord[1] = dir[2] * CLIGHT_PROP;
+  if constexpr (TESTMODE) {
+    for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
+      // pos_component_vel_relative_to_flow is constant along a ray with a given direction in Cartesian coordinates, but
+      // for non-Cartesian coordinates, we still need to check at the current position whether the packet is
+      // moving in the positive or negative direction in each grid coordinate direction relative to the homologous grid
+      // flow, otherwise we might never enter the cell that we're supposed to be in
+      const bool pos_component_vel_relative_to_flow = (pktvelgridcoord[d] * tstart) > pktposgridcoord[d];
 
-  } else if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
-    // the only coordinate is radius from the origin
-    pktvelgridcoord[0] = dot(pos, dir) / pktposgridcoord[0] * CLIGHT_PROP;  // radial velocity
-  } else {
-    assert_always(false);
-  }
-
-  const auto negdirections = std::array<enum cell_boundary, 3>{COORD0_MIN, COORD1_MIN, COORD2_MIN};
-  const auto posdirections = std::array<enum cell_boundary, 3>{COORD0_MAX, COORD1_MAX, COORD2_MAX};
-
-  for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
-    // flip is either zero or one to indicate +ve and -ve boundaries along the selected axis
-    for (int flip = 0; flip < 2; flip++) {
-      enum cell_boundary const direction = flip != 0 ? posdirections[d] : negdirections[d];
-      enum cell_boundary const invdirection = flip == 0 ? posdirections[d] : negdirections[d];
-      const int cellindexstride =
-          flip != 0 ? -grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
-
-      bool isoutside_thisside = false;
+      bool isoutside_error = false;
       double delta = 0.;
-      if (flip != 0) {
-        // packet pos below min
-        const double boundaryposmin = grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart;
-        delta = pktposgridcoord[d] - boundaryposmin;
-        isoutside_thisside = pktposgridcoord[d] < (boundaryposmin - 10.);  // 10 cm accuracy tolerance
-      } else {
-        // packet pos above max
+      if (pos_component_vel_relative_to_flow) {
+        // check if packet pos is above cell max while moving in the positive direction relative to the grid flow
         const double boundaryposmax = cellcoordmax[d] / globals::tmin * tstart;
         delta = pktposgridcoord[d] - boundaryposmax;
-        isoutside_thisside = pktposgridcoord[d] > (boundaryposmax + 10.);
+        isoutside_error = pktposgridcoord[d] > (boundaryposmax + 10.);
+      } else {
+        // check if packet pos is below cell min while moving in the negative direction relative to the grid flow
+        const double boundaryposmin = grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart;
+        delta = pktposgridcoord[d] - boundaryposmin;
+        isoutside_error = pktposgridcoord[d] < (boundaryposmin - 10.);
       }
 
-      if (isoutside_thisside && (last_cross != direction)) {
-        // for (int d2 = 0; d2 < ndim; d2++)
-        const int d2 = d;
-        {
-          printout(
-              "[warning] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
-              "cellcoordmin %g, cellcoordmax %g\n",
-              d, flip != 0 ? '-' : '+', grid::coordlabel[d], cellindex, pktvelgridcoord[d2], pktposgridcoord[d2],
-              grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart,
-              cellcoordmax[d2] / globals::tmin * tstart);
-        }
+      if (isoutside_error) {
+        printout(
+            "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
+            "cellcoordmin %g, cellcoordmax %g\n",
+            d, pos_component_vel_relative_to_flow ? '+' : '-', grid::coordlabel[d], cellindex, pktvelgridcoord[d],
+            pktposgridcoord[d], grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart,
+            cellcoordmax[d] / globals::tmin * tstart);
         printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart, tstart / globals::tmin);
-        printout("[warning] delta %g\n", delta);
+        printout(" delta %g\n", delta);
 
-        printout("[warning] dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
-        if ((pktvelgridcoord[d] - (pktposgridcoord[d] / tstart)) > 0) {
-          if ((grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1) && cellindexstride > 0) ||
-              (grid::get_cellcoordpointnum(cellindex, d) == 0 && cellindexstride < 0)) {
-            printout("escaping packet\n");
-            return {0., -99};
-          }
-          const int snext = cellindex + cellindexstride;
-          *pkt_last_cross = invdirection;
-          printout("[warning] swapping packet cellindex from %d to %d and setting last_cross to %d\n", cellindex, snext,
-                   *pkt_last_cross);
-          return {0., snext};
-        }
-        printout("pretending last_cross is %d\n", direction);
-        last_cross = direction;
+        printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
+        assert_always(false);
       }
     }
   }
 
-  // distance to reach the cell's upper boundary on each coordinate
-  auto d_coordmaxboundary = std::array<double, 3>{-1};
-
-  // distance to reach the cell's lower boundary on each coordinate
-  auto d_coordminboundary = std::array<double, 3>{-1};
+  double distance = std::numeric_limits<double>::max();
+  int snext{-1};
 
   if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
-    last_cross = BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
+    // the only coordinate is the radius from the origin
+
     const double speed = vec_len(dir) * CLIGHT_PROP;  // just in case dir is not normalised
 
-    const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
-    d_coordminboundary[0] = (r_inner > 0.) ? expanding_shell_intersection(pos, dir, speed, r_inner, true, tstart) : -1.;
-
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
-    d_coordmaxboundary[0] = expanding_shell_intersection(pos, dir, speed, r_outer, false, tstart);
+    const double d_coordmaxboundary = expanding_shell_intersection(pos, dir, speed, r_outer, false, tstart);
 
-  } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
-    // coordinate 0 is radius in x-y plane, coord 1 is z
-    if (last_cross == COORD0_MIN || last_cross == COORD0_MAX) {
-      last_cross =
-          BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
+    // upper d coordinate of the current cell
+    if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
+      distance = d_coordmaxboundary;
+      snext = (grid::get_cellcoordpointnum(cellindex, 0) == (grid::ncoordgrid[0] - 1))
+                  ? -99
+                  : cellindex + grid::get_coordcellindexincrement(0);
     }
 
-    std::tie(d_coordminboundary, d_coordmaxboundary) = get_coordboundary_distances_cylindrical2d(
-        pos, dir, pktposgridcoord, pktvelgridcoord, cellindex, tstart, cellcoordmax);
+    const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
+    if (r_inner > 0.) {
+      const double d_coordminboundary = expanding_shell_intersection(pos, dir, speed, r_inner, true, tstart);
+      // lower d coordinate of the current cell
+      if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
+        distance = d_coordminboundary;
+        snext =
+            (grid::get_cellcoordpointnum(cellindex, 0) == 0) ? -99 : cellindex - grid::get_coordcellindexincrement(0);
+      }
+    }
+  } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
+    // coordinate 0 is cylindrical radius (distance from z=0 in x-y plane), coord 1 is z
+
+    const std::array<double, 2> posnoz = {pos[0], pos[1]};
+
+    // r_cyl component of direction vector
+    const double dirxylen = std::sqrt((dir[0] * dir[0]) + (dir[1] * dir[1]));
+    // r_cyl component of velocity
+    const double xyspeed = dirxylen * CLIGHT_PROP;
+
+    // make a normalised 2D direction vector in the xy plane
+    const std::array<double, 2> dirnoz = {dir[0] / dirxylen, dir[1] / dirxylen};
+
+    const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
+    const double d_rcyl_coordmaxboundary =
+        expanding_shell_intersection(posnoz, dirnoz, xyspeed, r_outer, false, tstart);
+    if (d_rcyl_coordmaxboundary >= 0.) {
+      // how far did the packet travel in the z direction during this time?
+      const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * dir[2] * CLIGHT_PROP;
+      // distance from two perpendicular components to the r_cyl upper boundary
+      const double d_coordmaxboundary_rcyl = std::sqrt((d_rcyl_coordmaxboundary * d_rcyl_coordmaxboundary) +
+                                                       (d_z_coordmaxboundary * d_z_coordmaxboundary));
+      if ((d_coordmaxboundary_rcyl > 0) && (d_coordmaxboundary_rcyl < distance)) {
+        distance = d_coordmaxboundary_rcyl;
+        snext = (grid::get_cellcoordpointnum(cellindex, 0) == (grid::ncoordgrid[0] - 1))
+                    ? -99
+                    : cellindex + grid::get_coordcellindexincrement(0);
+      }
+    }
+
+    const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
+    // don't try to calculate the intersection if the inner radius is zero
+    if (r_inner > 0) {
+      // calculate the distance in the xy plane to the inner boundary
+      const double d_rcyl_coordminboundary =
+          expanding_shell_intersection(posnoz, dirnoz, xyspeed, r_inner, true, tstart);
+      if (d_rcyl_coordminboundary >= 0.) {
+        const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * dir[2] * CLIGHT_PROP;
+        // distance from two perpendicular components to the r_cyl lower boundary
+        const double d_coordminboundary_rcyl = std::sqrt((d_rcyl_coordminboundary * d_rcyl_coordminboundary) +
+                                                         (d_z_coordminboundary * d_z_coordminboundary));
+        if ((d_coordminboundary_rcyl >= 0.) && (d_coordminboundary_rcyl < distance)) {
+          distance = d_coordminboundary_rcyl;
+          snext =
+              (grid::get_cellcoordpointnum(cellindex, 0) == 0) ? -99 : cellindex - grid::get_coordcellindexincrement(0);
+        }
+      }
+    }
+
+    // handle Z boundaries as Cartesian
+
+    if ((pktvelgridcoord[1] * tstart) > pktposgridcoord[1]) {
+      const double t_zcoordmaxboundary = ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
+                                          ((cellcoordmax[1]) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
+                                         tstart;
+      const double d_coordmaxboundary_z = CLIGHT_PROP * t_zcoordmaxboundary;
+
+      if ((d_coordmaxboundary_z >= 0.) && (d_coordmaxboundary_z < distance)) {
+        distance = d_coordmaxboundary_z;
+        snext = (grid::get_cellcoordpointnum(cellindex, 1) == (grid::ncoordgrid[1] - 1))
+                    ? -99
+                    : cellindex + grid::get_coordcellindexincrement(1);
+      }
+    } else {
+      const double t_zcoordminboundary =
+          ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
+           ((grid::get_cellcoordmin(cellindex, 1)) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
+          tstart;
+      const double d_coordminboundary_z = CLIGHT_PROP * t_zcoordminboundary;
+
+      if ((d_coordminboundary_z >= 0.) && (d_coordminboundary_z < distance)) {
+        distance = d_coordminboundary_z;
+        snext =
+            (grid::get_cellcoordpointnum(cellindex, 1) == 0) ? -99 : cellindex - grid::get_coordcellindexincrement(1);
+      }
+    }
 
   } else if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     // There are six possible boundary crossings. Each of the three
@@ -2527,75 +2531,66 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
     // boundary, regardless of direction.
 
     for (int d = 0; d < 3; d++) {
-      const double t_coordminboundary =
-          ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
-           (grid::get_cellcoordmin(cellindex, d) - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
-          tstart;
-      d_coordminboundary[d] = CLIGHT_PROP * t_coordminboundary;
+      if ((pktvelgridcoord[d] * tstart) > pktposgridcoord[d]) {
+        const double t_coordmaxboundary = ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
+                                           (cellcoordmax[d] - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
+                                          tstart;
 
-      const double t_coordmaxboundary = ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
-                                         (cellcoordmax[d] - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
-                                        tstart;
+        const double d_coordmaxboundary = CLIGHT_PROP * t_coordmaxboundary;
 
-      d_coordmaxboundary[d] = CLIGHT_PROP * t_coordmaxboundary;
+        if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
+          distance = d_coordmaxboundary;
+          snext = (grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1))
+                      ? -99
+                      : cellindex + grid::get_coordcellindexincrement(d);
+        }
+      } else {
+        const double t_coordminboundary =
+            ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
+             (grid::get_cellcoordmin(cellindex, d) - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
+            tstart;
+        const double d_coordminboundary = CLIGHT_PROP * t_coordminboundary;
+
+        // lower d coordinate of the current cell
+        if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
+          distance = d_coordminboundary;
+          snext =
+              (grid::get_cellcoordpointnum(cellindex, d) == 0) ? -99 : cellindex - grid::get_coordcellindexincrement(d);
+        }
+      }
     }
   } else {
     assert_always(false);
   }
 
-  // We now need to identify the shortest +ve distance - that's the one we want.
-  enum cell_boundary choice = BOUNDARY_NONE;
-  double distance = std::numeric_limits<double>::max();
-  int snext = 0;
-  for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
-    // upper d coordinate of the current cell
-    if ((d_coordmaxboundary[d] > 0) && (d_coordmaxboundary[d] < distance) && (last_cross != negdirections[d])) {
-      choice = posdirections[d];
-      distance = d_coordmaxboundary[d];
-      if (grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1)) {
-        snext = -99;
-      } else {
-        *pkt_last_cross = choice;
-        snext = cellindex + grid::get_coordcellindexincrement(d);
-      }
-    }
-
-    // lower d coordinate of the current cell
-    if ((d_coordminboundary[d] > 0) && (d_coordminboundary[d] < distance) && (last_cross != posdirections[d])) {
-      choice = negdirections[d];
-      distance = d_coordminboundary[d];
-      if (grid::get_cellcoordpointnum(cellindex, d) == 0) {
-        snext = -99;
-      } else {
-        *pkt_last_cross = choice;
-        snext = cellindex - grid::get_coordcellindexincrement(d);
-      }
-    }
-  }
-
-  if (choice == BOUNDARY_NONE) {
-    if constexpr (TESTMODE) {
+  if constexpr (TESTMODE) {
+    if (snext == -1) {
       printout("Something wrong in boundary crossing - didn't find anything.\n");
       printout("packet cell %d\n", cellindex);
-      printout("choice %d\n", choice);
       printout("globals::tmin %g tstart %g\n", globals::tmin, tstart);
-      printout("last_cross %d\n", last_cross);
       for (int d2 = 0; d2 < 3; d2++) {
         printout("coord %d: initpos %g dir %g\n", d2, pos[d2], dir[d2]);
       }
       printout("|initpos| %g |dir| %g |pos.dir| %g\n", vec_len(pos), vec_len(dir), dot(pos, dir));
       for (int d2 = 0; d2 < get_ndim(GRID_TYPE); d2++) {
-        printout("coord %d: dist_posmax %g dist_posmin %g\n", d2, d_coordmaxboundary[d2], d_coordminboundary[d2]);
         printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2,
                  grid::get_cellcoordmin(cellindex, d2) * tstart / globals::tmin,
                  cellcoordmax[d2] * tstart / globals::tmin);
       }
       printout("tstart %g\n", tstart);
-
-      assert_always(false);
-    } else {
-      std::unreachable();
     }
+  }
+
+  assert_always((snext == -99) || ((snext >= 0) && (snext < grid::ngrid)));
+
+  const double maxsdist = (GRID_TYPE == GridType::CARTESIAN3D)
+                              ? globals::rmax * tstart / globals::tmin
+                              : 2 * globals::rmax * (tstart + distance / CLIGHT_PROP) / globals::tmin;
+
+  assert_always(distance >= 0. && distance <= maxsdist);
+
+  if (distance > globals::max_path_step) {
+    return {globals::max_path_step, cellindex};
   }
 
   return {distance, snext};
