@@ -1094,7 +1094,7 @@ void setup_grid_cartesian_3d() {
   }
 }
 
-void setup_grid_spherical1d() {
+void setup_grid_spherical_1d() {
   assert_always(get_model_type() == GridType::SPHERICAL1D);
   coordlabel = {'r', '_', '_'};
 
@@ -2212,7 +2212,7 @@ void grid_init(const int my_rank) {
   } else if (GRID_TYPE == GridType::CYLINDRICAL2D) {
     setup_grid_cylindrical_2d();
   } else if (GRID_TYPE == GridType::SPHERICAL1D) {
-    setup_grid_spherical1d();
+    setup_grid_spherical_1d();
   } else {
     printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
     std::abort();
