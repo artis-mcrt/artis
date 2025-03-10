@@ -1177,21 +1177,41 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 
 // Convert a position in Cartesian xyz to the grid coordinate system (which might the same, or 2D cylindrical or 1D
 // spherical)
-template <GridType grid_type>
 [[nodiscard]] constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) {
-  if constexpr (grid_type == GridType::CARTESIAN3D) {
+  if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return pos_xyz;
   }
 
-  if constexpr (grid_type == GridType::CYLINDRICAL2D) {
+  if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
     return std::array<double, 2>{std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2]};
   }
 
-  if constexpr (grid_type == GridType::SPHERICAL1D) {
+  if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
     return std::array<double, 1>{vec_len(pos_xyz)};
   }
 
   assert_always(false);
+}
+
+// get the velocity in the grid coordinate system from the xyz position and direction
+[[nodiscard]] constexpr auto get_gridcoords_vel_from_xyz_pos_dir(
+    const std::array<double, 3> &pos_xyz, const std::array<double, 3> &dir_xyz,
+    const std::array<double, get_ndim(GRID_TYPE)> &pktposgridcoord) {
+  if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
+    // keep xyz Cartesian coordinates
+    return std::array<double, 3>{dir_xyz[0] * CLIGHT_PROP, dir_xyz[1] * CLIGHT_PROP, dir_xyz[2] * CLIGHT_PROP};
+  } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
+    // xy plane radial velocity
+    // z velocity
+    return std::array<double, 2>{(pos_xyz[0] * dir_xyz[0] + pos_xyz[1] * dir_xyz[1]) / pktposgridcoord[0] * CLIGHT_PROP,
+                                 dir_xyz[2] * CLIGHT_PROP};
+
+  } else if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
+    // the only coordinate is radius from the origin
+    return std::array<double, 1>{dot(pos_xyz, dir_xyz) / pktposgridcoord[0] * CLIGHT_PROP};
+  } else {
+    assert_always(false);
+  }
 }
 
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
@@ -2310,7 +2330,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 
 // identify the cell index from an (x,y,z) position and a time.
 [[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> &pos, const double time) -> int {
-  auto posgridcoords = get_gridcoords_from_xyz<GRID_TYPE>(pos);
+  auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
     cellindex += get_coordcellindexincrement(d) * get_poscoordpointnum(posgridcoords[d], time, d);
@@ -2338,33 +2358,15 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   // d is used to loop over the coordinate indicies 0,1,2 for x,y,z
 
   // the following vector are in grid coordinates, so either x,y,z (3D) or r (1D), or r_xy, z (2D)
-  assert_testmodeonly(get_ndim(GRID_TYPE) <= 3);
+  static_assert(get_ndim(GRID_TYPE) <= 3);
+
+  const auto pktposgridcoord = get_gridcoords_from_xyz(pos);
+  auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(
+      pos, dir, pktposgridcoord);  // dir * CLIGHT_PROP converted from xyz to grid coordinates
+
   auto cellcoordmax = std::array<double, get_ndim(GRID_TYPE)>{0};  // position at time tmin
-  auto pktvelgridcoord =
-      std::array<double, get_ndim(GRID_TYPE)>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
-
-  const auto pktposgridcoord = get_gridcoords_from_xyz<GRID_TYPE>(pos);
-
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
     cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
-  }
-  if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
-    // keep xyz Cartesian coordinates
-    for (int d = 0; d < 3; d++) {
-      pktvelgridcoord[d] = dir[d] * CLIGHT_PROP;
-    }
-  } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
-    // xy plane radial velocity
-    pktvelgridcoord[0] = (pos[0] * dir[0] + pos[1] * dir[1]) / pktposgridcoord[0] * CLIGHT_PROP;
-
-    // second cylindrical coordinate is z
-    pktvelgridcoord[1] = dir[2] * CLIGHT_PROP;
-
-  } else if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
-    // the only coordinate is radius from the origin
-    pktvelgridcoord[0] = dot(pos, dir) / pktposgridcoord[0] * CLIGHT_PROP;  // radial velocity
-  } else {
-    assert_always(false);
   }
 
   if constexpr (TESTMODE) {
