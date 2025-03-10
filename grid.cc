@@ -2366,11 +2366,11 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord);
 
   const auto cellcoordmax = [cellindex] {
-    auto cellcoordmax = std::array<double, get_ndim(GRID_TYPE)>{0};  // position at time tmin
+    auto _cellcoordmax = std::array<double, get_ndim(GRID_TYPE)>{0};  // position at time tmin
     for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
-      cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
+      _cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
     }
-    return cellcoordmax;
+    return _cellcoordmax;
   }();
 
   if constexpr (TESTMODE) {
