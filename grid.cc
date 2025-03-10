@@ -51,7 +51,7 @@ struct ModelGridCellInput {
 
 std::array<char, 3> coordlabel{'?', '?', '?'};
 
-std::array<int, 3> ncoordgrid{0};  // propagation grid dimensions
+std::array<int, 3> ncoordgrid{};  // propagation grid dimensions
 
 GridType model_type = GridType::CARTESIAN3D;
 ptrdiff_t npts_model = 0;           // number of model grid cells
@@ -59,7 +59,7 @@ ptrdiff_t nonempty_npts_model = 0;  // number of allocated non-empty model grid 
 
 double t_model = -1.;  // time at which densities in input model are correct.
 std::vector<double> vout_model{};
-std::array<int, 3> ncoord_model{0};  // the model.txt input grid dimensions
+std::array<int, 3> ncoord_model{};  // the model.txt input grid dimensions
 
 double min_den;  // minimum model density
 
@@ -2366,7 +2366,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord);
 
   const auto cellcoordmax = [cellindex] {
-    auto _cellcoordmax = std::array<double, get_ndim(GRID_TYPE)>{0};  // position at time tmin
+    auto _cellcoordmax = std::array<double, get_ndim(GRID_TYPE)>{};  // position at time tmin
     for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
       _cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
     }
