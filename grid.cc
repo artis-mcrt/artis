@@ -2361,13 +2361,17 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   static_assert(get_ndim(GRID_TYPE) <= 3);
 
   const auto pktposgridcoord = get_gridcoords_from_xyz(pos);
-  auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(
-      pos, dir, pktposgridcoord);  // dir * CLIGHT_PROP converted from xyz to grid coordinates
 
-  auto cellcoordmax = std::array<double, get_ndim(GRID_TYPE)>{0};  // position at time tmin
-  for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
-    cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
-  }
+  // dir * CLIGHT_PROP converted from xyz to grid coordinates
+  const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord);
+
+  const auto cellcoordmax = [cellindex] {
+    auto cellcoordmax = std::array<double, get_ndim(GRID_TYPE)>{0};  // position at time tmin
+    for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
+      cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
+    }
+    return cellcoordmax;
+  }();
 
   if constexpr (TESTMODE) {
     for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
