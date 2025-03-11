@@ -225,7 +225,7 @@ jobs:
               if: always() && inputs.testmode != 'ON'
               run: |
                   python3 -m pip install --upgrade uv
-                  uv tool install artistools
+                  uv tool install artistools@latest
 
             - name: Plot light curve
               if: always() && inputs.testmode != 'ON'
