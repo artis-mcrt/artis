@@ -266,9 +266,11 @@ void mpi_reduce_estimators(const int nts) {
   assert_always(!globals::ffheatingestimator.empty());
   MPI_Allreduce(MPI_IN_PLACE, globals::ffheatingestimator.data(), globals::ffheatingestimator.size(), MPI_DOUBLE,
                 MPI_SUM, MPI_COMM_WORLD);
-  assert_always(!globals::colheatingestimator.empty());
-  MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator.data(), globals::colheatingestimator.size(), MPI_DOUBLE,
-                MPI_SUM, MPI_COMM_WORLD);
+  if constexpr (!DIRECT_COL_HEAT) {
+    assert_always(!globals::colheatingestimator.empty());
+    MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator.data(), globals::colheatingestimator.size(), MPI_DOUBLE,
+                  MPI_SUM, MPI_COMM_WORLD);
+  }
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (globals::nbfcontinua_ground > 0) {

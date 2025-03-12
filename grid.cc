@@ -441,14 +441,14 @@ void allocate_nonemptymodelcells() {
   resize_exactly(globals::ffheatingestimator, nonempty_npts_model);
   std::ranges::fill(globals::ffheatingestimator, 0.);
 
-  resize_exactly(globals::colheatingestimator, nonempty_npts_model);
+  resize_exactly(globals::colheatingestimator, DIRECT_COL_HEAT ? 0 : nonempty_npts_model);
   std::ranges::fill(globals::colheatingestimator, 0.);
 
 #ifdef DO_TITER
   resize_exactly(globals::ffheatingestimator_save, nonempty_npts_model);
   std::ranges::fill(globals::ffheatingestimator_save, 0.);
 
-  resize_exactly(globals::colheatingestimator_save, nonempty_npts_model);
+  resize_exactly(globals::colheatingestimator_save, DIRECT_COL_HEAT ? 0 : nonempty_npts_model);
   std::ranges::fill(globals::colheatingestimator_save, 0.);
 
 #endif

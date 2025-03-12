@@ -629,12 +629,11 @@ void init(const int my_rank, const int ndo_nonempty) {
 // fluctuations over timestep iterations if DO_TITER is defined) to -1.
 void initialise_prev_titer_photoionestimators() {
 #ifdef DO_TITER
+  std::ranges::fill(globals::ffheatingestimator_save, -1.);
+  std::ranges::fill(globals::colheatingestimator_save, -1.);
+  std::ranges::fill(globals::J_reduced_save, -1.);
+  std::ranges::fill(globals::nuJ_reduced_save, -1.);
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const int nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-    globals::ffheatingestimator_save[nonemptymgi] = -1.;
-    globals::colheatingestimator_save[nonemptymgi] = -1.;
-    J_reduced_save[nonemptymgi] = -1.;
-    nuJ_reduced_save[nonemptymgi] = -1.;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {

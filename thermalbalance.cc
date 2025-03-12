@@ -176,7 +176,7 @@ void calculate_heating_rates(const int nonemptymgi, const double T_e, const doub
     heatingcoolingrates.heating_collisional = C_deexc;
   } else {
     // Collisional heating (from estimators)
-    heatingcoolingrates.heating_collisional = globals::colheatingestimator[nonemptymgi];  // C_deexc + C_recomb;
+    heatingcoolingrates.heating_collisional = globals::colheatingestimator.at(nonemptymgi);  // C_deexc + C_recomb;
   }
 
   heatingcoolingrates.heating_bf = bfheating;
