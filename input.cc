@@ -753,6 +753,7 @@ void setup_phixs_list() {
           const double nu_edge = get_phixs_threshold(element, ion, level, phixstargetindex) / H;
 
           assert_always(allcontindex < globals::nbfcontinua);
+          assert_always(nonconstallcont != nullptr);
           nonconstallcont[allcontindex].nu_edge = nu_edge;
           nonconstallcont[allcontindex].element = element;
           nonconstallcont[allcontindex].ion = ion;
