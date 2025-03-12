@@ -238,7 +238,10 @@ void init_xcom_photoion_data() {
 __host__ __device__ auto choose_gamma_ray(const int nucindex) -> double {
   // Routine to choose which gamma ray line it'll be.
 
-  const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
+  double E_gamma = 0.;  // Average energy per gamma line of a decay
+  for (ptrdiff_t n = 0; n < std::ssize(gamma_spectra[nucindex]); n++) {
+    E_gamma += gamma_spectra[nucindex][n].probability * gamma_spectra[nucindex][n].energy;
+  }
 
   const double zrand = rng_uniform();
   double runtot = 0.;
