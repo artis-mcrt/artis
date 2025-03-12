@@ -438,7 +438,9 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
         pkt.type = TYPE_KPKT;
         end_packet = true;
-        atomicadd(globals::colheatingestimator[nonemptymgi], pkt.e_cmf);
+        if constexpr (!DIRECT_COL_HEAT) {
+          atomicadd(globals::colheatingestimator[nonemptymgi], pkt.e_cmf);
+        }
         break;
       }
 
@@ -480,7 +482,9 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
         pkt.type = TYPE_KPKT;
         end_packet = true;
-        atomicadd(globals::colheatingestimator[nonemptymgi], pkt.e_cmf);
+        if constexpr (!DIRECT_COL_HEAT) {
+          atomicadd(globals::colheatingestimator[nonemptymgi], pkt.e_cmf);
+        }
         break;
       }
 

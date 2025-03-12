@@ -856,11 +856,13 @@ static void titer_average_estimators(const int nonemptymgi) {
         (globals::ffheatingestimator[nonemptymgi] + globals::ffheatingestimator_save[nonemptymgi]) / 2;
   }
   globals::ffheatingestimator_save[nonemptymgi] = globals::ffheatingestimator[nonemptymgi];
-  if (globals::colheatingestimator_save[nonemptymgi] >= 0) {
-    globals::colheatingestimator[nonemptymgi] =
-        (globals::colheatingestimator[nonemptymgi] + globals::colheatingestimator_save[nonemptymgi]) / 2;
+  if constexpr (!DIRECT_COL_HEAT) {
+    if (globals::colheatingestimator_save[nonemptymgi] >= 0) {
+      globals::colheatingestimator[nonemptymgi] =
+          (globals::colheatingestimator[nonemptymgi] + globals::colheatingestimator_save[nonemptymgi]) / 2;
+    }
+    globals::colheatingestimator_save.at(nonemptymgi) = globals::colheatingestimator.at(nonemptymgi);
   }
-  globals::colheatingestimator_save[nonemptymgi] = globals::colheatingestimator[nonemptymgi];
 }
 #endif
 
@@ -981,7 +983,9 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       radfield::normalise_nuJ(nonemptymgi, estimator_normfactor_over4pi);
 
       globals::ffheatingestimator[nonemptymgi] *= estimator_normfactor;
-      globals::colheatingestimator[nonemptymgi] *= estimator_normfactor;
+      if constexpr (!DIRECT_COL_HEAT) {
+        globals::colheatingestimator[nonemptymgi] *= estimator_normfactor;
+      }
 
 #ifdef DO_TITER
       radfield::titer_nuJ(nonemptymgi);
