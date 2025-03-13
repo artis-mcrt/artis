@@ -394,17 +394,11 @@ void find_decaypaths(const std::vector<int> &custom_zlist, const std::vector<int
     const int d2_length = get_decaypathlength(d2);
     const int smallestpathlength = std::min(d1_length, d2_length);
     for (int i = 0; i < smallestpathlength; i++) {
-      if (d1.a[i] < d2.a[i]) {
-        return true;
+      if (d1.a[i] != d2.a[i]) {
+        return d1.a[i] < d2.a[i];
       }
-      if (d1.a[i] > d2.a[i]) {
-        return false;
-      }
-      if (d1.z[i] < d2.z[i]) {
-        return true;
-      }
-      if (d1.z[i] > d2.z[i]) {
-        return false;
+      if (d1.z[i] != d2.z[i]) {
+        return d1.z[i] < d2.z[i];
       }
     }
     // one is an extension of the other, so place the shorter one first
