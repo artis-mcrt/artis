@@ -628,6 +628,7 @@ void read_collion_data() {
 
     colliondata.push_back(collionrow);
   }
+  fclose(cifile);
   printout("Stored %zu of %d input shell cross sections\n", colliondata.size(), colliondatacount);
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
@@ -690,8 +691,6 @@ void read_collion_data() {
   std::ranges::stable_sort(colliondata, [](const collionrow &a, const collionrow &b) {
     return std::tie(a.Z, a.ionstage, a.ionpot_ev, a.n, a.l) < std::tie(b.Z, b.ionstage, b.ionpot_ev, b.n, b.l);
   });
-
-  fclose(cifile);
 
   if (NT_MAX_AUGER_ELECTRONS > 0) {
     read_auger_data();
