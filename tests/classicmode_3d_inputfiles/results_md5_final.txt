@@ -513,6 +513,7 @@ dfabf098f46792626128bc7a274f26fd  light_curve.out
 9d4855ca7fdff90a3b79d1940d9701e6  light_curve_res.out
 c0138ff7e4fab0ee2bcabb2ca6c2f6b9  linestat.out
 0edca801bc9867f17f0208399cf9ebd3  modelgridrankassignments.out
+bbcd1415c9d43c008cff65da19b32bab  nuclides.out
 c7ebaafec55fb3f357a7b38aa64bcc41  packets00_0000.out
 3d66b6d206bb4b4b592053b4f499db26  packets00_0001.out
 c3dd924b5836bb0fda6e018334ff4dae  packets00_0002.out

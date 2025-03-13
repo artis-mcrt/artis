@@ -9,6 +9,7 @@ e08bbb965fac36412810b8769a13ab9d  grid.out
 a17009fa94dcfedc019e3ebf46dd88fc  light_curve.out
 c0138ff7e4fab0ee2bcabb2ca6c2f6b9  linestat.out
 0edca801bc9867f17f0208399cf9ebd3  modelgridrankassignments.out
+bbcd1415c9d43c008cff65da19b32bab  nuclides.out
 88bde6603f56154e427a19c606f92e2b  packets00_0000.out
 323d6c4065c18f7bb2fc1b0b6692d2c3  packets00_0001.out
 17507db9bbf415751efb318ec20f5a92  packets00_0002.out

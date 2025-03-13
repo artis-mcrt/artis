@@ -6,6 +6,7 @@ e7d466d389c333f75ca3daf89c4f7d9c  gamma_light_curve.out
 bd40f9d7fbbb3bef2258786416249837  light_curve.out
 3d4b61fa5c0c8987526ebd71787cb8ea  linestat.out
 d80043ce6bedca56511b9fd3f7c0a49f  modelgridrankassignments.out
+9eb60a85900f25e261f2f6c21ea97029  nuclides.out
 3dd6aced4a32130e7d005eaaae2b4f7b  packets00_0000.out
 0c13d9b51dba0edbe2c6868d8f13c3cf  packets00_0001.out
 fb29ce3fc35d728e91976b762482a483  packets00_0002.out
