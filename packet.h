@@ -69,12 +69,7 @@ struct Packet {
   int pellet_nucindex{-1};                       // nuclide index of the decaying species
   float trueemissionvelocity{-1};
 
-  auto operator==(const Packet &rhs) const -> bool {
-    return (number == rhs.number && type == rhs.type &&
-            (em_pos[0] == rhs.em_pos[0] && em_pos[1] == rhs.em_pos[1] && em_pos[2] == rhs.em_pos[2]) &&
-            nu_cmf == rhs.nu_cmf && where == rhs.where && prop_time == rhs.prop_time && tdecay == rhs.tdecay &&
-            pellet_nucindex == rhs.pellet_nucindex);
-  }
+  auto operator==(const Packet &rhs) const -> bool = default;
 };
 
 enum last_event_type {

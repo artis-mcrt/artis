@@ -23,6 +23,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -1135,8 +1136,14 @@ void read_atomicdata_files() {
 
   if (globals::rank_in_node == 0) {
     // sort the lineline in descending frequency
-    std::SORT_OR_STABLE_SORT(EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(),
-                             [](const auto &a, const auto &b) { return a.nu > b.nu; });
+    std::SORT_OR_STABLE_SORT(
+        EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(), [](const auto &a, const auto &b) {
+          if (a.nu != b.nu) {
+            return a.nu > b.nu;
+          }
+          return std::tie(a.elementindex, a.ionindex, a.lowerlevelindex, a.upperlevelindex, a.einstein_A) <
+                 std::tie(b.elementindex, b.ionindex, b.lowerlevelindex, b.upperlevelindex, b.einstein_A);
+        });
 
     for (int i = 0; i < globals::nlines - 1; i++) {
       const double nu = temp_linelist[i].nu;
