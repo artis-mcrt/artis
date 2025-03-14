@@ -199,8 +199,6 @@ struct CellCache {
 
 namespace globals {
 
-inline constexpr std::array<double, 3> syn_dir{0., 0., 1.};  // vector defining the theta=0 direction
-
 inline std::vector<TimeStep> timesteps;
 
 // deposition estimators index by non-empty modelgridindex

@@ -169,8 +169,7 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   return pkt.escape_time - (dot(pkt.pos, pkt.dir) / CLIGHT_PROP);
 }
 
-[[nodiscard]] constexpr auto get_escapedirectionbin(const std::array<double, 3> &dir_in,
-                                                    const std::array<double, 3> &syn_dir) -> int {
+[[nodiscard]] constexpr auto get_escapedirectionbin(const std::array<double, 3> &dir_in) -> int {
   constexpr auto xhat = std::array<double, 3>{1.0, 0.0, 0.0};
 
   // sometimes dir vectors aren't accurately normalised

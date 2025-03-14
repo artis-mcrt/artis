@@ -537,7 +537,7 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
 // Add a packet to the outgoing spectrum.
 void add_to_spec_res(const Packet &pkt, const int current_abin, Spectra &spectra, Spectra *stokes_i, Spectra *stokes_q,
                      Spectra *stokes_u) {
-  if (current_abin == -1 || get_escapedirectionbin(pkt.dir, globals::syn_dir) == current_abin) {
+  if (current_abin == -1 || get_escapedirectionbin(pkt.dir) == current_abin) {
     // either angle average spectrum or packet matches the selected angle bin
     add_to_spec(pkt, current_abin, spectra, stokes_i, stokes_q, stokes_u);
   }
@@ -659,7 +659,7 @@ void add_to_lc_res(const Packet &pkt, const int current_abin, std::vector<double
 
     return;
   }
-  if (get_escapedirectionbin(pkt.dir, globals::syn_dir) == current_abin) {
+  if (get_escapedirectionbin(pkt.dir) == current_abin) {
     // Add only packets which escape to the current angle bin
     const double t_arrive = get_arrive_time(pkt);
     if (t_arrive > globals::tmin && t_arrive < globals::tmax) {

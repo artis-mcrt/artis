@@ -1,6 +1,7 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#include <array>
 #include <cstddef>
 #include <numbers>
 
@@ -44,6 +45,8 @@ constexpr double HCLIGHTOVERFOURPI = 1.580764662876770e-17;
 constexpr double OSCSTRENGTHCONVERSION = 1.3473837e+21;
 
 constexpr double H_ionpot = 13.5979996 * EV;
+
+inline constexpr std::array<double, 3> syn_dir{0., 0., 1.};  // vector defining the theta=0 direction
 
 enum class GridType {
   SPHERICAL1D,    // 1D radial shells (non-uniform dr)
