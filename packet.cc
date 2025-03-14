@@ -188,7 +188,7 @@ void write_packets(const char filename[], const Packet *const pkt) {
     packets_file << pkt[i].stokes[0] << " " << pkt[i].stokes[1] << " " << pkt[i].stokes[2] << " ";
     packets_file << pkt[i].pol_dir[0] << " " << pkt[i].pol_dir[1] << " " << pkt[i].pol_dir[2] << " ";
     packets_file << static_cast<int>(pkt[i].originated_from_particlenotgamma) << " " << pkt[i].trueemissionvelocity
-                 << " " << pkt[i].trueem_time << " " << pkt[i].pellet_nucindex;
+                 << " " << pkt[i].trueem_time << " " << pkt[i].pellet_nucindex << " ";
     packets_file << "\n";
   }
 }
