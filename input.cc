@@ -1778,9 +1778,8 @@ void read_parameterfile(int rank) {
   }
 }
 
-void update_parameterfile(int nts)
-// Subroutine to read in input parameters from input.txt.
-{
+// write out an updated input.txt to restart the simulation
+void update_parameterfile(const int nts) {
   assert_always(globals::my_rank == 0);
   if (nts >= 0) {
     printout("Update input.txt for restart at timestep %d...", nts);
@@ -1795,9 +1794,6 @@ void update_parameterfile(int nts)
   assert_always(fileout.is_open());
 
   std::string line;
-
-  // FILE *input_file = fopen_required("input.txt", "r+");
-  // setvbuf(input_file,nullptr, _IOLBF, 0);
 
   char c_line[1024];
   int noncomment_linenum = -1;
@@ -1856,7 +1852,7 @@ void update_parameterfile(int nts)
   printout("done\n");
 }
 
-// initialize the time steps
+// initialise the time steps
 void time_init() {
   // t=globals::tmin is the start of the calculation. t=globals::tmax is the end of the calculation.
   // globals::ntimesteps is the number of time steps
@@ -1920,7 +1916,7 @@ void time_init() {
     }
 
     case TimeStepSizeMethod::CONSTANT_THEN_LOGARITHMIC: {
-      // // First part fixed timesteps, second part log timesteps
+      // First part fixed timesteps, second part log timesteps
       const double t_transition = TIMESTEP_TRANSITION_TIME * DAY;  // transition from fixed to logarithmic timesteps
       const double maxtsdelta = FIXED_TIMESTEP_WIDTH * DAY;        // timestep width of fixed timesteps
       assert_always(t_transition > globals::tmin);
@@ -1994,11 +1990,12 @@ void time_init() {
 }
 
 void write_timestep_file() {
-  FILE *timestepfile = fopen_required("timesteps.out", "w");
-  fprintf(timestepfile, "#timestep tstart_days tmid_days twidth_days\n");
+  auto timestepfile = std::fstream("timesteps.out", std::ofstream::out | std::ofstream::trunc);
+  assert_always(timestepfile.is_open());
+  timestepfile << "#timestep tstart_days tmid_days twidth_days\n";
   for (int n = 0; n < globals::ntimesteps; n++) {
-    fprintf(timestepfile, "%d %lg %lg %lg\n", n, globals::timesteps[n].start / DAY, globals::timesteps[n].mid / DAY,
-            globals::timesteps[n].width / DAY);
+    timestepfile << n << " " << globals::timesteps[n].start / DAY << " " << globals::timesteps[n].mid / DAY << " "
+                 << globals::timesteps[n].width / DAY << "\n";
   }
-  fclose(timestepfile);
+  timestepfile.close();
 }
