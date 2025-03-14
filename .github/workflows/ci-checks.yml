@@ -74,7 +74,7 @@ jobs:
                         {name: gcc, ver: 12},
                         {name: gcc, ver: 13},
                         {name: gcc, ver: 14},
-                        {name: clang, ver: 19},
+                        {name: clang, ver: 20},
                         {name: nvc++, ver: '25.1'},
                     ]
             fail-fast: false
@@ -100,11 +100,13 @@ jobs:
             - name: Install Clang
               if: matrix.compiler.name == 'clang'
               run: |
+                  wget https://apt.llvm.org/llvm.sh
+                  chmod +x llvm.sh
+                  sudo ./llvm.sh ${{ matrix.compiler.ver }}
+                  sudo apt-get install libc++-${{ matrix.compiler.ver }}* libc++abi-${{ matrix.compiler.ver }}* -y --no-install-recommends
                   sudo apt-get update
                   sudo apt-get upgrade
                   sudo apt-get install -y lld-${{ matrix.compiler.ver }} clang-${{ matrix.compiler.ver }} libomp-${{ matrix.compiler.ver }}-dev libomp5-${{ matrix.compiler.ver }}
-                  sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${{ matrix.compiler.ver }} 100
-                  sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${{ matrix.compiler.ver }} 100
                   echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
                   echo "LDFLAGS=-L/usr/lib/llvm-${{ matrix.compiler.ver }}/lib" >> $GITHUB_ENV
