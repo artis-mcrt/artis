@@ -32,10 +32,12 @@ inline std::array<bool, 3> phixs_file_version_exists;
 
 constexpr std::array<const char *, 3> phixsdata_filenames = {"version0ignore", "phixsdata.txt", "phixsdata_v2.txt"};
 
-[[nodiscard]] inline auto get_nelements() -> int { return static_cast<int>(globals::elements.size()); }
+[[nodiscard]] __host__ __device__ inline auto get_nelements() -> int {
+  return static_cast<int>(globals::elements.size());
+}
 
 // total density of nuclei
-inline auto get_nnion_tot(int nonemptymgi) -> double {
+__host__ __device__ inline auto get_nnion_tot(int nonemptymgi) -> double {
   double nntot = 0.;
   for (int element = 0; element < get_nelements(); element++) {
     nntot += grid::get_elem_numberdens(nonemptymgi, element);
@@ -50,8 +52,8 @@ inline auto get_nions(const int element) -> int {
   return globals::elements[element].nions;
 }
 
-// Return the number of levels associated with with a specific ion given its elementindex and ionindex.
-inline auto get_nlevels(const int element, const int ion) -> int {
+// Return the number of levels associated with a specific ion given its elementindex and ionindex.
+__host__ __device__ inline auto get_nlevels(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].nlevels;
@@ -59,7 +61,7 @@ inline auto get_nlevels(const int element, const int ion) -> int {
 
 // Return the energy of (element,ion,level).
 
-[[nodiscard]] inline auto epsilon(const int element, const int ion, const int level) -> double {
+[[nodiscard]] __host__ __device__ inline auto epsilon(const int element, const int ion, const int level) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
@@ -67,21 +69,21 @@ inline auto get_nlevels(const int element, const int ion) -> int {
 }
 
 // Return the ionisation stage of an ion specified by its elementindex and ionindex.
-[[nodiscard]] inline auto get_ionstage(const int element, const int ion) -> int {
+[[nodiscard]] __host__ __device__ inline auto get_ionstage(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].ionstage;
 }
 
 // Return the number of levels associated with an ion that have energies below the ionisation threshold.
-[[nodiscard]] inline auto get_nlevels_ionising(const int element, const int ion) -> int {
+[[nodiscard]] __host__ __device__ inline auto get_nlevels_ionising(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].ionisinglevels;
 }
 
 // Returns the number of target states for photoionization of (element,ion,level).
-inline auto get_nphixstargets(const int element, const int ion, const int level) -> int {
+__host__ __device__ inline auto get_nphixstargets(const int element, const int ion, const int level) -> int {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(level < get_nlevels(element, ion));
   assert_testmodeonly(ion < get_nions(element));
@@ -92,8 +94,8 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
 }
 
 // Return the level index of a target state for photoionization of (element,ion,level).
-[[nodiscard]] inline auto get_phixsupperlevel(const int element, const int ion, const int level,
-                                              const int phixstargetindex) -> int {
+[[nodiscard]] __host__ __device__ inline auto get_phixsupperlevel(const int element, const int ion, const int level,
+                                                                  const int phixstargetindex) -> int {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
@@ -106,8 +108,8 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
 }
 
 // Return the probability of a target state for photoionization of (element,ion,level).
-[[nodiscard]] inline auto get_phixsprobability(const int element, const int ion, const int level,
-                                               const int phixstargetindex) -> double {
+[[nodiscard]] __host__ __device__ inline auto get_phixsprobability(const int element, const int ion, const int level,
+                                                                   const int phixstargetindex) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
@@ -121,7 +123,7 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
 
 // Return the statistical weight of (element,ion,level).
 
-[[nodiscard]] inline auto stat_weight(const int element, const int ion, const int level) -> double {
+[[nodiscard]] __host__ __device__ inline auto stat_weight(const int element, const int ion, const int level) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
@@ -135,7 +137,7 @@ inline auto get_nphixstargets(const int element, const int ion, const int level)
   return globals::elements[element].ions[ion].maxrecombininglevel;
 }
 
-inline auto get_phixs_table(const int element, const int ion, const int level) -> float * {
+inline __host__ __device__ auto get_phixs_table(const int element, const int ion, const int level) -> float * {
   const auto phixsstart = globals::elements[element].ions[ion].levels[level].phixsstart;
   assert_testmodeonly(phixsstart >= 0);
   return globals::allphixs.data() + (phixsstart * globals::NPHIXSPOINTS);
