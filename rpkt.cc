@@ -496,7 +496,6 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
         stats::increment_ion_stats(nonemptymgi, element, ion + 1, stats::ION_MACROATOM_ENERGYIN_PHOTOION, pkt.e_cmf);
       }
 
-      pkt.type = TYPE_MA;
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
       do_macroatom(pkt, {.element = element, .ion = ion + 1, .level = upper, .activatingline = -99});
@@ -521,7 +520,6 @@ void rpkt_event_boundbound(Packet &pkt, const MacroAtomState &pktmastate, const 
 
   pkt.absorptiontype = pktmastate.activatingline;
   pkt.absorptionfreq = pkt.nu_rf;
-  pkt.type = TYPE_MA;
 
   if constexpr (TRACK_ION_STATS) {
     const int element = pktmastate.element;

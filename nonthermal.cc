@@ -2331,7 +2331,6 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
       const int upperion = nt_random_upperion(nonemptymgi, element, lowerion, true);
       // const int upperion = lowerion + 1;
 
-      pkt.type = TYPE_MA;
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLION);
       stats::increment(stats::COUNTER_INTERACTIONS);
       pkt.trueemissiontype = EMTYPE_NOTSET;
@@ -2366,7 +2365,6 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
           // const int lower = linelist[lineindex].lowerlevelindex;
           const int upper = globals::linelist[lineindex].upperlevelindex;
 
-          pkt.type = TYPE_MA;
           stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC);
           stats::increment(stats::COUNTER_INTERACTIONS);
           pkt.trueemissiontype = EMTYPE_NOTSET;

@@ -612,7 +612,6 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
       stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC, pkt.e_cmf);
     }
 
-    pkt.type = TYPE_MA;
     stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLEXC);
     stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLEXC);
 
@@ -631,7 +630,6 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
       stats::increment_ion_stats(nonemptymgi, element, upperion, stats::ION_MACROATOM_ENERGYIN_COLLION, pkt.e_cmf);
     }
 
-    pkt.type = TYPE_MA;
     stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLION);
     stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLION);
 
