@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <ios>
 #include <numeric>
@@ -597,18 +598,23 @@ auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
 void read_collion_data() {
   printout("Reading collisional ionization data from collion.txt...\n");
 
-  FILE *cifile = fopen_required("collion.txt", "r");
+  auto cifile = std::fstream("collion.txt", std::ios::in);
+  assert_always(cifile.is_open());
+  std::string line;
+  get_noncommentline(cifile, line);
+  std::istringstream ssline(line);
   int colliondatacount = 0;
-  assert_always(fscanf(cifile, "%d", &colliondatacount) == 1);
+  assert_always(ssline >> colliondatacount);
   printout("Reading %d collisional transition rows\n", colliondatacount);
   assert_always(colliondatacount >= 0);
 
   for (int i = 0; i < colliondatacount; i++) {
     collionrow collionrow{};
     int nelec = -1;
-    assert_always(fscanf(cifile, "%2d %2d %1d %1d %lg %lg %lg %lg %lg", &collionrow.Z, &nelec, &collionrow.n,
-                         &collionrow.l, &collionrow.ionpot_ev, &collionrow.A, &collionrow.B, &collionrow.C,
-                         &collionrow.D) == 9);
+    get_noncommentline(cifile, line);
+    std::istringstream ssline2(line);
+    assert_always(ssline2 >> collionrow.Z >> nelec >> collionrow.n >> collionrow.l >> collionrow.ionpot_ev >>
+                  collionrow.A >> collionrow.B >> collionrow.C >> collionrow.D);
 
     assert_always(nelec > 0);
     collionrow.ionstage = collionrow.Z - nelec + 1;
@@ -628,7 +634,6 @@ void read_collion_data() {
 
     colliondata.push_back(collionrow);
   }
-  fclose(cifile);
   printout("Stored %zu of %d input shell cross sections\n", colliondata.size(), colliondatacount);
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
