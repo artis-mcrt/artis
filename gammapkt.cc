@@ -202,7 +202,7 @@ void init_gamma_linelist() {
                   << decay::get_nuc_z(allnuc_gamma_line_list[i].nucindex) << " "
                   << decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex) << " "
                   << allnuc_gamma_line_list[i].nucgammaindex << " " << gamma_spectra[nucindex][index].energy / MEV
-                  << " " << gamma_spectra[nucindex][index].probability << " \n";
+                  << " " << gamma_spectra[nucindex][index].probability << "\n";
   }
 }
 

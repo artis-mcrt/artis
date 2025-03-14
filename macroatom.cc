@@ -199,16 +199,13 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
 
   const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, downtrans.targetlevelindex);
 
-  const double oldnucmf{(pkt.last_event == 1) ? pkt.nu_cmf : NAN};
+  const double oldnucmf = pkt.nu_cmf;
   pkt.nu_cmf = epsilon_trans / H;
 
-  if (pkt.last_event == 1) {
-    stats::increment((oldnucmf < pkt.nu_cmf) ? stats::COUNTER_UPSCATTER : stats::COUNTER_DOWNSCATTER);
-  }
+  stats::increment((oldnucmf < pkt.nu_cmf) ? stats::COUNTER_UPSCATTER : stats::COUNTER_DOWNSCATTER);
 
   stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_BB);
   stats::increment(stats::COUNTER_INTERACTIONS);
-  pkt.last_event = 0;
 
   // emit the rpkt in a random direction
   emit_rpkt(pkt);
@@ -261,7 +258,6 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
 
   stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_FB);
   stats::increment(stats::COUNTER_INTERACTIONS);
-  pkt.last_event = 2;
 
   // Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
   emit_rpkt(pkt);
@@ -429,7 +425,6 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
         stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC);
         stats::increment(stats::COUNTER_INTERACTIONS);
-        pkt.last_event = 10;
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLDEEXC, pkt.e_cmf);
@@ -473,7 +468,6 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         // printout("[debug] do_ma:   collisonal recombination\n");
         stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLRECOMB);
         stats::increment(stats::COUNTER_INTERACTIONS);
-        pkt.last_event = 11;
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLRECOMB, pkt.e_cmf);

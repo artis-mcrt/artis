@@ -165,12 +165,11 @@ void packet_init(Packet *pkt)
 void write_packets(const char filename[], const Packet *const pkt) {
   auto packets_file = std::fstream(filename, std::ios::out | std::ios::trunc);
   assert_always(packets_file.is_open());
-  packets_file
-      << "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf "
-         "escape_type_id escape_time next_trans last_event emissiontype trueemissiontype "
-         "em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time absorptiondirx absorptiondiry "
-         "absorptiondirz stokes1 stokes2 stokes3 pol_dirx pol_diry pol_dirz originated_from_positron "
-         "true_emission_velocity trueem_time pellet_nucindex\n";
+  packets_file << "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf "
+                  "escape_type_id escape_time emissiontype trueemissiontype "
+                  "em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time stokes1 stokes2 "
+                  "stokes3 pol_dirx pol_diry pol_dirz originated_from_positron "
+                  "true_emission_velocity trueem_time pellet_nucindex\n";
 
   for (int i = 0; i < globals::npkts; i++) {
     packets_file << pkt[i].number << " " << pkt[i].where << " " << static_cast<int>(pkt[i].type) << " ";
@@ -179,16 +178,14 @@ void write_packets(const char filename[], const Packet *const pkt) {
     packets_file << pkt[i].tdecay << " ";
     packets_file << pkt[i].e_cmf << " " << pkt[i].e_rf << " " << pkt[i].nu_cmf << " " << pkt[i].nu_rf << " ";
     packets_file << static_cast<int>(pkt[i].escape_type) << " " << pkt[i].escape_time << " ";
-    packets_file << pkt[i].next_trans << " " << pkt[i].last_event << " " << pkt[i].emissiontype << " "
-                 << pkt[i].trueemissiontype << " ";
+    packets_file << pkt[i].emissiontype << " " << pkt[i].trueemissiontype << " ";
     packets_file << pkt[i].em_pos[0] << " " << pkt[i].em_pos[1] << " " << pkt[i].em_pos[2] << " "
                  << pkt[i].absorptiontype << " " << pkt[i].absorptionfreq << " " << pkt[i].nscatterings << " "
                  << pkt[i].em_time << " ";
-    packets_file << pkt[i].absorptiondir[0] << " " << pkt[i].absorptiondir[1] << " " << pkt[i].absorptiondir[2] << " ";
     packets_file << pkt[i].stokes[0] << " " << pkt[i].stokes[1] << " " << pkt[i].stokes[2] << " ";
     packets_file << pkt[i].pol_dir[0] << " " << pkt[i].pol_dir[1] << " " << pkt[i].pol_dir[2] << " ";
     packets_file << static_cast<int>(pkt[i].originated_from_particlenotgamma) << " " << pkt[i].trueemissionvelocity
-                 << " " << pkt[i].trueem_time << " " << pkt[i].pellet_nucindex << " ";
+                 << " " << pkt[i].trueem_time << " " << pkt[i].pellet_nucindex;
     packets_file << "\n";
   }
 }
@@ -274,8 +271,6 @@ void read_packets(const char filename[], Packet *pkt) {
     ssline >> escape_type >> pkt[i].escape_time;
     pkt[i].escape_type = static_cast<enum packet_type>(escape_type);
 
-    ssline >> pkt[i].next_trans >> pkt[i].last_event;
-
     ssline >> pkt[i].emissiontype >> pkt[i].trueemissiontype;
 
     ssline >> pkt[i].em_pos[0] >> pkt[i].em_pos[1] >> pkt[i].em_pos[2];
@@ -283,8 +278,6 @@ void read_packets(const char filename[], Packet *pkt) {
     ssline >> pkt[i].absorptiontype >> pkt[i].absorptionfreq >> pkt[i].nscatterings;
 
     ssline >> pkt[i].em_time;
-
-    ssline >> pkt[i].absorptiondir[0] >> pkt[i].absorptiondir[1] >> pkt[i].absorptiondir[2];
 
     ssline >> pkt[i].stokes[0] >> pkt[i].stokes[1] >> pkt[i].stokes[2];
 

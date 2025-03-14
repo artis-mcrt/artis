@@ -395,7 +395,6 @@ __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
   // if (tid == 0) k_stat_to_r_bb++;
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
   stats::increment(stats::COUNTER_INTERACTIONS);
-  pkt.last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
   pkt.emissiontype = EMTYPE_FREEFREE;
   pkt.em_pos = pkt.pos;
   pkt.em_time = pkt.prop_time;
@@ -528,7 +527,6 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     pkt.next_trans = -1;  // FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FF);
 
-    pkt.last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
     pkt.emissiontype = EMTYPE_FREEFREE;
     pkt.em_pos = pkt.pos;
     pkt.em_time = pkt.prop_time;
@@ -567,7 +565,6 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
 
     pkt.next_trans = -1;  // FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FB);
-    pkt.last_event = LASTEVENT_KPKT_TO_RPKT_FB;
     pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerlevel, upper);
     pkt.trueemissiontype = pkt.emissiontype;
     pkt.em_pos = pkt.pos;
@@ -619,7 +616,6 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLEXC);
     stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLEXC);
 
-    pkt.last_event = 8;
     pkt.trueemissiontype = EMTYPE_NOTSET;
     pkt.trueemissionvelocity = -1;
 
@@ -639,7 +635,6 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLION);
     stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLION);
 
-    pkt.last_event = 9;
     pkt.trueemissiontype = EMTYPE_NOTSET;
     pkt.trueemissionvelocity = -1;
 

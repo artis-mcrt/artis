@@ -432,7 +432,6 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     // printout("[debug] rpkt_event:   electron scattering\n");
     stats::increment(stats::COUNTER_INTERACTIONS);
     pkt.nscatterings += 1;
-    pkt.last_event = LASTEVENT_ELECTRONSCATTERING;
     stats::increment(stats::COUNTER_ESCOUNTER);
 
     // generate a virtual packet
@@ -453,7 +452,6 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     // printout("[debug] rpkt_event:   free-free transition\n");
     stats::increment(stats::COUNTER_K_STAT_FROM_FF);
     stats::increment(stats::COUNTER_INTERACTIONS);
-    pkt.last_event = 5;
     pkt.type = TYPE_KPKT;
     pkt.absorptiontype = -1;
   } else if (chi_rnd < chi_escatter + chi_ff + chi_bf) {
@@ -493,7 +491,6 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     if (rng_uniform() < nu_edge / nu) {
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BF);
       stats::increment(stats::COUNTER_INTERACTIONS);
-      pkt.last_event = 3;
 
       if constexpr (TRACK_ION_STATS) {
         stats::increment_ion_stats(nonemptymgi, element, ion + 1, stats::ION_MACROATOM_ENERGYIN_PHOTOION, pkt.e_cmf);
@@ -510,7 +507,6 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
       // printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
       stats::increment(stats::COUNTER_K_STAT_FROM_BF);
       stats::increment(stats::COUNTER_INTERACTIONS);
-      pkt.last_event = 4;
       pkt.type = TYPE_KPKT;
     }
   } else {
@@ -522,11 +518,9 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
 void rpkt_event_boundbound(Packet &pkt, const MacroAtomState &pktmastate, const int nonemptymgi) {
   stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BB);
   stats::increment(stats::COUNTER_INTERACTIONS);
-  pkt.last_event = 1;
 
   pkt.absorptiontype = pktmastate.activatingline;
   pkt.absorptionfreq = pkt.nu_rf;
-  pkt.absorptiondir = pkt.dir;
   pkt.type = TYPE_MA;
 
   if constexpr (TRACK_ION_STATS) {
@@ -556,7 +550,6 @@ void rpkt_event_thickcell(Packet &pkt) {
   // printout("[debug] rpkt_event_thickcell:   electron scattering\n");
   stats::increment(stats::COUNTER_INTERACTIONS);
   pkt.nscatterings += 1;
-  pkt.last_event = LASTEVENT_ELECTRONSCATTERING;
   stats::increment(stats::COUNTER_ESCOUNTER);
 
   emit_rpkt(pkt);
@@ -696,8 +689,6 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
       new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
     }
 
-    pkt.last_event = pkt.last_event + 100;
-
     return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
   }
 
@@ -737,7 +728,6 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     }
     move_pkt_withtime(pkt, tdist / 2.);
     pkt.prop_time = t2;
-    pkt.last_event = pkt.last_event + 1000;
 
     return false;
   }

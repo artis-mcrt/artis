@@ -2301,7 +2301,6 @@ __host__ __device__ void do_ntalpha_deposit(Packet &pkt) {
   // Spencer-Fano solution. For now, just treat alpha deposition as pure heating (even though the alpha deposition rate
   // was calculated from the sum of ionisation and plasma heating)
   atomicadd(nt_energy_deposited, pkt.e_cmf);
-  pkt.last_event = 22;
   pkt.type = TYPE_KPKT;
   stats::increment(stats::COUNTER_NT_STAT_TO_KPKT);
 }
@@ -2335,7 +2334,6 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
       pkt.type = TYPE_MA;
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLION);
       stats::increment(stats::COUNTER_INTERACTIONS);
-      pkt.last_event = 20;
       pkt.trueemissiontype = EMTYPE_NOTSET;
       pkt.trueemissionvelocity = -1;
 
@@ -2371,7 +2369,6 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
           pkt.type = TYPE_MA;
           stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC);
           stats::increment(stats::COUNTER_INTERACTIONS);
-          pkt.last_event = 21;
           pkt.trueemissiontype = EMTYPE_NOTSET;
           pkt.trueemissionvelocity = -1;
 
@@ -2387,7 +2384,6 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
     }
   }
 
-  pkt.last_event = 22;
   pkt.type = TYPE_KPKT;
   stats::increment(stats::COUNTER_NT_STAT_TO_KPKT);
 }
