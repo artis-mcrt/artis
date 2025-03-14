@@ -199,7 +199,7 @@ struct CellCache {
 
 namespace globals {
 
-inline std::array<double, 3> syn_dir{};  // vector pointing from origin to observer
+inline constexpr std::array<double, 3> syn_dir{0., 0., 1.};  // vector pointing from origin to observer
 
 inline std::vector<TimeStep> timesteps;
 
