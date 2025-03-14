@@ -176,7 +176,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     tau_vpkt[opacindex] = 0;
   }
 
-  atomicadd(nvpkt, 1);  // increment the number of virtual packet in the given timestep
+  atomicadd(nvpkt_created, 1);  // increment the number of virtual packet in the given timestep
 
   const auto vel_vec = get_velocity(pkt.pos, t_current);
   double Qi = vpkt.stokes[1];
@@ -368,11 +368,11 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
   // increment the number of escaped virtual packet in the given timestep
   if (type_before_rpkt == TYPE_RPKT) {
-    atomicadd(nvpkt_esc1, 1);
+    atomicadd(nvpkt_esc_from_rpkt, 1);
   } else if (type_before_rpkt == TYPE_KPKT) {
-    atomicadd(nvpkt_esc2, 1);
+    atomicadd(nvpkt_esc_from_kpkt, 1);
   } else if (type_before_rpkt == TYPE_MA) {
-    atomicadd(nvpkt_esc3, 1);
+    atomicadd(nvpkt_esc_from_macroatom, 1);
   }
 
   // -------------- final stokes vector ---------------

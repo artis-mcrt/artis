@@ -27,10 +27,10 @@ constexpr double VSPEC_TIMEMAX = 8 * DAY;
 constexpr int VMTBINS = 5;
 
 // number of virtual packets in a given timestep
-inline int nvpkt{0};
-inline int nvpkt_esc1{0};  // electron scattering event
-inline int nvpkt_esc2{0};  // kpkt deactivation
-inline int nvpkt_esc3{0};  // macroatom deactivation
+inline int nvpkt_created{0};
+inline int nvpkt_esc_from_rpkt{0};       // electron scattering event
+inline int nvpkt_esc_from_kpkt{0};       // kpkt deactivation
+inline int nvpkt_esc_from_macroatom{0};  // macroatom deactivation
 
 inline double cell_is_optically_thick_vpkt;
 

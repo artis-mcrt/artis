@@ -630,16 +630,16 @@ auto do_timestep(const int nts, const int titer, Packet *packets, const int wall
 
     if (VPKT_ON) {
       printout("During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped.\n", nts,
-               my_rank, nvpkt, nvpkt_esc1 + nvpkt_esc2 + nvpkt_esc3);
+               my_rank, nvpkt_created, nvpkt_esc_from_rpkt + nvpkt_esc_from_kpkt + nvpkt_esc_from_macroatom);
       printout(
           "%d virtual packets came from an electron scattering event, %d from a kpkt deactivation and %d from a "
           "macroatom deactivation.\n",
-          nvpkt_esc1, nvpkt_esc2, nvpkt_esc3);
+          nvpkt_esc_from_rpkt, nvpkt_esc_from_kpkt, nvpkt_esc_from_macroatom);
 
-      nvpkt = 0;
-      nvpkt_esc1 = 0;
-      nvpkt_esc2 = 0;
-      nvpkt_esc3 = 0;
+      nvpkt_created = 0;
+      nvpkt_esc_from_rpkt = 0;
+      nvpkt_esc_from_kpkt = 0;
+      nvpkt_esc_from_macroatom = 0;
     }
 
     if constexpr (RECORD_LINESTAT) {
@@ -689,10 +689,10 @@ auto main(int argc, char *argv[]) -> int {
   assert_always(!DETAILED_BF_ESTIMATORS_ON || !USE_LUT_PHOTOION);
 
   if constexpr (VPKT_ON) {
-    nvpkt = 0;
-    nvpkt_esc1 = 0;
-    nvpkt_esc2 = 0;
-    nvpkt_esc3 = 0;
+    nvpkt_created = 0;
+    nvpkt_esc_from_rpkt = 0;
+    nvpkt_esc_from_kpkt = 0;
+    nvpkt_esc_from_macroatom = 0;
   }
 
   MPI_Init(&argc, &argv);
