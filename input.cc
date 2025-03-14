@@ -1997,5 +1997,4 @@ void write_timestep_file() {
     timestepfile << n << " " << globals::timesteps[n].start / DAY << " " << globals::timesteps[n].mid / DAY << " "
                  << globals::timesteps[n].width / DAY << "\n";
   }
-  timestepfile.close();
 }
