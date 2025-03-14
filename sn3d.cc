@@ -24,6 +24,7 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <ios>
 #include <span>
 #ifdef STDPAR_ON
 #include <ranges>
@@ -814,9 +815,10 @@ auto main(int argc, char *argv[]) -> int {
   stats::init();
 
   // Record the chosen syn_dir
-  FILE *syn_file = fopen_required("syn_dir.txt", "w");
-  fprintf(syn_file, "%g %g %g", globals::syn_dir[0], globals::syn_dir[1], globals::syn_dir[2]);
-  fclose(syn_file);
+  auto syn_file = std::fstream("syn_dir.txt", std::ios::out | std::ios::trunc);
+  assert_always(syn_file.is_open());
+  syn_file << syn_dir[0] << " " << syn_dir[1] << " " << syn_dir[2];
+  syn_file.close();
   printout("time write syn_dir.txt file %ld\n", std::time(nullptr));
 
   bool terminate_early = false;

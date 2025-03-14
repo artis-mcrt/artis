@@ -34,7 +34,6 @@ struct Packet {
   double prop_time{-1.};              // internal clock to track how far in time the packet has been propagated
   int where{-1};                      // The propagation grid cell that the packet is in.
   int nscatterings{0};                // records number of electron scatterings a r-pkt undergone since it was emitted
-  int last_event{0};                  // debug: stores information about the packets history
   std::array<double, 3> pos{};        // Position of the packet (x,y,z).
   std::array<double, 3> dir{};        // Direction of propagation. (x,y,z). Always a unit vector.
   double e_cmf{0.};                   // The energy the packet carries in the co-moving frame.
@@ -52,32 +51,20 @@ struct Packet {
                           // decaying pellets of the 52Fe chain (-6) and pellets which decayed before the
                           // onset of the simulation (-7)
                           // decay of a positron pellet (-10)
-  int trueemissiontype = EMTYPE_NOTSET;   // emission type coming from a kpkt to rpkt (last thermal emission)
-  float trueem_time{-1.};                 // first thermal emission time [s]
-  double absorptionfreq{};                // records nu_rf of packet at last absorption
-  std::array<double, 3> absorptiondir{};  // Direction of propagation (x,y,z) when a packet was last absorbed in a line.
-                                          // Always a unit vector.
-  std::array<double, 3> stokes{};         // I, Q and U Stokes parameters
-  std::array<double, 3> pol_dir{};        // unit vector which defines the coordinate system against which Q and U are
-                                          // measured; should always be perpendicular to dir
-  double tdecay{-1.};                     // Time at which pellet decays
-  enum packet_type escape_type {};        // In which form when escaped from the grid.
-  float escape_time{-1};                  // time at which is passes out of the grid [s]
-  int number{-1};                         // A unique number to identify the packet
+  int trueemissiontype = EMTYPE_NOTSET;          // emission type coming from a kpkt to rpkt (last thermal emission)
+  float trueem_time{-1.};                        // first thermal emission time [s]
+  double absorptionfreq{};                       // records nu_rf of packet at last absorption
+  std::array<double, 3> stokes{1., 0., 0.};      // I, Q and U Stokes parameters
+  double tdecay{-1.};                            // Time at which pellet decays
+  enum packet_type escape_type {};               // In which form when escaped from the grid.
+  float escape_time{-1};                         // time at which is passes out of the grid [s]
+  int number{-1};                                // A unique number to identify the packet
   bool originated_from_particlenotgamma{false};  // first-non-pellet packet type was gamma
   int pellet_decaytype{-1};                      // index into decay::decaytypes
   int pellet_nucindex{-1};                       // nuclide index of the decaying species
   float trueemissionvelocity{-1};
 
   auto operator<=>(const Packet &rhs) const = default;
-};
-
-enum last_event_type {
-  LASTEVENT_KPKT_TO_RPKT_FFBB = 6,
-  LASTEVENT_KPKT_TO_RPKT_FB = 7,
-  LASTEVENT_KPKT_TO_MA_COLLEXC = 8,
-  LASTEVENT_KPKT_TO_MA_COLLION = 9,
-  LASTEVENT_ELECTRONSCATTERING = 12,
 };
 
 void packet_init(Packet *pkt);

@@ -65,7 +65,7 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     " 9: UNUSED n_out_it: number of iterations",
     "10: UNUSED: change speed of light by some factor. Change constants.h CLIGHT_PROP instead",
     "11: gamma_kappagrey: if >0: use grey opacity for gammas, if <0: use detailed opacity",
-    "12: syn_dir: x, y, and z components of unit vector (will be normalised after input or randomised if zero length)",
+    "12: UNUSED: syn_dir: x, y, and z components of unit vector (now always 0,0,1)",
     "13: opacity_case: opacity choice",
     "14: rho_crit_para: free parameter for calculation of rho_crit",
     "15: UNUSED debug_packet: (>=0: activate debug output for packet id, <0: ignore)",
@@ -1650,19 +1650,7 @@ void read_parameterfile(int rank) {
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> globals::gamma_kappagrey;  // use grey opacity for gammas?
 
-  std::array<float, 3> syn_dir_in{-1.};
-  assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> syn_dir_in[0] >> syn_dir_in[1] >> syn_dir_in[2];  // components of syn_dir
-
-  const double rr = (syn_dir_in[0] * syn_dir_in[0]) + (syn_dir_in[1] * syn_dir_in[1]) + (syn_dir_in[2] * syn_dir_in[2]);
-  // ensure that this vector is normalised.
-  if (rr > 1.e-6) {
-    globals::syn_dir = {syn_dir_in[0] / sqrt(rr), syn_dir_in[1] / sqrt(rr), syn_dir_in[2] / sqrt(rr)};
-  } else {
-    const double z1 = 1. - (2 * rng_uniform());
-    const double z2 = rng_uniform() * 2.0 * PI;
-    globals::syn_dir = {sqrt((1. - (z1 * z1))) * cos(z2), sqrt((1. - (z1 * z1))) * sin(z2), z1};
-  }
+  assert_always(get_noncommentline(file, line));  // UNUSED components of syn_dir
 
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> globals::opacity_case;  // opacity choice
@@ -1670,7 +1658,7 @@ void read_parameterfile(int rank) {
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> globals::rho_crit_para;  // free parameter for calculation of rho_crit
   printout("input: rho_crit_para %g\n", globals::rho_crit_para);
-  // he calculation of rho_crit itself depends on the time, therefore it happens in grid_init and update_grid
+  // the calculation of rho_crit itself depends on the time, therefore it happens in grid_init and update_grid
 
   assert_always(get_noncommentline(file, line));
   int debug_packet = 0;

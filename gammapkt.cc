@@ -202,7 +202,7 @@ void init_gamma_linelist() {
                   << decay::get_nuc_z(allnuc_gamma_line_list[i].nucindex) << " "
                   << decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex) << " "
                   << allnuc_gamma_line_list[i].nucgammaindex << " " << gamma_spectra[nucindex][index].energy / MEV
-                  << " " << gamma_spectra[nucindex][index].probability << " \n";
+                  << " " << gamma_spectra[nucindex][index].probability << "\n";
   }
 }
 
@@ -1021,13 +1021,6 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
 
   // initialise polarisation information
   pkt.stokes = {1., 0., 0.};
-
-  pkt.pol_dir = cross_prod(pkt.dir, std::array<double, 3>{0., 0., 1.});
-  if ((dot(pkt.pol_dir, pkt.pol_dir)) < 1.e-8) {
-    pkt.pol_dir = cross_prod(pkt.dir, std::array<double, 3>{0., 1., 0.});
-  }
-
-  pkt.pol_dir = vec_norm(pkt.pol_dir);
 }
 
 __host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {

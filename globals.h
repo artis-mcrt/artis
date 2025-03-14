@@ -199,8 +199,6 @@ struct CellCache {
 
 namespace globals {
 
-inline std::array<double, 3> syn_dir{};  // vector pointing from origin to observer
-
 inline std::vector<TimeStep> timesteps;
 
 // deposition estimators index by non-empty modelgridindex
