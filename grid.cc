@@ -2256,14 +2256,14 @@ void grid_init(const int my_rank) {
   }
 
   if (globals::my_rank == 0) {
-    FILE *grid_file = fopen_required("grid.out", "w");
+    auto grid_file = std::fstream("grid.out", std::ios::out);
+    assert_always(grid_file.is_open());
     for (int n = 0; n < ngrid; n++) {
       const int mgi = get_propcell_modelgridindex(n);
       if (mgi != get_npts_model()) {
-        fprintf(grid_file, "%d %d\n", n, mgi);  // write only non-empty cells to grid file
+        grid_file << n << " " << mgi << "\n";  // write only non-empty cells to grid file
       }
     }
-    fclose(grid_file);
   }
 
   allocate_nonemptymodelcells();

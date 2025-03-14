@@ -747,7 +747,6 @@ auto write_nuclides_list() {
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
     nuclides_file << nucindex << " " << get_nuc_z(nucindex) << " " << get_nuc_a(nucindex) << "\n";
   }
-  nuclides_file.close();
 }
 
 }  // anonymous namespace
