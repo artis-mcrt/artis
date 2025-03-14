@@ -12,6 +12,7 @@ a50dda3bbcb443690771b005db512534  emissiontrue.out
 ccec0d3d09a535709f79a55626983f07  light_curve.out
 87aa0a1a8eebc5b15f95c5c7ba6325a3  linestat.out
 41a1c375110d8edbf421edca3fc426e8  modelgridrankassignments.out
+bbcd1415c9d43c008cff65da19b32bab  nuclides.out
 c3888fecc54a78718ea3ac1c3752a30e  packets00_0000.out
 692d830c673b771a8b4c75fe9c888838  packets00_0001.out
 465fba24665b344fc0f03bbe34df8647  packets00_0002.out

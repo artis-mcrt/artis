@@ -10,6 +10,7 @@ a3e3cf9b6adeac882d182c06011c63e8  grid.out
 f656ff0ddbfe87bd1aea03d0e6599d6e  light_curve.out
 3d4b61fa5c0c8987526ebd71787cb8ea  linestat.out
 25a9dd224aa09e3ac10e091ad673223d  modelgridrankassignments.out
+bbcd1415c9d43c008cff65da19b32bab  nuclides.out
 d1a5c9daef4d5ddd0540a0a2a6a5cfd6  packets00_0000.out
 66eaf90dda54e599d623cc1fe81e5ccf  packets00_0001.out
 2e85959ce19230eb078072ee54c33121  packets00_0002.out

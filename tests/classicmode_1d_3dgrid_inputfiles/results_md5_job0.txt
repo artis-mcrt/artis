@@ -9,6 +9,7 @@ a9267b0332f4d0cb79840a82c127bf26  gamma_light_curve.out
 6f253893c204b20223e005d8a669cc16  light_curve.out
 87aa0a1a8eebc5b15f95c5c7ba6325a3  linestat.out
 41a1c375110d8edbf421edca3fc426e8  modelgridrankassignments.out
+bbcd1415c9d43c008cff65da19b32bab  nuclides.out
 6c7356be87ba143dbbc980053798a6b1  packets00_0000.out
 61d6d02978db3fd33dea763ef831c804  packets00_0001.out
 7d01f8e2affe2c46a0531be6c1ed7e25  packets00_0002.out

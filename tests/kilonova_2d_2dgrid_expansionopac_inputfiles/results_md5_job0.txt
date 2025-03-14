@@ -9,6 +9,7 @@ f5902ae8e529c0e852df6b3614fd1597  emissiontrue.out
 129f7ea5e0a1f64ab52dc649f1e92b51  light_curve.out
 3d4b61fa5c0c8987526ebd71787cb8ea  linestat.out
 d80043ce6bedca56511b9fd3f7c0a49f  modelgridrankassignments.out
+9eb60a85900f25e261f2f6c21ea97029  nuclides.out
 ca69185ba28a227af3c3bea42346df4a  packets00_0000.out
 78635586fe29f9af85df2b3c260f573b  packets00_0001.out
 44fc786f842bf802388f9ab14f9f30aa  packets00_0002.out

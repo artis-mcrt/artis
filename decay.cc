@@ -401,6 +401,7 @@ void find_decaypaths(const std::vector<int> &custom_zlist, const std::vector<int
         return d1.z[i] < d2.z[i];
       }
     }
+
     // one is an extension of the other, so place the shorter one first
     return d1_length < d2_length;
   });
@@ -738,6 +739,17 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int none
 
   return decaypower;
 }
+
+auto write_nuclides_list() {
+  auto nuclides_file = std::fstream("nuclides.out", std::ofstream::out | std::ofstream::trunc);
+  assert_always(nuclides_file.is_open());
+  nuclides_file << "#nucindex Z A\n";
+  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
+    nuclides_file << nucindex << " " << get_nuc_z(nucindex) << " " << get_nuc_a(nucindex) << "\n";
+  }
+  nuclides_file.close();
+}
+
 }  // anonymous namespace
 
 [[nodiscard]] auto get_num_nuclides() -> ptrdiff_t { return std::ssize(nuclides); }
@@ -981,6 +993,10 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
            nucdecayenergytotal(23, 48) / MEV);
   printout("decayenergy(FE52), decayenergy(MN52): %g %g\n", nucdecayenergytotal(26, 52) / MEV,
            nucdecayenergytotal(25, 52) / MEV);
+
+  if (globals::my_rank == 0 && !globals::simulation_continued_from_saved) {
+    write_nuclides_list();
+  }
 }
 
 // calculate the decay energy per unit mass [erg/g] released from time t_model (can be before tmin) to tstart,

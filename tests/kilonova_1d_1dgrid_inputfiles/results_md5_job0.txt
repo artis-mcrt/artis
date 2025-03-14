@@ -9,6 +9,7 @@ cfe0877961d7651ddab7826c45ba6770  gammalinelist.out
 e981746ff85b8b009e833d80aef76cc2  light_curve.out
 3d4b61fa5c0c8987526ebd71787cb8ea  linestat.out
 bc40edd64676f86b6ac2df0934e2ce9a  modelgridrankassignments.out
+bd94c410d0008d245ab6c56fbd7dde36  nuclides.out
 ac0880b1472f6ed2a2bd1afcab7f1fe0  packets00_0000.out
 2e6842063e1ccd12eb03c301051a124c  packets00_0001.out
 dd34ef7e7cb81d05a51bd14ff81f9f72  packets00_0002.out
