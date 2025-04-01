@@ -59,7 +59,7 @@ constexpr std::array<std::string, 28> shellnames{"K ", "L1", "L2", "L3", "M1", "
                                                  "O5", "O6", "O7", "P1", "P2", "P3", "P4", "Q1"};
 
 std::vector<std::vector<double>> elements_electron_binding;
-std::vector<std::vector<int>> elements_shells_q;
+std::vector<std::vector<int>> allions_shell_occupancies;
 
 struct collionrow {
   int Z{-1};
@@ -205,7 +205,94 @@ constexpr void decompactify_triangular_matrix(std::vector<double> &matrix) {
   }
 }
 
-void read_shell_configs() {
+auto get_approx_shell_occupancies(const int atomic_number, const int nbound) {
+  assert_always(nbound > 0);
+  const int ioncharge = atomic_number - nbound;
+  assert_always(ioncharge >= 0);
+  std::vector<int> q;
+  q.resize(std::max(10UZ, elements_electron_binding[atomic_number - 1].size()), 0);
+
+  for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
+    if (q[0] < 2) {
+      q[0]++;  // K 1s
+    } else if (q[1] < 2) {
+      q[1]++;  // L1 2s
+    } else if (q[2] < 2) {
+      q[2]++;  // L2 2p[1/2]
+    } else if (q[3] < 4) {
+      q[3]++;  // L3 2p[3/2]
+    } else if (q[4] < 2) {
+      q[4]++;  // M1 3s
+    } else if (q[5] < 2) {
+      q[5]++;  // M2 3p[1/2]
+    } else if (q[6] < 4) {
+      q[6]++;  // M3 3p[3/2]
+    } else if (ioncharge == 0) {
+      if (q[9] < 2) {
+        q[9]++;  // N1 4s
+      } else if (q[7] < 4) {
+        q[7]++;  // M4 3d[3/2]
+      } else if (q[8] < 6) {
+        q[8]++;  // M5 3d[5/2]
+      } else {
+        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+        std::abort();
+      }
+    } else if (ioncharge == 1) {
+      if (q[9] < 1) {
+        q[9]++;  // N1 4s
+      } else if (q[7] < 4) {
+        q[7]++;  // M4 3d[3/2]
+      } else if (q[8] < 6) {
+        q[8]++;  // M5 3d[5/2]
+      } else {
+        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+        std::abort();
+      }
+    } else if (ioncharge > 1) {
+      if (q[7] < 4) {
+        q[7]++;  // M4 3d[3/2]
+      } else if (q[8] < 6) {
+        q[8]++;  // M5 3d[5/2]
+      } else {
+        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+        std::abort();
+      }
+    }
+  }
+  assert_always(nbound == std::accumulate(q.begin(), q.end(), 0));
+  return q;
+}
+
+auto calculate_ion_shell_occupancies(const int atomic_number, const int nbound,
+                                     const std::vector<int> &element_shells_q_neutral) {
+  assert_testmodeonly(nbound >= 0);
+
+  const size_t shellcount =
+      std::min(element_shells_q_neutral.size(), elements_electron_binding[atomic_number - 1].size());
+  std::vector<int> element_shells_q;
+  resize_exactly(element_shells_q, shellcount);
+
+  int electron_count = 0;
+  for (size_t shellindex = 0; shellindex < shellcount; shellindex++) {
+    const int electronsinshell_neutral = element_shells_q_neutral.at(shellindex);
+
+    int electronsinshell = 0;
+    if ((electron_count + electronsinshell_neutral) <= nbound) {
+      electronsinshell = electronsinshell_neutral;
+    } else {
+      electronsinshell = nbound - electron_count;
+    }
+    assert_always(electronsinshell <= electronsinshell_neutral);
+    element_shells_q[shellindex] = electronsinshell;
+    electron_count += electronsinshell;
+    assert_always(electron_count <= nbound);
+  }
+
+  return element_shells_q;
+}
+
+auto read_shell_configs() {
   assert_always(NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE);
   auto shells_file = fstream_required("electron_shell_occupancy.txt", std::ios::in);
 
@@ -216,6 +303,8 @@ void read_shell_configs() {
   assert_always(get_noncommentline(shells_file, line));
   std::istringstream(line) >> nshells >> n_z_binding;
   printout("Reading electron_shell_occupancy.txt with %d elements and %d shells\n", n_z_binding, nshells);
+
+  std::vector<std::vector<int>> elements_shells_q;
 
   elements_shells_q.resize(n_z_binding, std::vector<int>(nshells, 0.));
 
@@ -236,6 +325,7 @@ void read_shell_configs() {
     }
     zminusone++;
   }
+  return elements_shells_q;
 }
 
 void read_binding_energies() {
@@ -274,13 +364,28 @@ void read_binding_energies() {
     }
   }
 
+  std::vector<std::vector<int>> elements_neutral_shells_q;
   if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
     if (!binding_en_newformat) {
       printout(
           "NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE is true, but could not find binding_energies_lotz_tab1and2.txt\n");
     }
     assert_always(binding_en_newformat);
-    read_shell_configs();
+    elements_neutral_shells_q = read_shell_configs();
+  }
+
+  resize_exactly(allions_shell_occupancies, get_includedions());
+  for (int element = 0; element < get_nelements(); element++) {
+    for (int ion = 0; ion < get_nions(element); ion++) {
+      const int ioncharge = get_ionstage(element, ion) - 1;
+      const int atomic_number = get_atomicnumber(element);
+      const int nbound = atomic_number - ioncharge;
+
+      allions_shell_occupancies[get_uniqueionindex(element, ion)] =
+          NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE
+              ? calculate_ion_shell_occupancies(atomic_number, nbound, elements_neutral_shells_q.at(atomic_number - 1))
+              : get_approx_shell_occupancies(atomic_number, nbound);
+    }
   }
 }
 
@@ -471,98 +576,6 @@ void read_auger_data() {
   fclose(augerfile);
 }
 
-auto get_approx_shell_occupancies(const int nbound, const int ioncharge) {
-  assert_always(nbound > 0);
-  assert_always(ioncharge >= 0);
-  const int Z = nbound + ioncharge;
-  std::vector<int> q;
-  q.resize(std::max(10UZ, elements_electron_binding[Z - 1].size()), 0);
-
-  for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
-    if (q[0] < 2) {
-      q[0]++;  // K 1s
-    } else if (q[1] < 2) {
-      q[1]++;  // L1 2s
-    } else if (q[2] < 2) {
-      q[2]++;  // L2 2p[1/2]
-    } else if (q[3] < 4) {
-      q[3]++;  // L3 2p[3/2]
-    } else if (q[4] < 2) {
-      q[4]++;  // M1 3s
-    } else if (q[5] < 2) {
-      q[5]++;  // M2 3p[1/2]
-    } else if (q[6] < 4) {
-      q[6]++;  // M3 3p[3/2]
-    } else if (ioncharge == 0) {
-      if (q[9] < 2) {
-        q[9]++;  // N1 4s
-      } else if (q[7] < 4) {
-        q[7]++;  // M4 3d[3/2]
-      } else if (q[8] < 6) {
-        q[8]++;  // M5 3d[5/2]
-      } else {
-        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-        std::abort();
-      }
-    } else if (ioncharge == 1) {
-      if (q[9] < 1) {
-        q[9]++;  // N1 4s
-      } else if (q[7] < 4) {
-        q[7]++;  // M4 3d[3/2]
-      } else if (q[8] < 6) {
-        q[8]++;  // M5 3d[5/2]
-      } else {
-        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-        std::abort();
-      }
-    } else if (ioncharge > 1) {
-      if (q[7] < 4) {
-        q[7]++;  // M4 3d[3/2]
-      } else if (q[8] < 6) {
-        q[8]++;  // M5 3d[5/2]
-      } else {
-        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-        std::abort();
-      }
-    }
-  }
-  assert_always(nbound == std::accumulate(q.begin(), q.end(), 0));
-  return q;
-}
-
-auto get_shell_occupancies(const int nbound, const int ioncharge) {
-  assert_testmodeonly(nbound > 0);
-  assert_testmodeonly(ioncharge >= 0);
-
-  if constexpr (!NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
-    return get_approx_shell_occupancies(nbound, ioncharge);
-  }
-
-  const int Z = nbound + ioncharge;
-
-  const auto &element_shells_q_neutral = elements_shells_q.at(Z - 1);
-  const size_t shellcount = std::min(element_shells_q_neutral.size(), elements_electron_binding[Z - 1].size());
-  auto element_shells_q = std::vector<int>(shellcount);
-
-  int electron_count = 0;
-  for (size_t shellindex = 0; shellindex < shellcount; shellindex++) {
-    const int electronsinshell_neutral = element_shells_q_neutral.at(shellindex);
-
-    int electronsinshell = 0;
-    if ((electron_count + electronsinshell_neutral) <= nbound) {
-      electronsinshell = electronsinshell_neutral;
-    } else {
-      electronsinshell = nbound - electron_count;
-    }
-    assert_always(electronsinshell <= electronsinshell_neutral);
-    element_shells_q[shellindex] = electronsinshell;
-    electron_count += electronsinshell;
-    assert_always(electron_count <= nbound);
-  }
-
-  return element_shells_q;
-}
-
 auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
   const int ioncharge = get_ionstage(element, ion) - 1;
   const int nbound = get_atomicnumber(element) - ioncharge;  // number of bound electrons
@@ -572,7 +585,7 @@ auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
   }
 
   // get the approximate shell occupancy if we don't have the data file
-  const auto shells_q = get_shell_occupancies(nbound, ioncharge);
+  const auto &shells_q = allions_shell_occupancies[get_uniqueionindex(element, ion)];
   const auto &binding_energies = elements_electron_binding.at(get_atomicnumber(element) - 1);
 
   double total = 0.;
@@ -650,7 +663,7 @@ void read_collion_data() {
         const int ioncharge = ionstage - 1;
         const int nbound = Z - ioncharge;  // number of bound electrons
         // get the approximate shell occupancy if we don't have the data file
-        auto shells_q = get_shell_occupancies(nbound, ioncharge);
+        const auto &shells_q = allions_shell_occupancies[get_uniqueionindex(element, ion)];
         int electron_count = 0;
         for (int shellindex = 0; shellindex < std::ssize(shells_q); shellindex++) {
           const int electronsinshell = shells_q.at(shellindex);
@@ -785,7 +798,7 @@ void zero_all_effionpot(const int nonemptymgi) {
   // return yfunc[index];
 }
 
-auto xs_ionization_lotz(const double en_erg, const collionrow &colliondata_ion) -> double {
+auto xs_ionization_lotz(const double en_erg, const collionrow &colliondata_ion, const int electronsinshell) -> double {
   const double ionpot_ev = colliondata_ion.ionpot_ev;
   if (en_erg < (ionpot_ev * EV)) {
     return 0.;
@@ -800,9 +813,6 @@ auto xs_ionization_lotz(const double en_erg, const collionrow &colliondata_ion) 
   if (nbound <= 0) {
     return 0.;
   }
-
-  const int shellindex = -colliondata_ion.l;
-  const int electronsinshell = get_shell_occupancies(nbound, ioncharge)[shellindex];
 
   const double p = colliondata_ion.ionpot_ev * EV;
 
@@ -822,13 +832,17 @@ auto xs_ionization_lotz(const double en_erg, const collionrow &colliondata_ion) 
 }
 
 auto get_xs_ionization_vector_lotz(std::array<double, SFPTS> &xs_vec, const collionrow &colliondata_ion) -> int {
+  const int element = get_elementindex(colliondata_ion.Z);
+  const int ion = colliondata_ion.ionstage - get_ionstage(element, 0);
+  const int shellindex = -colliondata_ion.l;
+  const int electronsinshell = allions_shell_occupancies[get_uniqueionindex(element, ion)][shellindex];
+
   const double ionpot_ev = colliondata_ion.ionpot_ev;
   const int startindex = get_energyindex_ev_gteq(ionpot_ev);
-
   std::fill_n(xs_vec.begin(), startindex, 0.);
 
   for (int i = startindex; i < SFPTS; i++) {
-    xs_vec[i] = xs_ionization_lotz(engrid(i) * EV, colliondata_ion);
+    xs_vec[i] = xs_ionization_lotz(engrid(i) * EV, colliondata_ion, electronsinshell);
   }
 
   return startindex;
@@ -961,7 +975,11 @@ constexpr auto xs_impactionization(const double energy_ev, const collionrow &col
   }
   const double A = colliondata_ion.A;
   if (A < 0) {
-    return xs_ionization_lotz(energy_ev / EV, colliondata_ion);
+    const int element = get_elementindex(colliondata_ion.Z);
+    const int ion = colliondata_ion.ionstage - get_ionstage(element, 0);
+    const int shellindex = -colliondata_ion.l;
+    const int electronsinshell = allions_shell_occupancies[get_uniqueionindex(element, ion)][shellindex];
+    return xs_ionization_lotz(energy_ev / EV, colliondata_ion, electronsinshell);
   }
 
   const double B = colliondata_ion.B;
