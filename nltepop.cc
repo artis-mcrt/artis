@@ -852,7 +852,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
   // printout("  Adding rates for ion stages:");
   const auto ions = std::ranges::iota_view{0, nions};
-  std::for_each(EXEC_PAR ions.begin(), ions.end(), [&](const auto ion) {
+  std::for_each(ions.begin(), ions.end(), [&](const auto ion) {
     // const int ionstage = get_ionstage(element, ion);
     // printout(" %d", ionstage);
 
