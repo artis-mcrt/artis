@@ -1425,8 +1425,9 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
   return gamma_ion;
 }
 
-auto get_bfheatingcoeff_ana(const int element, const int ion, const int level, const int phixstargetindex,
-                            const double T_R, const double W) -> double {
+__host__ __device__ auto get_bfheatingcoeff_ana(const int element, const int ion, const int level,
+                                                const int phixstargetindex, const double T_R, const double W)
+    -> double {
   // The correction factor for stimulated emission in gammacorr is set to its
   // LTE value. Because the T_e dependence of gammacorr is weak, this correction
   // correction may be evaluated at T_R!

@@ -1583,7 +1583,7 @@ auto get_nonempty_npts_model() -> int {
 }
 
 // get time at which model input densities are defined
-auto get_t_model() -> double {
+__host__ __device__ auto get_t_model() -> double {
   assert_testmodeonly(t_model > 0.);
   return t_model;
 }
@@ -1679,7 +1679,9 @@ auto get_initelectronfrac(const int modelgridindex) -> double {
 }
 
 // q: energy in the model at tmin per gram to use with USE_MODEL_INITIAL_ENERGY option [erg/g]
-auto get_initenergyq(const int modelgridindex) -> double { return modelgrid_input[modelgridindex].initenergyq; }
+__host__ __device__ auto get_initenergyq(const int modelgridindex) -> double {
+  return modelgrid_input[modelgridindex].initenergyq;
+}
 
 // get the radial distance from the origin to the centre of the cell at time tmin
 auto get_cellradialposmid(const int cellindex) -> double {
@@ -2329,7 +2331,8 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 }
 
 // identify the cell index from an (x,y,z) position and a time.
-[[nodiscard]] auto get_cellindex_from_pos(const std::array<double, 3> &pos, const double time) -> int {
+[[nodiscard]] __host__ __device__ auto get_cellindex_from_pos(const std::array<double, 3> &pos, const double time)
+    -> int {
   auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {

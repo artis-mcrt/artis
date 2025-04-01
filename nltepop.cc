@@ -1225,7 +1225,8 @@ auto get_nlte_levelpop_over_rho(const int nonemptymgi, const int element, const 
                                  globals::elements[element].ions[ion].first_nlte + level - 1];
 }
 
-auto get_nlte_superlevelpop_over_rho(const int nonemptymgi, const int element, const int ion) -> double {
+__host__ __device__ auto get_nlte_superlevelpop_over_rho(const int nonemptymgi, const int element, const int ion)
+    -> double {
   assert_testmodeonly(ion_has_superlevel(element, ion));
   const int sl_nlte_index = globals::elements[element].ions[ion].first_nlte + get_nlevels_nlte(element, ion);
   return grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + sl_nlte_index];
