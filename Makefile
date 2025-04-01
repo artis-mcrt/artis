@@ -108,7 +108,7 @@ ifeq ($(STDPAR),ON)
   ifeq ($(COMPILER_NAME),NVHPC)
 		ifeq ($(GPU),ON)
 			CXXFLAGS += -stdpar=gpu -gpu=mem:unified
-			# CXXFLAGS += -gpu=cc80
+			CXXFLAGS += -gpu=cc80
 		else
 			CXXFLAGS += -stdpar=multicore
 		endif
