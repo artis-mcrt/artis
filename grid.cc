@@ -1410,7 +1410,7 @@ auto get_coordcellindexincrement(const int axis) -> int {
         printout("invalid coordinate index %d", axis);
         assert_testmodeonly(false);
       } else {
-        std::unreachable();
+        __builtin_unreachable();
       }
   }
 }
@@ -1435,7 +1435,7 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
           printout("invalid coordinate index %d", axis);
           assert_testmodeonly(false);
         } else {
-          std::unreachable();
+          __builtin_unreachable();
         }
     }
   }

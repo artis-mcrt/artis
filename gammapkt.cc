@@ -13,7 +13,6 @@
 #include <numeric>
 #include <span>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "artisoptions.h"
@@ -1033,7 +1032,7 @@ __host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::GUTTMAN) {
     guttman_thermalisation(pkt);
   } else {
-    std::unreachable();
+    __builtin_unreachable();
   }
 
   if (pkt.type != TYPE_GAMMA && pkt.type != TYPE_ESCAPE) {
