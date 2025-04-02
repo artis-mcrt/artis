@@ -948,8 +948,8 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
   }
 }
 
-auto get_bfrate_estimator(const int element, const int lowerion, const int lower, const int phixstargetindex,
-                          const int nonemptymgi) -> double {
+__host__ __device__ auto get_bfrate_estimator(const int element, const int lowerion, const int lower,
+                                              const int phixstargetindex, const int nonemptymgi) -> double {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {
