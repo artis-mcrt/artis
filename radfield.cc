@@ -70,16 +70,15 @@ std::vector<std::vector<Jb_lu_estimator>> Jb_lu_raw{};          // unnormalised 
 std::span<float> prev_bfrate_normed{};  // values from the previous timestep
 std::vector<double> bfrate_raw;         // unnormalised estimators for the current timestep
 
-// expensive debugging mode to track the contributions to each bound-free rate estimator
+// J and nuJ are accumulated and then normalised in-place
+// i.e. be sure the normalisation has been applied (exactly once) before using the values here!
 
 std::vector<double> J;  // after normalisation: [ergs/s/sr/cm2/Hz]
 #ifdef DO_TITER
 std::vector<double> J_reduced_save;
 #endif
 
-// J and nuJ are accumulated and then normalised in-place
-// i.e. be sure the normalisation has been applied (exactly once) before using the values here!
-std::vector<double> nuJ;
+std::vector<double> nuJ;  // after normalisation: [ergs/s/sr/cm2]
 #ifdef DO_TITER
 std::vector<double> nuJ_reduced_save;
 #endif
@@ -112,7 +111,6 @@ constexpr auto get_bin_nu_lower(const int binindex) -> double {
 }
 
 // find the left-closed bin [nu_lower, nu_upper) that nu belongs to
-
 constexpr auto select_bin(const double nu) -> int {
   if (nu < nu_lower_first_initial) {
     return -2;  // out of range, nu lower than lowest bin's lower boundary
@@ -152,7 +150,7 @@ void add_detailed_line(const int lineindex) {
   assert_always(detailed_linecount == std::ssize(detailed_lineindicies));
 }
 
-// get the normalised J_nu
+// get the normalised J value for a bin
 auto get_bin_J(const int nonemptymgi, const int binindex) -> double {
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
   assert_testmodeonly(binindex >= 0);
@@ -161,6 +159,7 @@ auto get_bin_J(const int nonemptymgi, const int binindex) -> double {
          J_normfactor[nonemptymgi];
 }
 
+// get the normalised nuJ value for a bin
 auto get_bin_nuJ(const int nonemptymgi, const int binindex) -> double {
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
   assert_testmodeonly(binindex >= 0);
@@ -260,10 +259,9 @@ auto planck_integral(const double T_R, const double nu_lower, const double nu_up
   return integral;
 }
 
-auto delta_nu_bar(const double T_R, void *const paras) -> double
 // difference between the average nu and the average nu of a Planck function
 // at temperature T_R, in the frequency range corresponding to a bin
-{
+auto delta_nu_bar(const double T_R, void *const paras) -> double {
   const auto *params = static_cast<const GSLT_RSolverParams *>(paras);
   const auto nonemptymgi = params->nonemptymgi;
   const int binindex = params->binindex;
