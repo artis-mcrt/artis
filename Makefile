@@ -108,7 +108,7 @@ ifeq ($(STDPAR),ON)
   ifeq ($(COMPILER_NAME),NVHPC)
 		ifeq ($(GPU),ON)
 			CXXFLAGS += -stdpar=gpu -gpu=mem:unified
-			# CXXFLAGS += -gpu=cc80
+			CXXFLAGS += -gpu=cc80
 		else
 			CXXFLAGS += -stdpar=multicore
 		endif
@@ -231,7 +231,7 @@ else
 	endif
 endif
 
-CXXFLAGS += -Wall -Wextra -pedantic -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow
+CXXFLAGS += -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow
 
 ifneq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -Wunused-macros -Werror -Wno-error=unknown-pragmas -Wno-error=cast-function-type -MD -MP -ftrivial-auto-var-init=pattern -Wno-unused-function

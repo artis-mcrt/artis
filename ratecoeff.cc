@@ -356,7 +356,9 @@ void precalculate_rate_coefficient_integrals() {
       const int nlevels = get_nlevels_ionising(element, ion);
       printout("Performing rate integrals for Z = %d, ionstage %d...\n", atomic_number, ionstage);
 
+#if !USE_SIMPSON_INTEGRATOR
       gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+#endif
 
       for (int level = 0; level < nlevels; level++) {
         if ((level > 0) && (level % 50 == 0)) {
@@ -470,7 +472,9 @@ void precalculate_rate_coefficient_integrals() {
           }
         }
       }
+#if !USE_SIMPSON_INTEGRATOR
       gsl_set_error_handler(previous_handler);
+#endif
     }
   }
 }
@@ -705,14 +709,18 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
 
   double error = 0.;
 
+#if !USE_SIMPSON_INTEGRATOR
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+#endif
   double stimrecombcoeff = 0.;
 
   // const int status =
   integrator<integrand_stimrecombination_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsabs, epsrel,
                                                           GSL_INTEG_GAUSS61, &stimrecombcoeff, &error);
 
+#if !USE_SIMPSON_INTEGRATOR
   gsl_set_error_handler(previous_handler);
+#endif
 
   stimrecombcoeff *= FOURPI * sf * get_phixsprobability(element, lowerion, level, phixstargetindex);
 
@@ -789,13 +797,17 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
 
   double error = 0.;
 
+#if !USE_SIMPSON_INTEGRATOR
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+#endif
 
   double gammacorr = 0.;
   const int status = integrator<integrand_corrphotoioncoeff_custom_radfield>(
       intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &gammacorr, &error);
 
+#if !USE_SIMPSON_INTEGRATOR
   gsl_set_error_handler(previous_handler);
+#endif
 
   if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
     printout(
@@ -1425,8 +1437,9 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
   return gamma_ion;
 }
 
-auto get_bfheatingcoeff_ana(const int element, const int ion, const int level, const int phixstargetindex,
-                            const double T_R, const double W) -> double {
+__host__ __device__ auto get_bfheatingcoeff_ana(const int element, const int ion, const int level,
+                                                const int phixstargetindex, const double T_R, const double W)
+    -> double {
   // The correction factor for stimulated emission in gammacorr is set to its
   // LTE value. Because the T_e dependence of gammacorr is weak, this correction
   // correction may be evaluated at T_R!

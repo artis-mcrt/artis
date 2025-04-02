@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <ctime>
+#include <memory>
 #include <vector>
 
 #include "artisoptions.h"
@@ -14,9 +15,9 @@
 #include "sn3d.h"
 
 struct Phixslist {
-  std::vector<double> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or USE_LUT_BFHEATING = true
-  std::vector<double> chi_bf_sum;
-  std::vector<double> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
+  std::unique_ptr<double[]> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or USE_LUT_BFHEATING = true
+  std::unique_ptr<double[]> chi_bf_sum;
+  std::unique_ptr<double[]> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
   int allcontend{-1};
   int allcontbegin{0};
   int bfestimend{-1};
@@ -36,9 +37,9 @@ class Rpkt_continuum_absorptioncoeffs {
 
   constexpr Rpkt_continuum_absorptioncoeffs(const int nbfcontinua_ground, const int nbfcontinua,
                                             const int bfestimcount) {
-    resize_exactly(phixslist.groundcont_gamma_contr, nbfcontinua_ground);
-    resize_exactly(phixslist.chi_bf_sum, nbfcontinua);
-    resize_exactly(phixslist.gamma_contr, bfestimcount);
+    phixslist.groundcont_gamma_contr = std::make_unique<double[]>(nbfcontinua_ground);
+    phixslist.chi_bf_sum = std::make_unique<double[]>(nbfcontinua);
+    phixslist.gamma_contr = std::make_unique<double[]>(bfestimcount);
   }
 
   constexpr Rpkt_continuum_absorptioncoeffs() = default;

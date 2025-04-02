@@ -241,7 +241,9 @@ auto planck_integral(const double T_R, const double nu_lower, const double nu_up
 
   const gsl_planck_integral_paras intparas = {.T_R = T_R, .times_nu = times_nu};
 
+#if !USE_SIMPSON_INTEGRATOR
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+#endif
 
   const int status = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsabs, epsrel, GSL_INTEG_GAUSS61,
                                                       &integral, &error);
@@ -250,7 +252,10 @@ auto planck_integral(const double T_R, const double nu_lower, const double nu_up
              GSL_FAILURE, integral);
     integral = 0.;
   }
+
+#if !USE_SIMPSON_INTEGRATOR
   gsl_set_error_handler(previous_handler);
+#endif
 
   return integral;
 }
@@ -948,8 +953,8 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
   }
 }
 
-auto get_bfrate_estimator(const int element, const int lowerion, const int lower, const int phixstargetindex,
-                          const int nonemptymgi) -> double {
+__host__ __device__ auto get_bfrate_estimator(const int element, const int lowerion, const int lower,
+                                              const int phixstargetindex, const int nonemptymgi) -> double {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {

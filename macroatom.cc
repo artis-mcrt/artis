@@ -5,7 +5,6 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
-#include <utility>
 
 #if defined(STDPAR_ON) || defined(_OPENMP_ON)
 #include <mutex>
@@ -606,7 +605,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           printout("ERROR: Unknown macroatom selected_action type %d\n", selected_action);
           assert_testmodeonly(false);
         } else {
-          std::unreachable();
+          __builtin_unreachable();
         }
     }
   }
