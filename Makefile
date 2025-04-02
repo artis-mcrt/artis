@@ -146,7 +146,7 @@ ifeq ($(shell uname -s),Darwin)
 	# gcc
 	# CXXFLAGS += -fopt-info-vec-missed
 	# clang
-	CXXFLAGS += -Rpass=loop-vectorize
+	# CXXFLAGS += -Rpass=loop-vectorize
 	# CXXFLAGS += -Rpass-missed=loop-vectorize
 	# CXXFLAGS += -Rpass-analysis=loop-vectorize
 
