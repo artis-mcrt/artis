@@ -4,7 +4,7 @@ CompileFlags:
     # or brew install bear, then:
     # make clean && bear -- make TESTMODE=ON
     CompilationDatabase: compile_commands.json
-    Add: [-xc++, -std=c++23, -DTESTMODE=true, -Wall, -Wextra, -pedantic, -Wpedantic, -Wredundant-decls, -Wno-unneeded-internal-declaration, -Wno-unused-parameter, -Wno-unused-const-variable, -Wsign-compare, -Wshadow]
+    Add: [-xc++, -std=c++23, -DTESTMODE=true, -Wall, -Wextra, -Wpedantic, -Wredundant-decls, -Wno-unneeded-internal-declaration, -Wno-unused-parameter, -Wno-unused-const-variable, -Wsign-compare, -Wshadow]
 
 Diagnostics:
     ClangTidy:
@@ -12,14 +12,10 @@ Diagnostics:
     UnusedIncludes: Strict
     MissingIncludes: Strict
     Includes:
-        # std::ranges::upper_bound is triggering warning to include a private libc++ header __algorithm/ranges_upper_bound.h
-        # IgnoreHeader: '.*(ranges).*'
-        IgnoreHeader: 'signal.h|(_).*(.h)|.*(__algorithm).*'
         AnalyzeAngledIncludes: true
 
 Completion:
     AllScopes: true
-    #ArgumentListsPolicy: None  # added to LLVM 20?
 
 InlayHints:
     BlockEnd: true
