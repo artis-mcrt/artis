@@ -168,8 +168,8 @@ void write_packets(const char filename[], const Packet *const pkt) {
   packets_file << "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf "
                   "escape_type_id escape_time emissiontype trueemissiontype "
                   "em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time stokes1 stokes2 "
-                  "stokes3 originated_from_positron "
-                  "true_emission_velocity trueem_time pellet_nucindex\n";
+                  "stokes3 originated_from_particlenotgamma "
+                  "true_emission_velocity trueem_time pellet_nucindex pellet_decaytype\n";
 
   for (int i = 0; i < globals::npkts; i++) {
     packets_file << pkt[i].number << " " << pkt[i].where << " " << static_cast<int>(pkt[i].type) << " ";
@@ -184,7 +184,7 @@ void write_packets(const char filename[], const Packet *const pkt) {
                  << pkt[i].em_time << " ";
     packets_file << pkt[i].stokes[0] << " " << pkt[i].stokes[1] << " " << pkt[i].stokes[2] << " ";
     packets_file << static_cast<int>(pkt[i].originated_from_particlenotgamma) << " " << pkt[i].trueemissionvelocity
-                 << " " << pkt[i].trueem_time << " " << pkt[i].pellet_nucindex;
+                 << " " << pkt[i].trueem_time << " " << pkt[i].pellet_nucindex << " " << pkt[i].pellet_decaytype;
     packets_file << "\n";
   }
 }
