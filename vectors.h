@@ -203,13 +203,28 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 
 // Assuming isotropic distribution, get a random direction vector
 [[nodiscard]] inline auto get_rand_isotropic_unitvec() -> std::array<double, 3> {
-  const double costheta = -1 + (2. * rng_uniform());
+  // old method: slow due to sin and cos calls
+  // const double costheta = -1 + (2. * rng_uniform());
+  // const double phi = rng_uniform() * 2 * PI;
+  // const double sintheta = std::sqrt(1. - (costheta * costheta));
+  // return std::array<double, 3>{sintheta * std::cos(phi), sintheta * std::sin(phi), costheta};
 
-  const double phi = rng_uniform() * 2 * PI;
+  // method adapted from gsl_ran_dir_3d()
+  // This is a variant of the algorithm for computing a random point on the unit sphere; the algorithm is suggested in
+  // Knuth, v2, 3rd ed, p136; and attributed to Robert E Knop, CACM, 13(1970), 326.
 
-  const double sintheta = std::sqrt(1. - (costheta * costheta));
+  // Begin with the polar method for getting x,y inside a unit circle
+  const double x = -1 + (2 * rng_uniform());
+  const double y = -1 + (2 * rng_uniform());
+  const double s = (x * x) + (y * y);
+  if (s > 1.0) {
+    return get_rand_isotropic_unitvec();
+  }
 
-  return std::array<double, 3>{sintheta * std::cos(phi), sintheta * std::sin(phi), costheta};
+  // factor to adjust x,y so that x^2+y^2 is equal to 1-z^2
+  const double a = 2 * std::sqrt(1 - s);
+  // z is uniformly distributed from -1 to 1
+  return {x * a, y * a, -1 + (2 * s)};
 }
 
 // Rotation angle from the scattering plane
