@@ -340,7 +340,7 @@ auto thomson_angle() -> double {
 }
 
 // scattering a direction through angle theta.
-[[nodiscard]] auto scatter_dir(const std::array<double, 3> &dir_in, const double cos_theta) -> std::array<double, 3> {
+[[nodiscard]] auto scatter_dir(const Vec3d &dir_in, const double cos_theta) -> Vec3d {
   // begin with setting the direction in coordinates where original direction
   // is parallel to z-hat.
 
@@ -368,9 +368,9 @@ auto thomson_angle() -> double {
   const double r32 = dir_in[1] * norm2;
   const double r33 = dir_in[2] * norm2;
 
-  const auto dir_out = std::array<double, 3>{(r11 * xprime) + (r21 * yprime) + (r31 * zprime),
-                                             (r12 * xprime) + (r22 * yprime) + (r32 * zprime),
-                                             (r13 * xprime) + (r23 * yprime) + (r33 * zprime)};
+  const auto dir_out =
+      Vec3d{(r11 * xprime) + (r21 * yprime) + (r31 * zprime), (r12 * xprime) + (r22 * yprime) + (r32 * zprime),
+            (r13 * xprime) + (r23 * yprime) + (r33 * zprime)};
 
   assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
 

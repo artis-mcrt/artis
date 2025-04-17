@@ -24,9 +24,9 @@ template <size_t VECDIM>
 }
 
 // get a normalized copy of vec_in
-[[nodiscard]] constexpr auto vec_norm(const std::array<double, 3> &vec_in) {
+[[nodiscard]] constexpr auto vec_norm(const Vec3d &vec_in) {
   const double magnitude = vec_len(vec_in);
-  const std::array<double, 3> vec_out{vec_in[0] / magnitude, vec_in[1] / magnitude, vec_in[2] / magnitude};
+  const Vec3d vec_out{vec_in[0] / magnitude, vec_in[1] / magnitude, vec_in[2] / magnitude};
 
   assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
   return vec_out;
@@ -40,26 +40,24 @@ template <size_t S1, size_t S2>
 }
 
 // Get velocity vector of the flow at a position with homologous expansion.
-[[nodiscard]] constexpr auto get_velocity(const std::array<double, 3> &x, const double t) -> std::array<double, 3> {
-  return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
+[[nodiscard]] constexpr auto get_velocity(const Vec3d &x, const double t) -> Vec3d {
+  return {x[0] / t, x[1] / t, x[2] / t};
 }
 
-[[nodiscard]] constexpr auto cross_prod(const std::array<double, 3> &vec_a, const std::array<double, 3> &vec_b) {
-  return std::array<double, 3>{(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]),
-                               (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
-                               (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
+[[nodiscard]] constexpr auto cross_prod(const Vec3d &vec_a, const Vec3d &vec_b) -> Vec3d {
+  return {(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]), (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
+          (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
 }
 
-[[nodiscard]] constexpr auto vec_scale(const std::array<double, 3> &vec, const double scalefactor) {
-  return std::array<double, 3>{vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
+[[nodiscard]] constexpr auto vec_scale(const Vec3d &vec, const double scalefactor) -> Vec3d {
+  return {vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
 }
 
 // aberration of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
 //   dir2: direction vector in frame2
-[[nodiscard]] constexpr auto angle_ab(const std::array<double, 3> &dir1, const std::array<double, 3> &vel)
-    -> std::array<double, 3> {
+[[nodiscard]] constexpr auto angle_ab(const Vec3d &dir1, const Vec3d &vel) -> Vec3d {
   const double vsqr = dot(vel, vel) / CLIGHTSQUARED;
   const double gamma_rel = 1. / std::sqrt(1 - vsqr);
 
@@ -67,8 +65,8 @@ template <size_t S1, size_t S2>
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
   const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
-  const auto dir2 = std::array<double, 3>{(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
-                                          (dir1[2] - (vel[2] * fact2)) / fact1};
+  const auto dir2 = Vec3d{(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
+                          (dir1[2] - (vel[2] * fact2)) / fact1};
 
   return vec_norm(dir2);
 }
@@ -79,9 +77,8 @@ template <size_t S1, size_t S2>
 //   dir_rf: the rest frame direction (unit vector) of light propagation
 //   prop_time: the propagation time of the packet
 // returns: the ratio f = (nu_cmf / nu_rf) ^ 2
-[[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(const std::array<double, 3> &pos_rf,
-                                                           const std::array<double, 3> &dir_rf, const double prop_time)
-    -> double {
+[[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(const Vec3d &pos_rf, const Vec3d &dir_rf,
+                                                           const double prop_time) -> double {
   // velocity of the comoving frame relative to the rest frame
   const auto vel_rf = get_velocity(pos_rf, prop_time);
 
@@ -105,8 +102,7 @@ template <size_t S1, size_t S2>
 //   dir_rf: the rest frame direction (unit vector) of light propagation
 //   prop_time: the propagation time of the packet
 // returns: the ratio f = nu_cmf / nu_rf
-[[nodiscard]] constexpr auto calculate_doppler_nucmf_on_nurf(const std::array<double, 3> &pos_rf,
-                                                             const std::array<double, 3> &dir_rf,
+[[nodiscard]] constexpr auto calculate_doppler_nucmf_on_nurf(const Vec3d &pos_rf, const Vec3d &dir_rf,
                                                              const double prop_time) -> double {
   // velocity of the comoving frame relative to the rest frame
   const auto vel_rf = get_velocity(pos_rf, prop_time);
@@ -131,9 +127,8 @@ template <size_t S1, size_t S2>
 }
 
 // Move a packet along a straight line (specified by current dir vector). The distance moved is in the rest frame.
-constexpr auto move_pkt_withtime(std::array<double, 3> &pos_rf, const std::array<double, 3> &dir_rf, double &prop_time,
-                                 const double nu_rf, double &nu_cmf, const double e_rf, double &e_cmf,
-                                 const double distance) -> double {
+constexpr auto move_pkt_withtime(Vec3d &pos_rf, const Vec3d &dir_rf, double &prop_time, const double nu_rf,
+                                 double &nu_cmf, const double e_rf, double &e_cmf, const double distance) -> double {
   assert_always(distance >= 0);
 
   const double nu_cmf_old = nu_cmf;
@@ -169,12 +164,12 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   return pkt.escape_time - (dot(pkt.pos, pkt.dir) / CLIGHT_PROP);
 }
 
-[[nodiscard]] constexpr auto get_escapedirectionbin(const std::array<double, 3> &dir_in) -> int {
-  constexpr auto xhat = std::array<double, 3>{1.0, 0.0, 0.0};
+[[nodiscard]] constexpr auto get_escapedirectionbin(const Vec3d &dir_in) -> int {
+  constexpr auto xhat = Vec3d{1.0, 0.0, 0.0};
 
   // sometimes dir vectors aren't accurately normalised
   const double dirmag = vec_len(dir_in);
-  const auto dir = std::array<double, 3>{dir_in[0] / dirmag, dir_in[1] / dirmag, dir_in[2] / dirmag};
+  const auto dir = Vec3d{dir_in[0] / dirmag, dir_in[1] / dirmag, dir_in[2] / dirmag};
 
   // Angle resolved case: need to work out the correct angle bin
   const double costheta = dot(dir, syn_dir);
@@ -202,27 +197,25 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 }
 
 // Assuming isotropic distribution, get a random direction vector
-[[nodiscard]] inline auto get_rand_isotropic_unitvec() -> std::array<double, 3> {
+[[nodiscard]] inline auto get_rand_isotropic_unitvec() -> Vec3d {
   const double costheta = -1 + (2. * rng_uniform());
 
   const double phi = rng_uniform() * 2 * PI;
 
   const double sintheta = std::sqrt(1. - (costheta * costheta));
 
-  return std::array<double, 3>{sintheta * std::cos(phi), sintheta * std::sin(phi), costheta};
+  return {sintheta * std::cos(phi), sintheta * std::sin(phi), costheta};
 }
 
 // Rotation angle from the scattering plane
-[[nodiscard]] constexpr auto get_rot_angle(const std::array<double, 3> &n1, const std::array<double, 3> &n2,
-                                           const std::array<double, 3> &ref1, const std::array<double, 3> &ref2)
+[[nodiscard]] constexpr auto get_rot_angle(const Vec3d &n1, const Vec3d &n2, const Vec3d &ref1, const Vec3d &ref2)
     -> double {
   // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
   // the meridian frame such that Q=1 is in the scattering plane and along ref1
 
   // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
   const double n1_dot_n2 = dot(n1, n2);
-  auto ref1_sc =
-      std::array<double, 3>{(n1[0] * n1_dot_n2) - n2[0], (n1[1] * n1_dot_n2) - n2[1], (n1[2] * n1_dot_n2) - n2[2]};
+  auto ref1_sc = Vec3d{(n1[0] * n1_dot_n2) - n2[0], (n1[1] * n1_dot_n2) - n2[1], (n1[2] * n1_dot_n2) - n2[2]};
   ref1_sc = vec_norm(ref1_sc);
 
   const double cos_stokes_rot_1 = std::clamp(dot(ref1_sc, ref1), -1., 1.);
@@ -249,31 +242,28 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
-[[nodiscard]] constexpr auto meridian(const std::array<double, 3> &n)
-    -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
+[[nodiscard]] constexpr auto meridian(const Vec3d &n) -> std::tuple<Vec3d, Vec3d> {
   // for ref_1 use (from triple product rule)
   const double n_xylen = std::sqrt((n[0] * n[0]) + (n[1] * n[1]));
-  const auto ref1 =
-      std::array<double, 3>{-1. * n[0] * n[2] / n_xylen, -1. * n[1] * n[2] / n_xylen, (1 - (n[2] * n[2])) / n_xylen};
+  const auto ref1 = Vec3d{-1. * n[0] * n[2] / n_xylen, -1. * n[1] * n[2] / n_xylen, (1 - (n[2] * n[2])) / n_xylen};
 
   // for ref_2 use vector product of n_cmf with ref1
   const auto ref2 = cross_prod(ref1, n);
   return {ref1, ref2};
 }
 
-[[nodiscard]] constexpr auto lorentz(const std::array<double, 3> &e_rf, const std::array<double, 3> &n_rf,
-                                     const std::array<double, 3> &v) -> std::array<double, 3> {
+[[nodiscard]] constexpr auto lorentz(const Vec3d &e_rf, const Vec3d &n_rf, const Vec3d &v) -> Vec3d {
   // Use Lorentz transformations to get e_cmf from e_rf
 
-  const auto beta = std::array<double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
+  const auto beta = Vec3d{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
   const double vsqr = dot(beta, beta);
 
   const double gamma_rel = 1. / (sqrt(1 - vsqr));
 
-  const auto e_par = std::array<double, 3>{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
-                                           dot(e_rf, beta) * beta[2] / (vsqr)};
+  const auto e_par =
+      Vec3d{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr), dot(e_rf, beta) * beta[2] / (vsqr)};
 
-  const auto e_perp = std::array<double, 3>{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
+  const auto e_perp = Vec3d{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
 
   const auto b_rf = cross_prod(n_rf, e_rf);
 
@@ -287,15 +277,14 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
   // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
   //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
 
-  const auto e_cmf = std::array<double, 3>{e_par[0] + (gamma_rel * (e_perp[0] + v_cr_b[0])),
-                                           e_par[1] + (gamma_rel * (e_perp[1] + v_cr_b[1])),
-                                           e_par[2] + (gamma_rel * (e_perp[2] + v_cr_b[2]))};
+  const auto e_cmf =
+      Vec3d{e_par[0] + (gamma_rel * (e_perp[0] + v_cr_b[0])), e_par[1] + (gamma_rel * (e_perp[1] + v_cr_b[1])),
+            e_par[2] + (gamma_rel * (e_perp[2] + v_cr_b[2]))};
   return vec_norm(e_cmf);
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
-constexpr auto frame_transform(const std::array<double, 3> &n_rf, double *Q, double *U, const std::array<double, 3> &v)
-    -> std::array<double, 3> {
+constexpr auto frame_transform(const Vec3d &n_rf, double *Q, double *U, const Vec3d &v) -> Vec3d {
   // Meridian frame in the RF
   const auto [ref1_rf, ref2_rf] = meridian(n_rf);
 
@@ -336,9 +325,9 @@ constexpr auto frame_transform(const std::array<double, 3> &n_rf, double *Q, dou
 
   // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
 
-  const auto elec_rf = std::array<double, 3>{(cos(rot_angle) * ref1_rf[0]) - (sin(rot_angle) * ref2_rf[0]),
-                                             (cos(rot_angle) * ref1_rf[1]) - (sin(rot_angle) * ref2_rf[1]),
-                                             (cos(rot_angle) * ref1_rf[2]) - (sin(rot_angle) * ref2_rf[2])};
+  const auto elec_rf = Vec3d{(cos(rot_angle) * ref1_rf[0]) - (sin(rot_angle) * ref2_rf[0]),
+                             (cos(rot_angle) * ref1_rf[1]) - (sin(rot_angle) * ref2_rf[1]),
+                             (cos(rot_angle) * ref1_rf[2]) - (sin(rot_angle) * ref2_rf[2])};
 
   // Aberration
   const auto n_cmf = angle_ab(n_rf, v);

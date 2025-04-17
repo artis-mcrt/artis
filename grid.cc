@@ -68,7 +68,7 @@ double mfegroup = 0.;  // Total mass of Fe group elements in ejecta
 int first_cellindex = -1;  // auto-determine first cell index in model.txt (usually 1 or 0)
 
 // Initial co-ordinates of inner most corner of cell.
-std::vector<std::array<double, 3>> propcell_pos_min{};
+std::vector<Vec3d> propcell_pos_min{};
 
 // associate each propagation cell with a model grid cell, or not, if the cell is empty (or doesn't get mapped to
 // anything such as 1D/2D to 3D)
@@ -491,9 +491,9 @@ void map_2dmodelto3dgrid()
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     // map to 3D Cartesian grid
-    const auto pos_mid = std::array<double, 3>{get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex, 0)),
-                                               get_cellcoordmin(cellindex, 1) + (0.5 * wid_init(cellindex, 1)),
-                                               get_cellcoordmin(cellindex, 2) + (0.5 * wid_init(cellindex, 2))};
+    const auto pos_mid = Vec3d{get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex, 0)),
+                               get_cellcoordmin(cellindex, 1) + (0.5 * wid_init(cellindex, 1)),
+                               get_cellcoordmin(cellindex, 2) + (0.5 * wid_init(cellindex, 2))};
 
     const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
 
@@ -1177,7 +1177,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 
 // Convert a position in Cartesian xyz to the grid coordinate system (which might the same, or 2D cylindrical or 1D
 // spherical)
-[[nodiscard]] constexpr auto get_gridcoords_from_xyz(const std::array<double, 3> &pos_xyz) {
+[[nodiscard]] constexpr auto get_gridcoords_from_xyz(const Vec3d &pos_xyz) {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return pos_xyz;
   }
@@ -1195,11 +1195,10 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 
 // get the velocity in the grid coordinate system from the xyz position and direction
 [[nodiscard]] constexpr auto get_gridcoords_vel_from_xyz_pos_dir(
-    const std::array<double, 3> &pos_xyz, const std::array<double, 3> &dir_xyz,
-    const std::array<double, get_ndim(GRID_TYPE)> &pktposgridcoord) {
+    const Vec3d &pos_xyz, const Vec3d &dir_xyz, const std::array<double, get_ndim(GRID_TYPE)> &pktposgridcoord) {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     // keep xyz Cartesian coordinates
-    return std::array<double, 3>{dir_xyz[0] * CLIGHT_PROP, dir_xyz[1] * CLIGHT_PROP, dir_xyz[2] * CLIGHT_PROP};
+    return Vec3d{dir_xyz[0] * CLIGHT_PROP, dir_xyz[1] * CLIGHT_PROP, dir_xyz[2] * CLIGHT_PROP};
   } else if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
     // xy plane radial velocity
     // z velocity
@@ -1246,8 +1245,8 @@ template <size_t S1>
     double dist1 = (-b + sqrt(discriminant)) / 2 / a;
     double dist2 = (-b - sqrt(discriminant)) / 2 / a;
 
-    auto posfinal1 = std::array<double, 3>{0.};
-    auto posfinal2 = std::array<double, 3>{0.};
+    auto posfinal1 = Vec3d{0.};
+    auto posfinal2 = Vec3d{0.};
 
     for (int d = 0; d < std::ssize(pos); d++) {
       posfinal1[d] = pos[d] + dist1 * dir[d];
@@ -1701,7 +1700,7 @@ auto get_cellradialposmid(const int cellindex) -> double {
   }
 
   // cubic grid requires taking the length of the 3D position vector
-  std::array<double, 3> dcen{};
+  Vec3d dcen{};
   for (int axis = 0; axis < 3; axis++) {
     dcen[axis] = get_cellcoordmin(cellindex, axis) + (0.5 * wid_init(cellindex, axis));
   }
@@ -2331,8 +2330,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 }
 
 // identify the cell index from an (x,y,z) position and a time.
-[[nodiscard]] __host__ __device__ auto get_cellindex_from_pos(const std::array<double, 3> &pos, const double time)
-    -> int {
+[[nodiscard]] __host__ __device__ auto get_cellindex_from_pos(const Vec3d &pos, const double time) -> int {
   auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
@@ -2349,8 +2347,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 }
 
 // compute distance to a cell boundary.
-[[nodiscard]] __host__ __device__ auto boundary_distance(const std::array<double, 3> &dir,
-                                                         const std::array<double, 3> &pos, const double tstart,
+[[nodiscard]] __host__ __device__ auto boundary_distance(const Vec3d &dir, const Vec3d &pos, const double tstart,
                                                          const int cellindex) -> std::tuple<double, int> {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {

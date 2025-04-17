@@ -111,8 +111,7 @@ void add_to_vspecpol(const Packet &vpkt, const int obsdirindex, const int opacho
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> &vel, const int wlbin, const int obsdirindex,
-                      const std::array<double, 3> &obs) {
+void add_to_vpkt_grid(const Packet &vpkt, const Vec3d &vel, const int wlbin, const int obsdirindex, const Vec3d &obs) {
   double vref1{NAN};
   double vref2{NAN};
 
@@ -160,7 +159,7 @@ void add_to_vpkt_grid(const Packet &vpkt, const std::array<double, 3> &vel, cons
 }
 
 auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_arrive, const double nu_rf,
-                    const double e_rf, const int obsdirindex, const std::array<double, 3> &obsdir,
+                    const double e_rf, const int obsdirindex, const Vec3d &obsdir,
                     const enum packet_type type_before_rpkt, std::stringstream &vpkt_contrib_row) -> bool {
   int mgi = 0;
 
@@ -235,7 +234,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
     // Transform Stokes Parameters from the CMF to the RF
 
-    const auto vel_rev = std::array<double, 3>{-vel_vec[0], -vel_vec[1], -vel_vec[2]};
+    const auto vel_rev = Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]};
 
     frame_transform(obs_cmf, &Q, &U, vel_rev);
 
@@ -916,10 +915,10 @@ auto vpkt_call_estimators(const Packet &pkt, const enum packet_type type_before_
   for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
     // loop over different observer directions
 
-    const auto obsdir = std::array<double, 3>{
-        sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * cos(phiobs[obsdirindex]),
-        sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * sin(phiobs[obsdirindex]),
-        nz_obs_vpkt[obsdirindex]};
+    const auto obsdir =
+        Vec3d{sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * cos(phiobs[obsdirindex]),
+              sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * sin(phiobs[obsdirindex]),
+              nz_obs_vpkt[obsdirindex]};
 
     const double t_arrive = t_current - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
 

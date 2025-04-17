@@ -46,8 +46,6 @@ constexpr double OSCSTRENGTHCONVERSION = 1.3473837e+21;
 
 constexpr double H_ionpot = 13.5979996 * EV;
 
-inline constexpr std::array<double, 3> syn_dir{0., 0., 1.};  // vector defining the theta=0 direction
-
 enum class GridType {
   SPHERICAL1D,    // 1D radial shells (non-uniform dr)
   CYLINDRICAL2D,  // 2D cylindrical grid with uniform dz, drcyl
@@ -63,5 +61,8 @@ constexpr size_t GSLWSIZE = 16384;  // GSL integration workspace size
 enum class TimeStepSizeMethod { LOGARITHMIC, CONSTANT, LOGARITHMIC_THEN_CONSTANT, CONSTANT_THEN_LOGARITHMIC };
 
 enum class ThermalisationScheme { INSTANT, DETAILED, DETAILEDWITHGAMMAPRODUCTS, BARNES, WOLLAEGER, GUTTMAN };
+
+using Vec3d = std::array<double, 3>;
+inline constexpr Vec3d syn_dir{0., 0., 1.};  // vector defining the theta=0 direction
 
 #endif

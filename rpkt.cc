@@ -46,14 +46,14 @@ MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
 
 // get the frequency change per distance travelled assuming linear change to the abort distance
 // this is done is two parts to get identical results to do_rpkt_step()
-auto get_nu_cmf_abort(const std::array<double, 3> &pos, const std::array<double, 3> &dir, const double prop_time,
-                      const double nu_rf, const double abort_dist) -> double {
+auto get_nu_cmf_abort(const Vec3d &pos, const Vec3d &dir, const double prop_time, const double nu_rf,
+                      const double abort_dist) -> double {
   const auto half_abort_dist = abort_dist / 2.;
   const auto abort_time = prop_time + (half_abort_dist / CLIGHT_PROP) + (half_abort_dist / CLIGHT_PROP);
 
-  const std::array<double, 3> abort_pos{pos[0] + (dir[0] * half_abort_dist) + (dir[0] * half_abort_dist),
-                                        pos[1] + (dir[1] * half_abort_dist) + (dir[1] * half_abort_dist),
-                                        pos[2] + (dir[2] * half_abort_dist) + (dir[2] * half_abort_dist)};
+  const Vec3d abort_pos{pos[0] + (dir[0] * half_abort_dist) + (dir[0] * half_abort_dist),
+                        pos[1] + (dir[1] * half_abort_dist) + (dir[1] * half_abort_dist),
+                        pos[2] + (dir[2] * half_abort_dist) + (dir[2] * half_abort_dist)};
 
   const double nu_cmf_abort = nu_rf * calculate_doppler_nucmf_on_nurf(abort_pos, dir, abort_time);
 
@@ -340,7 +340,7 @@ void electron_scatter_rpkt(Packet &pkt) {
   }
 
   const double tsc = acos(M);
-  std::array<double, 3> new_dir_cmf{};
+  Vec3d new_dir_cmf{};
 
   if (fabs(old_dir_cmf[2]) < 0.99999) {
     new_dir_cmf[0] = sin(tsc) / sqrt(1. - pow(old_dir_cmf[2], 2.)) *
@@ -393,7 +393,7 @@ void electron_scatter_rpkt(Packet &pkt) {
 
   // Transform Stokes Parameters from the CMF to the RF
   // Update rest frame direction, frequency and energy
-  pkt.dir = frame_transform(new_dir_cmf, &Q, &U, std::array<double, 3>{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
+  pkt.dir = frame_transform(new_dir_cmf, &Q, &U, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
 
   pkt.stokes = {1., Q, U};
 
