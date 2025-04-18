@@ -636,8 +636,8 @@ void initialise_prev_titer_photoionestimators() {
 #ifdef DO_TITER
   std::ranges::fill(globals::ffheatingestimator_save, -1.);
   std::ranges::fill(globals::colheatingestimator_save, -1.);
-  std::ranges::fill(globals::J_reduced_save, -1.);
-  std::ranges::fill(globals::nuJ_reduced_save, -1.);
+  std::ranges::fill(J_reduced_save, -1.);
+  std::ranges::fill(nuJ_reduced_save, -1.);
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);

@@ -823,11 +823,11 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
       if constexpr (USE_LUT_BFHEATING) {
         globals::bfheatingestimator[ionestimindex] *= estimator_normfactor;
 #ifdef DO_TITER
-        if (bfheatingestimator_save[ionestimindex] >= 0) {
+        if (globals::bfheatingestimator_save[ionestimindex] >= 0) {
           globals::bfheatingestimator[ionestimindex] =
-              (globals::bfheatingestimator[ionestimindex] + bfheatingestimator_save[ionestimindex]) / 2;
+              (globals::bfheatingestimator[ionestimindex] + globals::bfheatingestimator_save[ionestimindex]) / 2;
         }
-        bfheatingestimator_save[ionestimindex] = globals::bfheatingestimator[ionestimindex];
+        globals::bfheatingestimator_save[ionestimindex] = globals::bfheatingestimator[ionestimindex];
 #endif
         // Now convert bfheatingestimator into the bfheating renormalisation coefficient used in
         // get_bfheating in the remaining part of update_grid. Later on it's reset and new
