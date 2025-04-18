@@ -1619,7 +1619,7 @@ void read_atomicdata() {
 
 // read input.txt, atomic data, and ejecta model
 void input(int rank) {
-  globals::n_titer = 1;
+  globals::n_titer = (globals::timestep < -1) ? 3 : 1;
   globals::lte_iteration = false;
 
   printout("[info] input: do n_titer %d iterations per timestep\n", globals::n_titer);
