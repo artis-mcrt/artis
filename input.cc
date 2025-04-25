@@ -1301,8 +1301,7 @@ void setup_cellcache() {
     assert_always(chlevelcount > 0);
     resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, chlevelcount);
 
-    chphixstargetsblock =
-        chphixsblocksize > 0 ? static_cast<CellCachePhixsTargets *>(malloc(chphixsblocksize)) : nullptr;
+    chphixstargetsblock = chphixsblocksize > 0 ? new CellCachePhixsTargets[chphixsblocksize] : nullptr;
     mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + chphixsblocksize;
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
