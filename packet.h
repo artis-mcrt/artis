@@ -71,7 +71,7 @@ struct Packet {
 
 void packet_init(std::span<Packet> pkt);
 void write_packets(const char filename[], std::span<const Packet> pkt);
-void read_packets(const char filename[], std::span<Packet> pkt);
+auto read_packets(const char filename[], std::span<Packet> packets) -> std::span<Packet>;
 void read_temp_packetsfile(int timestep, int my_rank, std::span<Packet> pkt);
 [[nodiscard]] auto verify_temp_packetsfile(int timestep, int my_rank, std::span<const Packet> pkt) -> bool;
 
