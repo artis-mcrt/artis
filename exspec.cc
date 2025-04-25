@@ -8,6 +8,7 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <span>
 #include <vector>
 
 #include "artisoptions.h"
@@ -46,7 +47,7 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
   assert_always(globals::nprocs_exspec > 0);
   for (int p = 0; p < globals::nprocs_exspec; p++) {
-    Packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
+    auto pkts_start = std::span<Packet>(load_allrank_packets ? &pkts[p * globals::npkts] : pkts, globals::npkts);
 
     if (a == -1 || !load_allrank_packets) {
       char pktfilename[MAXFILENAMELENGTH];

@@ -2,6 +2,7 @@
 #define SPECTRUM_H
 
 #include <array>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -33,7 +34,7 @@ void add_to_spec_res(const Packet &pkt, int current_abin, Spectra &spectra, Spec
 
 void init_spectra(Spectra &spectra, double nu_min, double nu_max, bool do_emission_res);
 void init_spectrum_trace();
-void write_partial_lightcurve_spectra(int my_rank, int nts, const Packet *pkts);
+void write_partial_lightcurve_spectra(int my_rank, int nts, std::span<const Packet> pkts);
 
 void add_to_lc_res(const Packet &pkt, int current_abin, std::vector<double> &light_curve_lum,
                    std::vector<double> &light_curve_lumcmf);

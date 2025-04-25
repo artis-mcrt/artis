@@ -2,6 +2,7 @@
 #define PACKET_H
 
 #include <cmath>
+#include <span>
 
 #include "constants.h"
 
@@ -68,10 +69,10 @@ struct Packet {
   auto operator<=>(const Packet &rhs) const = default;
 };
 
-void packet_init(Packet *pkt);
-void write_packets(const char filename[], const Packet *pkt);
-void read_packets(const char filename[], Packet *pkt);
-void read_temp_packetsfile(int timestep, int my_rank, Packet *pkt);
-[[nodiscard]] auto verify_temp_packetsfile(int timestep, int my_rank, const Packet *pkt) -> bool;
+void packet_init(std::span<Packet> pkt);
+void write_packets(const char filename[], std::span<const Packet> pkt);
+void read_packets(const char filename[], std::span<Packet> pkt);
+void read_temp_packetsfile(int timestep, int my_rank, std::span<Packet> pkt);
+[[nodiscard]] auto verify_temp_packetsfile(int timestep, int my_rank, std::span<const Packet> pkt) -> bool;
 
 #endif  // PACKET_H

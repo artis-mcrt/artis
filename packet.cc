@@ -10,6 +10,7 @@
 #include <fstream>
 #include <iostream>
 #include <ranges>
+#include <span>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -83,7 +84,7 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
 
 }  // anonymous namespace
 
-void packet_init(Packet *pkt)
+void packet_init(std::span<Packet> pkt)
 // Subroutine that initialises the packets if we start a new simulation.
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -162,7 +163,7 @@ void packet_init(Packet *pkt)
 }
 
 // write packets text file
-void write_packets(const char filename[], const Packet *const pkt) {
+void write_packets(const char filename[], std::span<const Packet> pkt) {
   auto packets_file = std::fstream(filename, std::ios::out | std::ios::trunc);
   assert_always(packets_file.is_open());
   packets_file << "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf "
@@ -189,20 +190,21 @@ void write_packets(const char filename[], const Packet *const pkt) {
   }
 }
 
-void read_temp_packetsfile(const int timestep, const int my_rank, Packet *pkt) {
+void read_temp_packetsfile(const int timestep, const int my_rank, std::span<Packet> pkt) {
   // read binary packets file
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Reading %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
-  assert_always(std::fread(pkt, sizeof(Packet), globals::npkts, packets_file) == static_cast<size_t>(globals::npkts));
+  assert_always(std::fread(pkt.data(), sizeof(Packet), globals::npkts, packets_file) ==
+                static_cast<size_t>(globals::npkts));
 
   fclose(packets_file);
   printout("done\n");
 }
 
-auto verify_temp_packetsfile(const int timestep, const int my_rank, const Packet *const pkt) -> bool {
+auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<const Packet> pkt) -> bool {
   // return true if verification is good, otherwise return false
 
   // read binary packets file
@@ -232,7 +234,7 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, const Packet
   return readback_passed;
 }
 
-void read_packets(const char filename[], Packet *pkt) {
+void read_packets(const char filename[], std::span<Packet> pkt) {
   // read packets*.out text format file
   std::fstream packets_file(filename, std::ios::in);
   assert_always(packets_file.is_open());
