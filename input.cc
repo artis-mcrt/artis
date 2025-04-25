@@ -727,8 +727,7 @@ void setup_phixs_list() {
   assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
   std::ranges::SORT_OR_STABLE_SORT(globals::groundcont, std::ranges::less{}, &GroundPhotoion::nu_edge);
 
-  auto *nonconstallcont =
-      static_cast<FullPhotoionTransition *>(malloc(globals::nbfcontinua * sizeof(FullPhotoionTransition)));
+  auto *nonconstallcont = new FullPhotoionTransition[globals::nbfcontinua];
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
            globals::nbfcontinua * (sizeof(FullPhotoionTransition)) / 1024. / 1024.);
   int allcontindex = 0;
@@ -818,7 +817,7 @@ void setup_phixs_list() {
   }
   printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
   globals::allcont = nonconstallcont;
-  nonconstallcont = nullptr;
+  delete[] nonconstallcont;
 }
 
 void read_phixs_data() {
@@ -972,7 +971,7 @@ void read_atomicdata_files() {
     globals::elements[element].uniqueionindexstart = uniqueionindex;
 
     // Initialize the elements ionlist
-    globals::elements[element].ions = static_cast<Ion *>(malloc(nions * sizeof(Ion)));
+    globals::elements[element].ions = new Ion[nions];
     assert_always(globals::elements[element].ions != nullptr);
 
     // now read in data for all ions of the current element. before doing so initialize
@@ -1277,9 +1276,7 @@ void setup_cellcache() {
              ncoolingterms * sizeof(double) / 1024. / 1024.);
 
     mem_usage_cellcache += get_nelements() * sizeof(CellCacheElements);
-    globals::cellcache[cellcachenum].chelements =
-        static_cast<CellCacheElements *>(malloc(get_nelements() * sizeof(CellCacheElements)));
-
+    globals::cellcache[cellcachenum].chelements = new CellCacheElements[get_nelements()];
     assert_always(globals::cellcache[cellcachenum].chelements != nullptr);
 
     ptrdiff_t chlevelcount = 0;
@@ -1304,13 +1301,11 @@ void setup_cellcache() {
     assert_always(chlevelcount > 0);
     resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, chlevelcount);
 
-    chphixstargetsblock =
-        chphixsblocksize > 0 ? static_cast<CellCachePhixsTargets *>(malloc(chphixsblocksize)) : nullptr;
+    chphixstargetsblock = chphixsblocksize > 0 ? new CellCachePhixsTargets[chphixsblocksize] : nullptr;
     mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + chphixsblocksize;
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
-    double *const chtransblock =
-        chtransblocksize > 0 ? static_cast<double *>(malloc(chtransblocksize * sizeof(double))) : nullptr;
+    double *const chtransblock = chtransblocksize > 0 ? new double[chtransblocksize] : nullptr;
 
     int alllevelindex = 0;
     int allphixstargetindex = 0;
@@ -1318,8 +1313,7 @@ void setup_cellcache() {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       mem_usage_cellcache += nions * sizeof(CellCacheIons);
-      globals::cellcache[cellcachenum].chelements[element].chions =
-          static_cast<CellCacheIons *>(malloc(nions * sizeof(CellCacheIons)));
+      globals::cellcache[cellcachenum].chelements[element].chions = new CellCacheIons[nions];
       assert_always(globals::cellcache[cellcachenum].chelements[element].chions != nullptr);
 
       for (int ion = 0; ion < nions; ion++) {
