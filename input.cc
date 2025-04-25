@@ -1305,8 +1305,7 @@ void setup_cellcache() {
     mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + chphixsblocksize;
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
-    double *const chtransblock =
-        chtransblocksize > 0 ? static_cast<double *>(malloc(chtransblocksize * sizeof(double))) : nullptr;
+    double *const chtransblock = chtransblocksize > 0 ? new double[chtransblocksize] : nullptr;
 
     int alllevelindex = 0;
     int allphixstargetindex = 0;
