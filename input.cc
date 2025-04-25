@@ -1313,8 +1313,7 @@ void setup_cellcache() {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       mem_usage_cellcache += nions * sizeof(CellCacheIons);
-      globals::cellcache[cellcachenum].chelements[element].chions =
-          static_cast<CellCacheIons *>(malloc(nions * sizeof(CellCacheIons)));
+      globals::cellcache[cellcachenum].chelements[element].chions = new CellCacheIons[nions];
       assert_always(globals::cellcache[cellcachenum].chelements[element].chions != nullptr);
 
       for (int ion = 0; ion < nions; ion++) {
