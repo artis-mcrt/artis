@@ -1276,9 +1276,7 @@ void setup_cellcache() {
              ncoolingterms * sizeof(double) / 1024. / 1024.);
 
     mem_usage_cellcache += get_nelements() * sizeof(CellCacheElements);
-    globals::cellcache[cellcachenum].chelements =
-        static_cast<CellCacheElements *>(malloc(get_nelements() * sizeof(CellCacheElements)));
-
+    globals::cellcache[cellcachenum].chelements = new CellCacheElements[get_nelements()];
     assert_always(globals::cellcache[cellcachenum].chelements != nullptr);
 
     ptrdiff_t chlevelcount = 0;
