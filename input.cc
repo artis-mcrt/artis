@@ -1337,20 +1337,22 @@ void setup_cellcache() {
 
         for (int level = 0; level < nlevels; level++) {
           const int ndowntrans = get_ndowntrans(element, ion, level);
-
-          chion.chlevels[level].sum_epstrans_rad_deexc = &globals::cellcache[cellcachenum].chtransblock[chtransindex];
+          chion.chlevels[level].sum_epstrans_rad_deexc =
+              globals::cellcache[cellcachenum].chtransblock.data() + chtransindex;
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
           const int ndowntrans = get_ndowntrans(element, ion, level);
-          chion.chlevels[level].sum_internal_down_same = &globals::cellcache[cellcachenum].chtransblock[chtransindex];
+          chion.chlevels[level].sum_internal_down_same =
+              globals::cellcache[cellcachenum].chtransblock.data() + chtransindex;
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
           const int nuptrans = get_nuptrans(element, ion, level);
-          chion.chlevels[level].sum_internal_up_same = &globals::cellcache[cellcachenum].chtransblock[chtransindex];
+          chion.chlevels[level].sum_internal_up_same =
+              globals::cellcache[cellcachenum].chtransblock.data() + chtransindex;
           chtransindex += nuptrans;
         }
       }
