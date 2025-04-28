@@ -87,6 +87,8 @@ constexpr bool USE_LUT_PHOTOION = false;
 
 constexpr bool USE_LUT_BFHEATING = false;
 
+constexpr bool STRICT_POPULATION_CHECKING = false;
+
 #define SEPARATE_STIMRECOMB false
 
 constexpr bool NT_ON = true;
