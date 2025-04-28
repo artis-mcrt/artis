@@ -353,21 +353,22 @@ inline auto get_includedlevels() -> int { return includedlevels; }
 }
 
 // inverse of get_uniquelevelindex(). get the element/ion/level from a unique level index
-[[nodiscard]] inline auto get_levelfromuniquelevelindex(const int alllevelsindex) -> std::tuple<int, int, int> {
+[[nodiscard]] inline auto get_levelfromuniquelevelindex(const int uniquelevelindex) -> std::tuple<int, int, int> {
+  assert_testmodeonly(uniquelevelindex < get_includedlevels());
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       if (get_nlevels(element, ion) == 0) {
         continue;
       }
-      const int level = alllevelsindex - globals::elements[element].ions[ion].uniquelevelindexstart;
+      const int level = uniquelevelindex - globals::elements[element].ions[ion].uniquelevelindexstart;
       if (level >= 0 && level < get_nlevels(element, ion)) {
-        assert_testmodeonly(get_uniquelevelindex(element, ion, level) == alllevelsindex);
+        assert_testmodeonly(get_uniquelevelindex(element, ion, level) == uniquelevelindex);
         return {element, ion, level};
       }
     }
   }
-  assert_always(false);  // alllevelsindex too high to be valid
+  assert_always(false);  // uniquelevelindex too high to be valid
   return {-1, -1, -1};
 }
 
