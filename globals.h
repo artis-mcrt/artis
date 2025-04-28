@@ -254,7 +254,7 @@ inline int opacity_case{};  // 0 grey, 1 for Fe-grp dependence.
 inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperature table value
 
 inline std::span<float> allphixs{};
-inline LevelTransition *alltrans;
+inline std::span<LevelTransition> alltrans{};
 inline std::vector<PhotoionTarget> allphixstargets;
 
 inline std::vector<Element> elements;

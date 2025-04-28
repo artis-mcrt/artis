@@ -1169,9 +1169,9 @@ void read_atomicdata_files() {
     assert_always(std::cmp_equal(totupdowntrans, temp_alltranslist_size));
     MPI_Barrier(MPI_COMM_WORLD);
 
-    globals::alltrans = MPI_shared_malloc<LevelTransition>(totupdowntrans);
+    globals::alltrans = MPI_shared_malloc_span<LevelTransition>(totupdowntrans);
     if (globals::rank_in_node == 0) {
-      std::copy_n(temp_alltranslist.data(), totupdowntrans, globals::alltrans);
+      std::copy_n(temp_alltranslist.data(), totupdowntrans, globals::alltrans.data());
     }
     temp_alltranslist.clear();
     temp_alltranslist.shrink_to_fit();
