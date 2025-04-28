@@ -88,24 +88,27 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     const double epsilon_current = epsilon(element, ion, level);
     const double statweight = stat_weight(element, ion, level);
 
-    const auto uptranslist = get_uptransspan(element, ion, level);
-    for (const auto &transition : uptranslist) {
-      const int upper = transition.targetlevelindex;
-      const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
-      const double C = nnlevel *
-                       col_excitation_ratecoeff(T_e, nne, element, ion, transition, epsilon_trans, statweight) *
-                       epsilon_trans;
-      C_ion += C;
-      if constexpr (!update_cooling_contrib_list) {
-        *C_exc += C;
+    const int nuptrans = get_nuptrans(element, ion, level);
+    if (nuptrans > 0) {
+      const auto uptranslist = get_uptransspan(element, ion, level);
+      for (const auto &transition : uptranslist) {
+        const int upper = transition.targetlevelindex;
+        const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
+        const double C = nnlevel *
+                         col_excitation_ratecoeff(T_e, nne, element, ion, transition, epsilon_trans, statweight) *
+                         epsilon_trans;
+        C_ion += C;
+        if constexpr (!update_cooling_contrib_list) {
+          *C_exc += C;
+        }
       }
-    }
-    if constexpr (update_cooling_contrib_list) {
-      globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
+      if constexpr (update_cooling_contrib_list) {
+        globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
-      assert_testmodeonly(coolinglist[i].type == CoolingType::COLLEXC);
+        assert_testmodeonly(coolinglist[i].type == CoolingType::COLLEXC);
 
-      i++;
+        i++;
+      }
     }
   }
 
