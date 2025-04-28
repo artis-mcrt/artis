@@ -749,26 +749,27 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
             row, get_atomicnumber(element), get_ionstage(element, ion), level,
             gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row));
 
-          return false;
+        return false;
       }
       // Now check if any of the excited populations are negative
       if (gsl_vector_get(popvec, row) < 0.0) {
         printout("  WARNING: NLTE solver gave negative population for index %zud (Z=%d ionstage %d level %d), pop = %g",
                  row, get_atomicnumber(element), get_ionstage(element, ion), level,
                  gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row));
-        if (gsl_vector_get(popvec, row) < -1*MINPOP) {
-            printout(
-                "  WARNING: negative pop = %g less than -1*MINPOP (-%g) unlikely a rounding error to zero so returning "
-                "nltepop_matrix_solve fail (using LTE pops instead)\n", gsl_vector_get(popvec, row), MINPOP);
+        if (gsl_vector_get(popvec, row) < -1 * MINPOP) {
+          printout(
+              "  WARNING: negative pop = %g less than -1*MINPOP (-%g) unlikely a rounding error to zero so returning "
+              "nltepop_matrix_solve fail (using LTE pops instead)\n",
+              gsl_vector_get(popvec, row), MINPOP);
 
-        return false;
+          return false;
         }
         printout(
-                "  WARNING: negative pop = %g greater than -1*MINPOP (-%g) likely a rounding error to zero so continue "
-                "with NLTE pops \n", gsl_vector_get(popvec, row), MINPOP);
+            "  WARNING: negative pop = %g greater than -1*MINPOP (-%g) likely a rounding error to zero so continue "
+            "with NLTE pops \n",
+            gsl_vector_get(popvec, row), MINPOP);
       }
-    }
-    else {
+    } else {
       if (gsl_vector_get(popvec, row) < 0.0) {
         printout(
             "  WARNING: NLTE solver gave negative population to index %zu (Z=%d ionstage %d level %d), pop = %g. "
