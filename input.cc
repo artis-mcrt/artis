@@ -19,6 +19,7 @@
 #include <functional>
 #include <ios>
 #include <iterator>
+#include <memory>
 #include <span>
 #include <sstream>
 #include <string>
@@ -81,7 +82,7 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     "23: kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y "
     "time steps"};
 
-CellCachePhixsTargets *chphixstargetsblock{};
+std::unique_ptr<CellCachePhixsTargets[]> chphixstargetsblock;
 
 void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
@@ -1301,7 +1302,9 @@ void setup_cellcache() {
     assert_always(chlevelcount > 0);
     resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, chlevelcount);
 
-    chphixstargetsblock = chphixsblocksize > 0 ? new CellCachePhixsTargets[chphixsblocksize] : nullptr;
+    if (chphixsblocksize > 0) {
+      chphixstargetsblock = std::make_unique<CellCachePhixsTargets[]>(chphixsblocksize);
+    }
     mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + chphixsblocksize;
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
