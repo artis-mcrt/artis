@@ -344,6 +344,7 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
 
     if (level < nlevelsmax) {
       const double currentlevelenergy = (energyoffset + levelenergy) * EV;
+      globals::elements[element].ions[ion].levels[level] = {};
       globals::elements[element].ions[ion].levels[level].nphixstargets = 0;
       globals::elements[element].ions[ion].levels[level].phixsstart = -1;
       globals::elements[element].ions[ion].levels[level].phixstargetstart = -1;
@@ -1065,7 +1066,7 @@ void read_atomicdata_files() {
       globals::elements[element].ions[ion].groundcontindex = -1;
       globals::elements[element].ions[ion].first_nlte = -1;
 
-      globals::elements[element].ions[ion].levels = static_cast<EnergyLevel *>(calloc(nlevelsmax, sizeof(EnergyLevel)));
+      globals::elements[element].ions[ion].levels = new EnergyLevel[nlevelsmax];
       assert_always(globals::elements[element].ions[ion].levels != nullptr);
 
       read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot);
