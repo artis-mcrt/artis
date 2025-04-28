@@ -4,6 +4,7 @@
 #include <mpi.h>
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <deque>
 #include <mutex>
@@ -94,19 +95,19 @@ struct EnergyLevel {
 };
 
 struct Ion {
-  EnergyLevel *levels;      // Carries information for each level: 0,1,...,nlevels-1
-  int ionstage;             // Which ionisation stage: XI=0, XII=1, XIII=2, ...
-  int nlevels;              // Number of levels for this ionisation stage
-  int nlevels_nlte;         // number of nlte levels for this ion
-  int first_nlte;           // index into nlte_pops array of a grid cell
-  int ionisinglevels;       // Number of levels which have a bf-continuum
-  int maxrecombininglevel;  // level index of the highest level with a non-zero recombination rate
-  int nlevels_groundterm;
-  int coolingoffset;
-  int ncoolingterms;
-  int uniquelevelindexstart;
-  int groundcontindex;
-  double ionpot;  // Ionisation threshold to the next ionstage
+  EnergyLevel *levels{};      // Carries information for each level: 0,1,...,nlevels-1
+  int ionstage{};             // Which ionisation stage: XI=0, XII=1, XIII=2, ...
+  int nlevels{};              // Number of levels for this ionisation stage
+  int nlevels_nlte{};         // number of nlte levels for this ion
+  int first_nlte{-1};         // index into nlte_pops array of a grid cell
+  int ionisinglevels{};       // Number of levels which have a bf-continuum
+  int maxrecombininglevel{};  // level index of the highest level with a non-zero recombination rate
+  int nlevels_groundterm{};
+  int coolingoffset{};
+  int ncoolingterms{};
+  int uniquelevelindexstart{};
+  int groundcontindex{};
+  double ionpot{NAN};  // Ionisation threshold to the next ionstage
 };
 
 struct Element {

@@ -344,7 +344,6 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
 
     if (level < nlevelsmax) {
       const double currentlevelenergy = (energyoffset + levelenergy) * EV;
-      globals::elements[element].ions[ion].levels[level] = {};
       globals::elements[element].ions[ion].levels[level].nphixstargets = 0;
       globals::elements[element].ions[ion].levels[level].phixsstart = -1;
       globals::elements[element].ions[ion].levels[level].phixstargetstart = -1;
