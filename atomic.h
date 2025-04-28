@@ -361,7 +361,7 @@ inline auto get_includedlevels() -> int { return includedlevels; }
         continue;
       }
       const int level = alllevelsindex - globals::elements[element].ions[ion].uniquelevelindexstart;
-      if (level < get_nlevels(element, ion)) {
+      if (level >= 0 && level < get_nlevels(element, ion)) {
         assert_testmodeonly(get_uniquelevelindex(element, ion, level) == alllevelsindex);
         return {element, ion, level};
       }
