@@ -19,7 +19,6 @@
 #include <functional>
 #include <ios>
 #include <iterator>
-#include <memory>
 #include <span>
 #include <sstream>
 #include <string>
@@ -81,8 +80,6 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     "no)",
     "23: kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y "
     "time steps"};
-
-std::unique_ptr<CellCachePhixsTargets[]> chphixstargetsblock;
 
 void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
@@ -1303,7 +1300,7 @@ void setup_cellcache() {
     resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, chlevelcount);
 
     if (chphixsblocksize > 0) {
-      chphixstargetsblock = std::make_unique<CellCachePhixsTargets[]>(chphixsblocksize);
+      resize_exactly(globals::cellcache[cellcachenum].chphixstargetsblock, chphixsblocksize);
     }
     mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + chphixsblocksize;
 
@@ -1330,7 +1327,8 @@ void setup_cellcache() {
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
           chion.chlevels[level].chphixstargets =
-              chphixsblocksize > 0 ? &chphixstargetsblock[allphixstargetindex] : nullptr;
+              chphixsblocksize > 0 ? &globals::cellcache[cellcachenum].chphixstargetsblock[allphixstargetindex]
+                                   : nullptr;
           allphixstargetindex += nphixstargets;
         }
 
