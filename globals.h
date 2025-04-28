@@ -188,7 +188,7 @@ struct CellCacheElements {
 };
 
 struct CellCache {
-  double *cooling_contrib{};  // Cooling contributions by the different processes.
+  std::vector<double> cooling_contrib;  // Cooling contributions by the different processes.
   CellCacheElements *chelements{};
   std::vector<CellCacheLevels> ch_all_levels;
   std::vector<double> ch_allcont_departureratios;

@@ -1268,7 +1268,8 @@ void setup_cellcache() {
 
     const auto ncoolingterms = kpkt::ncoolingterms;
     mem_usage_cellcache += ncoolingterms * sizeof(double);
-    globals::cellcache[cellcachenum].cooling_contrib = static_cast<double *>(calloc(ncoolingterms, sizeof(double)));
+    resize_exactly(globals::cellcache[cellcachenum].cooling_contrib, ncoolingterms);
+    std::ranges::fill(globals::cellcache[cellcachenum].cooling_contrib, 0.0);
 
     printout("[info] mem_usage: cellcache coolinglist contribs for thread %d occupies %.3f MB\n", cellcachenum,
              ncoolingterms * sizeof(double) / 1024. / 1024.);
