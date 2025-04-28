@@ -88,9 +88,8 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     const double epsilon_current = epsilon(element, ion, level);
     const double statweight = stat_weight(element, ion, level);
 
-    const int nuptrans = get_nuptrans(element, ion, level);
-    if (nuptrans > 0) {
-      const auto uptranslist = get_uptransspan(element, ion, level);
+    const auto uptranslist = get_uptransspan(element, ion, level);
+    if (!uptranslist.empty()) {
       for (const auto &transition : uptranslist) {
         const int upper = transition.targetlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
