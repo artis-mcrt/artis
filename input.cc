@@ -1305,7 +1305,9 @@ void setup_cellcache() {
     mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + chphixsblocksize;
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
-    double *const chtransblock = chtransblocksize > 0 ? new double[chtransblocksize] : nullptr;
+    if (chtransblocksize > 0) {
+      resize_exactly(globals::cellcache[cellcachenum].chtransblock, chtransblocksize);
+    }
 
     int alllevelindex = 0;
     int allphixstargetindex = 0;
@@ -1335,19 +1337,19 @@ void setup_cellcache() {
         for (int level = 0; level < nlevels; level++) {
           const int ndowntrans = get_ndowntrans(element, ion, level);
 
-          chion.chlevels[level].sum_epstrans_rad_deexc = &chtransblock[chtransindex];
+          chion.chlevels[level].sum_epstrans_rad_deexc = &globals::cellcache[cellcachenum].chtransblock[chtransindex];
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
           const int ndowntrans = get_ndowntrans(element, ion, level);
-          chion.chlevels[level].sum_internal_down_same = &chtransblock[chtransindex];
+          chion.chlevels[level].sum_internal_down_same = &globals::cellcache[cellcachenum].chtransblock[chtransindex];
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
           const int nuptrans = get_nuptrans(element, ion, level);
-          chion.chlevels[level].sum_internal_up_same = &chtransblock[chtransindex];
+          chion.chlevels[level].sum_internal_up_same = &globals::cellcache[cellcachenum].chtransblock[chtransindex];
           chtransindex += nuptrans;
         }
       }
