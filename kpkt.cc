@@ -90,12 +90,12 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
 
     const int nuptrans = get_nuptrans(element, ion, level);
     if (nuptrans > 0) {
-      const auto *const uptranslist = get_uptranslist(element, ion, level);
-      for (int ii = 0; ii < nuptrans; ii++) {
-        const int upper = uptranslist[ii].targetlevelindex;
+      const auto uptranslist = get_uptransspan(element, ion, level);
+      for (const auto &transition : uptranslist) {
+        const int upper = transition.targetlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
         const double C = nnlevel *
-                         col_excitation_ratecoeff(T_e, nne, element, ion, uptranslist[ii], epsilon_trans, statweight) *
+                         col_excitation_ratecoeff(T_e, nne, element, ion, transition, epsilon_trans, statweight) *
                          epsilon_trans;
         C_ion += C;
         if constexpr (!update_cooling_contrib_list) {
