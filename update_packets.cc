@@ -406,10 +406,10 @@ void update_packets(const int nts, std::span<Packet> packets) {
         }
       }
     }
-    const auto packets_remaining = packets.subspan(packetgroupstart - packets.data());
-    if (!packets_remaining.empty()) {
-      do_cell_packet_updates(packets_remaining, nts, ts_end);
-    }
+    // const auto packets_remaining = packets.subspan(packetgroupstart - packets.data());
+    // if (!packets_remaining.empty()) {
+    //   do_cell_packet_updates(packets_remaining, nts, ts_end);
+    // }
 
     timestepcomplete = std::ranges::all_of(
         packets, [ts_end](const auto &pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
