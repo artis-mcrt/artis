@@ -592,7 +592,15 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   // set NLTE level pops as invalid so that Boltzmann pops will be used instead
   nltepop_reset_element(nonemptymgi, element);
   calculate_cellpartfuncts(nonemptymgi, element);
-  // set ionisation to Saha
+  // When set_element_pops_lte is called when the NLTE solution fails the uppermost_ion used in set_groundlevelpops
+  // is the one set based on the NLTE phi factors. Therefore need to recall find_uppermost_ion with force_saha = true so
+  // the uppermost ion used in set_groundlevelpops is changed to the one based on the correct LTE phi factors instead
+  if (RECALL_FIND_UPPERMOST_ION_WHEN_SETTING_ELEMENT_POPS_LTE) {
+    const double nne_hi = grid::get_rho(nonemptymgi) / MH;
+    const bool force_saha = true;
+    const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_saha);
+    grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
+  }
   set_groundlevelpops(nonemptymgi, element, grid::get_nne(nonemptymgi), true);
 }
 
@@ -1030,8 +1038,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
   if (!matrix_solve_success) {
     printout(
-        "WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular matrix. "
-        "Attempting to use LTE solution instead\n",
+        "WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular matrix, "
+        "negative population or large population inversion. Attempting to use LTE solution instead\n",
         modelgridindex, timestep, atomic_number);
     set_element_pops_lte(nonemptymgi, element);
   } else {

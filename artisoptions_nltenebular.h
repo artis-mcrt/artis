@@ -97,6 +97,8 @@ constexpr bool USE_LUT_BFHEATING = false;
 
 constexpr bool STRICT_POPULATION_CHECKING = false;
 
+constexpr bool RECALL_FIND_UPPERMOST_ION_WHEN_SETTING_ELEMENT_POPS_LTE = false;
+
 #define SEPARATE_STIMRECOMB false
 
 constexpr bool NT_ON = true;

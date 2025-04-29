@@ -275,50 +275,6 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   return U;
 }
 
-auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi, const bool force_saha) -> int {
-  const int nions = get_nions(element);
-  if (nions == 0) {
-    return -1;
-  }
-  if (!force_saha && elem_has_nlte_levels(element)) {
-    return nions - 1;
-  }
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  const bool use_phi_saha = force_saha || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
-  int uppermost_ion = 0;
-
-  uppermost_ion = nions - 1;
-  if (!use_phi_saha) {
-    for (int ion = 0; ion < nions - 1; ion++) {
-      if (iongamma_is_zero(nonemptymgi, element, ion) &&
-          (!NT_ON || ((globals::dep_estimator_gamma[nonemptymgi] == 0.) &&
-                      (grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(24, 48)) == 0.) &&
-                      (grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(28, 56)) == 0.)))) {
-        uppermost_ion = ion;
-        break;
-      }
-    }
-  }
-
-  double factor = 1.;
-  int ion = 0;
-  for (ion = 0; ion < uppermost_ion; ion++) {
-    const auto phifactor =
-        use_phi_saha ? phi_saha(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
-    factor *= nne_hi * phifactor;
-
-    if (!std::isfinite(factor)) {
-      printout(
-          "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element "
-          "Z=%d, ionstage %d in cell %d\n",
-          get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
-      return ion;
-    }
-  }
-  uppermost_ion = ion;
-  return uppermost_ion;
-}
-
 void set_calculated_nne(const int nonemptymgi) {
   double nne = 0.;  // free electron density
   for (int element = 0; element < get_nelements(); element++) {
@@ -415,6 +371,51 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 }
 
 }  // anonymous namespace
+
+[[nodiscard]] __host__ __device__ auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi,
+                                                          const bool force_saha) -> int {
+  const int nions = get_nions(element);
+  if (nions == 0) {
+    return -1;
+  }
+  if (!force_saha && elem_has_nlte_levels(element)) {
+    return nions - 1;
+  }
+  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+  const bool use_phi_saha = force_saha || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
+  int uppermost_ion = 0;
+
+  uppermost_ion = nions - 1;
+  if (!use_phi_saha) {
+    for (int ion = 0; ion < nions - 1; ion++) {
+      if (iongamma_is_zero(nonemptymgi, element, ion) &&
+          (!NT_ON || ((globals::dep_estimator_gamma[nonemptymgi] == 0.) &&
+                      (grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(24, 48)) == 0.) &&
+                      (grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(28, 56)) == 0.)))) {
+        uppermost_ion = ion;
+        break;
+      }
+    }
+  }
+
+  double factor = 1.;
+  int ion = 0;
+  for (ion = 0; ion < uppermost_ion; ion++) {
+    const auto phifactor =
+        use_phi_saha ? phi_saha(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
+    factor *= nne_hi * phifactor;
+
+    if (!std::isfinite(factor)) {
+      printout(
+          "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element "
+          "Z=%d, ionstage %d in cell %d\n",
+          get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
+      return ion;
+    }
+  }
+  uppermost_ion = ion;
+  return uppermost_ion;
+}
 
 // Calculate the fractions of an element's population in each ionization stage based on Saha LTE or ionisation
 // equilibrium
@@ -612,7 +613,7 @@ auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
-      const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_saha);
+      const auto uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_saha);
       grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
 
       only_lowest_ionstage = only_lowest_ionstage && (uppermost_ion <= 0);
