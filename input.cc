@@ -85,14 +85,13 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
                            std::vector<float> &tmpallphixs, size_t *mem_usage_phixs, const int phixs_file_version) {
   std::string phixsline;
-  assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargetstart == -1);
-  globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargetstart =
-      static_cast<int>(globals::allphixstargets.size());
+  assert_always(get_ion_levels(element, lowerion)[lowerlevel].phixstargetstart == -1);
+  get_ion_levels(element, lowerion)[lowerlevel].phixstargetstart = static_cast<int>(globals::allphixstargets.size());
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - groundstate_index_in;
     assert_always(upperlevel >= 0);
-    assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets == 0);
-    globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
+    assert_always(get_ion_levels(element, lowerion)[lowerlevel].nphixstargets == 0);
+    get_ion_levels(element, lowerion)[lowerlevel].nphixstargets = 1;
     *mem_usage_phixs += sizeof(PhotoionTarget);
 
     if (single_level_top_ion && (upperion == get_nions(element) - 1)) {
@@ -109,7 +108,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     // read in a table of target states and probabilities and store them
     if (!single_level_top_ion || upperion < get_nions(element) - 1)  // in case the top ion has nlevelsmax = 1
     {
-      globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = in_nphixstargets;
+      get_ion_levels(element, lowerion)[lowerlevel].nphixstargets = in_nphixstargets;
       *mem_usage_phixs += in_nphixstargets * sizeof(PhotoionTarget);
 
       double probability_sum = 0.;
@@ -129,7 +128,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
                  get_atomicnumber(element), get_ionstage(element, lowerion), probability_sum);
       }
     } else {  // file has table of target states and probabilities but our top ion is limited to one level
-      globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
+      get_ion_levels(element, lowerion)[lowerlevel].nphixstargets = 1;
       *mem_usage_phixs += sizeof(PhotoionTarget);
 
       for (int i = 0; i < in_nphixstargets; i++) {
@@ -150,8 +149,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lowerlevel);
          phixstargetindex++) {
       const int upperlevel =
-          globals::allphixstargets[globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargetstart +
-                                   phixstargetindex]
+          globals::allphixstargets[get_ion_levels(element, lowerion)[lowerlevel].phixstargetstart + phixstargetindex]
               .levelindex;
       if (upperlevel > get_maxrecombininglevel(element, lowerion + 1)) {
         globals::elements[element].ions[lowerion + 1].maxrecombininglevel = upperlevel;
@@ -162,7 +160,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
   assert_always(tmpallphixs.size() % globals::NPHIXSPOINTS == 0);
   const auto tmpphixsstart = tmpallphixs.size();
-  globals::elements[element].ions[lowerion].levels[lowerlevel].phixsstart = tmpphixsstart / globals::NPHIXSPOINTS;
+  get_ion_levels(element, lowerion)[lowerlevel].phixsstart = tmpphixsstart / globals::NPHIXSPOINTS;
   tmpallphixs.resize(tmpallphixs.size() + globals::NPHIXSPOINTS);
 
   auto *levelphixstable = &tmpallphixs[tmpphixsstart];
@@ -344,11 +342,12 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
 
     if (level < nlevelsmax) {
       const double currentlevelenergy = (energyoffset + levelenergy) * EV;
-      globals::elements[element].ions[ion].levels[level].nphixstargets = 0;
-      globals::elements[element].ions[ion].levels[level].phixsstart = -1;
-      globals::elements[element].ions[ion].levels[level].phixstargetstart = -1;
-      globals::elements[element].ions[ion].levels[level].epsilon = currentlevelenergy;
-      globals::elements[element].ions[ion].levels[level].stat_weight = statweight;
+      auto &leveldata = get_ion_levels(element, ion)[level];
+      leveldata.nphixstargets = 0;
+      leveldata.phixsstart = -1;
+      leveldata.phixstargetstart = -1;
+      leveldata.epsilon = currentlevelenergy;
+      leveldata.stat_weight = statweight;
       assert_always(statweight > 0.);
 
       // The level contributes to the ionisinglevels if its energy
@@ -362,7 +361,7 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
       set_ndowntrans(element, ion, level, 0);
       set_nuptrans(element, ion, level, 0);
     } else {
-      // globals::elements[element].ions[ion].levels[nlevelsmax - 1].stat_weight += statweight;
+      // get_ion_levels(element, ion)[nlevelsmax - 1].stat_weight += statweight;
     }
   }
 }
@@ -474,7 +473,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         temp_linelist.reserve(temp_alltranslist_size);
       }
       for (int level = 0; level < nlevelsmax; level++) {
-        globals::elements[element].ions[ion].levels[level].alltrans_startdown = alltransindex;
+        get_ion_levels(element, ion)[level].alltrans_startdown = alltransindex;
         alltransindex += get_ndowntrans(element, ion, level);
         alltransindex += get_nuptrans(element, ion, level);
 
@@ -535,15 +534,15 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
           // the line list has not been sorted yet, so the store the level index for now and
           // the index into the sorted line list will be set later
 
-          temp_alltranslist[globals::elements[element].ions[ion].levels[level].alltrans_startdown + nupperdowntrans -
-                            1] = {.lineindex = -1,
-                                  .targetlevelindex = lowerlevel,
-                                  .einstein_A = transition.A,
-                                  .coll_str = transition.coll_str,
-                                  .osc_strength = f_ul,
-                                  .forbidden = transition.forbidden};
-          const auto lowerstartup = globals::elements[element].ions[ion].levels[lowerlevel].alltrans_startdown +
-                                    get_ndowntrans(element, ion, lowerlevel);
+          temp_alltranslist[get_ion_levels(element, ion)[level].alltrans_startdown + nupperdowntrans - 1] = {
+              .lineindex = -1,
+              .targetlevelindex = lowerlevel,
+              .einstein_A = transition.A,
+              .coll_str = transition.coll_str,
+              .osc_strength = f_ul,
+              .forbidden = transition.forbidden};
+          const auto lowerstartup =
+              get_ion_levels(element, ion)[lowerlevel].alltrans_startdown + get_ndowntrans(element, ion, lowerlevel);
           temp_alltranslist[lowerstartup + nloweruptrans - 1] = {.lineindex = -1,
                                                                  .targetlevelindex = level,
                                                                  .einstein_A = transition.A,
@@ -577,8 +576,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A;
 
         const int nupperdowntrans = get_ndowntrans(element, ion, level);
-        auto &downtransition = temp_alltranslist[globals::elements[element].ions[ion].levels[level].alltrans_startdown +
-                                                 nupperdowntrans - 1];
+        auto &downtransition =
+            temp_alltranslist[get_ion_levels(element, ion)[level].alltrans_startdown + nupperdowntrans - 1];
 
         assert_always(downtransition.targetlevelindex == lowerlevel);
 
@@ -587,8 +586,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         downtransition.coll_str = std::max(downtransition.coll_str, transition.coll_str);
 
         const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
-        const auto lowerstartup = globals::elements[element].ions[ion].levels[lowerlevel].alltrans_startdown +
-                                  get_ndowntrans(element, ion, lowerlevel);
+        const auto lowerstartup =
+            get_ion_levels(element, ion)[lowerlevel].alltrans_startdown + get_ndowntrans(element, ion, lowerlevel);
         auto &uptransition = temp_alltranslist[lowerstartup + nloweruptrans - 1];
 
         // as above, the downtrans list should be searched to find the correct index instead of using the last one.
@@ -763,7 +762,7 @@ void setup_phixs_list() {
             const auto groundcontindex = search_groundphixslist(nu_edge_target0, element, ion, level);
             nonconstallcont[allcontindex].index_in_groundphixslist = groundcontindex;
 
-            globals::elements[element].ions[ion].levels[level].closestgroundlevelcont = groundcontindex;
+            get_ion_levels(element, ion)[level].closestgroundlevelcont = groundcontindex;
           }
           allcontindex++;
         }
@@ -852,7 +851,7 @@ void read_phixs_data() {
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         const int nphixstargets = get_nphixstargets(element, ion, level);
-        globals::elements[element].ions[ion].levels[level].cont_index = (nphixstargets > 0) ? cont_index : -1;
+        get_ion_levels(element, ion)[level].cont_index = (nphixstargets > 0) ? cont_index : -1;
         cont_index += nphixstargets;
         if (nphixstargets > 0) {
           nbftables++;
@@ -1066,7 +1065,7 @@ void read_atomicdata_files() {
       globals::elements[element].ions[ion].first_nlte = -1;
 
       globals::elements[element].ions[ion].levels = new EnergyLevel[nlevelsmax]();
-      assert_always(globals::elements[element].ions[ion].levels != nullptr);
+      assert_always(get_ion_levels(element, ion) != nullptr);
 
       read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot);
 
