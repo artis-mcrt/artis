@@ -341,14 +341,13 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
     assert_always(levelindex_in == level + groundstate_index_in);
 
     if (level < nlevelsmax) {
-      const double currentlevelenergy = (energyoffset + levelenergy) * EV;
-      auto &leveldata = get_ion_levels(element, ion)[level];
-      leveldata.nphixstargets = 0;
-      leveldata.phixsstart = -1;
-      leveldata.phixstargetstart = -1;
-      leveldata.epsilon = currentlevelenergy;
-      leveldata.stat_weight = statweight;
       assert_always(statweight > 0.);
+      const double currentlevelenergy = (energyoffset + levelenergy) * EV;
+      globals::alllevels.push_back({.epsilon = currentlevelenergy,
+                                    .phixsstart = -1,
+                                    .nphixstargets = 0,
+                                    .stat_weight = statweight,
+                                    .phixstargetstart = -1});
 
       // The level contributes to the ionisinglevels if its energy
       // is below the ionization potential and the level doesn't
@@ -1066,7 +1065,6 @@ void read_atomicdata_files() {
       iondata.first_nlte = -1;
 
       assert_always(std::ssize(globals::alllevels) == uniquelevelindex);
-      globals::alllevels.resize(globals::alllevels.size() + nlevelsmax);
       assert_always(get_ion_levels(element, ion) != nullptr);
 
       read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot);
