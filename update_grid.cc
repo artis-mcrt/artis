@@ -910,8 +910,9 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
     if (USE_LUT_PHOTOION && !globals::simulation_continued_from_saved) {
       // Determine renormalisation factor for corrected photoionization cross-sections
-      std::fill_n(globals::corrphotoionrenorm.data() + (nonemptymgi * globals::nbfcontinua_ground),
-                  globals::nbfcontinua_ground, 1.);
+      std::ranges::fill(
+          globals::corrphotoionrenorm.subspan(nonemptymgi * globals::nbfcontinua_ground, globals::nbfcontinua_ground),
+          1.);
     }
 
     // W == 1 indicates that this modelgrid cell was treated grey in the
@@ -968,8 +969,9 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       grid::set_W(nonemptymgi, 1);
 
       if constexpr (USE_LUT_PHOTOION) {
-        std::fill_n(globals::corrphotoionrenorm.data() + (nonemptymgi * globals::nbfcontinua_ground),
-                    globals::nbfcontinua_ground, 1.);
+        std::ranges::fill(
+            globals::corrphotoionrenorm.subspan(nonemptymgi * globals::nbfcontinua_ground, globals::nbfcontinua_ground),
+            1.);
       }
 
       for (int element = 0; element < get_nelements(); element++) {
