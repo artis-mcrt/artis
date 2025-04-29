@@ -88,21 +88,20 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     const double epsilon_current = epsilon(element, ion, level);
     const double statweight = stat_weight(element, ion, level);
 
-    const int nuptrans = get_nuptrans(element, ion, level);
-    if (nuptrans > 0) {
-      const auto *const uptranslist = get_uptranslist(element, ion, level);
-      for (int ii = 0; ii < nuptrans; ii++) {
-        const int upper = uptranslist[ii].targetlevelindex;
-        const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
-        const double C = nnlevel *
-                         col_excitation_ratecoeff(T_e, nne, element, ion, uptranslist[ii], epsilon_trans, statweight) *
-                         epsilon_trans;
-        C_ion += C;
-        if constexpr (!update_cooling_contrib_list) {
-          *C_exc += C;
-        }
+    const auto uptranslist = get_uptransspan(element, ion, level);
+    for (const auto &transition : uptranslist) {
+      const int upper = transition.targetlevelindex;
+      const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
+      const double C = nnlevel *
+                       col_excitation_ratecoeff(T_e, nne, element, ion, transition, epsilon_trans, statweight) *
+                       epsilon_trans;
+      C_ion += C;
+      if constexpr (!update_cooling_contrib_list) {
+        *C_exc += C;
       }
-      if constexpr (update_cooling_contrib_list) {
+    }
+    if constexpr (update_cooling_contrib_list) {
+      if (!uptranslist.empty()) {
         globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
         assert_testmodeonly(coolinglist[i].type == CoolingType::COLLEXC);
@@ -491,9 +490,9 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   const double rndcool_ion_process = rng_uniform() * C_ion_procsum;
 
   const auto i =
-      std::upper_bound(globals::cellcache[cellcacheslotid].cooling_contrib + ilow,
-                       globals::cellcache[cellcacheslotid].cooling_contrib + ihigh + 1, rndcool_ion_process) -
-      globals::cellcache[cellcacheslotid].cooling_contrib;
+      std::upper_bound(globals::cellcache[cellcacheslotid].cooling_contrib.data() + ilow,
+                       globals::cellcache[cellcacheslotid].cooling_contrib.data() + ihigh + 1, rndcool_ion_process) -
+      globals::cellcache[cellcacheslotid].cooling_contrib.data();
 
   if (i > ihigh) {
     printout("do_kpkt: error occurred while selecting a cooling channel: low %d, high %d, i %td, rndcool %g\n", ilow,

@@ -79,7 +79,7 @@ std::vector<int> modelgrid_numpropcells;
 std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
 
-std::span<double> totmassradionuclide{};  // total mass of each radionuclide in the ejecta
+std::vector<double> totmassradionuclide{};  // total mass of each radionuclide in the ejecta
 
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
 MPI_Win win_initnucmassfrac_allcells = MPI_WIN_NULL;
@@ -92,7 +92,7 @@ std::vector<int> ranks_nstart;
 std::vector<int> ranks_nstart_nonempty;
 std::vector<int> ranks_ndo;
 std::vector<int> ranks_ndo_nonempty;
-inline std::span<ModelGridCellInput> modelgrid_input{};
+std::span<ModelGridCellInput> modelgrid_input{};
 
 // Get number of dimensions
 consteval auto get_ndim(const GridType gridtype) -> int {
@@ -799,14 +799,8 @@ void calc_modelinit_totmassradionuclides() {
   mtot_input = 0.;
   mfegroup = 0.;
 
-  assert_always(totmassradionuclide.data() == nullptr);
-  totmassradionuclide =
-      std::span(static_cast<double *>(malloc(decay::get_num_nuclides() * sizeof(double))), decay::get_num_nuclides());
-  assert_always(totmassradionuclide.data() != nullptr);
-
-  for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-    totmassradionuclide[nucindex] = 0.;
-  }
+  resize_exactly(totmassradionuclide, decay::get_num_nuclides());
+  std::ranges::fill(totmassradionuclide, 0.);
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     const double mass_in_shell = get_rho_tmin(mgi) * get_inputcellvolume(mgi);

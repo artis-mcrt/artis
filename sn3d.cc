@@ -26,6 +26,7 @@
 #include <fstream>
 #include <ios>
 #include <span>
+#include <vector>
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
@@ -347,7 +348,7 @@ void mpi_reduce_estimators(const int nts) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void write_temp_packetsfile(const int timestep, const int my_rank, const Packet *pkt) {
+void write_temp_packetsfile(const int timestep, const int my_rank, std::span<const Packet> pkt) {
   // write packets binary file (and retry if the write fails)
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
@@ -360,8 +361,8 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const Packet 
       printout("ERROR: Could not open file '%s' for mode 'wb'.\n", filename);
       write_success = false;
     } else {
-      write_success =
-          (std::fwrite(pkt, sizeof(Packet), globals::npkts, packets_file) == static_cast<size_t>(globals::npkts));
+      write_success = (std::fwrite(pkt.data(), sizeof(Packet), globals::npkts, packets_file) ==
+                       static_cast<size_t>(globals::npkts));
       if (!write_success) {
         printout("fwrite() FAILED! will retry...\n");
       }
@@ -424,7 +425,7 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
   return do_this_full_loop;
 }
 
-void save_grid_and_packets(const int nts, const Packet *packets) {
+void save_grid_and_packets(const int nts, std::span<const Packet> packets) {
   MPI_Barrier(MPI_COMM_WORLD);
   const auto my_rank = globals::my_rank;
 
@@ -551,7 +552,7 @@ void normalise_deposition_estimators(int nts) {
   }
 }
 
-auto do_timestep(const int nts, const int titer, Packet *packets, const int walltimelimitseconds) -> bool {
+auto do_timestep(const int nts, const int titer, std::span<Packet> packets, const int walltimelimitseconds) -> bool {
   const auto my_rank = globals::my_rank;
   bool do_this_full_loop = true;
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
@@ -605,7 +606,7 @@ auto do_timestep(const int nts, const int titer, Packet *packets, const int wall
   if ((nts < globals::timestep_finish) && do_this_full_loop) {
     // Now process the packets.
 
-    update_packets(nts, std::span{packets, static_cast<size_t>(globals::npkts)});
+    update_packets(nts, packets);
 
     // All the processes have their own versions of the estimators for this time step now.
     // Since these are going to be needed in the next time step, we will gather all the
@@ -759,9 +760,8 @@ auto main(int argc, char *argv[]) -> int {
     }
   }
 
-  auto *const packets = static_cast<Packet *>(malloc(globals::npkts * sizeof(Packet)));
-
-  assert_always(packets != nullptr);
+  std::vector<Packet> packets;
+  resize_exactly(packets, globals::npkts);
 
   printout("git branch %s\n", GIT_BRANCH);
 
@@ -930,8 +930,6 @@ auto main(int argc, char *argv[]) -> int {
 
   radfield::close_file();
   nonthermal::close_file();
-
-  free(packets);
 
   decay::cleanup();
 

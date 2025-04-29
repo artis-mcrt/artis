@@ -48,7 +48,7 @@ struct RadFieldBin {
 constexpr double radfieldbins_delta_nu =
     (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
 
-RadFieldBin *radfieldbins{};
+std::vector<RadFieldBin> radfieldbins{};
 RadFieldBinSolution *radfieldbin_solutions{};
 
 MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
@@ -578,7 +578,7 @@ void init(const int my_rank, const int ndo_nonempty) {
     }
 
     const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBin);
-    radfieldbins = static_cast<RadFieldBin *>(malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBin)));
+    resize_exactly(radfieldbins, nonempty_npts_model * RADFIELDBINCOUNT);
 
     const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
 
@@ -696,7 +696,7 @@ void close_file() {
   }
 
   if (MULTIBIN_RADFIELD_MODEL_ON) {
-    free(radfieldbins);
+    radfieldbins = {};
     if (win_radfieldbin_solutions != MPI_WIN_NULL) {
       MPI_Win_free(&win_radfieldbin_solutions);
     }
@@ -717,7 +717,7 @@ void zero_estimators() {
   std::ranges::fill(bfrate_raw, 0.0);
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    assert_always(radfieldbins != nullptr);
+    assert_always(!radfieldbins.empty());
     for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
       std::fill_n(&radfieldbins[nonemptymgi * RADFIELDBINCOUNT], RADFIELDBINCOUNT,
                   RadFieldBin{.J_raw = 0., .nuJ_raw = 0., .contribcount = 0});
@@ -1032,7 +1032,6 @@ void reduce_estimators()
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     const auto sys_time_start_reduction = std::time(nullptr);
     printout("Reducing binned radiation field estimators");
-    assert_always(radfieldbins != nullptr);
 
     for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {

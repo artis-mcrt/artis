@@ -8,6 +8,8 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <new>
+#include <span>
 #include <vector>
 
 #include "artisoptions.h"
@@ -25,8 +27,8 @@ std::ofstream output_file;
 
 namespace {
 
-void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra &rpkt_spectra, Spectra &stokes_i,
-                  Spectra &stokes_q, Spectra &stokes_u, Spectra &gamma_spectra) {
+void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets, Spectra &rpkt_spectra,
+                  Spectra &stokes_i, Spectra &stokes_q, Spectra &stokes_u, Spectra &gamma_spectra) {
   std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
   std::vector<double> rpkt_light_curve_lumcmf(globals::ntimesteps, 0.);
   std::vector<double> gamma_light_curve_lum(globals::ntimesteps, 0.);
@@ -46,7 +48,7 @@ void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra 
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
   assert_always(globals::nprocs_exspec > 0);
   for (int p = 0; p < globals::nprocs_exspec; p++) {
-    Packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
+    auto pkts_start = pkts.subspan(load_allrank_packets ? p * globals::npkts : 0, globals::npkts);
 
     if (a == -1 || !load_allrank_packets) {
       char pktfilename[MAXFILENAMELENGTH];
@@ -200,20 +202,24 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
   // nprocs_exspec is the number of rank output files to process with expec
   // however, we might be running exspec with 1 or just a few ranks
 
-  auto *pkts = static_cast<Packet *>(malloc(globals::nprocs_exspec * globals::npkts * sizeof(Packet)));
-  const bool load_allrank_packets = (pkts != nullptr);
-  if (load_allrank_packets) {
+  std::vector<Packet> pkts;
+  bool load_allrank_packets = false;
+  try {
+    // try to allocate memory for all packets from all ranks
+    resize_exactly(pkts, globals::nprocs_exspec * globals::npkts);
     printout("mem_usage: loading %d packets from each %d processes simultaneously (total %d packets, %.1f MB memory)\n",
              globals::npkts, globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
              globals::nprocs_exspec * globals::npkts * sizeof(Packet) / 1024. / 1024.);
-  } else {
+    load_allrank_packets = true;
+  } catch (const std::bad_alloc &e) {
+    // if we can't allocate memory for all packets, try to allocate memory for just one rank
+    load_allrank_packets = false;
     printout("mem_usage: malloc failed to allocate memory for all packets\n");
     printout(
         "mem_usage: loading %d packets from each of %d processes sequentially (total %d packets, %.1f MB memory)\n",
         globals::npkts, globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
         globals::nprocs_exspec * globals::npkts * sizeof(Packet) / 1024. / 1024.);
-    pkts = static_cast<Packet *>(malloc(globals::npkts * sizeof(Packet)));
-    assert_always(pkts != nullptr);
+    resize_exactly(pkts, globals::npkts);
   }
 
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
@@ -234,7 +240,6 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
     do_angle_bin(a, pkts, load_allrank_packets, rpkt_spectra, stokes_i, stokes_q, stokes_u, gamma_spectra);
   }
 
-  free(pkts);
   decay::cleanup();
   printout("exspec finished at %ld (tstart + %ld seconds)\n", std::time(nullptr), std::time(nullptr) - sys_time_start);
 

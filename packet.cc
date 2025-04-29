@@ -10,6 +10,7 @@
 #include <fstream>
 #include <iostream>
 #include <ranges>
+#include <span>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -83,7 +84,7 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
 
 }  // anonymous namespace
 
-void packet_init(Packet *pkt)
+void packet_init(std::span<Packet> pkt)
 // Subroutine that initialises the packets if we start a new simulation.
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -162,7 +163,7 @@ void packet_init(Packet *pkt)
 }
 
 // write packets text file
-void write_packets(const char filename[], const Packet *const pkt) {
+void write_packets(const char filename[], std::span<const Packet> pkt) {
   auto packets_file = std::fstream(filename, std::ios::out | std::ios::trunc);
   assert_always(packets_file.is_open());
   packets_file << "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf "
@@ -189,20 +190,21 @@ void write_packets(const char filename[], const Packet *const pkt) {
   }
 }
 
-void read_temp_packetsfile(const int timestep, const int my_rank, Packet *pkt) {
+void read_temp_packetsfile(const int timestep, const int my_rank, std::span<Packet> pkt) {
   // read binary packets file
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Reading %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
-  assert_always(std::fread(pkt, sizeof(Packet), globals::npkts, packets_file) == static_cast<size_t>(globals::npkts));
+  assert_always(std::fread(pkt.data(), sizeof(Packet), globals::npkts, packets_file) ==
+                static_cast<size_t>(globals::npkts));
 
   fclose(packets_file);
   printout("done\n");
 }
 
-auto verify_temp_packetsfile(const int timestep, const int my_rank, const Packet *const pkt) -> bool {
+auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<const Packet> pkt) -> bool {
   // return true if verification is good, otherwise return false
 
   // read binary packets file
@@ -232,7 +234,7 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, const Packet
   return readback_passed;
 }
 
-void read_packets(const char filename[], Packet *pkt) {
+auto read_packets(const char filename[], std::span<Packet> packets) -> std::span<Packet> {
   // read packets*.out text format file
   std::fstream packets_file(filename, std::ios::in);
   assert_always(packets_file.is_open());
@@ -255,40 +257,40 @@ void read_packets(const char filename[], Packet *pkt) {
     std::istringstream ssline(line);
 
     int pkt_type_in = 0;
-    ssline >> pkt[i].number >> pkt[i].where >> pkt_type_in;
-    pkt[i].type = static_cast<enum packet_type>(pkt_type_in);
+    ssline >> packets[i].number >> packets[i].where >> pkt_type_in;
+    packets[i].type = static_cast<enum packet_type>(pkt_type_in);
 
-    ssline >> pkt[i].pos[0] >> pkt[i].pos[1] >> pkt[i].pos[2];
+    ssline >> packets[i].pos[0] >> packets[i].pos[1] >> packets[i].pos[2];
 
-    ssline >> pkt[i].dir[0] >> pkt[i].dir[1] >> pkt[i].dir[2];
+    ssline >> packets[i].dir[0] >> packets[i].dir[1] >> packets[i].dir[2];
 
-    ssline >> pkt[i].tdecay;
+    ssline >> packets[i].tdecay;
 
-    ssline >> pkt[i].e_cmf >> pkt[i].e_rf >> pkt[i].nu_cmf >> pkt[i].nu_rf;
+    ssline >> packets[i].e_cmf >> packets[i].e_rf >> packets[i].nu_cmf >> packets[i].nu_rf;
 
     int escape_type = 0;
-    ssline >> escape_type >> pkt[i].escape_time;
-    pkt[i].escape_type = static_cast<enum packet_type>(escape_type);
+    ssline >> escape_type >> packets[i].escape_time;
+    packets[i].escape_type = static_cast<enum packet_type>(escape_type);
 
-    ssline >> pkt[i].emissiontype >> pkt[i].trueemissiontype;
+    ssline >> packets[i].emissiontype >> packets[i].trueemissiontype;
 
-    ssline >> pkt[i].em_pos[0] >> pkt[i].em_pos[1] >> pkt[i].em_pos[2];
+    ssline >> packets[i].em_pos[0] >> packets[i].em_pos[1] >> packets[i].em_pos[2];
 
-    ssline >> pkt[i].absorptiontype >> pkt[i].absorptionfreq >> pkt[i].nscatterings;
+    ssline >> packets[i].absorptiontype >> packets[i].absorptionfreq >> packets[i].nscatterings;
 
-    ssline >> pkt[i].em_time;
+    ssline >> packets[i].em_time;
 
-    ssline >> pkt[i].stokes[0] >> pkt[i].stokes[1] >> pkt[i].stokes[2];
+    ssline >> packets[i].stokes[0] >> packets[i].stokes[1] >> packets[i].stokes[2];
 
     int int_originated_from_particlenotgamma = 0;
     ssline >> int_originated_from_particlenotgamma;
-    pkt[i].originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
+    packets[i].originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
 
-    ssline >> pkt[i].trueemissionvelocity;
+    ssline >> packets[i].trueemissionvelocity;
 
-    ssline >> pkt[i].trueem_time;
+    ssline >> packets[i].trueem_time;
 
-    ssline >> pkt[i].pellet_nucindex;
+    ssline >> packets[i].pellet_nucindex;
   }
 
   if (packets_read < globals::npkts) {
@@ -298,4 +300,5 @@ void read_packets(const char filename[], Packet *pkt) {
         packets_read, globals::npkts);
     std::abort();
   }
+  return packets;
 }

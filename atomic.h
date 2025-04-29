@@ -218,9 +218,8 @@ inline __host__ __device__ auto get_phixs_table(const int element, const int ion
 
   const double n_l = get_levelpop(nonemptymgi, element, ion, lower);
 
-  const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
   const double A_ul = line.einstein_A;
-  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * A_ul;
   const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
   const double n_u = get_levelpop(nonemptymgi, element, ion, upper);
@@ -354,21 +353,22 @@ inline auto get_includedlevels() -> int { return includedlevels; }
 }
 
 // inverse of get_uniquelevelindex(). get the element/ion/level from a unique level index
-[[nodiscard]] inline auto get_levelfromuniquelevelindex(const int alllevelsindex) -> std::tuple<int, int, int> {
+[[nodiscard]] inline auto get_levelfromuniquelevelindex(const int uniquelevelindex) -> std::tuple<int, int, int> {
+  assert_testmodeonly(uniquelevelindex < get_includedlevels());
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       if (get_nlevels(element, ion) == 0) {
         continue;
       }
-      const int level = alllevelsindex - globals::elements[element].ions[ion].uniquelevelindexstart;
-      if (level < get_nlevels(element, ion)) {
-        assert_testmodeonly(get_uniquelevelindex(element, ion, level) == alllevelsindex);
+      const int level = uniquelevelindex - globals::elements[element].ions[ion].uniquelevelindexstart;
+      if (level >= 0 && level < get_nlevels(element, ion)) {
+        assert_testmodeonly(get_uniquelevelindex(element, ion, level) == uniquelevelindex);
         return {element, ion, level};
       }
     }
   }
-  assert_always(false);  // alllevelsindex too high to be valid
+  assert_always(false);  // uniquelevelindex too high to be valid
   return {-1, -1, -1};
 }
 
@@ -387,7 +387,7 @@ inline auto get_includedlevels() -> int { return includedlevels; }
 }
 
 [[nodiscard]] inline auto get_downtranslist(const int element, const int ion, const int level) -> LevelTransition * {
-  return globals::alltrans + globals::elements[element].ions[ion].levels[level].alltrans_startdown;
+  return globals::alltrans.data() + globals::elements[element].ions[ion].levels[level].alltrans_startdown;
 }
 
 // the number of upward bound-bound transitions from the specified level
@@ -399,12 +399,13 @@ inline auto get_includedlevels() -> int { return includedlevels; }
 }
 
 [[nodiscard]] inline auto get_uptranslist(const int element, const int ion, const int level) -> LevelTransition * {
-  const auto &levelref = globals::elements[element].ions[ion].levels[level];
-  return globals::alltrans + levelref.alltrans_startdown + levelref.ndowntrans;
+  return globals::alltrans.data() + globals::elements[element].ions[ion].levels[level].alltrans_startup();
 }
 
-[[nodiscard]] inline auto get_uptransspan(const int element, const int ion, const int level) {
-  return std::span(get_uptranslist(element, ion, level), get_nuptrans(element, ion, level));
+[[nodiscard]] inline auto get_uptransspan(const int element, const int ion, const int level)
+    -> std::span<const LevelTransition> {
+  return globals::alltrans.subspan(globals::elements[element].ions[ion].levels[level].alltrans_startup(),
+                                   get_nuptrans(element, ion, level));
 }
 
 // the number of downward bound-bound transitions from the specified level

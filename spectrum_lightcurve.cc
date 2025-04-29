@@ -9,6 +9,7 @@
 #include <ctime>
 #include <functional>
 #include <ios>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -543,7 +544,7 @@ void add_to_spec_res(const Packet &pkt, const int current_abin, Spectra &spectra
   }
 }
 
-void write_partial_lightcurve_spectra(const int my_rank, const int nts, const Packet *pkts) {
+void write_partial_lightcurve_spectra(const int my_rank, const int nts, std::span<const Packet> pkts) {
   const auto time_func_start = std::time(nullptr);
 
   std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);

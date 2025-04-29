@@ -4,6 +4,7 @@
 #include <mpi.h>
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <deque>
 #include <mutex>
@@ -91,22 +92,27 @@ struct EnergyLevel {
                              // element/ion/level/phixstargetindex
                              // (not an index into the nu_edge-sorted allcont list!)
   int closestgroundlevelcont{-1};
+
+  [[nodiscard]] constexpr auto alltrans_startup() const -> int {
+    // index into globals::alltrans for first up transition from this level
+    return alltrans_startdown + ndowntrans;
+  }
 };
 
 struct Ion {
-  EnergyLevel *levels;      // Carries information for each level: 0,1,...,nlevels-1
-  int ionstage;             // Which ionisation stage: XI=0, XII=1, XIII=2, ...
-  int nlevels;              // Number of levels for this ionisation stage
-  int nlevels_nlte;         // number of nlte levels for this ion
-  int first_nlte;           // index into nlte_pops array of a grid cell
-  int ionisinglevels;       // Number of levels which have a bf-continuum
-  int maxrecombininglevel;  // level index of the highest level with a non-zero recombination rate
-  int nlevels_groundterm;
-  int coolingoffset;
-  int ncoolingterms;
-  int uniquelevelindexstart;
-  int groundcontindex;
-  double ionpot;  // Ionisation threshold to the next ionstage
+  EnergyLevel *levels{};      // Carries information for each level: 0,1,...,nlevels-1
+  int ionstage{};             // Which ionisation stage: XI=0, XII=1, XIII=2, ...
+  int nlevels{};              // Number of levels for this ionisation stage
+  int nlevels_nlte{};         // number of nlte levels for this ion
+  int first_nlte{-1};         // index into nlte_pops array of a grid cell
+  int ionisinglevels{};       // Number of levels which have a bf-continuum
+  int maxrecombininglevel{};  // level index of the highest level with a non-zero recombination rate
+  int nlevels_groundterm{};
+  int coolingoffset{};
+  int ncoolingterms{};
+  int uniquelevelindexstart{};
+  int groundcontindex{};
+  double ionpot{NAN};  // Ionisation threshold to the next ionstage
 };
 
 struct Element {
@@ -187,14 +193,16 @@ struct CellCacheElements {
 };
 
 struct CellCache {
-  double *cooling_contrib{};  // Cooling contributions by the different processes.
+  std::vector<double> cooling_contrib;  // Cooling contributions by the different processes.
   CellCacheElements *chelements{};
   std::vector<CellCacheLevels> ch_all_levels;
   std::vector<double> ch_allcont_departureratios;
   std::vector<double> ch_allcont_nnlevel;
   std::vector<bool> ch_keep_this_cont;
   double chi_ff_nnionpart{-1};
-  int nonemptymgi{-1};  // Identifies the cell the data is valid for.
+  int nonemptymgi{-1};                                     // Identifies the cell the data is valid for.
+  std::vector<CellCachePhixsTargets> chphixstargetsblock;  // photoionisation targets for all levels
+  std::vector<double> chtransblock;                        // cumulative transition rates for all levels
 };
 
 namespace globals {
@@ -251,7 +259,7 @@ inline int opacity_case{};  // 0 grey, 1 for Fe-grp dependence.
 inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperature table value
 
 inline std::span<float> allphixs{};
-inline LevelTransition *alltrans;
+inline std::span<LevelTransition> alltrans{};
 inline std::vector<PhotoionTarget> allphixstargets;
 
 inline std::vector<Element> elements;
