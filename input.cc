@@ -1068,7 +1068,6 @@ void read_atomicdata_files() {
       };
 
       assert_always(std::ssize(globals::alllevels) == uniquelevelindex);
-      assert_always(get_ion_levels(element, ion) != nullptr);
 
       read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot);
 
