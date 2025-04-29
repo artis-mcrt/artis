@@ -55,6 +55,8 @@ inline auto get_nions(const int element) -> int {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(globals::elements[element].ions[ion].uniquelevelindexstart >= 0);
+  assert_testmodeonly(std::ssize(globals::alllevels) > (globals::elements[element].ions[ion].uniquelevelindexstart +
+                                                        globals::elements[element].ions[ion].nlevels - 1));
   return globals::alllevels.data() + globals::elements[element].ions[ion].uniquelevelindexstart;
 }
 
