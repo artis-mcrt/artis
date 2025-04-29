@@ -406,9 +406,9 @@ void update_packets(const int nts, std::span<Packet> packets) {
         }
       }
     }
-    const auto packets_remaining = packets.data() + packets.size() - packetgroupstart;
-    if (packets_remaining > 0) {
-      do_cell_packet_updates(std::span(packetgroupstart, packets_remaining), nts, ts_end);
+    const auto packets_remaining = packets.subspan(packetgroupstart - packets.data());
+    if (!packets_remaining.empty()) {
+      do_cell_packet_updates(packets_remaining, nts, ts_end);
     }
 
     timestepcomplete = std::ranges::all_of(
