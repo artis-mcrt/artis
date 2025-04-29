@@ -100,17 +100,17 @@ struct EnergyLevel {
 };
 
 struct Ion {
-  int ionstage{};             // Which ionisation stage: XI=0, XII=1, XIII=2, ...
-  int nlevels{};              // Number of levels for this ionisation stage
-  int nlevels_nlte{};         // number of nlte levels for this ion
-  int first_nlte{-1};         // index into nlte_pops array of a grid cell
-  int nlevels_ionising{};     // Number of levels which have a bf-continuum
-  int maxrecombininglevel{};  // level index of the highest level with a non-zero recombination rate
-  int nlevels_groundterm{};
-  int coolingoffset{};
-  int ncoolingterms{};
-  int uniquelevelindexstart{};  // index of the first level in the alllevels list
-  int groundcontindex{};
+  int ionstage{-1};             // Which ionisation stage: XI=0, XII=1, XIII=2, ...
+  int nlevels{0};               // Number of levels for this ionisation stage
+  int nlevels_nlte{0};          // number of nlte levels for this ion
+  int first_nlte{-1};           // index into nlte_pops array of a grid cell
+  int nlevels_ionising{0};      // Number of levels which have a bf-continuum
+  int maxrecombininglevel{-1};  // level index of the highest level with a non-zero recombination rate
+  int nlevels_groundterm{0};
+  int coolingoffset{-1};
+  int ncoolingterms{0};
+  int uniquelevelindexstart{-1};  // index of the first level in the alllevels list
+  int groundcontindex{-1};
   double ionpot{NAN};  // Ionisation threshold to the next ionstage
 };
 
