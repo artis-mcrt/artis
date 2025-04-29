@@ -92,6 +92,11 @@ struct EnergyLevel {
                              // element/ion/level/phixstargetindex
                              // (not an index into the nu_edge-sorted allcont list!)
   int closestgroundlevelcont{-1};
+
+  [[nodiscard]] constexpr auto alltrans_startup() const -> int {
+    // index into globals::alltrans for first up transition from this level
+    return alltrans_startdown + ndowntrans;
+  }
 };
 
 struct Ion {
