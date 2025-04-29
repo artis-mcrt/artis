@@ -1054,15 +1054,16 @@ void read_atomicdata_files() {
 
       // read the data for the levels and set up the list of possible transitions for each level
       // store the ions data to memory and set up the ions zeta and levellist
-      globals::elements[element].ions[ion].ionstage = ionstage;
-      globals::elements[element].ions[ion].nlevels = nlevelsmax;
-      globals::elements[element].ions[ion].nlevels_ionising = 0;
-      globals::elements[element].ions[ion].maxrecombininglevel = -1;
-      globals::elements[element].ions[ion].ionpot = ionpot * EV;
-      globals::elements[element].ions[ion].nlevels_groundterm = -1;
-      globals::elements[element].ions[ion].uniquelevelindexstart = uniquelevelindex;
-      globals::elements[element].ions[ion].groundcontindex = -1;
-      globals::elements[element].ions[ion].first_nlte = -1;
+      auto &iondata = globals::elements[element].ions[ion];
+      iondata.ionstage = ionstage;
+      iondata.nlevels = nlevelsmax;
+      iondata.nlevels_ionising = 0;
+      iondata.maxrecombininglevel = -1;
+      iondata.ionpot = ionpot * EV;
+      iondata.nlevels_groundterm = -1;
+      iondata.uniquelevelindexstart = uniquelevelindex;
+      iondata.groundcontindex = -1;
+      iondata.first_nlte = -1;
 
       assert_always(std::ssize(globals::alllevels) == uniquelevelindex);
       globals::alllevels.resize(globals::alllevels.size() + nlevelsmax);
