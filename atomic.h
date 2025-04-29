@@ -51,6 +51,10 @@ inline auto get_nions(const int element) -> int {
   return globals::elements[element].nions;
 }
 
+[[nodiscard]] inline auto get_ion_levels(const int element, const int ion) -> EnergyLevel * {
+  return globals::elements[element].ions[ion].levels;
+}
+
 // Return the number of levels associated with a specific ion given its elementindex and ionindex.
 __host__ __device__ inline auto get_nlevels(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
@@ -64,7 +68,7 @@ __host__ __device__ inline auto get_nlevels(const int element, const int ion) ->
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  return globals::elements[element].ions[ion].levels[level].epsilon;
+  return get_ion_levels(element, ion)[level].epsilon;
 }
 
 // Return the ionisation stage of an ion specified by its elementindex and ionindex.
