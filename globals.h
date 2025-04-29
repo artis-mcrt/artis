@@ -104,12 +104,12 @@ struct Ion {
   int nlevels{};              // Number of levels for this ionisation stage
   int nlevels_nlte{};         // number of nlte levels for this ion
   int first_nlte{-1};         // index into nlte_pops array of a grid cell
-  int ionisinglevels{};       // Number of levels which have a bf-continuum
+  int nlevels_ionising{};     // Number of levels which have a bf-continuum
   int maxrecombininglevel{};  // level index of the highest level with a non-zero recombination rate
   int nlevels_groundterm{};
   int coolingoffset{};
   int ncoolingterms{};
-  int uniquelevelindexstart{};
+  int uniquelevelindexstart{};  // index of the first level in the alllevels list
   int groundcontindex{};
   double ionpot{NAN};  // Ionisation threshold to the next ionstage
 };

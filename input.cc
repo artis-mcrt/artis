@@ -355,7 +355,7 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
       // belong to the topmost ion included.
       // Rate coefficients are only available for ionising levels.
       if (levelenergy < ionpot && ion < nions - 1) {
-        globals::elements[element].ions[ion].ionisinglevels++;
+        globals::elements[element].ions[ion].nlevels_ionising++;
       }
 
       set_ndowntrans(element, ion, level, 0);
@@ -1056,7 +1056,7 @@ void read_atomicdata_files() {
       // store the ions data to memory and set up the ions zeta and levellist
       globals::elements[element].ions[ion].ionstage = ionstage;
       globals::elements[element].ions[ion].nlevels = nlevelsmax;
-      globals::elements[element].ions[ion].ionisinglevels = 0;
+      globals::elements[element].ions[ion].nlevels_ionising = 0;
       globals::elements[element].ions[ion].maxrecombininglevel = -1;
       globals::elements[element].ions[ion].ionpot = ionpot * EV;
       globals::elements[element].ions[ion].nlevels_groundterm = -1;
@@ -1105,7 +1105,7 @@ void read_atomicdata_files() {
       }
 
       if (ion < nions - 1) {
-        nbfcheck += globals::elements[element].ions[ion].ionisinglevels;  // nlevelsmax;
+        nbfcheck += globals::elements[element].ions[ion].nlevels_ionising;  // nlevelsmax;
       }
       uniqueionindex++;
     }

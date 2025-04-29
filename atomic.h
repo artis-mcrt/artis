@@ -84,7 +84,7 @@ __host__ __device__ inline auto get_nlevels(const int element, const int ion) ->
 [[nodiscard]] __host__ __device__ inline auto get_nlevels_ionising(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-  return globals::elements[element].ions[ion].ionisinglevels;
+  return globals::elements[element].ions[ion].nlevels_ionising;
 }
 
 // Returns the number of target states for photoionization of (element,ion,level).
