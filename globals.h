@@ -100,7 +100,6 @@ struct EnergyLevel {
 };
 
 struct Ion {
-  EnergyLevel *levels{};      // Carries information for each level: 0,1,...,nlevels-1
   int ionstage{};             // Which ionisation stage: XI=0, XII=1, XIII=2, ...
   int nlevels{};              // Number of levels for this ionisation stage
   int nlevels_nlte{};         // number of nlte levels for this ion
@@ -261,6 +260,7 @@ inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperatur
 inline std::span<float> allphixs{};
 inline std::span<LevelTransition> alltrans{};
 inline std::vector<PhotoionTarget> allphixstargets;
+inline std::vector<EnergyLevel> alllevels;
 
 inline std::vector<Element> elements;
 
