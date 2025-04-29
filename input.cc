@@ -333,7 +333,7 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in = 0;
     double levelenergy{NAN};
-    double statweight{NAN};
+    float statweight{NAN};
     int ntransitions = 0;
     std::string line;
     assert_always(get_noncommentline(adata, line));
