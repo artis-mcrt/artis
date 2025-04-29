@@ -6,7 +6,6 @@
 #include <span>
 #include <vector>
 
-#include "artisoptions.h"
 #ifndef __host__
 #define __host__
 #endif
@@ -221,16 +220,6 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
 }
 
 #include "globals.h"
-
-[[nodiscard]] inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
-                                         const int phixstargetindex) -> int {
-  const int contindex = globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
-
-  const int bflutindex = (tempindex * globals::nbfcontinua) + contindex;
-  assert_testmodeonly(bflutindex >= 0);
-  assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
-  return bflutindex;
-}
 
 [[nodiscard]] inline auto get_timestep(const double time) -> int {
   assert_always(time >= globals::tmin);

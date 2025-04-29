@@ -52,6 +52,8 @@ inline auto get_nions(const int element) -> int {
 }
 
 [[nodiscard]] inline auto get_ion_levels(const int element, const int ion) -> EnergyLevel * {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].levels;
 }
 
@@ -88,9 +90,9 @@ __host__ __device__ inline auto get_nlevels(const int element, const int ion) ->
 // Returns the number of target states for photoionization of (element,ion,level).
 __host__ __device__ inline auto get_nphixstargets(const int element, const int ion, const int level) -> int {
   assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(level < get_nlevels(element, ion));
   assert_testmodeonly(ion < get_nions(element));
-  const auto nphixstargets = globals::elements[element].ions[ion].levels[level].nphixstargets;
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  const auto nphixstargets = get_ion_levels(element, ion)[level].nphixstargets;
   assert_testmodeonly(nphixstargets == 0 ||
                       ((ion < (get_nions(element) - 1)) && (level < get_nlevels_ionising(element, ion))));
   return nphixstargets;
@@ -105,9 +107,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
 
-  return globals::allphixstargets[globals::elements[element].ions[ion].levels[level].phixstargetstart +
-                                  phixstargetindex]
-      .levelindex;
+  return globals::allphixstargets[get_ion_levels(element, ion)[level].phixstargetstart + phixstargetindex].levelindex;
 }
 
 // Return the probability of a target state for photoionization of (element,ion,level).
@@ -119,9 +119,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
 
-  return globals::allphixstargets[globals::elements[element].ions[ion].levels[level].phixstargetstart +
-                                  phixstargetindex]
-      .probability;
+  return globals::allphixstargets[get_ion_levels(element, ion)[level].phixstargetstart + phixstargetindex].probability;
 }
 
 // Return the statistical weight of (element,ion,level).
@@ -130,7 +128,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  return globals::elements[element].ions[ion].levels[level].stat_weight;
+  return get_ion_levels(element, ion)[level].stat_weight;
 }
 
 // Return the number of bf-continua associated with ion ion of element element.
@@ -141,7 +139,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
 }
 
 inline __host__ __device__ auto get_phixs_table(const int element, const int ion, const int level) -> float * {
-  const auto phixsstart = globals::elements[element].ions[ion].levels[level].phixsstart;
+  const auto phixsstart = get_ion_levels(element, ion)[level].phixsstart;
   assert_testmodeonly(phixsstart >= 0);
   return globals::allphixs.data() + (phixsstart * globals::NPHIXSPOINTS);
 }
@@ -387,11 +385,11 @@ inline auto get_includedlevels() -> int { return includedlevels; }
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  return globals::elements[element].ions[ion].levels[level].ndowntrans;
+  return get_ion_levels(element, ion)[level].ndowntrans;
 }
 
 [[nodiscard]] inline auto get_downtranslist(const int element, const int ion, const int level) -> LevelTransition * {
-  return globals::alltrans.data() + globals::elements[element].ions[ion].levels[level].alltrans_startdown;
+  return globals::alltrans.data() + get_ion_levels(element, ion)[level].alltrans_startdown;
 }
 
 // the number of upward bound-bound transitions from the specified level
@@ -399,16 +397,16 @@ inline auto get_includedlevels() -> int { return includedlevels; }
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  return globals::elements[element].ions[ion].levels[level].nuptrans;
+  return get_ion_levels(element, ion)[level].nuptrans;
 }
 
 [[nodiscard]] inline auto get_uptranslist(const int element, const int ion, const int level) -> LevelTransition * {
-  return globals::alltrans.data() + globals::elements[element].ions[ion].levels[level].alltrans_startup();
+  return globals::alltrans.data() + get_ion_levels(element, ion)[level].alltrans_startup();
 }
 
 [[nodiscard]] inline auto get_uptransspan(const int element, const int ion, const int level)
     -> std::span<const LevelTransition> {
-  return globals::alltrans.subspan(globals::elements[element].ions[ion].levels[level].alltrans_startup(),
+  return globals::alltrans.subspan(get_ion_levels(element, ion)[level].alltrans_startup(),
                                    get_nuptrans(element, ion, level));
 }
 
@@ -417,7 +415,7 @@ inline void set_ndowntrans(const int element, const int ion, const int level, co
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  globals::elements[element].ions[ion].levels[level].ndowntrans = ndowntrans;
+  get_ion_levels(element, ion)[level].ndowntrans = ndowntrans;
 }
 
 // the number of upward bound-bound transitions from the specified level
@@ -425,7 +423,7 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  globals::elements[element].ions[ion].levels[level].nuptrans = nuptrans;
+  get_ion_levels(element, ion)[level].nuptrans = nuptrans;
 }
 
 [[nodiscard]] inline auto get_phixtargetindex(const int element, const int ion, const int level,
@@ -448,7 +446,7 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
 [[nodiscard]] inline auto get_emtype_continuum(const int element, const int ion, const int level,
                                                const int upperionlevel) -> int {
   const int phixstargetindex = get_phixtargetindex(element, ion, level, upperionlevel);
-  return -1 - globals::elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
+  return -1 - get_ion_levels(element, ion)[level].cont_index - phixstargetindex;
 }
 
 // Returns the energy of (element,ion,level).
@@ -461,6 +459,16 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
   const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
   const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
   return E_threshold;
+}
+
+[[nodiscard]] inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
+                                         const int phixstargetindex) -> int {
+  const int contindex = get_ion_levels(element, ion)[level].cont_index + phixstargetindex;
+
+  const int bflutindex = (tempindex * globals::nbfcontinua) + contindex;
+  assert_testmodeonly(bflutindex >= 0);
+  assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
+  return bflutindex;
 }
 
 #endif  // ATOMIC_H
