@@ -343,11 +343,13 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
     if (level < nlevelsmax) {
       assert_always(statweight > 0.);
       const double currentlevelenergy = (energyoffset + levelenergy) * EV;
-      globals::alllevels.push_back({.epsilon = currentlevelenergy,
-                                    .phixsstart = -1,
-                                    .nphixstargets = 0,
-                                    .stat_weight = statweight,
-                                    .phixstargetstart = -1});
+      globals::alllevels.push_back({
+          .epsilon = currentlevelenergy,
+          .phixsstart = -1,
+          .nphixstargets = 0,
+          .stat_weight = statweight,
+          .phixstargetstart = -1,
+      });
 
       // The level contributes to the ionisinglevels if its energy
       // is below the ionization potential and the level doesn't
