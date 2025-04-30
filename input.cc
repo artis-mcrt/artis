@@ -1189,19 +1189,17 @@ void read_atomicdata_files() {
   temp_alltranslist.shrink_to_fit();
 
   // create a linelist shared on node and then copy data across, freeing the local copy
-  TransitionLine *nonconstlinelist{};
-  nonconstlinelist = MPI_shared_malloc<TransitionLine>(globals::nlines);
+  auto nonconstlinelist = MPI_shared_malloc_span<TransitionLine>(globals::nlines);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_linelist) == globals::nlines);
-    std::ranges::copy(temp_linelist, nonconstlinelist);
+    std::ranges::copy(temp_linelist, nonconstlinelist.begin());
   }
   temp_linelist.clear();
   temp_linelist.shrink_to_fit();
 
   MPI_Barrier(MPI_COMM_WORLD);
-  globals::linelist = nonconstlinelist;
-  nonconstlinelist = nullptr;
+  globals::linelist = nonconstlinelist.data();
   printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
            globals::nlines * sizeof(TransitionLine) / 1024. / 1024);
 
