@@ -329,7 +329,8 @@ constexpr auto downtranslevelstart(const int level) {
 }
 
 void read_ion_levels(std::fstream &adata, const int element, const int ion, const int nions, const int nlevels,
-                     int nlevelsmax, const double energyoffset, const double ionpot) {
+                     int nlevelsmax, const double energyoffset, const double ionpot,
+                     std::vector<EnergyLevel> &temp_alllevels) {
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in = 0;
     double levelenergy{NAN};
@@ -343,7 +344,8 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
     if (level < nlevelsmax) {
       assert_always(statweight > 0.);
       const double currentlevelenergy = (energyoffset + levelenergy) * EV;
-      globals::alllevels.push_back({
+      assert_always(std::ssize(temp_alllevels) == globals::elements[element].ions[ion].uniquelevelindexstart + level);
+      temp_alllevels.push_back({
           .epsilon = currentlevelenergy,
           .ndowntrans = 0,
           .nuptrans = 0,
@@ -1062,7 +1064,7 @@ void read_atomicdata_files() {
 
       assert_always(std::ssize(globals::alllevels) == uniquelevelindex);
 
-      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot);
+      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, globals::alllevels);
 
       int tottransitions = tottransitions_in_file;
 
