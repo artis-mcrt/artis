@@ -265,7 +265,7 @@ inline std::span<EnergyLevel> alllevels;
 inline std::vector<Element> elements;
 
 inline int nlines{-1};
-inline const TransitionLine *linelist{};
+inline std::span<const TransitionLine> linelist{};
 inline std::vector<BFListEntry> bflist;
 
 inline std::vector<double> bfestim_nu_edge;

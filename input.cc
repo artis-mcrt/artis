@@ -1199,7 +1199,7 @@ void read_atomicdata_files() {
   temp_linelist.shrink_to_fit();
 
   MPI_Barrier(MPI_COMM_WORLD);
-  globals::linelist = nonconstlinelist.data();
+  globals::linelist = nonconstlinelist;
   printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
            globals::nlines * sizeof(TransitionLine) / 1024. / 1024);
 
