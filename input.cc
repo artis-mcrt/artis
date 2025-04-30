@@ -1163,7 +1163,6 @@ void read_atomicdata_files() {
     }
   }
 
-  // globals::alllevels = temp_alllevels;
   // create a shared level list and copy data across, freeing the local copy
   globals::alllevels = MPI_shared_malloc_span<EnergyLevel>(temp_alllevels.size());
   if (globals::rank_in_node == 0) {
@@ -1173,19 +1172,18 @@ void read_atomicdata_files() {
   temp_alllevels.clear();
   temp_alllevels.shrink_to_fit();
 
-  {
-    // create a shared all transitions list and then copy data across, freeing the local copy
-    const auto totupdowntrans = totaluptrans + totaldowntrans;
-    assert_always(std::cmp_equal(totupdowntrans, temp_alltranslist_size));
-    MPI_Barrier(MPI_COMM_WORLD);
+  const auto totupdowntrans = totaluptrans + totaldowntrans;
+  assert_always(std::cmp_equal(totupdowntrans, temp_alltranslist_size));
 
-    globals::alltrans = MPI_shared_malloc_span<LevelTransition>(totupdowntrans);
-    if (globals::rank_in_node == 0) {
-      std::copy_n(temp_alltranslist.data(), totupdowntrans, globals::alltrans.data());
-    }
-    temp_alltranslist.clear();
-    temp_alltranslist.shrink_to_fit();
+  // create a shared all transitions list and then copy data across, freeing the local copy
+  MPI_Barrier(globals::mpi_comm_node);
+
+  globals::alltrans = MPI_shared_malloc_span<LevelTransition>(totupdowntrans);
+  if (globals::rank_in_node == 0) {
+    std::copy_n(temp_alltranslist.data(), totupdowntrans, globals::alltrans.data());
   }
+  temp_alltranslist.clear();
+  temp_alltranslist.shrink_to_fit();
 
   // create a linelist shared on node and then copy data across, freeing the local copy
   TransitionLine *nonconstlinelist{};
