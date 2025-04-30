@@ -85,12 +85,13 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
                            std::vector<float> &tmpallphixs, size_t *mem_usage_phixs, const int phixs_file_version) {
   std::string phixsline;
-  auto *lowerion_levels = get_ion_levels(element, lowerion);
-  lowerion_levels[lowerlevel].phixstargetstart = static_cast<int>(globals::allphixstargets.size());
+  assert_always(get_ion_levels(element, lowerion)[lowerlevel].phixstargetstart == -1);
+  get_ion_levels(element, lowerion)[lowerlevel].phixstargetstart = static_cast<int>(globals::allphixstargets.size());
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - groundstate_index_in;
     assert_always(upperlevel >= 0);
-    lowerion_levels[lowerlevel].nphixstargets = 1;
+    assert_always(get_ion_levels(element, lowerion)[lowerlevel].nphixstargets == 0);
+    get_ion_levels(element, lowerion)[lowerlevel].nphixstargets = 1;
     *mem_usage_phixs += sizeof(PhotoionTarget);
 
     if (single_level_top_ion && (upperion == get_nions(element) - 1)) {
@@ -107,7 +108,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     // read in a table of target states and probabilities and store them
     if (!single_level_top_ion || upperion < get_nions(element) - 1)  // in case the top ion has nlevelsmax = 1
     {
-      lowerion_levels[lowerlevel].nphixstargets = in_nphixstargets;
+      get_ion_levels(element, lowerion)[lowerlevel].nphixstargets = in_nphixstargets;
       *mem_usage_phixs += in_nphixstargets * sizeof(PhotoionTarget);
 
       double probability_sum = 0.;
@@ -127,7 +128,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
                  get_atomicnumber(element), get_ionstage(element, lowerion), probability_sum);
       }
     } else {  // file has table of target states and probabilities but our top ion is limited to one level
-      lowerion_levels[lowerlevel].nphixstargets = 1;
+      get_ion_levels(element, lowerion)[lowerlevel].nphixstargets = 1;
       *mem_usage_phixs += sizeof(PhotoionTarget);
 
       for (int i = 0; i < in_nphixstargets; i++) {
@@ -328,8 +329,7 @@ constexpr auto downtranslevelstart(const int level) {
 }
 
 void read_ion_levels(std::fstream &adata, const int element, const int ion, const int nions, const int nlevels,
-                     int nlevelsmax, const double energyoffset, const double ionpot,
-                     std::vector<EnergyLevel> &temp_alllevels) {
+                     int nlevelsmax, const double energyoffset, const double ionpot) {
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in = 0;
     double levelenergy{NAN};
@@ -343,10 +343,8 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
     if (level < nlevelsmax) {
       assert_always(statweight > 0.);
       const double currentlevelenergy = (energyoffset + levelenergy) * EV;
-      temp_alllevels.push_back({
+      globals::alllevels.push_back({
           .epsilon = currentlevelenergy,
-          .ndowntrans = 0,
-          .nuptrans = 0,
           .phixsstart = -1,
           .nphixstargets = 0,
           .stat_weight = statweight,
@@ -360,6 +358,9 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
       if (levelenergy < ionpot && ion < nions - 1) {
         globals::elements[element].ions[ion].nlevels_ionising++;
       }
+
+      set_ndowntrans(element, ion, level, 0);
+      set_nuptrans(element, ion, level, 0);
     } else {
       // get_ion_levels(element, ion)[nlevelsmax - 1].stat_weight += statweight;
     }
@@ -457,8 +458,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
                                           std::vector<int> &iondowntranstmplineindicies, int &lineindex,
                                           std::vector<TransitionLine> &temp_linelist,
                                           std::vector<LevelTransition> &temp_alltranslist,
-                                          size_t &temp_alltranslist_size, std::vector<EnergyLevel> &temp_alllevels) {
-  auto *ion_levels = temp_alllevels.data() + globals::elements[element].ions[ion].uniquelevelindexstart;
+                                          size_t &temp_alltranslist_size) {
   const int lineindex_initial = lineindex;
   ptrdiff_t totupdowntrans = 0;
   // pass 0 to get transition counts of each level
@@ -474,12 +474,12 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         temp_linelist.reserve(temp_alltranslist_size);
       }
       for (int level = 0; level < nlevelsmax; level++) {
-        ion_levels[level].alltrans_startdown = alltransindex;
-        alltransindex += ion_levels[level].ndowntrans;
-        alltransindex += ion_levels[level].nuptrans;
+        get_ion_levels(element, ion)[level].alltrans_startdown = alltransindex;
+        alltransindex += get_ndowntrans(element, ion, level);
+        alltransindex += get_nuptrans(element, ion, level);
 
-        ion_levels[level].ndowntrans = 0;
-        ion_levels[level].nuptrans = 0;
+        set_ndowntrans(element, ion, level, 0);
+        set_nuptrans(element, ion, level, 0);
       }
     }
 
@@ -497,7 +497,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
       if ((lowerlevel >= nlevelsmax) || (level >= nlevelsmax)) {
         continue;
       }
-      const double nu_trans = (ion_levels[level].epsilon - ion_levels[lowerlevel].epsilon) / H;
+      const double nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, lowerlevel)) / H;
       if (!(nu_trans > 0)) {
         continue;
       }
@@ -510,16 +510,16 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
       if (downtranslineindex < 0) {
         downtranslineindex = lineindex++;
 
-        const int nupperdowntrans = ion_levels[level].ndowntrans + 1;
-        ion_levels[level].ndowntrans = nupperdowntrans;
+        const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
+        set_ndowntrans(element, ion, level, nupperdowntrans);
 
-        const int nloweruptrans = ion_levels[lowerlevel].nuptrans + 1;
-        ion_levels[lowerlevel].nuptrans = nloweruptrans;
+        const int nloweruptrans = get_nuptrans(element, ion, lowerlevel) + 1;
+        set_nuptrans(element, ion, lowerlevel, nloweruptrans);
 
         totupdowntrans += 2;
 
         if (pass == 1 && globals::rank_in_node == 0) {
-          const auto g_ratio = ion_levels[level].stat_weight / ion_levels[lowerlevel].stat_weight;
+          const auto g_ratio = stat_weight(element, ion, level) / stat_weight(element, ion, lowerlevel);
           const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A;
           assert_always(std::isfinite(f_ul));
 
@@ -535,14 +535,15 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
           // the line list has not been sorted yet, so the store the level index for now and
           // the index into the sorted line list will be set later
 
-          temp_alltranslist[ion_levels[level].alltrans_startdown + nupperdowntrans - 1] = {
+          temp_alltranslist[get_ion_levels(element, ion)[level].alltrans_startdown + nupperdowntrans - 1] = {
               .lineindex = -1,
               .targetlevelindex = lowerlevel,
               .einstein_A = transition.A,
               .coll_str = transition.coll_str,
               .osc_strength = f_ul,
               .forbidden = transition.forbidden};
-          const auto lowerstartup = ion_levels[lowerlevel].alltrans_startup();
+          const auto lowerstartup =
+              get_ion_levels(element, ion)[lowerlevel].alltrans_startdown + get_ndowntrans(element, ion, lowerlevel);
           temp_alltranslist[lowerstartup + nloweruptrans - 1] = {.lineindex = -1,
                                                                  .targetlevelindex = level,
                                                                  .einstein_A = transition.A,
@@ -572,11 +573,12 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
           std::abort();
         }
 
-        const auto g_ratio = ion_levels[level].stat_weight / ion_levels[lowerlevel].stat_weight;
+        const auto g_ratio = stat_weight(element, ion, level) / stat_weight(element, ion, lowerlevel);
         const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A;
 
-        const int nupperdowntrans = ion_levels[level].ndowntrans;
-        auto &downtransition = temp_alltranslist[ion_levels[level].alltrans_startdown + nupperdowntrans - 1];
+        const int nupperdowntrans = get_ndowntrans(element, ion, level);
+        auto &downtransition =
+            temp_alltranslist[get_ion_levels(element, ion)[level].alltrans_startdown + nupperdowntrans - 1];
 
         assert_always(downtransition.targetlevelindex == lowerlevel);
 
@@ -584,8 +586,9 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         downtransition.osc_strength += f_ul;
         downtransition.coll_str = std::max(downtransition.coll_str, transition.coll_str);
 
-        const int nloweruptrans = ion_levels[lowerlevel].nuptrans;
-        const auto lowerstartup = ion_levels[lowerlevel].alltrans_startup();
+        const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
+        const auto lowerstartup =
+            get_ion_levels(element, ion)[lowerlevel].alltrans_startdown + get_ndowntrans(element, ion, lowerlevel);
         auto &uptransition = temp_alltranslist[lowerstartup + nloweruptrans - 1];
 
         // as above, the downtrans list should be searched to find the correct index instead of using the last one.
@@ -922,8 +925,6 @@ void read_atomicdata_files() {
   std::vector<LevelTransition> temp_alltranslist;
   size_t temp_alltranslist_size = 0;  // keep size separate because the vector is only resized on rank_in_node == 0
 
-  std::vector<EnergyLevel> temp_alllevels;
-
   std::vector<Transition> iontransitiontable;
   std::vector<int> iondowntranstmplineindicies;
 
@@ -1066,9 +1067,9 @@ void read_atomicdata_files() {
           .ionpot = ionpot * EV,
       };
 
-      assert_always(std::ssize(temp_alllevels) == uniquelevelindex);
+      assert_always(std::ssize(globals::alllevels) == uniquelevelindex);
 
-      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, temp_alllevels);
+      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot);
 
       int tottransitions = tottransitions_in_file;
 
@@ -1096,14 +1097,12 @@ void read_atomicdata_files() {
       iondowntranstmplineindicies.resize(downtranslevelstart(nlevelsmax));
 
       add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, iontransitiontable, iondowntranstmplineindicies,
-                                           lineindex, temp_linelist, temp_alltranslist, temp_alltranslist_size,
-                                           temp_alllevels);
+                                           lineindex, temp_linelist, temp_alltranslist, temp_alltranslist_size);
 
       for (int level = 0; level < nlevelsmax; level++) {
         uniquelevelindex++;
-        auto &leveldata = temp_alllevels[globals::elements[element].ions[ion].uniquelevelindexstart + level];
-        totaldowntrans += leveldata.ndowntrans;
-        totaluptrans += leveldata.nuptrans;
+        totaldowntrans += get_ndowntrans(element, ion, level);
+        totaluptrans += get_nuptrans(element, ion, level);
       }
 
       if (ion < nions - 1) {
@@ -1165,36 +1164,29 @@ void read_atomicdata_files() {
     }
   }
 
-  // create a shared all transitions list and then copy data across, freeing the local copy
-  const auto totupdowntrans = totaluptrans + totaldowntrans;
-  assert_always(std::cmp_equal(totupdowntrans, temp_alltranslist_size));
-  MPI_Barrier(MPI_COMM_WORLD);
+  {
+    // create a shared all transitions list and then copy data across, freeing the local copy
+    const auto totupdowntrans = totaluptrans + totaldowntrans;
+    assert_always(std::cmp_equal(totupdowntrans, temp_alltranslist_size));
+    MPI_Barrier(MPI_COMM_WORLD);
 
-  globals::alltrans = MPI_shared_malloc_span<LevelTransition>(totupdowntrans);
-  if (globals::rank_in_node == 0) {
-    std::copy_n(temp_alltranslist.data(), totupdowntrans, globals::alltrans.data());
+    globals::alltrans = MPI_shared_malloc_span<LevelTransition>(totupdowntrans);
+    if (globals::rank_in_node == 0) {
+      std::copy_n(temp_alltranslist.data(), totupdowntrans, globals::alltrans.data());
+    }
+    temp_alltranslist.clear();
+    temp_alltranslist.shrink_to_fit();
   }
-  temp_alltranslist.clear();
-  temp_alltranslist.shrink_to_fit();
 
   // create a linelist shared on node and then copy data across, freeing the local copy
   TransitionLine *nonconstlinelist{};
   nonconstlinelist = MPI_shared_malloc<TransitionLine>(globals::nlines);
+
   if (globals::rank_in_node == 0) {
     std::copy_n(temp_linelist.data(), globals::nlines, nonconstlinelist);
   }
   temp_linelist.clear();
   temp_alltranslist.shrink_to_fit();
-
-  // create a shared level list and copy data across, freeing the local copy
-  globals::alllevels = MPI_shared_malloc_span<EnergyLevel>(uniquelevelindex);
-  if (globals::rank_in_node == 0) {
-    assert_always(std::cmp_equal(temp_alllevels.size(), globals::alllevels.size()));
-    std::ranges::copy(temp_alllevels, globals::alllevels.begin());
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-  temp_alllevels.clear();
-  temp_alllevels.shrink_to_fit();
 
   MPI_Barrier(MPI_COMM_WORLD);
   globals::linelist = nonconstlinelist;
