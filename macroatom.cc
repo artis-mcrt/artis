@@ -173,7 +173,8 @@ auto do_macroatom_internal_down_same(const int element, const int ion, const int
 
 // radiative deexcitation
 void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion, const int level,
-                                  const int activatingline, const CellCacheLevels &chlevel) {
+                                  const double epsilon_current, const int activatingline,
+                                  const CellCacheLevels &chlevel) {
   // randomly select which line transitions occurs
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
@@ -196,7 +197,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
     atomicadd(globals::ecounter[downtrans.lineindex], 1);
   }
 
-  const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, downtrans.targetlevelindex);
+  const double epsilon_trans = epsilon_current - epsilon(element, ion, downtrans.targetlevelindex);
 
   const double oldnucmf = pkt.nu_cmf;
   pkt.nu_cmf = epsilon_trans / H;
@@ -397,8 +398,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
         // printout("[debug] do_ma:   radiative deexcitation\n");
-
-        do_macroatom_raddeexcitation(pkt, element, ion, level, activatingline, chlevel);
+        do_macroatom_raddeexcitation(pkt, element, ion, level, epsilon_current, activatingline, chlevel);
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC, pkt.e_cmf);
@@ -530,7 +530,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           printout("internal downward transition to ground level occurred ... abort\n");
           printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
           printout("Z %d, ionstage %d, energy %g\n", get_atomicnumber(element), get_ionstage(element, ion - 1),
-                   globals::elements[element].ions[ion - 1].levels[lower].epsilon);
+                   get_ion_levels(element, ion - 1)[lower].epsilon);
           printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
           std::abort();
         }

@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <ctime>
+#include <functional>
 #include <limits>
 #include <span>
 #include <tuple>
@@ -78,8 +79,8 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
                MacroAtomState &mastate,
                const double tau_rnd,     // random optical depth until which the packet travels
                const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
-               const double nu_cmf_abort, const double d_nu_on_d_l, const double doppler, const auto *const linelist,
-               const int nlines) -> std::tuple<double, int, bool> {
+               const double nu_cmf_abort, const double d_nu_on_d_l, const double doppler,
+               const std::span<const TransitionLine> linelist) -> std::tuple<double, int, bool> {
   auto pos = pkt.pos;
   auto nu_cmf = pkt.nu_cmf;
   auto e_cmf = pkt.e_cmf;
@@ -96,7 +97,7 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
     // create therefore new variables in packet, which contain next_lowerlevel, ...
 
     // returns negative value if nu_cmf > nu_trans
-    if (const int lineindex = closest_transition(nu_cmf, next_trans, nlines, linelist); lineindex >= 0) [[likely]] {
+    if (const int lineindex = closest_transition(nu_cmf, next_trans, linelist); lineindex >= 0) [[likely]] {
       // line interaction is possible (nu_cmf > nu_trans)
       const auto &line = globals::linelist[lineindex];
 
@@ -188,7 +189,7 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
       }
       // continuum process occurs at edist
 
-      return {dist + ((tau_rnd - tau) / chi_cont), nlines + 1, false};
+      return {dist + ((tau_rnd - tau) / chi_cont), globals::nlines + 1, false};
     }
   }
 
@@ -254,7 +255,7 @@ auto get_event_expansion_opacity(
         bool event_is_boundbound = false;
         std::tie(edist_after_bin, next_trans, event_is_boundbound) =
             get_event(nonemptymgi, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
-                      std::numeric_limits<double>::max(), 0., d_nu_on_d_l, doppler, globals::linelist, globals::nlines);
+                      std::numeric_limits<double>::max(), 0., d_nu_on_d_l, doppler, globals::linelist);
         // assert_always(edist_after_bin <= 1.1 * binedgedist);
         dist = dist + edist_after_bin;
 
@@ -668,7 +669,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     } else {
       std::tie(edist, pkt.next_trans, event_is_boundbound) =
           get_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l,
-                    doppler, globals::linelist, globals::nlines);
+                    doppler, globals::linelist);
     }
   }
   assert_always(edist >= 0);
@@ -1058,10 +1059,9 @@ void calculate_expansion_opacities(const int nonemptymgi) {
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
   // find the first line with nu below the upper limit of the first bin
-  int lineindex = static_cast<int>(
-      std::lower_bound(globals::linelist, globals::linelist + globals::nlines, get_expopac_bin_nu_upper(0),
-                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; }) -
-      globals::linelist);
+  int lineindex = static_cast<int>(std::ranges::lower_bound(globals::linelist, get_expopac_bin_nu_upper(0),
+                                                            std::ranges::greater{}, &TransitionLine::nu) -
+                                   globals::linelist.begin());
 
   double kappa_planck_cumulative = 0.;
 

@@ -1,9 +1,12 @@
 #ifndef RPKT_H
 #define RPKT_H
 
+#include <algorithm>
 #include <cstddef>
 #include <ctime>
+#include <functional>
 #include <memory>
+#include <span>
 #include <vector>
 
 #include "artisoptions.h"
@@ -73,12 +76,12 @@ void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);
   return CLIGHT * prop_time * (nu_cmf / nu_trans - 1);
 }
 
-constexpr auto closest_transition(const double nu_cmf, const int next_trans, const int nlines,
-                                  const auto *const linelist) -> int
-// for the propagation through non empty cells
 // find the next transition lineindex redder than nu_cmf
+// for the propagation through non empty cells
 // return -1 if no transition can be reached
-{
+constexpr auto closest_transition(const double nu_cmf, const int next_trans,
+                                  const std::span<const TransitionLine> linelist) -> int {
+  const int nlines = static_cast<int>(linelist.size());
   if (next_trans > (nlines - 1)) {
     // packet is tagged as having no more line interactions
     return -1;
@@ -106,9 +109,7 @@ constexpr auto closest_transition(const double nu_cmf, const int next_trans, con
   // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
   // lower_bound matches the first element where the comparison function is false
   const int matchindex = static_cast<int>(
-      std::lower_bound(linelist, linelist + nlines, nu_cmf,
-                       [](const auto &line, const double find_nu_cmf) -> bool { return line.nu > find_nu_cmf; }) -
-      linelist);
+      std::ranges::lower_bound(linelist, nu_cmf, std::ranges::greater{}, &TransitionLine::nu) - linelist.begin());
 
   if (matchindex >= nlines) [[unlikely]] {
     return -1;

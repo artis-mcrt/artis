@@ -87,7 +87,7 @@ struct EnergyLevel {
   int phixsstart{-1};        // index to start of photoionisation cross-sections table in global::allphixs
   int nphixstargets{0};      // number of target levels for photoionisation
   float stat_weight{0.};     // statistical weight of this level
-  int phixstargetstart{};    // index into globals::allphixstargets
+  int phixstargetstart{-1};  // index into globals::allphixstargets
   int cont_index{-1};        // index of the bound-free continuum (for first target) sorted by
                              // element/ion/level/phixstargetindex
                              // (not an index into the nu_edge-sorted allcont list!)
@@ -100,18 +100,17 @@ struct EnergyLevel {
 };
 
 struct Ion {
-  EnergyLevel *levels{};      // Carries information for each level: 0,1,...,nlevels-1
-  int ionstage{};             // Which ionisation stage: XI=0, XII=1, XIII=2, ...
-  int nlevels{};              // Number of levels for this ionisation stage
-  int nlevels_nlte{};         // number of nlte levels for this ion
-  int first_nlte{-1};         // index into nlte_pops array of a grid cell
-  int ionisinglevels{};       // Number of levels which have a bf-continuum
-  int maxrecombininglevel{};  // level index of the highest level with a non-zero recombination rate
-  int nlevels_groundterm{};
-  int coolingoffset{};
-  int ncoolingterms{};
-  int uniquelevelindexstart{};
-  int groundcontindex{};
+  int ionstage{-1};             // Which ionisation stage: XI=0, XII=1, XIII=2, ...
+  int nlevels{0};               // Number of levels for this ionisation stage
+  int nlevels_nlte{0};          // number of nlte levels for this ion
+  int first_nlte{-1};           // index into nlte_pops array of a grid cell
+  int nlevels_ionising{0};      // Number of levels which have a bf-continuum
+  int maxrecombininglevel{-1};  // level index of the highest level with a non-zero recombination rate
+  int nlevels_groundterm{0};
+  int coolingoffset{-1};
+  int ncoolingterms{0};
+  int uniquelevelindexstart{-1};  // index of the first level in the alllevels list
+  int groundcontindex{-1};
   double ionpot{NAN};  // Ionisation threshold to the next ionstage
 };
 
@@ -261,11 +260,12 @@ inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperatur
 inline std::span<float> allphixs{};
 inline std::span<LevelTransition> alltrans{};
 inline std::vector<PhotoionTarget> allphixstargets;
+inline std::span<EnergyLevel> alllevels;
 
 inline std::vector<Element> elements;
 
 inline int nlines{-1};
-inline const TransitionLine *linelist{};
+inline std::span<const TransitionLine> linelist{};
 inline std::vector<BFListEntry> bflist;
 
 inline std::vector<double> bfestim_nu_edge;
