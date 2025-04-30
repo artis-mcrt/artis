@@ -1195,7 +1195,7 @@ void read_atomicdata_files() {
     std::copy_n(temp_linelist.data(), globals::nlines, nonconstlinelist);
   }
   temp_linelist.clear();
-  temp_alltranslist.shrink_to_fit();
+  temp_linelist.shrink_to_fit();
 
   MPI_Barrier(MPI_COMM_WORLD);
   globals::linelist = nonconstlinelist;
