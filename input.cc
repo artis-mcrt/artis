@@ -86,7 +86,6 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
                            std::vector<float> &tmpallphixs, size_t *mem_usage_phixs, const int phixs_file_version) {
   std::string phixsline;
   auto *lowerion_levels = get_ion_levels(element, lowerion);
-  assert_always(lowerion_levels[lowerlevel].phixstargetstart == -1);
   lowerion_levels[lowerlevel].phixstargetstart = static_cast<int>(globals::allphixstargets.size());
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - groundstate_index_in;
