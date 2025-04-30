@@ -107,10 +107,8 @@ constexpr auto closest_transition(const double nu_cmf, const int next_trans,
 
   // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
   // lower_bound matches the first element where the comparison function is false
-  const int matchindex = static_cast<int>(
-      std::lower_bound(linelist.begin(), linelist.end(), nu_cmf,
-                       [](const auto &line, const double find_nu_cmf) -> bool { return line.nu > find_nu_cmf; }) -
-      linelist.begin());
+  const int matchindex =
+      static_cast<int>(std::ranges::lower_bound(linelist, nu_cmf, {}, &TransitionLine::nu) - linelist.begin());
 
   if (matchindex >= nlines) [[unlikely]] {
     return -1;
