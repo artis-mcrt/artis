@@ -1059,9 +1059,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
 
   // find the first line with nu below the upper limit of the first bin
   int lineindex = static_cast<int>(
-      std::lower_bound(globals::linelist.begin(), globals::linelist.begin() + globals::nlines,
-                       get_expopac_bin_nu_upper(0),
-                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; }) -
+      std::ranges::lower_bound(globals::linelist, get_expopac_bin_nu_upper(0), {}, &TransitionLine::nu) -
       globals::linelist.begin());
 
   double kappa_planck_cumulative = 0.;
