@@ -332,7 +332,7 @@ constexpr auto downtranslevelstart(const int level) {
 
 void read_ion_levels(std::fstream &adata, const int element, const int ion, const int nions, const int nlevels,
                      int nlevelsmax, const double energyoffset, const double ionpot,
-                     std::vector<EnergyLevel> &temp_alllevels) {
+                     std::vector<EnergyLevel> &temp_alllevels) {  // cppcheck-suppress constParameterReference
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in = 0;
     double levelenergy{NAN};
