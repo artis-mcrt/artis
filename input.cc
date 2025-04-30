@@ -1091,11 +1091,11 @@ void read_atomicdata_files() {
       // last level index is (nlevelsmax - 1), so this is the correct size
       iondowntranstmplineindicies.resize(downtranslevelstart(nlevelsmax));
 
+      auto *ion_levels = get_ion_levels(element, ion);
       add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, iontransitiontable, iondowntranstmplineindicies,
                                            lineindex, temp_linelist, temp_alltranslist, temp_alltranslist_size,
-                                           get_ion_levels(element, ion));
+                                           ion_levels);
 
-      auto *ion_levels = get_ion_levels(element, ion);
       for (int level = 0; level < nlevelsmax; level++) {
         uniquelevelindex++;
         totaldowntrans += ion_levels[level].ndowntrans;
