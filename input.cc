@@ -1182,7 +1182,7 @@ void read_atomicdata_files() {
   nonconstlinelist = MPI_shared_malloc<TransitionLine>(globals::nlines);
 
   if (globals::rank_in_node == 0) {
-    memcpy(static_cast<void *>(nonconstlinelist), temp_linelist.data(), globals::nlines * sizeof(TransitionLine));
+    std::copy_n(temp_linelist.data(), globals::nlines, nonconstlinelist);
   }
   temp_linelist.clear();
   temp_alltranslist.shrink_to_fit();
