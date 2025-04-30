@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <ctime>
+#include <functional>
 #include <limits>
 #include <span>
 #include <tuple>
@@ -1058,9 +1059,9 @@ void calculate_expansion_opacities(const int nonemptymgi) {
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
   // find the first line with nu below the upper limit of the first bin
-  int lineindex = static_cast<int>(
-      std::ranges::lower_bound(globals::linelist, get_expopac_bin_nu_upper(0), {}, &TransitionLine::nu) -
-      globals::linelist.begin());
+  int lineindex = static_cast<int>(std::ranges::lower_bound(globals::linelist, get_expopac_bin_nu_upper(0),
+                                                            std::ranges::greater{}, &TransitionLine::nu) -
+                                   globals::linelist.begin());
 
   double kappa_planck_cumulative = 0.;
 
