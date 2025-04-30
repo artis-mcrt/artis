@@ -203,8 +203,10 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
           // recalculate the Gammas using the current level populations
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions - 1; ion++) {
-            globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] =
-                calculate_iongamma_per_gspop(nonemptymgi, element, ion);
+            if (globals::elements[element].ions[ion].groundcontindex >= 0) {
+              globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] =
+                  calculate_iongamma_per_gspop(nonemptymgi, element, ion);
+            }
           }
         }
       }
