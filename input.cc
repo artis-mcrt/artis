@@ -920,6 +920,8 @@ void read_atomicdata_files() {
   std::vector<LevelTransition> temp_alltranslist;
   size_t temp_alltranslist_size = 0;  // keep size separate because the vector is only resized on rank_in_node == 0
 
+  std::vector<EnergyLevel> temp_alllevels;
+
   std::vector<Transition> iontransitiontable;
   std::vector<int> iondowntranstmplineindicies;
 
@@ -1062,9 +1064,10 @@ void read_atomicdata_files() {
           .ionpot = ionpot * EV,
       };
 
-      assert_always(std::ssize(globals::alllevels) == uniquelevelindex);
+      assert_always(std::ssize(temp_alllevels) == uniquelevelindex);
 
-      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, globals::alllevels);
+      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, temp_alllevels);
+      auto *ion_levels = temp_alllevels.data() + globals::elements[element].ions[ion].uniquelevelindexstart;
 
       int tottransitions = tottransitions_in_file;
 
@@ -1091,7 +1094,6 @@ void read_atomicdata_files() {
       // last level index is (nlevelsmax - 1), so this is the correct size
       iondowntranstmplineindicies.resize(downtranslevelstart(nlevelsmax));
 
-      auto *ion_levels = get_ion_levels(element, ion);
       add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, iontransitiontable, iondowntranstmplineindicies,
                                            lineindex, temp_linelist, temp_alltranslist, temp_alltranslist_size,
                                            ion_levels);
@@ -1160,6 +1162,8 @@ void read_atomicdata_files() {
       }
     }
   }
+
+  globals::alllevels = temp_alllevels;
 
   {
     // create a shared all transitions list and then copy data across, freeing the local copy
