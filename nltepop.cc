@@ -354,10 +354,11 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
   return superlevel_partfuncs;
 }
 
-[[nodiscard]] auto get_element_nlte_dimension(const int element) -> int {
+[[nodiscard]] auto get_element_nlte_dimension(const int element, const int nions_used, const int first_ion_used)
+    -> int {
   int nlte_dimension = 0;
-  const int nions = get_nions(element);
-  for (int ion = 0; ion < nions; ion++) {
+  // const int nions = get_nions(element);
+  for (int ion = first_ion_used; ion < nions_used + first_ion_used; ion++) {
     const int nlevels_nlte = get_nlevels_nlte(element, ion);
 
     nlte_dimension += nlevels_nlte + 1;  // ground state is not counted in nlevels_nlte
@@ -372,10 +373,10 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
 }
 
 // get the maximum NLTE dimension for any of the included elements
-[[nodiscard]] auto get_max_nlte_dimension() {
+[[nodiscard]] auto get_max_nlte_dimension(const int nions_used, const int first_ion_used) -> int {
   int max_nlte_dimension = 0;
   for (int element = 0; element < get_nelements(); element++) {
-    max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element));
+    max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element, nions_used, first_ion_used));
   }
   return max_nlte_dimension;
 }
@@ -867,11 +868,15 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
       modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_abundance(nonemptymgi, element), nnelement);
 
   const auto superlevel_partfunc = get_element_superlevelpartfuncs(nonemptymgi, element);
-  const int nlte_dimension = get_element_nlte_dimension(element);
+  const int nions_used = nions;
+  const int first_ion_used = 0;
+  // const bool matrix_solve_satisfied_with_ion_list = false;
+  // const bool matrix_solve_success = false;
+  const int nlte_dimension = get_element_nlte_dimension(element, nions_used, first_ion_used);
 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
-  const auto max_nlte_dimension = get_max_nlte_dimension();
+  const auto max_nlte_dimension = get_max_nlte_dimension(nions_used, first_ion_used);
   assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
 
   THREADLOCALONHOST std::vector<double> vec_rate_matrix;
