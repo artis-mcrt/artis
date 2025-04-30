@@ -1182,7 +1182,8 @@ void read_atomicdata_files() {
 
   globals::alltrans = MPI_shared_malloc_span<LevelTransition>(totupdowntrans);
   if (globals::rank_in_node == 0) {
-    std::copy_n(temp_alltranslist.data(), totupdowntrans, globals::alltrans.data());
+    assert_always(std::ssize(temp_alltranslist) == totupdowntrans);
+    std::ranges::copy(temp_alltranslist, globals::alltrans.data());
   }
   temp_alltranslist.clear();
   temp_alltranslist.shrink_to_fit();
@@ -1192,7 +1193,8 @@ void read_atomicdata_files() {
   nonconstlinelist = MPI_shared_malloc<TransitionLine>(globals::nlines);
 
   if (globals::rank_in_node == 0) {
-    std::copy_n(temp_linelist.data(), globals::nlines, nonconstlinelist);
+    assert_always(std::ssize(temp_linelist) == globals::nlines);
+    std::ranges::copy(temp_linelist, nonconstlinelist);
   }
   temp_linelist.clear();
   temp_linelist.shrink_to_fit();
