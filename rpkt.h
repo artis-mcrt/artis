@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <ctime>
+#include <functional>
 #include <memory>
 #include <span>
 #include <vector>
@@ -107,12 +108,8 @@ constexpr auto closest_transition(const double nu_cmf, const int next_trans,
 
   // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
   // lower_bound matches the first element where the comparison function is false
-  const int matchindex =
-      static_cast<int>(std::ranges::lower_bound(
-                           linelist, nu_cmf,
-                           [](const double line_nu, const double find_nu_cmf) -> bool { return line_nu > find_nu_cmf; },
-                           &TransitionLine::nu) -
-                       linelist.begin());
+  const int matchindex = static_cast<int>(
+      std::ranges::lower_bound(linelist, nu_cmf, std::ranges::greater{}, &TransitionLine::nu) - linelist.begin());
 
   if (matchindex >= nlines) [[unlikely]] {
     return -1;
