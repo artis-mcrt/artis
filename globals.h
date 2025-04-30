@@ -260,7 +260,7 @@ inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperatur
 inline std::span<float> allphixs{};
 inline std::span<LevelTransition> alltrans{};
 inline std::vector<PhotoionTarget> allphixstargets;
-inline std::vector<EnergyLevel> alllevels;
+inline std::span<EnergyLevel> alllevels;
 
 inline std::vector<Element> elements;
 

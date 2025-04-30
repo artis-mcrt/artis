@@ -1163,7 +1163,15 @@ void read_atomicdata_files() {
     }
   }
 
-  globals::alllevels = temp_alllevels;
+  // globals::alllevels = temp_alllevels;
+  // create a shared level list and copy data across, freeing the local copy
+  globals::alllevels = MPI_shared_malloc_span<EnergyLevel>(temp_alllevels.size());
+  if (globals::rank_in_node == 0) {
+    std::ranges::copy(temp_alllevels, globals::alllevels.begin());
+  }
+  MPI_Barrier(globals::mpi_comm_node);
+  temp_alllevels.clear();
+  temp_alllevels.shrink_to_fit();
 
   {
     // create a shared all transitions list and then copy data across, freeing the local copy
