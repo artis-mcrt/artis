@@ -85,13 +85,14 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
                            std::vector<float> &tmpallphixs, size_t *mem_usage_phixs, const int phixs_file_version) {
   std::string phixsline;
-  assert_always(get_ion_levels(element, lowerion)[lowerlevel].phixstargetstart == -1);
-  get_ion_levels(element, lowerion)[lowerlevel].phixstargetstart = static_cast<int>(globals::allphixstargets.size());
+  auto *lowerion_levels = get_ion_levels(element, lowerion);
+  assert_always(lowerion_levels[lowerlevel].phixstargetstart == -1);
+  lowerion_levels[lowerlevel].phixstargetstart = static_cast<int>(globals::allphixstargets.size());
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - groundstate_index_in;
     assert_always(upperlevel >= 0);
-    assert_always(get_ion_levels(element, lowerion)[lowerlevel].nphixstargets == 0);
-    get_ion_levels(element, lowerion)[lowerlevel].nphixstargets = 1;
+    assert_always(lowerion_levels[lowerlevel].nphixstargets == 0);
+    lowerion_levels[lowerlevel].nphixstargets = 1;
     *mem_usage_phixs += sizeof(PhotoionTarget);
 
     if (single_level_top_ion && (upperion == get_nions(element) - 1)) {
@@ -108,7 +109,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     // read in a table of target states and probabilities and store them
     if (!single_level_top_ion || upperion < get_nions(element) - 1)  // in case the top ion has nlevelsmax = 1
     {
-      get_ion_levels(element, lowerion)[lowerlevel].nphixstargets = in_nphixstargets;
+      lowerion_levels[lowerlevel].nphixstargets = in_nphixstargets;
       *mem_usage_phixs += in_nphixstargets * sizeof(PhotoionTarget);
 
       double probability_sum = 0.;
@@ -128,7 +129,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
                  get_atomicnumber(element), get_ionstage(element, lowerion), probability_sum);
       }
     } else {  // file has table of target states and probabilities but our top ion is limited to one level
-      get_ion_levels(element, lowerion)[lowerlevel].nphixstargets = 1;
+      lowerion_levels[lowerlevel].nphixstargets = 1;
       *mem_usage_phixs += sizeof(PhotoionTarget);
 
       for (int i = 0; i < in_nphixstargets; i++) {
@@ -149,8 +150,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lowerlevel);
          phixstargetindex++) {
       const int upperlevel =
-          globals::allphixstargets[get_ion_levels(element, lowerion)[lowerlevel].phixstargetstart + phixstargetindex]
-              .levelindex;
+          globals::allphixstargets[lowerion_levels[lowerlevel].phixstargetstart + phixstargetindex].levelindex;
       if (upperlevel > get_maxrecombininglevel(element, lowerion + 1)) {
         globals::elements[element].ions[lowerion + 1].maxrecombininglevel = upperlevel;
       }
@@ -160,7 +160,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
   assert_always(tmpallphixs.size() % globals::NPHIXSPOINTS == 0);
   const auto tmpphixsstart = tmpallphixs.size();
-  get_ion_levels(element, lowerion)[lowerlevel].phixsstart = tmpphixsstart / globals::NPHIXSPOINTS;
+  lowerion_levels[lowerlevel].phixsstart = tmpphixsstart / globals::NPHIXSPOINTS;
   tmpallphixs.resize(tmpallphixs.size() + globals::NPHIXSPOINTS);
 
   auto *levelphixstable = &tmpallphixs[tmpphixsstart];
@@ -345,6 +345,8 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
       const double currentlevelenergy = (energyoffset + levelenergy) * EV;
       globals::alllevels.push_back({
           .epsilon = currentlevelenergy,
+          .ndowntrans = 0,
+          .nuptrans = 0,
           .phixsstart = -1,
           .nphixstargets = 0,
           .stat_weight = statweight,
@@ -358,11 +360,6 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
       if (levelenergy < ionpot && ion < nions - 1) {
         globals::elements[element].ions[ion].nlevels_ionising++;
       }
-
-      set_ndowntrans(element, ion, level, 0);
-      set_nuptrans(element, ion, level, 0);
-    } else {
-      // get_ion_levels(element, ion)[nlevelsmax - 1].stat_weight += statweight;
     }
   }
 }
@@ -459,6 +456,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
                                           std::vector<TransitionLine> &temp_linelist,
                                           std::vector<LevelTransition> &temp_alltranslist,
                                           size_t &temp_alltranslist_size) {
+  auto *ion_levels = get_ion_levels(element, ion);
   const int lineindex_initial = lineindex;
   ptrdiff_t totupdowntrans = 0;
   // pass 0 to get transition counts of each level
@@ -474,7 +472,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         temp_linelist.reserve(temp_alltranslist_size);
       }
       for (int level = 0; level < nlevelsmax; level++) {
-        get_ion_levels(element, ion)[level].alltrans_startdown = alltransindex;
+        ion_levels[level].alltrans_startdown = alltransindex;
         alltransindex += get_ndowntrans(element, ion, level);
         alltransindex += get_nuptrans(element, ion, level);
 
@@ -535,7 +533,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
           // the line list has not been sorted yet, so the store the level index for now and
           // the index into the sorted line list will be set later
 
-          temp_alltranslist[get_ion_levels(element, ion)[level].alltrans_startdown + nupperdowntrans - 1] = {
+          temp_alltranslist[ion_levels[level].alltrans_startdown + nupperdowntrans - 1] = {
               .lineindex = -1,
               .targetlevelindex = lowerlevel,
               .einstein_A = transition.A,
@@ -543,7 +541,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
               .osc_strength = f_ul,
               .forbidden = transition.forbidden};
           const auto lowerstartup =
-              get_ion_levels(element, ion)[lowerlevel].alltrans_startdown + get_ndowntrans(element, ion, lowerlevel);
+              ion_levels[lowerlevel].alltrans_startdown + get_ndowntrans(element, ion, lowerlevel);
           temp_alltranslist[lowerstartup + nloweruptrans - 1] = {.lineindex = -1,
                                                                  .targetlevelindex = level,
                                                                  .einstein_A = transition.A,
@@ -577,8 +575,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A;
 
         const int nupperdowntrans = get_ndowntrans(element, ion, level);
-        auto &downtransition =
-            temp_alltranslist[get_ion_levels(element, ion)[level].alltrans_startdown + nupperdowntrans - 1];
+        auto &downtransition = temp_alltranslist[ion_levels[level].alltrans_startdown + nupperdowntrans - 1];
 
         assert_always(downtransition.targetlevelindex == lowerlevel);
 
@@ -587,8 +584,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         downtransition.coll_str = std::max(downtransition.coll_str, transition.coll_str);
 
         const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
-        const auto lowerstartup =
-            get_ion_levels(element, ion)[lowerlevel].alltrans_startdown + get_ndowntrans(element, ion, lowerlevel);
+        const auto lowerstartup = ion_levels[lowerlevel].alltrans_startdown + get_ndowntrans(element, ion, lowerlevel);
         auto &uptransition = temp_alltranslist[lowerstartup + nloweruptrans - 1];
 
         // as above, the downtrans list should be searched to find the correct index instead of using the last one.
