@@ -385,8 +385,7 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
     // reduce the size of the rate matrices to match the actual nlte_dimensions for each element.
     nions_used = get_nions(element);
     first_ion_used = 0;
-    max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element, nions_used,
-      first_ion_used));
+    max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element, nions_used, first_ion_used));
   }
   return max_nlte_dimension;
 }
