@@ -116,7 +116,7 @@ template <size_t S1, size_t S2>
   if (USE_RELATIVISTIC_DOPPLER_SHIFT) {
     const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
     assert_testmodeonly(betasq >= 0.);  // v < c
-    assert_testmodeonly(betasq < 1.);   // v < c
+    assert_testmodeonly(betasq < 1.);  // v < c
     dopplerfactor = dopplerfactor / std::sqrt(1 - betasq);
   }
 

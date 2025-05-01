@@ -25,27 +25,27 @@ constexpr int EMTYPE_NOTSET{-9999000};
 constexpr int EMTYPE_FREEFREE{-9999999};
 
 struct MacroAtomState {
-  int element;         // macro atom of type element (this is an element index)
-  int ion;             // in ionstage ion (this is an ion index)
-  int level;           // and level=level (this is a level index)
+  int element;  // macro atom of type element (this is an element index)
+  int ion;  // in ionstage ion (this is an ion index)
+  int level;  // and level=level (this is a level index)
   int activatingline;  // Linelistindex of the activating line for bb activated MAs, -99 else.
 };
 
 struct Packet {
-  enum packet_type type {};         // type of packet (k-, r-, etc.)
-  double prop_time{-1.};            // internal clock to track how far in time the packet has been propagated
-  int where{-1};                    // The propagation grid cell that the packet is in.
-  int nscatterings{0};              // records number of electron scatterings a r-pkt undergone since it was emitted
-  Vec3d pos{};                      // Position of the packet (x,y,z).
-  Vec3d dir{};                      // Direction of propagation. (x,y,z). Always a unit vector.
-  double e_cmf{0.};                 // The energy the packet carries in the co-moving frame.
-  double e_rf{0.};                  // The energy the packet carries in the rest frame.
-  double nu_cmf{0.};                // The frequency in the co-moving frame.
-  double nu_rf{0.};                 // The frequency in the rest frame.
-  int next_trans{-1};               // This keeps track of the next possible line interaction of a rpkt by storing
-                                    // its linelist index (to overcome numerical problems in propagating the rpkts).
+  enum packet_type type {};  // type of packet (k-, r-, etc.)
+  double prop_time{-1.};  // internal clock to track how far in time the packet has been propagated
+  int where{-1};  // The propagation grid cell that the packet is in.
+  int nscatterings{0};  // records number of electron scatterings a r-pkt undergone since it was emitted
+  Vec3d pos{};  // Position of the packet (x,y,z).
+  Vec3d dir{};  // Direction of propagation. (x,y,z). Always a unit vector.
+  double e_cmf{0.};  // The energy the packet carries in the co-moving frame.
+  double e_rf{0.};  // The energy the packet carries in the rest frame.
+  double nu_cmf{0.};  // The frequency in the co-moving frame.
+  double nu_rf{0.};  // The frequency in the rest frame.
+  int next_trans{-1};  // This keeps track of the next possible line interaction of a rpkt by storing
+                       // its linelist index (to overcome numerical problems in propagating the rpkts).
   int emissiontype{EMTYPE_NOTSET};  // records how the packet was emitted if it is a r-pkt
-  Vec3d em_pos{NAN};                // Position of the last emission (x,y,z).
+  Vec3d em_pos{NAN};  // Position of the last emission (x,y,z).
   float em_time{-1.};
   int absorptiontype{0};  // records linelistindex of the last absorption
                           // negative values give ff-abs (-1), bf-abs (-2), compton scattering of gammas (-3),
@@ -53,17 +53,17 @@ struct Packet {
                           // decaying pellets of the 52Fe chain (-6) and pellets which decayed before the
                           // onset of the simulation (-7)
                           // decay of a positron pellet (-10)
-  int trueemissiontype = EMTYPE_NOTSET;          // emission type coming from a kpkt to rpkt (last thermal emission)
-  float trueem_time{-1.};                        // first thermal emission time [s]
-  double absorptionfreq{};                       // records nu_rf of packet at last absorption
-  Vec3d stokes{1., 0., 0.};                      // I, Q and U Stokes parameters
-  double tdecay{-1.};                            // Time at which pellet decays
-  enum packet_type escape_type {};               // In which form when escaped from the grid.
-  float escape_time{-1};                         // time at which is passes out of the grid [s]
-  int number{-1};                                // A unique number to identify the packet
+  int trueemissiontype = EMTYPE_NOTSET;  // emission type coming from a kpkt to rpkt (last thermal emission)
+  float trueem_time{-1.};  // first thermal emission time [s]
+  double absorptionfreq{};  // records nu_rf of packet at last absorption
+  Vec3d stokes{1., 0., 0.};  // I, Q and U Stokes parameters
+  double tdecay{-1.};  // Time at which pellet decays
+  enum packet_type escape_type {};  // In which form when escaped from the grid.
+  float escape_time{-1};  // time at which is passes out of the grid [s]
+  int number{-1};  // A unique number to identify the packet
   bool originated_from_particlenotgamma{false};  // first-non-pellet packet type was gamma
-  int pellet_decaytype{-1};                      // index into decay::decaytypes
-  int pellet_nucindex{-1};                       // nuclide index of the decaying species
+  int pellet_decaytype{-1};  // index into decay::decaytypes
+  int pellet_nucindex{-1};  // nuclide index of the decaying species
   float trueemissionvelocity{-1};
 
   auto operator<=>(const Packet &rhs) const = default;

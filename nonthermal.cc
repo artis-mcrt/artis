@@ -157,7 +157,7 @@ std::span<NonThermalExcitation> excitations_list_all_cells{};
 int nt_excitations_stored = 0;
 
 struct NonThermalSolutionIon {
-  float eff_ionpot{0.};               // these are used to calculate the non-thermal ionization rate
+  float eff_ionpot{0.};  // these are used to calculate the non-thermal ionization rate
   double fracdep_ionization_ion{0.};  // the fraction of the non-thermal deposition energy going to ionizing each ion
 
   // probability that one ionisation of this ion will produce n Auger electrons.
@@ -170,13 +170,13 @@ struct NonThermalSolutionIon {
 std::span<NonThermalSolutionIon> ion_data_all_cells{};
 
 struct NonThermalCellSolution {
-  float frac_heating = 1.;     // energy fractions should add up to 1.0 if the solution is good
+  float frac_heating = 1.;  // energy fractions should add up to 1.0 if the solution is good
   float frac_ionization = 0.;  // fraction of deposition energy going to ionization
   float frac_excitation = 0.;  // fraction of deposition energy going to excitation
 
   int frac_excitations_list_size = 0;
 
-  int timestep_last_solved = -1;     // the quantities above were calculated for this timestep
+  int timestep_last_solved = -1;  // the quantities above were calculated for this timestep
   float nneperion_when_solved{NAN};  // the nne when the solver was last run
 };
 
@@ -296,7 +296,7 @@ auto read_shell_configs() {
   assert_always(NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE);
   auto shells_file = fstream_required("electron_shell_occupancy.txt", std::ios::in);
 
-  int nshells = 0;      // number of shell in binding energy file
+  int nshells = 0;  // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in file
 
   std::string line;
@@ -335,7 +335,7 @@ void read_binding_energies() {
   // just in case the file system was faulty and the ranks disagree on the existence of the files
   MPI_Allreduce(MPI_IN_PLACE, &binding_en_newformat, 1, MPI_C_BOOL, MPI_LOR, MPI_COMM_WORLD);
 
-  int nshells = 0;      // number of shell in binding energy file
+  int nshells = 0;  // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in binding energy file
 
   const auto *filename = binding_en_newformat ? "binding_energies_lotz_tab1and2.txt" : "binding_energies.txt";

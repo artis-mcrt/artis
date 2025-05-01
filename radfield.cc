@@ -35,7 +35,7 @@ std::vector<double> J_normfactor;
 struct RadFieldBinSolution {
   // these two parameters are used in the current timestep, but were calculated
   // from the values of J and nuJ in the previous timestep
-  float W;    // dilution (scaling) factor
+  float W;  // dilution (scaling) factor
   float T_R;  // radiation temperature
 };
 
@@ -65,10 +65,10 @@ int detailed_linecount = 0;
 std::vector<int> detailed_lineindicies;
 
 std::vector<std::vector<Jb_lu_estimator>> prev_Jb_lu_normed{};  // value from the previous timestep
-std::vector<std::vector<Jb_lu_estimator>> Jb_lu_raw{};          // unnormalised estimator for the current timestep
+std::vector<std::vector<Jb_lu_estimator>> Jb_lu_raw{};  // unnormalised estimator for the current timestep
 
 std::span<float> prev_bfrate_normed{};  // values from the previous timestep
-std::vector<double> bfrate_raw;         // unnormalised estimators for the current timestep
+std::vector<double> bfrate_raw;  // unnormalised estimators for the current timestep
 
 // J and nuJ are accumulated and then normalised in-place
 // i.e. be sure the normalisation has been applied (exactly once) before using the values here!

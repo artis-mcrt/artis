@@ -2,4 +2,5 @@
 Language: Cpp
 BasedOnStyle: Google
 ColumnLimit: 120
+AlignTrailingComments: Never
 BreakAfterAttributes: Never

@@ -41,9 +41,7 @@ std::vector<std::vector<VSpecPol>> vspecpol{};
 std::array<float, VMNUBINS> lower_freq_vspec;
 std::array<float, VMNUBINS> delta_freq_vspec;
 
-// --------- INPUT PARAMETERS -----------
-
-int Nobs = 0;      // Number of observer directions
+int Nobs = 0;  // Number of observer directions
 int Nspectra = 0;  // Number of virtual packet spectra per observer direction (total + elements switched off)
 std::vector<double> nz_obs_vpkt;
 std::vector<double> phiobs;
@@ -62,8 +60,6 @@ std::vector<int> exclude;  // vector of opacity contribution setups:
 std::vector<double> tau_vpkt;
 
 std::ofstream vpkt_contrib_file;
-
-// --------- VPacket GRID -----------
 
 struct VGrid {
   std::vector<std::vector<StokesParams>> flux;
@@ -405,7 +401,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
 
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
-        if (t_arrive > tmin_grid && t_arrive < tmax_grid) {                      // Time selection
+        if (t_arrive > tmin_grid && t_arrive < tmax_grid) {  // Time selection
           add_to_vpkt_grid(vpkt, vel_vec, wlbin, obsdirindex, obsdir);
         }
       }

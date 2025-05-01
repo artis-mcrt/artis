@@ -299,7 +299,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float> &tmpallphi
 
     if (skip_this_phixs_table) {  // for ions or elements that are not part of the current model atom, proceed through
                                   // the table and throw away the data
-      if (upperlevel_in < 0) {    // a table of target states and probabilities will follow, so read past those lines
+      if (upperlevel_in < 0) {  // a table of target states and probabilities will follow, so read past those lines
         int nphixstargets = 0;
         assert_always(get_noncommentline(phixsfile, phixsline));
         assert_always(std::stringstream(phixsline) >> nphixstargets);
@@ -938,8 +938,8 @@ void read_atomicdata_files() {
   // open transition data file
   auto ftransitiondata = fstream_required("transitiondata.txt", std::ios::in);
 
-  int lineindex = 0;         // counter to determine the total number of lines
-  int uniqueionindex = 0;    // index into list of all ions of all elements
+  int lineindex = 0;  // counter to determine the total number of lines
+  int uniqueionindex = 0;  // index into list of all ions of all elements
   int uniquelevelindex = 0;  // index into list of all levels of all ions of all elements
   int nbfcheck = 0;
   for (int element = 0; element < get_nelements(); element++) {
@@ -1883,7 +1883,7 @@ void time_init() {
     case TimeStepSizeMethod::LOGARITHMIC_THEN_CONSTANT: {
       // First part log, second part fixed timesteps
       const double t_transition = TIMESTEP_TRANSITION_TIME * DAY;  // transition from logarithmic to fixed timesteps
-      const double maxtsdelta = FIXED_TIMESTEP_WIDTH * DAY;        // maximum timestep width in fixed part
+      const double maxtsdelta = FIXED_TIMESTEP_WIDTH * DAY;  // maximum timestep width in fixed part
       assert_always(t_transition > globals::tmin);
       assert_always(t_transition < globals::tmax);
       const int nts_fixed = ceil((globals::tmax - t_transition) / maxtsdelta);
@@ -1916,7 +1916,7 @@ void time_init() {
     case TimeStepSizeMethod::CONSTANT_THEN_LOGARITHMIC: {
       // First part fixed timesteps, second part log timesteps
       const double t_transition = TIMESTEP_TRANSITION_TIME * DAY;  // transition from fixed to logarithmic timesteps
-      const double maxtsdelta = FIXED_TIMESTEP_WIDTH * DAY;        // timestep width of fixed timesteps
+      const double maxtsdelta = FIXED_TIMESTEP_WIDTH * DAY;  // timestep width of fixed timesteps
       assert_always(t_transition > globals::tmin);
       assert_always(t_transition < globals::tmax);
       const int nts_fixed = ceil((t_transition - globals::tmin) / maxtsdelta);

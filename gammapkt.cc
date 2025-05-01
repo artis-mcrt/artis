@@ -39,7 +39,7 @@ struct GammaLine {
 std::vector<std::vector<GammaLine>> gamma_spectra;
 
 struct el_photoion_data {
-  double energy;      // energy in MeV
+  double energy;  // energy in MeV
   double sigma_xcom;  // cross section in barns/atom
 };
 
@@ -48,9 +48,9 @@ constexpr int numb_xcom_elements = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
 std::array<std::vector<el_photoion_data>, numb_xcom_elements> photoion_data;
 
 struct NucGammaLine {
-  int nucindex;       // is it a Ni56, Co56, a fake line, etc
+  int nucindex;  // is it a Ni56, Co56, a fake line, etc
   int nucgammaindex;  // which of the lines of that nuclide is it
-  double energy;      // in erg
+  double energy;  // in erg
 };
 
 std::vector<NucGammaLine> allnuc_gamma_line_list;

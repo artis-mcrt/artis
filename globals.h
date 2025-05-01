@@ -14,29 +14,29 @@
 #include "artisoptions.h"
 
 struct TimeStep {
-  double start{0.};                   // time at start of this timestep. [s]
-  double width{0.};                   // Width of timestep. [s]
-  double mid{0.};                     // Mid time in step - computed logarithmically. [s]
-  double gamma_dep{0.};               // cmf gamma ray energy deposition from packet trajectories [erg]
-  double gamma_dep_discrete{0.};      // cmf gamma ray energy deposition from absorption events [erg]
-  double positron_dep{0.};            // cmf positron energy deposition from packet trajectories [erg]
-  double positron_dep_discrete{0.};   // cmf positron energy deposition from absorption events [erg]
-  double positron_emission{0.};       // cmf positron KE energy generation [erg]
+  double start{0.};  // time at start of this timestep. [s]
+  double width{0.};  // Width of timestep. [s]
+  double mid{0.};  // Mid time in step - computed logarithmically. [s]
+  double gamma_dep{0.};  // cmf gamma ray energy deposition from packet trajectories [erg]
+  double gamma_dep_discrete{0.};  // cmf gamma ray energy deposition from absorption events [erg]
+  double positron_dep{0.};  // cmf positron energy deposition from packet trajectories [erg]
+  double positron_dep_discrete{0.};  // cmf positron energy deposition from absorption events [erg]
+  double positron_emission{0.};  // cmf positron KE energy generation [erg]
   double eps_positron_ana_power{0.};  // cmf positron KE energy generation rate analytical [erg/s]
-  double electron_dep{0.};            // cmf electron energy deposition from packet trajectories [erg]
-  double electron_dep_discrete{0.};   // cmf electron energy deposition from absorption events [erg]
-  double electron_emission{0.};       // cmf electron KE energy generation [erg]
+  double electron_dep{0.};  // cmf electron energy deposition from packet trajectories [erg]
+  double electron_dep_discrete{0.};  // cmf electron energy deposition from absorption events [erg]
+  double electron_emission{0.};  // cmf electron KE energy generation [erg]
   double eps_electron_ana_power{0.};  // cmf electron KE energy generation rate analytical [erg/s]
-  double alpha_dep{0.};               // cmf alpha energy deposition from packet trajectories [erg]
-  double alpha_dep_discrete{0.};      // cmf alpha energy deposition from absorption events [erg]
-  double alpha_emission{0.};          // cmf alpha KE energy generation [erg]
-  double eps_alpha_ana_power{0.};     // cmf alpha KE energy generation rate analytical [erg/s]
-  double gamma_emission{0.};          // gamma decay energy generation in this timestep [erg]
-  double qdot_betaminus{0.};          // energy generation from beta-minus decays (including neutrinos) [erg/s/g]
-  double qdot_alpha{0.};              // energy generation from alpha decays (including neutrinos) [erg/s/g]
-  double qdot_total{0.};              // energy generation from all decays (including neutrinos) [erg/s/g]
-  double cmf_lum{0.};                 // cmf luminosity light curve [erg]
-  int pellet_decays{0};               // Number of pellets that decay in this time step.
+  double alpha_dep{0.};  // cmf alpha energy deposition from packet trajectories [erg]
+  double alpha_dep_discrete{0.};  // cmf alpha energy deposition from absorption events [erg]
+  double alpha_emission{0.};  // cmf alpha KE energy generation [erg]
+  double eps_alpha_ana_power{0.};  // cmf alpha KE energy generation rate analytical [erg/s]
+  double gamma_emission{0.};  // gamma decay energy generation in this timestep [erg]
+  double qdot_betaminus{0.};  // energy generation from beta-minus decays (including neutrinos) [erg/s/g]
+  double qdot_alpha{0.};  // energy generation from alpha decays (including neutrinos) [erg/s/g]
+  double qdot_total{0.};  // energy generation from all decays (including neutrinos) [erg/s/g]
+  double cmf_lum{0.};  // cmf luminosity light curve [erg]
+  int pellet_decays{0};  // Number of pellets that decay in this time step.
 };
 
 struct BFListEntry {
@@ -76,21 +76,21 @@ struct LevelTransition {
 
 struct PhotoionTarget {
   double probability;  // fraction of phixs cross section leading to this final level
-  int levelindex;      // index of upper ion level after photoionisation
+  int levelindex;  // index of upper ion level after photoionisation
 };
 
 struct EnergyLevel {
-  double epsilon{-1};        // Excitation energy of this level relative to the neutral ground level.
+  double epsilon{-1};  // Excitation energy of this level relative to the neutral ground level.
   int alltrans_startdown{};  // index into globals::alltrans for first down transition from this level
-  int ndowntrans{0};         // Number of down transitions from this level
-  int nuptrans{0};           // Number of up transitions to this level
-  int phixsstart{-1};        // index to start of photoionisation cross-sections table in global::allphixs
-  int nphixstargets{0};      // number of target levels for photoionisation
-  float stat_weight{0.};     // statistical weight of this level
+  int ndowntrans{0};  // Number of down transitions from this level
+  int nuptrans{0};  // Number of up transitions to this level
+  int phixsstart{-1};  // index to start of photoionisation cross-sections table in global::allphixs
+  int nphixstargets{0};  // number of target levels for photoionisation
+  float stat_weight{0.};  // statistical weight of this level
   int phixstargetstart{-1};  // index into globals::allphixstargets
-  int cont_index{-1};        // index of the bound-free continuum (for first target) sorted by
-                             // element/ion/level/phixstargetindex
-                             // (not an index into the nu_edge-sorted allcont list!)
+  int cont_index{-1};  // index of the bound-free continuum (for first target) sorted by
+                       // element/ion/level/phixstargetindex
+                       // (not an index into the nu_edge-sorted allcont list!)
   int closestgroundlevelcont{-1};
 
   [[nodiscard]] constexpr auto alltrans_startup() const -> int {
@@ -100,11 +100,11 @@ struct EnergyLevel {
 };
 
 struct Ion {
-  int ionstage{-1};             // Which ionisation stage: XI=0, XII=1, XIII=2, ...
-  int nlevels{0};               // Number of levels for this ionisation stage
-  int nlevels_nlte{0};          // number of nlte levels for this ion
-  int first_nlte{-1};           // index into nlte_pops array of a grid cell
-  int nlevels_ionising{0};      // Number of levels which have a bf-continuum
+  int ionstage{-1};  // Which ionisation stage: XI=0, XII=1, XIII=2, ...
+  int nlevels{0};  // Number of levels for this ionisation stage
+  int nlevels_nlte{0};  // number of nlte levels for this ion
+  int first_nlte{-1};  // index into nlte_pops array of a grid cell
+  int nlevels_ionising{0};  // Number of levels which have a bf-continuum
   int maxrecombininglevel{-1};  // level index of the highest level with a non-zero recombination rate
   int nlevels_groundterm{0};
   int coolingoffset{-1};
@@ -115,10 +115,10 @@ struct Ion {
 };
 
 struct Element {
-  Ion *ions{};                         // Carries information for each ion: 0,1,...,nions-1
-  int nions{0};                        // Number of ions for the current element
-  int anumber{-1};                     // Atomic number
-  int uniqueionindexstart{-1};         /// uniqueionindex index of the lowest ionisation stage of this element
+  Ion *ions{};  // Carries information for each ion: 0,1,...,nions-1
+  int nions{0};  // Number of ions for the current element
+  int anumber{-1};  // Atomic number
+  int uniqueionindexstart{-1};  /// uniqueionindex index of the lowest ionisation stage of this element
   float initstablemeannucmass = {0.};  // Atomic mass number in multiple of MH
   bool has_nlte_levels{false};
 };
@@ -126,9 +126,9 @@ struct Element {
 struct TransitionLine {
   double nu;  // Frequency of the line transition
   float einstein_A;
-  int elementindex;     // It's a transition of element (not its atomic number,
-                        // but the (x-1)th element included in the simulation.
-  int ionindex;         // The same for the elements ion
+  int elementindex;  // It's a transition of element (not its atomic number,
+                     // but the (x-1)th element included in the simulation.
+  int ionindex;  // The same for the elements ion
   int upperlevelindex;  // And the participating upper
   int lowerlevelindex;  // and lower levels
 };
@@ -199,9 +199,9 @@ struct CellCache {
   std::vector<double> ch_allcont_nnlevel;
   std::vector<bool> ch_keep_this_cont;
   double chi_ff_nnionpart{-1};
-  int nonemptymgi{-1};                                     // Identifies the cell the data is valid for.
+  int nonemptymgi{-1};  // Identifies the cell the data is valid for.
   std::vector<CellCachePhixsTargets> chphixstargetsblock;  // photoionisation targets for all levels
-  std::vector<double> chtransblock;                        // cumulative transition rates for all levels
+  std::vector<double> chtransblock;  // cumulative transition rates for all levels
 };
 
 namespace globals {
@@ -275,7 +275,7 @@ inline const FullPhotoionTransition *allcont{};
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
 inline std::vector<GroundPhotoion> groundcont{};
 
-inline int nbfcontinua{-1};         // number of bf-continua
+inline int nbfcontinua{-1};  // number of bf-continua
 inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels
 
 inline int NPHIXSPOINTS{-1};
@@ -309,8 +309,8 @@ inline int timestep_finish{-1};
 inline int timestep{-1};  // Current time step during the simulation
 
 inline double opcase3_normal;  // MK: normalisation factor for opacity_case 3
-inline double rho_crit_para;   // MK: free parameter for the selection of the critical opacity in opacity_case 3
-inline double rho_crit;        // MK: critical opacity in opacity_case 3 (could now be declared locally)
+inline double rho_crit_para;  // MK: free parameter for the selection of the critical opacity in opacity_case 3
+inline double rho_crit;  // MK: critical opacity in opacity_case 3 (could now be declared locally)
 
 inline int total_nlte_levels;
 

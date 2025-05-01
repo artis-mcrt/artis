@@ -49,13 +49,13 @@ const std::array<const std::string, 119> elsymbols{
 constexpr int Z_MAX = elsymbols.size() - 1;
 
 struct Nuclide {
-  int z{-1};                    // atomic number
-  int a{-1};                    // mass number
-  double meanlife{-1};          // mean lifetime before decay [s]
+  int z{-1};  // atomic number
+  int a{-1};  // mass number
+  double meanlife{-1};  // mean lifetime before decay [s]
   double endecay_electron{0.};  // average energy per beta- decay in kinetic energy of emitted electons [erg]
   double endecay_positron{0.};  // average energy per beta+ decay in kinetic energy of emitted positrons [erg]
-  double endecay_gamma{0.};     // average energy per decay in gamma rays [erg]
-  double endecay_alpha{0.};     // average energy per alpha decay in kinetic energy of alpha particles [erg]
+  double endecay_gamma{0.};  // average energy per decay in gamma rays [erg]
+  double endecay_alpha{0.};  // average energy per alpha decay in kinetic energy of alpha particles [erg]
   std::array<double, decaytypes::DECAYTYPE_COUNT> endecay_q = {
       0.};  // Q-value (reactant minus product energy) for each decay type
   std::array<double, decaytypes::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
@@ -112,8 +112,8 @@ struct Nuclide {
 // to another (daughter of last nuclide in decaypath) via decays
 // every different path within the network is considered, e.g. 56Ni -> 56Co -> 56Fe is separate to 56Ni -> 56Co
 struct DecayPath {
-  std::vector<int> z;         // atomic number
-  std::vector<int> a;         // mass number
+  std::vector<int> z;  // atomic number
+  std::vector<int> a;  // mass number
   std::vector<int> nucindex;  // index into nuclides list
   std::vector<int> decaytypes;
   std::vector<double> lambdas;

@@ -8,24 +8,24 @@
 // fundamental constants
 
 constexpr double CLIGHT = 2.99792458e+10;  // Speed of light [cm/s]
-constexpr double CLIGHT_PROP = CLIGHT;     // Speed of light for ray travel. Physically = CLIGHT but
-                                           // can be changed for testing.
-constexpr double H = 6.6260755e-27;        // Planck constant [erg s]
-constexpr double MSUN = 1.98855e+33;       // Solar mass [g]
-constexpr double LSUN = 3.826e+33;         // Solar luminosity [erg/s]
-constexpr double MH = 1.67352e-24;         // Mass of hydrogen atom [g]
-constexpr double ME = 9.1093897e-28;       // Mass of free electron [g]
-constexpr double QE = 4.80325E-10;         // elementary charge in cgs units [statcoulomb]
+constexpr double CLIGHT_PROP = CLIGHT;  // Speed of light for ray travel. Physically = CLIGHT but
+                                        // can be changed for testing.
+constexpr double H = 6.6260755e-27;  // Planck constant [erg s]
+constexpr double MSUN = 1.98855e+33;  // Solar mass [g]
+constexpr double LSUN = 3.826e+33;  // Solar luminosity [erg/s]
+constexpr double MH = 1.67352e-24;  // Mass of hydrogen atom [g]
+constexpr double ME = 9.1093897e-28;  // Mass of free electron [g]
+constexpr double QE = 4.80325E-10;  // elementary charge in cgs units [statcoulomb]
 constexpr double PI = std::numbers::pi;
-constexpr double EV = 1.6021772e-12;         // eV to ergs [eV/erg]
-constexpr double MEV = 1.6021772e-6;         // MeV to ergs [MeV/erg]
-constexpr double DAY = 86400.;               // day to seconds [s/day]
-constexpr double SIGMA_T = 6.6524e-25;       // Thomson cross-section [cm2]
-constexpr double THOMSON_LIMIT = 1e-2;       // Limit below which e-scattering is Thomson
-constexpr double PARSEC = 3.0857e+18;        // pc to cm [cm/pc]
-constexpr double KB = 1.38064852e-16;        // Boltzmann constant [erg/K]
-constexpr double STEBO = 5.670400e-5;        // Stefan-Boltzmann constant [erg cm^−2 s^−1 K^−4.]
-                                             // (data from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
+constexpr double EV = 1.6021772e-12;  // eV to ergs [eV/erg]
+constexpr double MEV = 1.6021772e-6;  // MeV to ergs [MeV/erg]
+constexpr double DAY = 86400.;  // day to seconds [s/day]
+constexpr double SIGMA_T = 6.6524e-25;  // Thomson cross-section [cm2]
+constexpr double THOMSON_LIMIT = 1e-2;  // Limit below which e-scattering is Thomson
+constexpr double PARSEC = 3.0857e+18;  // pc to cm [cm/pc]
+constexpr double KB = 1.38064852e-16;  // Boltzmann constant [erg/K]
+constexpr double STEBO = 5.670400e-5;  // Stefan-Boltzmann constant [erg cm^−2 s^−1 K^−4.]
+                                       // (data from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
 constexpr double SAHACONST = 2.0706659e-16;  // Saha constant
 
 constexpr double EULERGAMMA = std::numbers::egamma;
@@ -47,9 +47,9 @@ constexpr double OSCSTRENGTHCONVERSION = 1.3473837e+21;
 constexpr double H_ionpot = 13.5979996 * EV;
 
 enum class GridType {
-  SPHERICAL1D,    // 1D radial shells (non-uniform dr)
+  SPHERICAL1D,  // 1D radial shells (non-uniform dr)
   CYLINDRICAL2D,  // 2D cylindrical grid with uniform dz, drcyl
-  CARTESIAN3D     // 3D Cartesian cubic grid with uniform dx=dy=dz
+  CARTESIAN3D  // 3D Cartesian cubic grid with uniform dx=dy=dz
 };
 
 // constant for van-Regemorter approximation.

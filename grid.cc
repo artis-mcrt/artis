@@ -46,7 +46,7 @@ struct ModelGridCellInput {
   float ffegrp = 0.;
   float initial_radial_pos_sum = 0.;
   float initelectronfrac = -1;  // Ye: electrons (or protons) per nucleon
-  float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
+  float initenergyq = 0.;  // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
 };
 
 std::array<char, 3> coordlabel{'?', '?', '?'};
@@ -54,7 +54,7 @@ std::array<char, 3> coordlabel{'?', '?', '?'};
 std::array<int, 3> ncoordgrid{};  // propagation grid dimensions
 
 GridType model_type = GridType::CARTESIAN3D;
-ptrdiff_t npts_model = 0;           // number of model grid cells
+ptrdiff_t npts_model = 0;  // number of model grid cells
 ptrdiff_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
 double t_model = -1.;  // time at which densities in input model are correct.
@@ -782,7 +782,7 @@ auto get_inputcellvolume(const int mgi) -> double {
   }
   if (get_model_type() == GridType::CYLINDRICAL2D) {
     const int n_r = mgi % ncoord_model[0];
-    const double dcoord_rcyl = globals::vmax * t_model / ncoord_model[0];    // dr 2D for input model
+    const double dcoord_rcyl = globals::vmax * t_model / ncoord_model[0];  // dr 2D for input model
     const double dcoord_z = 2. * globals::vmax * t_model / ncoord_model[1];  // dz 2D for input model
     return pow(globals::tmin / t_model, 3) * dcoord_z * PI *
            (pow((n_r + 1) * dcoord_rcyl, 2.) - pow(n_r * dcoord_rcyl, 2.));

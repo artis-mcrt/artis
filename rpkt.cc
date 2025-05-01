@@ -77,7 +77,7 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
 // boolean BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
 auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
                MacroAtomState &mastate,
-               const double tau_rnd,     // random optical depth until which the packet travels
+               const double tau_rnd,  // random optical depth until which the packet travels
                const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
                const double nu_cmf_abort, const double d_nu_on_d_l, const double doppler,
                const std::span<const TransitionLine> linelist) -> std::tuple<double, int, bool> {
@@ -88,7 +88,7 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
   int next_trans = pkt.next_trans;
 
   const double chi_cont = chi_rpkt_cont.total * doppler;
-  double tau = 0.;   // optical depth along path
+  double tau = 0.;  // optical depth along path
   double dist = 0.;  // position on path
   while (true) {
     // calculate distance to next line encounter ldist

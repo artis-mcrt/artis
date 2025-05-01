@@ -258,9 +258,9 @@ auto sample_planck_montecarlo(const double T) -> double {
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates *heatingcoolingrates) {
-  double C_ff_all = 0.;          // free-free creation of rpkts
-  double C_fb_all = 0.;          // free-bound creation of rpkt
-  double C_exc_all = 0.;         // collisional excitation of macroatoms
+  double C_ff_all = 0.;  // free-free creation of rpkts
+  double C_fb_all = 0.;  // free-bound creation of rpkt
+  double C_exc_all = 0.;  // collisional excitation of macroatoms
   double C_ionization_all = 0.;  // collisional ionisation of macroatoms
 
   const auto allionindices = std::ranges::iota_view{0, get_includedions()};
