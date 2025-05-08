@@ -13,6 +13,7 @@
 #include <numeric>
 #include <span>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "artisoptions.h"
@@ -52,8 +53,6 @@ struct NucGammaLine {
   int nucgammaindex;  // which of the lines of that nuclide is it
   double energy;  // in erg
 };
-
-std::vector<NucGammaLine> allnuc_gamma_line_list;
 
 void read_gamma_spectrum(const int nucindex, const char filename[50])
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
@@ -165,7 +164,7 @@ void init_gamma_linelist() {
   }
   printout("total gamma-ray lines %td\n", total_lines);
 
-  allnuc_gamma_line_list = std::vector<NucGammaLine>();
+  std::vector<NucGammaLine> allnuc_gamma_line_list;
   allnuc_gamma_line_list.reserve(total_lines);
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
@@ -174,20 +173,10 @@ void init_gamma_linelist() {
           {.nucindex = nucindex, .nucgammaindex = static_cast<int>(j), .energy = gamma_spectra[nucindex][j].energy});
     }
   }
-  allnuc_gamma_line_list.shrink_to_fit();
-  assert_always(static_cast<int>(allnuc_gamma_line_list.size()) == total_lines);
+
+  assert_always(std::ssize(allnuc_gamma_line_list) == total_lines);
   std::ranges::SORT_OR_STABLE_SORT(allnuc_gamma_line_list, [](const NucGammaLine &g1, const NucGammaLine &g2) {
-    // true if d1 < d2
-    if (g1.energy < g2.energy) {
-      return true;
-    }
-    if (g1.energy == g2.energy && g1.nucindex < g2.nucindex) {
-      return true;
-    }
-    if (g1.energy == g2.energy && g1.nucindex == g2.nucindex && g1.nucgammaindex < g2.nucgammaindex) {
-      return true;
-    }
-    return false;
+    return std::tie(g1.energy, g1.nucindex, g1.nucgammaindex) < std::tie(g2.energy, g2.nucindex, g2.nucgammaindex);
   });
 
   auto gammalinelist = std::fstream("gammalinelist.out", std::ofstream::out | std::ofstream::trunc);
