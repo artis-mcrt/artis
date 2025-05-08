@@ -2688,9 +2688,9 @@ void nt_MPI_Bcast(const int nonemptymgi, const int root_node_id) {
   }
 }
 
-void nt_reset_stats() { nt_energy_deposited = 0.; }
+void reset_stats() { nt_energy_deposited = 0.; }
 
-void nt_print_stats(const double modelvolume, const double deltat) {
+void print_stats(const double modelvolume, const double deltat) {
   const double deposition_rate_density_montecarlo = nt_energy_deposited / EV / modelvolume / deltat;
 
   printout("nt_energy_deposited = %g [eV/s/cm^3]\n", deposition_rate_density_montecarlo);

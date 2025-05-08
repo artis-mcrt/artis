@@ -164,7 +164,7 @@ void pkt_action_counters_reset() {
     eventstats[i] = 0;
   }
 
-  nonthermal::nt_reset_stats();
+  nonthermal::reset_stats();
   globals::nesc = 0;
 }
 
@@ -215,7 +215,7 @@ void pkt_action_counters_printout(const int nts) {
   printout("timestep %d: nt_stat_to_ionization = %td\n", nts, get_counter(COUNTER_NT_STAT_TO_IONIZATION));
   printout("timestep %d: nt_stat_to_excitation = %td\n", nts, get_counter(COUNTER_NT_STAT_TO_EXCITATION));
   printout("timestep %d: nt_stat_to_kpkt = %td\n", nts, get_counter(COUNTER_NT_STAT_TO_KPKT));
-  nonthermal::nt_print_stats(modelvolume, deltat);
+  nonthermal::print_stats(modelvolume, deltat);
 
   printout("timestep %d: escounter = %td\n", nts, get_counter(COUNTER_ESCOUNTER));
   printout("timestep %d: cellcrossing  = %td\n", nts, get_counter(COUNTER_CELLCROSSINGS));
