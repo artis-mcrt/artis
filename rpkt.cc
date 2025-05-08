@@ -437,7 +437,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
 
     // generate a virtual packet
     if constexpr (VPKT_ON) {
-      vpkt_call_estimators(pkt, TYPE_RPKT);
+      vpkt::call_estimators(pkt, TYPE_RPKT);
     }
 
     // pkt.nu_cmf = 3.7474058e+14;

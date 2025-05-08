@@ -621,7 +621,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
   if (pkt.type == TYPE_RPKT) {
     if constexpr (VPKT_ON) {
-      vpkt_call_estimators(pkt, TYPE_MA);
+      vpkt::call_estimators(pkt, TYPE_MA);
     }
   }
 }

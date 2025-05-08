@@ -1555,7 +1555,7 @@ void input(int rank) {
 
   // Read in parameters from vpkt.txt
   if (VPKT_ON) {
-    read_parameterfile_vpkt();
+    vpkt::read_vpktparameterfile();
   }
 
   read_atomicdata();
@@ -1851,7 +1851,7 @@ void update_parameterfile(const int nts) {
 }
 
 // initialise the time steps
-void time_init() {
+void setup_timesteps() {
   // t=globals::tmin is the start of the calculation. t=globals::tmax is the end of the calculation.
   // globals::ntimesteps is the number of time steps
 

@@ -49,8 +49,6 @@ struct ModelGridCellInput {
   float initenergyq = 0.;  // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
 };
 
-std::array<char, 3> coordlabel{'?', '?', '?'};
-
 std::array<int, 3> ncoordgrid{};  // propagation grid dimensions
 
 GridType model_type = GridType::CARTESIAN3D;
@@ -61,11 +59,11 @@ double t_model = -1.;  // time at which densities in input model are correct.
 std::vector<double> vout_model{};
 std::array<int, 3> ncoord_model{};  // the model.txt input grid dimensions
 
-double min_den;  // minimum model density
+double min_den{-1.};  // minimum model density
 
-double mfegroup = 0.;  // Total mass of Fe group elements in ejecta
+double mfegroup{0.};  // Total mass of Fe group elements in ejecta
 
-int first_cellindex = -1;  // auto-determine first cell index in model.txt (usually 1 or 0)
+int first_cellindex{-1};  // auto-determine first cell index in model.txt (usually 1 or 0)
 
 // Initial co-ordinates of inner most corner of cell.
 std::vector<Vec3d> propcell_pos_min{};
@@ -108,6 +106,19 @@ consteval auto get_ndim(const GridType gridtype) -> int {
       return -1;
   }
 }
+
+constexpr auto coordlabel = [] -> std::array<char, 3> {
+  if (GRID_TYPE == GridType::CARTESIAN3D) {
+    return {'X', 'Y', 'Z'};
+  }
+  if (GRID_TYPE == GridType::CYLINDRICAL2D) {
+    return {'r', 'z', '_'};
+  }
+  if (GRID_TYPE == GridType::SPHERICAL1D) {
+    return {'r', '_', '_'};
+  }
+  assert_always(false)
+}();
 
 void set_rho_tmin(const int modelgridindex, const float x) { modelgrid_input[modelgridindex].rhoinit = x; }
 
@@ -525,7 +536,7 @@ void map_modeltogrid_direct() {
   }
 }
 
-void abundances_read() {
+void read_abundances() {
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
   printout("reading abundances.txt...");
@@ -1066,7 +1077,6 @@ void setup_grid_cartesian_3d() {
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
   resize_exactly(propcell_pos_min, ngrid);
 
-  coordlabel = {'X', 'Y', 'Z'};
   std::array<int, 3> nxyz = {0, 0, 0};
   for (int n = 0; n < ngrid; n++) {
     for (int axis = 0; axis < 3; axis++) {
@@ -1090,7 +1100,6 @@ void setup_grid_cartesian_3d() {
 
 void setup_grid_spherical_1d() {
   assert_always(get_model_type() == GridType::SPHERICAL1D);
-  coordlabel = {'r', '_', '_'};
 
   ncoordgrid = {get_npts_model(), 1, 1};
 
@@ -1111,7 +1120,6 @@ void setup_grid_cylindrical_2d() {
   assert_always(vmax_corner < CLIGHT);
 
   assert_always(get_model_type() == GridType::CYLINDRICAL2D);
-  coordlabel = {'r', 'z', '_'};
 
   ncoordgrid = ncoord_model;
 
@@ -2198,7 +2206,7 @@ auto get_ndo_nonempty(const int rank) -> int {
 }
 
 // Initialise the propagation grid cells and associate them with modelgrid cells
-void grid_init(const int my_rank) {
+void init_grid(const int my_rank) {
   // The cells will be ordered by x then y, then z. Call a routine that
   // sets up the initial positions and widths of the cells.
 
@@ -2253,17 +2261,17 @@ void grid_init(const int my_rank) {
   if (globals::my_rank == 0) {
     auto grid_file = std::fstream("grid.out", std::ios::out);
     assert_always(grid_file.is_open());
-    for (int n = 0; n < ngrid; n++) {
-      const int mgi = get_propcell_modelgridindex(n);
+    for (int cellindex = 0; cellindex < ngrid; cellindex++) {
+      const int mgi = get_propcell_modelgridindex(cellindex);
       if (mgi != get_npts_model()) {
-        grid_file << n << " " << mgi << "\n";  // write only non-empty cells to grid file
+        grid_file << cellindex << " " << mgi << "\n";  // write only non-empty cells to grid file
       }
     }
   }
 
   allocate_nonemptymodelcells();
   calculate_kappagrey();
-  abundances_read();
+  read_abundances();
 
   const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
 

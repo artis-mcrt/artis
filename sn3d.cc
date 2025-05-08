@@ -437,7 +437,7 @@ void save_grid_and_packets(const int nts, std::span<const Packet> packets) {
     // save packet state at start of current timestep (before propagation)
     write_temp_packetsfile(nts, globals::my_rank, packets);
 
-    vpkt_write_timestep(nts, globals::my_rank, false);
+    vpkt::write_timestep(nts, globals::my_rank, false);
 
     const auto time_write_packets_finished_thisrank = std::time(nullptr);
 
@@ -483,7 +483,7 @@ void save_grid_and_packets(const int nts, std::span<const Packet> packets) {
 
     // delete temp packets files from previous timestep now that all restart data for the new timestep is available
     remove_temp_packetsfile(nts - 1, my_rank);
-    vpkt_remove_temp_file(nts - 1, my_rank);
+    vpkt::remove_temp_vpkt_file(nts - 1, my_rank);
   }
 }
 
@@ -632,16 +632,17 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 
     if (VPKT_ON) {
       printout("During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped.\n", nts,
-               my_rank, nvpkt_created, nvpkt_esc_from_rpkt + nvpkt_esc_from_kpkt + nvpkt_esc_from_macroatom);
+               my_rank, vpkt::nvpkt_created,
+               vpkt::nvpkt_esc_from_rpkt + vpkt::nvpkt_esc_from_kpkt + vpkt::nvpkt_esc_from_macroatom);
       printout(
           "%d virtual packets came from an electron scattering event, %d from a kpkt deactivation and %d from a "
           "macroatom deactivation.\n",
-          nvpkt_esc_from_rpkt, nvpkt_esc_from_kpkt, nvpkt_esc_from_macroatom);
+          vpkt::nvpkt_esc_from_rpkt, vpkt::nvpkt_esc_from_kpkt, vpkt::nvpkt_esc_from_macroatom);
 
-      nvpkt_created = 0;
-      nvpkt_esc_from_rpkt = 0;
-      nvpkt_esc_from_kpkt = 0;
-      nvpkt_esc_from_macroatom = 0;
+      vpkt::nvpkt_created = 0;
+      vpkt::nvpkt_esc_from_rpkt = 0;
+      vpkt::nvpkt_esc_from_kpkt = 0;
+      vpkt::nvpkt_esc_from_macroatom = 0;
     }
 
     if constexpr (RECORD_LINESTAT) {
@@ -667,7 +668,7 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
       // snprintf(filename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", middle_iteration, my_rank);
       write_packets(filename, packets);
 
-      vpkt_write_timestep(nts, my_rank, true);
+      vpkt::write_timestep(nts, my_rank, true);
 
       printout("time after write final packets file %ld\n", std::time(nullptr));
 
@@ -691,10 +692,10 @@ auto main(int argc, char *argv[]) -> int {
   assert_always(!DETAILED_BF_ESTIMATORS_ON || !USE_LUT_PHOTOION);
 
   if constexpr (VPKT_ON) {
-    nvpkt_created = 0;
-    nvpkt_esc_from_rpkt = 0;
-    nvpkt_esc_from_kpkt = 0;
-    nvpkt_esc_from_macroatom = 0;
+    vpkt::nvpkt_created = 0;
+    vpkt::nvpkt_esc_from_rpkt = 0;
+    vpkt::nvpkt_esc_from_kpkt = 0;
+    vpkt::nvpkt_esc_from_macroatom = 0;
   }
 
   MPI_Init(&argc, &argv);
@@ -823,14 +824,14 @@ auto main(int argc, char *argv[]) -> int {
 
   bool terminate_early = false;
 
-  time_init();
+  setup_timesteps();
 
   if (my_rank == 0) {
     write_timestep_file();
   }
 
   printout("time grid_init %ld\n", std::time(nullptr));
-  grid::grid_init(my_rank);
+  grid::init_grid(my_rank);
 
   printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts,
            1. * globals::npkts * globals::nprocs, globals::nprocs);
@@ -874,7 +875,7 @@ auto main(int argc, char *argv[]) -> int {
   }
 
   // initialise or read in virtual packet spectra
-  vpkt_init(globals::timestep, my_rank, globals::simulation_continued_from_saved);
+  vpkt::init(globals::timestep, my_rank, globals::simulation_continued_from_saved);
 
   while (globals::timestep < globals::timestep_finish && !terminate_early) {
     MPI_Barrier(MPI_COMM_WORLD);

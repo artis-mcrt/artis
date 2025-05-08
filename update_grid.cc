@@ -1030,7 +1030,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     printout("timestep %d cell %d is treated in grey approximation (chi_grey %g [cm2/g], tau %g >= %g)\n", nts, mgi,
              grid::get_kappagrey(nonemptymgi), grey_optical_depth, globals::cell_is_optically_thick);
     grid::modelgrid[nonemptymgi].thick = 1;
-  } else if (VPKT_ON && (grey_optical_depth > cell_is_optically_thick_vpkt)) {
+  } else if (VPKT_ON && (grey_optical_depth > vpkt::cell_is_optically_thick_vpkt)) {
     grid::modelgrid[nonemptymgi].thick = 2;
   } else {
     grid::modelgrid[nonemptymgi].thick = 0;
