@@ -631,6 +631,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   // is the one set based on the NLTE phi factors. Therefore need to recall find_uppermost_ion with force_saha = true so
   // the uppermost ion used in set_groundlevelpops is changed to the one based on the correct LTE phi factors instead
   if (RECALL_FIND_UPPERMOST_ION_WHEN_SETTING_ELEMENT_POPS_LTE) {
+    printout("RECALL_FIND_UPPERMOST_ION_WHEN_SETTING_ELEMENT_POPS_LTE for element %d\n", element);
     const double nne_hi = grid::get_rho(nonemptymgi) / MH;
     const bool force_saha = true;
     const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_saha);
@@ -810,8 +811,9 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
         }
         printout(
             "  WARNING: negative pop = %g greater than -1*MINPOP (-%g) likely a rounding error to zero so continue "
-            "with NLTE pops \n",
+            "with NLTE pops but set this level to MINPOP\n",
             gsl_vector_get(popvec, row), MINPOP);
+        gsl_vector_set(popvec, row, MINPOP);
       }
       // Now check for population inversions.
       if (row != row_ground_state &&
@@ -901,7 +903,6 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
       "Solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d (mass fraction %.2e, "
       "nnelement %.2e cm^-3)\n",
       modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_abundance(nonemptymgi, element), nnelement);
-
   const auto superlevel_partfunc = get_element_superlevelpartfuncs(nonemptymgi, element);
   int nions_used = nions;
   int first_ion_used = 0;
@@ -916,8 +917,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   gsl_matrix rate_matrix_coll_bf;
   gsl_matrix rate_matrix_ntcoll_bf;
   gsl_vector popvec;
-
   bool first_iteration = true;
+  bool retry_with_less_ions = false;
   while (first_iteration || (NLTE_LIMIT_ION_STAGES_AFTER_FAILURE && !matrix_solve_satisfied_with_ion_list)) {
     first_iteration = false;
     // printout("NLTE: the vector dimension is %d", nlte_dimension);
@@ -1087,7 +1088,15 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
     if (matrix_solve_success) {
       matrix_solve_satisfied_with_ion_list = true;
+      if (retry_with_less_ions) {
+        printout(
+            "successfully solved NLTE matrix when reducing ions for element Z=%d from ionstage=%d to ionstage=%d\n",
+            atomic_number, get_ionstage(element, first_ion_used),
+            get_ionstage(element, first_ion_used + nions_used - 1));
+      }
+
     } else {
+      retry_with_less_ions = true;
       if (gsl_vector_get(&popvec, get_nlte_vector_index(element, first_ion_used + nions_used - 1, 0, first_ion_used)) <
           100) {
         printout(
@@ -1123,7 +1132,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   if (!matrix_solve_success) {
     printout(
         "WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular matrix, "
-        "negative population or large population inversion. Attempting to use LTE solution instead\n",
+        "negative population or large population inversion and unable to recover solution by reducing ion range. "
+        "Attempting to use LTE solution instead\n",
         modelgridindex, timestep, atomic_number);
     set_element_pops_lte(nonemptymgi, element);
   } else {
@@ -1136,6 +1146,33 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
       const int index_gs = get_nlte_vector_index(element, ion, 0, first_ion_used);
+
+      if (ion < first_ion_used || ion >= (first_ion_used + nions_used)) {
+        printout(
+            "  WARNING: element %d ionstage %d removed from NLTE rate matrix solution. Setting levelpop for ion to "
+            "zero \n",
+            element, get_ionstage(element, ion));
+        for (int level = 1; level <= nlevels_nlte; level++) {
+          // const int index = get_nlte_vector_index(element, ion, level, first_ion_used);
+          set_nlte_levelpop_over_rho(nonemptymgi, element, ion, level, 0);
+        }
+
+        if (ion_has_superlevel(element, ion))  // a superlevel exists
+        {
+          // const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1, first_ion_used);
+          printout(
+              "  WARNING: element %d ionstage %d removed from NLTE rate matrix solution. Setting superlevel pop for "
+              "ion to zero \n",
+              element, get_ionstage(element, ion));
+          set_nlte_superlevelpop_over_rho(nonemptymgi, element, ion, 0);
+        }
+        printout(
+            "  WARNING: element %d ionstage %d removed from NLTE rate matrix solution. Setting ground level pop for "
+            "ion to zero \n",
+            element, get_ionstage(element, ion));
+        grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
+                                           get_uniqueionindex(element, ion)] = 0;
+      }
       // const int ionstage = get_ionstage(element, ion);
       // printout("  [ionstage %d]\n", ionstage);
       //
@@ -1146,30 +1183,31 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
       // store the NLTE level populations
       // double solution_ion_pop = 0.;
-      for (int level = 1; level <= nlevels_nlte; level++) {
-        const int index = get_nlte_vector_index(element, ion, level, first_ion_used);
-        set_nlte_levelpop_over_rho(nonemptymgi, element, ion, level,
-                                   gsl_vector_get(&popvec, index) / grid::get_rho(nonemptymgi));
-        // solution_ion_pop += gsl_vector_get(popvec, index);
+      else {
+        for (int level = 1; level <= nlevels_nlte; level++) {
+          const int index = get_nlte_vector_index(element, ion, level, first_ion_used);
+          set_nlte_levelpop_over_rho(nonemptymgi, element, ion, level,
+                                     gsl_vector_get(&popvec, index) / grid::get_rho(nonemptymgi));
+          // solution_ion_pop += gsl_vector_get(popvec, index);
+        }
+
+        // store the superlevel population if there is one
+        if (ion_has_superlevel(element, ion))  // a superlevel exists
+        {
+          const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1, first_ion_used);
+          set_nlte_superlevelpop_over_rho(
+              nonemptymgi, element, ion,
+              gsl_vector_get(&popvec, index_sl) / grid::get_rho(nonemptymgi) / superlevel_partfunc[ion]);
+        }
+
+        // store the ground level population
+        grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
+                                           get_uniqueionindex(element, ion)] = gsl_vector_get(&popvec, index_gs);
+        // solution_ion_pop += gsl_vector_get(popvec, index_gs);
+
+        calculate_cellpartfuncts(nonemptymgi, element);
       }
-
-      // store the superlevel population if there is one
-      if (ion_has_superlevel(element, ion))  // a superlevel exists
-      {
-        const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1, first_ion_used);
-        set_nlte_superlevelpop_over_rho(
-            nonemptymgi, element, ion,
-            gsl_vector_get(&popvec, index_sl) / grid::get_rho(nonemptymgi) / superlevel_partfunc[ion]);
-      }
-
-      // store the ground level population
-      grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                         get_uniqueionindex(element, ion)] = gsl_vector_get(&popvec, index_gs);
-      // solution_ion_pop += gsl_vector_get(popvec, index_gs);
-
-      calculate_cellpartfuncts(nonemptymgi, element);
     }
-
     const double elem_pop_matrix = gsl_blas_dasum(&popvec);
     const double elem_pop_error_percent = fabs((nnelement / elem_pop_matrix) - 1) * 100;
     if (elem_pop_error_percent > 1.0) {
