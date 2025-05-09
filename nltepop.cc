@@ -384,9 +384,9 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
     // number of ions is reduced if the solver fails. As these values correspnd to the element that was passed to
     // get_max_nlte_dimension but get_max_nlte_dimension loops through all elements. So need to update the numbers of
     // ions used and first_ion_used for each element here. Since the max_nlte_dimensions is an upper lmit from one
-    // element in the case when the NLTE solver fails and less ion stages are used than get_nions(element) tis shouldn't
-    // cause any problems - it just means a bit more memory will be allocated before gsl_matrix_view_array is used to
-    // reduce the size of the rate matrices to match the actual nlte_dimensions for each element.
+    // element in the case when the NLTE solver fails and less ion stages are used than get_nions(element) this
+    // shouldn't cause any problems - it just means a bit more memory will be allocated before gsl_matrix_view_array is
+    // used to reduce the size of the rate matrices to match the actual nlte_dimensions for each element.
     nions_used = get_nions(element);
     first_ion_used = 0;
     max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element, nions_used, first_ion_used));
@@ -646,7 +646,6 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     const double u = gsl_matrix_get(LU, i, i);
     if (u == 0) {
       const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used);
-      // check this - don;t want to use actual first_ion_used here as want to set entire element to LTE? just use 0
       if (is_nlte(element, ion, level)) {
         printout("NLTE disconnected level: Z=%d ionstage %d level %d\n", get_atomicnumber(element),
                  get_ionstage(element, ion), level);
@@ -904,22 +903,11 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
       modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_abundance(nonemptymgi, element), nnelement);
 
   const auto superlevel_partfunc = get_element_superlevelpartfuncs(nonemptymgi, element);
-  const int nions_used = nions;
-  const int first_ion_used = 0;
-  // const bool matrix_solve_satisfied_with_ion_list = false;
-  // const bool matrix_solve_success = false;
-  const int nlte_dimension = get_element_nlte_dimension(element, nions_used, first_ion_used);
-
-  // printout("NLTE: the vector dimension is %d", nlte_dimension);
-
-  const auto max_nlte_dimension =
-      get_max_nlte_dimension(nions_used, first_ion_used);  // this only needs to be called once outside the while loop
-  assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
-
-  THREADLOCALONHOST std::vector<double> vec_rate_matrix;
-  resize_exactly(vec_rate_matrix, max_nlte_dimension * max_nlte_dimension);
-  auto rate_matrix = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension).matrix;
-  gsl_matrix_set_all(&rate_matrix, 0.);
+  int nions_used = nions;
+  int first_ion_used = 0;
+  bool matrix_solve_satisfied_with_ion_list = false;
+  bool matrix_solve_success = false;
+  int nlte_dimension = get_element_nlte_dimension(element, nions_used, first_ion_used);
 
   gsl_matrix rate_matrix_rad_bb;
   gsl_matrix rate_matrix_coll_bb;
@@ -927,158 +915,210 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   gsl_matrix rate_matrix_rad_bf;
   gsl_matrix rate_matrix_coll_bf;
   gsl_matrix rate_matrix_ntcoll_bf;
+  gsl_vector popvec;
 
-  THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bb;
-  THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bb;
-  THREADLOCALONHOST std::vector<double> vec_rate_matrix_ntcoll_bb;
-  THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bf;
-  THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bf;
-  THREADLOCALONHOST std::vector<double> vec_rate_matrix_ntcoll_bf;
-  if constexpr (individual_process_matrices) {
-    resize_exactly(vec_rate_matrix_rad_bb, max_nlte_dimension * max_nlte_dimension);
-    rate_matrix_rad_bb = gsl_matrix_view_array(vec_rate_matrix_rad_bb.data(), nlte_dimension, nlte_dimension).matrix;
-    gsl_matrix_set_all(&rate_matrix_rad_bb, 0.);
+  bool first_iteration = true;
+  while (first_iteration || (NLTE_LIMIT_ION_STAGES_AFTER_FAILURE && !matrix_solve_satisfied_with_ion_list)) {
+    first_iteration = false;
+    // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
-    resize_exactly(vec_rate_matrix_coll_bb, max_nlte_dimension * max_nlte_dimension);
-    rate_matrix_coll_bb = gsl_matrix_view_array(vec_rate_matrix_coll_bb.data(), nlte_dimension, nlte_dimension).matrix;
-    gsl_matrix_set_all(&rate_matrix_coll_bb, 0.);
+    const auto max_nlte_dimension =
+        get_max_nlte_dimension(nions_used, first_ion_used);  // this only needs to be called once outside the while loop
+    assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
 
-    resize_exactly(vec_rate_matrix_ntcoll_bb, max_nlte_dimension * max_nlte_dimension);
-    rate_matrix_ntcoll_bb =
-        gsl_matrix_view_array(vec_rate_matrix_ntcoll_bb.data(), nlte_dimension, nlte_dimension).matrix;
-    gsl_matrix_set_all(&rate_matrix_ntcoll_bb, 0.);
+    THREADLOCALONHOST std::vector<double> vec_rate_matrix;
+    resize_exactly(vec_rate_matrix, max_nlte_dimension * max_nlte_dimension);
+    auto rate_matrix = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension).matrix;
+    gsl_matrix_set_all(&rate_matrix, 0.);
 
-    resize_exactly(vec_rate_matrix_rad_bf, max_nlte_dimension * max_nlte_dimension);
-    rate_matrix_rad_bf = gsl_matrix_view_array(vec_rate_matrix_rad_bf.data(), nlte_dimension, nlte_dimension).matrix;
-    gsl_matrix_set_all(&rate_matrix_rad_bf, 0.);
+    THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bb;
+    THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bb;
+    THREADLOCALONHOST std::vector<double> vec_rate_matrix_ntcoll_bb;
+    THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bf;
+    THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bf;
+    THREADLOCALONHOST std::vector<double> vec_rate_matrix_ntcoll_bf;
+    if constexpr (individual_process_matrices) {
+      resize_exactly(vec_rate_matrix_rad_bb, max_nlte_dimension * max_nlte_dimension);
+      rate_matrix_rad_bb = gsl_matrix_view_array(vec_rate_matrix_rad_bb.data(), nlte_dimension, nlte_dimension).matrix;
+      gsl_matrix_set_all(&rate_matrix_rad_bb, 0.);
 
-    resize_exactly(vec_rate_matrix_coll_bf, max_nlte_dimension * max_nlte_dimension);
-    rate_matrix_coll_bf = gsl_matrix_view_array(vec_rate_matrix_coll_bf.data(), nlte_dimension, nlte_dimension).matrix;
-    gsl_matrix_set_all(&rate_matrix_coll_bf, 0.);
+      resize_exactly(vec_rate_matrix_coll_bb, max_nlte_dimension * max_nlte_dimension);
+      rate_matrix_coll_bb =
+          gsl_matrix_view_array(vec_rate_matrix_coll_bb.data(), nlte_dimension, nlte_dimension).matrix;
+      gsl_matrix_set_all(&rate_matrix_coll_bb, 0.);
 
-    resize_exactly(vec_rate_matrix_ntcoll_bf, max_nlte_dimension * max_nlte_dimension);
-    rate_matrix_ntcoll_bf =
-        gsl_matrix_view_array(vec_rate_matrix_ntcoll_bf.data(), nlte_dimension, nlte_dimension).matrix;
-    gsl_matrix_set_all(&rate_matrix_ntcoll_bf, 0.);
-  } else {
-    // if not individual_process_matrices, alias a single matrix for all transition types
-    // the "gsl_matrix" structs are independent, but the data is shared
-    rate_matrix_rad_bb = rate_matrix;
-    rate_matrix_coll_bb = rate_matrix;
-    rate_matrix_ntcoll_bb = rate_matrix;
-    rate_matrix_rad_bf = rate_matrix;
-    rate_matrix_coll_bf = rate_matrix;
-    rate_matrix_ntcoll_bf = rate_matrix;
-  }
+      resize_exactly(vec_rate_matrix_ntcoll_bb, max_nlte_dimension * max_nlte_dimension);
+      rate_matrix_ntcoll_bb =
+          gsl_matrix_view_array(vec_rate_matrix_ntcoll_bb.data(), nlte_dimension, nlte_dimension).matrix;
+      gsl_matrix_set_all(&rate_matrix_ntcoll_bb, 0.);
 
-  // printout("  Adding rates for ion stages:");
-  const auto ions = std::ranges::iota_view{first_ion_used, first_ion_used + nions_used};
-  std::for_each(ions.begin(), ions.end(), [&](const auto ion) {
-    // const int ionstage = get_ionstage(element, ion);
-    // printout(" %d", ionstage);
+      resize_exactly(vec_rate_matrix_rad_bf, max_nlte_dimension * max_nlte_dimension);
+      rate_matrix_rad_bf = gsl_matrix_view_array(vec_rate_matrix_rad_bf.data(), nlte_dimension, nlte_dimension).matrix;
+      gsl_matrix_set_all(&rate_matrix_rad_bf, 0.);
 
-    const int nlevels = get_nlevels(element, ion);
-    const int nlevels_nlte = get_nlevels_nlte(element, ion);  // does not count the ground state!
+      resize_exactly(vec_rate_matrix_coll_bf, max_nlte_dimension * max_nlte_dimension);
+      rate_matrix_coll_bf =
+          gsl_matrix_view_array(vec_rate_matrix_coll_bf.data(), nlte_dimension, nlte_dimension).matrix;
+      gsl_matrix_set_all(&rate_matrix_coll_bf, 0.);
 
-    auto s_renorm = std::vector<double>(nlevels);
-    std::fill_n(s_renorm.begin(), nlevels_nlte + 1, 1.);
-
-    for (int level = (nlevels_nlte + 1); level < nlevels; level++) {
-      s_renorm[level] = superlevel_boltzmann(nonemptymgi, element, ion, level) / superlevel_partfunc[ion];
+      resize_exactly(vec_rate_matrix_ntcoll_bf, max_nlte_dimension * max_nlte_dimension);
+      rate_matrix_ntcoll_bf =
+          gsl_matrix_view_array(vec_rate_matrix_ntcoll_bf.data(), nlte_dimension, nlte_dimension).matrix;
+      gsl_matrix_set_all(&rate_matrix_ntcoll_bf, 0.);
+    } else {
+      // if not individual_process_matrices, alias a single matrix for all transition types
+      // the "gsl_matrix" structs are independent, but the data is shared
+      rate_matrix_rad_bb = rate_matrix;
+      rate_matrix_coll_bb = rate_matrix;
+      rate_matrix_ntcoll_bb = rate_matrix;
+      rate_matrix_rad_bf = rate_matrix;
+      rate_matrix_coll_bf = rate_matrix;
+      rate_matrix_ntcoll_bf = rate_matrix;
     }
 
-    nltepop_matrix_add_boundbound(nonemptymgi, element, ion, t_mid, s_renorm, &rate_matrix_rad_bb, &rate_matrix_coll_bb,
-                                  &rate_matrix_ntcoll_bb, first_ion_used);
+    // printout("  Adding rates for ion stages:");
+    const auto ions = std::ranges::iota_view{first_ion_used, first_ion_used + nions_used};
+    std::for_each(ions.begin(), ions.end(), [&](const auto ion) {
+      // const int ionstage = get_ionstage(element, ion);
+      // printout(" %d", ionstage);
 
-    if (ion < (first_ion_used + nions_used - 1)) {
-      // this is the slowest component
-      nltepop_matrix_add_ionisation(nonemptymgi, element, ion, s_renorm, &rate_matrix_rad_bf, &rate_matrix_coll_bf,
-                                    first_ion_used, nions_used);
-      if (NT_ON) {
-        nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, &rate_matrix_ntcoll_bf, first_ion_used,
-                                         nions_used);
-      }
-    }
-  });
-  // printout("\n");
+      const int nlevels = get_nlevels(element, ion);
+      const int nlevels_nlte = get_nlevels_nlte(element, ion);  // does not count the ground state!
 
-  if (individual_process_matrices) {
-    // sum the matrices for each transition type to get a total rate matrix
-    gsl_matrix_add(&rate_matrix, &rate_matrix_rad_bb);
-    gsl_matrix_add(&rate_matrix, &rate_matrix_coll_bb);
-    gsl_matrix_add(&rate_matrix, &rate_matrix_ntcoll_bb);
-    gsl_matrix_add(&rate_matrix, &rate_matrix_rad_bf);
-    gsl_matrix_add(&rate_matrix, &rate_matrix_coll_bf);
-    gsl_matrix_add(&rate_matrix, &rate_matrix_ntcoll_bf);
-  }
+      auto s_renorm = std::vector<double>(nlevels);
+      std::fill_n(s_renorm.begin(), nlevels_nlte + 1, 1.);
 
-  // replace the first row of the matrix and balance vector with the normalisation
-  // constraint on the total element population
-  gsl_vector_view first_row_view = gsl_matrix_row(&rate_matrix, 0);
-  gsl_vector_set_all(&first_row_view.vector, 1.0);
-
-  THREADLOCALONHOST std::vector<double> vec_balance_vector;
-  resize_exactly(vec_balance_vector, max_nlte_dimension);
-  auto balance_vector = gsl_vector_view_array(vec_balance_vector.data(), nlte_dimension).vector;
-  gsl_vector_set_all(&balance_vector, 0.);
-  // set first balance vector entry to the element population (all other entries will be zero)
-  gsl_vector_set(&balance_vector, 0, nnelement);
-
-  if (FORCE_SAHA_ION_BALANCE(atomic_number)) {
-    const auto ionfractions = calculate_ionfractions(element, nonemptymgi, grid::get_nne(nonemptymgi), true);
-    const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
-    for (int ion = 1; ion <= uppermost_ion; ion++) {
-      // replace matrix row for ion's ground state with sum of this ion's level populations is equal to the ion
-      // population
-      const double nnion = nnelement * ionfractions[ion];
-      const int index_ion_ground = get_nlte_vector_index(element, ion, 0, first_ion_used);
-      const int index_ion_toplevel = get_nlte_vector_index(element, ion, get_nlevels(element, ion), first_ion_used);
-      gsl_vector_view ion_ground_row_view = gsl_matrix_row(&rate_matrix, index_ion_ground);
-      gsl_vector_set_all(&ion_ground_row_view.vector, 0.);
-      for (int index = index_ion_ground; index <= index_ion_toplevel; index++) {
-        gsl_vector_set(&ion_ground_row_view.vector, index, 1.);
+      for (int level = (nlevels_nlte + 1); level < nlevels; level++) {
+        s_renorm[level] = superlevel_boltzmann(nonemptymgi, element, ion, level) / superlevel_partfunc[ion];
       }
 
-      gsl_vector_set(&balance_vector, get_nlte_vector_index(element, ion, index_ion_ground, first_ion_used), nnion);
+      nltepop_matrix_add_boundbound(nonemptymgi, element, ion, t_mid, s_renorm, &rate_matrix_rad_bb,
+                                    &rate_matrix_coll_bb, &rate_matrix_ntcoll_bb, first_ion_used);
+
+      if (ion < (first_ion_used + nions_used - 1)) {
+        // this is the slowest component
+        nltepop_matrix_add_ionisation(nonemptymgi, element, ion, s_renorm, &rate_matrix_rad_bf, &rate_matrix_coll_bf,
+                                      first_ion_used, nions_used);
+        if (NT_ON) {
+          nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, &rate_matrix_ntcoll_bf, first_ion_used,
+                                           nions_used);
+        }
+      }
+    });
+    // printout("\n");
+
+    if (individual_process_matrices) {
+      // sum the matrices for each transition type to get a total rate matrix
+      gsl_matrix_add(&rate_matrix, &rate_matrix_rad_bb);
+      gsl_matrix_add(&rate_matrix, &rate_matrix_coll_bb);
+      gsl_matrix_add(&rate_matrix, &rate_matrix_ntcoll_bb);
+      gsl_matrix_add(&rate_matrix, &rate_matrix_rad_bf);
+      gsl_matrix_add(&rate_matrix, &rate_matrix_coll_bf);
+      gsl_matrix_add(&rate_matrix, &rate_matrix_ntcoll_bf);
     }
+
+    // replace the first row of the matrix and balance vector with the normalisation
+    // constraint on the total element population
+    gsl_vector_view first_row_view = gsl_matrix_row(&rate_matrix, 0);
+    gsl_vector_set_all(&first_row_view.vector, 1.0);
+
+    THREADLOCALONHOST std::vector<double> vec_balance_vector;
+    resize_exactly(vec_balance_vector, max_nlte_dimension);
+    auto balance_vector = gsl_vector_view_array(vec_balance_vector.data(), nlte_dimension).vector;
+    gsl_vector_set_all(&balance_vector, 0.);
+    // set first balance vector entry to the element population (all other entries will be zero)
+    gsl_vector_set(&balance_vector, 0, nnelement);
+
+    if (FORCE_SAHA_ION_BALANCE(atomic_number)) {
+      const auto ionfractions = calculate_ionfractions(element, nonemptymgi, grid::get_nne(nonemptymgi), true);
+      const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
+      for (int ion = 1; ion <= uppermost_ion; ion++) {
+        // replace matrix row for ion's ground state with sum of this ion's level populations is equal to the ion
+        // population
+        const double nnion = nnelement * ionfractions[ion];
+        const int index_ion_ground = get_nlte_vector_index(element, ion, 0, first_ion_used);
+        const int index_ion_toplevel = get_nlte_vector_index(element, ion, get_nlevels(element, ion), first_ion_used);
+        gsl_vector_view ion_ground_row_view = gsl_matrix_row(&rate_matrix, index_ion_ground);
+        gsl_vector_set_all(&ion_ground_row_view.vector, 0.);
+        for (int index = index_ion_ground; index <= index_ion_toplevel; index++) {
+          gsl_vector_set(&ion_ground_row_view.vector, index, 1.);
+        }
+
+        gsl_vector_set(&balance_vector, get_nlte_vector_index(element, ion, index_ion_ground, first_ion_used), nnion);
+      }
+    }
+
+    // calculate the normalisation factors and apply them to the matrix
+    // columns and balance vector elements
+    THREADLOCALONHOST std::vector<double> vec_pop_norm_factor_vec;
+    resize_exactly(vec_pop_norm_factor_vec, max_nlte_dimension);
+    auto pop_norm_factor_vec = gsl_vector_view_array(vec_pop_norm_factor_vec.data(), nlte_dimension).vector;
+    gsl_vector_set_all(&pop_norm_factor_vec, 1.0);
+
+    nltepop_matrix_normalise(nonemptymgi, element, &rate_matrix, &pop_norm_factor_vec, first_ion_used);
+
+    // printout("Rate matrix | balance vector:\n");
+    // for (int row = 0; row < nlte_dimension; row++)
+    // {
+    //   for (int column = 0; column < nlte_dimension; column++)
+    //   {
+    //     char str[15];
+    //     snprintf(str, 15, "%+.1e ", gsl_matrix_get(rate_matrix, row, column));
+    //     printout(str);
+    //   }
+    //   printout("| ");
+    //   char str[15];
+    //   snprintf(str, 15, "%+.1e\n", gsl_vector_get(balance_vector, row));
+    //   printout(str);
+    // }
+    // printout("\n");
+
+    // eliminate barely-interacting levels from the NLTE matrix by removing
+    // their interactions and setting their normalised populations (probably departure coeff) to 1.0
+    // filter_nlte_matrix(element, rate_matrix, balance_vector, pop_norm_factor_vec);
+
+    // the true population densities
+    THREADLOCALONHOST std::vector<double> vec_pop;
+    resize_exactly(vec_pop, max_nlte_dimension);
+    popvec = gsl_vector_view_array(vec_pop.data(), nlte_dimension).vector;
+
+    matrix_solve_success = nltepop_matrix_solve(element, &rate_matrix, &balance_vector, &popvec, &pop_norm_factor_vec,
+                                                max_nlte_dimension, first_ion_used);
+
+    if (matrix_solve_success) {
+      matrix_solve_satisfied_with_ion_list = true;
+    } else {
+      if (gsl_vector_get(&popvec, get_nlte_vector_index(element, first_ion_used + nions_used - 1, 0, first_ion_used)) <
+          100) {
+        printout(
+            "  WARNING: NLTE matrix solution failed for element Z=%d using ion range of ionstage=%d to ionstage %d, "
+            "removing top ionstage  "
+            "and attempting to re-solve nlte rate matrix \n",
+            atomic_number, get_ionstage(element, first_ion_used),
+            get_ionstage(element, first_ion_used + nions_used - 1));
+        nions_used = nions_used - 1;
+      } else if (gsl_vector_get(&popvec, get_nlte_vector_index(element, first_ion_used, 0, first_ion_used)) < 100) {
+        printout(
+            "  WARNING: NLTE matrix solution failed for element Z=%d using ion range of ionstage=%d to ionstage %d, "
+            "removing bottom ionstage  "
+            "and attempting to re-solve nlte rate matrix \n",
+            atomic_number, get_ionstage(element, first_ion_used), get_ionstage(element, first_ion_used));
+        nions_used = nions_used - 1;
+        first_ion_used++;
+      } else {
+        matrix_solve_satisfied_with_ion_list = true;
+      }
+      if (!matrix_solve_satisfied_with_ion_list) {
+        nlte_dimension = get_element_nlte_dimension(element, nions_used, first_ion_used);
+        // Might need to change this if we want solver to work for sub-set of elements ions
+        // printout that we are reducing the number of ions used
+        // printout(
+        //     "  WARNING: NLTE matrix solution failed for element Z=%d with %d ions, reducing to %d ions starting from
+        //     ion " "stage %d\n", atomic_number, nions, nions_used, get_ionstage(element, first_ion_used));}
+      }
+    }
+    // assert_always(get_atomicnumber(element) < 26);
   }
-
-  // calculate the normalisation factors and apply them to the matrix
-  // columns and balance vector elements
-  THREADLOCALONHOST std::vector<double> vec_pop_norm_factor_vec;
-  resize_exactly(vec_pop_norm_factor_vec, max_nlte_dimension);
-  auto pop_norm_factor_vec = gsl_vector_view_array(vec_pop_norm_factor_vec.data(), nlte_dimension).vector;
-  gsl_vector_set_all(&pop_norm_factor_vec, 1.0);
-
-  nltepop_matrix_normalise(nonemptymgi, element, &rate_matrix, &pop_norm_factor_vec, first_ion_used);
-
-  // printout("Rate matrix | balance vector:\n");
-  // for (int row = 0; row < nlte_dimension; row++)
-  // {
-  //   for (int column = 0; column < nlte_dimension; column++)
-  //   {
-  //     char str[15];
-  //     snprintf(str, 15, "%+.1e ", gsl_matrix_get(rate_matrix, row, column));
-  //     printout(str);
-  //   }
-  //   printout("| ");
-  //   char str[15];
-  //   snprintf(str, 15, "%+.1e\n", gsl_vector_get(balance_vector, row));
-  //   printout(str);
-  // }
-  // printout("\n");
-
-  // eliminate barely-interacting levels from the NLTE matrix by removing
-  // their interactions and setting their normalised populations (probably departure coeff) to 1.0
-  // filter_nlte_matrix(element, rate_matrix, balance_vector, pop_norm_factor_vec);
-
-  // the true population densities
-  THREADLOCALONHOST std::vector<double> vec_pop;
-  resize_exactly(vec_pop, max_nlte_dimension);
-  auto popvec = gsl_vector_view_array(vec_pop.data(), nlte_dimension).vector;
-
-  const bool matrix_solve_success = nltepop_matrix_solve(element, &rate_matrix, &balance_vector, &popvec,
-                                                         &pop_norm_factor_vec, max_nlte_dimension, first_ion_used);
 
   if (!matrix_solve_success) {
     printout(
