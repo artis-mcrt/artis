@@ -479,7 +479,7 @@ void allocate_nonemptymodelcells() {
 }
 
 void map_1dmodelto3dgrid()
-// Map 1D spherical model grid onto propagation grid
+// Map 1D spherical model grid onto 3D Cartesian propagation grid
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const double cellvmid = get_cellradialposmid(cellindex) / globals::tmin;
@@ -498,7 +498,7 @@ void map_1dmodelto3dgrid()
 }
 
 void map_2dmodelto3dgrid()
-// Map 2D cylindrical model onto propagation grid
+// Map 2D cylindrical model onto 3D Cartesia propagation grid
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     // map to 3D Cartesian grid
@@ -527,7 +527,7 @@ void map_2dmodelto3dgrid()
   }
 }
 
-// mgi and cellindex are interchangeable in this mode (except for empty cells that associated with mgi ==
+// mgi and cellindex are interchangeable in this mode (except for empty cells that are associated with mgi ==
 // get_npts_model())
 void map_modeltogrid_direct() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
