@@ -206,9 +206,8 @@ inline __host__ __device__ auto get_phixs_table(const int element, const int ion
 
   const double n_l = get_levelpop(nonemptymgi, element, ion, lower);
 
-  const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
   const double A_ul = line.einstein_A;
-  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * A_ul;
   const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
   return std::max(B_lu * n_l * HCLIGHTOVERFOURPI * t_current, 0.);
