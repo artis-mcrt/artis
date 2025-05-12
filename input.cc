@@ -741,6 +741,7 @@ void setup_phixs_list() {
       }
       const int nlevels = get_nlevels_ionising(element, ion);
       for (int level = 0; level < nlevels; level++) {
+        const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
         const int nphixstargets = get_nphixstargets(element, ion, level);
 
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
@@ -761,7 +762,7 @@ void setup_phixs_list() {
             const auto groundcontindex = search_groundphixslist(nu_edge_target0, element, ion, level);
             nonconstallcont[allcontindex].index_in_groundphixslist = groundcontindex;
 
-            globals::alllevels_closestgroundlevelcont[get_uniquelevelindex(element, ion, level)] = groundcontindex;
+            globals::alllevels_closestgroundlevelcont[uniquelevelindex] = groundcontindex;
           }
           allcontindex++;
         }
