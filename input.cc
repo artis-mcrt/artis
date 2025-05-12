@@ -354,7 +354,6 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
           .epsilon = currentlevelenergy,
           .ndowntrans = 0,
           .nuptrans = 0,
-          .phixsstart = -1,
           .nphixstargets = 0,
           .stat_weight = statweight,
       });
