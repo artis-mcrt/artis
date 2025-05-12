@@ -53,8 +53,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   double sum_internal_down_same = 0.;
   double sum_raddeexc = 0.;
   double sum_coldeexc = 0.;
-  const int ndowntrans = get_ndowntrans(element, ion, level);
-  const auto *const leveldowntranslist = get_downtranslist(element, ion, level);
+  const int ndowntrans = get_ndowntrans(ionuniquelevelindexstart + level);
+  const auto *const leveldowntranslist = get_downtranslist(ionuniquelevelindexstart + level);
   auto *const arr_sum_epstrans_rad_deexc = chlevel.sum_epstrans_rad_deexc;
   auto *const arr_sum_internal_down_same = chlevel.sum_internal_down_same;
   for (int i = 0; i < ndowntrans; i++) {
@@ -84,8 +84,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   // Calculate sum for upward internal transitions
   // transitions within the current ionisation stage
   double sum_internal_up_same = 0.;
-  const int nuptrans = get_nuptrans(element, ion, level);
-  const auto *const uptranslist = get_uptranslist(element, ion, level);
+  const int nuptrans = get_nuptrans(ionuniquelevelindexstart + level);
+  const auto *const uptranslist = get_uptranslist(ionuniquelevelindexstart + level);
   for (int i = 0; i < nuptrans; i++) {
     const auto &uptrans = uptranslist[i];
     const double epsilon_trans = epsilon(ionuniquelevelindexstart + uptrans.targetlevelindex) - epsilon_current;
@@ -153,9 +153,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   return processrates;
 }
 
-auto do_macroatom_internal_down_same(const int element, const int ion, const int level, const CellCacheLevels &chlevel)
-    -> int {
-  const int ndowntrans = get_ndowntrans(element, ion, level);
+auto do_macroatom_internal_down_same(const int uniquelevelindex, const CellCacheLevels &chlevel) -> int {
+  const int ndowntrans = get_ndowntrans(uniquelevelindex);
 
   // printout("[debug] do_ma:   internal downward jump within current ionstage\n");
 
@@ -169,7 +168,7 @@ auto do_macroatom_internal_down_same(const int element, const int ion, const int
       std::upper_bound(sum_internal_down_same, sum_internal_down_same + ndowntrans - 1, targetval) -
       sum_internal_down_same;
 
-  const int lower = get_downtranslist(element, ion, level)[downtransindex].targetlevelindex;
+  const int lower = get_downtranslist(uniquelevelindex)[downtransindex].targetlevelindex;
 
   return lower;
 }
@@ -448,7 +447,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
       case MA_ACTION_INTERNALDOWNSAME: {
         stats::increment(stats::COUNTER_INTERACTIONS);
-        level = do_macroatom_internal_down_same(element, ion, level, chlevel);
+        level = do_macroatom_internal_down_same(ionuniquelevelindexstart + level, chlevel);
 
         break;
       }
@@ -557,7 +556,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
             std::upper_bound(sum_internal_up_same, sum_internal_up_same + nuptrans - 1, targetval) -
             sum_internal_up_same;
 
-        const int upper = get_uptranslist(element, ion, level)[uptransindex].targetlevelindex;
+        const int upper = get_uptranslist(ionuniquelevelindexstart + level)[uptransindex].targetlevelindex;
 
         level = upper;
         break;
