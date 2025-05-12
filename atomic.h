@@ -488,13 +488,18 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
   return E_threshold;
 }
 
-[[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int element, const int ion, const int level,
+[[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int uniquelevelindex,
                                          const int phixstargetindex) -> int {
-  const int contindex = globals::alllevels_cont_index[get_uniquelevelindex(element, ion, level)] + phixstargetindex;
+  const int contindex = globals::alllevels_cont_index[uniquelevelindex] + phixstargetindex;
   const int bflutindex = (temperatureindex * globals::nbfcontinua) + contindex;
   assert_testmodeonly(bflutindex >= 0);
   assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
   return bflutindex;
+}
+
+[[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int element, const int ion, const int level,
+                                         const int phixstargetindex) -> int {
+  return get_bflutindex(temperatureindex, get_uniquelevelindex(element, ion, level), phixstargetindex);
 }
 
 #endif  // ATOMIC_H
