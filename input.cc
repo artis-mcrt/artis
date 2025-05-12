@@ -459,7 +459,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
                                           std::vector<int> &iondowntranstmplineindicies, int &lineindex,
                                           std::vector<TransitionLine> &temp_linelist,
                                           std::vector<LevelTransition> &temp_alltranslist,
-                                          size_t &temp_alltranslist_size, EnergyLevel *ion_levels) {
+                                          size_t &temp_alltranslist_size, std::span<EnergyLevel> ion_levels) {
   const int lineindex_initial = lineindex;
   ptrdiff_t totupdowntrans = 0;
   // pass 0 to get transition counts of each level
@@ -1069,7 +1069,6 @@ void read_atomicdata_files() {
       assert_always(std::ssize(temp_alllevels) == uniquelevelindex);
 
       read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, temp_alllevels);
-      auto *ion_levels = temp_alllevels.data() + globals::elements[element].ions[ion].uniquelevelindexstart;
 
       int tottransitions = tottransitions_in_file;
 
@@ -1096,14 +1095,16 @@ void read_atomicdata_files() {
       // last level index is (nlevelsmax - 1), so this is the correct size
       iondowntranstmplineindicies.resize(downtranslevelstart(nlevelsmax));
 
+      auto ion_levels =
+          std::span{temp_alllevels}.subspan(globals::elements[element].ions[ion].uniquelevelindexstart, nlevelsmax);
       add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, iontransitiontable, iondowntranstmplineindicies,
                                            lineindex, temp_linelist, temp_alltranslist, temp_alltranslist_size,
                                            ion_levels);
 
-      for (int level = 0; level < nlevelsmax; level++) {
+      for (const auto &level : ion_levels) {
         uniquelevelindex++;
-        totaldowntrans += ion_levels[level].ndowntrans;
-        totaluptrans += ion_levels[level].nuptrans;
+        totaldowntrans += level.ndowntrans;
+        totaluptrans += level.nuptrans;
       }
 
       if (ion < nions - 1) {
