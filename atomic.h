@@ -102,9 +102,6 @@ __host__ __device__ inline auto get_nphixstargets(const int uniquelevelindex) ->
 
 // Returns the number of target states for photoionization of (element,ion,level).
 __host__ __device__ inline auto get_nphixstargets(const int element, const int ion, const int level) -> int {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
   const auto nphixstargets = get_nphixstargets(get_uniquelevelindex(element, ion, level));
   assert_testmodeonly(nphixstargets == 0 ||
                       ((ion < (get_nions(element) - 1)) && (level < get_nlevels_ionising(element, ion))));
@@ -112,16 +109,27 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
 }
 
 // Return the level index of a target state for photoionization of (element,ion,level).
-[[nodiscard]] __host__ __device__ inline auto get_phixsupperlevel(const int element, const int ion, const int level,
+[[nodiscard]] __host__ __device__ inline auto get_phixsupperlevel(const int uniquelevelindex,
                                                                   const int phixstargetindex) -> int {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
   assert_testmodeonly(phixstargetindex >= 0);
-  assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
-  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+  assert_testmodeonly(phixstargetindex < get_nphixstargets(uniquelevelindex));
 
   return globals::allphixstargets[globals::alllevels_phixstargetstart[uniquelevelindex] + phixstargetindex].levelindex;
+}
+
+// Return the level index of a target state for photoionization of (element,ion,level).
+[[nodiscard]] __host__ __device__ inline auto get_phixsupperlevel(const int element, const int ion, const int level,
+                                                                  const int phixstargetindex) -> int {
+  return get_phixsupperlevel(get_uniquelevelindex(element, ion, level), phixstargetindex);
+}
+
+// Return the probability of a target state for photoionization of (element,ion,level).
+[[nodiscard]] __host__ __device__ inline auto get_phixsprobability(const int uniquelevelindex,
+                                                                   const int phixstargetindex) -> double {
+  assert_testmodeonly(phixstargetindex >= 0);
+  assert_testmodeonly(phixstargetindex < get_nphixstargets(uniquelevelindex));
+
+  return globals::allphixstargets[globals::alllevels_phixstargetstart[uniquelevelindex] + phixstargetindex].probability;
 }
 
 // Return the probability of a target state for photoionization of (element,ion,level).
@@ -130,11 +138,8 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  assert_testmodeonly(phixstargetindex >= 0);
-  assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
-  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
 
-  return globals::allphixstargets[globals::alllevels_phixstargetstart[uniquelevelindex] + phixstargetindex].probability;
+  return get_phixsprobability(get_uniquelevelindex(element, ion, level), phixstargetindex);
 }
 
 // Return the number of bf-continua associated with ion ion of element element.
@@ -144,10 +149,15 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   return globals::elements[element].ions[ion].maxrecombininglevel;
 }
 
-inline __host__ __device__ auto get_phixs_table(const int element, const int ion, const int level) -> float * {
-  const auto phixsstart = globals::alllevels_phixsstart[get_uniquelevelindex(element, ion, level)];
+[[nodiscard]] inline __host__ __device__ auto get_phixs_table(const int uniquelevelindexl) -> float * {
+  const auto phixsstart = globals::alllevels_phixsstart[uniquelevelindexl];
   assert_testmodeonly(phixsstart >= 0);
   return globals::allphixs.data() + (phixsstart * globals::NPHIXSPOINTS);
+}
+
+[[nodiscard]] inline __host__ __device__ auto get_phixs_table(const int element, const int ion, const int level)
+    -> float * {
+  return get_phixs_table(get_uniquelevelindex(element, ion, level));
 }
 
 // Calculate the photoionisation cross-section at frequency nu out of the atomic data.
