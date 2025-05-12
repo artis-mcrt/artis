@@ -842,7 +842,6 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 }
 
 // multiply by upper level population to get a rate per second
-
 auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans,
                                 const double upperstatweight, const double lowerstatweight,
                                 const LevelTransition &downtransition) -> double {
@@ -891,7 +890,6 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
 }
 
 // multiply by lower level population to get a rate per second
-
 auto col_excitation_ratecoeff(const float T_e, const float nne, const double upperstatweight,
                               const LevelTransition &uptrans, const double epsilon_trans, const double lowerstatweight)
     -> double {
