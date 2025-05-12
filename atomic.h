@@ -437,8 +437,12 @@ inline auto get_includedions() -> int {
   return get_nuptrans(get_uniquelevelindex(element, ion, level));
 }
 
+[[nodiscard]] inline auto get_uptranslist(const int uniquelevelindex) -> LevelTransition * {
+  return globals::alltrans.data() + get_alltrans_startup(uniquelevelindex);
+}
+
 [[nodiscard]] inline auto get_uptranslist(const int element, const int ion, const int level) -> LevelTransition * {
-  return globals::alltrans.data() + get_alltrans_startup(get_uniquelevelindex(element, ion, level));
+  return get_uptranslist(get_uniquelevelindex(element, ion, level));
 }
 
 [[nodiscard]] inline auto get_uptransspan(const int element, const int ion, const int level)
