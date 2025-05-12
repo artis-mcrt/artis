@@ -1180,8 +1180,10 @@ void cellcache_change_cell(const int nonemptymgi) {
       cacheslot
           .cooling_contrib[kpkt::get_coolinglistoffset(element, ion) + kpkt::get_ncoolingterms_ion(element, ion) - 1] =
           COOLING_UNDEFINED;
+    }
 
-      if (nonemptymgi >= 0) {
+    if (nonemptymgi >= 0) {
+      for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
         auto &chion = cacheslot.chelements[element].chions[ion];
 #ifdef _OPENMP
@@ -1220,7 +1222,8 @@ void cellcache_change_cell(const int nonemptymgi) {
       const int element = globals::allcont[i].element;
       const int ion = globals::allcont[i].ion;
       const int level = globals::allcont[i].level;
-      const auto nnlevel = get_levelpop(nonemptymgi, element, ion, level);
+      const auto nnlevel =
+          globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].population;
       cacheslot.ch_allcont_nnlevel[i] = nnlevel;
       cacheslot.ch_keep_this_cont[i] = nnlevel > 0 && keep_this_cont(element, ion, level, nonemptymgi, nnetot);
     }
