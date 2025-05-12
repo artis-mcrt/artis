@@ -40,10 +40,12 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
   auto processrates = std::array<double, MA_ACTION_COUNT>{};
 
+  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
-  const double epsilon_current = epsilon(element, ion, level);
-  const double statweight = stat_weight(element, ion, level);
+  const double epsilon_current = globals::alllevels_epsilon[ionuniquelevelindexstart + level];
+  const double statweight = globals::alllevels_statweight[ionuniquelevelindexstart + level];
   const auto nnlevel = get_levelpop(nonemptymgi, element, ion, level);
 
   // Downward transitions within the current ionisation stage:
