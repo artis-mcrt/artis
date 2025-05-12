@@ -196,6 +196,39 @@ inline __host__ __device__ auto get_phixs_table(const int element, const int ion
   return sigma_bf;
 }
 
+// return the number of ions of all elements combined
+inline auto get_includedlevels() -> int { return includedlevels; }
+
+// Get an index for level of an ionstage of an element that is unique across every ion of every element
+[[nodiscard]] inline auto get_uniquelevelindex(const int element, const int ion, const int level) -> int {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  const auto uniquelevelindex = globals::elements[element].ions[ion].uniquelevelindexstart + level;
+  assert_testmodeonly(uniquelevelindex < get_includedlevels());
+
+  return uniquelevelindex;
+}
+
+// inverse of get_uniquelevelindex(). get the element/ion/level from a unique level index
+[[nodiscard]] inline auto get_levelfromuniquelevelindex(const int uniquelevelindex) -> std::tuple<int, int, int> {
+  assert_testmodeonly(uniquelevelindex < get_includedlevels());
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      if (get_nlevels(element, ion) == 0) {
+        continue;
+      }
+      const int level = uniquelevelindex - globals::elements[element].ions[ion].uniquelevelindexstart;
+      if (level >= 0 && level < get_nlevels(element, ion)) {
+        assert_testmodeonly(get_uniquelevelindex(element, ion, level) == uniquelevelindex);
+        return {element, ion, level};
+      }
+    }
+  }
+  assert_always(false);  // uniquelevelindex too high to be valid
+  return {-1, -1, -1};
+}
 [[nodiscard]] inline auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current)
     -> double {
   const auto &line = globals::linelist[lineindex];
@@ -277,9 +310,6 @@ inline auto get_includedions() -> int {
   return includedions;
 }
 
-// return the number of ions of all elements combined
-inline auto get_includedlevels() -> int { return includedlevels; }
-
 // get a number greater than or equal to nions(element) for all elements
 [[nodiscard]] inline auto get_max_nions() -> int { return maxnions; }
 
@@ -343,37 +373,6 @@ inline auto get_includedlevels() -> int { return includedlevels; }
   }
   assert_always(false);  // allionsindex too high to be valid
   return {-1, -1};
-}
-
-// Get an index for level of an ionstage of an element that is unique across every ion of every element
-[[nodiscard]] inline auto get_uniquelevelindex(const int element, const int ion, const int level) -> int {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  const auto uniquelevelindex = globals::elements[element].ions[ion].uniquelevelindexstart + level;
-  assert_testmodeonly(uniquelevelindex < get_includedlevels());
-
-  return uniquelevelindex;
-}
-
-// inverse of get_uniquelevelindex(). get the element/ion/level from a unique level index
-[[nodiscard]] inline auto get_levelfromuniquelevelindex(const int uniquelevelindex) -> std::tuple<int, int, int> {
-  assert_testmodeonly(uniquelevelindex < get_includedlevels());
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      if (get_nlevels(element, ion) == 0) {
-        continue;
-      }
-      const int level = uniquelevelindex - globals::elements[element].ions[ion].uniquelevelindexstart;
-      if (level >= 0 && level < get_nlevels(element, ion)) {
-        assert_testmodeonly(get_uniquelevelindex(element, ion, level) == uniquelevelindex);
-        return {element, ion, level};
-      }
-    }
-  }
-  assert_always(false);  // uniquelevelindex too high to be valid
-  return {-1, -1, -1};
 }
 
 [[nodiscard]] inline auto ion_has_superlevel(const int element, const int ion) -> bool {
