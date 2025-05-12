@@ -225,11 +225,15 @@ inline __host__ __device__ auto get_phixs_table(const int element, const int ion
 }
 
 // Return the energy of (element,ion,level).
+[[nodiscard]] __host__ __device__ inline auto epsilon(const int uniquelevelindex) -> double {
+  return globals::alllevels_epsilon[uniquelevelindex];
+}
+
 [[nodiscard]] __host__ __device__ inline auto epsilon(const int element, const int ion, const int level) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  return globals::alllevels_epsilon[get_uniquelevelindex(element, ion, level)];
+  return epsilon(get_uniquelevelindex(element, ion, level));
 }
 
 [[nodiscard]] inline auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current)
