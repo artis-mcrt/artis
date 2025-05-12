@@ -431,7 +431,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const int upper = uptrans.targetlevelindex;
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
 
-      const double R = rad_excitation_ratecoeff(nonemptymgi, element, ion, level, uptrans, epsilon_trans, nnlevel,
+      const double R = rad_excitation_ratecoeff(nonemptymgi, element, ion, uptrans, epsilon_trans, nnlevel, statweight,
                                                 lineindex, t_mid) *
                        s_renorm[level];
       assert_always(R >= 0);
