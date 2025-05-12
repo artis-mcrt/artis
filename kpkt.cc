@@ -592,9 +592,8 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     const double statweight = stat_weight(element, ion, level);
     int upper = -1;
     // excitation to same ionization stage
-    const int nuptrans = get_nuptrans(element, ion, level);
-    const auto *const uptranslist = get_uptranslist(element, ion, level);
-    for (int ii = 0; ii < nuptrans; ii++) {
+    const auto uptranslist = get_uptransspan(element, ion, level);
+    for (int ii = 0; ii < std::ssize(uptranslist); ii++) {
       const int tmpupper = uptranslist[ii].targetlevelindex;
       // printout("    excitation to level %d possible\n",upper);
       const double epsilon_trans = epsilon(element, ion, tmpupper) - epsilon_current;
