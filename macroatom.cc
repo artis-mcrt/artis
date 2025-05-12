@@ -666,7 +666,7 @@ auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int element, const 
     const double nu_trans = epsilon_trans / H;
 
     const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
-    const double B_lu = upperstatweight / stat_weight(get_uniquelevelindex(element, ion, lower)) * B_ul;
+    const double B_lu = upperstatweight / stat_weight(element, ion, lower) * B_ul;
 
     const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
@@ -945,7 +945,7 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, const int elemen
     // forbidden transitions: magnetic dipole, electric quadropole...
     // Axelrod's approximation (thesis 1980)
     const int upper = uptrans.targetlevelindex;
-    const double upperstatweight = stat_weight(globals::elements[element].ions[ion].uniquelevelindexstart + upper);
+    const double upperstatweight = stat_weight(element, ion, upper);
 
     return nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
   }
