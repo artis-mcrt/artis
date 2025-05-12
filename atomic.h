@@ -455,10 +455,13 @@ inline auto get_includedions() -> int {
   return get_uptranslist(get_uniquelevelindex(element, ion, level));
 }
 
+[[nodiscard]] inline auto get_uptransspan(const int uniquelevelindex) -> std::span<const LevelTransition> {
+  return globals::alltrans.subspan(get_alltrans_startup(uniquelevelindex), get_nuptrans(uniquelevelindex));
+}
+
 [[nodiscard]] inline auto get_uptransspan(const int element, const int ion, const int level)
     -> std::span<const LevelTransition> {
-  return globals::alltrans.subspan(get_alltrans_startup(get_uniquelevelindex(element, ion, level)),
-                                   get_nuptrans(element, ion, level));
+  return get_uptransspan(get_uniquelevelindex(element, ion, level));
 }
 
 // the number of downward bound-bound transitions from the specified level
