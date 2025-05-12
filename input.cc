@@ -162,7 +162,8 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
   assert_always(tmpallphixs.size() % globals::NPHIXSPOINTS == 0);
   const auto tmpphixsstart = tmpallphixs.size();
-  lowerion_levels[lowerlevel].phixsstart = tmpphixsstart / globals::NPHIXSPOINTS;
+  const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
+  globals::alllevels_phixsstart[lower_uniquelevelindex] = tmpphixsstart / globals::NPHIXSPOINTS;
   tmpallphixs.resize(tmpallphixs.size() + globals::NPHIXSPOINTS);
 
   auto *levelphixstable = &tmpallphixs[tmpphixsstart];
@@ -1170,13 +1171,13 @@ void read_atomicdata_files() {
   globals::alllevels_epsilon = MPI_shared_malloc_span<double>(temp_alllevels.size());
   globals::alllevels_statweight = MPI_shared_malloc_span<float>(temp_alllevels.size());
   globals::alllevels_closestgroundlevelcont = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  globals::alllevels_phixsstart = MPI_shared_malloc_span<int>(temp_alllevels.size());
   if (globals::rank_in_node == 0) {
     for (size_t i = 0; i < temp_alllevels.size(); i++) {
       globals::alllevels[i] = {
           .alltrans_startdown = temp_alllevels[i].alltrans_startdown,
           .ndowntrans = temp_alllevels[i].ndowntrans,
           .nuptrans = temp_alllevels[i].nuptrans,
-          .phixsstart = temp_alllevels[i].phixsstart,
           .nphixstargets = temp_alllevels[i].nphixstargets,
           .phixstargetstart = temp_alllevels[i].phixstargetstart,
           .cont_index = temp_alllevels[i].cont_index,
@@ -1184,6 +1185,7 @@ void read_atomicdata_files() {
       globals::alllevels_epsilon[i] = temp_alllevels[i].epsilon;
       globals::alllevels_statweight[i] = temp_alllevels[i].stat_weight;
       globals::alllevels_closestgroundlevelcont[i] = temp_alllevels[i].closestgroundlevelcont;
+      globals::alllevels_phixsstart[i] = temp_alllevels[i].phixsstart;
     }
   }
   MPI_Barrier(globals::mpi_comm_node);

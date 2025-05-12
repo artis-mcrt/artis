@@ -103,7 +103,6 @@ struct EnergyLevel {
   int alltrans_startdown{};
   int ndowntrans{0};
   int nuptrans{0};
-  int phixsstart{-1};
   int nphixstargets{0};
   int phixstargetstart{-1};
   int cont_index{-1};
@@ -279,6 +278,7 @@ inline std::span<EnergyLevel> alllevels;
 inline std::span<double> alllevels_epsilon;
 inline std::span<float> alllevels_statweight;
 inline std::span<int> alllevels_closestgroundlevelcont;
+inline std::span<int> alllevels_phixsstart;
 
 inline std::vector<Element> elements;
 

@@ -31,6 +31,9 @@ inline std::array<bool, 3> phixs_file_version_exists;
 
 constexpr std::array<const char *, 3> phixsdata_filenames = {"version0ignore", "phixsdata.txt", "phixsdata_v2.txt"};
 
+// return the number of ions of all elements combined
+inline auto get_includedlevels() -> int { return includedlevels; }
+
 [[nodiscard]] __host__ __device__ inline auto get_nelements() -> int {
   return static_cast<int>(globals::elements.size());
 }
@@ -51,6 +54,24 @@ inline auto get_nions(const int element) -> int {
   return globals::elements[element].nions;
 }
 
+// Return the number of levels associated with a specific ion given its elementindex and ionindex.
+__host__ __device__ inline auto get_nlevels(const int element, const int ion) -> int {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  return globals::elements[element].ions[ion].nlevels;
+}
+
+// Get an index for level of an ionstage of an element that is unique across every ion of every element
+[[nodiscard]] inline auto get_uniquelevelindex(const int element, const int ion, const int level) -> int {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  const auto uniquelevelindex = globals::elements[element].ions[ion].uniquelevelindexstart + level;
+  assert_testmodeonly(uniquelevelindex < get_includedlevels());
+
+  return uniquelevelindex;
+}
+
 [[nodiscard]] inline auto get_ion_levels(const int element, const int ion) -> EnergyLevel * {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
@@ -58,13 +79,6 @@ inline auto get_nions(const int element) -> int {
   assert_testmodeonly(std::ssize(globals::alllevels) > (globals::elements[element].ions[ion].uniquelevelindexstart +
                                                         globals::elements[element].ions[ion].nlevels - 1));
   return globals::alllevels.data() + globals::elements[element].ions[ion].uniquelevelindexstart;
-}
-
-// Return the number of levels associated with a specific ion given its elementindex and ionindex.
-__host__ __device__ inline auto get_nlevels(const int element, const int ion) -> int {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  return globals::elements[element].ions[ion].nlevels;
 }
 
 // Return the ionisation stage of an ion specified by its elementindex and ionindex.
@@ -124,7 +138,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
 }
 
 inline __host__ __device__ auto get_phixs_table(const int element, const int ion, const int level) -> float * {
-  const auto phixsstart = get_ion_levels(element, ion)[level].phixsstart;
+  const auto phixsstart = globals::alllevels_phixsstart[get_uniquelevelindex(element, ion, level)];
   assert_testmodeonly(phixsstart >= 0);
   return globals::allphixs.data() + (phixsstart * globals::NPHIXSPOINTS);
 }
@@ -176,20 +190,6 @@ inline __host__ __device__ auto get_phixs_table(const int element, const int ion
   }
 
   return sigma_bf;
-}
-
-// return the number of ions of all elements combined
-inline auto get_includedlevels() -> int { return includedlevels; }
-
-// Get an index for level of an ionstage of an element that is unique across every ion of every element
-[[nodiscard]] inline auto get_uniquelevelindex(const int element, const int ion, const int level) -> int {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  const auto uniquelevelindex = globals::elements[element].ions[ion].uniquelevelindexstart + level;
-  assert_testmodeonly(uniquelevelindex < get_includedlevels());
-
-  return uniquelevelindex;
 }
 
 // inverse of get_uniquelevelindex(). get the element/ion/level from a unique level index
