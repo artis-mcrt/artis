@@ -10,8 +10,8 @@ void macroatom_close_file();
 void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate);
 
 [[nodiscard]] auto rad_deexcitation_ratecoeff(int nonemptymgi, int lower_uniquelevelindex, double epsilon_trans,
-                                              float A_ul, double upperstatweight, double nnlevelupper, double t_current)
-    -> double;
+                                              float A_ul, double upperstatweight, double lowerstatweight,
+                                              double nnlevelupper, double t_current) -> double;
 
 [[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, int upper_uniquelevelindex, double upper_statweight,
                                             const LevelTransition &uptrans, double epsilon_trans, double nnlevel_lower,
@@ -29,8 +29,8 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate);
 [[nodiscard]] auto col_ionization_ratecoeff(float T_e, float nne, int element, int ion, int lower, int phixstargetindex,
                                             double epsilon_trans) -> double;
 
-[[nodiscard]] auto col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, int element, int ion,
-                                              double upperstatweight, const LevelTransition &downtransition) -> double;
+[[nodiscard]] auto col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, double upperstatweight,
+                                              double lowerstatweight, const LevelTransition &downtransition) -> double;
 
 [[nodiscard]] auto col_excitation_ratecoeff(float T_e, float nne, double upperstatweight,
                                             const LevelTransition &uptrans, double epsilon_trans,

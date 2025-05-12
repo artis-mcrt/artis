@@ -402,13 +402,15 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const double A_ul = downtransition.einstein_A;
       const int lower = downtransition.targetlevelindex;
       const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
+      const auto lower_statweight = stat_weight(lower_uniquelevelindex);
 
       const double epsilon_trans = epsilon_level - epsilon(lower_uniquelevelindex);
       const double R = rad_deexcitation_ratecoeff(nonemptymgi, lower_uniquelevelindex, epsilon_trans, A_ul, statweight,
-                                                  nnlevel, t_mid) *
+                                                  lower_statweight, nnlevel, t_mid) *
                        s_renorm[level];
-      const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, statweight, downtransition) *
-                       s_renorm[level];
+      const double C =
+          col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, downtransition) *
+          s_renorm[level];
 
       const int upper_index = level_index;
       const int lower_index = get_nlte_vector_index(element, ion, lower);

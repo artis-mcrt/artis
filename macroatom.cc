@@ -63,10 +63,11 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     const double epsilon_target = epsilon(ionuniquelevelindexstart + lower);
     const double epsilon_trans = epsilon_current - epsilon_target;
     const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
+    const auto lower_statweight = stat_weight(lower_uniquelevelindex);
 
     const double R = rad_deexcitation_ratecoeff(nonemptymgi, lower_uniquelevelindex, epsilon_trans, A_ul, statweight,
-                                                nnlevel, t_mid);
-    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, statweight, downtrans);
+                                                lower_statweight, nnlevel, t_mid);
+    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, downtrans);
 
     sum_raddeexc += R * epsilon_trans;
     sum_coldeexc += C * epsilon_trans;
@@ -655,8 +656,8 @@ void macroatom_close_file() {
 // multiply by upper level population to get a rate per second
 
 auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int lower_uniquelevelindex, const double epsilon_trans,
-                                const float A_ul, const double upperstatweight, const double nnlevelupper,
-                                const double t_current) -> double {
+                                const float A_ul, const double upperstatweight, const double lowerstatweight,
+                                const double nnlevelupper, const double t_current) -> double {
   const auto &n_u = nnlevelupper;
   const double n_l = get_levelpop(nonemptymgi, lower_uniquelevelindex);
 
@@ -667,7 +668,7 @@ auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int lower_uniquelev
     const double nu_trans = epsilon_trans / H;
 
     const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
-    const double B_lu = upperstatweight / stat_weight(lower_uniquelevelindex) * B_ul;
+    const double B_lu = upperstatweight / lowerstatweight * B_ul;
 
     const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
@@ -846,12 +847,9 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 
 // multiply by upper level population to get a rate per second
 
-auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, const int element,
-                                const int ion, const double upperstatweight, const LevelTransition &downtransition)
-    -> double {
-  const int lower = downtransition.targetlevelindex;
-  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
-  const double lowerstatweight = stat_weight(ionuniquelevelindexstart + lower);
+auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans,
+                                const double upperstatweight, const double lowerstatweight,
+                                const LevelTransition &downtransition) -> double {
   const double coll_str_thisline = downtransition.coll_str;
   if (coll_str_thisline < 0) {
     const bool forbidden = downtransition.forbidden;
