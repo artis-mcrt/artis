@@ -343,9 +343,10 @@ void setup_coolinglist() {
       if (ion < (nions - 1))  // check whether further ionisation stage available
       {
         for (int level = 0; level < nionisinglevels; level++) {
-          const int nphixstargets = get_nphixstargets(element, ion, level);
+          const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+          const int nphixstargets = get_nphixstargets(uniquelevelindex);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+            const int upper = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
             coolinglist[i].type = CoolingType::COLLION;
             coolinglist[i].level = level;
             coolinglist[i].upperlevel = upper;
@@ -356,9 +357,10 @@ void setup_coolinglist() {
         // fb creation of r-pkt
         // free bound rates are calculated from the lower ion, but associated to the higher ion
         for (int level = 0; level < nionisinglevels; level++) {
-          const int nphixstargets = get_nphixstargets(element, ion, level);
+          const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+          const int nphixstargets = get_nphixstargets(uniquelevelindex);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+            const int upper = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
             coolinglist[i].type = CoolingType::FREEBOUND;
             coolinglist[i].level = level;
             coolinglist[i].upperlevel = upper;
