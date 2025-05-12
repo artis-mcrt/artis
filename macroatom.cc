@@ -201,7 +201,9 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
     atomicadd(globals::ecounter[downtrans.lineindex], 1);
   }
 
-  const double epsilon_trans = epsilon_current - epsilon(element, ion, downtrans.targetlevelindex);
+  const double epsilon_trans =
+      epsilon_current - globals::alllevels_epsilon[globals::elements[element].ions[ion].uniquelevelindexstart +
+                                                   downtrans.targetlevelindex];
 
   const double oldnucmf = pkt.nu_cmf;
   pkt.nu_cmf = epsilon_trans / H;
