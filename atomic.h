@@ -67,6 +67,15 @@ __host__ __device__ inline auto get_nlevels(const int element, const int ion) ->
   return globals::elements[element].ions[ion].nlevels;
 }
 
+// Return the energy of (element,ion,level).
+
+[[nodiscard]] __host__ __device__ inline auto epsilon(const int element, const int ion, const int level) -> double {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  return get_ion_levels(element, ion)[level].epsilon;
+}
+
 // Return the ionisation stage of an ion specified by its elementindex and ionindex.
 [[nodiscard]] __host__ __device__ inline auto get_ionstage(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
@@ -114,6 +123,15 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
 
   return globals::allphixstargets[get_ion_levels(element, ion)[level].phixstargetstart + phixstargetindex].probability;
+}
+
+// Return the statistical weight of (element,ion,level).
+
+[[nodiscard]] __host__ __device__ inline auto stat_weight(const int element, const int ion, const int level) -> double {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  return get_ion_levels(element, ion)[level].stat_weight;
 }
 
 // Return the number of bf-continua associated with ion ion of element element.
@@ -178,56 +196,6 @@ inline __host__ __device__ auto get_phixs_table(const int element, const int ion
   return sigma_bf;
 }
 
-// return the number of ions of all elements combined
-inline auto get_includedlevels() -> int { return includedlevels; }
-
-// Get an index for level of an ionstage of an element that is unique across every ion of every element
-[[nodiscard]] inline auto get_uniquelevelindex(const int element, const int ion, const int level) -> int {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  const auto uniquelevelindex = globals::elements[element].ions[ion].uniquelevelindexstart + level;
-  assert_testmodeonly(uniquelevelindex < get_includedlevels());
-
-  return uniquelevelindex;
-}
-
-// inverse of get_uniquelevelindex(). get the element/ion/level from a unique level index
-[[nodiscard]] inline auto get_levelfromuniquelevelindex(const int uniquelevelindex) -> std::tuple<int, int, int> {
-  assert_testmodeonly(uniquelevelindex < get_includedlevels());
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      if (get_nlevels(element, ion) == 0) {
-        continue;
-      }
-      const int level = uniquelevelindex - globals::elements[element].ions[ion].uniquelevelindexstart;
-      if (level >= 0 && level < get_nlevels(element, ion)) {
-        assert_testmodeonly(get_uniquelevelindex(element, ion, level) == uniquelevelindex);
-        return {element, ion, level};
-      }
-    }
-  }
-  assert_always(false);  // uniquelevelindex too high to be valid
-  return {-1, -1, -1};
-}
-
-// Return the statistical weight of (element,ion,level).
-[[nodiscard]] __host__ __device__ inline auto stat_weight(const int element, const int ion, const int level) -> double {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  return globals::alllevels_statweight[get_uniquelevelindex(element, ion, level)];
-}
-
-// Return the energy of (element,ion,level).
-[[nodiscard]] __host__ __device__ inline auto epsilon(const int element, const int ion, const int level) -> double {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  return globals::alllevels_epsilon[get_uniquelevelindex(element, ion, level)];
-}
-
 [[nodiscard]] inline auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current)
     -> double {
   const auto &line = globals::linelist[lineindex];
@@ -256,9 +224,7 @@ inline auto get_includedlevels() -> int { return includedlevels; }
 
   const double A_ul = line.einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * A_ul;
-  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
-  const double B_lu = globals::alllevels_statweight[ionuniquelevelindexstart + upper] /
-                      globals::alllevels_statweight[ionuniquelevelindexstart + lower] * B_ul;
+  const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
   const double n_u = get_levelpop(nonemptymgi, element, ion, upper);
   return std::max((B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current, 0.);
@@ -310,6 +276,9 @@ inline auto get_includedions() -> int {
   assert_testmodeonly(includedions > 0);
   return includedions;
 }
+
+// return the number of ions of all elements combined
+inline auto get_includedlevels() -> int { return includedlevels; }
 
 // get a number greater than or equal to nions(element) for all elements
 [[nodiscard]] inline auto get_max_nions() -> int { return maxnions; }
@@ -374,6 +343,37 @@ inline auto get_includedions() -> int {
   }
   assert_always(false);  // allionsindex too high to be valid
   return {-1, -1};
+}
+
+// Get an index for level of an ionstage of an element that is unique across every ion of every element
+[[nodiscard]] inline auto get_uniquelevelindex(const int element, const int ion, const int level) -> int {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  const auto uniquelevelindex = globals::elements[element].ions[ion].uniquelevelindexstart + level;
+  assert_testmodeonly(uniquelevelindex < get_includedlevels());
+
+  return uniquelevelindex;
+}
+
+// inverse of get_uniquelevelindex(). get the element/ion/level from a unique level index
+[[nodiscard]] inline auto get_levelfromuniquelevelindex(const int uniquelevelindex) -> std::tuple<int, int, int> {
+  assert_testmodeonly(uniquelevelindex < get_includedlevels());
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      if (get_nlevels(element, ion) == 0) {
+        continue;
+      }
+      const int level = uniquelevelindex - globals::elements[element].ions[ion].uniquelevelindexstart;
+      if (level >= 0 && level < get_nlevels(element, ion)) {
+        assert_testmodeonly(get_uniquelevelindex(element, ion, level) == uniquelevelindex);
+        return {element, ion, level};
+      }
+    }
+  }
+  assert_always(false);  // uniquelevelindex too high to be valid
+  return {-1, -1, -1};
 }
 
 [[nodiscard]] inline auto ion_has_superlevel(const int element, const int ion) -> bool {
