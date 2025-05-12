@@ -865,8 +865,9 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, const int element,
                                 const int ion, const int upper, const LevelTransition &downtransition) -> double {
   const int lower = downtransition.targetlevelindex;
-  const double upperstatweight = stat_weight(element, ion, upper);
-  const double lowerstatweight = stat_weight(element, ion, lower);
+  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+  const double upperstatweight = globals::alllevels_statweight[ionuniquelevelindexstart + upper];
+  const double lowerstatweight = globals::alllevels_statweight[ionuniquelevelindexstart + lower];
   const double coll_str_thisline = downtransition.coll_str;
   if (coll_str_thisline < 0) {
     const bool forbidden = downtransition.forbidden;
