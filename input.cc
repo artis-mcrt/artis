@@ -87,9 +87,10 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   std::string phixsline;
   auto *lowerion_levels = get_ion_levels(element, lowerion);
   const auto phixstargetstart = static_cast<int>(globals::allphixstargets.size());
-  assert_always(lowerion_levels[lowerlevel].phixstargetstart == -1 ||
-                lowerion_levels[lowerlevel].phixstargetstart == phixstargetstart);
-  lowerion_levels[lowerlevel].phixstargetstart = phixstargetstart;
+  const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
+  assert_always(globals::alllevels_phixstargetstart[lowerionlower_uniquelevelindex] == -1 ||
+                globals::alllevels_phixstargetstart[lowerionlower_uniquelevelindex] == phixstargetstart);
+  globals::alllevels_phixstargetstart[lowerionlower_uniquelevelindex] = phixstargetstart;
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - groundstate_index_in;
     assert_always(upperlevel >= 0);
@@ -152,7 +153,9 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lowerlevel);
          phixstargetindex++) {
       const int upperlevel =
-          globals::allphixstargets[lowerion_levels[lowerlevel].phixstargetstart + phixstargetindex].levelindex;
+          globals::allphixstargets[globals::alllevels_phixstargetstart[lowerionlower_uniquelevelindex] +
+                                   phixstargetindex]
+              .levelindex;
       if (upperlevel > get_maxrecombininglevel(element, lowerion + 1)) {
         globals::elements[element].ions[lowerion + 1].maxrecombininglevel = upperlevel;
       }
@@ -162,8 +165,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
   assert_always(tmpallphixs.size() % globals::NPHIXSPOINTS == 0);
   const auto tmpphixsstart = tmpallphixs.size();
-  const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
-  globals::alllevels_phixsstart[lower_uniquelevelindex] = tmpphixsstart / globals::NPHIXSPOINTS;
+  globals::alllevels_phixsstart[lowerionlower_uniquelevelindex] = tmpphixsstart / globals::NPHIXSPOINTS;
   tmpallphixs.resize(tmpallphixs.size() + globals::NPHIXSPOINTS);
 
   auto *levelphixstable = &tmpallphixs[tmpphixsstart];
@@ -355,7 +357,6 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
           .phixsstart = -1,
           .nphixstargets = 0,
           .stat_weight = statweight,
-          .phixstargetstart = -1,
       });
 
       // The level contributes to the ionisinglevels if its energy
@@ -1174,17 +1175,18 @@ void read_atomicdata_files() {
   globals::alllevels_statweight = MPI_shared_malloc_span<float>(temp_alllevels.size());
   globals::alllevels_closestgroundlevelcont = MPI_shared_malloc_span<int>(temp_alllevels.size());
   globals::alllevels_phixsstart = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  globals::alllevels_phixstargetstart = MPI_shared_malloc_span<int>(temp_alllevels.size());
   globals::alllevels_cont_index = MPI_shared_malloc_span<int>(temp_alllevels.size());
   if (globals::rank_in_node == 0) {
-    std::ranges::fill(globals::alllevels_cont_index, -1);
     std::ranges::fill(globals::alllevels_phixsstart, -1);
+    std::ranges::fill(globals::alllevels_phixstargetstart, -1);
+    std::ranges::fill(globals::alllevels_cont_index, -1);
     for (size_t i = 0; i < temp_alllevels.size(); i++) {
       globals::alllevels[i] = {
           .alltrans_startdown = temp_alllevels[i].alltrans_startdown,
           .ndowntrans = temp_alllevels[i].ndowntrans,
           .nuptrans = temp_alllevels[i].nuptrans,
           .nphixstargets = temp_alllevels[i].nphixstargets,
-          .phixstargetstart = temp_alllevels[i].phixstargetstart,
       };
       globals::alllevels_epsilon[i] = temp_alllevels[i].epsilon;
       globals::alllevels_statweight[i] = temp_alllevels[i].stat_weight;

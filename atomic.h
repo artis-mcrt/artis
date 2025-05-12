@@ -114,8 +114,9 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   assert_testmodeonly(level < get_nlevels(element, ion));
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
+  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
 
-  return globals::allphixstargets[get_ion_levels(element, ion)[level].phixstargetstart + phixstargetindex].levelindex;
+  return globals::allphixstargets[globals::alllevels_phixstargetstart[uniquelevelindex] + phixstargetindex].levelindex;
 }
 
 // Return the probability of a target state for photoionization of (element,ion,level).
@@ -126,8 +127,9 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   assert_testmodeonly(level < get_nlevels(element, ion));
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
+  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
 
-  return globals::allphixstargets[get_ion_levels(element, ion)[level].phixstargetstart + phixstargetindex].probability;
+  return globals::allphixstargets[globals::alllevels_phixstargetstart[uniquelevelindex] + phixstargetindex].probability;
 }
 
 // Return the number of bf-continua associated with ion ion of element element.

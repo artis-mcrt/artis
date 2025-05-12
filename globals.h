@@ -87,7 +87,6 @@ struct EnergyLevelInput {
   int phixsstart{-1};  // index to start of photoionisation cross-sections table in global::allphixs
   int nphixstargets{0};  // number of target levels for photoionisation
   float stat_weight{0.};  // statistical weight of this level
-  int phixstargetstart{-1};  // index into globals::allphixstargets
   int closestgroundlevelcont{-1};
 
   [[nodiscard]] constexpr auto alltrans_startup() const -> int {
@@ -101,7 +100,6 @@ struct EnergyLevel {
   int ndowntrans{0};
   int nuptrans{0};
   int nphixstargets{0};
-  int phixstargetstart{-1};
 
   [[nodiscard]] constexpr auto alltrans_startup() const -> int {
     // index into globals::alltrans for first up transition from this level
@@ -277,6 +275,9 @@ inline std::span<int> alllevels_closestgroundlevelcont;
 
 // index into globals::allphixs for photoionisation cross-sections
 inline std::span<int> alllevels_phixsstart;
+
+// index into globals::allphixstargets for the first target level
+inline std::span<int> alllevels_phixstargetstart;
 
 // index of the bound-free continuum (for first target) sorted by element/ion/level/phixstargetindex (not an index into
 // the nu_edge-sorted allcont list!)
