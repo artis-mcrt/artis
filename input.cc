@@ -1116,6 +1116,8 @@ void read_atomicdata_files() {
   }
   printout("nbfcheck %d\n", nbfcheck);
 
+  update_includedionslevels_maxnions();
+
   // Save the linecounters value to the global variable containing the number of lines
   globals::nlines = lineindex;
   printout("nlines %d\n", globals::nlines);
@@ -1279,8 +1281,6 @@ void read_atomicdata_files() {
   }
 
   read_phixs_data();
-
-  update_includedionslevels_maxnions();
 }
 
 void setup_cellcache() {
