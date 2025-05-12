@@ -1180,6 +1180,7 @@ void read_atomicdata_files() {
     std::ranges::fill(globals::alllevels_phixsstart, -1);
     std::ranges::fill(globals::alllevels_phixstargetstart, -1);
     std::ranges::fill(globals::alllevels_cont_index, -1);
+    std::ranges::fill(globals::alllevels_closestgroundlevelcont, -1);
     for (size_t i = 0; i < temp_alllevels.size(); i++) {
       globals::alllevels[i] = {
           .alltrans_startdown = temp_alllevels[i].alltrans_startdown,
@@ -1189,7 +1190,6 @@ void read_atomicdata_files() {
       };
       globals::alllevels_epsilon[i] = temp_alllevels[i].epsilon;
       globals::alllevels_statweight[i] = temp_alllevels[i].stat_weight;
-      globals::alllevels_closestgroundlevelcont[i] = temp_alllevels[i].closestgroundlevelcont;
     }
   }
   MPI_Barrier(globals::mpi_comm_node);

@@ -86,7 +86,6 @@ struct EnergyLevelInput {
   int nuptrans{0};  // Number of up transitions to this level
   int nphixstargets{0};  // number of target levels for photoionisation
   float stat_weight{0.};  // statistical weight of this level
-  int closestgroundlevelcont{-1};
 
   [[nodiscard]] constexpr auto alltrans_startup() const -> int {
     // index into globals::alltrans for first up transition from this level
