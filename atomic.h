@@ -96,11 +96,16 @@ __host__ __device__ inline auto get_nlevels(const int element, const int ion) ->
 }
 
 // Returns the number of target states for photoionization of (element,ion,level).
+__host__ __device__ inline auto get_nphixstargets(const int uniquelevelindex) -> int {
+  return globals::alllevels_nphixstargets[uniquelevelindex];
+}
+
+// Returns the number of target states for photoionization of (element,ion,level).
 __host__ __device__ inline auto get_nphixstargets(const int element, const int ion, const int level) -> int {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  const auto nphixstargets = get_ion_levels(element, ion)[level].nphixstargets;
+  const auto nphixstargets = get_nphixstargets(get_uniquelevelindex(element, ion, level));
   assert_testmodeonly(nphixstargets == 0 ||
                       ((ion < (get_nions(element) - 1)) && (level < get_nlevels_ionising(element, ion))));
   return nphixstargets;

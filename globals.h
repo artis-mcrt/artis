@@ -84,7 +84,6 @@ struct EnergyLevelInput {
   int alltrans_startdown{};  // index into globals::alltrans for first down transition from this level
   int ndowntrans{0};  // Number of down transitions from this level
   int nuptrans{0};  // Number of up transitions to this level
-  int nphixstargets{0};  // number of target levels for photoionisation
   float stat_weight{0.};  // statistical weight of this level
 
   [[nodiscard]] constexpr auto alltrans_startup() const -> int {
@@ -97,7 +96,6 @@ struct EnergyLevel {
   int alltrans_startdown{};
   int ndowntrans{0};
   int nuptrans{0};
-  int nphixstargets{0};
 
   [[nodiscard]] constexpr auto alltrans_startup() const -> int {
     // index into globals::alltrans for first up transition from this level
@@ -273,6 +271,9 @@ inline std::span<int> alllevels_closestgroundlevelcont;
 
 // index to start of photoionisation cross-sections table in global::allphixs
 inline std::span<int> alllevels_phixsstart;
+
+// number of target levels for photoionisation
+inline std::span<int> alllevels_nphixstargets;
 
 // index into globals::allphixstargets for the first target level
 inline std::span<int> alllevels_phixstargetstart;
