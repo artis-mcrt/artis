@@ -89,10 +89,11 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     const auto &uptrans = uptranslist[i];
     const auto upper_uniquelevelindex = ionuniquelevelindexstart + uptrans.targetlevelindex;
     const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_current;
+    const auto upper_statweight = stat_weight(upper_uniquelevelindex);
 
-    const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, uptrans, epsilon_trans, nnlevel,
-                                              statweight, uptrans.lineindex, t_mid);
-    const double C = col_excitation_ratecoeff(T_e, nne, element, ion, uptrans, epsilon_trans, statweight);
+    const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, upper_statweight, uptrans,
+                                              epsilon_trans, nnlevel, statweight, uptrans.lineindex, t_mid);
+    const double C = col_excitation_ratecoeff(T_e, nne, upper_statweight, uptrans, epsilon_trans, statweight);
     const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, element, ion, level, i, uptrans.lineindex);
 
     sum_internal_up_same += (R + C + NT) * epsilon_current;
@@ -687,15 +688,15 @@ auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int lower_uniquelev
 // radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
 
-auto rad_excitation_ratecoeff(const int nonemptymgi, const int upper_uniquelevelindex, const LevelTransition &uptrans,
-                              const double epsilon_trans, const double nnlevel_lower, const double statweight_lower,
-                              const int lineindex, const double t_current) -> double {
+auto rad_excitation_ratecoeff(const int nonemptymgi, const int upper_uniquelevelindex, const double upper_statweight,
+                              const LevelTransition &uptrans, const double epsilon_trans, const double nnlevel_lower,
+                              const double statweight_lower, const int lineindex, const double t_current) -> double {
   const double n_u = get_levelpop(nonemptymgi, upper_uniquelevelindex);
   const auto &n_l = nnlevel_lower;
   const double nu_trans = epsilon_trans / H;
   const double A_ul = uptrans.einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
-  const double B_lu = stat_weight(upper_uniquelevelindex) / statweight_lower * B_ul;
+  const double B_lu = upper_statweight / statweight_lower * B_ul;
 
   const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
@@ -897,7 +898,7 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
 
 // multiply by lower level population to get a rate per second
 
-auto col_excitation_ratecoeff(const float T_e, const float nne, const int element, const int ion,
+auto col_excitation_ratecoeff(const float T_e, const float nne, const double upperstatweight,
                               const LevelTransition &uptrans, const double epsilon_trans, const double lowerstatweight)
     -> double {
   const double coll_strength = uptrans.coll_str;
@@ -931,8 +932,6 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, const int elemen
 
     // forbidden transitions: magnetic dipole, electric quadropole...
     // Axelrod's approximation (thesis 1980)
-    const int upper = uptrans.targetlevelindex;
-    const double upperstatweight = stat_weight(element, ion, upper);
 
     return nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
   }

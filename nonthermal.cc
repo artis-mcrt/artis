@@ -1739,14 +1739,15 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
 
         const double ntcollexc_ratecoeff = ntexc.ratecoeffperdeposition * deposition_rate_density;
         const auto &uptrans = get_uptranslist(element, ion, lower)[uptransindex];
+        const auto statweight_upper = stat_weight(upper_uniquelevelindex);
 
         const double t_mid = globals::timesteps[timestep].mid;
         const double radexc_ratecoeff =
-            rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, uptrans, epsilon_trans, nnlevel_lower,
-                                     statweight_lower, lineindex, t_mid);
+            rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, statweight_upper, uptrans, epsilon_trans,
+                                     nnlevel_lower, statweight_lower, lineindex, t_mid);
 
         const double collexc_ratecoeff =
-            col_excitation_ratecoeff(T_e, nne, element, ion, uptrans, epsilon_trans, stat_weight(element, ion, lower));
+            col_excitation_ratecoeff(T_e, nne, statweight_upper, uptrans, epsilon_trans, statweight_lower);
 
         const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
         const auto coll_str = uptrans.coll_str;

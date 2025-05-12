@@ -433,15 +433,16 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const int upper = uptrans.targetlevelindex;
       const auto upper_uniquelevelindex = ionuniquelevelindexstart + upper;
       const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_level;
+      const auto upper_statweight = stat_weight(upper_uniquelevelindex);
 
-      const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, uptrans, epsilon_trans, nnlevel,
-                                                statweight, lineindex, t_mid) *
+      const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, upper_statweight, uptrans,
+                                                epsilon_trans, nnlevel, statweight, lineindex, t_mid) *
                        s_renorm[level];
       assert_always(R >= 0);
       assert_always(std::isfinite(R));
 
       const double C =
-          col_excitation_ratecoeff(T_e, nne, element, ion, uptrans, epsilon_trans, statweight) * s_renorm[level];
+          col_excitation_ratecoeff(T_e, nne, upper_statweight, uptrans, epsilon_trans, statweight) * s_renorm[level];
       assert_always(C >= 0);
       assert_always(std::isfinite(C));
 

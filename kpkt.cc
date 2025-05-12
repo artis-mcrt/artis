@@ -95,8 +95,9 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     for (const auto &transition : uptranslist) {
       const int upper = transition.targetlevelindex;
       const double epsilon_trans = epsilon(ionuniquelevelindexstart + upper) - epsilon_current;
+      const auto upper_statweight = stat_weight(ionuniquelevelindexstart + upper);
       const double C = nnlevel *
-                       col_excitation_ratecoeff(T_e, nne, element, ion, transition, epsilon_trans, statweight) *
+                       col_excitation_ratecoeff(T_e, nne, upper_statweight, transition, epsilon_trans, statweight) *
                        epsilon_trans;
       C_ion += C;
       if constexpr (!update_cooling_contrib_list) {
@@ -589,19 +590,23 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
 
     double contrib = contrib_low;
     const int level = coolinglist[i].level;
-    const double epsilon_current = epsilon(element, ion, level);
-    const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
-    const double statweight = stat_weight(element, ion, level);
+    const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+    const auto uniquelevelindex = ionuniquelevelindexstart + level;
+    const double epsilon_current = epsilon(uniquelevelindex);
+    const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+    const double statweight = stat_weight(uniquelevelindex);
     int upper = -1;
     // excitation to same ionization stage
     const auto uptranslist = get_uptransspan(element, ion, level);
     for (int ii = 0; ii < std::ssize(uptranslist); ii++) {
       const int tmpupper = uptranslist[ii].targetlevelindex;
       // printout("    excitation to level %d possible\n",upper);
-      const double epsilon_trans = epsilon(element, ion, tmpupper) - epsilon_current;
-      const double C = nnlevel *
-                       col_excitation_ratecoeff(T_e, nne, element, ion, uptranslist[ii], epsilon_trans, statweight) *
-                       epsilon_trans;
+      const auto upperuniquelevelindex = ionuniquelevelindexstart + tmpupper;
+      const double epsilon_trans = epsilon(upperuniquelevelindex) - epsilon_current;
+      const auto upper_statweight = stat_weight(upperuniquelevelindex);
+      const double C =
+          nnlevel * col_excitation_ratecoeff(T_e, nne, upper_statweight, uptranslist[ii], epsilon_trans, statweight) *
+          epsilon_trans;
       contrib += C;
       if (contrib > rndcool_ion_process) {
         upper = tmpupper;
