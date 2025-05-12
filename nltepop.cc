@@ -405,8 +405,8 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const double R = rad_deexcitation_ratecoeff(nonemptymgi, element, ion, lower, epsilon_trans, A_ul, statweight,
                                                   nnlevel, t_mid) *
                        s_renorm[level];
-      const double C =
-          col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtransition) * s_renorm[level];
+      const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, statweight, downtransition) *
+                       s_renorm[level];
 
       const int upper_index = level_index;
       const int lower_index = get_nlte_vector_index(element, ion, lower);

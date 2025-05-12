@@ -66,7 +66,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
 
     const double R =
         rad_deexcitation_ratecoeff(nonemptymgi, element, ion, lower, epsilon_trans, A_ul, statweight, nnlevel, t_mid);
-    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtrans);
+    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, statweight, downtrans);
 
     sum_raddeexc += R * epsilon_trans;
     sum_coldeexc += C * epsilon_trans;
@@ -859,10 +859,10 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 // multiply by upper level population to get a rate per second
 
 auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, const int element,
-                                const int ion, const int upper, const LevelTransition &downtransition) -> double {
+                                const int ion, const double upperstatweight, const LevelTransition &downtransition)
+    -> double {
   const int lower = downtransition.targetlevelindex;
   const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
-  const double upperstatweight = stat_weight(ionuniquelevelindexstart + upper);
   const double lowerstatweight = stat_weight(ionuniquelevelindexstart + lower);
   const double coll_str_thisline = downtransition.coll_str;
   if (coll_str_thisline < 0) {

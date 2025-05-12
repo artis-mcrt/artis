@@ -118,6 +118,7 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
   for (int level = 0; level < nlevels; level++) {
     const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
     const double epsilon_level = epsilon(ionuniquelevelindexstart + level);
+    const double statweight = stat_weight(ionuniquelevelindexstart + level);
 
     // Collisional heating: deexcitation to same ionization stage
     const int ndowntrans = get_ndowntrans(element, ion, level);
@@ -127,7 +128,7 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
       const int lower = downtransition.targetlevelindex;
       const double epsilon_trans = epsilon_level - epsilon(ionuniquelevelindexstart + lower);
       const double C = nnlevel *
-                       col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtransition) *
+                       col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, statweight, downtransition) *
                        epsilon_trans;
       C_deexc += C;
     }
