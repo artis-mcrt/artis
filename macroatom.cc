@@ -711,7 +711,9 @@ auto rad_excitation_ratecoeff(const int nonemptymgi, const int element, const in
   const double nu_trans = epsilon_trans / H;
   const double A_ul = uptrans.einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
-  const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+  const double B_lu = globals::alllevels_statweight[ionuniquelevelindexstart + upper] /
+                      globals::alllevels_statweight[ionuniquelevelindexstart + lower] * B_ul;
 
   const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
