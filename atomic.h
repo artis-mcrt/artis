@@ -256,7 +256,9 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
 
   const double A_ul = line.einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * A_ul;
-  const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+  const double B_lu =
+      stat_weight(ionuniquelevelindexstart + upper) / stat_weight(ionuniquelevelindexstart + lower) * B_ul;
 
   return std::max(B_lu * n_l * HCLIGHTOVERFOURPI * t_current, 0.);
 }
