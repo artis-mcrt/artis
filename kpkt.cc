@@ -80,18 +80,20 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     }
   }
 
+  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
   // excitation to same ionization stage
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
     // printout("[debug] do_kpkt: element %d, ion %d, level %d\n", element, ion, level);
     const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
-    const double epsilon_current = epsilon(element, ion, level);
-    const double statweight = stat_weight(element, ion, level);
+
+    const double epsilon_current = globals::alllevels_epsilon[ionuniquelevelindexstart + level];
+    const double statweight = globals::alllevels_statweight[ionuniquelevelindexstart + level];
 
     const auto uptranslist = get_uptransspan(element, ion, level);
     for (const auto &transition : uptranslist) {
       const int upper = transition.targetlevelindex;
-      const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
+      const double epsilon_trans = globals::alllevels_epsilon[ionuniquelevelindexstart + upper] - epsilon_current;
       const double C = nnlevel *
                        col_excitation_ratecoeff(T_e, nne, element, ion, transition, epsilon_trans, statweight) *
                        epsilon_trans;
