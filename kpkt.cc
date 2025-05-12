@@ -88,7 +88,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
 
     const double epsilon_current = globals::alllevels_epsilon[ionuniquelevelindexstart + level];
-    const double statweight = globals::alllevels_statweight[ionuniquelevelindexstart + level];
+    const double statweight = stat_weight(ionuniquelevelindexstart + level);
 
     const auto uptranslist = get_uptransspan(element, ion, level);
     for (const auto &transition : uptranslist) {
