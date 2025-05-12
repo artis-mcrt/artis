@@ -67,15 +67,6 @@ __host__ __device__ inline auto get_nlevels(const int element, const int ion) ->
   return globals::elements[element].ions[ion].nlevels;
 }
 
-// Return the energy of (element,ion,level).
-
-[[nodiscard]] __host__ __device__ inline auto epsilon(const int element, const int ion, const int level) -> double {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  return get_ion_levels(element, ion)[level].epsilon;
-}
-
 // Return the ionisation stage of an ion specified by its elementindex and ionindex.
 [[nodiscard]] __host__ __device__ inline auto get_ionstage(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
@@ -123,15 +114,6 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
 
   return globals::allphixstargets[get_ion_levels(element, ion)[level].phixstargetstart + phixstargetindex].probability;
-}
-
-// Return the statistical weight of (element,ion,level).
-
-[[nodiscard]] __host__ __device__ inline auto stat_weight(const int element, const int ion, const int level) -> double {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  return get_ion_levels(element, ion)[level].stat_weight;
 }
 
 // Return the number of bf-continua associated with ion ion of element element.
@@ -229,6 +211,23 @@ inline auto get_includedlevels() -> int { return includedlevels; }
   assert_always(false);  // uniquelevelindex too high to be valid
   return {-1, -1, -1};
 }
+
+// Return the statistical weight of (element,ion,level).
+[[nodiscard]] __host__ __device__ inline auto stat_weight(const int element, const int ion, const int level) -> double {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  return globals::alllevels_statweight[get_uniquelevelindex(element, ion, level)];
+}
+
+// Return the energy of (element,ion,level).
+[[nodiscard]] __host__ __device__ inline auto epsilon(const int element, const int ion, const int level) -> double {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  return globals::alllevels_epsilon[get_uniquelevelindex(element, ion, level)];
+}
+
 [[nodiscard]] inline auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current)
     -> double {
   const auto &line = globals::linelist[lineindex];
@@ -257,7 +256,9 @@ inline auto get_includedlevels() -> int { return includedlevels; }
 
   const double A_ul = line.einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * A_ul;
-  const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+  const double B_lu = globals::alllevels_statweight[ionuniquelevelindexstart + upper] /
+                      globals::alllevels_statweight[ionuniquelevelindexstart + lower] * B_ul;
 
   const double n_u = get_levelpop(nonemptymgi, element, ion, upper);
   return std::max((B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current, 0.);
