@@ -83,9 +83,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   // Calculate sum for upward internal transitions
   // transitions within the current ionisation stage
   double sum_internal_up_same = 0.;
-  const int nuptrans = get_nuptrans(ionuniquelevelindexstart + level);
-  const auto *const uptranslist = get_uptranslist(ionuniquelevelindexstart + level);
-  for (int i = 0; i < nuptrans; i++) {
+  const auto uptranslist = get_uptransspan(ionuniquelevelindexstart + level);
+  for (int i = 0; i < std::ssize(uptranslist); i++) {
     const auto &uptrans = uptranslist[i];
     const double epsilon_trans = epsilon(ionuniquelevelindexstart + uptrans.targetlevelindex) - epsilon_current;
 
