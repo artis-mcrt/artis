@@ -87,13 +87,13 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     // printout("[debug] do_kpkt: element %d, ion %d, level %d\n", element, ion, level);
     const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
 
-    const double epsilon_current = globals::alllevels_epsilon[ionuniquelevelindexstart + level];
+    const double epsilon_current = epsilon(ionuniquelevelindexstart + level);
     const double statweight = stat_weight(ionuniquelevelindexstart + level);
 
     const auto uptranslist = get_uptransspan(element, ion, level);
     for (const auto &transition : uptranslist) {
       const int upper = transition.targetlevelindex;
-      const double epsilon_trans = globals::alllevels_epsilon[ionuniquelevelindexstart + upper] - epsilon_current;
+      const double epsilon_trans = epsilon(ionuniquelevelindexstart + upper) - epsilon_current;
       const double C = nnlevel *
                        col_excitation_ratecoeff(T_e, nne, element, ion, transition, epsilon_trans, statweight) *
                        epsilon_trans;
