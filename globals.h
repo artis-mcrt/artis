@@ -107,7 +107,6 @@ struct EnergyLevel {
   int nphixstargets{0};
   int phixstargetstart{-1};
   int cont_index{-1};
-  int closestgroundlevelcont{-1};
 
   [[nodiscard]] constexpr auto alltrans_startup() const -> int {
     // index into globals::alltrans for first up transition from this level
@@ -279,6 +278,7 @@ inline std::vector<PhotoionTarget> allphixstargets;
 inline std::span<EnergyLevel> alllevels;
 inline std::span<double> alllevels_epsilon;
 inline std::span<float> alllevels_statweight;
+inline std::span<int> alllevels_closestgroundlevelcont;
 
 inline std::vector<Element> elements;
 
