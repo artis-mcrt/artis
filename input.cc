@@ -332,7 +332,7 @@ constexpr auto downtranslevelstart(const int level) {
 
 void read_ion_levels(std::fstream &adata, const int element, const int ion, const int nions, const int nlevels,
                      int nlevelsmax, const double energyoffset, const double ionpot,
-                     std::vector<EnergyLevel> &temp_alllevels) {  // cppcheck-suppress constParameterReference
+                     std::vector<EnergyLevelInput> &temp_alllevels) {  // cppcheck-suppress constParameterReference
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in = 0;
     double levelenergy{NAN};
@@ -459,7 +459,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
                                           std::vector<int> &iondowntranstmplineindicies, int &lineindex,
                                           std::vector<TransitionLine> &temp_linelist,
                                           std::vector<LevelTransition> &temp_alltranslist,
-                                          size_t &temp_alltranslist_size, EnergyLevel *ion_levels) {
+                                          size_t &temp_alltranslist_size, EnergyLevelInput *ion_levels) {
   const int lineindex_initial = lineindex;
   ptrdiff_t totupdowntrans = 0;
   // pass 0 to get transition counts of each level
@@ -922,7 +922,7 @@ void read_atomicdata_files() {
   std::vector<LevelTransition> temp_alltranslist;
   size_t temp_alltranslist_size = 0;  // keep size separate because the vector is only resized on rank_in_node == 0
 
-  std::vector<EnergyLevel> temp_alllevels;
+  std::vector<EnergyLevelInput> temp_alllevels;
 
   std::vector<Transition> iontransitiontable;
   std::vector<int> iondowntranstmplineindicies;
@@ -1170,8 +1170,17 @@ void read_atomicdata_files() {
   globals::alllevels_epsilon = MPI_shared_malloc_span<double>(temp_alllevels.size());
   globals::alllevels_statweight = MPI_shared_malloc_span<float>(temp_alllevels.size());
   if (globals::rank_in_node == 0) {
-    std::ranges::copy(temp_alllevels, globals::alllevels.begin());
     for (size_t i = 0; i < temp_alllevels.size(); i++) {
+      globals::alllevels[i] = {
+          .alltrans_startdown = temp_alllevels[i].alltrans_startdown,
+          .ndowntrans = temp_alllevels[i].ndowntrans,
+          .nuptrans = temp_alllevels[i].nuptrans,
+          .phixsstart = temp_alllevels[i].phixsstart,
+          .nphixstargets = temp_alllevels[i].nphixstargets,
+          .phixstargetstart = temp_alllevels[i].phixstargetstart,
+          .cont_index = temp_alllevels[i].cont_index,
+          .closestgroundlevelcont = temp_alllevels[i].closestgroundlevelcont,
+      };
       globals::alllevels_epsilon[i] = temp_alllevels[i].epsilon;
       globals::alllevels_statweight[i] = temp_alllevels[i].stat_weight;
     }

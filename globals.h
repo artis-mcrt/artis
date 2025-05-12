@@ -79,7 +79,7 @@ struct PhotoionTarget {
   int levelindex;  // index of upper ion level after photoionisation
 };
 
-struct EnergyLevel {
+struct EnergyLevelInput {
   double epsilon{-1};  // Excitation energy of this level relative to the neutral ground level.
   int alltrans_startdown{};  // index into globals::alltrans for first down transition from this level
   int ndowntrans{0};  // Number of down transitions from this level
@@ -91,6 +91,22 @@ struct EnergyLevel {
   int cont_index{-1};  // index of the bound-free continuum (for first target) sorted by
                        // element/ion/level/phixstargetindex
                        // (not an index into the nu_edge-sorted allcont list!)
+  int closestgroundlevelcont{-1};
+
+  [[nodiscard]] constexpr auto alltrans_startup() const -> int {
+    // index into globals::alltrans for first up transition from this level
+    return alltrans_startdown + ndowntrans;
+  }
+};
+
+struct EnergyLevel {
+  int alltrans_startdown{};
+  int ndowntrans{0};
+  int nuptrans{0};
+  int phixsstart{-1};
+  int nphixstargets{0};
+  int phixstargetstart{-1};
+  int cont_index{-1};
   int closestgroundlevelcont{-1};
 
   [[nodiscard]] constexpr auto alltrans_startup() const -> int {
