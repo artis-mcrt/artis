@@ -850,7 +850,8 @@ void read_phixs_data() {
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         const int nphixstargets = get_nphixstargets(element, ion, level);
-        get_ion_levels(element, ion)[level].cont_index = (nphixstargets > 0) ? cont_index : -1;
+        const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+        globals::alllevels_cont_index[uniquelevelindex] = (nphixstargets > 0) ? cont_index : -1;
         cont_index += nphixstargets;
         if (nphixstargets > 0) {
           nbftables++;
@@ -1172,7 +1173,10 @@ void read_atomicdata_files() {
   globals::alllevels_statweight = MPI_shared_malloc_span<float>(temp_alllevels.size());
   globals::alllevels_closestgroundlevelcont = MPI_shared_malloc_span<int>(temp_alllevels.size());
   globals::alllevels_phixsstart = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  globals::alllevels_cont_index = MPI_shared_malloc_span<int>(temp_alllevels.size());
   if (globals::rank_in_node == 0) {
+    std::ranges::fill(globals::alllevels_cont_index, -1);
+    std::ranges::fill(globals::alllevels_phixsstart, -1);
     for (size_t i = 0; i < temp_alllevels.size(); i++) {
       globals::alllevels[i] = {
           .alltrans_startdown = temp_alllevels[i].alltrans_startdown,
@@ -1180,12 +1184,10 @@ void read_atomicdata_files() {
           .nuptrans = temp_alllevels[i].nuptrans,
           .nphixstargets = temp_alllevels[i].nphixstargets,
           .phixstargetstart = temp_alllevels[i].phixstargetstart,
-          .cont_index = temp_alllevels[i].cont_index,
       };
       globals::alllevels_epsilon[i] = temp_alllevels[i].epsilon;
       globals::alllevels_statweight[i] = temp_alllevels[i].stat_weight;
       globals::alllevels_closestgroundlevelcont[i] = temp_alllevels[i].closestgroundlevelcont;
-      globals::alllevels_phixsstart[i] = temp_alllevels[i].phixsstart;
     }
   }
   MPI_Barrier(globals::mpi_comm_node);

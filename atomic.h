@@ -452,7 +452,7 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
 [[nodiscard]] inline auto get_emtype_continuum(const int element, const int ion, const int level,
                                                const int upperionlevel) -> int {
   const int phixstargetindex = get_phixtargetindex(element, ion, level, upperionlevel);
-  return -1 - get_ion_levels(element, ion)[level].cont_index - phixstargetindex;
+  return -1 - globals::alllevels_cont_index[get_uniquelevelindex(element, ion, level)] - phixstargetindex;
 }
 
 // Returns the energy of (element,ion,level).
@@ -467,11 +467,10 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
   return E_threshold;
 }
 
-[[nodiscard]] inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
+[[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int element, const int ion, const int level,
                                          const int phixstargetindex) -> int {
-  const int contindex = get_ion_levels(element, ion)[level].cont_index + phixstargetindex;
-
-  const int bflutindex = (tempindex * globals::nbfcontinua) + contindex;
+  const int contindex = globals::alllevels_cont_index[get_uniquelevelindex(element, ion, level)] + phixstargetindex;
+  const int bflutindex = (temperatureindex * globals::nbfcontinua) + contindex;
   assert_testmodeonly(bflutindex >= 0);
   assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
   return bflutindex;
