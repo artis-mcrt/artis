@@ -405,7 +405,7 @@ inline auto get_includedions() -> int {
 
 // the number of downward bound-bound transitions from the specified level
 [[nodiscard]] inline auto get_ndowntrans(const int uniquelevelindex) -> int {
-  return globals::alllevels_alltrans_startdown[uniquelevelindex];
+  return globals::alllevels_ndowntrans[uniquelevelindex];
 }
 
 // the number of downward bound-bound transitions from the specified level
