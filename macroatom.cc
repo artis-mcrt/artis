@@ -654,7 +654,6 @@ void macroatom_close_file() {
 
 // radiative deexcitation rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
-
 auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int lower_uniquelevelindex, const double epsilon_trans,
                                 const float A_ul, const double upperstatweight, const double lowerstatweight,
                                 const double nnlevelupper, const double t_current) -> double {
@@ -688,7 +687,6 @@ auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int lower_uniquelev
 
 // radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
-
 auto rad_excitation_ratecoeff(const int nonemptymgi, const int upper_uniquelevelindex, const double upper_statweight,
                               const LevelTransition &uptrans, const double epsilon_trans, const double nnlevel_lower,
                               const double statweight_lower, const int lineindex, const double t_current) -> double {
@@ -727,7 +725,6 @@ auto rad_excitation_ratecoeff(const int nonemptymgi, const int upper_uniquelevel
 
 // radiative recombination rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
-
 auto rad_recombination_ratecoeff(const float T_e, const float nne, const int element, const int upperion,
                                  const int upperionlevel, const int lowerionlevel, const int nonemptymgi) -> double {
   // it's probably faster to only check this condition outside this function
@@ -773,7 +770,6 @@ auto stim_recombination_ratecoeff(const float nne, const int element, const int 
 }
 
 // multiply by upper level population to get a rate per second
-
 auto col_recombination_ratecoeff(const float T_e, const float nne, const int element, const int upperion,
                                  const int upper, const int lower, const double epsilon_trans) -> double {
   // it's probably faster to only check this condition outside this function
