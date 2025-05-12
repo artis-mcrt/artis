@@ -950,7 +950,7 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, const int elemen
     // Axelrod's approximation (thesis 1980)
     const int upper = uptrans.targetlevelindex;
     const double upperstatweight =
-        globals::alllevels_epsilon[globals::elements[element].ions[ion].uniquelevelindexstart + upper];
+        globals::alllevels_statweight[globals::elements[element].ions[ion].uniquelevelindexstart + upper];
 
     return nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
   }
