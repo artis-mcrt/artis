@@ -45,7 +45,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
   const double epsilon_current = globals::alllevels_epsilon[ionuniquelevelindexstart + level];
-  const double statweight = globals::alllevels_statweight[ionuniquelevelindexstart + level];
+  const double statweight = stat_weight(ionuniquelevelindexstart + level);
   const auto nnlevel = get_levelpop(nonemptymgi, element, ion, level);
 
   // Downward transitions within the current ionisation stage:
@@ -669,8 +669,7 @@ auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int element, const 
 
     const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
     const double B_lu =
-        upperstatweight /
-        globals::alllevels_statweight[globals::elements[element].ions[ion].uniquelevelindexstart + lower] * B_ul;
+        upperstatweight / stat_weight(globals::elements[element].ions[ion].uniquelevelindexstart + lower) * B_ul;
 
     const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
@@ -712,8 +711,8 @@ auto rad_excitation_ratecoeff(const int nonemptymgi, const int element, const in
   const double A_ul = uptrans.einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
   const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
-  const double B_lu = globals::alllevels_statweight[ionuniquelevelindexstart + upper] /
-                      globals::alllevels_statweight[ionuniquelevelindexstart + lower] * B_ul;
+  const double B_lu =
+      stat_weight(ionuniquelevelindexstart + upper) / stat_weight(ionuniquelevelindexstart + lower) * B_ul;
 
   const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
@@ -866,8 +865,8 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
                                 const int ion, const int upper, const LevelTransition &downtransition) -> double {
   const int lower = downtransition.targetlevelindex;
   const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
-  const double upperstatweight = globals::alllevels_statweight[ionuniquelevelindexstart + upper];
-  const double lowerstatweight = globals::alllevels_statweight[ionuniquelevelindexstart + lower];
+  const double upperstatweight = stat_weight(ionuniquelevelindexstart + upper);
+  const double lowerstatweight = stat_weight(ionuniquelevelindexstart + lower);
   const double coll_str_thisline = downtransition.coll_str;
   if (coll_str_thisline < 0) {
     const bool forbidden = downtransition.forbidden;
@@ -949,8 +948,7 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, const int elemen
     // forbidden transitions: magnetic dipole, electric quadropole...
     // Axelrod's approximation (thesis 1980)
     const int upper = uptrans.targetlevelindex;
-    const double upperstatweight =
-        globals::alllevels_statweight[globals::elements[element].ions[ion].uniquelevelindexstart + upper];
+    const double upperstatweight = stat_weight(globals::elements[element].ions[ion].uniquelevelindexstart + upper);
 
     return nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
   }
