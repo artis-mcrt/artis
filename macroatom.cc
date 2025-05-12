@@ -88,7 +88,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   const auto *const uptranslist = get_uptranslist(element, ion, level);
   for (int i = 0; i < nuptrans; i++) {
     const auto &uptrans = uptranslist[i];
-    const double epsilon_trans = epsilon(element, ion, uptrans.targetlevelindex) - epsilon_current;
+    const double epsilon_trans =
+        globals::alllevels_epsilon[ionuniquelevelindexstart + uptrans.targetlevelindex] - epsilon_current;
 
     const double R = rad_excitation_ratecoeff(nonemptymgi, element, ion, level, uptrans, epsilon_trans, nnlevel,
                                               uptrans.lineindex, t_mid);
