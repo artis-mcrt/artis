@@ -399,11 +399,12 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
     std::for_each(leveldowntrans.begin(), leveldowntrans.end(), [&](const auto &downtransition) {
       const double A_ul = downtransition.einstein_A;
       const int lower = downtransition.targetlevelindex;
+      const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, ion, lower);
 
       const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
 
-      const double R = rad_deexcitation_ratecoeff(nonemptymgi, element, ion, lower, epsilon_trans, A_ul, statweight,
-                                                  nnlevel, t_mid) *
+      const double R = rad_deexcitation_ratecoeff(nonemptymgi, lowerionlower_uniquelevelindex, epsilon_trans, A_ul,
+                                                  statweight, nnlevel, t_mid) *
                        s_renorm[level];
       const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, statweight, downtransition) *
                        s_renorm[level];

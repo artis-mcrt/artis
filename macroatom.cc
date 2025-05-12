@@ -39,7 +39,6 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
                                          const double t_mid, CellCacheLevels &chlevel) {
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
   auto processrates = std::array<double, MA_ACTION_COUNT>{};
-
   const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
 
   const auto T_e = grid::get_Te(nonemptymgi);
@@ -62,9 +61,10 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     const auto A_ul = downtrans.einstein_A;
     const double epsilon_target = epsilon(ionuniquelevelindexstart + lower);
     const double epsilon_trans = epsilon_current - epsilon_target;
+    const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
 
-    const double R =
-        rad_deexcitation_ratecoeff(nonemptymgi, element, ion, lower, epsilon_trans, A_ul, statweight, nnlevel, t_mid);
+    const double R = rad_deexcitation_ratecoeff(nonemptymgi, lower_uniquelevelindex, epsilon_trans, A_ul, statweight,
+                                                nnlevel, t_mid);
     const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, statweight, downtrans);
 
     sum_raddeexc += R * epsilon_trans;
@@ -652,11 +652,11 @@ void macroatom_close_file() {
 // radiative deexcitation rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
 
-auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int element, const int ion, const int lower,
-                                const double epsilon_trans, const float A_ul, const double upperstatweight,
-                                const double nnlevelupper, const double t_current) -> double {
+auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int lower_uniquelevelindex, const double epsilon_trans,
+                                const float A_ul, const double upperstatweight, const double nnlevelupper,
+                                const double t_current) -> double {
   const auto &n_u = nnlevelupper;
-  const double n_l = get_levelpop(nonemptymgi, element, ion, lower);
+  const double n_l = get_levelpop(nonemptymgi, lower_uniquelevelindex);
 
   double R = 0.;
 
@@ -665,7 +665,7 @@ auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int element, const 
     const double nu_trans = epsilon_trans / H;
 
     const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
-    const double B_lu = upperstatweight / stat_weight(element, ion, lower) * B_ul;
+    const double B_lu = upperstatweight / stat_weight(lower_uniquelevelindex) * B_ul;
 
     const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
