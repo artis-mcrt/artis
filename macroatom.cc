@@ -291,7 +291,8 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   // Randomly select the occurring transition
   const double targetrate = rng_uniform() * internal_up_higher;
   double rate = 0.;
-  const int nphixstargets = get_nphixstargets(element, ion, level);
+  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+  const int nphixstargets = get_nphixstargets(uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
     const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi);
@@ -299,7 +300,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
     rate += (R + C) * epsilon_current;
     if (rate > targetrate) {
       // set the macroatom's new state
-      return get_phixsupperlevel(element, ion, level, phixstargetindex);
+      return get_phixsupperlevel(uniquelevelindex, phixstargetindex);
     }
   }
 
@@ -748,9 +749,10 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
 
   double R = 0.;
   const int lowerion = upperion - 1;
-  const int nphixstargets = get_nphixstargets(element, lowerion, lowerionlevel);
+  const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerionlevel);
+  const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-    if (get_phixsupperlevel(element, lowerion, lowerionlevel, phixstargetindex) == upperionlevel) {
+    if (get_phixsupperlevel(lowerionlower_uniquelevelindex, phixstargetindex) == upperionlevel) {
       R = nne * get_spontrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, T_e);
 
       if constexpr (SEPARATE_STIMRECOMB) {
@@ -790,10 +792,10 @@ auto col_recombination_ratecoeff(const float T_e, const float nne, const int ele
   // in a case where this wasn't checked, the function will return zero anyway
   // if (upper > get_maxrecombininglevel(element, upperion))
   //   return 0.;
-
-  const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
+  const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, upperion - 1, lower);
+  const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-    if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {
+    if (get_phixsupperlevel(lowerionlower_uniquelevelindex, phixstargetindex) == upper) {
       const double fac1 = epsilon_trans / KB / T_e;
       const int ionstage = get_ionstage(element, upperion);
 
@@ -808,8 +810,8 @@ auto col_recombination_ratecoeff(const float T_e, const float nne, const int ele
         g = 0.3;
       }
 
-      const double sigma_bf = (get_phixs_table(element, upperion - 1, lower)[0] *
-                               get_phixsprobability(element, upperion - 1, lower, phixstargetindex));
+      const double sigma_bf = (get_phixs_table(lowerionlower_uniquelevelindex)[0] *
+                               get_phixsprobability(lowerionlower_uniquelevelindex, phixstargetindex));
 
       const double sf = calculate_sahafact(element, upperion - 1, lower, upper, T_e, epsilon_trans);
 
