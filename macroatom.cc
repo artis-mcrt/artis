@@ -61,7 +61,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     const auto &downtrans = leveldowntranslist[i];
     const int lower = downtrans.targetlevelindex;
     const auto A_ul = downtrans.einstein_A;
-    const double epsilon_target = epsilon(element, ion, lower);
+    const double epsilon_target = globals::alllevels_epsilon[ionuniquelevelindexstart + lower];
     const double epsilon_trans = epsilon_current - epsilon_target;
 
     const double R =
