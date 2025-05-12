@@ -674,19 +674,9 @@ auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int lower_uniquelev
       // const double beta = 1.;
       R = A_ul * beta;
     } else {
-      // printout("[warning] rad_deexcitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
-      // printout("[warning] rad_deexcitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
-      // printout("[warning] rad_deexcitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
-      // printout("[warning] rad_deexcitation: T_e %g, T_R %g, W %g in model cell
-      // %d\n",grid::get_Te(nonemptymgi),get_TR(nonemptymgi),get_W(nonemptymgi),modelgridindex);
       R = 0.;
-      // printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
-      // abort();
     }
 
-    // printout("[debug] rad_rates_down: Z=%d, ionstage %d, upper %d, lower %d\n", get_atomicnumber(element),
-    // get_ionstage(element, ion), upper, lower); printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n",
-    // A_ul, tau_sobolev, n_u);
     assert_testmodeonly(std::isfinite(R));
   }
 
