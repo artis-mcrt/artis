@@ -44,7 +44,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
 
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
-  const double epsilon_current = globals::alllevels_epsilon[ionuniquelevelindexstart + level];
+  const double epsilon_current = epsilon(ionuniquelevelindexstart + level);
   const double statweight = stat_weight(ionuniquelevelindexstart + level);
   const auto nnlevel = get_levelpop(nonemptymgi, element, ion, level);
 
@@ -61,7 +61,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     const auto &downtrans = leveldowntranslist[i];
     const int lower = downtrans.targetlevelindex;
     const auto A_ul = downtrans.einstein_A;
-    const double epsilon_target = globals::alllevels_epsilon[ionuniquelevelindexstart + lower];
+    const double epsilon_target = epsilon(ionuniquelevelindexstart + lower);
     const double epsilon_trans = epsilon_current - epsilon_target;
 
     const double R =
@@ -88,8 +88,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   const auto *const uptranslist = get_uptranslist(element, ion, level);
   for (int i = 0; i < nuptrans; i++) {
     const auto &uptrans = uptranslist[i];
-    const double epsilon_trans =
-        globals::alllevels_epsilon[ionuniquelevelindexstart + uptrans.targetlevelindex] - epsilon_current;
+    const double epsilon_trans = epsilon(ionuniquelevelindexstart + uptrans.targetlevelindex) - epsilon_current;
 
     const double R = rad_excitation_ratecoeff(nonemptymgi, element, ion, level, uptrans, epsilon_trans, nnlevel,
                                               uptrans.lineindex, t_mid);
@@ -113,7 +112,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   if (ion > 0 && level <= get_maxrecombininglevel(element, ion)) {
     const int nlevels = get_nlevels_ionising(element, ion - 1);
     for (int lower = 0; lower < nlevels; lower++) {
-      const double epsilon_target = globals::alllevels_epsilon[lowerionuniquelevelindexstart + lower];
+      const double epsilon_target = epsilon(lowerionuniquelevelindexstart + lower);
       const double epsilon_trans = epsilon_current - epsilon_target;
 
       const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, nonemptymgi);
@@ -201,9 +200,8 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
     atomicadd(globals::ecounter[downtrans.lineindex], 1);
   }
 
-  const double epsilon_trans =
-      epsilon_current - globals::alllevels_epsilon[globals::elements[element].ions[ion].uniquelevelindexstart +
-                                                   downtrans.targetlevelindex];
+  const double epsilon_trans = epsilon_current - epsilon(globals::elements[element].ions[ion].uniquelevelindexstart +
+                                                         downtrans.targetlevelindex);
 
   const double oldnucmf = pkt.nu_cmf;
   pkt.nu_cmf = epsilon_trans / H;
@@ -358,7 +356,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
     assert_testmodeonly(ion < get_nions(element));
     const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
 
-    const double epsilon_current = globals::alllevels_epsilon[ionuniquelevelindexstart + level];
+    const double epsilon_current = epsilon(ionuniquelevelindexstart + level);
     const int nuptrans = get_nuptrans(element, ion, level);
 
     auto &chlevel = globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level];
