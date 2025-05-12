@@ -85,10 +85,11 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
     // printout("[debug] do_kpkt: element %d, ion %d, level %d\n", element, ion, level);
-    const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
+    const auto uniquelevelindex = ionuniquelevelindexstart + level;
+    const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
 
-    const double epsilon_current = epsilon(ionuniquelevelindexstart + level);
-    const double statweight = stat_weight(ionuniquelevelindexstart + level);
+    const double epsilon_current = epsilon(uniquelevelindex);
+    const double statweight = stat_weight(uniquelevelindex);
 
     const auto uptranslist = get_uptransspan(element, ion, level);
     for (const auto &transition : uptranslist) {
@@ -118,11 +119,12 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
 
     // ionization to higher ionization stage
     for (int level = 0; level < nionisinglevels; level++) {
-      const double epsilon_current = epsilon(element, ion, level);
-      const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
-      const int nphixstargets = get_nphixstargets(element, ion, level);
+      const auto uniquelevelindex = ionuniquelevelindexstart + level;
+      const double epsilon_current = epsilon(uniquelevelindex);
+      const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+      const int nphixstargets = get_nphixstargets(uniquelevelindex);
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-        const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+        const int upper = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
         const double epsilon_upper = epsilon(element, ion + 1, upper);
         const double epsilon_trans = epsilon_upper - epsilon_current;
         const double C = nnlevel *
