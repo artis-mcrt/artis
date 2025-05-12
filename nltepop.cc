@@ -386,25 +386,26 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
   const auto T_e = grid::get_Te(nonemptymgi);
   const float nne = grid::get_nne(nonemptymgi);
   const int nlevels = get_nlevels(element, ion);
+  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
   const auto levels = std::ranges::iota_view{0, nlevels};
   std::for_each(levels.begin(), levels.end(), [&](const auto level) {
     const int level_index = get_nlte_vector_index(element, ion, level);
-    const double epsilon_level = epsilon(element, ion, level);
-    const double statweight = stat_weight(element, ion, level);
-    const auto nnlevel = get_levelpop(nonemptymgi, element, ion, level);
+    const auto uniquelevelindex = ionuniquelevelindexstart + level;
+    const double epsilon_level = epsilon(uniquelevelindex);
+    const double statweight = stat_weight(uniquelevelindex);
+    const auto nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
 
     // de-excitation
-    const int ndowntrans = get_ndowntrans(element, ion, level);
-    const auto leveldowntrans = std::span(get_downtranslist(element, ion, level), ndowntrans);
+    const int ndowntrans = get_ndowntrans(uniquelevelindex);
+    const auto leveldowntrans = std::span(get_downtranslist(uniquelevelindex), ndowntrans);
     std::for_each(leveldowntrans.begin(), leveldowntrans.end(), [&](const auto &downtransition) {
       const double A_ul = downtransition.einstein_A;
       const int lower = downtransition.targetlevelindex;
-      const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, ion, lower);
+      const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
 
-      const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
-
-      const double R = rad_deexcitation_ratecoeff(nonemptymgi, lowerionlower_uniquelevelindex, epsilon_trans, A_ul,
-                                                  statweight, nnlevel, t_mid) *
+      const double epsilon_trans = epsilon_level - epsilon(lower_uniquelevelindex);
+      const double R = rad_deexcitation_ratecoeff(nonemptymgi, lower_uniquelevelindex, epsilon_trans, A_ul, statweight,
+                                                  nnlevel, t_mid) *
                        s_renorm[level];
       const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, statweight, downtransition) *
                        s_renorm[level];
@@ -423,17 +424,18 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
     });
 
     // excitation
-    const int nuptrans = get_nuptrans(element, ion, level);
-    const auto *const leveluptranslist = get_uptranslist(element, ion, level);
+    const int nuptrans = get_nuptrans(uniquelevelindex);
+    const auto *const leveluptranslist = get_uptranslist(uniquelevelindex);
     const auto nuptransindices = std::ranges::iota_view{0, nuptrans};
     std::for_each(nuptransindices.begin(), nuptransindices.end(), [&](const auto i) {
       const auto &uptrans = leveluptranslist[i];
       const int lineindex = uptrans.lineindex;
       const int upper = uptrans.targetlevelindex;
-      const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
+      const auto upper_uniquelevelindex = ionuniquelevelindexstart + upper;
+      const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_level;
 
-      const double R = rad_excitation_ratecoeff(nonemptymgi, element, ion, uptrans, epsilon_trans, nnlevel, statweight,
-                                                lineindex, t_mid) *
+      const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, uptrans, epsilon_trans, nnlevel,
+                                                statweight, lineindex, t_mid) *
                        s_renorm[level];
       assert_always(R >= 0);
       assert_always(std::isfinite(R));

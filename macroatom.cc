@@ -87,10 +87,11 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   const auto uptranslist = get_uptransspan(uniquelevelindex);
   for (int i = 0; i < std::ssize(uptranslist); i++) {
     const auto &uptrans = uptranslist[i];
-    const double epsilon_trans = epsilon(ionuniquelevelindexstart + uptrans.targetlevelindex) - epsilon_current;
+    const auto upper_uniquelevelindex = ionuniquelevelindexstart + uptrans.targetlevelindex;
+    const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_current;
 
-    const double R = rad_excitation_ratecoeff(nonemptymgi, element, ion, uptrans, epsilon_trans, nnlevel, statweight,
-                                              uptrans.lineindex, t_mid);
+    const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, uptrans, epsilon_trans, nnlevel,
+                                              statweight, uptrans.lineindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, element, ion, uptrans, epsilon_trans, statweight);
     const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, element, ion, level, i, uptrans.lineindex);
 
@@ -686,18 +687,15 @@ auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int lower_uniquelev
 // radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
 
-auto rad_excitation_ratecoeff(const int nonemptymgi, const int element, const int ion, const LevelTransition &uptrans,
+auto rad_excitation_ratecoeff(const int nonemptymgi, const int upper_uniquelevelindex, const LevelTransition &uptrans,
                               const double epsilon_trans, const double nnlevel_lower, const double statweight_lower,
                               const int lineindex, const double t_current) -> double {
-  const int upper = uptrans.targetlevelindex;
-
-  const double n_u = get_levelpop(nonemptymgi, element, ion, upper);
+  const double n_u = get_levelpop(nonemptymgi, upper_uniquelevelindex);
   const auto &n_l = nnlevel_lower;
   const double nu_trans = epsilon_trans / H;
   const double A_ul = uptrans.einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
-  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
-  const double B_lu = stat_weight(ionuniquelevelindexstart + upper) / statweight_lower * B_ul;
+  const double B_lu = stat_weight(upper_uniquelevelindex) / statweight_lower * B_ul;
 
   const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 

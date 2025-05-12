@@ -13,7 +13,7 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate);
                                               float A_ul, double upperstatweight, double nnlevelupper, double t_current)
     -> double;
 
-[[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, int element, int ion, const LevelTransition &uptrans,
+[[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, int upper_uniquelevelindex, const LevelTransition &uptrans,
                                             double epsilon_trans, double nnlevel_lower, double statweight_lower,
                                             int lineindex, double t_current) -> double;
 
