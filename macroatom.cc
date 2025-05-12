@@ -530,7 +530,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
           printout("internal downward transition to ground level occurred ... abort\n");
           printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
           printout("Z %d, ionstage %d, energy %g\n", get_atomicnumber(element), get_ionstage(element, ion - 1),
-                   get_ion_levels(element, ion - 1)[lower].epsilon);
+                   epsilon(element, ion - 1, lower));
           printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
           std::abort();
         }
