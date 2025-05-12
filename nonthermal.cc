@@ -1017,12 +1017,11 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
       const int nlevels = std::min(NTEXCITATION_MAXNLEVELS_LOWER, nlevels_all);
 
       for (int lower = 0; lower < nlevels; lower++) {
-        const int nuptrans = get_nuptrans(element, ion, lower);
-        const auto *const uptranslist = get_uptranslist(element, ion, lower);
+        const auto uptranslist = get_uptransspan(element, ion, lower);
         const double nnlevel = get_levelpop(nonemptymgi, element, ion, lower);
         const double epsilon_lower = epsilon(element, ion, lower);
         const auto statweight_lower = stat_weight(element, ion, lower);
-        for (int t = 0; t < nuptrans; t++) {
+        for (int t = 0; t < std::ssize(uptranslist); t++) {
           const int upper = uptranslist[t].targetlevelindex;
           if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
             continue;
@@ -1515,9 +1514,8 @@ auto select_nt_ionization(const int nonemptymgi) -> std::tuple<int, int> {
 }
 
 auto get_uptransindex(const int element, const int ion, const int lower, const int upper) {
-  const int nuptrans = get_nuptrans(element, ion, lower);
-  const auto *const leveluptranslist = get_uptranslist(element, ion, lower);
-  for (int t = 0; t < nuptrans; t++) {
+  const auto leveluptranslist = get_uptransspan(element, ion, lower);
+  for (int t = 0; t < std::ssize(leveluptranslist); t++) {
     if (upper == leveluptranslist[t].targetlevelindex) {
       return t;
     }
