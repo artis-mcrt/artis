@@ -356,8 +356,9 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
     assert_testmodeonly(ion >= 0);
     assert_testmodeonly(ion < get_nions(element));
+    const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
 
-    const double epsilon_current = epsilon(element, ion, level);
+    const double epsilon_current = globals::alllevels_epsilon[ionuniquelevelindexstart + level];
     const int nuptrans = get_nuptrans(element, ion, level);
 
     auto &chlevel = globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level];
