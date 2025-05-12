@@ -251,12 +251,12 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   const int ion = line.ionindex;
   const int lower = line.lowerlevelindex;
   const int upper = line.upperlevelindex;
+  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
 
-  const double n_l = get_levelpop(nonemptymgi, element, ion, lower);
+  const double n_l = get_levelpop(nonemptymgi, ionuniquelevelindexstart + lower);
 
   const double A_ul = line.einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * A_ul;
-  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
   const double B_lu =
       stat_weight(ionuniquelevelindexstart + upper) / stat_weight(ionuniquelevelindexstart + lower) * B_ul;
 
@@ -270,15 +270,15 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   const int lower = line.lowerlevelindex;
   const int upper = line.upperlevelindex;
 
-  const double n_l = get_levelpop(nonemptymgi, element, ion, lower);
+  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+  const double n_l = get_levelpop(nonemptymgi, ionuniquelevelindexstart + lower);
 
   const double A_ul = line.einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * A_ul;
-  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
   const double B_lu =
       stat_weight(ionuniquelevelindexstart + upper) / stat_weight(ionuniquelevelindexstart + lower) * B_ul;
 
-  const double n_u = get_levelpop(nonemptymgi, element, ion, upper);
+  const double n_u = get_levelpop(nonemptymgi, ionuniquelevelindexstart + upper);
   return std::max((B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current, 0.);
 }
 
