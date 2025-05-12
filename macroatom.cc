@@ -103,6 +103,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
 
   assert_always(std::isfinite(processrates[MA_ACTION_INTERNALUPSAME]));
 
+  const auto lowerionuniquelevelindexstart = globals::elements[element].ions[ion - 1].uniquelevelindexstart;
   // Downward transitions to lower ionisation stages:
   // radiative/collisional recombination and internal downward jumps
   // checks only if there is a lower ion, doesn't make sure that Z(ion)=Z(ion-1)+1
@@ -112,7 +113,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   if (ion > 0 && level <= get_maxrecombininglevel(element, ion)) {
     const int nlevels = get_nlevels_ionising(element, ion - 1);
     for (int lower = 0; lower < nlevels; lower++) {
-      const double epsilon_target = epsilon(element, ion - 1, lower);
+      const double epsilon_target = globals::alllevels_epsilon[lowerionuniquelevelindexstart + lower];
       const double epsilon_trans = epsilon_current - epsilon_target;
 
       const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, nonemptymgi);
