@@ -283,7 +283,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
 
           if constexpr (USE_LUT_BFHEATING) {
             const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-            const int index_in_groundlevelcontestimator = globals::alllevels_closestgroundlevelcont[uniquelevelindex];
+            const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
             if (index_in_groundlevelcontestimator >= 0) {
               bfheatingcoeff *= globals::bfheatingestimator[(nonemptymgi * globals::nbfcontinua_ground) +
                                                             index_in_groundlevelcontestimator];

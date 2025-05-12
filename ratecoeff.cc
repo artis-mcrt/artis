@@ -1246,7 +1246,7 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
 
         gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
         const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-        const int index_in_groundlevelcontestimator = globals::alllevels_closestgroundlevelcont[uniquelevelindex];
+        const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
         if (index_in_groundlevelcontestimator >= 0) {
           gammacorr *= globals::corrphotoionrenorm[(nonemptymgi * globals::nbfcontinua_ground) +
                                                    index_in_groundlevelcontestimator];

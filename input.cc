@@ -87,15 +87,15 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   std::string phixsline;
   const auto phixstargetstart = static_cast<int>(globals::allphixstargets.size());
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
-  assert_always(globals::alllevels_phixstargetstart[lowerionlower_uniquelevelindex] == -1 ||
-                globals::alllevels_phixstargetstart[lowerionlower_uniquelevelindex] == phixstargetstart);
-  globals::alllevels_phixstargetstart[lowerionlower_uniquelevelindex] = phixstargetstart;
+  assert_always(globals::alllevels.phixstargetstart[lowerionlower_uniquelevelindex] == -1 ||
+                globals::alllevels.phixstargetstart[lowerionlower_uniquelevelindex] == phixstargetstart);
+  globals::alllevels.phixstargetstart[lowerionlower_uniquelevelindex] = phixstargetstart;
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - groundstate_index_in;
     assert_always(upperlevel >= 0);
-    assert_always(globals::alllevels_nphixstargets[lowerionlower_uniquelevelindex] == 0 ||
-                  globals::alllevels_nphixstargets[lowerionlower_uniquelevelindex] == 1);
-    globals::alllevels_nphixstargets[lowerionlower_uniquelevelindex] = 1;
+    assert_always(globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] == 0 ||
+                  globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] == 1);
+    globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] = 1;
     *mem_usage_phixs += sizeof(PhotoionTarget);
 
     if (single_level_top_ion && (upperion == get_nions(element) - 1)) {
@@ -112,7 +112,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     // read in a table of target states and probabilities and store them
     if (!single_level_top_ion || upperion < get_nions(element) - 1)  // in case the top ion has nlevelsmax = 1
     {
-      globals::alllevels_nphixstargets[lowerionlower_uniquelevelindex] = in_nphixstargets;
+      globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] = in_nphixstargets;
       *mem_usage_phixs += in_nphixstargets * sizeof(PhotoionTarget);
 
       double probability_sum = 0.;
@@ -132,7 +132,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
                  get_atomicnumber(element), get_ionstage(element, lowerion), probability_sum);
       }
     } else {  // file has table of target states and probabilities but our top ion is limited to one level
-      globals::alllevels_nphixstargets[lowerionlower_uniquelevelindex] = 1;
+      globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] = 1;
       *mem_usage_phixs += sizeof(PhotoionTarget);
 
       for (int i = 0; i < in_nphixstargets; i++) {
@@ -153,7 +153,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lowerlevel);
          phixstargetindex++) {
       const int upperlevel =
-          globals::allphixstargets[globals::alllevels_phixstargetstart[lowerionlower_uniquelevelindex] +
+          globals::allphixstargets[globals::alllevels.phixstargetstart[lowerionlower_uniquelevelindex] +
                                    phixstargetindex]
               .levelindex;
       if (upperlevel > get_maxrecombininglevel(element, lowerion + 1)) {
@@ -165,7 +165,7 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
   *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
   assert_always(tmpallphixs.size() % globals::NPHIXSPOINTS == 0);
   const auto tmpphixsstart = tmpallphixs.size();
-  globals::alllevels_phixsstart[lowerionlower_uniquelevelindex] = tmpphixsstart / globals::NPHIXSPOINTS;
+  globals::alllevels.phixsstart[lowerionlower_uniquelevelindex] = tmpphixsstart / globals::NPHIXSPOINTS;
   tmpallphixs.resize(tmpallphixs.size() + globals::NPHIXSPOINTS);
 
   auto *levelphixstable = &tmpallphixs[tmpphixsstart];
@@ -761,7 +761,7 @@ void setup_phixs_list() {
             const auto groundcontindex = search_groundphixslist(nu_edge_target0, element, ion, level);
             nonconstallcont[allcontindex].index_in_groundphixslist = groundcontindex;
 
-            globals::alllevels_closestgroundlevelcont[uniquelevelindex] = groundcontindex;
+            globals::alllevels.closestgroundlevelcont[uniquelevelindex] = groundcontindex;
           }
           allcontindex++;
         }
@@ -851,7 +851,7 @@ void read_phixs_data() {
       for (int level = 0; level < nlevels; level++) {
         const int nphixstargets = get_nphixstargets(element, ion, level);
         const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-        globals::alllevels_cont_index[uniquelevelindex] = (nphixstargets > 0) ? cont_index : -1;
+        globals::alllevels.cont_index[uniquelevelindex] = (nphixstargets > 0) ? cont_index : -1;
         cont_index += nphixstargets;
         if (nphixstargets > 0) {
           nbftables++;
@@ -1170,28 +1170,28 @@ void read_atomicdata_files() {
   }
 
   // create a shared level list and copy data across, freeing the local copy
-  globals::alllevels_alltrans_startdown = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels_ndowntrans = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels_nuptrans = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels_epsilon = MPI_shared_malloc_span<double>(temp_alllevels.size());
-  globals::alllevels_statweight = MPI_shared_malloc_span<float>(temp_alllevels.size());
-  globals::alllevels_closestgroundlevelcont = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels_phixsstart = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels_nphixstargets = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels_phixstargetstart = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels_cont_index = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  globals::alllevels.alltrans_startdown = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  globals::alllevels.ndowntrans = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  globals::alllevels.nuptrans = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  globals::alllevels.epsilon = MPI_shared_malloc_span<double>(temp_alllevels.size());
+  globals::alllevels.statweight = MPI_shared_malloc_span<float>(temp_alllevels.size());
+  globals::alllevels.closestgroundlevelcont = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  globals::alllevels.phixsstart = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  globals::alllevels.nphixstargets = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  globals::alllevels.phixstargetstart = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  globals::alllevels.cont_index = MPI_shared_malloc_span<int>(temp_alllevels.size());
   if (globals::rank_in_node == 0) {
-    std::ranges::fill(globals::alllevels_phixsstart, -1);
-    std::ranges::fill(globals::alllevels_nphixstargets, 0);
-    std::ranges::fill(globals::alllevels_phixstargetstart, -1);
-    std::ranges::fill(globals::alllevels_cont_index, -1);
-    std::ranges::fill(globals::alllevels_closestgroundlevelcont, -1);
+    std::ranges::fill(globals::alllevels.phixsstart, -1);
+    std::ranges::fill(globals::alllevels.nphixstargets, 0);
+    std::ranges::fill(globals::alllevels.phixstargetstart, -1);
+    std::ranges::fill(globals::alllevels.cont_index, -1);
+    std::ranges::fill(globals::alllevels.closestgroundlevelcont, -1);
     for (size_t i = 0; i < temp_alllevels.size(); i++) {
-      globals::alllevels_alltrans_startdown[i] = temp_alllevels[i].alltrans_startdown;
-      globals::alllevels_ndowntrans[i] = temp_alllevels[i].ndowntrans;
-      globals::alllevels_nuptrans[i] = temp_alllevels[i].nuptrans;
-      globals::alllevels_epsilon[i] = temp_alllevels[i].epsilon;
-      globals::alllevels_statweight[i] = temp_alllevels[i].stat_weight;
+      globals::alllevels.alltrans_startdown[i] = temp_alllevels[i].alltrans_startdown;
+      globals::alllevels.ndowntrans[i] = temp_alllevels[i].ndowntrans;
+      globals::alllevels.nuptrans[i] = temp_alllevels[i].nuptrans;
+      globals::alllevels.epsilon[i] = temp_alllevels[i].epsilon;
+      globals::alllevels.statweight[i] = temp_alllevels[i].stat_weight;
     }
   }
   MPI_Barrier(globals::mpi_comm_node);

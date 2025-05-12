@@ -88,7 +88,7 @@ __host__ __device__ inline auto get_nlevels(const int element, const int ion) ->
 
 // Returns the number of target states for photoionization of (element,ion,level).
 __host__ __device__ inline auto get_nphixstargets(const int uniquelevelindex) -> int {
-  return globals::alllevels_nphixstargets[uniquelevelindex];
+  return globals::alllevels.nphixstargets[uniquelevelindex];
 }
 
 // Returns the number of target states for photoionization of (element,ion,level).
@@ -105,7 +105,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(uniquelevelindex));
 
-  return globals::allphixstargets[globals::alllevels_phixstargetstart[uniquelevelindex] + phixstargetindex].levelindex;
+  return globals::allphixstargets[globals::alllevels.phixstargetstart[uniquelevelindex] + phixstargetindex].levelindex;
 }
 
 // Return the level index of a target state for photoionization of (element,ion,level).
@@ -120,7 +120,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(uniquelevelindex));
 
-  return globals::allphixstargets[globals::alllevels_phixstargetstart[uniquelevelindex] + phixstargetindex].probability;
+  return globals::allphixstargets[globals::alllevels.phixstargetstart[uniquelevelindex] + phixstargetindex].probability;
 }
 
 // Return the probability of a target state for photoionization of (element,ion,level).
@@ -141,7 +141,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
 }
 
 [[nodiscard]] inline __host__ __device__ auto get_phixs_table(const int uniquelevelindexl) -> float * {
-  const auto phixsstart = globals::alllevels_phixsstart[uniquelevelindexl];
+  const auto phixsstart = globals::alllevels.phixsstart[uniquelevelindexl];
   assert_testmodeonly(phixsstart >= 0);
   return globals::allphixs.data() + (phixsstart * globals::NPHIXSPOINTS);
 }
@@ -221,7 +221,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
 }
 // Return the statistical weight of (element,ion,level).
 [[nodiscard]] __host__ __device__ inline auto stat_weight(const int uniquelevelindex) -> double {
-  return globals::alllevels_statweight[uniquelevelindex];
+  return globals::alllevels.statweight[uniquelevelindex];
 }
 
 // Return the statistical weight of (element,ion,level).
@@ -234,7 +234,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
 
 // Return the energy of (element,ion,level).
 [[nodiscard]] __host__ __device__ inline auto epsilon(const int uniquelevelindex) -> double {
-  return globals::alllevels_epsilon[uniquelevelindex];
+  return globals::alllevels.epsilon[uniquelevelindex];
 }
 
 [[nodiscard]] __host__ __device__ inline auto epsilon(const int element, const int ion, const int level) -> double {
@@ -400,12 +400,12 @@ inline auto get_includedions() -> int {
 
 [[nodiscard]] constexpr auto get_alltrans_startup(const int uniquelevelindex) -> int {
   // index into globals::alltrans for first up transition from this level
-  return globals::alllevels_alltrans_startdown[uniquelevelindex] + globals::alllevels_ndowntrans[uniquelevelindex];
+  return globals::alllevels.alltrans_startdown[uniquelevelindex] + globals::alllevels.ndowntrans[uniquelevelindex];
 }
 
 // the number of downward bound-bound transitions from the specified level
 [[nodiscard]] inline auto get_ndowntrans(const int uniquelevelindex) -> int {
-  return globals::alllevels_ndowntrans[uniquelevelindex];
+  return globals::alllevels.ndowntrans[uniquelevelindex];
 }
 
 // the number of downward bound-bound transitions from the specified level
@@ -417,7 +417,7 @@ inline auto get_includedions() -> int {
 }
 
 [[nodiscard]] inline auto get_downtranslist(const int uniquelevelindex) -> LevelTransition * {
-  return globals::alltrans.data() + globals::alllevels_alltrans_startdown[uniquelevelindex];
+  return globals::alltrans.data() + globals::alllevels.alltrans_startdown[uniquelevelindex];
 }
 
 [[nodiscard]] inline auto get_downtranslist(const int element, const int ion, const int level) -> LevelTransition * {
@@ -425,7 +425,7 @@ inline auto get_includedions() -> int {
 }
 
 [[nodiscard]] inline auto get_downtransspan(const int uniquelevelindex) -> std::span<const LevelTransition> {
-  return globals::alltrans.subspan(globals::alllevels_alltrans_startdown[uniquelevelindex],
+  return globals::alltrans.subspan(globals::alllevels.alltrans_startdown[uniquelevelindex],
                                    get_ndowntrans(uniquelevelindex));
 }
 
@@ -436,7 +436,7 @@ inline auto get_includedions() -> int {
 
 // the number of upward bound-bound transitions from the specified level
 [[nodiscard]] inline auto get_nuptrans(const int uniquelevelindex) -> int {
-  return globals::alllevels_nuptrans[uniquelevelindex];
+  return globals::alllevels.nuptrans[uniquelevelindex];
 }
 
 // the number of upward bound-bound transitions from the specified level
@@ -469,7 +469,7 @@ inline void set_ndowntrans(const int element, const int ion, const int level, co
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  globals::alllevels_ndowntrans[get_uniquelevelindex(element, ion, level)] = ndowntrans;
+  globals::alllevels.ndowntrans[get_uniquelevelindex(element, ion, level)] = ndowntrans;
 }
 
 // the number of upward bound-bound transitions from the specified level
@@ -477,7 +477,7 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  globals::alllevels_nuptrans[get_uniquelevelindex(element, ion, level)] = nuptrans;
+  globals::alllevels.nuptrans[get_uniquelevelindex(element, ion, level)] = nuptrans;
 }
 
 [[nodiscard]] inline auto get_phixtargetindex(const int element, const int ion, const int level,
@@ -500,7 +500,7 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
 [[nodiscard]] inline auto get_emtype_continuum(const int element, const int ion, const int level,
                                                const int upperionlevel) -> int {
   const int phixstargetindex = get_phixtargetindex(element, ion, level, upperionlevel);
-  return -1 - globals::alllevels_cont_index[get_uniquelevelindex(element, ion, level)] - phixstargetindex;
+  return -1 - globals::alllevels.cont_index[get_uniquelevelindex(element, ion, level)] - phixstargetindex;
 }
 
 // Returns the energy of (element,ion,level).
@@ -517,7 +517,7 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
 
 [[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int uniquelevelindex,
                                          const int phixstargetindex) -> int {
-  const int contindex = globals::alllevels_cont_index[uniquelevelindex] + phixstargetindex;
+  const int contindex = globals::alllevels.cont_index[uniquelevelindex] + phixstargetindex;
   const int bflutindex = (temperatureindex * globals::nbfcontinua) + contindex;
   assert_testmodeonly(bflutindex >= 0);
   assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);

@@ -254,31 +254,36 @@ inline std::span<float> allphixs{};
 inline std::span<LevelTransition> alltrans{};
 inline std::vector<PhotoionTarget> allphixstargets;
 
-inline std::span<double> alllevels_epsilon;
-inline std::span<float> alllevels_statweight;
-inline std::span<int> alllevels_closestgroundlevelcont;
+struct AllLevels {
+  // all of these arrays are indexed by uniquelevelindex, which can be derived from the element, ion, level
 
-// index to start of photoionisation cross-sections table in global::allphixs
-inline std::span<int> alllevels_phixsstart;
+  std::span<double> epsilon;
+  std::span<float> statweight;
+  std::span<int> closestgroundlevelcont;
 
-// number of target levels for photoionisation
-inline std::span<int> alllevels_nphixstargets;
+  // index to start of photoionisation cross-sections table in global::allphixs
+  std::span<int> phixsstart;
 
-// index into globals::allphixstargets for the first target level
-inline std::span<int> alllevels_phixstargetstart;
+  // number of target levels for photoionisation
+  std::span<int> nphixstargets;
 
-// index of the bound-free continuum (for first target) sorted by element/ion/level/phixstargetindex (not an index into
-// the nu_edge-sorted allcont list!)
-inline std::span<int> alllevels_cont_index;
+  // index into globals::allphixstargets for the first target level
+  std::span<int> phixstargetstart;
 
-// index into globals::alltrans for first down transition from each level
-inline std::span<int> alllevels_alltrans_startdown;
+  // index of the bound-free continuum (for first target) sorted by element/ion/level/phixstargetindex (not an index
+  // into the nu_edge-sorted allcont list!)
+  std::span<int> cont_index;
 
-// Number of down transitions from each level
-inline std::span<int> alllevels_ndowntrans;
+  // index into globals::alltrans for first down transition from each level
+  std::span<int> alltrans_startdown;
+  // Number of down transitions from each level
+  std::span<int> ndowntrans;
 
-// Number of up transitions from each level
-inline std::span<int> alllevels_nuptrans;
+  // Number of up transitions from each level
+  std::span<int> nuptrans;
+};
+
+inline AllLevels alllevels{};
 
 inline std::vector<Element> elements;
 
