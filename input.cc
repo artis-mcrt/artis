@@ -1168,7 +1168,9 @@ void read_atomicdata_files() {
   }
 
   // create a shared level list and copy data across, freeing the local copy
-  globals::alllevels = MPI_shared_malloc_span<EnergyLevel>(temp_alllevels.size());
+  globals::alllevels_alltrans_startdown = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  globals::alllevels_ndowntrans = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  globals::alllevels_nuptrans = MPI_shared_malloc_span<int>(temp_alllevels.size());
   globals::alllevels_epsilon = MPI_shared_malloc_span<double>(temp_alllevels.size());
   globals::alllevels_statweight = MPI_shared_malloc_span<float>(temp_alllevels.size());
   globals::alllevels_closestgroundlevelcont = MPI_shared_malloc_span<int>(temp_alllevels.size());
@@ -1183,11 +1185,9 @@ void read_atomicdata_files() {
     std::ranges::fill(globals::alllevels_cont_index, -1);
     std::ranges::fill(globals::alllevels_closestgroundlevelcont, -1);
     for (size_t i = 0; i < temp_alllevels.size(); i++) {
-      globals::alllevels[i] = {
-          .alltrans_startdown = temp_alllevels[i].alltrans_startdown,
-          .ndowntrans = temp_alllevels[i].ndowntrans,
-          .nuptrans = temp_alllevels[i].nuptrans,
-      };
+      globals::alllevels_alltrans_startdown[i] = temp_alllevels[i].alltrans_startdown;
+      globals::alllevels_ndowntrans[i] = temp_alllevels[i].ndowntrans;
+      globals::alllevels_nuptrans[i] = temp_alllevels[i].nuptrans;
       globals::alllevels_epsilon[i] = temp_alllevels[i].epsilon;
       globals::alllevels_statweight[i] = temp_alllevels[i].stat_weight;
     }

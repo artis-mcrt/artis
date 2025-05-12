@@ -92,17 +92,6 @@ struct EnergyLevelInput {
   }
 };
 
-struct EnergyLevel {
-  int alltrans_startdown{};
-  int ndowntrans{0};
-  int nuptrans{0};
-
-  [[nodiscard]] constexpr auto alltrans_startup() const -> int {
-    // index into globals::alltrans for first up transition from this level
-    return alltrans_startdown + ndowntrans;
-  }
-};
-
 struct Ion {
   int ionstage{-1};  // Which ionisation stage: XI=0, XII=1, XIII=2, ...
   int nlevels{0};  // Number of levels for this ionisation stage
@@ -264,7 +253,7 @@ inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperatur
 inline std::span<float> allphixs{};
 inline std::span<LevelTransition> alltrans{};
 inline std::vector<PhotoionTarget> allphixstargets;
-inline std::span<EnergyLevel> alllevels;
+
 inline std::span<double> alllevels_epsilon;
 inline std::span<float> alllevels_statweight;
 inline std::span<int> alllevels_closestgroundlevelcont;
@@ -281,6 +270,15 @@ inline std::span<int> alllevels_phixstargetstart;
 // index of the bound-free continuum (for first target) sorted by element/ion/level/phixstargetindex (not an index into
 // the nu_edge-sorted allcont list!)
 inline std::span<int> alllevels_cont_index;
+
+// index into globals::alltrans for first down transition from each level
+inline std::span<int> alllevels_alltrans_startdown;
+
+// Number of down transitions from each level
+inline std::span<int> alllevels_ndowntrans;
+
+// Number of up transitions from each level
+inline std::span<int> alllevels_nuptrans;
 
 inline std::vector<Element> elements;
 
