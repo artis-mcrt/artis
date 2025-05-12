@@ -275,7 +275,7 @@ inline std::span<double> alllevels_epsilon;
 inline std::span<float> alllevels_statweight;
 inline std::span<int> alllevels_closestgroundlevelcont;
 
-// index into globals::allphixstargets
+// index into globals::allphixs for photoionisation cross-sections
 inline std::span<int> alllevels_phixsstart;
 
 // index of the bound-free continuum (for first target) sorted by element/ion/level/phixstargetindex (not an index into
