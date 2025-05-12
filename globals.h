@@ -262,7 +262,7 @@ inline std::span<LevelTransition> alltrans{};
 inline std::vector<PhotoionTarget> allphixstargets;
 inline std::span<EnergyLevel> alllevels;
 inline std::span<double> alllevels_epsilon;
-inline std::span<double> alllevels_statweight;
+inline std::span<float> alllevels_statweight;
 
 inline std::vector<Element> elements;
 
