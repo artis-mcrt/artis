@@ -139,9 +139,9 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
       sum_up_highernt = nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion) * epsilon_current;
     }
 
-    const auto nphixstargets = get_nphixstargets(element, ion, level);
+    const auto nphixstargets = get_nphixstargets(uniquelevelindex);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-      const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
+      const double epsilon_trans = get_phixs_threshold(uniquelevelindex, phixstargetindex);
 
       const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi);
       const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);

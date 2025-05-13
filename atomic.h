@@ -497,7 +497,7 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
   return -1;
 }
 
-// Returns the emissiontype index of the continuum associated to the given level. Will be negative and ordered by
+// Return the emissiontype index of the continuum associated to the given level. Will be negative and ordered by
 // element/ion/level/phixstargetindex
 [[nodiscard]] inline auto get_emtype_continuum(const int element, const int ion, const int level,
                                                const int upperionlevel) -> int {
@@ -505,7 +505,16 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
   return -1 - globals::alllevels.cont_index[get_uniquelevelindex(element, ion, level)] - phixstargetindex;
 }
 
-// Returns the energy of (element,ion,level).
+// Return the photionisation threshold energy [erg]
+[[nodiscard]] inline auto get_phixs_threshold(const int uniquelevelindex, const int phixstargetindex) -> double {
+  assert_testmodeonly(phixstargetindex < get_nphixstargets(uniquelevelindex));
+  const int upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
+  const auto [element, ion, _] = get_levelfromuniquelevelindex(uniquelevelindex);
+  const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(uniquelevelindex);
+  return E_threshold;
+}
+
+// Return the photionisation threshold energy [erg]
 [[nodiscard]] inline auto get_phixs_threshold(const int element, const int ion, const int level,
                                               const int phixstargetindex) -> double {
   assert_testmodeonly(element < get_nelements());
