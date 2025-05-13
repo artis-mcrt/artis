@@ -400,11 +400,6 @@ inline auto get_includedions() -> int {
   return (get_nlevels(element, ion) > get_nlevels_nlte(element, ion) + 1);
 }
 
-[[nodiscard]] constexpr auto get_alltrans_startup(const int uniquelevelindex) -> int {
-  // index into globals::alltrans for first up transition from this level
-  return globals::alllevels.alltrans_startdown[uniquelevelindex] + globals::alllevels.ndowntrans[uniquelevelindex];
-}
-
 // the number of downward bound-bound transitions from the specified level
 [[nodiscard]] inline auto get_ndowntrans(const int uniquelevelindex) -> int {
   return globals::alllevels.ndowntrans[uniquelevelindex];
@@ -418,8 +413,23 @@ inline auto get_includedions() -> int {
   return get_ndowntrans(get_uniquelevelindex(element, ion, level));
 }
 
+// index into globals::alltrans for first down transition from this level
+[[nodiscard]] inline auto get_alltrans_startdown(const int uniquelevelindex) -> int {
+  return globals::alllevels.alltrans_startdown[uniquelevelindex];
+}
+
+// index into globals::alltrans for first up transition from this level
+[[nodiscard]] inline auto get_alltrans_startup(const int uniquelevelindex) -> int {
+  return get_alltrans_startdown(uniquelevelindex) + get_ndowntrans(uniquelevelindex);
+}
+
+[[nodiscard]] inline auto get_alltrans_startup(const int element, const int ion, const int level) -> int {
+  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+  return get_alltrans_startup(uniquelevelindex);
+}
+
 [[nodiscard]] inline auto get_downtranslist(const int uniquelevelindex) -> LevelTransition * {
-  return globals::alltrans.data() + globals::alllevels.alltrans_startdown[uniquelevelindex];
+  return globals::alltrans.data() + get_alltrans_startdown(uniquelevelindex);
 }
 
 [[nodiscard]] inline auto get_downtranslist(const int element, const int ion, const int level) -> LevelTransition * {
@@ -427,8 +437,7 @@ inline auto get_includedions() -> int {
 }
 
 [[nodiscard]] inline auto get_downtransspan(const int uniquelevelindex) -> std::span<const LevelTransition> {
-  return globals::alltrans.subspan(globals::alllevels.alltrans_startdown[uniquelevelindex],
-                                   get_ndowntrans(uniquelevelindex));
+  return globals::alltrans.subspan(get_alltrans_startdown(uniquelevelindex), get_ndowntrans(uniquelevelindex));
 }
 
 [[nodiscard]] inline auto get_downtransspan(const int element, const int ion, const int level)
