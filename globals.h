@@ -284,6 +284,7 @@ struct AllLevels {
 
   // index into globals::alltrans for first down transition from each level
   std::span<int> alltrans_startdown;
+
   // Number of down transitions from each level
   std::span<int> ndowntrans;
 
