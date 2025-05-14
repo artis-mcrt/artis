@@ -1195,21 +1195,18 @@ void cellcache_change_cell(const int nonemptymgi) {
       }
     }
 
+    for (auto phixstarget : cacheslot.challphixstargets) {
+      phixstarget.corrphotoioncoeff = -99.;
+#if (SEPARATE_STIMRECOMB)
+      phixstarget.stimrecombcoeff = -99.;
+#endif
+    }
+
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels = get_nlevels(element, ion);
       auto &chion = cacheslot.chelements[element].chions[ion];
       for (int level = 0; level < nlevels; level++) {
-        const auto nphixstargets = get_nphixstargets(element, ion, level);
-        auto &chlevel = chion.chlevels[level];
-        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          chlevel.chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
-
-#if (SEPARATE_STIMRECOMB)
-          chlevel.chphixstargets[phixstargetindex].stimrecombcoeff = -99.;
-#endif
-        }
-
-        chlevel.processrates[MA_ACTION_INTERNALUPHIGHER] = -99.;
+        chion.chlevels[level].processrates[MA_ACTION_INTERNALUPHIGHER] = -99.;
       }
     }
   }

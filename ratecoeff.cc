@@ -1173,12 +1173,9 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
   double stimrecombcoeff = -1.;
 #if (SEPARATE_STIMRECOMB)
   if (use_cellcache) {
-    stimrecombcoeff = globals::cellcache[cellcacheslotid]
-                          .chelements[element]
-                          .chions[lowerion]
-                          .chlevels[level]
-                          .chphixstargets[phixstargetindex]
-                          .stimrecombcoeff;
+    const auto uniquelevelindex = get_uniquelevelindex(element, lowerion, level);
+    const auto allphisxtargetindex = globals::alllevels.phixstargetstart[uniquelevelindex] + phixstargetindex;
+    stimrecombcoeff = globals::cellcache[cellcacheslotid].challphixstargets[allphisxtargetindex].stimrecombcoeff;
   }
 #endif
 
@@ -1187,12 +1184,7 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
 
 #if (SEPARATE_STIMRECOMB)
     if (use_cellcache) {
-      globals::cellcache[cellcacheslotid]
-          .chelements[element]
-          .chions[lowerion]
-          .chlevels[level]
-          .chphixstargets[phixstargetindex]
-          .stimrecombcoeff = stimrecombcoeff;
+      globals::cellcache[cellcacheslotid].challphixstargets[allphisxtargetindex].stimrecombcoeff = stimrecombcoeff;
     }
 #endif
   }
@@ -1223,13 +1215,11 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
   // The correction factor for stimulated emission in gammacorr is set to its
   // LTE value. Because the T_e dependence of gammacorr is weak, this correction
   // correction may be evaluated at T_R!
-  double gammacorr = (use_cellcache) ? globals::cellcache[cellcacheslotid]
-                                           .chelements[element]
-                                           .chions[ion]
-                                           .chlevels[level]
-                                           .chphixstargets[phixstargetindex]
-                                           .corrphotoioncoeff
-                                     : -1;
+  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+  const auto allphisxtargetindex = globals::alllevels.phixstargetstart[uniquelevelindex] + phixstargetindex;
+  double gammacorr = (use_cellcache)
+                         ? globals::cellcache[cellcacheslotid].challphixstargets[allphisxtargetindex].corrphotoioncoeff
+                         : -1;
 
   if (!use_cellcache || gammacorr < 0) {
     if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {
@@ -1245,7 +1235,6 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
         const double T_R = grid::get_TR(nonemptymgi);
 
         gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
-        const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
         const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
         if (index_in_groundlevelcontestimator >= 0) {
           gammacorr *= globals::corrphotoionrenorm[(nonemptymgi * globals::nbfcontinua_ground) +
@@ -1254,12 +1243,7 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
       }
     }
     if (use_cellcache) {
-      globals::cellcache[cellcacheslotid]
-          .chelements[element]
-          .chions[ion]
-          .chlevels[level]
-          .chphixstargets[phixstargetindex]
-          .corrphotoioncoeff = gammacorr;
+      globals::cellcache[cellcacheslotid].challphixstargets[allphisxtargetindex].corrphotoioncoeff = gammacorr;
     }
   }
 

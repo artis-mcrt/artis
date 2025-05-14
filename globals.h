@@ -169,7 +169,6 @@ enum ma_action {
 
 struct CellCacheLevels {
   std::array<double, MA_ACTION_COUNT> processrates;
-  CellCachePhixsTargets *chphixstargets;
   double population;
   double *sum_epstrans_rad_deexc;
   double *sum_internal_down_same;
