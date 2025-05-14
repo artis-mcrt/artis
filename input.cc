@@ -1249,22 +1249,30 @@ void read_atomicdata_files() {
     // so find the first up and the first down transition that match: element, ion, lowerlevel, upperlevel
 
     const auto upper_uniquelevelindex = get_uniquelevelindex(element, ion, upperlevel);
-    const auto downtransspan = std::span{globals::alltrans}.subspan(get_alltrans_startdown(upper_uniquelevelindex),
-                                                                    get_ndowntrans(upper_uniquelevelindex));
-    const auto downtrans = std::find_if(downtransspan.begin(), downtransspan.end(),
-                                        [=](const auto &trans) { return trans.targetlevelindex == lowerlevel; });
-    assert_always(downtrans != downtransspan.end());
-    const auto downtransid = static_cast<int>(std::distance(downtransspan.begin(), downtrans));
-    downtransspan[downtransid].lineindex = lineindex;
+    const auto alltrans_startdown = get_alltrans_startdown(upper_uniquelevelindex);
+    const auto ndowntrans = get_ndowntrans(upper_uniquelevelindex);
+    int downtransid = -1;
+    for (int i = alltrans_startdown; i < alltrans_startdown + ndowntrans; i++) {
+      if (globals::alltrans[i].targetlevelindex == lowerlevel) {
+        downtransid = i;
+        break;
+      }
+    }
+    assert_always(downtransid != -1);
+    globals::alltrans[downtransid].lineindex = lineindex;
 
     const auto lower_uniquelevelindex = get_uniquelevelindex(element, ion, lowerlevel);
-    const auto uptransspan = std::span{globals::alltrans}.subspan(get_alltrans_startup(lower_uniquelevelindex),
-                                                                  get_nuptrans(lower_uniquelevelindex));
-    const auto &uptrans = std::find_if(uptransspan.begin(), uptransspan.end(),
-                                       [=](const auto &trans) { return trans.targetlevelindex == upperlevel; });
-    assert_always(uptrans != uptransspan.end());
-    const auto uptransid = static_cast<int>(std::distance(uptransspan.begin(), uptrans));
-    uptransspan[uptransid].lineindex = lineindex;
+    const auto alltrans_startup = get_alltrans_startup(lower_uniquelevelindex);
+    const auto nuptrans = get_nuptrans(lower_uniquelevelindex);
+    int uptransid = -1;
+    for (int i = alltrans_startup; i < alltrans_startup + nuptrans; i++) {
+      if (globals::alltrans[i].targetlevelindex == upperlevel) {
+        uptransid = i;
+        break;
+      }
+    }
+    assert_always(uptransid != -1);
+    globals::alltrans[uptransid].lineindex = lineindex;
   }
 
   printout("  took %lds\n", std::time(nullptr) - time_start_establish_linelist_connections);
