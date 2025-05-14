@@ -36,7 +36,8 @@ constexpr bool LOG_MACROATOM = false;
 FILE *macroatom_file{};
 
 auto calculate_macroatom_transitionrates(const int nonemptymgi, const int element, const int ion, const int level,
-                                         const double t_mid, CellCacheLevels &chlevel) {
+                                         const double t_mid, CellCacheLevels &chlevel,
+                                         const globals::AllTransitions &alltrans) {
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
   auto processrates = std::array<double, MA_ACTION_COUNT>{};
   const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
@@ -59,8 +60,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   auto *const arr_sum_internal_down_same = chlevel.sum_internal_down_same;
   for (int i = 0; i < ndowntrans; i++) {
     const auto alltransindex = alltrans_startdown + i;
-    const int lower = globals::alltrans.targetlevelindex[alltransindex];
-    const auto A_ul = globals::alltrans.einstein_A[alltransindex];
+    const int lower = alltrans.targetlevelindex[alltransindex];
+    const auto A_ul = alltrans.einstein_A[alltransindex];
     const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
     const double epsilon_target = epsilon(lower_uniquelevelindex);
     const double epsilon_trans = epsilon_current - epsilon_target;
@@ -90,18 +91,16 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   const int nuptrans = get_nuptrans(uniquelevelindex);
   for (int ii = 0; ii < nuptrans; ii++) {
     const auto alltransindex = alltrans_startup + ii;
-    const auto upper_uniquelevelindex = ionuniquelevelindexstart + globals::alltrans.targetlevelindex[alltransindex];
+    const auto upper = alltrans.targetlevelindex[alltransindex];
+    const auto upper_uniquelevelindex = ionuniquelevelindexstart + upper;
     const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_current;
     const auto upper_statweight = stat_weight(upper_uniquelevelindex);
 
     const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, upper_statweight,
-                                              globals::alltrans.lineindex[alltransindex], epsilon_trans, nnlevel,
-                                              statweight, globals::alltrans.lineindex[alltransindex], t_mid);
-    const double C =
-        col_excitation_ratecoeff(T_e, nne, upper_statweight, alltrans_startup + ii, epsilon_trans, statweight);
-    const double NT =
-        nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, globals::alltrans.targetlevelindex[alltransindex],
-                                            globals::alltrans.lineindex[alltransindex]);
+                                              alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel, statweight,
+                                              alltrans.lineindex[alltransindex], t_mid);
+    const double C = col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight);
+    const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltrans.lineindex[alltransindex]);
 
     sum_internal_up_same += (R + C + NT) * epsilon_current;
     chlevel.sum_internal_up_same[ii] = sum_internal_up_same;
@@ -382,7 +381,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
       // If there are no precalculated rates available then calculate them
       if (chlevel.processrates[MA_ACTION_INTERNALUPHIGHER] < 0) {
-        chlevel.processrates = calculate_macroatom_transitionrates(nonemptymgi, element, ion, level, t_mid, chlevel);
+        chlevel.processrates =
+            calculate_macroatom_transitionrates(nonemptymgi, element, ion, level, t_mid, chlevel, globals::alltrans);
       }
     }
 
@@ -855,7 +855,7 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans,
                                 const double upperstatweight, const double lowerstatweight, const int alltransindex)
     -> double {
-  const double coll_strength = globals::alltrans.coll_str[alltransindex];
+  const auto coll_strength = globals::alltrans.coll_str[alltransindex];
   if (coll_strength < 0) {
     if (!globals::alltrans.forbidden[alltransindex])  // alternative: (coll_strength > -1.5) i.e. to catch -1
     {
@@ -895,13 +895,13 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
   // positive coll_str is treated as effective collision strength
 
   // from Osterbrock and Ferland, p51
-  return nne * 8.629e-6 * coll_strength / upperstatweight / std::sqrt(T_e);
+  return nne * 8.629e-6 * static_cast<double>(coll_strength) / upperstatweight / std::sqrt(T_e);
 }
 
 // multiply by lower level population to get a rate per second
 auto col_excitation_ratecoeff(const float T_e, const float nne, const double upperstatweight, const int alltransindex,
                               const double epsilon_trans, const double lowerstatweight) -> double {
-  const double coll_strength = globals::alltrans.coll_str[alltransindex];
+  const auto coll_strength = globals::alltrans.coll_str[alltransindex];
   const double eoverkt = epsilon_trans / (KB * T_e);
 
   if (coll_strength < 0) {
@@ -937,5 +937,5 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, const double upp
   }
 
   // from Osterbrock and Ferland, p51
-  return nne * 8.629e-6 * coll_strength * std::exp(-eoverkt) / lowerstatweight / std::sqrt(T_e);
+  return nne * 8.629e-6 * static_cast<double>(coll_strength) * std::exp(-eoverkt) / lowerstatweight / std::sqrt(T_e);
 }
