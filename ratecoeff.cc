@@ -868,6 +868,23 @@ auto get_nlevels_important(const int nonemptymgi, const int element, const int i
   return {nlevels_important, nnlevelsum};
 }
 
+auto interpolate_corrphotoioncoeff(const int element, const int ion, const int level, const int phixstargetindex,
+                                   const double T) -> double {
+  assert_always(USE_LUT_PHOTOION);
+  const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
+  if (lowerindex < TABLESIZE - 1) {
+    const int upperindex = lowerindex + 1;
+    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
+    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
+
+    const double f_upper = corrphotoioncoeffs[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
+    const double f_lower = corrphotoioncoeffs[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
+
+    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower)));
+  }
+  return corrphotoioncoeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
+}
+
 }  // anonymous namespace
 
 void setup_photoion_luts() {
@@ -1136,23 +1153,6 @@ void ratecoefficients_init() {
   precalculate_ion_alpha_sp();
 
   printout("time after tabulation of rate coefficients %ld\n", std::time(nullptr));
-}
-
-auto interpolate_corrphotoioncoeff(const int element, const int ion, const int level, const int phixstargetindex,
-                                   const double T) -> double {
-  assert_always(USE_LUT_PHOTOION);
-  const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
-  if (lowerindex < TABLESIZE - 1) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
-
-    const double f_upper = corrphotoioncoeffs[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
-    const double f_lower = corrphotoioncoeffs[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
-
-    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower)));
-  }
-  return corrphotoioncoeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
 }
 
 auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex,
