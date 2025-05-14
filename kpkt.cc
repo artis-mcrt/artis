@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <numeric>
 #include <ranges>
 #include <vector>
 
@@ -279,11 +280,10 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates *heating
 
   // this loop is made separate for future parallelisation of upper loop.
   // the ion contributions must be added in this exact order
-  double C_total = 0.;
-  for (int allionindex = 0; allionindex < get_includedions(); allionindex++) {
-    C_total +=
-        grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + allionindex];
-  }
+  const auto cellioncontribs = grid::ion_cooling_contribs_allcells.subspan(
+      (static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()), get_includedions());
+  const double C_total = std::accumulate(cellioncontribs.begin(), cellioncontribs.end(), 0.0);
+
   grid::modelgrid[nonemptymgi].totalcooling = C_total;
 
   // only used in the T_e solver and write_to_estimators file
