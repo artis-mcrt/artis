@@ -33,8 +33,7 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate);
                                               double lowerstatweight, float coll_str, float osc_strength,
                                               bool forbidden) -> double;
 
-[[nodiscard]] auto col_excitation_ratecoeff(float T_e, float nne, double upperstatweight,
-                                            const LevelTransition &uptrans, double epsilon_trans,
-                                            double lowerstatweight) -> double;
+[[nodiscard]] auto col_excitation_ratecoeff(float T_e, float nne, double upperstatweight, int alltransindex,
+                                            double epsilon_trans, double lowerstatweight) -> double;
 
 #endif  // MACROATOM_H

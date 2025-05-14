@@ -99,7 +99,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
       const double epsilon_trans = epsilon(ionuniquelevelindexstart + upper) - epsilon_current;
       const auto upper_statweight = stat_weight(ionuniquelevelindexstart + upper);
       const double C = nnlevel *
-                       col_excitation_ratecoeff(T_e, nne, upper_statweight, uptrans, epsilon_trans, statweight) *
+                       col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight) *
                        epsilon_trans;
       C_ion += C;
       if constexpr (!update_cooling_contrib_list) {
@@ -599,16 +599,17 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     const double statweight = stat_weight(uniquelevelindex);
     int upper = -1;
     // excitation to same ionization stage
-    const auto uptranslist = get_uptransspan(element, ion, level);
-    for (int ii = 0; ii < std::ssize(uptranslist); ii++) {
-      const int tmpupper = uptranslist[ii].targetlevelindex;
+    const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
+    const int nuptrans = get_nuptrans(uniquelevelindex);
+    for (int alltransindex = alltrans_startup; alltransindex < (alltrans_startup + nuptrans); alltransindex++) {
+      const int tmpupper = globals::alltrans[alltransindex].targetlevelindex;
       // printout("    excitation to level %d possible\n",upper);
       const auto upperuniquelevelindex = ionuniquelevelindexstart + tmpupper;
       const double epsilon_trans = epsilon(upperuniquelevelindex) - epsilon_current;
       const auto upper_statweight = stat_weight(upperuniquelevelindex);
-      const double C =
-          nnlevel * col_excitation_ratecoeff(T_e, nne, upper_statweight, uptranslist[ii], epsilon_trans, statweight) *
-          epsilon_trans;
+      const double C = nnlevel *
+                       col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight) *
+                       epsilon_trans;
       contrib += C;
       if (contrib > rndcool_ion_process) {
         upper = tmpupper;

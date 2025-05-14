@@ -87,20 +87,22 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   // Calculate sum for upward internal transitions
   // transitions within the current ionisation stage
   double sum_internal_up_same = 0.;
-  const auto uptranslist = get_uptransspan(uniquelevelindex);
-  for (int i = 0; i < std::ssize(uptranslist); i++) {
-    const auto &uptrans = uptranslist[i];
+  const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
+  const int nuptrans = get_nuptrans(uniquelevelindex);
+  for (int ii = 0; ii < nuptrans; ii++) {
+    const auto &uptrans = globals::alltrans[alltrans_startup + ii];
     const auto upper_uniquelevelindex = ionuniquelevelindexstart + uptrans.targetlevelindex;
     const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_current;
     const auto upper_statweight = stat_weight(upper_uniquelevelindex);
 
     const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, upper_statweight, uptrans,
                                               epsilon_trans, nnlevel, statweight, uptrans.lineindex, t_mid);
-    const double C = col_excitation_ratecoeff(T_e, nne, upper_statweight, uptrans, epsilon_trans, statweight);
-    const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, element, ion, level, i, uptrans.lineindex);
+    const double C =
+        col_excitation_ratecoeff(T_e, nne, upper_statweight, alltrans_startup + ii, epsilon_trans, statweight);
+    const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, element, ion, level, ii, uptrans.lineindex);
 
     sum_internal_up_same += (R + C + NT) * epsilon_current;
-    chlevel.sum_internal_up_same[i] = sum_internal_up_same;
+    chlevel.sum_internal_up_same[ii] = sum_internal_up_same;
   }
   processrates[MA_ACTION_INTERNALUPSAME] = sum_internal_up_same;
 
@@ -890,17 +892,16 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
 }
 
 // multiply by lower level population to get a rate per second
-auto col_excitation_ratecoeff(const float T_e, const float nne, const double upperstatweight,
-                              const LevelTransition &uptrans, const double epsilon_trans, const double lowerstatweight)
-    -> double {
-  const double coll_strength = uptrans.coll_str;
+auto col_excitation_ratecoeff(const float T_e, const float nne, const double upperstatweight, const int alltransindex,
+                              const double epsilon_trans, const double lowerstatweight) -> double {
+  const double coll_strength = globals::alltrans[alltransindex].coll_str;
   const double eoverkt = epsilon_trans / (KB * T_e);
 
   if (coll_strength < 0) {
-    const bool forbidden = uptrans.forbidden;
+    const bool forbidden = globals::alltrans[alltransindex].forbidden;
     if (!forbidden) {
       // alternative condition: (coll_strength > -1.5) i.e. to catch -1
-      const double trans_osc_strength = uptrans.osc_strength;
+      const double trans_osc_strength = globals::alltrans[alltransindex].osc_strength;
       // permitted E1 electric dipole transitions
       // collisional excitation: formula valid only for atoms!!!!!!!!!!!
       // Rutten script eq. 3.32. p.50

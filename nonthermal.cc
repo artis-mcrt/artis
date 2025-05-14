@@ -1734,11 +1734,13 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         const auto nnlevel_lower = get_levelpop(nonemptymgi, lower_uniquelevelindex);
         const auto statweight_lower = stat_weight(lower_uniquelevelindex);
 
+        const auto alltrans_startup = get_alltrans_startup(lower_uniquelevelindex);
         const auto uptransindex = get_uptransindex(element, ion, lower, upper);
         const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon(lower_uniquelevelindex);
 
         const double ntcollexc_ratecoeff = ntexc.ratecoeffperdeposition * deposition_rate_density;
-        const auto &uptrans = get_uptranslist(element, ion, lower)[uptransindex];
+        const auto alltransindex = alltrans_startup + uptransindex;
+        const auto &uptrans = globals::alltrans[alltransindex];
         const auto statweight_upper = stat_weight(upper_uniquelevelindex);
 
         const double t_mid = globals::timesteps[timestep].mid;
@@ -1747,7 +1749,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
                                      nnlevel_lower, statweight_lower, lineindex, t_mid);
 
         const double collexc_ratecoeff =
-            col_excitation_ratecoeff(T_e, nne, statweight_upper, uptrans, epsilon_trans, statweight_lower);
+            col_excitation_ratecoeff(T_e, nne, statweight_upper, alltransindex, epsilon_trans, statweight_lower);
 
         const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
         const auto coll_str = uptrans.coll_str;
