@@ -1205,10 +1205,23 @@ void read_atomicdata_files() {
   // create a shared all transitions list and then copy data across, freeing the local copy
   MPI_Barrier(globals::mpi_comm_node);
 
-  globals::alltrans = MPI_shared_malloc_span<LevelTransition>(totupdowntrans);
+  globals::alltrans.lineindex = MPI_shared_malloc_span<int>(totupdowntrans);
+  globals::alltrans.targetlevelindex = MPI_shared_malloc_span<int>(totupdowntrans);
+  globals::alltrans.einstein_A = MPI_shared_malloc_span<float>(totupdowntrans);
+  globals::alltrans.coll_str = MPI_shared_malloc_span<float>(totupdowntrans);
+  globals::alltrans.osc_strength = MPI_shared_malloc_span<float>(totupdowntrans);
+  globals::alltrans.forbidden = MPI_shared_malloc_span<bool>(totupdowntrans);
+
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_alltranslist) == totupdowntrans);
-    std::ranges::copy(temp_alltranslist, globals::alltrans.data());
+    for (int t = 0; t < totupdowntrans; t++) {
+      globals::alltrans.lineindex[t] = temp_alltranslist[t].lineindex;
+      globals::alltrans.targetlevelindex[t] = temp_alltranslist[t].targetlevelindex;
+      globals::alltrans.einstein_A[t] = temp_alltranslist[t].einstein_A;
+      globals::alltrans.coll_str[t] = temp_alltranslist[t].coll_str;
+      globals::alltrans.osc_strength[t] = temp_alltranslist[t].osc_strength;
+      globals::alltrans.forbidden[t] = temp_alltranslist[t].forbidden;
+    }
   }
   temp_alltranslist.clear();
   temp_alltranslist.shrink_to_fit();
@@ -1253,26 +1266,26 @@ void read_atomicdata_files() {
     const auto ndowntrans = get_ndowntrans(upper_uniquelevelindex);
     int downtransid = -1;
     for (int i = alltrans_startdown; i < alltrans_startdown + ndowntrans; i++) {
-      if (globals::alltrans[i].targetlevelindex == lowerlevel) {
+      if (globals::alltrans.targetlevelindex[i] == lowerlevel) {
         downtransid = i;
         break;
       }
     }
     assert_always(downtransid != -1);
-    globals::alltrans[downtransid].lineindex = lineindex;
+    globals::alltrans.lineindex[downtransid] = lineindex;
 
     const auto lower_uniquelevelindex = get_uniquelevelindex(element, ion, lowerlevel);
     const auto alltrans_startup = get_alltrans_startup(lower_uniquelevelindex);
     const auto nuptrans = get_nuptrans(lower_uniquelevelindex);
     int uptransid = -1;
     for (int i = alltrans_startup; i < alltrans_startup + nuptrans; i++) {
-      if (globals::alltrans[i].targetlevelindex == upperlevel) {
+      if (globals::alltrans.targetlevelindex[i] == upperlevel) {
         uptransid = i;
         break;
       }
     }
     assert_always(uptransid != -1);
-    globals::alltrans[uptransid].lineindex = lineindex;
+    globals::alltrans.lineindex[uptransid] = lineindex;
   }
 
   printout("  took %lds\n", std::time(nullptr) - time_start_establish_linelist_connections);

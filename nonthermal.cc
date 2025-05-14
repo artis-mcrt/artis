@@ -724,8 +724,9 @@ auto get_possible_nt_excitation_count() -> int {
       const int lower_nlevels = std::min(NTEXCITATION_MAXNLEVELS_LOWER, get_nlevels(element, ion));
       for (int lower = 0; lower < lower_nlevels; lower++) {
         const int nuptrans = get_nuptrans(element, ion, lower);
+        const auto alltrans_startup = get_alltrans_startup(element, ion, lower);
         for (int t = 0; t < nuptrans; t++) {
-          const int upper = get_uptranslist(element, ion, lower)[t].targetlevelindex;
+          const int upper = globals::alltrans.targetlevelindex[alltrans_startup + t];
           if (upper < NTEXCITATION_MAXNLEVELS_UPPER) {
             ntexcitationcount++;
           }
@@ -918,13 +919,15 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
     return 0.;
   }
 
-  const auto &uptrans = get_uptranslist(element, ion, lower)[uptransindex];
-  if (uptrans.coll_str >= 0) {
+  const auto alltrans_startup = get_alltrans_startup(element, ion, lower);
+  const auto alltransindex = alltrans_startup + uptransindex;
+  if (globals::alltrans.coll_str[alltransindex] >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
-    return std::pow(H_ionpot / energy, 2) / lowerstatweight * uptrans.coll_str * PI * A_naught_squared;
+    return std::pow(H_ionpot / energy, 2) / lowerstatweight * globals::alltrans.coll_str[alltransindex] * PI *
+           A_naught_squared;
   }
-  if (!uptrans.forbidden) {
+  if (!globals::alltrans.forbidden[alltransindex]) {
     // permitted E1 electric dipole transitions
     const double U = energy / epsilon_trans;
 
@@ -935,7 +938,8 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
 
     constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
-    return prefactor * A_naught_squared * std::pow(H_ionpot / epsilon_trans, 2) * uptrans.osc_strength * g_bar / U;
+    return prefactor * A_naught_squared * std::pow(H_ionpot / epsilon_trans, 2) *
+           globals::alltrans.osc_strength[alltransindex] * g_bar / U;
   }
   return 0.;
 }
@@ -1017,12 +1021,14 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
       const int nlevels = std::min(NTEXCITATION_MAXNLEVELS_LOWER, nlevels_all);
 
       for (int lower = 0; lower < nlevels; lower++) {
-        const auto uptranslist = get_uptransspan(element, ion, lower);
-        const double nnlevel = get_levelpop(nonemptymgi, element, ion, lower);
-        const double epsilon_lower = epsilon(element, ion, lower);
-        const auto statweight_lower = stat_weight(element, ion, lower);
-        for (int t = 0; t < std::ssize(uptranslist); t++) {
-          const int upper = uptranslist[t].targetlevelindex;
+        const auto uniquelevelindex = get_uniquelevelindex(element, ion, lower);
+        const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+        const double epsilon_lower = epsilon(uniquelevelindex);
+        const auto statweight_lower = stat_weight(uniquelevelindex);
+        const int nuptrans = get_nuptrans(uniquelevelindex);
+        const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
+        for (int t = 0; t < nuptrans; t++) {
+          const int upper = globals::alltrans.targetlevelindex[alltrans_startup + t];
           if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
             continue;
           }
@@ -1372,11 +1378,11 @@ auto nt_ionization_ratecoeff_sf(const int nonemptymgi, const int element, const 
 auto get_xs_excitation_vector(const int alltransindex, const double statweight_lower, const double epsilon_trans)
     -> std::tuple<std::array<double, SFPTS>, int> {
   std::array<double, SFPTS> xs_excitation_vec{};
-  const auto &uptr = globals::alltrans[alltransindex];
-  if (uptr.coll_str >= 0) {
+  if (globals::alltrans.coll_str[alltransindex] >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
-    const double constantfactor = std::pow(H_ionpot, 2) / statweight_lower * uptr.coll_str * PI * A_naught_squared;
+    const double constantfactor =
+        std::pow(H_ionpot, 2) / statweight_lower * globals::alltrans.coll_str[alltransindex] * PI * A_naught_squared;
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
 
@@ -1388,8 +1394,8 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
     }
     return {xs_excitation_vec, en_startindex};
   }
-  if (!uptr.forbidden) {
-    const double trans_osc_strength = uptr.osc_strength;
+  if (!globals::alltrans.forbidden[alltransindex]) {
+    const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
     // permitted E1 electric dipole transitions
 
     // constexpr double g_bar = 0.2;
@@ -1512,9 +1518,10 @@ auto select_nt_ionization(const int nonemptymgi) -> std::tuple<int, int> {
 }
 
 auto get_uptransindex(const int element, const int ion, const int lower, const int upper) {
-  const auto leveluptranslist = get_uptransspan(element, ion, lower);
-  for (int t = 0; t < std::ssize(leveluptranslist); t++) {
-    if (upper == leveluptranslist[t].targetlevelindex) {
+  const int nuptrans = get_nuptrans(element, ion, lower);
+  const auto alltrans_startup = get_alltrans_startup(element, ion, lower);
+  for (int t = 0; t < nuptrans; t++) {
+    if (upper == globals::alltrans.targetlevelindex[alltrans_startup + t]) {
       return t;
     }
   }
@@ -1613,7 +1620,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
 
         for (int t = 0; t < nuptrans; t++) {
           const int alltransindex = alltrans_startup + t;
-          const int upper = globals::alltrans[alltransindex].targetlevelindex;
+          const int upper = globals::alltrans.targetlevelindex[alltransindex];
           if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
             continue;
           }
@@ -1636,7 +1643,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
               tmp_excitation_list.push_back({
                   .frac_deposition = frac_excitation_thistrans,
                   .ratecoeffperdeposition = ratecoeffperdeposition,
-                  .lineindex = globals::alltrans[alltransindex].lineindex,
+                  .lineindex = globals::alltrans.lineindex[alltransindex],
               });
             }
           }  // NT_EXCITATION_ON
@@ -1740,19 +1747,18 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
 
         const double ntcollexc_ratecoeff = ntexc.ratecoeffperdeposition * deposition_rate_density;
         const auto alltransindex = alltrans_startup + uptransindex;
-        const auto &uptrans = globals::alltrans[alltransindex];
         const auto statweight_upper = stat_weight(upper_uniquelevelindex);
 
         const double t_mid = globals::timesteps[timestep].mid;
-        const double radexc_ratecoeff =
-            rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, statweight_upper, uptrans, epsilon_trans,
-                                     nnlevel_lower, statweight_lower, lineindex, t_mid);
+        const double radexc_ratecoeff = rad_excitation_ratecoeff(
+            nonemptymgi, upper_uniquelevelindex, statweight_upper, globals::alltrans.einstein_A[alltransindex],
+            epsilon_trans, nnlevel_lower, statweight_lower, lineindex, t_mid);
 
         const double collexc_ratecoeff =
             col_excitation_ratecoeff(T_e, nne, statweight_upper, alltransindex, epsilon_trans, statweight_lower);
 
         const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
-        const auto coll_str = uptrans.coll_str;
+        const auto coll_str = globals::alltrans.coll_str[alltransindex];
 
         printout(
             "    frac_deposition %.3e Z=%2d ionstage %d lower %4d upper %4d rad_exc %.1e coll_exc %.1e nt_exc %.1e "
@@ -1822,7 +1828,7 @@ void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int no
     const int nuptrans = get_nuptrans(uniquelevelindex);
     for (int t = 0; t < nuptrans; t++) {
       const int alltransindex = alltrans_startup + t;
-      const int upper = globals::alltrans[alltransindex].targetlevelindex;
+      const int upper = globals::alltrans.targetlevelindex[alltransindex];
       if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
         continue;
       }

@@ -428,23 +428,6 @@ inline auto get_includedions() -> int {
   return get_alltrans_startup(uniquelevelindex);
 }
 
-[[nodiscard]] inline auto get_downtranslist(const int uniquelevelindex) -> LevelTransition * {
-  return globals::alltrans.data() + get_alltrans_startdown(uniquelevelindex);
-}
-
-[[nodiscard]] inline auto get_downtranslist(const int element, const int ion, const int level) -> LevelTransition * {
-  return get_downtranslist(get_uniquelevelindex(element, ion, level));
-}
-
-[[nodiscard]] inline auto get_downtransspan(const int uniquelevelindex) -> std::span<const LevelTransition> {
-  return globals::alltrans.subspan(get_alltrans_startdown(uniquelevelindex), get_ndowntrans(uniquelevelindex));
-}
-
-[[nodiscard]] inline auto get_downtransspan(const int element, const int ion, const int level)
-    -> std::span<const LevelTransition> {
-  return get_downtransspan(get_uniquelevelindex(element, ion, level));
-}
-
 // the number of upward bound-bound transitions from the specified level
 [[nodiscard]] inline auto get_nuptrans(const int uniquelevelindex) -> int {
   return globals::alllevels.nuptrans[uniquelevelindex];
@@ -456,23 +439,6 @@ inline auto get_includedions() -> int {
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
   return get_nuptrans(get_uniquelevelindex(element, ion, level));
-}
-
-[[nodiscard]] inline auto get_uptranslist(const int uniquelevelindex) -> LevelTransition * {
-  return globals::alltrans.data() + get_alltrans_startup(uniquelevelindex);
-}
-
-[[nodiscard]] inline auto get_uptranslist(const int element, const int ion, const int level) -> LevelTransition * {
-  return get_uptranslist(get_uniquelevelindex(element, ion, level));
-}
-
-[[nodiscard]] inline auto get_uptransspan(const int uniquelevelindex) -> std::span<const LevelTransition> {
-  return globals::alltrans.subspan(get_alltrans_startup(uniquelevelindex), get_nuptrans(uniquelevelindex));
-}
-
-[[nodiscard]] inline auto get_uptransspan(const int element, const int ion, const int level)
-    -> std::span<const LevelTransition> {
-  return get_uptransspan(get_uniquelevelindex(element, ion, level));
 }
 
 // the number of downward bound-bound transitions from the specified level

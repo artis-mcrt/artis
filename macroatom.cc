@@ -59,8 +59,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   auto *const arr_sum_internal_down_same = chlevel.sum_internal_down_same;
   for (int i = 0; i < ndowntrans; i++) {
     const auto alltransindex = alltrans_startdown + i;
-    const int lower = globals::alltrans[alltransindex].targetlevelindex;
-    const auto A_ul = globals::alltrans[alltransindex].einstein_A;
+    const int lower = globals::alltrans.targetlevelindex[alltransindex];
+    const auto A_ul = globals::alltrans.einstein_A[alltransindex];
     const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
     const double epsilon_target = epsilon(lower_uniquelevelindex);
     const double epsilon_trans = epsilon_current - epsilon_target;
@@ -89,17 +89,19 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
   const int nuptrans = get_nuptrans(uniquelevelindex);
   for (int ii = 0; ii < nuptrans; ii++) {
-    const auto &uptrans = globals::alltrans[alltrans_startup + ii];
-    const auto upper_uniquelevelindex = ionuniquelevelindexstart + uptrans.targetlevelindex;
+    const auto alltransindex = alltrans_startup + ii;
+    const auto upper_uniquelevelindex = ionuniquelevelindexstart + globals::alltrans.targetlevelindex[alltransindex];
     const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_current;
     const auto upper_statweight = stat_weight(upper_uniquelevelindex);
 
-    const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, upper_statweight, uptrans,
-                                              epsilon_trans, nnlevel, statweight, uptrans.lineindex, t_mid);
+    const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, upper_statweight,
+                                              globals::alltrans.lineindex[alltransindex], epsilon_trans, nnlevel,
+                                              statweight, globals::alltrans.lineindex[alltransindex], t_mid);
     const double C =
         col_excitation_ratecoeff(T_e, nne, upper_statweight, alltrans_startup + ii, epsilon_trans, statweight);
     const double NT =
-        nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, uptrans.targetlevelindex, uptrans.lineindex);
+        nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, globals::alltrans.targetlevelindex[alltransindex],
+                                            globals::alltrans.lineindex[alltransindex]);
 
     sum_internal_up_same += (R + C + NT) * epsilon_current;
     chlevel.sum_internal_up_same[ii] = sum_internal_up_same;
@@ -173,18 +175,19 @@ auto do_macroatom_internal_down_same(const int uniquelevelindex, const CellCache
   const auto downtransindex =
       std::upper_bound(sum_internal_down_same, sum_internal_down_same + ndowntrans - 1, targetval) -
       sum_internal_down_same;
+  const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
 
-  const int lower = get_downtranslist(uniquelevelindex)[downtransindex].targetlevelindex;
+  const int lower = globals::alltrans.targetlevelindex[alltrans_startdown + downtransindex];
 
   return lower;
 }
 
 // radiative deexcitation
-void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion, const int level,
+void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion, const int uniquelevelindex,
                                   const double epsilon_current, const int activatingline,
                                   const CellCacheLevels &chlevel) {
   // randomly select which line transitions occurs
-  const int ndowntrans = get_ndowntrans(element, ion, level);
+  const int ndowntrans = get_ndowntrans(uniquelevelindex);
 
   const auto *sum_epstrans_rad_deexc = chlevel.sum_epstrans_rad_deexc;
 
@@ -194,19 +197,21 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   const auto downtransindex =
       std::upper_bound(sum_epstrans_rad_deexc, sum_epstrans_rad_deexc + ndowntrans - 1, targetval) -
       sum_epstrans_rad_deexc;
+  const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
 
-  const auto &downtrans = get_downtranslist(element, ion, level)[downtransindex];
+  const auto lineindex = globals::alltrans.lineindex[alltrans_startdown + downtransindex];
 
-  if (downtrans.lineindex == activatingline) {
+  if (lineindex == activatingline) {
     stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
   }
 
   if constexpr (RECORD_LINESTAT) {
-    atomicadd(globals::ecounter[downtrans.lineindex], 1);
+    atomicadd(globals::ecounter[lineindex], 1);
   }
 
-  const double epsilon_trans = epsilon_current - epsilon(globals::elements[element].ions[ion].uniquelevelindexstart +
-                                                         downtrans.targetlevelindex);
+  const double epsilon_trans =
+      epsilon_current - epsilon(globals::elements[element].ions[ion].uniquelevelindexstart +
+                                globals::alltrans.targetlevelindex[alltrans_startdown + downtransindex]);
 
   const double oldnucmf = pkt.nu_cmf;
   pkt.nu_cmf = epsilon_trans / H;
@@ -222,8 +227,8 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   emit_rpkt(pkt);
 
   // the r-pkt can only interact with lines redder than the current one
-  pkt.next_trans = downtrans.lineindex + 1;
-  pkt.emissiontype = downtrans.lineindex;
+  pkt.next_trans = lineindex + 1;
+  pkt.emissiontype = lineindex;
   pkt.em_pos = pkt.pos;
   pkt.em_time = pkt.prop_time;
   pkt.nscatterings = 0;
@@ -409,7 +414,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
         // printout("[debug] do_ma:   radiative deexcitation\n");
-        do_macroatom_raddeexcitation(pkt, element, ion, level, epsilon_current, activatingline, chlevel);
+        do_macroatom_raddeexcitation(pkt, element, ion, uniquelevelindex, epsilon_current, activatingline, chlevel);
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC, pkt.e_cmf);
@@ -561,8 +566,9 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         const auto uptransindex =
             std::upper_bound(sum_internal_up_same, sum_internal_up_same + nuptrans - 1, targetval) -
             sum_internal_up_same;
+        const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
 
-        const int upper = get_uptranslist(uniquelevelindex)[uptransindex].targetlevelindex;
+        const int upper = globals::alltrans.targetlevelindex[alltrans_startup + uptransindex];
 
         level = upper;
         break;
@@ -692,12 +698,12 @@ auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int lower_uniquelev
 // radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
 auto rad_excitation_ratecoeff(const int nonemptymgi, const int upper_uniquelevelindex, const double upper_statweight,
-                              const LevelTransition &uptrans, const double epsilon_trans, const double nnlevel_lower,
+                              const double einstein_A, const double epsilon_trans, const double nnlevel_lower,
                               const double statweight_lower, const int lineindex, const double t_current) -> double {
   const double n_u = get_levelpop(nonemptymgi, upper_uniquelevelindex);
   const auto &n_l = nnlevel_lower;
   const double nu_trans = epsilon_trans / H;
-  const double A_ul = uptrans.einstein_A;
+  const double A_ul = einstein_A;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
   const double B_lu = upper_statweight / statweight_lower * B_ul;
 
@@ -849,9 +855,9 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans,
                                 const double upperstatweight, const double lowerstatweight, const int alltransindex)
     -> double {
-  const double coll_strength = globals::alltrans[alltransindex].coll_str;
+  const double coll_strength = globals::alltrans.coll_str[alltransindex];
   if (coll_strength < 0) {
-    if (!globals::alltrans[alltransindex].forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
+    if (!globals::alltrans.forbidden[alltransindex])  // alternative: (coll_strength > -1.5) i.e. to catch -1
     {
       // permitted E1 electric dipole transitions
       // collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
@@ -859,7 +865,7 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
       // f = osc_strength(element,ion,upper,lower);
       // C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) *
       // stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
-      const double trans_osc_strength = globals::alltrans[alltransindex].osc_strength;
+      const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
 
       const double eoverkt = epsilon_trans / (KB * T_e);
       // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
@@ -895,14 +901,14 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
 // multiply by lower level population to get a rate per second
 auto col_excitation_ratecoeff(const float T_e, const float nne, const double upperstatweight, const int alltransindex,
                               const double epsilon_trans, const double lowerstatweight) -> double {
-  const double coll_strength = globals::alltrans[alltransindex].coll_str;
+  const double coll_strength = globals::alltrans.coll_str[alltransindex];
   const double eoverkt = epsilon_trans / (KB * T_e);
 
   if (coll_strength < 0) {
-    const bool forbidden = globals::alltrans[alltransindex].forbidden;
+    const bool forbidden = globals::alltrans.forbidden[alltransindex];
     if (!forbidden) {
       // alternative condition: (coll_strength > -1.5) i.e. to catch -1
-      const double trans_osc_strength = globals::alltrans[alltransindex].osc_strength;
+      const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
       // permitted E1 electric dipole transitions
       // collisional excitation: formula valid only for atoms!!!!!!!!!!!
       // Rutten script eq. 3.32. p.50

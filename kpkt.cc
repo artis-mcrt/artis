@@ -94,8 +94,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
     const int nuptrans = get_nuptrans(uniquelevelindex);
     for (int alltransindex = alltrans_startup; alltransindex < (alltrans_startup + nuptrans); alltransindex++) {
-      const auto &uptrans = globals::alltrans[alltransindex];
-      const int upper = uptrans.targetlevelindex;
+      const int upper = globals::alltrans.targetlevelindex[alltransindex];
       const double epsilon_trans = epsilon(ionuniquelevelindexstart + upper) - epsilon_current;
       const auto upper_statweight = stat_weight(ionuniquelevelindexstart + upper);
       const double C = nnlevel *
@@ -602,7 +601,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
     const int nuptrans = get_nuptrans(uniquelevelindex);
     for (int alltransindex = alltrans_startup; alltransindex < (alltrans_startup + nuptrans); alltransindex++) {
-      const int tmpupper = globals::alltrans[alltransindex].targetlevelindex;
+      const int tmpupper = globals::alltrans.targetlevelindex[alltransindex];
       // printout("    excitation to level %d possible\n",upper);
       const auto upperuniquelevelindex = ionuniquelevelindexstart + tmpupper;
       const double epsilon_trans = epsilon(upperuniquelevelindex) - epsilon_current;

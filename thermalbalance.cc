@@ -126,7 +126,7 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
     const int ndowntrans = get_ndowntrans(uniquelevelindex);
     for (int i = 0; i < ndowntrans; i++) {
       const auto alltransindex = alltrans_startdown + i;
-      const int lower = globals::alltrans[alltransindex].targetlevelindex;
+      const int lower = globals::alltrans.targetlevelindex[alltransindex];
       const double epsilon_trans = epsilon_level - epsilon(ionuniquelevelindexstart + lower);
       const auto lower_statweight = stat_weight(ionuniquelevelindexstart + lower);
       const double C =

@@ -113,17 +113,24 @@ void printout_tracemission_stats() {
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = statweight_target / statweight_lower * B_ul;
 
-        const int nupperdowntrans = get_ndowntrans(element, ion, upper);
-        const auto *downtranslist = get_downtranslist(element, ion, upper);
-        const auto *downtransition = std::find_if(downtranslist, downtranslist + nupperdowntrans,
-                                                  [=](const auto &downtr) { return downtr.targetlevelindex == lower; });
-        assert_always(downtransition != (downtranslist + nupperdowntrans));
+        const auto upper_uniquelevelindex = get_uniquelevelindex(element, ion, upper);
+
+        const auto alltrans_startdown = get_alltrans_startdown(upper_uniquelevelindex);
+        const auto ndowntrans = get_ndowntrans(upper_uniquelevelindex);
+        int downtransid = -1;
+        for (int alltransindex = alltrans_startdown; alltransindex < alltrans_startdown + ndowntrans; alltransindex++) {
+          if (globals::alltrans.targetlevelindex[alltransindex] == lower) {
+            downtransid = alltransindex;
+            break;
+          }
+        }
+        assert_always(downtransid != -1);
 
         printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n", encontrib,
                  100 * encontrib / totalenergy, get_atomicnumber(element), get_ionstage(element, ion),
                  globals::linelist[lineindex].upperlevelindex, globals::linelist[lineindex].lowerlevelindex,
-                 downtransition->coll_str, globals::linelist[lineindex].einstein_A,
-                 static_cast<int>(downtransition->forbidden), linelambda, v_rad, B_lu, B_ul);
+                 globals::alltrans.coll_str[downtransid], globals::linelist[lineindex].einstein_A,
+                 static_cast<int>(globals::alltrans.forbidden[downtransid]), linelambda, v_rad, B_lu, B_ul);
       } else {
         break;
       }
