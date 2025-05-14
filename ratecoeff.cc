@@ -761,8 +761,8 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const vo
   return ONEOVERH * sigma_bf / nu * Jnu * corrfactor;
 }
 
-auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int level, const int phixstargetindex,
-                                          int nonemptymgi) -> double {
+auto calculate_corrphotoioncoeff_integral(const int element, const int ion, const int level, const int phixstargetindex,
+                                          const int nonemptymgi) -> double {
   constexpr double epsrel = 1e-3;
   constexpr double epsrelwarning = 1e-1;
   constexpr double epsabs = 0.;

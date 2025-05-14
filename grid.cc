@@ -1479,7 +1479,7 @@ __host__ __device__ auto get_initial_radial_pos_sum(const int modelgridindex) ->
   return modelgrid_input[modelgridindex].initial_radial_pos_sum;
 }
 
-auto get_elem_abundance(int nonemptymgi, int element) -> float
+auto get_elem_abundance(const int nonemptymgi, const int element) -> float
 // mass fraction of an element (all isotopes combined)
 {
   const auto massfrac = elem_massfracs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element];
