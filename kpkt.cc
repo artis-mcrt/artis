@@ -91,13 +91,15 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     const double epsilon_current = epsilon(uniquelevelindex);
     const double statweight = stat_weight(uniquelevelindex);
 
-    const auto uptranslist = get_uptransspan(element, ion, level);
-    for (const auto &transition : uptranslist) {
-      const int upper = transition.targetlevelindex;
+    const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
+    const int nuptrans = get_nuptrans(uniquelevelindex);
+    for (int alltransindex = alltrans_startup; alltransindex < (alltrans_startup + nuptrans); alltransindex++) {
+      const auto &uptrans = globals::alltrans[alltransindex];
+      const int upper = uptrans.targetlevelindex;
       const double epsilon_trans = epsilon(ionuniquelevelindexstart + upper) - epsilon_current;
       const auto upper_statweight = stat_weight(ionuniquelevelindexstart + upper);
       const double C = nnlevel *
-                       col_excitation_ratecoeff(T_e, nne, upper_statweight, transition, epsilon_trans, statweight) *
+                       col_excitation_ratecoeff(T_e, nne, upper_statweight, uptrans, epsilon_trans, statweight) *
                        epsilon_trans;
       C_ion += C;
       if constexpr (!update_cooling_contrib_list) {
@@ -105,7 +107,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
       }
     }
     if constexpr (update_cooling_contrib_list) {
-      if (!uptranslist.empty()) {
+      if (nuptrans > 0) {
         globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
         assert_testmodeonly(coolinglist[i].type == CoolingType::COLLEXC);
