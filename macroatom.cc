@@ -58,9 +58,9 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   auto *const arr_sum_epstrans_rad_deexc = chlevel.sum_epstrans_rad_deexc;
   auto *const arr_sum_internal_down_same = chlevel.sum_internal_down_same;
   for (int i = 0; i < ndowntrans; i++) {
-    const auto &downtrans = globals::alltrans[alltrans_startdown + i];
-    const int lower = downtrans.targetlevelindex;
-    const auto A_ul = downtrans.einstein_A;
+    const auto alltransindex = alltrans_startdown + i;
+    const int lower = globals::alltrans[alltransindex].targetlevelindex;
+    const auto A_ul = globals::alltrans[alltransindex].einstein_A;
     const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
     const double epsilon_target = epsilon(lower_uniquelevelindex);
     const double epsilon_trans = epsilon_current - epsilon_target;
@@ -68,8 +68,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
 
     const double R = rad_deexcitation_ratecoeff(nonemptymgi, lower_uniquelevelindex, epsilon_trans, A_ul, statweight,
                                                 lower_statweight, nnlevel, t_mid);
-    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight,
-                                                downtrans.coll_str, downtrans.osc_strength, downtrans.forbidden);
+    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex);
 
     sum_raddeexc += R * epsilon_trans;
     sum_coldeexc += C * epsilon_trans;
@@ -848,10 +847,11 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 
 // multiply by upper level population to get a rate per second
 auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans,
-                                const double upperstatweight, const double lowerstatweight, const float coll_str,
-                                const float osc_strength, const bool forbidden) -> double {
-  if (coll_str < 0) {
-    if (!forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
+                                const double upperstatweight, const double lowerstatweight, const int alltransindex)
+    -> double {
+  const double coll_strength = globals::alltrans[alltransindex].coll_str;
+  if (coll_strength < 0) {
+    if (!globals::alltrans[alltransindex].forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
     {
       // permitted E1 electric dipole transitions
       // collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
@@ -859,7 +859,7 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
       // f = osc_strength(element,ion,upper,lower);
       // C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) *
       // stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
-      const double trans_osc_strength = osc_strength;
+      const double trans_osc_strength = globals::alltrans[alltransindex].osc_strength;
 
       const double eoverkt = epsilon_trans / (KB * T_e);
       // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
@@ -889,7 +889,7 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
   // positive coll_str is treated as effective collision strength
 
   // from Osterbrock and Ferland, p51
-  return nne * 8.629e-6 * coll_str / upperstatweight / std::sqrt(T_e);
+  return nne * 8.629e-6 * coll_strength / upperstatweight / std::sqrt(T_e);
 }
 
 // multiply by lower level population to get a rate per second

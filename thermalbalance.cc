@@ -116,22 +116,22 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
   const int nlevels = get_nlevels(element, ion);
   const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
   for (int level = 0; level < nlevels; level++) {
-    const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
-    const double epsilon_level = epsilon(ionuniquelevelindexstart + level);
-    const double statweight = stat_weight(ionuniquelevelindexstart + level);
+    const auto uniquelevelindex = ionuniquelevelindexstart + level;
+    const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+    const double epsilon_level = epsilon(uniquelevelindex);
+    const double statweight = stat_weight(uniquelevelindex);
 
     // Collisional heating: deexcitation to same ionization stage
-    const int ndowntrans = get_ndowntrans(element, ion, level);
-    const auto *const leveldowntranslist = get_downtranslist(element, ion, level);
+    const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
+    const int ndowntrans = get_ndowntrans(uniquelevelindex);
     for (int i = 0; i < ndowntrans; i++) {
-      const auto &downtrans = leveldowntranslist[i];
-      const int lower = downtrans.targetlevelindex;
+      const auto alltransindex = alltrans_startdown + i;
+      const int lower = globals::alltrans[alltransindex].targetlevelindex;
       const double epsilon_trans = epsilon_level - epsilon(ionuniquelevelindexstart + lower);
       const auto lower_statweight = stat_weight(ionuniquelevelindexstart + lower);
-      const double C = nnlevel *
-                       col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight,
-                                                  downtrans.coll_str, downtrans.osc_strength, downtrans.forbidden) *
-                       epsilon_trans;
+      const double C =
+          nnlevel * col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex) *
+          epsilon_trans;
       C_deexc += C;
     }
   }

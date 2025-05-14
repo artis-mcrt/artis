@@ -30,8 +30,7 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate);
                                             double epsilon_trans) -> double;
 
 [[nodiscard]] auto col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, double upperstatweight,
-                                              double lowerstatweight, float coll_str, float osc_strength,
-                                              bool forbidden) -> double;
+                                              double lowerstatweight, int alltransindex) -> double;
 
 [[nodiscard]] auto col_excitation_ratecoeff(float T_e, float nne, double upperstatweight, int alltransindex,
                                             double epsilon_trans, double lowerstatweight) -> double;

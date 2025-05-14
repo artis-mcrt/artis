@@ -396,20 +396,23 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
     const auto nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
 
     // de-excitation
+    const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
     const int ndowntrans = get_ndowntrans(uniquelevelindex);
-    const auto leveldowntrans = std::span(get_downtranslist(uniquelevelindex), ndowntrans);
-    std::for_each(leveldowntrans.begin(), leveldowntrans.end(), [&](const auto &downtrans) {
-      const int lower = downtrans.targetlevelindex;
+    const auto ndowntransindices = std::ranges::iota_view{0, ndowntrans};
+    std::for_each(ndowntransindices.begin(), ndowntransindices.end(), [&](const auto &i) {
+      const auto alltransindex = alltrans_startdown + i;
+      const int lower = globals::alltrans[alltransindex].targetlevelindex;
       const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
       const auto lower_statweight = stat_weight(lower_uniquelevelindex);
 
       const double epsilon_trans = epsilon_level - epsilon(lower_uniquelevelindex);
       const double R = rad_deexcitation_ratecoeff(nonemptymgi, lower_uniquelevelindex, epsilon_trans,
-                                                  downtrans.einstein_A, statweight, lower_statweight, nnlevel, t_mid) *
+                                                  globals::alltrans[alltransindex].einstein_A, statweight,
+                                                  lower_statweight, nnlevel, t_mid) *
                        s_renorm[level];
-      const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight,
-                                                  downtrans.coll_str, downtrans.osc_strength, downtrans.forbidden) *
-                       s_renorm[level];
+      const double C =
+          col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex) *
+          s_renorm[level];
 
       const int upper_index = level_index;
       const int lower_index = get_nlte_vector_index(element, ion, lower);
