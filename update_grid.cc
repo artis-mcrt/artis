@@ -1194,21 +1194,17 @@ void cellcache_change_cell(const int nonemptymgi) {
         }
       }
     }
+  }
 
-    for (auto phixstarget : cacheslot.challphixstargets) {
-      phixstarget.corrphotoioncoeff = -99.;
+  for (auto &phixstarget : cacheslot.challphixstargets) {
+    phixstarget.corrphotoioncoeff = -99.;
 #if (SEPARATE_STIMRECOMB)
-      phixstarget.stimrecombcoeff = -99.;
+    phixstarget.stimrecombcoeff = -99.;
 #endif
-    }
+  }
 
-    for (int ion = 0; ion < nions; ion++) {
-      const int nlevels = get_nlevels(element, ion);
-      auto &chion = cacheslot.chelements[element].chions[ion];
-      for (int level = 0; level < nlevels; level++) {
-        chion.chlevels[level].processrates[MA_ACTION_INTERNALUPHIGHER] = -99.;
-      }
-    }
+  for (int uniquelevelindex = 0; uniquelevelindex < std::ssize(cacheslot.ch_all_levels); uniquelevelindex++) {
+    cacheslot.ch_all_levels[uniquelevelindex].processrates[MA_ACTION_INTERNALUPHIGHER] = -99.;
   }
 
   if (nonemptymgi >= 0) {
