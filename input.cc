@@ -1345,7 +1345,6 @@ void setup_cellcache() {
     }
 
     int alllevelindex = 0;
-    int allphixstargetindex = 0;
     int chtransindex = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -1362,11 +1361,11 @@ void setup_cellcache() {
         alllevelindex += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
-          const int nphixstargets = get_nphixstargets(element, ion, level);
+          const int allphixstargetindex =
+              globals::alllevels.phixstargetstart[get_uniquelevelindex(element, ion, level)];
           chion.chlevels[level].chphixstargets =
               chphixsblocksize > 0 ? &globals::cellcache[cellcachenum].chphixstargetsblock[allphixstargetindex]
                                    : nullptr;
-          allphixstargetindex += nphixstargets;
         }
 
         for (int level = 0; level < nlevels; level++) {
