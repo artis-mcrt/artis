@@ -168,11 +168,11 @@ enum ma_action {
 };
 
 struct CellCacheLevels {
-  std::array<double, MA_ACTION_COUNT> processrates;
-  double population;
-  double *sum_epstrans_rad_deexc;
-  double *sum_internal_down_same;
-  double *sum_internal_up_same;
+  std::array<double, MA_ACTION_COUNT> processrates{-1.};
+  double population{NAN};
+  double *sum_epstrans_rad_deexc{nullptr};
+  double *sum_internal_down_same{nullptr};
+  double *sum_internal_up_same{nullptr};
 };
 
 struct CellCacheIons {
