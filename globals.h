@@ -193,7 +193,7 @@ struct CellCache {
   std::vector<bool> ch_keep_this_cont;
   double chi_ff_nnionpart{-1};
   int nonemptymgi{-1};  // Identifies the cell the data is valid for.
-  std::vector<CellCachePhixsTargets> chphixstargetsblock;  // photoionisation targets for all levels
+  std::vector<CellCachePhixsTargets> challphixstargets;  // photoionisation targets for all levels
   std::vector<double> chtransblock;  // cumulative transition rates for all levels
 };
 

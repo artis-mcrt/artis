@@ -1335,7 +1335,7 @@ void setup_cellcache() {
     resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, chlevelcount);
 
     if (chphixsblocksize > 0) {
-      resize_exactly(globals::cellcache[cellcachenum].chphixstargetsblock, chphixsblocksize);
+      resize_exactly(globals::cellcache[cellcachenum].challphixstargets, chphixsblocksize);
     }
     mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + chphixsblocksize;
 
@@ -1364,8 +1364,7 @@ void setup_cellcache() {
           const int allphixstargetindex =
               globals::alllevels.phixstargetstart[get_uniquelevelindex(element, ion, level)];
           chion.chlevels[level].chphixstargets =
-              chphixsblocksize > 0 ? &globals::cellcache[cellcachenum].chphixstargetsblock[allphixstargetindex]
-                                   : nullptr;
+              chphixsblocksize > 0 ? &globals::cellcache[cellcachenum].challphixstargets[allphixstargetindex] : nullptr;
         }
 
         for (int level = 0; level < nlevels; level++) {
