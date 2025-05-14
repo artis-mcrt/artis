@@ -2294,16 +2294,14 @@ __host__ __device__ auto nt_ionization_ratecoeff(const int nonemptymgi, const in
   return nt_ionization_ratecoeff_wfapprox(nonemptymgi, element, ion);
 }
 
-__host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const int element, const int ion,
-                                                 const int lowerlevel, const int uptransindex, const int lineindex)
-    -> double {
+__host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const int lowerlevel, const int upperlevel,
+                                                 const int lineindex) -> double {
   if constexpr (!NT_EXCITATION_ON) {
     return 0.;
   }
   if (lowerlevel >= NTEXCITATION_MAXNLEVELS_LOWER) {
     return 0.;
   }
-  const int upperlevel = get_uptranslist(element, ion, lowerlevel)[uptransindex].targetlevelindex;
   if (upperlevel >= NTEXCITATION_MAXNLEVELS_UPPER) {
     return 0.;
   }

@@ -448,8 +448,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       assert_always(C >= 0);
       assert_always(std::isfinite(C));
 
-      const double NTC =
-          nonthermal::nt_excitation_ratecoeff(nonemptymgi, element, ion, level, i, lineindex) * s_renorm[level];
+      const double NTC = nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, lineindex) * s_renorm[level];
 
       const int lower_index = level_index;
       const int upper_index = get_nlte_vector_index(element, ion, upper);

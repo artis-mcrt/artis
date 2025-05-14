@@ -99,7 +99,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
                                               epsilon_trans, nnlevel, statweight, uptrans.lineindex, t_mid);
     const double C =
         col_excitation_ratecoeff(T_e, nne, upper_statweight, alltrans_startup + ii, epsilon_trans, statweight);
-    const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, element, ion, level, ii, uptrans.lineindex);
+    const double NT =
+        nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, uptrans.targetlevelindex, uptrans.lineindex);
 
     sum_internal_up_same += (R + C + NT) * epsilon_current;
     chlevel.sum_internal_up_same[ii] = sum_internal_up_same;
