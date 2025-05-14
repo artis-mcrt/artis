@@ -169,9 +169,11 @@ void calculate_heating_rates(const int nonemptymgi, const double T_e, const doub
 
     for (int ion = 0; ion < nions - 1; ion++) {
       const int nbflevels = get_nlevels_ionising(element, ion);
+      const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
       for (int level = 0; level < nbflevels; level++) {
-        const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
-        bfheating += nnlevel * bfheatingcoeffs[get_uniquelevelindex(element, ion, level)];
+        const auto uniquelevelindex = ionuniquelevelindexstart + level;
+        const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+        bfheating += nnlevel * bfheatingcoeffs[uniquelevelindex];
       }
     }
   }
