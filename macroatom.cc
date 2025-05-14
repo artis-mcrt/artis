@@ -53,16 +53,17 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   double sum_internal_down_same = 0.;
   double sum_raddeexc = 0.;
   double sum_coldeexc = 0.;
-  const auto downtranslist = get_downtransspan(uniquelevelindex);
+  const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
+  const auto ndowntrans = get_ndowntrans(uniquelevelindex);
   auto *const arr_sum_epstrans_rad_deexc = chlevel.sum_epstrans_rad_deexc;
   auto *const arr_sum_internal_down_same = chlevel.sum_internal_down_same;
-  for (int i = 0; i < std::ssize(downtranslist); i++) {
-    const auto &downtrans = downtranslist[i];
+  for (int i = 0; i < ndowntrans; i++) {
+    const auto &downtrans = globals::alltrans[alltrans_startdown + i];
     const int lower = downtrans.targetlevelindex;
     const auto A_ul = downtrans.einstein_A;
-    const double epsilon_target = epsilon(ionuniquelevelindexstart + lower);
-    const double epsilon_trans = epsilon_current - epsilon_target;
     const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
+    const double epsilon_target = epsilon(lower_uniquelevelindex);
+    const double epsilon_trans = epsilon_current - epsilon_target;
     const auto lower_statweight = stat_weight(lower_uniquelevelindex);
 
     const double R = rad_deexcitation_ratecoeff(nonemptymgi, lower_uniquelevelindex, epsilon_trans, A_ul, statweight,
