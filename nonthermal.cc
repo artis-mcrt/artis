@@ -1369,11 +1369,10 @@ auto nt_ionization_ratecoeff_sf(const int nonemptymgi, const int element, const 
 // epsilon_trans is in erg
 // returns the index of the first valid cross section point (en >= epsilon_trans)
 // all elements below this index are invalid and should not be used
-auto get_xs_excitation_vector(const int element, const int ion, const int lower, const int uptransindex,
-                              const double statweight_lower, const double epsilon_trans)
+auto get_xs_excitation_vector(const int alltransindex, const double statweight_lower, const double epsilon_trans)
     -> std::tuple<std::array<double, SFPTS>, int> {
   std::array<double, SFPTS> xs_excitation_vec{};
-  const auto &uptr = get_uptranslist(element, ion, lower)[uptransindex];
+  const auto &uptr = globals::alltrans[alltransindex];
   if (uptr.coll_str >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
@@ -1426,12 +1425,11 @@ auto get_xs_excitation_vector(const int element, const int ion, const int lower,
 
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
 // returns the rate coefficient in s^-1 divided by deposition rate density in erg/cm^3/s
-auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SFPTS> &yvec, const int element,
-                                                     const int ion, const int lower, const int uptransindex,
+auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SFPTS> &yvec, const int alltransindex,
                                                      const double statweight_lower, const double epsilon_trans)
     -> double {
   const auto [xs_excitation_vec, xsstartindex] =
-      get_xs_excitation_vector(element, ion, lower, uptransindex, statweight_lower, epsilon_trans);
+      get_xs_excitation_vector(alltransindex, statweight_lower, epsilon_trans);
 
   if (xsstartindex >= 0) {
     const double y_xs_de =
@@ -1606,21 +1604,23 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
       const bool above_minionfraction = (nnion >= minionfraction * get_nnion_tot(nonemptymgi));
 
       for (int lower = 0; lower < nlevels; lower++) {
-        const double statweight_lower = stat_weight(element, ion, lower);
-        const int nuptrans = get_nuptrans(element, ion, lower);
-        const auto *const uptranslist = get_uptranslist(element, ion, lower);
-        const double nnlevel = get_levelpop(nonemptymgi, element, ion, lower);
-        const double epsilon_lower = epsilon(element, ion, lower);
+        const auto uniquelevelindex = get_uniquelevelindex(element, ion, lower);
+        const double statweight_lower = stat_weight(uniquelevelindex);
+        const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
+        const int nuptrans = get_nuptrans(uniquelevelindex);
+        const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+        const double epsilon_lower = epsilon(uniquelevelindex);
 
         for (int t = 0; t < nuptrans; t++) {
-          const int upper = uptranslist[t].targetlevelindex;
+          const int alltransindex = alltrans_startup + t;
+          const int upper = globals::alltrans[alltransindex].targetlevelindex;
           if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
             continue;
           }
 
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
-          const double ratecoeffperdeposition = calculate_nt_excitation_ratecoeff_perdeposition(
-              yfunc, element, ion, lower, t, statweight_lower, epsilon_trans);
+          const double ratecoeffperdeposition =
+              calculate_nt_excitation_ratecoeff_perdeposition(yfunc, alltransindex, statweight_lower, epsilon_trans);
           const double frac_excitation_thistrans = nnlevel * epsilon_trans * ratecoeffperdeposition;
           frac_excitation_ion += frac_excitation_thistrans;
 
@@ -1636,7 +1636,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
               tmp_excitation_list.push_back({
                   .frac_deposition = frac_excitation_thistrans,
                   .ratecoeffperdeposition = ratecoeffperdeposition,
-                  .lineindex = uptranslist[t].lineindex,
+                  .lineindex = globals::alltrans[alltransindex].lineindex,
               });
             }
           }  // NT_EXCITATION_ON
@@ -1814,13 +1814,15 @@ void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int no
 
   const auto lowers = std::ranges::iota_view{0, nlevels};
   std::for_each(lowers.begin(), lowers.end(), [&](const int lower) {
-    const double statweight_lower = stat_weight(element, ion, lower);
-    const double nnlevel = get_levelpop(nonemptymgi, element, ion, lower);
-    const double epsilon_lower = epsilon(element, ion, lower);
-    const int nuptrans = get_nuptrans(element, ion, lower);
-    const auto *const uptranslist = get_uptranslist(element, ion, lower);
+    const auto uniquelevelindex = get_uniquelevelindex(element, ion, lower);
+    const double statweight_lower = stat_weight(uniquelevelindex);
+    const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+    const double epsilon_lower = epsilon(uniquelevelindex);
+    const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
+    const int nuptrans = get_nuptrans(uniquelevelindex);
     for (int t = 0; t < nuptrans; t++) {
-      const int upper = uptranslist[t].targetlevelindex;
+      const int alltransindex = alltrans_startup + t;
+      const int upper = globals::alltrans[alltransindex].targetlevelindex;
       if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
         continue;
       }
@@ -1831,7 +1833,7 @@ void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int no
       }
 
       auto [vec_xs_excitation_deltae, xsstartindex] =
-          get_xs_excitation_vector(element, ion, lower, t, statweight_lower, epsilon_trans);
+          get_xs_excitation_vector(alltransindex, statweight_lower, epsilon_trans);
       if (xsstartindex >= 0) {
         cblas_dscal(SFPTS - xsstartindex, DELTA_E, vec_xs_excitation_deltae.data() + xsstartindex, 1);
 
