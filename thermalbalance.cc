@@ -124,13 +124,14 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
     const int ndowntrans = get_ndowntrans(element, ion, level);
     const auto *const leveldowntranslist = get_downtranslist(element, ion, level);
     for (int i = 0; i < ndowntrans; i++) {
-      const auto &downtransition = leveldowntranslist[i];
-      const int lower = downtransition.targetlevelindex;
+      const auto &downtrans = leveldowntranslist[i];
+      const int lower = downtrans.targetlevelindex;
       const double epsilon_trans = epsilon_level - epsilon(ionuniquelevelindexstart + lower);
       const auto lower_statweight = stat_weight(ionuniquelevelindexstart + lower);
-      const double C =
-          nnlevel * col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, downtransition) *
-          epsilon_trans;
+      const double C = nnlevel *
+                       col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight,
+                                                  downtrans.coll_str, downtrans.osc_strength, downtrans.forbidden) *
+                       epsilon_trans;
       C_deexc += C;
     }
   }
