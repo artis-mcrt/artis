@@ -868,8 +868,7 @@ auto get_nlevels_important(const int nonemptymgi, const int element, const int i
   return {nlevels_important, nnlevelsum};
 }
 
-auto interpolate_corrphotoioncoeff(const int element, const int ion, const int level, const int phixstargetindex,
-                                   const double T) -> double {
+auto interpolate_corrphotoioncoeff(const int uniquelevelindex, const int phixstargetindex, const double T) -> double {
   assert_always(USE_LUT_PHOTOION);
   const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1) {
@@ -877,12 +876,12 @@ auto interpolate_corrphotoioncoeff(const int element, const int ion, const int l
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper = corrphotoioncoeffs[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
-    const double f_lower = corrphotoioncoeffs[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
+    const double f_upper = corrphotoioncoeffs[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
+    const double f_lower = corrphotoioncoeffs[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
 
     return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower)));
   }
-  return corrphotoioncoeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
+  return corrphotoioncoeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
 }
 
 }  // anonymous namespace
@@ -1165,8 +1164,8 @@ auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, cons
   // correction may be evaluated at T_R!
   const double W = grid::get_W(nonemptymgi);
   const double T_R = grid::get_TR(nonemptymgi);
-
-  return W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
+  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+  return W * interpolate_corrphotoioncoeff(uniquelevelindex, phixstargetindex, T_R);
 }
 
 // Returns the stimulated recombination rate coefficient. multiply by upper level population and nne to get rate
@@ -1237,7 +1236,7 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
         const double W = grid::get_W(nonemptymgi);
         const double T_R = grid::get_TR(nonemptymgi);
 
-        gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
+        gammacorr = W * interpolate_corrphotoioncoeff(uniquelevelindex, phixstargetindex, T_R);
         const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
         if (index_in_groundlevelcontestimator >= 0) {
           gammacorr *= globals::corrphotoionrenorm[(nonemptymgi * globals::nbfcontinua_ground) +
