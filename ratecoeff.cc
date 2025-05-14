@@ -767,7 +767,9 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
   constexpr double epsrelwarning = 1e-1;
   constexpr double epsabs = 0.;
 
-  const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+
+  const double E_threshold = get_phixs_threshold(uniquelevelindex, phixstargetindex);
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
@@ -777,9 +779,9 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
   const double departure_ratio = 0.;  // zero the stimulated recomb contribution
 #else
   // stimulated recombination is negative photoionisation
-  const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
+  const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
   const double nne = grid::get_nne(nonemptymgi);
-  const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+  const int upperionlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
   const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
   const double nnupperionlevel = get_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
   double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.;  // put that to phixslist
@@ -790,7 +792,7 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
   const auto intparas = GSLIntegralParasGammaCorr{
       .nu_edge = nu_threshold,
       .departure_ratio = departure_ratio,
-      .photoion_xs = get_phixs_table(element, ion, level),
+      .photoion_xs = get_phixs_table(uniquelevelindex),
       .T_e = T_e,
       .nonemptymgi = nonemptymgi,
   };
@@ -820,7 +822,7 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
     }
   }
 
-  gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+  gammacorr *= FOURPI * get_phixsprobability(uniquelevelindex, phixstargetindex);
 
   return gammacorr;
 }
@@ -1196,17 +1198,18 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
 __host__ __device__ auto get_bfcoolingcoeff(const int element, const int ion, const int level,
                                             const int phixstargetindex, const float T_e) -> double {
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
+  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   if (lowerindex < TABLESIZE - 1) {
     const int upperindex = lowerindex + 1;
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper = bfcooling_coeffs[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
-    const double f_lower = bfcooling_coeffs[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
+    const double f_upper = bfcooling_coeffs[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
+    const double f_lower = bfcooling_coeffs[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
 
     return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower)));
   }
-  return bfcooling_coeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
+  return bfcooling_coeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
 }
 
 // Return the photoionisation rate coefficient (corrected for stimulated emission)
