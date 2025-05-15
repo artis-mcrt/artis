@@ -496,9 +496,10 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
-  const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-  const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+  const int uniquelevelindex = get_uniquelevelindex(element, ion, level);
+  assert_testmodeonly(phixstargetindex < get_nphixstargets(uniquelevelindex));
+  const int upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
+  const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(uniquelevelindex);
   return E_threshold;
 }
 
