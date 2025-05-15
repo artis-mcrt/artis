@@ -925,8 +925,9 @@ void setup_photoion_luts() {
 
 __host__ __device__ auto select_continuum_nu(int element, const int lowerion, const int lower, const int upperionlevel,
                                              float T_e) -> double {
-  const int phixstargetindex = get_phixtargetindex(element, lowerion, lower, upperionlevel);
-  const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
+  const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
+  const int phixstargetindex = get_phixtargetindex(lower_uniquelevelindex, upperionlevel);
+  const double E_threshold = get_phixs_threshold(lower_uniquelevelindex, phixstargetindex);
   const double nu_threshold = ONEOVERH * E_threshold;
 
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
@@ -934,7 +935,7 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
   const int npieces = globals::NPHIXSPOINTS;
 
   const GSLIntegrationParas intparas = {
-      .nu_edge = nu_threshold, .T = T_e, .photoion_xs = get_phixs_table(element, lowerion, lower)};
+      .nu_edge = nu_threshold, .T = T_e, .photoion_xs = get_phixs_table(lower_uniquelevelindex)};
 
   const double zrand = 1. - rng_uniform();  // Make sure that 0 < zrand <= 1
 

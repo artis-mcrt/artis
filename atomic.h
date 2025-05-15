@@ -457,11 +457,10 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
   globals::alllevels.nuptrans[get_uniquelevelindex(element, ion, level)] = nuptrans;
 }
 
-[[nodiscard]] inline auto get_phixtargetindex(const int element, const int ion, const int level,
-                                              const int upperionlevel) -> int {
-  const auto nphixstargets = get_nphixstargets(element, ion, level);
+[[nodiscard]] inline auto get_phixtargetindex(const int uniquelevelindex, const int upperionlevel) -> int {
+  const auto nphixstargets = get_nphixstargets(uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-    if (upperionlevel == get_phixsupperlevel(element, ion, level, phixstargetindex)) {
+    if (upperionlevel == get_phixsupperlevel(uniquelevelindex, phixstargetindex)) {
       return phixstargetindex;
     }
   }
@@ -477,8 +476,9 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
 // nu_edge)
 [[nodiscard]] inline auto get_emtype_continuum(const int element, const int ion, const int level,
                                                const int upperionlevel) -> int {
-  const int phixstargetindex = get_phixtargetindex(element, ion, level, upperionlevel);
-  return -1 - globals::alllevels.cont_index[get_uniquelevelindex(element, ion, level)] - phixstargetindex;
+  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+  const int phixstargetindex = get_phixtargetindex(uniquelevelindex, upperionlevel);
+  return -1 - globals::alllevels.cont_index[uniquelevelindex] - phixstargetindex;
 }
 
 // Return the photionisation threshold energy [erg]
