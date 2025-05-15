@@ -160,23 +160,6 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   return processrates;
 }
 
-auto do_macroatom_internal_down_same(const int uniquelevelindex, const double *sum_internal_down_same) -> int {
-  const int ndowntrans = get_ndowntrans(uniquelevelindex);
-
-  // Randomly select the occurring transition
-  const double targetval = rng_uniform() * sum_internal_down_same[ndowntrans - 1];
-
-  // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
-  const auto downtransindex =
-      std::upper_bound(sum_internal_down_same, sum_internal_down_same + ndowntrans - 1, targetval) -
-      sum_internal_down_same;
-  const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
-
-  const int lower = globals::alltrans.targetlevelindex[alltrans_startdown + downtransindex];
-
-  return lower;
-}
-
 // radiative deexcitation
 void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion, const int uniquelevelindex,
                                   const double epsilon_current, const int activatingline,
@@ -453,7 +436,19 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
       case MA_ACTION_INTERNALDOWNSAME: {
         stats::increment(stats::COUNTER_INTERACTIONS);
-        level = do_macroatom_internal_down_same(uniquelevelindex, chlevel.sum_internal_down_same);
+        const double *sum_internal_down_same = chlevel.sum_internal_down_same;
+        const int ndowntrans = get_ndowntrans(uniquelevelindex);
+
+        // Randomly select the occurring transition
+        const double targetval = rng_uniform() * sum_internal_down_same[ndowntrans - 1];
+
+        // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
+        const auto downtransindex =
+            std::upper_bound(sum_internal_down_same, sum_internal_down_same + ndowntrans - 1, targetval) -
+            sum_internal_down_same;
+        const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
+
+        level = globals::alltrans.targetlevelindex[alltrans_startdown + downtransindex];
 
         break;
       }
