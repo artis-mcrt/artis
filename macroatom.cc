@@ -160,12 +160,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   return processrates;
 }
 
-auto do_macroatom_internal_down_same(const int uniquelevelindex, const CellCacheLevels &chlevel) -> int {
+auto do_macroatom_internal_down_same(const int uniquelevelindex, const double *sum_internal_down_same) -> int {
   const int ndowntrans = get_ndowntrans(uniquelevelindex);
-
-  // printout("[debug] do_ma:   internal downward jump within current ionstage\n");
-
-  const double *sum_internal_down_same = chlevel.sum_internal_down_same;
 
   // Randomly select the occurring transition
   const double targetval = rng_uniform() * sum_internal_down_same[ndowntrans - 1];
@@ -457,7 +453,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
       case MA_ACTION_INTERNALDOWNSAME: {
         stats::increment(stats::COUNTER_INTERACTIONS);
-        level = do_macroatom_internal_down_same(uniquelevelindex, chlevel);
+        level = do_macroatom_internal_down_same(uniquelevelindex, chlevel.sum_internal_down_same);
 
         break;
       }
