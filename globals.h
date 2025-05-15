@@ -74,11 +74,6 @@ struct LevelTransition {
   bool forbidden;
 };
 
-struct PhotoionTarget {
-  double probability;  // fraction of phixs cross section leading to this final level
-  int levelindex;  // index of upper ion level after photoionisation
-};
-
 struct EnergyLevelInput {
   double epsilon{-1};  // Excitation energy of this level relative to the neutral ground level.
   int alltrans_startdown{};  // index into globals::alltrans for first down transition from this level
@@ -260,7 +255,9 @@ struct AllTransitions {
 };
 inline AllTransitions alltrans;
 
-inline std::vector<PhotoionTarget> allphixstargets;
+inline std::vector<int> allphixstargets_levelindex;  // index of upper ion level after photoionisation
+inline std::vector<double>
+    allphixstargets_probability;  // fraction of phixs cross section leading to associated final level
 
 struct AllLevels {
   // all of these arrays are indexed by uniquelevelindex, which can be derived from the element, ion, level
