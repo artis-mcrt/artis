@@ -184,11 +184,9 @@ auto do_macroatom_internal_down_same(const int uniquelevelindex, const CellCache
 // radiative deexcitation
 void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion, const int uniquelevelindex,
                                   const double epsilon_current, const int activatingline,
-                                  const CellCacheLevels &chlevel) {
+                                  const auto *sum_epstrans_rad_deexc) {
   // randomly select which line transitions occurs
   const int ndowntrans = get_ndowntrans(uniquelevelindex);
-
-  const auto *sum_epstrans_rad_deexc = chlevel.sum_epstrans_rad_deexc;
 
   const double targetval = rng_uniform() * sum_epstrans_rad_deexc[ndowntrans - 1];
 
@@ -414,7 +412,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
         // printout("[debug] do_ma:   radiative deexcitation\n");
-        do_macroatom_raddeexcitation(pkt, element, ion, uniquelevelindex, epsilon_current, activatingline, chlevel);
+        do_macroatom_raddeexcitation(pkt, element, ion, uniquelevelindex, epsilon_current, activatingline,
+                                     chlevel.sum_epstrans_rad_deexc);
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC, pkt.e_cmf);
