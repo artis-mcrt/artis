@@ -377,7 +377,7 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
 }
 
 // get the maximum NLTE dimension for any of the included elements
-[[nodiscard]] auto get_max_nlte_dimension(int nions_used, int first_ion_used) -> int {
+[[nodiscard]] auto get_max_nlte_dimension() -> int {
   int max_nlte_dimension = 0;
   for (int element = 0; element < get_nelements(); element++) {
     // overwrite actual values of nions_used and first_ion_used passed to this function with the values before the
@@ -387,8 +387,8 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
     // element in the case when the NLTE solver fails and less ion stages are used than get_nions(element) this
     // shouldn't cause any problems - it just means a bit more memory will be allocated before gsl_matrix_view_array is
     // used to reduce the size of the rate matrices to match the actual nlte_dimensions for each element.
-    nions_used = get_nions(element);
-    first_ion_used = 0;
+    const int nions_used = get_nions(element);
+    const int first_ion_used = 0;
     max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element, nions_used, first_ion_used));
   }
   return max_nlte_dimension;
@@ -814,6 +814,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
             "with NLTE pops but set this level to MINPOP\n",
             gsl_vector_get(popvec, row), MINPOP);
         gsl_vector_set(popvec, row, MINPOP);
+        // Discuss if this is the best thing to set the population to??
       }
       // Now check for population inversions.
       if (row != row_ground_state &&
@@ -909,6 +910,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   bool matrix_solve_satisfied_with_ion_list = false;
   bool matrix_solve_success = false;
   int nlte_dimension = get_element_nlte_dimension(element, nions_used, first_ion_used);
+  const auto max_nlte_dimension = get_max_nlte_dimension();
 
   gsl_matrix rate_matrix_rad_bb;
   gsl_matrix rate_matrix_coll_bb;
@@ -923,8 +925,6 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     first_iteration = false;
     // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
-    const auto max_nlte_dimension =
-        get_max_nlte_dimension(nions_used, first_ion_used);  // this only needs to be called once outside the while loop
     assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
 
     THREADLOCALONHOST std::vector<double> vec_rate_matrix;
