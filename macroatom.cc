@@ -738,7 +738,7 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
   const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (get_phixsupperlevel(lowerionlower_uniquelevelindex, phixstargetindex) == upperionlevel) {
-      R = nne * get_spontrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, T_e);
+      R = nne * get_spontrecombcoeff(lowerionlower_uniquelevelindex, phixstargetindex, T_e);
 
       if constexpr (SEPARATE_STIMRECOMB) {
         R += nne * get_stimrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, nonemptymgi);

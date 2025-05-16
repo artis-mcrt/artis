@@ -661,9 +661,10 @@ void precalculate_ion_alpha_sp() {
         const int nionisinglevels = get_nlevels_ionising(element, ion);
         double zeta = 0.;
         for (int level = 0; level < nionisinglevels; level++) {
-          const auto nphixstargets = get_nphixstargets(element, ion, level);
+          const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+          const auto nphixstargets = get_nphixstargets(uniquelevelindex);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            const double zeta_level = get_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
+            const double zeta_level = get_spontrecombcoeff(uniquelevelindex, phixstargetindex, T_e);
             zeta += zeta_level;
           }
         }
@@ -981,8 +982,8 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
 }
 
 // Return the rate coefficient for spontaneous recombination.
-__host__ __device__ auto get_spontrecombcoeff(int element, const int ion, const int level, const int phixstargetindex,
-                                              float T_e) -> double {
+__host__ __device__ auto get_spontrecombcoeff(const int uniquelevelindex, const int phixstargetindex, float T_e)
+    -> double {
   double Alpha_sp{NAN};
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   assert_always(lowerindex >= 0);
@@ -991,11 +992,11 @@ __host__ __device__ auto get_spontrecombcoeff(int element, const int ion, const 
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper = spontrecombcoeffs[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
-    const double f_lower = spontrecombcoeffs[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
+    const double f_upper = spontrecombcoeffs[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
+    const double f_lower = spontrecombcoeffs[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
     Alpha_sp = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   } else {
-    Alpha_sp = spontrecombcoeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
+    Alpha_sp = spontrecombcoeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
   }
   return Alpha_sp;
 }
