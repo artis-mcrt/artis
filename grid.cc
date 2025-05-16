@@ -1019,7 +1019,7 @@ void setup_nstart_ndo() {
         rank++;
         ranks_nstart[rank] = mgi;
         ranks_nstart_nonempty[rank] = get_next_nonemptymgi(mgi);
-        assert_always(ranks_nstart_nonempty[rank] >= 0);
+        assert_always(ranks_nstart_nonempty[rank] >= 0 || rank >= get_nonempty_npts_model());
       }
 
       ranks_ndo[rank]++;
