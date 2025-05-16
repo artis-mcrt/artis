@@ -99,13 +99,18 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   return nphixstargets;
 }
 
-// Return the level index of a target state for photoionization of (element,ion,level).
-[[nodiscard]] __host__ __device__ inline auto get_phixsupperlevel(const int uniquelevelindex,
-                                                                  const int phixstargetindex) -> int {
+// Return the index into the allphixstargets arrays for a target state for photoionization of (element,ion,level).
+[[nodiscard]] __host__ __device__ inline auto get_allphixstargetindex(const int uniquelevelindex,
+                                                                      const int phixstargetindex) -> int {
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(uniquelevelindex));
 
-  return globals::allphixstargets_levelindex[globals::alllevels.phixstargetstart[uniquelevelindex] + phixstargetindex];
+  return globals::alllevels.phixstargetstart[uniquelevelindex] + phixstargetindex;
+}
+// Return the level index of a target state for photoionization of (element,ion,level).
+[[nodiscard]] __host__ __device__ inline auto get_phixsupperlevel(const int uniquelevelindex,
+                                                                  const int phixstargetindex) -> int {
+  return globals::allphixstargets_levelindex[get_allphixstargetindex(uniquelevelindex, phixstargetindex)];
 }
 
 // Return the level index of a target state for photoionization of (element,ion,level).
@@ -117,10 +122,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
 // Return the probability of a target state for photoionization of (element,ion,level).
 [[nodiscard]] __host__ __device__ inline auto get_phixsprobability(const int uniquelevelindex,
                                                                    const int phixstargetindex) -> double {
-  assert_testmodeonly(phixstargetindex >= 0);
-  assert_testmodeonly(phixstargetindex < get_nphixstargets(uniquelevelindex));
-
-  return globals::allphixstargets_probability[globals::alllevels.phixstargetstart[uniquelevelindex] + phixstargetindex];
+  return globals::allphixstargets_probability[get_allphixstargetindex(uniquelevelindex, phixstargetindex)];
 }
 
 // Return the probability of a target state for photoionization of (element,ion,level).
