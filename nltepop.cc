@@ -433,7 +433,6 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
     const auto nuptransindices = std::ranges::iota_view{0, nuptrans};
     std::for_each(nuptransindices.begin(), nuptransindices.end(), [&](const auto i) {
       const auto alltransindex = alltrans_startup + i;
-      const int lineindex = globals::alltrans.lineindex[alltransindex];
       const int upper = globals::alltrans.targetlevelindex[alltransindex];
       const auto upper_uniquelevelindex = ionuniquelevelindexstart + upper;
       const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_level;
@@ -441,7 +440,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
 
       const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, upper_statweight,
                                                 globals::alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel,
-                                                statweight, lineindex, t_mid) *
+                                                statweight, alltransindex, t_mid) *
                        s_renorm[level];
       assert_always(R >= 0);
       assert_always(std::isfinite(R));
@@ -451,7 +450,8 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       assert_always(C >= 0);
       assert_always(std::isfinite(C));
 
-      const double NTC = nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, lineindex) * s_renorm[level];
+      const double NTC =
+          nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex) * s_renorm[level];
 
       const int lower_index = level_index;
       const int upper_index = get_nlte_vector_index(element, ion, upper);

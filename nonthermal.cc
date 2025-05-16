@@ -147,7 +147,7 @@ double nt_energy_deposited = 0;
 struct NonThermalExcitation {
   double frac_deposition;  // the fraction of the non-thermal deposition energy going to the excitation transition
   double ratecoeffperdeposition;  // the excitation rate coefficient divided by the deposition rate density
-  int lineindex;
+  int alltransindex;
 };
 
 // pointer to either local or node-shared memory excitation list of all cells
@@ -1517,18 +1517,6 @@ auto select_nt_ionization(const int nonemptymgi) -> std::tuple<int, int> {
   return {-1, -1};
 }
 
-auto get_uptransindex(const int element, const int ion, const int lower, const int upper) {
-  const int nuptrans = get_nuptrans(element, ion, lower);
-  const auto alltrans_startup = get_alltrans_startup(element, ion, lower);
-  for (int t = 0; t < nuptrans; t++) {
-    if (upper == globals::alltrans.targetlevelindex[alltrans_startup + t]) {
-      return t;
-    }
-  }
-  assert_always(false);
-  return -1;
-}
-
 void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool enable_sfexcitation,
                          const std::array<double, SFPTS> &yfunc) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -1643,7 +1631,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
               tmp_excitation_list.push_back({
                   .frac_deposition = frac_excitation_thistrans,
                   .ratecoeffperdeposition = ratecoeffperdeposition,
-                  .lineindex = globals::alltrans.lineindex[alltransindex],
+                  .alltransindex = alltransindex,
               });
             }
           }  // NT_EXCITATION_ON
@@ -1730,29 +1718,26 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
     for (int excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++) {
       const auto &ntexc = tmp_excitation_list[excitationindex];
       if (ntexc.frac_deposition > 0.) {
-        const int lineindex = ntexc.lineindex;
-        const auto &line = globals::linelist[lineindex];
-        const int element = line.elementindex;
-        const int ion = line.ionindex;
-        const int lower = line.lowerlevelindex;
-        const int upper = line.upperlevelindex;
+        const auto alltransindex = ntexc.alltransindex;
+        const auto lineindex = globals::alltrans.lineindex[alltransindex];
+        const int element = globals::linelist[lineindex].elementindex;
+        const int ion = globals::linelist[lineindex].ionindex;
+        const int lower = globals::linelist[lineindex].lowerlevelindex;
+        const int upper = globals::linelist[lineindex].upperlevelindex;
         const auto lower_uniquelevelindex = get_uniquelevelindex(element, ion, lower);
         const auto upper_uniquelevelindex = get_uniquelevelindex(element, ion, upper);
         const auto nnlevel_lower = get_levelpop(nonemptymgi, lower_uniquelevelindex);
         const auto statweight_lower = stat_weight(lower_uniquelevelindex);
 
-        const auto alltrans_startup = get_alltrans_startup(lower_uniquelevelindex);
-        const auto uptransindex = get_uptransindex(element, ion, lower, upper);
         const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon(lower_uniquelevelindex);
 
         const double ntcollexc_ratecoeff = ntexc.ratecoeffperdeposition * deposition_rate_density;
-        const auto alltransindex = alltrans_startup + uptransindex;
         const auto statweight_upper = stat_weight(upper_uniquelevelindex);
 
         const double t_mid = globals::timesteps[timestep].mid;
         const double radexc_ratecoeff = rad_excitation_ratecoeff(
             nonemptymgi, upper_uniquelevelindex, statweight_upper, globals::alltrans.einstein_A[alltransindex],
-            epsilon_trans, nnlevel_lower, statweight_lower, lineindex, t_mid);
+            epsilon_trans, nnlevel_lower, statweight_lower, alltransindex, t_mid);
 
         const double collexc_ratecoeff =
             col_excitation_ratecoeff(T_e, nne, statweight_upper, alltransindex, epsilon_trans, statweight_lower);
@@ -1771,7 +1756,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
 
     // sort the excitation list by ascending lineindex for fast lookup with a binary search
     std::ranges::SORT_OR_STABLE_SORT(get_cell_ntexcitations(nonemptymgi), std::ranges::less{},
-                                     &NonThermalExcitation::lineindex);
+                                     &NonThermalExcitation::alltransindex);
 
   }  // NT_EXCITATION_ON
 
@@ -2301,7 +2286,7 @@ __host__ __device__ auto nt_ionization_ratecoeff(const int nonemptymgi, const in
 }
 
 __host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const int lowerlevel, const int upperlevel,
-                                                 const int lineindex) -> double {
+                                                 const int alltransindex) -> double {
   if constexpr (!NT_EXCITATION_ON) {
     return 0.;
   }
@@ -2314,8 +2299,9 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const in
 
   // binary search, assuming the excitation list is sorted by lineindex ascending
   const auto ntexclist = get_cell_ntexcitations(nonemptymgi);
-  const auto ntexcitation = std::ranges::lower_bound(ntexclist, lineindex, {}, &NonThermalExcitation::lineindex);
-  if (ntexcitation == ntexclist.end() || ntexcitation->lineindex != lineindex) {
+  const auto ntexcitation =
+      std::ranges::lower_bound(ntexclist, alltransindex, {}, &NonThermalExcitation::alltransindex);
+  if (ntexcitation == ntexclist.end() || ntexcitation->alltransindex != alltransindex) {
     return 0.;
   }
 
@@ -2388,10 +2374,9 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
       for (const auto &ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
         const double frac_deposition_exc = ntexcitation.frac_deposition;
         if (zrand < frac_deposition_exc) {
-          const int lineindex = ntexcitation.lineindex;
+          const auto lineindex = globals::alltrans.lineindex[ntexcitation.alltransindex];
           const int element = globals::linelist[lineindex].elementindex;
           const int ion = globals::linelist[lineindex].ionindex;
-          // const int lower = linelist[lineindex].lowerlevelindex;
           const int upper = globals::linelist[lineindex].upperlevelindex;
 
           stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC);
@@ -2600,7 +2585,7 @@ void write_restart_data(FILE *gridsave_file) {
 
       for (const auto &excitation : get_cell_ntexcitations(nonemptymgi)) {
         fprintf(gridsave_file, "%la %la %d\n", excitation.frac_deposition, excitation.ratecoeffperdeposition,
-                excitation.lineindex);
+                excitation.alltransindex);
       }
     }
   }
@@ -2663,7 +2648,7 @@ void read_restart_data(FILE *gridsave_file) {
       for (int excitationindex = 0; excitationindex < frac_excitations_list_size_in; excitationindex++) {
         assert_always(fscanf(gridsave_file, "%la %la %d\n", &ntexclist[excitationindex].frac_deposition,
                              &ntexclist[excitationindex].ratecoeffperdeposition,
-                             &ntexclist[excitationindex].lineindex) == 3);
+                             &ntexclist[excitationindex].alltransindex) == 3);
       }
     }
   }

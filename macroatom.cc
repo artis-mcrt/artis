@@ -98,9 +98,9 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
 
     const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, upper_statweight,
                                               alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel, statweight,
-                                              alltrans.lineindex[alltransindex], t_mid);
+                                              alltransindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight);
-    const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltrans.lineindex[alltransindex]);
+    const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex);
 
     sum_internal_up_same += (R + C + NT) * epsilon_current;
     chlevel.sum_internal_up_same[ii] = sum_internal_up_same;
@@ -689,7 +689,8 @@ auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int lower_uniquelev
 // multiply by lower level population to get a rate per second
 auto rad_excitation_ratecoeff(const int nonemptymgi, const int upper_uniquelevelindex, const double upper_statweight,
                               const double einstein_A, const double epsilon_trans, const double nnlevel_lower,
-                              const double statweight_lower, const int lineindex, const double t_current) -> double {
+                              const double statweight_lower, const int alltransindex, const double t_current)
+    -> double {
   const double n_u = get_levelpop(nonemptymgi, upper_uniquelevelindex);
   const auto &n_l = nnlevel_lower;
   const double nu_trans = epsilon_trans / H;
@@ -707,7 +708,8 @@ auto rad_excitation_ratecoeff(const int nonemptymgi, const int upper_uniquelevel
     if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
       if (!globals::lte_iteration) {
         // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
-        if (const int jblueindex = radfield::get_Jblueindex(lineindex); jblueindex >= 0) {
+        if (const int jblueindex = radfield::get_Jblueindex(globals::alltrans.lineindex[alltransindex]);
+            jblueindex >= 0) {
           return R_over_J_nu * radfield::get_Jb_lu(nonemptymgi, jblueindex);
         }
       }
