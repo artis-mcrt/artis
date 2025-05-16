@@ -1176,8 +1176,8 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
 #if (SEPARATE_STIMRECOMB)
   if (use_cellcache) {
     const auto uniquelevelindex = get_uniquelevelindex(element, lowerion, level);
-    const auto allphisxtargetindex = globals::alllevels.phixstargetstart[uniquelevelindex] + phixstargetindex;
-    stimrecombcoeff = globals::cellcache[cellcacheslotid].challphixstargets[allphisxtargetindex].stimrecombcoeff;
+    const auto allphisxtargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
+    stimrecombcoeff = globals::cellcache[cellcacheslotid].allphixstargets_stimrecombcoeff[allphisxtargetindex];
   }
 #endif
 
@@ -1186,7 +1186,7 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
 
 #if (SEPARATE_STIMRECOMB)
     if (use_cellcache) {
-      globals::cellcache[cellcacheslotid].challphixstargets[allphisxtargetindex].stimrecombcoeff = stimrecombcoeff;
+      globals::cellcache[cellcacheslotid].allphixstargets_stimrecombcoeff[allphisxtargetindex] = stimrecombcoeff;
     }
 #endif
   }
@@ -1219,10 +1219,9 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
   // LTE value. Because the T_e dependence of gammacorr is weak, this correction
   // correction may be evaluated at T_R!
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-  const auto allphisxtargetindex = globals::alllevels.phixstargetstart[uniquelevelindex] + phixstargetindex;
-  double gammacorr = (use_cellcache)
-                         ? globals::cellcache[cellcacheslotid].challphixstargets[allphisxtargetindex].corrphotoioncoeff
-                         : -1;
+  const auto allphisxtargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
+  double gammacorr =
+      (use_cellcache) ? globals::cellcache[cellcacheslotid].allphixstargets_corrphotoioncoeff[allphisxtargetindex] : -1;
 
   if (!use_cellcache || gammacorr < 0) {
     if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {
@@ -1246,7 +1245,7 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
       }
     }
     if (use_cellcache) {
-      globals::cellcache[cellcacheslotid].challphixstargets[allphisxtargetindex].corrphotoioncoeff = gammacorr;
+      globals::cellcache[cellcacheslotid].allphixstargets_corrphotoioncoeff[allphisxtargetindex] = gammacorr;
     }
   }
 

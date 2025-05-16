@@ -1196,11 +1196,9 @@ void cellcache_change_cell(const int nonemptymgi) {
     }
   }
 
-  for (auto &phixstarget : cacheslot.challphixstargets) {
-    phixstarget.corrphotoioncoeff = -99.;
-#if (SEPARATE_STIMRECOMB)
-    phixstarget.stimrecombcoeff = -99.;
-#endif
+  std::ranges::fill(cacheslot.allphixstargets_corrphotoioncoeff, -99.);
+  if constexpr (SEPARATE_STIMRECOMB) {
+    std::ranges::fill(cacheslot.allphixstargets_stimrecombcoeff, -99.);
   }
 
   for (int uniquelevelindex = 0; uniquelevelindex < std::ssize(cacheslot.ch_all_levels); uniquelevelindex++) {

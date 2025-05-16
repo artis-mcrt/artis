@@ -127,19 +127,6 @@ struct GSLIntegrationParas {
   const float *photoion_xs;
 };
 
-template <bool separatestimrecomb>
-struct chphixstargets {
-  double corrphotoioncoeff;
-};
-
-template <>
-struct chphixstargets<true> {
-  double corrphotoioncoeff;
-  double separatestimrecomb;
-};
-
-using CellCachePhixsTargets = chphixstargets<SEPARATE_STIMRECOMB>;
-
 enum ma_action {
   // Radiative deexcitation rate from this level.
   MA_ACTION_RADDEEXC = 0,
@@ -187,7 +174,8 @@ struct CellCache {
   std::vector<bool> ch_keep_this_cont;
   double chi_ff_nnionpart{-1};
   int nonemptymgi{-1};  // Identifies the cell the data is valid for.
-  std::vector<CellCachePhixsTargets> challphixstargets;  // photoionisation targets for all levels
+  std::vector<double> allphixstargets_corrphotoioncoeff;
+  std::vector<double> allphixstargets_stimrecombcoeff;
   std::vector<double> chtransblock;  // cumulative transition rates for all levels
 };
 

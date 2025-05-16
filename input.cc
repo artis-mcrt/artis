@@ -1348,7 +1348,7 @@ void setup_cellcache() {
 
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
-          chphixsblocksize += nphixstargets * sizeof(CellCachePhixsTargets);
+          chphixsblocksize += nphixstargets * sizeof(double) * 2;
 
           const int ndowntrans = get_ndowntrans(element, ion, level);
           const int nuptrans = get_nuptrans(element, ion, level);
@@ -1360,7 +1360,10 @@ void setup_cellcache() {
     resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, chlevelcount);
 
     if (chphixsblocksize > 0) {
-      resize_exactly(globals::cellcache[cellcachenum].challphixstargets, chphixsblocksize);
+      resize_exactly(globals::cellcache[cellcachenum].allphixstargets_corrphotoioncoeff, chphixsblocksize);
+      if constexpr (SEPARATE_STIMRECOMB) {
+        resize_exactly(globals::cellcache[cellcachenum].allphixstargets_stimrecombcoeff, chphixsblocksize);
+      }
     }
     mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + chphixsblocksize;
 
