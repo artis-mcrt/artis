@@ -176,6 +176,7 @@ struct CellCache {
   int nonemptymgi{-1};  // Identifies the cell the data is valid for.
   std::vector<double> allphixstargets_corrphotoioncoeff;
   std::vector<double> allphixstargets_stimrecombcoeff;
+  std::vector<double> alpha_sp_E_integrals;  // size is size(allphisxtargets) * NPHIXSPOINTS
   std::vector<double> chtransblock;  // cumulative transition rates for all levels
 };
 
