@@ -1176,8 +1176,8 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
 #if (SEPARATE_STIMRECOMB)
   if (use_cellcache) {
     const auto uniquelevelindex = get_uniquelevelindex(element, lowerion, level);
-    const auto allphisxtargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
-    stimrecombcoeff = globals::cellcache[cellcacheslotid].allphixstargets_stimrecombcoeff[allphisxtargetindex];
+    const auto allphixstargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
+    stimrecombcoeff = globals::cellcache[cellcacheslotid].allphixstargets_stimrecombcoeff[allphixstargetindex];
   }
 #endif
 
@@ -1186,7 +1186,7 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
 
 #if (SEPARATE_STIMRECOMB)
     if (use_cellcache) {
-      globals::cellcache[cellcacheslotid].allphixstargets_stimrecombcoeff[allphisxtargetindex] = stimrecombcoeff;
+      globals::cellcache[cellcacheslotid].allphixstargets_stimrecombcoeff[allphixstargetindex] = stimrecombcoeff;
     }
 #endif
   }
