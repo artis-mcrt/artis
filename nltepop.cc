@@ -830,22 +830,25 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
             (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) /
                 (gsl_vector_get(popvec, row_ground_state) / gsl_vector_get(popvec, row)));
 
-        if (gsl_vector_get(popvec, row_ground_state) * 10000. <
+        if (gsl_vector_get(popvec, row_ground_state) * POP_INVERSION_FACTOR_SOLVER_FAIL <
             (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row)) {
           printout(
-              "large pop inversion (ground_pop * 10000 < ([g_gs / g_es] * excited_pop) - return matrix solve "
-              "fail and use LTE pops for element \n");
+              "large pop inversion (ground_pop * %g < ([g_gs / g_es] * excited_pop) - return matrix solve "
+              "fail and use LTE pops for element \n",
+              POP_INVERSION_FACTOR_SOLVER_FAIL);
           return false;
         }
-        if (gsl_vector_get(popvec, row_ground_state) * 10. <
+        if (gsl_vector_get(popvec, row_ground_state) * POP_INVERSION_FACTOR_SMALL_INVERSION_WARNING <
             (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row)) {
           printout(
-              "more substantial pop inversion (ground_pop * 10 < ([g_gs / g_es] * excited_pop) - "
-              "but continue with NLTE solution\n");
+              "more substantial pop inversion (ground_pop * %g < ([g_gs / g_es] * excited_pop) - "
+              "but continue with NLTE solution\n",
+              POP_INVERSION_FACTOR_SMALL_INVERSION_WARNING);
         } else {
           printout(
-              "relatively small pop inversion (ground_pop * 10 > ([g_gs / g_es] * excited_pop) - "
-              "continue with NLTE solution\n");
+              "relatively small pop inversion (ground_pop * %g > ([g_gs / g_es] * excited_pop) - "
+              "continue with NLTE solution\n",
+              POP_INVERSION_FACTOR_SMALL_INVERSION_WARNING);
         }
       }
     } else {
@@ -920,7 +923,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   gsl_matrix rate_matrix_ntcoll_bf;
   gsl_vector popvec;
   bool first_iteration = true;
-  bool retry_with_less_ions = false;
+  bool retry_with_fewer_ions = false;
   while (first_iteration || (NLTE_LIMIT_ION_STAGES_AFTER_FAILURE && !matrix_solve_satisfied_with_ion_list)) {
     first_iteration = false;
     // printout("NLTE: the vector dimension is %d", nlte_dimension);
@@ -1088,29 +1091,28 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
     if (matrix_solve_success) {
       matrix_solve_satisfied_with_ion_list = true;
-      if (retry_with_less_ions) {
+      if (retry_with_fewer_ions) {
         printout(
-            "successfully solved NLTE matrix when reducing ions for element Z=%d from ionstage=%d to ionstage=%d\n",
+            "successfully solved NLTE matrix when reducing ions used for element Z=%d to ionstage=%d to ionstage=%d\n",
             atomic_number, get_ionstage(element, first_ion_used),
             get_ionstage(element, first_ion_used + nions_used - 1));
       }
 
     } else {
-      retry_with_less_ions = true;
+      retry_with_fewer_ions = true;
       if (gsl_vector_get(&popvec, get_nlte_vector_index(element, first_ion_used + nions_used - 1, 0, first_ion_used)) <
-          100) {
+          POPULATION_CUT_REMOVE_ION) {
         printout(
-            "  WARNING: NLTE matrix solution failed for element Z=%d using ion range of ionstage=%d to ionstage %d, "
-            "removing top ionstage  "
-            "and attempting to re-solve nlte rate matrix \n",
+            "  WARNING: NLTE matrix solution failed for element Z=%d using ionstage=%d to ionstage %d, "
+            "removing top ionstage and attempting to re-solve nlte rate matrix \n",
             atomic_number, get_ionstage(element, first_ion_used),
             get_ionstage(element, first_ion_used + nions_used - 1));
         nions_used = nions_used - 1;
-      } else if (gsl_vector_get(&popvec, get_nlte_vector_index(element, first_ion_used, 0, first_ion_used)) < 100) {
+      } else if (gsl_vector_get(&popvec, get_nlte_vector_index(element, first_ion_used, 0, first_ion_used)) <
+                 POPULATION_CUT_REMOVE_ION) {
         printout(
-            "  WARNING: NLTE matrix solution failed for element Z=%d using ion range of ionstage=%d to ionstage %d, "
-            "removing bottom ionstage  "
-            "and attempting to re-solve nlte rate matrix \n",
+            "  WARNING: NLTE matrix solution failed for element Z=%d using ionstage=%d to ionstage %d, "
+            "removing bottom ionstage and attempting to re-solve nlte rate matrix \n",
             atomic_number, get_ionstage(element, first_ion_used), get_ionstage(element, first_ion_used));
         nions_used = nions_used - 1;
         first_ion_used++;
@@ -1132,7 +1134,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   if (!matrix_solve_success) {
     printout(
         "WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular matrix, "
-        "negative population or large population inversion and unable to recover solution by reducing ion range. "
+        "negative pop or large pop inversion and unable to recover solution by reducing ion range. "
         "Attempting to use LTE solution instead\n",
         modelgridindex, timestep, atomic_number);
     set_element_pops_lte(nonemptymgi, element);
@@ -1149,9 +1151,9 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
       if (ion < first_ion_used || ion >= (first_ion_used + nions_used)) {
         printout(
-            "  WARNING: element %d ionstage %d removed from NLTE rate matrix solution. Setting levelpop for ion to "
+            "  WARNING: Z=%d ionstage %d removed from NLTE rate matrix solution. Setting levelpop for ion to "
             "zero \n",
-            element, get_ionstage(element, ion));
+            get_atomicnumber(element), get_ionstage(element, ion));
         for (int level = 1; level <= nlevels_nlte; level++) {
           // const int index = get_nlte_vector_index(element, ion, level, first_ion_used);
           set_nlte_levelpop_over_rho(nonemptymgi, element, ion, level, 0);
@@ -1161,15 +1163,15 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
         {
           // const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1, first_ion_used);
           printout(
-              "  WARNING: element %d ionstage %d removed from NLTE rate matrix solution. Setting superlevel pop for "
+              "  WARNING: Z=%d ionstage %d removed from NLTE rate matrix solution. Setting superlevel pop for "
               "ion to zero \n",
-              element, get_ionstage(element, ion));
+              get_atomicnumber(element), get_ionstage(element, ion));
           set_nlte_superlevelpop_over_rho(nonemptymgi, element, ion, 0);
         }
         printout(
-            "  WARNING: element %d ionstage %d removed from NLTE rate matrix solution. Setting ground level pop for "
+            "  WARNING: Z=%d ionstage %d removed from NLTE rate matrix solution. Setting ground level pop for "
             "ion to zero \n",
-            element, get_ionstage(element, ion));
+            get_atomicnumber(element), get_ionstage(element, ion));
         grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
                                            get_uniqueionindex(element, ion)] = 0;
       }
