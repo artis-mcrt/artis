@@ -1338,7 +1338,7 @@ void setup_cellcache() {
     assert_always(globals::cellcache[cellcachenum].chelements != nullptr);
 
     ptrdiff_t chlevelcount = 0;
-    size_t chphixsblocksize = 0;
+    size_t allphixstargetcount = 0;
     int chtransblocksize = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -1348,7 +1348,7 @@ void setup_cellcache() {
 
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
-          chphixsblocksize += nphixstargets * sizeof(double) * 2;
+          allphixstargetcount += nphixstargets * sizeof(double);
 
           const int ndowntrans = get_ndowntrans(element, ion, level);
           const int nuptrans = get_nuptrans(element, ion, level);
@@ -1359,13 +1359,13 @@ void setup_cellcache() {
     assert_always(chlevelcount > 0);
     resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, chlevelcount);
 
-    if (chphixsblocksize > 0) {
-      resize_exactly(globals::cellcache[cellcachenum].allphixstargets_corrphotoioncoeff, chphixsblocksize);
+    if (allphixstargetcount > 0) {
+      resize_exactly(globals::cellcache[cellcachenum].allphixstargets_corrphotoioncoeff, allphixstargetcount);
       if constexpr (SEPARATE_STIMRECOMB) {
-        resize_exactly(globals::cellcache[cellcachenum].allphixstargets_stimrecombcoeff, chphixsblocksize);
+        resize_exactly(globals::cellcache[cellcachenum].allphixstargets_stimrecombcoeff, allphixstargetcount);
       }
     }
-    mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + chphixsblocksize;
+    mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + allphixstargetcount * sizeof(double) * 2;
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
     if (chtransblocksize > 0) {
