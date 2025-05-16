@@ -1361,14 +1361,11 @@ void setup_cellcache() {
 
     if (allphixstargetcount > 0) {
       resize_exactly(globals::cellcache[cellcachenum].allphixstargets_corrphotoioncoeff, allphixstargetcount);
-      resize_exactly(globals::cellcache[cellcachenum].alpha_sp_E_integrals,
-                     allphixstargetcount * globals::NPHIXSPOINTS);
       if constexpr (SEPARATE_STIMRECOMB) {
         resize_exactly(globals::cellcache[cellcachenum].allphixstargets_stimrecombcoeff, allphixstargetcount);
       }
     }
-    mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + allphixstargetcount * sizeof(double) * 2 +
-                           allphixstargetcount * globals::NPHIXSPOINTS * sizeof(double);
+    mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + allphixstargetcount * sizeof(double) * 2;
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
     if (chtransblocksize > 0) {

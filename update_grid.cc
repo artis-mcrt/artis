@@ -1205,8 +1205,6 @@ void cellcache_change_cell(const int nonemptymgi) {
     cacheslot.ch_all_levels[uniquelevelindex].processrates[MA_ACTION_INTERNALUPHIGHER] = -99.;
   }
 
-  std::ranges::fill(cacheslot.alpha_sp_E_integrals, -99.);
-
   if (nonemptymgi >= 0) {
     std::ranges::fill(cacheslot.ch_allcont_departureratios, -1.);
 

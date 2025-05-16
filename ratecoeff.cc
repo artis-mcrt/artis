@@ -926,47 +926,43 @@ void setup_photoion_luts() {
 
 __host__ __device__ auto select_continuum_nu(int element, const int lowerion, const int lower, const int upperionlevel,
                                              float T_e) -> double {
-  // this function should only be called in the cellcache mode (packet prop, not update grid)
-  assert_testmodeonly(use_cellcache);
   const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
   const int phixstargetindex = get_phixtargetindex(lower_uniquelevelindex, upperionlevel);
-  const auto allphixstargetindex = get_allphixstargetindex(lower_uniquelevelindex, phixstargetindex);
-
-  const int npieces = globals::NPHIXSPOINTS;
-  auto *integrals = &globals::cellcache[cellcacheslotid].alpha_sp_E_integrals[allphixstargetindex * npieces];
-
   const double E_threshold = get_phixs_threshold(lower_uniquelevelindex, phixstargetindex);
   const double nu_threshold = ONEOVERH * E_threshold;
+
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
-  const double deltanu = (nu_max_phixs - nu_threshold) / npieces;
+
+  const int npieces = globals::NPHIXSPOINTS;
 
   const GSLIntegrationParas intparas = {
       .nu_edge = nu_threshold, .T = T_e, .photoion_xs = get_phixs_table(lower_uniquelevelindex)};
 
+  const double zrand = 1. - rng_uniform();  // Make sure that 0 < zrand <= 1
+
+  const double deltanu = (nu_max_phixs - nu_threshold) / npieces;
   double error{NAN};
 
 #if !USE_SIMPSON_INTEGRATOR
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 #endif
 
-  if (integrals[0] < 0.) {
-    integrator<alpha_sp_E_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY,
-                                         GSL_INTEG_GAUSS31, &integrals[0], &error);
-  }
-  const auto total_alpha_sp = integrals[0];
+  double total_alpha_sp = 0.;
+  integrator<alpha_sp_E_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY,
+                                       GSL_INTEG_GAUSS31, &total_alpha_sp, &error);
 
   double alpha_sp_old = total_alpha_sp;
   double alpha_sp = total_alpha_sp;
-  const double zrand = 1. - rng_uniform();  // Make sure that 0 < zrand <= 1
+
   int i = 1;
   for (i = 1; i < npieces; i++) {
     alpha_sp_old = alpha_sp;
-    if (integrals[i] < 0.) {
-      const double xlow = nu_threshold + (i * deltanu);
-      integrator<alpha_sp_E_integrand_gsl>(intparas, xlow, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY,
-                                           GSL_INTEG_GAUSS31, &integrals[i], &error);
-    }
-    alpha_sp = integrals[i];
+    const double xlow = nu_threshold + (i * deltanu);
+
+    // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
+    integrator<alpha_sp_E_integrand_gsl>(intparas, xlow, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY,
+                                         GSL_INTEG_GAUSS31, &alpha_sp, &error);
+
     if (zrand >= alpha_sp / total_alpha_sp) {
       break;
     }
