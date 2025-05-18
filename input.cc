@@ -147,23 +147,6 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     }
   }
 
-  // The level contributes to the ionisinglevels if its energy
-  // is below the ionisation potential and the level doesn't
-  // belong to the topmost ion included.
-  // Rate coefficients are only available for ionising levels.
-  //  also need (levelenergy < ionpot && ...)?
-  if (lowerion < get_nions(element) - 1) {
-    for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lowerlevel);
-         phixstargetindex++) {
-      const int upperlevel =
-          globals::allphixstargets_levelindex[globals::alllevels.phixstargetstart[lowerionlower_uniquelevelindex] +
-                                              phixstargetindex];
-      if (upperlevel > get_maxrecombininglevel(element, lowerion + 1)) {
-        globals::elements[element].ions[lowerion + 1].maxrecombininglevel = upperlevel;
-      }
-    }
-  }
-
   *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
   assert_always(tmpallphixs.size() % globals::NPHIXSPOINTS == 0);
   const auto tmpphixsstart = tmpallphixs.size();
@@ -219,6 +202,23 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
       // the photoionisation cross-sections in the database are given in Mbarn = 1e6 * 1e-28m^2
       // to convert to cgs units multiply by 1e-18
       levelphixstable[i] = phixs * 1e-18;
+    }
+  }
+
+  // The level contributes to the ionisinglevels if its energy
+  // is below the ionisation potential and the level doesn't
+  // belong to the topmost ion included.
+  // Rate coefficients are only available for ionising levels.
+  //  also need (levelenergy < ionpot && ...)?
+  if (lowerion < get_nions(element) - 1) {
+    for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lowerlevel);
+         phixstargetindex++) {
+      const int upperlevel =
+          globals::allphixstargets_levelindex[globals::alllevels.phixstargetstart[lowerionlower_uniquelevelindex] +
+                                              phixstargetindex];
+      if (upperlevel > get_maxrecombininglevel(element, lowerion + 1)) {
+        globals::elements[element].ions[lowerion + 1].maxrecombininglevel = upperlevel;
+      }
     }
   }
 
