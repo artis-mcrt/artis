@@ -113,6 +113,8 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     // read in a table of target states and probabilities and store them
     if (!single_level_top_ion || upperion < get_nions(element) - 1)  // in case the top ion has nlevelsmax = 1
     {
+      assert_always(globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] == 0 ||
+                    globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] == in_nphixstargets);
       globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] = in_nphixstargets;
       *mem_usage_phixs += in_nphixstargets * sizeof(double) + sizeof(int);
 
