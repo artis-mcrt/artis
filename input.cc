@@ -96,7 +96,6 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     assert_always(globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] == 0 ||
                   globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] == 1);
     globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] = 1;
-    *mem_usage_phixs += sizeof(double) + sizeof(int);
 
     if (single_level_top_ion && (upperion == get_nions(element) - 1)) {
       // top ion has only one level, so send it to that level
@@ -116,7 +115,6 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
       assert_always(globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] == 0 ||
                     globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] == in_nphixstargets);
       globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] = in_nphixstargets;
-      *mem_usage_phixs += in_nphixstargets * sizeof(double) + sizeof(int);
 
       double probability_sum = 0.;
       for (int i = 0; i < in_nphixstargets; i++) {
@@ -137,7 +135,6 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
       }
     } else {  // file has table of target states and probabilities but our top ion is limited to one level
       globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] = 1;
-      *mem_usage_phixs += sizeof(double) + sizeof(int);
 
       for (int i = 0; i < in_nphixstargets; i++) {
         assert_always(get_noncommentline(phixsfile, phixsline));
@@ -149,7 +146,6 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     }
   }
 
-  *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
   assert_always(tmpallphixs.size() % globals::NPHIXSPOINTS == 0);
   const auto tmpphixsstart = tmpallphixs.size();
   globals::alllevels.phixsstart[lowerionlower_uniquelevelindex] = tmpphixsstart / globals::NPHIXSPOINTS;
@@ -224,8 +220,10 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
     }
   }
 
-  globals::nbfcontinua += get_nphixstargets(element, lowerion, lowerlevel);
-  if (lowerlevel == 0 && get_nphixstargets(element, lowerion, lowerlevel) > 0) {
+  *mem_usage_phixs += get_nphixstargets(lowerionlower_uniquelevelindex) * sizeof(double) + sizeof(int);
+  *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
+  globals::nbfcontinua += get_nphixstargets(lowerionlower_uniquelevelindex);
+  if (lowerlevel == 0 && get_nphixstargets(lowerionlower_uniquelevelindex) > 0) {
     globals::nbfcontinua_ground++;
   }
 }
