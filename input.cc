@@ -852,19 +852,12 @@ void read_phixs_data() {
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
+        const int nphixstargets = get_nphixstargets(element, ion, level);
         const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-        const int nphixstargets = get_nphixstargets(uniquelevelindex);
+        globals::alllevels.cont_index[uniquelevelindex] = (nphixstargets > 0) ? cont_index : -1;
+        cont_index += nphixstargets;
         if (nphixstargets > 0) {
           nbftables++;
-        }
-        globals::alllevels.cont_index[uniquelevelindex] = (get_nphixstargets(uniquelevelindex) > 0) ? cont_index : -1;
-        cont_index += nphixstargets;
-
-        const auto phixstable = std::span{tmpallphixs}.subspan(
-            globals::alllevels.phixsstart[uniquelevelindex] * globals::NPHIXSPOINTS, globals::NPHIXSPOINTS);
-        if (!std::ranges::any_of(phixstable, [](const auto &x) { return x > 0.; })) {
-          globals::alllevels.nphixstargets[uniquelevelindex] = 0;
-          printout("All-zero cross section for element %d ion %d level %d\n", element, ion, level);
         }
       }
 
