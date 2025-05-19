@@ -243,8 +243,8 @@ struct AllTransitions {
 };
 inline AllTransitions alltrans;
 
-inline std::vector<int> allphixstargets_levelindex;  // index of upper ion level after photoionisation
-inline std::vector<double>
+inline std::span<int> allphixstargets_levelindex;  // index of upper ion level after photoionisation
+inline std::span<double>
     allphixstargets_probability;  // fraction of phixs cross section leading to associated final level
 
 struct AllLevels {
