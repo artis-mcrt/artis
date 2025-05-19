@@ -882,16 +882,16 @@ void read_phixs_data() {
     globals::allphixstargets_levelindex = MPI_shared_malloc_span<int>(tmpallphixstargets.size());
     globals::allphixstargets_probability = MPI_shared_malloc_span<double>(tmpallphixstargets.size());
 
-    MPI_Barrier(globals::mpi_comm_node);
+    if (globals::rank_in_node == 0) {
+      std::copy_n(tmpallphixs.cbegin(), tmpallphixs.size(), globals::allphixs.data());
 
-    std::copy_n(tmpallphixs.cbegin(), tmpallphixs.size(), globals::allphixs.data());
-
-    for (int i = 0; i < std::ssize(tmpallphixstargets); i++) {
-      globals::allphixstargets_levelindex[i] = tmpallphixstargets[i].levelindex;
-      globals::allphixstargets_probability[i] = tmpallphixstargets[i].probability;
+      for (int i = 0; i < std::ssize(tmpallphixstargets); i++) {
+        globals::allphixstargets_levelindex[i] = tmpallphixstargets[i].levelindex;
+        globals::allphixstargets_probability[i] = tmpallphixstargets[i].probability;
+      }
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(globals::mpi_comm_node);
 
     tmpallphixs.clear();
     tmpallphixs.shrink_to_fit();
