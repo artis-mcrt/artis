@@ -89,10 +89,11 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     "23: kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y "
     "time steps"};
 
-void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
-                           const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
-                           std::vector<float> &tmpallphixs, std::vector<PhotoionTarget> &tmpallphixstargets,
-                           size_t *mem_usage_phixs, const int phixs_file_version) {
+void read_phixs_data_table(
+    std::fstream &phixsfile, const int nphixspoints_inputtable, const int element, const int lowerion,
+    const int lowerlevel, const int upperion, int upperlevel_in, std::vector<float> &tmpallphixs,
+    std::vector<PhotoionTarget> &tmpallphixstargets,  // cppcheck-suppress constParameterReference
+    size_t *mem_usage_phixs, const int phixs_file_version) {
   std::string phixsline;
   const auto phixstargetstart = static_cast<int>(tmpallphixstargets.size());
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
@@ -137,8 +138,9 @@ void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_input
         probability_sum += phixstargetprobability;
       }
       if (fabs(probability_sum - 1.0) > 0.01) {
-        printout("WARNING: photoionisation table for Z=%d ionstage %d has probabilities that sum to %g",
+        printout("ERROR: photoionisation table for Z=%d ionstage %d has probabilities that sum to %g",
                  get_atomicnumber(element), get_ionstage(element, lowerion), probability_sum);
+        assert_always(false);
       }
     } else {  // file has table of target states and probabilities but our top ion is limited to one level
       globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] = 1;
