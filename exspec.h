@@ -1,3 +1,4 @@
+#pragma once
 /// Spectrum data structure
 #define MNUBINS   1000
 #define MABINS    100
@@ -74,8 +75,3 @@ typedef struct
   double stokes[3];
 } EPKT;
 EPKT *epkts;
-
-
-
-
-
