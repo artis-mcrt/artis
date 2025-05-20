@@ -270,6 +270,13 @@ endif
 # and write it to version.h to so that the code knows which
 # revision was used for a particular run
 
+CFLAGS += -std=c99 -O3
+LDFLAGS += $(shell pkg-config --libs gsl)
+CFLAGS += $(shell pkg-config --cflags gsl)
+CC = mpicc
+CFLAGS += -DMPI_ON
+exspec: override CFLAGS = -std=c99 -O3 -DDO_EXSPEC
+exspec: override CC = cc
 
 
 sn3d_objects = sn3d.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o grey_emissivities.o syn_lc.o  ltepop.o atomic.o ratecoeff.o thermalbalance.o polarization.o vpkt.o
@@ -310,7 +317,7 @@ version:
 
 
 clean:
-	rm -f *o
+	rm -f *.o
 
 veryclean:
-	rm -f *o *exe *~ 
+	rm -f *.o *exe *~ 
