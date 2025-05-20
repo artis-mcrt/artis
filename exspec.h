@@ -4,9 +4,9 @@
 #define MABINS    100
 #define MTBINS  200
 
-int nprocs_exspec;
-int do_emission_res;
-int nepkts;
+extern int nprocs_exspec;
+extern int do_emission_res;
+extern int nepkts;
 
 typedef struct 
 {
@@ -23,27 +23,26 @@ struct spec
   float delta_t;
   //int packets[MNUBINS];
   emstat_t stat[MNUBINS];
-} spectra[MTBINS]; //, spectra_res[MTBINS][MABINS];
+} extern spectra[MTBINS]; //, spectra_res[MTBINS][MABINS];
 
-double dlognu;
-
+extern double dlognu;
 
 /// Light curve data structure
 #define MTLCBINS  200
 #define MALCBINS  100
 #define MANGLCBINS 100
-double nu_min, nu_max; //limits on frequency range for gamma spectrum
+extern double nu_min, nu_max; //limits on frequency range for gamma spectrum
 
 struct lc
 {
   float lower_time;
   float delta_t;
   double lum;
-} light_curve[MTLCBINS], light_curve_cmf[MTLCBINS], light_curve_angle[MTLCBINS][MANGLCBINS];
+};
+extern struct lc light_curve[MTLCBINS], light_curve_cmf[MTLCBINS], light_curve_angle[MTLCBINS][MANGLCBINS];
 
-double dlogtlc;
-double dlogtlc_angle;
-
+extern double dlogtlc;
+extern double dlogtlc_angle;
 
 ///Specpol
 
@@ -55,9 +54,12 @@ struct specpol
     float lower_time;
     float delta_t;
     emstat_t stat[MNUBINS];
-} stokes_i[MTBINS], stokes_q[MTBINS], stokes_u[MTBINS];
+};
+extern struct specpol stokes_i[MTBINS], stokes_q[MTBINS], stokes_u[MTBINS];
 
-
+extern struct spec spectra[MTBINS]; //, spectra_res[MTBINS][MABINS];
+extern struct lc light_curve[MTLCBINS], light_curve_cmf[MTLCBINS], light_curve_angle[MTLCBINS][MANGLCBINS];
+extern struct specpol stokes_i[MTBINS], stokes_q[MTBINS], stokes_u[MTBINS];
 
 typedef struct 
 {
@@ -74,4 +76,4 @@ typedef struct
   int em_time;
   double stokes[3];
 } EPKT;
-EPKT *epkts;
+extern EPKT *epkts;
