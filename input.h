@@ -8,7 +8,7 @@
 void input(int rank);
 void read_parameterfile(int rank);
 void update_parameterfile(int nts);
-void time_init();
+void setup_timesteps();
 void write_timestep_file();
 auto get_noncommentline(std::fstream &input, std::string &line) -> bool;
 

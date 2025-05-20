@@ -501,9 +501,25 @@ auto calculate_levelpop(const int nonemptymgi, const int element, const int ion,
   return nn;
 }
 
+[[nodiscard]] __host__ __device__ auto get_levelpop(const int nonemptymgi, const int uniquelevelindex) -> double {
+  double nn = 0.;
+  if (use_cellcache) {
+    assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
+    nn = globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex].population;
+  } else {
+    const auto [element, ion, level] = get_levelfromuniquelevelindex(uniquelevelindex);
+    nn = calculate_levelpop(nonemptymgi, element, ion, level);
+  }
+
+  assert_testmodeonly(nn >= 0.);
+  assert_testmodeonly(std::isfinite(nn));
+
+  return nn;
+}
+
 // Calculate the population of a level from either LTE or NLTE information
-__host__ __device__ auto get_levelpop(const int nonemptymgi, const int element, const int ion, const int level)
-    -> double {
+[[nodiscard]] __host__ __device__ auto get_levelpop(const int nonemptymgi, const int element, const int ion,
+                                                    const int level) -> double {
   double nn = 0.;
   if (use_cellcache) {
     assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);

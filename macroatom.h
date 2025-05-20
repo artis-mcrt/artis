@@ -1,7 +1,6 @@
 #ifndef MACROATOM_H
 #define MACROATOM_H
 
-#include "globals.h"
 #include "packet.h"
 
 void macroatom_open_file(int my_rank);
@@ -9,13 +8,13 @@ void macroatom_close_file();
 
 void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate);
 
-[[nodiscard]] auto rad_deexcitation_ratecoeff(int nonemptymgi, int element, int ion, int lower, double epsilon_trans,
-                                              float A_ul, double upperstatweight, double nnlevelupper, double t_current)
-    -> double;
+[[nodiscard]] auto rad_deexcitation_ratecoeff(int nonemptymgi, int lower_uniquelevelindex, double epsilon_trans,
+                                              float A_ul, double upperstatweight, double lowerstatweight,
+                                              double nnlevelupper, double t_current) -> double;
 
-[[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, int element, int ion, int lower,
-                                            const LevelTransition &uptrans, double epsilon_trans, double nnlevel_lower,
-                                            int lineindex, double t_current) -> double;
+[[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, int upper_uniquelevelindex, double upper_statweight,
+                                            double einstein_A, double epsilon_trans, double nnlevel_lower,
+                                            double statweight_lower, int alltransindex, double t_current) -> double;
 
 [[nodiscard]] auto rad_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upperionlevel,
                                                int lowerionlevel, int nonemptymgi) -> double;
@@ -29,10 +28,10 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate);
 [[nodiscard]] auto col_ionization_ratecoeff(float T_e, float nne, int element, int ion, int lower, int phixstargetindex,
                                             double epsilon_trans) -> double;
 
-[[nodiscard]] auto col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, int element, int ion,
-                                              int upper, const LevelTransition &downtransition) -> double;
+[[nodiscard]] auto col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, double upperstatweight,
+                                              double lowerstatweight, int alltransindex) -> double;
 
-[[nodiscard]] auto col_excitation_ratecoeff(float T_e, float nne, int element, int ion, const LevelTransition &uptrans,
+[[nodiscard]] auto col_excitation_ratecoeff(float T_e, float nne, double upperstatweight, int alltransindex,
                                             double epsilon_trans, double lowerstatweight) -> double;
 
 #endif  // MACROATOM_H

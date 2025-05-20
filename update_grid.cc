@@ -1030,7 +1030,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     printout("timestep %d cell %d is treated in grey approximation (chi_grey %g [cm2/g], tau %g >= %g)\n", nts, mgi,
              grid::get_kappagrey(nonemptymgi), grey_optical_depth, globals::cell_is_optically_thick);
     grid::modelgrid[nonemptymgi].thick = 1;
-  } else if (VPKT_ON && (grey_optical_depth > cell_is_optically_thick_vpkt)) {
+  } else if (VPKT_ON && (grey_optical_depth > vpkt::cell_is_optically_thick_vpkt)) {
     grid::modelgrid[nonemptymgi].thick = 2;
   } else {
     grid::modelgrid[nonemptymgi].thick = 0;
@@ -1180,8 +1180,10 @@ void cellcache_change_cell(const int nonemptymgi) {
       cacheslot
           .cooling_contrib[kpkt::get_coolinglistoffset(element, ion) + kpkt::get_ncoolingterms_ion(element, ion) - 1] =
           COOLING_UNDEFINED;
+    }
 
-      if (nonemptymgi >= 0) {
+    if (nonemptymgi >= 0) {
+      for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
         auto &chion = cacheslot.chelements[element].chions[ion];
 #ifdef _OPENMP
@@ -1192,24 +1194,15 @@ void cellcache_change_cell(const int nonemptymgi) {
         }
       }
     }
+  }
 
-    for (int ion = 0; ion < nions; ion++) {
-      const int nlevels = get_nlevels(element, ion);
-      auto &chion = cacheslot.chelements[element].chions[ion];
-      for (int level = 0; level < nlevels; level++) {
-        const auto nphixstargets = get_nphixstargets(element, ion, level);
-        auto &chlevel = chion.chlevels[level];
-        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          chlevel.chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
+  std::ranges::fill(cacheslot.allphixstargets_corrphotoioncoeff, -99.);
+  if constexpr (SEPARATE_STIMRECOMB) {
+    std::ranges::fill(cacheslot.allphixstargets_stimrecombcoeff, -99.);
+  }
 
-#if (SEPARATE_STIMRECOMB)
-          chlevel.chphixstargets[phixstargetindex].stimrecombcoeff = -99.;
-#endif
-        }
-
-        chlevel.processrates[MA_ACTION_INTERNALUPHIGHER] = -99.;
-      }
-    }
+  for (int uniquelevelindex = 0; uniquelevelindex < std::ssize(cacheslot.ch_all_levels); uniquelevelindex++) {
+    cacheslot.ch_all_levels[uniquelevelindex].processrates[MA_ACTION_INTERNALUPHIGHER] = -99.;
   }
 
   if (nonemptymgi >= 0) {
@@ -1220,7 +1213,8 @@ void cellcache_change_cell(const int nonemptymgi) {
       const int element = globals::allcont[i].element;
       const int ion = globals::allcont[i].ion;
       const int level = globals::allcont[i].level;
-      const auto nnlevel = get_levelpop(nonemptymgi, element, ion, level);
+      const auto nnlevel =
+          globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].population;
       cacheslot.ch_allcont_nnlevel[i] = nnlevel;
       cacheslot.ch_keep_this_cont[i] = nnlevel > 0 && keep_this_cont(element, ion, level, nonemptymgi, nnetot);
     }

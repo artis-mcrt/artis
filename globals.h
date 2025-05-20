@@ -74,24 +74,12 @@ struct LevelTransition {
   bool forbidden;
 };
 
-struct PhotoionTarget {
-  double probability;  // fraction of phixs cross section leading to this final level
-  int levelindex;  // index of upper ion level after photoionisation
-};
-
-struct EnergyLevel {
+struct EnergyLevelInput {
   double epsilon{-1};  // Excitation energy of this level relative to the neutral ground level.
   int alltrans_startdown{};  // index into globals::alltrans for first down transition from this level
   int ndowntrans{0};  // Number of down transitions from this level
   int nuptrans{0};  // Number of up transitions to this level
-  int phixsstart{-1};  // index to start of photoionisation cross-sections table in global::allphixs
-  int nphixstargets{0};  // number of target levels for photoionisation
   float stat_weight{0.};  // statistical weight of this level
-  int phixstargetstart{-1};  // index into globals::allphixstargets
-  int cont_index{-1};  // index of the bound-free continuum (for first target) sorted by
-                       // element/ion/level/phixstargetindex
-                       // (not an index into the nu_edge-sorted allcont list!)
-  int closestgroundlevelcont{-1};
 
   [[nodiscard]] constexpr auto alltrans_startup() const -> int {
     // index into globals::alltrans for first up transition from this level
@@ -139,19 +127,6 @@ struct GSLIntegrationParas {
   const float *photoion_xs;
 };
 
-template <bool separatestimrecomb>
-struct chphixstargets {
-  double corrphotoioncoeff;
-};
-
-template <>
-struct chphixstargets<true> {
-  double corrphotoioncoeff;
-  double separatestimrecomb;
-};
-
-using CellCachePhixsTargets = chphixstargets<SEPARATE_STIMRECOMB>;
-
 enum ma_action {
   // Radiative deexcitation rate from this level.
   MA_ACTION_RADDEEXC = 0,
@@ -175,12 +150,11 @@ enum ma_action {
 };
 
 struct CellCacheLevels {
-  std::array<double, MA_ACTION_COUNT> processrates;
-  CellCachePhixsTargets *chphixstargets;
-  double population;
-  double *sum_epstrans_rad_deexc;
-  double *sum_internal_down_same;
-  double *sum_internal_up_same;
+  std::array<double, MA_ACTION_COUNT> processrates{-1.};
+  double population{NAN};
+  double *sum_epstrans_rad_deexc{nullptr};
+  double *sum_internal_down_same{nullptr};
+  double *sum_internal_up_same{nullptr};
 };
 
 struct CellCacheIons {
@@ -200,7 +174,8 @@ struct CellCache {
   std::vector<bool> ch_keep_this_cont;
   double chi_ff_nnionpart{-1};
   int nonemptymgi{-1};  // Identifies the cell the data is valid for.
-  std::vector<CellCachePhixsTargets> chphixstargetsblock;  // photoionisation targets for all levels
+  std::vector<double> allphixstargets_corrphotoioncoeff;
+  std::vector<double> allphixstargets_stimrecombcoeff;
   std::vector<double> chtransblock;  // cumulative transition rates for all levels
 };
 
@@ -258,9 +233,51 @@ inline int opacity_case{};  // 0 grey, 1 for Fe-grp dependence.
 inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperature table value
 
 inline std::span<float> allphixs{};
-inline std::span<LevelTransition> alltrans{};
-inline std::vector<PhotoionTarget> allphixstargets;
-inline std::span<EnergyLevel> alllevels;
+struct AllTransitions {
+  std::span<int> lineindex;
+  std::span<int> targetlevelindex;
+  std::span<float> einstein_A;
+  std::span<float> coll_str;
+  std::span<float> osc_strength;
+  std::span<bool> forbidden;
+};
+inline AllTransitions alltrans;
+
+inline std::span<int> allphixstargets_levelindex;  // index of upper ion level after photoionisation
+inline std::span<double>
+    allphixstargets_probability;  // fraction of phixs cross section leading to associated final level
+
+struct AllLevels {
+  // all of these arrays are indexed by uniquelevelindex, which can be derived from the element, ion, level
+
+  std::span<double> epsilon;
+  std::span<float> statweight;
+  std::span<int> closestgroundlevelcont;
+
+  // index to start of photoionisation cross-sections table in global::allphixs
+  std::span<int> phixsstart;
+
+  // number of target levels for photoionisation
+  std::span<int> nphixstargets;
+
+  // index into globals::allphixstargets for the first target level
+  std::span<int> phixstargetstart;
+
+  // index of the bound-free continuum (for first target) sorted by element/ion/level/phixstargetindex (not an index
+  // into the nu_edge-sorted allcont list!)
+  std::span<int> cont_index;
+
+  // index into globals::alltrans for first down transition from each level
+  std::span<int> alltrans_startdown;
+
+  // Number of down transitions from each level
+  std::span<int> ndowntrans;
+
+  // Number of up transitions from each level
+  std::span<int> nuptrans;
+};
+
+inline AllLevels alllevels{};
 
 inline std::vector<Element> elements;
 

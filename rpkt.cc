@@ -437,7 +437,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
 
     // generate a virtual packet
     if constexpr (VPKT_ON) {
-      vpkt_call_estimators(pkt, TYPE_RPKT);
+      vpkt::call_estimators(pkt, TYPE_RPKT);
     }
 
     // pkt.nu_cmf = 3.7474058e+14;
@@ -481,14 +481,11 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     const int level = globals::allcont[allcontindex].level;
     const int phixstargetindex = globals::allcont[allcontindex].phixstargetindex;
 
-    // printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n", element, ion +
-    // 1, 0, ion, level); printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
-
     if constexpr (TRACK_ION_STATS) {
       stats::increment_ion_stats_contabsorption(pkt, nonemptymgi, element, ion);
     }
 
-    // and decide whether we go to ionisation energy
+    // decide whether we go to ionisation energy or to the thermal pool
     if (rng_uniform() < nu_edge / nu) {
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BF);
       stats::increment(stats::COUNTER_INTERACTIONS);
@@ -500,11 +497,8 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
       do_macroatom(pkt, {.element = element, .ion = ion + 1, .level = upper, .activatingline = -99});
-    }
-    // or to the thermal pool
-    else {
+    } else {
       // transform to k-pkt
-      // printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
       stats::increment(stats::COUNTER_K_STAT_FROM_BF);
       stats::increment(stats::COUNTER_INTERACTIONS);
       pkt.type = TYPE_KPKT;
