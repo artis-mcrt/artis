@@ -693,7 +693,7 @@ void read_model_radioabundances(std::fstream &fmodel, std::istringstream &ssline
       set_modelinitnucmassfrac(mgi, nucindexlist[i], valuein);
     } else if (colnames[i] == "X_Fegroup") {
       set_ffegrp(mgi, valuein);
-    } else if (colnames[i] == "cellYe") {
+    } else if (colnames[i] == "cellYe" || colnames[i] == "Ye") {
       set_initelectronfrac(mgi, valuein);
     } else if (colnames[i] == "q") {
       // use value for t_model and adjust to tmin with expansion factor
