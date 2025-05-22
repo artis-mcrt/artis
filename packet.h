@@ -32,18 +32,16 @@ struct MacroAtomState {
 };
 
 struct Packet {
-  enum packet_type type {};  // type of packet (k-, r-, etc.)
   double prop_time{-1.};  // internal clock to track how far in time the packet has been propagated
-  int where{-1};  // The propagation grid cell that the packet is in.
-  int nscatterings{0};  // records number of electron scatterings a r-pkt undergone since it was emitted
   Vec3d pos{};  // Position of the packet (x,y,z).
   Vec3d dir{};  // Direction of propagation. (x,y,z). Always a unit vector.
-  double e_cmf{0.};  // The energy the packet carries in the co-moving frame.
-  double e_rf{0.};  // The energy the packet carries in the rest frame.
   double nu_cmf{0.};  // The frequency in the co-moving frame.
+  double e_cmf{0.};  // The energy the packet carries in the co-moving frame.
   double nu_rf{0.};  // The frequency in the rest frame.
+  double e_rf{0.};  // The energy the packet carries in the rest frame.
   int next_trans{-1};  // This keeps track of the next possible line interaction of a rpkt by storing
                        // its linelist index (to overcome numerical problems in propagating the rpkts).
+  int nscatterings{0};  // records number of electron scatterings a r-pkt undergone since it was emitted
   int emissiontype{EMTYPE_NOTSET};  // records how the packet was emitted if it is a r-pkt
   Vec3d em_pos{NAN};  // Position of the last emission (x,y,z).
   float em_time{-1.};
@@ -53,18 +51,20 @@ struct Packet {
                           // decaying pellets of the 52Fe chain (-6) and pellets which decayed before the
                           // onset of the simulation (-7)
                           // decay of a positron pellet (-10)
-  int trueemissiontype = EMTYPE_NOTSET;  // emission type coming from a kpkt to rpkt (last thermal emission)
-  float trueem_time{-1.};  // first thermal emission time [s]
   double absorptionfreq{};  // records nu_rf of packet at last absorption
   Vec3d stokes{1., 0., 0.};  // I, Q and U Stokes parameters
-  double tdecay{-1.};  // Time at which pellet decays
+  int trueemissiontype = EMTYPE_NOTSET;  // emission type coming from a kpkt to rpkt (last thermal emission)
+  float trueemissionvelocity{-1};
+  float trueem_time{-1.};  // first thermal emission time [s]
+  enum packet_type type {};  // type of packet (k-, r-, etc.)
+  int where{-1};  // The propagation grid cell that the packet is in.
   enum packet_type escape_type {};  // In which form when escaped from the grid.
   float escape_time{-1};  // time at which is passes out of the grid [s]
+  double tdecay{-1.};  // Time at which pellet decays
   int number{-1};  // A unique number to identify the packet
   bool originated_from_particlenotgamma{false};  // first-non-pellet packet type was gamma
   int pellet_decaytype{-1};  // index into decay::decaytypes
   int pellet_nucindex{-1};  // nuclide index of the decaying species
-  float trueemissionvelocity{-1};
 
   auto operator<=>(const Packet &rhs) const = default;
 };

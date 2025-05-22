@@ -22,6 +22,7 @@
 #include "sn3d.h"
 #include "vectors.h"
 
+namespace vpkt {
 namespace {
 
 struct StokesParams {
@@ -587,7 +588,7 @@ void read_vpkt_grid(const int my_rank, const int nts) {
 
 }  // anonymous namespace
 
-void vpkt_remove_temp_file(const int nts, const int my_rank) {
+void remove_temp_vpkt_file(const int nts, const int my_rank) {
   std::array<char[MAXFILENAMELENGTH], 3> filenames{};
   snprintf(filenames[0], MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
   snprintf(filenames[1], MAXFILENAMELENGTH, "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
@@ -601,7 +602,7 @@ void vpkt_remove_temp_file(const int nts, const int my_rank) {
   }
 }
 
-void read_parameterfile_vpkt() {
+void read_vpktparameterfile() {
   FILE *input_file = fopen_required("vpkt.txt", "r");
 
   // Nobs
@@ -784,7 +785,7 @@ void read_parameterfile_vpkt() {
   fclose(input_file);
 }
 
-void vpkt_write_timestep(const int nts, const int my_rank, const bool is_final) {
+void write_timestep(const int nts, const int my_rank, const bool is_final) {
   if constexpr (!VPKT_ON) {
     return;
   }
@@ -838,7 +839,7 @@ void vpkt_write_timestep(const int nts, const int my_rank, const bool is_final) 
   }
 }
 
-void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved) {
+void init(const int nts, const int my_rank, const bool continued_from_saved) {
   if constexpr (!VPKT_ON) {
     return;
   }
@@ -889,7 +890,7 @@ void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved
   }
 }
 
-auto vpkt_call_estimators(const Packet &pkt, const enum packet_type type_before_rpkt) -> void {
+auto call_estimators(const Packet &pkt, const enum packet_type type_before_rpkt) -> void {
   if constexpr (!VPKT_ON) {
     return;
   }
@@ -953,3 +954,4 @@ auto vpkt_call_estimators(const Packet &pkt, const enum packet_type type_before_
     vpkt_contrib_file.flush();
   }
 }
+}  // namespace vpkt

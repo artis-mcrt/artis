@@ -232,7 +232,7 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
 
   Spectra gamma_spectra;
 
-  time_init();
+  setup_timesteps();
 
   const int amax = ((grid::get_model_type() == GridType::SPHERICAL1D)) ? 0 : MABINS;
   // a is the escape direction angle bin

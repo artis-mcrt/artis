@@ -114,21 +114,24 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
                                 const double nne) -> double {
   double C_deexc = 0.;
   const int nlevels = get_nlevels(element, ion);
-
+  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
   for (int level = 0; level < nlevels; level++) {
-    const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
-    const double epsilon_level = epsilon(element, ion, level);
+    const auto uniquelevelindex = ionuniquelevelindexstart + level;
+    const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+    const double epsilon_level = epsilon(uniquelevelindex);
+    const double statweight = stat_weight(uniquelevelindex);
 
     // Collisional heating: deexcitation to same ionization stage
-    const int ndowntrans = get_ndowntrans(element, ion, level);
-    const auto *const leveldowntranslist = get_downtranslist(element, ion, level);
+    const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
+    const int ndowntrans = get_ndowntrans(uniquelevelindex);
     for (int i = 0; i < ndowntrans; i++) {
-      const auto &downtransition = leveldowntranslist[i];
-      const int lower = downtransition.targetlevelindex;
-      const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
-      const double C = nnlevel *
-                       col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtransition) *
-                       epsilon_trans;
+      const auto alltransindex = alltrans_startdown + i;
+      const int lower = globals::alltrans.targetlevelindex[alltransindex];
+      const double epsilon_trans = epsilon_level - epsilon(ionuniquelevelindexstart + lower);
+      const auto lower_statweight = stat_weight(ionuniquelevelindexstart + lower);
+      const double C =
+          nnlevel * col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex) *
+          epsilon_trans;
       C_deexc += C;
     }
   }
@@ -166,9 +169,11 @@ void calculate_heating_rates(const int nonemptymgi, const double T_e, const doub
 
     for (int ion = 0; ion < nions - 1; ion++) {
       const int nbflevels = get_nlevels_ionising(element, ion);
+      const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
       for (int level = 0; level < nbflevels; level++) {
-        const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
-        bfheating += nnlevel * bfheatingcoeffs[get_uniquelevelindex(element, ion, level)];
+        const auto uniquelevelindex = ionuniquelevelindexstart + level;
+        const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+        bfheating += nnlevel * bfheatingcoeffs[uniquelevelindex];
       }
     }
   }
@@ -281,7 +286,8 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
           assert_always(std::isfinite(bfheatingcoeff));
 
           if constexpr (USE_LUT_BFHEATING) {
-            const int index_in_groundlevelcontestimator = get_ion_levels(element, ion)[level].closestgroundlevelcont;
+            const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+            const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
             if (index_in_groundlevelcontestimator >= 0) {
               bfheatingcoeff *= globals::bfheatingestimator[(nonemptymgi * globals::nbfcontinua_ground) +
                                                             index_in_groundlevelcontestimator];

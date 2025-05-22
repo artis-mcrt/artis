@@ -4,12 +4,14 @@
 #include "constants.h"
 #include "packet.h"
 
-void read_parameterfile_vpkt();
-void vpkt_init(int nts, int my_rank, bool continued_from_saved);
-void vpkt_call_estimators(const Packet &pkt, enum packet_type type_before_rpkt);
-void vpkt_write_timestep(int nts, int my_rank, bool is_final);
+namespace vpkt {
 
-void vpkt_remove_temp_file(int nts, int my_rank);
+void read_vpktparameterfile();
+void init(int nts, int my_rank, bool continued_from_saved);
+void call_estimators(const Packet &pkt, enum packet_type type_before_rpkt);
+void write_timestep(int nts, int my_rank, bool is_final);
+
+void remove_temp_vpkt_file(int nts, int my_rank);
 
 constexpr int VGRID_NY = 50;
 constexpr int VGRID_NZ = 50;
@@ -33,5 +35,6 @@ inline int nvpkt_esc_from_kpkt{0};  // kpkt deactivation
 inline int nvpkt_esc_from_macroatom{0};  // macroatom deactivation
 
 inline double cell_is_optically_thick_vpkt;
+}  // namespace vpkt
 
 #endif  // VPKT_H

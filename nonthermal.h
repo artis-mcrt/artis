@@ -19,15 +19,15 @@ void calculate_deposition_rate_density(int nonemptymgi, int timestep, HeatingCoo
 [[nodiscard]] auto get_deposition_rate_density(int nonemptymgi) -> double;
 [[nodiscard]] auto get_nt_frac_heating(int nonemptymgi) -> float;
 
-[[nodiscard]] auto nt_excitation_ratecoeff(int nonemptymgi, int element, int ion, int lowerlevel, int uptransindex,
-                                           int lineindex) -> double;
+[[nodiscard]] auto nt_excitation_ratecoeff(int nonemptymgi, int lowerlevel, int upperlevel, int alltransindex)
+    -> double;
 void do_ntalpha_deposit(Packet &pkt);
 void do_ntlepton_deposit(Packet &pkt);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);
 void nt_MPI_Bcast(int nonemptymgi, int root_node_id);
-void nt_reset_stats();
-void nt_print_stats(double modelvolume, double deltat);
+void reset_stats();
+void print_stats(double modelvolume, double deltat);
 }  // namespace nonthermal
 
 #endif  // NONTHERMAL_H

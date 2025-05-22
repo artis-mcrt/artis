@@ -79,7 +79,7 @@ void set_Te(int nonemptymgi, float Te);
 void set_TR(int nonemptymgi, float TR);
 void set_TJ(int nonemptymgi, float TJ);
 void set_W(int nonemptymgi, float W);
-void grid_init(int my_rank);
+void init_grid(int my_rank);
 [[nodiscard]] auto get_modelinitnucmassfrac(int modelgridindex, int nucindex) -> float;
 [[nodiscard]] auto get_stable_initabund(int nonemptymgi, int element) -> float;
 [[nodiscard]] auto get_element_meanweight(int nonemptymgi, int element) -> float;

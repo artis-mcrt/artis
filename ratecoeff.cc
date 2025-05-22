@@ -661,9 +661,10 @@ void precalculate_ion_alpha_sp() {
         const int nionisinglevels = get_nlevels_ionising(element, ion);
         double zeta = 0.;
         for (int level = 0; level < nionisinglevels; level++) {
-          const auto nphixstargets = get_nphixstargets(element, ion, level);
+          const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+          const auto nphixstargets = get_nphixstargets(uniquelevelindex);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            const double zeta_level = get_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
+            const double zeta_level = get_spontrecombcoeff(uniquelevelindex, phixstargetindex, T_e);
             zeta += zeta_level;
           }
         }
@@ -761,13 +762,15 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const vo
   return ONEOVERH * sigma_bf / nu * Jnu * corrfactor;
 }
 
-auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int level, const int phixstargetindex,
-                                          int nonemptymgi) -> double {
+auto calculate_corrphotoioncoeff_integral(const int element, const int ion, const int level, const int phixstargetindex,
+                                          const int nonemptymgi) -> double {
   constexpr double epsrel = 1e-3;
   constexpr double epsrelwarning = 1e-1;
   constexpr double epsabs = 0.;
 
-  const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+
+  const double E_threshold = get_phixs_threshold(uniquelevelindex, phixstargetindex);
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
@@ -777,9 +780,9 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
   const double departure_ratio = 0.;  // zero the stimulated recomb contribution
 #else
   // stimulated recombination is negative photoionisation
-  const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
+  const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
   const double nne = grid::get_nne(nonemptymgi);
-  const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+  const int upperionlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
   const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
   const double nnupperionlevel = get_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
   double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.;  // put that to phixslist
@@ -790,7 +793,7 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
   const auto intparas = GSLIntegralParasGammaCorr{
       .nu_edge = nu_threshold,
       .departure_ratio = departure_ratio,
-      .photoion_xs = get_phixs_table(element, ion, level),
+      .photoion_xs = get_phixs_table(uniquelevelindex),
       .T_e = T_e,
       .nonemptymgi = nonemptymgi,
   };
@@ -820,7 +823,7 @@ auto calculate_corrphotoioncoeff_integral(int element, const int ion, const int 
     }
   }
 
-  gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+  gammacorr *= FOURPI * get_phixsprobability(uniquelevelindex, phixstargetindex);
 
   return gammacorr;
 }
@@ -866,6 +869,22 @@ auto get_nlevels_important(const int nonemptymgi, const int element, const int i
   return {nlevels_important, nnlevelsum};
 }
 
+auto interpolate_corrphotoioncoeff(const int uniquelevelindex, const int phixstargetindex, const double T) -> double {
+  assert_always(USE_LUT_PHOTOION);
+  const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
+  if (lowerindex < TABLESIZE - 1) {
+    const int upperindex = lowerindex + 1;
+    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
+    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
+
+    const double f_upper = corrphotoioncoeffs[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
+    const double f_lower = corrphotoioncoeffs[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
+
+    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower)));
+  }
+  return corrphotoioncoeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
+}
+
 }  // anonymous namespace
 
 void setup_photoion_luts() {
@@ -907,8 +926,9 @@ void setup_photoion_luts() {
 
 __host__ __device__ auto select_continuum_nu(int element, const int lowerion, const int lower, const int upperionlevel,
                                              float T_e) -> double {
-  const int phixstargetindex = get_phixtargetindex(element, lowerion, lower, upperionlevel);
-  const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
+  const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
+  const int phixstargetindex = get_phixtargetindex(lower_uniquelevelindex, upperionlevel);
+  const double E_threshold = get_phixs_threshold(lower_uniquelevelindex, phixstargetindex);
   const double nu_threshold = ONEOVERH * E_threshold;
 
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
@@ -916,7 +936,7 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
   const int npieces = globals::NPHIXSPOINTS;
 
   const GSLIntegrationParas intparas = {
-      .nu_edge = nu_threshold, .T = T_e, .photoion_xs = get_phixs_table(element, lowerion, lower)};
+      .nu_edge = nu_threshold, .T = T_e, .photoion_xs = get_phixs_table(lower_uniquelevelindex)};
 
   const double zrand = 1. - rng_uniform();  // Make sure that 0 < zrand <= 1
 
@@ -962,8 +982,8 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
 }
 
 // Return the rate coefficient for spontaneous recombination.
-__host__ __device__ auto get_spontrecombcoeff(int element, const int ion, const int level, const int phixstargetindex,
-                                              float T_e) -> double {
+__host__ __device__ auto get_spontrecombcoeff(const int uniquelevelindex, const int phixstargetindex, float T_e)
+    -> double {
   double Alpha_sp{NAN};
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   assert_always(lowerindex >= 0);
@@ -972,11 +992,11 @@ __host__ __device__ auto get_spontrecombcoeff(int element, const int ion, const 
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper = spontrecombcoeffs[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
-    const double f_lower = spontrecombcoeffs[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
+    const double f_upper = spontrecombcoeffs[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
+    const double f_lower = spontrecombcoeffs[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
     Alpha_sp = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   } else {
-    Alpha_sp = spontrecombcoeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
+    Alpha_sp = spontrecombcoeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
   }
   return Alpha_sp;
 }
@@ -1136,23 +1156,6 @@ void ratecoefficients_init() {
   printout("time after tabulation of rate coefficients %ld\n", std::time(nullptr));
 }
 
-auto interpolate_corrphotoioncoeff(const int element, const int ion, const int level, const int phixstargetindex,
-                                   const double T) -> double {
-  assert_always(USE_LUT_PHOTOION);
-  const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
-  if (lowerindex < TABLESIZE - 1) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
-
-    const double f_upper = corrphotoioncoeffs[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
-    const double f_lower = corrphotoioncoeffs[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
-
-    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower)));
-  }
-  return corrphotoioncoeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
-}
-
 auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex,
                                const int nonemptymgi) -> double
 // Returns the for stimulated emission corrected photoionisation rate coefficient.
@@ -1163,8 +1166,8 @@ auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, cons
   // correction may be evaluated at T_R!
   const double W = grid::get_W(nonemptymgi);
   const double T_R = grid::get_TR(nonemptymgi);
-
-  return W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
+  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+  return W * interpolate_corrphotoioncoeff(uniquelevelindex, phixstargetindex, T_R);
 }
 
 // Returns the stimulated recombination rate coefficient. multiply by upper level population and nne to get rate
@@ -1173,12 +1176,9 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
   double stimrecombcoeff = -1.;
 #if (SEPARATE_STIMRECOMB)
   if (use_cellcache) {
-    stimrecombcoeff = globals::cellcache[cellcacheslotid]
-                          .chelements[element]
-                          .chions[lowerion]
-                          .chlevels[level]
-                          .chphixstargets[phixstargetindex]
-                          .stimrecombcoeff;
+    const auto uniquelevelindex = get_uniquelevelindex(element, lowerion, level);
+    const auto allphixstargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
+    stimrecombcoeff = globals::cellcache[cellcacheslotid].allphixstargets_stimrecombcoeff[allphixstargetindex];
   }
 #endif
 
@@ -1187,12 +1187,7 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
 
 #if (SEPARATE_STIMRECOMB)
     if (use_cellcache) {
-      globals::cellcache[cellcacheslotid]
-          .chelements[element]
-          .chions[lowerion]
-          .chlevels[level]
-          .chphixstargets[phixstargetindex]
-          .stimrecombcoeff = stimrecombcoeff;
+      globals::cellcache[cellcacheslotid].allphixstargets_stimrecombcoeff[allphixstargetindex] = stimrecombcoeff;
     }
 #endif
   }
@@ -1204,17 +1199,18 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
 __host__ __device__ auto get_bfcoolingcoeff(const int element, const int ion, const int level,
                                             const int phixstargetindex, const float T_e) -> double {
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
+  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   if (lowerindex < TABLESIZE - 1) {
     const int upperindex = lowerindex + 1;
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper = bfcooling_coeffs[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
-    const double f_lower = bfcooling_coeffs[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
+    const double f_upper = bfcooling_coeffs[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
+    const double f_lower = bfcooling_coeffs[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
 
     return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower)));
   }
-  return bfcooling_coeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
+  return bfcooling_coeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
 }
 
 // Return the photoionisation rate coefficient (corrected for stimulated emission)
@@ -1223,13 +1219,10 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
   // The correction factor for stimulated emission in gammacorr is set to its
   // LTE value. Because the T_e dependence of gammacorr is weak, this correction
   // correction may be evaluated at T_R!
-  double gammacorr = (use_cellcache) ? globals::cellcache[cellcacheslotid]
-                                           .chelements[element]
-                                           .chions[ion]
-                                           .chlevels[level]
-                                           .chphixstargets[phixstargetindex]
-                                           .corrphotoioncoeff
-                                     : -1;
+  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+  const auto allphisxtargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
+  double gammacorr =
+      (use_cellcache) ? globals::cellcache[cellcacheslotid].allphixstargets_corrphotoioncoeff[allphisxtargetindex] : -1;
 
   if (!use_cellcache || gammacorr < 0) {
     if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {
@@ -1244,8 +1237,8 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
         const double W = grid::get_W(nonemptymgi);
         const double T_R = grid::get_TR(nonemptymgi);
 
-        gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
-        const int index_in_groundlevelcontestimator = get_ion_levels(element, ion)[level].closestgroundlevelcont;
+        gammacorr = W * interpolate_corrphotoioncoeff(uniquelevelindex, phixstargetindex, T_R);
+        const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
         if (index_in_groundlevelcontestimator >= 0) {
           gammacorr *= globals::corrphotoionrenorm[(nonemptymgi * globals::nbfcontinua_ground) +
                                                    index_in_groundlevelcontestimator];
@@ -1253,12 +1246,7 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
       }
     }
     if (use_cellcache) {
-      globals::cellcache[cellcacheslotid]
-          .chelements[element]
-          .chions[ion]
-          .chlevels[level]
-          .chphixstargets[phixstargetindex]
-          .corrphotoioncoeff = gammacorr;
+      globals::cellcache[cellcacheslotid].allphixstargets_corrphotoioncoeff[allphisxtargetindex] = gammacorr;
     }
   }
 
@@ -1388,18 +1376,6 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
           // use the cellcache but not the detailed bf estimators
           gamma_coeff_integral +=
               calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, nonemptymgi);
-          // double gamma_coeff_integral_level_ch = globals::cellcache[cellcacheslotid]
-          //                                            .chelements[element]
-          //                                            .chions[lowerion]
-          //                                            .chlevels[lower]
-          //                                            .chphixstargets[phixstargetindex]
-          //                                            .corrphotoioncoeff;
-          // if (gamma_coeff_integral_level_ch >= 0) {
-          //   gamma_coeff_integral += gamma_coeff_integral_level_ch;
-          // } else {
-          //   gamma_coeff_integral +=
-          //       calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
-          // }
         }
       }
 
