@@ -135,6 +135,11 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   md5sum *.out job0/*.out | tee ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
+
+            - name: Validate job0 checksums
+              if: always() && inputs.testmode != 'ON'
+              working-directory: tests/${{ matrix.testname }}_testrun
+              run: |
                   if [ -f results_md5_job0.txt ]; then md5sum -c results_md5_job0.txt; else echo "results_md5_job0.txt not found"; fi
 
             - name: Run test job1 resume
@@ -194,7 +199,12 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   md5sum *.out job1/*.out | tee ../${{ matrix.testname }}_inputfiles/results_md5_final.txt
-                  if [ -f results_md5_final.txt ]; then md5sum -c results_md5_final.txt; else echo "results_md5_final.txt not found"; fi
+
+            - name: Validate job1 checksums
+              if: always() && inputs.testmode != 'ON'
+              working-directory: tests/${{ matrix.testname }}_testrun
+              run: |
+                    if [ -f results_md5_final.txt ]; then md5sum -c results_md5_final.txt; else echo "results_md5_final.txt not found"; fi
 
             - name: Prepare for next steps
               if: always()
