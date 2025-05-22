@@ -558,28 +558,41 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
 
   const int nlevels = get_nlevels(element, ion);
 
-  // Need to update this for the case when the top ion has been stripped??
-  // Need to check what the ordering of the NLTE solver vs NT calculatons
-  // is - if we have a function that returns the first_ion_used and nions_used
-  // but this is only after these NT functions that utilise nt_ionisation_maxupperion
-  // have been called then not sure what to do - but if the NLTE solver is called
-  // first then the nions_used and first_ion_used should be consistent throughout
-
-  // Need to update other instances of nt_ionisation_maxupperion to use first_ion_used and nions_used?
-  // I think its safe to just change the condition here and not change the nt_ionisation_maxupperion function
-  // since the other calls to nt_ionisation_maxupperion are called before solve_nlte_pops_element in update grid
-  // so they will use the entire ion - it should only be for the NT ionisation being added the the NLTE solver
-  // here that this should matter - which should be achieved by changing the condition of the below for loop to
-  // include the first_ion_used and nions_used variables
-
-  // maxupper = std::min(maxupper, first_ion_used + nions_used - 1);
-  // Change this condition to limit the upperionstage in the loop to the smaller of the physically upper limit from
-  // Auger electrons or the the new top ion if ion stages have been stripped due to a failure of the NLTE solver
+  // Looping through the different upper ionstages that are targets for NT ionisation and adding the NT ionsiation
+  // rate from the current ion being considering to these states on by one.
+  double Y_nt_thisupperion_sum = 0.0;
   for (int upperion = ion + 1;
        upperion <= std::min(nonthermal::nt_ionisation_maxupperion(element, ion), first_ion_used + nions_used - 1);
        upperion++) {
-    const double Y_nt_thisupperion =
+    double Y_nt_thisupperion =
         Y_nt * nonthermal::nt_ionization_upperion_probability(nonemptymgi, element, ion, upperion, false);
+
+    // For the case where the upperion taget is limited by ions having being stripped from the NLTE solution
+    // then need to add the Y_nt_this_upperion for the stripped ions to the last upperion which is being used in the
+    // solution so this contribution to the NT ionsiation rate isn't lost
+    if (nonthermal::nt_ionisation_maxupperion(element, ion) > (first_ion_used + nions_used - 1) &&
+        upperion == first_ion_used + nions_used - 1) {
+      for (int upperion_outside_NT_ionisation_range = first_ion_used + nions_used;
+           upperion_outside_NT_ionisation_range <= nonthermal::nt_ionisation_maxupperion(element, ion);
+           upperion_outside_NT_ionisation_range++) {
+        printout("nt_ionisation_maxupperion ionstage=%d first_ion_used + nions_used - 1 ionstage=%d\n",
+                 get_ionstage(element, nonthermal::nt_ionisation_maxupperion(element, ion)),
+                 get_ionstage(element, (first_ion_used + nions_used - 1)));
+        printout(
+            "Y_nt_thisupperion for ionstage=%d and upperion top allowed=%d before adding NT ionisation for stripped "
+            "ions "
+            "%g\n",
+            get_ionstage(element, ion), get_ionstage(element, upperion), Y_nt_thisupperion);
+        Y_nt_thisupperion += Y_nt * nonthermal::nt_ionization_upperion_probability(
+                                        nonemptymgi, element, ion, upperion_outside_NT_ionisation_range, false);
+        printout("Y_nt_thisupperion contribution from ionstage=%d (above upperion=%d) = %g\n",
+                 get_ionstage(element, upperion_outside_NT_ionisation_range), get_ionstage(element, upperion),
+                 Y_nt * nonthermal::nt_ionization_upperion_probability(nonemptymgi, element, ion,
+                                                                       upperion_outside_NT_ionisation_range, false));
+        printout("Y_nt_thisupperion for upperion top allowed=%d after adding NT ionisation for stripped ion %g\n",
+                 get_ionstage(element, upperion), Y_nt_thisupperion);
+      }
+    }
 
     if (Y_nt_thisupperion > 0.) {
       const int upper_groundstate_index = get_nlte_vector_index(element, upperion, 0, first_ion_used);
@@ -591,6 +604,10 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
         atomicadd(*gsl_matrix_ptr(rate_matrix_ntcoll_bf, upper_groundstate_index, lower_index),
                   Y_nt_thisupperion * s_renorm[level]);
       }
+    }
+    if (nonthermal::nt_ionisation_maxupperion(element, ion) > (first_ion_used + nions_used - 1)) {
+      Y_nt_thisupperion_sum += Y_nt_thisupperion;
+      printout("Y_nt = %g Y_nt_thisupperion_sum = %g\n", Y_nt, Y_nt_thisupperion_sum);
     }
   }
 }
@@ -636,8 +653,9 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   nltepop_reset_element(nonemptymgi, element);
   calculate_cellpartfuncts(nonemptymgi, element);
   // When set_element_pops_lte is called when the NLTE solution fails the uppermost_ion used in set_groundlevelpops
-  // is the one set based on the NLTE phi factors. Therefore need to recall find_uppermost_ion with force_saha = true so
-  // the uppermost ion used in set_groundlevelpops is changed to the one based on the correct LTE phi factors instead
+  // is the one set based on the NLTE phi factors. Therefore need to recall find_uppermost_ion with force_saha =
+  // true so the uppermost ion used in set_groundlevelpops is changed to the one based on the correct LTE phi
+  // factors instead
   if (RECALL_FIND_UPPERMOST_ION_WHEN_SETTING_ELEMENT_POPS_LTE) {
     printout("RECALL_FIND_UPPERMOST_ION_WHEN_SETTING_ELEMENT_POPS_LTE for element %d\n", element);
     const double nne_hi = grid::get_rho(nonemptymgi) / MH;
@@ -811,7 +829,8 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
                  gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row));
         if (gsl_vector_get(popvec, row) < -1 * MINPOP) {
           printout(
-              "  WARNING: negative pop = %g less than -1*MINPOP (-%g) unlikely a rounding error to zero so returning "
+              "  WARNING: negative pop = %g less than -1*MINPOP (-%g) unlikely a rounding error to zero so "
+              "returning "
               "nltepop_matrix_solve fail (using LTE pops instead)\n",
               gsl_vector_get(popvec, row), MINPOP);
 
@@ -912,7 +931,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
 
   printout(
-      "Solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d (mass fraction %.2e, "
+      "Solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d (mass fraction "
+      "%.2e, "
       "nnelement %.2e cm^-3)\n",
       modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_abundance(nonemptymgi, element), nnelement);
   const auto superlevel_partfunc = get_element_superlevelpartfuncs(nonemptymgi, element);
@@ -1101,7 +1121,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
       matrix_solve_satisfied_with_ion_list = true;
       if (retry_with_fewer_ions) {
         printout(
-            "successfully solved NLTE matrix when reducing ions used for element Z=%d to ionstage=%d to ionstage=%d\n",
+            "successfully solved NLTE matrix when reducing ions used for element Z=%d to ionstage=%d to "
+            "ionstage=%d\n",
             atomic_number, get_ionstage(element, first_ion_used),
             get_ionstage(element, first_ion_used + nions_used - 1));
       }
@@ -1132,8 +1153,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
         // Might need to change this if we want solver to work for sub-set of elements ions
         // printout that we are reducing the number of ions used
         // printout(
-        //     "  WARNING: NLTE matrix solution failed for element Z=%d with %d ions, reducing to %d ions starting from
-        //     ion " "stage %d\n", atomic_number, nions, nions_used, get_ionstage(element, first_ion_used));}
+        //     "  WARNING: NLTE matrix solution failed for element Z=%d with %d ions, reducing to %d ions starting
+        //     from ion " "stage %d\n", atomic_number, nions, nions_used, get_ionstage(element, first_ion_used));}
       }
     }
     // assert_always(get_atomicnumber(element) < 26);
@@ -1141,7 +1162,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
   if (!matrix_solve_success) {
     printout(
-        "WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular matrix, "
+        "WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular "
+        "matrix, "
         "negative pop or large pop inversion and unable to recover solution by reducing ion range. "
         "Attempting to use LTE solution instead\n",
         modelgridindex, timestep, atomic_number);
