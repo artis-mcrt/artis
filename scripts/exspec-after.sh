@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # only compress the files if we successfully ran exspec
-if [[ -f emission.out || -f emission.out.zst ]]; then
+if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
 
   # zstd does decent compression at high speeds
   cmdcompress="zstd -T0 -16 -v --rm -f"
