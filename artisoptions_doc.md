@@ -114,6 +114,41 @@ constexpr bool USE_LUT_PHOTOION;
 // as above for bound-free heating
 constexpr bool USE_LUT_BFHEATING;
 
+// Previously the NLTE solver only checked if level populations were negative and replaced these populations
+// with the LTE population. However this can cause numerical problems (e.g. when the ground populations is very
+// small and and the negative population is replaced with a significantly larger population ratios taken e.g.
+// when calculating partition functions can over the float limit.) This option provides additional checks
+// on the populations calculated by the NLTE solver (ground population > MINPOP, checks for population inversions)
+// and now returns a solver fail for certain cases.
+constexpr bool STRICT_POPULATION_CHECKING = false;
+
+// Previously when the NLTE solution failed the populations for the entire element were set to LTE values.
+// However it is often the uppermost/lowermost ions which have problems in their solution due to the
+// dynamic range of the simulation (e.g. high ion stages which have small populations in cells which
+// are in a low ionisation state and vice versa) while a good NLTE solution can be obtained for the rest
+// of the ions in the element. This option provides functionality to strip the top/bottom ions progressively
+// from elements (provided they have small populations) when the NLTE fails before retrying the solution
+// to determine if a successful solution can be obtained with this reduced range of ions.
+constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE = false;
+
+// Controls by what factor the populations of a level have to be inverted relative to the ground to result
+// in a NLTE solver fail being returned
+constexpr float POP_INVERSION_FACTOR_SOLVER_FAIL = 1000.;
+
+// Controls by what factor the populations of a level have to be inverted relative to print out a warning
+// that the level is inverted
+constexpr float POP_INVERSION_FACTOR_SMALL_INVERSION_WARNING = 10.;
+
+// Controls the highest population an ion can have and still be removed from the NLTE solution when using
+// the NLTE_LIMIT_ION_STAGES_AFTER_FAILURE functionality
+constexpr float POPULATION_CUT_REMOVE_ION = 100.;
+
+// If set_element_pops_lte is called when NLTE solver fails the uppermost_ion used in set_groundlevelpops
+// is the one in set in memory based on the NLTE phi factors. In rare cases this can result in partition
+// function overflows. This option recalls find_uppermost_ion so the uppermost_ion used is based on the
+// correct LTE phi factors instead.
+constexpr bool RECALL_FIND_UPPERMOST_ION_WHEN_SETTING_ELEMENT_POPS_LTE = false;
+
 // if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
 #define SEPARATE_STIMRECOMB false
 

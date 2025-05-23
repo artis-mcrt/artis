@@ -386,13 +386,6 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
 [[nodiscard]] auto get_max_nlte_dimension() -> int {
   int max_nlte_dimension = 0;
   for (int element = 0; element < get_nelements(); element++) {
-    // overwrite actual values of nions_used and first_ion_used passed to this function with the values before the
-    // number of ions is reduced if the solver fails. As these values correspnd to the element that was passed to
-    // get_max_nlte_dimension but get_max_nlte_dimension loops through all elements. So need to update the numbers of
-    // ions used and first_ion_used for each element here. Since the max_nlte_dimensions is an upper lmit from one
-    // element in the case when the NLTE solver fails and less ion stages are used than get_nions(element) this
-    // shouldn't cause any problems - it just means a bit more memory will be allocated before gsl_matrix_view_array is
-    // used to reduce the size of the rate matrices to match the actual nlte_dimensions for each element.
     const int nions_used = get_nions(element);
     const int first_ion_used = 0;
     max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element, nions_used, first_ion_used));
