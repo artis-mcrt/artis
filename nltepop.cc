@@ -43,6 +43,8 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
   // have to convert from nlte_pops index to nlte_vector index
   // the difference is that nlte vectors apply to a single element and include ground states
   // The (+ ion) term accounts for the ground state population indices that are not counted in the NLTE array
+  assert_testmodeonly(first_ion_used >= 0);
+  assert_testmodeonly(first_ion_used < get_nions(element));
   const int gs_index = globals::elements[element].ions[ion].first_nlte -
                        globals::elements[element].ions[first_ion_used].first_nlte + ion;
 
