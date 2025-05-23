@@ -6,7 +6,7 @@
 
 #include "constants.h"
 
-constexpr int MPKTS = 1000;
+constexpr int MPKTS = 1000000;
 
 constexpr auto GRID_TYPE = GridType::CARTESIAN3D;
 constexpr int CUBOID_NCOORDGRID_X = 50;
@@ -17,11 +17,12 @@ constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
 constexpr int NLTEITER = 30;
 
 constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) {
-  if (element_z < 20) {
-    return (level <= 200);
+  if (element_z == 26 && ionstage == 2) {
+    return (level <= 197);
   }
-  return (level <= 300);
+  return (level <= 80);
 }
+
 
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
 
@@ -31,19 +32,19 @@ constexpr bool single_level_top_ion = false;
 
 constexpr bool single_ground_level = false;
 
-constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return (Z < 20) ? 200 : 300; }
+constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return (Z < 20) ? 100 : 200; }
 
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
 constexpr bool DIRECT_COL_HEAT = true;
-constexpr bool INITIAL_PACKETS_ON = true;
+constexpr bool INITIAL_PACKETS_ON = false;
 constexpr bool RECORD_LINESTAT = false;
 
 constexpr bool USE_MODEL_INITIAL_ENERGY = true;
 
 constexpr int TABLESIZE = 100;
-constexpr double MINTEMP = 3500.;
-constexpr double MAXTEMP = 140000.;
+constexpr double MINTEMP = 1000.;
+constexpr double MAXTEMP = 30000.;
 
 constexpr double RECOMBCALIBRATION_T_ELEC = 6000.;
 
@@ -84,7 +85,7 @@ constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
 constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) {
   // To only BF estimators for NLTE levels:
   return LEVEL_IS_NLTE(element_z, ionstage, level);
-  return true;
+  // return true;
 }
 
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
