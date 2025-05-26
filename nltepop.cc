@@ -363,7 +363,7 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
 [[nodiscard]] auto get_element_nlte_dimension(const int element, const int nions_used, const int first_ion_used)
     -> int {
   assert_testmodeonly(nions_used >= 0);
-  assert_testmodeonly(nions_used < get_nions(element));
+  assert_testmodeonly(nions_used <= get_nions(element));
   assert_testmodeonly(first_ion_used >= 0);
   assert_testmodeonly(first_ion_used < get_nions(element));
   assert_testmodeonly((first_ion_used + nions_used - 1) < get_nions(element));
