@@ -12,12 +12,25 @@
 /*************************** HEADER FILES ***************************/
 #include "md5.h"
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <string>
 
 #include "sn3d.h"
+
+constexpr int MD5_BLOCK_SIZE = 16;  // MD5 outputs a 16 byte digest
+
+using BYTE = unsigned char;  // 8-bit byte
+using WORD = unsigned int;  // 32-bit word, change to "long" for 16-bit machines
+
+using MD5_CTX = struct {
+  BYTE data[64];
+  WORD datalen;
+  std::uint64_t bitlen;
+  WORD state[4];
+};
 
 /****************************** MACROS ******************************/
 #define ROTLEFT(a, b) (((a) << (b)) | ((a) >> (32 - (b))))
@@ -145,8 +158,6 @@ void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
   ctx->state[3] += d;
 }
 
-}  // anonymous namespace
-
 void md5_init(MD5_CTX *ctx) {
   ctx->datalen = 0;
   ctx->bitlen = 0;
@@ -170,7 +181,7 @@ void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
   }
 }
 
-void md5_final(MD5_CTX *ctx, BYTE hash[]) {
+void md5_final(MD5_CTX *ctx, BYTE hash[MD5_BLOCK_SIZE]) {
   size_t i = 0;
 
   i = ctx->datalen;
@@ -211,6 +222,8 @@ void md5_final(MD5_CTX *ctx, BYTE hash[]) {
     hash[i + 12] = (ctx->state[3] >> (i * 8)) & 0x000000ff;
   }
 }
+
+}  // anonymous namespace
 
 // added by Luke Shingles
 auto md5_file(const std::string &filename) -> std::string {
