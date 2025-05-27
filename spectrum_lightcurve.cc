@@ -452,7 +452,7 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
   fprintf(specpol_file, "\n");
 
   assert_always(stokes_i->lower_freq.size() == stokes_i->delta_freq.size());
-  for (ptrdiff_t nnu = 0; nnu < std::ssize(stokes_i->lower_freq); nnu++) {
+  for (int nnu = 0; nnu < std::ssize(stokes_i->lower_freq); nnu++) {
     fprintf(specpol_file, "%g ", ((stokes_i->lower_freq[nnu] + (stokes_i->delta_freq[nnu] / 2))));
 
     write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, *stokes_i, nnu, do_emission_res);

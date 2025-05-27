@@ -160,7 +160,7 @@ MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
 // get the nuclide array index from the atomic number and mass number
 [[nodiscard]] auto get_nucindex_or_neg_one(const int z, const int a) -> int {
   assert_testmodeonly(get_num_nuclides() > 0);
-  const int num_nuclides = get_num_nuclides();
+  const auto num_nuclides = get_num_nuclides();
 
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     if (nuclides[nucindex].z == z && nuclides[nucindex].a == a) {
@@ -1048,7 +1048,7 @@ void setup_decaypath_energy_per_mass() {
   for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
     if (nonemptymgi % globals::node_nprocs == globals::rank_in_node) {
       const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-      for (ptrdiff_t decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
+      for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
         decaypath_energy_per_mass[(nonemptymgi * num_decaypaths) + decaypathindex] =
             get_endecay_per_ejectamass_between_times(mgi, decaypathindex, time_min_decay, globals::tmax);
       }
