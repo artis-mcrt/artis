@@ -200,7 +200,7 @@ constexpr auto gsl_integrand_planck(const double nu, void *voidparas) -> double 
   return integrand;
 }
 
-void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
+void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cmf, const double nu_cmf,
                          const double doppler_nucmf_on_nurf, const Phixslist &phixslist) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
 
@@ -731,9 +731,9 @@ void zero_estimators() {
   }
 }
 
-__host__ __device__ void update_estimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                                           const double doppler_nucmf_on_nurf, const Phixslist &phixslist,
-                                           const bool thickcell) {
+__host__ __device__ void update_estimators(const ptrdiff_t nonemptymgi, const double distance_e_cmf,
+                                           const double nu_cmf, const double doppler_nucmf_on_nurf,
+                                           const Phixslist &phixslist, const bool thickcell) {
   if (distance_e_cmf == 0) {
     return;
   }
@@ -753,7 +753,7 @@ __host__ __device__ void update_estimators(const int nonemptymgi, const double d
     const int binindex = select_bin(nu_cmf);
 
     if (binindex >= 0) {
-      const ptrdiff_t mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
+      const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
       atomicadd(radfieldbins[mgibinindex].J_raw, distance_e_cmf);
       atomicadd(radfieldbins[mgibinindex].nuJ_raw, distance_e_cmf * nu_cmf);
       atomicadd(radfieldbins[mgibinindex].contribcount, 1);
