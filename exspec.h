@@ -1,8 +1,9 @@
 #ifndef EXSPEC_H
 #define EXSPEC_H
 
-// Spectrum data structure
-constexpr int MNUBINS = 1000;
+#include <cstddef>
+
+constexpr ptrdiff_t MNUBINS = 1000;
 
 constexpr int NPHIBINS = 10;
 constexpr int NCOSTHETABINS = 10;
