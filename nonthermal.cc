@@ -454,9 +454,9 @@ void read_auger_data() {
   char line[151] = "";
 
   // map x-ray notation shells K L1 L2 L3 M1 M2 M3 to quantum numbers n and l
-  const int xrayn[7] = {1, 2, 2, 2, 3, 3, 3};
-  const int xrayl[7] = {0, 0, 1, 1, 0, 1, 1};
-  const int xrayg[7] = {2, 2, 2, 4, 2, 2, 4};  // g statistical weight = 2j + 1
+  constexpr std::array<int, 7> xrayn = {1, 2, 2, 2, 3, 3, 3};
+  constexpr std::array<int, 7> xrayl = {0, 0, 1, 1, 0, 1, 1};
+  constexpr std::array<int, 7> xrayg = {2, 2, 2, 4, 2, 2, 4};  // g statistical weight = 2j + 1
 
   while (feof(augerfile) == 0) {
     if (line != fgets(line, 151, augerfile)) {
