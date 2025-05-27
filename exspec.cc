@@ -210,7 +210,7 @@ auto main(int argc, char *argv[]) noexcept(false) -> int {  // NOLINT(misc-unuse
     // try to allocate memory for all packets from all ranks
     resize_exactly(pkts, npkts_allranks);
     printout(
-        "mem_usage: loading %d packets from each %d processes simultaneously (total %ld packets, %.1f MB memory)\n",
+        "mem_usage: loading %d packets from each %d processes simultaneously (total %td packets, %.1f MB memory)\n",
         globals::npkts, globals::nprocs_exspec, npkts_allranks, npkts_allranks * sizeof(Packet) / 1024. / 1024.);
     load_allrank_packets = true;
   } catch (const std::bad_alloc &e) {
@@ -218,7 +218,7 @@ auto main(int argc, char *argv[]) noexcept(false) -> int {  // NOLINT(misc-unuse
     load_allrank_packets = false;
     printout("mem_usage: malloc failed to allocate memory for all packets\n");
     printout(
-        "mem_usage: loading %d packets from each of %d processes sequentially (total %ld packets, %.1f MB memory)\n",
+        "mem_usage: loading %d packets from each of %d processes sequentially (total %td packets, %.1f MB memory)\n",
         globals::npkts, globals::nprocs_exspec, npkts_allranks, npkts_allranks * sizeof(Packet) / 1024. / 1024.);
     resize_exactly(pkts, globals::npkts);
   }
