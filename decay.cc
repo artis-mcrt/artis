@@ -1032,7 +1032,7 @@ auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi) -> double {
 }
 
 void setup_decaypath_energy_per_mass() {
-  const int nonempty_npts_model = grid::get_nonempty_npts_model();
+  const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
   printout(
       "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies %.1f MB (node "
       "shared)...",
