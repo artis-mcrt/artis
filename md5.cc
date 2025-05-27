@@ -213,7 +213,7 @@ void md5_final(MD5_CTX *ctx, BYTE hash[]) {
 }
 
 // added by Luke Shingles
-void md5_file(const std::string &filename, char hashout[(2 * MD5_BLOCK_SIZE) + 1]) {
+auto md5_file(const std::string &filename) -> std::string {
   MD5_CTX ctx;
   md5_init(&ctx);
 
@@ -235,9 +235,10 @@ void md5_file(const std::string &filename, char hashout[(2 * MD5_BLOCK_SIZE) + 1
   BYTE hashbytes[MD5_BLOCK_SIZE];
   md5_final(&ctx, hashbytes);
 
+  std::string hashout(2 * MD5_BLOCK_SIZE, '0');  // Initialize with zeros
   for (int j = 0; j < MD5_BLOCK_SIZE; j++) {
     snprintf(&hashout[2 * j], (2 * MD5_BLOCK_SIZE) + 1 - (2 * j), "%02x", hashbytes[j]);
   }
 
-  hashout[2 * MD5_BLOCK_SIZE] = '\0';
+  return hashout;
 }

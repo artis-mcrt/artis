@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <span>
+#include <string>
 
 #if !USE_SIMPSON_INTEGRATOR
 #include <gsl/gsl_integration.h>
@@ -51,9 +52,9 @@ struct GSLIntegralParasGammaCorr {
   int nonemptymgi;
 };
 
-char adatafile_hash[33];
-char compositionfile_hash[33];
-std::array<std::array<char, 33>, 3> phixsfile_hash;
+std::string adatafile_hash;
+std::string compositionfile_hash;
+std::array<std::string, 3> phixsfile_hash;
 
 auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 // Try to read in the precalculated rate coefficients from file
@@ -67,10 +68,10 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
     return false;
   }
   printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in);
-  if (strcmp(adatafile_hash, adatafile_hash_in) == 0) {
+  if (strcmp(adatafile_hash.c_str(), adatafile_hash_in) == 0) {
     printout("(pass)\n");
   } else {
-    printout("MISMATCH: MD5 adata.txt = %s\n", adatafile_hash);
+    printout("MISMATCH: MD5 adata.txt = %s\n", adatafile_hash.c_str());
     return false;
   }
 
@@ -79,10 +80,10 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
     return false;
   }
   printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in);
-  if (strcmp(compositionfile_hash, compositionfile_hash_in) == 0) {
+  if (strcmp(compositionfile_hash.c_str(), compositionfile_hash_in) == 0) {
     printout("(pass)\n");
   } else {
-    printout("\nMISMATCH: MD5 compositiondata.txt = %s\n", compositionfile_hash);
+    printout("\nMISMATCH: MD5 compositiondata.txt = %s\n", compositionfile_hash.c_str());
     return false;
   }
 
@@ -221,8 +222,8 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 
 void write_ratecoeff_dat() {
   FILE *ratecoeff_file = fopen_required("ratecoeff.dat", "w");
-  fprintf(ratecoeff_file, "%32s\n", adatafile_hash);
-  fprintf(ratecoeff_file, "%32s\n", compositionfile_hash);
+  fprintf(ratecoeff_file, "%32s\n", adatafile_hash.c_str());
+  fprintf(ratecoeff_file, "%32s\n", compositionfile_hash.c_str());
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
       fprintf(ratecoeff_file, "%32s\n", phixsfile_hash[phixsver].data());
@@ -1111,11 +1112,11 @@ void ratecoefficients_init() {
   // Determine the temperature grids gridsize
   T_step_log = (log(MAXTEMP) - log(MINTEMP)) / (TABLESIZE - 1.);
 
-  md5_file("adata.txt", adatafile_hash);
-  md5_file("compositiondata.txt", compositionfile_hash);
+  adatafile_hash = md5_file("adata.txt");
+  compositionfile_hash = md5_file("compositiondata.txt");
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
-      md5_file(phixsdata_filenames[phixsver], phixsfile_hash[phixsver].data());
+      phixsfile_hash[phixsver] = md5_file(phixsdata_filenames[phixsver]);
     }
   }
 

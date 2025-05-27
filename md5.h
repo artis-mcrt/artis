@@ -20,6 +20,6 @@ using MD5_CTX = struct {
 void md5_init(MD5_CTX *ctx);
 void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len);
 void md5_final(MD5_CTX *ctx, BYTE hash[]);
-void md5_file(const std::string &filename, char hashout[33]);
+auto md5_file(const std::string &filename) -> std::string;
 
 #endif  // MD5_H
