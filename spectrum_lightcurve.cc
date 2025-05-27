@@ -526,7 +526,7 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
     std::ranges::fill(spectra.trueemissionalltimesteps, 0.0);
 
     if (print_memusage) {
-      printout("[info] mem_usage: set of emission/absorption spectra occupy %.3f MB (nnubins %ld)\n",
+      printout("[info] mem_usage: set of emission/absorption spectra occupy %.3f MB (nnubins %td)\n",
                mem_usage / 1024. / 1024., MNUBINS);
     }
 
@@ -536,7 +536,7 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
     spectra.trueemissionalltimesteps.clear();
 
     if (print_memusage) {
-      printout("[info] mem_usage: set of spectra occupy %.3f MB (nnubins %ld)\n", mem_usage / 1024. / 1024., MNUBINS);
+      printout("[info] mem_usage: set of spectra occupy %.3f MB (nnubins %td)\n", mem_usage / 1024. / 1024., MNUBINS);
     }
   }
 }
