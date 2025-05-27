@@ -482,7 +482,7 @@ void read_auger_data() {
       assert_always(offset == 20);
 
       float n_auger_elec_avg = 0;
-      std::array<double, NT_MAX_AUGER_ELECTRONS + 1> prob_num_auger{};
+      std::array<double, (NT_MAX_AUGER_ELECTRONS + 1)> prob_num_auger{};
       for (int a = 0; a < 9; a++) {
         linepos = 26 + (a * 5);
         // have to read out exactly 5 characters at a time because the columns are sometimes not separated by a space
@@ -501,10 +501,10 @@ void read_auger_data() {
         n_auger_elec_avg += a * probnaugerelec;
 
         if (a <= NT_MAX_AUGER_ELECTRONS) {
-          prob_num_auger[a] = probnaugerelec;
+          prob_num_auger.at(a) = probnaugerelec;
         } else {
           // add the rates of all higher ionisations to the top one
-          prob_num_auger[NT_MAX_AUGER_ELECTRONS] += probnaugerelec;
+          prob_num_auger.at(NT_MAX_AUGER_ELECTRONS) += probnaugerelec;
         }
       }
 
