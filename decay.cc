@@ -897,7 +897,6 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
 
   if (use_custom_nuclides) {
     auto fbetaminus = fstream_required("betaminusdecays.txt", std::ios::in);
-    assert_always(fbetaminus.is_open());
     std::string line;
     while (get_noncommentline(fbetaminus, line)) {
       // energies are average per beta decay
