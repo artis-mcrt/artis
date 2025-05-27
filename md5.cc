@@ -23,7 +23,7 @@
 constexpr int MD5_BLOCK_SIZE = 16;  // MD5 outputs a 16 byte digest
 
 using BYTE = unsigned char;  // 8-bit byte
-using WORD = unsigned int;  // 32-bit word, change to "long" for 16-bit machines
+using WORD = std::uint32_t;  // 32-bit word, change to "long" for 16-bit machines
 
 using MD5_CTX = struct {
   BYTE data[64];
