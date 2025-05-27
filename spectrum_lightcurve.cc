@@ -229,16 +229,14 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
       const int truenproc = columnindex_from_emissiontype(pkt.trueemissiontype);
       assert_always(truenproc < proccount);
       if (truenproc >= 0) {
-        const auto emindex =
-            (static_cast<ptrdiff_t>(nts) * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + truenproc;
+        const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + truenproc;
         spectra.trueemissionalltimesteps[emindex] += deltaE;
       }
 
       const int nproc = columnindex_from_emissiontype(pkt.emissiontype);
       assert_always(nproc < proccount);
       if (nproc >= 0) {  // -1 means not set
-        const auto emindex =
-            (static_cast<ptrdiff_t>(nts) * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + nproc;
+        const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + nproc;
         spectra.emissionalltimesteps[emindex] += deltaE;
 
         if (stokes_i != nullptr && stokes_i->do_emission_res) {
@@ -335,8 +333,7 @@ void write_specpol_param(FILE *specpol_file, FILE *emissionpol_file, FILE *absor
 
     if (do_emission_res) {
       for (int nproc = 0; nproc < proccount; nproc++) {
-        const auto emindex =
-            (static_cast<ptrdiff_t>(nts) * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + nproc;
+        const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + nproc;
         fprintf(emissionpol_file, "%g ", spec.emissionalltimesteps[emindex]);
       }
       fprintf(emissionpol_file, "\n");
@@ -397,15 +394,13 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
       fprintf(spec_file, "%g ", spectra.fluxalltimesteps[(nts * MNUBINS) + nnu]);
       if (do_emission_res) {
         for (int nproc = 0; nproc < proccount; nproc++) {
-          const auto emindex =
-              (static_cast<ptrdiff_t>(nts) * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + nproc;
+          const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + nproc;
           fprintf(emission_file, "%g ", spectra.emissionalltimesteps[emindex]);
         }
         fprintf(emission_file, "\n");
 
         for (int truenproc = 0; truenproc < proccount; truenproc++) {
-          const auto trueemindex = (static_cast<ptrdiff_t>(nts) * MNUBINS * proccount) +
-                                   (static_cast<ptrdiff_t>(nnu * proccount)) + truenproc;
+          const auto trueemindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + truenproc;
           fprintf(trueemission_file, "%g ", spectra.trueemissionalltimesteps[trueemindex]);
         }
         fprintf(trueemission_file, "\n");
