@@ -13,6 +13,7 @@
 #include <numeric>
 #include <span>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <vector>
 
@@ -54,11 +55,11 @@ struct NucGammaLine {
   double energy;  // in erg
 };
 
-void read_gamma_spectrum(const int nucindex, const char filename[50])
+void read_gamma_spectrum(const int nucindex, const std::string &filename)
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
 {
   printout("reading gamma spectrum for Z=%d A=%d from %s...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
-           filename);
+           filename.c_str());
 
   FILE *filein = fopen_required(filename, "r");
   int nlines = 0;
