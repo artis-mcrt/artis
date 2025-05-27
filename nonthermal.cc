@@ -449,28 +449,23 @@ void check_auger_probabilities(int nonemptymgi) {
 
 void read_auger_data() {
   printout("Reading Auger effect data...\n");
-  FILE *augerfile = fopen_required("auger-km1993-table2.txt", "r");
-
-  char line[151] = "";
+  auto augerfile = fstream_required("auger-km1993-table2.txt", std::ios::in);
 
   // map x-ray notation shells K L1 L2 L3 M1 M2 M3 to quantum numbers n and l
   constexpr std::array<int, 7> xrayn = {1, 2, 2, 2, 3, 3, 3};
   constexpr std::array<int, 7> xrayl = {0, 0, 1, 1, 0, 1, 1};
   constexpr std::array<int, 7> xrayg = {2, 2, 2, 4, 2, 2, 4};  // g statistical weight = 2j + 1
 
-  while (feof(augerfile) == 0) {
-    if (line != fgets(line, 151, augerfile)) {
-      break;
-    }
-
+  std::string strline;
+  while (get_noncommentline(augerfile, strline)) {
     int Z = -1;
     int ionstage = -1;
     int shellnum = -1;
 
-    char *linepos = line;
+    int linepos = 0;
     int offset = 0;
 
-    assert_always(sscanf(linepos, "%d %d%n", &Z, &ionstage, &offset) == 2);
+    assert_always(sscanf(strline.c_str(), "%d %d%n", &Z, &ionstage, &offset) == 2);
     assert_always(offset == 5);
     linepos += offset;
 
@@ -482,22 +477,22 @@ void read_auger_data() {
       float en_auger_ev_total_nocorrection = -1;
       int epsilon_e3 = -1;
 
-      assert_always(sscanf(linepos, "%d %g %g %d%n", &shellnum, &ionpot_ev, &en_auger_ev_total_nocorrection,
-                           &epsilon_e3, &offset) == 4);
+      assert_always(sscanf(strline.substr(linepos).c_str(), "%d %g %g %d%n", &shellnum, &ionpot_ev,
+                           &en_auger_ev_total_nocorrection, &epsilon_e3, &offset) == 4);
       assert_always(offset == 20);
 
       float n_auger_elec_avg = 0;
-      double prob_num_auger[NT_MAX_AUGER_ELECTRONS + 1];
+      std::array<double, NT_MAX_AUGER_ELECTRONS + 1> prob_num_auger{};
       for (int a = 0; a < 9; a++) {
-        linepos = line + 26 + (a * 5);
+        linepos = 26 + (a * 5);
         // have to read out exactly 5 characters at a time because the columns are sometimes not separated by a space
-        char strprob[6] = "00000";
-        assert_always(sscanf(linepos, "%5c%n", strprob, &offset) == 1);
+        std::array<char, 6> strprob{"00000"};
+        assert_always(sscanf(strline.substr(linepos).c_str(), "%5c%n", strprob.data(), &offset) == 1);
         assert_always(offset == 5);
         strprob[5] = '\0';
 
         int probnaugerelece4 = -1;
-        assert_always(sscanf(strprob, "%d", &probnaugerelece4) == 1);
+        assert_always(sscanf(strprob.data(), "%d", &probnaugerelece4) == 1);
 
         const double probnaugerelec = probnaugerelece4 / 10000.;
 
@@ -573,7 +568,6 @@ void read_auger_data() {
       }
     }
   }
-  fclose(augerfile);
 }
 
 auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
