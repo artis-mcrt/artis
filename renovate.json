@@ -9,6 +9,6 @@
     "enabled": true
   },
   "schedule": [
-    "0 10 * * 2"
+    "* 9-15 * * 2"
   ]
 }
