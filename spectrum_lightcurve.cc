@@ -333,7 +333,7 @@ void write_specpol_param(FILE *specpol_file, FILE *emissionpol_file, FILE *absor
 
     if (do_emission_res) {
       for (int nproc = 0; nproc < proccount; nproc++) {
-        const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + nproc;
+        const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu) * proccount) + nproc;
         fprintf(emissionpol_file, "%g ", spec.emissionalltimesteps[emindex]);
       }
       fprintf(emissionpol_file, "\n");
@@ -505,7 +505,7 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
 
   spectra.do_emission_res = do_emission_res;  // might be set true later by alloc_emissionabsorption_spectra
 
-  resize_exactly(spectra.fluxalltimesteps, static_cast<ptrdiff_t>(globals::ntimesteps * MNUBINS));
+  resize_exactly(spectra.fluxalltimesteps, globals::ntimesteps * MNUBINS);
   std::ranges::fill(spectra.fluxalltimesteps, 0.0);
 
   mem_usage += globals::ntimesteps * sizeof(Spectra);
