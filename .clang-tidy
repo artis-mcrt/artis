@@ -2,7 +2,6 @@
 InheritParentConfig: true
 Checks: [
         '*',
-        -*static-assert*,
         -*avoid-c-arrays,
         -cert-dcl03-c,
         -abseil-*,
