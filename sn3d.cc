@@ -685,7 +685,7 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 
 }  // anonymous namespace
 
-auto main(int argc, char *argv[]) -> int {
+auto main(int argc, char *argv[]) noexcept(false) -> int {
   real_time_start = std::time(nullptr);
 
   // if DETAILED_BF_ESTIMATORS_ON is true, USE_LUT_PHOTOION must be false
