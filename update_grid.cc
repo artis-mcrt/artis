@@ -911,7 +911,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     if (USE_LUT_PHOTOION && !globals::simulation_continued_from_saved) {
       // Determine renormalisation factor for corrected photoionization cross-sections
       std::ranges::fill(
-          globals::corrphotoionrenorm.subspan(nonemptymgi * globals::nbfcontinua_ground, globals::nbfcontinua_ground),
+          globals::corrphotoionrenorm.subspan(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground,
+                                              globals::nbfcontinua_ground),
           1.);
     }
 
@@ -970,7 +971,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
       if constexpr (USE_LUT_PHOTOION) {
         std::ranges::fill(
-            globals::corrphotoionrenorm.subspan(nonemptymgi * globals::nbfcontinua_ground, globals::nbfcontinua_ground),
+            globals::corrphotoionrenorm.subspan(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground,
+                                                globals::nbfcontinua_ground),
             1.);
       }
 
