@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 
 #include "sn3d.h"
 
@@ -212,11 +213,11 @@ void md5_final(MD5_CTX *ctx, BYTE hash[]) {
 }
 
 // added by Luke Shingles
-void md5_file(const char filename[], char hashout[(2 * MD5_BLOCK_SIZE) + 1]) {
+void md5_file(const std::string &filename, char hashout[(2 * MD5_BLOCK_SIZE) + 1]) {
   MD5_CTX ctx;
   md5_init(&ctx);
 
-  FILE *infile = fopen(filename, "r");
+  FILE *infile = fopen(filename.c_str(), "r");
 
   assert_always(infile != nullptr);
 

@@ -1115,7 +1115,7 @@ void ratecoefficients_init() {
   md5_file("compositiondata.txt", compositionfile_hash);
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
-      md5_file(phixsdata_filenames[phixsver].c_str(), phixsfile_hash[phixsver].data());
+      md5_file(phixsdata_filenames[phixsver], phixsfile_hash[phixsver].data());
     }
   }
 
