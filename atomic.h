@@ -5,6 +5,7 @@
 #include <array>
 #include <cmath>
 #include <span>
+#include <string>
 #include <tuple>
 
 #include "artisoptions.h"
@@ -29,7 +30,7 @@ inline double last_phixs_nuovernuedge;
 // first value in this array is not used but exists so the indexes match those of the phixsdata_filenames array
 inline std::array<bool, 3> phixs_file_version_exists;
 
-constexpr std::array<const char *, 3> phixsdata_filenames = {"version0ignore", "phixsdata.txt", "phixsdata_v2.txt"};
+constexpr std::array<const std::string, 3> phixsdata_filenames = {"IGNORE", "phixsdata.txt", "phixsdata_v2.txt"};
 
 // return the number of ions of all elements combined
 inline auto get_includedlevels() -> int { return includedlevels; }

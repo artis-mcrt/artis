@@ -53,7 +53,7 @@ struct GSLIntegralParasGammaCorr {
 
 char adatafile_hash[33];
 char compositionfile_hash[33];
-std::array<char[33], 3> phixsfile_hash;
+std::array<std::array<char, 33>, 3> phixsfile_hash;
 
 auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 // Try to read in the precalculated rate coefficients from file
@@ -92,11 +92,11 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
       if (fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) != 1) {
         return false;
       }
-      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver], phixsfile_hash_in);
-      if (strcmp(phixsfile_hash[phixsver], phixsfile_hash_in) == 0) {
+      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver].c_str(), phixsfile_hash_in);
+      if (strcmp(phixsfile_hash[phixsver].data(), phixsfile_hash_in) == 0) {
         printout("(pass)\n");
       } else {
-        printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[phixsver], phixsfile_hash[phixsver]);
+        printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[phixsver].c_str(), phixsfile_hash[phixsver].data());
         return false;
       }
     }
@@ -225,7 +225,7 @@ void write_ratecoeff_dat() {
   fprintf(ratecoeff_file, "%32s\n", compositionfile_hash);
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
-      fprintf(ratecoeff_file, "%32s\n", phixsfile_hash[phixsver]);
+      fprintf(ratecoeff_file, "%32s\n", phixsfile_hash[phixsver].data());
     }
   }
   fprintf(ratecoeff_file, "%la %la %d %d %d %la\n", MINTEMP, MAXTEMP, TABLESIZE, globals::nlines, globals::nbfcontinua,
@@ -1115,7 +1115,7 @@ void ratecoefficients_init() {
   md5_file("compositiondata.txt", compositionfile_hash);
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
-      md5_file(phixsdata_filenames[phixsver], phixsfile_hash[phixsver]);
+      md5_file(phixsdata_filenames[phixsver].c_str(), phixsfile_hash[phixsver].data());
     }
   }
 

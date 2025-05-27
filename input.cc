@@ -239,7 +239,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float> &tmpallphi
                      std::vector<PhotoionTarget> &tmpallphixstargets) {
   size_t mem_usage_phixs = 0;
 
-  printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
+  printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version].c_str());
 
   auto phixsfile = fstream_required(phixsdata_filenames[phixs_file_version], std::ios::in);
   std::string phixsline;
