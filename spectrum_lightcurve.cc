@@ -358,14 +358,12 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
   const bool do_emission_res = spectra.do_emission_res;
   auto emission_file =
       do_emission_res ? fstream_required(emission_filename, std::ios::out | std::ios::trunc) : std::fstream{};
-  FILE *trueemission_file{};
-  FILE *absorption_file{};
+  auto trueemission_file =
+      do_emission_res ? fstream_required(trueemission_filename, std::ios::out | std::ios::trunc) : std::fstream{};
+  auto absorption_file =
+      do_emission_res ? fstream_required(absorption_filename, std::ios::out | std::ios::trunc) : std::fstream{};
 
   if (do_emission_res) {
-    trueemission_file = fopen_required(trueemission_filename, "w");
-    assert_always(trueemission_file != nullptr);
-    absorption_file = fopen_required(absorption_filename, "w");
-    assert_always(absorption_file != nullptr);
     printout("Writing %s, %s, %s, and %s\n", spec_filename.c_str(), emission_filename.c_str(),
              trueemission_filename.c_str(), absorption_filename.c_str());
   } else {
@@ -401,23 +399,18 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
 
         for (int truenproc = 0; truenproc < proccount; truenproc++) {
           const auto trueemindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + truenproc;
-          fprintf(trueemission_file, "%g ", spectra.trueemissionalltimesteps[trueemindex]);
+          trueemission_file << spectra.trueemissionalltimesteps[trueemindex] << " ";
         }
-        fprintf(trueemission_file, "\n");
+        trueemission_file << "\n";
 
         for (int i = 0; i < ioncount; i++) {
           const auto absindex = get_absindex(nts, nnu, 0, i);
-          fprintf(absorption_file, "%g ", spectra.absorptionalltimesteps[absindex]);
+          absorption_file << spectra.absorptionalltimesteps[absindex] << " ";
         }
-        fprintf(absorption_file, "\n");
+        absorption_file << "\n";
       }
     }
     spec_file << "\n";
-  }
-
-  if (do_emission_res) {
-    fclose(trueemission_file);
-    fclose(absorption_file);
   }
 }
 
