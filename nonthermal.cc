@@ -619,9 +619,8 @@ void read_collion_data() {
     collionrow collionrow{};
     int nelec = -1;
     get_noncommentline(cifile, line);
-    std::istringstream ssline2(line);
-    assert_always(ssline2 >> collionrow.Z >> nelec >> collionrow.n >> collionrow.l >> collionrow.ionpot_ev >>
-                  collionrow.A >> collionrow.B >> collionrow.C >> collionrow.D);
+    assert_always(std::istringstream(line) >> collionrow.Z >> nelec >> collionrow.n >> collionrow.l >>
+                  collionrow.ionpot_ev >> collionrow.A >> collionrow.B >> collionrow.C >> collionrow.D);
 
     assert_always(nelec > 0);
     collionrow.ionstage = collionrow.Z - nelec + 1;
