@@ -1,13 +1,5 @@
-/*********************************************************************
-* Filename:   md5.c
-* Author:     Brad Conte (brad AT bradconte.com)
-* Copyright:
-* Disclaimer: This code is presented "as is" without any guarantees.
-* Details:    Implementation of the MD5 hashing algorithm.
-                                  Algorithm specification can be found here:
-                                   * http://tools.ietf.org/html/rfc1321
-                                  This implementation uses little endian byte order.
-*********************************************************************/
+// Based on the public domain MD5 implementation by Brad Conte
+// https://github.com/B-Con/crypto-algorithms/blob/master/md5.c
 
 #include "md5.h"
 
