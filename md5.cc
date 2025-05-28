@@ -34,10 +34,10 @@ using MD5_CTX = struct {
 
 constexpr auto ROTLEFT(const WORD a, const WORD b) -> WORD { return (a << b) | (a >> (32 - b)); }
 
-#define F(x, y, z) (((x) & (y)) | (~(x) & (z)))
-#define G(x, y, z) (((x) & (z)) | ((y) & ~(z)))
-#define _H(x, y, z) ((x) ^ (y) ^ (z))
-#define I(x, y, z) ((y) ^ ((x) | ~(z)))
+constexpr auto F(const WORD x, const WORD y, const WORD z) -> WORD { return (x & y) | (~x & z); }
+constexpr auto G(const WORD x, const WORD y, const WORD z) -> WORD { return (x & z) | (y & ~z); }
+constexpr auto _H(const WORD x, const WORD y, const WORD z) -> WORD { return x ^ y ^ z; }
+constexpr auto I(const WORD x, const WORD y, const WORD z) -> WORD { return y ^ (x | ~z); }
 
 #define FF(a, b, c, d, m, s, t)    \
   {                                \
