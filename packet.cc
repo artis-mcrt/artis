@@ -196,11 +196,10 @@ void read_temp_packetsfile(const int timestep, const int my_rank, std::span<Pack
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Reading %s...", filename);
-  FILE *packets_file = fopen_required(filename, "rb");
-  assert_always(std::fread(pkt.data(), sizeof(Packet), globals::npkts, packets_file) ==
+  auto packets_file = fopen_required_uniqueptr(filename, "rb");
+  assert_always(std::fread(pkt.data(), sizeof(Packet), globals::npkts, packets_file.get()) ==
                 static_cast<size_t>(globals::npkts));
 
-  fclose(packets_file);
   printout("done\n");
 }
 
@@ -212,11 +211,11 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<co
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Verifying file %s...", filename);
-  FILE *packets_file = fopen_required(filename, "rb");
+  auto packets_file = fopen_required_uniqueptr(filename, "rb");
   Packet pkt_in;
   bool readback_passed = true;
   for (int n = 0; n < globals::npkts; n++) {
-    assert_always(std::fread(&pkt_in, sizeof(Packet), 1, packets_file) == 1);
+    assert_always(std::fread(&pkt_in, sizeof(Packet), 1, packets_file.get()) == 1);
     if (pkt_in != pkt[n]) {
       printout("failed on packet %d\n", n);
       printout(" compare number %d %d\n", pkt_in.number, pkt[n].number);
@@ -225,7 +224,6 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<co
       readback_passed = false;
     }
   }
-  fclose(packets_file);
   if (readback_passed) {
     printout("  verification passed\n");
   } else {
@@ -236,8 +234,7 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<co
 
 auto read_packets(const char filename[], std::span<Packet> packets) -> std::span<Packet> {
   // read packets*.out text format file
-  std::fstream packets_file(filename, std::ios::in);
-  assert_always(packets_file.is_open());
+  auto packets_file = fstream_required(filename, std::ios::in);
 
   std::string line;
 
