@@ -2259,7 +2259,7 @@ void init_grid(const int my_rank) {
   }
 
   if (globals::my_rank == 0) {
-    auto grid_file = std::fstream("grid.out", std::ios::out);
+    auto grid_file = std::fstream("grid.out", std::ios::out | std::ios::trunc);
     assert_always(grid_file.is_open());
     for (int cellindex = 0; cellindex < ngrid; cellindex++) {
       const int mgi = get_propcell_modelgridindex(cellindex);
