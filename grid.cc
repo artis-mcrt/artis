@@ -132,20 +132,19 @@ void read_possible_yefile() {
     return;
   }
 
-  FILE *filein = fopen_required("Ye.txt", "r");
+  auto filein = fopen_required_uniqueptr("Ye.txt", "r");
   int nlines_in = 0;
-  assert_always(fscanf(filein, "%d", &nlines_in) == 1);
+  assert_always(fscanf(filein.get(), "%d", &nlines_in) == 1);
 
   for (int n = 0; n < nlines_in; n++) {
     int mgiplusone = -1;
     double initelecfrac = 0.;
-    assert_always(fscanf(filein, "%d %lg", &mgiplusone, &initelecfrac) == 2);
+    assert_always(fscanf(filein.get(), "%d %lg", &mgiplusone, &initelecfrac) == 2);
     const int mgi = mgiplusone - 1;
     if (mgi >= 0 && mgi < get_npts_model()) {
       set_initelectronfrac(mgi, initelecfrac);
     }
   }
-  fclose(filein);
 }
 
 void allocate_initradiobund() {
