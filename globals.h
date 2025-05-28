@@ -265,7 +265,7 @@ struct AllLevels {
 
   // index of the bound-free continuum (for first target) sorted by element/ion/level/phixstargetindex (not an index
   // into the nu_edge-sorted allcont list!)
-  std::span<int> cont_index;
+  std::span<int> bflist_start;
 
   // index into globals::alltrans for first down transition from each level
   std::span<int> alltrans_startdown;

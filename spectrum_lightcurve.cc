@@ -165,16 +165,16 @@ auto columnindex_from_emissiontype(const int et) -> int {
   if (et == EMTYPE_NOTSET) {
     return -1;
   }  // bf-emission
-  const int contindex = -1 - et;
+  const int bfindex = -1 - et;
   if (globals::nbfcontinua == 0) {
     // assert_always(false);  // if there are no bf processes, we should not get here
     return 2 * get_nelements() * get_max_nions();
   }
-  assert_always(contindex < globals::nbfcontinua);
-  const int element = globals::bflist[contindex].elementindex;
-  const int ion = globals::bflist[contindex].ionindex;
-  const int level = globals::bflist[contindex].levelindex;
-  const int phixstargetindex = globals::bflist[contindex].phixstargetindex;
+  assert_always(bfindex < globals::nbfcontinua);
+  const int element = globals::bflist[bfindex].elementindex;
+  const int ion = globals::bflist[bfindex].ionindex;
+  const int level = globals::bflist[bfindex].levelindex;
+  const int phixstargetindex = globals::bflist[bfindex].phixstargetindex;
   const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
   assert_always(get_emtype_continuum(element, ion, level, upperionlevel) == et);

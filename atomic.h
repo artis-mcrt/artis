@@ -481,7 +481,7 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
                                                const int upperionlevel) -> int {
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   const int phixstargetindex = get_phixtargetindex(uniquelevelindex, upperionlevel);
-  return -1 - globals::alllevels.cont_index[uniquelevelindex] - phixstargetindex;
+  return -1 - globals::alllevels.bflist_start[uniquelevelindex] - phixstargetindex;
 }
 
 // Return the photionisation threshold energy [erg]
@@ -508,7 +508,7 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
 
 [[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int uniquelevelindex,
                                          const int phixstargetindex) -> int {
-  const int contindex = globals::alllevels.cont_index[uniquelevelindex] + phixstargetindex;
+  const int contindex = globals::alllevels.bflist_start[uniquelevelindex] + phixstargetindex;
   const int bflutindex = (temperatureindex * globals::nbfcontinua) + contindex;
   assert_testmodeonly(bflutindex >= 0);
   assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);

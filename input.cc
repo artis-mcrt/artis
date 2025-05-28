@@ -865,7 +865,7 @@ void read_phixs_data() {
       for (int level = 0; level < nlevels; level++) {
         const int nphixstargets = get_nphixstargets(element, ion, level);
         const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-        globals::alllevels.cont_index[uniquelevelindex] = (nphixstargets > 0) ? cont_index : -1;
+        globals::alllevels.bflist_start[uniquelevelindex] = (nphixstargets > 0) ? cont_index : -1;
         cont_index += nphixstargets;
         if (nphixstargets > 0) {
           nbftables++;
@@ -1206,12 +1206,12 @@ void read_atomicdata_files() {
   globals::alllevels.phixsstart = MPI_shared_malloc_span<int>(temp_alllevels.size());
   globals::alllevels.nphixstargets = MPI_shared_malloc_span<int>(temp_alllevels.size());
   globals::alllevels.phixstargetstart = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels.cont_index = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  globals::alllevels.bflist_start = MPI_shared_malloc_span<int>(temp_alllevels.size());
   if (globals::rank_in_node == 0) {
     std::ranges::fill(globals::alllevels.phixsstart, -1);
     std::ranges::fill(globals::alllevels.nphixstargets, 0);
     std::ranges::fill(globals::alllevels.phixstargetstart, -1);
-    std::ranges::fill(globals::alllevels.cont_index, -1);
+    std::ranges::fill(globals::alllevels.bflist_start, -1);
     std::ranges::fill(globals::alllevels.closestgroundlevelcont, -1);
     for (size_t i = 0; i < temp_alllevels.size(); i++) {
       globals::alllevels.alltrans_startdown[i] = temp_alllevels[i].alltrans_startdown;
