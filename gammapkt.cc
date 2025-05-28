@@ -9,9 +9,11 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <ios>
 #include <limits>
 #include <numeric>
 #include <span>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -23,6 +25,7 @@
 #include "decay.h"
 #include "globals.h"
 #include "grid.h"
+#include "input.h"
 #include "packet.h"
 #include "random.h"
 #include "sn3d.h"
@@ -61,17 +64,21 @@ void read_gamma_spectrum(const int nucindex, const std::string &filename)
   printout("reading gamma spectrum for Z=%d A=%d from %s...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
            filename.c_str());
 
-  auto filein = fopen_required_uniqueptr(filename, "r");
+  auto gammafile = fstream_required(filename, std::ios::in);
+  std::string line;
+  get_noncommentline(gammafile, line);
+  std::istringstream ssline(line);
   int nlines = 0;
-  assert_always(fscanf(filein.get(), "%d", &nlines) == 1);
+  ssline >> nlines;
 
   gamma_spectra[nucindex].resize(nlines, {});
 
   double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++) {
+    get_noncommentline(gammafile, line);
     double en_mev = 0.;
     double prob = 0.;
-    assert_always(fscanf(filein.get(), "%lg %lg", &en_mev, &prob) == 2);
+    assert_always(std::istringstream(line) >> en_mev >> prob);
     gamma_spectra[nucindex][n].energy = en_mev * MEV;
     gamma_spectra[nucindex][n].probability = prob;
     E_gamma_avg += en_mev * MEV * prob;
