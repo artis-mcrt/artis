@@ -20,6 +20,7 @@
 
 #include "sn3d.h"
 
+namespace {
 constexpr int MD5_BLOCK_SIZE = 16;  // MD5 outputs a 16 byte digest
 
 using BYTE = unsigned char;  // 8-bit byte
@@ -62,7 +63,6 @@ using MD5_CTX = struct {
   }
 
 /*********************** FUNCTION DEFINITIONS ***********************/
-namespace {
 void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
   WORD a = 0;
   WORD b = 0;
