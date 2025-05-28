@@ -11,6 +11,7 @@
 
 #include "md5.h"
 
+#include <bit>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -32,38 +33,36 @@ using MD5_CTX = struct {
   WORD state[4];
 };
 
-constexpr auto ROTLEFT(const WORD a, const WORD b) -> WORD { return (a << b) | (a >> (32 - b)); }
-
 constexpr auto F(const WORD x, const WORD y, const WORD z) -> WORD { return (x & y) | (~x & z); }
 constexpr auto G(const WORD x, const WORD y, const WORD z) -> WORD { return (x & z) | (y & ~z); }
-constexpr auto H_func(const WORD x, const WORD y, const WORD z) -> WORD { return x ^ y ^ z; }
+constexpr auto H(const WORD x, const WORD y, const WORD z) -> WORD { return x ^ y ^ z; }
 constexpr auto I(const WORD x, const WORD y, const WORD z) -> WORD { return y ^ (x | ~z); }
 
-constexpr auto ff_func(WORD a, const WORD b, const WORD c, const WORD d, const WORD m, const WORD s, const WORD t)
+constexpr auto ff_func(WORD a, const WORD b, const WORD c, const WORD d, const WORD m, const int s, const WORD t)
     -> WORD {
   a += F(b, c, d) + m + t;
-  a = b + ROTLEFT(a, s);
+  a = b + std::rotl(a, s);
   return a;
 }
 
-constexpr auto gg_func(WORD a, const WORD b, const WORD c, const WORD d, const WORD m, const WORD s, const WORD t)
+constexpr auto gg_func(WORD a, const WORD b, const WORD c, const WORD d, const WORD m, const int s, const WORD t)
     -> WORD {
   a += G(b, c, d) + m + t;
-  a = b + ROTLEFT(a, s);
+  a = b + std::rotl(a, s);
   return a;
 }
 
-constexpr auto hh_func(WORD a, const WORD b, const WORD c, const WORD d, const WORD m, const WORD s, const WORD t)
+constexpr auto hh_func(WORD a, const WORD b, const WORD c, const WORD d, const WORD m, const int s, const WORD t)
     -> WORD {
-  a += H_func(b, c, d) + m + t;
-  a = b + ROTLEFT(a, s);
+  a += H(b, c, d) + m + t;
+  a = b + std::rotl(a, s);
   return a;
 }
 
-constexpr auto ii_func(WORD a, const WORD b, const WORD c, const WORD d, const WORD m, const WORD s, const WORD t)
+constexpr auto ii_func(WORD a, const WORD b, const WORD c, const WORD d, const WORD m, const int s, const WORD t)
     -> WORD {
   a += I(b, c, d) + m + t;
-  a = b + ROTLEFT(a, s);
+  a = b + std::rotl(a, s);
   return a;
 }
 
