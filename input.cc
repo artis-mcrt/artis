@@ -751,10 +751,10 @@ void setup_phixs_list() {
       const int nlevels = get_nlevels_ionising(element, ion);
       for (int level = 0; level < nlevels; level++) {
         const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-        const int nphixstargets = get_nphixstargets(element, ion, level);
+        const int nphixstargets = get_nphixstargets(uniquelevelindex);
 
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          const double nu_edge = get_phixs_threshold(element, ion, level, phixstargetindex) / H;
+          const double nu_edge = get_phixs_threshold(uniquelevelindex, phixstargetindex) / H;
 
           assert_always(allcontindex < globals::nbfcontinua);
           assert_always(nonconstallcont != nullptr);
@@ -763,11 +763,11 @@ void setup_phixs_list() {
           nonconstallcont[allcontindex].ion = ion;
           nonconstallcont[allcontindex].level = level;
           nonconstallcont[allcontindex].phixstargetindex = phixstargetindex;
-          nonconstallcont[allcontindex].probability = get_phixsprobability(element, ion, level, phixstargetindex);
-          nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+          nonconstallcont[allcontindex].probability = get_phixsprobability(uniquelevelindex, phixstargetindex);
+          nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
 
           if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-            const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
+            const double nu_edge_target0 = get_phixs_threshold(uniquelevelindex, 0) / H;
             const auto groundcontindex = search_groundphixslist(nu_edge_target0, element, ion, level);
             nonconstallcont[allcontindex].index_in_groundphixslist = groundcontindex;
 
