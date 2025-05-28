@@ -1058,9 +1058,6 @@ void calculate_expansion_opacities(const int nonemptymgi) {
 
   for (ptrdiff_t binindex = 0; binindex < expopac_nbins; binindex++) {
     double bin_linesum = 0.;
-
-    const auto nu_upper = get_expopac_bin_nu_upper(binindex);
-
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
 
     while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= nu_lower) {
@@ -1078,6 +1075,8 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       // thread_local Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
       // calculate_chi_rpkt_cont(nu_mid, chi_rpkt_cont, nullptr, nonemptymgi);
       // const auto bin_kappa_cont = chi_rpkt_cont.total / rho;
+
+      const auto nu_upper = get_expopac_bin_nu_upper(binindex);
       const auto nu_mid = (nu_upper + nu_lower) / 2.;
       const auto bin_kappa_cont = calculate_chi_ffheating(nonemptymgi, nu_mid) / rho;
 
