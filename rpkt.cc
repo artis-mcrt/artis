@@ -306,7 +306,6 @@ void electron_scatter_rpkt(Packet &pkt) {
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
   // Whitlock 2008)
   double M = 0.;
-  double mu = 0.;
   double phisc = 0.;
 
   if constexpr (DIPOLE) {
@@ -317,7 +316,7 @@ void electron_scatter_rpkt(Packet &pkt) {
       const double zrand = rng_uniform();
 
       M = 2 * zrand - 1;
-      mu = pow(M, 2.);
+      const double mu = pow(M, 2.);
       phisc = 2 * PI * rng_uniform();
 
       // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
@@ -336,7 +335,6 @@ void electron_scatter_rpkt(Packet &pkt) {
     const double zrand = rng_uniform();
 
     M = 2. * zrand - 1;
-    mu = pow(M, 2.);
     phisc = 2 * PI * rng_uniform();
   }
 
@@ -372,7 +370,7 @@ void electron_scatter_rpkt(Packet &pkt) {
 
   // Scattering
 
-  mu = dot(old_dir_cmf, new_dir_cmf);
+  const double mu = dot(old_dir_cmf, new_dir_cmf);
 
   const double Inew = 0.75 * ((mu * mu + 1.0) + Qold * (mu * mu - 1.0));
   const double Qnew = (0.75 * ((mu * mu - 1.0) + Qold * (mu * mu + 1.0))) / Inew;
@@ -1042,13 +1040,12 @@ void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node
 }
 
 void calculate_expansion_opacities(const int nonemptymgi) {
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const auto rho = grid::get_rho(nonemptymgi);
 
   const auto sys_time_start_calc = std::time(nullptr);
   const auto temperature = grid::get_TR(nonemptymgi);
 
-  printout("calculating expansion opacities for cell %d...", modelgridindex);
+  printout("calculating expansion opacities for cell %d...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
@@ -1065,9 +1062,6 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     const auto nu_upper = get_expopac_bin_nu_upper(binindex);
 
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
-    const auto nu_mid = (nu_upper + nu_lower) / 2.;
-
-    const auto delta_nu = nu_upper - nu_lower;
 
     while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= nu_lower) {
       const float tau_line = get_tau_sobolev(nonemptymgi, lineindex, t_mid);
@@ -1084,11 +1078,13 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       // thread_local Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
       // calculate_chi_rpkt_cont(nu_mid, chi_rpkt_cont, nullptr, nonemptymgi);
       // const auto bin_kappa_cont = chi_rpkt_cont.total / rho;
+      const auto nu_mid = (nu_upper + nu_lower) / 2.;
       const auto bin_kappa_cont = calculate_chi_ffheating(nonemptymgi, nu_mid) / rho;
 
       const auto planck_val = radfield::dbb(nu_mid, temperature, 1);
       const auto kappa_planck = (bin_kappa_bb + bin_kappa_cont) * planck_val;
 
+      const auto delta_nu = nu_upper - nu_lower;
       kappa_planck_cumulative += kappa_planck * delta_nu;
 
       expansionopacity_planck_cumulative[(nonemptymgi * expopac_nbins) + binindex] = kappa_planck_cumulative;
