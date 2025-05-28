@@ -32,7 +32,7 @@ using MD5_CTX = struct {
   WORD state[4];
 };
 
-#define ROTLEFT(a, b) (((a) << (b)) | ((a) >> (32 - (b))))
+constexpr auto ROTLEFT(const WORD a, const WORD b) -> WORD { return (a << b) | (a >> (32 - b)); }
 
 #define F(x, y, z) (((x) & (y)) | (~(x) & (z)))
 #define G(x, y, z) (((x) & (z)) | ((y) & ~(z)))
