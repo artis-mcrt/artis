@@ -156,7 +156,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
 
 // Calculate the photoionisation cross-section at frequency nu out of the atomic data.
 [[nodiscard]] inline auto photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge,
-                                                                 const double nu) -> double {
+                                                                 const double nu) -> float {
   // if (nu < nu_edge || nu > nu_edge * 1.05)
   //   return 0;
   // else
