@@ -449,7 +449,6 @@ void compton_scatter(Packet &pkt) {
 
 // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the observer reference frame
 auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
-  double chi_cmf{NAN};
   // Start by working out the x-section in the co-moving frame.
 
   const int mgi = grid::get_propcell_modelgridindex(pkt.where);
@@ -461,8 +460,8 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
 
   const double rho = grid::get_rho(nonemptymgi);
 
+  double chi_cmf{0.};
   if (globals::gamma_kappagrey < 0) {
-    chi_cmf = 0.;
     if constexpr (!USE_XCOM_GAMMAPHOTOION) {
       // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
 
