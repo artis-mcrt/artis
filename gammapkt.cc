@@ -61,9 +61,9 @@ void read_gamma_spectrum(const int nucindex, const std::string &filename)
   printout("reading gamma spectrum for Z=%d A=%d from %s...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
            filename.c_str());
 
-  FILE *filein = fopen_required(filename, "r");
+  auto filein = fopen_required_uniqueptr(filename, "r");
   int nlines = 0;
-  assert_always(fscanf(filein, "%d", &nlines) == 1);
+  assert_always(fscanf(filein.get(), "%d", &nlines) == 1);
 
   gamma_spectra[nucindex].resize(nlines, {});
 
@@ -71,12 +71,11 @@ void read_gamma_spectrum(const int nucindex, const std::string &filename)
   for (int n = 0; n < nlines; n++) {
     double en_mev = 0.;
     double prob = 0.;
-    assert_always(fscanf(filein, "%lg %lg", &en_mev, &prob) == 2);
+    assert_always(fscanf(filein.get(), "%lg %lg", &en_mev, &prob) == 2);
     gamma_spectra[nucindex][n].energy = en_mev * MEV;
     gamma_spectra[nucindex][n].probability = prob;
     E_gamma_avg += en_mev * MEV * prob;
   }
-  fclose(filein);
 
   decay::set_nucdecayenergygamma(nucindex, E_gamma_avg);
 

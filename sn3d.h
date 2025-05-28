@@ -206,6 +206,11 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   return file;
 }
 
+[[nodiscard]] inline auto fopen_required_uniqueptr(const std::string &filename, const char *mode) {
+  return std::unique_ptr<FILE, int (*)(FILE *)>(fopen_required(filename, mode),
+                                                [](FILE *fp) -> int { return std::fclose(fp); });
+}
+
 [[nodiscard]] inline auto fstream_required(const std::string &filename, std::ios_base::openmode mode) -> std::fstream {
   const std::string datafolderfilename = "data/" + filename;
   if (mode == std::ios::in && std::filesystem::exists(datafolderfilename)) {
