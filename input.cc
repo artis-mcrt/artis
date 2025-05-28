@@ -1448,11 +1448,6 @@ void setup_cellcache() {
 void write_bflist_file() {
   resize_exactly(globals::bflist, globals::nbfcontinua);
 
-  FILE *bflist_file{};
-  if (globals::my_rank == 0) {
-    bflist_file = fopen_required("bflist.out", "w");
-    fprintf(bflist_file, "%d\n", globals::nbfcontinua);
-  }
   int i = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -1466,10 +1461,6 @@ void write_bflist_file() {
           globals::bflist[i].ionindex = ion;
           globals::bflist[i].levelindex = level;
           globals::bflist[i].phixstargetindex = phixstargetindex;
-
-          if (globals::my_rank == 0) {
-            fprintf(bflist_file, "%d %d %d %d %d\n", i, element, ion, level, upperionlevel);
-          }
 
           const int et = -1 - i;
 
@@ -1485,8 +1476,19 @@ void write_bflist_file() {
     }
   }
   assert_always(i == globals::nbfcontinua);
+
   if (globals::my_rank == 0) {
-    fclose(bflist_file);
+    auto bflist_file = fstream_required("bflist.out", std::ios::out | std::ios::trunc);
+    bflist_file << globals::nbfcontinua << "\n";
+    for (i = 0; i < globals::nbfcontinua; i++) {
+      const int element = globals::bflist[i].elementindex;
+      const int ion = globals::bflist[i].ionindex;
+      const int level = globals::bflist[i].levelindex;
+      const int phixstargetindex = globals::bflist[i].phixstargetindex;
+      const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+      bflist_file << i << " " << element << " " << ion << " " << level << " " << phixstargetindex << " "
+                  << upperionlevel << "\n";
+    }
   }
 }
 
