@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <ctime>
+#include <fstream>
 #include <functional>
 #include <ios>
 #include <span>
@@ -354,15 +355,13 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
                     const Spectra &spectra, const int numtimesteps) {
   auto spec_file = fstream_required(spec_filename, std::ios::out | std::ios::trunc);
 
-  FILE *emission_file{};
+  const bool do_emission_res = spectra.do_emission_res;
+  auto emission_file =
+      do_emission_res ? fstream_required(emission_filename, std::ios::out | std::ios::trunc) : std::fstream{};
   FILE *trueemission_file{};
   FILE *absorption_file{};
 
-  const bool do_emission_res = spectra.do_emission_res;
-
   if (do_emission_res) {
-    emission_file = fopen_required(emission_filename, "w");
-    assert_always(emission_file != nullptr);
     trueemission_file = fopen_required(trueemission_filename, "w");
     assert_always(trueemission_file != nullptr);
     absorption_file = fopen_required(absorption_filename, "w");
@@ -396,9 +395,9 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
       if (do_emission_res) {
         for (int nproc = 0; nproc < proccount; nproc++) {
           const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + nproc;
-          fprintf(emission_file, "%g ", spectra.emissionalltimesteps[emindex]);
+          emission_file << spectra.emissionalltimesteps[emindex] << " ";
         }
-        fprintf(emission_file, "\n");
+        emission_file << "\n";
 
         for (int truenproc = 0; truenproc < proccount; truenproc++) {
           const auto trueemindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + truenproc;
@@ -417,7 +416,6 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
   }
 
   if (do_emission_res) {
-    fclose(emission_file);
     fclose(trueemission_file);
     fclose(absorption_file);
   }
