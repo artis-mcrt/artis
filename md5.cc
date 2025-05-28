@@ -9,7 +9,6 @@
                                   This implementation uses little endian byte order.
 *********************************************************************/
 
-/*************************** HEADER FILES ***************************/
 #include "md5.h"
 
 #include <cstdint>
@@ -33,7 +32,6 @@ using MD5_CTX = struct {
   WORD state[4];
 };
 
-/****************************** MACROS ******************************/
 #define ROTLEFT(a, b) (((a) << (b)) | ((a) >> (32 - (b))))
 
 #define F(x, y, z) (((x) & (y)) | (~(x) & (z)))
@@ -63,7 +61,7 @@ using MD5_CTX = struct {
   }
 
 /*********************** FUNCTION DEFINITIONS ***********************/
-void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
+constexpr void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
   WORD a = 0;
   WORD b = 0;
   WORD c = 0;
@@ -158,7 +156,7 @@ void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
   ctx->state[3] += d;
 }
 
-void md5_init(MD5_CTX *ctx) {
+constexpr void md5_init(MD5_CTX *ctx) {
   ctx->datalen = 0;
   ctx->bitlen = 0;
   ctx->state[0] = 0x67452301;
@@ -167,7 +165,7 @@ void md5_init(MD5_CTX *ctx) {
   ctx->state[3] = 0x10325476;
 }
 
-void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
+constexpr void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
   size_t i = 0;
 
   for (i = 0; i < len; ++i) {
@@ -181,7 +179,7 @@ void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
   }
 }
 
-void md5_final(MD5_CTX *ctx, BYTE hash[MD5_BLOCK_SIZE]) {
+constexpr void md5_final(MD5_CTX *ctx, BYTE hash[MD5_BLOCK_SIZE]) {
   size_t i = 0;
 
   i = ctx->datalen;
@@ -254,4 +252,22 @@ auto md5_file(const std::string &filename) -> std::string {
   }
 
   return hashout;
+}
+
+void md5_test() {
+  MD5_CTX ctx;
+  md5_init(&ctx);
+
+  constexpr BYTE buffer[] = "md5 test string\n";
+
+  md5_update(&ctx, buffer, sizeof(buffer) - 1);
+
+  BYTE hashbytes[MD5_BLOCK_SIZE];
+  md5_final(&ctx, hashbytes);
+
+  std::string hashout(2 * MD5_BLOCK_SIZE, '0');  // Initialize with zeros
+  for (int j = 0; j < MD5_BLOCK_SIZE; j++) {
+    snprintf(&hashout[2 * j], (2 * MD5_BLOCK_SIZE) + 1 - (2 * j), "%02x", hashbytes[j]);
+  }
+  assert_always(hashout == "4b0cff9625b0501c7b9ccc6569113ddf");
 }
