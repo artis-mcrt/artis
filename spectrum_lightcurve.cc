@@ -352,7 +352,7 @@ void write_specpol_param(FILE *specpol_file, FILE *emissionpol_file, FILE *absor
 void write_spectrum(const std::string &spec_filename, const std::string &emission_filename,
                     const std::string &trueemission_filename, const std::string &absorption_filename,
                     const Spectra &spectra, const int numtimesteps) {
-  FILE *spec_file = fopen_required(spec_filename, "w");
+  auto spec_file = fstream_required(spec_filename, std::ios::out | std::ios::trunc);
 
   FILE *emission_file{};
   FILE *trueemission_file{};
@@ -379,19 +379,20 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
 
   assert_always(numtimesteps <= globals::ntimesteps);
 
-  fprintf(spec_file, "%g ", 0.0);
+  spec_file << "0 ";
   for (int p = 0; p < numtimesteps; p++) {
-    fprintf(spec_file, "%g ", globals::timesteps[p].mid / DAY);
+    // fprintf(spec_file, "%g ", globals::timesteps[p].mid / DAY);
+    spec_file << globals::timesteps[p].mid / DAY << " ";
   }
-  fprintf(spec_file, "\n");
+  spec_file << "\n";
 
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
   for (int nnu = 0; nnu < MNUBINS; nnu++) {
-    fprintf(spec_file, "%g ", ((spectra.lower_freq[nnu] + (spectra.delta_freq[nnu] / 2))));
+    spec_file << ((spectra.lower_freq[nnu] + (spectra.delta_freq[nnu] / 2))) << " ";
 
     for (int nts = 0; nts < numtimesteps; nts++) {
-      fprintf(spec_file, "%g ", spectra.fluxalltimesteps[(nts * MNUBINS) + nnu]);
+      spec_file << spectra.fluxalltimesteps[(nts * MNUBINS) + nnu] << " ";
       if (do_emission_res) {
         for (int nproc = 0; nproc < proccount; nproc++) {
           const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + nproc;
@@ -412,10 +413,9 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
         fprintf(absorption_file, "\n");
       }
     }
-    fprintf(spec_file, "\n");
+    spec_file << "\n";
   }
 
-  fclose(spec_file);
   if (do_emission_res) {
     fclose(emission_file);
     fclose(trueemission_file);
