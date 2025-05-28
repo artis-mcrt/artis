@@ -1486,8 +1486,7 @@ void write_bflist_file() {
       const int level = globals::bflist[i].levelindex;
       const int phixstargetindex = globals::bflist[i].phixstargetindex;
       const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      bflist_file << i << " " << element << " " << ion << " " << level << " " << phixstargetindex << " "
-                  << upperionlevel << "\n";
+      bflist_file << i << " " << element << " " << ion << " " << level << " " << upperionlevel << "\n";
     }
   }
 }
