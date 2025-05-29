@@ -1207,9 +1207,10 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
     isomassfracsum += stable_init_massfrac;
     isomassfrac_on_nucmass_sum += stable_init_massfrac / globals::elements[element].initstablemeannucmass;
 
-    grid::set_elem_abundance(nonemptymgi, element, isomassfracsum);
+    grid::set_elem_abundance(nonemptymgi, element, static_cast<float>(isomassfracsum));
     if (isomassfrac_on_nucmass_sum > 0.) {
-      grid::set_element_meanweight(nonemptymgi, element, isomassfracsum / isomassfrac_on_nucmass_sum);
+      grid::set_element_meanweight(nonemptymgi, element,
+                                   static_cast<float>(isomassfracsum / isomassfrac_on_nucmass_sum));
     } else {
       // avoid a divide by zero
       grid::set_element_meanweight(nonemptymgi, element, globals::elements[element].initstablemeannucmass);
