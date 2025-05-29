@@ -231,7 +231,7 @@ void set_modelinitnucmassfrac(const int modelgridindex, const int nucindex, floa
   initnucmassfrac_allcells[(modelgridindex * num_nuclides) + nucindex] = abund;
 }
 
-void set_initenergyq(const int modelgridindex, const double initenergyq) {
+void set_initenergyq(const int modelgridindex, const float initenergyq) {
   modelgrid_input[modelgridindex].initenergyq = initenergyq;
 }
 
