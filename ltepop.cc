@@ -607,8 +607,9 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
       nnion = MINPOP;
     }
 
-    const double groundpop = nnion * stat_weight(element, ion, 0) /
-                             grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex];
+    const auto groundpop =
+        static_cast<float>(nnion * stat_weight(element, ion, 0) /
+                           grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex]);
 
     if (!std::isfinite(groundpop)) {
       printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
