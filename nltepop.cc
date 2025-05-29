@@ -1114,7 +1114,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
       matrix_solve_satisfied_with_ion_list = true;
       if (retry_with_fewer_ions) {
         printout(
-            "successfully solved NLTE matrix when reducing ions used for element Z=%d ionstage=%d to ionstage=%d\n",
+            "successfully solved NLTE matrix when reducing ions used for element to Z=%d ionstage=%d to ionstage=%d\n",
             atomic_number, get_ionstage(element, first_ion_used),
             get_ionstage(element, first_ion_used + nions_used - 1));
       }

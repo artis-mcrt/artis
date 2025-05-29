@@ -1,0 +1,52 @@
+#!/usr/bin/env zsh
+
+set -x
+
+runfolder=nltephotospheric_dynamic_ion_range_1d_1dgrid_testrun
+
+mkdir -p $runfolder
+
+if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_feconi.tar.xz; fi
+
+tar -xf atomicdata_feconi.tar.xz --directory $runfolder
+
+rsync -av nltephotospheric_dynamic_ion_range_1d_1dgrid_inputfiles/ $runfolder
+
+rsync -av --ignore-times nltephotospheric_dynamic_ion_range_1d_1dgrid_inputfiles/ $runfolder
+
+cp ../data/* $runfolder
+
+cp ../artisoptions_nltephotospheric_dynamic_ion_range.h $runfolder/artisoptions.h
+
+cd $runfolder
+
+sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 250;/g' artisoptions.h
+
+sed -i'' -e 's/constexpr auto GRID_TYPE.*/constexpr auto GRID_TYPE = GridType::SPHERICAL1D;/g' artisoptions.h
+
+sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_X.*/constexpr int CUBOID_NCOORDGRID_X = 50;/g' artisoptions.h
+sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_Y.*/constexpr int CUBOID_NCOORDGRID_Y = 50;/g' artisoptions.h
+sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_Z.*/constexpr int CUBOID_NCOORDGRID_Z = 50;/g' artisoptions.h
+
+sed -i'' -e 's|constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {.*}|constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return (Z < 20) ? 20 : 40; }|g' artisoptions.h
+
+
+sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 20;/g' artisoptions.h
+sed -i'' -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 3500.;/g' artisoptions.h
+sed -i'' -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 140000.;/g' artisoptions.h
+
+sed -i'' -e 's/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 7;/g' artisoptions.h
+
+sed -i'' -e 's/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 7;/g' artisoptions.h
+
+sed -i'' -e 's/constexpr float POP_INVERSION_FACTOR_SOLVER_FAIL.*/constexpr float POP_INVERSION_FACTOR_SOLVER_FAIL = 50.0;/g' artisoptions.h
+
+sed -i'' -e 's/constexpr float POP_INVERSION_FACTOR_SMALL_INVERSION_WARNING.*/constexpr float POP_INVERSION_FACTOR_SMALL_INVERSION_WARNING = 10.0;/g' artisoptions.h
+
+sed -i'' -e 's/constexpr float POPULATION_CUT_REMOVE_ION.*/constexpr float POPULATION_CUT_REMOVE_ION = 100.0;/g' artisoptions.h
+
+sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' artisoptions.h
+
+cd -
+
+set +x
