@@ -456,7 +456,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 
 // Return the given ions groundlevel population for modelgridindex which was precalculated
 // during update_grid and stored to the grid.
-auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion) -> double {
+auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion) -> float {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   const double nn = grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
@@ -467,7 +467,7 @@ auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion)
     }
     return 0.;
   }
-  return nn;
+  return static_cast<float>(nn);
 }
 
 // Calculate occupation population of a level assuming LTE excitation
@@ -475,7 +475,7 @@ auto calculate_levelpop_boltzmann(const int nonemptymgi, const int element, cons
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  const auto nnground = get_groundlevelpop(nonemptymgi, element, ion);
+  const double nnground = get_groundlevelpop(nonemptymgi, element, ion);
   if (level == 0) {
     return nnground;
   }
@@ -565,7 +565,7 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
 
 // Use the ground level population and partition function to get an ion population
 [[nodiscard]] __host__ __device__ auto get_nnion(const int nonemptymgi, const int element, const int ion) -> double {
-  const auto nnion = get_groundlevelpop(nonemptymgi, element, ion) *
+  const auto nnion = static_cast<double>(get_groundlevelpop(nonemptymgi, element, ion)) *
                      grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
                                                    get_uniqueionindex(element, ion)] /
                      stat_weight(element, ion, 0);
