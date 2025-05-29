@@ -1217,12 +1217,14 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
   }
 
   // total number of electrons in grid cell which are possible targets for compton scattering of gamma rays
-  double nnetot = 0.;
-  const auto nelements = get_nelements();
-  for (int element = 0; element < nelements; element++) {
-    const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
-    nnetot += nnelement * get_atomicnumber(element);
-  }
+  const auto nnetot = [nonemptymgi]() {
+    double nnetot = 0.;
+    const auto nelements = get_nelements();
+    for (int element = 0; element < nelements; element++) {
+      nnetot += grid::get_elem_numberdens(nonemptymgi, element) * get_atomicnumber(element);
+    }
+    return static_cast<float>(nnetot);
+  }();
   grid::set_nnetot(nonemptymgi, nnetot);
 
   // double initnucfracsum = 0.;
