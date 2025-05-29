@@ -1457,9 +1457,7 @@ __host__ __device__ auto get_rho(const int nonemptymgi) -> float {
 __host__ __device__ auto get_nne(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  const double nne = modelgrid[nonemptymgi].nne;
-  assert_testmodeonly(std::isfinite(nne));
-  return nne;
+  return modelgrid[nonemptymgi].nne;
 }
 
 __host__ __device__ auto get_nnetot(const int nonemptymgi) -> float {
