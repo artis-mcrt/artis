@@ -403,7 +403,7 @@ __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
   stats::increment(stats::COUNTER_INTERACTIONS);
   pkt.emissiontype = EMTYPE_FREEFREE;
   pkt.em_pos = pkt.pos;
-  pkt.em_time = pkt.prop_time;
+  pkt.em_time = static_cast<float>(pkt.prop_time);
   pkt.nscatterings = 0;
 }
 
@@ -535,7 +535,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
 
     pkt.emissiontype = EMTYPE_FREEFREE;
     pkt.em_pos = pkt.pos;
-    pkt.em_time = pkt.prop_time;
+    pkt.em_time = static_cast<float>(pkt.prop_time);
     pkt.nscatterings = 0;
     if constexpr (VPKT_ON) {
       vpkt::call_estimators(pkt, TYPE_KPKT);
@@ -574,7 +574,7 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerlevel, upper);
     pkt.trueemissiontype = pkt.emissiontype;
     pkt.em_pos = pkt.pos;
-    pkt.em_time = pkt.prop_time;
+    pkt.em_time = static_cast<float>(pkt.prop_time);
     pkt.nscatterings = 0;
 
     if constexpr (VPKT_ON) {

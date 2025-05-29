@@ -206,7 +206,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   pkt.next_trans = lineindex + 1;
   pkt.emissiontype = lineindex;
   pkt.em_pos = pkt.pos;
-  pkt.em_time = pkt.prop_time;
+  pkt.em_time = static_cast<float>(pkt.prop_time);
   pkt.nscatterings = 0;
 }
 
@@ -262,7 +262,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   pkt.next_trans = -1;  // continuum transition, no restrictions for further line interactions
   pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerionlevel, upperionlevel);
   pkt.em_pos = pkt.pos;
-  pkt.em_time = pkt.prop_time;
+  pkt.em_time = static_cast<float>(pkt.prop_time);
   pkt.nscatterings = 0;
   return lowerionlevel;
 }

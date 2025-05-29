@@ -444,7 +444,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     // Electron scattering does not modify the last emission flag
     // but it updates the last emission position
     pkt.em_pos = pkt.pos;
-    pkt.em_time = pkt.prop_time;
+    pkt.em_time = static_cast<float>(pkt.prop_time);
 
   } else if (chi_rnd < chi_escatter + chi_ff) {
     // ff: transform to k-pkt
@@ -546,7 +546,7 @@ void rpkt_event_thickcell(Packet &pkt) {
   emit_rpkt(pkt);
   // Electron scattering does not modify the last emission flag but it updates the last emission position
   pkt.em_pos = pkt.pos;
-  pkt.em_time = pkt.prop_time;
+  pkt.em_time = static_cast<float>(pkt.prop_time);
 }
 
 // Update the volume estimators J and nuJ

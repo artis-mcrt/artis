@@ -181,7 +181,7 @@ void update_pellet(Packet &pkt, const int nts, const double t2) {
       } else {
         __builtin_unreachable();
       }
-      pkt.em_time = pkt.prop_time;
+      pkt.em_time = static_cast<float>(pkt.prop_time);
       pkt.absorptiontype = -10;
     } else {
       // decay to gamma-ray packet
