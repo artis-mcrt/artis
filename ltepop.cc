@@ -232,7 +232,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
 {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-  double pop_store{NAN};
+  float pop_store{NAN};
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
 
