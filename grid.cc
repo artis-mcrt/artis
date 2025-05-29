@@ -1486,8 +1486,8 @@ auto get_elem_abundance(const int nonemptymgi, const int element) -> float
 }
 
 // mass fraction of an element (all isotopes combined)
-void set_elem_abundance(const int nonemptymgi, const int element, const float newabundance) {
-  elem_massfracs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] = newabundance;
+void set_elem_abundance(const ptrdiff_t nonemptymgi, const int element, const float newabundance) {
+  elem_massfracs_allcells[(nonemptymgi * get_nelements()) + element] = newabundance;
 }
 
 // mass fraction of an element (all isotopes combined)

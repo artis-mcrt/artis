@@ -62,7 +62,7 @@ void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion)
 [[nodiscard]] auto get_nnetot(int nonemptymgi) -> float;
 [[nodiscard]] auto get_ffegrp(int modelgridindex) -> float;
 [[nodiscard]] auto get_modelcell_mean_radial_pos(int modelgridindex, double tratmid) -> double;
-void set_elem_abundance(int nonemptymgi, int element, float newabundance);
+void set_elem_abundance(ptrdiff_t nonemptymgi, int element, float newabundance);
 [[nodiscard]] auto get_elem_numberdens(int nonemptymgi, int element) -> double;
 [[nodiscard]] auto get_initelectronfrac(int modelgridindex) -> double;
 [[nodiscard]] auto get_initenergyq(int modelgridindex) -> double;
