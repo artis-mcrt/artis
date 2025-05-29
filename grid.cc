@@ -122,7 +122,7 @@ constexpr auto coordlabel = [] -> std::array<char, 3> {
 
 void set_rho_tmin(const int modelgridindex, const float x) { modelgrid_input[modelgridindex].rhoinit = x; }
 
-void set_initelectronfrac(const int modelgridindex, const double electronfrac) {
+void set_initelectronfrac(const int modelgridindex, const float electronfrac) {
   modelgrid_input[modelgridindex].initelectronfrac = electronfrac;
 }
 
@@ -138,8 +138,8 @@ void read_possible_yefile() {
 
   for (int n = 0; n < nlines_in; n++) {
     int mgiplusone = -1;
-    double initelecfrac = 0.;
-    assert_always(fscanf(filein.get(), "%d %lg", &mgiplusone, &initelecfrac) == 2);
+    float initelecfrac = 0.;
+    assert_always(fscanf(filein.get(), "%d %g", &mgiplusone, &initelecfrac) == 2);
     const int mgi = mgiplusone - 1;
     if (mgi >= 0 && mgi < get_npts_model()) {
       set_initelectronfrac(mgi, initelecfrac);
