@@ -2060,7 +2060,7 @@ void read_ejecta_model() {
 
       // in 3D cartesian, cellindex and modelgridindex are interchangeable
       const bool keepcell = (rho_model > 0);
-      const double rho_tmin = rho_model * pow(t_model / globals::tmin, 3);
+      const auto rho_tmin = static_cast<float>(rho_model * pow(t_model / globals::tmin, 3));
       set_rho_tmin(mgi, rho_tmin);
 
       if (min_den < 0. || min_den > rho_model) {
