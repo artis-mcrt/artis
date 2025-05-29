@@ -156,7 +156,8 @@ void read_phixs_data_table(
 
   assert_always(tmpallphixs.size() % globals::NPHIXSPOINTS == 0);
   const auto tmpphixsstart = tmpallphixs.size();
-  globals::alllevels.phixsstart[lowerionlower_uniquelevelindex] = tmpphixsstart / globals::NPHIXSPOINTS;
+  globals::alllevels.phixsstart[lowerionlower_uniquelevelindex] =
+      static_cast<int>(tmpphixsstart / globals::NPHIXSPOINTS);
   tmpallphixs.resize(tmpallphixs.size() + globals::NPHIXSPOINTS);
 
   const auto levelphixstable = std::span{tmpallphixs}.subspan(tmpphixsstart, globals::NPHIXSPOINTS);
