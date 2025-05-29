@@ -119,7 +119,7 @@ inline void change_cell(Packet &pkt, const int snext)
     // Then the packet is exiting the grid. We need to record
     // where and at what time it leaves the grid.
     pkt.escape_type = pkt.type;
-    pkt.escape_time = pkt.prop_time;
+    pkt.escape_time = static_cast<float>(pkt.prop_time);
     pkt.type = TYPE_ESCAPE;
     atomicadd(globals::nesc, 1);
 
