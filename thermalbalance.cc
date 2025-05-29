@@ -240,9 +240,9 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   const double p = nntot * KB * T_e;  // pressure in [erg/cm^3]
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double volumetmin = grid::get_modelcell_assocvolume_tmin(modelgridindex);
-  const double dV = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);  // really dV/dt
+  const double dV_on_dt = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);
   const double V = volumetmin * pow(t_current / globals::tmin, 3);
-  heatingcoolingrates.cooling_adiabatic = p * dV / V;
+  heatingcoolingrates.cooling_adiabatic = p * dV_on_dt / V;
 
   const double total_heating_rate = heatingcoolingrates.heating_ff + heatingcoolingrates.heating_bf +
                                     heatingcoolingrates.heating_collisional + heatingcoolingrates.heating_dep;
