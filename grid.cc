@@ -1731,11 +1731,9 @@ void calculate_kappagrey() {
 
     if (globals::opacity_case == 3) {
       if (get_rho_tmin(mgi) > 0.) {
-        double kappagrey = ((0.9 * get_ffegrp(mgi)) + 0.1);
-
-        if (get_rho_tmin(mgi) > globals::rho_crit) {
-          kappagrey *= globals::rho_crit / get_rho_tmin(mgi);
-        }
+        const auto kappagrey =
+            static_cast<float>(((0.9 * get_ffegrp(mgi)) + 0.1) *
+                               ((get_rho_tmin(mgi) > globals::rho_crit) ? globals::rho_crit / get_rho_tmin(mgi) : 1.));
 
         set_kappagrey(nonemptymgi, kappagrey);
       } else if (get_rho_tmin(mgi) == 0.) {
@@ -1926,7 +1924,7 @@ void read_ejecta_model() {
 
         vout_model[mgi] = vout_kmps * 1.e5;
 
-        const double rho_tmin = pow(10., log_rho) * pow(t_model / globals::tmin, 3);
+        const auto rho_tmin = static_cast<float>(pow(10., log_rho) * pow(t_model / globals::tmin, 3));
         set_rho_tmin(mgi, rho_tmin);
       } else {
         printout("Unexpected number of values in model.txt\n");
