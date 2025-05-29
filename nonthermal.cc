@@ -1111,20 +1111,19 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
 }
 
 // fraction of deposited energy that goes into ionization
-auto get_nt_frac_ionization(const int modelgridindex) -> float {
+auto get_nt_frac_ionization(const int nonemptymgi) -> float {
   if (!NT_ON) {
     return 0.;
   }
   if (!NT_SOLVE_SPENCERFANO) {
     return 0.03;
   }
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   const float frac_ionization = nt_solution[nonemptymgi].frac_ionization;
 
   if (frac_ionization < 0 || !std::isfinite(frac_ionization)) {
     printout("ERROR: get_nt_frac_ionization called with no valid solution stored for cell %d. frac_ionization = %g\n",
-             modelgridindex, frac_ionization);
+             grid::get_mgi_of_nonemptymgi(nonemptymgi), frac_ionization);
     std::abort();
   }
 
@@ -1132,17 +1131,16 @@ auto get_nt_frac_ionization(const int modelgridindex) -> float {
 }
 
 // fraction of deposited energy that goes into collisional excitation
-auto get_nt_frac_excitation(const int modelgridindex) -> float {
+auto get_nt_frac_excitation(const int nonemptymgi) -> float {
   if (!NT_ON || !NT_SOLVE_SPENCERFANO) {
     return 0.;
   }
 
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const float frac_excitation = nt_solution[nonemptymgi].frac_excitation;
 
   if (frac_excitation < 0 || !std::isfinite(frac_excitation)) {
     printout("ERROR: get_nt_frac_excitation called with no valid solution stored for cell %d. frac_excitation = %g\n",
-             modelgridindex, frac_excitation);
+             grid::get_mgi_of_nonemptymgi(nonemptymgi), frac_excitation);
     std::abort();
   }
 
@@ -2358,7 +2356,7 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
       return;
     }
 
-    // const double frac_excitation = NT_EXCITATION_ON ? get_nt_frac_excitation(modelgridindex) : 0;
+    // const double frac_excitation = NT_EXCITATION_ON ? get_nt_frac_excitation(nonemptymgi) : 0;
     const double frac_excitation = 0.;
     if (zrand < (frac_ionization + frac_excitation)) {
       zrand -= frac_ionization;
