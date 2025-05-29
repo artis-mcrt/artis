@@ -1015,7 +1015,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
   double alpha = 0.;
   if (lowerion < get_nions(element) - 1) {
     // this gets divided and cancelled out in the radiative case anyway
-    const float nne = (nonemptymgi >= 0) ? grid::get_nne(nonemptymgi) : 1.F;
+    const auto nne = (nonemptymgi >= 0) ? grid::get_nne(nonemptymgi) : 1.F;
 
     double nnupperion = 0;
     int upper_nlevels = 0;
