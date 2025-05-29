@@ -1061,13 +1061,13 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
 
     while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= nu_lower) {
-      const float tau_line = get_tau_sobolev(nonemptymgi, lineindex, t_mid);
+      const auto tau_line = static_cast<float>(get_tau_sobolev(nonemptymgi, lineindex, t_mid));
       const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
       bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
       lineindex++;
     }
 
-    const float bin_kappa_bb = 1. / (CLIGHT * t_mid * rho) * bin_linesum;
+    const auto bin_kappa_bb = static_cast<float>(1. / (CLIGHT * t_mid * rho) * bin_linesum);
     assert_always(std::isfinite(bin_kappa_bb));
     expansionopacities[(nonemptymgi * expopac_nbins) + binindex] = bin_kappa_bb;
 
