@@ -525,8 +525,8 @@ void read_recombrate_file() {
 
   printout("Reading recombination rate file (recombrates.txt)...\n");
 
-  const double Te_estimate = RECOMBCALIBRATION_T_ELEC;
-  const double log_Te_estimate = log10(Te_estimate);
+  const float Te_estimate = RECOMBCALIBRATION_T_ELEC;
+  const double log_Te_estimate = log10(RECOMBCALIBRATION_T_ELEC);
 
   printout("Calibrating recombination rates for a temperature of %.1f K\n", Te_estimate);
 
