@@ -981,9 +981,9 @@ void assign_initial_temperatures() {
 void setup_nstart_ndo() {
   const int nprocesses = globals::nprocs;
   assert_always(nonempty_npts_model > 0);
-  const int min_nonempty_perproc =
+  const auto min_nonempty_perproc =
       nonempty_npts_model / nprocesses;  // integer division, minimum non-empty cells per process
-  const int n_remainder = nonempty_npts_model % nprocesses;
+  const auto n_remainder = nonempty_npts_model % nprocesses;
 
   ranks_nstart.resize(nprocesses, -1);
   ranks_nstart_nonempty.resize(nprocesses, -1);
@@ -1012,7 +1012,7 @@ void setup_nstart_ndo() {
 
     int rank = 0;
     for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-      const int target_nonempty_thisrank = (rank < n_remainder) ? min_nonempty_perproc + 1 : min_nonempty_perproc;
+      const auto target_nonempty_thisrank = (rank < n_remainder) ? min_nonempty_perproc + 1 : min_nonempty_perproc;
       if ((rank < (nprocesses - 1)) && (ranks_ndo_nonempty[rank] >= target_nonempty_thisrank)) {
         // current rank has enough non-empty cells, so start assigning cells to the next rank
         rank++;
