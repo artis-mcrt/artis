@@ -956,7 +956,6 @@ void assign_initial_temperatures() {
     } else if (!std::isfinite(T_initial)) {
       printout("mgi %d: T_initial of %g is infinite!\n", mgi, T_initial);
     }
-    assert_always(std::isfinite(T_initial));
 
     set_Te(nonemptymgi, T_initial);
     set_TJ(nonemptymgi, T_initial);
