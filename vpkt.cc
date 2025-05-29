@@ -9,6 +9,7 @@
 #include <fstream>
 #include <ios>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include "artisoptions.h"
@@ -16,6 +17,7 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
+#include "input.h"
 #include "ltepop.h"
 #include "packet.h"
 #include "rpkt.h"
@@ -483,47 +485,49 @@ void read_vspecpol(const int my_rank, const int nts) {
   snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
   printout("Reading %s\n", filename);
 
-  FILE *vspecpol_file = fopen_required(filename, "r");
+  auto vspecpol_file = fstream_required(filename, std::ios::in);
 
   float a{NAN};
   float b{NAN};
   float c{NAN};
+  std::string line;
 
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
     // Initialise I,Q,U fluxes from temporary files
-    assert_always(fscanf(vspecpol_file, "%g ", &a) == 1);
+    assert_always(vspecpol_file >> a);
 
+    get_noncommentline(vspecpol_file, line);
+    auto ssline = std::stringstream(line);
     for (int l = 0; l < 3; l++) {
       for (int p = 0; p < VMTBINS; p++) {
-        assert_always(fscanf(vspecpol_file, "%g ", &b) == 1);
+        assert_always(ssline >> b);
       }
     }
 
-    assert_always(fscanf(vspecpol_file, "\n") == 0);
+    get_noncommentline(vspecpol_file, line);
+    ssline = std::stringstream(line);
 
     for (int j = 0; j < VMNUBINS; j++) {
-      assert_always(fscanf(vspecpol_file, "%g ", &c) == 1);
+      assert_always(ssline >> c);
 
       // Stokes I
       for (int p = 0; p < VMTBINS; p++) {
-        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux[j].i) == 1);
+        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].i);
       }
 
       // Stokes Q
       for (int p = 0; p < VMTBINS; p++) {
-        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux[j].q) == 1);
+        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].q);
       }
 
       // Stokes U
       for (int p = 0; p < VMTBINS; p++) {
-        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux[j].u) == 1);
+        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].u);
       }
-
-      assert_always(fscanf(vspecpol_file, "\n") == 0);
     }
   }
 
-  fclose(vspecpol_file);
+  vspecpol_file.close();
 }
 
 void init_vpkt_grid() {
