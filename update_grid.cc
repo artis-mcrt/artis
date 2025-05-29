@@ -963,7 +963,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     if (globals::lte_iteration || grid::modelgrid[nonemptymgi].thick == 1) {
       // LTE mode or grey mode (where temperature doesn't matter but is calculated anyway)
 
-      const double T_J = radfield::get_T_J_from_J(nonemptymgi);
+      const auto T_J = radfield::get_T_J_from_J(nonemptymgi);
       grid::set_TR(nonemptymgi, T_J);
       grid::set_Te(nonemptymgi, T_J);
       grid::set_TJ(nonemptymgi, T_J);

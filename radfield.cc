@@ -971,8 +971,8 @@ void normalise_nuJ(const int nonemptymgi, const double estimator_normfactor_over
   nuJ[nonemptymgi] *= estimator_normfactor_over4pi;
 }
 
-auto get_T_J_from_J(const int nonemptymgi) -> double {
-  const double T_J = pow(J[nonemptymgi] * PI / STEBO, 1. / 4.);
+auto get_T_J_from_J(const int nonemptymgi) -> float {
+  const auto T_J = static_cast<float>(pow(J[nonemptymgi] * PI / STEBO, 1. / 4.));
   if (!std::isfinite(T_J)) {
     // keep old value of T_J
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
