@@ -584,7 +584,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         }
 
         const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
-        const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A;
+        const auto f_ul =
+            static_cast<float>(g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A);
 
         auto &downtransition =
             temp_alltranslist[ion_levels[level].alltrans_startdown + ion_levels[level].ndowntrans - 1];
@@ -636,10 +637,10 @@ auto calculate_nlevels_groundterm(const int element, const int ion) -> int {
   // there should be no duplicate stat weights within the ground term
   // limit the ground multiplet to nnnnlowest levels below the first duplicated stat weight
   for (int level_a = 1; level_a < nlevels_groundterm; level_a++) {
-    const float g_a = stat_weight(element, ion, level_a);
+    const auto g_a = stat_weight(element, ion, level_a);
 
     for (int level_b = 0; level_b < level_a; level_b++) {
-      const float g_b = stat_weight(element, ion, level_b);
+      const auto g_b = stat_weight(element, ion, level_b);
       if (fabs(g_a - g_b) < 0.4) {
         // level_a is outside the ground term because of duplicate stat weight
         // highest ground level index is level_a - 1, so nlevels_groundterm == level_a
