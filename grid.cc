@@ -690,14 +690,14 @@ void read_model_radioabundances(std::fstream &fmodel, std::istringstream &ssline
 
     if (nucindexlist[i] >= 0) {
       assert_testmodeonly(valuein <= 1.);
-      set_modelinitnucmassfrac(mgi, nucindexlist[i], valuein);
+      set_modelinitnucmassfrac(mgi, nucindexlist[i], static_cast<float>(valuein));
     } else if (colnames[i] == "X_Fegroup") {
-      set_ffegrp(mgi, valuein);
+      set_ffegrp(mgi, static_cast<float>(valuein));
     } else if (colnames[i] == "cellYe" || colnames[i] == "Ye") {
-      set_initelectronfrac(mgi, valuein);
+      set_initelectronfrac(mgi, static_cast<float>(valuein));
     } else if (colnames[i] == "q") {
       // use value for t_model and adjust to tmin with expansion factor
-      set_initenergyq(mgi, valuein * t_model / globals::tmin);
+      set_initenergyq(mgi, static_cast<float>(valuein * t_model / globals::tmin));
     } else if (colnames[i] == "tracercount") {
       ;
     } else {
