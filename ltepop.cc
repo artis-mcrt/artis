@@ -565,10 +565,11 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
 
 // Use the ground level population and partition function to get an ion population
 [[nodiscard]] __host__ __device__ auto get_nnion(const int nonemptymgi, const int element, const int ion) -> double {
-  const auto nnion = static_cast<double>(get_groundlevelpop(nonemptymgi, element, ion)) *
-                     grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                                   get_uniqueionindex(element, ion)] /
-                     stat_weight(element, ion, 0);
+  const auto nnion =
+      static_cast<double>(get_groundlevelpop(nonemptymgi, element, ion)) *
+      static_cast<double>(grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
+                                                        get_uniqueionindex(element, ion)]) /
+      stat_weight(element, ion, 0);
   assert_testmodeonly(nnion >= 0.);
   assert_testmodeonly(std::isfinite(nnion));
   return nnion;
