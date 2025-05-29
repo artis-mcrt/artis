@@ -346,9 +346,9 @@ void set_groundlevelpops_neutral(const int nonemptymgi) {
       } else {
         nnion = 0.;
       }
-      const double groundpop =
-          (nnion * stat_weight(element, ion, 0) /
-           grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex]);
+      const auto groundpop = static_cast<float>(
+          nnion * stat_weight(element, ion, 0) /
+          grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex]);
 
       grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex] =
           groundpop;
