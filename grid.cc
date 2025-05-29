@@ -593,7 +593,7 @@ void read_abundances() {
         // now set the abundances (by mass) of included elements, i.e.
         // read out the abundances specified in the atomic data file
         const int anumber = get_atomicnumber(element);
-        const float elemabundance = abundances_in[anumber - 1] / normfactor;
+        const auto elemabundance = static_cast<float>(abundances_in[anumber - 1] / normfactor);
         assert_always(elemabundance >= 0.);
 
         // radioactive nuclide abundances should have already been set by read_??_model
