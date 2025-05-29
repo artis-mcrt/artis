@@ -1649,7 +1649,7 @@ auto get_element_meanweight(const int nonemptymgi, const int element) -> float
 // weight is in grams
 {
   if (USE_CALCULATED_MEANATOMICWEIGHT) {
-    const double mu = elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element];
+    const auto mu = elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element];
     if (mu > 0) {
       return mu;
     }
