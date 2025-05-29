@@ -942,8 +942,8 @@ void assign_initial_temperatures() {
       decayedenergy_per_mass += get_initenergyq(mgi);
     }
 
-    double T_initial =
-        pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.);
+    auto T_initial = static_cast<float>(
+        pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
 
     if (T_initial < MINTEMP) {
       //   printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", mgi, T_initial, MINTEMP);
