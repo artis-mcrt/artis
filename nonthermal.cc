@@ -1100,7 +1100,7 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
   frac_heating_Einit += N_e_contrib;
   printout(" heating N_e contrib (en < EMIN) %g nsteps %d\n", N_e_contrib / E_init_ev, nsteps);
 
-  const float frac_heating = frac_heating_Einit / E_init_ev;
+  const auto frac_heating = static_cast<float>(frac_heating_Einit / E_init_ev);
 
   if (!std::isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0) {
     printout("WARNING: calculate_frac_heating: invalid result of %g. Setting to 1.0 instead\n", frac_heating);
