@@ -494,10 +494,10 @@ void read_vspecpol(const int my_rank, const int nts) {
 
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
     // Initialise I,Q,U fluxes from temporary files
-    assert_always(vspecpol_file >> a);
-
     get_noncommentline(vspecpol_file, line);
     auto ssline = std::stringstream(line);
+    assert_always(ssline >> a);
+
     for (int l = 0; l < 3; l++) {
       for (int p = 0; p < VMTBINS; p++) {
         assert_always(ssline >> b);
