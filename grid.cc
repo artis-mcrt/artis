@@ -1474,8 +1474,9 @@ __host__ __device__ auto get_ffegrp(const int modelgridindex) -> float {
   return modelgrid_input[modelgridindex].ffegrp;
 }
 
-__host__ __device__ auto get_initial_radial_pos_sum(const int modelgridindex) -> float {
-  return modelgrid_input[modelgridindex].initial_radial_pos_sum;
+__host__ __device__ auto get_modelcell_mean_radial_pos(const int modelgridindex, const double tratmid) -> double {
+  const int assoc_cells = grid::get_numpropcells(modelgridindex);
+  return modelgrid_input[modelgridindex].initial_radial_pos_sum * tratmid / assoc_cells;
 }
 
 auto get_elem_abundance(const int nonemptymgi, const int element) -> float

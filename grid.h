@@ -61,7 +61,7 @@ void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion)
 [[nodiscard]] auto get_nne(int nonemptymgi) -> float;
 [[nodiscard]] auto get_nnetot(int nonemptymgi) -> float;
 [[nodiscard]] auto get_ffegrp(int modelgridindex) -> float;
-[[nodiscard]] auto get_initial_radial_pos_sum(int modelgridindex) -> float;
+[[nodiscard]] auto get_modelcell_mean_radial_pos(int modelgridindex, double tratmid) -> double;
 void set_elem_abundance(int nonemptymgi, int element, float newabundance);
 [[nodiscard]] auto get_elem_numberdens(int nonemptymgi, int element) -> double;
 [[nodiscard]] auto get_initelectronfrac(int modelgridindex) -> double;
@@ -131,9 +131,8 @@ inline auto get_ejecta_kinetic_energy() {
   double E_kin = 0.;
   for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-    const int assoc_cells = get_numpropcells(mgi);
     double const M_cell = get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
-    const double radial_pos = get_initial_radial_pos_sum(mgi) / assoc_cells;
+    const double radial_pos = get_modelcell_mean_radial_pos(mgi, 1.);
     E_kin += 0.5 * M_cell * std::pow(radial_pos / globals::tmin, 2);
   }
 
