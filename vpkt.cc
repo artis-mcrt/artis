@@ -486,29 +486,18 @@ void read_vspecpol(const int my_rank, const int nts) {
   printout("Reading %s\n", filename);
 
   auto vspecpol_file = fstream_required(filename, std::ios::in);
-
-  float a{NAN};
-  float b{NAN};
-  float c{NAN};
   std::string line;
 
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
+    get_noncommentline(vspecpol_file, line);  // first line is the header of times
+
     // Initialise I,Q,U fluxes from temporary files
-    get_noncommentline(vspecpol_file, line);
-    auto ssline = std::stringstream(line);
-    assert_always(ssline >> a);
-
-    for (int l = 0; l < 3; l++) {
-      for (int p = 0; p < VMTBINS; p++) {
-        assert_always(ssline >> b);
-      }
-    }
-
-    get_noncommentline(vspecpol_file, line);
-    ssline = std::stringstream(line);
-
     for (int j = 0; j < VMNUBINS; j++) {
-      assert_always(ssline >> c);
+      get_noncommentline(vspecpol_file, line);
+      auto ssline = std::stringstream(line);
+
+      float c{};
+      assert_always(ssline >> c);  // frequency bin center
 
       // Stokes I
       for (int p = 0; p < VMTBINS; p++) {
@@ -526,8 +515,6 @@ void read_vspecpol(const int my_rank, const int nts) {
       }
     }
   }
-
-  vspecpol_file.close();
 }
 
 void init_vpkt_grid() {
