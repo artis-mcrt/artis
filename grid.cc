@@ -273,7 +273,7 @@ void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int 
   }
 
   // (isofracsum + massfracstable) might not exactly match elemabundance if we had to boost it to reach isofracsum
-  set_elem_abundance(nonemptymgi, element, isofracsum + massfrac_untrackedstable);
+  set_elem_abundance(nonemptymgi, element, static_cast<float>(isofracsum + massfrac_untrackedstable));
 }
 
 void allocate_nonemptycells_composition_cooling()
