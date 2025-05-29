@@ -226,7 +226,7 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
   return nn;
 }
 
-auto calculate_partfunct(const int element, const int ion, const int nonemptymgi) -> double
+auto calculate_partfunct(const int element, const int ion, const int nonemptymgi) -> float
 // Calculates the partition function for ion=ion of element=element in
 // cell modelgridindex
 {
@@ -257,8 +257,9 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
     U += nn;
   }
   U *= stat_weight(element, ion, 0);
+  const auto U_float = static_cast<float>(U);
 
-  if (!std::isfinite(U)) {
+  if (!std::isfinite(U_float)) {
     printout("element %d ion %d\n", element, ion);
     printout("modelgridindex %d\n", grid::get_mgi_of_nonemptymgi(nonemptymgi));
     printout("nlevels %d\n", nlevels);
@@ -272,7 +273,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
         pop_store;
   }
 
-  return U;
+  return U_float;
 }
 
 auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi, const bool force_saha) -> int {
@@ -564,7 +565,7 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
 
 // Use the ground level population and partition function to get an ion population
 [[nodiscard]] __host__ __device__ auto get_nnion(const int nonemptymgi, const int element, const int ion) -> double {
-  const auto nnion = get_groundlevelpop(nonemptymgi, element, ion) *
+  const auto nnion = static_cast<double>(get_groundlevelpop(nonemptymgi, element, ion)) *
                      grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
                                                    get_uniqueionindex(element, ion)] /
                      stat_weight(element, ion, 0);
