@@ -268,7 +268,8 @@ void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int 
 
   // if (globals::rank_in_node == 0)
   {
-    initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element] = massfrac_untrackedstable;
+    initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element] =
+        static_cast<float>(massfrac_untrackedstable);
   }
 
   // (isofracsum + massfracstable) might not exactly match elemabundance if we had to boost it to reach isofracsum
