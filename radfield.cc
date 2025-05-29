@@ -303,7 +303,7 @@ auto delta_nu_bar(const double T_R, void *const paras) -> double {
 }
 
 auto find_T_R(const int nonemptymgi, const int binindex) -> float {
-  double T_R = 0.;
+  float T_R = 0.;
 
   GSLT_RSolverParams paras{};
   paras.nonemptymgi = nonemptymgi;
@@ -335,7 +335,7 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
     int status = 0;
     for (int iteration_num = 0; iteration_num <= maxit; iteration_num++) {
       gsl_root_fsolver_iterate(T_R_solver);
-      T_R = gsl_root_fsolver_root(T_R_solver);
+      T_R = static_cast<float>(gsl_root_fsolver_root(T_R_solver));
 
       const double T_R_lower = gsl_root_fsolver_x_lower(T_R_solver);
       const double T_R_upper = gsl_root_fsolver_x_upper(T_R_solver);
