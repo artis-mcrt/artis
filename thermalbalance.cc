@@ -195,7 +195,7 @@ void calculate_heating_rates(const int nonemptymgi, const double T_e, const doub
 
 // Thermal balance equation on which we have to iterate to get T_e
 auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
-  const TeSolutionParams *const params = static_cast<TeSolutionParams *>(paras);
+  const auto *const params = static_cast<const TeSolutionParams *>(paras);
 
   const auto nonemptymgi = params->nonemptymgi;
   const double t_current = params->t_current;
