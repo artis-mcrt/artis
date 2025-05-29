@@ -1465,8 +1465,7 @@ __host__ __device__ auto get_nne(const int nonemptymgi) -> float {
 __host__ __device__ auto get_nnetot(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  const double nnetot = modelgrid[nonemptymgi].nnetot;
-  return nnetot;
+  return modelgrid[nonemptymgi].nnetot;
 }
 
 __host__ __device__ auto get_ffegrp(const int modelgridindex) -> float {
