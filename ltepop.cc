@@ -455,11 +455,11 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 
 // Return the given ions groundlevel population for modelgridindex which was precalculated
 // during update_grid and stored to the grid.
-auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion) -> double {
+auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion) -> float {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-  const double nn = grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                                       get_uniqueionindex(element, ion)];
+  const auto nn = grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
+                                                     get_uniqueionindex(element, ion)];
   if (nn < MINPOP) {
     if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
       return MINPOP;
