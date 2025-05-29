@@ -176,8 +176,8 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
       // use a parameterization of sigma_bf by the Kramers formula
       // which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
       // so far the highest grid point, otherwise the cross-section is not continuous
-      sigma_bf = photoion_xs[globals::NPHIXSPOINTS - 1] *
-                 pow(nu_edge * (1 + globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS) / nu, 3);
+      sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] *
+                                    pow(nu_edge * (1 + globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS) / nu, 3));
     }
     return sigma_bf;
   }
@@ -191,13 +191,13 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
     const double sigma_bf_a = photoion_xs[i];
     const double sigma_bf_b = photoion_xs[i + 1];
     const double factor_b = ireal - i;
-    sigma_bf = ((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b);
+    sigma_bf = static_cast<float>(((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b));
   } else {
     // use a parameterization of sigma_bf by the Kramers formula
     // which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
     // so far the highest grid point, otherwise the cross-section is not continuous
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
-    sigma_bf = photoion_xs[globals::NPHIXSPOINTS - 1] * pow(nu_max_phixs / nu, 3);
+    sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] * pow(nu_max_phixs / nu, 3));
   }
 
   return sigma_bf;
