@@ -1983,7 +1983,7 @@ void read_ejecta_model() {
       }
 
       const bool keepcell = (rho_tmodel > 0);
-      const double rho_tmin = rho_tmodel * pow(t_model / globals::tmin, 3);
+      const auto rho_tmin = static_cast<float>(rho_tmodel * pow(t_model / globals::tmin, 3));
       set_rho_tmin(mgi, rho_tmin);
 
       read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
@@ -2302,7 +2302,7 @@ void init_grid(const int my_rank) {
         for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
           const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
           const double prev_abund = get_modelinitnucmassfrac(mgi, nucindex);
-          const double new_abund = prev_abund * ratio;
+          const auto new_abund = static_cast<float>(prev_abund * ratio);
           set_modelinitnucmassfrac(mgi, nucindex, new_abund);
         }
       }
