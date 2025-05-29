@@ -531,7 +531,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
         if (pass == 1 && globals::rank_in_node == 0) {
           const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
-          const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A;
+          const auto f_ul =
+              static_cast<float>(g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A);
           assert_always(std::isfinite(f_ul));
 
           temp_linelist.push_back({
