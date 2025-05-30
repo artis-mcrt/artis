@@ -422,8 +422,9 @@ void init_vspecpol() {
   }
 
   for (int m = 0; m < VMNUBINS; m++) {
-    lower_freq_vspec[m] = exp(log(VSPEC_NUMIN) + (m * (dlognu_vspec)));
-    delta_freq_vspec[m] = exp(log(VSPEC_NUMIN) + ((m + 1) * (dlognu_vspec))) - lower_freq_vspec[m];
+    lower_freq_vspec[m] = static_cast<float>(std::exp(log(VSPEC_NUMIN) + (m * (dlognu_vspec))));
+    delta_freq_vspec[m] =
+        static_cast<float>(std::exp(log(VSPEC_NUMIN) + ((m + 1) * (dlognu_vspec))) - lower_freq_vspec[m]);
   }
 
   // start by setting up the time and frequency bins.
@@ -431,9 +432,9 @@ void init_vspecpol() {
   // step sizes first.
   for (int n = 0; n < VMTBINS; n++) {
     for (int ind_comb = 0; ind_comb < indexmax; ind_comb++) {
-      vspecpol[n][ind_comb].lower_time = exp(log(VSPEC_TIMEMIN) + (n * (dlogt_vspec)));
-      vspecpol[n][ind_comb].delta_t =
-          exp(log(VSPEC_TIMEMIN) + ((n + 1) * (dlogt_vspec))) - vspecpol[n][ind_comb].lower_time;
+      vspecpol[n][ind_comb].lower_time = static_cast<float>(std::exp(log(VSPEC_TIMEMIN) + (n * (dlogt_vspec))));
+      vspecpol[n][ind_comb].delta_t = static_cast<float>(std::exp(log(VSPEC_TIMEMIN) + ((n + 1) * (dlogt_vspec))) -
+                                                         vspecpol[n][ind_comb].lower_time);
 
       for (auto &flux : vspecpol[n][ind_comb].flux) {
         flux.i = 0.;
