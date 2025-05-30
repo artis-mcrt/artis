@@ -34,8 +34,7 @@ namespace {
 constexpr float expopac_lambdamin = 534.5;
 constexpr float expopac_lambdamax = 35000.;
 constexpr float expopac_deltalambda = 35.5;
-constexpr auto expopac_nbins =
-    static_cast<std::ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
+constexpr auto expopac_nbins = static_cast<ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
 // kappa in cm^2/g for each bin of each non-empty cell
 std::span<float> expansionopacities{};
