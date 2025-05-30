@@ -1765,8 +1765,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
     nne_nt_max += yscalefactor * yfunc[i] * oneovervelocity * delta_endash;
   }
 
-  nt_solution[nonemptymgi].frac_excitation = frac_excitation_total;
-  nt_solution[nonemptymgi].frac_ionization = frac_ionization_total;
+  nt_solution[nonemptymgi].frac_excitation = static_cast<float>(frac_excitation_total);
+  nt_solution[nonemptymgi].frac_ionization = static_cast<float>(frac_ionization_total);
 
   printout("  E_init:      %9.2f eV/s/cm^3\n", E_init_ev);
   printout("  deposition:  %9.2f eV/s/cm^3\n", deposition_rate_density_ev);
@@ -1784,7 +1784,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
   const double frac_sum = nt_solution[nonemptymgi].frac_heating + frac_excitation_total + frac_ionization_total;
   printout("  frac_sum:            %g (should be close to 1.0)\n", frac_sum);
 
-  nt_solution[nonemptymgi].frac_heating = 1. - frac_excitation_total - frac_ionization_total;
+  nt_solution[nonemptymgi].frac_heating = static_cast<float>(1. - frac_excitation_total - frac_ionization_total);
   printout("  (replacing calculated frac_heating_tot with %g to make frac_sum = 1.0)\n",
            nt_solution[nonemptymgi].frac_heating);
 }
