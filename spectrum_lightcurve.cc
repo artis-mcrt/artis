@@ -309,18 +309,18 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
 
 void mpi_reduce_spectra(int my_rank, Spectra &spectra) {
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.fluxalltimesteps.data(), spectra.fluxalltimesteps.data(),
-             spectra.fluxalltimesteps.size(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+             static_cast<int>(std::ssize(spectra.fluxalltimesteps)), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
   if (spectra.do_emission_res) {
     MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.absorptionalltimesteps.data(),
-               spectra.absorptionalltimesteps.data(), spectra.absorptionalltimesteps.size(), MPI_DOUBLE, MPI_SUM, 0,
-               MPI_COMM_WORLD);
+               spectra.absorptionalltimesteps.data(), static_cast<int>(std::ssize(spectra.absorptionalltimesteps)),
+               MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
     MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.emissionalltimesteps.data(), spectra.emissionalltimesteps.data(),
-               spectra.emissionalltimesteps.size(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+               static_cast<int>(std::ssize(spectra.emissionalltimesteps)), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.trueemissionalltimesteps.data(),
-               spectra.trueemissionalltimesteps.data(), spectra.trueemissionalltimesteps.size(), MPI_DOUBLE, MPI_SUM, 0,
-               MPI_COMM_WORLD);
+               spectra.trueemissionalltimesteps.data(), static_cast<int>(std::ssize(spectra.trueemissionalltimesteps)),
+               MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   }
 }
 
