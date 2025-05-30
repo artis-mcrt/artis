@@ -218,7 +218,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *const paras) -> doubl
     }
   }
   // Set new T_e guess for the current cell and update populations
-  grid::set_Te(nonemptymgi, T_e);
+  grid::set_Te(nonemptymgi, static_cast<float>(T_e));
 
   calculate_ion_balance_nne(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
