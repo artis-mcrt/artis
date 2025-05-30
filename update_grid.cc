@@ -688,7 +688,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
       // SF solution depends on the ionization balance, and weakly on nne
       nonthermal::solve_spencerfano(nonemptymgi, nts, nlte_iter);
     }
-    const int duration_solve_spencerfano = std::time(nullptr) - sys_time_start_spencerfano;
+    const auto duration_solve_spencerfano = std::time(nullptr) - sys_time_start_spencerfano;
 
     const auto sys_time_start_partfuncs_or_gamma = std::time(nullptr);
     for (int element = 0; element < get_nelements(); element++) {
@@ -696,7 +696,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         calculate_cellpartfuncts(nonemptymgi, element);
       }
     }
-    const int duration_solve_partfuncs_or_gamma = std::time(nullptr) - sys_time_start_partfuncs_or_gamma;
+    const auto duration_solve_partfuncs_or_gamma = std::time(nullptr) - sys_time_start_partfuncs_or_gamma;
 
     const double prev_T_e = grid::get_Te(nonemptymgi);
     const auto sys_time_start_Te = std::time(nullptr);
@@ -705,16 +705,16 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     call_T_e_finder(nonemptymgi, globals::timesteps[nts_prev].mid, MINTEMP, MAXTEMP, heatingcoolingrates,
                     bfheatingcoeffs);
 
-    const int duration_solve_T_e = std::time(nullptr) - sys_time_start_Te;
+    const auto duration_solve_T_e = std::time(nullptr) - sys_time_start_Te;
 
     if (globals::total_nlte_levels == 0) {
       const auto sys_time_start_pops = std::time(nullptr);
       calculate_ion_balance_nne(nonemptymgi);
-      const int duration_solve_pops = std::time(nullptr) - sys_time_start_pops;
+      const auto duration_solve_pops = std::time(nullptr) - sys_time_start_pops;
 
       printout(
-          "Grid solver cell %d timestep %d: time spent on: Spencer-Fano %ds, partfuncs/gamma "
-          "%ds, T_e %ds, populations %ds\n",
+          "Grid solver cell %d timestep %d: time spent on: Spencer-Fano %lds, partfuncs/gamma "
+          "%lds, T_e %lds, populations %lds\n",
           mgi, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
           duration_solve_pops);
       break;  // no iteration is needed without nlte pops
@@ -731,14 +731,14 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         calculate_cellpartfuncts(nonemptymgi, element);
       }
     }
-    const int duration_solve_nltepops = std::time(nullptr) - sys_time_start_nltepops;
+    const auto duration_solve_nltepops = std::time(nullptr) - sys_time_start_nltepops;
 
     const double nne_prev = grid::get_nne(nonemptymgi);
     calculate_ion_balance_nne(nonemptymgi);  // sets nne
     fracdiff_nne = fabs((grid::get_nne(nonemptymgi) / nne_prev) - 1);
     printout(
-        "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e "
-        "%ds, NLTE populations %ds\n",
+        "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %lds, T_e "
+        "%lds, NLTE populations %lds\n",
         mgi, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
     printout(
         "NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: prev_iter nne "
@@ -1069,9 +1069,9 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     }
   }
 
-  const int update_grid_cell_seconds = std::time(nullptr) - sys_time_start_update_cell;
+  const auto update_grid_cell_seconds = std::time(nullptr) - sys_time_start_update_cell;
   if (update_grid_cell_seconds > 0) {
-    printout("update_grid_cell for cell %d timestep %d took %d seconds\n", mgi, nts, update_grid_cell_seconds);
+    printout("update_grid_cell for cell %d timestep %d took %ld seconds\n", mgi, nts, update_grid_cell_seconds);
   }
 }
 
