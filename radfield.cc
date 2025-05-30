@@ -946,7 +946,7 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
     const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
     for (int i = 0; i < bfestimcount; i++) {
       const auto mgibfindex = (nonemptymgi * bfestimcount) + i;
-      prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * (estimator_normfactor / H);
+      prev_bfrate_normed[mgibfindex] = static_cast<float>(bfrate_raw[mgibfindex] * (estimator_normfactor / H));
     }
   }
 }
@@ -1056,8 +1056,8 @@ void reduce_estimators()
                       MPI_COMM_WORLD);
       }
     }
-    const int duration_reduction = std::time(nullptr) - sys_time_start_reduction;
-    printout(" (took %d s)\n", duration_reduction);
+    const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
+    printout(" (took %ld s)\n", duration_reduction);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
