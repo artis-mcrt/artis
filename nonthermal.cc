@@ -1331,7 +1331,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
     if (!std::isfinite(eff_ionpot)) {
       eff_ionpot = 0.;
     }
-    get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot = eff_ionpot;
+    get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot = static_cast<float>(eff_ionpot);
   } else {
     printout("WARNING! No matching subshells in NT impact ionisation cross section data for Z=%d ionstage %d.\n",
              get_atomicnumber(element), get_ionstage(element, ion));
@@ -1339,7 +1339,8 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
         "-> Defaulting to work function approximation and ionisation energy is not accounted for in Spencer-Fano "
         "solution.\n");
 
-    get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot = 1. / get_oneoverw(element, ion, nonemptymgi);
+    get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot =
+        static_cast<float>(1. / get_oneoverw(element, ion, nonemptymgi));
   }
 }
 
