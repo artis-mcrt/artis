@@ -133,7 +133,7 @@ constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE = false;
 
 // Controls by what factor the populations of a level have to be inverted relative to the ground to result
 // in a NLTE solver fail being returned
-constexpr float POP_INVERSION_FACTOR_SOLVER_FAIL = 1000.;
+constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL = 1000.;
 
 // Controls by what factor the populations of a level have to be inverted relative to print out a warning
 // that the level is inverted

@@ -836,7 +836,6 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
             "with NLTE pops but set this level to MINPOP\n",
             gsl_vector_get(popvec, row), MINPOP);
         gsl_vector_set(popvec, row, MINPOP);
-        // Discuss if this is the best thing to set the population to??
       }
       // Now check for population inversions.
       if (row != row_ground_state &&
@@ -852,10 +851,10 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
             (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) /
                 (gsl_vector_get(popvec, row_ground_state) / gsl_vector_get(popvec, row)));
 
-        if (gsl_vector_get(popvec, row_ground_state) * POP_INVERSION_FACTOR_SOLVER_FAIL <
+        if (gsl_vector_get(popvec, row_ground_state) * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL <
             (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row)) {
           printout("large pop inversion (ground_pop * %g < ([g_gs / g_es] * excited_pop) - return matrix solve fail\n",
-                   POP_INVERSION_FACTOR_SOLVER_FAIL);
+                   STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL);
           return false;
         }
         if (gsl_vector_get(popvec, row_ground_state) * POP_INVERSION_FACTOR_SMALL_INVERSION_WARNING <
@@ -1156,9 +1155,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   if (!matrix_solve_success) {
     printout(
         "WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular "
-        "matrix, "
-        "negative pop or large pop inversion and unable to recover solution by reducing ion range. "
-        "Attempting to use LTE solution instead\n",
+        "matrix, negative pop or large pop inversion and unable to recover solution by reducing ion range. Attempting "
+        "to use LTE solution instead\n",
         modelgridindex, timestep, atomic_number);
     set_element_pops_lte(nonemptymgi, element);
   } else {
