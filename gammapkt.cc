@@ -165,7 +165,7 @@ void init_gamma_linelist() {
 
   // Now do the sorting.
 
-  std::ptrdiff_t total_lines = 0;
+  ptrdiff_t total_lines = 0;
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     total_lines += std::ssize(gamma_spectra[nucindex]);
   }
@@ -175,9 +175,9 @@ void init_gamma_linelist() {
   allnuc_gamma_line_list.reserve(total_lines);
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-    for (std::ptrdiff_t j = 0; j < std::ssize(gamma_spectra[nucindex]); j++) {
+    for (int j = 0; j < std::ssize(gamma_spectra[nucindex]); j++) {
       allnuc_gamma_line_list.push_back(
-          {.nucindex = nucindex, .nucgammaindex = static_cast<int>(j), .energy = gamma_spectra[nucindex][j].energy});
+          {.nucindex = nucindex, .nucgammaindex = j, .energy = gamma_spectra[nucindex][j].energy});
     }
   }
 
@@ -190,7 +190,7 @@ void init_gamma_linelist() {
   assert_always(gammalinelist.is_open());
   gammalinelist << "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability\n";
 
-  for (std::ptrdiff_t i = 0; i < total_lines; i++) {
+  for (ptrdiff_t i = 0; i < total_lines; i++) {
     const int nucindex = allnuc_gamma_line_list[i].nucindex;
     const int index = allnuc_gamma_line_list[i].nucgammaindex;
     gammalinelist << static_cast<int>(i) << " " << allnuc_gamma_line_list[i].nucindex << " "
