@@ -19,6 +19,7 @@
 #include <functional>
 #include <ios>
 #include <iterator>
+#include <limits>
 #include <span>
 #include <sstream>
 #include <string>
@@ -478,7 +479,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
   for (int pass = 0; pass < 2; pass++) {
     lineindex = lineindex_initial;
     if (pass == 1) {
-      int alltransindex = temp_alltranslist_size;
+      ptrdiff_t alltransindex = temp_alltranslist_size;
       temp_alltranslist_size += totupdowntrans;
       if (globals::rank_in_node == 0) {
         resize_exactly(temp_alltranslist, temp_alltranslist_size);
@@ -486,7 +487,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         temp_linelist.reserve(temp_alltranslist_size);
       }
       for (int level = 0; level < nlevelsmax; level++) {
-        ion_levels[level].alltrans_startdown = alltransindex;
+        assert_always(alltransindex < std::numeric_limits<int>::max());
+        ion_levels[level].alltrans_startdown = static_cast<int>(alltransindex);
         alltransindex += ion_levels[level].ndowntrans;
         alltransindex += ion_levels[level].nuptrans;
 
