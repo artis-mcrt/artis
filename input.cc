@@ -186,7 +186,7 @@ void read_phixs_data_table(
     const double nu_max = nugrid_in.back();
 
     // Now interpolate these cross-sections
-    levelphixstable[0] = phixs_in[0];
+    levelphixstable[0] = static_cast<float>(phixs_in[0]);
 
     gsl_interp_accel *acc = gsl_interp_accel_alloc();
     gsl_spline *spline = gsl_spline_alloc(gsl_interp_linear, nphixspoints_inputtable);
@@ -194,9 +194,9 @@ void read_phixs_data_table(
     for (int i = 1; i < globals::NPHIXSPOINTS; i++) {
       const double nu = nu_edge * (1. + i * globals::NPHIXSNUINCREMENT);
       if (nu > nu_max) {
-        levelphixstable[i] = phixs_in[nphixspoints_inputtable - 1] * pow(nu_max / nu, 3);
+        levelphixstable[i] = static_cast<float>(phixs_in[nphixspoints_inputtable - 1] * pow(nu_max / nu, 3));
       } else {
-        levelphixstable[i] = gsl_spline_eval(spline, nu, acc);
+        levelphixstable[i] = static_cast<float>(gsl_spline_eval(spline, nu, acc));
       }
     }
     gsl_spline_free(spline);
@@ -209,7 +209,7 @@ void read_phixs_data_table(
 
       // the photoionisation cross-sections in the database are given in Mbarn = 1e6 * 1e-28m^2
       // to convert to cgs units multiply by 1e-18
-      levelphixstable[i] = phixs * 1e-18;
+      levelphixstable[i] = static_cast<float>(phixs * 1e-18);
     }
   }
 
@@ -997,7 +997,7 @@ void read_atomicdata_files() {
     // write this element's data to memory
     globals::elements[element].anumber = Z;
     globals::elements[element].nions = nions;
-    globals::elements[element].initstablemeannucmass = mass_amu * MH;
+    globals::elements[element].initstablemeannucmass = static_cast<float>(mass_amu * MH);
     globals::elements[element].uniqueionindexstart = uniqueionindex;
 
     // Initialize the elements ionlist
