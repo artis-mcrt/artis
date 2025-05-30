@@ -376,7 +376,7 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
     printout("[warning] T_R estimator infinite in cell %d, keep T_R, T_J, W of last timestep. J = %g. nuJ = %g\n",
              modelgridindex, J[nonemptymgi], nuJ[nonemptymgi]);
   } else {
-    float T_J = pow(J[nonemptymgi] * PI / STEBO, 1 / 4.);
+    auto T_J = static_cast<float>(pow(J[nonemptymgi] * PI / STEBO, 1 / 4.));
     if (T_J > MAXTEMP) {
       printout("[warning] temperature estimator T_J = %g exceeds T_max %g in cell %d. Setting T_J = T_max!\n", T_J,
                MAXTEMP, modelgridindex);
@@ -388,7 +388,7 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
     }
     grid::set_TJ(nonemptymgi, T_J);
 
-    float T_R = H * nubar / KB / 3.832229494;
+    auto T_R = static_cast<float>(H * nubar / KB / 3.832229494);
     if (T_R > MAXTEMP) {
       printout("[warning] temperature estimator T_R = %g exceeds T_max %g in cell %d. Setting T_R = T_max!\n", T_R,
                MAXTEMP, modelgridindex);
@@ -400,7 +400,7 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
     }
     grid::set_TR(nonemptymgi, T_R);
 
-    const float W = J[nonemptymgi] * PI / STEBO / pow(T_R, 4);
+    const auto W = static_cast<float>(J[nonemptymgi] * PI / STEBO / pow(T_R, 4));
     grid::set_W(nonemptymgi, W);
 
     printout(
