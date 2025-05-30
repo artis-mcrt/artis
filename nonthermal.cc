@@ -389,7 +389,7 @@ void read_binding_energies() {
   }
 }
 
-[[nodiscard]] auto get_cell_ntexcitations(const int nonemptymgi) {
+[[nodiscard]] auto get_cell_ntexcitations(const ptrdiff_t nonemptymgi) {
   return excitations_list_all_cells.subspan(nonemptymgi * nt_excitations_stored,
                                             nt_solution[nonemptymgi].frac_excitations_list_size);
 }
@@ -2645,7 +2645,7 @@ void read_restart_data(FILE *gridsave_file) {
   }
 }
 
-void nt_MPI_Bcast(const int nonemptymgi, const int root_node_id) {
+void nt_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root_node_id) {
   MPI_Bcast(&deposition_rate_density_all_cells[nonemptymgi], 1, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
 
   if (NT_ON && NT_SOLVE_SPENCERFANO) {
