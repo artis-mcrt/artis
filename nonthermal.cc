@@ -2660,9 +2660,10 @@ void nt_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root_node_id) {
       MPI_Bcast(&nt_solution[nonemptymgi].frac_excitations_list_size, 1, MPI_INT, root_node_id,
                 globals::mpi_comm_internode);
 
-      MPI_Bcast(get_cell_ntexcitations(nonemptymgi).data(),
-                static_cast<size_t>(nt_solution[nonemptymgi].frac_excitations_list_size) * sizeof(NonThermalExcitation),
-                MPI_BYTE, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast(
+          get_cell_ntexcitations(nonemptymgi).data(),
+          static_cast<ptrdiff_t>(nt_solution[nonemptymgi].frac_excitations_list_size) * sizeof(NonThermalExcitation),
+          MPI_BYTE, root_node_id, globals::mpi_comm_internode);
 
       const auto ion_data = get_cell_ion_data(nonemptymgi);
       MPI_Bcast(ion_data.data(), static_cast<int>(std::ssize(ion_data) * sizeof(NonThermalSolutionIon)), MPI_BYTE,
