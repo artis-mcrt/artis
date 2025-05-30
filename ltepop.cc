@@ -232,7 +232,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
 {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-  float pop_store{NAN};
+  double pop_store{NAN};
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
 
@@ -270,7 +270,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   if (initial) {
     // put back the zero, just in case it matters for something
     grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex] =
-        pop_store;
+        static_cast<float>(pop_store);
   }
 
   return U_float;
@@ -326,7 +326,7 @@ void set_calculated_nne(const int nonemptymgi) {
     nne += get_element_nne_contrib(nonemptymgi, element);
   }
 
-  grid::set_nne(nonemptymgi, std::max(MINPOP, nne));
+  grid::set_nne(nonemptymgi, static_cast<float>(std::max(MINPOP, nne)));
 }
 
 // Special case of only neutral ions, set nne to some finite value so that packets are not lost in kpkts
@@ -412,7 +412,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 
   gsl_root_fsolver_free(solver);
 
-  return std::max(MINPOP, nne_solution);
+  return static_cast<float>(std::max(MINPOP, nne_solution));
 }
 
 }  // anonymous namespace
