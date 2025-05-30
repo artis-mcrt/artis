@@ -41,7 +41,7 @@ Checks: [
         -readability-function-cognitive-complexity,
         -readability-magic-numbers,
     ]
-WarningsAsErrors: '*,-clang-analyzer-deadcode.DeadStores,-clang-diagnostic-unused-function,-bugprone-narrowing-conversions'
+WarningsAsErrors: '*,-clang-analyzer-deadcode.DeadStores,-clang-diagnostic-unused-function'
 FormatStyle: file
 ExtraArgs: [-std=c++23]
 CheckOptions:
@@ -68,7 +68,7 @@ CheckOptions:
     - key: bugprone-reserved-identifier.AllowedIdentifiers
       value: '__host__;__device__'
     - key: bugprone-narrowing-conversions.IgnoreConversionFromTypes
-      value: size_t; ptrdiff_t; size_type; difference_type; time_t; MPI_Aint
+      value: size_t; size_type
     - key: bugprone-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
       value: 'false'
     - key: bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
