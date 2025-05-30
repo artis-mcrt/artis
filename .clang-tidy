@@ -64,6 +64,8 @@ CheckOptions:
       value: '__host__;__device__'
     - key: bugprone-narrowing-conversions.IgnoreConversionFromTypes
       value: size_t; size_type
+    - key: bugprone-narrowing-conversions.WarnOnEquivalentBitWidth
+      value: 'false'
     - key: bugprone-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
       value: 'false'
     - key: bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
