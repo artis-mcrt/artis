@@ -202,7 +202,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *const paras) -> doubl
   auto &heatingcoolingrates = *params->heatingcoolingrates;
   if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
     if (std::abs((T_e / grid::get_Te(nonemptymgi)) - 1.) > 0.1) {
-      grid::set_Te(nonemptymgi, T_e);
+      grid::set_Te(nonemptymgi, static_cast<float>(T_e));
       for (int element = 0; element < get_nelements(); element++) {
         if (!elem_has_nlte_levels(element)) {
           // recalculate the Gammas using the current level populations
