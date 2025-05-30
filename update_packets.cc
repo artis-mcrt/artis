@@ -416,7 +416,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
 
     const auto cellcacheresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
     printout(
-        "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellcacheresets %7ld (took %lds)\n",
+        "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellcacheresets %7td (took %lds)\n",
         nts, passnumber, std::time(nullptr), count_pktupdates, cellcacheresets,
         std::time(nullptr) - sys_time_start_pass);
 
