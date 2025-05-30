@@ -1302,8 +1302,9 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
         if (upperion <= topion)  // not too many Auger electrons to exceed the top ion of this element
         {
           get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[a] =
-              eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum;
-          get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[a] = eta_nauger_ionize_sum[a] / eta_sum;
+              static_cast<float>(eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum);
+          get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[a] =
+              static_cast<float>(eta_nauger_ionize_sum[a] / eta_sum);
         } else {
           // the following ensures that multiple ionisations can't send you to an ion stage that is not in
           // the model. Send it to the highest ion stage instead
