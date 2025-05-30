@@ -498,7 +498,7 @@ void read_auger_data() {
 
         assert_always(probnaugerelec <= 1.0);
 
-        n_auger_elec_avg += a * probnaugerelec;
+        n_auger_elec_avg += static_cast<float>(a * probnaugerelec);
 
         if (a <= NT_MAX_AUGER_ELECTRONS) {
           prob_num_auger.at(a) = probnaugerelec;
@@ -509,7 +509,7 @@ void read_auger_data() {
       }
 
       // use the epsilon correction factor as in equation 7 of Kaastra & Mewe (1993)
-      float en_auger_ev = en_auger_ev_total_nocorrection - (epsilon_e3 / 1000. * ionpot_ev);
+      auto en_auger_ev = static_cast<float>(en_auger_ev_total_nocorrection - (epsilon_e3 / 1000. * ionpot_ev));
 
       const int n = xrayn[shellnum - 1];
       const int l = xrayl[shellnum - 1];
@@ -546,8 +546,9 @@ void read_auger_data() {
           collionrow.auger_g_accumulated += g;
 
           // update the statistical-weight averaged values
-          collionrow.en_auger_ev = oldweight * collionrow.en_auger_ev + newweight * en_auger_ev;
-          collionrow.n_auger_elec_avg = oldweight * collionrow.n_auger_elec_avg + newweight * n_auger_elec_avg;
+          collionrow.en_auger_ev = static_cast<float>((oldweight * collionrow.en_auger_ev) + (newweight * en_auger_ev));
+          collionrow.n_auger_elec_avg =
+              static_cast<float>((oldweight * collionrow.n_auger_elec_avg) + (newweight * n_auger_elec_avg));
 
           prob_sum = 0.;
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
@@ -2450,7 +2451,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
       "%d (nne=%g e-/cm^3)\n",
       SFPTS, SF_EMIN, SF_EMAX, modelgridindex, timestep, iteration, nne);
 
-  nt_solution[nonemptymgi].nneperion_when_solved = nne_per_ion;
+  nt_solution[nonemptymgi].nneperion_when_solved = static_cast<float>(nne_per_ion);
   nt_solution[nonemptymgi].timestep_last_solved = timestep;
 
   const bool enable_sfexcitation = true;
