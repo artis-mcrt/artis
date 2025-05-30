@@ -863,7 +863,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
       const double nu_upper = get_bin_nu_upper(binindex);
       const double J_bin = get_bin_J(nonemptymgi, binindex);
       float T_R_bin = -1.;
-      double W_bin = -1.;
+      float W_bin = -1.;
       const int contribcount = get_bin_contribcount(nonemptymgi, binindex);
 
       if (contribcount > 0) {
@@ -881,14 +881,14 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
           //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower,
           //          nu_upper, planck_integral_result);
 
-          W_bin = J_bin / planck_integral_result;
+          W_bin = static_cast<float>(J_bin / planck_integral_result);
 
           if (W_bin > 1e4) {
             //            printout("T_R_bin %g, nu_lower %g, nu_upper %g\n", T_R_bin, nu_lower, nu_upper);
             printout("W %g too high, trying setting T_R of bin %d to %g. J_bin %g planck_integral %g\n", W_bin,
                      binindex, T_R_max, J_bin, planck_integral_result);
             planck_integral_result = planck_integral(T_R_max, nu_lower, nu_upper, false);
-            W_bin = J_bin / planck_integral_result;
+            W_bin = static_cast<float>(J_bin / planck_integral_result);
             if (W_bin > 1e4) {
               printout("W still very high, W=%g. Zeroing bin...\n", W_bin);
               T_R_bin = -99.;
