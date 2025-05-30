@@ -1011,7 +1011,7 @@ void titer_nuJ(const int nonemptymgi) {
 void reduce_estimators()
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
-  const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
+  const auto nonempty_npts_model = grid::get_nonempty_npts_model();
 
   MPI_Allreduce(MPI_IN_PLACE, J.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, nuJ.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -1041,8 +1041,8 @@ void reduce_estimators()
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
       }
     }
-    const int duration_reduction = std::time(nullptr) - sys_time_start_reduction;
-    printout(" (took %d s)\n", duration_reduction);
+    const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
+    printout(" (took %ld s)\n", duration_reduction);
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
