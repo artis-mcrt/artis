@@ -137,7 +137,7 @@ constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL = 1000.;
 
 // Controls by what factor the populations of a level have to be inverted relative to print out a warning
 // that the level is inverted
-constexpr float POP_INVERSION_FACTOR_SMALL_INVERSION_WARNING = 10.;
+constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 10.;
 
 // Controls the highest population an ion can have and still be removed from the NLTE solution when using
 // the NLTE_LIMIT_ION_STAGES_AFTER_FAILURE functionality

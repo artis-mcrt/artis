@@ -41,7 +41,7 @@ sed -i'' -e 's/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*/constexpr 
 
 sed -i'' -e 's/constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL.*/constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL = 50.0;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr float POP_INVERSION_FACTOR_SMALL_INVERSION_WARNING.*/constexpr float POP_INVERSION_FACTOR_SMALL_INVERSION_WARNING = 10.0;/g' artisoptions.h
+sed -i'' -e 's/constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING.*/constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 10.0;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr float POPULATION_CUT_REMOVE_ION.*/constexpr float POPULATION_CUT_REMOVE_ION = 100.0;/g' artisoptions.h
 

@@ -857,17 +857,17 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
                    STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL);
           return false;
         }
-        if (gsl_vector_get(popvec, row_ground_state) * POP_INVERSION_FACTOR_SMALL_INVERSION_WARNING <
+        if (gsl_vector_get(popvec, row_ground_state) * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
             (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row)) {
           printout(
               "more substantial pop inversion (ground_pop * %g < ([g_gs / g_es] * excited_pop) - "
               "but continue with NLTE solution\n",
-              POP_INVERSION_FACTOR_SMALL_INVERSION_WARNING);
+              STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING);
         } else {
           printout(
               "relatively small pop inversion (ground_pop * %g > ([g_gs / g_es] * excited_pop) - "
               "continue with NLTE solution\n",
-              POP_INVERSION_FACTOR_SMALL_INVERSION_WARNING);
+              STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING);
         }
       }
     } else {
