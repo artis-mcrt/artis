@@ -382,7 +382,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
     T_e = std::max(T_e, MINTEMP);
   }
 
-  grid::set_Te(nonemptymgi, T_e);
+  grid::set_Te(nonemptymgi, static_cast<float>(T_e));
 
   // this call with make sure heating/cooling rates and populations are updated for the final T_e
   // in case T_e got modified after the T_e solver finished
