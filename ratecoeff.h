@@ -43,7 +43,7 @@ void setup_photoion_luts();
 
 inline double T_step_log{};
 
-template <double func_integrand(double, void *)>
+template <double func_integrand(double, void *const)>
 constexpr auto simpson_integrator(auto &params, const double a, const double b, const int samplecount) -> double {
   assert_testmodeonly(samplecount % 2 == 1);
 
@@ -73,7 +73,7 @@ constexpr auto simpson_integrator(auto &params, const double a, const double b, 
   return integral;
 }
 
-template <double func_integrand(double, void *)>
+template <double func_integrand(double, void *const)>
 auto integrator(auto params, const double a, const double b, const double epsabs, const double epsrel, const int key,
                 double *result, double *abserr) {
   if constexpr (USE_SIMPSON_INTEGRATOR) {
