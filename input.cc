@@ -487,7 +487,6 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         temp_linelist.reserve(temp_alltranslist_size);
       }
       for (int level = 0; level < nlevelsmax; level++) {
-        assert_always(alltransindex < std::numeric_limits<int>::max());
         ion_levels[level].alltrans_startdown = static_cast<int>(alltransindex);
         alltransindex += ion_levels[level].ndowntrans;
         alltransindex += ion_levels[level].nuptrans;
@@ -495,6 +494,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         ion_levels[level].ndowntrans = 0;
         ion_levels[level].nuptrans = 0;
       }
+      assert_always(alltransindex < std::numeric_limits<int>::max());
     }
 
     std::ranges::fill(iondowntranstmplineindicies, -99);
