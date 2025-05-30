@@ -386,7 +386,7 @@ void precalculate_rate_coefficient_integrals() {
             const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
             double error{NAN};
             int status = 0;
-            const float T_e = MINTEMP * exp(iter * T_step_log);
+            const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
 
             const double sfac = calculate_sahafact(element, ion, level, upperlevel, T_e, E_threshold);
 
@@ -654,7 +654,7 @@ void read_recombrate_file() {
 void precalculate_ion_alpha_sp() {
   globals::ion_alpha_sp.resize(get_includedions() * TABLESIZE);
   for (int iter = 0; iter < TABLESIZE; iter++) {
-    const float T_e = MINTEMP * exp(iter * T_step_log);
+    const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element) - 1;
       for (int ion = 0; ion < nions; ion++) {
@@ -669,7 +669,7 @@ void precalculate_ion_alpha_sp() {
             zeta += zeta_level;
           }
         }
-        globals::ion_alpha_sp[(uniqueionindex * TABLESIZE) + iter] = zeta;
+        globals::ion_alpha_sp[(uniqueionindex * TABLESIZE) + iter] = static_cast<float>(zeta);
       }
     }
   }
