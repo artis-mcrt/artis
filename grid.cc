@@ -1571,13 +1571,13 @@ __host__ __device__ auto get_npts_model() -> int
 // number of model grid cells
 {
   assert_testmodeonly(npts_model > 0);
-  return npts_model;
+  return static_cast<int>(npts_model);
 }
 
 // number of model grid cells
 auto get_nonempty_npts_model() -> int {
   assert_testmodeonly(nonempty_npts_model > 0);
-  return nonempty_npts_model;
+  return static_cast<int>(nonempty_npts_model);
 }
 
 // get time at which model input densities are defined
@@ -2222,7 +2222,7 @@ void init_grid(const int my_rank) {
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
     printout("    coordinate %d '%c': cells have %d position values\n", d, coordlabel[d], ncoordgrid[d]);
   }
-  printout("    total propagation cells: %d\n", ngrid);
+  printout("    total propagation cells: %ld\n", ngrid);
 
   // Now set up the density in each cell.
 

@@ -34,7 +34,7 @@ struct ModelGridCell {
 
 inline std::span<ModelGridCell> modelgrid{};
 
-inline int ngrid{0};
+inline ptrdiff_t ngrid{0};
 
 inline double mtot_input{0.};
 
