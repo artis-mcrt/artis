@@ -394,23 +394,23 @@ void read_binding_energies() {
                                             nt_solution[nonemptymgi].frac_excitations_list_size);
 }
 
-[[nodiscard]] auto get_cell_ion_data(const int nonemptymgi) {
+[[nodiscard]] auto get_cell_ion_data(const ptrdiff_t nonemptymgi) {
   return ion_data_all_cells.subspan(nonemptymgi * get_includedions(), get_includedions());
 }
 
-auto get_auger_probability(const int nonemptymgi, const int element, const int ion, const int naugerelec) {
+auto get_auger_probability(const ptrdiff_t nonemptymgi, const int element, const int ion, const int naugerelec) {
   assert_always(naugerelec <= NT_MAX_AUGER_ELECTRONS);
   const int uniqueionindex = get_uniqueionindex(element, ion);
   return get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[naugerelec];
 }
 
-auto get_ion_auger_enfrac(const int nonemptymgi, const int element, const int ion, const int naugerelec) {
+auto get_ion_auger_enfrac(const ptrdiff_t nonemptymgi, const int element, const int ion, const int naugerelec) {
   assert_always(naugerelec <= NT_MAX_AUGER_ELECTRONS);
   const int uniqueionindex = get_uniqueionindex(element, ion);
   return get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[naugerelec];
 }
 
-void check_auger_probabilities(int nonemptymgi) {
+void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
   bool problem_found = false;
 
   for (int element = 0; element < get_nelements(); element++) {
@@ -730,7 +730,7 @@ auto get_possible_nt_excitation_count() -> int {
   return ntexcitationcount;
 }
 
-void zero_all_effionpot(const int nonemptymgi) {
+void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
   for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
     auto &ion_data = get_cell_ion_data(nonemptymgi)[uniqueionindex];
     ion_data.eff_ionpot = 0.;
@@ -1695,7 +1695,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
       tmp_excitation_list.resize(nt_excitations_stored);
     }
 
-    nt_solution[nonemptymgi].frac_excitations_list_size = tmp_excitation_list.size();
+    nt_solution[nonemptymgi].frac_excitations_list_size = static_cast<int>(std::ssize(tmp_excitation_list));
     std::ranges::copy(tmp_excitation_list, get_cell_ntexcitations(nonemptymgi).begin());
 
     printout("[info] mem_usage: non-thermal excitations for cell %d at this timestep occupy %.3f MB\n", modelgridindex,
@@ -2665,8 +2665,8 @@ void nt_MPI_Bcast(const int nonemptymgi, const int root_node_id) {
                 MPI_BYTE, root_node_id, globals::mpi_comm_internode);
 
       const auto ion_data = get_cell_ion_data(nonemptymgi);
-      MPI_Bcast(ion_data.data(), ion_data.size() * sizeof(NonThermalSolutionIon), MPI_BYTE, root_node_id,
-                globals::mpi_comm_internode);
+      MPI_Bcast(ion_data.data(), static_cast<int>(std::ssize(ion_data) * sizeof(NonThermalSolutionIon)), MPI_BYTE,
+                root_node_id, globals::mpi_comm_internode);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
