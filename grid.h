@@ -88,7 +88,7 @@ void set_element_meanweight(int nonemptymgi, int element, float meanweight);
 [[nodiscard]] auto get_electronfrac(int nonemptymgi) -> double;
 [[nodiscard]] auto get_numpropcells(int modelgridindex) -> int;
 [[nodiscard]] auto get_nonemptymgi_of_mgi(int mgi) -> int;
-[[nodiscard]] auto get_mgi_of_nonemptymgi(int nonemptymgi) -> int;
+[[nodiscard]] auto get_mgi_of_nonemptymgi(ptrdiff_t nonemptymgi) -> int;
 [[nodiscard]] auto get_model_type() -> GridType;
 void set_model_type(GridType model_type_value);
 [[nodiscard]] auto get_npts_model() -> int;

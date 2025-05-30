@@ -1622,7 +1622,7 @@ __host__ __device__ auto get_nonemptymgi_of_mgi(const int mgi) -> int {
 }
 
 // get the index in the list of non-empty cells for a given model grid cell
-__host__ __device__ auto get_mgi_of_nonemptymgi(const int nonemptymgi) -> int {
+__host__ __device__ auto get_mgi_of_nonemptymgi(const ptrdiff_t nonemptymgi) -> int {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
