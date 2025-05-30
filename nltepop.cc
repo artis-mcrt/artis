@@ -1063,9 +1063,9 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     }
   }
 
-  const int duration_nltesolver = std::time(nullptr) - sys_time_start_nltesolver;
+  const auto duration_nltesolver = std::time(nullptr) - sys_time_start_nltesolver;
   if (duration_nltesolver > 2) {
-    printout("NLTE population solver call for Z=%d took %d seconds\n", get_atomicnumber(element), duration_nltesolver);
+    printout("NLTE population solver call for Z=%d took %ld seconds\n", get_atomicnumber(element), duration_nltesolver);
   }
 }
 
