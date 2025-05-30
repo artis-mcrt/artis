@@ -492,13 +492,13 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
 
     auto *phixstable = get_phixs_table(element, ion, level);
     for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
-      phixstable[n] *= factor;
+      phixstable[n] = static_cast<float>(phixstable[n] * factor);
     }
 
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       for (int iter = 0; iter < TABLESIZE; iter++) {
         const auto bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
-        spontrecombcoeffs[bflutindex] *= factor;
+        spontrecombcoeffs[bflutindex] = spontrecombcoeffs[bflutindex] * factor;
 
         if constexpr (USE_LUT_PHOTOION) {
           corrphotoioncoeffs[bflutindex] *= factor;
