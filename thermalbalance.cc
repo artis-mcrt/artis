@@ -140,7 +140,7 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
 
 // Calculate the heating rates for a given cell. Results are returned via the elements of the heatingrates data
 // structure.
-void calculate_heating_rates(const int nonemptymgi, const double T_e, const double nne,
+void calculate_heating_rates(const int nonemptymgi, const float T_e, const float nne,
                              HeatingCoolingRates &heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
   double C_deexc = 0.;
 
