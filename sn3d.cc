@@ -60,8 +60,8 @@ namespace {
 constexpr bool VERIFY_WRITTEN_PACKETS_FILES = false;
 
 FILE *linestat_file{};
-auto real_time_start = -1;
-auto time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
+time_t real_time_start = -1;
+time_t time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
 FILE *estimators_file{};
 
 void initialise_linestat_file() {
@@ -202,8 +202,8 @@ void write_deposition_file() {
 }
 
 void mpi_communicate_grid_properties() {
-  const ptrdiff_t nincludedions = get_includedions();
-  const ptrdiff_t nelements = get_nelements();
+  const int nincludedions = get_includedions();
+  const auto nelements = get_nelements();
   for (int root = 0; root < globals::nprocs; root++) {
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -211,7 +211,7 @@ void mpi_communicate_grid_properties() {
     MPI_Bcast(&root_node_id, 1, MPI_INT, root, MPI_COMM_WORLD);
 
     const ptrdiff_t root_nstart_nonempty = grid::get_nstart_nonempty(root);
-    const ptrdiff_t root_ndo_nonempty = grid::get_ndo_nonempty(root);
+    const auto root_ndo_nonempty = grid::get_ndo_nonempty(root);
 
     for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
          nonemptymgi++) {
@@ -405,15 +405,15 @@ void remove_grid_restart_data(const int timestep) {
 auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) -> bool {
   MPI_Barrier(MPI_COMM_WORLD);
   // time is measured from just before packet propagation from one timestep to the next
-  const int estimated_time_per_timestep = std::time(nullptr) - time_timestep_start;
-  printout("TIME: time between timesteps is %d seconds (measured packet prop of ts %d and update grid of ts %d)\n",
+  const auto estimated_time_per_timestep = std::time(nullptr) - time_timestep_start;
+  printout("TIME: time between timesteps is %ld seconds (measured packet prop of ts %d and update grid of ts %d)\n",
            estimated_time_per_timestep, nts_prev, nts);
 
   bool do_this_full_loop = true;
   if (walltimelimitseconds > 0 && nts < globals::timestep_finish) {
-    const int wallclock_used_seconds = std::time(nullptr) - real_time_start;
-    const int wallclock_remaining_seconds = walltimelimitseconds - wallclock_used_seconds;
-    printout("TIMED_RESTARTS: Used %d of %d seconds of wall time.\n", wallclock_used_seconds, walltimelimitseconds);
+    const auto wallclock_used_seconds = std::time(nullptr) - real_time_start;
+    const auto wallclock_remaining_seconds = walltimelimitseconds - wallclock_used_seconds;
+    printout("TIMED_RESTARTS: Used %ld of %d seconds of wall time.\n", wallclock_used_seconds, walltimelimitseconds);
 
     // This flag being false will make it update_grid, and then exit
     do_this_full_loop = (wallclock_remaining_seconds >= (1.5 * estimated_time_per_timestep));
@@ -421,10 +421,10 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
     // communicate whatever decision the rank 0 process decided, just in case they differ
     MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
     if (do_this_full_loop) {
-      printout("TIMED_RESTARTS: Going to continue since remaining time %d s >= 1.5 * time_per_timestep\n",
+      printout("TIMED_RESTARTS: Going to continue since remaining time %ld s >= 1.5 * time_per_timestep\n",
                wallclock_remaining_seconds);
     } else {
-      printout("TIMED_RESTARTS: Going to terminate since remaining time %d s < 1.5 * time_per_timestep\n",
+      printout("TIMED_RESTARTS: Going to terminate since remaining time %ld s < 1.5 * time_per_timestep\n",
                wallclock_remaining_seconds);
     }
   }
@@ -745,7 +745,7 @@ auto main(int argc, char *argv[]) noexcept(false) -> int {
   printout("GPU_ON is enabled\n");
 #endif
 
-  printout("time at start %d\n", real_time_start);
+  printout("time at start %ld\n", real_time_start);
 
   printout("integration method is %s\n", USE_SIMPSON_INTEGRATOR ? "Simpson rule" : "GSL qag");
 
