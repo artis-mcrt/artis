@@ -883,9 +883,9 @@ void read_phixs_data() {
     assert_always((nbftables * globals::NPHIXSPOINTS) == std::ssize(tmpallphixs));
 
     // copy the photoionisation tables into one contiguous block of memory
-    globals::allphixs = MPI_shared_malloc_span<float>(tmpallphixs.size());
-    globals::allphixstargets_levelindex = MPI_shared_malloc_span<int>(tmpallphixstargets.size());
-    globals::allphixstargets_probability = MPI_shared_malloc_span<double>(tmpallphixstargets.size());
+    globals::allphixs = MPI_shared_malloc_span<float>(std::ssize(tmpallphixs));
+    globals::allphixstargets_levelindex = MPI_shared_malloc_span<int>(std::ssize(tmpallphixstargets));
+    globals::allphixstargets_probability = MPI_shared_malloc_span<double>(std::ssize(tmpallphixstargets));
 
     if (globals::rank_in_node == 0) {
       std::copy_n(tmpallphixs.cbegin(), tmpallphixs.size(), globals::allphixs.data());
