@@ -272,12 +272,12 @@ void mpi_reduce_estimators(const int nts) {
   radfield::reduce_estimators();
   MPI_Barrier(MPI_COMM_WORLD);
   assert_always(!globals::ffheatingestimator.empty());
-  MPI_Allreduce(MPI_IN_PLACE, globals::ffheatingestimator.data(), globals::ffheatingestimator.size(), MPI_DOUBLE,
-                MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, globals::ffheatingestimator.data(),
+                static_cast<int>(std::ssize(globals::ffheatingestimator)), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   if constexpr (!DIRECT_COL_HEAT) {
     assert_always(!globals::colheatingestimator.empty());
-    MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator.data(), globals::colheatingestimator.size(), MPI_DOUBLE,
-                  MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator.data(),
+                  static_cast<int>(std::ssize(globals::colheatingestimator)), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -285,24 +285,26 @@ void mpi_reduce_estimators(const int nts) {
     if constexpr (USE_LUT_PHOTOION) {
       MPI_Barrier(MPI_COMM_WORLD);
       assert_always(!globals::gammaestimator.empty());
-      MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator.data(), globals::gammaestimator.size(), MPI_DOUBLE, MPI_SUM,
-                    MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator.data(), static_cast<int>(std::ssize(globals::gammaestimator)),
+                    MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
 
     if constexpr (USE_LUT_BFHEATING) {
       MPI_Barrier(MPI_COMM_WORLD);
       assert_always(!globals::bfheatingestimator.empty());
-      MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator.data(), nonempty_npts_model * globals::nbfcontinua_ground,
-                    MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator.data(),
+                    static_cast<int>(std::ssize(globals::bfheatingestimator)), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
   }
 
   if constexpr (RECORD_LINESTAT) {
     MPI_Barrier(MPI_COMM_WORLD);
     assert_always(!globals::ecounter.empty());
-    MPI_Allreduce(MPI_IN_PLACE, globals::ecounter.data(), globals::ecounter.size(), MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::ecounter.data(), static_cast<int>(std::ssize(globals::ecounter)), MPI_INT,
+                  MPI_SUM, MPI_COMM_WORLD);
     assert_always(!globals::acounter.empty());
-    MPI_Allreduce(MPI_IN_PLACE, globals::acounter.data(), globals::acounter.size(), MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::acounter.data(), static_cast<int>(std::ssize(globals::acounter)), MPI_INT,
+                  MPI_SUM, MPI_COMM_WORLD);
   }
 
   assert_always(std::ssize(globals::dep_estimator_gamma) == nonempty_npts_model);
