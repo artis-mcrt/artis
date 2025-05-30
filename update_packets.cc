@@ -379,7 +379,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
 
     const int count_pktupdates = static_cast<int>(std::ranges::count_if(
         packets, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
-    const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
+    const auto updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
     auto *packetgroupstart = packets.data();
 
     for (auto &pkt : packets) {
@@ -414,9 +414,9 @@ void update_packets(const int nts, std::span<Packet> packets) {
     timestepcomplete = std::ranges::all_of(
         packets, [ts_end](const auto &pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
 
-    const int cellcacheresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
+    const auto cellcacheresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
     printout(
-        "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellcacheresets %7d (took %lds)\n",
+        "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellcacheresets %7ld (took %lds)\n",
         nts, passnumber, std::time(nullptr), count_pktupdates, cellcacheresets,
         std::time(nullptr) - sys_time_start_pass);
 
