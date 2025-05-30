@@ -110,8 +110,8 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   return bfheating;
 }
 
-auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const double T_e,
-                                const double nne) -> double {
+auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const float T_e,
+                                const float nne) -> double {
   double C_deexc = 0.;
   const int nlevels = get_nlevels(element, ion);
   const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
