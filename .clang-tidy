@@ -67,6 +67,6 @@ CheckOptions:
     - key: bugprone-narrowing-conversions.WarnOnEquivalentBitWidth
       value: 'false'
     - key: bugprone-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
-      value: 'false'
+      value: 'true'
     - key: bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
       value: 'false'
