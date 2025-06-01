@@ -2,7 +2,6 @@
 InheritParentConfig: true
 Checks: [
         '*',
-        -cert-dcl03-c,
         -abseil-*,
         -android-*,
         -altera-*,
@@ -11,6 +10,7 @@ Checks: [
         -bugprone-implicit-widening-of-multiplication-result,
         -bugprone-multi-level-implicit-pointer-conversion,
         -boost-use-ranges,
+        -cert-dcl03-c,
         -cert-dcl50-cpp,
         -cert-err33-c,
         -cert-err34-c,
