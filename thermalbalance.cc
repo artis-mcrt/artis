@@ -196,13 +196,14 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 // Thermal balance equation on which we have to iterate to get T_e
 auto T_e_eqn_heating_minus_cooling(const double T_e, void *const paras) -> double {
   const auto *const params = static_cast<const TeSolutionParams *>(paras);
+  const auto fT_e = static_cast<float>(T_e);
 
   const auto nonemptymgi = params->nonemptymgi;
   const double t_current = params->t_current;
   auto &heatingcoolingrates = *params->heatingcoolingrates;
   if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
     if (std::abs((T_e / grid::get_Te(nonemptymgi)) - 1.) > 0.1) {
-      grid::set_Te(nonemptymgi, static_cast<float>(T_e));
+      grid::set_Te(nonemptymgi, fT_e);
       for (int element = 0; element < get_nelements(); element++) {
         if (!elem_has_nlte_levels(element)) {
           // recalculate the Gammas using the current level populations
@@ -218,14 +219,14 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *const paras) -> doubl
     }
   }
   // Set new T_e guess for the current cell and update populations
-  grid::set_Te(nonemptymgi, static_cast<float>(T_e));
+  grid::set_Te(nonemptymgi, fT_e);
 
   calculate_ion_balance_nne(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
 
   // Then calculate heating and cooling rates
   kpkt::calculate_cooling_rates(nonemptymgi, &heatingcoolingrates);
-  calculate_heating_rates(nonemptymgi, T_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
+  calculate_heating_rates(nonemptymgi, fT_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(nonemptymgi);
   const auto ntlepton_dep = nonthermal::get_deposition_rate_density(nonemptymgi);
