@@ -1817,7 +1817,7 @@ void calculate_kappagrey() {
         std::abort();
       }
 
-      set_kappagrey(nonemptymgi, kappa);
+      set_kappagrey(nonemptymgi, static_cast<float>(kappa));
     } else if (get_rho_tmin(mgi) == 0.) {
       set_kappagrey(nonemptymgi, 0.);
     } else if (get_rho_tmin(mgi) < 0.) {
