@@ -336,7 +336,8 @@ void allocate_nonemptymodelcells() {
 
     modelgrid_numpropcells[mgi] += 1;
     if (globals::rank_in_node == 0) {
-      modelgrid_input[mgi].initial_radial_pos_sum += radial_pos_mid;
+      modelgrid_input[mgi].initial_radial_pos_sum =
+          static_cast<float>(modelgrid_input[mgi].initial_radial_pos_sum + radial_pos_mid);
     }
 
     assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (modelgrid_numpropcells[mgi] == 1) ||
