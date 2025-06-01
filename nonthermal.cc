@@ -1258,8 +1258,9 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
 
   std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionize_over_ionpot_sum{};
   std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionize_sum{};
-  std::ranges::fill(get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger, 0.);
-  std::ranges::fill(get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger, 0.);
+  auto &celliondata = get_cell_ion_data(nonemptymgi)[uniqueionindex];
+  std::ranges::fill(celliondata.prob_num_auger, 0.);
+  std::ranges::fill(celliondata.ionenfrac_num_auger, 0.);
 
   double eta_over_ionpot_sum = 0.;
   double eta_sum = 0.;
@@ -1301,29 +1302,25 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
         const int upperion = ion + 1 + a;
         if (upperion <= topion)  // not too many Auger electrons to exceed the top ion of this element
         {
-          get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[a] =
+          celliondata.prob_num_auger[a] =
               static_cast<float>(eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum);
-          get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[a] =
-              static_cast<float>(eta_nauger_ionize_sum[a] / eta_sum);
+          celliondata.ionenfrac_num_auger[a] = static_cast<float>(eta_nauger_ionize_sum[a] / eta_sum);
         } else {
           // the following ensures that multiple ionisations can't send you to an ion stage that is not in
           // the model. Send it to the highest ion stage instead
           const int a_replace = topion - ion - 1;
+          celliondata.prob_num_auger.at(a_replace) += eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum;
+          celliondata.ionenfrac_num_auger.at(a_replace) += eta_nauger_ionize_sum[a] / eta_sum;
 
-          get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger.at(a_replace) +=
-              eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum;
-          get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger.at(a_replace) +=
-              eta_nauger_ionize_sum[a] / eta_sum;
-
-          get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[a] = 0;
-          get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[a] = 0.;
+          celliondata.prob_num_auger[a] = 0;
+          celliondata.ionenfrac_num_auger[a] = 0.;
         }
       }
     }
   } else {
     const int a = 0;
-    get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[a] = 1.;
-    get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[a] = 1.;
+    celliondata.prob_num_auger[a] = 1.;
+    celliondata.ionenfrac_num_auger[a] = 1.;
   }
 
   if (matching_nlsubshell_count > 0) {
