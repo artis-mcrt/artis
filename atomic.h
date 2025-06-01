@@ -444,22 +444,6 @@ inline auto get_includedions() -> int {
   return get_nuptrans(get_uniquelevelindex(element, ion, level));
 }
 
-// the number of downward bound-bound transitions from the specified level
-inline void set_ndowntrans(const int element, const int ion, const int level, const int ndowntrans) {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  globals::alllevels.ndowntrans[get_uniquelevelindex(element, ion, level)] = ndowntrans;
-}
-
-// the number of upward bound-bound transitions from the specified level
-inline void set_nuptrans(const int element, const int ion, const int level, const int nuptrans) {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  globals::alllevels.nuptrans[get_uniquelevelindex(element, ion, level)] = nuptrans;
-}
-
 [[nodiscard]] inline auto get_phixtargetindex(const int uniquelevelindex, const int upperionlevel) -> int {
   const auto nphixstargets = get_nphixstargets(uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
