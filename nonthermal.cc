@@ -1309,8 +1309,10 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
           // the following ensures that multiple ionisations can't send you to an ion stage that is not in
           // the model. Send it to the highest ion stage instead
           const int a_replace = topion - ion - 1;
-          celliondata.prob_num_auger.at(a_replace) += eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum;
-          celliondata.ionenfrac_num_auger.at(a_replace) += eta_nauger_ionize_sum[a] / eta_sum;
+          celliondata.prob_num_auger.at(a_replace) = static_cast<float>(
+              celliondata.prob_num_auger.at(a_replace) + (eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum));
+          celliondata.ionenfrac_num_auger.at(a_replace) =
+              static_cast<float>(celliondata.ionenfrac_num_auger.at(a_replace) + (eta_nauger_ionize_sum[a] / eta_sum));
 
           celliondata.prob_num_auger[a] = 0;
           celliondata.ionenfrac_num_auger[a] = 0.;
