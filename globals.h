@@ -250,8 +250,17 @@ inline std::span<double>
 struct AllLevels {
   // all of these arrays are indexed by uniquelevelindex, which can be derived from the element, ion, level
 
-  std::span<double> epsilon;
-  std::span<float> statweight;
+  std::span<const double> epsilon;
+  std::span<const float> statweight;
+  // index into globals::alltrans for first down transition from each level
+  std::span<const int> alltrans_startdown;
+
+  // Number of down transitions from each level
+  std::span<const int> ndowntrans;
+
+  // Number of up transitions from each level
+  std::span<const int> nuptrans;
+
   std::span<int> closestgroundlevelcont;
 
   // index to start of photoionisation cross-sections table in global::allphixs
@@ -266,15 +275,6 @@ struct AllLevels {
   // index of the bound-free continuum (for first target) sorted by element/ion/level/phixstargetindex (not an index
   // into the nu_edge-sorted allcont list!)
   std::span<int> bflist_start;
-
-  // index into globals::alltrans for first down transition from each level
-  std::span<int> alltrans_startdown;
-
-  // Number of down transitions from each level
-  std::span<int> ndowntrans;
-
-  // Number of up transitions from each level
-  std::span<int> nuptrans;
 };
 
 inline AllLevels alllevels{};

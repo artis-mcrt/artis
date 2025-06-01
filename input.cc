@@ -1203,11 +1203,11 @@ void read_atomicdata_files() {
 
   // create a shared level list and copy data across, freeing the local copy
   const ptrdiff_t nlevels = std::ssize(temp_alllevels);
-  globals::alllevels.alltrans_startdown = MPI_shared_malloc_span<int>(nlevels);
-  globals::alllevels.ndowntrans = MPI_shared_malloc_span<int>(nlevels);
-  globals::alllevels.nuptrans = MPI_shared_malloc_span<int>(nlevels);
-  globals::alllevels.epsilon = MPI_shared_malloc_span<double>(nlevels);
-  globals::alllevels.statweight = MPI_shared_malloc_span<float>(nlevels);
+  auto alllevels_alltrans_startdown = MPI_shared_malloc_span<int>(nlevels);
+  auto alllevels_ndowntrans = MPI_shared_malloc_span<int>(nlevels);
+  auto alllevels_nuptrans = MPI_shared_malloc_span<int>(nlevels);
+  auto alllevels_epsilon = MPI_shared_malloc_span<double>(nlevels);
+  auto alllevels_statweight = MPI_shared_malloc_span<float>(nlevels);
   globals::alllevels.closestgroundlevelcont = MPI_shared_malloc_span<int>(nlevels);
   globals::alllevels.phixsstart = MPI_shared_malloc_span<int>(nlevels);
   globals::alllevels.nphixstargets = MPI_shared_malloc_span<int>(nlevels);
@@ -1220,14 +1220,19 @@ void read_atomicdata_files() {
     std::ranges::fill(globals::alllevels.bflist_start, -1);
     std::ranges::fill(globals::alllevels.closestgroundlevelcont, -1);
     for (size_t i = 0; i < temp_alllevels.size(); i++) {
-      globals::alllevels.alltrans_startdown[i] = temp_alllevels[i].alltrans_startdown;
-      globals::alllevels.ndowntrans[i] = temp_alllevels[i].ndowntrans;
-      globals::alllevels.nuptrans[i] = temp_alllevels[i].nuptrans;
-      globals::alllevels.epsilon[i] = temp_alllevels[i].epsilon;
-      globals::alllevels.statweight[i] = temp_alllevels[i].stat_weight;
+      alllevels_alltrans_startdown[i] = temp_alllevels[i].alltrans_startdown;
+      alllevels_ndowntrans[i] = temp_alllevels[i].ndowntrans;
+      alllevels_nuptrans[i] = temp_alllevels[i].nuptrans;
+      alllevels_epsilon[i] = temp_alllevels[i].epsilon;
+      alllevels_statweight[i] = temp_alllevels[i].stat_weight;
     }
   }
   MPI_Barrier(globals::mpi_comm_node);
+  globals::alllevels.alltrans_startdown = alllevels_alltrans_startdown;
+  globals::alllevels.ndowntrans = alllevels_ndowntrans;
+  globals::alllevels.nuptrans = alllevels_nuptrans;
+  globals::alllevels.epsilon = alllevels_epsilon;
+  globals::alllevels.statweight = alllevels_statweight;
   temp_alllevels.clear();
   temp_alllevels.shrink_to_fit();
 
