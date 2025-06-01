@@ -63,8 +63,6 @@ CheckOptions:
       value: google
     - key: cppcoreguidelines-init-variables.MathHeader
       value: <cmath>
-    - key: cppcoreguidelines-pro-type-member-init.IgnoreArrays
-      value: 'true'
     - key: hicpp-signed-bitwise.IgnorePositiveIntegerLiterals
       value: 'true'
     - key: modernize-deprecated-headers.CheckHeaderFile
