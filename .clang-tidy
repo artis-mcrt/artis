@@ -12,11 +12,11 @@ Checks: [
         -bugprone-implicit-widening-of-multiplication-result,
         -bugprone-multi-level-implicit-pointer-conversion,
         -boost-use-ranges,
-        -llvmlibc-*,
         -cert-dcl50-cpp,
         -cert-err33-c,
         -cert-err34-c,
         -cert-err58-cpp,
+        -clang-analyzer-deadcode.DeadStores,
         -cppcoreguidelines-avoid-magic-numbers,
         -cppcoreguidelines-avoid-non-const-global-variables,
         -cppcoreguidelines-macro-usage,
@@ -33,6 +33,7 @@ Checks: [
         -hicpp-vararg,
         -hicpp-no-array-decay,
         -hicpp-signed-bitwise,
+        -llvmlibc-*,
         -misc-no-recursion,
         -misc-non-private-member-variables-in-classes,
         -modernize-use-ranges, # things like sort and for_each don't support parallel execution policies
@@ -42,7 +43,7 @@ Checks: [
         -readability-function-cognitive-complexity,
         -readability-magic-numbers,
     ]
-WarningsAsErrors: '*,-clang-analyzer-deadcode.DeadStores,-clang-diagnostic-unused-function'
+WarningsAsErrors: '*,-clang-diagnostic-unused-function'
 FormatStyle: file
 ExtraArgs: [-std=c++23]
 CheckOptions:
