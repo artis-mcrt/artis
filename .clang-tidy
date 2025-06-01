@@ -2,7 +2,6 @@
 InheritParentConfig: true
 Checks: [
         '*',
-        -*avoid-c-arrays,
         -cert-dcl03-c,
         -abseil-*,
         -android-*,
@@ -17,6 +16,7 @@ Checks: [
         -cert-err34-c,
         -cert-err58-cpp,
         -clang-analyzer-deadcode.DeadStores,
+        -cppcoreguidelines-avoid-c-arrays,
         -cppcoreguidelines-avoid-magic-numbers,
         -cppcoreguidelines-avoid-non-const-global-variables,
         -cppcoreguidelines-macro-usage,
@@ -30,13 +30,15 @@ Checks: [
         -fuchsia-*,
         -google-objc*,
         -google-readability-todo,
+        -hicpp-avoid-c-arrays,
         -hicpp-vararg,
         -hicpp-no-array-decay,
-        -hicpp-signed-bitwise,
+        # -hicpp-signed-bitwise,
         -llvmlibc-*,
         -misc-no-recursion,
         -misc-non-private-member-variables-in-classes,
-        -modernize-use-ranges, # things like sort and for_each don't support parallel execution policies
+        -modernize-avoid-c-arrays,
+        -modernize-use-ranges, # things like sort and for_each don't support parallel execution policies yet (C++26 will?)
         -modernize-use-std-print, # replace printout macro with a function when we want to autofix to use std::format gcc >=13
         -performance-enum-size,
         -readability-identifier-length,
@@ -47,20 +49,6 @@ WarningsAsErrors: '*,-clang-diagnostic-unused-function'
 FormatStyle: file
 ExtraArgs: [-std=c++23]
 CheckOptions:
-    - key: modernize-deprecated-headers.CheckHeaderFile
-      value: 'true'
-    - key: cppcoreguidelines-init-variables.IncludeStyle
-      value: google
-    - key: cppcoreguidelines-init-variables.MathHeader
-      value: <cmath>
-    - key: modernize-use-std-print.PrintfLikeFunctions
-      value: printf; absl::PrintF; printout
-    - key: modernize-use-std-print.FprintfLikeFunctions
-      value: fprintf; absl::FPrintF
-    - key: cppcoreguidelines-pro-type-member-init.IgnoreArrays
-      value: 'true'
-    - key: readability-identifier-naming.NamespaceCase
-      value: lower_case
     - key: bugprone-reserved-identifier.AllowedIdentifiers
       value: '__host__;__device__'
     - key: bugprone-narrowing-conversions.IgnoreConversionFromTypes
@@ -71,3 +59,19 @@ CheckOptions:
       value: 'true'
     - key: bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
       value: 'false'
+    - key: cppcoreguidelines-init-variables.IncludeStyle
+      value: google
+    - key: cppcoreguidelines-init-variables.MathHeader
+      value: <cmath>
+    - key: cppcoreguidelines-pro-type-member-init.IgnoreArrays
+      value: 'true'
+    - key: hicpp-signed-bitwise.IgnorePositiveIntegerLiterals
+      value: 'true'
+    - key: modernize-deprecated-headers.CheckHeaderFile
+      value: 'true'
+    - key: modernize-use-std-print.PrintfLikeFunctions
+      value: printf; absl::PrintF; printout
+    - key: modernize-use-std-print.FprintfLikeFunctions
+      value: fprintf; absl::FPrintF
+    - key: readability-identifier-naming.NamespaceCase
+      value: lower_case
