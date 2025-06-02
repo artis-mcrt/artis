@@ -84,7 +84,7 @@ auto integrator(auto params, const double a, const double b, const double epsabs
     *abserr = 0.;
     return 0;
   } else {
-    const gsl_function F = {.function = func_integrand, .params = &params};
+    const auto F = gsl_function{.function = func_integrand, .params = &params};
     return gsl_integration_qag(&F, a, b, epsabs, epsrel, GSLWSIZE, key, gslworkspace.get(), result, abserr);
   }
 }
