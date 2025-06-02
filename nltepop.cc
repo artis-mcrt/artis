@@ -1144,11 +1144,10 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
       if (remove_top_ion_from_solution) {
         // Now check the excited populations of the top ion relative to the total element population
         // To make sure none of these are too large to remove the top ion
-        double nlte_excited_pop_top_ion = 0.0;
         for (int level = 1; level <= nlevels_nlte_top_ion; level++) {
           const int top_ion_nlte_index =
               get_nlte_vector_index(element, first_ion_used + nions_used - 1, level, first_ion_used);
-          nlte_excited_pop_top_ion = gsl_vector_get(&popvec, top_ion_nlte_index);
+          const double nlte_excited_pop_top_ion = gsl_vector_get(&popvec, top_ion_nlte_index);
           nlte_excited_pop_top_ion_sum += fabs(nlte_excited_pop_top_ion);
           if (nlte_excited_pop_top_ion / nnelement > LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION) {
             printout(
@@ -1209,10 +1208,9 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
         if (remove_bottom_ion_from_solution) {
           // Now check the excited populations of the bottom ion relative to the total element population
           // To make sure none of these are too large to remove the bottom ion
-          double nlte_excited_pop_bottom_ion = 0.0;
           for (int level = 1; level <= nlevels_nlte_bottom_ion; level++) {
             const int bottom_ion_nlte_index = get_nlte_vector_index(element, first_ion_used, level, first_ion_used);
-            nlte_excited_pop_bottom_ion = gsl_vector_get(&popvec, bottom_ion_nlte_index);
+            const double nlte_excited_pop_bottom_ion = gsl_vector_get(&popvec, bottom_ion_nlte_index);
             nlte_excited_pop_bottom_ion_sum += fabs(nlte_excited_pop_bottom_ion);
             if (nlte_excited_pop_bottom_ion / nnelement > LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION) {
               printout(
