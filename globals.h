@@ -234,12 +234,12 @@ inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperatur
 
 inline std::span<float> allphixs{};
 struct AllTransitions {
-  std::span<int> lineindex;
+  std::span<const int> lineindex;
   std::span<const int> targetlevelindex;
-  std::span<float> einstein_A;
-  std::span<float> coll_str;
-  std::span<float> osc_strength;
-  std::span<bool> forbidden;
+  std::span<const float> einstein_A;
+  std::span<const float> coll_str;
+  std::span<const float> osc_strength;
+  std::span<const bool> forbidden;
 };
 inline AllTransitions alltrans;
 

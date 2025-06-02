@@ -1265,7 +1265,6 @@ void read_atomicdata_files() {
   temp_alltranslist.clear();
   temp_alltranslist.shrink_to_fit();
 
-  globals::alltrans.lineindex = alltrans_lineindex;
   globals::alltrans.targetlevelindex = alltrans_targetlevelindex;
   globals::alltrans.einstein_A = alltrans_einstein_A;
   globals::alltrans.coll_str = alltrans_coll_str;
@@ -1273,17 +1272,17 @@ void read_atomicdata_files() {
   globals::alltrans.forbidden = alltrans_forbidden;
 
   // create a linelist shared on node and then copy data across, freeing the local copy
-  auto nonconstlinelist = MPI_shared_malloc_span<TransitionLine>(globals::nlines);
+  auto linelist = MPI_shared_malloc_span<TransitionLine>(globals::nlines);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_linelist) == globals::nlines);
-    std::ranges::copy(temp_linelist, nonconstlinelist.begin());
+    std::ranges::copy(temp_linelist, linelist.begin());
   }
   temp_linelist.clear();
   temp_linelist.shrink_to_fit();
 
   MPI_Barrier(MPI_COMM_WORLD);
-  globals::linelist = nonconstlinelist;
+  globals::linelist = linelist;
   printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
            globals::nlines * sizeof(TransitionLine) / 1024. / 1024);
 
@@ -1318,7 +1317,7 @@ void read_atomicdata_files() {
       }
     }
     assert_always(downtransid != -1);
-    globals::alltrans.lineindex[downtransid] = lineindex;
+    alltrans_lineindex[downtransid] = lineindex;
 
     const auto lower_uniquelevelindex = get_uniquelevelindex(element, ion, lowerlevel);
     const auto alltrans_startup = get_alltrans_startup(lower_uniquelevelindex);
@@ -1331,8 +1330,9 @@ void read_atomicdata_files() {
       }
     }
     assert_always(uptransid != -1);
-    globals::alltrans.lineindex[uptransid] = lineindex;
+    alltrans_lineindex[uptransid] = lineindex;
   }
+  globals::alltrans.lineindex = alltrans_lineindex;
 
   printout("  took %lds\n", std::time(nullptr) - time_start_establish_linelist_connections);
   MPI_Barrier(MPI_COMM_WORLD);
