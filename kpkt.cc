@@ -498,9 +498,9 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   const double rndcool_ion_process = rng_uniform() * C_ion_procsum;
 
   const auto i =
-      std::upper_bound(globals::cellcache[cellcacheslotid].cooling_contrib.data() + ilow,
-                       globals::cellcache[cellcacheslotid].cooling_contrib.data() + ihigh + 1, rndcool_ion_process) -
-      globals::cellcache[cellcacheslotid].cooling_contrib.data();
+      std::upper_bound(globals::cellcache[cellcacheslotid].cooling_contrib.begin() + ilow,
+                       globals::cellcache[cellcacheslotid].cooling_contrib.begin() + ihigh + 1, rndcool_ion_process) -
+      globals::cellcache[cellcacheslotid].cooling_contrib.begin();
 
   if (i > ihigh) {
     printout("do_kpkt: error occurred while selecting a cooling channel: low %d, high %d, i %td, rndcool %g\n", ilow,
