@@ -1244,26 +1244,33 @@ void read_atomicdata_files() {
   // create a shared all transitions list and then copy data across, freeing the local copy
   MPI_Barrier(globals::mpi_comm_node);
 
-  globals::alltrans.lineindex = MPI_shared_malloc_span<int>(totupdowntrans);
-  globals::alltrans.targetlevelindex = MPI_shared_malloc_span<int>(totupdowntrans);
-  globals::alltrans.einstein_A = MPI_shared_malloc_span<float>(totupdowntrans);
-  globals::alltrans.coll_str = MPI_shared_malloc_span<float>(totupdowntrans);
-  globals::alltrans.osc_strength = MPI_shared_malloc_span<float>(totupdowntrans);
-  globals::alltrans.forbidden = MPI_shared_malloc_span<bool>(totupdowntrans);
+  auto alltrans_lineindex = MPI_shared_malloc_span<int>(totupdowntrans);
+  auto alltrans_targetlevelindex = MPI_shared_malloc_span<int>(totupdowntrans);
+  auto alltrans_einstein_A = MPI_shared_malloc_span<float>(totupdowntrans);
+  auto alltrans_coll_str = MPI_shared_malloc_span<float>(totupdowntrans);
+  auto alltrans_osc_strength = MPI_shared_malloc_span<float>(totupdowntrans);
+  auto alltrans_forbidden = MPI_shared_malloc_span<bool>(totupdowntrans);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_alltranslist) == totupdowntrans);
     for (int t = 0; t < totupdowntrans; t++) {
-      globals::alltrans.lineindex[t] = temp_alltranslist[t].lineindex;
-      globals::alltrans.targetlevelindex[t] = temp_alltranslist[t].targetlevelindex;
-      globals::alltrans.einstein_A[t] = temp_alltranslist[t].einstein_A;
-      globals::alltrans.coll_str[t] = temp_alltranslist[t].coll_str;
-      globals::alltrans.osc_strength[t] = temp_alltranslist[t].osc_strength;
-      globals::alltrans.forbidden[t] = temp_alltranslist[t].forbidden;
+      alltrans_lineindex[t] = temp_alltranslist[t].lineindex;
+      alltrans_targetlevelindex[t] = temp_alltranslist[t].targetlevelindex;
+      alltrans_einstein_A[t] = temp_alltranslist[t].einstein_A;
+      alltrans_coll_str[t] = temp_alltranslist[t].coll_str;
+      alltrans_osc_strength[t] = temp_alltranslist[t].osc_strength;
+      alltrans_forbidden[t] = temp_alltranslist[t].forbidden;
     }
   }
   temp_alltranslist.clear();
   temp_alltranslist.shrink_to_fit();
+
+  globals::alltrans.lineindex = alltrans_lineindex;
+  globals::alltrans.targetlevelindex = alltrans_targetlevelindex;
+  globals::alltrans.einstein_A = alltrans_einstein_A;
+  globals::alltrans.coll_str = alltrans_coll_str;
+  globals::alltrans.osc_strength = alltrans_osc_strength;
+  globals::alltrans.forbidden = alltrans_forbidden;
 
   // create a linelist shared on node and then copy data across, freeing the local copy
   auto nonconstlinelist = MPI_shared_malloc_span<TransitionLine>(globals::nlines);
