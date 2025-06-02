@@ -811,8 +811,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       if (gsl_vector_get(popvec, row) < MINPOP && row == row_ground_state) {
         printout(
             "  WARNING: NLTE solver gave ground pop less than MINPOP for index %zud (Z=%d ionstage %d level %d), "
-            "pop = %g. "
-            "Returning nltepop_matrix_solve fail (using LTE pops instead)\n",
+            "pop = %g. Returning nltepop_matrix_solve fail\n",
             row, get_atomicnumber(element), get_ionstage(element, ion), level,
             gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row));
 
@@ -1111,33 +1110,156 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
     } else {
       retry_with_fewer_ions = true;
-      if (gsl_vector_get(&popvec, get_nlte_vector_index(element, first_ion_used + nions_used - 1, 0, first_ion_used)) <
-          POPULATION_CUT_REMOVE_ION) {
+      printout("  WARNING: NLTE matrix solution failed for element Z=%d using ionstage=%d to ionstage %d\n",
+               atomic_number, get_ionstage(element, first_ion_used),
+               get_ionstage(element, first_ion_used + nions_used - 1));
+      // Check if the top ion populations are low enough as a relative fraction of the total element population
+      // nnelement which already has been defined in this function. First check the ground state population relative
+      // to this, then check the excited populations, then check the superlevel population if it exists.
+      // Check all of these relative to a factor of 1e6 or 1e9 of the total element population.
+      // Do this for each the top ion and the bottom ion here then set flags for each of these e.g.
+      // top_ion_can_cut_from_solution = true; If looping through each of these with an if condition is too slow
+      // then instead could so the sum with an fabs(pop) for each population value so that negative populations
+      // don't cancel out positive populations and make it seem like the population of an ion is very low when
+      // actually it is just a big negative population cancelling out the larger positive populations.
+
+      bool remove_top_ion_from_solution = true;
+      bool remove_bottom_ion_from_solution = true;
+
+      const int nlevels_nlte_top_ion = get_nlevels_nlte(element, first_ion_used + nions_used - 1);
+      const int index_gs_top_ion = get_nlte_vector_index(element, first_ion_used + nions_used - 1, 0, first_ion_used);
+      const double ground_pop_top_ion = gsl_vector_get(&popvec, index_gs_top_ion);
+      if (ground_pop_top_ion / nnelement > LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION) {
+        // check ground pop of top ion relative to total element population first
+        // If this ground pop is too large relative to the total element popualtion
+        // then can't remove top ion so go straight to checking if the bottom ion
+        // can be removed
         printout(
-            "  WARNING: NLTE matrix solution failed for element Z=%d using ionstage=%d to ionstage %d, "
-            "removing top ionstage and attempting to re-solve nlte rate matrix \n",
-            atomic_number, get_ionstage(element, first_ion_used),
-            get_ionstage(element, first_ion_used + nions_used - 1));
-        nions_used = nions_used - 1;
-      } else if (gsl_vector_get(&popvec, get_nlte_vector_index(element, first_ion_used, 0, first_ion_used)) <
-                 POPULATION_CUT_REMOVE_ION) {
+            "  WARNING: top ion ground state population too large to remove ion (ground_pop_top_ion / nnelement "
+            "(%g/%g) > (%g) LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION)\n",
+            ground_pop_top_ion, nnelement, LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION);
+        remove_top_ion_from_solution = false;
+      }
+      double nlte_excited_pop_top_ion_sum = 0.0;
+      if (remove_top_ion_from_solution) {
+        // Now check the excited populations of the top ion relative to the total element population
+        // To make sure none of these are too large to remove the top ion
+        double nlte_excited_pop_top_ion = 0.0;
+        for (int level = 1; level <= nlevels_nlte_top_ion; level++) {
+          const int top_ion_nlte_index =
+              get_nlte_vector_index(element, first_ion_used + nions_used - 1, level, first_ion_used);
+          nlte_excited_pop_top_ion = gsl_vector_get(&popvec, top_ion_nlte_index);
+          nlte_excited_pop_top_ion_sum += fabs(nlte_excited_pop_top_ion);
+          if (nlte_excited_pop_top_ion / nnelement > LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION) {
+            printout(
+                "  WARNING: top ion excited state (level %d) population too large to remove ion "
+                "(nlte_excited_pop_top_ion / nnelement (%g/%g) > (%g) "
+                "LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION)\n",
+                top_ion_nlte_index, nlte_excited_pop_top_ion, nnelement,
+                LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION);
+            remove_top_ion_from_solution = false;
+            break;  // no need to check the other excited levels if one is too large
+          }
+        }
+      }
+      double superlevel_pop_top_ion = 0.0;
+      if (remove_top_ion_from_solution && ion_has_superlevel(element, first_ion_used + nions_used - 1)) {
+        // Now check the superlevel population of the top ion relative to the total element population
+        // To make sure this isn't too large to remove the top ion
+        const int index_sl_top_ion =
+            get_nlte_vector_index(element, first_ion_used + nions_used - 1, nlevels_nlte_top_ion + 1, first_ion_used);
+        superlevel_pop_top_ion = gsl_vector_get(&popvec, index_sl_top_ion);
+        if (superlevel_pop_top_ion / nnelement > LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION) {
+          printout(
+              "  WARNING: top ion superlevel population too large to remove ion (superlevel_pop_top_ion / nnelement "
+              "(%g/%g) > (%g) LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION)\n",
+              superlevel_pop_top_ion, nnelement, LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION);
+          remove_top_ion_from_solution = false;
+        }
+      }
+
+      if (remove_top_ion_from_solution) {
         printout(
-            "  WARNING: NLTE matrix solution failed for element Z=%d using ionstage=%d to ionstage %d, "
-            "removing bottom ionstage and attempting to re-solve nlte rate matrix \n",
-            atomic_number, get_ionstage(element, first_ion_used),
-            get_ionstage(element, first_ion_used + nions_used - 1));
-        nions_used = nions_used - 1;
-        first_ion_used++;
+            "  Passed checks: removing top ion from NLTE solution and attempting to re-solve rate (ionstage %d, ground "
+            "pop %g, fabs(excited pops) sum %g, superlevel pop %g, nnelement %g) matrix\n",
+            get_ionstage(element, first_ion_used + nions_used - 1), ground_pop_top_ion, nlte_excited_pop_top_ion_sum,
+            superlevel_pop_top_ion, nnelement);
+        nions_used = nions_used - 1;  // remove the top ion from the solution
       } else {
+        printout(
+            "  WARNING: can't remove top ion stage from NLTE solution, attempting to remove bottom ionstage %d "
+            "instead\n",
+            get_ionstage(element, first_ion_used));
+        const int nlevels_nlte_bottom_ion = get_nlevels_nlte(element, first_ion_used);
+        const int index_gs_bottom_ion = get_nlte_vector_index(element, first_ion_used, 0, first_ion_used);
+        const double ground_pop_bottom_ion = gsl_vector_get(&popvec, index_gs_bottom_ion);
+
+        if (ground_pop_bottom_ion / nnelement > LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION) {
+          // check ground pop of bottom ion relative to total element population first
+          // If this ground pop is too large relative to the total element popualtion
+          // then can't remove bottom ion so go straight to checking if the bottom ion
+          // can be removed
+          printout(
+              "  WARNING: Bottom ion ground state population too large to remove ion (ground_pop_bottom_ion / "
+              "nnelement (%g/%g) > (%g) LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION)\n",
+              ground_pop_bottom_ion, nnelement, LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION);
+          remove_bottom_ion_from_solution = false;
+        }
+        double nlte_excited_pop_bottom_ion_sum = 0.0;
+        if (remove_bottom_ion_from_solution) {
+          // Now check the excited populations of the bottom ion relative to the total element population
+          // To make sure none of these are too large to remove the bottom ion
+          double nlte_excited_pop_bottom_ion = 0.0;
+          for (int level = 1; level <= nlevels_nlte_bottom_ion; level++) {
+            const int bottom_ion_nlte_index = get_nlte_vector_index(element, first_ion_used, level, first_ion_used);
+            nlte_excited_pop_bottom_ion = gsl_vector_get(&popvec, bottom_ion_nlte_index);
+            nlte_excited_pop_bottom_ion_sum += fabs(nlte_excited_pop_bottom_ion);
+            if (nlte_excited_pop_bottom_ion / nnelement > LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION) {
+              printout(
+                  "  WARNING: Bottom ion excited state (level %d) population too large to remove ion "
+                  "(nlte_excited_pop_bottom_ion "
+                  "/ nnelement (%g/%g) > (%g) LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION)\n",
+                  bottom_ion_nlte_index, nlte_excited_pop_bottom_ion, nnelement,
+                  LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION);
+              remove_bottom_ion_from_solution = false;
+              break;  // no need to check the other excited levels if one is too large
+            }
+          }
+        }
+        double superlevel_pop_bottom_ion = 0.0;
+        if (remove_bottom_ion_from_solution && ion_has_superlevel(element, first_ion_used)) {
+          // Now check the superlevel population of the bottom ion relative to the total element population
+          // To make sure this isn't too large to remove the bottom ion
+          const int index_sl_bottom_ion =
+              get_nlte_vector_index(element, first_ion_used, nlevels_nlte_bottom_ion + 1, first_ion_used);
+          superlevel_pop_bottom_ion = gsl_vector_get(&popvec, index_sl_bottom_ion);
+          if (superlevel_pop_bottom_ion / nnelement > LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION) {
+            printout(
+                "  WARNING: Bottom ion superlevel population too large to remove ion (superlevel_pop_bottom_ion / "
+                "nnelement "
+                "(%g/%g) > (%g) LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION)\n",
+                superlevel_pop_bottom_ion, nnelement, LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION);
+            remove_bottom_ion_from_solution = false;
+          }
+        }
+        if (remove_bottom_ion_from_solution) {
+          printout(
+              "  Passed checks: removing bottom ion from NLTE solution and attempting to re-solve rate matrix "
+              "(ionstage %d, ground pop %g, fabs(excited pops) sum %g, superlevel pop %g, nnelement %g)\n",
+              get_ionstage(element, first_ion_used), ground_pop_bottom_ion, nlte_excited_pop_bottom_ion_sum,
+              superlevel_pop_bottom_ion, nnelement);
+          nions_used = nions_used - 1;  // remove the bottom ion from the solution
+          first_ion_used++;  // increment the first ion used to the next ion
+        } else {
+          printout("  WARNING: can't remove bottom ion stage from NLTE solution, returning matrix solve fail\n");
+          return;
+        }
+      }
+      if (!remove_bottom_ion_from_solution && !remove_top_ion_from_solution) {
         matrix_solve_satisfied_with_ion_list = true;
       }
       if (!matrix_solve_satisfied_with_ion_list) {
         nlte_dimension = get_element_nlte_dimension(element, nions_used, first_ion_used);
-        // Might need to change this if we want solver to work for sub-set of elements ions
-        // printout that we are reducing the number of ions used
-        // printout(
-        //     "  WARNING: NLTE matrix solution failed for element Z=%d with %d ions, reducing to %d ions starting
-        //     from ion " "stage %d\n", atomic_number, nions, nions_used, get_ionstage(element, first_ion_used));}
       }
     }
     // assert_always(get_atomicnumber(element) < 26);
@@ -1146,8 +1268,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   if (!matrix_solve_success) {
     printout(
         "WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular "
-        "matrix, negative pop or large pop inversion and unable to recover solution by reducing ion range. Attempting "
-        "to use LTE solution instead\n",
+        "matrix, negative pop or large pop inversion and unable to recover solution by reducing ion range. "
+        "Attempting to use LTE solution instead\n",
         modelgridindex, timestep, atomic_number);
     set_element_pops_lte(nonemptymgi, element);
   } else {

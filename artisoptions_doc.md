@@ -139,9 +139,11 @@ constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL = 1000.;
 // that the level is inverted
 constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 10.;
 
-// Controls the highest population an ion can have and still be removed from the NLTE solution when using
-// the NLTE_LIMIT_ION_STAGES_AFTER_FAILURE functionality
-constexpr float POPULATION_CUT_REMOVE_ION = 100.;
+// Controls the highest ratio the population a level can have relative to the total population of the element
+// for the ion to still be removed from the NLTE solution when using the NLTE_LIMIT_ION_STAGES_AFTER_FAILURE
+// functionality. The ratio of the nlte ground populations, each nlte excited population and the superlevel
+// population are all individually checked.
+constexpr double LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION = 1e-9;
 
 // If set_element_pops_lte is called when NLTE solver fails the uppermost_ion used in set_groundlevelpops
 // is the one in set in memory based on the NLTE phi factors. In rare cases this can result in partition
