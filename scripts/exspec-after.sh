@@ -41,7 +41,7 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
   mv *_res_*.out* speclc_angle_res/ || true
 
   curl -LsSf https://astral.sh/uv/install.sh | sh
-  uv tool install -U --no-cache artistools@latest
+  uv tool install -U --no-cache -p 3.13 artistools@latest
 
   # convert packets to parquet for fast reading
   uvx artistools lc --frompackets || true

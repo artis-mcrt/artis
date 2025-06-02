@@ -71,7 +71,6 @@ jobs:
             matrix:
                 compiler:
                     [
-                        {name: gcc, ver: 12},
                         {name: gcc, ver: 13},
                         {name: gcc, ver: 14},
                         {name: gcc, ver: 15},
