@@ -33,7 +33,6 @@ Checks: [
         -hicpp-avoid-c-arrays,
         -hicpp-vararg,
         -hicpp-no-array-decay,
-        # -hicpp-signed-bitwise,
         -llvmlibc-*,
         -misc-no-recursion,
         -misc-non-private-member-variables-in-classes,
