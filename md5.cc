@@ -3,6 +3,7 @@
 
 #include "md5.h"
 
+#include <array>
 #include <bit>
 #include <cstdint>
 #include <cstdio>
@@ -230,13 +231,13 @@ auto md5_file(const std::string &filename) -> std::string {
 
   assert_always(infile != nullptr);
 
-  BYTE buffer[1024];
+  std::array<BYTE, 1024> buffer{};
 
   size_t numbytes = 1;
   while (numbytes != 0 && feof(infile) == 0) {
-    numbytes = fread(buffer, sizeof(char), 1024, infile);
+    numbytes = fread(buffer.data(), sizeof(BYTE), buffer.size(), infile);
     assert_always(ferror(infile) == 0);
-    md5_update(&ctx, buffer, numbytes);
+    md5_update(&ctx, buffer.data(), numbytes);
   }
 
   fclose(infile);
