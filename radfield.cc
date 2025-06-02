@@ -213,17 +213,17 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
   const auto bfestimcount = globals::bfestimcount;
 
   assert_testmodeonly(phixslist.bfestimend <= bfestimcount);
-  const auto bfestimend = std::upper_bound(globals::bfestim_nu_edge.data(),
-                                           globals::bfestim_nu_edge.data() + phixslist.bfestimend, nu_cmf) -
-                          globals::bfestim_nu_edge.data();
+  const auto bfestimend = std::upper_bound(globals::bfestim_nu_edge.begin(),
+                                           globals::bfestim_nu_edge.begin() + phixslist.bfestimend, nu_cmf) -
+                          globals::bfestim_nu_edge.begin();
   assert_testmodeonly(bfestimend <= bfestimcount);
   assert_testmodeonly(phixslist.bfestimbegin >= 0);
-  const auto bfestimbegin = std::lower_bound(globals::bfestim_nu_edge.data() + phixslist.bfestimbegin,
-                                             globals::bfestim_nu_edge.data() + bfestimend, nu_cmf,
+  const auto bfestimbegin = std::lower_bound(globals::bfestim_nu_edge.begin() + phixslist.bfestimbegin,
+                                             globals::bfestim_nu_edge.begin() + bfestimend, nu_cmf,
                                              [](const double nu_edge, const double find_nu_cmf) {
                                                return nu_edge * last_phixs_nuovernuedge < find_nu_cmf;
                                              }) -
-                            globals::bfestim_nu_edge.data();
+                            globals::bfestim_nu_edge.begin();
 
   for (auto bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
     atomicadd(bfrate_raw[(nonemptymgi * bfestimcount) + bfestimindex],
