@@ -737,7 +737,7 @@ void setup_phixs_list() {
   assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
   std::ranges::SORT_OR_STABLE_SORT(globals::groundcont, std::ranges::less{}, &GroundPhotoion::nu_edge);
 
-  auto *nonconstallcont = new FullPhotoionTransition[globals::nbfcontinua];
+  auto *allcont = new FullPhotoionTransition[globals::nbfcontinua];
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
            globals::nbfcontinua * (sizeof(FullPhotoionTransition)) / 1024. / 1024.);
   int allcontindex = 0;
@@ -762,19 +762,19 @@ void setup_phixs_list() {
           const double nu_edge = get_phixs_threshold(uniquelevelindex, phixstargetindex) / H;
 
           assert_always(allcontindex < globals::nbfcontinua);
-          assert_always(nonconstallcont != nullptr);
-          nonconstallcont[allcontindex].nu_edge = nu_edge;
-          nonconstallcont[allcontindex].element = element;
-          nonconstallcont[allcontindex].ion = ion;
-          nonconstallcont[allcontindex].level = level;
-          nonconstallcont[allcontindex].phixstargetindex = phixstargetindex;
-          nonconstallcont[allcontindex].probability = get_phixsprobability(uniquelevelindex, phixstargetindex);
-          nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
+          assert_always(allcont != nullptr);
+          allcont[allcontindex].nu_edge = nu_edge;
+          allcont[allcontindex].element = element;
+          allcont[allcontindex].ion = ion;
+          allcont[allcontindex].level = level;
+          allcont[allcontindex].phixstargetindex = phixstargetindex;
+          allcont[allcontindex].probability = get_phixsprobability(uniquelevelindex, phixstargetindex);
+          allcont[allcontindex].upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
 
           if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
             const double nu_edge_target0 = get_phixs_threshold(uniquelevelindex, 0) / H;
             const auto groundcontindex = search_groundphixslist(nu_edge_target0, element, ion, level);
-            nonconstallcont[allcontindex].index_in_groundphixslist = groundcontindex;
+            allcont[allcontindex].index_in_groundphixslist = groundcontindex;
 
             globals::alllevels.closestgroundlevelcont[uniquelevelindex] = groundcontindex;
           }
@@ -792,12 +792,12 @@ void setup_phixs_list() {
   globals::bfestimcount = 0;
   if (nbfcontinua > 0) {
     // indices above were temporary only. continuum index should be to the sorted list
-    std::ranges::SORT_OR_STABLE_SORT(std::span(nonconstallcont, nbfcontinua), std::ranges::less{},
+    std::ranges::SORT_OR_STABLE_SORT(std::span(allcont, nbfcontinua), std::ranges::less{},
                                      &FullPhotoionTransition::nu_edge);
 
     globals::bfestim_nu_edge.clear();
     for (int i = 0; i < nbfcontinua; i++) {
-      auto &cont = nonconstallcont[i];
+      auto &cont = allcont[i];
       if (DETAILED_BF_ESTIMATORS_ON &&
           LEVEL_HAS_BFEST(get_atomicnumber(cont.element), get_ionstage(cont.element, cont.ion), cont.level)) {
         cont.bfestimindex = globals::bfestimcount;
@@ -813,22 +813,21 @@ void setup_phixs_list() {
     assert_always(globals::bfestimcount == std::ssize(globals::bfestim_nu_edge));
 
     for (int i = 0; i < nbfcontinua; i++) {
-      globals::allcont_nu_edge[i] = nonconstallcont[i].nu_edge;
+      globals::allcont_nu_edge[i] = allcont[i].nu_edge;
     }
 
     setup_photoion_luts();
 
     for (int i = 0; i < nbfcontinua; i++) {
-      const int element = nonconstallcont[i].element;
-      const int ion = nonconstallcont[i].ion;
-      const int level = nonconstallcont[i].level;
-      nonconstallcont[i].photoion_xs = get_phixs_table(element, ion, level);
-      assert_always(nonconstallcont[i].photoion_xs != nullptr);
+      const int element = allcont[i].element;
+      const int ion = allcont[i].ion;
+      const int level = allcont[i].level;
+      allcont[i].photoion_xs = get_phixs_table(element, ion, level);
+      assert_always(allcont[i].photoion_xs != nullptr);
     }
   }
   printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
-  globals::allcont = nonconstallcont;
-  nonconstallcont = nullptr;
+  globals::allcont = allcont;
 }
 
 void read_phixs_data() {
