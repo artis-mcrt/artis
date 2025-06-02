@@ -796,11 +796,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   int i = 0;
   const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.begin());
 
-  const int allcontbegin = std::lower_bound(allcont_nu_edge.data(), allcont_nu_edge.data() + allcontend, nu,
+  const int allcontbegin = std::lower_bound(allcont_nu_edge.begin(), allcont_nu_edge.begin() + allcontend, nu,
                                             [](const double nu_edge, const double nu_cmf) {
                                               return nu_edge * last_phixs_nuovernuedge < nu_cmf;
                                             }) -
-                           allcont_nu_edge.data();
+                           allcont_nu_edge.begin();
 
   assert_testmodeonly(allcontbegin >= 0);
   assert_testmodeonly(allcontend <= globals::nbfcontinua);
@@ -817,9 +817,9 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 
     phixslist.bfestimbegin =
         std::lower_bound(
-            globals::bfestim_nu_edge.data(), globals::bfestim_nu_edge.data() + phixslist.bfestimend, nu,
+            globals::bfestim_nu_edge.cbegin(), globals::bfestim_nu_edge.cbegin() + phixslist.bfestimend, nu,
             [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }) -
-        globals::bfestim_nu_edge.data();
+        globals::bfestim_nu_edge.cbegin();
   }
 
   for (i = allcontbegin; i < allcontend; i++) {
