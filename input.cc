@@ -886,19 +886,21 @@ void read_phixs_data() {
 
     // copy the photoionisation tables into one contiguous block of memory
     globals::allphixs = MPI_shared_malloc_span<float>(std::ssize(tmpallphixs));
-    globals::allphixstargets_levelindex = MPI_shared_malloc_span<int>(std::ssize(tmpallphixstargets));
-    globals::allphixstargets_probability = MPI_shared_malloc_span<double>(std::ssize(tmpallphixstargets));
+    auto allphixstargets_levelindex = MPI_shared_malloc_span<int>(std::ssize(tmpallphixstargets));
+    auto allphixstargets_probability = MPI_shared_malloc_span<double>(std::ssize(tmpallphixstargets));
 
     if (globals::rank_in_node == 0) {
       std::copy_n(tmpallphixs.cbegin(), tmpallphixs.size(), globals::allphixs.data());
 
       for (int i = 0; i < std::ssize(tmpallphixstargets); i++) {
-        globals::allphixstargets_levelindex[i] = tmpallphixstargets[i].levelindex;
-        globals::allphixstargets_probability[i] = tmpallphixstargets[i].probability;
+        allphixstargets_levelindex[i] = tmpallphixstargets[i].levelindex;
+        allphixstargets_probability[i] = tmpallphixstargets[i].probability;
       }
     }
 
     MPI_Barrier(globals::mpi_comm_node);
+    globals::allphixstargets_levelindex = allphixstargets_levelindex;
+    globals::allphixstargets_probability = allphixstargets_probability;
 
     tmpallphixs.clear();
     tmpallphixs.shrink_to_fit();
