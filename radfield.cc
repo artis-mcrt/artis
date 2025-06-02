@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <iterator>
 #include <span>
 #include <tuple>
 #include <vector>
@@ -213,17 +214,18 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
   const auto bfestimcount = globals::bfestimcount;
 
   assert_testmodeonly(phixslist.bfestimend <= bfestimcount);
-  const auto bfestimend = std::upper_bound(globals::bfestim_nu_edge.begin(),
-                                           globals::bfestim_nu_edge.begin() + phixslist.bfestimend, nu_cmf) -
-                          globals::bfestim_nu_edge.begin();
+  const auto bfestimend =
+      std::distance(globals::bfestim_nu_edge.cbegin(),
+                    std::upper_bound(globals::bfestim_nu_edge.cbegin(),
+                                     globals::bfestim_nu_edge.cbegin() + phixslist.bfestimend, nu_cmf));
   assert_testmodeonly(bfestimend <= bfestimcount);
   assert_testmodeonly(phixslist.bfestimbegin >= 0);
-  const auto bfestimbegin = std::lower_bound(globals::bfestim_nu_edge.begin() + phixslist.bfestimbegin,
-                                             globals::bfestim_nu_edge.begin() + bfestimend, nu_cmf,
-                                             [](const double nu_edge, const double find_nu_cmf) {
-                                               return nu_edge * last_phixs_nuovernuedge < find_nu_cmf;
-                                             }) -
-                            globals::bfestim_nu_edge.begin();
+  const auto bfestimbegin = std::distance(globals::bfestim_nu_edge.cbegin(),
+                                          std::lower_bound(globals::bfestim_nu_edge.cbegin() + phixslist.bfestimbegin,
+                                                           globals::bfestim_nu_edge.cbegin() + bfestimend, nu_cmf,
+                                                           [](const double nu_edge, const double find_nu_cmf) {
+                                                             return nu_edge * last_phixs_nuovernuedge < find_nu_cmf;
+                                                           }));
 
   for (auto bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
     atomicadd(bfrate_raw[(nonemptymgi * bfestimcount) + bfestimindex],
