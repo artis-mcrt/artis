@@ -794,7 +794,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   // break the list into nu >= nu_edge and the remainder (nu < nu_edge)
 
   int i = 0;
-  const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.cbegin());
+  const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.begin());
 
   const int allcontbegin = std::lower_bound(allcont_nu_edge.data(), allcont_nu_edge.data() + allcontend, nu,
                                             [](const double nu_edge, const double nu_cmf) {
@@ -806,7 +806,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   assert_testmodeonly(allcontend <= globals::nbfcontinua);
   assert_testmodeonly(allcontbegin <= allcontend);
 
-  const auto *const allcont = globals::allcont;
+  const auto allcont = globals::allcont;
 
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     phixslist.allcontbegin = allcontbegin;

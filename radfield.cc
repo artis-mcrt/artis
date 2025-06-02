@@ -412,13 +412,13 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
 auto get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
   // simple linear search seems to be faster than the binary search
   // possibly because lower frequency transitions near start of list are more likely to be called?
-  const auto bfcontindex = static_cast<int>(std::find_if(globals::allcont, globals::allcont + globals::nbfcontinua,
-                                                         [=](const auto &bf) {
-                                                           return (bf.element == element) && (bf.ion == lowerion) &&
-                                                                  (bf.level == lower) &&
-                                                                  (bf.phixstargetindex == phixstargetindex);
-                                                         }) -
-                                            globals::allcont);
+  const auto bfcontindex =
+      static_cast<int>(std::find_if(globals::allcont.data(), globals::allcont.data() + globals::nbfcontinua,
+                                    [=](const auto &bf) {
+                                      return (bf.element == element) && (bf.ion == lowerion) && (bf.level == lower) &&
+                                             (bf.phixstargetindex == phixstargetindex);
+                                    }) -
+                       globals::allcont.data());
 
   if (bfcontindex < globals::nbfcontinua) {
     return bfcontindex;

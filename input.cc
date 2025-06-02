@@ -737,7 +737,8 @@ void setup_phixs_list() {
   assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
   std::ranges::SORT_OR_STABLE_SORT(globals::groundcont, std::ranges::less{}, &GroundPhotoion::nu_edge);
 
-  auto *allcont = new FullPhotoionTransition[globals::nbfcontinua];
+  auto allcont = std::span<FullPhotoionTransition>{new FullPhotoionTransition[globals::nbfcontinua],
+                                                   static_cast<size_t>(globals::nbfcontinua)};
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
            globals::nbfcontinua * (sizeof(FullPhotoionTransition)) / 1024. / 1024.);
   int allcontindex = 0;
@@ -762,7 +763,7 @@ void setup_phixs_list() {
           const double nu_edge = get_phixs_threshold(uniquelevelindex, phixstargetindex) / H;
 
           assert_always(allcontindex < globals::nbfcontinua);
-          assert_always(allcont != nullptr);
+          assert_always(allcontindex < std::ssize(allcont));
           allcont[allcontindex].nu_edge = nu_edge;
           allcont[allcontindex].element = element;
           allcont[allcontindex].ion = ion;
@@ -792,8 +793,7 @@ void setup_phixs_list() {
   globals::bfestimcount = 0;
   if (nbfcontinua > 0) {
     // indices above were temporary only. continuum index should be to the sorted list
-    std::ranges::SORT_OR_STABLE_SORT(std::span(allcont, nbfcontinua), std::ranges::less{},
-                                     &FullPhotoionTransition::nu_edge);
+    std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &FullPhotoionTransition::nu_edge);
 
     globals::bfestim_nu_edge.clear();
     for (int i = 0; i < nbfcontinua; i++) {
@@ -807,14 +807,15 @@ void setup_phixs_list() {
         cont.bfestimindex = -1;
       }
     }
-
-    globals::allcont_nu_edge.resize(nbfcontinua, 0.);
     globals::bfestim_nu_edge.shrink_to_fit();
+
+    auto allcont_nu_edge = MPI_shared_malloc_span<double>(nbfcontinua);
     assert_always(globals::bfestimcount == std::ssize(globals::bfestim_nu_edge));
 
     for (int i = 0; i < nbfcontinua; i++) {
-      globals::allcont_nu_edge[i] = allcont[i].nu_edge;
+      allcont_nu_edge[i] = allcont[i].nu_edge;
     }
+    globals::allcont_nu_edge = allcont_nu_edge;
 
     setup_photoion_luts();
 

@@ -285,9 +285,9 @@ inline int nlines{-1};
 inline std::span<const TransitionLine> linelist{};
 inline std::vector<BFListEntry> bflist;
 
-inline std::vector<double> bfestim_nu_edge;
-inline std::vector<double> allcont_nu_edge;
-inline const FullPhotoionTransition *allcont{};
+inline std::vector<double> bfestim_nu_edge{};
+inline std::span<const double> allcont_nu_edge{};
+inline std::span<const FullPhotoionTransition> allcont{};
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
 inline std::vector<GroundPhotoion> groundcont{};
