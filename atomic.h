@@ -143,8 +143,8 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   return globals::elements[element].ions[ion].maxrecombininglevel;
 }
 
-[[nodiscard]] inline __host__ __device__ auto get_phixs_table(const int uniquelevelindexl) -> float * {
-  const auto phixsstart = globals::alllevels.phixsstart[uniquelevelindexl];
+[[nodiscard]] inline __host__ __device__ auto get_phixs_table(const int uniquelevelindex) -> float * {
+  const auto phixsstart = globals::alllevels.phixsstart[uniquelevelindex];
   assert_testmodeonly(phixsstart >= 0);
   return globals::allphixs.data() + (phixsstart * globals::NPHIXSPOINTS);
 }
