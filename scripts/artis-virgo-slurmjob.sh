@@ -2,14 +2,14 @@
 ## SLURM META DIRECTIVES HERE DON'T WORK UNDER CENTOS VIRTUAL APPLICATION ENVIRONMENT
 ## So they are located in artis-virgo-submit.sh as cmd-line parameters to sbatch
 
-export APPTAINER_CONTAINER="/cvmfs/vae.gsi.de/vae24/containers/vae24-user_container_20240418T1037.sif"
-export APPTAINER_NAME="vae24-user_container"
+export APPTAINER_CONTAINER="/cvmfs/vae.gsi.de/vae25/containers/vae25-user_container_20250402T1038.sif"
+export APPTAINER_NAME="vae25-user_container"
 export APPTAINER_SHARENS=true
 export APPTAINER_CONFIGDIR=/tmp/$USER
 
-eval `spack load --sh openmpi%gcc arch=linux-debian11-x86_64`
-eval `spack load --sh gsl%gcc arch=linux-debian11-x86_64`
-eval `spack load --sh gcc arch=linux-debian11-x86_64`
+eval `spack load --sh openmpi%gcc arch=linux-debian12-x86_64`
+eval `spack load --sh gsl%gcc arch=linux-debian12-x86_64`
+eval `spack load --sh gcc arch=linux-debian12-x86_64`
 
 export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
 
