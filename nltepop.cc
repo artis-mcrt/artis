@@ -190,7 +190,6 @@ void print_element_rates_summary(const int element, const int modelgridindex, co
                                  const gsl_matrix *rate_matrix_ntcoll_bf, const int first_ion_used,
                                  const int nions_used) {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-  // const int nions = get_nions(element);
   for (int ion = first_ion_used; ion < first_ion_used + nions_used - 1; ion++) {
     const int nlevels = get_nlevels(element, ion);
     const int nlevels_nlte = get_nlevels_nlte(element, ion);
@@ -557,7 +556,6 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
 
   // Looping through the different upper ionstages that are targets for NT ionisation and adding the NT ionsiation
   // rate from the current ion being considering to these states on by one.
-  double Y_nt_thisupperion_sum = 0.0;
   for (int upperion = ion + 1;
        upperion <= std::min(nonthermal::nt_ionisation_maxupperion(element, ion), first_ion_used + nions_used - 1);
        upperion++) {
@@ -572,22 +570,8 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
       for (int upperion_outside_NT_ionisation_range = first_ion_used + nions_used;
            upperion_outside_NT_ionisation_range <= nonthermal::nt_ionisation_maxupperion(element, ion);
            upperion_outside_NT_ionisation_range++) {
-        printout("nt_ionisation_maxupperion ionstage=%d first_ion_used + nions_used - 1 ionstage=%d\n",
-                 get_ionstage(element, nonthermal::nt_ionisation_maxupperion(element, ion)),
-                 get_ionstage(element, (first_ion_used + nions_used - 1)));
-        printout(
-            "Y_nt_thisupperion for ionstage=%d and upperion top allowed=%d before adding NT ionisation for stripped "
-            "ions "
-            "%g\n",
-            get_ionstage(element, ion), get_ionstage(element, upperion), Y_nt_thisupperion);
         Y_nt_thisupperion += Y_nt * nonthermal::nt_ionization_upperion_probability(
                                         nonemptymgi, element, ion, upperion_outside_NT_ionisation_range, false);
-        printout("Y_nt_thisupperion contribution from ionstage=%d (above upperion=%d) = %g\n",
-                 get_ionstage(element, upperion_outside_NT_ionisation_range), get_ionstage(element, upperion),
-                 Y_nt * nonthermal::nt_ionization_upperion_probability(nonemptymgi, element, ion,
-                                                                       upperion_outside_NT_ionisation_range, false));
-        printout("Y_nt_thisupperion for upperion top allowed=%d after adding NT ionisation for stripped ion %g\n",
-                 get_ionstage(element, upperion), Y_nt_thisupperion);
       }
     }
 
@@ -601,10 +585,6 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
         atomicadd(*gsl_matrix_ptr(rate_matrix_ntcoll_bf, upper_groundstate_index, lower_index),
                   Y_nt_thisupperion * s_renorm[level]);
       }
-    }
-    if (nonthermal::nt_ionisation_maxupperion(element, ion) > (first_ion_used + nions_used - 1)) {
-      Y_nt_thisupperion_sum += Y_nt_thisupperion;
-      printout("Y_nt = %g Y_nt_thisupperion_sum = %g\n", Y_nt, Y_nt_thisupperion_sum);
     }
   }
 }
