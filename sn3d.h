@@ -123,12 +123,12 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
 }
 
 template <class... Args>
-inline auto printout2(std::format_string<Args...> fmt, Args &&...myargs) -> void {
+inline auto printout2(const std::format_string<Args...> fmt, Args &&...myargs) -> void {
   print_line_start();
-  std::string strformatted = std::format(fmt, std::forward<Args>(myargs)...);
+  std::format_to_n(outputlinebuf, std::size(outputlinebuf), fmt, std::forward<Args>(myargs)...);
 
-  outputstartofline = (strformatted.ends_with('\n'));
-  output_file << strformatted;
+  outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n');
+  output_file << outputlinebuf;
   output_file.flush();
 }
 
