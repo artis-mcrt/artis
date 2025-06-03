@@ -96,13 +96,13 @@ inline thread_local auto gslworkspace =
 #define printout(...) printf(__VA_ARGS__)
 
 template <class... Args>
-inline auto logprintfmt(const std::format_string<Args...> fmt, Args &&...myargs) -> void {
-  printf("%s", std::format(fmt, std::forward<Args>(myargs)...).c_str());
+inline auto logprintfmt(const std::format_string<Args...> fmt, Args &&...args) -> void {
+  printf("%s", std::format(fmt, std::forward<Args>(args)...).c_str());
 }
 
 template <class... Args>
-inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...myargs) -> void {
-  printf("%s\n", std::format(fmt, std::forward<Args>(myargs)...).c_str());
+inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...args) -> void {
+  printf("%s\n", std::format(fmt, std::forward<Args>(args)...).c_str());
 }
 
 #define __artis_assert(e)                         \
@@ -133,9 +133,9 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
 }
 
 template <class... Args>
-inline auto logprintfmt(const std::format_string<Args...> fmt, Args &&...myargs) -> void {
+inline auto logprintfmt(const std::format_string<Args...> fmt, Args &&...args) -> void {
   print_line_start();
-  std::format_to_n(outputlinebuf, std::size(outputlinebuf), fmt, std::forward<Args>(myargs)...);
+  std::format_to_n(outputlinebuf, std::size(outputlinebuf), fmt, std::forward<Args>(args)...);
 
   outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n');
   output_file << outputlinebuf;
@@ -143,9 +143,9 @@ inline auto logprintfmt(const std::format_string<Args...> fmt, Args &&...myargs)
 }
 
 template <class... Args>
-inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...myargs) -> void {
+inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...args) -> void {
   print_line_start();
-  std::format_to_n(outputlinebuf, std::size(outputlinebuf), fmt, std::forward<Args>(myargs)...);
+  std::format_to_n(outputlinebuf, std::size(outputlinebuf), fmt, std::forward<Args>(args)...);
 
   outputstartofline = true;
   output_file << outputlinebuf << '\n';
