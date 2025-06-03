@@ -155,7 +155,7 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
 
 }  // anonymous namespace
 
-auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
+auto main(int argc, char *argv[]) -> int {
   const auto sys_time_start = std::time(nullptr);
 
   MPI_Init(&argc, &argv);
