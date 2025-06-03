@@ -747,9 +747,9 @@ auto main(int argc, char *argv[]) noexcept(false) -> int {
   printout("GPU_ON is enabled\n");
 #endif
 
-  logprintfmt("time at start {}\n", real_time_start);
+  logprintlnfmt("time at start {}", real_time_start);
 
-  logprintfmt("integration method is {}\n", USE_SIMPSON_INTEGRATOR ? "Simpson rule" : "GSL qag");
+  logprintlnfmt("integration method is {}", USE_SIMPSON_INTEGRATOR ? "Simpson rule" : "GSL qag");
 
 #ifdef WALLTIMELIMITSECONDS
   int walltimelimitseconds = WALLTIMELIMITSECONDS;

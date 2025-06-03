@@ -132,6 +132,16 @@ inline auto logprintfmt(const std::format_string<Args...> fmt, Args &&...myargs)
   output_file.flush();
 }
 
+template <class... Args>
+inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...myargs) -> void {
+  print_line_start();
+  std::format_to_n(outputlinebuf, std::size(outputlinebuf), fmt, std::forward<Args>(myargs)...);
+
+  outputstartofline = true;
+  output_file << outputlinebuf << '\n';
+  output_file.flush();
+}
+
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
     const bool assertpass = static_cast<bool>(e);                                                                      \
