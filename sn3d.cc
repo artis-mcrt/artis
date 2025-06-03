@@ -693,7 +693,7 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 
 }  // anonymous namespace
 
-auto main(int argc, char *argv[]) noexcept(false) -> int {
+auto main(int argc, char *argv[]) -> int {
   md5_test();
   real_time_start = std::time(nullptr);
 
