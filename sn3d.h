@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include <ctime>
+#include <format>
 #include <span>
 #include <vector>
 
@@ -118,6 +119,16 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
 
   outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n');
   output_file << outputlinebuf;
+  output_file.flush();
+}
+
+template <class... Args>
+inline auto printout2(std::format_string<Args...> fmt, Args &&...myargs) -> void {
+  print_line_start();
+  std::string strformatted = std::format(fmt, std::forward<Args>(myargs)...);
+
+  outputstartofline = (strformatted.ends_with('\n'));
+  output_file << strformatted;
   output_file.flush();
 }
 
