@@ -123,7 +123,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
 }
 
 template <class... Args>
-inline auto printfmt(const std::format_string<Args...> fmt, Args &&...myargs) -> void {
+inline auto logprintfmt(const std::format_string<Args...> fmt, Args &&...myargs) -> void {
   print_line_start();
   std::format_to_n(outputlinebuf, std::size(outputlinebuf), fmt, std::forward<Args>(myargs)...);
 
