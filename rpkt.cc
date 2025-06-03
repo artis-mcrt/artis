@@ -196,11 +196,10 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
   assert_always(false);
 }
 
-auto get_event_expansion_opacity(
-    const int nonemptymgi, const Packet &pkt,
-    const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
-    MacroAtomState &mastate, const double tau_rnd, const double nu_cmf_abort, const double d_nu_on_d_l,
-    const double doppler) -> std::tuple<double, int, bool> {
+auto get_event_expansion_opacity(const int nonemptymgi, const Packet &pkt,
+                                 const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, MacroAtomState &mastate,
+                                 const double tau_rnd, const double nu_cmf_abort, const double d_nu_on_d_l,
+                                 const double doppler) -> std::tuple<double, int, bool> {
   auto pos = pkt.pos;
   const auto nu_rf = pkt.nu_rf;
   auto nu_cmf = pkt.nu_cmf;
