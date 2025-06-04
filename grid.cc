@@ -152,7 +152,7 @@ void allocate_initradiobund() {
 
   const ptrdiff_t num_nuclides = decay::get_num_nuclides();
 
-  const size_t totalradioabundcount = (npts_model + 1) * num_nuclides;
+  const auto totalradioabundcount = (npts_model + 1) * num_nuclides;
   std::tie(initnucmassfrac_allcells, win_initnucmassfrac_allcells) =
       MPI_shared_malloc_keepwin_span<float>(totalradioabundcount);
   printout(
@@ -161,11 +161,9 @@ void allocate_initradiobund() {
 
   MPI_Barrier(globals::mpi_comm_node);
 
-  assert_always(initnucmassfrac_allcells.data() != nullptr);
-
   for (ptrdiff_t mgi = 0; mgi < (npts_model + 1); mgi++) {
     if (mgi % static_cast<ptrdiff_t>(globals::node_nprocs) == globals::rank_in_node) {
-      std::fill_n(&initnucmassfrac_allcells[mgi * num_nuclides], num_nuclides, 0.);
+      std::ranges::fill(initmassfracuntrackedstable_allcells.subspan(mgi * num_nuclides, num_nuclides), 0.);
     }
   }
   MPI_Barrier(globals::mpi_comm_node);
