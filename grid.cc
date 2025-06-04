@@ -916,9 +916,10 @@ void read_grid_restart_data(const int timestep) {
   fclose(gridsave_file);
 }
 
-// Assign temperatures to the grid cells at the start of the simulation
+// Assign temperatures to the grid cells at the start of the simulation by assuming that all radioactive decay since the
+// snapshot time (plus any snapshot initial cell energy) energy is fully trapped
 void assign_initial_temperatures() {
-  MPI_Barrier(MPI_COMM_WORLD);  // For a simulation started from scratch we estimate the initial temperatures
+  MPI_Barrier(MPI_COMM_WORLD);
 
   // We assume that for early times the material is so optically thick, that
   // all the radiation is trapped in the cell it originates from. This
@@ -935,10 +936,9 @@ void assign_initial_temperatures() {
   for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
-    double decayedenergy_per_mass = decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(nonemptymgi, tstart);
-    if constexpr (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) {
-      decayedenergy_per_mass += get_initenergyq(mgi);
-    }
+    const auto q = (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? get_initenergyq(mgi) : 0.;
+    const double decayedenergy_per_mass =
+        decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(nonemptymgi, tstart) + q;
 
     auto T_initial = static_cast<float>(
         pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
