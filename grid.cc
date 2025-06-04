@@ -1044,7 +1044,7 @@ void setup_nstart_ndo() {
     fileout << "#rank nstart ndo ndo_nonempty\n";
     for (int r = 0; r < nprocesses; r++) {
       assert_always(ranks_ndo_nonempty[r] <= ranks_ndo[r]);
-      fileout << r << " " << ranks_nstart[r] << " " << ranks_ndo[r] << " " << ranks_ndo_nonempty[r] << "\n";
+      fileout << r << " " << ranks_nstart[r] << " " << ranks_ndo[r] << " " << ranks_ndo_nonempty[r] << '\n';
     }
   }
 }
@@ -2260,7 +2260,7 @@ void init_grid(const int my_rank) {
     for (int cellindex = 0; cellindex < ngrid; cellindex++) {
       const int mgi = get_propcell_modelgridindex(cellindex);
       if (mgi != get_npts_model()) {
-        grid_file << cellindex << " " << mgi << "\n";  // write only non-empty cells to grid file
+        grid_file << cellindex << " " << mgi << '\n';  // write only non-empty cells to grid file
       }
     }
   }

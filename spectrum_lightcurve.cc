@@ -380,7 +380,7 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
     // fprintf(spec_file, "%g ", globals::timesteps[p].mid / DAY);
     spec_file << globals::timesteps[p].mid / DAY << ' ';
   }
-  spec_file << "\n";
+  spec_file << '\n';
 
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count

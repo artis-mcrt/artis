@@ -1499,14 +1499,14 @@ void write_bflist_file() {
 
   if (globals::my_rank == 0) {
     auto bflist_file = fstream_required("bflist.out", std::ios::out | std::ios::trunc);
-    bflist_file << globals::nbfcontinua << "\n";
+    bflist_file << globals::nbfcontinua << '\n';
     for (i = 0; i < globals::nbfcontinua; i++) {
       const int element = globals::bflist[i].elementindex;
       const int ion = globals::bflist[i].ionindex;
       const int level = globals::bflist[i].levelindex;
       const int phixstargetindex = globals::bflist[i].phixstargetindex;
       const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      bflist_file << i << " " << element << " " << ion << " " << level << " " << upperionlevel << "\n";
+      bflist_file << i << " " << element << " " << ion << " " << level << " " << upperionlevel << '\n';
     }
   }
 }
@@ -2079,6 +2079,6 @@ void write_timestep_file() {
   timestepfile << "#timestep tstart_days tmid_days twidth_days\n";
   for (int n = 0; n < globals::ntimesteps; n++) {
     timestepfile << n << " " << globals::timesteps[n].start / DAY << " " << globals::timesteps[n].mid / DAY << " "
-                 << globals::timesteps[n].width / DAY << "\n";
+                 << globals::timesteps[n].width / DAY << '\n';
   }
 }

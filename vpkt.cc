@@ -863,7 +863,7 @@ void init(const int nts, const int my_rank, const bool continued_from_saved) {
         }
       }
 
-      vpkt_contrib_file << "\n";
+      vpkt_contrib_file << '\n';
       vpkt_contrib_file.flush();
       vpkt_contrib_file.close();
     }
@@ -942,7 +942,7 @@ auto call_estimators(const Packet &pkt, const enum packet_type type_before_rpkt)
   if (VPKT_WRITE_CONTRIBS && any_dir_escaped) {
     vpkt_contrib_file << pkt.emissiontype << " " << pkt.trueemissiontype << " " << pkt.absorptiontype << " "
                       << pkt.absorptionfreq;
-    vpkt_contrib_file << vpkt_contrib_row.rdbuf() << "\n";
+    vpkt_contrib_file << vpkt_contrib_row.rdbuf() << '\n';
     vpkt_contrib_file.flush();
   }
 }

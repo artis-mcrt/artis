@@ -158,11 +158,11 @@ inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...args)
     if (!assertpass) [[unlikely]] {                                                                                    \
       if (output_file) {                                                                                               \
         output_file << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
-                    << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                                          \
+                    << #e << "` in function " << __PRETTY_FUNCTION__ << '\n';                                          \
         output_file.flush();                                                                                           \
       }                                                                                                                \
       std::cerr << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `"     \
-                << #e << "` in function " << __PRETTY_FUNCTION__ << "\n" STACKTRACEIFSUPPORTED;                        \
+                << #e << "` in function " << __PRETTY_FUNCTION__ << '\n' STACKTRACEIFSUPPORTED;                        \
     }                                                                                                                  \
     assert(assertpass);                                                                                                \
   }
