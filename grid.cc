@@ -161,10 +161,8 @@ void allocate_initradiobund() {
 
   MPI_Barrier(globals::mpi_comm_node);
 
-  for (ptrdiff_t mgi = 0; mgi < (npts_model + 1); mgi++) {
-    if (mgi % static_cast<ptrdiff_t>(globals::node_nprocs) == globals::rank_in_node) {
-      std::ranges::fill(initmassfracuntrackedstable_allcells.subspan(mgi * num_nuclides, num_nuclides), 0.);
-    }
+  if (globals::rank_in_node == 0) {
+    std::ranges::fill(initmassfracuntrackedstable_allcells, 0.);
   }
   MPI_Barrier(globals::mpi_comm_node);
 }
