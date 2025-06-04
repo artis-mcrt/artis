@@ -379,38 +379,38 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
   spec_file << "0 ";
   for (int p = 0; p < numtimesteps; p++) {
     // fprintf(spec_file, "%g ", globals::timesteps[p].mid / DAY);
-    spec_file << globals::timesteps[p].mid / DAY << " ";
+    spec_file << globals::timesteps[p].mid / DAY << ' ';
   }
   spec_file << "\n";
 
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
   for (int nnu = 0; nnu < MNUBINS; nnu++) {
-    spec_file << ((spectra.lower_freq[nnu] + (spectra.delta_freq[nnu] / 2))) << " ";
+    spec_file << ((spectra.lower_freq[nnu] + (spectra.delta_freq[nnu] / 2))) << ' ';
 
     for (int nts = 0; nts < numtimesteps; nts++) {
-      spec_file << spectra.fluxalltimesteps[(nts * MNUBINS) + nnu] << " ";
+      spec_file << spectra.fluxalltimesteps[(nts * MNUBINS) + nnu] << ' ';
       if (do_emission_res) {
         for (int nproc = 0; nproc < proccount; nproc++) {
           const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + nproc;
-          emission_file << spectra.emissionalltimesteps[emindex] << " ";
+          emission_file << spectra.emissionalltimesteps[emindex] << ' ';
         }
-        emission_file << "\n";
+        emission_file << '\n';
 
         for (int truenproc = 0; truenproc < proccount; truenproc++) {
           const auto trueemindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + truenproc;
-          trueemission_file << spectra.trueemissionalltimesteps[trueemindex] << " ";
+          trueemission_file << spectra.trueemissionalltimesteps[trueemindex] << ' ';
         }
-        trueemission_file << "\n";
+        trueemission_file << '\n';
 
         for (int i = 0; i < ioncount; i++) {
           const auto absindex = get_absindex(nts, nnu, 0, i);
-          absorption_file << spectra.absorptionalltimesteps[absindex] << " ";
+          absorption_file << spectra.absorptionalltimesteps[absindex] << ' ';
         }
-        absorption_file << "\n";
+        absorption_file << '\n';
       }
     }
-    spec_file << "\n";
+    spec_file << '\n';
   }
 }
 
