@@ -385,26 +385,25 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
 
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
-  for (int nnu = 0; nnu < MNUBINS; nnu++) {
-    spec_file << ((spectra.lower_freq[nnu] + (spectra.delta_freq[nnu] / 2))) << ' ';
+  for (int nubin = 0; nubin < MNUBINS; nubin++) {
+    spec_file << ((spectra.lower_freq[nubin] + (spectra.delta_freq[nubin] / 2))) << ' ';
 
     for (int nts = 0; nts < numtimesteps; nts++) {
-      spec_file << spectra.fluxalltimesteps[(nts * MNUBINS) + nnu] << ' ';
+      spec_file << spectra.fluxalltimesteps[(nts * MNUBINS) + nubin] << ' ';
       if (do_emission_res) {
+        const auto emindex_nts_nubin = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nubin * proccount));
         for (int nproc = 0; nproc < proccount; nproc++) {
-          const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + nproc;
-          emission_file << spectra.emissionalltimesteps[emindex] << ' ';
+          emission_file << spectra.emissionalltimesteps[emindex_nts_nubin + nproc] << ' ';
         }
         emission_file << '\n';
 
         for (int truenproc = 0; truenproc < proccount; truenproc++) {
-          const auto trueemindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + truenproc;
-          trueemission_file << spectra.trueemissionalltimesteps[trueemindex] << ' ';
+          trueemission_file << spectra.trueemissionalltimesteps[emindex_nts_nubin + truenproc] << ' ';
         }
         trueemission_file << '\n';
 
         for (int i = 0; i < ioncount; i++) {
-          const auto absindex = get_absindex(nts, nnu, 0, i);
+          const auto absindex = get_absindex(nts, nubin, 0, i);
           absorption_file << spectra.absorptionalltimesteps[absindex] << ' ';
         }
         absorption_file << '\n';
