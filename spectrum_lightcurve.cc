@@ -442,7 +442,8 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
 
   fprintf(specpol_file, "\n");
 
-  assert_always(stokes_i->lower_freq.size() == stokes_i->delta_freq.size());
+  assert_always(std::ssize(stokes_i->delta_freq) == MNUBINS);
+  assert_always(std::ssize(stokes_i->lower_freq) == MNUBINS);
   for (int nnu = 0; nnu < std::ssize(stokes_i->lower_freq); nnu++) {
     fprintf(specpol_file, "%g ", ((stokes_i->lower_freq[nnu] + (stokes_i->delta_freq[nnu] / 2))));
 
