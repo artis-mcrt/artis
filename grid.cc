@@ -968,6 +968,7 @@ void assign_initial_temperatures() {
   }
   printout("  cells below MINTEMP %g: %d\n", MINTEMP, cells_below_mintemp);
   printout("  cells above MAXTEMP %g: %d\n", MAXTEMP, cells_above_maxtemp);
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 // start at mgi_start and find the next non-empty cell, or return -1 if none found
