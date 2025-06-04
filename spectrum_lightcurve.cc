@@ -206,12 +206,11 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
     const int nts = get_timestep(t_arrive);
 
     const int nnu = static_cast<int>((log(pkt.nu_rf) - log(nu_min)) / dlognu);
-    assert_always(nnu < MNUBINS);
 
-    const double deltaE = pkt.e_rf / globals::timesteps[nts].width / spectra.delta_freq[nnu] / 4.e12 / PI / PARSEC /
+    const double deltaE = pkt.e_rf / globals::timesteps[nts].width / spectra.delta_freq.at(nnu) / 4.e12 / PI / PARSEC /
                           PARSEC / globals::nprocs_exspec * anglefactor;
 
-    const ptrdiff_t fluxindex = (nts * MNUBINS) + nnu;
+    const auto fluxindex = (static_cast<ptrdiff_t>(nts) * MNUBINS) + nnu;
     spectra.fluxalltimesteps[fluxindex] += deltaE;
 
     if (stokes_i != nullptr) {
@@ -230,14 +229,14 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
       const int truenproc = columnindex_from_emissiontype(pkt.trueemissiontype);
       assert_always(truenproc < proccount);
       if (truenproc >= 0) {
-        const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + truenproc;
+        const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu) * proccount) + truenproc;
         spectra.trueemissionalltimesteps[emindex] += deltaE;
       }
 
       const int nproc = columnindex_from_emissiontype(pkt.emissiontype);
       assert_always(nproc < proccount);
       if (nproc >= 0) {  // -1 means not set
-        const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu * proccount)) + nproc;
+        const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu) * proccount) + nproc;
         spectra.emissionalltimesteps[emindex] += deltaE;
 
         if (stokes_i != nullptr && stokes_i->do_emission_res) {
@@ -391,7 +390,7 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
     for (int nts = 0; nts < numtimesteps; nts++) {
       spec_file << spectra.fluxalltimesteps[(nts * MNUBINS) + nubin] << ' ';
       if (do_emission_res) {
-        const auto emindex_nts_nubin = (nts * MNUBINS * proccount) + static_cast<ptrdiff_t>(nubin) * proccount;
+        const auto emindex_nts_nubin = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nubin) * proccount);
         for (int nproc = 0; nproc < proccount; nproc++) {
           emission_file << spectra.emissionalltimesteps[emindex_nts_nubin + nproc] << ' ';
         }
