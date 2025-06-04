@@ -173,19 +173,19 @@ void write_packets(const char filename[], std::span<const Packet> pkt) {
                   "true_emission_velocity trueem_time pellet_nucindex pellet_decaytype\n";
 
   for (int i = 0; i < globals::npkts; i++) {
-    packets_file << pkt[i].number << " " << pkt[i].where << " " << static_cast<int>(pkt[i].type) << " ";
-    packets_file << pkt[i].pos[0] << " " << pkt[i].pos[1] << " " << pkt[i].pos[2] << " ";
-    packets_file << pkt[i].dir[0] << " " << pkt[i].dir[1] << " " << pkt[i].dir[2] << " ";
-    packets_file << pkt[i].tdecay << " ";
-    packets_file << pkt[i].e_cmf << " " << pkt[i].e_rf << " " << pkt[i].nu_cmf << " " << pkt[i].nu_rf << " ";
-    packets_file << static_cast<int>(pkt[i].escape_type) << " " << pkt[i].escape_time << " ";
-    packets_file << pkt[i].emissiontype << " " << pkt[i].trueemissiontype << " ";
-    packets_file << pkt[i].em_pos[0] << " " << pkt[i].em_pos[1] << " " << pkt[i].em_pos[2] << " "
-                 << pkt[i].absorptiontype << " " << pkt[i].absorptionfreq << " " << pkt[i].nscatterings << " "
-                 << pkt[i].em_time << " ";
-    packets_file << pkt[i].stokes[0] << " " << pkt[i].stokes[1] << " " << pkt[i].stokes[2] << " ";
-    packets_file << static_cast<int>(pkt[i].originated_from_particlenotgamma) << " " << pkt[i].trueemissionvelocity
-                 << " " << pkt[i].trueem_time << " " << pkt[i].pellet_nucindex << " " << pkt[i].pellet_decaytype;
+    packets_file << pkt[i].number << ' ' << pkt[i].where << ' ' << static_cast<int>(pkt[i].type) << ' ';
+    packets_file << pkt[i].pos[0] << ' ' << pkt[i].pos[1] << ' ' << pkt[i].pos[2] << ' ';
+    packets_file << pkt[i].dir[0] << ' ' << pkt[i].dir[1] << ' ' << pkt[i].dir[2] << ' ';
+    packets_file << pkt[i].tdecay << ' ';
+    packets_file << pkt[i].e_cmf << ' ' << pkt[i].e_rf << ' ' << pkt[i].nu_cmf << ' ' << pkt[i].nu_rf << ' ';
+    packets_file << static_cast<int>(pkt[i].escape_type) << ' ' << pkt[i].escape_time << ' ';
+    packets_file << pkt[i].emissiontype << ' ' << pkt[i].trueemissiontype << ' ';
+    packets_file << pkt[i].em_pos[0] << ' ' << pkt[i].em_pos[1] << ' ' << pkt[i].em_pos[2] << ' '
+                 << pkt[i].absorptiontype << ' ' << pkt[i].absorptionfreq << ' ' << pkt[i].nscatterings << ' '
+                 << pkt[i].em_time << ' ';
+    packets_file << pkt[i].stokes[0] << ' ' << pkt[i].stokes[1] << ' ' << pkt[i].stokes[2] << ' ';
+    packets_file << static_cast<int>(pkt[i].originated_from_particlenotgamma) << ' ' << pkt[i].trueemissionvelocity
+                 << ' ' << pkt[i].trueem_time << ' ' << pkt[i].pellet_nucindex << ' ' << pkt[i].pellet_decaytype;
     packets_file << '\n';
   }
 }

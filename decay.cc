@@ -745,7 +745,7 @@ auto write_nuclides_list() {
   assert_always(nuclides_file.is_open());
   nuclides_file << "#nucindex Z A\n";
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
-    nuclides_file << nucindex << " " << get_nuc_z(nucindex) << " " << get_nuc_a(nucindex) << '\n';
+    nuclides_file << nucindex << ' ' << get_nuc_z(nucindex) << ' ' << get_nuc_a(nucindex) << '\n';
   }
 }
 

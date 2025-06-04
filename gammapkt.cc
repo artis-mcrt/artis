@@ -193,11 +193,11 @@ void init_gamma_linelist() {
   for (ptrdiff_t i = 0; i < total_lines; i++) {
     const int nucindex = allnuc_gamma_line_list[i].nucindex;
     const int index = allnuc_gamma_line_list[i].nucgammaindex;
-    gammalinelist << static_cast<int>(i) << " " << allnuc_gamma_line_list[i].nucindex << " "
-                  << decay::get_nuc_z(allnuc_gamma_line_list[i].nucindex) << " "
-                  << decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex) << " "
-                  << allnuc_gamma_line_list[i].nucgammaindex << " " << gamma_spectra[nucindex][index].energy / MEV
-                  << " " << gamma_spectra[nucindex][index].probability << '\n';
+    gammalinelist << static_cast<int>(i) << ' ' << allnuc_gamma_line_list[i].nucindex << ' '
+                  << decay::get_nuc_z(allnuc_gamma_line_list[i].nucindex) << ' '
+                  << decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex) << ' '
+                  << allnuc_gamma_line_list[i].nucgammaindex << ' ' << gamma_spectra[nucindex][index].energy / MEV
+                  << ' ' << gamma_spectra[nucindex][index].probability << '\n';
   }
 }
 

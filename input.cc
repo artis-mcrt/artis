@@ -1506,7 +1506,7 @@ void write_bflist_file() {
       const int level = globals::bflist[i].levelindex;
       const int phixstargetindex = globals::bflist[i].phixstargetindex;
       const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      bflist_file << i << " " << element << " " << ion << " " << level << " " << upperionlevel << '\n';
+      bflist_file << i << ' ' << element << ' ' << ion << ' ' << level << ' ' << upperionlevel << '\n';
     }
   }
 }
@@ -2078,7 +2078,7 @@ void write_timestep_file() {
   assert_always(timestepfile.is_open());
   timestepfile << "#timestep tstart_days tmid_days twidth_days\n";
   for (int n = 0; n < globals::ntimesteps; n++) {
-    timestepfile << n << " " << globals::timesteps[n].start / DAY << " " << globals::timesteps[n].mid / DAY << " "
+    timestepfile << n << ' ' << globals::timesteps[n].start / DAY << ' ' << globals::timesteps[n].mid / DAY << ' '
                  << globals::timesteps[n].width / DAY << '\n';
   }
 }

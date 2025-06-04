@@ -116,7 +116,7 @@ inline void print_line_start() {
   if (outputstartofline) {
     const time_t now_time = time(nullptr);
     strftime(outputlinebuf, 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
-    output_file << outputlinebuf << " ";
+    output_file << outputlinebuf << ' ';
   }
 }
 

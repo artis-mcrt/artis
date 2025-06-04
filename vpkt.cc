@@ -374,7 +374,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
   // -------------- final stokes vector ---------------
 
   if (VPKT_WRITE_CONTRIBS) {
-    vpkt_contrib_row << " " << t_arrive / DAY << " " << vpkt.nu_rf;
+    vpkt_contrib_row << ' ' << t_arrive / DAY << ' ' << vpkt.nu_rf;
   }
 
   for (int ind = 0; ind < Nspectra; ind++) {
@@ -391,7 +391,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     add_to_vspecpol(vpkt, obsdirindex, ind, t_arrive);
 
     if constexpr (VPKT_WRITE_CONTRIBS) {
-      vpkt_contrib_row << " " << vpkt.e_rf * prob;
+      vpkt_contrib_row << ' ' << vpkt.e_rf * prob;
     }
   }
 
@@ -940,7 +940,7 @@ auto call_estimators(const Packet &pkt, const enum packet_type type_before_rpkt)
     }
   }
   if (VPKT_WRITE_CONTRIBS && any_dir_escaped) {
-    vpkt_contrib_file << pkt.emissiontype << " " << pkt.trueemissiontype << " " << pkt.absorptiontype << " "
+    vpkt_contrib_file << pkt.emissiontype << ' ' << pkt.trueemissiontype << ' ' << pkt.absorptiontype << ' '
                       << pkt.absorptionfreq;
     vpkt_contrib_file << vpkt_contrib_row.rdbuf() << '\n';
     vpkt_contrib_file.flush();
