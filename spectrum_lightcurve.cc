@@ -391,7 +391,7 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
     for (int nts = 0; nts < numtimesteps; nts++) {
       spec_file << spectra.fluxalltimesteps[(nts * MNUBINS) + nubin] << ' ';
       if (do_emission_res) {
-        const auto emindex_nts_nubin = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nubin * proccount));
+        const auto emindex_nts_nubin = (nts * MNUBINS * proccount) + static_cast<ptrdiff_t>(nubin) * proccount;
         for (int nproc = 0; nproc < proccount; nproc++) {
           emission_file << spectra.emissionalltimesteps[emindex_nts_nubin + nproc] << ' ';
         }
