@@ -633,8 +633,8 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   // is the one set based on the NLTE phi factors. Therefore need to recall find_uppermost_ion with force_saha =
   // true so the uppermost ion used in set_groundlevelpops is changed to the one based on the correct LTE phi
   // factors instead
-  if (RECALL_FIND_UPPERMOST_ION_WHEN_SETTING_ELEMENT_POPS_LTE) {
-    printout("RECALL_FIND_UPPERMOST_ION_WHEN_SETTING_ELEMENT_POPS_LTE for element %d\n", element);
+  if (NLTEPOP_FAILURE_USE_FIND_UPPERMOST_ION_FOR_LTE_RESET) {
+    printout("NLTEPOP_FAILURE_USE_FIND_UPPERMOST_ION_FOR_LTE_RESET for element %d\n", element);
     const double nne_hi = grid::get_rho(nonemptymgi) / MH;
     const bool force_saha = true;
     const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_saha);

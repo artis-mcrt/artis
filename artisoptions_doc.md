@@ -149,7 +149,7 @@ constexpr double LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION = 1e-9;
 // is the one in set in memory based on the NLTE phi factors. In rare cases this can result in partition
 // function overflows. This option recalls find_uppermost_ion so the uppermost_ion used is based on the
 // correct LTE phi factors instead.
-constexpr bool RECALL_FIND_UPPERMOST_ION_WHEN_SETTING_ELEMENT_POPS_LTE = false;
+constexpr bool NLTEPOP_FAILURE_USE_FIND_UPPERMOST_ION_FOR_LTE_RESET = false;
 
 // if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
 #define SEPARATE_STIMRECOMB false
