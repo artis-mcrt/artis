@@ -1109,15 +1109,15 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
       const int nlevels_nlte_top_ion = get_nlevels_nlte(element, first_ion_used + nions_used - 1);
       const int index_gs_top_ion = get_nlte_vector_index(element, first_ion_used + nions_used - 1, 0, first_ion_used);
       const double ground_pop_top_ion = gsl_vector_get(&popvec, index_gs_top_ion);
-      if (ground_pop_top_ion / nnelement > LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION) {
+      if (ground_pop_top_ion / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
         // check ground pop of top ion relative to total element population first
         // If this ground pop is too large relative to the total element popualtion
         // then can't remove top ion so go straight to checking if the bottom ion
         // can be removed
         printout(
             "  WARNING: top ion ground state population too large to remove ion (ground_pop_top_ion / nnelement "
-            "(%g/%g) > (%g) LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION)\n",
-            ground_pop_top_ion, nnelement, LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION);
+            "(%g/%g) > (%g) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)\n",
+            ground_pop_top_ion, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
         remove_top_ion_from_solution = false;
       }
       double nlte_excited_pop_top_ion_sum = 0.0;
@@ -1129,13 +1129,13 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
               get_nlte_vector_index(element, first_ion_used + nions_used - 1, level, first_ion_used);
           const double nlte_excited_pop_top_ion = gsl_vector_get(&popvec, top_ion_nlte_index);
           nlte_excited_pop_top_ion_sum += fabs(nlte_excited_pop_top_ion);
-          if (nlte_excited_pop_top_ion / nnelement > LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION) {
+          if (nlte_excited_pop_top_ion / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
             printout(
                 "  WARNING: top ion excited state (level %d) population too large to remove ion "
                 "(nlte_excited_pop_top_ion / nnelement (%g/%g) > (%g) "
-                "LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION)\n",
+                "NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)\n",
                 top_ion_nlte_index, nlte_excited_pop_top_ion, nnelement,
-                LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION);
+                NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
             remove_top_ion_from_solution = false;
             break;  // no need to check the other excited levels if one is too large
           }
@@ -1148,11 +1148,11 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
         const int index_sl_top_ion =
             get_nlte_vector_index(element, first_ion_used + nions_used - 1, nlevels_nlte_top_ion + 1, first_ion_used);
         superlevel_pop_top_ion = gsl_vector_get(&popvec, index_sl_top_ion);
-        if (superlevel_pop_top_ion / nnelement > LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION) {
+        if (superlevel_pop_top_ion / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
           printout(
               "  WARNING: top ion superlevel population too large to remove ion (superlevel_pop_top_ion / nnelement "
-              "(%g/%g) > (%g) LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION)\n",
-              superlevel_pop_top_ion, nnelement, LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION);
+              "(%g/%g) > (%g) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)\n",
+              superlevel_pop_top_ion, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
           remove_top_ion_from_solution = false;
         }
       }
@@ -1173,15 +1173,15 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
         const int index_gs_bottom_ion = get_nlte_vector_index(element, first_ion_used, 0, first_ion_used);
         const double ground_pop_bottom_ion = gsl_vector_get(&popvec, index_gs_bottom_ion);
 
-        if (ground_pop_bottom_ion / nnelement > LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION) {
+        if (ground_pop_bottom_ion / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
           // check ground pop of bottom ion relative to total element population first
           // If this ground pop is too large relative to the total element popualtion
           // then can't remove bottom ion so go straight to checking if the bottom ion
           // can be removed
           printout(
               "  WARNING: Bottom ion ground state population too large to remove ion (ground_pop_bottom_ion / "
-              "nnelement (%g/%g) > (%g) LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION)\n",
-              ground_pop_bottom_ion, nnelement, LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION);
+              "nnelement (%g/%g) > (%g) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)\n",
+              ground_pop_bottom_ion, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
           remove_bottom_ion_from_solution = false;
         }
         double nlte_excited_pop_bottom_ion_sum = 0.0;
@@ -1192,13 +1192,14 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
             const int bottom_ion_nlte_index = get_nlte_vector_index(element, first_ion_used, level, first_ion_used);
             const double nlte_excited_pop_bottom_ion = gsl_vector_get(&popvec, bottom_ion_nlte_index);
             nlte_excited_pop_bottom_ion_sum += fabs(nlte_excited_pop_bottom_ion);
-            if (nlte_excited_pop_bottom_ion / nnelement > LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION) {
+            if (nlte_excited_pop_bottom_ion / nnelement >
+                NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
               printout(
                   "  WARNING: Bottom ion excited state (level %d) population too large to remove ion "
                   "(nlte_excited_pop_bottom_ion "
-                  "/ nnelement (%g/%g) > (%g) LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION)\n",
+                  "/ nnelement (%g/%g) > (%g) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)\n",
                   bottom_ion_nlte_index, nlte_excited_pop_bottom_ion, nnelement,
-                  LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION);
+                  NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
               remove_bottom_ion_from_solution = false;
               break;  // no need to check the other excited levels if one is too large
             }
@@ -1211,12 +1212,12 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
           const int index_sl_bottom_ion =
               get_nlte_vector_index(element, first_ion_used, nlevels_nlte_bottom_ion + 1, first_ion_used);
           superlevel_pop_bottom_ion = gsl_vector_get(&popvec, index_sl_bottom_ion);
-          if (superlevel_pop_bottom_ion / nnelement > LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION) {
+          if (superlevel_pop_bottom_ion / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
             printout(
                 "  WARNING: Bottom ion superlevel population too large to remove ion (superlevel_pop_bottom_ion / "
                 "nnelement "
-                "(%g/%g) > (%g) LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION)\n",
-                superlevel_pop_bottom_ion, nnelement, LEVEL_POPULATION_RATIO_WITH_ELEMENT_ALLOW_REMOVE_ION);
+                "(%g/%g) > (%g) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)\n",
+                superlevel_pop_bottom_ion, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
             remove_bottom_ion_from_solution = false;
           }
         }
