@@ -10,9 +10,9 @@ if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O https://theory.gsi.de/~lshing
 
 tar -xf atomicdata_feconi.tar.xz --directory $runfolder
 
-rsync -av nltephotospheric_dynamic_ion_range_1d_1dgrid_inputfiles/ $runfolder
-
 rsync -av --ignore-times nltephotospheric_dynamic_ion_range_1d_1dgrid_inputfiles/ $runfolder
+
+rsync -av nebular_1d_3dgrid_inputfiles/abundances.txt nebular_1d_3dgrid_inputfiles/model.txt nebular_1d_3dgrid_inputfiles/recombrates.txt $runfolder
 
 cp ../data/* $runfolder
 
