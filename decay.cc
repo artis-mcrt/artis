@@ -498,7 +498,7 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
 // numnuclides:        number of items in lambdas to use
 // lambdas:            array of 1/(mean lifetime) for nuc[0]..nuc[num_nuclides-1]  [seconds^-1]
 // useexpansionfactor: if true, return a modified 'abundance' at the end of the chain, with a weighting factor
-//                          accounting for photon energy loss from expansion since the decays occurred
+//                          accounting for adiabatic loss from expansion since the decays occurred
 //                          (This is needed to get the initial temperature)
 constexpr auto calculate_decaychain(const double firstinitabund, const std::vector<double> &lambdas,
                                     const int num_nuclides, const double timediff, const bool useexpansionfactor)
