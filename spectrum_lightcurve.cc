@@ -203,14 +203,14 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
   const double dlognu = (log(nu_max) - log(nu_min)) / MNUBINS;
   const double t_arrive = get_arrive_time(pkt);
   if (t_arrive > globals::tmin && t_arrive < globals::tmax && pkt.nu_rf > nu_min && pkt.nu_rf < nu_max) {
-    const int nts = get_timestep(t_arrive);
+    const auto nts = get_timestep(t_arrive);
 
-    const int nnu = static_cast<int>((log(pkt.nu_rf) - log(nu_min)) / dlognu);
+    const auto nnu = static_cast<ptrdiff_t>((log(pkt.nu_rf) - log(nu_min)) / dlognu);
 
     const double deltaE = pkt.e_rf / globals::timesteps[nts].width / spectra.delta_freq.at(nnu) / 4.e12 / PI / PARSEC /
                           PARSEC / globals::nprocs_exspec * anglefactor;
 
-    const auto fluxindex = (static_cast<ptrdiff_t>(nts) * MNUBINS) + nnu;
+    const auto fluxindex = (nts * MNUBINS) + nnu;
     spectra.fluxalltimesteps[fluxindex] += deltaE;
 
     if (stokes_i != nullptr) {
@@ -224,19 +224,19 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
     }
 
     if (spectra.do_emission_res) {
-      const int proccount = get_proccount();
+      const auto proccount = get_proccount();
 
-      const int truenproc = columnindex_from_emissiontype(pkt.trueemissiontype);
+      const auto truenproc = columnindex_from_emissiontype(pkt.trueemissiontype);
       assert_always(truenproc < proccount);
       if (truenproc >= 0) {
-        const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu) * proccount) + truenproc;
+        const auto emindex = (nts * MNUBINS * proccount) + (nnu * proccount) + truenproc;
         spectra.trueemissionalltimesteps[emindex] += deltaE;
       }
 
-      const int nproc = columnindex_from_emissiontype(pkt.emissiontype);
+      const auto nproc = columnindex_from_emissiontype(pkt.emissiontype);
       assert_always(nproc < proccount);
       if (nproc >= 0) {  // -1 means not set
-        const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu) * proccount) + nproc;
+        const auto emindex = (nts * MNUBINS * proccount) + (nnu * proccount) + nproc;
         spectra.emissionalltimesteps[emindex] += deltaE;
 
         if (stokes_i != nullptr && stokes_i->do_emission_res) {
