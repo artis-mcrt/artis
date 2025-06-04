@@ -955,11 +955,16 @@ void assign_initial_temperatures() {
       printout("mgi %d: T_initial of %g is infinite!\n", mgi, T_initial);
     }
 
-    set_Te(nonemptymgi, T_initial);
-    set_TJ(nonemptymgi, T_initial);
-    set_TR(nonemptymgi, T_initial);
-    set_W(nonemptymgi, 1.);
-    modelgrid[nonemptymgi].thick = 0;
+    if (globals::rank_in_node == 0) {
+      // set the initial temperatures in the modelgrid
+      // this is only done by the node master, so that the values are shared
+      // in the node shared memory
+      set_Te(nonemptymgi, T_initial);
+      set_TJ(nonemptymgi, T_initial);
+      set_TR(nonemptymgi, T_initial);
+      set_W(nonemptymgi, 1.);
+      modelgrid[nonemptymgi].thick = 0;
+    }
   }
   printout("  cells below MINTEMP %g: %d\n", MINTEMP, cells_below_mintemp);
   printout("  cells above MAXTEMP %g: %d\n", MAXTEMP, cells_above_maxtemp);
