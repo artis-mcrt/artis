@@ -28,7 +28,7 @@
 namespace {
 
 // Place pellet n with energy e0 in cell m
-void place_pellet(const double e0, const int cellindex, const int pktnumber, Packet &pkt) {
+void place_pellet(const double e0, const int cellindex, const int pktnumber, Packet& pkt) {
   // First choose a position for the pellet. In the cell.
   pkt.where = cellindex;
   pkt.number = pktnumber;  // record the packets number for debugging
@@ -163,7 +163,7 @@ void packet_init(std::span<Packet> pkt)
 }
 
 // write packets text file
-void write_packets(const char filename[], std::span<const Packet> pkt) {
+void write_packets(const std::string& filename, std::span<const Packet> pkt) {
   auto packets_file = std::fstream(filename, std::ios::out | std::ios::trunc);
   assert_always(packets_file.is_open());
   packets_file << "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf "
@@ -232,7 +232,7 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<co
   return readback_passed;
 }
 
-auto read_packets(const char filename[], std::span<Packet> packets) -> std::span<Packet> {
+auto read_packets(const std::string& filename, std::span<Packet> packets) -> std::span<Packet> {
   // read packets*.out text format file
   auto packets_file = fstream_required(filename, std::ios::in);
 

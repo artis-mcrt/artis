@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <span>
+#include <string>
 
 #include "constants.h"
 
@@ -66,12 +67,12 @@ struct Packet {
   int pellet_decaytype{-1};  // index into decay::decaytypes
   int pellet_nucindex{-1};  // nuclide index of the decaying species
 
-  auto operator<=>(const Packet &rhs) const = default;
+  auto operator<=>(const Packet& rhs) const = default;
 };
 
 void packet_init(std::span<Packet> pkt);
-void write_packets(const char filename[], std::span<const Packet> pkt);
-auto read_packets(const char filename[], std::span<Packet> packets) -> std::span<Packet>;
+void write_packets(const std::string& filename, std::span<const Packet> pkt);
+auto read_packets(const std::string& filename, std::span<Packet> packets) -> std::span<Packet>;
 void read_temp_packetsfile(int timestep, int my_rank, std::span<Packet> pkt);
 [[nodiscard]] auto verify_temp_packetsfile(int timestep, int my_rank, std::span<const Packet> pkt) -> bool;
 
