@@ -9,9 +9,15 @@
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
 
-module load Stages/2025 ParaStationMPI GSL zstd/.1.5.6
+module load Stages/2025
+module load ParaStationMPI
+module load GSL
+module load zstd/.1.5.6
+module list
 
 cd $SLURM_SUBMIT_DIR
+
+echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
 if [[ -f emission.out || -f emission.out.zst ]]; then
   echo 'Not running exspec because emission.out[.zst] was found'
