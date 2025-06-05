@@ -1,11 +1,10 @@
 #!/bin/bash -l
 
 #SBATCH --ntasks 128
-#SBATCH -J exspec-zip
-#SBATCH -p cosma8
-#SBATCH -A dp033
+#SBATCH --time=48:00:00
+#SBATCH --partition=cosma8-milan
+#SBATCH --account=dp033
 #SBATCH --exclusive
-#SBATCH -t 48:00:00
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=f.callan@qub.ac.uk
 ##SBATCH --mail-user=luke.shingles@gmail.com
