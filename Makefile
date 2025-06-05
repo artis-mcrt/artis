@@ -163,6 +163,9 @@ else
 		CXXFLAGS += -march=znver4
 		# and znver3 nodes in the other partitions and login nodes
 		# CXXFLAGS += -march=native -mtune=znver4
+	else ifneq (,$(shell hostname -A | grep cosma.dur.ac.uk))
+		# cosma8-milan queue is znver3, but login nodes are znver2
+		CXXFLAGS += -march=znver3
 	else
 		CXXFLAGS += -march=native
 	endif

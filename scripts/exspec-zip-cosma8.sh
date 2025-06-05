@@ -1,18 +1,21 @@
-#!/bin/bash -x
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=48
-#SBATCH --ntasks-per-node=1
-#SBATCH --time=24:00:00
-#SBATCH --partition=batch
-##SBATCH --account=rtsn22
-#SBATCH --account=knrt23
+#!/bin/bash -l
+
+#SBATCH --ntasks 128
+#SBATCH --time=48:00:00
+#SBATCH --partition=cosma8-milan
+#SBATCH --account=dp033
+#SBATCH --exclusive
 #SBATCH --mail-type=ALL
+##SBATCH --mail-user=f.callan@qub.ac.uk
 ##SBATCH --mail-user=luke.shingles@gmail.com
 
-module load Stages/2025
-module load ParaStationMPI
-module load GSL
-module load zstd/.1.5.6
+module purge
+module load cosma
+module load gnu_comp
+module load gsl
+module load openmpi
+module load python
+
 module list
 
 cd $SLURM_SUBMIT_DIR
