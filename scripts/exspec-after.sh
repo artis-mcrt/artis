@@ -40,7 +40,13 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
   mkdir -p speclc_angle_res
   mv *_res_*.out* speclc_angle_res/ || true
 
-  curl -LsSf https://astral.sh/uv/install.sh | sh
+  if ! command -v uv >/dev/null 2>&1
+  then
+    # curl -LsSf https://astral.sh/uv/install.sh | sh
+    # cosma disallows curl, so install uv with pip
+    python3 -m ensurepip --upgrade
+    python3 -m pip install --upgrade uv
+  fi
   uv tool install -U --no-cache -p 3.13 artistools@latest
 
   # convert packets to parquet for fast reading
