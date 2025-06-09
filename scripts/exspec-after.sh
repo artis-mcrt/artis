@@ -4,10 +4,7 @@
 if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
 
   # zstd does decent compression at high speeds
-  cmdcompress="zstd -T0 -16 -v --rm -f"
-
-  # fall back to gzip
-  # cmdcompress="gzip -v -f"
+  cmdcompress="zstd -T0 -13 -v --rm -f"
 
   # join 3D direction files, if they exist
   python3 ./artis/scripts/mergeangleres.py
@@ -26,21 +23,27 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
 
   # 3D kilonova model.txt and abundances.txt can be huge, so compress txt files
   # do maxdepth 1 first in case job gets killed during run folder compression
-  find . -maxdepth 1 -name '*.txt' ! -name "output_0-0.txt" -size +2M -exec $cmdcompress {} \;
-  find . -maxdepth 1 -name '*.out' ! -name "slurm-*.out" -size +1M -exec $cmdcompress {} \;
-  find . -maxdepth 1 -name 'ratecoeff.dat' -size +1M -exec $cmdcompress {} \;
+  find . -maxdepth 1 -name '*.txt' ! -name "output_0-0.txt" -size +2M -print0 | sort -z | xargs -r0 $cmdcompress
+  find . -maxdepth 1 -name '*.out' ! -name "slurm-*.out" -size +1M -print0 | sort -z | xargs -r0 $cmdcompress
+  find . -maxdepth 1 -name 'ratecoeff.dat' -size +1M -print0 | sort -z | xargs -r0 $cmdcompress
 
-  find packets/ -name 'packets*.out' -size +1M -exec $cmdcompress {} \;
+  find packets/ -name 'packets*.out' -size +1M -print0 | sort -z | xargs -r0 $cmdcompress
 
-  find . -maxdepth 2 -name '*.txt' ! -name "output_0-0.txt" -size +2M -exec $cmdcompress {} \;
-  find . -maxdepth 2 -name '*.out' ! -name "slurm-*.out" -size +1M -exec $cmdcompress {} \;
+  find . -maxdepth 2 -name '*.txt' ! -name "output_0-0.txt" -size +2M -print0 | sort -z | xargs -r0 $cmdcompress
+  find . -maxdepth 2 -name '*.out' ! -name "slurm-*.out" -size +1M -print0 | sort -z | xargs -r0 $cmdcompress
 
   ./artis/scripts/tar_rm_logs.sh
 
   mkdir -p speclc_angle_res
   mv *_res_*.out* speclc_angle_res/ || true
 
-  curl -LsSf https://astral.sh/uv/install.sh | sh
+  if ! command -v uv >/dev/null 2>&1
+  then
+    # curl -LsSf https://astral.sh/uv/install.sh | sh
+    # cosma disallows curl, so install uv with pip
+    python3 -m ensurepip --upgrade
+    python3 -m pip install --upgrade uv
+  fi
   uv tool install -U --no-cache -p 3.13 artistools@latest
 
   # convert packets to parquet for fast reading
