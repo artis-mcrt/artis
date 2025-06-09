@@ -1,8 +1,10 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite Sim (2007) and Kromer & Sim (2009). For specific features, please also cite: polarisation and virtual packets (Bulla et al. 2015), non-LTE populations and the non-thermal solver (Shingles et al. 2020), alpha- and beta-decays and time-dependent thermalisation (Shingles et al. 2023)."
 authors:
+  - name: ARTIS Collaboration
   - family-names: Sim
     given-names: Stuart
+    orcid: https://orcid.org/0000-0002-9774-1192
   - family-names: Kromer
     given-names: Markus
   - family-names: Shingles
@@ -17,8 +19,15 @@ authors:
     email: c.collins@gsi.de
   - family-names: Callan
     given-names: Fionntan
+    orcid: https://orcid.org/0000-0002-7975-8185
   - family-names: Holas
     given-names: Alexander
+    orcid: https://orcid.org/0000-0001-5184-6928
+  - family-names: Pollin
+    given-names: Joshua
+    orcid: https://orcid.org/0009-0005-6989-3198
+  - family-names: Leck
+    given-names: Gerrit
 title: artis
 version: v2025.2.17
 date-released: 2023-02-17

@@ -22,9 +22,14 @@ module load python
 
 module list
 
+export PATH=/cosma/local/intel/oneAPI_2021.3.0/intelpython/python3.7/pkgs/zstd-1.4.5-h2daa505_0/bin:$PATH
+
 cd $SLURM_SUBMIT_DIR
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
+
+# decompress any zipped input files
+source ./artis/scripts/exspec-before.sh
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): before srun sn3d. hours left: $hoursleft"
