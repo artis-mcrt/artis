@@ -769,16 +769,13 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   gsl_vector_mul(popvec, pop_normfactor_vec);
   // popvec will be used contains the real population densities
 
-  size_t row_ground_state = 0;
   for (size_t row = 0; row < nlte_dimension; row++) {
     double recovered_balance_vector_elem = 0.;
     gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
     gsl_blas_ddot(&row_view.vector, &x, &recovered_balance_vector_elem);
 
     const auto [ion, level] = get_ion_level_of_nlte_vector_index(row, element, first_ion_used, nions_used);
-    if (level == 0) {
-      row_ground_state = row;
-    }
+    const size_t index_ion_ground = get_nlte_vector_index(element, ion, 0, first_ion_used);
     // printout("index %4d (ionstage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e
     // departure ratio %.4f\n",
     //          row,get_ionstage(element,ion),level, gsl_vector_get(residual_vector,row),
@@ -788,7 +785,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
     if (STRICT_POPULATION_CHECKING) {
       // First check if groundpop is greater than MINPOP - if not then use LTE populations for element instead
-      if (gsl_vector_get(popvec, row) < MINPOP && row == row_ground_state) {
+      if (gsl_vector_get(popvec, row) < MINPOP && row == index_ion_ground) {
         printout(
             "  WARNING: NLTE solver gave ground pop less than MINPOP for index %zud (Z=%d ionstage %d level %d), "
             "pop = %g. Returning nltepop_matrix_solve fail\n",
@@ -817,23 +814,23 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
         gsl_vector_set(popvec, row, MINPOP);
       }
       // Now check for population inversions.
-      if (row != row_ground_state &&
-          gsl_vector_get(popvec, row_ground_state) <
+      if (row != index_ion_ground &&
+          gsl_vector_get(popvec, index_ion_ground) <
               (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row) &&
-          (gsl_vector_get(popvec, row_ground_state) * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
+          (gsl_vector_get(popvec, index_ion_ground) * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
            (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row))) {
         printout(
             "[debug] WARNING: pop inversion greater than factor %g: (g_pop %g)/(e_pop %g) = %g is less than (g_sw "
             "%g)/(e_sw %g) = %g for index %zud Z=%d ionstage %d level %d (factor %g inversion) - ",
-            STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING, gsl_vector_get(popvec, row_ground_state),
-            gsl_vector_get(popvec, row), gsl_vector_get(popvec, row_ground_state) / gsl_vector_get(popvec, row),
+            STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING, gsl_vector_get(popvec, index_ion_ground),
+            gsl_vector_get(popvec, row), gsl_vector_get(popvec, index_ion_ground) / gsl_vector_get(popvec, row),
             stat_weight(element, ion, 0), stat_weight(element, ion, level),
             stat_weight(element, ion, 0) / stat_weight(element, ion, level), row, get_atomicnumber(element),
             get_ionstage(element, ion), level,
             (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) /
-                (gsl_vector_get(popvec, row_ground_state) / gsl_vector_get(popvec, row)));
+                (gsl_vector_get(popvec, index_ion_ground) / gsl_vector_get(popvec, row)));
 
-        if (gsl_vector_get(popvec, row_ground_state) * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL <
+        if (gsl_vector_get(popvec, index_ion_ground) * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL <
             (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row)) {
           printout("large pop inversion - return matrix solve fail\n");
           return false;
