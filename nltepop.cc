@@ -485,7 +485,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
 void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, const int ion,
                                    const std::vector<double> &s_renorm, gsl_matrix *rate_matrix_rad_bf,
                                    gsl_matrix *rate_matrix_coll_bf, const int first_ion_used, const int nions_used) {
-  assert_always((ion + 1) < nions_used + first_ion_used);  // updated to cover case when ions have been stripped
+  assert_always((ion + 1) < (nions_used + first_ion_used));  // can't ionise top ion stage
   const auto T_e = grid::get_Te(nonemptymgi);
   const float nne = grid::get_nne(nonemptymgi);
   const int nionisinglevels = get_nlevels_ionising(element, ion);
