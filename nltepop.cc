@@ -554,29 +554,15 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
 
   const int nlevels = get_nlevels(element, ion);
 
-  // Looping through the different upper ionstages that are targets for NT ionisation and adding the NT ionsiation
-  // rate from the current ion being considering to these states on by one.
-  for (int upperion = ion + 1;
-       upperion <= std::min(nonthermal::nt_ionisation_maxupperion(element, ion), first_ion_used + nions_used - 1);
-       upperion++) {
-    double Y_nt_thisupperion =
+  for (int upperion = ion + 1; upperion <= nonthermal::nt_ionisation_maxupperion(element, ion); upperion++) {
+    const double Y_nt_thisupperion =
         Y_nt * nonthermal::nt_ionization_upperion_probability(nonemptymgi, element, ion, upperion, false);
 
-    // For the case where the upperion taget is limited by ions having being stripped from the NLTE solution
-    // then need to add the Y_nt_this_upperion for the stripped ions to the last upperion which is being used in the
-    // solution so this contribution to the NT ionsiation rate isn't lost
-    if (nonthermal::nt_ionisation_maxupperion(element, ion) > (first_ion_used + nions_used - 1) &&
-        upperion == first_ion_used + nions_used - 1) {
-      for (int upperion_outside_NT_ionisation_range = first_ion_used + nions_used;
-           upperion_outside_NT_ionisation_range <= nonthermal::nt_ionisation_maxupperion(element, ion);
-           upperion_outside_NT_ionisation_range++) {
-        Y_nt_thisupperion += Y_nt * nonthermal::nt_ionization_upperion_probability(
-                                        nonemptymgi, element, ion, upperion_outside_NT_ionisation_range, false);
-      }
-    }
-
     if (Y_nt_thisupperion > 0.) {
-      const int upper_groundstate_index = get_nlte_vector_index(element, upperion, 0, first_ion_used);
+      // ensure if upperion here is past the upper ion used in the NLTE solution the rates
+      // to this ion are instead added to the ground state of the uppermost ion used in the NLTE solution
+      const int upperion_clamped = std::min(upperion, first_ion_used + nions_used - 1);
+      const int upper_groundstate_index = get_nlte_vector_index(element, upperion_clamped, 0, first_ion_used);
       for (int level = 0; level < nlevels; level++) {
         const int lower_index = get_nlte_vector_index(element, ion, level, first_ion_used);
 
