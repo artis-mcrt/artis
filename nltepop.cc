@@ -837,15 +837,13 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
         }
         printout("relatively small pop inversion continue with NLTE solution\n");
       }
-    } else {
-      if (gsl_vector_get(popvec, row) < 0.0) {
-        printout(
-            "  WARNING: NLTE solver gave negative population to index %zu (Z=%d ionstage %d level %d), pop = %g. "
-            "Replacing with LTE pop of %g\n",
-            row, get_atomicnumber(element), get_ionstage(element, ion), level,
-            gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row), gsl_vector_get(pop_normfactor_vec, row));
-        gsl_vector_set(popvec, row, gsl_vector_get(pop_normfactor_vec, row));
-      }
+    } else if (gsl_vector_get(popvec, row) < 0.0) {
+      printout(
+          "  WARNING: NLTE solver gave negative population to index %zu (Z=%d ionstage %d level %d), pop = %g. "
+          "Replacing with LTE pop of %g\n",
+          row, get_atomicnumber(element), get_ionstage(element, ion), level,
+          gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row), gsl_vector_get(pop_normfactor_vec, row));
+      gsl_vector_set(popvec, row, gsl_vector_get(pop_normfactor_vec, row));
     }
   }
 
