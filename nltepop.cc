@@ -1296,7 +1296,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
         // store the ground level population
         grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                           get_uniqueionindex(element, ion)] = gsl_vector_get(&popvec, index_gs);
+                                           get_uniqueionindex(element, ion)] =
+            static_cast<float>(gsl_vector_get(&popvec, index_gs));
         // solution_ion_pop += gsl_vector_get(popvec, index_gs);
 
         calculate_cellpartfuncts(nonemptymgi, element);
