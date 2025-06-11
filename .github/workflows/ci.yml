@@ -35,6 +35,7 @@ jobs:
                         kilonova_2d_3dgrid,
                         nebular_1d_3dgrid,
                         nebular_1d_3dgrid_limitbfest,
+                        nltephotospheric_dynamic_ion_range_1d_1dgrid,
                     ]
             fail-fast: ${{ inputs.testmode == 'ON' }}
 
