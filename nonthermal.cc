@@ -662,6 +662,9 @@ void read_collion_data() {
 
         const int ioncharge = ionstage - 1;
         const int nbound = Z - ioncharge;  // number of bound electrons
+        if (nbound <= 0) {
+          continue;
+        }
         // get the approximate shell occupancy if we don't have the data file
         const auto &shells_q = allions_shell_occupancies[get_uniqueionindex(element, ion)];
         int electron_count = 0;
