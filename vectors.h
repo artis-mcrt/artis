@@ -186,7 +186,7 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 
   // with phi defined according to y = cos(theta) * sin(phi), the
   // phibins are in decreasing phi order (i.e. the upper side of bin zero 0 is 2pi)
-  const int phibin = static_cast<int>((testphi >= 0 ? acos(cosphi) : acos(cosphi) + PI) / 2. / PI * NPHIBINS);
+  const int phibin = static_cast<int>((testphi > 0 ? acos(cosphi) : acos(cosphi) + PI) / 2. / PI * NPHIBINS);
 
   assert_testmodeonly(phibin >= 0);
   assert_testmodeonly(phibin < NPHIBINS);
