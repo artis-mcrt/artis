@@ -39,24 +39,25 @@ constexpr bool individual_process_matrices = true;
 
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[nonemptymgi].nlte_pops that contains all elements
-auto get_nlte_vector_index(const int element, const int ion, const int level) -> int {
+auto get_nlte_vector_index(const int element, const int ion, const int level, const int first_ion_used) -> int {
   // have to convert from nlte_pops index to nlte_vector index
   // the difference is that nlte vectors apply to a single element and include ground states
   // The (+ ion) term accounts for the ground state population indices that are not counted in the NLTE array
-  const int gs_index =
-      globals::elements[element].ions[ion].first_nlte - globals::elements[element].ions[0].first_nlte + ion;
-
+  assert_testmodeonly(first_ion_used >= 0);
+  assert_testmodeonly(first_ion_used < get_nions(element));
+  const int gs_index = globals::elements[element].ions[ion].first_nlte -
+                       globals::elements[element].ions[first_ion_used].first_nlte + (ion - first_ion_used);
   // add in level or superlevel number
   const int level_index = gs_index + (is_nlte(element, ion, level) ? level : (get_nlevels_nlte(element, ion) + 1));
-
   return level_index;
 }
 
-[[nodiscard]] auto get_ion_level_of_nlte_vector_index(const int index, const int element) -> std::tuple<int, int> {
+[[nodiscard]] auto get_ion_level_of_nlte_vector_index(const int index, const int element, const int first_ion_used,
+                                                      const int nions_used) -> std::tuple<int, int> {
   // this could easily be optimized if need be
-  for (int dion = 0; dion < get_nions(element); dion++) {
+  for (int dion = first_ion_used; dion < first_ion_used + nions_used; dion++) {
     for (int dlevel = 0; dlevel < get_nlevels(element, dion); dlevel++) {
-      if (get_nlte_vector_index(element, dion, dlevel) == index) {
+      if (get_nlte_vector_index(element, dion, dlevel, first_ion_used) == index) {
         return {dion, dlevel};
       }
     }
@@ -127,8 +128,8 @@ void print_level_rates_summary(const int element, const int selected_ion, const 
                                const gsl_vector *popvec, const gsl_matrix *rate_matrix_rad_bb,
                                const gsl_matrix *rate_matrix_coll_bb, const gsl_matrix *rate_matrix_ntcoll_bb,
                                const gsl_matrix *rate_matrix_rad_bf, const gsl_matrix *rate_matrix_coll_bf,
-                               const gsl_matrix *rate_matrix_ntcoll_bf) {
-  const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level);
+                               const gsl_matrix *rate_matrix_ntcoll_bf, const int first_ion_used) {
+  const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level, first_ion_used);
 
   for (int i = 0; i <= 3; i++) {
     // rates in from below, in from above, out to below, out to above
@@ -186,10 +187,10 @@ void print_element_rates_summary(const int element, const int modelgridindex, co
                                  const gsl_vector *popvec, const gsl_matrix *rate_matrix_rad_bb,
                                  const gsl_matrix *rate_matrix_coll_bb, const gsl_matrix *rate_matrix_ntcoll_bb,
                                  const gsl_matrix *rate_matrix_rad_bf, const gsl_matrix *rate_matrix_coll_bf,
-                                 const gsl_matrix *rate_matrix_ntcoll_bf) {
+                                 const gsl_matrix *rate_matrix_ntcoll_bf, const int first_ion_used,
+                                 const int nions_used) {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
-  const int nions = get_nions(element);
-  for (int ion = 0; ion < nions; ion++) {
+  for (int ion = first_ion_used; ion < first_ion_used + nions_used - 1; ion++) {
     const int nlevels = get_nlevels(element, ion);
     const int nlevels_nlte = get_nlevels_nlte(element, ion);
 
@@ -209,14 +210,16 @@ void print_element_rates_summary(const int element, const int modelgridindex, co
       }
 
       print_level_rates_summary(element, ion, level, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb,
-                                rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+                                rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf,
+                                first_ion_used);
     }
 
     if (ion_has_superlevel(element, ion) && max_printed_levels < (nlevels_nlte + 1)) {
       const int level_superlevel = nlevels_nlte + 1;
 
       print_level_rates_summary(element, ion, level_superlevel, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb,
-                                rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+                                rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf,
+                                first_ion_used);
     }
   }
 }
@@ -225,7 +228,7 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
                        const int selected_level, const gsl_vector *popvec, const gsl_matrix *rate_matrix_rad_bb,
                        const gsl_matrix *rate_matrix_coll_bb, const gsl_matrix *rate_matrix_ntcoll_bb,
                        const gsl_matrix *rate_matrix_rad_bf, const gsl_matrix *rate_matrix_coll_bf,
-                       const gsl_matrix *rate_matrix_ntcoll_bf) {
+                       const gsl_matrix *rate_matrix_ntcoll_bf, const int first_ion_used, const int nions_used) {
   // very detailed output of the NLTE processes for a particular levels
 
   if (element > get_nelements() - 1 || selected_ion > get_nions(element) - 1 ||
@@ -245,7 +248,7 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   const int nlte_dimension = popvector.size;
   const int atomic_number = get_atomicnumber(element);
   const int selected_ionstage = get_ionstage(element, selected_ion);
-  const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level);
+  const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level, first_ion_used);
   const double pop_selectedlevel = gsl_vector_get(popvec, selected_index);
   printout(
       "timestep %d cell %d Te %g nne %g NLTE level diagnostics for Z=%d ionstage %d level %d rates into and out of "
@@ -284,7 +287,7 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
     if (index == selected_index) {
       continue;
     }
-    const auto [ion, level] = get_ion_level_of_nlte_vector_index(index, element);
+    const auto [ion, level] = get_ion_level_of_nlte_vector_index(index, element, first_ion_used, nions_used);
     const int ionstage = get_ionstage(element, ion);
     // in means populating the selected level, out means depopulating the selected level
     const double pop = gsl_vector_get(popvec, index);
@@ -354,10 +357,15 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
   return superlevel_partfuncs;
 }
 
-[[nodiscard]] auto get_element_nlte_dimension(const int element) -> int {
+[[nodiscard]] auto get_element_nlte_dimension(const int element, const int nions_used, const int first_ion_used)
+    -> int {
+  assert_testmodeonly(nions_used >= 0);
+  assert_testmodeonly(nions_used <= get_nions(element));
+  assert_testmodeonly(first_ion_used >= 0);
+  assert_testmodeonly(first_ion_used < get_nions(element));
+  assert_testmodeonly((first_ion_used + nions_used - 1) < get_nions(element));
   int nlte_dimension = 0;
-  const int nions = get_nions(element);
-  for (int ion = 0; ion < nions; ion++) {
+  for (int ion = first_ion_used; ion < (nions_used + first_ion_used); ion++) {
     const int nlevels_nlte = get_nlevels_nlte(element, ion);
 
     nlte_dimension += nlevels_nlte + 1;  // ground state is not counted in nlevels_nlte
@@ -372,24 +380,27 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
 }
 
 // get the maximum NLTE dimension for any of the included elements
-[[nodiscard]] auto get_max_nlte_dimension() {
+[[nodiscard]] auto get_max_nlte_dimension() -> int {
   int max_nlte_dimension = 0;
   for (int element = 0; element < get_nelements(); element++) {
-    max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element));
+    const int nions_used = get_nions(element);
+    const int first_ion_used = 0;
+    max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element, nions_used, first_ion_used));
   }
   return max_nlte_dimension;
 }
 
 void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, const int ion, const double t_mid,
                                    const std::vector<double> &s_renorm, gsl_matrix *rate_matrix_rad_bb,
-                                   gsl_matrix *rate_matrix_coll_bb, gsl_matrix *rate_matrix_ntcoll_bb) {
+                                   gsl_matrix *rate_matrix_coll_bb, gsl_matrix *rate_matrix_ntcoll_bb,
+                                   const int first_ion_used) {
   const auto T_e = grid::get_Te(nonemptymgi);
   const float nne = grid::get_nne(nonemptymgi);
   const int nlevels = get_nlevels(element, ion);
   const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
   const auto levels = std::ranges::iota_view{0, nlevels};
   std::for_each(levels.begin(), levels.end(), [&](const auto level) {
-    const int level_index = get_nlte_vector_index(element, ion, level);
+    const int level_index = get_nlte_vector_index(element, ion, level, first_ion_used);
     const auto uniquelevelindex = ionuniquelevelindexstart + level;
     const double epsilon_level = epsilon(uniquelevelindex);
     const double statweight = stat_weight(uniquelevelindex);
@@ -415,7 +426,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
           s_renorm[level];
 
       const int upper_index = level_index;
-      const int lower_index = get_nlte_vector_index(element, ion, lower);
+      const int lower_index = get_nlte_vector_index(element, ion, lower, first_ion_used);
 
       atomicadd(*gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, upper_index), -R);
       atomicadd(*gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, upper_index), R);
@@ -454,7 +465,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
           nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex) * s_renorm[level];
 
       const int lower_index = level_index;
-      const int upper_index = get_nlte_vector_index(element, ion, upper);
+      const int upper_index = get_nlte_vector_index(element, ion, upper, first_ion_used);
 
       atomicadd(*gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, lower_index), -R);
       atomicadd(*gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, lower_index), R);
@@ -473,8 +484,8 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
 
 void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, const int ion,
                                    const std::vector<double> &s_renorm, gsl_matrix *rate_matrix_rad_bf,
-                                   gsl_matrix *rate_matrix_coll_bf) {
-  assert_always((ion + 1) < get_nions(element));  // can't ionise the top ion
+                                   gsl_matrix *rate_matrix_coll_bf, const int first_ion_used, const int nions_used) {
+  assert_always((ion + 1) < (nions_used + first_ion_used));  // can't ionise top ion stage
   const auto T_e = grid::get_Te(nonemptymgi);
   const float nne = grid::get_nne(nonemptymgi);
   const int nionisinglevels = get_nlevels_ionising(element, ion);
@@ -482,7 +493,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
 
   const auto levels = std::ranges::iota_view{0, nionisinglevels};
   std::for_each(EXEC_PAR levels.begin(), levels.end(), [&](const auto level) {
-    const int lower_index = get_nlte_vector_index(element, ion, level);
+    const int lower_index = get_nlte_vector_index(element, ion, level, first_ion_used);
 
     // thermal collisional ionization, photoionisation and recombination processes
     const double epsilon_current = epsilon(element, ion, level);
@@ -490,7 +501,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
     const auto nphixstargets = get_nphixstargets(element, ion, level);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      const int upper_index = get_nlte_vector_index(element, ion + 1, upper);
+      const int upper_index = get_nlte_vector_index(element, ion + 1, upper, first_ion_used);
       const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
 
       // ionization
@@ -531,10 +542,11 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
 }
 
 void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, const int ion,
-                                      const std::vector<double> &s_renorm, gsl_matrix *rate_matrix_ntcoll_bf) {
+                                      const std::vector<double> &s_renorm, gsl_matrix *rate_matrix_ntcoll_bf,
+                                      const int first_ion_used, const int nions_used) {
   // collisional ionization by non-thermal electrons
 
-  assert_always(ion + 1 < get_nions(element));  // can't ionise the top ion
+  assert_always(ion + 1 < (nions_used + first_ion_used));  // can't ionise top ion stage
   const double Y_nt = nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion);
   if (Y_nt < 0.) {
     printout("  WARNING: Negative NT_ionization rate from ionstage %d\n", get_ionstage(element, ion));
@@ -547,9 +559,12 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
         Y_nt * nonthermal::nt_ionization_upperion_probability(nonemptymgi, element, ion, upperion, false);
 
     if (Y_nt_thisupperion > 0.) {
-      const int upper_groundstate_index = get_nlte_vector_index(element, upperion, 0);
+      // ensure if upperion here is past the upper ion used in the NLTE solution the rates
+      // to this ion are instead added to the ground state of the uppermost ion used in the NLTE solution
+      const int upperion_clamped = std::min(upperion, first_ion_used + nions_used - 1);
+      const int upper_groundstate_index = get_nlte_vector_index(element, upperion_clamped, 0, first_ion_used);
       for (int level = 0; level < nlevels; level++) {
-        const int lower_index = get_nlte_vector_index(element, ion, level);
+        const int lower_index = get_nlte_vector_index(element, ion, level, first_ion_used);
 
         atomicadd(*gsl_matrix_ptr(rate_matrix_ntcoll_bf, lower_index, lower_index),
                   -Y_nt_thisupperion * s_renorm[level]);
@@ -561,7 +576,7 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
 }
 
 void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matrix *rate_matrix,
-                              gsl_vector *pop_norm_factor_vec) {
+                              gsl_vector *pop_norm_factor_vec, const int first_ion_used, const int nions_used) {
   const size_t nlte_dimension = pop_norm_factor_vec->size;
   assert_always(pop_norm_factor_vec->size == nlte_dimension);
   assert_always(rate_matrix->size1 == nlte_dimension);
@@ -570,7 +585,7 @@ void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matr
   // TODO: consider replacing normalisation by LTE populations with
   // GSL's gsl_linalg_balance_matrix(gsl_matrix * A, gsl_vector * D) function instead
   for (size_t column = 0; column < nlte_dimension; column++) {
-    const auto [ion, level] = get_ion_level_of_nlte_vector_index(column, element);
+    const auto [ion, level] = get_ion_level_of_nlte_vector_index(column, element, first_ion_used, nions_used);
 
     gsl_vector_set(pop_norm_factor_vec, column, calculate_levelpop_boltzmann(nonemptymgi, element, ion, level));
 
@@ -600,17 +615,27 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   // set NLTE level pops as invalid so that Boltzmann pops will be used instead
   nltepop_reset_element(nonemptymgi, element);
   calculate_cellpartfuncts(nonemptymgi, element);
-  // set ionisation to Saha
+  // When set_element_pops_lte is called when the NLTE solution fails the uppermost_ion used in set_groundlevelpops
+  // is the one set based on the NLTE phi factors. Therefore need to recall find_uppermost_ion with force_saha =
+  // true so the uppermost ion used in set_groundlevelpops is changed to the one based on the correct LTE phi
+  // factors instead
+  if (NLTEPOP_FAILURE_USE_FIND_UPPERMOST_ION_FOR_LTE_RESET) {
+    printout("NLTEPOP_FAILURE_USE_FIND_UPPERMOST_ION_FOR_LTE_RESET for element %d\n", element);
+    const double nne_hi = grid::get_rho(nonemptymgi) / MH;
+    const bool force_saha = true;
+    const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_saha);
+    grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
+  }
   set_groundlevelpops(nonemptymgi, element, grid::get_nne(nonemptymgi), true);
 }
 
-[[nodiscard]] auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {
+[[nodiscard]] auto lumatrix_is_singular(const gsl_matrix *LU, const int element, const int first_ion_used,
+                                        const int nions_used) -> bool {
   size_t const n = LU->size1;
-
   for (size_t i = 0; i < n; i++) {
     const double u = gsl_matrix_get(LU, i, i);
     if (u == 0) {
-      const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element);
+      const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
       if (is_nlte(element, ion, level)) {
         printout("NLTE disconnected level: Z=%d ionstage %d level %d\n", get_atomicnumber(element),
                  get_ionstage(element, ion), level);
@@ -630,14 +655,14 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 // return true if the solution is successful, or false if the matrix is singular
 [[nodiscard]] auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix,
                                         const gsl_vector *balance_vector, gsl_vector *popvec,
-                                        const gsl_vector *pop_normfactor_vec, const int max_nlte_dimension) -> bool {
+                                        const gsl_vector *pop_normfactor_vec, const int max_nlte_dimension,
+                                        const int first_ion_used, const int nions_used) -> bool {
   const size_t nlte_dimension = balance_vector->size;
   assert_always(pop_normfactor_vec->size == nlte_dimension);
   assert_always(rate_matrix->size1 == nlte_dimension);
   assert_always(rate_matrix->size2 == nlte_dimension);
   assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
-
-  if (lumatrix_is_singular(rate_matrix, element)) {
+  if (lumatrix_is_singular(rate_matrix, element, first_ion_used, nions_used)) {
     printout("ERROR: NLTE matrix is singular for element Z=%d!\n", get_atomicnumber(element));
     // abort();
     return false;
@@ -735,8 +760,8 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
     gsl_blas_ddot(&row_view.vector, &x, &recovered_balance_vector_elem);
 
-    const auto [ion, level] = get_ion_level_of_nlte_vector_index(row, element);
-
+    const auto [ion, level] = get_ion_level_of_nlte_vector_index(row, element, first_ion_used, nions_used);
+    const size_t index_ion_ground = get_nlte_vector_index(element, ion, 0, first_ion_used);
     // printout("index %4d (ionstage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e
     // departure ratio %.4f\n",
     //          row,get_ionstage(element,ion),level, gsl_vector_get(residual_vector,row),
@@ -744,7 +769,61 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     //          gsl_vector_get(popvec, row),
     //          gsl_vector_get(x, row) / gsl_vector_get(x,get_nlte_vector_index(element,ion,0)));
 
-    if (gsl_vector_get(popvec, row) < 0.0) {
+    if (STRICT_POPULATION_CHECKING) {
+      // First check if groundpop is greater than MINPOP - if not then use LTE populations for element instead
+      if (gsl_vector_get(popvec, row) < MINPOP && row == index_ion_ground) {
+        printout(
+            "  WARNING: NLTE solver gave ground pop less than MINPOP for index %zud (Z=%d ionstage %d level %d), "
+            "pop = %g. Returning nltepop_matrix_solve fail\n",
+            row, get_atomicnumber(element), get_ionstage(element, ion), level,
+            gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row));
+
+        return false;
+      }
+      // Now check if any of the excited populations are negative
+      if (gsl_vector_get(popvec, row) < 0.0) {
+        printout("  WARNING: NLTE solver gave negative population for index %zud (Z=%d ionstage %d level %d), pop = %g",
+                 row, get_atomicnumber(element), get_ionstage(element, ion), level,
+                 gsl_vector_get(&x, row) * gsl_vector_get(pop_normfactor_vec, row));
+        if (gsl_vector_get(popvec, row) < -1 * MINPOP) {
+          printout(
+              "  WARNING: negative pop = %g less than -1*MINPOP (-%g) unlikely a rounding error to zero so "
+              "returning nltepop_matrix_solve fail\n",
+              gsl_vector_get(popvec, row), MINPOP);
+
+          return false;
+        }
+        printout(
+            "  WARNING: negative pop = %g greater than -1*MINPOP (-%g) likely a rounding error to zero so continue "
+            "with NLTE pops but set this level to MINPOP\n",
+            gsl_vector_get(popvec, row), MINPOP);
+        gsl_vector_set(popvec, row, MINPOP);
+      }
+      // Now check for population inversions.
+      if (row != index_ion_ground &&
+          gsl_vector_get(popvec, index_ion_ground) <
+              (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row) &&
+          (gsl_vector_get(popvec, index_ion_ground) * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
+           (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row))) {
+        printout(
+            "[debug] WARNING: pop inversion greater than factor %g: (g_pop %g)/(e_pop %g) = %g is less than (g_sw "
+            "%g)/(e_sw %g) = %g for index %zud Z=%d ionstage %d level %d (factor %g inversion) - ",
+            STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING, gsl_vector_get(popvec, index_ion_ground),
+            gsl_vector_get(popvec, row), gsl_vector_get(popvec, index_ion_ground) / gsl_vector_get(popvec, row),
+            stat_weight(element, ion, 0), stat_weight(element, ion, level),
+            stat_weight(element, ion, 0) / stat_weight(element, ion, level), row, get_atomicnumber(element),
+            get_ionstage(element, ion), level,
+            (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) /
+                (gsl_vector_get(popvec, index_ion_ground) / gsl_vector_get(popvec, row)));
+
+        if (gsl_vector_get(popvec, index_ion_ground) * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL <
+            (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row)) {
+          printout("large pop inversion - return matrix solve fail\n");
+          return false;
+        }
+        printout("relatively small pop inversion continue with NLTE solution\n");
+      }
+    } else if (gsl_vector_get(popvec, row) < 0.0) {
       printout(
           "  WARNING: NLTE solver gave negative population to index %zu (Z=%d ionstage %d level %d), pop = %g. "
           "Replacing with LTE pop of %g\n",
@@ -795,22 +874,17 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
 
   printout(
-      "Solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d (mass fraction %.2e, "
+      "Solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d (mass fraction "
+      "%.2e, "
       "nnelement %.2e cm^-3)\n",
       modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_abundance(nonemptymgi, element), nnelement);
-
   const auto superlevel_partfunc = get_element_superlevelpartfuncs(nonemptymgi, element);
-  const int nlte_dimension = get_element_nlte_dimension(element);
-
-  // printout("NLTE: the vector dimension is %d", nlte_dimension);
-
+  int nions_used = nions;
+  int first_ion_used = 0;
+  bool matrix_solve_satisfied_with_ion_list = false;
+  bool matrix_solve_success = false;
+  int nlte_dimension = get_element_nlte_dimension(element, nions_used, first_ion_used);
   const auto max_nlte_dimension = get_max_nlte_dimension();
-  assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
-
-  THREADLOCALONHOST std::vector<double> vec_rate_matrix;
-  resize_exactly(vec_rate_matrix, max_nlte_dimension * max_nlte_dimension);
-  auto rate_matrix = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension).matrix;
-  gsl_matrix_set_all(&rate_matrix, 0.);
 
   gsl_matrix rate_matrix_rad_bb;
   gsl_matrix rate_matrix_coll_bb;
@@ -818,160 +892,341 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   gsl_matrix rate_matrix_rad_bf;
   gsl_matrix rate_matrix_coll_bf;
   gsl_matrix rate_matrix_ntcoll_bf;
+  gsl_vector popvec;
+  bool first_iteration = true;
+  bool retry_with_fewer_ions = false;
+  while (first_iteration ||
+         (NLTE_LIMIT_ION_STAGES_AFTER_FAILURE && !matrix_solve_satisfied_with_ion_list && nions_used > 0)) {
+    first_iteration = false;
+    // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
-  THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bb;
-  THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bb;
-  THREADLOCALONHOST std::vector<double> vec_rate_matrix_ntcoll_bb;
-  THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bf;
-  THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bf;
-  THREADLOCALONHOST std::vector<double> vec_rate_matrix_ntcoll_bf;
-  if constexpr (individual_process_matrices) {
-    resize_exactly(vec_rate_matrix_rad_bb, max_nlte_dimension * max_nlte_dimension);
-    rate_matrix_rad_bb = gsl_matrix_view_array(vec_rate_matrix_rad_bb.data(), nlte_dimension, nlte_dimension).matrix;
-    gsl_matrix_set_all(&rate_matrix_rad_bb, 0.);
+    assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
 
-    resize_exactly(vec_rate_matrix_coll_bb, max_nlte_dimension * max_nlte_dimension);
-    rate_matrix_coll_bb = gsl_matrix_view_array(vec_rate_matrix_coll_bb.data(), nlte_dimension, nlte_dimension).matrix;
-    gsl_matrix_set_all(&rate_matrix_coll_bb, 0.);
+    THREADLOCALONHOST std::vector<double> vec_rate_matrix;
+    resize_exactly(vec_rate_matrix, max_nlte_dimension * max_nlte_dimension);
+    auto rate_matrix = gsl_matrix_view_array(vec_rate_matrix.data(), nlte_dimension, nlte_dimension).matrix;
+    gsl_matrix_set_all(&rate_matrix, 0.);
 
-    resize_exactly(vec_rate_matrix_ntcoll_bb, max_nlte_dimension * max_nlte_dimension);
-    rate_matrix_ntcoll_bb =
-        gsl_matrix_view_array(vec_rate_matrix_ntcoll_bb.data(), nlte_dimension, nlte_dimension).matrix;
-    gsl_matrix_set_all(&rate_matrix_ntcoll_bb, 0.);
+    THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bb;
+    THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bb;
+    THREADLOCALONHOST std::vector<double> vec_rate_matrix_ntcoll_bb;
+    THREADLOCALONHOST std::vector<double> vec_rate_matrix_rad_bf;
+    THREADLOCALONHOST std::vector<double> vec_rate_matrix_coll_bf;
+    THREADLOCALONHOST std::vector<double> vec_rate_matrix_ntcoll_bf;
+    if constexpr (individual_process_matrices) {
+      resize_exactly(vec_rate_matrix_rad_bb, max_nlte_dimension * max_nlte_dimension);
+      rate_matrix_rad_bb = gsl_matrix_view_array(vec_rate_matrix_rad_bb.data(), nlte_dimension, nlte_dimension).matrix;
+      gsl_matrix_set_all(&rate_matrix_rad_bb, 0.);
 
-    resize_exactly(vec_rate_matrix_rad_bf, max_nlte_dimension * max_nlte_dimension);
-    rate_matrix_rad_bf = gsl_matrix_view_array(vec_rate_matrix_rad_bf.data(), nlte_dimension, nlte_dimension).matrix;
-    gsl_matrix_set_all(&rate_matrix_rad_bf, 0.);
+      resize_exactly(vec_rate_matrix_coll_bb, max_nlte_dimension * max_nlte_dimension);
+      rate_matrix_coll_bb =
+          gsl_matrix_view_array(vec_rate_matrix_coll_bb.data(), nlte_dimension, nlte_dimension).matrix;
+      gsl_matrix_set_all(&rate_matrix_coll_bb, 0.);
 
-    resize_exactly(vec_rate_matrix_coll_bf, max_nlte_dimension * max_nlte_dimension);
-    rate_matrix_coll_bf = gsl_matrix_view_array(vec_rate_matrix_coll_bf.data(), nlte_dimension, nlte_dimension).matrix;
-    gsl_matrix_set_all(&rate_matrix_coll_bf, 0.);
+      resize_exactly(vec_rate_matrix_ntcoll_bb, max_nlte_dimension * max_nlte_dimension);
+      rate_matrix_ntcoll_bb =
+          gsl_matrix_view_array(vec_rate_matrix_ntcoll_bb.data(), nlte_dimension, nlte_dimension).matrix;
+      gsl_matrix_set_all(&rate_matrix_ntcoll_bb, 0.);
 
-    resize_exactly(vec_rate_matrix_ntcoll_bf, max_nlte_dimension * max_nlte_dimension);
-    rate_matrix_ntcoll_bf =
-        gsl_matrix_view_array(vec_rate_matrix_ntcoll_bf.data(), nlte_dimension, nlte_dimension).matrix;
-    gsl_matrix_set_all(&rate_matrix_ntcoll_bf, 0.);
-  } else {
-    // if not individual_process_matrices, alias a single matrix for all transition types
-    // the "gsl_matrix" structs are independent, but the data is shared
-    rate_matrix_rad_bb = rate_matrix;
-    rate_matrix_coll_bb = rate_matrix;
-    rate_matrix_ntcoll_bb = rate_matrix;
-    rate_matrix_rad_bf = rate_matrix;
-    rate_matrix_coll_bf = rate_matrix;
-    rate_matrix_ntcoll_bf = rate_matrix;
-  }
+      resize_exactly(vec_rate_matrix_rad_bf, max_nlte_dimension * max_nlte_dimension);
+      rate_matrix_rad_bf = gsl_matrix_view_array(vec_rate_matrix_rad_bf.data(), nlte_dimension, nlte_dimension).matrix;
+      gsl_matrix_set_all(&rate_matrix_rad_bf, 0.);
 
-  // printout("  Adding rates for ion stages:");
-  const auto ions = std::ranges::iota_view{0, nions};
-  std::for_each(ions.begin(), ions.end(), [&](const auto ion) {
-    // const int ionstage = get_ionstage(element, ion);
-    // printout(" %d", ionstage);
+      resize_exactly(vec_rate_matrix_coll_bf, max_nlte_dimension * max_nlte_dimension);
+      rate_matrix_coll_bf =
+          gsl_matrix_view_array(vec_rate_matrix_coll_bf.data(), nlte_dimension, nlte_dimension).matrix;
+      gsl_matrix_set_all(&rate_matrix_coll_bf, 0.);
 
-    const int nlevels = get_nlevels(element, ion);
-    const int nlevels_nlte = get_nlevels_nlte(element, ion);  // does not count the ground state!
-
-    auto s_renorm = std::vector<double>(nlevels);
-    std::fill_n(s_renorm.begin(), nlevels_nlte + 1, 1.);
-
-    for (int level = (nlevels_nlte + 1); level < nlevels; level++) {
-      s_renorm[level] = superlevel_boltzmann(nonemptymgi, element, ion, level) / superlevel_partfunc[ion];
+      resize_exactly(vec_rate_matrix_ntcoll_bf, max_nlte_dimension * max_nlte_dimension);
+      rate_matrix_ntcoll_bf =
+          gsl_matrix_view_array(vec_rate_matrix_ntcoll_bf.data(), nlte_dimension, nlte_dimension).matrix;
+      gsl_matrix_set_all(&rate_matrix_ntcoll_bf, 0.);
+    } else {
+      // if not individual_process_matrices, alias a single matrix for all transition types
+      // the "gsl_matrix" structs are independent, but the data is shared
+      rate_matrix_rad_bb = rate_matrix;
+      rate_matrix_coll_bb = rate_matrix;
+      rate_matrix_ntcoll_bb = rate_matrix;
+      rate_matrix_rad_bf = rate_matrix;
+      rate_matrix_coll_bf = rate_matrix;
+      rate_matrix_ntcoll_bf = rate_matrix;
     }
 
-    nltepop_matrix_add_boundbound(nonemptymgi, element, ion, t_mid, s_renorm, &rate_matrix_rad_bb, &rate_matrix_coll_bb,
-                                  &rate_matrix_ntcoll_bb);
+    // printout("  Adding rates for ion stages:");
+    const auto ions = std::ranges::iota_view{first_ion_used, first_ion_used + nions_used};
+    std::for_each(ions.begin(), ions.end(), [&](const auto ion) {
+      // const int ionstage = get_ionstage(element, ion);
+      // printout(" %d", ionstage);
 
-    if (ion < (nions - 1)) {
-      // this is the slowest component
-      nltepop_matrix_add_ionisation(nonemptymgi, element, ion, s_renorm, &rate_matrix_rad_bf, &rate_matrix_coll_bf);
-      if (NT_ON) {
-        nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, &rate_matrix_ntcoll_bf);
-      }
-    }
-  });
-  // printout("\n");
+      const int nlevels = get_nlevels(element, ion);
+      const int nlevels_nlte = get_nlevels_nlte(element, ion);  // does not count the ground state!
 
-  if (individual_process_matrices) {
-    // sum the matrices for each transition type to get a total rate matrix
-    gsl_matrix_add(&rate_matrix, &rate_matrix_rad_bb);
-    gsl_matrix_add(&rate_matrix, &rate_matrix_coll_bb);
-    gsl_matrix_add(&rate_matrix, &rate_matrix_ntcoll_bb);
-    gsl_matrix_add(&rate_matrix, &rate_matrix_rad_bf);
-    gsl_matrix_add(&rate_matrix, &rate_matrix_coll_bf);
-    gsl_matrix_add(&rate_matrix, &rate_matrix_ntcoll_bf);
-  }
+      auto s_renorm = std::vector<double>(nlevels);
+      std::fill_n(s_renorm.begin(), nlevels_nlte + 1, 1.);
 
-  // replace the first row of the matrix and balance vector with the normalisation
-  // constraint on the total element population
-  gsl_vector_view first_row_view = gsl_matrix_row(&rate_matrix, 0);
-  gsl_vector_set_all(&first_row_view.vector, 1.0);
-
-  THREADLOCALONHOST std::vector<double> vec_balance_vector;
-  resize_exactly(vec_balance_vector, max_nlte_dimension);
-  auto balance_vector = gsl_vector_view_array(vec_balance_vector.data(), nlte_dimension).vector;
-  gsl_vector_set_all(&balance_vector, 0.);
-  // set first balance vector entry to the element population (all other entries will be zero)
-  gsl_vector_set(&balance_vector, 0, nnelement);
-
-  if (FORCE_SAHA_ION_BALANCE(atomic_number)) {
-    const auto ionfractions = calculate_ionfractions(element, nonemptymgi, grid::get_nne(nonemptymgi), true);
-    const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
-    for (int ion = 1; ion <= uppermost_ion; ion++) {
-      // replace matrix row for ion's ground state with sum of this ion's level populations is equal to the ion
-      // population
-      const double nnion = nnelement * ionfractions[ion];
-      const int index_ion_ground = get_nlte_vector_index(element, ion, 0);
-      const int index_ion_toplevel = get_nlte_vector_index(element, ion, get_nlevels(element, ion));
-      gsl_vector_view ion_ground_row_view = gsl_matrix_row(&rate_matrix, index_ion_ground);
-      gsl_vector_set_all(&ion_ground_row_view.vector, 0.);
-      for (int index = index_ion_ground; index <= index_ion_toplevel; index++) {
-        gsl_vector_set(&ion_ground_row_view.vector, index, 1.);
+      for (int level = (nlevels_nlte + 1); level < nlevels; level++) {
+        s_renorm[level] = superlevel_boltzmann(nonemptymgi, element, ion, level) / superlevel_partfunc[ion];
       }
 
-      gsl_vector_set(&balance_vector, get_nlte_vector_index(element, ion, index_ion_ground), nnion);
+      nltepop_matrix_add_boundbound(nonemptymgi, element, ion, t_mid, s_renorm, &rate_matrix_rad_bb,
+                                    &rate_matrix_coll_bb, &rate_matrix_ntcoll_bb, first_ion_used);
+
+      if (ion < (first_ion_used + nions_used - 1)) {
+        // this is the slowest component
+        nltepop_matrix_add_ionisation(nonemptymgi, element, ion, s_renorm, &rate_matrix_rad_bf, &rate_matrix_coll_bf,
+                                      first_ion_used, nions_used);
+        if (NT_ON) {
+          nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, &rate_matrix_ntcoll_bf, first_ion_used,
+                                           nions_used);
+        }
+      }
+    });
+    // printout("\n");
+
+    if (individual_process_matrices) {
+      // sum the matrices for each transition type to get a total rate matrix
+      gsl_matrix_add(&rate_matrix, &rate_matrix_rad_bb);
+      gsl_matrix_add(&rate_matrix, &rate_matrix_coll_bb);
+      gsl_matrix_add(&rate_matrix, &rate_matrix_ntcoll_bb);
+      gsl_matrix_add(&rate_matrix, &rate_matrix_rad_bf);
+      gsl_matrix_add(&rate_matrix, &rate_matrix_coll_bf);
+      gsl_matrix_add(&rate_matrix, &rate_matrix_ntcoll_bf);
+    }
+
+    // replace the first row of the matrix and balance vector with the normalisation
+    // constraint on the total element population
+    gsl_vector_view first_row_view = gsl_matrix_row(&rate_matrix, 0);
+    gsl_vector_set_all(&first_row_view.vector, 1.0);
+
+    THREADLOCALONHOST std::vector<double> vec_balance_vector;
+    resize_exactly(vec_balance_vector, max_nlte_dimension);
+    auto balance_vector = gsl_vector_view_array(vec_balance_vector.data(), nlte_dimension).vector;
+    gsl_vector_set_all(&balance_vector, 0.);
+    // set first balance vector entry to the element population (all other entries will be zero)
+    gsl_vector_set(&balance_vector, 0, nnelement);
+
+    if (FORCE_SAHA_ION_BALANCE(atomic_number)) {
+      const auto ionfractions = calculate_ionfractions(element, nonemptymgi, grid::get_nne(nonemptymgi), true);
+      const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
+      for (int ion = 1; ion <= uppermost_ion; ion++) {
+        // replace matrix row for ion's ground state with sum of this ion's level populations is equal to the ion
+        // population
+        const double nnion = nnelement * ionfractions[ion];
+        const int index_ion_ground = get_nlte_vector_index(element, ion, 0, first_ion_used);
+        const int index_ion_toplevel = get_nlte_vector_index(element, ion, get_nlevels(element, ion), first_ion_used);
+        gsl_vector_view ion_ground_row_view = gsl_matrix_row(&rate_matrix, index_ion_ground);
+        gsl_vector_set_all(&ion_ground_row_view.vector, 0.);
+        for (int index = index_ion_ground; index <= index_ion_toplevel; index++) {
+          gsl_vector_set(&ion_ground_row_view.vector, index, 1.);
+        }
+
+        gsl_vector_set(&balance_vector, get_nlte_vector_index(element, ion, index_ion_ground, first_ion_used), nnion);
+      }
+    }
+
+    // calculate the normalisation factors and apply them to the matrix
+    // columns and balance vector elements
+    THREADLOCALONHOST std::vector<double> vec_pop_norm_factor_vec;
+    resize_exactly(vec_pop_norm_factor_vec, max_nlte_dimension);
+    auto pop_norm_factor_vec = gsl_vector_view_array(vec_pop_norm_factor_vec.data(), nlte_dimension).vector;
+    gsl_vector_set_all(&pop_norm_factor_vec, 1.0);
+    nltepop_matrix_normalise(nonemptymgi, element, &rate_matrix, &pop_norm_factor_vec, first_ion_used, nions_used);
+
+    // printout("Rate matrix | balance vector:\n");
+    // for (int row = 0; row < nlte_dimension; row++)
+    // {
+    //   for (int column = 0; column < nlte_dimension; column++)
+    //   {
+    //     char str[15];
+    //     snprintf(str, 15, "%+.1e ", gsl_matrix_get(rate_matrix, row, column));
+    //     printout(str);
+    //   }
+    //   printout("| ");
+    //   char str[15];
+    //   snprintf(str, 15, "%+.1e\n", gsl_vector_get(balance_vector, row));
+    //   printout(str);
+    // }
+    // printout("\n");
+
+    // eliminate barely-interacting levels from the NLTE matrix by removing
+    // their interactions and setting their normalised populations (probably departure coeff) to 1.0
+    // filter_nlte_matrix(element, rate_matrix, balance_vector, pop_norm_factor_vec);
+
+    // the true population densities
+    THREADLOCALONHOST std::vector<double> vec_pop;
+    resize_exactly(vec_pop, max_nlte_dimension);
+    popvec = gsl_vector_view_array(vec_pop.data(), nlte_dimension).vector;
+
+    matrix_solve_success = nltepop_matrix_solve(element, &rate_matrix, &balance_vector, &popvec, &pop_norm_factor_vec,
+                                                max_nlte_dimension, first_ion_used, nions_used);
+
+    if (matrix_solve_success) {
+      matrix_solve_satisfied_with_ion_list = true;
+      if (retry_with_fewer_ions) {
+        printout(
+            "successfully solved NLTE matrix when reducing ions used for element to Z=%d ionstage=%d to ionstage=%d\n",
+            atomic_number, get_ionstage(element, first_ion_used),
+            get_ionstage(element, first_ion_used + nions_used - 1));
+      }
+
+    } else if (NLTE_LIMIT_ION_STAGES_AFTER_FAILURE) {
+      retry_with_fewer_ions = true;
+      printout("  WARNING: NLTE matrix solution failed for element Z=%d using ionstage=%d to ionstage %d\n",
+               atomic_number, get_ionstage(element, first_ion_used),
+               get_ionstage(element, first_ion_used + nions_used - 1));
+      // Check if the top ion populations are low enough as a relative fraction of the total element population
+      // nnelement which already has been defined in this function. First check the ground state population relative
+      // to this, then check the excited populations, then check the superlevel population if it exists.
+      // Check all of these relative to a factor of 1e6 or 1e9 of the total element population.
+      // Do this for each the top ion and the bottom ion here then set flags for each of these e.g.
+      // top_ion_can_cut_from_solution = true; If looping through each of these with an if condition is too slow
+      // then instead could so the sum with an fabs(pop) for each population value so that negative populations
+      // don't cancel out positive populations and make it seem like the population of an ion is very low when
+      // actually it is just a big negative population cancelling out the larger positive populations.
+
+      bool remove_top_ion_from_solution = true;
+      bool remove_bottom_ion_from_solution = true;
+
+      const int nlevels_nlte_top_ion = get_nlevels_nlte(element, first_ion_used + nions_used - 1);
+      const int index_gs_top_ion = get_nlte_vector_index(element, first_ion_used + nions_used - 1, 0, first_ion_used);
+      const double ground_pop_top_ion = gsl_vector_get(&popvec, index_gs_top_ion);
+      if (ground_pop_top_ion / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
+        // check ground pop of top ion relative to total element population first
+        // If this ground pop is too large relative to the total element popualtion
+        // then can't remove top ion so go straight to checking if the bottom ion
+        // can be removed
+        printout(
+            "  WARNING: top ion ground state population too large to remove ion (ground_pop_top_ion / nnelement "
+            "(%g/%g) > (%g) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)\n",
+            ground_pop_top_ion, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+        remove_top_ion_from_solution = false;
+      }
+      double nlte_excited_pop_top_ion_sum = 0.0;
+      if (remove_top_ion_from_solution) {
+        // Now check the excited populations of the top ion relative to the total element population
+        // To make sure none of these are too large to remove the top ion
+        for (int level = 1; level <= nlevels_nlte_top_ion; level++) {
+          const int top_ion_nlte_index =
+              get_nlte_vector_index(element, first_ion_used + nions_used - 1, level, first_ion_used);
+          const double nlte_excited_pop_top_ion = gsl_vector_get(&popvec, top_ion_nlte_index);
+          nlte_excited_pop_top_ion_sum += fabs(nlte_excited_pop_top_ion);
+          if (nlte_excited_pop_top_ion / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
+            printout(
+                "  WARNING: top ion excited state (level %d) population too large to remove ion "
+                "(nlte_excited_pop_top_ion / nnelement (%g/%g) > (%g) "
+                "NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)\n",
+                top_ion_nlte_index, nlte_excited_pop_top_ion, nnelement,
+                NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+            remove_top_ion_from_solution = false;
+            break;  // no need to check the other excited levels if one is too large
+          }
+        }
+      }
+      double superlevel_pop_top_ion = 0.0;
+      if (remove_top_ion_from_solution && ion_has_superlevel(element, first_ion_used + nions_used - 1)) {
+        // Now check the superlevel population of the top ion relative to the total element population
+        // To make sure this isn't too large to remove the top ion
+        const int index_sl_top_ion =
+            get_nlte_vector_index(element, first_ion_used + nions_used - 1, nlevels_nlte_top_ion + 1, first_ion_used);
+        superlevel_pop_top_ion = gsl_vector_get(&popvec, index_sl_top_ion);
+        if (superlevel_pop_top_ion / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
+          printout(
+              "  WARNING: top ion superlevel population too large to remove ion (superlevel_pop_top_ion / nnelement "
+              "(%g/%g) > (%g) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)\n",
+              superlevel_pop_top_ion, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+          remove_top_ion_from_solution = false;
+        }
+      }
+
+      if (remove_top_ion_from_solution) {
+        printout(
+            "  Passed checks: removing top ion from NLTE solution and attempting to re-solve rate (ionstage %d, "
+            "ground pop %g, fabs(excited pops) sum %g, superlevel pop %g, nnelement %g) matrix\n",
+            get_ionstage(element, first_ion_used + nions_used - 1), ground_pop_top_ion, nlte_excited_pop_top_ion_sum,
+            superlevel_pop_top_ion, nnelement);
+        nions_used = nions_used - 1;  // remove the top ion from the solution
+      } else {
+        printout(
+            "  WARNING: can't remove top ion stage from NLTE solution, attempting to remove bottom ionstage %d "
+            "instead\n",
+            get_ionstage(element, first_ion_used));
+        const int nlevels_nlte_bottom_ion = get_nlevels_nlte(element, first_ion_used);
+        const int index_gs_bottom_ion = get_nlte_vector_index(element, first_ion_used, 0, first_ion_used);
+        const double ground_pop_bottom_ion = gsl_vector_get(&popvec, index_gs_bottom_ion);
+
+        if (ground_pop_bottom_ion / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
+          // check ground pop of bottom ion relative to total element population first
+          // If this ground pop is too large relative to the total element popualtion
+          // then can't remove bottom ion so go straight to checking if the bottom ion
+          // can be removed
+          printout(
+              "  WARNING: Bottom ion ground state population too large to remove ion (ground_pop_bottom_ion / "
+              "nnelement (%g/%g) > (%g) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)\n",
+              ground_pop_bottom_ion, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+          remove_bottom_ion_from_solution = false;
+        }
+        double nlte_excited_pop_bottom_ion_sum = 0.0;
+        if (remove_bottom_ion_from_solution) {
+          // Now check the excited populations of the bottom ion relative to the total element population
+          // To make sure none of these are too large to remove the bottom ion
+          for (int level = 1; level <= nlevels_nlte_bottom_ion; level++) {
+            const int bottom_ion_nlte_index = get_nlte_vector_index(element, first_ion_used, level, first_ion_used);
+            const double nlte_excited_pop_bottom_ion = gsl_vector_get(&popvec, bottom_ion_nlte_index);
+            nlte_excited_pop_bottom_ion_sum += fabs(nlte_excited_pop_bottom_ion);
+            if (nlte_excited_pop_bottom_ion / nnelement >
+                NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
+              printout(
+                  "  WARNING: Bottom ion excited state (level %d) population too large to remove ion "
+                  "(nlte_excited_pop_bottom_ion "
+                  "/ nnelement (%g/%g) > (%g) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)\n",
+                  bottom_ion_nlte_index, nlte_excited_pop_bottom_ion, nnelement,
+                  NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+              remove_bottom_ion_from_solution = false;
+              break;  // no need to check the other excited levels if one is too large
+            }
+          }
+        }
+        double superlevel_pop_bottom_ion = 0.0;
+        if (remove_bottom_ion_from_solution && ion_has_superlevel(element, first_ion_used)) {
+          // Now check the superlevel population of the bottom ion relative to the total element population
+          // To make sure this isn't too large to remove the bottom ion
+          const int index_sl_bottom_ion =
+              get_nlte_vector_index(element, first_ion_used, nlevels_nlte_bottom_ion + 1, first_ion_used);
+          superlevel_pop_bottom_ion = gsl_vector_get(&popvec, index_sl_bottom_ion);
+          if (superlevel_pop_bottom_ion / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
+            printout(
+                "  WARNING: Bottom ion superlevel population too large to remove ion (superlevel_pop_bottom_ion / "
+                "nnelement (%g/%g) > (%g) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)\n",
+                superlevel_pop_bottom_ion, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+            remove_bottom_ion_from_solution = false;
+          }
+        }
+        if (remove_bottom_ion_from_solution) {
+          printout(
+              "  Passed checks: removing bottom ion from NLTE solution and attempting to re-solve rate matrix "
+              "(ionstage %d, ground pop %g, fabs(excited pops) sum %g, superlevel pop %g, nnelement %g)\n",
+              get_ionstage(element, first_ion_used), ground_pop_bottom_ion, nlte_excited_pop_bottom_ion_sum,
+              superlevel_pop_bottom_ion, nnelement);
+          nions_used = nions_used - 1;  // remove the bottom ion from the solution
+          first_ion_used++;  // increment the first ion used to the next ion
+        } else {
+          printout("  WARNING: can't remove bottom ion stage from NLTE solution, returning matrix solve fail\n");
+          return;
+        }
+      }
+      if (!remove_bottom_ion_from_solution && !remove_top_ion_from_solution) {
+        matrix_solve_satisfied_with_ion_list = true;
+      }
+      if (!matrix_solve_satisfied_with_ion_list) {
+        nlte_dimension = get_element_nlte_dimension(element, nions_used, first_ion_used);
+      }
     }
   }
-
-  // calculate the normalisation factors and apply them to the matrix
-  // columns and balance vector elements
-  THREADLOCALONHOST std::vector<double> vec_pop_norm_factor_vec;
-  resize_exactly(vec_pop_norm_factor_vec, max_nlte_dimension);
-  auto pop_norm_factor_vec = gsl_vector_view_array(vec_pop_norm_factor_vec.data(), nlte_dimension).vector;
-  gsl_vector_set_all(&pop_norm_factor_vec, 1.0);
-
-  nltepop_matrix_normalise(nonemptymgi, element, &rate_matrix, &pop_norm_factor_vec);
-
-  // printout("Rate matrix | balance vector:\n");
-  // for (int row = 0; row < nlte_dimension; row++)
-  // {
-  //   for (int column = 0; column < nlte_dimension; column++)
-  //   {
-  //     char str[15];
-  //     snprintf(str, 15, "%+.1e ", gsl_matrix_get(rate_matrix, row, column));
-  //     printout(str);
-  //   }
-  //   printout("| ");
-  //   char str[15];
-  //   snprintf(str, 15, "%+.1e\n", gsl_vector_get(balance_vector, row));
-  //   printout(str);
-  // }
-  // printout("\n");
-
-  // eliminate barely-interacting levels from the NLTE matrix by removing
-  // their interactions and setting their normalised populations (probably departure coeff) to 1.0
-  // filter_nlte_matrix(element, rate_matrix, balance_vector, pop_norm_factor_vec);
-
-  // the true population densities
-  THREADLOCALONHOST std::vector<double> vec_pop;
-  resize_exactly(vec_pop, max_nlte_dimension);
-  auto popvec = gsl_vector_view_array(vec_pop.data(), nlte_dimension).vector;
-
-  const bool matrix_solve_success =
-      nltepop_matrix_solve(element, &rate_matrix, &balance_vector, &popvec, &pop_norm_factor_vec, max_nlte_dimension);
 
   if (!matrix_solve_success) {
     printout(
-        "WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular matrix. "
+        "WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular "
+        "matrix, negative pop or large pop inversion and unable to recover solution by reducing ion range. "
         "Attempting to use LTE solution instead\n",
         modelgridindex, timestep, atomic_number);
     set_element_pops_lte(nonemptymgi, element);
@@ -984,7 +1239,34 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
-      const int index_gs = get_nlte_vector_index(element, ion, 0);
+      const int index_gs = get_nlte_vector_index(element, ion, 0, first_ion_used);
+
+      if (ion < first_ion_used || ion >= (first_ion_used + nions_used)) {
+        printout(
+            "  WARNING: Z=%d ionstage %d removed from NLTE rate matrix solution. Setting levelpop for ion to "
+            "zero \n",
+            get_atomicnumber(element), get_ionstage(element, ion));
+        for (int level = 1; level <= nlevels_nlte; level++) {
+          // const int index = get_nlte_vector_index(element, ion, level, first_ion_used);
+          set_nlte_levelpop_over_rho(nonemptymgi, element, ion, level, 0);
+        }
+
+        if (ion_has_superlevel(element, ion))  // a superlevel exists
+        {
+          // const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1, first_ion_used);
+          printout(
+              "  WARNING: Z=%d ionstage %d removed from NLTE rate matrix solution. Setting superlevel pop for "
+              "ion to zero \n",
+              get_atomicnumber(element), get_ionstage(element, ion));
+          set_nlte_superlevelpop_over_rho(nonemptymgi, element, ion, 0);
+        }
+        printout(
+            "  WARNING: Z=%d ionstage %d removed from NLTE rate matrix solution. Setting ground level pop for "
+            "ion to zero \n",
+            get_atomicnumber(element), get_ionstage(element, ion));
+        grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
+                                           get_uniqueionindex(element, ion)] = 0;
+      }
       // const int ionstage = get_ionstage(element, ion);
       // printout("  [ionstage %d]\n", ionstage);
       //
@@ -995,31 +1277,31 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
       // store the NLTE level populations
       // double solution_ion_pop = 0.;
-      for (int level = 1; level <= nlevels_nlte; level++) {
-        const int index = get_nlte_vector_index(element, ion, level);
-        set_nlte_levelpop_over_rho(nonemptymgi, element, ion, level,
-                                   gsl_vector_get(&popvec, index) / grid::get_rho(nonemptymgi));
-        // solution_ion_pop += gsl_vector_get(popvec, index);
+      else {
+        for (int level = 1; level <= nlevels_nlte; level++) {
+          const int index = get_nlte_vector_index(element, ion, level, first_ion_used);
+          set_nlte_levelpop_over_rho(nonemptymgi, element, ion, level,
+                                     gsl_vector_get(&popvec, index) / grid::get_rho(nonemptymgi));
+          // solution_ion_pop += gsl_vector_get(popvec, index);
+        }
+
+        // store the superlevel population if there is one
+        if (ion_has_superlevel(element, ion))  // a superlevel exists
+        {
+          const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1, first_ion_used);
+          set_nlte_superlevelpop_over_rho(
+              nonemptymgi, element, ion,
+              gsl_vector_get(&popvec, index_sl) / grid::get_rho(nonemptymgi) / superlevel_partfunc[ion]);
+        }
+
+        // store the ground level population
+        grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
+                                           get_uniqueionindex(element, ion)] = gsl_vector_get(&popvec, index_gs);
+        // solution_ion_pop += gsl_vector_get(popvec, index_gs);
+
+        calculate_cellpartfuncts(nonemptymgi, element);
       }
-
-      // store the superlevel population if there is one
-      if (ion_has_superlevel(element, ion))  // a superlevel exists
-      {
-        const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1);
-        set_nlte_superlevelpop_over_rho(
-            nonemptymgi, element, ion,
-            gsl_vector_get(&popvec, index_sl) / grid::get_rho(nonemptymgi) / superlevel_partfunc[ion]);
-      }
-
-      // store the ground level population
-      grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                         get_uniqueionindex(element, ion)] =
-          static_cast<float>(gsl_vector_get(&popvec, index_gs));
-      // solution_ion_pop += gsl_vector_get(popvec, index_gs);
-
-      calculate_cellpartfuncts(nonemptymgi, element);
     }
-
     const double elem_pop_matrix = gsl_blas_dasum(&popvec);
     const double elem_pop_error_percent = fabs((nnelement / elem_pop_matrix) - 1) * 100;
     if (elem_pop_error_percent > 1.0) {
@@ -1035,7 +1317,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     {
       print_element_rates_summary(element, modelgridindex, timestep, nlte_iter, &popvec, &rate_matrix_rad_bb,
                                   &rate_matrix_coll_bb, &rate_matrix_ntcoll_bb, &rate_matrix_rad_bf,
-                                  &rate_matrix_coll_bf, &rate_matrix_ntcoll_bf);
+                                  &rate_matrix_coll_bf, &rate_matrix_ntcoll_bf, first_ion_used, nions_used);
     }
 
     const bool print_detailed_level_stats = false;
@@ -1052,14 +1334,14 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
       for (int level = 0; level < get_nlevels_nlte(element, ion); level++) {
         print_level_rates(nonemptymgi, timestep, element, ion, level, &popvec, &rate_matrix_rad_bb,
                           &rate_matrix_coll_bb, &rate_matrix_ntcoll_bb, &rate_matrix_rad_bf, &rate_matrix_coll_bf,
-                          &rate_matrix_ntcoll_bf);
+                          &rate_matrix_ntcoll_bf, first_ion_used, nions_used);
       }
 
       if (ion_has_superlevel(element, ion)) {
         const int slindex = get_nlevels_nlte(element, ion) + 1;
         print_level_rates(nonemptymgi, timestep, element, ion, slindex, &popvec, &rate_matrix_rad_bb,
                           &rate_matrix_coll_bb, &rate_matrix_ntcoll_bb, &rate_matrix_rad_bf, &rate_matrix_coll_bf,
-                          &rate_matrix_ntcoll_bf);
+                          &rate_matrix_ntcoll_bf, first_ion_used, nions_used);
       }
     }
   }

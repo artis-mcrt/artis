@@ -17,10 +17,10 @@ constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
 constexpr int NLTEITER = 30;
 
 constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) {
-  if (element_z == 26 && ionstage == 2) {
-    return (level <= 197);
+  if (element_z < 20) {
+    return (level <= 100);
   }
-  return (level <= 80);
+  return (level <= 200);
 }
 
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
@@ -31,9 +31,7 @@ constexpr bool single_level_top_ion = false;
 
 constexpr bool single_ground_level = false;
 
-constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
-  return ((Z == 26 || Z == 28) && ionstage >= 1) ? 80 : 0;
-}
+constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return (Z < 20) ? 100 : 200; }
 
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
@@ -85,8 +83,8 @@ constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
 
 constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) {
   // To only BF estimators for NLTE levels:
-  // return LEVEL_IS_NLTE(element_z, ionstage, level);
-  return true;
+  return LEVEL_IS_NLTE(element_z, ionstage, level);
+  // return true;
 }
 
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
@@ -95,17 +93,17 @@ constexpr bool USE_LUT_PHOTOION = false;
 
 constexpr bool USE_LUT_BFHEATING = false;
 
-constexpr bool STRICT_POPULATION_CHECKING = false;
+constexpr bool STRICT_POPULATION_CHECKING = true;
 
-constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE = false;
+constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE = true;
 
-constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL = 1000.;
+constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL = 50.;
 
-constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 10.;
+constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 2.;
 
 constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION = 1e-9;
 
-constexpr bool NLTEPOP_FAILURE_USE_FIND_UPPERMOST_ION_FOR_LTE_RESET = false;
+constexpr bool NLTEPOP_FAILURE_USE_FIND_UPPERMOST_ION_FOR_LTE_RESET = true;
 
 #define SEPARATE_STIMRECOMB false
 
