@@ -32,8 +32,10 @@ $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := CLANG
 	CXXFLAGS += -flto=thin
-	ifeq ($(if $(shell command -v lld),'true','false'), 'true')
-    	LDFLAGS += -fuse-ld=lld
+	ifeq '' '$(findstring Apple,$(COMPILER_VERSION))'
+		ifeq ($(if $(shell command -v lld),'true','false'), 'true')
+			LDFLAGS += -fuse-ld=lld
+		endif
 	endif
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 	COMPILER_NAME := GCC
@@ -287,7 +289,6 @@ endif
 all: sn3d exspec
 
 $(BUILD_DIR)/%.o: %.cc Makefile $(BUILD_DIR)/compiler.txt
-	mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 check: $(sn3d_files)
