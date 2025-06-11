@@ -365,7 +365,7 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
   assert_testmodeonly(first_ion_used < get_nions(element));
   assert_testmodeonly((first_ion_used + nions_used - 1) < get_nions(element));
   int nlte_dimension = 0;
-  for (int ion = first_ion_used; ion < nions_used + first_ion_used; ion++) {
+  for (int ion = first_ion_used; ion < (nions_used + first_ion_used); ion++) {
     const int nlevels_nlte = get_nlevels_nlte(element, ion);
 
     nlte_dimension += nlevels_nlte + 1;  // ground state is not counted in nlevels_nlte
@@ -546,7 +546,7 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
                                       const int first_ion_used, const int nions_used) {
   // collisional ionization by non-thermal electrons
 
-  assert_always(ion + 1 < nions_used + first_ion_used);  // updated to cover case when ions have been stripped
+  assert_always(ion + 1 < (nions_used + first_ion_used));  // can't ionise top ion stage
   const double Y_nt = nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion);
   if (Y_nt < 0.) {
     printout("  WARNING: Negative NT_ionization rate from ionstage %d\n", get_ionstage(element, ion));
