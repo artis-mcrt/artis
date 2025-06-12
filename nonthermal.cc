@@ -380,9 +380,9 @@ void read_binding_energies() {
       const int ioncharge = get_ionstage(element, ion) - 1;
       const int atomic_number = get_atomicnumber(element);
       const int nbound = atomic_number - ioncharge;
-        if (nbound <= 0) {
-          continue;
-        }
+      if (nbound <= 0) {
+        continue;
+      }
       allions_shell_occupancies[get_uniqueionindex(element, ion)] =
           NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE
               ? calculate_ion_shell_occupancies(atomic_number, nbound, elements_neutral_shells_q.at(atomic_number - 1))
