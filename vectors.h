@@ -178,10 +178,10 @@ constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
 
   const auto vec1 = cross_prod(dir, syn_dir);
 
-  const auto vec2 = cross_prod(xhat, syn_dir);
+  constexpr auto vec2 = cross_prod(xhat, syn_dir);
   const double cosphi = dot(vec1, vec2) / vec_len(vec1) / vec_len(vec2);
 
-  const auto vec3 = cross_prod(vec2, syn_dir);
+  constexpr auto vec3 = cross_prod(vec2, syn_dir);
   const double testphi = dot(vec1, vec3);
 
   // with phi defined according to y = cos(theta) * sin(phi), the
