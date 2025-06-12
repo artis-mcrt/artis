@@ -163,11 +163,8 @@ else
 	ifneq (,$(shell hostname -A | grep gsi.de))
 		# virgo has znver4 nodes in the amd,epyc,9654 feature group
 		CXXFLAGS += -march=znver4
-		# and znver3 nodes in the other partitions and login nodes
+		# znver3 in the other partitions and login nodes does not support avx512
 		# CXXFLAGS += -march=native -mtune=znver4
-	# else ifneq (,$(shell hostname -A | grep cosma.dur.ac.uk))
-	# 	# cosma8-milan queue is znver3, but login nodes and rome queue are znver2
-	# 	CXXFLAGS += -march=znver3
 	else
 		CXXFLAGS += -march=native
 	endif
