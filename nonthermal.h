@@ -1,6 +1,7 @@
 #ifndef NONTHERMAL_H
 #define NONTHERMAL_H
 
+#include <cstddef>
 #include <cstdio>
 
 #include "packet.h"
@@ -25,7 +26,7 @@ void do_ntalpha_deposit(Packet &pkt);
 void do_ntlepton_deposit(Packet &pkt);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);
-void nt_MPI_Bcast(int nonemptymgi, int root_node_id);
+void nt_MPI_Bcast(ptrdiff_t nonemptymgi, int root_node_id);
 void reset_stats();
 void print_stats(double modelvolume, double deltat);
 }  // namespace nonthermal

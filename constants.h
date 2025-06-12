@@ -63,6 +63,6 @@ enum class TimeStepSizeMethod { LOGARITHMIC, CONSTANT, LOGARITHMIC_THEN_CONSTANT
 enum class ThermalisationScheme { INSTANT, DETAILED, DETAILEDWITHGAMMAPRODUCTS, BARNES, WOLLAEGER, GUTTMAN };
 
 using Vec3d = std::array<double, 3>;
-inline constexpr Vec3d syn_dir{0., 0., 1.};  // vector defining the theta=0 direction
+constexpr Vec3d syn_dir{0., 0., 1.};  // vector defining the theta=0 direction
 
 #endif

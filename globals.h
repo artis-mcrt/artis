@@ -234,12 +234,12 @@ inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperatur
 
 inline std::span<float> allphixs{};
 struct AllTransitions {
-  std::span<int> lineindex;
-  std::span<int> targetlevelindex;
-  std::span<float> einstein_A;
-  std::span<float> coll_str;
-  std::span<float> osc_strength;
-  std::span<bool> forbidden;
+  std::span<const int> lineindex;
+  std::span<const int> targetlevelindex;
+  std::span<const float> einstein_A;
+  std::span<const float> coll_str;
+  std::span<const float> osc_strength;
+  std::span<const bool> forbidden;
 };
 inline AllTransitions alltrans;
 
@@ -250,8 +250,17 @@ inline std::span<const double>
 struct AllLevels {
   // all of these arrays are indexed by uniquelevelindex, which can be derived from the element, ion, level
 
-  std::span<double> epsilon;
-  std::span<float> statweight;
+  std::span<const double> epsilon;
+  std::span<const float> statweight;
+  // index into globals::alltrans for first down transition from each level
+  std::span<const int> alltrans_startdown;
+
+  // Number of down transitions from each level
+  std::span<const int> ndowntrans;
+
+  // Number of up transitions from each level
+  std::span<const int> nuptrans;
+
   std::span<int> closestgroundlevelcont;
 
   // index to start of photoionisation cross-sections table in global::allphixs
@@ -265,16 +274,7 @@ struct AllLevels {
 
   // index of the bound-free continuum (for first target) sorted by element/ion/level/phixstargetindex (not an index
   // into the nu_edge-sorted allcont list!)
-  std::span<int> cont_index;
-
-  // index into globals::alltrans for first down transition from each level
-  std::span<int> alltrans_startdown;
-
-  // Number of down transitions from each level
-  std::span<int> ndowntrans;
-
-  // Number of up transitions from each level
-  std::span<int> nuptrans;
+  std::span<int> bflist_start;
 };
 
 inline AllLevels alllevels{};
@@ -285,9 +285,9 @@ inline int nlines{-1};
 inline std::span<const TransitionLine> linelist{};
 inline std::vector<BFListEntry> bflist;
 
-inline std::vector<double> bfestim_nu_edge;
-inline std::vector<double> allcont_nu_edge;
-inline const FullPhotoionTransition *allcont{};
+inline std::vector<double> bfestim_nu_edge{};
+inline std::span<const double> allcont_nu_edge{};
+inline std::span<const FullPhotoionTransition> allcont{};
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
 inline std::vector<GroundPhotoion> groundcont{};

@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include <ctime>
+#include <format>
 #include <span>
 #include <vector>
 
@@ -94,6 +95,16 @@ inline thread_local auto gslworkspace =
 #ifdef __NVCOMPILER_CUDA_ARCH__
 #define printout(...) printf(__VA_ARGS__)
 
+template <class... Args>
+inline auto logprintfmt(const std::format_string<Args...> fmt, Args &&...args) -> void {
+  printf("%s", std::format(fmt, std::forward<Args>(args)...).c_str());
+}
+
+template <class... Args>
+inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...args) -> void {
+  printf("%s\n", std::format(fmt, std::forward<Args>(args)...).c_str());
+}
+
 #define __artis_assert(e)                         \
   {                                               \
     const bool assertpass = static_cast<bool>(e); \
@@ -105,7 +116,7 @@ inline void print_line_start() {
   if (outputstartofline) {
     const time_t now_time = time(nullptr);
     strftime(outputlinebuf, 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
-    output_file << outputlinebuf << " ";
+    output_file << outputlinebuf << ' ';
   }
 }
 
@@ -121,17 +132,37 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
   output_file.flush();
 }
 
+template <class... Args>
+inline auto logprintfmt(const std::format_string<Args...> fmt, Args &&...args) -> void {
+  print_line_start();
+  std::format_to_n(outputlinebuf, std::size(outputlinebuf), fmt, std::forward<Args>(args)...);
+
+  outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n');
+  output_file << outputlinebuf;
+  output_file.flush();
+}
+
+template <class... Args>
+inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...args) -> void {
+  print_line_start();
+  std::format_to_n(outputlinebuf, std::size(outputlinebuf), fmt, std::forward<Args>(args)...);
+
+  outputstartofline = true;
+  output_file << outputlinebuf << '\n';
+  output_file.flush();
+}
+
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
     const bool assertpass = static_cast<bool>(e);                                                                      \
     if (!assertpass) [[unlikely]] {                                                                                    \
       if (output_file) {                                                                                               \
         output_file << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
-                    << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                                          \
+                    << #e << "` in function " << __PRETTY_FUNCTION__ << '\n';                                          \
         output_file.flush();                                                                                           \
       }                                                                                                                \
       std::cerr << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `"     \
-                << #e << "` in function " << __PRETTY_FUNCTION__ << "\n" STACKTRACEIFSUPPORTED;                        \
+                << #e << "` in function " << __PRETTY_FUNCTION__ << '\n' STACKTRACEIFSUPPORTED;                        \
     }                                                                                                                  \
     assert(assertpass);                                                                                                \
   }
@@ -206,6 +237,11 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   return file;
 }
 
+[[nodiscard]] inline auto fopen_required_uniqueptr(const std::string &filename, const char *mode) {
+  return std::unique_ptr<FILE, int (*)(FILE *)>(fopen_required(filename, mode),
+                                                [](FILE *fp) -> int { return std::fclose(fp); });
+}
+
 [[nodiscard]] inline auto fstream_required(const std::string &filename, std::ios_base::openmode mode) -> std::fstream {
   const std::string datafolderfilename = "data/" + filename;
   if (mode == std::ios::in && std::filesystem::exists(datafolderfilename)) {
@@ -272,12 +308,10 @@ inline void check_already_running() {
       pid_t artispid_in = 0;
       std::string line;
       std::getline(pidfile, line);
-      std::istringstream ssline1(line);
-      ssline1 >> artispid_in;
+      std::istringstream(line) >> artispid_in;
       std::getline(pidfile, line);
-      std::istringstream ssline2(line);
       std::string working_directory;
-      ssline2 >> working_directory;
+      std::istringstream(line) >> working_directory;
       pidfile.close();
       if (is_pid_running(artispid_in) && std::filesystem::current_path().generic_string() == working_directory) {
         fprintf(stderr,
@@ -353,7 +387,7 @@ template <typename T>
 }
 
 template <typename T>
-constexpr void resize_exactly(std::vector<T> &vec, const ptrdiff_t size) {
+constexpr void resize_exactly(std::vector<T> &vec, const size_t size) {
   // just resizing can (only with libstdc++?) allocate a larger capacity than needed
   vec.reserve(size);
   vec.resize(size);

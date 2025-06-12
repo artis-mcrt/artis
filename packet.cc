@@ -28,7 +28,7 @@
 namespace {
 
 // Place pellet n with energy e0 in cell m
-void place_pellet(const double e0, const int cellindex, const int pktnumber, Packet &pkt) {
+void place_pellet(const double e0, const int cellindex, const int pktnumber, Packet& pkt) {
   // First choose a position for the pellet. In the cell.
   pkt.where = cellindex;
   pkt.number = pktnumber;  // record the packets number for debugging
@@ -163,7 +163,7 @@ void packet_init(std::span<Packet> pkt)
 }
 
 // write packets text file
-void write_packets(const char filename[], std::span<const Packet> pkt) {
+void write_packets(const std::string& filename, std::span<const Packet> pkt) {
   auto packets_file = std::fstream(filename, std::ios::out | std::ios::trunc);
   assert_always(packets_file.is_open());
   packets_file << "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf "
@@ -173,20 +173,20 @@ void write_packets(const char filename[], std::span<const Packet> pkt) {
                   "true_emission_velocity trueem_time pellet_nucindex pellet_decaytype\n";
 
   for (int i = 0; i < globals::npkts; i++) {
-    packets_file << pkt[i].number << " " << pkt[i].where << " " << static_cast<int>(pkt[i].type) << " ";
-    packets_file << pkt[i].pos[0] << " " << pkt[i].pos[1] << " " << pkt[i].pos[2] << " ";
-    packets_file << pkt[i].dir[0] << " " << pkt[i].dir[1] << " " << pkt[i].dir[2] << " ";
-    packets_file << pkt[i].tdecay << " ";
-    packets_file << pkt[i].e_cmf << " " << pkt[i].e_rf << " " << pkt[i].nu_cmf << " " << pkt[i].nu_rf << " ";
-    packets_file << static_cast<int>(pkt[i].escape_type) << " " << pkt[i].escape_time << " ";
-    packets_file << pkt[i].emissiontype << " " << pkt[i].trueemissiontype << " ";
-    packets_file << pkt[i].em_pos[0] << " " << pkt[i].em_pos[1] << " " << pkt[i].em_pos[2] << " "
-                 << pkt[i].absorptiontype << " " << pkt[i].absorptionfreq << " " << pkt[i].nscatterings << " "
-                 << pkt[i].em_time << " ";
-    packets_file << pkt[i].stokes[0] << " " << pkt[i].stokes[1] << " " << pkt[i].stokes[2] << " ";
-    packets_file << static_cast<int>(pkt[i].originated_from_particlenotgamma) << " " << pkt[i].trueemissionvelocity
-                 << " " << pkt[i].trueem_time << " " << pkt[i].pellet_nucindex << " " << pkt[i].pellet_decaytype;
-    packets_file << "\n";
+    packets_file << pkt[i].number << ' ' << pkt[i].where << ' ' << static_cast<int>(pkt[i].type) << ' ';
+    packets_file << pkt[i].pos[0] << ' ' << pkt[i].pos[1] << ' ' << pkt[i].pos[2] << ' ';
+    packets_file << pkt[i].dir[0] << ' ' << pkt[i].dir[1] << ' ' << pkt[i].dir[2] << ' ';
+    packets_file << pkt[i].tdecay << ' ';
+    packets_file << pkt[i].e_cmf << ' ' << pkt[i].e_rf << ' ' << pkt[i].nu_cmf << ' ' << pkt[i].nu_rf << ' ';
+    packets_file << static_cast<int>(pkt[i].escape_type) << ' ' << pkt[i].escape_time << ' ';
+    packets_file << pkt[i].emissiontype << ' ' << pkt[i].trueemissiontype << ' ';
+    packets_file << pkt[i].em_pos[0] << ' ' << pkt[i].em_pos[1] << ' ' << pkt[i].em_pos[2] << ' '
+                 << pkt[i].absorptiontype << ' ' << pkt[i].absorptionfreq << ' ' << pkt[i].nscatterings << ' '
+                 << pkt[i].em_time << ' ';
+    packets_file << pkt[i].stokes[0] << ' ' << pkt[i].stokes[1] << ' ' << pkt[i].stokes[2] << ' ';
+    packets_file << static_cast<int>(pkt[i].originated_from_particlenotgamma) << ' ' << pkt[i].trueemissionvelocity
+                 << ' ' << pkt[i].trueem_time << ' ' << pkt[i].pellet_nucindex << ' ' << pkt[i].pellet_decaytype;
+    packets_file << '\n';
   }
 }
 
@@ -196,11 +196,10 @@ void read_temp_packetsfile(const int timestep, const int my_rank, std::span<Pack
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Reading %s...", filename);
-  FILE *packets_file = fopen_required(filename, "rb");
-  assert_always(std::fread(pkt.data(), sizeof(Packet), globals::npkts, packets_file) ==
+  auto packets_file = fopen_required_uniqueptr(filename, "rb");
+  assert_always(std::fread(pkt.data(), sizeof(Packet), globals::npkts, packets_file.get()) ==
                 static_cast<size_t>(globals::npkts));
 
-  fclose(packets_file);
   printout("done\n");
 }
 
@@ -212,11 +211,11 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<co
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Verifying file %s...", filename);
-  FILE *packets_file = fopen_required(filename, "rb");
+  auto packets_file = fopen_required_uniqueptr(filename, "rb");
   Packet pkt_in;
   bool readback_passed = true;
   for (int n = 0; n < globals::npkts; n++) {
-    assert_always(std::fread(&pkt_in, sizeof(Packet), 1, packets_file) == 1);
+    assert_always(std::fread(&pkt_in, sizeof(Packet), 1, packets_file.get()) == 1);
     if (pkt_in != pkt[n]) {
       printout("failed on packet %d\n", n);
       printout(" compare number %d %d\n", pkt_in.number, pkt[n].number);
@@ -225,7 +224,6 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<co
       readback_passed = false;
     }
   }
-  fclose(packets_file);
   if (readback_passed) {
     printout("  verification passed\n");
   } else {
@@ -234,10 +232,9 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<co
   return readback_passed;
 }
 
-auto read_packets(const char filename[], std::span<Packet> packets) -> std::span<Packet> {
+auto read_packets(const std::string& filename, std::span<Packet> packets) -> std::span<Packet> {
   // read packets*.out text format file
-  std::fstream packets_file(filename, std::ios::in);
-  assert_always(packets_file.is_open());
+  auto packets_file = fstream_required(filename, std::ios::in);
 
   std::string line;
 

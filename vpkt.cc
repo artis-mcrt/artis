@@ -9,6 +9,7 @@
 #include <fstream>
 #include <ios>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include "artisoptions.h"
@@ -16,6 +17,7 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
+#include "input.h"
 #include "ltepop.h"
 #include "packet.h"
 #include "rpkt.h"
@@ -372,7 +374,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
   // -------------- final stokes vector ---------------
 
   if (VPKT_WRITE_CONTRIBS) {
-    vpkt_contrib_row << " " << t_arrive / DAY << " " << vpkt.nu_rf;
+    vpkt_contrib_row << ' ' << t_arrive / DAY << ' ' << vpkt.nu_rf;
   }
 
   for (int ind = 0; ind < Nspectra; ind++) {
@@ -389,7 +391,7 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     add_to_vspecpol(vpkt, obsdirindex, ind, t_arrive);
 
     if constexpr (VPKT_WRITE_CONTRIBS) {
-      vpkt_contrib_row << " " << vpkt.e_rf * prob;
+      vpkt_contrib_row << ' ' << vpkt.e_rf * prob;
     }
   }
 
@@ -420,8 +422,9 @@ void init_vspecpol() {
   }
 
   for (int m = 0; m < VMNUBINS; m++) {
-    lower_freq_vspec[m] = exp(log(VSPEC_NUMIN) + (m * (dlognu_vspec)));
-    delta_freq_vspec[m] = exp(log(VSPEC_NUMIN) + ((m + 1) * (dlognu_vspec))) - lower_freq_vspec[m];
+    lower_freq_vspec[m] = static_cast<float>(std::exp(log(VSPEC_NUMIN) + (m * (dlognu_vspec))));
+    delta_freq_vspec[m] =
+        static_cast<float>(std::exp(log(VSPEC_NUMIN) + ((m + 1) * (dlognu_vspec))) - lower_freq_vspec[m]);
   }
 
   // start by setting up the time and frequency bins.
@@ -429,9 +432,9 @@ void init_vspecpol() {
   // step sizes first.
   for (int n = 0; n < VMTBINS; n++) {
     for (int ind_comb = 0; ind_comb < indexmax; ind_comb++) {
-      vspecpol[n][ind_comb].lower_time = exp(log(VSPEC_TIMEMIN) + (n * (dlogt_vspec)));
-      vspecpol[n][ind_comb].delta_t =
-          exp(log(VSPEC_TIMEMIN) + ((n + 1) * (dlogt_vspec))) - vspecpol[n][ind_comb].lower_time;
+      vspecpol[n][ind_comb].lower_time = static_cast<float>(std::exp(log(VSPEC_TIMEMIN) + (n * (dlogt_vspec))));
+      vspecpol[n][ind_comb].delta_t = static_cast<float>(std::exp(log(VSPEC_TIMEMIN) + ((n + 1) * (dlogt_vspec))) -
+                                                         vspecpol[n][ind_comb].lower_time);
 
       for (auto &flux : vspecpol[n][ind_comb].flux) {
         flux.i = 0.;
@@ -483,47 +486,36 @@ void read_vspecpol(const int my_rank, const int nts) {
   snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
   printout("Reading %s\n", filename);
 
-  FILE *vspecpol_file = fopen_required(filename, "r");
-
-  float a{NAN};
-  float b{NAN};
-  float c{NAN};
+  auto vspecpol_file = fstream_required(filename, std::ios::in);
+  std::string line;
 
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
+    get_noncommentline(vspecpol_file, line);  // first line is the header of times
+
     // Initialise I,Q,U fluxes from temporary files
-    assert_always(fscanf(vspecpol_file, "%g ", &a) == 1);
-
-    for (int l = 0; l < 3; l++) {
-      for (int p = 0; p < VMTBINS; p++) {
-        assert_always(fscanf(vspecpol_file, "%g ", &b) == 1);
-      }
-    }
-
-    assert_always(fscanf(vspecpol_file, "\n") == 0);
-
     for (int j = 0; j < VMNUBINS; j++) {
-      assert_always(fscanf(vspecpol_file, "%g ", &c) == 1);
+      get_noncommentline(vspecpol_file, line);
+      auto ssline = std::stringstream(line);
+
+      float c{};
+      assert_always(ssline >> c);  // frequency bin center
 
       // Stokes I
       for (int p = 0; p < VMTBINS; p++) {
-        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux[j].i) == 1);
+        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].i);
       }
 
       // Stokes Q
       for (int p = 0; p < VMTBINS; p++) {
-        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux[j].q) == 1);
+        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].q);
       }
 
       // Stokes U
       for (int p = 0; p < VMTBINS; p++) {
-        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux[j].u) == 1);
+        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].u);
       }
-
-      assert_always(fscanf(vspecpol_file, "\n") == 0);
     }
   }
-
-  fclose(vspecpol_file);
 }
 
 void init_vpkt_grid() {
@@ -871,7 +863,7 @@ void init(const int nts, const int my_rank, const bool continued_from_saved) {
         }
       }
 
-      vpkt_contrib_file << "\n";
+      vpkt_contrib_file << '\n';
       vpkt_contrib_file.flush();
       vpkt_contrib_file.close();
     }
@@ -948,9 +940,9 @@ auto call_estimators(const Packet &pkt, const enum packet_type type_before_rpkt)
     }
   }
   if (VPKT_WRITE_CONTRIBS && any_dir_escaped) {
-    vpkt_contrib_file << pkt.emissiontype << " " << pkt.trueemissiontype << " " << pkt.absorptiontype << " "
+    vpkt_contrib_file << pkt.emissiontype << ' ' << pkt.trueemissiontype << ' ' << pkt.absorptiontype << ' '
                       << pkt.absorptionfreq;
-    vpkt_contrib_file << vpkt_contrib_row.rdbuf() << "\n";
+    vpkt_contrib_file << vpkt_contrib_row.rdbuf() << '\n';
     vpkt_contrib_file.flush();
   }
 }

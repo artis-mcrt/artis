@@ -38,7 +38,7 @@ namespace decay {
 
 namespace {
 
-const std::array<const std::string, 119> elsymbols{
+constexpr auto elsymbols = std::array<const std::string, 119>{
     "n",  "H",  "He", "Li", "Be", "B",  "C",  "N",  "O",  "F",  "Ne", "Na",  "Mg", "Al",  "Si", "P",   "S",
     "Cl", "Ar", "K",  "Ca", "Sc", "Ti", "V",  "Cr", "Mn", "Fe", "Co", "Ni",  "Cu", "Zn",  "Ga", "Ge",  "As",
     "Se", "Br", "Kr", "Rb", "Sr", "Y",  "Zr", "Nb", "Mo", "Tc", "Ru", "Rh",  "Pd", "Ag",  "Cd", "In",  "Sn",
@@ -160,7 +160,7 @@ MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
 // get the nuclide array index from the atomic number and mass number
 [[nodiscard]] auto get_nucindex_or_neg_one(const int z, const int a) -> int {
   assert_testmodeonly(get_num_nuclides() > 0);
-  const int num_nuclides = get_num_nuclides();
+  const auto num_nuclides = get_num_nuclides();
 
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     if (nuclides[nucindex].z == z && nuclides[nucindex].a == a) {
@@ -498,7 +498,7 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
 // numnuclides:        number of items in lambdas to use
 // lambdas:            array of 1/(mean lifetime) for nuc[0]..nuc[num_nuclides-1]  [seconds^-1]
 // useexpansionfactor: if true, return a modified 'abundance' at the end of the chain, with a weighting factor
-//                          accounting for photon energy loss from expansion since the decays occurred
+//                          accounting for adiabatic loss from expansion since the decays occurred
 //                          (This is needed to get the initial temperature)
 constexpr auto calculate_decaychain(const double firstinitabund, const std::vector<double> &lambdas,
                                     const int num_nuclides, const double timediff, const bool useexpansionfactor)
@@ -745,7 +745,7 @@ auto write_nuclides_list() {
   assert_always(nuclides_file.is_open());
   nuclides_file << "#nucindex Z A\n";
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
-    nuclides_file << nucindex << " " << get_nuc_z(nucindex) << " " << get_nuc_a(nucindex) << "\n";
+    nuclides_file << nucindex << ' ' << get_nuc_z(nucindex) << ' ' << get_nuc_a(nucindex) << '\n';
   }
 }
 
@@ -897,7 +897,6 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
 
   if (use_custom_nuclides) {
     auto fbetaminus = fstream_required("betaminusdecays.txt", std::ios::in);
-    assert_always(fbetaminus.is_open());
     std::string line;
     while (get_noncommentline(fbetaminus, line)) {
       // energies are average per beta decay
@@ -1033,7 +1032,7 @@ auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi) -> double {
 }
 
 void setup_decaypath_energy_per_mass() {
-  const int nonempty_npts_model = grid::get_nonempty_npts_model();
+  const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
   printout(
       "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies %.1f MB (node "
       "shared)...",
@@ -1049,7 +1048,7 @@ void setup_decaypath_energy_per_mass() {
   for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
     if (nonemptymgi % globals::node_nprocs == globals::rank_in_node) {
       const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-      for (ptrdiff_t decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
+      for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
         decaypath_energy_per_mass[(nonemptymgi * num_decaypaths) + decaypathindex] =
             get_endecay_per_ejectamass_between_times(mgi, decaypathindex, time_min_decay, globals::tmax);
       }
@@ -1208,9 +1207,10 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
     isomassfracsum += stable_init_massfrac;
     isomassfrac_on_nucmass_sum += stable_init_massfrac / globals::elements[element].initstablemeannucmass;
 
-    grid::set_elem_abundance(nonemptymgi, element, isomassfracsum);
+    grid::set_elem_abundance(nonemptymgi, element, static_cast<float>(isomassfracsum));
     if (isomassfrac_on_nucmass_sum > 0.) {
-      grid::set_element_meanweight(nonemptymgi, element, isomassfracsum / isomassfrac_on_nucmass_sum);
+      grid::set_element_meanweight(nonemptymgi, element,
+                                   static_cast<float>(isomassfracsum / isomassfrac_on_nucmass_sum));
     } else {
       // avoid a divide by zero
       grid::set_element_meanweight(nonemptymgi, element, globals::elements[element].initstablemeannucmass);
@@ -1218,12 +1218,14 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
   }
 
   // total number of electrons in grid cell which are possible targets for compton scattering of gamma rays
-  double nnetot = 0.;
-  const auto nelements = get_nelements();
-  for (int element = 0; element < nelements; element++) {
-    const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
-    nnetot += nnelement * get_atomicnumber(element);
-  }
+  const auto nnetot = [nonemptymgi]() {
+    double nnetot_sum = 0.;
+    const auto nelements = get_nelements();
+    for (int element = 0; element < nelements; element++) {
+      nnetot_sum += grid::get_elem_numberdens(nonemptymgi, element) * get_atomicnumber(element);
+    }
+    return static_cast<float>(nnetot_sum);
+  }();
   grid::set_nnetot(nonemptymgi, nnetot);
 
   // double initnucfracsum = 0.;

@@ -19,6 +19,7 @@
 #include <functional>
 #include <ios>
 #include <iterator>
+#include <limits>
 #include <span>
 #include <sstream>
 #include <string>
@@ -156,7 +157,8 @@ void read_phixs_data_table(
 
   assert_always(tmpallphixs.size() % globals::NPHIXSPOINTS == 0);
   const auto tmpphixsstart = tmpallphixs.size();
-  globals::alllevels.phixsstart[lowerionlower_uniquelevelindex] = tmpphixsstart / globals::NPHIXSPOINTS;
+  globals::alllevels.phixsstart[lowerionlower_uniquelevelindex] =
+      static_cast<int>(tmpphixsstart / globals::NPHIXSPOINTS);
   tmpallphixs.resize(tmpallphixs.size() + globals::NPHIXSPOINTS);
 
   const auto levelphixstable = std::span{tmpallphixs}.subspan(tmpphixsstart, globals::NPHIXSPOINTS);
@@ -184,7 +186,7 @@ void read_phixs_data_table(
     const double nu_max = nugrid_in.back();
 
     // Now interpolate these cross-sections
-    levelphixstable[0] = phixs_in[0];
+    levelphixstable[0] = static_cast<float>(phixs_in[0]);
 
     gsl_interp_accel *acc = gsl_interp_accel_alloc();
     gsl_spline *spline = gsl_spline_alloc(gsl_interp_linear, nphixspoints_inputtable);
@@ -192,9 +194,9 @@ void read_phixs_data_table(
     for (int i = 1; i < globals::NPHIXSPOINTS; i++) {
       const double nu = nu_edge * (1. + i * globals::NPHIXSNUINCREMENT);
       if (nu > nu_max) {
-        levelphixstable[i] = phixs_in[nphixspoints_inputtable - 1] * pow(nu_max / nu, 3);
+        levelphixstable[i] = static_cast<float>(phixs_in[nphixspoints_inputtable - 1] * pow(nu_max / nu, 3));
       } else {
-        levelphixstable[i] = gsl_spline_eval(spline, nu, acc);
+        levelphixstable[i] = static_cast<float>(gsl_spline_eval(spline, nu, acc));
       }
     }
     gsl_spline_free(spline);
@@ -207,7 +209,7 @@ void read_phixs_data_table(
 
       // the photoionisation cross-sections in the database are given in Mbarn = 1e6 * 1e-28m^2
       // to convert to cgs units multiply by 1e-18
-      levelphixstable[i] = phixs * 1e-18;
+      levelphixstable[i] = static_cast<float>(phixs * 1e-18);
     }
   }
 
@@ -239,7 +241,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float> &tmpallphi
                      std::vector<PhotoionTarget> &tmpallphixstargets) {
   size_t mem_usage_phixs = 0;
 
-  printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
+  printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version].c_str());
 
   auto phixsfile = fstream_required(phixsdata_filenames[phixs_file_version], std::ios::in);
   std::string phixsline;
@@ -477,7 +479,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
   for (int pass = 0; pass < 2; pass++) {
     lineindex = lineindex_initial;
     if (pass == 1) {
-      int alltransindex = temp_alltranslist_size;
+      ptrdiff_t alltransindex = temp_alltranslist_size;
       temp_alltranslist_size += totupdowntrans;
       if (globals::rank_in_node == 0) {
         resize_exactly(temp_alltranslist, temp_alltranslist_size);
@@ -485,13 +487,14 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         temp_linelist.reserve(temp_alltranslist_size);
       }
       for (int level = 0; level < nlevelsmax; level++) {
-        ion_levels[level].alltrans_startdown = alltransindex;
+        ion_levels[level].alltrans_startdown = static_cast<int>(alltransindex);
         alltransindex += ion_levels[level].ndowntrans;
         alltransindex += ion_levels[level].nuptrans;
 
         ion_levels[level].ndowntrans = 0;
         ion_levels[level].nuptrans = 0;
       }
+      assert_always(alltransindex < std::numeric_limits<int>::max());
     }
 
     std::ranges::fill(iondowntranstmplineindicies, -99);
@@ -531,7 +534,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
         if (pass == 1 && globals::rank_in_node == 0) {
           const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
-          const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A;
+          const auto f_ul =
+              static_cast<float>(g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A);
           assert_always(std::isfinite(f_ul));
 
           temp_linelist.push_back({
@@ -584,7 +588,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         }
 
         const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
-        const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A;
+        const auto f_ul =
+            static_cast<float>(g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A);
 
         auto &downtransition =
             temp_alltranslist[ion_levels[level].alltrans_startdown + ion_levels[level].ndowntrans - 1];
@@ -636,10 +641,10 @@ auto calculate_nlevels_groundterm(const int element, const int ion) -> int {
   // there should be no duplicate stat weights within the ground term
   // limit the ground multiplet to nnnnlowest levels below the first duplicated stat weight
   for (int level_a = 1; level_a < nlevels_groundterm; level_a++) {
-    const float g_a = stat_weight(element, ion, level_a);
+    const auto g_a = stat_weight(element, ion, level_a);
 
     for (int level_b = 0; level_b < level_a; level_b++) {
-      const float g_b = stat_weight(element, ion, level_b);
+      const auto g_b = stat_weight(element, ion, level_b);
       if (fabs(g_a - g_b) < 0.4) {
         // level_a is outside the ground term because of duplicate stat weight
         // highest ground level index is level_a - 1, so nlevels_groundterm == level_a
@@ -732,7 +737,8 @@ void setup_phixs_list() {
   assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
   std::ranges::SORT_OR_STABLE_SORT(globals::groundcont, std::ranges::less{}, &GroundPhotoion::nu_edge);
 
-  auto *nonconstallcont = new FullPhotoionTransition[globals::nbfcontinua];
+  auto allcont = std::span<FullPhotoionTransition>{new FullPhotoionTransition[globals::nbfcontinua],
+                                                   static_cast<size_t>(globals::nbfcontinua)};
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
            globals::nbfcontinua * (sizeof(FullPhotoionTransition)) / 1024. / 1024.);
   int allcontindex = 0;
@@ -751,25 +757,25 @@ void setup_phixs_list() {
       const int nlevels = get_nlevels_ionising(element, ion);
       for (int level = 0; level < nlevels; level++) {
         const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-        const int nphixstargets = get_nphixstargets(element, ion, level);
+        const int nphixstargets = get_nphixstargets(uniquelevelindex);
 
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          const double nu_edge = get_phixs_threshold(element, ion, level, phixstargetindex) / H;
+          const double nu_edge = get_phixs_threshold(uniquelevelindex, phixstargetindex) / H;
 
           assert_always(allcontindex < globals::nbfcontinua);
-          assert_always(nonconstallcont != nullptr);
-          nonconstallcont[allcontindex].nu_edge = nu_edge;
-          nonconstallcont[allcontindex].element = element;
-          nonconstallcont[allcontindex].ion = ion;
-          nonconstallcont[allcontindex].level = level;
-          nonconstallcont[allcontindex].phixstargetindex = phixstargetindex;
-          nonconstallcont[allcontindex].probability = get_phixsprobability(element, ion, level, phixstargetindex);
-          nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+          assert_always(allcontindex < std::ssize(allcont));
+          allcont[allcontindex].nu_edge = nu_edge;
+          allcont[allcontindex].element = element;
+          allcont[allcontindex].ion = ion;
+          allcont[allcontindex].level = level;
+          allcont[allcontindex].phixstargetindex = phixstargetindex;
+          allcont[allcontindex].probability = get_phixsprobability(uniquelevelindex, phixstargetindex);
+          allcont[allcontindex].upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
 
           if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-            const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
+            const double nu_edge_target0 = get_phixs_threshold(uniquelevelindex, 0) / H;
             const auto groundcontindex = search_groundphixslist(nu_edge_target0, element, ion, level);
-            nonconstallcont[allcontindex].index_in_groundphixslist = groundcontindex;
+            allcont[allcontindex].index_in_groundphixslist = groundcontindex;
 
             globals::alllevels.closestgroundlevelcont[uniquelevelindex] = groundcontindex;
           }
@@ -787,12 +793,11 @@ void setup_phixs_list() {
   globals::bfestimcount = 0;
   if (nbfcontinua > 0) {
     // indices above were temporary only. continuum index should be to the sorted list
-    std::ranges::SORT_OR_STABLE_SORT(std::span(nonconstallcont, nbfcontinua), std::ranges::less{},
-                                     &FullPhotoionTransition::nu_edge);
+    std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &FullPhotoionTransition::nu_edge);
 
     globals::bfestim_nu_edge.clear();
     for (int i = 0; i < nbfcontinua; i++) {
-      auto &cont = nonconstallcont[i];
+      auto &cont = allcont[i];
       if (DETAILED_BF_ESTIMATORS_ON &&
           LEVEL_HAS_BFEST(get_atomicnumber(cont.element), get_ionstage(cont.element, cont.ion), cont.level)) {
         cont.bfestimindex = globals::bfestimcount;
@@ -802,28 +807,28 @@ void setup_phixs_list() {
         cont.bfestimindex = -1;
       }
     }
-
-    globals::allcont_nu_edge.resize(nbfcontinua, 0.);
     globals::bfestim_nu_edge.shrink_to_fit();
+
+    auto allcont_nu_edge = MPI_shared_malloc_span<double>(nbfcontinua);
     assert_always(globals::bfestimcount == std::ssize(globals::bfestim_nu_edge));
 
     for (int i = 0; i < nbfcontinua; i++) {
-      globals::allcont_nu_edge[i] = nonconstallcont[i].nu_edge;
+      allcont_nu_edge[i] = allcont[i].nu_edge;
     }
+    globals::allcont_nu_edge = allcont_nu_edge;
 
     setup_photoion_luts();
 
     for (int i = 0; i < nbfcontinua; i++) {
-      const int element = nonconstallcont[i].element;
-      const int ion = nonconstallcont[i].ion;
-      const int level = nonconstallcont[i].level;
-      nonconstallcont[i].photoion_xs = get_phixs_table(element, ion, level);
-      assert_always(nonconstallcont[i].photoion_xs != nullptr);
+      const int element = allcont[i].element;
+      const int ion = allcont[i].ion;
+      const int level = allcont[i].level;
+      allcont[i].photoion_xs = get_phixs_table(element, ion, level);
+      assert_always(allcont[i].photoion_xs != nullptr);
     }
   }
   printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
-  globals::allcont = nonconstallcont;
-  nonconstallcont = nullptr;
+  globals::allcont = allcont;
 }
 
 void read_phixs_data() {
@@ -865,7 +870,7 @@ void read_phixs_data() {
       for (int level = 0; level < nlevels; level++) {
         const int nphixstargets = get_nphixstargets(element, ion, level);
         const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-        globals::alllevels.cont_index[uniquelevelindex] = (nphixstargets > 0) ? cont_index : -1;
+        globals::alllevels.bflist_start[uniquelevelindex] = (nphixstargets > 0) ? cont_index : -1;
         cont_index += nphixstargets;
         if (nphixstargets > 0) {
           nbftables++;
@@ -880,9 +885,9 @@ void read_phixs_data() {
     assert_always((nbftables * globals::NPHIXSPOINTS) == std::ssize(tmpallphixs));
 
     // copy the photoionisation tables into one contiguous block of memory
-    globals::allphixs = MPI_shared_malloc_span<float>(tmpallphixs.size());
-    auto allphixstargets_levelindex = MPI_shared_malloc_span<int>(tmpallphixstargets.size());
-    auto allphixstargets_probability = MPI_shared_malloc_span<double>(tmpallphixstargets.size());
+    globals::allphixs = MPI_shared_malloc_span<float>(std::ssize(tmpallphixs));
+    auto allphixstargets_levelindex = MPI_shared_malloc_span<int>(std::ssize(tmpallphixstargets));
+    auto allphixstargets_probability = MPI_shared_malloc_span<double>(std::ssize(tmpallphixstargets));
 
     if (globals::rank_in_node == 0) {
       std::copy_n(tmpallphixs.cbegin(), tmpallphixs.size(), globals::allphixs.data());
@@ -994,7 +999,7 @@ void read_atomicdata_files() {
     // write this element's data to memory
     globals::elements[element].anumber = Z;
     globals::elements[element].nions = nions;
-    globals::elements[element].initstablemeannucmass = mass_amu * MH;
+    globals::elements[element].initstablemeannucmass = static_cast<float>(mass_amu * MH);
     globals::elements[element].uniqueionindexstart = uniqueionindex;
 
     // Initialize the elements ionlist
@@ -1199,31 +1204,37 @@ void read_atomicdata_files() {
   }
 
   // create a shared level list and copy data across, freeing the local copy
-  globals::alllevels.alltrans_startdown = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels.ndowntrans = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels.nuptrans = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels.epsilon = MPI_shared_malloc_span<double>(temp_alllevels.size());
-  globals::alllevels.statweight = MPI_shared_malloc_span<float>(temp_alllevels.size());
-  globals::alllevels.closestgroundlevelcont = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels.phixsstart = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels.nphixstargets = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels.phixstargetstart = MPI_shared_malloc_span<int>(temp_alllevels.size());
-  globals::alllevels.cont_index = MPI_shared_malloc_span<int>(temp_alllevels.size());
+  const ptrdiff_t nlevels = std::ssize(temp_alllevels);
+  auto alllevels_alltrans_startdown = MPI_shared_malloc_span<int>(nlevels);
+  auto alllevels_ndowntrans = MPI_shared_malloc_span<int>(nlevels);
+  auto alllevels_nuptrans = MPI_shared_malloc_span<int>(nlevels);
+  auto alllevels_epsilon = MPI_shared_malloc_span<double>(nlevels);
+  auto alllevels_statweight = MPI_shared_malloc_span<float>(nlevels);
+  globals::alllevels.closestgroundlevelcont = MPI_shared_malloc_span<int>(nlevels);
+  globals::alllevels.phixsstart = MPI_shared_malloc_span<int>(nlevels);
+  globals::alllevels.nphixstargets = MPI_shared_malloc_span<int>(nlevels);
+  globals::alllevels.phixstargetstart = MPI_shared_malloc_span<int>(nlevels);
+  globals::alllevels.bflist_start = MPI_shared_malloc_span<int>(nlevels);
   if (globals::rank_in_node == 0) {
     std::ranges::fill(globals::alllevels.phixsstart, -1);
     std::ranges::fill(globals::alllevels.nphixstargets, 0);
     std::ranges::fill(globals::alllevels.phixstargetstart, -1);
-    std::ranges::fill(globals::alllevels.cont_index, -1);
+    std::ranges::fill(globals::alllevels.bflist_start, -1);
     std::ranges::fill(globals::alllevels.closestgroundlevelcont, -1);
     for (size_t i = 0; i < temp_alllevels.size(); i++) {
-      globals::alllevels.alltrans_startdown[i] = temp_alllevels[i].alltrans_startdown;
-      globals::alllevels.ndowntrans[i] = temp_alllevels[i].ndowntrans;
-      globals::alllevels.nuptrans[i] = temp_alllevels[i].nuptrans;
-      globals::alllevels.epsilon[i] = temp_alllevels[i].epsilon;
-      globals::alllevels.statweight[i] = temp_alllevels[i].stat_weight;
+      alllevels_alltrans_startdown[i] = temp_alllevels[i].alltrans_startdown;
+      alllevels_ndowntrans[i] = temp_alllevels[i].ndowntrans;
+      alllevels_nuptrans[i] = temp_alllevels[i].nuptrans;
+      alllevels_epsilon[i] = temp_alllevels[i].epsilon;
+      alllevels_statweight[i] = temp_alllevels[i].stat_weight;
     }
   }
   MPI_Barrier(globals::mpi_comm_node);
+  globals::alllevels.alltrans_startdown = alllevels_alltrans_startdown;
+  globals::alllevels.ndowntrans = alllevels_ndowntrans;
+  globals::alllevels.nuptrans = alllevels_nuptrans;
+  globals::alllevels.epsilon = alllevels_epsilon;
+  globals::alllevels.statweight = alllevels_statweight;
   temp_alllevels.clear();
   temp_alllevels.shrink_to_fit();
 
@@ -1233,39 +1244,45 @@ void read_atomicdata_files() {
   // create a shared all transitions list and then copy data across, freeing the local copy
   MPI_Barrier(globals::mpi_comm_node);
 
-  globals::alltrans.lineindex = MPI_shared_malloc_span<int>(totupdowntrans);
-  globals::alltrans.targetlevelindex = MPI_shared_malloc_span<int>(totupdowntrans);
-  globals::alltrans.einstein_A = MPI_shared_malloc_span<float>(totupdowntrans);
-  globals::alltrans.coll_str = MPI_shared_malloc_span<float>(totupdowntrans);
-  globals::alltrans.osc_strength = MPI_shared_malloc_span<float>(totupdowntrans);
-  globals::alltrans.forbidden = MPI_shared_malloc_span<bool>(totupdowntrans);
+  auto alltrans_lineindex = MPI_shared_malloc_span<int>(totupdowntrans);
+  auto alltrans_targetlevelindex = MPI_shared_malloc_span<int>(totupdowntrans);
+  auto alltrans_einstein_A = MPI_shared_malloc_span<float>(totupdowntrans);
+  auto alltrans_coll_str = MPI_shared_malloc_span<float>(totupdowntrans);
+  auto alltrans_osc_strength = MPI_shared_malloc_span<float>(totupdowntrans);
+  auto alltrans_forbidden = MPI_shared_malloc_span<bool>(totupdowntrans);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_alltranslist) == totupdowntrans);
     for (int t = 0; t < totupdowntrans; t++) {
-      globals::alltrans.lineindex[t] = temp_alltranslist[t].lineindex;
-      globals::alltrans.targetlevelindex[t] = temp_alltranslist[t].targetlevelindex;
-      globals::alltrans.einstein_A[t] = temp_alltranslist[t].einstein_A;
-      globals::alltrans.coll_str[t] = temp_alltranslist[t].coll_str;
-      globals::alltrans.osc_strength[t] = temp_alltranslist[t].osc_strength;
-      globals::alltrans.forbidden[t] = temp_alltranslist[t].forbidden;
+      alltrans_lineindex[t] = temp_alltranslist[t].lineindex;
+      alltrans_targetlevelindex[t] = temp_alltranslist[t].targetlevelindex;
+      alltrans_einstein_A[t] = temp_alltranslist[t].einstein_A;
+      alltrans_coll_str[t] = temp_alltranslist[t].coll_str;
+      alltrans_osc_strength[t] = temp_alltranslist[t].osc_strength;
+      alltrans_forbidden[t] = temp_alltranslist[t].forbidden;
     }
   }
   temp_alltranslist.clear();
   temp_alltranslist.shrink_to_fit();
 
+  globals::alltrans.targetlevelindex = alltrans_targetlevelindex;
+  globals::alltrans.einstein_A = alltrans_einstein_A;
+  globals::alltrans.coll_str = alltrans_coll_str;
+  globals::alltrans.osc_strength = alltrans_osc_strength;
+  globals::alltrans.forbidden = alltrans_forbidden;
+
   // create a linelist shared on node and then copy data across, freeing the local copy
-  auto nonconstlinelist = MPI_shared_malloc_span<TransitionLine>(globals::nlines);
+  auto linelist = MPI_shared_malloc_span<TransitionLine>(globals::nlines);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_linelist) == globals::nlines);
-    std::ranges::copy(temp_linelist, nonconstlinelist.begin());
+    std::ranges::copy(temp_linelist, linelist.begin());
   }
   temp_linelist.clear();
   temp_linelist.shrink_to_fit();
 
   MPI_Barrier(MPI_COMM_WORLD);
-  globals::linelist = nonconstlinelist;
+  globals::linelist = linelist;
   printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
            globals::nlines * sizeof(TransitionLine) / 1024. / 1024);
 
@@ -1300,7 +1317,7 @@ void read_atomicdata_files() {
       }
     }
     assert_always(downtransid != -1);
-    globals::alltrans.lineindex[downtransid] = lineindex;
+    alltrans_lineindex[downtransid] = lineindex;
 
     const auto lower_uniquelevelindex = get_uniquelevelindex(element, ion, lowerlevel);
     const auto alltrans_startup = get_alltrans_startup(lower_uniquelevelindex);
@@ -1313,8 +1330,9 @@ void read_atomicdata_files() {
       }
     }
     assert_always(uptransid != -1);
-    globals::alltrans.lineindex[uptransid] = lineindex;
+    alltrans_lineindex[uptransid] = lineindex;
   }
+  globals::alltrans.lineindex = alltrans_lineindex;
 
   printout("  took %lds\n", std::time(nullptr) - time_start_establish_linelist_connections);
   MPI_Barrier(MPI_COMM_WORLD);
@@ -1450,11 +1468,6 @@ void setup_cellcache() {
 void write_bflist_file() {
   resize_exactly(globals::bflist, globals::nbfcontinua);
 
-  FILE *bflist_file{};
-  if (globals::my_rank == 0) {
-    bflist_file = fopen_required("bflist.out", "w");
-    fprintf(bflist_file, "%d\n", globals::nbfcontinua);
-  }
   int i = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -1468,10 +1481,6 @@ void write_bflist_file() {
           globals::bflist[i].ionindex = ion;
           globals::bflist[i].levelindex = level;
           globals::bflist[i].phixstargetindex = phixstargetindex;
-
-          if (globals::my_rank == 0) {
-            fprintf(bflist_file, "%d %d %d %d %d\n", i, element, ion, level, upperionlevel);
-          }
 
           const int et = -1 - i;
 
@@ -1487,8 +1496,18 @@ void write_bflist_file() {
     }
   }
   assert_always(i == globals::nbfcontinua);
+
   if (globals::my_rank == 0) {
-    fclose(bflist_file);
+    auto bflist_file = fstream_required("bflist.out", std::ios::out | std::ios::trunc);
+    bflist_file << globals::nbfcontinua << '\n';
+    for (i = 0; i < globals::nbfcontinua; i++) {
+      const int element = globals::bflist[i].elementindex;
+      const int ion = globals::bflist[i].ionindex;
+      const int level = globals::bflist[i].levelindex;
+      const int phixstargetindex = globals::bflist[i].phixstargetindex;
+      const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+      bflist_file << i << ' ' << element << ' ' << ion << ' ' << level << ' ' << upperionlevel << '\n';
+    }
   }
 }
 
@@ -2059,7 +2078,7 @@ void write_timestep_file() {
   assert_always(timestepfile.is_open());
   timestepfile << "#timestep tstart_days tmid_days twidth_days\n";
   for (int n = 0; n < globals::ntimesteps; n++) {
-    timestepfile << n << " " << globals::timesteps[n].start / DAY << " " << globals::timesteps[n].mid / DAY << " "
-                 << globals::timesteps[n].width / DAY << "\n";
+    timestepfile << n << ' ' << globals::timesteps[n].start / DAY << ' ' << globals::timesteps[n].mid / DAY << ' '
+                 << globals::timesteps[n].width / DAY << '\n';
   }
 }

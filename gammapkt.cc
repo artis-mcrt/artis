@@ -9,10 +9,13 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <ios>
 #include <limits>
 #include <numeric>
 #include <span>
+#include <sstream>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <vector>
 
@@ -22,6 +25,7 @@
 #include "decay.h"
 #include "globals.h"
 #include "grid.h"
+#include "input.h"
 #include "packet.h"
 #include "random.h"
 #include "sn3d.h"
@@ -54,28 +58,31 @@ struct NucGammaLine {
   double energy;  // in erg
 };
 
-void read_gamma_spectrum(const int nucindex, const char filename[50])
+void read_gamma_spectrum(const int nucindex, const std::string &filename)
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
 {
   printout("reading gamma spectrum for Z=%d A=%d from %s...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
-           filename);
+           filename.c_str());
 
-  FILE *filein = fopen_required(filename, "r");
+  auto gammafile = fstream_required(filename, std::ios::in);
+  std::string line;
+  get_noncommentline(gammafile, line);
+  std::istringstream ssline(line);
   int nlines = 0;
-  assert_always(fscanf(filein, "%d", &nlines) == 1);
+  ssline >> nlines;
 
   gamma_spectra[nucindex].resize(nlines, {});
 
   double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++) {
+    get_noncommentline(gammafile, line);
     double en_mev = 0.;
     double prob = 0.;
-    assert_always(fscanf(filein, "%lg %lg", &en_mev, &prob) == 2);
+    assert_always(std::istringstream(line) >> en_mev >> prob);
     gamma_spectra[nucindex][n].energy = en_mev * MEV;
     gamma_spectra[nucindex][n].probability = prob;
     E_gamma_avg += en_mev * MEV * prob;
   }
-  fclose(filein);
 
   decay::set_nucdecayenergygamma(nucindex, E_gamma_avg);
 
@@ -158,7 +165,7 @@ void init_gamma_linelist() {
 
   // Now do the sorting.
 
-  std::ptrdiff_t total_lines = 0;
+  ptrdiff_t total_lines = 0;
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     total_lines += std::ssize(gamma_spectra[nucindex]);
   }
@@ -168,9 +175,9 @@ void init_gamma_linelist() {
   allnuc_gamma_line_list.reserve(total_lines);
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-    for (std::ptrdiff_t j = 0; j < std::ssize(gamma_spectra[nucindex]); j++) {
+    for (int j = 0; j < std::ssize(gamma_spectra[nucindex]); j++) {
       allnuc_gamma_line_list.push_back(
-          {.nucindex = nucindex, .nucgammaindex = static_cast<int>(j), .energy = gamma_spectra[nucindex][j].energy});
+          {.nucindex = nucindex, .nucgammaindex = j, .energy = gamma_spectra[nucindex][j].energy});
     }
   }
 
@@ -183,14 +190,14 @@ void init_gamma_linelist() {
   assert_always(gammalinelist.is_open());
   gammalinelist << "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability\n";
 
-  for (std::ptrdiff_t i = 0; i < total_lines; i++) {
+  for (ptrdiff_t i = 0; i < total_lines; i++) {
     const int nucindex = allnuc_gamma_line_list[i].nucindex;
     const int index = allnuc_gamma_line_list[i].nucgammaindex;
-    gammalinelist << static_cast<int>(i) << " " << allnuc_gamma_line_list[i].nucindex << " "
-                  << decay::get_nuc_z(allnuc_gamma_line_list[i].nucindex) << " "
-                  << decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex) << " "
-                  << allnuc_gamma_line_list[i].nucgammaindex << " " << gamma_spectra[nucindex][index].energy / MEV
-                  << " " << gamma_spectra[nucindex][index].probability << "\n";
+    gammalinelist << static_cast<int>(i) << ' ' << allnuc_gamma_line_list[i].nucindex << ' '
+                  << decay::get_nuc_z(allnuc_gamma_line_list[i].nucindex) << ' '
+                  << decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex) << ' '
+                  << allnuc_gamma_line_list[i].nucgammaindex << ' ' << gamma_spectra[nucindex][index].energy / MEV
+                  << ' ' << gamma_spectra[nucindex][index].probability << '\n';
   }
 }
 
@@ -448,7 +455,6 @@ void compton_scatter(Packet &pkt) {
 
 // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the observer reference frame
 auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
-  double chi_cmf{NAN};
   // Start by working out the x-section in the co-moving frame.
 
   const int mgi = grid::get_propcell_modelgridindex(pkt.where);
@@ -460,8 +466,8 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
 
   const double rho = grid::get_rho(nonemptymgi);
 
+  double chi_cmf{0.};
   if (globals::gamma_kappagrey < 0) {
-    chi_cmf = 0.;
     if constexpr (!USE_XCOM_GAMMAPHOTOION) {
       // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
 

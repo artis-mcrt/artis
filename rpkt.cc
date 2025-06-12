@@ -34,8 +34,7 @@ namespace {
 constexpr float expopac_lambdamin = 534.5;
 constexpr float expopac_lambdamax = 35000.;
 constexpr float expopac_deltalambda = 35.5;
-constexpr auto expopac_nbins =
-    static_cast<std::ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
+constexpr auto expopac_nbins = static_cast<ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
 // kappa in cm^2/g for each bin of each non-empty cell
 std::span<float> expansionopacities{};
@@ -197,11 +196,10 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
   assert_always(false);
 }
 
-auto get_event_expansion_opacity(
-    const int nonemptymgi, const Packet &pkt,
-    const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
-    MacroAtomState &mastate, const double tau_rnd, const double nu_cmf_abort, const double d_nu_on_d_l,
-    const double doppler) -> std::tuple<double, int, bool> {
+auto get_event_expansion_opacity(const int nonemptymgi, const Packet &pkt,
+                                 const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, MacroAtomState &mastate,
+                                 const double tau_rnd, const double nu_cmf_abort, const double d_nu_on_d_l,
+                                 const double doppler) -> std::tuple<double, int, bool> {
   auto pos = pkt.pos;
   const auto nu_rf = pkt.nu_rf;
   auto nu_cmf = pkt.nu_cmf;
@@ -306,7 +304,6 @@ void electron_scatter_rpkt(Packet &pkt) {
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
   // Whitlock 2008)
   double M = 0.;
-  double mu = 0.;
   double phisc = 0.;
 
   if constexpr (DIPOLE) {
@@ -317,7 +314,7 @@ void electron_scatter_rpkt(Packet &pkt) {
       const double zrand = rng_uniform();
 
       M = 2 * zrand - 1;
-      mu = pow(M, 2.);
+      const double mu = pow(M, 2.);
       phisc = 2 * PI * rng_uniform();
 
       // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
@@ -336,7 +333,6 @@ void electron_scatter_rpkt(Packet &pkt) {
     const double zrand = rng_uniform();
 
     M = 2. * zrand - 1;
-    mu = pow(M, 2.);
     phisc = 2 * PI * rng_uniform();
   }
 
@@ -372,7 +368,7 @@ void electron_scatter_rpkt(Packet &pkt) {
 
   // Scattering
 
-  mu = dot(old_dir_cmf, new_dir_cmf);
+  const double mu = dot(old_dir_cmf, new_dir_cmf);
 
   const double Inew = 0.75 * ((mu * mu + 1.0) + Qold * (mu * mu - 1.0));
   const double Qnew = (0.75 * ((mu * mu - 1.0) + Qold * (mu * mu + 1.0))) / Inew;
@@ -446,7 +442,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     // Electron scattering does not modify the last emission flag
     // but it updates the last emission position
     pkt.em_pos = pkt.pos;
-    pkt.em_time = pkt.prop_time;
+    pkt.em_time = static_cast<float>(pkt.prop_time);
 
   } else if (chi_rnd < chi_escatter + chi_ff) {
     // ff: transform to k-pkt
@@ -548,7 +544,7 @@ void rpkt_event_thickcell(Packet &pkt) {
   emit_rpkt(pkt);
   // Electron scattering does not modify the last emission flag but it updates the last emission position
   pkt.em_pos = pkt.pos;
-  pkt.em_time = pkt.prop_time;
+  pkt.em_time = static_cast<float>(pkt.prop_time);
 }
 
 // Update the volume estimators J and nuJ
@@ -797,19 +793,19 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   // break the list into nu >= nu_edge and the remainder (nu < nu_edge)
 
   int i = 0;
-  const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.cbegin());
+  const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.begin());
 
-  const int allcontbegin = std::lower_bound(allcont_nu_edge.data(), allcont_nu_edge.data() + allcontend, nu,
+  const int allcontbegin = std::lower_bound(allcont_nu_edge.begin(), allcont_nu_edge.begin() + allcontend, nu,
                                             [](const double nu_edge, const double nu_cmf) {
                                               return nu_edge * last_phixs_nuovernuedge < nu_cmf;
                                             }) -
-                           allcont_nu_edge.data();
+                           allcont_nu_edge.begin();
 
   assert_testmodeonly(allcontbegin >= 0);
   assert_testmodeonly(allcontend <= globals::nbfcontinua);
   assert_testmodeonly(allcontbegin <= allcontend);
 
-  const auto *const allcont = globals::allcont;
+  const auto allcont = globals::allcont;
 
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     phixslist.allcontbegin = allcontbegin;
@@ -820,9 +816,9 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 
     phixslist.bfestimbegin =
         std::lower_bound(
-            globals::bfestim_nu_edge.data(), globals::bfestim_nu_edge.data() + phixslist.bfestimend, nu,
+            globals::bfestim_nu_edge.cbegin(), globals::bfestim_nu_edge.cbegin() + phixslist.bfestimend, nu,
             [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }) -
-        globals::bfestim_nu_edge.data();
+        globals::bfestim_nu_edge.cbegin();
   }
 
   for (i = allcontbegin; i < allcontend; i++) {
@@ -1042,13 +1038,12 @@ void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node
 }
 
 void calculate_expansion_opacities(const int nonemptymgi) {
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const auto rho = grid::get_rho(nonemptymgi);
 
   const auto sys_time_start_calc = std::time(nullptr);
   const auto temperature = grid::get_TR(nonemptymgi);
 
-  printout("calculating expansion opacities for cell %d...", modelgridindex);
+  printout("calculating expansion opacities for cell %d...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
@@ -1061,22 +1056,16 @@ void calculate_expansion_opacities(const int nonemptymgi) {
 
   for (ptrdiff_t binindex = 0; binindex < expopac_nbins; binindex++) {
     double bin_linesum = 0.;
-
-    const auto nu_upper = get_expopac_bin_nu_upper(binindex);
-
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
-    const auto nu_mid = (nu_upper + nu_lower) / 2.;
-
-    const auto delta_nu = nu_upper - nu_lower;
 
     while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= nu_lower) {
-      const float tau_line = get_tau_sobolev(nonemptymgi, lineindex, t_mid);
+      const auto tau_line = static_cast<float>(get_tau_sobolev(nonemptymgi, lineindex, t_mid));
       const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
       bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
       lineindex++;
     }
 
-    const float bin_kappa_bb = 1. / (CLIGHT * t_mid * rho) * bin_linesum;
+    const auto bin_kappa_bb = static_cast<float>(1. / (CLIGHT * t_mid * rho) * bin_linesum);
     assert_always(std::isfinite(bin_kappa_bb));
     expansionopacities[(nonemptymgi * expopac_nbins) + binindex] = bin_kappa_bb;
 
@@ -1084,11 +1073,15 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       // thread_local Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
       // calculate_chi_rpkt_cont(nu_mid, chi_rpkt_cont, nullptr, nonemptymgi);
       // const auto bin_kappa_cont = chi_rpkt_cont.total / rho;
+
+      const auto nu_upper = get_expopac_bin_nu_upper(binindex);
+      const auto nu_mid = (nu_upper + nu_lower) / 2.;
       const auto bin_kappa_cont = calculate_chi_ffheating(nonemptymgi, nu_mid) / rho;
 
       const auto planck_val = radfield::dbb(nu_mid, temperature, 1);
       const auto kappa_planck = (bin_kappa_bb + bin_kappa_cont) * planck_val;
 
+      const auto delta_nu = nu_upper - nu_lower;
       kappa_planck_cumulative += kappa_planck * delta_nu;
 
       expansionopacity_planck_cumulative[(nonemptymgi * expopac_nbins) + binindex] = kappa_planck_cumulative;
