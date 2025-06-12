@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <span>
+#include <string>
 
 #if !USE_SIMPSON_INTEGRATOR
 #include <gsl/gsl_integration.h>
@@ -51,9 +52,9 @@ struct GSLIntegralParasGammaCorr {
   int nonemptymgi;
 };
 
-char adatafile_hash[33];
-char compositionfile_hash[33];
-std::array<char[33], 3> phixsfile_hash;
+std::string adatafile_hash;
+std::string compositionfile_hash;
+std::array<std::string, 3> phixsfile_hash;
 
 auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 // Try to read in the precalculated rate coefficients from file
@@ -67,10 +68,10 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
     return false;
   }
   printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in);
-  if (strcmp(adatafile_hash, adatafile_hash_in) == 0) {
+  if (strcmp(adatafile_hash.c_str(), adatafile_hash_in) == 0) {
     printout("(pass)\n");
   } else {
-    printout("MISMATCH: MD5 adata.txt = %s\n", adatafile_hash);
+    printout("MISMATCH: MD5 adata.txt = %s\n", adatafile_hash.c_str());
     return false;
   }
 
@@ -79,10 +80,10 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
     return false;
   }
   printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in);
-  if (strcmp(compositionfile_hash, compositionfile_hash_in) == 0) {
+  if (strcmp(compositionfile_hash.c_str(), compositionfile_hash_in) == 0) {
     printout("(pass)\n");
   } else {
-    printout("\nMISMATCH: MD5 compositiondata.txt = %s\n", compositionfile_hash);
+    printout("\nMISMATCH: MD5 compositiondata.txt = %s\n", compositionfile_hash.c_str());
     return false;
   }
 
@@ -92,11 +93,11 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
       if (fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) != 1) {
         return false;
       }
-      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver], phixsfile_hash_in);
-      if (strcmp(phixsfile_hash[phixsver], phixsfile_hash_in) == 0) {
+      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver].c_str(), phixsfile_hash_in);
+      if (strcmp(phixsfile_hash[phixsver].data(), phixsfile_hash_in) == 0) {
         printout("(pass)\n");
       } else {
-        printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[phixsver], phixsfile_hash[phixsver]);
+        printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[phixsver].c_str(), phixsfile_hash[phixsver].data());
         return false;
       }
     }
@@ -221,11 +222,11 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 
 void write_ratecoeff_dat() {
   FILE *ratecoeff_file = fopen_required("ratecoeff.dat", "w");
-  fprintf(ratecoeff_file, "%32s\n", adatafile_hash);
-  fprintf(ratecoeff_file, "%32s\n", compositionfile_hash);
+  fprintf(ratecoeff_file, "%32s\n", adatafile_hash.c_str());
+  fprintf(ratecoeff_file, "%32s\n", compositionfile_hash.c_str());
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
-      fprintf(ratecoeff_file, "%32s\n", phixsfile_hash[phixsver]);
+      fprintf(ratecoeff_file, "%32s\n", phixsfile_hash[phixsver].data());
     }
   }
   fprintf(ratecoeff_file, "%la %la %d %d %d %la\n", MINTEMP, MAXTEMP, TABLESIZE, globals::nlines, globals::nbfcontinua,
@@ -385,7 +386,7 @@ void precalculate_rate_coefficient_integrals() {
             const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
             double error{NAN};
             int status = 0;
-            const float T_e = MINTEMP * exp(iter * T_step_log);
+            const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
 
             const double sfac = calculate_sahafact(element, ion, level, upperlevel, T_e, E_threshold);
 
@@ -491,13 +492,13 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
 
     auto *phixstable = get_phixs_table(element, ion, level);
     for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
-      phixstable[n] *= factor;
+      phixstable[n] = static_cast<float>(phixstable[n] * factor);
     }
 
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       for (int iter = 0; iter < TABLESIZE; iter++) {
         const auto bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
-        spontrecombcoeffs[bflutindex] *= factor;
+        spontrecombcoeffs[bflutindex] = spontrecombcoeffs[bflutindex] * factor;
 
         if constexpr (USE_LUT_PHOTOION) {
           corrphotoioncoeffs[bflutindex] *= factor;
@@ -524,8 +525,8 @@ void read_recombrate_file() {
 
   printout("Reading recombination rate file (recombrates.txt)...\n");
 
-  const double Te_estimate = RECOMBCALIBRATION_T_ELEC;
-  const double log_Te_estimate = log10(Te_estimate);
+  const float Te_estimate = RECOMBCALIBRATION_T_ELEC;
+  const double log_Te_estimate = log10(RECOMBCALIBRATION_T_ELEC);
 
   printout("Calibrating recombination rates for a temperature of %.1f K\n", Te_estimate);
 
@@ -653,7 +654,7 @@ void read_recombrate_file() {
 void precalculate_ion_alpha_sp() {
   globals::ion_alpha_sp.resize(get_includedions() * TABLESIZE);
   for (int iter = 0; iter < TABLESIZE; iter++) {
-    const float T_e = MINTEMP * exp(iter * T_step_log);
+    const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element) - 1;
       for (int ion = 0; ion < nions; ion++) {
@@ -668,7 +669,7 @@ void precalculate_ion_alpha_sp() {
             zeta += zeta_level;
           }
         }
-        globals::ion_alpha_sp[(uniqueionindex * TABLESIZE) + iter] = zeta;
+        globals::ion_alpha_sp[(uniqueionindex * TABLESIZE) + iter] = static_cast<float>(zeta);
       }
     }
   }
@@ -1014,7 +1015,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
   double alpha = 0.;
   if (lowerion < get_nions(element) - 1) {
     // this gets divided and cancelled out in the radiative case anyway
-    const double nne = (nonemptymgi >= 0) ? grid::get_nne(nonemptymgi) : 1.;
+    const auto nne = (nonemptymgi >= 0) ? grid::get_nne(nonemptymgi) : 1.F;
 
     double nnupperion = 0;
     int upper_nlevels = 0;
@@ -1111,11 +1112,11 @@ void ratecoefficients_init() {
   // Determine the temperature grids gridsize
   T_step_log = (log(MAXTEMP) - log(MINTEMP)) / (TABLESIZE - 1.);
 
-  md5_file("adata.txt", adatafile_hash);
-  md5_file("compositiondata.txt", compositionfile_hash);
+  adatafile_hash = md5_file("adata.txt");
+  compositionfile_hash = md5_file("compositiondata.txt");
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
-      md5_file(phixsdata_filenames[phixsver], phixsfile_hash[phixsver]);
+      phixsfile_hash[phixsver] = md5_file(phixsdata_filenames[phixsver]);
     }
   }
 

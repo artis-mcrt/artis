@@ -1,55 +1,66 @@
-/*********************************************************************
-* Filename:   md5.c
-* Author:     Brad Conte (brad AT bradconte.com)
-* Copyright:
-* Disclaimer: This code is presented "as is" without any guarantees.
-* Details:    Implementation of the MD5 hashing algorithm.
-                                  Algorithm specification can be found here:
-                                   * http://tools.ietf.org/html/rfc1321
-                                  This implementation uses little endian byte order.
-*********************************************************************/
+// Based on the public domain MD5 implementation by Brad Conte
+// https://github.com/B-Con/crypto-algorithms/blob/master/md5.c
 
-/*************************** HEADER FILES ***************************/
 #include "md5.h"
 
+#include <array>
+#include <bit>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 
 #include "sn3d.h"
 
-/****************************** MACROS ******************************/
-#define ROTLEFT(a, b) (((a) << (b)) | ((a) >> (32 - (b))))
+namespace {
+constexpr int MD5_BLOCK_SIZE = 16;  // MD5 outputs a 16 byte digest
 
-#define F(x, y, z) (((x) & (y)) | (~(x) & (z)))
-#define G(x, y, z) (((x) & (z)) | ((y) & ~(z)))
-#define _H(x, y, z) ((x) ^ (y) ^ (z))
-#define I(x, y, z) ((y) ^ ((x) | ~(z)))
+using BYTE = unsigned char;  // 8-bit byte
+using WORD = std::uint32_t;  // 32-bit word, change to "long" for 16-bit machines
 
-#define FF(a, b, c, d, m, s, t)    \
-  {                                \
-    (a) += F(b, c, d) + (m) + (t); \
-    (a) = (b) + ROTLEFT(a, s);     \
-  }
-#define GG(a, b, c, d, m, s, t)    \
-  {                                \
-    (a) += G(b, c, d) + (m) + (t); \
-    (a) = (b) + ROTLEFT(a, s);     \
-  }
-#define HH(a, b, c, d, m, s, t)     \
-  {                                 \
-    (a) += _H(b, c, d) + (m) + (t); \
-    (a) = (b) + ROTLEFT(a, s);      \
-  }
-#define II(a, b, c, d, m, s, t)    \
-  {                                \
-    (a) += I(b, c, d) + (m) + (t); \
-    (a) = (b) + ROTLEFT(a, s);     \
-  }
+using MD5_CTX = struct {
+  BYTE data[64];
+  WORD datalen;
+  std::uint64_t bitlen;
+  WORD state[4];
+};
+
+constexpr auto F(const WORD x, const WORD y, const WORD z) -> WORD { return (x & y) | (~x & z); }
+constexpr auto G(const WORD x, const WORD y, const WORD z) -> WORD { return (x & z) | (y & ~z); }
+constexpr auto H(const WORD x, const WORD y, const WORD z) -> WORD { return x ^ y ^ z; }
+constexpr auto I(const WORD x, const WORD y, const WORD z) -> WORD { return y ^ (x | ~z); }
+
+constexpr auto ff_func(WORD a, const WORD b, const WORD c, const WORD d, const WORD m, const int s, const WORD t)
+    -> WORD {
+  a += F(b, c, d) + m + t;
+  a = b + std::rotl(a, s);
+  return a;
+}
+
+constexpr auto gg_func(WORD a, const WORD b, const WORD c, const WORD d, const WORD m, const int s, const WORD t)
+    -> WORD {
+  a += G(b, c, d) + m + t;
+  a = b + std::rotl(a, s);
+  return a;
+}
+
+constexpr auto hh_func(WORD a, const WORD b, const WORD c, const WORD d, const WORD m, const int s, const WORD t)
+    -> WORD {
+  a += H(b, c, d) + m + t;
+  a = b + std::rotl(a, s);
+  return a;
+}
+
+constexpr auto ii_func(WORD a, const WORD b, const WORD c, const WORD d, const WORD m, const int s, const WORD t)
+    -> WORD {
+  a += I(b, c, d) + m + t;
+  a = b + std::rotl(a, s);
+  return a;
+}
 
 /*********************** FUNCTION DEFINITIONS ***********************/
-namespace {
-void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
+constexpr void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
   WORD a = 0;
   WORD b = 0;
   WORD c = 0;
@@ -70,73 +81,73 @@ void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
   c = ctx->state[2];
   d = ctx->state[3];
 
-  FF(a, b, c, d, m[0], 7, 0xd76aa478);
-  FF(d, a, b, c, m[1], 12, 0xe8c7b756);
-  FF(c, d, a, b, m[2], 17, 0x242070db);
-  FF(b, c, d, a, m[3], 22, 0xc1bdceee);
-  FF(a, b, c, d, m[4], 7, 0xf57c0faf);
-  FF(d, a, b, c, m[5], 12, 0x4787c62a);
-  FF(c, d, a, b, m[6], 17, 0xa8304613);
-  FF(b, c, d, a, m[7], 22, 0xfd469501);
-  FF(a, b, c, d, m[8], 7, 0x698098d8);
-  FF(d, a, b, c, m[9], 12, 0x8b44f7af);
-  FF(c, d, a, b, m[10], 17, 0xffff5bb1);
-  FF(b, c, d, a, m[11], 22, 0x895cd7be);
-  FF(a, b, c, d, m[12], 7, 0x6b901122);
-  FF(d, a, b, c, m[13], 12, 0xfd987193);
-  FF(c, d, a, b, m[14], 17, 0xa679438e);
-  FF(b, c, d, a, m[15], 22, 0x49b40821);
+  a = ff_func(a, b, c, d, m[0], 7, 0xd76aa478);
+  d = ff_func(d, a, b, c, m[1], 12, 0xe8c7b756);
+  c = ff_func(c, d, a, b, m[2], 17, 0x242070db);
+  b = ff_func(b, c, d, a, m[3], 22, 0xc1bdceee);
+  a = ff_func(a, b, c, d, m[4], 7, 0xf57c0faf);
+  d = ff_func(d, a, b, c, m[5], 12, 0x4787c62a);
+  c = ff_func(c, d, a, b, m[6], 17, 0xa8304613);
+  b = ff_func(b, c, d, a, m[7], 22, 0xfd469501);
+  a = ff_func(a, b, c, d, m[8], 7, 0x698098d8);
+  d = ff_func(d, a, b, c, m[9], 12, 0x8b44f7af);
+  c = ff_func(c, d, a, b, m[10], 17, 0xffff5bb1);
+  b = ff_func(b, c, d, a, m[11], 22, 0x895cd7be);
+  a = ff_func(a, b, c, d, m[12], 7, 0x6b901122);
+  d = ff_func(d, a, b, c, m[13], 12, 0xfd987193);
+  c = ff_func(c, d, a, b, m[14], 17, 0xa679438e);
+  b = ff_func(b, c, d, a, m[15], 22, 0x49b40821);
 
-  GG(a, b, c, d, m[1], 5, 0xf61e2562);
-  GG(d, a, b, c, m[6], 9, 0xc040b340);
-  GG(c, d, a, b, m[11], 14, 0x265e5a51);
-  GG(b, c, d, a, m[0], 20, 0xe9b6c7aa);
-  GG(a, b, c, d, m[5], 5, 0xd62f105d);
-  GG(d, a, b, c, m[10], 9, 0x02441453);
-  GG(c, d, a, b, m[15], 14, 0xd8a1e681);
-  GG(b, c, d, a, m[4], 20, 0xe7d3fbc8);
-  GG(a, b, c, d, m[9], 5, 0x21e1cde6);
-  GG(d, a, b, c, m[14], 9, 0xc33707d6);
-  GG(c, d, a, b, m[3], 14, 0xf4d50d87);
-  GG(b, c, d, a, m[8], 20, 0x455a14ed);
-  GG(a, b, c, d, m[13], 5, 0xa9e3e905);
-  GG(d, a, b, c, m[2], 9, 0xfcefa3f8);
-  GG(c, d, a, b, m[7], 14, 0x676f02d9);
-  GG(b, c, d, a, m[12], 20, 0x8d2a4c8a);
+  a = gg_func(a, b, c, d, m[1], 5, 0xf61e2562);
+  d = gg_func(d, a, b, c, m[6], 9, 0xc040b340);
+  c = gg_func(c, d, a, b, m[11], 14, 0x265e5a51);
+  b = gg_func(b, c, d, a, m[0], 20, 0xe9b6c7aa);
+  a = gg_func(a, b, c, d, m[5], 5, 0xd62f105d);
+  d = gg_func(d, a, b, c, m[10], 9, 0x02441453);
+  c = gg_func(c, d, a, b, m[15], 14, 0xd8a1e681);
+  b = gg_func(b, c, d, a, m[4], 20, 0xe7d3fbc8);
+  a = gg_func(a, b, c, d, m[9], 5, 0x21e1cde6);
+  d = gg_func(d, a, b, c, m[14], 9, 0xc33707d6);
+  c = gg_func(c, d, a, b, m[3], 14, 0xf4d50d87);
+  b = gg_func(b, c, d, a, m[8], 20, 0x455a14ed);
+  a = gg_func(a, b, c, d, m[13], 5, 0xa9e3e905);
+  d = gg_func(d, a, b, c, m[2], 9, 0xfcefa3f8);
+  c = gg_func(c, d, a, b, m[7], 14, 0x676f02d9);
+  b = gg_func(b, c, d, a, m[12], 20, 0x8d2a4c8a);
 
-  HH(a, b, c, d, m[5], 4, 0xfffa3942);
-  HH(d, a, b, c, m[8], 11, 0x8771f681);
-  HH(c, d, a, b, m[11], 16, 0x6d9d6122);
-  HH(b, c, d, a, m[14], 23, 0xfde5380c);
-  HH(a, b, c, d, m[1], 4, 0xa4beea44);
-  HH(d, a, b, c, m[4], 11, 0x4bdecfa9);
-  HH(c, d, a, b, m[7], 16, 0xf6bb4b60);
-  HH(b, c, d, a, m[10], 23, 0xbebfbc70);
-  HH(a, b, c, d, m[13], 4, 0x289b7ec6);
-  HH(d, a, b, c, m[0], 11, 0xeaa127fa);
-  HH(c, d, a, b, m[3], 16, 0xd4ef3085);
-  HH(b, c, d, a, m[6], 23, 0x04881d05);
-  HH(a, b, c, d, m[9], 4, 0xd9d4d039);
-  HH(d, a, b, c, m[12], 11, 0xe6db99e5);
-  HH(c, d, a, b, m[15], 16, 0x1fa27cf8);
-  HH(b, c, d, a, m[2], 23, 0xc4ac5665);
+  a = hh_func(a, b, c, d, m[5], 4, 0xfffa3942);
+  d = hh_func(d, a, b, c, m[8], 11, 0x8771f681);
+  c = hh_func(c, d, a, b, m[11], 16, 0x6d9d6122);
+  b = hh_func(b, c, d, a, m[14], 23, 0xfde5380c);
+  a = hh_func(a, b, c, d, m[1], 4, 0xa4beea44);
+  d = hh_func(d, a, b, c, m[4], 11, 0x4bdecfa9);
+  c = hh_func(c, d, a, b, m[7], 16, 0xf6bb4b60);
+  b = hh_func(b, c, d, a, m[10], 23, 0xbebfbc70);
+  a = hh_func(a, b, c, d, m[13], 4, 0x289b7ec6);
+  d = hh_func(d, a, b, c, m[0], 11, 0xeaa127fa);
+  c = hh_func(c, d, a, b, m[3], 16, 0xd4ef3085);
+  b = hh_func(b, c, d, a, m[6], 23, 0x04881d05);
+  a = hh_func(a, b, c, d, m[9], 4, 0xd9d4d039);
+  d = hh_func(d, a, b, c, m[12], 11, 0xe6db99e5);
+  c = hh_func(c, d, a, b, m[15], 16, 0x1fa27cf8);
+  b = hh_func(b, c, d, a, m[2], 23, 0xc4ac5665);
 
-  II(a, b, c, d, m[0], 6, 0xf4292244);
-  II(d, a, b, c, m[7], 10, 0x432aff97);
-  II(c, d, a, b, m[14], 15, 0xab9423a7);
-  II(b, c, d, a, m[5], 21, 0xfc93a039);
-  II(a, b, c, d, m[12], 6, 0x655b59c3);
-  II(d, a, b, c, m[3], 10, 0x8f0ccc92);
-  II(c, d, a, b, m[10], 15, 0xffeff47d);
-  II(b, c, d, a, m[1], 21, 0x85845dd1);
-  II(a, b, c, d, m[8], 6, 0x6fa87e4f);
-  II(d, a, b, c, m[15], 10, 0xfe2ce6e0);
-  II(c, d, a, b, m[6], 15, 0xa3014314);
-  II(b, c, d, a, m[13], 21, 0x4e0811a1);
-  II(a, b, c, d, m[4], 6, 0xf7537e82);
-  II(d, a, b, c, m[11], 10, 0xbd3af235);
-  II(c, d, a, b, m[2], 15, 0x2ad7d2bb);
-  II(b, c, d, a, m[9], 21, 0xeb86d391);
+  a = ii_func(a, b, c, d, m[0], 6, 0xf4292244);
+  d = ii_func(d, a, b, c, m[7], 10, 0x432aff97);
+  c = ii_func(c, d, a, b, m[14], 15, 0xab9423a7);
+  b = ii_func(b, c, d, a, m[5], 21, 0xfc93a039);
+  a = ii_func(a, b, c, d, m[12], 6, 0x655b59c3);
+  d = ii_func(d, a, b, c, m[3], 10, 0x8f0ccc92);
+  c = ii_func(c, d, a, b, m[10], 15, 0xffeff47d);
+  b = ii_func(b, c, d, a, m[1], 21, 0x85845dd1);
+  a = ii_func(a, b, c, d, m[8], 6, 0x6fa87e4f);
+  d = ii_func(d, a, b, c, m[15], 10, 0xfe2ce6e0);
+  c = ii_func(c, d, a, b, m[6], 15, 0xa3014314);
+  b = ii_func(b, c, d, a, m[13], 21, 0x4e0811a1);
+  a = ii_func(a, b, c, d, m[4], 6, 0xf7537e82);
+  d = ii_func(d, a, b, c, m[11], 10, 0xbd3af235);
+  c = ii_func(c, d, a, b, m[2], 15, 0x2ad7d2bb);
+  b = ii_func(b, c, d, a, m[9], 21, 0xeb86d391);
 
   ctx->state[0] += a;
   ctx->state[1] += b;
@@ -144,9 +155,7 @@ void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
   ctx->state[3] += d;
 }
 
-}  // anonymous namespace
-
-void md5_init(MD5_CTX *ctx) {
+constexpr void md5_init(MD5_CTX *ctx) {
   ctx->datalen = 0;
   ctx->bitlen = 0;
   ctx->state[0] = 0x67452301;
@@ -155,7 +164,7 @@ void md5_init(MD5_CTX *ctx) {
   ctx->state[3] = 0x10325476;
 }
 
-void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
+constexpr void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
   size_t i = 0;
 
   for (i = 0; i < len; ++i) {
@@ -169,7 +178,7 @@ void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
   }
 }
 
-void md5_final(MD5_CTX *ctx, BYTE hash[]) {
+constexpr void md5_final(MD5_CTX *ctx, BYTE hash[MD5_BLOCK_SIZE]) {
   size_t i = 0;
 
   i = ctx->datalen;
@@ -211,22 +220,24 @@ void md5_final(MD5_CTX *ctx, BYTE hash[]) {
   }
 }
 
+}  // anonymous namespace
+
 // added by Luke Shingles
-void md5_file(const char filename[], char hashout[(2 * MD5_BLOCK_SIZE) + 1]) {
+auto md5_file(const std::string &filename) -> std::string {
   MD5_CTX ctx;
   md5_init(&ctx);
 
-  FILE *infile = fopen(filename, "r");
+  FILE *infile = fopen(filename.c_str(), "r");
 
   assert_always(infile != nullptr);
 
-  BYTE buffer[1024];
+  std::array<BYTE, 1024> buffer{};
 
   size_t numbytes = 1;
   while (numbytes != 0 && feof(infile) == 0) {
-    numbytes = fread(buffer, sizeof(char), 1024, infile);
+    numbytes = fread(buffer.data(), sizeof(BYTE), buffer.size(), infile);
     assert_always(ferror(infile) == 0);
-    md5_update(&ctx, buffer, numbytes);
+    md5_update(&ctx, buffer.data(), numbytes);
   }
 
   fclose(infile);
@@ -234,9 +245,28 @@ void md5_file(const char filename[], char hashout[(2 * MD5_BLOCK_SIZE) + 1]) {
   BYTE hashbytes[MD5_BLOCK_SIZE];
   md5_final(&ctx, hashbytes);
 
+  std::string hashout(2 * MD5_BLOCK_SIZE, '0');  // Initialize with zeros
   for (int j = 0; j < MD5_BLOCK_SIZE; j++) {
     snprintf(&hashout[2 * j], (2 * MD5_BLOCK_SIZE) + 1 - (2 * j), "%02x", hashbytes[j]);
   }
 
-  hashout[2 * MD5_BLOCK_SIZE] = '\0';
+  return hashout;
+}
+
+void md5_test() {
+  MD5_CTX ctx;
+  md5_init(&ctx);
+
+  constexpr BYTE buffer[] = "md5 test string\n";
+
+  md5_update(&ctx, buffer, sizeof(buffer) - 1);
+
+  BYTE hashbytes[MD5_BLOCK_SIZE];
+  md5_final(&ctx, hashbytes);
+
+  std::string hashout(2 * MD5_BLOCK_SIZE, '0');  // Initialize with zeros
+  for (int j = 0; j < MD5_BLOCK_SIZE; j++) {
+    snprintf(&hashout[2 * j], (2 * MD5_BLOCK_SIZE) + 1 - (2 * j), "%02x", hashbytes[j]);
+  }
+  assert_always(hashout == "4b0cff9625b0501c7b9ccc6569113ddf");
 }

@@ -2,9 +2,6 @@
 InheritParentConfig: true
 Checks: [
         '*',
-        -*static-assert*,
-        -*avoid-c-arrays,
-        -cert-dcl03-c,
         -abseil-*,
         -android-*,
         -altera-*,
@@ -13,19 +10,18 @@ Checks: [
         -bugprone-exception-escape,
         -bugprone-implicit-widening-of-multiplication-result,
         -bugprone-multi-level-implicit-pointer-conversion,
-        -bugprone-narrowing-conversions,
         -boost-use-ranges,
-        -llvmlibc-*,
+        -cert-dcl03-c,
         -cert-dcl50-cpp,
         -cert-err33-c,
         -cert-err34-c,
         -cert-err58-cpp,
         -clang-analyzer-deadcode.DeadStores,
-        -clang-diagnostic-unneeded-internal-declaration,
-        -clang-diagnostic-unused-function,
+        -cppcoreguidelines-avoid-c-arrays,
         -cppcoreguidelines-avoid-magic-numbers,
         -cppcoreguidelines-avoid-non-const-global-variables,
         -cppcoreguidelines-macro-usage,
+        -cppcoreguidelines-narrowing-conversions,  # alias for bugprone-narrowing-conversions
         -cppcoreguidelines-owning-memory,
         -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
         -cppcoreguidelines-pro-bounds-constant-array-index,
@@ -35,41 +31,45 @@ Checks: [
         -fuchsia-*,
         -google-objc*,
         -google-readability-todo,
+        -hicpp-avoid-c-arrays,
         -hicpp-vararg,
         -hicpp-no-array-decay,
-        -hicpp-signed-bitwise,
+        -llvmlibc-*,
         -misc-no-recursion,
         -misc-non-private-member-variables-in-classes,
-        -modernize-use-ranges, # things like sort and for_each don't support parallel execution policies
+        -modernize-avoid-c-arrays,
+        -modernize-use-ranges, # things like sort and for_each don't support parallel execution policies yet (C++26 will?)
         -modernize-use-std-print, # replace printout macro with a function when we want to autofix to use std::format gcc >=13
         -performance-enum-size,
         -readability-identifier-length,
         -readability-function-cognitive-complexity,
         -readability-magic-numbers,
     ]
-WarningsAsErrors: '*'
+WarningsAsErrors: '*,-clang-diagnostic-unused-function'
 FormatStyle: file
 ExtraArgs: [-std=c++23]
 CheckOptions:
-    - key: modernize-deprecated-headers.CheckHeaderFile
+    - key: bugprone-reserved-identifier.AllowedIdentifiers
+      value: '__host__;__device__'
+    - key: bugprone-narrowing-conversions.IgnoreConversionFromTypes
+      value: size_t; size_type
+    - key: bugprone-narrowing-conversions.WarnOnEquivalentBitWidth
+      value: 'false'
+    - key: bugprone-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
       value: 'true'
+    - key: bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
+      value: 'false'
     - key: cppcoreguidelines-init-variables.IncludeStyle
       value: google
     - key: cppcoreguidelines-init-variables.MathHeader
       value: <cmath>
+    - key: hicpp-signed-bitwise.IgnorePositiveIntegerLiterals
+      value: 'true'
+    - key: modernize-deprecated-headers.CheckHeaderFile
+      value: 'true'
     - key: modernize-use-std-print.PrintfLikeFunctions
       value: printf; absl::PrintF; printout
     - key: modernize-use-std-print.FprintfLikeFunctions
       value: fprintf; absl::FPrintF
-    - key: cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes
-      value: size_t;ptrdiff_t;size_type;difference_type;time_t;MPI_Aint
-    - key: cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
-      value: 'false'
-    - key: cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
-      value: 'false'
-    - key: cppcoreguidelines-pro-type-member-init.IgnoreArrays
-      value: 'true'
     - key: readability-identifier-naming.NamespaceCase
       value: lower_case
-    - key: bugprone-reserved-identifier.AllowedIdentifiers
-      value: '__host__;__device__'

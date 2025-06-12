@@ -5,9 +5,11 @@
 ##SBATCH --ntasks 1920
 ##SBATCH --ntasks 3072
 #SBATCH --time=70:00:00
-#SBATCH --partition=cosma8-milan
+#SBATCH --partition=cosma8-rome
 #SBATCH --account=dp033
 #SBATCH --exclusive
+#SBATCH -o slurm-%J.out
+#SBATCH -e slurm-%J.out
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=f.callan@qub.ac.uk
 ##SBATCH --mail-user=luke.shingles@gmail.com

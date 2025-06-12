@@ -226,7 +226,7 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
   return nn;
 }
 
-auto calculate_partfunct(const int element, const int ion, const int nonemptymgi) -> double
+auto calculate_partfunct(const int element, const int ion, const int nonemptymgi) -> float
 // Calculates the partition function for ion=ion of element=element in
 // cell modelgridindex
 {
@@ -257,8 +257,9 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
     U += nn;
   }
   U *= stat_weight(element, ion, 0);
+  const auto U_float = static_cast<float>(U);
 
-  if (!std::isfinite(U)) {
+  if (!std::isfinite(U_float)) {
     printout("element %d ion %d\n", element, ion);
     printout("modelgridindex %d\n", grid::get_mgi_of_nonemptymgi(nonemptymgi));
     printout("nlevels %d\n", nlevels);
@@ -269,10 +270,10 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   if (initial) {
     // put back the zero, just in case it matters for something
     grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex] =
-        pop_store;
+        static_cast<float>(pop_store);
   }
 
-  return U;
+  return U_float;
 }
 
 void set_calculated_nne(const int nonemptymgi) {
@@ -281,7 +282,7 @@ void set_calculated_nne(const int nonemptymgi) {
     nne += get_element_nne_contrib(nonemptymgi, element);
   }
 
-  grid::set_nne(nonemptymgi, std::max(MINPOP, nne));
+  grid::set_nne(nonemptymgi, static_cast<float>(std::max(MINPOP, nne)));
 }
 
 // Special case of only neutral ions, set nne to some finite value so that packets are not lost in kpkts
@@ -302,9 +303,9 @@ void set_groundlevelpops_neutral(const int nonemptymgi) {
       } else {
         nnion = 0.;
       }
-      const double groundpop =
-          (nnion * stat_weight(element, ion, 0) /
-           grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex]);
+      const auto groundpop = static_cast<float>(
+          nnion * stat_weight(element, ion, 0) /
+          grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex]);
 
       grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex] =
           groundpop;
@@ -367,7 +368,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 
   gsl_root_fsolver_free(solver);
 
-  return std::max(MINPOP, nne_solution);
+  return static_cast<float>(std::max(MINPOP, nne_solution));
 }
 
 }  // anonymous namespace
@@ -608,8 +609,9 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
       nnion = MINPOP;
     }
 
-    const double groundpop = nnion * stat_weight(element, ion, 0) /
-                             grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex];
+    const auto groundpop =
+        static_cast<float>(nnion * stat_weight(element, ion, 0) /
+                           grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex]);
 
     if (!std::isfinite(groundpop)) {
       printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");

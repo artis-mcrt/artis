@@ -34,7 +34,7 @@ struct ModelGridCell {
 
 inline std::span<ModelGridCell> modelgrid{};
 
-inline int ngrid{0};
+inline ptrdiff_t ngrid{0};
 
 inline double mtot_input{0.};
 
@@ -61,8 +61,8 @@ void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion)
 [[nodiscard]] auto get_nne(int nonemptymgi) -> float;
 [[nodiscard]] auto get_nnetot(int nonemptymgi) -> float;
 [[nodiscard]] auto get_ffegrp(int modelgridindex) -> float;
-[[nodiscard]] auto get_initial_radial_pos_sum(int modelgridindex) -> float;
-void set_elem_abundance(int nonemptymgi, int element, float newabundance);
+[[nodiscard]] auto get_modelcell_mean_radial_pos(int modelgridindex, double tratmid) -> double;
+void set_elem_abundance(ptrdiff_t nonemptymgi, int element, float newabundance);
 [[nodiscard]] auto get_elem_numberdens(int nonemptymgi, int element) -> double;
 [[nodiscard]] auto get_initelectronfrac(int modelgridindex) -> double;
 [[nodiscard]] auto get_initenergyq(int modelgridindex) -> double;
@@ -88,7 +88,7 @@ void set_element_meanweight(int nonemptymgi, int element, float meanweight);
 [[nodiscard]] auto get_electronfrac(int nonemptymgi) -> double;
 [[nodiscard]] auto get_numpropcells(int modelgridindex) -> int;
 [[nodiscard]] auto get_nonemptymgi_of_mgi(int mgi) -> int;
-[[nodiscard]] auto get_mgi_of_nonemptymgi(int nonemptymgi) -> int;
+[[nodiscard]] auto get_mgi_of_nonemptymgi(ptrdiff_t nonemptymgi) -> int;
 [[nodiscard]] auto get_model_type() -> GridType;
 void set_model_type(GridType model_type_value);
 [[nodiscard]] auto get_npts_model() -> int;
@@ -119,7 +119,7 @@ inline void change_cell(Packet &pkt, const int snext)
     // Then the packet is exiting the grid. We need to record
     // where and at what time it leaves the grid.
     pkt.escape_type = pkt.type;
-    pkt.escape_time = pkt.prop_time;
+    pkt.escape_time = static_cast<float>(pkt.prop_time);
     pkt.type = TYPE_ESCAPE;
     atomicadd(globals::nesc, 1);
 
@@ -131,9 +131,8 @@ inline auto get_ejecta_kinetic_energy() {
   double E_kin = 0.;
   for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-    const int assoc_cells = get_numpropcells(mgi);
     double const M_cell = get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
-    const double radial_pos = get_initial_radial_pos_sum(mgi) / assoc_cells;
+    const double radial_pos = get_modelcell_mean_radial_pos(mgi, 1.);
     E_kin += 0.5 * M_cell * std::pow(radial_pos / globals::tmin, 2);
   }
 

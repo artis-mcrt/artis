@@ -27,6 +27,8 @@
 #include <ios>
 #include <span>
 #include <vector>
+
+#include "md5.h"
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
@@ -58,8 +60,8 @@ namespace {
 constexpr bool VERIFY_WRITTEN_PACKETS_FILES = false;
 
 FILE *linestat_file{};
-auto real_time_start = -1;
-auto time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
+time_t real_time_start = -1;
+time_t time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
 FILE *estimators_file{};
 
 void initialise_linestat_file() {
@@ -155,12 +157,11 @@ void write_deposition_file() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (my_rank == 0) {
-    FILE *dep_file = fopen_required("deposition.out.tmp", "w");
-    fprintf(dep_file,
-            "#ts tmid_days tmid_s total_dep_Lsun gammadep_discrete_Lsun gammadep_Lsun positrondep_Lsun "
-            "eps_positron_ana_Lsun elecdep_Lsun eps_elec_Lsun eps_elec_ana_Lsun alphadep_Lsun eps_alpha_Lsun "
-            "eps_alpha_ana_Lsun eps_gamma_Lsun Qdot_betaminus_ana_erg/s/g Qdotalpha_ana_erg/s/g eps_erg/s/g "
-            "Qdot_ana_erg/s/g positrondep_discrete_Lsun elecdep_discrete_Lsun alphadep_discrete_Lsun\n");
+    auto dep_file = fstream_required("deposition.out.tmp", std::ios::out | std::ios::trunc);
+    dep_file << "#ts tmid_days tmid_s total_dep_Lsun gammadep_discrete_Lsun gammadep_Lsun positrondep_Lsun "
+                "eps_positron_ana_Lsun elecdep_Lsun eps_elec_Lsun eps_elec_ana_Lsun alphadep_Lsun eps_alpha_Lsun "
+                "eps_alpha_ana_Lsun eps_gamma_Lsun Qdot_betaminus_ana_erg/s/g Qdotalpha_ana_erg/s/g eps_erg/s/g "
+                "Qdot_ana_erg/s/g positrondep_discrete_Lsun elecdep_discrete_Lsun alphadep_discrete_Lsun\n";
 
     for (int i = 0; i <= nts; i++) {
       const double t_mid = globals::timesteps[i].mid;
@@ -172,20 +173,25 @@ void write_deposition_file() {
                                   globals::timesteps[i].electron_emission + globals::timesteps[i].alpha_emission) /
                                  mtot / t_width;
 
-      fprintf(dep_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n", i, t_mid / DAY, t_mid,
-              total_dep / t_width / LSUN, globals::timesteps[i].gamma_dep_discrete / t_width / LSUN,
-              globals::timesteps[i].gamma_dep / t_width / LSUN, globals::timesteps[i].positron_dep / t_width / LSUN,
-              globals::timesteps[i].eps_positron_ana_power / LSUN, globals::timesteps[i].electron_dep / t_width / LSUN,
-              globals::timesteps[i].electron_emission / t_width / LSUN,
-              globals::timesteps[i].eps_electron_ana_power / LSUN, globals::timesteps[i].alpha_dep / t_width / LSUN,
-              globals::timesteps[i].alpha_emission / t_width / LSUN, globals::timesteps[i].eps_alpha_ana_power / LSUN,
-              globals::timesteps[i].gamma_emission / t_width / LSUN, globals::timesteps[i].qdot_betaminus / mtot,
-              globals::timesteps[i].qdot_alpha / mtot, epsilon_tot, globals::timesteps[i].qdot_total / mtot,
-              globals::timesteps[i].positron_dep_discrete / t_width / LSUN,
-              globals::timesteps[i].electron_dep_discrete / t_width / LSUN,
-              globals::timesteps[i].alpha_dep_discrete / t_width / LSUN);
+      dep_file << i << ' ' << t_mid / DAY << ' ' << t_mid << ' ' << total_dep / t_width / LSUN << ' '
+               << globals::timesteps[i].gamma_dep_discrete / t_width / LSUN << ' '
+               << globals::timesteps[i].gamma_dep / t_width / LSUN << ' '
+               << globals::timesteps[i].positron_dep / t_width / LSUN << ' '
+               << globals::timesteps[i].eps_positron_ana_power / LSUN << ' '
+               << globals::timesteps[i].electron_dep / t_width / LSUN << ' '
+               << globals::timesteps[i].electron_emission / t_width / LSUN << ' '
+               << globals::timesteps[i].eps_electron_ana_power / LSUN << ' '
+               << globals::timesteps[i].alpha_dep / t_width / LSUN << ' '
+               << globals::timesteps[i].alpha_emission / t_width / LSUN << ' '
+               << globals::timesteps[i].eps_alpha_ana_power / LSUN << ' '
+               << globals::timesteps[i].gamma_emission / t_width / LSUN << ' '
+               << globals::timesteps[i].qdot_betaminus / mtot << ' ' << globals::timesteps[i].qdot_alpha / mtot << ' '
+               << epsilon_tot << ' ' << globals::timesteps[i].qdot_total / mtot << ' '
+               << globals::timesteps[i].positron_dep_discrete / t_width / LSUN << ' '
+               << globals::timesteps[i].electron_dep_discrete / t_width / LSUN << ' '
+               << globals::timesteps[i].alpha_dep_discrete / t_width / LSUN << '\n';
     }
-    fclose(dep_file);
+    dep_file.close();
 
     std::remove("deposition.out");
     std::rename("deposition.out.tmp", "deposition.out");
@@ -196,8 +202,8 @@ void write_deposition_file() {
 }
 
 void mpi_communicate_grid_properties() {
-  const ptrdiff_t nincludedions = get_includedions();
-  const ptrdiff_t nelements = get_nelements();
+  const int nincludedions = get_includedions();
+  const auto nelements = get_nelements();
   for (int root = 0; root < globals::nprocs; root++) {
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -205,7 +211,7 @@ void mpi_communicate_grid_properties() {
     MPI_Bcast(&root_node_id, 1, MPI_INT, root, MPI_COMM_WORLD);
 
     const ptrdiff_t root_nstart_nonempty = grid::get_nstart_nonempty(root);
-    const ptrdiff_t root_ndo_nonempty = grid::get_ndo_nonempty(root);
+    const auto root_ndo_nonempty = grid::get_ndo_nonempty(root);
 
     for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
          nonemptymgi++) {
@@ -266,12 +272,12 @@ void mpi_reduce_estimators(const int nts) {
   radfield::reduce_estimators();
   MPI_Barrier(MPI_COMM_WORLD);
   assert_always(!globals::ffheatingestimator.empty());
-  MPI_Allreduce(MPI_IN_PLACE, globals::ffheatingestimator.data(), globals::ffheatingestimator.size(), MPI_DOUBLE,
-                MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, globals::ffheatingestimator.data(),
+                static_cast<int>(std::ssize(globals::ffheatingestimator)), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   if constexpr (!DIRECT_COL_HEAT) {
     assert_always(!globals::colheatingestimator.empty());
-    MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator.data(), globals::colheatingestimator.size(), MPI_DOUBLE,
-                  MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator.data(),
+                  static_cast<int>(std::ssize(globals::colheatingestimator)), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -279,24 +285,26 @@ void mpi_reduce_estimators(const int nts) {
     if constexpr (USE_LUT_PHOTOION) {
       MPI_Barrier(MPI_COMM_WORLD);
       assert_always(!globals::gammaestimator.empty());
-      MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator.data(), globals::gammaestimator.size(), MPI_DOUBLE, MPI_SUM,
-                    MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator.data(), static_cast<int>(std::ssize(globals::gammaestimator)),
+                    MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
 
     if constexpr (USE_LUT_BFHEATING) {
       MPI_Barrier(MPI_COMM_WORLD);
       assert_always(!globals::bfheatingestimator.empty());
-      MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator.data(), nonempty_npts_model * globals::nbfcontinua_ground,
-                    MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator.data(),
+                    static_cast<int>(std::ssize(globals::bfheatingestimator)), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
   }
 
   if constexpr (RECORD_LINESTAT) {
     MPI_Barrier(MPI_COMM_WORLD);
     assert_always(!globals::ecounter.empty());
-    MPI_Allreduce(MPI_IN_PLACE, globals::ecounter.data(), globals::ecounter.size(), MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::ecounter.data(), static_cast<int>(std::ssize(globals::ecounter)), MPI_INT,
+                  MPI_SUM, MPI_COMM_WORLD);
     assert_always(!globals::acounter.empty());
-    MPI_Allreduce(MPI_IN_PLACE, globals::acounter.data(), globals::acounter.size(), MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::acounter.data(), static_cast<int>(std::ssize(globals::acounter)), MPI_INT,
+                  MPI_SUM, MPI_COMM_WORLD);
   }
 
   assert_always(std::ssize(globals::dep_estimator_gamma) == nonempty_npts_model);
@@ -399,15 +407,15 @@ void remove_grid_restart_data(const int timestep) {
 auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) -> bool {
   MPI_Barrier(MPI_COMM_WORLD);
   // time is measured from just before packet propagation from one timestep to the next
-  const int estimated_time_per_timestep = std::time(nullptr) - time_timestep_start;
-  printout("TIME: time between timesteps is %d seconds (measured packet prop of ts %d and update grid of ts %d)\n",
+  const auto estimated_time_per_timestep = std::time(nullptr) - time_timestep_start;
+  printout("TIME: time between timesteps is %ld seconds (measured packet prop of ts %d and update grid of ts %d)\n",
            estimated_time_per_timestep, nts_prev, nts);
 
   bool do_this_full_loop = true;
   if (walltimelimitseconds > 0 && nts < globals::timestep_finish) {
-    const int wallclock_used_seconds = std::time(nullptr) - real_time_start;
-    const int wallclock_remaining_seconds = walltimelimitseconds - wallclock_used_seconds;
-    printout("TIMED_RESTARTS: Used %d of %d seconds of wall time.\n", wallclock_used_seconds, walltimelimitseconds);
+    const auto wallclock_used_seconds = std::time(nullptr) - real_time_start;
+    const auto wallclock_remaining_seconds = walltimelimitseconds - wallclock_used_seconds;
+    printout("TIMED_RESTARTS: Used %ld of %d seconds of wall time.\n", wallclock_used_seconds, walltimelimitseconds);
 
     // This flag being false will make it update_grid, and then exit
     do_this_full_loop = (wallclock_remaining_seconds >= (1.5 * estimated_time_per_timestep));
@@ -415,10 +423,10 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
     // communicate whatever decision the rank 0 process decided, just in case they differ
     MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
     if (do_this_full_loop) {
-      printout("TIMED_RESTARTS: Going to continue since remaining time %d s >= 1.5 * time_per_timestep\n",
+      printout("TIMED_RESTARTS: Going to continue since remaining time %ld s >= 1.5 * time_per_timestep\n",
                wallclock_remaining_seconds);
     } else {
-      printout("TIMED_RESTARTS: Going to terminate since remaining time %d s < 1.5 * time_per_timestep\n",
+      printout("TIMED_RESTARTS: Going to terminate since remaining time %ld s < 1.5 * time_per_timestep\n",
                wallclock_remaining_seconds);
     }
   }
@@ -686,6 +694,7 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 }  // anonymous namespace
 
 auto main(int argc, char *argv[]) -> int {
+  md5_test();
   real_time_start = std::time(nullptr);
 
   // if DETAILED_BF_ESTIMATORS_ON is true, USE_LUT_PHOTOION must be false
@@ -738,9 +747,9 @@ auto main(int argc, char *argv[]) -> int {
   printout("GPU_ON is enabled\n");
 #endif
 
-  printout("time at start %d\n", real_time_start);
+  logprintlnfmt("time at start {}", real_time_start);
 
-  printout("integration method is %s\n", USE_SIMPSON_INTEGRATOR ? "Simpson rule" : "GSL qag");
+  logprintlnfmt("integration method is {}", USE_SIMPSON_INTEGRATOR ? "Simpson rule" : "GSL qag");
 
 #ifdef WALLTIMELIMITSECONDS
   int walltimelimitseconds = WALLTIMELIMITSECONDS;
@@ -818,7 +827,7 @@ auto main(int argc, char *argv[]) -> int {
   // Record the chosen syn_dir
   auto syn_file = std::fstream("syn_dir.txt", std::ios::out | std::ios::trunc);
   assert_always(syn_file.is_open());
-  syn_file << syn_dir[0] << " " << syn_dir[1] << " " << syn_dir[2];
+  syn_file << syn_dir[0] << ' ' << syn_dir[1] << ' ' << syn_dir[2];
   syn_file.close();
   printout("time write syn_dir.txt file %ld\n", std::time(nullptr));
 

@@ -54,9 +54,9 @@ constexpr double MINDEPRATE = 0.;
 // Bohr radius squared in cm^2
 constexpr double A_naught_squared = 2.800285203e-17;
 
-const std::array<std::string, 28> shellnames{"K ", "L1", "L2", "L3", "M1", "M2", "M3", "M4", "M5", "N1",
-                                             "N2", "N3", "N4", "N5", "N6", "N7", "O1", "O2", "O3", "O4",
-                                             "O5", "O6", "O7", "P1", "P2", "P3", "P4", "Q1"};
+constexpr std::array<std::string, 28> shellnames{"K ", "L1", "L2", "L3", "M1", "M2", "M3", "M4", "M5", "N1",
+                                                 "N2", "N3", "N4", "N5", "N6", "N7", "O1", "O2", "O3", "O4",
+                                                 "O5", "O6", "O7", "P1", "P2", "P3", "P4", "Q1"};
 
 std::vector<std::vector<double>> elements_electron_binding;
 std::vector<std::vector<int>> allions_shell_occupancies;
@@ -391,28 +391,28 @@ void read_binding_energies() {
   }
 }
 
-[[nodiscard]] auto get_cell_ntexcitations(const int nonemptymgi) {
+[[nodiscard]] auto get_cell_ntexcitations(const ptrdiff_t nonemptymgi) {
   return excitations_list_all_cells.subspan(nonemptymgi * nt_excitations_stored,
                                             nt_solution[nonemptymgi].frac_excitations_list_size);
 }
 
-[[nodiscard]] auto get_cell_ion_data(const int nonemptymgi) {
+[[nodiscard]] auto get_cell_ion_data(const ptrdiff_t nonemptymgi) {
   return ion_data_all_cells.subspan(nonemptymgi * get_includedions(), get_includedions());
 }
 
-auto get_auger_probability(const int nonemptymgi, const int element, const int ion, const int naugerelec) {
+auto get_auger_probability(const ptrdiff_t nonemptymgi, const int element, const int ion, const int naugerelec) {
   assert_always(naugerelec <= NT_MAX_AUGER_ELECTRONS);
   const int uniqueionindex = get_uniqueionindex(element, ion);
   return get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[naugerelec];
 }
 
-auto get_ion_auger_enfrac(const int nonemptymgi, const int element, const int ion, const int naugerelec) {
+auto get_ion_auger_enfrac(const ptrdiff_t nonemptymgi, const int element, const int ion, const int naugerelec) {
   assert_always(naugerelec <= NT_MAX_AUGER_ELECTRONS);
   const int uniqueionindex = get_uniqueionindex(element, ion);
   return get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[naugerelec];
 }
 
-void check_auger_probabilities(int nonemptymgi) {
+void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
   bool problem_found = false;
 
   for (int element = 0; element < get_nelements(); element++) {
@@ -451,28 +451,23 @@ void check_auger_probabilities(int nonemptymgi) {
 
 void read_auger_data() {
   printout("Reading Auger effect data...\n");
-  FILE *augerfile = fopen_required("auger-km1993-table2.txt", "r");
-
-  char line[151] = "";
+  auto augerfile = fstream_required("auger-km1993-table2.txt", std::ios::in);
 
   // map x-ray notation shells K L1 L2 L3 M1 M2 M3 to quantum numbers n and l
-  const int xrayn[7] = {1, 2, 2, 2, 3, 3, 3};
-  const int xrayl[7] = {0, 0, 1, 1, 0, 1, 1};
-  const int xrayg[7] = {2, 2, 2, 4, 2, 2, 4};  // g statistical weight = 2j + 1
+  constexpr std::array<int, 7> xrayn = {1, 2, 2, 2, 3, 3, 3};
+  constexpr std::array<int, 7> xrayl = {0, 0, 1, 1, 0, 1, 1};
+  constexpr std::array<int, 7> xrayg = {2, 2, 2, 4, 2, 2, 4};  // g statistical weight = 2j + 1
 
-  while (feof(augerfile) == 0) {
-    if (line != fgets(line, 151, augerfile)) {
-      break;
-    }
-
+  std::string strline;
+  while (get_noncommentline(augerfile, strline)) {
     int Z = -1;
     int ionstage = -1;
     int shellnum = -1;
 
-    char *linepos = line;
+    int linepos = 0;
     int offset = 0;
 
-    assert_always(sscanf(linepos, "%d %d%n", &Z, &ionstage, &offset) == 2);
+    assert_always(sscanf(strline.c_str(), "%d %d%n", &Z, &ionstage, &offset) == 2);
     assert_always(offset == 5);
     linepos += offset;
 
@@ -484,39 +479,39 @@ void read_auger_data() {
       float en_auger_ev_total_nocorrection = -1;
       int epsilon_e3 = -1;
 
-      assert_always(sscanf(linepos, "%d %g %g %d%n", &shellnum, &ionpot_ev, &en_auger_ev_total_nocorrection,
-                           &epsilon_e3, &offset) == 4);
+      assert_always(sscanf(strline.substr(linepos).c_str(), "%d %g %g %d%n", &shellnum, &ionpot_ev,
+                           &en_auger_ev_total_nocorrection, &epsilon_e3, &offset) == 4);
       assert_always(offset == 20);
 
       float n_auger_elec_avg = 0;
-      double prob_num_auger[NT_MAX_AUGER_ELECTRONS + 1];
+      std::array<double, (NT_MAX_AUGER_ELECTRONS + 1)> prob_num_auger{};
       for (int a = 0; a < 9; a++) {
-        linepos = line + 26 + (a * 5);
+        linepos = 26 + (a * 5);
         // have to read out exactly 5 characters at a time because the columns are sometimes not separated by a space
-        char strprob[6] = "00000";
-        assert_always(sscanf(linepos, "%5c%n", strprob, &offset) == 1);
+        std::array<char, 6> strprob{"00000"};
+        assert_always(sscanf(strline.substr(linepos).c_str(), "%5c%n", strprob.data(), &offset) == 1);
         assert_always(offset == 5);
         strprob[5] = '\0';
 
         int probnaugerelece4 = -1;
-        assert_always(sscanf(strprob, "%d", &probnaugerelece4) == 1);
+        assert_always(sscanf(strprob.data(), "%d", &probnaugerelece4) == 1);
 
         const double probnaugerelec = probnaugerelece4 / 10000.;
 
         assert_always(probnaugerelec <= 1.0);
 
-        n_auger_elec_avg += a * probnaugerelec;
+        n_auger_elec_avg += static_cast<float>(a * probnaugerelec);
 
         if (a <= NT_MAX_AUGER_ELECTRONS) {
-          prob_num_auger[a] = probnaugerelec;
+          prob_num_auger.at(a) = probnaugerelec;
         } else {
           // add the rates of all higher ionisations to the top one
-          prob_num_auger[NT_MAX_AUGER_ELECTRONS] += probnaugerelec;
+          prob_num_auger.at(NT_MAX_AUGER_ELECTRONS) += probnaugerelec;
         }
       }
 
       // use the epsilon correction factor as in equation 7 of Kaastra & Mewe (1993)
-      float en_auger_ev = en_auger_ev_total_nocorrection - (epsilon_e3 / 1000. * ionpot_ev);
+      auto en_auger_ev = static_cast<float>(en_auger_ev_total_nocorrection - (epsilon_e3 / 1000. * ionpot_ev));
 
       const int n = xrayn[shellnum - 1];
       const int l = xrayl[shellnum - 1];
@@ -553,8 +548,9 @@ void read_auger_data() {
           collionrow.auger_g_accumulated += g;
 
           // update the statistical-weight averaged values
-          collionrow.en_auger_ev = oldweight * collionrow.en_auger_ev + newweight * en_auger_ev;
-          collionrow.n_auger_elec_avg = oldweight * collionrow.n_auger_elec_avg + newweight * n_auger_elec_avg;
+          collionrow.en_auger_ev = static_cast<float>((oldweight * collionrow.en_auger_ev) + (newweight * en_auger_ev));
+          collionrow.n_auger_elec_avg =
+              static_cast<float>((oldweight * collionrow.n_auger_elec_avg) + (newweight * n_auger_elec_avg));
 
           prob_sum = 0.;
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
@@ -575,7 +571,6 @@ void read_auger_data() {
       }
     }
   }
-  fclose(augerfile);
 }
 
 auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
@@ -627,9 +622,8 @@ void read_collion_data() {
     collionrow collionrow{};
     int nelec = -1;
     get_noncommentline(cifile, line);
-    std::istringstream ssline2(line);
-    assert_always(ssline2 >> collionrow.Z >> nelec >> collionrow.n >> collionrow.l >> collionrow.ionpot_ev >>
-                  collionrow.A >> collionrow.B >> collionrow.C >> collionrow.D);
+    assert_always(std::istringstream(line) >> collionrow.Z >> nelec >> collionrow.n >> collionrow.l >>
+                  collionrow.ionpot_ev >> collionrow.A >> collionrow.B >> collionrow.C >> collionrow.D);
 
     assert_always(nelec > 0);
     collionrow.ionstage = collionrow.Z - nelec + 1;
@@ -742,7 +736,7 @@ auto get_possible_nt_excitation_count() -> int {
   return ntexcitationcount;
 }
 
-void zero_all_effionpot(const int nonemptymgi) {
+void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
   for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
     auto &ion_data = get_cell_ion_data(nonemptymgi)[uniqueionindex];
     ion_data.eff_ionpot = 0.;
@@ -1112,7 +1106,7 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
   frac_heating_Einit += N_e_contrib;
   printout(" heating N_e contrib (en < EMIN) %g nsteps %d\n", N_e_contrib / E_init_ev, nsteps);
 
-  const float frac_heating = frac_heating_Einit / E_init_ev;
+  const auto frac_heating = static_cast<float>(frac_heating_Einit / E_init_ev);
 
   if (!std::isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0) {
     printout("WARNING: calculate_frac_heating: invalid result of %g. Setting to 1.0 instead\n", frac_heating);
@@ -1123,20 +1117,19 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
 }
 
 // fraction of deposited energy that goes into ionization
-auto get_nt_frac_ionization(const int modelgridindex) -> float {
+auto get_nt_frac_ionization(const int nonemptymgi) -> float {
   if (!NT_ON) {
     return 0.;
   }
   if (!NT_SOLVE_SPENCERFANO) {
     return 0.03;
   }
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   const float frac_ionization = nt_solution[nonemptymgi].frac_ionization;
 
   if (frac_ionization < 0 || !std::isfinite(frac_ionization)) {
     printout("ERROR: get_nt_frac_ionization called with no valid solution stored for cell %d. frac_ionization = %g\n",
-             modelgridindex, frac_ionization);
+             grid::get_mgi_of_nonemptymgi(nonemptymgi), frac_ionization);
     std::abort();
   }
 
@@ -1144,17 +1137,16 @@ auto get_nt_frac_ionization(const int modelgridindex) -> float {
 }
 
 // fraction of deposited energy that goes into collisional excitation
-auto get_nt_frac_excitation(const int modelgridindex) -> float {
+auto get_nt_frac_excitation(const int nonemptymgi) -> float {
   if (!NT_ON || !NT_SOLVE_SPENCERFANO) {
     return 0.;
   }
 
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   const float frac_excitation = nt_solution[nonemptymgi].frac_excitation;
 
   if (frac_excitation < 0 || !std::isfinite(frac_excitation)) {
     printout("ERROR: get_nt_frac_excitation called with no valid solution stored for cell %d. frac_excitation = %g\n",
-             modelgridindex, frac_excitation);
+             grid::get_mgi_of_nonemptymgi(nonemptymgi), frac_excitation);
     std::abort();
   }
 
@@ -1271,8 +1263,9 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
 
   std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionize_over_ionpot_sum{};
   std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionize_sum{};
-  std::ranges::fill(get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger, 0.);
-  std::ranges::fill(get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger, 0.);
+  auto &celliondata = get_cell_ion_data(nonemptymgi)[uniqueionindex];
+  std::ranges::fill(celliondata.prob_num_auger, 0.);
+  std::ranges::fill(celliondata.ionenfrac_num_auger, 0.);
 
   double eta_over_ionpot_sum = 0.;
   double eta_sum = 0.;
@@ -1314,28 +1307,27 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
         const int upperion = ion + 1 + a;
         if (upperion <= topion)  // not too many Auger electrons to exceed the top ion of this element
         {
-          get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[a] =
-              eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum;
-          get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[a] = eta_nauger_ionize_sum[a] / eta_sum;
+          celliondata.prob_num_auger[a] =
+              static_cast<float>(eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum);
+          celliondata.ionenfrac_num_auger[a] = static_cast<float>(eta_nauger_ionize_sum[a] / eta_sum);
         } else {
           // the following ensures that multiple ionisations can't send you to an ion stage that is not in
           // the model. Send it to the highest ion stage instead
           const int a_replace = topion - ion - 1;
+          celliondata.prob_num_auger.at(a_replace) = static_cast<float>(
+              celliondata.prob_num_auger.at(a_replace) + (eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum));
+          celliondata.ionenfrac_num_auger.at(a_replace) =
+              static_cast<float>(celliondata.ionenfrac_num_auger.at(a_replace) + (eta_nauger_ionize_sum[a] / eta_sum));
 
-          get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger.at(a_replace) +=
-              eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum;
-          get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger.at(a_replace) +=
-              eta_nauger_ionize_sum[a] / eta_sum;
-
-          get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[a] = 0;
-          get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[a] = 0.;
+          celliondata.prob_num_auger[a] = 0;
+          celliondata.ionenfrac_num_auger[a] = 0.;
         }
       }
     }
   } else {
     const int a = 0;
-    get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[a] = 1.;
-    get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[a] = 1.;
+    celliondata.prob_num_auger[a] = 1.;
+    celliondata.ionenfrac_num_auger[a] = 1.;
   }
 
   if (matching_nlsubshell_count > 0) {
@@ -1343,7 +1335,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
     if (!std::isfinite(eff_ionpot)) {
       eff_ionpot = 0.;
     }
-    get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot = eff_ionpot;
+    get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot = static_cast<float>(eff_ionpot);
   } else {
     printout("WARNING! No matching subshells in NT impact ionisation cross section data for Z=%d ionstage %d.\n",
              get_atomicnumber(element), get_ionstage(element, ion));
@@ -1351,7 +1343,8 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
         "-> Defaulting to work function approximation and ionisation energy is not accounted for in Spencer-Fano "
         "solution.\n");
 
-    get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot = 1. / get_oneoverw(element, ion, nonemptymgi);
+    get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot =
+        static_cast<float>(1. / get_oneoverw(element, ion, nonemptymgi));
   }
 }
 
@@ -1709,7 +1702,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
       tmp_excitation_list.resize(nt_excitations_stored);
     }
 
-    nt_solution[nonemptymgi].frac_excitations_list_size = tmp_excitation_list.size();
+    nt_solution[nonemptymgi].frac_excitations_list_size = static_cast<int>(std::ssize(tmp_excitation_list));
     std::ranges::copy(tmp_excitation_list, get_cell_ntexcitations(nonemptymgi).begin());
 
     printout("[info] mem_usage: non-thermal excitations for cell %d at this timestep occupy %.3f MB\n", modelgridindex,
@@ -1777,8 +1770,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
     nne_nt_max += yscalefactor * yfunc[i] * oneovervelocity * delta_endash;
   }
 
-  nt_solution[nonemptymgi].frac_excitation = frac_excitation_total;
-  nt_solution[nonemptymgi].frac_ionization = frac_ionization_total;
+  nt_solution[nonemptymgi].frac_excitation = static_cast<float>(frac_excitation_total);
+  nt_solution[nonemptymgi].frac_ionization = static_cast<float>(frac_ionization_total);
 
   printout("  E_init:      %9.2f eV/s/cm^3\n", E_init_ev);
   printout("  deposition:  %9.2f eV/s/cm^3\n", deposition_rate_density_ev);
@@ -1796,7 +1789,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
   const double frac_sum = nt_solution[nonemptymgi].frac_heating + frac_excitation_total + frac_ionization_total;
   printout("  frac_sum:            %g (should be close to 1.0)\n", frac_sum);
 
-  nt_solution[nonemptymgi].frac_heating = 1. - frac_excitation_total - frac_ionization_total;
+  nt_solution[nonemptymgi].frac_heating = static_cast<float>(1. - frac_excitation_total - frac_ionization_total);
   printout("  (replacing calculated frac_heating_tot with %g to make frac_sum = 1.0)\n",
            nt_solution[nonemptymgi].frac_heating);
 }
@@ -2370,7 +2363,7 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
       return;
     }
 
-    // const double frac_excitation = NT_EXCITATION_ON ? get_nt_frac_excitation(modelgridindex) : 0;
+    // const double frac_excitation = NT_EXCITATION_ON ? get_nt_frac_excitation(nonemptymgi) : 0;
     const double frac_excitation = 0.;
     if (zrand < (frac_ionization + frac_excitation)) {
       zrand -= frac_ionization;
@@ -2464,7 +2457,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
       "%d (nne=%g e-/cm^3)\n",
       SFPTS, SF_EMIN, SF_EMAX, modelgridindex, timestep, iteration, nne);
 
-  nt_solution[nonemptymgi].nneperion_when_solved = nne_per_ion;
+  nt_solution[nonemptymgi].nneperion_when_solved = static_cast<float>(nne_per_ion);
   nt_solution[nonemptymgi].timestep_last_solved = timestep;
 
   const bool enable_sfexcitation = true;
@@ -2659,7 +2652,7 @@ void read_restart_data(FILE *gridsave_file) {
   }
 }
 
-void nt_MPI_Bcast(const int nonemptymgi, const int root_node_id) {
+void nt_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root_node_id) {
   MPI_Bcast(&deposition_rate_density_all_cells[nonemptymgi], 1, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
 
   if (NT_ON && NT_SOLVE_SPENCERFANO) {
@@ -2675,12 +2668,12 @@ void nt_MPI_Bcast(const int nonemptymgi, const int root_node_id) {
                 globals::mpi_comm_internode);
 
       MPI_Bcast(get_cell_ntexcitations(nonemptymgi).data(),
-                static_cast<size_t>(nt_solution[nonemptymgi].frac_excitations_list_size) * sizeof(NonThermalExcitation),
+                static_cast<int>(nt_solution[nonemptymgi].frac_excitations_list_size * sizeof(NonThermalExcitation)),
                 MPI_BYTE, root_node_id, globals::mpi_comm_internode);
 
       const auto ion_data = get_cell_ion_data(nonemptymgi);
-      MPI_Bcast(ion_data.data(), ion_data.size() * sizeof(NonThermalSolutionIon), MPI_BYTE, root_node_id,
-                globals::mpi_comm_internode);
+      MPI_Bcast(ion_data.data(), static_cast<int>(std::ssize(ion_data) * sizeof(NonThermalSolutionIon)), MPI_BYTE,
+                root_node_id, globals::mpi_comm_internode);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);

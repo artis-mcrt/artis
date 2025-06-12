@@ -122,7 +122,7 @@ constexpr auto coordlabel = [] -> std::array<char, 3> {
 
 void set_rho_tmin(const int modelgridindex, const float x) { modelgrid_input[modelgridindex].rhoinit = x; }
 
-void set_initelectronfrac(const int modelgridindex, const double electronfrac) {
+void set_initelectronfrac(const int modelgridindex, const float electronfrac) {
   modelgrid_input[modelgridindex].initelectronfrac = electronfrac;
 }
 
@@ -132,20 +132,19 @@ void read_possible_yefile() {
     return;
   }
 
-  FILE *filein = fopen_required("Ye.txt", "r");
+  auto filein = fopen_required_uniqueptr("Ye.txt", "r");
   int nlines_in = 0;
-  assert_always(fscanf(filein, "%d", &nlines_in) == 1);
+  assert_always(fscanf(filein.get(), "%d", &nlines_in) == 1);
 
   for (int n = 0; n < nlines_in; n++) {
     int mgiplusone = -1;
-    double initelecfrac = 0.;
-    assert_always(fscanf(filein, "%d %lg", &mgiplusone, &initelecfrac) == 2);
+    float initelecfrac = 0.;
+    assert_always(fscanf(filein.get(), "%d %g", &mgiplusone, &initelecfrac) == 2);
     const int mgi = mgiplusone - 1;
     if (mgi >= 0 && mgi < get_npts_model()) {
       set_initelectronfrac(mgi, initelecfrac);
     }
   }
-  fclose(filein);
 }
 
 void allocate_initradiobund() {
@@ -153,7 +152,7 @@ void allocate_initradiobund() {
 
   const ptrdiff_t num_nuclides = decay::get_num_nuclides();
 
-  const size_t totalradioabundcount = (npts_model + 1) * num_nuclides;
+  const auto totalradioabundcount = (npts_model + 1) * num_nuclides;
   std::tie(initnucmassfrac_allcells, win_initnucmassfrac_allcells) =
       MPI_shared_malloc_keepwin_span<float>(totalradioabundcount);
   printout(
@@ -162,12 +161,8 @@ void allocate_initradiobund() {
 
   MPI_Barrier(globals::mpi_comm_node);
 
-  assert_always(initnucmassfrac_allcells.data() != nullptr);
-
-  for (ptrdiff_t mgi = 0; mgi < (npts_model + 1); mgi++) {
-    if (mgi % static_cast<ptrdiff_t>(globals::node_nprocs) == globals::rank_in_node) {
-      std::fill_n(&initnucmassfrac_allcells[mgi * num_nuclides], num_nuclides, 0.);
-    }
+  if (globals::rank_in_node == 0) {
+    std::ranges::fill(initmassfracuntrackedstable_allcells, 0.);
   }
   MPI_Barrier(globals::mpi_comm_node);
 }
@@ -232,7 +227,7 @@ void set_modelinitnucmassfrac(const int modelgridindex, const int nucindex, floa
   initnucmassfrac_allcells[(modelgridindex * num_nuclides) + nucindex] = abund;
 }
 
-void set_initenergyq(const int modelgridindex, const double initenergyq) {
+void set_initenergyq(const int modelgridindex, const float initenergyq) {
   modelgrid_input[modelgridindex].initenergyq = initenergyq;
 }
 
@@ -269,11 +264,12 @@ void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int 
 
   // if (globals::rank_in_node == 0)
   {
-    initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element] = massfrac_untrackedstable;
+    initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element] =
+        static_cast<float>(massfrac_untrackedstable);
   }
 
   // (isofracsum + massfracstable) might not exactly match elemabundance if we had to boost it to reach isofracsum
-  set_elem_abundance(nonemptymgi, element, isofracsum + massfrac_untrackedstable);
+  set_elem_abundance(nonemptymgi, element, static_cast<float>(isofracsum + massfrac_untrackedstable));
 }
 
 void allocate_nonemptycells_composition_cooling()
@@ -336,7 +332,8 @@ void allocate_nonemptymodelcells() {
 
     modelgrid_numpropcells[mgi] += 1;
     if (globals::rank_in_node == 0) {
-      modelgrid_input[mgi].initial_radial_pos_sum += radial_pos_mid;
+      modelgrid_input[mgi].initial_radial_pos_sum =
+          static_cast<float>(modelgrid_input[mgi].initial_radial_pos_sum + radial_pos_mid);
     }
 
     assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (modelgrid_numpropcells[mgi] == 1) ||
@@ -593,7 +590,7 @@ void read_abundances() {
         // now set the abundances (by mass) of included elements, i.e.
         // read out the abundances specified in the atomic data file
         const int anumber = get_atomicnumber(element);
-        const float elemabundance = abundances_in[anumber - 1] / normfactor;
+        const auto elemabundance = static_cast<float>(abundances_in[anumber - 1] / normfactor);
         assert_always(elemabundance >= 0.);
 
         // radioactive nuclide abundances should have already been set by read_??_model
@@ -690,14 +687,14 @@ void read_model_radioabundances(std::fstream &fmodel, std::istringstream &ssline
 
     if (nucindexlist[i] >= 0) {
       assert_testmodeonly(valuein <= 1.);
-      set_modelinitnucmassfrac(mgi, nucindexlist[i], valuein);
+      set_modelinitnucmassfrac(mgi, nucindexlist[i], static_cast<float>(valuein));
     } else if (colnames[i] == "X_Fegroup") {
-      set_ffegrp(mgi, valuein);
+      set_ffegrp(mgi, static_cast<float>(valuein));
     } else if (colnames[i] == "cellYe" || colnames[i] == "Ye") {
-      set_initelectronfrac(mgi, valuein);
+      set_initelectronfrac(mgi, static_cast<float>(valuein));
     } else if (colnames[i] == "q") {
       // use value for t_model and adjust to tmin with expansion factor
-      set_initenergyq(mgi, valuein * t_model / globals::tmin);
+      set_initenergyq(mgi, static_cast<float>(valuein * t_model / globals::tmin));
     } else if (colnames[i] == "tracercount") {
       ;
     } else {
@@ -919,9 +916,10 @@ void read_grid_restart_data(const int timestep) {
   fclose(gridsave_file);
 }
 
-// Assign temperatures to the grid cells at the start of the simulation
+// Assign temperatures to the grid cells at the start of the simulation by assuming that all radioactive decay since the
+// snapshot time (plus any snapshot initial cell energy) energy is fully trapped
 void assign_initial_temperatures() {
-  MPI_Barrier(MPI_COMM_WORLD);  // For a simulation started from scratch we estimate the initial temperatures
+  MPI_Barrier(MPI_COMM_WORLD);
 
   // We assume that for early times the material is so optically thick, that
   // all the radiation is trapped in the cell it originates from. This
@@ -938,13 +936,12 @@ void assign_initial_temperatures() {
   for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
-    double decayedenergy_per_mass = decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(nonemptymgi, tstart);
-    if constexpr (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) {
-      decayedenergy_per_mass += get_initenergyq(mgi);
-    }
+    const auto q = (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? get_initenergyq(mgi) : 0.;
+    const double decayedenergy_per_mass =
+        decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(nonemptymgi, tstart) + q;
 
-    double T_initial =
-        pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.);
+    auto T_initial = static_cast<float>(
+        pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
 
     if (T_initial < MINTEMP) {
       //   printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", mgi, T_initial, MINTEMP);
@@ -957,16 +954,21 @@ void assign_initial_temperatures() {
     } else if (!std::isfinite(T_initial)) {
       printout("mgi %d: T_initial of %g is infinite!\n", mgi, T_initial);
     }
-    assert_always(std::isfinite(T_initial));
 
-    set_Te(nonemptymgi, T_initial);
-    set_TJ(nonemptymgi, T_initial);
-    set_TR(nonemptymgi, T_initial);
-    set_W(nonemptymgi, 1.);
-    modelgrid[nonemptymgi].thick = 0;
+    if (globals::rank_in_node == 0) {
+      // set the initial temperatures in the modelgrid
+      // this is only done by the node master, so that the values are shared
+      // in the node shared memory
+      set_Te(nonemptymgi, T_initial);
+      set_TJ(nonemptymgi, T_initial);
+      set_TR(nonemptymgi, T_initial);
+      set_W(nonemptymgi, 1.);
+      modelgrid[nonemptymgi].thick = 0;
+    }
   }
   printout("  cells below MINTEMP %g: %d\n", MINTEMP, cells_below_mintemp);
   printout("  cells above MAXTEMP %g: %d\n", MAXTEMP, cells_above_maxtemp);
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 // start at mgi_start and find the next non-empty cell, or return -1 if none found
@@ -982,9 +984,9 @@ void assign_initial_temperatures() {
 void setup_nstart_ndo() {
   const int nprocesses = globals::nprocs;
   assert_always(nonempty_npts_model > 0);
-  const int min_nonempty_perproc =
+  const auto min_nonempty_perproc =
       nonempty_npts_model / nprocesses;  // integer division, minimum non-empty cells per process
-  const int n_remainder = nonempty_npts_model % nprocesses;
+  const auto n_remainder = nonempty_npts_model % nprocesses;
 
   ranks_nstart.resize(nprocesses, -1);
   ranks_nstart_nonempty.resize(nprocesses, -1);
@@ -1013,7 +1015,7 @@ void setup_nstart_ndo() {
 
     int rank = 0;
     for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-      const int target_nonempty_thisrank = (rank < n_remainder) ? min_nonempty_perproc + 1 : min_nonempty_perproc;
+      const auto target_nonempty_thisrank = (rank < n_remainder) ? min_nonempty_perproc + 1 : min_nonempty_perproc;
       if ((rank < (nprocesses - 1)) && (ranks_ndo_nonempty[rank] >= target_nonempty_thisrank)) {
         // current rank has enough non-empty cells, so start assigning cells to the next rank
         rank++;
@@ -1044,7 +1046,7 @@ void setup_nstart_ndo() {
     fileout << "#rank nstart ndo ndo_nonempty\n";
     for (int r = 0; r < nprocesses; r++) {
       assert_always(ranks_ndo_nonempty[r] <= ranks_ndo[r]);
-      fileout << r << " " << ranks_nstart[r] << " " << ranks_ndo[r] << " " << ranks_ndo_nonempty[r] << "\n";
+      fileout << r << ' ' << ranks_nstart[r] << ' ' << ranks_ndo[r] << ' ' << ranks_ndo_nonempty[r] << '\n';
     }
   }
 }
@@ -1459,24 +1461,22 @@ __host__ __device__ auto get_rho(const int nonemptymgi) -> float {
 __host__ __device__ auto get_nne(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  const double nne = modelgrid[nonemptymgi].nne;
-  assert_testmodeonly(std::isfinite(nne));
-  return nne;
+  return modelgrid[nonemptymgi].nne;
 }
 
 __host__ __device__ auto get_nnetot(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  const double nnetot = modelgrid[nonemptymgi].nnetot;
-  return nnetot;
+  return modelgrid[nonemptymgi].nnetot;
 }
 
 __host__ __device__ auto get_ffegrp(const int modelgridindex) -> float {
   return modelgrid_input[modelgridindex].ffegrp;
 }
 
-__host__ __device__ auto get_initial_radial_pos_sum(const int modelgridindex) -> float {
-  return modelgrid_input[modelgridindex].initial_radial_pos_sum;
+__host__ __device__ auto get_modelcell_mean_radial_pos(const int modelgridindex, const double tratmid) -> double {
+  const int assoc_cells = grid::get_numpropcells(modelgridindex);
+  return modelgrid_input[modelgridindex].initial_radial_pos_sum * tratmid / assoc_cells;
 }
 
 auto get_elem_abundance(const int nonemptymgi, const int element) -> float
@@ -1488,8 +1488,8 @@ auto get_elem_abundance(const int nonemptymgi, const int element) -> float
 }
 
 // mass fraction of an element (all isotopes combined)
-void set_elem_abundance(const int nonemptymgi, const int element, const float newabundance) {
-  elem_massfracs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] = newabundance;
+void set_elem_abundance(const ptrdiff_t nonemptymgi, const int element, const float newabundance) {
+  elem_massfracs_allcells[(nonemptymgi * get_nelements()) + element] = newabundance;
 }
 
 // mass fraction of an element (all isotopes combined)
@@ -1574,13 +1574,13 @@ __host__ __device__ auto get_npts_model() -> int
 // number of model grid cells
 {
   assert_testmodeonly(npts_model > 0);
-  return npts_model;
+  return static_cast<int>(npts_model);
 }
 
 // number of model grid cells
 auto get_nonempty_npts_model() -> int {
   assert_testmodeonly(nonempty_npts_model > 0);
-  return nonempty_npts_model;
+  return static_cast<int>(nonempty_npts_model);
 }
 
 // get time at which model input densities are defined
@@ -1625,7 +1625,7 @@ __host__ __device__ auto get_nonemptymgi_of_mgi(const int mgi) -> int {
 }
 
 // get the index in the list of non-empty cells for a given model grid cell
-__host__ __device__ auto get_mgi_of_nonemptymgi(const int nonemptymgi) -> int {
+__host__ __device__ auto get_mgi_of_nonemptymgi(const ptrdiff_t nonemptymgi) -> int {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
@@ -1653,7 +1653,7 @@ auto get_element_meanweight(const int nonemptymgi, const int element) -> float
 // weight is in grams
 {
   if (USE_CALCULATED_MEANATOMICWEIGHT) {
-    const double mu = elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element];
+    const auto mu = elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element];
     if (mu > 0) {
       return mu;
     }
@@ -1735,11 +1735,9 @@ void calculate_kappagrey() {
 
     if (globals::opacity_case == 3) {
       if (get_rho_tmin(mgi) > 0.) {
-        double kappagrey = ((0.9 * get_ffegrp(mgi)) + 0.1);
-
-        if (get_rho_tmin(mgi) > globals::rho_crit) {
-          kappagrey *= globals::rho_crit / get_rho_tmin(mgi);
-        }
+        const auto kappagrey =
+            static_cast<float>(((0.9 * get_ffegrp(mgi)) + 0.1) *
+                               ((get_rho_tmin(mgi) > globals::rho_crit) ? globals::rho_crit / get_rho_tmin(mgi) : 1.));
 
         set_kappagrey(nonemptymgi, kappagrey);
       } else if (get_rho_tmin(mgi) == 0.) {
@@ -1821,7 +1819,7 @@ void calculate_kappagrey() {
         std::abort();
       }
 
-      set_kappagrey(nonemptymgi, kappa);
+      set_kappagrey(nonemptymgi, static_cast<float>(kappa));
     } else if (get_rho_tmin(mgi) == 0.) {
       set_kappagrey(nonemptymgi, 0.);
     } else if (get_rho_tmin(mgi) < 0.) {
@@ -1930,7 +1928,7 @@ void read_ejecta_model() {
 
         vout_model[mgi] = vout_kmps * 1.e5;
 
-        const double rho_tmin = pow(10., log_rho) * pow(t_model / globals::tmin, 3);
+        const auto rho_tmin = static_cast<float>(pow(10., log_rho) * pow(t_model / globals::tmin, 3));
         set_rho_tmin(mgi, rho_tmin);
       } else {
         printout("Unexpected number of values in model.txt\n");
@@ -1989,7 +1987,7 @@ void read_ejecta_model() {
       }
 
       const bool keepcell = (rho_tmodel > 0);
-      const double rho_tmin = rho_tmodel * pow(t_model / globals::tmin, 3);
+      const auto rho_tmin = static_cast<float>(rho_tmodel * pow(t_model / globals::tmin, 3));
       set_rho_tmin(mgi, rho_tmin);
 
       read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
@@ -2066,7 +2064,7 @@ void read_ejecta_model() {
 
       // in 3D cartesian, cellindex and modelgridindex are interchangeable
       const bool keepcell = (rho_model > 0);
-      const double rho_tmin = rho_model * pow(t_model / globals::tmin, 3);
+      const auto rho_tmin = static_cast<float>(rho_model * pow(t_model / globals::tmin, 3));
       set_rho_tmin(mgi, rho_tmin);
 
       if (min_den < 0. || min_den > rho_model) {
@@ -2227,7 +2225,7 @@ void init_grid(const int my_rank) {
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
     printout("    coordinate %d '%c': cells have %d position values\n", d, coordlabel[d], ncoordgrid[d]);
   }
-  printout("    total propagation cells: %d\n", ngrid);
+  printout("    total propagation cells: %td\n", ngrid);
 
   // Now set up the density in each cell.
 
@@ -2259,12 +2257,12 @@ void init_grid(const int my_rank) {
   }
 
   if (globals::my_rank == 0) {
-    auto grid_file = std::fstream("grid.out", std::ios::out);
+    auto grid_file = std::fstream("grid.out", std::ios::out | std::ios::trunc);
     assert_always(grid_file.is_open());
     for (int cellindex = 0; cellindex < ngrid; cellindex++) {
       const int mgi = get_propcell_modelgridindex(cellindex);
       if (mgi != get_npts_model()) {
-        grid_file << cellindex << " " << mgi << "\n";  // write only non-empty cells to grid file
+        grid_file << cellindex << ' ' << mgi << '\n';  // write only non-empty cells to grid file
       }
     }
   }
@@ -2308,7 +2306,7 @@ void init_grid(const int my_rank) {
         for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
           const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
           const double prev_abund = get_modelinitnucmassfrac(mgi, nucindex);
-          const double new_abund = prev_abund * ratio;
+          const auto new_abund = static_cast<float>(prev_abund * ratio);
           set_modelinitnucmassfrac(mgi, nucindex, new_abund);
         }
       }

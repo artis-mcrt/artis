@@ -688,7 +688,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
       // SF solution depends on the ionization balance, and weakly on nne
       nonthermal::solve_spencerfano(nonemptymgi, nts, nlte_iter);
     }
-    const int duration_solve_spencerfano = std::time(nullptr) - sys_time_start_spencerfano;
+    const auto duration_solve_spencerfano = std::time(nullptr) - sys_time_start_spencerfano;
 
     const auto sys_time_start_partfuncs_or_gamma = std::time(nullptr);
     for (int element = 0; element < get_nelements(); element++) {
@@ -696,7 +696,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         calculate_cellpartfuncts(nonemptymgi, element);
       }
     }
-    const int duration_solve_partfuncs_or_gamma = std::time(nullptr) - sys_time_start_partfuncs_or_gamma;
+    const auto duration_solve_partfuncs_or_gamma = std::time(nullptr) - sys_time_start_partfuncs_or_gamma;
 
     const double prev_T_e = grid::get_Te(nonemptymgi);
     const auto sys_time_start_Te = std::time(nullptr);
@@ -705,16 +705,16 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     call_T_e_finder(nonemptymgi, globals::timesteps[nts_prev].mid, MINTEMP, MAXTEMP, heatingcoolingrates,
                     bfheatingcoeffs);
 
-    const int duration_solve_T_e = std::time(nullptr) - sys_time_start_Te;
+    const auto duration_solve_T_e = std::time(nullptr) - sys_time_start_Te;
 
     if (globals::total_nlte_levels == 0) {
       const auto sys_time_start_pops = std::time(nullptr);
       calculate_ion_balance_nne(nonemptymgi);
-      const int duration_solve_pops = std::time(nullptr) - sys_time_start_pops;
+      const auto duration_solve_pops = std::time(nullptr) - sys_time_start_pops;
 
       printout(
-          "Grid solver cell %d timestep %d: time spent on: Spencer-Fano %ds, partfuncs/gamma "
-          "%ds, T_e %ds, populations %ds\n",
+          "Grid solver cell %d timestep %d: time spent on: Spencer-Fano %lds, partfuncs/gamma "
+          "%lds, T_e %lds, populations %lds\n",
           mgi, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
           duration_solve_pops);
       break;  // no iteration is needed without nlte pops
@@ -731,14 +731,14 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         calculate_cellpartfuncts(nonemptymgi, element);
       }
     }
-    const int duration_solve_nltepops = std::time(nullptr) - sys_time_start_nltepops;
+    const auto duration_solve_nltepops = std::time(nullptr) - sys_time_start_nltepops;
 
     const double nne_prev = grid::get_nne(nonemptymgi);
     calculate_ion_balance_nne(nonemptymgi);  // sets nne
     fracdiff_nne = fabs((grid::get_nne(nonemptymgi) / nne_prev) - 1);
     printout(
-        "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e "
-        "%ds, NLTE populations %ds\n",
+        "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %lds, T_e "
+        "%lds, NLTE populations %lds\n",
         mgi, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
     printout(
         "NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: prev_iter nne "
@@ -877,7 +877,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   printout("update_grid_cell: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
 
   // Update current mass density of cell
-  grid::set_rho(nonemptymgi, grid::get_rho_tmin(mgi) / pow(tratmid, 3));
+  const auto rho = static_cast<float>(grid::get_rho_tmin(mgi) / pow(tratmid, 3));
+  grid::set_rho(nonemptymgi, rho);
 
   // Update elemental abundances with radioactive decays
   decay::update_abundances(nonemptymgi, nts, globals::timesteps[nts].mid);
@@ -895,12 +896,10 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     grid::modelgrid[nonemptymgi].thick = 1;
 
     if (globals::opacity_case == 3) {
-      if (grid::get_rho(nonemptymgi) > globals::rho_crit) {
-        grid::set_kappagrey(nonemptymgi, globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1) *
-                                             globals::rho_crit / grid::get_rho(nonemptymgi));
-      } else {
-        grid::set_kappagrey(nonemptymgi, globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1));
-      }
+      const auto kappagrey =
+          static_cast<float>(globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1) *
+                             (rho > globals::rho_crit ? globals::rho_crit / grid::get_rho(nonemptymgi) : 1.));
+      grid::set_kappagrey(nonemptymgi, kappagrey);
     }
   }
 
@@ -911,7 +910,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     if (USE_LUT_PHOTOION && !globals::simulation_continued_from_saved) {
       // Determine renormalisation factor for corrected photoionization cross-sections
       std::ranges::fill(
-          globals::corrphotoionrenorm.subspan(nonemptymgi * globals::nbfcontinua_ground, globals::nbfcontinua_ground),
+          globals::corrphotoionrenorm.subspan(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground,
+                                              globals::nbfcontinua_ground),
           1.);
     }
 
@@ -962,7 +962,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     if (globals::lte_iteration || grid::modelgrid[nonemptymgi].thick == 1) {
       // LTE mode or grey mode (where temperature doesn't matter but is calculated anyway)
 
-      const double T_J = radfield::get_T_J_from_J(nonemptymgi);
+      const auto T_J = radfield::get_T_J_from_J(nonemptymgi);
       grid::set_TR(nonemptymgi, T_J);
       grid::set_Te(nonemptymgi, T_J);
       grid::set_TJ(nonemptymgi, T_J);
@@ -970,7 +970,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
       if constexpr (USE_LUT_PHOTOION) {
         std::ranges::fill(
-            globals::corrphotoionrenorm.subspan(nonemptymgi * globals::nbfcontinua_ground, globals::nbfcontinua_ground),
+            globals::corrphotoionrenorm.subspan(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground,
+                                                globals::nbfcontinua_ground),
             1.);
       }
 
@@ -1009,13 +1010,13 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   const float nne = grid::get_nne(nonemptymgi);
   const double compton_optical_depth = SIGMA_T * nne * grid::wid_init(mgi, 0) * tratmid;
 
-  const int assoc_cells = grid::get_numpropcells(mgi);
-  const double radial_pos = grid::get_initial_radial_pos_sum(mgi) * tratmid / assoc_cells;
+  const double radial_pos = grid::get_modelcell_mean_radial_pos(mgi, tratmid);
   const double grey_optical_deptha =
       grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) * grid::wid_init(mgi, 0) * tratmid;
   // cube corners will have radial pos > rmax, so clamp to 0.
   const double dist_to_obs = std::max(0., (globals::rmax * tratmid) - radial_pos);
-  const double grey_optical_depth = grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) * dist_to_obs;
+  const auto grey_optical_depth =
+      static_cast<float>(grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) * dist_to_obs);
   printout(
       "modelgridcell %d, compton optical depth (/propgridcell) %g, grey optical depth "
       "(/propgridcell) %g\n",
@@ -1067,9 +1068,9 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     }
   }
 
-  const int update_grid_cell_seconds = std::time(nullptr) - sys_time_start_update_cell;
+  const auto update_grid_cell_seconds = std::time(nullptr) - sys_time_start_update_cell;
   if (update_grid_cell_seconds > 0) {
-    printout("update_grid_cell for cell %d timestep %d took %d seconds\n", mgi, nts, update_grid_cell_seconds);
+    printout("update_grid_cell for cell %d timestep %d took %ld seconds\n", mgi, nts, update_grid_cell_seconds);
   }
 }
 

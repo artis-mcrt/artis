@@ -110,8 +110,8 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   return bfheating;
 }
 
-auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const double T_e,
-                                const double nne) -> double {
+auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const float T_e,
+                                const float nne) -> double {
   double C_deexc = 0.;
   const int nlevels = get_nlevels(element, ion);
   const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
@@ -140,7 +140,7 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
 
 // Calculate the heating rates for a given cell. Results are returned via the elements of the heatingrates data
 // structure.
-void calculate_heating_rates(const int nonemptymgi, const double T_e, const double nne,
+void calculate_heating_rates(const int nonemptymgi, const float T_e, const float nne,
                              HeatingCoolingRates &heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
   double C_deexc = 0.;
 
@@ -194,15 +194,16 @@ void calculate_heating_rates(const int nonemptymgi, const double T_e, const doub
 }
 
 // Thermal balance equation on which we have to iterate to get T_e
-auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
-  const TeSolutionParams *const params = static_cast<TeSolutionParams *>(paras);
+auto T_e_eqn_heating_minus_cooling(const double T_e, void *const paras) -> double {
+  const auto *const params = static_cast<const TeSolutionParams *>(paras);
+  const auto fT_e = static_cast<float>(T_e);
 
   const auto nonemptymgi = params->nonemptymgi;
   const double t_current = params->t_current;
   auto &heatingcoolingrates = *params->heatingcoolingrates;
   if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
     if (std::abs((T_e / grid::get_Te(nonemptymgi)) - 1.) > 0.1) {
-      grid::set_Te(nonemptymgi, T_e);
+      grid::set_Te(nonemptymgi, fT_e);
       for (int element = 0; element < get_nelements(); element++) {
         if (!elem_has_nlte_levels(element)) {
           // recalculate the Gammas using the current level populations
@@ -218,14 +219,14 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
     }
   }
   // Set new T_e guess for the current cell and update populations
-  grid::set_Te(nonemptymgi, T_e);
+  grid::set_Te(nonemptymgi, fT_e);
 
   calculate_ion_balance_nne(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
 
   // Then calculate heating and cooling rates
   kpkt::calculate_cooling_rates(nonemptymgi, &heatingcoolingrates);
-  calculate_heating_rates(nonemptymgi, T_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
+  calculate_heating_rates(nonemptymgi, fT_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(nonemptymgi);
   const auto ntlepton_dep = nonthermal::get_deposition_rate_density(nonemptymgi);
@@ -240,9 +241,9 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double {
   const double p = nntot * KB * T_e;  // pressure in [erg/cm^3]
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double volumetmin = grid::get_modelcell_assocvolume_tmin(modelgridindex);
-  const double dV = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);  // really dV/dt
+  const double dV_on_dt = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);
   const double V = volumetmin * pow(t_current / globals::tmin, 3);
-  heatingcoolingrates.cooling_adiabatic = p * dV / V;
+  heatingcoolingrates.cooling_adiabatic = p * dV_on_dt / V;
 
   const double total_heating_rate = heatingcoolingrates.heating_ff + heatingcoolingrates.heating_bf +
                                     heatingcoolingrates.heating_collisional + heatingcoolingrates.heating_dep;
@@ -382,7 +383,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
     T_e = std::max(T_e, MINTEMP);
   }
 
-  grid::set_Te(nonemptymgi, T_e);
+  grid::set_Te(nonemptymgi, static_cast<float>(T_e));
 
   // this call with make sure heating/cooling rates and populations are updated for the final T_e
   // in case T_e got modified after the T_e solver finished

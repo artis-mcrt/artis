@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <iterator>
 #include <span>
 #include <tuple>
 #include <vector>
@@ -187,8 +188,8 @@ auto get_bin_T_R(const int nonemptymgi, const int binindex) -> float {
   return radfieldbin_solutions[(nonemptymgi * RADFIELDBINCOUNT) + binindex].T_R;
 }
 
-constexpr auto gsl_integrand_planck(const double nu, void *voidparas) -> double {
-  const auto *paras = static_cast<gsl_planck_integral_paras *>(voidparas);
+constexpr auto gsl_integrand_planck(const double nu, void *const voidparas) -> double {
+  const auto *paras = static_cast<const gsl_planck_integral_paras *>(voidparas);
   const auto T_R = paras->T_R;
 
   double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
@@ -200,7 +201,7 @@ constexpr auto gsl_integrand_planck(const double nu, void *voidparas) -> double 
   return integrand;
 }
 
-void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
+void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cmf, const double nu_cmf,
                          const double doppler_nucmf_on_nurf, const Phixslist &phixslist) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
 
@@ -213,17 +214,18 @@ void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, con
   const auto bfestimcount = globals::bfestimcount;
 
   assert_testmodeonly(phixslist.bfestimend <= bfestimcount);
-  const auto bfestimend = std::upper_bound(globals::bfestim_nu_edge.data(),
-                                           globals::bfestim_nu_edge.data() + phixslist.bfestimend, nu_cmf) -
-                          globals::bfestim_nu_edge.data();
+  const auto bfestimend =
+      std::distance(globals::bfestim_nu_edge.cbegin(),
+                    std::upper_bound(globals::bfestim_nu_edge.cbegin(),
+                                     globals::bfestim_nu_edge.cbegin() + phixslist.bfestimend, nu_cmf));
   assert_testmodeonly(bfestimend <= bfestimcount);
   assert_testmodeonly(phixslist.bfestimbegin >= 0);
-  const auto bfestimbegin = std::lower_bound(globals::bfestim_nu_edge.data() + phixslist.bfestimbegin,
-                                             globals::bfestim_nu_edge.data() + bfestimend, nu_cmf,
-                                             [](const double nu_edge, const double find_nu_cmf) {
-                                               return nu_edge * last_phixs_nuovernuedge < find_nu_cmf;
-                                             }) -
-                            globals::bfestim_nu_edge.data();
+  const auto bfestimbegin = std::distance(globals::bfestim_nu_edge.cbegin(),
+                                          std::lower_bound(globals::bfestim_nu_edge.cbegin() + phixslist.bfestimbegin,
+                                                           globals::bfestim_nu_edge.cbegin() + bfestimend, nu_cmf,
+                                                           [](const double nu_edge, const double find_nu_cmf) {
+                                                             return nu_edge * last_phixs_nuovernuedge < find_nu_cmf;
+                                                           }));
 
   for (auto bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
     atomicadd(bfrate_raw[(nonemptymgi * bfestimcount) + bfestimindex],
@@ -303,7 +305,7 @@ auto delta_nu_bar(const double T_R, void *const paras) -> double {
 }
 
 auto find_T_R(const int nonemptymgi, const int binindex) -> float {
-  double T_R = 0.;
+  float T_R = 0.;
 
   GSLT_RSolverParams paras{};
   paras.nonemptymgi = nonemptymgi;
@@ -335,7 +337,7 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
     int status = 0;
     for (int iteration_num = 0; iteration_num <= maxit; iteration_num++) {
       gsl_root_fsolver_iterate(T_R_solver);
-      T_R = gsl_root_fsolver_root(T_R_solver);
+      T_R = static_cast<float>(gsl_root_fsolver_root(T_R_solver));
 
       const double T_R_lower = gsl_root_fsolver_x_lower(T_R_solver);
       const double T_R_upper = gsl_root_fsolver_x_upper(T_R_solver);
@@ -376,7 +378,7 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
     printout("[warning] T_R estimator infinite in cell %d, keep T_R, T_J, W of last timestep. J = %g. nuJ = %g\n",
              modelgridindex, J[nonemptymgi], nuJ[nonemptymgi]);
   } else {
-    float T_J = pow(J[nonemptymgi] * PI / STEBO, 1 / 4.);
+    auto T_J = static_cast<float>(pow(J[nonemptymgi] * PI / STEBO, 1 / 4.));
     if (T_J > MAXTEMP) {
       printout("[warning] temperature estimator T_J = %g exceeds T_max %g in cell %d. Setting T_J = T_max!\n", T_J,
                MAXTEMP, modelgridindex);
@@ -388,7 +390,7 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
     }
     grid::set_TJ(nonemptymgi, T_J);
 
-    float T_R = H * nubar / KB / 3.832229494;
+    auto T_R = static_cast<float>(H * nubar / KB / 3.832229494);
     if (T_R > MAXTEMP) {
       printout("[warning] temperature estimator T_R = %g exceeds T_max %g in cell %d. Setting T_R = T_max!\n", T_R,
                MAXTEMP, modelgridindex);
@@ -400,7 +402,7 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
     }
     grid::set_TR(nonemptymgi, T_R);
 
-    const float W = J[nonemptymgi] * PI / STEBO / pow(T_R, 4);
+    const auto W = static_cast<float>(J[nonemptymgi] * PI / STEBO / pow(T_R, 4));
     grid::set_W(nonemptymgi, W);
 
     printout(
@@ -412,13 +414,13 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
 auto get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
   // simple linear search seems to be faster than the binary search
   // possibly because lower frequency transitions near start of list are more likely to be called?
-  const auto bfcontindex = static_cast<int>(std::find_if(globals::allcont, globals::allcont + globals::nbfcontinua,
-                                                         [=](const auto &bf) {
-                                                           return (bf.element == element) && (bf.ion == lowerion) &&
-                                                                  (bf.level == lower) &&
-                                                                  (bf.phixstargetindex == phixstargetindex);
-                                                         }) -
-                                            globals::allcont);
+  const auto bfcontindex =
+      static_cast<int>(std::find_if(globals::allcont.begin(), globals::allcont.begin() + globals::nbfcontinua,
+                                    [=](const auto &bf) {
+                                      return (bf.element == element) && (bf.ion == lowerion) && (bf.level == lower) &&
+                                             (bf.phixstargetindex == phixstargetindex);
+                                    }) -
+                       globals::allcont.begin());
 
   if (bfcontindex < globals::nbfcontinua) {
     return bfcontindex;
@@ -731,9 +733,9 @@ void zero_estimators() {
   }
 }
 
-__host__ __device__ void update_estimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                                           const double doppler_nucmf_on_nurf, const Phixslist &phixslist,
-                                           const bool thickcell) {
+__host__ __device__ void update_estimators(const ptrdiff_t nonemptymgi, const double distance_e_cmf,
+                                           const double nu_cmf, const double doppler_nucmf_on_nurf,
+                                           const Phixslist &phixslist, const bool thickcell) {
   if (distance_e_cmf == 0) {
     return;
   }
@@ -753,7 +755,7 @@ __host__ __device__ void update_estimators(const int nonemptymgi, const double d
     const int binindex = select_bin(nu_cmf);
 
     if (binindex >= 0) {
-      const ptrdiff_t mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
+      const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
       atomicadd(radfieldbins[mgibinindex].J_raw, distance_e_cmf);
       atomicadd(radfieldbins[mgibinindex].nuJ_raw, distance_e_cmf * nu_cmf);
       atomicadd(radfieldbins[mgibinindex].contribcount, 1);
@@ -863,7 +865,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
       const double nu_upper = get_bin_nu_upper(binindex);
       const double J_bin = get_bin_J(nonemptymgi, binindex);
       float T_R_bin = -1.;
-      double W_bin = -1.;
+      float W_bin = -1.;
       const int contribcount = get_bin_contribcount(nonemptymgi, binindex);
 
       if (contribcount > 0) {
@@ -881,14 +883,14 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
           //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower,
           //          nu_upper, planck_integral_result);
 
-          W_bin = J_bin / planck_integral_result;
+          W_bin = static_cast<float>(J_bin / planck_integral_result);
 
           if (W_bin > 1e4) {
             //            printout("T_R_bin %g, nu_lower %g, nu_upper %g\n", T_R_bin, nu_lower, nu_upper);
             printout("W %g too high, trying setting T_R of bin %d to %g. J_bin %g planck_integral %g\n", W_bin,
                      binindex, T_R_max, J_bin, planck_integral_result);
             planck_integral_result = planck_integral(T_R_max, nu_lower, nu_upper, false);
-            W_bin = J_bin / planck_integral_result;
+            W_bin = static_cast<float>(J_bin / planck_integral_result);
             if (W_bin > 1e4) {
               printout("W still very high, W=%g. Zeroing bin...\n", W_bin);
               T_R_bin = -99.;
@@ -946,7 +948,7 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
     const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
     for (int i = 0; i < bfestimcount; i++) {
       const auto mgibfindex = (nonemptymgi * bfestimcount) + i;
-      prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * (estimator_normfactor / H);
+      prev_bfrate_normed[mgibfindex] = static_cast<float>(bfrate_raw[mgibfindex] * (estimator_normfactor / H));
     }
   }
 }
@@ -971,8 +973,8 @@ void normalise_nuJ(const int nonemptymgi, const double estimator_normfactor_over
   nuJ[nonemptymgi] *= estimator_normfactor_over4pi;
 }
 
-auto get_T_J_from_J(const int nonemptymgi) -> double {
-  const double T_J = pow(J[nonemptymgi] * PI / STEBO, 1. / 4.);
+auto get_T_J_from_J(const int nonemptymgi) -> float {
+  const auto T_J = static_cast<float>(pow(J[nonemptymgi] * PI / STEBO, 1. / 4.));
   if (!std::isfinite(T_J)) {
     // keep old value of T_J
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -1011,7 +1013,7 @@ void titer_nuJ(const int nonemptymgi) {
 void reduce_estimators()
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
-  const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
+  const auto nonempty_npts_model = grid::get_nonempty_npts_model();
 
   MPI_Allreduce(MPI_IN_PLACE, J.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, nuJ.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -1041,8 +1043,8 @@ void reduce_estimators()
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
       }
     }
-    const int duration_reduction = std::time(nullptr) - sys_time_start_reduction;
-    printout(" (took %d s)\n", duration_reduction);
+    const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
+    printout(" (took %ld s)\n", duration_reduction);
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
@@ -1056,8 +1058,8 @@ void reduce_estimators()
                       MPI_COMM_WORLD);
       }
     }
-    const int duration_reduction = std::time(nullptr) - sys_time_start_reduction;
-    printout(" (took %d s)\n", duration_reduction);
+    const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
+    printout(" (took %ld s)\n", duration_reduction);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }

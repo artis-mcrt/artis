@@ -5,6 +5,7 @@
 #include <array>
 #include <cmath>
 #include <span>
+#include <string>
 #include <tuple>
 
 #include "artisoptions.h"
@@ -29,7 +30,7 @@ inline double last_phixs_nuovernuedge;
 // first value in this array is not used but exists so the indexes match those of the phixsdata_filenames array
 inline std::array<bool, 3> phixs_file_version_exists;
 
-constexpr std::array<const char *, 3> phixsdata_filenames = {"version0ignore", "phixsdata.txt", "phixsdata_v2.txt"};
+inline const std::array<const std::string, 3> phixsdata_filenames = {"IGNORE", "phixsdata.txt", "phixsdata_v2.txt"};
 
 // return the number of ions of all elements combined
 inline auto get_includedlevels() -> int { return includedlevels; }
@@ -142,8 +143,8 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   return globals::elements[element].ions[ion].maxrecombininglevel;
 }
 
-[[nodiscard]] inline __host__ __device__ auto get_phixs_table(const int uniquelevelindexl) -> float * {
-  const auto phixsstart = globals::alllevels.phixsstart[uniquelevelindexl];
+[[nodiscard]] inline __host__ __device__ auto get_phixs_table(const int uniquelevelindex) -> float * {
+  const auto phixsstart = globals::alllevels.phixsstart[uniquelevelindex];
   assert_testmodeonly(phixsstart >= 0);
   return globals::allphixs.data() + (phixsstart * globals::NPHIXSPOINTS);
 }
@@ -155,7 +156,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
 
 // Calculate the photoionisation cross-section at frequency nu out of the atomic data.
 [[nodiscard]] inline auto photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge,
-                                                                 const double nu) -> double {
+                                                                 const double nu) -> float {
   // if (nu < nu_edge || nu > nu_edge * 1.05)
   //   return 0;
   // else
@@ -175,8 +176,8 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
       // use a parameterization of sigma_bf by the Kramers formula
       // which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
       // so far the highest grid point, otherwise the cross-section is not continuous
-      sigma_bf = photoion_xs[globals::NPHIXSPOINTS - 1] *
-                 pow(nu_edge * (1 + globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS) / nu, 3);
+      sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] *
+                                    pow(nu_edge * (1 + globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS) / nu, 3));
     }
     return sigma_bf;
   }
@@ -190,13 +191,13 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
     const double sigma_bf_a = photoion_xs[i];
     const double sigma_bf_b = photoion_xs[i + 1];
     const double factor_b = ireal - i;
-    sigma_bf = ((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b);
+    sigma_bf = static_cast<float>(((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b));
   } else {
     // use a parameterization of sigma_bf by the Kramers formula
     // which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
     // so far the highest grid point, otherwise the cross-section is not continuous
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
-    sigma_bf = photoion_xs[globals::NPHIXSPOINTS - 1] * pow(nu_max_phixs / nu, 3);
+    sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] * pow(nu_max_phixs / nu, 3));
   }
 
   return sigma_bf;
@@ -443,22 +444,6 @@ inline auto get_includedions() -> int {
   return get_nuptrans(get_uniquelevelindex(element, ion, level));
 }
 
-// the number of downward bound-bound transitions from the specified level
-inline void set_ndowntrans(const int element, const int ion, const int level, const int ndowntrans) {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  globals::alllevels.ndowntrans[get_uniquelevelindex(element, ion, level)] = ndowntrans;
-}
-
-// the number of upward bound-bound transitions from the specified level
-inline void set_nuptrans(const int element, const int ion, const int level, const int nuptrans) {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  globals::alllevels.nuptrans[get_uniquelevelindex(element, ion, level)] = nuptrans;
-}
-
 [[nodiscard]] inline auto get_phixtargetindex(const int uniquelevelindex, const int upperionlevel) -> int {
   const auto nphixstargets = get_nphixstargets(uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
@@ -480,7 +465,7 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
                                                const int upperionlevel) -> int {
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   const int phixstargetindex = get_phixtargetindex(uniquelevelindex, upperionlevel);
-  return -1 - globals::alllevels.cont_index[uniquelevelindex] - phixstargetindex;
+  return -1 - globals::alllevels.bflist_start[uniquelevelindex] - phixstargetindex;
 }
 
 // Return the photionisation threshold energy [erg]
@@ -507,7 +492,7 @@ inline void set_nuptrans(const int element, const int ion, const int level, cons
 
 [[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int uniquelevelindex,
                                          const int phixstargetindex) -> int {
-  const int contindex = globals::alllevels.cont_index[uniquelevelindex] + phixstargetindex;
+  const int contindex = globals::alllevels.bflist_start[uniquelevelindex] + phixstargetindex;
   const int bflutindex = (temperatureindex * globals::nbfcontinua) + contindex;
   assert_testmodeonly(bflutindex >= 0);
   assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
