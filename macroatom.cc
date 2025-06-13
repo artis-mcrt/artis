@@ -741,13 +741,14 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
     if (get_phixsupperlevel(lowerionlower_uniquelevelindex, phixstargetindex) == upperionlevel) {
       const auto R_spont = nne * get_spontrecombcoeff(lowerionlower_uniquelevelindex, phixstargetindex, T_e);
       assert_testmodeonly(std::isfinite(R_spont));
-      return R_spont;
 
       if constexpr (SEPARATE_STIMRECOMB) {
         const auto R_stimb = nne * get_stimrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, nonemptymgi);
         assert_testmodeonly(std::isfinite(R_stimb));
         return R_spont + R_stimb;
       }
+
+      return R_spont;
     }
   }
 
