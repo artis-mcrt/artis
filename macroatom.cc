@@ -746,19 +746,17 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
 
 auto stim_recombination_ratecoeff(const float nne, const int element, const int upperion, const int upper,
                                   const int lower, const int nonemptymgi) -> double {
-  double R = 0.;
-
   if constexpr (SEPARATE_STIMRECOMB) {
     const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {
-        R = nne * get_stimrecombcoeff(element, upperion - 1, lower, phixstargetindex, nonemptymgi);
-        break;
+        const double R = nne * get_stimrecombcoeff(element, upperion - 1, lower, phixstargetindex, nonemptymgi);
+        return R;
       }
     }
   }
 
-  return R;
+  return 0.;
 }
 
 // multiply by upper level population to get a rate per second
