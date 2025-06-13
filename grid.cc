@@ -1249,13 +1249,15 @@ template <size_t S1>
     double dist1 = (-b + sqrt(discriminant)) / 2 / a;
     double dist2 = (-b - sqrt(discriminant)) / 2 / a;
 
-    auto posfinal1 = Vec3d{0.};
-    auto posfinal2 = Vec3d{0.};
-
-    for (int d = 0; d < std::ssize(pos); d++) {
-      posfinal1[d] = pos[d] + dist1 * dir[d];
-      posfinal2[d] = pos[d] + dist2 * dir[d];
-    }
+    const auto [posfinal1, posfinal2] = [&]() {
+      std::array<double, S1> posf1{};
+      std::array<double, S1> posf2{};
+      for (size_t d = 0; d < S1; d++) {
+        posf1[d] = pos[d] + dist1 * dir[d];
+        posf2[d] = pos[d] + dist2 * dir[d];
+      }
+      return std::tuple{posf1, posf2};
+    }();
 
     const double v_rad_shell = shellradiuststart / tstart;
     const double v_rad_final1 = dot(dir, posfinal1) * speed / vec_len(posfinal1);
