@@ -2,6 +2,7 @@
 #define SPECTRUM_H
 
 #include <array>
+#include <cstddef>
 #include <span>
 #include <string>
 #include <vector>
@@ -19,6 +20,14 @@ struct Spectra {
   std::vector<double> emissionalltimesteps;
   std::vector<double> trueemissionalltimesteps;
   bool do_emission_res = false;
+
+  [[nodiscard]] auto mem_usage_bytes() const -> size_t {
+    auto mem_usage = sizeof(Spectra);
+    mem_usage += sizeof(float) * (lower_freq.size() + delta_freq.size());
+    mem_usage += sizeof(double) * (fluxalltimesteps.size() + absorptionalltimesteps.size() +
+                                   emissionalltimesteps.size() + trueemissionalltimesteps.size());
+    return mem_usage;
+  }
 };
 
 void write_spectrum(const std::string &spec_filename, const std::string &emission_filename,

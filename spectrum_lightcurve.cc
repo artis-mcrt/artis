@@ -479,7 +479,6 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
   // setup the time and frequency bins using a logarithmic spacing in both t and nu
 
   assert_always(MNUBINS > 0);
-  size_t mem_usage = 0;
   const double dlognu = (log(nu_max) - log(nu_min)) / MNUBINS;
 
   spectra.nu_min = nu_min;
@@ -499,36 +498,23 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
   resize_exactly(spectra.fluxalltimesteps, globals::ntimesteps * MNUBINS);
   std::ranges::fill(spectra.fluxalltimesteps, 0.0);
 
-  mem_usage += globals::ntimesteps * sizeof(Spectra);
-  mem_usage += globals::ntimesteps * MNUBINS * sizeof(double);
-
   if (do_emission_res) {
-    const int proccount = get_proccount();
-
-    mem_usage += globals::ntimesteps * MNUBINS * get_nelements() * get_max_nions() * sizeof(double);
-    mem_usage += globals::ntimesteps * MNUBINS * proccount * sizeof(double) * 2;
-
     resize_exactly(spectra.absorptionalltimesteps, globals::ntimesteps * MNUBINS * get_nelements() * get_max_nions());
-    resize_exactly(spectra.emissionalltimesteps, globals::ntimesteps * MNUBINS * proccount);
-    resize_exactly(spectra.trueemissionalltimesteps, globals::ntimesteps * MNUBINS * proccount);
+    resize_exactly(spectra.emissionalltimesteps, globals::ntimesteps * MNUBINS * get_proccount());
+    resize_exactly(spectra.trueemissionalltimesteps, globals::ntimesteps * MNUBINS * get_proccount());
 
     std::ranges::fill(spectra.absorptionalltimesteps, 0.0);
     std::ranges::fill(spectra.emissionalltimesteps, 0.0);
     std::ranges::fill(spectra.trueemissionalltimesteps, 0.0);
-
-    if (print_memusage) {
-      printout("[info] mem_usage: set of emission/absorption spectra occupy %.3f MB (nnubins %td)\n",
-               mem_usage / 1024. / 1024., MNUBINS);
-    }
-
   } else {
     spectra.absorptionalltimesteps.clear();
     spectra.emissionalltimesteps.clear();
     spectra.trueemissionalltimesteps.clear();
+  }
 
-    if (print_memusage) {
-      printout("[info] mem_usage: set of spectra occupy %.3f MB (nnubins %td)\n", mem_usage / 1024. / 1024., MNUBINS);
-    }
+  if (print_memusage) {
+    printout("[info] mem_usage: set of spectra%s occupy %.3f MB\n",
+             do_emission_res ? " (with emission/absorption tracing)" : "", spectra.mem_usage_bytes() / 1024. / 1024.);
   }
 }
 
