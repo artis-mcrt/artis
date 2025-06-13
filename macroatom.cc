@@ -775,14 +775,15 @@ auto col_recombination_ratecoeff(const float T_e, const float nne, const int ele
 
       // Seaton approximation: Mihalas (1978), eq.5-79, p.134
       // select gaunt factor according to ionic charge
-      double g{NAN};
-      if (ionstage - 1 == 1) {
-        g = 0.1;
-      } else if (ionstage - 1 == 2) {
-        g = 0.2;
-      } else {
-        g = 0.3;
-      }
+      const double g = [ionstage]() -> double {
+        if (ionstage == 1) {
+          return 0.1;
+        }
+        if (ionstage == 2) {
+          return 0.2;
+        }
+        return 0.3;
+      }();
 
       const double sigma_bf = (get_phixs_table(lowerionlower_uniquelevelindex)[0] *
                                get_phixsprobability(lowerionlower_uniquelevelindex, phixstargetindex));
