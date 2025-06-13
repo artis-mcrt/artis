@@ -785,7 +785,7 @@ auto col_recombination_ratecoeff(const float T_e, const float nne, const int ele
       const double fac1 = epsilon_trans / KB / T_e;
 
       // select gaunt factor according to ionic charge
-      const double g = gaunt_factor(get_ionstage(element, upperion));
+      const double g = gaunt_factor(get_ionstage(element, upperion - 1));
 
       const double sigma_bf = (get_phixs_table(lowerionlower_uniquelevelindex)[0] *
                                get_phixsprobability(lowerionlower_uniquelevelindex, phixstargetindex));
