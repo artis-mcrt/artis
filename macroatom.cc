@@ -657,32 +657,22 @@ void macroatom_close_file() {
 auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int lower_uniquelevelindex, const double epsilon_trans,
                                 const float A_ul, const double upperstatweight, const double lowerstatweight,
                                 const double nnlevelupper, const double t_current) -> double {
-  const auto &n_u = nnlevelupper;
   const double n_l = get_levelpop(nonemptymgi, lower_uniquelevelindex);
 
-  double R = 0.;
+  const double nu_trans = epsilon_trans / H;
 
-  // if ((n_u > 1.1 * MINPOP) && (n_l > 1.1 * MINPOP))
-  {
-    const double nu_trans = epsilon_trans / H;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
+  const double B_lu = upperstatweight / lowerstatweight * B_ul;
 
-    const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
-    const double B_lu = upperstatweight / lowerstatweight * B_ul;
+  const double tau_sobolev = (B_lu * n_l - B_ul * nnlevelupper) * HCLIGHTOVERFOURPI * t_current;
 
-    const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
-
-    if (tau_sobolev > 1e-100) {
-      const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
-      // const double beta = 1.;
-      R = A_ul * beta;
-    } else {
-      R = 0.;
-    }
-
+  if (tau_sobolev > 1e-100) {
+    const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
+    const auto R = A_ul * beta;
     assert_testmodeonly(std::isfinite(R));
+    return R;
   }
-
-  return R;
+  return 0.;
 }
 
 // radiative excitation rate: paperII 3.5.2
