@@ -724,24 +724,24 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
   // if (upperionlevel > get_maxrecombininglevel(element, upperion))
   //   return 0.;
 
-  double R = 0.;
   const int lowerion = upperion - 1;
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerionlevel);
   const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (get_phixsupperlevel(lowerionlower_uniquelevelindex, phixstargetindex) == upperionlevel) {
-      R = nne * get_spontrecombcoeff(lowerionlower_uniquelevelindex, phixstargetindex, T_e);
+      const auto R_spont = nne * get_spontrecombcoeff(lowerionlower_uniquelevelindex, phixstargetindex, T_e);
+      assert_testmodeonly(std::isfinite(R_spont));
+      return R_spont;
 
       if constexpr (SEPARATE_STIMRECOMB) {
-        R += nne * get_stimrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, nonemptymgi);
+        const auto R_stimb = nne * get_stimrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, nonemptymgi);
+        assert_testmodeonly(std::isfinite(R_stimb));
+        return R_spont + R_stimb;
       }
-      break;
     }
   }
 
-  assert_testmodeonly(std::isfinite(R));
-
-  return R;
+  return 0.;
 }
 
 auto stim_recombination_ratecoeff(const float nne, const int element, const int upperion, const int upper,
