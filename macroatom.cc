@@ -294,6 +294,16 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   return -1;
 }
 
+constexpr auto gaunt_factor(const int ionstage) -> double {
+  if (ionstage == 1) {
+    return 0.1;
+  }
+  if (ionstage == 2) {
+    return 0.2;
+  }
+  return 0.3;
+}
+
 }  // anonymous namespace
 
 // handle activated macro atoms
@@ -770,20 +780,12 @@ auto col_recombination_ratecoeff(const float T_e, const float nne, const int ele
   const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (get_phixsupperlevel(lowerionlower_uniquelevelindex, phixstargetindex) == upper) {
-      const double fac1 = epsilon_trans / KB / T_e;
-      const int ionstage = get_ionstage(element, upperion);
-
       // Seaton approximation: Mihalas (1978), eq.5-79, p.134
+
+      const double fac1 = epsilon_trans / KB / T_e;
+
       // select gaunt factor according to ionic charge
-      const double g = [ionstage]() -> double {
-        if (ionstage == 1) {
-          return 0.1;
-        }
-        if (ionstage == 2) {
-          return 0.2;
-        }
-        return 0.3;
-      }();
+      const double g = gaunt_factor(get_ionstage(element, upperion));
 
       const double sigma_bf = (get_phixs_table(lowerionlower_uniquelevelindex)[0] *
                                get_phixsprobability(lowerionlower_uniquelevelindex, phixstargetindex));
@@ -808,16 +810,8 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, lower));
 
   // Seaton approximation: Mihalas (1978), eq.5-79, p.134
-  // select gaunt factor according to ionic charge
-  double g{NAN};
-  const int ionstage = get_ionstage(element, ion);
-  if (ionstage == 1) {
-    g = 0.1;
-  } else if (ionstage == 2) {
-    g = 0.2;
-  } else {
-    g = 0.3;
-  }
+
+  const double g = gaunt_factor(get_ionstage(element, ion));
 
   const double fac1 = epsilon_trans / KB / T_e;
 
