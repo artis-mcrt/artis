@@ -535,7 +535,7 @@ void write_partial_lightcurve_spectra(const int my_rank, const int nts, std::spa
   bool do_emission_absorption = false;
 
   // the emission resolved spectra are slow to generate, so only allow making them for the final timestep or every n
-  if (WRITE_PARTIAL_EMISSIONABSORPTIONSPEC && globals::do_emission_res) {
+  if (WRITE_PARTIAL_EMISSIONABSORPTIONSPEC) {
     do_emission_absorption = ((nts >= globals::timestep_finish - 1) || (nts % 5 == 0));
   }
 

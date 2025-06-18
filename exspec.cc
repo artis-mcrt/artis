@@ -36,12 +36,12 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
   std::vector<double> gamma_light_curve_lumcmf(globals::ntimesteps, 0.);
 
   // Set up the spectrum grid and initialise the bins to zero.
-  init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
+  init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, true);
 
   if constexpr (POL_ON) {
-    init_spectra(stokes_i, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
-    init_spectra(stokes_q, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
-    init_spectra(stokes_u, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
+    init_spectra(stokes_i, NU_MIN_R, NU_MAX_R, true);
+    init_spectra(stokes_q, NU_MIN_R, NU_MAX_R, true);
+    init_spectra(stokes_u, NU_MIN_R, NU_MAX_R, true);
   }
 
   const double nu_min_gamma = 0.05 * MEV / H;
