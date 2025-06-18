@@ -729,10 +729,8 @@ auto rad_excitation_ratecoeff(const int nonemptymgi, const int upper_uniquelevel
 // multiply by upper level population to get a rate per second
 auto rad_recombination_ratecoeff(const float T_e, const float nne, const int element, const int upperion,
                                  const int upperionlevel, const int lowerionlevel, const int nonemptymgi) -> double {
-  // it's probably faster to only check this condition outside this function
-  // in a case where this wasn't checked, the function will return zero anyway
-  // if (upperionlevel > get_maxrecombininglevel(element, upperion))
-  //   return 0.;
+  // it's faster to only check this condition outside this function than to check it for every level
+  assert_testmodeonly(upperionlevel <= get_maxrecombininglevel(element, upperion));
 
   const int lowerion = upperion - 1;
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerionlevel);
@@ -804,7 +802,6 @@ auto col_recombination_ratecoeff(const float T_e, const float nne, const int ele
 
 // collisional ionization rate: paperII 3.5.1
 // multiply by lower level population to get a rate per second
-
 auto col_ionization_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
                               const int phixstargetindex, const double epsilon_trans) -> double {
   assert_testmodeonly(phixstargetindex >= 0);
