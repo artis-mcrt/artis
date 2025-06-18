@@ -19,7 +19,7 @@ struct Spectra {
   std::vector<double> absorptionalltimesteps;
   std::vector<double> emissionalltimesteps;
   std::vector<double> trueemissionalltimesteps;
-  bool do_emission_res = false;
+  bool do_emission_absorption = false;
 
   [[nodiscard]] auto mem_usage_bytes() const -> size_t {
     auto mem_usage = sizeof(Spectra);
@@ -42,7 +42,7 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
 void add_to_spec_res(const Packet &pkt, int current_abin, Spectra &spectra, Spectra *stokes_i, Spectra *stokes_q,
                      Spectra *stokes_u);
 
-void init_spectra(Spectra &spectra, double nu_min, double nu_max, bool do_emission_res);
+void init_spectra(Spectra &spectra, double nu_min, double nu_max, bool do_emission_absorption);
 void init_spectrum_trace();
 void write_partial_lightcurve_spectra(int my_rank, int nts, std::span<const Packet> pkts);
 
