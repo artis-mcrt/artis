@@ -619,8 +619,8 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
 }
 
 // add a packet to the outgoing light-curve.
-void add_to_lc_res(const Packet &pkt, const int current_abin, std::vector<double> &light_curve_lum,
-                   std::vector<double> &light_curve_lumcmf) {
+void add_to_lc_res(const Packet &pkt, const int current_abin, std::span<double> light_curve_lum,
+                   std::span<double> light_curve_lumcmf) {
   if (current_abin == -1) {
     // Put this into the time grid
     const double arrive_time = get_arrive_time(pkt);
