@@ -622,7 +622,7 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
 void add_to_lc_res(const Packet &pkt, const int current_abin, std::span<double> light_curve_lum,
                    std::span<double> light_curve_lumcmf) {
   if (current_abin == -1) {
-    // -1 means all full 4π angle average light curve
+    // -1 means all full 4π angle average (no angle filtering)
 
     // Put this into the time grid
     const double arrive_time = get_arrive_time(pkt);
@@ -643,7 +643,8 @@ void add_to_lc_res(const Packet &pkt, const int current_abin, std::span<double> 
     }
 
   } else if (get_escapedirectionbin(pkt.dir) == current_abin) {
-    // Add only packets which escape to the current angle bin
+    // packets that escape in the select angle bin
+
     const double t_arrive = get_arrive_time(pkt);
     if (t_arrive > globals::tmin && t_arrive < globals::tmax) {
       const int nts = get_timestep(t_arrive);
