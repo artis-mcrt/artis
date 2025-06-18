@@ -24,8 +24,9 @@ struct Spectra {
   [[nodiscard]] auto mem_usage_bytes() const -> size_t {
     auto mem_usage = sizeof(Spectra);
     mem_usage += sizeof(float) * (lower_freq.size() + delta_freq.size());
-    mem_usage += sizeof(double) * (fluxalltimesteps.size() + absorptionalltimesteps.size() +
-                                   emissionalltimesteps.size() + trueemissionalltimesteps.size());
+    mem_usage += sizeof(double) * (fluxalltimesteps.capacity() + absorptionalltimesteps.capacity() +
+                                   emissionalltimesteps.capacity() + trueemissionalltimesteps.capacity());
+    // Note: Allocator overhead is not included in this calculation.
     return mem_usage;
   }
 };
