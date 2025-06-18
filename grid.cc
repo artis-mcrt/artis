@@ -154,7 +154,7 @@ void allocate_initradiobund() {
 
   const auto totalradioabundcount = (npts_model + 1) * num_nuclides;
   std::tie(initnucmassfrac_allcells, win_initnucmassfrac_allcells) =
-      MPI_shared_malloc_keepwin_span<float>(totalradioabundcount);
+      MPI_shared_malloc_span_keepwin<float>(totalradioabundcount);
   printout(
       "[info] mem_usage: radioabundance data for %td nuclides for %td cells occupies %.3f MB (node shared memory)\n",
       num_nuclides, npts_model, static_cast<double>(totalradioabundcount * sizeof(float)) / 1024. / 1024.);
@@ -288,7 +288,7 @@ void allocate_nonemptycells_composition_cooling()
 
   if (globals::total_nlte_levels > 0) {
     std::tie(nltepops_allcells, win_nltepops_allcells) =
-        MPI_shared_malloc_keepwin_span<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels);
+        MPI_shared_malloc_span_keepwin<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels);
 
   } else {
     nltepops_allcells = {};
@@ -411,7 +411,7 @@ void allocate_nonemptymodelcells() {
 
   if (ionestimsize > 0) {
     std::tie(globals::corrphotoionrenorm, globals::win_corrphotoionrenorm) =
-        MPI_shared_malloc_keepwin_span<double>(ionestimcount);
+        MPI_shared_malloc_span_keepwin<double>(ionestimcount);
 
     if (globals::rank_in_node == 0) {
       std::ranges::fill(globals::corrphotoionrenorm, 1.);
@@ -1249,13 +1249,15 @@ template <size_t S1>
     double dist1 = (-b + sqrt(discriminant)) / 2 / a;
     double dist2 = (-b - sqrt(discriminant)) / 2 / a;
 
-    auto posfinal1 = Vec3d{0.};
-    auto posfinal2 = Vec3d{0.};
-
-    for (int d = 0; d < std::ssize(pos); d++) {
-      posfinal1[d] = pos[d] + dist1 * dir[d];
-      posfinal2[d] = pos[d] + dist2 * dir[d];
-    }
+    const auto [posfinal1, posfinal2] = [&]() {
+      std::array<double, S1> posf1{};
+      std::array<double, S1> posf2{};
+      for (size_t d = 0; d < S1; d++) {
+        posf1[d] = pos[d] + dist1 * dir[d];
+        posf2[d] = pos[d] + dist2 * dir[d];
+      }
+      return std::tuple{posf1, posf2};
+    }();
 
     const double v_rad_shell = shellradiuststart / tstart;
     const double v_rad_final1 = dot(dir, posfinal1) * speed / vec_len(posfinal1);

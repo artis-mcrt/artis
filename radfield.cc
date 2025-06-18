@@ -50,7 +50,7 @@ constexpr double radfieldbins_delta_nu =
     (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
 
 std::vector<RadFieldBin> radfieldbins{};
-RadFieldBinSolution *radfieldbin_solutions{};
+std::span<RadFieldBinSolution> radfieldbin_solutions{};
 
 MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
 MPI_Win win_prev_bfrate_normed = MPI_WIN_NULL;
@@ -585,7 +585,7 @@ void init(const int my_rank, const int ndo_nonempty) {
     const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
 
     std::tie(radfieldbin_solutions, win_radfieldbin_solutions) =
-        MPI_shared_malloc_keepwin<RadFieldBinSolution>(nonempty_npts_model * RADFIELDBINCOUNT);
+        MPI_shared_malloc_span_keepwin<RadFieldBinSolution>(nonempty_npts_model * RADFIELDBINCOUNT);
 
     printout("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy %.3f MB\n",
              mem_usage_bins / 1024. / 1024.);
@@ -599,7 +599,7 @@ void init(const int my_rank, const int ndo_nonempty) {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     {
       std::tie(prev_bfrate_normed, win_prev_bfrate_normed) =
-          MPI_shared_malloc_keepwin_span<float>(nonempty_npts_model * globals::bfestimcount);
+          MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * globals::bfestimcount);
       if (globals::rank_in_node == 0) {
         std::ranges::fill(prev_bfrate_normed, 0.);
       }
@@ -701,12 +701,14 @@ void close_file() {
     radfieldbins = {};
     if (win_radfieldbin_solutions != MPI_WIN_NULL) {
       MPI_Win_free(&win_radfieldbin_solutions);
+      radfieldbin_solutions = {};
     }
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     if (win_radfieldbin_solutions != MPI_WIN_NULL) {
       MPI_Win_free(&win_prev_bfrate_normed);
+      prev_bfrate_normed = {};
     }
   }
 }

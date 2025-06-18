@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <cstdio>
 #include <ctime>
 #include <fstream>
 #include <functional>
@@ -223,7 +222,7 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
       stokes_u->fluxalltimesteps[fluxindex] += pkt.stokes[2] * deltaE;
     }
 
-    if (spectra.do_emission_res) {
+    if (spectra.do_emission_absorption) {
       const auto proccount = get_proccount();
 
       const auto truenproc = columnindex_from_emissiontype(pkt.trueemissiontype);
@@ -239,13 +238,13 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
         const auto emindex = (nts * MNUBINS * proccount) + (nnu * proccount) + nproc;
         spectra.emissionalltimesteps[emindex] += deltaE;
 
-        if (stokes_i != nullptr && stokes_i->do_emission_res) {
+        if (stokes_i != nullptr && stokes_i->do_emission_absorption) {
           stokes_i->emissionalltimesteps[emindex] += pkt.stokes[0] * deltaE;
         }
-        if (stokes_q != nullptr && stokes_q->do_emission_res) {
+        if (stokes_q != nullptr && stokes_q->do_emission_absorption) {
           stokes_q->emissionalltimesteps[emindex] += pkt.stokes[1] * deltaE;
         }
-        if (stokes_u != nullptr && stokes_u->do_emission_res) {
+        if (stokes_u != nullptr && stokes_u->do_emission_absorption) {
           stokes_u->emissionalltimesteps[emindex] += pkt.stokes[2] * deltaE;
         }
       }
@@ -279,13 +278,13 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
           const auto absindex = get_absindex(nts, nnu_abs, element, ion);
           spectra.absorptionalltimesteps[absindex] += deltaE_absorption;
 
-          if (stokes_i != nullptr && stokes_i->do_emission_res) {
+          if (stokes_i != nullptr && stokes_i->do_emission_absorption) {
             stokes_i->absorptionalltimesteps[absindex] += pkt.stokes[0] * deltaE_absorption;
           }
-          if (stokes_q != nullptr && stokes_q->do_emission_res) {
+          if (stokes_q != nullptr && stokes_q->do_emission_absorption) {
             stokes_q->absorptionalltimesteps[absindex] += pkt.stokes[1] * deltaE_absorption;
           }
-          if (stokes_u != nullptr && stokes_u->do_emission_res) {
+          if (stokes_u != nullptr && stokes_u->do_emission_absorption) {
             stokes_u->absorptionalltimesteps[absindex] += pkt.stokes[2] * deltaE_absorption;
           }
 
@@ -310,7 +309,7 @@ void mpi_reduce_spectra(int my_rank, Spectra &spectra) {
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.fluxalltimesteps.data(), spectra.fluxalltimesteps.data(),
              static_cast<int>(std::ssize(spectra.fluxalltimesteps)), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
-  if (spectra.do_emission_res) {
+  if (spectra.do_emission_absorption) {
     MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.absorptionalltimesteps.data(),
                spectra.absorptionalltimesteps.data(), static_cast<int>(std::ssize(spectra.absorptionalltimesteps)),
                MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -323,26 +322,26 @@ void mpi_reduce_spectra(int my_rank, Spectra &spectra) {
   }
 }
 
-void write_specpol_param(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpol_file, const Spectra &spec,
-                         const int nnu, const bool do_emission_res) {
+void write_specpol_param(std::fstream &specpol_file, std::fstream &emissionpol_file, std::fstream &absorptionpol_file,
+                         const Spectra &spec, const int nnu, const bool do_emission_absorption) {
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
   // Stokes I, Q, or U
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
-    fprintf(specpol_file, "%g ", spec.fluxalltimesteps[(nts * MNUBINS) + nnu]);
+    specpol_file << spec.fluxalltimesteps[(nts * MNUBINS) + nnu] << ' ';
 
-    if (do_emission_res) {
+    if (do_emission_absorption) {
       for (int nproc = 0; nproc < proccount; nproc++) {
         const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu) * proccount) + nproc;
-        fprintf(emissionpol_file, "%g ", spec.emissionalltimesteps[emindex]);
+        emissionpol_file << spec.emissionalltimesteps[emindex] << ' ';
       }
-      fprintf(emissionpol_file, "\n");
+      emissionpol_file << '\n';
 
       for (int i = 0; i < ioncount; i++) {
         const auto absindex = get_absindex(nts, nnu, 0, i);
-        fprintf(absorptionpol_file, "%g ", spec.absorptionalltimesteps[absindex]);
+        absorptionpol_file << spec.absorptionalltimesteps[absindex] << ' ';
       }
-      fprintf(absorptionpol_file, "\n");
+      absorptionpol_file << '\n';
     }
   }
 }
@@ -354,22 +353,22 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
                     const Spectra &spectra, const int numtimesteps) {
   auto spec_file = fstream_required(spec_filename, std::ios::out | std::ios::trunc);
 
-  const bool do_emission_res = spectra.do_emission_res;
-  auto emission_file =
-      do_emission_res ? fstream_required(emission_filename, std::ios::out | std::ios::trunc) : std::fstream{};
-  auto trueemission_file =
-      do_emission_res ? fstream_required(trueemission_filename, std::ios::out | std::ios::trunc) : std::fstream{};
-  auto absorption_file =
-      do_emission_res ? fstream_required(absorption_filename, std::ios::out | std::ios::trunc) : std::fstream{};
+  const bool do_emission_absorption = spectra.do_emission_absorption;
+  std::fstream emission_file{};
+  std::fstream trueemission_file{};
+  std::fstream absorption_file{};
 
-  if (do_emission_res) {
+  if (do_emission_absorption) {
+    emission_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
+    trueemission_file = fstream_required(trueemission_filename, std::ios::out | std::ios::trunc);
+    absorption_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
     printout("Writing %s, %s, %s, and %s\n", spec_filename.c_str(), emission_filename.c_str(),
              trueemission_filename.c_str(), absorption_filename.c_str());
   } else {
     printout("Writing %s\n", spec_filename.c_str());
   }
 
-  if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_res && !traceemissionabsorption.empty()) {
+  if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_absorption && !traceemissionabsorption.empty()) {
     printout_tracemission_stats();
   }
 
@@ -389,7 +388,7 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
 
     for (int nts = 0; nts < numtimesteps; nts++) {
       spec_file << spectra.fluxalltimesteps[(nts * MNUBINS) + nubin] << ' ';
-      if (do_emission_res) {
+      if (do_emission_absorption) {
         const auto emindex_nts_nubin = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nubin) * proccount);
         for (int nproc = 0; nproc < proccount; nproc++) {
           emission_file << spectra.emissionalltimesteps[emindex_nts_nubin + nproc] << ' ';
@@ -415,47 +414,41 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
 void write_specpol(const std::string &specpol_filename, const std::string &emission_filename,
                    const std::string &absorption_filename, const Spectra *stokes_i, const Spectra *stokes_q,
                    const Spectra *stokes_u) {
-  FILE *specpol_file = fopen_required(specpol_filename, "w");
-  FILE *emissionpol_file{};
-  FILE *absorptionpol_file{};
+  auto specpol_file = fstream_required(specpol_filename, std::ios::out | std::ios::trunc);
+  std::fstream emissionpol_file{};
+  std::fstream absorptionpol_file{};
 
-  const bool do_emission_res = stokes_i->do_emission_res;
+  const bool do_emission_absorption = stokes_i->do_emission_absorption;
 
-  if (do_emission_res) {
-    emissionpol_file = fopen_required(emission_filename, "w");
-    absorptionpol_file = fopen_required(absorption_filename, "w");
+  if (do_emission_absorption) {
+    emissionpol_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
+    absorptionpol_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
     printout("Writing %s, %s, and %s\n", specpol_filename.c_str(), emission_filename.c_str(),
              absorption_filename.c_str());
   } else {
     printout("Writing %s\n", specpol_filename.c_str());
   }
 
-  fprintf(specpol_file, "%g ", 0.0);
+  specpol_file << 0.0 << ' ';
 
   for (int l = 0; l < 3; l++) {
     for (int p = 0; p < globals::ntimesteps; p++) {
-      fprintf(specpol_file, "%g ", globals::timesteps[p].mid / DAY);
+      specpol_file << globals::timesteps[p].mid / DAY << ' ';
     }
   }
 
-  fprintf(specpol_file, "\n");
+  specpol_file << '\n';
 
   assert_always(std::ssize(stokes_i->delta_freq) == MNUBINS);
   assert_always(std::ssize(stokes_i->lower_freq) == MNUBINS);
   for (int nnu = 0; nnu < std::ssize(stokes_i->lower_freq); nnu++) {
-    fprintf(specpol_file, "%g ", ((stokes_i->lower_freq[nnu] + (stokes_i->delta_freq[nnu] / 2))));
+    specpol_file << (stokes_i->lower_freq[nnu] + (stokes_i->delta_freq[nnu] / 2)) << ' ';
 
-    write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, *stokes_i, nnu, do_emission_res);
-    write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, *stokes_q, nnu, do_emission_res);
-    write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, *stokes_u, nnu, do_emission_res);
+    write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, *stokes_i, nnu, do_emission_absorption);
+    write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, *stokes_q, nnu, do_emission_absorption);
+    write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, *stokes_u, nnu, do_emission_absorption);
 
-    fprintf(specpol_file, "\n");
-  }
-
-  fclose(specpol_file);
-  if (do_emission_res) {
-    fclose(emissionpol_file);
-    fclose(absorptionpol_file);
+    specpol_file << '\n';
   }
 }
 
@@ -475,18 +468,17 @@ void init_spectrum_trace() {
 }
 
 // resize and initialize the spectra object
-void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, const bool do_emission_res) {
+void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, const bool do_emission_absorption) {
   // setup the time and frequency bins using a logarithmic spacing in both t and nu
 
   assert_always(MNUBINS > 0);
-  size_t mem_usage = 0;
   const double dlognu = (log(nu_max) - log(nu_min)) / MNUBINS;
 
   spectra.nu_min = nu_min;
   spectra.nu_max = nu_max;
-  spectra.do_emission_res = do_emission_res;
+  spectra.do_emission_absorption = do_emission_absorption;
   const bool print_memusage =
-      (spectra.fluxalltimesteps.empty() || (do_emission_res && spectra.absorptionalltimesteps.empty()));
+      (spectra.fluxalltimesteps.empty() || (do_emission_absorption && spectra.absorptionalltimesteps.empty()));
 
   for (ptrdiff_t nnu = 0; nnu < MNUBINS; nnu++) {
     spectra.lower_freq[nnu] = static_cast<float>(std::exp(log(nu_min) + (nnu * (dlognu))));
@@ -494,41 +486,30 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
         static_cast<float>(std::exp(log(nu_min) + ((nnu + 1) * (dlognu))) - spectra.lower_freq[nnu]);
   }
 
-  spectra.do_emission_res = do_emission_res;  // might be set true later by alloc_emissionabsorption_spectra
+  spectra.do_emission_absorption =
+      do_emission_absorption;  // might be set true later by alloc_emissionabsorption_spectra
 
   resize_exactly(spectra.fluxalltimesteps, globals::ntimesteps * MNUBINS);
   std::ranges::fill(spectra.fluxalltimesteps, 0.0);
 
-  mem_usage += globals::ntimesteps * sizeof(Spectra);
-  mem_usage += globals::ntimesteps * MNUBINS * sizeof(double);
-
-  if (do_emission_res) {
-    const int proccount = get_proccount();
-
-    mem_usage += globals::ntimesteps * MNUBINS * get_nelements() * get_max_nions() * sizeof(double);
-    mem_usage += globals::ntimesteps * MNUBINS * proccount * sizeof(double) * 2;
-
+  if (do_emission_absorption) {
     resize_exactly(spectra.absorptionalltimesteps, globals::ntimesteps * MNUBINS * get_nelements() * get_max_nions());
-    resize_exactly(spectra.emissionalltimesteps, globals::ntimesteps * MNUBINS * proccount);
-    resize_exactly(spectra.trueemissionalltimesteps, globals::ntimesteps * MNUBINS * proccount);
+    resize_exactly(spectra.emissionalltimesteps, globals::ntimesteps * MNUBINS * get_proccount());
+    resize_exactly(spectra.trueemissionalltimesteps, globals::ntimesteps * MNUBINS * get_proccount());
 
     std::ranges::fill(spectra.absorptionalltimesteps, 0.0);
     std::ranges::fill(spectra.emissionalltimesteps, 0.0);
     std::ranges::fill(spectra.trueemissionalltimesteps, 0.0);
-
-    if (print_memusage) {
-      printout("[info] mem_usage: set of emission/absorption spectra occupy %.3f MB (nnubins %td)\n",
-               mem_usage / 1024. / 1024., MNUBINS);
-    }
-
   } else {
     spectra.absorptionalltimesteps.clear();
     spectra.emissionalltimesteps.clear();
     spectra.trueemissionalltimesteps.clear();
+  }
 
-    if (print_memusage) {
-      printout("[info] mem_usage: set of spectra occupy %.3f MB (nnubins %td)\n", mem_usage / 1024. / 1024., MNUBINS);
-    }
+  if (print_memusage) {
+    printout("[info] mem_usage: set of spectra%s occupy %.3f MB\n",
+             do_emission_absorption ? " (with emission/absorption tracing)" : "",
+             spectra.mem_usage_bytes() / 1024. / 1024.);
   }
 }
 
@@ -551,14 +532,14 @@ void write_partial_lightcurve_spectra(const int my_rank, const int nts, std::spa
 
   TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 
-  bool do_emission_res = false;
+  bool do_emission_absorption = false;
 
   // the emission resolved spectra are slow to generate, so only allow making them for the final timestep or every n
-  if (WRITE_PARTIAL_EMISSIONABSORPTIONSPEC && globals::do_emission_res) {
-    do_emission_res = ((nts >= globals::timestep_finish - 1) || (nts % 5 == 0));
+  if (WRITE_PARTIAL_EMISSIONABSORPTIONSPEC) {
+    do_emission_absorption = ((nts >= globals::timestep_finish - 1) || (nts % 5 == 0));
   }
 
-  init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, do_emission_res);
+  init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, do_emission_absorption);
 
   for (int ii = 0; ii < globals::npkts; ii++) {
     if (pkts[ii].type == TYPE_ESCAPE) {
@@ -597,7 +578,7 @@ void write_partial_lightcurve_spectra(const int my_rank, const int nts, std::spa
 
   MPI_Barrier(MPI_COMM_WORLD);
   printout("timestep %d: Saving partial light curves and %sspectra took %lds (%lds for MPI reduction)\n", nts,
-           do_emission_res ? "emission/absorption " : "", std::time(nullptr) - time_func_start,
+           do_emission_absorption ? "emission/absorption " : "", std::time(nullptr) - time_func_start,
            time_mpireduction_end - time_mpireduction_start);
 }
 
@@ -610,32 +591,28 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
 
   printout("Writing %s\n", lc_filename.c_str());
 
-  char linebuffer[1024];
-
   // Print out the UVOIR bolometric light curve.
   for (int nts = 0; nts < numtimesteps; nts++) {
-    assert_always(snprintf(linebuffer, sizeof(linebuffer), "%g %g %g", globals::timesteps[nts].mid / DAY,
-                           (light_curve_lum[nts] / LSUN),
-                           (light_curve_lumcmf[nts] / LSUN)) < static_cast<int>(sizeof(linebuffer)));
-    lc_file << linebuffer << '\n';
+    lc_file << globals::timesteps[nts].mid / DAY << ' ' << light_curve_lum[nts] / LSUN << ' '
+            << light_curve_lumcmf[nts] / LSUN << '\n';
   }
 
   if (current_abin == -1) {
     // Now print out the gamma ray deposition rate in the same file.
     for (int m = 0; m < numtimesteps; m++) {
-      assert_always(snprintf(linebuffer, sizeof(linebuffer), "%g %g %g", globals::timesteps[m].mid / DAY,
-                             (globals::timesteps[m].gamma_dep / LSUN / globals::timesteps[m].width),
-                             (globals::timesteps[m].cmf_lum / globals::timesteps[m].width / LSUN)) <
-                    static_cast<int>(sizeof(linebuffer)));
-      lc_file << linebuffer << '\n';
+      lc_file << globals::timesteps[m].mid / DAY << ' '
+              << globals::timesteps[m].gamma_dep / LSUN / globals::timesteps[m].width << ' '
+              << globals::timesteps[m].cmf_lum / globals::timesteps[m].width / LSUN << '\n';
     }
   }
 }
 
 // add a packet to the outgoing light-curve.
-void add_to_lc_res(const Packet &pkt, const int current_abin, std::vector<double> &light_curve_lum,
-                   std::vector<double> &light_curve_lumcmf) {
+void add_to_lc_res(const Packet &pkt, const int current_abin, std::span<double> light_curve_lum,
+                   std::span<double> light_curve_lumcmf) {
   if (current_abin == -1) {
+    // -1 means all full 4π angle average (no angle filtering)
+
     // Put this into the time grid
     const double arrive_time = get_arrive_time(pkt);
     if (arrive_time > globals::tmin && arrive_time < globals::tmax) {
@@ -646,7 +623,6 @@ void add_to_lc_res(const Packet &pkt, const int current_abin, std::vector<double
     const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
 
     // Now do the cmf light curve.
-    // t_arrive = pkt.escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
     const double arrive_time_cmf = pkt.escape_time * inverse_gamma;
 
     if (arrive_time_cmf > globals::tmin && arrive_time_cmf < globals::tmax) {
@@ -655,10 +631,9 @@ void add_to_lc_res(const Packet &pkt, const int current_abin, std::vector<double
                 pkt.e_cmf / globals::timesteps[nts].width / globals::nprocs_exspec / inverse_gamma);
     }
 
-    return;
-  }
-  if (get_escapedirectionbin(pkt.dir) == current_abin) {
-    // Add only packets which escape to the current angle bin
+  } else if (get_escapedirectionbin(pkt.dir) == current_abin) {
+    // packets that escape in the select angle bin
+
     const double t_arrive = get_arrive_time(pkt);
     if (t_arrive > globals::tmin && t_arrive < globals::tmax) {
       const int nts = get_timestep(t_arrive);

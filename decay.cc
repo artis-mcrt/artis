@@ -1044,7 +1044,7 @@ void setup_decaypath_energy_per_mass() {
       "shared)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
   std::tie(decaypath_energy_per_mass, win_decaypath_energy_per_mass) =
-      MPI_shared_malloc_keepwin_span<double>(nonempty_npts_model * get_num_decaypaths());
+      MPI_shared_malloc_span_keepwin<double>(nonempty_npts_model * get_num_decaypaths());
   printout("done.\n");
 
   MPI_Barrier(MPI_COMM_WORLD);
