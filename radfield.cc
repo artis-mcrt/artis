@@ -585,7 +585,7 @@ void init(const int my_rank, const int ndo_nonempty) {
     const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
 
     std::tie(radfieldbin_solutions, win_radfieldbin_solutions) =
-        MPI_shared_malloc_keepwin_span<RadFieldBinSolution>(nonempty_npts_model * RADFIELDBINCOUNT);
+        MPI_shared_malloc_span_keepwin<RadFieldBinSolution>(nonempty_npts_model * RADFIELDBINCOUNT);
 
     printout("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy %.3f MB\n",
              mem_usage_bins / 1024. / 1024.);
@@ -599,7 +599,7 @@ void init(const int my_rank, const int ndo_nonempty) {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     {
       std::tie(prev_bfrate_normed, win_prev_bfrate_normed) =
-          MPI_shared_malloc_keepwin_span<float>(nonempty_npts_model * globals::bfestimcount);
+          MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * globals::bfestimcount);
       if (globals::rank_in_node == 0) {
         std::ranges::fill(prev_bfrate_normed, 0.);
       }

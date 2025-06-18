@@ -154,7 +154,7 @@ void allocate_initradiobund() {
 
   const auto totalradioabundcount = (npts_model + 1) * num_nuclides;
   std::tie(initnucmassfrac_allcells, win_initnucmassfrac_allcells) =
-      MPI_shared_malloc_keepwin_span<float>(totalradioabundcount);
+      MPI_shared_malloc_span_keepwin<float>(totalradioabundcount);
   printout(
       "[info] mem_usage: radioabundance data for %td nuclides for %td cells occupies %.3f MB (node shared memory)\n",
       num_nuclides, npts_model, static_cast<double>(totalradioabundcount * sizeof(float)) / 1024. / 1024.);
@@ -288,7 +288,7 @@ void allocate_nonemptycells_composition_cooling()
 
   if (globals::total_nlte_levels > 0) {
     std::tie(nltepops_allcells, win_nltepops_allcells) =
-        MPI_shared_malloc_keepwin_span<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels);
+        MPI_shared_malloc_span_keepwin<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels);
 
   } else {
     nltepops_allcells = {};
@@ -411,7 +411,7 @@ void allocate_nonemptymodelcells() {
 
   if (ionestimsize > 0) {
     std::tie(globals::corrphotoionrenorm, globals::win_corrphotoionrenorm) =
-        MPI_shared_malloc_keepwin_span<double>(ionestimcount);
+        MPI_shared_malloc_span_keepwin<double>(ionestimcount);
 
     if (globals::rank_in_node == 0) {
       std::ranges::fill(globals::corrphotoionrenorm, 1.);

@@ -896,12 +896,12 @@ void allocate_expansionopacities() {
 
   assert_always(expansionopacities.data() == nullptr);
   std::tie(expansionopacities, win_expansionopacities) =
-      MPI_shared_malloc_keepwin_span<float>(nonempty_npts_model * expopac_nbins);
+      MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * expopac_nbins);
 
   assert_always(expansionopacity_planck_cumulative.data() == nullptr);
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
     std::tie(expansionopacity_planck_cumulative, win_expansionopacity_planck_cumulative) =
-        MPI_shared_malloc_keepwin_span<double>(nonempty_npts_model * expopac_nbins);
+        MPI_shared_malloc_span_keepwin<double>(nonempty_npts_model * expopac_nbins);
   }
 }
 
