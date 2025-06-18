@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <cstdio>
 #include <ctime>
 #include <fstream>
 #include <functional>
@@ -323,26 +322,26 @@ void mpi_reduce_spectra(int my_rank, Spectra &spectra) {
   }
 }
 
-void write_specpol_param(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpol_file, const Spectra &spec,
-                         const int nnu, const bool do_emission_res) {
+void write_specpol_param(std::fstream &specpol_file, std::fstream &emissionpol_file, std::fstream &absorptionpol_file,
+                         const Spectra &spec, const int nnu, const bool do_emission_res) {
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
   // Stokes I, Q, or U
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
-    fprintf(specpol_file, "%g ", spec.fluxalltimesteps[(nts * MNUBINS) + nnu]);
+    specpol_file << spec.fluxalltimesteps[(nts * MNUBINS) + nnu] << ' ';
 
     if (do_emission_res) {
       for (int nproc = 0; nproc < proccount; nproc++) {
         const auto emindex = (nts * MNUBINS * proccount) + (static_cast<ptrdiff_t>(nnu) * proccount) + nproc;
-        fprintf(emissionpol_file, "%g ", spec.emissionalltimesteps[emindex]);
+        emissionpol_file << spec.emissionalltimesteps[emindex] << ' ';
       }
-      fprintf(emissionpol_file, "\n");
+      emissionpol_file << '\n';
 
       for (int i = 0; i < ioncount; i++) {
         const auto absindex = get_absindex(nts, nnu, 0, i);
-        fprintf(absorptionpol_file, "%g ", spec.absorptionalltimesteps[absindex]);
+        absorptionpol_file << spec.absorptionalltimesteps[absindex] << ' ';
       }
-      fprintf(absorptionpol_file, "\n");
+      absorptionpol_file << '\n';
     }
   }
 }
@@ -415,47 +414,41 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
 void write_specpol(const std::string &specpol_filename, const std::string &emission_filename,
                    const std::string &absorption_filename, const Spectra *stokes_i, const Spectra *stokes_q,
                    const Spectra *stokes_u) {
-  FILE *specpol_file = fopen_required(specpol_filename, "w");
-  FILE *emissionpol_file{};
-  FILE *absorptionpol_file{};
+  auto specpol_file = fstream_required(specpol_filename, std::ios::out | std::ios::trunc);
+  std::fstream emissionpol_file{};
+  std::fstream absorptionpol_file{};
 
   const bool do_emission_res = stokes_i->do_emission_res;
 
   if (do_emission_res) {
-    emissionpol_file = fopen_required(emission_filename, "w");
-    absorptionpol_file = fopen_required(absorption_filename, "w");
+    emissionpol_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
+    absorptionpol_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
     printout("Writing %s, %s, and %s\n", specpol_filename.c_str(), emission_filename.c_str(),
              absorption_filename.c_str());
   } else {
     printout("Writing %s\n", specpol_filename.c_str());
   }
 
-  fprintf(specpol_file, "%g ", 0.0);
+  specpol_file << 0.0 << ' ';
 
   for (int l = 0; l < 3; l++) {
     for (int p = 0; p < globals::ntimesteps; p++) {
-      fprintf(specpol_file, "%g ", globals::timesteps[p].mid / DAY);
+      specpol_file << globals::timesteps[p].mid / DAY << ' ';
     }
   }
 
-  fprintf(specpol_file, "\n");
+  specpol_file << '\n';
 
   assert_always(std::ssize(stokes_i->delta_freq) == MNUBINS);
   assert_always(std::ssize(stokes_i->lower_freq) == MNUBINS);
   for (int nnu = 0; nnu < std::ssize(stokes_i->lower_freq); nnu++) {
-    fprintf(specpol_file, "%g ", ((stokes_i->lower_freq[nnu] + (stokes_i->delta_freq[nnu] / 2))));
+    specpol_file << ((stokes_i->lower_freq[nnu] + (stokes_i->delta_freq[nnu] / 2))) << ' ';
 
     write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, *stokes_i, nnu, do_emission_res);
     write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, *stokes_q, nnu, do_emission_res);
     write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, *stokes_u, nnu, do_emission_res);
 
-    fprintf(specpol_file, "\n");
-  }
-
-  fclose(specpol_file);
-  if (do_emission_res) {
-    fclose(emissionpol_file);
-    fclose(absorptionpol_file);
+    specpol_file << '\n';
   }
 }
 
