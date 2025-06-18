@@ -632,6 +632,16 @@ constexpr auto meanf_sigma(const double x) -> double {
   return tot;
 }
 
+// get the gamma-ray opacity (with the expected energy loss per interaction factor included)
+auto get_kappa(const Packet &pkt) -> double {
+  const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
+  const int mgi = grid::get_propcell_modelgridindex(pkt.where);
+  const double chi = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + get_chi_photo_electric_rf(pkt) +
+                      (get_chi_pair_prod_rf(pkt) * (1. - (2.46636e+20 / pkt.nu_cmf))));
+  const double kappa = 1 / grid::get_rho(mgi) * chi;
+  return kappa;
+}
+
 // update the energy deposition estimator for gamma ray path increment
 void update_gamma_dep(const Packet &pkt, const double dist, const int nonemptymgi) {
   if (!(dist > 0)) {
