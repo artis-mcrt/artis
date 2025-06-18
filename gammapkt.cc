@@ -226,7 +226,7 @@ void init_xcom_photoion_data() {
         assert_always(Z > 0);
         assert_always(Z <= numb_xcom_elements);
         // convert XCOM data to cgs units already here
-        photoion_data[Z - 1].push_back({.energy = E, .sigma_xcom = sigma * 1e-24});
+        photoion_data[Z - 1].push_back({.energy = E, .sigma_xcom = sigma});
       }
     }
   }
@@ -515,11 +515,11 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
           }
         }
         if (E_gtr_idx == 0) {  // packet energy smaller than all tabulated values
-          chi_cmf += photoion_data[Z - 1][0].sigma_xcom * n_i;
+          chi_cmf += photoion_data[Z - 1][0].sigma_xcom * n_i * 1e-24;
           continue;
         }
         if (E_gtr_idx == -1) {  // packet energy greater than all tabulated values
-          chi_cmf += photoion_data[Z - 1][numb_energies - 1].sigma_xcom * n_i;
+          chi_cmf += photoion_data[Z - 1][numb_energies - 1].sigma_xcom * n_i * 1e-24;
           continue;
         }
         assert_always(E_gtr_idx > 0);
@@ -534,7 +534,7 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
         // interpolate or extrapolate, both linear in log10-log10 space
         const double log10_intpol = log10_E_smaller + ((log10_sigma_gtr - log10_sigma_lower) /
                                                        (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller));
-        const double sigma_intpol = pow(10., log10_intpol);
+        const double sigma_intpol = pow(10., log10_intpol) * 1e-24;
         const double chi_cmf_contrib = sigma_intpol * n_i;
         assert_always(sigma_intpol >= 0.);
         chi_cmf += chi_cmf_contrib;
