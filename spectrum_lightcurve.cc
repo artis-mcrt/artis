@@ -632,7 +632,6 @@ void add_to_lc_res(const Packet &pkt, const int current_abin, std::span<double> 
     const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
 
     // Now do the cmf light curve.
-    // t_arrive = pkt.escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
     const double arrive_time_cmf = pkt.escape_time * inverse_gamma;
 
     if (arrive_time_cmf > globals::tmin && arrive_time_cmf < globals::tmax) {
