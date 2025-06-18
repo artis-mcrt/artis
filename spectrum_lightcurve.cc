@@ -354,14 +354,14 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
   auto spec_file = fstream_required(spec_filename, std::ios::out | std::ios::trunc);
 
   const bool do_emission_res = spectra.do_emission_res;
-  auto emission_file =
-      do_emission_res ? fstream_required(emission_filename, std::ios::out | std::ios::trunc) : std::fstream{};
-  auto trueemission_file =
-      do_emission_res ? fstream_required(trueemission_filename, std::ios::out | std::ios::trunc) : std::fstream{};
-  auto absorption_file =
-      do_emission_res ? fstream_required(absorption_filename, std::ios::out | std::ios::trunc) : std::fstream{};
+  std::fstream emission_file{};
+  std::fstream trueemission_file{};
+  std::fstream absorption_file{};
 
   if (do_emission_res) {
+    emission_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
+    trueemission_file = fstream_required(trueemission_filename, std::ios::out | std::ios::trunc);
+    absorption_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
     printout("Writing %s, %s, %s, and %s\n", spec_filename.c_str(), emission_filename.c_str(),
              trueemission_filename.c_str(), absorption_filename.c_str());
   } else {
