@@ -1537,6 +1537,11 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
       const int uniqueionindex = get_uniqueionindex(element, ion);
 
       const int ionstage = get_ionstage(element, ion);
+      const int ioncharge = ionstage - 1;
+      const int nbound = Z - ioncharge;  // number of bound electrons
+      if (nbound <= 0) {
+        continue;
+      }
       const double nnion = get_nnion(nonemptymgi, element, ion);
 
       // if (nnion < minionfraction * get_nnion_tot(nonemptymgi)) // skip negligible ions
