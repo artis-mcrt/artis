@@ -294,6 +294,16 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   return -1;
 }
 
+constexpr auto gaunt_factor(const int ionstage) -> double {
+  if (ionstage == 1) {
+    return 0.1;
+  }
+  if (ionstage == 2) {
+    return 0.2;
+  }
+  return 0.3;
+}
+
 }  // anonymous namespace
 
 // handle activated macro atoms
@@ -657,32 +667,22 @@ void macroatom_close_file() {
 auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int lower_uniquelevelindex, const double epsilon_trans,
                                 const float A_ul, const double upperstatweight, const double lowerstatweight,
                                 const double nnlevelupper, const double t_current) -> double {
-  const auto &n_u = nnlevelupper;
   const double n_l = get_levelpop(nonemptymgi, lower_uniquelevelindex);
 
-  double R = 0.;
+  const double nu_trans = epsilon_trans / H;
 
-  // if ((n_u > 1.1 * MINPOP) && (n_l > 1.1 * MINPOP))
-  {
-    const double nu_trans = epsilon_trans / H;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
+  const double B_lu = upperstatweight / lowerstatweight * B_ul;
 
-    const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
-    const double B_lu = upperstatweight / lowerstatweight * B_ul;
+  const double tau_sobolev = (B_lu * n_l - B_ul * nnlevelupper) * HCLIGHTOVERFOURPI * t_current;
 
-    const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
-
-    if (tau_sobolev > 1e-100) {
-      const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
-      // const double beta = 1.;
-      R = A_ul * beta;
-    } else {
-      R = 0.;
-    }
-
+  if (tau_sobolev > 1e-100) {
+    const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
+    const auto R = A_ul * beta;
     assert_testmodeonly(std::isfinite(R));
+    return R;
   }
-
-  return R;
+  return 0.;
 }
 
 // radiative excitation rate: paperII 3.5.2
@@ -729,46 +729,43 @@ auto rad_excitation_ratecoeff(const int nonemptymgi, const int upper_uniquelevel
 // multiply by upper level population to get a rate per second
 auto rad_recombination_ratecoeff(const float T_e, const float nne, const int element, const int upperion,
                                  const int upperionlevel, const int lowerionlevel, const int nonemptymgi) -> double {
-  // it's probably faster to only check this condition outside this function
-  // in a case where this wasn't checked, the function will return zero anyway
-  // if (upperionlevel > get_maxrecombininglevel(element, upperion))
-  //   return 0.;
+  // it's faster to only check this condition outside this function than to check it for every level
+  assert_testmodeonly(upperionlevel <= get_maxrecombininglevel(element, upperion));
 
-  double R = 0.;
   const int lowerion = upperion - 1;
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerionlevel);
   const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (get_phixsupperlevel(lowerionlower_uniquelevelindex, phixstargetindex) == upperionlevel) {
-      R = nne * get_spontrecombcoeff(lowerionlower_uniquelevelindex, phixstargetindex, T_e);
+      const auto R_spont = nne * get_spontrecombcoeff(lowerionlower_uniquelevelindex, phixstargetindex, T_e);
+      assert_testmodeonly(std::isfinite(R_spont));
 
       if constexpr (SEPARATE_STIMRECOMB) {
-        R += nne * get_stimrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, nonemptymgi);
+        const auto R_stimb = nne * get_stimrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, nonemptymgi);
+        assert_testmodeonly(std::isfinite(R_stimb));
+        return R_spont + R_stimb;
       }
-      break;
+
+      return R_spont;
     }
   }
 
-  assert_testmodeonly(std::isfinite(R));
-
-  return R;
+  return 0.;
 }
 
 auto stim_recombination_ratecoeff(const float nne, const int element, const int upperion, const int upper,
                                   const int lower, const int nonemptymgi) -> double {
-  double R = 0.;
-
   if constexpr (SEPARATE_STIMRECOMB) {
     const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {
-        R = nne * get_stimrecombcoeff(element, upperion - 1, lower, phixstargetindex, nonemptymgi);
-        break;
+        const double R = nne * get_stimrecombcoeff(element, upperion - 1, lower, phixstargetindex, nonemptymgi);
+        return R;
       }
     }
   }
 
-  return R;
+  return 0.;
 }
 
 // multiply by upper level population to get a rate per second
@@ -782,19 +779,12 @@ auto col_recombination_ratecoeff(const float T_e, const float nne, const int ele
   const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (get_phixsupperlevel(lowerionlower_uniquelevelindex, phixstargetindex) == upper) {
-      const double fac1 = epsilon_trans / KB / T_e;
-      const int ionstage = get_ionstage(element, upperion);
-
       // Seaton approximation: Mihalas (1978), eq.5-79, p.134
+
+      const double fac1 = epsilon_trans / KB / T_e;
+
       // select gaunt factor according to ionic charge
-      double g{NAN};
-      if (ionstage - 1 == 1) {
-        g = 0.1;
-      } else if (ionstage - 1 == 2) {
-        g = 0.2;
-      } else {
-        g = 0.3;
-      }
+      const double g = gaunt_factor(get_ionstage(element, upperion - 1));
 
       const double sigma_bf = (get_phixs_table(lowerionlower_uniquelevelindex)[0] *
                                get_phixsprobability(lowerionlower_uniquelevelindex, phixstargetindex));
@@ -812,23 +802,14 @@ auto col_recombination_ratecoeff(const float T_e, const float nne, const int ele
 
 // collisional ionization rate: paperII 3.5.1
 // multiply by lower level population to get a rate per second
-
 auto col_ionization_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
                               const int phixstargetindex, const double epsilon_trans) -> double {
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, lower));
 
   // Seaton approximation: Mihalas (1978), eq.5-79, p.134
-  // select gaunt factor according to ionic charge
-  double g{NAN};
-  const int ionstage = get_ionstage(element, ion);
-  if (ionstage == 1) {
-    g = 0.1;
-  } else if (ionstage == 2) {
-    g = 0.2;
-  } else {
-    g = 0.3;
-  }
+
+  const double g = gaunt_factor(get_ionstage(element, ion));
 
   const double fac1 = epsilon_trans / KB / T_e;
 

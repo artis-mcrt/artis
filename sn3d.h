@@ -371,7 +371,7 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto MPI_shared_malloc_keepwin_span(const ptrdiff_t num_allranks) -> std::tuple<std::span<T>, MPI_Win> {
+[[nodiscard]] auto MPI_shared_malloc_span_keepwin(const ptrdiff_t num_allranks) -> std::tuple<std::span<T>, MPI_Win> {
   const auto [ptr, mpiwin] = MPI_shared_malloc_keepwin<T>(num_allranks);
   return {std::span(ptr, num_allranks), mpiwin};
 }

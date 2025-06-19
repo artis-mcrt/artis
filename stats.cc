@@ -2,6 +2,7 @@
 
 #include <mpi.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -29,7 +30,9 @@ std::array<ptrdiff_t, COUNTER_COUNT> eventstats{};
 
 void init() {
   if constexpr (TRACK_ION_STATS) {
-    ionstats.resize(static_cast<ptrdiff_t>(grid::get_nonempty_npts_model()) * get_includedions() * ION_STAT_COUNT, 0.);
+    resize_exactly(ionstats,
+                   static_cast<ptrdiff_t>(grid::get_nonempty_npts_model()) * get_includedions() * ION_STAT_COUNT);
+    std::ranges::fill(ionstats, 0.0);
   }
 }
 
@@ -227,8 +230,7 @@ void pkt_action_counters_printout(const int nts) {
 }
 
 void reduce_estimators() {
-  MPI_Allreduce(MPI_IN_PLACE, stats::ionstats.data(),
-                grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT, MPI_DOUBLE, MPI_SUM,
-                MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, stats::ionstats.data(), static_cast<int>(std::ssize(stats::ionstats)), MPI_DOUBLE,
+                MPI_SUM, MPI_COMM_WORLD);
 }
 }  // namespace stats

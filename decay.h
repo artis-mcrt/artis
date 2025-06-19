@@ -35,6 +35,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
 [[nodiscard]] auto nuc_exists(int z, int a) -> bool;
 [[nodiscard]] auto nucdecayenergygamma(int nucindex) -> double;
 [[nodiscard]] auto nucdecayenergygamma(int z, int a) -> double;
+[[nodiscard]] auto get_decay_neutrino_frac(int nucindex, int decaytype) -> double;
 void set_nucdecayenergygamma(int nucindex, double value);
 void update_abundances(int nonemptymgi, int timestep, double t_current);
 [[nodiscard]] auto get_endecay_per_ejectamass_t0_to_time_withexpansion(int nonemptymgi, double tstart) -> double;

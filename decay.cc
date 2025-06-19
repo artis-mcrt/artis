@@ -751,6 +751,12 @@ auto write_nuclides_list() {
 
 }  // anonymous namespace
 
+[[nodiscard]] auto get_decay_neutrino_frac(const int nucindex, const int decaytype) -> double {
+  // subtract fraction of other decay products, nucdecayenergy() excludes neutrinos!
+  const double nu_frac = 1. - (nucdecayenergy(nucindex, decaytype) / nuclides[nucindex].endecay_q[decaytype]);
+  return nu_frac;
+}
+
 [[nodiscard]] auto get_num_nuclides() -> ptrdiff_t { return std::ssize(nuclides); }
 
 [[nodiscard]] auto get_elname(const int z) -> std::string {
@@ -1038,7 +1044,7 @@ void setup_decaypath_energy_per_mass() {
       "shared)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
   std::tie(decaypath_energy_per_mass, win_decaypath_energy_per_mass) =
-      MPI_shared_malloc_keepwin_span<double>(nonempty_npts_model * get_num_decaypaths());
+      MPI_shared_malloc_span_keepwin<double>(nonempty_npts_model * get_num_decaypaths());
   printout("done.\n");
 
   MPI_Barrier(MPI_COMM_WORLD);

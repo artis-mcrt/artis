@@ -9,7 +9,6 @@ Checks: [
         -bugprone-easily-swappable-parameters,
         -bugprone-exception-escape,
         -bugprone-implicit-widening-of-multiplication-result,
-        -bugprone-multi-level-implicit-pointer-conversion,
         -boost-use-ranges,
         -cert-dcl03-c,
         -cert-dcl50-cpp,

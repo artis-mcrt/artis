@@ -33,9 +33,8 @@ template <size_t VECDIM>
 }
 
 // vector dot product
-template <size_t S1, size_t S2>
-[[nodiscard]] constexpr auto dot(const std::array<double, S1> &x, const std::array<double, S2> &y) -> double {
-  // if len(x) < len(y), the extra elements of y are ignored
+template <size_t S1>
+[[nodiscard]] constexpr auto dot(const std::array<double, S1> &x, const std::array<double, S1> &y) -> double {
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
@@ -134,20 +133,17 @@ constexpr auto move_pkt_withtime(Vec3d &pos_rf, const Vec3d &dir_rf, double &pro
   const double nu_cmf_old = nu_cmf;
   prop_time += distance / CLIGHT_PROP;
 
-  pos_rf[0] += (dir_rf[0] * distance);
-  pos_rf[1] += (dir_rf[1] * distance);
-  pos_rf[2] += (dir_rf[2] * distance);
+  pos_rf = {pos_rf[0] + (dir_rf[0] * distance), pos_rf[1] + (dir_rf[1] * distance), pos_rf[2] + (dir_rf[2] * distance)};
 
   // During motion, rest frame energy and frequency are conserved.
   // But need to update the co-moving ones.
   const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pos_rf, dir_rf, prop_time);
 
-  nu_cmf = nu_rf * dopplerfactor;
-  e_cmf = e_rf * dopplerfactor;
-
-  // frequency should only over decrease due to packet movement
+  // frequency should only ever decrease during packet movement with homologous expansion
   // enforce this to overcome numerical error
-  nu_cmf = std::min(nu_cmf, nu_cmf_old);
+  nu_cmf = std::min(nu_rf * dopplerfactor, nu_cmf_old);
+
+  e_cmf = e_rf * dopplerfactor;
 
   return dopplerfactor;
 }

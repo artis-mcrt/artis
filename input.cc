@@ -85,8 +85,7 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     "19: cell_is_optically_thick num_grey_timesteps",
     "20: UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)",
     "21: nprocs_exspec: extract spectra for n MPI tasks. sn3d will set this on start of new sim.",
-    "22: do_emission_res: Extract line-of-sight dependent information of last emission for spectrum_res (1: yes, 0: "
-    "no)",
+    "22: UNUSED do_emission_res: this is always true for exspec, sometimes true during sn3d",
     "23: kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y "
     "time steps"};
 
@@ -1835,11 +1834,8 @@ void read_parameterfile(int rank) {
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> globals::nprocs_exspec;
 
-  // Extract line-of-sight dependent information of last emission for spectrum_res
+  // UNUSED: Extract line-of-sight dependent information of last emission for spectrum_res
   assert_always(get_noncommentline(file, line));
-  int dum1 = 0;
-  std::istringstream(line) >> dum1;
-  globals::do_emission_res = (dum1 != 0);
 
   // To reduce the work imbalance between different MPI tasks I introduced a diffusion
   // for kpkts, since it turned out that this work imbalance was largely dominated

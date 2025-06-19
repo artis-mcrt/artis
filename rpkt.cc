@@ -653,14 +653,15 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     const auto d_nu_on_d_l = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
     const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-    if constexpr (EXPANSIONOPACITIES_ON) {
-      std::tie(edist, pkt.next_trans, event_is_boundbound) = get_event_expansion_opacity(
-          nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, nu_cmf_abort, d_nu_on_d_l, doppler);
-    } else {
-      std::tie(edist, pkt.next_trans, event_is_boundbound) =
-          get_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l,
-                    doppler, globals::linelist);
-    }
+    std::tie(edist, pkt.next_trans, event_is_boundbound) = [&]() {
+      if constexpr (EXPANSIONOPACITIES_ON) {
+        return get_event_expansion_opacity(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, nu_cmf_abort,
+                                           d_nu_on_d_l, doppler);
+      } else {
+        return get_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l,
+                         doppler, globals::linelist);
+      }
+    }();
   }
   assert_always(edist >= 0);
 
@@ -895,12 +896,12 @@ void allocate_expansionopacities() {
 
   assert_always(expansionopacities.data() == nullptr);
   std::tie(expansionopacities, win_expansionopacities) =
-      MPI_shared_malloc_keepwin_span<float>(nonempty_npts_model * expopac_nbins);
+      MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * expopac_nbins);
 
   assert_always(expansionopacity_planck_cumulative.data() == nullptr);
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
     std::tie(expansionopacity_planck_cumulative, win_expansionopacity_planck_cumulative) =
-        MPI_shared_malloc_keepwin_span<double>(nonempty_npts_model * expopac_nbins);
+        MPI_shared_malloc_span_keepwin<double>(nonempty_npts_model * expopac_nbins);
   }
 }
 

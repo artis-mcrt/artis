@@ -29,6 +29,7 @@
 #include "vpkt.h"
 
 namespace {
+
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
 void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, const int timestep, const int titer,

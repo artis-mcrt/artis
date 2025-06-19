@@ -214,7 +214,6 @@ inline std::vector<int> ecounter{};
 inline std::vector<int> acounter{};
 
 inline int nprocs_exspec{1};
-inline bool do_emission_res{true};
 
 inline double gamma_kappagrey{};  // set to -ve for proper treatment. If positive, then
                                   // gamma_rays are treated as grey with this opacity.
