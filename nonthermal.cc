@@ -648,6 +648,11 @@ void read_collion_data() {
     const int Z = get_atomicnumber(element);
     for (int ion = 0; ion < get_nions(element); ion++) {
       const int ionstage = get_ionstage(element, ion);
+      const int ioncharge = ionstage - 1;
+      const int nbound = Z - ioncharge;  // number of bound electrons
+      if (nbound <= 0) {
+        continue;
+      }
       const bool any_data_matched = std::ranges::any_of(colliondata, [Z, ionstage](const collionrow &collionrow) {
         return collionrow.Z == Z && collionrow.ionstage == ionstage;
       });
@@ -656,11 +661,6 @@ void read_collion_data() {
         printout("No collisional ionisation data for Z=%d ionstage %d. Using Lotz approximation with ionpot = %g eV\n",
                  Z, ionstage, ionpot_ev);
 
-        const int ioncharge = ionstage - 1;
-        const int nbound = Z - ioncharge;  // number of bound electrons
-        if (nbound <= 0) {
-          continue;
-        }
         // get the approximate shell occupancy if we don't have the data file
         const auto &shells_q = allions_shell_occupancies[get_uniqueionindex(element, ion)];
         int electron_count = 0;
