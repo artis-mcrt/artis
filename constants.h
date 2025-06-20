@@ -27,6 +27,9 @@ constexpr double KB = 1.38064852e-16;  // Boltzmann constant [erg/K]
 constexpr double STEBO = 5.670400e-5;  // Stefan-Boltzmann constant [erg cm^−2 s^−1 K^−4.]
                                        // (data from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
 constexpr double SAHACONST = 2.0706659e-16;  // Saha constant
+constexpr double BARN = 1.0e-24;  // one barn [cm2]
+constexpr double PAIR_PROD_FREQUENCY =
+    2.46636e+20;  // frequency of a wave having the energy corresponding to the rest energy of an electron-positron pair
 
 constexpr double EULERGAMMA = std::numbers::egamma;
 

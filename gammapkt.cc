@@ -44,8 +44,8 @@ struct GammaLine {
 std::vector<std::vector<GammaLine>> gamma_spectra;
 
 struct el_photoion_data {
-  double energy;  // energy in MeV
-  double sigma_xcom;  // cross section in barns/atom
+  double energy_mev;
+  double sigma_xcom_barn;
 };
 
 constexpr int numb_xcom_elements = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
@@ -226,7 +226,7 @@ void init_xcom_photoion_data() {
         assert_always(Z > 0);
         assert_always(Z <= numb_xcom_elements);
         // convert XCOM data to cgs units already here
-        photoion_data[Z - 1].push_back({.energy = E, .sigma_xcom = sigma});
+        photoion_data[Z - 1].push_back({.energy_mev = E, .sigma_xcom_barn = sigma});
       }
     }
   }
@@ -474,11 +474,11 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
       // 2.41326e19 Hz = 100 keV / H
       const double hnu_over_100kev = pkt.nu_cmf / 2.41326e+19;
 
-      // double sigma_cmf_cno = 0.0448e-24 * pow(hnu_over_100kev, -3.2);
+      // double sigma_cmf_cno = 0.0448 * BARN * pow(hnu_over_100kev, -3.2);
 
-      const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
+      const double sigma_cmf_si = 1.16 * BARN * pow(hnu_over_100kev, -3.13);
 
-      const double sigma_cmf_fe = 25.7e-24 * pow(hnu_over_100kev, -3.0);
+      const double sigma_cmf_fe = 25.7 * BARN * pow(hnu_over_100kev, -3.0);
 
       // Now need to multiply by the particle number density.
 
@@ -509,17 +509,17 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
         int E_gtr_idx = -1;
 
         for (int j = 0; j < numb_energies; j++) {
-          if (photoion_data[Z - 1][j].energy > hnu_over_1MeV) {
+          if (photoion_data[Z - 1][j].energy_mev > hnu_over_1MeV) {
             E_gtr_idx = j;
             break;
           }
         }
         if (E_gtr_idx == 0) {  // packet energy smaller than all tabulated values
-          chi_cmf += photoion_data[Z - 1][0].sigma_xcom * n_i * 1e-24;
+          chi_cmf += photoion_data[Z - 1][0].sigma_xcom_barn * n_i * BARN;
           continue;
         }
         if (E_gtr_idx == -1) {  // packet energy greater than all tabulated values
-          chi_cmf += photoion_data[Z - 1][numb_energies - 1].sigma_xcom * n_i * 1e-24;
+          chi_cmf += photoion_data[Z - 1][numb_energies - 1].sigma_xcom_barn * n_i * BARN;
           continue;
         }
         assert_always(E_gtr_idx > 0);
@@ -527,14 +527,14 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
         const int E_smaller_idx = E_gtr_idx - 1;
         assert_always(E_smaller_idx >= 0);
         const double log10_E = log10_hnu_over_1MeV;
-        const double log10_E_gtr = log10(photoion_data[Z - 1][E_gtr_idx].energy);
-        const double log10_E_smaller = log10(photoion_data[Z - 1][E_smaller_idx].energy);
-        const double log10_sigma_lower = log10(photoion_data[Z - 1][E_smaller_idx].sigma_xcom);
-        const double log10_sigma_gtr = log10(photoion_data[Z - 1][E_gtr_idx].sigma_xcom);
+        const double log10_E_gtr = log10(photoion_data[Z - 1][E_gtr_idx].energy_mev);
+        const double log10_E_smaller = log10(photoion_data[Z - 1][E_smaller_idx].energy_mev);
+        const double log10_sigma_lower = log10(photoion_data[Z - 1][E_smaller_idx].sigma_xcom_barn);
+        const double log10_sigma_gtr = log10(photoion_data[Z - 1][E_gtr_idx].sigma_xcom_barn);
         // interpolate or extrapolate, both linear in log10-log10 space
         const double log10_intpol = log10_E_smaller + ((log10_sigma_gtr - log10_sigma_lower) /
                                                        (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller));
-        const double sigma_intpol = pow(10., log10_intpol) * 1e-24;
+        const double sigma_intpol = pow(10., log10_intpol) * BARN;
         const double chi_cmf_contrib = sigma_intpol * n_i;
         assert_always(sigma_intpol >= 0.);
         chi_cmf += chi_cmf_contrib;
@@ -564,8 +564,7 @@ auto get_chi_pair_prod_rf(const Packet &pkt) -> double {
     return 0.;
   }
 
-  // 2.46636e+20 Hz = 1022 keV / H
-  if (pkt.nu_cmf <= 2.46636e+20) {
+  if (pkt.nu_cmf <= PAIR_PROD_FREQUENCY) {
     return 0.;
   }
 
@@ -637,7 +636,7 @@ auto get_kappa(const Packet &pkt) -> double {
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
   const int mgi = grid::get_propcell_modelgridindex(pkt.where);
   const double chi = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + get_chi_photo_electric_rf(pkt) +
-                      (get_chi_pair_prod_rf(pkt) * (1. - (2.46636e+20 / pkt.nu_cmf))));
+                      (get_chi_pair_prod_rf(pkt) * (1. - (PAIR_PROD_FREQUENCY / pkt.nu_cmf))));
   const double kappa = 1 / grid::get_rho(mgi) * chi;
   return kappa;
 }
@@ -655,7 +654,7 @@ void update_gamma_dep(const Packet &pkt, const double dist, const int nonemptymg
 
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
   double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + get_chi_photo_electric_rf(pkt) +
-                         (get_chi_pair_prod_rf(pkt) * (1. - (2.46636e+20 / pkt.nu_cmf))));
+                         (get_chi_pair_prod_rf(pkt) * (1. - (PAIR_PROD_FREQUENCY / pkt.nu_cmf))));
   heating_cont = heating_cont * pkt.e_rf * dist * doppler_sq;
 
   // The terms in the above are for Compton, photoelectric and pair production. The pair production one
