@@ -628,27 +628,24 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   assert_always(tdist >= 0);
 
   const double abort_dist = std::min(tdist, sdist);
-  const bool thickcell = (nonemptymgi >= 0) && (grid::modelgrid[nonemptymgi].thick == 1);
 
   // Get distance to the next physical event (continuum or bound-bound)
-  const auto [edist, next_trans, event_is_boundbound] = [&]() -> std::tuple<double, int, bool> {
-    if (nonemptymgi < 0) {
-      // for empty cells no physical event occurs. The packets just propagate.
-      const double _edist = std::numeric_limits<double>::max();
-      const int _next_trans =
-          -1;  // next_trans = -1 means skip over lines and search for line list position on the next non-empty cell
-      return {_edist, _next_trans, true};
-    }
-    if (thickcell) [[unlikely]] {
-      // In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
+  double edist = -1;
+  bool event_is_boundbound = true;
+  const bool thickcell = (nonemptymgi >= 0) && (grid::modelgrid[nonemptymgi].thick == 1);
+  if (nonemptymgi < 0) {
+    // for empty cells no physical event occurs. The packets just propagate.
+    edist = std::numeric_limits<double>::max();
+    pkt.next_trans = -1;  // skip over lines and search for line list position on the next non-empty cell
+  } else if (thickcell) [[unlikely]] {
+    // In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
-      const double chi_grey = grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) *
-                              calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+    const double chi_grey = grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) *
+                            calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-      const auto _edist = tau_next / chi_grey;
-      const auto _next_trans = -1;
-      return {_edist, _next_trans, true};
-    }
+    edist = tau_next / chi_grey;
+    pkt.next_trans = -1;
+  } else {
     calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, nonemptymgi);
 
     // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
@@ -658,14 +655,16 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     const auto d_nu_on_d_l = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
     const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-    if constexpr (EXPANSIONOPACITIES_ON) {
-      return get_event_expansion_opacity(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, nu_cmf_abort,
-                                         d_nu_on_d_l, doppler);
-    }
-    return get_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l,
-                     doppler, globals::linelist);
-  }();
-  pkt.next_trans = next_trans;
+    std::tie(edist, pkt.next_trans, event_is_boundbound) = [&]() {
+      if constexpr (EXPANSIONOPACITIES_ON) {
+        return get_event_expansion_opacity(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, nu_cmf_abort,
+                                           d_nu_on_d_l, doppler);
+      } else {
+        return get_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l,
+                         doppler, globals::linelist);
+      }
+    }();
+  }
   assert_always(edist >= 0);
 
   if ((sdist <= tdist) && (sdist <= edist)) {
