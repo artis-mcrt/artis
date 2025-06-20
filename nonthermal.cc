@@ -380,7 +380,9 @@ void read_binding_energies() {
       const int ioncharge = get_ionstage(element, ion) - 1;
       const int atomic_number = get_atomicnumber(element);
       const int nbound = atomic_number - ioncharge;
-
+      if (nbound <= 0) {
+        continue;
+      }
       allions_shell_occupancies[get_uniqueionindex(element, ion)] =
           NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE
               ? calculate_ion_shell_occupancies(atomic_number, nbound, elements_neutral_shells_q.at(atomic_number - 1))
@@ -646,6 +648,11 @@ void read_collion_data() {
     const int Z = get_atomicnumber(element);
     for (int ion = 0; ion < get_nions(element); ion++) {
       const int ionstage = get_ionstage(element, ion);
+      const int ioncharge = ionstage - 1;
+      const int nbound = Z - ioncharge;  // number of bound electrons
+      if (nbound <= 0) {
+        continue;
+      }
       const bool any_data_matched = std::ranges::any_of(colliondata, [Z, ionstage](const collionrow &collionrow) {
         return collionrow.Z == Z && collionrow.ionstage == ionstage;
       });
@@ -654,8 +661,6 @@ void read_collion_data() {
         printout("No collisional ionisation data for Z=%d ionstage %d. Using Lotz approximation with ionpot = %g eV\n",
                  Z, ionstage, ionpot_ev);
 
-        const int ioncharge = ionstage - 1;
-        const int nbound = Z - ioncharge;  // number of bound electrons
         // get the approximate shell occupancy if we don't have the data file
         const auto &shells_q = allions_shell_occupancies[get_uniqueionindex(element, ion)];
         int electron_count = 0;
@@ -1532,6 +1537,11 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
       const int uniqueionindex = get_uniqueionindex(element, ion);
 
       const int ionstage = get_ionstage(element, ion);
+      const int ioncharge = ionstage - 1;
+      const int nbound = Z - ioncharge;  // number of bound electrons
+      if (nbound <= 0) {
+        continue;
+      }
       const double nnion = get_nnion(nonemptymgi, element, ion);
 
       // if (nnion < minionfraction * get_nnion_tot(nonemptymgi)) // skip negligible ions
