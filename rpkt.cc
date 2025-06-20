@@ -661,25 +661,8 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   }
   assert_always(edist >= 0);
 
-  if ((sdist <= tdist) && (sdist <= edist)) {
-    // Move it into the new cell.
-    const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt, sdist / 2.);
-    if (nonemptymgi >= 0) {
-      update_estimators(pkt.e_cmf, pkt.nu_cmf, sdist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont, thickcell);
-    }
-    move_pkt_withtime(pkt, sdist / 2.);
-
-    int new_nonemptymgi = nonemptymgi;
-    if (snext != pkt.where) {
-      grid::change_cell(pkt, snext);
-      new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
-    }
-
-    return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
-  }
-
-  if ((edist <= sdist) && (edist <= tdist)) [[likely]] {
-    // bound-bound or continuum event
+  if ((edist < sdist) && (edist <= tdist)) [[likely]] {
+    // bound-bound or continuum event occurs before cell crossing or end of timestep
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt, edist / 2.);
     update_estimators(pkt.e_cmf, pkt.nu_cmf, edist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont, thickcell);
     move_pkt_withtime(pkt, edist / 2.);
@@ -704,6 +687,23 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     }
 
     return (pkt.type == TYPE_RPKT);
+  }
+
+  if ((sdist <= tdist) && (sdist <= edist)) {
+    // cell crossing event occurs before interaction or end of timestep
+    const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt, sdist / 2.);
+    if (nonemptymgi >= 0) {
+      update_estimators(pkt.e_cmf, pkt.nu_cmf, sdist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont, thickcell);
+    }
+    move_pkt_withtime(pkt, sdist / 2.);
+
+    int new_nonemptymgi = nonemptymgi;
+    if (snext != pkt.where) {
+      grid::change_cell(pkt, snext);
+      new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+    }
+
+    return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
   }
 
   if ((tdist <= sdist) && (tdist <= edist)) [[unlikely]] {
