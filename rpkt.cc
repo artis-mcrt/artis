@@ -674,7 +674,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
       if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY < 0.) {
         rpkt_event_boundbound(pkt, pktmastate, nonemptymgi);
       } else {
-        // Probability based thermalisation (i.e. redistibution of the packet frequency) or scattering
+        // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
         if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 1. ||
             rng_uniform() < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY) {
           pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
