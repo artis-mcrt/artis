@@ -96,88 +96,9 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
     // create therefore new variables in packet, which contain next_lowerlevel, ...
 
     // returns negative value if nu_cmf > nu_trans
-    if (const int lineindex = closest_transition(nu_cmf, next_trans, linelist); lineindex >= 0) [[likely]] {
-      // line interaction is possible (nu_cmf > nu_trans)
-      const auto &line = globals::linelist[lineindex];
+    const int lineindex = closest_transition(nu_cmf, next_trans, linelist);
 
-      const double nu_trans = line.nu;
-
-      // helper variable to overcome numerical problems after line scattering
-      // further scattering events should be located at lower frequencies to prevent
-      // multiple scattering events of one packet in a single line
-      next_trans = lineindex + 1;
-
-      const double ldist = get_linedistance(prop_time, nu_cmf, nu_trans, d_nu_on_d_l);
-
-      const double tau_cont = chi_cont * ldist;
-
-      if (tau_rnd - tau > tau_cont) {
-        // got past the continuum optical depth so propagate to the line, and check interaction
-
-        if (nu_trans < nu_cmf_abort) [[unlikely]] {
-          // back up one line, because we didn't reach it before the boundary/timelimit
-
-          return {std::numeric_limits<double>::max(), next_trans - 1, false};
-        }
-
-        const double tau_line = get_tau_sobolev_subupdown(nonemptymgi, line, prop_time);
-
-        // printout("[debug] get_event:     tau_line %g\n", tau_line);
-        // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
-
-        if (tau_rnd - tau > tau_cont + tau_line) {
-          // total optical depth still below tau_rnd: propagate to the line and continue
-
-          // printout(
-          //     "[debug] get_event: tau_rnd - tau > tau_cont + tau_line ... proceed this packets "
-          //     "propagation\n");
-
-          dist += ldist;
-          tau += tau_cont + tau_line;
-
-          if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
-            move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
-          } else {
-            // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
-            // and use the linear approx instead
-            pos[0] += (pkt.dir[0] * ldist);
-            pos[1] += (pkt.dir[1] * ldist);
-            pos[2] += (pkt.dir[2] * ldist);
-            prop_time += ldist / CLIGHT_PROP;
-            nu_cmf = pkt.nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
-            assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
-          }
-
-          if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-            radfield::update_lineestimator(nonemptymgi, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
-          }
-
-        } else {
-          // bound-bound process occurs
-          // printout("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
-
-          mastate = {.element = line.elementindex,
-                     .ion = line.ionindex,
-                     .level = line.upperlevelindex,
-                     .activatingline = lineindex};
-
-          if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-            move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
-            radfield::update_lineestimator(nonemptymgi, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
-          }
-
-          // the line and its parameters were already selected by closest_transition!
-          // printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop
-          // %d\n",edist,abort_dist,edist-abort_dist,endloop);
-
-          return {dist + ldist, next_trans, true};
-        }
-      } else {
-        // continuum process occurs before reaching the line
-
-        return {dist + ((tau_rnd - tau) / chi_cont), next_trans - 1, false};
-      }
-    } else [[unlikely]] {
+    if (lineindex < 0) [[unlikely]] {
       // no line interaction possible - check whether continuum process occurs in cell
 
       const double tau_cont = chi_cont * (abort_dist - dist);
@@ -189,6 +110,87 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
       // continuum process occurs at edist
 
       return {dist + ((tau_rnd - tau) / chi_cont), globals::nlines + 1, false};
+    }
+
+    // line interaction is possible (nu_cmf > nu_trans)
+    const auto &line = globals::linelist[lineindex];
+
+    const double nu_trans = line.nu;
+
+    // helper variable to overcome numerical problems after line scattering
+    // further scattering events should be located at lower frequencies to prevent
+    // multiple scattering events of one packet in a single line
+    next_trans = lineindex + 1;
+
+    const double ldist = get_linedistance(prop_time, nu_cmf, nu_trans, d_nu_on_d_l);
+
+    const double tau_cont = chi_cont * ldist;
+
+    if (tau_rnd - tau > tau_cont) {
+      // got past the continuum optical depth so propagate to the line, and check interaction
+
+      if (nu_trans < nu_cmf_abort) [[unlikely]] {
+        // back up one line, because we didn't reach it before the boundary/timelimit
+
+        return {std::numeric_limits<double>::max(), next_trans - 1, false};
+      }
+
+      const double tau_line = get_tau_sobolev_subupdown(nonemptymgi, line, prop_time);
+
+      // printout("[debug] get_event:     tau_line %g\n", tau_line);
+      // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
+
+      if ((tau_rnd - tau) <= (tau_cont + tau_line)) {
+        // bound-bound process occurs
+        // printout("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
+
+        mastate = {.element = line.elementindex,
+                   .ion = line.ionindex,
+                   .level = line.upperlevelindex,
+                   .activatingline = lineindex};
+
+        if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+          move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
+          radfield::update_lineestimator(nonemptymgi, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
+        }
+
+        // the line and its parameters were already selected by closest_transition!
+        // printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop
+        // %d\n",edist,abort_dist,edist-abort_dist,endloop);
+
+        return {dist + ldist, next_trans, true};
+      }
+
+      // total optical depth still below tau_rnd: propagate to the line and continue
+
+      // printout(
+      //     "[debug] get_event: tau_rnd - tau > tau_cont + tau_line ... proceed this packets "
+      //     "propagation\n");
+
+      dist += ldist;
+      tau += tau_cont + tau_line;
+
+      if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
+        move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
+      } else {
+        // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
+        // and use the linear approx instead
+        pos[0] += (pkt.dir[0] * ldist);
+        pos[1] += (pkt.dir[1] * ldist);
+        pos[2] += (pkt.dir[2] * ldist);
+        prop_time += ldist / CLIGHT_PROP;
+        nu_cmf = pkt.nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
+        assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
+      }
+
+      if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+        radfield::update_lineestimator(nonemptymgi, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
+      }
+
+    } else {
+      // continuum process occurs before reaching the line
+
+      return {dist + ((tau_rnd - tau) / chi_cont), next_trans - 1, false};
     }
   }
 
