@@ -601,13 +601,12 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
   THREADLOCALONHOST auto chi_rpkt_cont =
       Rpkt_continuum_absorptioncoeffs{globals::nbfcontinua_ground, globals::nbfcontinua, globals::bfestimcount};
 
-  // Assign optical depth to next physical event
+  // draw random optical depth to next physical event
   const double zrand = rng_uniform_pos();
   const double tau_next = -1. * log(zrand);
 
-  // Start by finding the distance to the crossing of the grid cell
-  // boundaries. sdist is the boundary distance and snext is the
-  // grid cell into which we pass.
+  // Finding the distance to the crossing of the grid cell boundaries.
+  // sdist is the boundary distance to the next grid cell snext
   const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.where);
 
   if (sdist == 0) {
@@ -617,11 +616,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
   }
 
-  // At present there is no scattering/destruction process so all that needs to
-  // happen is that we determine whether the packet reaches the boundary during the timestep.
-
-  // Find how far it can travel during the time interval.
-
+  // maximum travel distance before t2 (end of timestep) is tdist
   const double tdist = (t2 - pkt.prop_time) * CLIGHT_PROP;
 
   assert_always(tdist >= 0);
