@@ -670,18 +670,16 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     // The previously selected and in pkt stored event occurs. Handling is done by rpkt_event
     if (thickcell) {
       rpkt_event_thickcell(pkt);
+    } else if (event_is_boundbound && RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY < 0.) {
+      rpkt_event_boundbound(pkt, pktmastate, nonemptymgi);
     } else if (event_is_boundbound) {
-      if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY < 0.) {
-        rpkt_event_boundbound(pkt, pktmastate, nonemptymgi);
-      } else {
-        // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
-        if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 1. ||
-            rng_uniform() < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY) {
-          pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
-          // When thermalised, we do not associate the packet with a specific line emission
-        }
-        rpkt_event_thickcell(pkt);
+      // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
+      if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 1. ||
+          rng_uniform() < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY) {
+        pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
+        // When thermalised, we do not associate the packet with a specific line emission
       }
+      rpkt_event_thickcell(pkt);
     } else {
       rpkt_event_continuum(pkt, chi_rpkt_cont, nonemptymgi);
     }
