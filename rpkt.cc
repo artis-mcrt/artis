@@ -72,19 +72,19 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
   return 1e8 * CLIGHT / lambda_upper;
 }
 
-// return edist, the distance to the next physical event (continuum or bound-bound) and is_boundbound_event, a
-// boolean BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
-auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-               MacroAtomState &mastate,
-               const double tau_rnd,  // random optical depth until which the packet travels
-               const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
-               const double nu_cmf_abort, const double d_nu_on_d_l, const double doppler,
-               const std::span<const TransitionLine> linelist) -> std::tuple<double, int, bool> {
+// find any line or continuum interaction occuring before frequency decreases to nu_cmf_abort at distance abort_dist
+auto get_possible_interaction_before_abort(
+    const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+    MacroAtomState &mastate,
+    const double tau_rnd,  // random optical depth until which the packet travels
+    const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
+    const double nu_cmf_abort, const double d_nu_on_d_l, const double doppler,
+    const std::span<const TransitionLine> linelist) -> std::tuple<double, int, bool> {
   auto pos = pkt.pos;
   auto nu_cmf = pkt.nu_cmf;
   auto e_cmf = pkt.e_cmf;
   auto prop_time = pkt.prop_time;
-  int next_trans = pkt.next_trans;
+  auto next_trans = pkt.next_trans;
 
   const double chi_cont = chi_rpkt_cont.total * doppler;
   double tau = 0.;  // optical depth along path
@@ -107,8 +107,8 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
         // no continuum event before abort_dist
         return {std::numeric_limits<double>::max(), next_trans, false};
       }
-      // continuum process occurs at edist
 
+      // continuum process occurs at edist
       return {dist + ((tau_rnd - tau) / chi_cont), globals::nlines + 1, false};
     }
 
@@ -198,10 +198,11 @@ auto get_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_ab
   assert_always(false);
 }
 
-auto get_event_expansion_opacity(const int nonemptymgi, const Packet &pkt,
-                                 const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, MacroAtomState &mastate,
-                                 const double tau_rnd, const double nu_cmf_abort, const double d_nu_on_d_l,
-                                 const double doppler) -> std::tuple<double, int, bool> {
+auto get_possible_interaction_expansion_opacity(const int nonemptymgi, const Packet &pkt,
+                                                const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+                                                MacroAtomState &mastate, const double tau_rnd,
+                                                const double nu_cmf_abort, const double d_nu_on_d_l,
+                                                const double doppler) -> std::tuple<double, int, bool> {
   auto pos = pkt.pos;
   const auto nu_rf = pkt.nu_rf;
   auto nu_cmf = pkt.nu_cmf;
@@ -240,27 +241,27 @@ auto get_event_expansion_opacity(const int nonemptymgi, const Packet &pkt,
         const auto edist = std::max(dist + ((tau_rnd - tau) / chi_tot), 0.);
         const bool event_is_boundbound = rng_uniform() <= chi_bb_expansionopac / chi_tot;
         return {edist, next_trans, event_is_boundbound};
-      } else {
-        // re-trace this bin line-by-line
-        auto pkt_bin_start = pkt;
-        pkt_bin_start.pos = pos;
-        pkt_bin_start.nu_rf = nu_rf;
-        pkt_bin_start.nu_cmf = nu_cmf;
-        pkt_bin_start.e_rf = e_rf;
-        pkt_bin_start.e_cmf = e_cmf;
-        // expansion opacity was calculated at t_mid, so match it
-        pkt_bin_start.prop_time = globals::timesteps[globals::timestep].mid;
-        pkt_bin_start.next_trans = -1;
-        double edist_after_bin = 0.;
-        bool event_is_boundbound = false;
-        std::tie(edist_after_bin, next_trans, event_is_boundbound) =
-            get_event(nonemptymgi, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
-                      std::numeric_limits<double>::max(), 0., d_nu_on_d_l, doppler, globals::linelist);
-        // assert_always(edist_after_bin <= 1.1 * binedgedist);
-        dist = dist + edist_after_bin;
-
-        return {dist, next_trans, event_is_boundbound};
       }
+
+      // re-trace this bin line-by-line
+      auto pkt_bin_start = pkt;
+      pkt_bin_start.pos = pos;
+      pkt_bin_start.nu_rf = nu_rf;
+      pkt_bin_start.nu_cmf = nu_cmf;
+      pkt_bin_start.e_rf = e_rf;
+      pkt_bin_start.e_cmf = e_cmf;
+      // expansion opacity was calculated at t_mid, so match it
+      pkt_bin_start.prop_time = globals::timesteps[globals::timestep].mid;
+      pkt_bin_start.next_trans = -1;
+      double edist_after_bin = 0.;
+      bool event_is_boundbound = false;
+      std::tie(edist_after_bin, next_trans, event_is_boundbound) = get_possible_interaction_before_abort(
+          nonemptymgi, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau, std::numeric_limits<double>::max(), 0.,
+          d_nu_on_d_l, doppler, globals::linelist);
+      // assert_always(edist_after_bin <= 1.1 * binedgedist);
+      dist = dist + edist_after_bin;
+
+      return {dist, next_trans, event_is_boundbound};
     }
 
     tau += chi_tot * binedgedist;
@@ -657,11 +658,11 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
 
     std::tie(edist, pkt.next_trans, event_is_boundbound) = [&]() {
       if constexpr (EXPANSIONOPACITIES_ON) {
-        return get_event_expansion_opacity(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, nu_cmf_abort,
-                                           d_nu_on_d_l, doppler);
+        return get_possible_interaction_expansion_opacity(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next,
+                                                          nu_cmf_abort, d_nu_on_d_l, doppler);
       } else {
-        return get_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort, d_nu_on_d_l,
-                         doppler, globals::linelist);
+        return get_possible_interaction_before_abort(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist,
+                                                     nu_cmf_abort, d_nu_on_d_l, doppler, globals::linelist);
       }
     }();
   }
