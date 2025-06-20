@@ -706,7 +706,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
   }
 
-  if ((tdist <= sdist) && (tdist <= edist)) [[unlikely]] {
+  if ((tdist < sdist) && (tdist <= edist)) [[unlikely]] {
     // reaches end of timestep before cell boundary or interaction
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt, tdist / 2.);
     if (nonemptymgi >= 0) {
