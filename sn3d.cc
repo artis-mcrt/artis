@@ -285,8 +285,7 @@ void mpi_reduce_estimators(const int nts) {
     if constexpr (USE_LUT_PHOTOION) {
       MPI_Barrier(MPI_COMM_WORLD);
       assert_always(!globals::gammaestimator.empty());
-      MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator.data(), static_cast<int>(std::ssize(globals::gammaestimator)),
-                    MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce_inplacespan(std::span{globals::gammaestimator}, MPI_SUM, MPI_COMM_WORLD);
     }
 
     if constexpr (USE_LUT_BFHEATING) {

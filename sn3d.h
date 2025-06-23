@@ -4,7 +4,9 @@
 #include <cstdlib>
 #include <ctime>
 #include <format>
+#include <limits>
 #include <span>
+#include <utility>
 #include <vector>
 
 #ifndef __host__
@@ -384,6 +386,32 @@ template <typename T>
 template <typename T>
 [[nodiscard]] auto MPI_shared_malloc_span(const ptrdiff_t num_allranks) -> std::span<T> {
   return std::span(MPI_shared_malloc<T>(num_allranks), num_allranks);
+}
+
+template <typename T>
+constexpr auto MPI_TYPE() -> MPI_Datatype {
+  if constexpr (std::is_same_v<T, float>) {
+    return MPI_FLOAT;
+  } else if constexpr (std::is_same_v<T, double>) {
+    return MPI_DOUBLE;
+  } else if constexpr (std::is_same_v<T, int>) {
+    return MPI_INT;
+  } else {
+    static_assert(std::is_same_v<T, void>, "Unsupported data type for MPI operations");
+  }
+}
+
+template <typename T>
+void MPI_Allreduce_inplacespan(std::span<T> data, auto op, auto comm) {
+  assert_always(!data.empty());
+  assert_always(data.data() != nullptr);
+  assert_always(op != MPI_OP_NULL);
+  assert_always(comm != MPI_COMM_NULL);
+
+  assert_always(std::cmp_less(data.size(), std::numeric_limits<int>::max()) &&
+                "Data size exceeds maximum value for MPI_Allreduce");
+
+  MPI_Allreduce(MPI_IN_PLACE, data.data(), static_cast<int>(data.size()), MPI_TYPE<T>(), op, comm);
 }
 
 template <typename T>
