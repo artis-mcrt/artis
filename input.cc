@@ -1002,7 +1002,7 @@ void read_atomicdata_files() {
     globals::elements[element].uniqueionindexstart = uniqueionindex;
 
     // Initialize the elements ionlist
-    globals::elements[element].ions = new Ion[nions];
+    globals::elements[element].ions = std::make_unique<Ion[]>(nions);
     assert_always(globals::elements[element].ions != nullptr);
 
     // now read in data for all ions of the current element. before doing so initialize
