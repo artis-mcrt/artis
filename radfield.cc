@@ -1029,7 +1029,7 @@ void reduce_estimators()
     if (globals::rank_in_node == 0) {
       MPI_Allreduce_safe(bfrate_raw, MPI_SUM, globals::mpi_comm_internode);
     }
-    MPI_Bcast(bfrate_raw.data(), nonempty_npts_model * globals::bfestimcount, MPI_DOUBLE, 0, globals::mpi_comm_node);
+    MPI_Bcast_safe(bfrate_raw, 0, globals::mpi_comm_node);
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -1067,22 +1067,22 @@ void reduce_estimators()
 // broadcast computed radfield results including parameters
 // from the cells belonging to root process to all processes
 void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_node_id) {
-  MPI_Bcast(&J_normfactor[nonemptymgi], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+  MPI_Bcast_safe(J_normfactor[nonemptymgi], root, MPI_COMM_WORLD);
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
       if (globals::rank_in_node == 0) {
-        MPI_Bcast(&radfieldbin_solutions[mgibinindex].W, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
-        MPI_Bcast(&radfieldbin_solutions[mgibinindex].T_R, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+        MPI_Bcast_safe(radfieldbin_solutions[mgibinindex].W, root_node_id, globals::mpi_comm_internode);
+        MPI_Bcast_safe(radfieldbin_solutions[mgibinindex].T_R, root_node_id, globals::mpi_comm_internode);
       }
     }
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-      MPI_Bcast(&prev_Jb_lu_normed[nonemptymgi][jblueindex].value, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-      MPI_Bcast(&prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
+      MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi][jblueindex].value, root, MPI_COMM_WORLD);
+      MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount, root, MPI_COMM_WORLD);
     }
   }
 
