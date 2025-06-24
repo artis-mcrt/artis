@@ -427,8 +427,8 @@ inline void MPI_Allreduce_safe(R &&data, Op &&op, Comm &&comm) {
 
   assert_always(std::cmp_equal(int_data_size, true_size) && "Data size exceeds maximum value for MPI_Allreduce");
 
-  using T = std::ranges::range_value_t<R>;
-  auto ret = MPI_Allreduce(MPI_IN_PLACE, std::forward<R>(data).data(), int_data_size, GET_MPI_TYPE<T>(),
+  auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
+  auto ret = MPI_Allreduce(MPI_IN_PLACE, std::forward<R>(data).data(), int_data_size, mpi_datatype,
                            std::forward<Op>(op), std::forward<Comm>(comm));
   assert_always(ret == MPI_SUCCESS);
 }
