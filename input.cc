@@ -1378,14 +1378,12 @@ void setup_cellcache() {
     mem_usage_cellcache += get_nelements() * sizeof(CellCacheElements);
     resize_exactly(globals::cellcache[cellcachenum].chelements, get_nelements());
 
-    ptrdiff_t chlevelcount = 0;
     size_t allphixstargetcount = 0;
     int chtransblocksize = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
-        chlevelcount += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
@@ -1397,8 +1395,8 @@ void setup_cellcache() {
         }
       }
     }
-    assert_always(chlevelcount > 0);
-    resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, chlevelcount);
+    resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, get_includedlevels());
+    resize_exactly(globals::cellcache[cellcachenum].ch_all_ions, get_includedions());
 
     if (allphixstargetcount > 0) {
       resize_exactly(globals::cellcache[cellcachenum].allphixstargets_corrphotoioncoeff, allphixstargetcount);
@@ -1406,7 +1404,7 @@ void setup_cellcache() {
         resize_exactly(globals::cellcache[cellcachenum].allphixstargets_stimrecombcoeff, allphixstargetcount);
       }
     }
-    mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + allphixstargetcount * sizeof(double) * 2;
+    mem_usage_cellcache += get_includedlevels() * sizeof(CellCacheLevels) + allphixstargetcount * sizeof(double) * 2;
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
     if (chtransblocksize > 0) {
@@ -1418,7 +1416,10 @@ void setup_cellcache() {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       mem_usage_cellcache += nions * sizeof(CellCacheIons);
-      resize_exactly(globals::cellcache[cellcachenum].chelements[element].chions, nions);
+      if (nions > 0) {
+        globals::cellcache[cellcachenum].chelements[element].chions = std::span<CellCacheIons>(
+            &globals::cellcache[cellcachenum].ch_all_ions[get_uniqueionindex(element, 0)], nions);
+      }
 
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);

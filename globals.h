@@ -163,13 +163,14 @@ struct CellCacheIons {
 };
 
 struct CellCacheElements {
-  std::vector<CellCacheIons> chions;  // Pointer to the elements ionlist.
+  std::span<CellCacheIons> chions;  // Pointer to the elements ionlist.
 };
 
 struct CellCache {
   std::vector<double> cooling_contrib;  // Cooling contributions by the different processes.
   std::vector<CellCacheElements> chelements;
   std::vector<CellCacheLevels> ch_all_levels;
+  std::vector<CellCacheIons> ch_all_ions;
   std::vector<double> ch_allcont_departureratios;
   std::vector<double> ch_allcont_nnlevel;
   std::vector<bool> ch_keep_this_cont;
