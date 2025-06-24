@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <format>
+#include <iterator>
 #include <limits>
 #include <ranges>
 #include <span>
@@ -402,19 +403,18 @@ constexpr auto MPI_TYPE() -> MPI_Datatype {
   }
 }
 
-template <typename R>
-  requires std::ranges::random_access_range<R> && std::ranges::contiguous_range<R>
+template <std::random_access_iterator R>
 inline void MPI_Allreduce_safe(R data, auto op, auto comm) {
-  using T = typename R::value_type;
+  using T = std::iter_value_t<R>;
   assert_always(!data.empty());
   assert_always(data.data() != nullptr);
   assert_always(op != MPI_OP_NULL);
   assert_always(comm != MPI_COMM_NULL);
+  const auto int_data_size = static_cast<int>(std::ssize(data));
 
-  assert_always(std::cmp_less(data.size(), std::numeric_limits<int>::max()) &&
-                "Data size exceeds maximum value for MPI_Allreduce");
+  assert_always(std::cmp_equal(int_data_size, std::ssize(data)) && "Data size exceeds maximum value for MPI_Allreduce");
 
-  MPI_Allreduce(MPI_IN_PLACE, data.data(), static_cast<int>(data.size()), MPI_TYPE<T>(), op, comm);
+  MPI_Allreduce(MPI_IN_PLACE, data.data(), int_data_size, MPI_TYPE<T>(), op, comm);
 }
 
 template <typename T>
