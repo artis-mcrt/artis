@@ -760,25 +760,29 @@ void setup_phixs_list() {
         const int nphixstargets = get_nphixstargets(uniquelevelindex);
 
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          const double nu_edge = get_phixs_threshold(uniquelevelindex, phixstargetindex) / H;
-
-          assert_always(allcontindex < globals::nbfcontinua);
           assert_always(allcontindex < std::ssize(allcont));
-          allcont[allcontindex].nu_edge = nu_edge;
-          allcont[allcontindex].element = element;
-          allcont[allcontindex].ion = ion;
-          allcont[allcontindex].level = level;
-          allcont[allcontindex].phixstargetindex = phixstargetindex;
-          allcont[allcontindex].probability = get_phixsprobability(uniquelevelindex, phixstargetindex);
-          allcont[allcontindex].upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
 
+          int index_in_groundphixslist = -1;
           if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
             const double nu_edge_target0 = get_phixs_threshold(uniquelevelindex, 0) / H;
-            const auto groundcontindex = search_groundphixslist(nu_edge_target0, element, ion, level);
-            allcont[allcontindex].index_in_groundphixslist = groundcontindex;
+            index_in_groundphixslist = search_groundphixslist(nu_edge_target0, element, ion, level);
 
-            globals::alllevels.closestgroundlevelcont[uniquelevelindex] = groundcontindex;
+            globals::alllevels.closestgroundlevelcont[uniquelevelindex] = index_in_groundphixslist;
           }
+
+          allcont[allcontindex] = {
+              .nu_edge = get_phixs_threshold(uniquelevelindex, phixstargetindex) / H,
+              .element = element,
+              .ion = ion,
+              .level = level,
+              .phixstargetindex = phixstargetindex,
+              .upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex),
+              .photoion_xs = nullptr,
+              .probability = get_phixsprobability(uniquelevelindex, phixstargetindex),
+              .index_in_groundphixslist = index_in_groundphixslist,
+              .bfestimindex = -1,
+          };
+
           allcontindex++;
         }
       }
