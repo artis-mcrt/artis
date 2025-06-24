@@ -1023,7 +1023,7 @@ void reduce_estimators()
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
       MPI_Reduce_safe(std::span{bfrate_raw}.subspan(nonemptymgi * globals::bfestimcount, globals::bfestimcount),
-                      MPI_SUM, 0, globals::mpi_comm_node, globals::rank_in_node);
+                      MPI_SUM, 0, globals::mpi_comm_node);
     }
     if (globals::rank_in_node == 0) {
       MPI_Allreduce_safe(bfrate_raw, MPI_SUM, globals::mpi_comm_internode);
