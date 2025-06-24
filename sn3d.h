@@ -425,7 +425,7 @@ inline void MPI_Allreduce_safe(R &data, Op &&op, Comm &&comm) {
 
 template <typename T, typename Op, typename Comm>
   requires(!std::ranges::random_access_range<T> &&
-           (std::is_same_v<T, double> || std::is_same_v<T, float> || std::is_same_v<T, int>))
+           (std::is_same_v<T, double> || std::is_same_v<T, float> || std::is_same_v<T, int> || std::is_same_v<T, bool>))
 inline void MPI_Allreduce_safe(T &data, Op &&op, Comm &&comm) {
   assert_always(op != MPI_OP_NULL);
   assert_always(comm != MPI_COMM_NULL);
