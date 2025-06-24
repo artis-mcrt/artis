@@ -737,7 +737,8 @@ void setup_phixs_list() {
   assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
   std::ranges::SORT_OR_STABLE_SORT(globals::groundcont, std::ranges::less{}, &GroundPhotoion::nu_edge);
 
-  auto allcont = MPI_shared_malloc_span<FullPhotoionTransition>(globals::nbfcontinua);
+  auto allcont = std::span<FullPhotoionTransition>{new FullPhotoionTransition[globals::nbfcontinua],
+                                                   static_cast<size_t>(globals::nbfcontinua)};
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
            globals::nbfcontinua * (sizeof(FullPhotoionTransition)) / 1024. / 1024.);
   int allcontindex = 0;
@@ -808,9 +809,9 @@ void setup_phixs_list() {
     }
     globals::bfestim_nu_edge.shrink_to_fit();
 
+    auto allcont_nu_edge = MPI_shared_malloc_span<double>(nbfcontinua);
     assert_always(globals::bfestimcount == std::ssize(globals::bfestim_nu_edge));
 
-    auto allcont_nu_edge = MPI_shared_malloc_span<double>(nbfcontinua);
     for (int i = 0; i < nbfcontinua; i++) {
       allcont_nu_edge[i] = allcont[i].nu_edge;
     }
@@ -827,7 +828,6 @@ void setup_phixs_list() {
     }
   }
   printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
-  MPI_Barrier(globals::mpi_comm_node);
   globals::allcont = allcont;
 }
 
