@@ -417,8 +417,8 @@ inline auto MPI_Allreduce_safe(R data, auto op, auto comm) {
   // assert_always(std::cmp_equal(int_data_size, std::ssize(data)) && "Data size exceeds maximum value for
   // MPI_Allreduce");
 
-  return MPI_Allreduce(MPI_IN_PLACE, data.data(), static_cast<int>(std::ssize(globals::gammaestimator)), MPI_DOUBLE, op,
-                       comm);
+  return MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator.data(),
+                       static_cast<int>(std::ssize(globals::gammaestimator)), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 }
 
 template <typename T>
