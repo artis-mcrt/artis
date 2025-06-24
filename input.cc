@@ -814,21 +814,21 @@ void setup_phixs_list() {
         allcont[i].bfestimindex = -1;
       }
     }
+
     MPI_Barrier(globals::mpi_comm_node);
     globals::allcont = allcont;
-    globals::bfestim_nu_edge.shrink_to_fit();
 
+    globals::bfestim_nu_edge.shrink_to_fit();
     assert_always(globals::bfestimcount == std::ssize(globals::bfestim_nu_edge));
 
     auto allcont_nu_edge = MPI_shared_malloc_span<double>(nbfcontinua);
     for (int i = 0; i < nbfcontinua; i++) {
       allcont_nu_edge[i] = globals::allcont[i].nu_edge;
     }
+    MPI_Barrier(globals::mpi_comm_node);
     globals::allcont_nu_edge = allcont_nu_edge;
 
     setup_photoion_luts();
-
-    MPI_Barrier(globals::mpi_comm_node);
   }
   printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
 }
