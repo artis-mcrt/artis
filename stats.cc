@@ -229,8 +229,5 @@ void pkt_action_counters_printout(const int nts) {
   printout("timestep %d: downscatterings  = %td\n", nts, get_counter(COUNTER_DOWNSCATTER));
 }
 
-void reduce_estimators() {
-  MPI_Allreduce(MPI_IN_PLACE, stats::ionstats.data(), static_cast<int>(std::ssize(stats::ionstats)), MPI_DOUBLE,
-                MPI_SUM, MPI_COMM_WORLD);
-}
+void reduce_estimators() { MPI_Allreduce_safe(stats::ionstats, MPI_SUM, MPI_COMM_WORLD); }
 }  // namespace stats
