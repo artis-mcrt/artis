@@ -271,13 +271,9 @@ void mpi_reduce_estimators(const int nts) {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
   radfield::reduce_estimators();
   MPI_Barrier(MPI_COMM_WORLD);
-  assert_always(!globals::ffheatingestimator.empty());
-  MPI_Allreduce(MPI_IN_PLACE, globals::ffheatingestimator.data(),
-                static_cast<int>(std::ssize(globals::ffheatingestimator)), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::ffheatingestimator, MPI_SUM, MPI_COMM_WORLD);
   if constexpr (!DIRECT_COL_HEAT) {
-    assert_always(!globals::colheatingestimator.empty());
-    MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator.data(),
-                  static_cast<int>(std::ssize(globals::colheatingestimator)), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce_safe(globals::colheatingestimator, MPI_SUM, MPI_COMM_WORLD);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -313,28 +309,28 @@ void mpi_reduce_estimators(const int nts) {
   MPI_Allreduce_safe(globals::timesteps[nts].cmf_lum, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].cmf_lum /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].gamma_dep_discrete, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].gamma_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].gamma_dep_discrete /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].positron_dep_discrete, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].positron_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].positron_dep_discrete /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].positron_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].positron_emission, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].positron_emission /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].electron_dep_discrete, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].electron_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].electron_dep_discrete /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].electron_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].electron_emission, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].electron_emission /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].alpha_dep_discrete, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].alpha_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].alpha_dep_discrete /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].alpha_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].alpha_emission, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].alpha_emission /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].gamma_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].gamma_emission, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].gamma_emission /= globals::nprocs;
 
   if constexpr (TRACK_ION_STATS) {
