@@ -1417,15 +1417,14 @@ void setup_cellcache() {
       const int nions = get_nions(element);
       mem_usage_cellcache += nions * sizeof(CellCacheIons);
       if (nions > 0) {
-        globals::cellcache[cellcachenum].chelements[element].chions = std::span<CellCacheIons>(
-            &globals::cellcache[cellcachenum].ch_all_ions[get_uniqueionindex(element, 0)], nions);
+        globals::cellcache[cellcachenum].chelements[element].chions =
+            std::span{globals::cellcache[cellcachenum].ch_all_ions}.subspan(get_uniqueionindex(element, 0), nions);
       }
 
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
         auto &chion = globals::cellcache[cellcachenum].chelements[element].chions[ion];
-        chion.chlevels =
-            std::span<CellCacheLevels>(&globals::cellcache[cellcachenum].ch_all_levels[alllevelindex], nlevels);
+        chion.chlevels = std::span{globals::cellcache[cellcachenum].ch_all_levels}.subspan(alllevelindex, nlevels);
 
         assert_always(alllevelindex == get_uniquelevelindex(element, ion, 0));
         alllevelindex += nlevels;
