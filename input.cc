@@ -1684,7 +1684,7 @@ void read_parameterfile(int rank) {
   } else {
     pre_zseed = get_rng_random_seed();
     // broadcast randomly-generated seed from rank 0 to all ranks
-    MPI_Bcast(&pre_zseed, 1, MPI_INT64_T, 0, MPI_COMM_WORLD);
+    MPI_Bcast_safe(pre_zseed, 0, MPI_COMM_WORLD);
     printout("randomly-generated random number seed is %" PRId64 "\n", pre_zseed);
 #if defined REPRODUCIBLE && REPRODUCIBLE
     printout("ERROR: reproducible mode is on, so random number seed is required.\n");
