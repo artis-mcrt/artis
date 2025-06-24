@@ -391,7 +391,7 @@ template <typename T>
 }
 
 template <typename T>
-constexpr auto MPI_TYPE() -> MPI_Datatype {
+constexpr auto GET_MPI_TYPE() -> MPI_Datatype {
   if constexpr (std::is_same_v<T, float>) {
     return MPI_FLOAT;
   } else if constexpr (std::is_same_v<T, double>) {
@@ -406,16 +406,16 @@ constexpr auto MPI_TYPE() -> MPI_Datatype {
 template <typename R>
 inline auto MPI_Allreduce_safe(R &data, auto &op, auto &comm) {
   // std::ranges::random_access_range
-  // using T = std::ranges::range_value_t<R>;
-  // assert_always(!data.empty());
-  // assert_always(data.data() != nullptr);
-  // assert_always(op != MPI_OP_NULL);
-  // assert_always(comm != MPI_COMM_NULL);
+  using T = std::ranges::range_value_t<R>;
+  assert_always(!data.empty());
+  assert_always(data.data() != nullptr);
+  assert_always(op != MPI_OP_NULL);
+  assert_always(comm != MPI_COMM_NULL);
   const auto int_data_size = static_cast<int>(std::ssize(data));
 
   assert_always(std::cmp_equal(int_data_size, std::ssize(data)) && "Data size exceeds maximum value for MPI_Allreduce");
 
-  return MPI_Allreduce(MPI_IN_PLACE, data.data(), int_data_size, MPI_DOUBLE, op, comm);
+  return MPI_Allreduce(MPI_IN_PLACE, data.data(), int_data_size, GET_MPI_TYPE<T>(), op, comm);
 }
 
 template <typename T>
