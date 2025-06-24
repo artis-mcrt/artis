@@ -20,6 +20,7 @@
 #include <ios>
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <span>
 #include <sstream>
 #include <string>
@@ -1375,8 +1376,7 @@ void setup_cellcache() {
              ncoolingterms * sizeof(double) / 1024. / 1024.);
 
     mem_usage_cellcache += get_nelements() * sizeof(CellCacheElements);
-    globals::cellcache[cellcachenum].chelements = new CellCacheElements[get_nelements()];
-    assert_always(globals::cellcache[cellcachenum].chelements != nullptr);
+    resize_exactly(globals::cellcache[cellcachenum].chelements, get_nelements());
 
     ptrdiff_t chlevelcount = 0;
     size_t allphixstargetcount = 0;
@@ -1418,8 +1418,7 @@ void setup_cellcache() {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       mem_usage_cellcache += nions * sizeof(CellCacheIons);
-      globals::cellcache[cellcachenum].chelements[element].chions = new CellCacheIons[nions];
-      assert_always(globals::cellcache[cellcachenum].chelements[element].chions != nullptr);
+      resize_exactly(globals::cellcache[cellcachenum].chelements[element].chions, nions);
 
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
