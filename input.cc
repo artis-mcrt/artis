@@ -790,8 +790,8 @@ void setup_phixs_list() {
 
   assert_always(allcontindex == globals::nbfcontinua);
   assert_always(globals::nbfcontinua >= 0);  // was initialised as -1 before startup
-  const auto nbfcontinua =
-      globals::nbfcontinua;  // so that clang-tidy doesn't throw errors on the assumption that nbfcontinua is changing
+  // just so that clang-tidy doesn't throw errors on the assumption that nbfcontinua is changing
+  const auto nbfcontinua = globals::nbfcontinua;
 
   globals::bfestimcount = 0;
   if (nbfcontinua > 0) {
@@ -821,10 +821,10 @@ void setup_phixs_list() {
     globals::allcont_nu_edge = allcont_nu_edge;
 
     setup_photoion_luts();
+    MPI_Barrier(globals::mpi_comm_node);
+    globals::allcont = allcont;
   }
   printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
-  MPI_Barrier(globals::mpi_comm_node);
-  globals::allcont = allcont;
 }
 
 void read_phixs_data() {
