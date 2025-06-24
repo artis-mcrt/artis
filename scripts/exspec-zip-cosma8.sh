@@ -3,7 +3,9 @@
 #SBATCH --ntasks 128
 #SBATCH --time=48:00:00
 #SBATCH --partition=cosma8-rome
+##SBATCH --partition=cosma8-milan
 #SBATCH --account=dp033
+##SBATCH --account=dp385
 #SBATCH --exclusive
 #SBATCH -o slurm-%J.out
 #SBATCH -e slurm-%J.out
