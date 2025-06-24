@@ -796,7 +796,10 @@ void setup_phixs_list() {
   globals::bfestimcount = 0;
   if (nbfcontinua > 0) {
     // indices above were temporary only. continuum index should be to the sorted list
-    std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &FullPhotoionTransition::nu_edge);
+    if (globals::rank_in_node == 0) {
+      std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &FullPhotoionTransition::nu_edge);
+    }
+    MPI_Barrier(globals::mpi_comm_node);
 
     globals::bfestim_nu_edge.clear();
     for (int i = 0; i < nbfcontinua; i++) {
@@ -821,6 +824,7 @@ void setup_phixs_list() {
     globals::allcont_nu_edge = allcont_nu_edge;
 
     setup_photoion_luts();
+
     MPI_Barrier(globals::mpi_comm_node);
     globals::allcont = allcont;
   }
