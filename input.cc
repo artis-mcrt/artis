@@ -796,6 +796,7 @@ void setup_phixs_list() {
   globals::bfestimcount = 0;
   if (nbfcontinua > 0) {
     // indices above were temporary only. continuum index should be to the sorted list
+    MPI_Barrier(globals::mpi_comm_node);
     if (globals::rank_in_node == 0) {
       std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &FullPhotoionTransition::nu_edge);
     }
