@@ -395,7 +395,7 @@ template <typename T>
 }
 
 template <typename T>
-constexpr auto GET_MPI_TYPE() -> MPI_Datatype {
+inline auto GET_MPI_TYPE() -> MPI_Datatype {
   if constexpr (std::is_same_v<T, float>) {
     return MPI_FLOAT;
   } else if constexpr (std::is_same_v<T, double>) {
@@ -407,7 +407,7 @@ constexpr auto GET_MPI_TYPE() -> MPI_Datatype {
   } else if constexpr (std::is_same_v<T, bool>) {
     return MPI_C_BOOL;
   } else {
-    static_assert(std::is_same_v<T, void>, "Unsupported data type for MPI operations");
+    return MPI_BYTE;  // fallback to byte type for unsupported types
   }
 }
 
@@ -427,7 +427,7 @@ inline void MPI_Allreduce_safe(R &&data, Op &&op, Comm &&comm) {
   const auto int_data_size = static_cast<int>(true_size);
   assert_always(std::cmp_equal(int_data_size, true_size));
 
-  auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
+  const auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
 
   auto ret = MPI_Allreduce(MPI_IN_PLACE, std::forward<R>(data).data(), int_data_size, mpi_datatype,
                            std::forward<Op>(op), std::forward<Comm>(comm));
@@ -449,11 +449,13 @@ inline void MPI_Bcast_safe(R &&data, const int root, Comm &&comm) {
   assert_always(std::forward<R>(data).data() != nullptr);
   assert_always(comm != MPI_COMM_NULL);
 
-  const auto true_size = std::ssize(std::forward<R>(data));
+  const auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
+  // if we're transferring bytes, then we need multiply the array count by the byte size of the type
+  const ptrdiff_t sizefactor = mpi_datatype == MPI_BYTE ? sizeof(typename std::ranges::range_value_t<R>) : 1;
+
+  const auto true_size = std::ssize(std::forward<R>(data)) * sizefactor;
   const auto int_data_size = static_cast<int>(true_size);
   assert_always(std::cmp_equal(int_data_size, true_size));
-
-  auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
 
   auto ret = MPI_Bcast(std::forward<R>(data).data(), int_data_size, mpi_datatype, root, std::forward<Comm>(comm));
   assert_always(ret == MPI_SUCCESS);
