@@ -284,26 +284,19 @@ void mpi_reduce_estimators(const int nts) {
   if (globals::nbfcontinua_ground > 0) {
     if constexpr (USE_LUT_PHOTOION) {
       MPI_Barrier(MPI_COMM_WORLD);
-      assert_always(!globals::gammaestimator.empty());
       MPI_Allreduce_safe(globals::gammaestimator, MPI_SUM, MPI_COMM_WORLD);
     }
 
     if constexpr (USE_LUT_BFHEATING) {
       MPI_Barrier(MPI_COMM_WORLD);
-      assert_always(!globals::bfheatingestimator.empty());
-      MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator.data(),
-                    static_cast<int>(std::ssize(globals::bfheatingestimator)), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce_safe(globals::bfheatingestimator, MPI_SUM, MPI_COMM_WORLD);
     }
   }
 
   if constexpr (RECORD_LINESTAT) {
     MPI_Barrier(MPI_COMM_WORLD);
-    assert_always(!globals::ecounter.empty());
-    MPI_Allreduce(MPI_IN_PLACE, globals::ecounter.data(), static_cast<int>(std::ssize(globals::ecounter)), MPI_INT,
-                  MPI_SUM, MPI_COMM_WORLD);
-    assert_always(!globals::acounter.empty());
-    MPI_Allreduce(MPI_IN_PLACE, globals::acounter.data(), static_cast<int>(std::ssize(globals::acounter)), MPI_INT,
-                  MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce_safe(globals::ecounter, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce_safe(globals::acounter, MPI_SUM, MPI_COMM_WORLD);
   }
 
   assert_always(std::ssize(globals::dep_estimator_gamma) == nonempty_npts_model);
