@@ -1,11 +1,11 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#include <cstdint>
 #include <cstdlib>
 #include <ctime>
 #include <format>
 #include <iterator>
-#include <limits>
 #include <ranges>
 #include <span>
 #include <utility>
@@ -402,6 +402,8 @@ constexpr auto GET_MPI_TYPE() -> MPI_Datatype {
     return MPI_DOUBLE;
   } else if constexpr (std::is_same_v<T, int>) {
     return MPI_INT;
+  } else if constexpr (std::is_same_v<T, std::int64_t>) {
+    return MPI_INT64_T;
   } else if constexpr (std::is_same_v<T, bool>) {
     return MPI_C_BOOL;
   } else {
@@ -429,8 +431,7 @@ inline void MPI_Allreduce_safe(R &&data, Op &&op, Comm &&comm) {
 }
 
 template <typename T, typename Op, typename Comm>
-  requires(!std::ranges::random_access_range<T> &&
-           (std::is_same_v<T, double> || std::is_same_v<T, float> || std::is_same_v<T, int> || std::is_same_v<T, bool>))
+  requires(!std::ranges::random_access_range<T>)
 inline void MPI_Allreduce_safe(T &data, Op &&op, Comm &&comm) {
   MPI_Allreduce_safe(std::span(&data, 1), std::forward<Op>(op), std::forward<Comm>(comm));
 }
@@ -452,8 +453,7 @@ inline void MPI_Bcast_safe(R &&data, int root, Comm &&comm) {
 }
 
 template <typename T, typename Comm>
-  requires(!std::ranges::random_access_range<T> &&
-           (std::is_same_v<T, double> || std::is_same_v<T, float> || std::is_same_v<T, int> || std::is_same_v<T, bool>))
+  requires(!std::ranges::random_access_range<T>)
 inline void MPI_Bcast_safe(T &data, int root, Comm &&comm) {
   MPI_Bcast_safe(std::span(&data, 1), root, std::forward<Comm>(comm));
 }
