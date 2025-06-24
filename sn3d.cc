@@ -243,8 +243,7 @@ void mpi_communicate_grid_properties() {
       }
 
       if (globals::rank_in_node == 0) {
-        MPI_Bcast(&grid::modelgrid[nonemptymgi], sizeof(grid::ModelGridCell), MPI_BYTE, root_node_id,
-                  globals::mpi_comm_internode);
+        MPI_Bcast_safe(grid::modelgrid[nonemptymgi], root_node_id, globals::mpi_comm_internode);
       }
 
       MPI_Bcast_binned_opacities(nonemptymgi, root_node_id);
