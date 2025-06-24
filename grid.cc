@@ -826,7 +826,7 @@ void calc_modelinit_totmassradionuclides() {
 
 void read_grid_restart_data(const int timestep) {
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "gridsave_ts%d.tmp", timestep);
+  snprintf(filename, std::size(filename), "gridsave_ts%d.tmp", timestep);
 
   printout("READIN GRID SNAPSHOT from %s\n", filename);
   FILE *gridsave_file = fopen_required(filename, "r");
@@ -2123,7 +2123,7 @@ void read_ejecta_model() {
 
 void write_grid_restart_data(const int timestep) {
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "gridsave_ts%d.tmp", timestep);
+  snprintf(filename, std::size(filename), "gridsave_ts%d.tmp", timestep);
 
   const auto sys_time_start_write_restart = std::time(nullptr);
   printout("Write grid restart data to %s...", filename);

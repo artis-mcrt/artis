@@ -483,7 +483,7 @@ void write_vspecpol(FILE *specpol_file) {
 void read_vspecpol(const int my_rank, const int nts) {
   char filename[MAXFILENAMELENGTH];
 
-  snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
+  snprintf(filename, std::size(filename), "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
   printout("Reading %s\n", filename);
 
   auto vspecpol_file = fstream_required(filename, std::ios::in);
@@ -559,7 +559,7 @@ void read_vpkt_grid(const int my_rank, const int nts) {
   }
 
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
+  snprintf(filename, std::size(filename), "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
   printout("Reading vpkt grid file %s\n", filename);
   FILE *vpkt_grid_file = fopen_required(filename, "r");
 
@@ -816,10 +816,10 @@ void write_timestep(const int nts, const int my_rank, const bool is_final) {
     char filename[MAXFILENAMELENGTH];
     if (is_final) {
       snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
-      snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d.out", my_rank);
+      snprintf(filename, std::size(filename), "vpackets_%.4d.out", my_rank);
     } else {
       snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
-      snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
+      snprintf(filename, std::size(filename), "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
     }
 
     std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
@@ -843,7 +843,7 @@ void init(const int nts, const int my_rank, const bool continued_from_saved) {
 
   if constexpr (VPKT_WRITE_CONTRIBS) {
     char filename[MAXFILENAMELENGTH];
-    snprintf(filename, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
+    snprintf(filename, std::size(filename), "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
 
     if (continued_from_saved) {
       char filename_prev[MAXFILENAMELENGTH];

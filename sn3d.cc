@@ -351,7 +351,7 @@ void mpi_reduce_estimators(const int nts) {
 void write_temp_packetsfile(const int timestep, const int my_rank, std::span<const Packet> pkt) {
   // write packets binary file (and retry if the write fails)
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  snprintf(filename, std::size(filename), "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   bool write_success = false;
   while (!write_success) {
@@ -378,7 +378,7 @@ void write_temp_packetsfile(const int timestep, const int my_rank, std::span<con
 
 void remove_temp_packetsfile(const int timestep, const int my_rank) {
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  snprintf(filename, std::size(filename), "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   if (std::filesystem::exists(filename)) {
     std::remove(filename);
@@ -664,8 +664,8 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 
     if (nts == globals::timestep_finish - 1) {
       char filename[MAXFILENAMELENGTH];
-      snprintf(filename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", 0, my_rank);
-      // snprintf(filename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", middle_iteration, my_rank);
+      snprintf(filename, std::size(filename), "packets%.2d_%.4d.out", 0, my_rank);
+      // snprintf(filename, std::size(filename), "packets%.2d_%.4d.out", middle_iteration, my_rank);
       write_packets(filename, packets);
 
       vpkt::write_timestep(nts, my_rank, true);
@@ -674,9 +674,9 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 
       // final packets*.out have been written, so remove the temporary packets files
       // commented out because you might still want to resume the simulation
-      // snprintf(filename, MAXFILENAMELENGTH, "packets%d_%d_odd.tmp", 0, my_rank);
+      // snprintf(filename, std::size(filename), "packets%d_%d_odd.tmp", 0, my_rank);
       // std::remove(filename);
-      // snprintf(filename, MAXFILENAMELENGTH, "packets%d_%d_even.tmp", 0, my_rank);
+      // snprintf(filename, std::size(filename), "packets%d_%d_even.tmp", 0, my_rank);
       // std::remove(filename);
     }
   }
@@ -867,7 +867,7 @@ auto main(int argc, char *argv[]) -> int {
   if (ndo > 0) {
     assert_always(estimators_file == nullptr);
     char filename[MAXFILENAMELENGTH];
-    snprintf(filename, MAXFILENAMELENGTH, "estimators_%.4d.out", my_rank);
+    snprintf(filename, std::size(filename), "estimators_%.4d.out", my_rank);
     estimators_file = fopen_required(filename, "w");
 
     if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {

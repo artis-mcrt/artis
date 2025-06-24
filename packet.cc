@@ -193,7 +193,7 @@ void write_packets(const std::string& filename, std::span<const Packet> pkt) {
 void read_temp_packetsfile(const int timestep, const int my_rank, std::span<Packet> pkt) {
   // read binary packets file
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  snprintf(filename, std::size(filename), "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Reading %s...", filename);
   auto packets_file = fopen_required_uniqueptr(filename, "rb");
@@ -208,7 +208,7 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<co
 
   // read binary packets file
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  snprintf(filename, std::size(filename), "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Verifying file %s...", filename);
   auto packets_file = fopen_required_uniqueptr(filename, "rb");

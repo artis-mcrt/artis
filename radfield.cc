@@ -572,7 +572,7 @@ void init(const int my_rank, const int ndo_nonempty) {
              H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
     if (ndo_nonempty > 0) {
       char filename[MAXFILENAMELENGTH];
-      snprintf(filename, MAXFILENAMELENGTH, "radfield_%.4d.out", my_rank);
+      snprintf(filename, std::size(filename), "radfield_%.4d.out", my_rank);
       assert_always(radfieldfile == nullptr);
       radfieldfile = fopen_required(filename, "w");
       fprintf(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W\n");
