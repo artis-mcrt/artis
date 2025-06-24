@@ -1424,7 +1424,8 @@ void setup_cellcache() {
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
         auto &chion = globals::cellcache[cellcachenum].chelements[element].chions[ion];
-        chion.chlevels = &globals::cellcache[cellcachenum].ch_all_levels[alllevelindex];
+        chion.chlevels =
+            std::span<CellCacheLevels>(&globals::cellcache[cellcachenum].ch_all_levels[alllevelindex], nlevels);
 
         assert_always(alllevelindex == get_uniquelevelindex(element, ion, 0));
         alllevelindex += nlevels;

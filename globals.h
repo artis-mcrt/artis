@@ -159,7 +159,7 @@ struct CellCacheLevels {
 };
 
 struct CellCacheIons {
-  CellCacheLevels *chlevels;  // Pointer to the ions levellist.
+  std::span<CellCacheLevels> chlevels;  // Pointer to the ions levellist.
 };
 
 struct CellCacheElements {
