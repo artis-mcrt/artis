@@ -448,10 +448,11 @@ inline void MPI_Bcast_safe(R &&data, const int root, Comm &&comm) {
   }
   assert_always(std::forward<R>(data).data() != nullptr);
   assert_always(comm != MPI_COMM_NULL);
+  using value_t = typename std::ranges::range_value_t<R>;
 
-  const auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
+  const auto mpi_datatype = GET_MPI_TYPE<value_t>();
   // if we're transferring bytes, then we need multiply the array count by the byte size of the type
-  const ptrdiff_t sizefactor = mpi_datatype == MPI_BYTE ? sizeof(typename std::ranges::range_value_t<R>) : 1;
+  const ptrdiff_t sizefactor = mpi_datatype == MPI_BYTE ? sizeof(value_t) : 1;
 
   const auto true_size = std::ssize(std::forward<R>(data)) * sizefactor;
   const auto int_data_size = static_cast<int>(true_size);
