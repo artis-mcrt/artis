@@ -351,6 +351,10 @@ constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks, co
   return std::tuple{nstart, nsize};
 }
 
+static_assert(get_range_chunk(10, 3, 0) == std::tuple{0, 4});
+static_assert(get_range_chunk(10, 3, 1) == std::tuple{4, 3});
+static_assert(get_range_chunk(10, 3, 2) == std::tuple{7, 3});
+
 template <typename T>
 [[nodiscard]] auto MPI_shared_malloc_keepwin(const ptrdiff_t num_allranks) -> std::tuple<T *, MPI_Win> {
   if (num_allranks == 0) {
