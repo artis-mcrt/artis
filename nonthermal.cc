@@ -1439,7 +1439,7 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
 
   if (xsstartindex >= 0) {
     const double y_xs_de =
-        cblas_ddot(SFPTS - xsstartindex, xs_excitation_vec.data() + xsstartindex, 1, yvec.data() + xsstartindex, 1) *
+        std::inner_product(yvec.begin() + xsstartindex, yvec.end(), xs_excitation_vec.begin() + xsstartindex, 0.0) *
         DELTA_E;
 
     return y_xs_de / E_init_ev / EV;
