@@ -398,11 +398,14 @@ constexpr auto GET_MPI_TYPE() -> MPI_Datatype {
     return MPI_DOUBLE;
   } else if constexpr (std::is_same_v<T, int>) {
     return MPI_INT;
+  } else if constexpr (std::is_same_v<T, bool>) {
+    return MPI_C_BOOL;
   } else {
     static_assert(std::is_same_v<T, void>, "Unsupported data type for MPI operations");
   }
 }
 
+// these wrappers add type, bounds, and overflow safety to the MPI_Allreduce calls
 template <typename R, typename Op, typename Comm>
   requires std::ranges::random_access_range<R>
 inline void MPI_Allreduce_safe(R &data, Op &&op, Comm &&comm) {
