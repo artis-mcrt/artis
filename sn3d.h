@@ -5,6 +5,7 @@
 #include <ctime>
 #include <format>
 #include <limits>
+#include <ranges>
 #include <span>
 #include <utility>
 #include <vector>
@@ -401,8 +402,9 @@ constexpr auto MPI_TYPE() -> MPI_Datatype {
   }
 }
 
-template <typename T>
-void MPI_Allreduce_inplacespan(std::span<T> data, auto op, auto comm) {
+template <typename R>
+  requires std::ranges::random_access_range<R> && std::ranges::contiguous_range<R>
+inline void MPI_Allreduce_safe(R data, auto op, auto comm) {
   assert_always(!data.empty());
   assert_always(data.data() != nullptr);
   assert_always(op != MPI_OP_NULL);
@@ -411,7 +413,7 @@ void MPI_Allreduce_inplacespan(std::span<T> data, auto op, auto comm) {
   assert_always(std::cmp_less(data.size(), std::numeric_limits<int>::max()) &&
                 "Data size exceeds maximum value for MPI_Allreduce");
 
-  MPI_Allreduce(MPI_IN_PLACE, data.data(), static_cast<int>(data.size()), MPI_TYPE<T>(), op, comm);
+  MPI_Allreduce(MPI_IN_PLACE, data.data(), static_cast<int>(data.size()), MPI_TYPE<R::value_type>(), op, comm);
 }
 
 template <typename T>
