@@ -404,8 +404,8 @@ constexpr auto GET_MPI_TYPE() -> MPI_Datatype {
 }
 
 template <typename R>
-inline auto MPI_Allreduce_safe(R &data, auto &op, auto &comm) {
-  // std::ranges::random_access_range
+  requires std::ranges::random_access_range<R>  // R must be a random access range
+inline auto MPI_Allreduce_safe(R &data, auto &&op, auto &&comm) {
   using T = std::ranges::range_value_t<R>;
   assert_always(!data.empty());
   assert_always(data.data() != nullptr);
@@ -415,7 +415,8 @@ inline auto MPI_Allreduce_safe(R &data, auto &op, auto &comm) {
 
   assert_always(std::cmp_equal(int_data_size, std::ssize(data)) && "Data size exceeds maximum value for MPI_Allreduce");
 
-  return MPI_Allreduce(MPI_IN_PLACE, data.data(), int_data_size, GET_MPI_TYPE<T>(), op, comm);
+  return MPI_Allreduce(MPI_IN_PLACE, data.data(), int_data_size, GET_MPI_TYPE<T>(), std::forward(op),
+                       std::forward(comm));
 }
 
 template <typename T>
