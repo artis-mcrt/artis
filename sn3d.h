@@ -425,7 +425,7 @@ inline void MPI_Allreduce_safe(R &&data, Op &&op, Comm &&comm) {
   const auto true_size = std::ssize(std::forward<R>(data));
   const auto int_data_size = static_cast<int>(true_size);
 
-  assert_always(std::cmp_equal(int_data_size, true_size) && "Data size exceeds maximum value for MPI_Allreduce");
+  assert_always(std::cmp_equal(int_data_size, true_size) && "Data size exceeds maximum int value");
 
   auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
   auto ret = MPI_Allreduce(MPI_IN_PLACE, std::forward<R>(data).data(), int_data_size, mpi_datatype,
@@ -450,7 +450,7 @@ inline void MPI_Bcast_safe(R &&data, const int root, Comm &&comm) {
   const auto true_size = std::ssize(std::forward<R>(data));
   const auto int_data_size = static_cast<int>(true_size);
 
-  assert_always(std::cmp_equal(int_data_size, true_size) && "Data size exceeds maximum value for MPI_Bcast");
+  assert_always(std::cmp_equal(int_data_size, true_size) && "Data size exceeds maximum int value");
 
   auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
   auto ret = MPI_Bcast(std::forward<R>(data).data(), int_data_size, mpi_datatype, root, std::forward<Comm>(comm));
@@ -474,7 +474,7 @@ inline void MPI_Reduce_safe(R &&data, Op &&op, const int root, Comm &&comm) {
   const auto true_size = std::ssize(std::forward<R>(data));
   const auto int_data_size = static_cast<int>(true_size);
 
-  assert_always(std::cmp_equal(int_data_size, true_size) && "Data size exceeds maximum value for MPI_Bcast");
+  assert_always(std::cmp_equal(int_data_size, true_size) && "Data size exceeds maximum int value");
 
   int my_rank{-1};
   assert_always(MPI_Comm_rank(std::forward<Comm>(comm), &my_rank) == MPI_SUCCESS);
