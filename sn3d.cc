@@ -310,7 +310,7 @@ void mpi_reduce_estimators(const int nts) {
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].cmf_lum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].cmf_lum, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].cmf_lum /= globals::nprocs;
 
   MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].gamma_dep_discrete, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);

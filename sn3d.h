@@ -404,8 +404,8 @@ constexpr auto GET_MPI_TYPE() -> MPI_Datatype {
 }
 
 template <typename R, typename Op, typename Comm>
-  requires std::ranges::random_access_range<R>  // R must be a random access range
-inline auto MPI_Allreduce_safe(R &data, Op &&op, Comm &&comm) {
+  requires std::ranges::random_access_range<R>
+inline void MPI_Allreduce_safe(R &data, Op &&op, Comm &&comm) {
   using T = std::ranges::range_value_t<R>;
   assert_always(!data.empty());
   assert_always(data.data() != nullptr);
@@ -415,8 +415,20 @@ inline auto MPI_Allreduce_safe(R &data, Op &&op, Comm &&comm) {
 
   assert_always(std::cmp_equal(int_data_size, std::ssize(data)) && "Data size exceeds maximum value for MPI_Allreduce");
 
-  return MPI_Allreduce(MPI_IN_PLACE, data.data(), int_data_size, GET_MPI_TYPE<T>(), std::forward<Op>(op),
-                       std::forward<Comm>(comm));
+  auto ret = MPI_Allreduce(MPI_IN_PLACE, data.data(), int_data_size, GET_MPI_TYPE<T>(), std::forward<Op>(op),
+                           std::forward<Comm>(comm));
+  assert_always(ret == MPI_SUCCESS);
+}
+
+template <typename T, typename Op, typename Comm>
+  requires(!std::ranges::random_access_range<T> &&
+           (std::is_same_v<T, double> || std::is_same_v<T, float> || std::is_same_v<T, int>))
+inline void MPI_Allreduce_safe(T &data, Op &&op, Comm &&comm) {
+  assert_always(op != MPI_OP_NULL);
+  assert_always(comm != MPI_COMM_NULL);
+  const auto ret =
+      MPI_Allreduce(MPI_IN_PLACE, &data, 1, GET_MPI_TYPE<T>(), std::forward<Op>(op), std::forward<Comm>(comm));
+  assert_always(ret == MPI_SUCCESS);
 }
 
 template <typename T>
