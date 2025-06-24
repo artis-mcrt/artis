@@ -777,7 +777,7 @@ void setup_phixs_list() {
               .level = level,
               .phixstargetindex = phixstargetindex,
               .upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex),
-              .photoion_xs = nullptr,
+              .uniquelevelindex = uniquelevelindex,
               .probability = get_phixsprobability(uniquelevelindex, phixstargetindex),
               .index_in_groundphixslist = index_in_groundphixslist,
               .bfestimindex = -1,
@@ -822,14 +822,6 @@ void setup_phixs_list() {
     globals::allcont_nu_edge = allcont_nu_edge;
 
     setup_photoion_luts();
-
-    for (int i = 0; i < nbfcontinua; i++) {
-      const int element = allcont[i].element;
-      const int ion = allcont[i].ion;
-      const int level = allcont[i].level;
-      allcont[i].photoion_xs = get_phixs_table(element, ion, level);
-      assert_always(allcont[i].photoion_xs != nullptr);
-    }
   }
   printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
   globals::allcont = allcont;
