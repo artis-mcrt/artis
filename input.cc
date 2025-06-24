@@ -827,6 +827,7 @@ void setup_phixs_list() {
     }
   }
   printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
+  MPI_Barrier(globals::mpi_comm_node);
   globals::allcont = allcont;
 }
 
