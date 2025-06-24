@@ -804,30 +804,31 @@ void setup_phixs_list() {
 
     globals::bfestim_nu_edge.clear();
     for (int i = 0; i < nbfcontinua; i++) {
-      auto &cont = allcont[i];
       if (DETAILED_BF_ESTIMATORS_ON &&
-          LEVEL_HAS_BFEST(get_atomicnumber(cont.element), get_ionstage(cont.element, cont.ion), cont.level)) {
-        cont.bfestimindex = globals::bfestimcount;
-        globals::bfestim_nu_edge.push_back(cont.nu_edge);
+          LEVEL_HAS_BFEST(get_atomicnumber(allcont[i].element), get_ionstage(allcont[i].element, allcont[i].ion),
+                          allcont[i].level)) {
+        allcont[i].bfestimindex = globals::bfestimcount;
+        globals::bfestim_nu_edge.push_back(allcont[i].nu_edge);
         globals::bfestimcount++;
       } else {
-        cont.bfestimindex = -1;
+        allcont[i].bfestimindex = -1;
       }
     }
+    MPI_Barrier(globals::mpi_comm_node);
+    globals::allcont = allcont;
     globals::bfestim_nu_edge.shrink_to_fit();
 
     assert_always(globals::bfestimcount == std::ssize(globals::bfestim_nu_edge));
 
     auto allcont_nu_edge = MPI_shared_malloc_span<double>(nbfcontinua);
     for (int i = 0; i < nbfcontinua; i++) {
-      allcont_nu_edge[i] = allcont[i].nu_edge;
+      allcont_nu_edge[i] = globals::allcont[i].nu_edge;
     }
     globals::allcont_nu_edge = allcont_nu_edge;
 
     setup_photoion_luts();
 
     MPI_Barrier(globals::mpi_comm_node);
-    globals::allcont = allcont;
   }
   printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
 }
