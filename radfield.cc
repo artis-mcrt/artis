@@ -1039,9 +1039,9 @@ void reduce_estimators()
     for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
         const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
-        MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce_safe(radfieldbins[mgibinindex].J_raw, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce_safe(radfieldbins[mgibinindex].nuJ_raw, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce_safe(radfieldbins[mgibinindex].contribcount, MPI_SUM, MPI_COMM_WORLD);
       }
     }
     const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
@@ -1054,9 +1054,8 @@ void reduce_estimators()
 
     for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
       for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-        MPI_Allreduce(MPI_IN_PLACE, &Jb_lu_raw[nonemptymgi][jblueindex].value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, &Jb_lu_raw[nonemptymgi][jblueindex].contribcount, 1, MPI_INT, MPI_SUM,
-                      MPI_COMM_WORLD);
+        MPI_Allreduce_safe(Jb_lu_raw[nonemptymgi][jblueindex].value, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce_safe(Jb_lu_raw[nonemptymgi][jblueindex].contribcount, MPI_SUM, MPI_COMM_WORLD);
       }
     }
     const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
