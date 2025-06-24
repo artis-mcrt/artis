@@ -843,7 +843,7 @@ void read_phixs_data() {
   phixs_file_version_exists[2] = std::filesystem::exists(phixsdata_filenames[2]);
 
   // just in case the file system was faulty and the ranks disagree on the existence of the files
-  MPI_Allreduce(MPI_IN_PLACE, phixs_file_version_exists.data(), 3, MPI_C_BOOL, MPI_LOR, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(phixs_file_version_exists, MPI_LOR, MPI_COMM_WORLD);
   assert_always(phixs_file_version_exists[1] || phixs_file_version_exists[2]);  // at least one must exist
   if (phixs_file_version_exists[1] && phixs_file_version_exists[2]) {
     printout(
