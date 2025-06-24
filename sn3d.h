@@ -441,7 +441,7 @@ inline void MPI_Allreduce_safe(T &data, Op &&op, Comm &&comm) {
 
 template <typename R, typename Comm>
   requires std::ranges::random_access_range<R>
-inline void MPI_Bcast_safe(R &&data, int root, Comm &&comm) {
+inline void MPI_Bcast_safe(R &&data, const int root, Comm &&comm) {
   if (std::forward<R>(data).empty()) {
     return;
   }
@@ -459,7 +459,7 @@ inline void MPI_Bcast_safe(R &&data, int root, Comm &&comm) {
 
 template <typename T, typename Comm>
   requires(!std::ranges::random_access_range<T>)
-inline void MPI_Bcast_safe(T &data, int root, Comm &&comm) {
+inline void MPI_Bcast_safe(T &data, const int root, Comm &&comm) {
   MPI_Bcast_safe(std::span(&data, 1), root, std::forward<Comm>(comm));
 }
 
