@@ -403,7 +403,7 @@ constexpr auto MPI_TYPE() -> MPI_Datatype {
   }
 }
 
-template <std::random_access_iterator R>
+template <std::ranges::random_access_range R>
 inline void MPI_Allreduce_safe(R data, auto op, auto comm) {
   using T = std::iter_value_t<R>;
   assert_always(!data.empty());
