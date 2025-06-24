@@ -10,9 +10,9 @@ if [ ! -f atomicdata_hefeconi_fe_I_to_VII.tar.xz ]; then curl -O https://theory.
 
 tar -xf atomicdata_hefeconi_fe_i_to_vii.tar.xz --directory $runfolder
 
-rsync -av --ignore-times nltephotospheric_dynamic_ion_range_1d_1dgrid_inputfiles/ $runfolder
+rsync -av --exclude="recombrates.txt" nebular_1d_3dgrid_inputfiles/ $runfolder/
 
-rsync -av nebular_1d_3dgrid_inputfiles/model.txt $runfolder
+rsync -av --ignore-times nltephotospheric_dynamic_ion_range_1d_1dgrid_inputfiles/ $runfolder/
 
 cp ../data/* $runfolder
 
