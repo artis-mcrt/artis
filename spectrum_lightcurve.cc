@@ -305,18 +305,14 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
   }
 }
 
-void mpi_reduce_spectra(int my_rank, Spectra &spectra) {
-  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.fluxalltimesteps.data(), spectra.fluxalltimesteps.data(),
-             static_cast<int>(std::ssize(spectra.fluxalltimesteps)), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+void mpi_reduce_spectra(Spectra &spectra) {
+  MPI_Reduce_safe(spectra.fluxalltimesteps, MPI_SUM, 0, MPI_COMM_WORLD);
 
   if (spectra.do_emission_absorption) {
-    MPI_Reduce_safe(spectra.absorptionalltimesteps, MPI_SUM, 0, MPI_COMM_WORLD, my_rank);
+    MPI_Reduce_safe(spectra.absorptionalltimesteps, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.emissionalltimesteps.data(), spectra.emissionalltimesteps.data(),
-               static_cast<int>(std::ssize(spectra.emissionalltimesteps)), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.trueemissionalltimesteps.data(),
-               spectra.trueemissionalltimesteps.data(), static_cast<int>(std::ssize(spectra.trueemissionalltimesteps)),
-               MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce_safe(spectra.emissionalltimesteps, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce_safe(spectra.trueemissionalltimesteps, MPI_SUM, 0, MPI_COMM_WORLD);
   }
 }
 
@@ -556,15 +552,11 @@ void write_partial_lightcurve_spectra(const int my_rank, const int nts, std::spa
 
   const auto time_mpireduction_start = std::time(nullptr);
   MPI_Barrier(MPI_COMM_WORLD);
-  mpi_reduce_spectra(my_rank, rpkt_spectra);
-  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lum.data(), rpkt_light_curve_lum.data(), numtimesteps,
-             MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lumcmf.data(), rpkt_light_curve_lumcmf.data(), numtimesteps,
-             MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : gamma_light_curve_lum.data(), gamma_light_curve_lum.data(), numtimesteps,
-             MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : gamma_light_curve_lumcmf.data(), gamma_light_curve_lumcmf.data(),
-             numtimesteps, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  mpi_reduce_spectra(rpkt_spectra);
+  MPI_Reduce_safe(rpkt_light_curve_lum, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce_safe(rpkt_light_curve_lumcmf, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce_safe(gamma_light_curve_lum, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce_safe(gamma_light_curve_lumcmf, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
   const auto time_mpireduction_end = std::time(nullptr);
 
