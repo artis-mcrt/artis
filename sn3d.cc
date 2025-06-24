@@ -146,14 +146,14 @@ void write_deposition_file() {
   }
 
   // each MPI rank only calculated the contribution of a subset of cells
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_positron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_electron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_alpha_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_betaminus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_alpha, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].eps_positron_ana_power, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].eps_electron_ana_power, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].eps_alpha_ana_power, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].qdot_betaminus, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].qdot_alpha, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].qdot_total, MPI_SUM, MPI_COMM_WORLD);
 
-  MPI_Allreduce(MPI_IN_PLACE, &mtot, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(mtot, MPI_SUM, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (my_rank == 0) {
