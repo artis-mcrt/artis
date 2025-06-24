@@ -1021,12 +1021,12 @@ void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node
   if constexpr (EXPANSIONOPACITIES_ON) {
     if (globals::rank_in_node == 0) {
       assert_always(nonemptymgi >= 0);
-      MPI_Bcast(&expansionopacities[nonemptymgi * expopac_nbins], expopac_nbins, MPI_FLOAT, root_node_id,
-                globals::mpi_comm_internode);
+      MPI_Bcast_safe(expansionopacities.subspan(nonemptymgi * expopac_nbins, expopac_nbins), root_node_id,
+                     globals::mpi_comm_internode);
 
       if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
-        MPI_Bcast(&expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins], expopac_nbins, MPI_DOUBLE,
-                  root_node_id, globals::mpi_comm_internode);
+        MPI_Bcast_safe(expansionopacity_planck_cumulative.subspan(nonemptymgi * expopac_nbins, expopac_nbins),
+                       root_node_id, globals::mpi_comm_internode);
       }
     }
   }
