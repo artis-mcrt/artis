@@ -463,6 +463,25 @@ inline void MPI_Bcast_safe(T &data, const int root, Comm &&comm) {
   MPI_Bcast_safe(std::span(&data, 1), root, std::forward<Comm>(comm));
 }
 
+template <typename R, typename Op, typename Comm>
+  requires std::ranges::random_access_range<R>
+inline void MPI_Reduce_safe(R &&data, Op &&op, const int root, Comm &&comm, const int my_rank) {
+  if (std::forward<R>(data).empty()) {
+    return;
+  }
+  assert_always(std::forward<R>(data).data() != nullptr);
+  assert_always(comm != MPI_COMM_NULL);
+  const auto true_size = std::ssize(std::forward<R>(data));
+  const auto int_data_size = static_cast<int>(true_size);
+
+  assert_always(std::cmp_equal(int_data_size, true_size) && "Data size exceeds maximum value for MPI_Bcast");
+
+  auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
+  auto ret = MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : std::forward<R>(data).data(), std::forward<R>(data).data(),
+                        int_data_size, mpi_datatype, std::forward<Op>(op), root, std::forward<Comm>(comm));
+  assert_always(ret == MPI_SUCCESS);
+}
+
 template <typename T>
 constexpr void resize_exactly(std::vector<T> &vec, const size_t size) {
   // just resizing can (only with libstdc++?) allocate a larger capacity than needed

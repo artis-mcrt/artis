@@ -310,9 +310,7 @@ void mpi_reduce_spectra(int my_rank, Spectra &spectra) {
              static_cast<int>(std::ssize(spectra.fluxalltimesteps)), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
   if (spectra.do_emission_absorption) {
-    MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.absorptionalltimesteps.data(),
-               spectra.absorptionalltimesteps.data(), static_cast<int>(std::ssize(spectra.absorptionalltimesteps)),
-               MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce_safe(spectra.absorptionalltimesteps, MPI_SUM, 0, MPI_COMM_WORLD, my_rank);
 
     MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.emissionalltimesteps.data(), spectra.emissionalltimesteps.data(),
                static_cast<int>(std::ssize(spectra.emissionalltimesteps)), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
