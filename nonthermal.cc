@@ -1183,7 +1183,8 @@ auto calculate_nt_frac_ionization_shell(const int nonemptymgi, const int element
   std::array<double, SFPTS> cross_section_vec{};
   get_xs_ionization_vector(cross_section_vec, collionrow);
 
-  const double y_dot_crosssection_de = cblas_ddot(SFPTS, yfunc.data(), 1, cross_section_vec.data(), 1) * DELTA_E;
+  const double y_dot_crosssection_de =
+      std::inner_product(yfunc.begin(), yfunc.end(), cross_section_vec.begin(), 0.0) * DELTA_E;
 
   return nnion * ionpot_ev * y_dot_crosssection_de / E_init_ev;
 }
