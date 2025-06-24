@@ -410,8 +410,8 @@ template <typename R, typename Op, typename Comm>
   requires std::ranges::random_access_range<R>
 inline void MPI_Allreduce_safe(R &&data, Op &&op, Comm &&comm) {
   using T = std::ranges::range_value_t<R>;
-  assert_always(!data.empty());
-  assert_always(data.data() != nullptr);
+  assert_always(!std::forward<R>(data).empty());
+  assert_always(std::forward<R>(data).data() != nullptr);
   assert_always(op != MPI_OP_NULL);
   assert_always(comm != MPI_COMM_NULL);
   const auto true_size = std::ssize(std::forward<R>(data));
@@ -419,8 +419,8 @@ inline void MPI_Allreduce_safe(R &&data, Op &&op, Comm &&comm) {
 
   assert_always(std::cmp_equal(int_data_size, true_size) && "Data size exceeds maximum value for MPI_Allreduce");
 
-  auto ret = MPI_Allreduce(MPI_IN_PLACE, data.data(), int_data_size, GET_MPI_TYPE<T>(), std::forward<Op>(op),
-                           std::forward<Comm>(comm));
+  auto ret = MPI_Allreduce(MPI_IN_PLACE, std::forward<R>(data).data(), int_data_size, GET_MPI_TYPE<T>(),
+                           std::forward<Op>(op), std::forward<Comm>(comm));
   assert_always(ret == MPI_SUCCESS);
 }
 
