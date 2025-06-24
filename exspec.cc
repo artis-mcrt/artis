@@ -166,7 +166,7 @@ auto main(int argc, char *argv[]) -> int {
 
   char filename[MAXFILENAMELENGTH];
   if (globals::my_rank == 0) {
-    snprintf(filename, MAXFILENAMELENGTH, "exspec.txt");
+    snprintf(filename, std::size(filename), "exspec.txt");
     output_file = std::ofstream(filename);
     assert_always(output_file.is_open());
   }

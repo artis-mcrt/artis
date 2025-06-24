@@ -146,14 +146,14 @@ void write_deposition_file() {
   }
 
   // each MPI rank only calculated the contribution of a subset of cells
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_positron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_electron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].eps_alpha_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_betaminus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_alpha, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].qdot_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].eps_positron_ana_power, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].eps_electron_ana_power, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].eps_alpha_ana_power, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].qdot_betaminus, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].qdot_alpha, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].qdot_total, MPI_SUM, MPI_COMM_WORLD);
 
-  MPI_Allreduce(MPI_IN_PLACE, &mtot, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(mtot, MPI_SUM, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (my_rank == 0) {
@@ -208,7 +208,7 @@ void mpi_communicate_grid_properties() {
     MPI_Barrier(MPI_COMM_WORLD);
 
     int root_node_id = globals::node_id;
-    MPI_Bcast(&root_node_id, 1, MPI_INT, root, MPI_COMM_WORLD);
+    MPI_Bcast_safe(root_node_id, root, MPI_COMM_WORLD);
 
     const ptrdiff_t root_nstart_nonempty = grid::get_nstart_nonempty(root);
     const auto root_ndo_nonempty = grid::get_ndo_nonempty(root);
@@ -222,26 +222,28 @@ void mpi_communicate_grid_properties() {
       nonthermal::nt_MPI_Bcast(nonemptymgi, root_node_id);
 
       if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
-        MPI_Bcast(&grid::nltepops_allcells[nonemptymgi * globals::total_nlte_levels], globals::total_nlte_levels,
-                  MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
+        MPI_Bcast_safe(
+            grid::nltepops_allcells.subspan(nonemptymgi * globals::total_nlte_levels, globals::total_nlte_levels),
+            root_node_id, globals::mpi_comm_internode);
       }
 
       if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
         assert_always(globals::corrphotoionrenorm.data() != nullptr);
         if (globals::rank_in_node == 0) {
-          MPI_Bcast(&globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua_ground],
-                    globals::nbfcontinua_ground, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
+          MPI_Bcast_safe(globals::corrphotoionrenorm.subspan(nonemptymgi * globals::nbfcontinua_ground,
+                                                             globals::nbfcontinua_ground),
+                         root_node_id, globals::mpi_comm_internode);
         }
 
         MPI_Barrier(MPI_COMM_WORLD);
 
-        MPI_Bcast(&globals::gammaestimator[nonemptymgi * globals::nbfcontinua_ground], globals::nbfcontinua_ground,
-                  MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast_safe(std::span{globals::gammaestimator}.subspan(nonemptymgi * globals::nbfcontinua_ground,
+                                                                  globals::nbfcontinua_ground),
+                       root, MPI_COMM_WORLD);
       }
 
       if (globals::rank_in_node == 0) {
-        MPI_Bcast(&grid::modelgrid[nonemptymgi], sizeof(grid::ModelGridCell), MPI_BYTE, root_node_id,
-                  globals::mpi_comm_internode);
+        MPI_Bcast_safe(grid::modelgrid[nonemptymgi], root_node_id, globals::mpi_comm_internode);
       }
 
       MPI_Bcast_binned_opacities(nonemptymgi, root_node_id);
@@ -249,16 +251,21 @@ void mpi_communicate_grid_properties() {
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (globals::rank_in_node == 0) {
-      MPI_Bcast(&grid::elem_meanweight_allcells[root_nstart_nonempty * nelements], root_ndo_nonempty * nelements,
-                MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
-      MPI_Bcast(&grid::elem_massfracs_allcells[root_nstart_nonempty * nelements], root_ndo_nonempty * nelements,
-                MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
-      MPI_Bcast(&grid::ion_groundlevelpops_allcells[root_nstart_nonempty * nincludedions],
-                root_ndo_nonempty * nincludedions, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
-      MPI_Bcast(&grid::ion_partfuncts_allcells[root_nstart_nonempty * nincludedions], root_ndo_nonempty * nincludedions,
-                MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
-      MPI_Bcast(&grid::ion_cooling_contribs_allcells[root_nstart_nonempty * nincludedions],
-                root_ndo_nonempty * nincludedions, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(
+          grid::elem_meanweight_allcells.subspan(root_nstart_nonempty * nelements, root_ndo_nonempty * nelements),
+          root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(
+          grid::elem_massfracs_allcells.subspan(root_nstart_nonempty * nelements, root_ndo_nonempty * nelements),
+          root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(grid::ion_groundlevelpops_allcells.subspan(root_nstart_nonempty * nincludedions,
+                                                                root_ndo_nonempty * nincludedions),
+                     root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(grid::ion_partfuncts_allcells.subspan(root_nstart_nonempty * nincludedions,
+                                                           root_ndo_nonempty * nincludedions),
+                     root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(grid::ion_cooling_contribs_allcells.subspan(root_nstart_nonempty * nincludedions,
+                                                                 root_ndo_nonempty * nincludedions),
+                     root_node_id, globals::mpi_comm_internode);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -271,82 +278,66 @@ void mpi_reduce_estimators(const int nts) {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
   radfield::reduce_estimators();
   MPI_Barrier(MPI_COMM_WORLD);
-  assert_always(!globals::ffheatingestimator.empty());
-  MPI_Allreduce(MPI_IN_PLACE, globals::ffheatingestimator.data(),
-                static_cast<int>(std::ssize(globals::ffheatingestimator)), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::ffheatingestimator, MPI_SUM, MPI_COMM_WORLD);
   if constexpr (!DIRECT_COL_HEAT) {
-    assert_always(!globals::colheatingestimator.empty());
-    MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator.data(),
-                  static_cast<int>(std::ssize(globals::colheatingestimator)), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce_safe(globals::colheatingestimator, MPI_SUM, MPI_COMM_WORLD);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (globals::nbfcontinua_ground > 0) {
     if constexpr (USE_LUT_PHOTOION) {
       MPI_Barrier(MPI_COMM_WORLD);
-      assert_always(!globals::gammaestimator.empty());
-      MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator.data(), static_cast<int>(std::ssize(globals::gammaestimator)),
-                    MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce_safe(globals::gammaestimator, MPI_SUM, MPI_COMM_WORLD);
     }
 
     if constexpr (USE_LUT_BFHEATING) {
       MPI_Barrier(MPI_COMM_WORLD);
-      assert_always(!globals::bfheatingestimator.empty());
-      MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator.data(),
-                    static_cast<int>(std::ssize(globals::bfheatingestimator)), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce_safe(globals::bfheatingestimator, MPI_SUM, MPI_COMM_WORLD);
     }
   }
 
   if constexpr (RECORD_LINESTAT) {
     MPI_Barrier(MPI_COMM_WORLD);
-    assert_always(!globals::ecounter.empty());
-    MPI_Allreduce(MPI_IN_PLACE, globals::ecounter.data(), static_cast<int>(std::ssize(globals::ecounter)), MPI_INT,
-                  MPI_SUM, MPI_COMM_WORLD);
-    assert_always(!globals::acounter.empty());
-    MPI_Allreduce(MPI_IN_PLACE, globals::acounter.data(), static_cast<int>(std::ssize(globals::acounter)), MPI_INT,
-                  MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce_safe(globals::ecounter, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce_safe(globals::acounter, MPI_SUM, MPI_COMM_WORLD);
   }
 
   assert_always(std::ssize(globals::dep_estimator_gamma) == nonempty_npts_model);
-  MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_gamma.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
-                MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::dep_estimator_gamma, MPI_SUM, MPI_COMM_WORLD);
   assert_always(std::ssize(globals::dep_estimator_positron) == nonempty_npts_model);
-  MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_positron.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
-                MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::dep_estimator_positron, MPI_SUM, MPI_COMM_WORLD);
   assert_always(std::ssize(globals::dep_estimator_electron) == nonempty_npts_model);
-  MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_electron.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
-                MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::dep_estimator_electron, MPI_SUM, MPI_COMM_WORLD);
   assert_always(std::ssize(globals::dep_estimator_alpha) == nonempty_npts_model);
-  MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_alpha.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
-                MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::dep_estimator_alpha, MPI_SUM, MPI_COMM_WORLD);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].cmf_lum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].cmf_lum, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].cmf_lum /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].gamma_dep_discrete, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].gamma_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].gamma_dep_discrete /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].positron_dep_discrete, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].positron_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].positron_dep_discrete /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].positron_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].positron_emission, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].positron_emission /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].electron_dep_discrete, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].electron_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].electron_dep_discrete /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].electron_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].electron_emission, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].electron_emission /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].alpha_dep_discrete, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].alpha_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].alpha_dep_discrete /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].alpha_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].alpha_emission, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].alpha_emission /= globals::nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].gamma_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].gamma_emission, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].gamma_emission /= globals::nprocs;
 
   if constexpr (TRACK_ION_STATS) {
@@ -359,7 +350,7 @@ void mpi_reduce_estimators(const int nts) {
 void write_temp_packetsfile(const int timestep, const int my_rank, std::span<const Packet> pkt) {
   // write packets binary file (and retry if the write fails)
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  snprintf(filename, std::size(filename), "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   bool write_success = false;
   while (!write_success) {
@@ -386,7 +377,7 @@ void write_temp_packetsfile(const int timestep, const int my_rank, std::span<con
 
 void remove_temp_packetsfile(const int timestep, const int my_rank) {
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  snprintf(filename, std::size(filename), "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   if (std::filesystem::exists(filename)) {
     std::remove(filename);
@@ -421,7 +412,7 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
     do_this_full_loop = (wallclock_remaining_seconds >= (1.5 * estimated_time_per_timestep));
 
     // communicate whatever decision the rank 0 process decided, just in case they differ
-    MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+    MPI_Bcast_safe(do_this_full_loop, 0, MPI_COMM_WORLD);
     if (do_this_full_loop) {
       printout("TIMED_RESTARTS: Going to continue since remaining time %ld s >= 1.5 * time_per_timestep\n",
                wallclock_remaining_seconds);
@@ -672,8 +663,8 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 
     if (nts == globals::timestep_finish - 1) {
       char filename[MAXFILENAMELENGTH];
-      snprintf(filename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", 0, my_rank);
-      // snprintf(filename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", middle_iteration, my_rank);
+      snprintf(filename, std::size(filename), "packets%.2d_%.4d.out", 0, my_rank);
+      // snprintf(filename, std::size(filename), "packets%.2d_%.4d.out", middle_iteration, my_rank);
       write_packets(filename, packets);
 
       vpkt::write_timestep(nts, my_rank, true);
@@ -682,9 +673,9 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 
       // final packets*.out have been written, so remove the temporary packets files
       // commented out because you might still want to resume the simulation
-      // snprintf(filename, MAXFILENAMELENGTH, "packets%d_%d_odd.tmp", 0, my_rank);
+      // snprintf(filename, std::size(filename), "packets%d_%d_odd.tmp", 0, my_rank);
       // std::remove(filename);
-      // snprintf(filename, MAXFILENAMELENGTH, "packets%d_%d_even.tmp", 0, my_rank);
+      // snprintf(filename, std::size(filename), "packets%d_%d_even.tmp", 0, my_rank);
       // std::remove(filename);
     }
   }
@@ -875,7 +866,7 @@ auto main(int argc, char *argv[]) -> int {
   if (ndo > 0) {
     assert_always(estimators_file == nullptr);
     char filename[MAXFILENAMELENGTH];
-    snprintf(filename, MAXFILENAMELENGTH, "estimators_%.4d.out", my_rank);
+    snprintf(filename, std::size(filename), "estimators_%.4d.out", my_rank);
     estimators_file = fopen_required(filename, "w");
 
     if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {

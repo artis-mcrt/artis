@@ -20,6 +20,7 @@
 #include <ios>
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <span>
 #include <sstream>
 #include <string>
@@ -736,8 +737,7 @@ void setup_phixs_list() {
   assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
   std::ranges::SORT_OR_STABLE_SORT(globals::groundcont, std::ranges::less{}, &GroundPhotoion::nu_edge);
 
-  auto allcont = std::span<FullPhotoionTransition>{new FullPhotoionTransition[globals::nbfcontinua],
-                                                   static_cast<size_t>(globals::nbfcontinua)};
+  auto allcont = MPI_shared_malloc_span<FullPhotoionTransition>(globals::nbfcontinua);
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
            globals::nbfcontinua * (sizeof(FullPhotoionTransition)) / 1024. / 1024.);
   int allcontindex = 0;
@@ -759,25 +759,29 @@ void setup_phixs_list() {
         const int nphixstargets = get_nphixstargets(uniquelevelindex);
 
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          const double nu_edge = get_phixs_threshold(uniquelevelindex, phixstargetindex) / H;
-
-          assert_always(allcontindex < globals::nbfcontinua);
           assert_always(allcontindex < std::ssize(allcont));
-          allcont[allcontindex].nu_edge = nu_edge;
-          allcont[allcontindex].element = element;
-          allcont[allcontindex].ion = ion;
-          allcont[allcontindex].level = level;
-          allcont[allcontindex].phixstargetindex = phixstargetindex;
-          allcont[allcontindex].probability = get_phixsprobability(uniquelevelindex, phixstargetindex);
-          allcont[allcontindex].upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
 
+          int index_in_groundphixslist = -1;
           if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
             const double nu_edge_target0 = get_phixs_threshold(uniquelevelindex, 0) / H;
-            const auto groundcontindex = search_groundphixslist(nu_edge_target0, element, ion, level);
-            allcont[allcontindex].index_in_groundphixslist = groundcontindex;
+            index_in_groundphixslist = search_groundphixslist(nu_edge_target0, element, ion, level);
 
-            globals::alllevels.closestgroundlevelcont[uniquelevelindex] = groundcontindex;
+            globals::alllevels.closestgroundlevelcont[uniquelevelindex] = index_in_groundphixslist;
           }
+
+          allcont[allcontindex] = {
+              .nu_edge = get_phixs_threshold(uniquelevelindex, phixstargetindex) / H,
+              .element = element,
+              .ion = ion,
+              .level = level,
+              .phixstargetindex = phixstargetindex,
+              .upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex),
+              .uniquelevelindex = uniquelevelindex,
+              .probability = get_phixsprobability(uniquelevelindex, phixstargetindex),
+              .index_in_groundphixslist = index_in_groundphixslist,
+              .bfestimindex = -1,
+          };
+
           allcontindex++;
         }
       }
@@ -786,48 +790,47 @@ void setup_phixs_list() {
 
   assert_always(allcontindex == globals::nbfcontinua);
   assert_always(globals::nbfcontinua >= 0);  // was initialised as -1 before startup
-  const auto nbfcontinua =
-      globals::nbfcontinua;  // so that clang-tidy doesn't throw errors on the assumption that nbfcontinua is changing
+  // just so that clang-tidy doesn't throw errors on the assumption that nbfcontinua is changing
+  const auto nbfcontinua = globals::nbfcontinua;
 
   globals::bfestimcount = 0;
   if (nbfcontinua > 0) {
     // indices above were temporary only. continuum index should be to the sorted list
-    std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &FullPhotoionTransition::nu_edge);
+    MPI_Barrier(globals::mpi_comm_node);
+    if (globals::rank_in_node == 0) {
+      std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &FullPhotoionTransition::nu_edge);
+    }
+    MPI_Barrier(globals::mpi_comm_node);
 
     globals::bfestim_nu_edge.clear();
     for (int i = 0; i < nbfcontinua; i++) {
-      auto &cont = allcont[i];
       if (DETAILED_BF_ESTIMATORS_ON &&
-          LEVEL_HAS_BFEST(get_atomicnumber(cont.element), get_ionstage(cont.element, cont.ion), cont.level)) {
-        cont.bfestimindex = globals::bfestimcount;
-        globals::bfestim_nu_edge.push_back(cont.nu_edge);
+          LEVEL_HAS_BFEST(get_atomicnumber(allcont[i].element), get_ionstage(allcont[i].element, allcont[i].ion),
+                          allcont[i].level)) {
+        allcont[i].bfestimindex = globals::bfestimcount;
+        globals::bfestim_nu_edge.push_back(allcont[i].nu_edge);
         globals::bfestimcount++;
       } else {
-        cont.bfestimindex = -1;
+        allcont[i].bfestimindex = -1;
       }
     }
-    globals::bfestim_nu_edge.shrink_to_fit();
 
-    auto allcont_nu_edge = MPI_shared_malloc_span<double>(nbfcontinua);
+    MPI_Barrier(globals::mpi_comm_node);
+    globals::allcont = allcont;
+
+    globals::bfestim_nu_edge.shrink_to_fit();
     assert_always(globals::bfestimcount == std::ssize(globals::bfestim_nu_edge));
 
+    auto allcont_nu_edge = MPI_shared_malloc_span<double>(nbfcontinua);
     for (int i = 0; i < nbfcontinua; i++) {
-      allcont_nu_edge[i] = allcont[i].nu_edge;
+      allcont_nu_edge[i] = globals::allcont[i].nu_edge;
     }
+    MPI_Barrier(globals::mpi_comm_node);
     globals::allcont_nu_edge = allcont_nu_edge;
 
     setup_photoion_luts();
-
-    for (int i = 0; i < nbfcontinua; i++) {
-      const int element = allcont[i].element;
-      const int ion = allcont[i].ion;
-      const int level = allcont[i].level;
-      allcont[i].photoion_xs = get_phixs_table(element, ion, level);
-      assert_always(allcont[i].photoion_xs != nullptr);
-    }
   }
   printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
-  globals::allcont = allcont;
 }
 
 void read_phixs_data() {
@@ -842,7 +845,7 @@ void read_phixs_data() {
   phixs_file_version_exists[2] = std::filesystem::exists(phixsdata_filenames[2]);
 
   // just in case the file system was faulty and the ranks disagree on the existence of the files
-  MPI_Allreduce(MPI_IN_PLACE, phixs_file_version_exists.data(), 3, MPI_C_BOOL, MPI_LOR, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(phixs_file_version_exists, MPI_LOR, MPI_COMM_WORLD);
   assert_always(phixs_file_version_exists[1] || phixs_file_version_exists[2]);  // at least one must exist
   if (phixs_file_version_exists[1] && phixs_file_version_exists[2]) {
     printout(
@@ -1002,7 +1005,7 @@ void read_atomicdata_files() {
     globals::elements[element].uniqueionindexstart = uniqueionindex;
 
     // Initialize the elements ionlist
-    globals::elements[element].ions = new Ion[nions];
+    globals::elements[element].ions = std::make_unique<Ion[]>(nions);
     assert_always(globals::elements[element].ions != nullptr);
 
     // now read in data for all ions of the current element. before doing so initialize
@@ -1375,17 +1378,14 @@ void setup_cellcache() {
              ncoolingterms * sizeof(double) / 1024. / 1024.);
 
     mem_usage_cellcache += get_nelements() * sizeof(CellCacheElements);
-    globals::cellcache[cellcachenum].chelements = new CellCacheElements[get_nelements()];
-    assert_always(globals::cellcache[cellcachenum].chelements != nullptr);
+    resize_exactly(globals::cellcache[cellcachenum].chelements, get_nelements());
 
-    ptrdiff_t chlevelcount = 0;
     size_t allphixstargetcount = 0;
     int chtransblocksize = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
-        chlevelcount += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
@@ -1397,8 +1397,8 @@ void setup_cellcache() {
         }
       }
     }
-    assert_always(chlevelcount > 0);
-    resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, chlevelcount);
+    resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, get_includedlevels());
+    resize_exactly(globals::cellcache[cellcachenum].ch_all_ions, get_includedions());
 
     if (allphixstargetcount > 0) {
       resize_exactly(globals::cellcache[cellcachenum].allphixstargets_corrphotoioncoeff, allphixstargetcount);
@@ -1406,7 +1406,7 @@ void setup_cellcache() {
         resize_exactly(globals::cellcache[cellcachenum].allphixstargets_stimrecombcoeff, allphixstargetcount);
       }
     }
-    mem_usage_cellcache += chlevelcount * sizeof(CellCacheLevels) + allphixstargetcount * sizeof(double) * 2;
+    mem_usage_cellcache += get_includedlevels() * sizeof(CellCacheLevels) + allphixstargetcount * sizeof(double) * 2;
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
     if (chtransblocksize > 0) {
@@ -1418,13 +1418,15 @@ void setup_cellcache() {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       mem_usage_cellcache += nions * sizeof(CellCacheIons);
-      globals::cellcache[cellcachenum].chelements[element].chions = new CellCacheIons[nions];
-      assert_always(globals::cellcache[cellcachenum].chelements[element].chions != nullptr);
+      if (nions > 0) {
+        globals::cellcache[cellcachenum].chelements[element].chions =
+            std::span{globals::cellcache[cellcachenum].ch_all_ions}.subspan(get_uniqueionindex(element, 0), nions);
+      }
 
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
         auto &chion = globals::cellcache[cellcachenum].chelements[element].chions[ion];
-        chion.chlevels = &globals::cellcache[cellcachenum].ch_all_levels[alllevelindex];
+        chion.chlevels = std::span{globals::cellcache[cellcachenum].ch_all_levels}.subspan(alllevelindex, nlevels);
 
         assert_always(alllevelindex == get_uniquelevelindex(element, ion, 0));
         alllevelindex += nlevels;
@@ -1432,21 +1434,21 @@ void setup_cellcache() {
         for (int level = 0; level < nlevels; level++) {
           const int ndowntrans = get_ndowntrans(element, ion, level);
           chion.chlevels[level].sum_epstrans_rad_deexc =
-              globals::cellcache[cellcachenum].chtransblock.data() + chtransindex;
+              std::span{globals::cellcache[cellcachenum].chtransblock}.subspan(chtransindex, ndowntrans).data();
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
           const int ndowntrans = get_ndowntrans(element, ion, level);
           chion.chlevels[level].sum_internal_down_same =
-              globals::cellcache[cellcachenum].chtransblock.data() + chtransindex;
+              std::span{globals::cellcache[cellcachenum].chtransblock}.subspan(chtransindex, ndowntrans).data();
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
           const int nuptrans = get_nuptrans(element, ion, level);
           chion.chlevels[level].sum_internal_up_same =
-              globals::cellcache[cellcachenum].chtransblock.data() + chtransindex;
+              std::span{globals::cellcache[cellcachenum].chtransblock}.subspan(chtransindex, nuptrans).data();
           chtransindex += nuptrans;
         }
       }
@@ -1683,7 +1685,7 @@ void read_parameterfile(int rank) {
   } else {
     pre_zseed = get_rng_random_seed();
     // broadcast randomly-generated seed from rank 0 to all ranks
-    MPI_Bcast(&pre_zseed, 1, MPI_INT64_T, 0, MPI_COMM_WORLD);
+    MPI_Bcast_safe(pre_zseed, 0, MPI_COMM_WORLD);
     printout("randomly-generated random number seed is %" PRId64 "\n", pre_zseed);
 #if defined REPRODUCIBLE && REPRODUCIBLE
     printout("ERROR: reproducible mode is on, so random number seed is required.\n");

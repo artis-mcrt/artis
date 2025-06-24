@@ -1,10 +1,14 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#include <cstdint>
 #include <cstdlib>
 #include <ctime>
 #include <format>
+#include <iterator>
+#include <ranges>
 #include <span>
+#include <utility>
 #include <vector>
 
 #ifndef __host__
@@ -347,6 +351,10 @@ constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks, co
   return std::tuple{nstart, nsize};
 }
 
+static_assert(get_range_chunk(10, 3, 0) == std::tuple{0, 4});
+static_assert(get_range_chunk(10, 3, 1) == std::tuple{4, 3});
+static_assert(get_range_chunk(10, 3, 2) == std::tuple{7, 3});
+
 template <typename T>
 [[nodiscard]] auto MPI_shared_malloc_keepwin(const ptrdiff_t num_allranks) -> std::tuple<T *, MPI_Win> {
   if (num_allranks == 0) {
@@ -384,6 +392,104 @@ template <typename T>
 template <typename T>
 [[nodiscard]] auto MPI_shared_malloc_span(const ptrdiff_t num_allranks) -> std::span<T> {
   return std::span(MPI_shared_malloc<T>(num_allranks), num_allranks);
+}
+
+template <typename T>
+inline auto GET_MPI_TYPE() -> MPI_Datatype {
+  if constexpr (std::is_same_v<T, float>) {
+    return MPI_FLOAT;
+  } else if constexpr (std::is_same_v<T, double>) {
+    return MPI_DOUBLE;
+  } else if constexpr (std::is_same_v<T, int>) {
+    return MPI_INT;
+  } else if constexpr (std::is_same_v<T, std::int64_t>) {
+    return MPI_INT64_T;
+  } else if constexpr (std::is_same_v<T, bool>) {
+    return MPI_C_BOOL;
+  } else {
+    return MPI_BYTE;  // fallback to byte type for unsupported types
+  }
+}
+
+// these wrappers add type, bounds, and overflow safety to the MPI calls
+template <typename R, typename Op, typename Comm>
+  requires std::ranges::random_access_range<R>
+inline void MPI_Allreduce_safe(R &&data, Op &&op, Comm &&comm) {
+  if (std::forward<R>(data).empty()) {
+    return;
+  }
+  assert_always(!std::forward<R>(data).empty());
+  assert_always(std::forward<R>(data).data() != nullptr);
+  assert_always(op != MPI_OP_NULL);
+  assert_always(comm != MPI_COMM_NULL);
+
+  const auto true_size = std::ssize(std::forward<R>(data));
+  const auto int_data_size = static_cast<int>(true_size);
+  assert_always(std::cmp_equal(int_data_size, true_size));
+
+  const auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
+
+  auto ret = MPI_Allreduce(MPI_IN_PLACE, std::forward<R>(data).data(), int_data_size, mpi_datatype,
+                           std::forward<Op>(op), std::forward<Comm>(comm));
+  assert_always(ret == MPI_SUCCESS);
+}
+
+template <typename T, typename Op, typename Comm>
+  requires(!std::ranges::random_access_range<T>)
+inline void MPI_Allreduce_safe(T &data, Op &&op, Comm &&comm) {
+  MPI_Allreduce_safe(std::span(&data, 1), std::forward<Op>(op), std::forward<Comm>(comm));
+}
+
+template <typename R, typename Comm>
+  requires std::ranges::random_access_range<R>
+inline void MPI_Bcast_safe(R &&data, const int root, Comm &&comm) {
+  if (std::forward<R>(data).empty()) {
+    return;
+  }
+  assert_always(std::forward<R>(data).data() != nullptr);
+  assert_always(comm != MPI_COMM_NULL);
+  using value_t = typename std::ranges::range_value_t<R>;
+
+  const auto mpi_datatype = GET_MPI_TYPE<value_t>();
+  // if we're transferring bytes, then we need multiply the array count by the byte size of the type
+  const ptrdiff_t sizefactor = mpi_datatype == MPI_BYTE ? sizeof(value_t) : 1;
+
+  const auto true_size = std::ssize(std::forward<R>(data)) * sizefactor;
+  const auto int_data_size = static_cast<int>(true_size);
+  assert_always(std::cmp_equal(int_data_size, true_size));
+
+  auto ret = MPI_Bcast(std::forward<R>(data).data(), int_data_size, mpi_datatype, root, std::forward<Comm>(comm));
+  assert_always(ret == MPI_SUCCESS);
+}
+
+template <typename T, typename Comm>
+  requires(!std::ranges::random_access_range<T>)
+inline void MPI_Bcast_safe(T &data, const int root, Comm &&comm) {
+  MPI_Bcast_safe(std::span(&data, 1), root, std::forward<Comm>(comm));
+}
+
+template <typename R, typename Op, typename Comm>
+  requires std::ranges::random_access_range<R>
+inline void MPI_Reduce_safe(R &&data, Op &&op, const int root, Comm &&comm) {
+  if (std::forward<R>(data).empty()) {
+    return;
+  }
+  assert_always(std::forward<R>(data).data() != nullptr);
+  assert_always(comm != MPI_COMM_NULL);
+
+  const auto true_size = std::ssize(std::forward<R>(data));
+  const auto int_data_size = static_cast<int>(true_size);
+  assert_always(std::cmp_equal(int_data_size, true_size));
+
+  int my_rank{-1};
+  assert_always(MPI_Comm_rank(std::forward<Comm>(comm), &my_rank) == MPI_SUCCESS);
+  assert_always(my_rank >= 0);
+
+  const auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
+
+  const auto ret = MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : std::forward<R>(data).data(), std::forward<R>(data).data(),
+                              int_data_size, mpi_datatype, std::forward<Op>(op), root, std::forward<Comm>(comm));
+  assert_always(ret == MPI_SUCCESS);
 }
 
 template <typename T>
