@@ -1235,7 +1235,8 @@ auto calculate_nt_ionization_ratecoeff(const int nonemptymgi, const int element,
     }
   }
 
-  const double y_xs_de = cblas_ddot(SFPTS, yfunc.data(), 1, cross_section_vec_allshells.data(), 1) * DELTA_E;
+  const double y_xs_de =
+      std::inner_product(yfunc.begin(), yfunc.end(), cross_section_vec_allshells.begin(), 0.0) * DELTA_E;
 
   const double deposition_rate_density_ev = get_deposition_rate_density(nonemptymgi) / EV;
   const double yscalefactor = deposition_rate_density_ev / E_init_ev;
