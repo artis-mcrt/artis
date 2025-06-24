@@ -208,7 +208,7 @@ void mpi_communicate_grid_properties() {
     MPI_Barrier(MPI_COMM_WORLD);
 
     int root_node_id = globals::node_id;
-    MPI_Bcast(&root_node_id, 1, MPI_INT, root, MPI_COMM_WORLD);
+    MPI_Bcast_safe(root_node_id, root, MPI_COMM_WORLD);
 
     const ptrdiff_t root_nstart_nonempty = grid::get_nstart_nonempty(root);
     const auto root_ndo_nonempty = grid::get_ndo_nonempty(root);
@@ -413,7 +413,7 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
     do_this_full_loop = (wallclock_remaining_seconds >= (1.5 * estimated_time_per_timestep));
 
     // communicate whatever decision the rank 0 process decided, just in case they differ
-    MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+    MPI_Bcast_safe(do_this_full_loop, 0, MPI_COMM_WORLD);
     if (do_this_full_loop) {
       printout("TIMED_RESTARTS: Going to continue since remaining time %ld s >= 1.5 * time_per_timestep\n",
                wallclock_remaining_seconds);
