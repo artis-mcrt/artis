@@ -409,7 +409,7 @@ constexpr auto GET_MPI_TYPE() -> MPI_Datatype {
   }
 }
 
-// these wrappers add type, bounds, and overflow safety to the MPI_Allreduce calls
+// these wrappers add type, bounds, and overflow safety to the MPI calls
 template <typename R, typename Op, typename Comm>
   requires std::ranges::random_access_range<R>
 inline void MPI_Allreduce_safe(R &&data, Op &&op, Comm &&comm) {
@@ -433,6 +433,29 @@ template <typename T, typename Op, typename Comm>
            (std::is_same_v<T, double> || std::is_same_v<T, float> || std::is_same_v<T, int> || std::is_same_v<T, bool>))
 inline void MPI_Allreduce_safe(T &data, Op &&op, Comm &&comm) {
   MPI_Allreduce_safe(std::span(&data, 1), std::forward<Op>(op), std::forward<Comm>(comm));
+}
+
+template <typename R, typename Comm>
+  requires std::ranges::random_access_range<R>
+inline void MPI_Bcast_safe(R &&data, int root, Comm &&comm) {
+  using T = std::ranges::range_value_t<R>;
+  assert_always(!std::forward<R>(data).empty());
+  assert_always(std::forward<R>(data).data() != nullptr);
+  assert_always(comm != MPI_COMM_NULL);
+  const auto true_size = std::ssize(std::forward<R>(data));
+  const auto int_data_size = static_cast<int>(true_size);
+
+  assert_always(std::cmp_equal(int_data_size, true_size) && "Data size exceeds maximum value for MPI_Bcast");
+
+  auto ret = MPI_Bcast(std::forward<R>(data).data(), int_data_size, GET_MPI_TYPE<T>(), root, std::forward<Comm>(comm));
+  assert_always(ret == MPI_SUCCESS);
+}
+
+template <typename T, typename Comm>
+  requires(!std::ranges::random_access_range<T> &&
+           (std::is_same_v<T, double> || std::is_same_v<T, float> || std::is_same_v<T, int> || std::is_same_v<T, bool>))
+inline void MPI_Bcast_safe(T &data, int root, Comm &&comm) {
+  MPI_Bcast_safe(std::span(&data, 1), root, std::forward<Comm>(comm));
 }
 
 template <typename T>
