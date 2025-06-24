@@ -1017,8 +1017,8 @@ void reduce_estimators()
 {
   const auto nonempty_npts_model = grid::get_nonempty_npts_model();
 
-  MPI_Allreduce(MPI_IN_PLACE, J.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, nuJ.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(J, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(nuJ, MPI_SUM, MPI_COMM_WORLD);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
@@ -1027,8 +1027,7 @@ void reduce_estimators()
                  globals::mpi_comm_node);
     }
     if (globals::rank_in_node == 0) {
-      MPI_Allreduce(MPI_IN_PLACE, bfrate_raw.data(), nonempty_npts_model * globals::bfestimcount, MPI_DOUBLE, MPI_SUM,
-                    globals::mpi_comm_internode);
+      MPI_Allreduce_safe(bfrate_raw, MPI_SUM, globals::mpi_comm_internode);
     }
     MPI_Bcast(bfrate_raw.data(), nonempty_npts_model * globals::bfestimcount, MPI_DOUBLE, 0, globals::mpi_comm_node);
   }
