@@ -404,21 +404,18 @@ constexpr auto MPI_TYPE() -> MPI_Datatype {
 }
 
 template <typename R>
-inline auto MPI_Allreduce_safe(R data, auto op, auto comm) {
+inline auto MPI_Allreduce_safe(R &data, auto op, auto comm) {
   // std::ranges::random_access_range
-  // using T = R::value_type;
   // using T = std::ranges::range_value_t<R>;
   // assert_always(!data.empty());
   // assert_always(data.data() != nullptr);
   // assert_always(op != MPI_OP_NULL);
   // assert_always(comm != MPI_COMM_NULL);
-  // const auto int_data_size = static_cast<int>(std::ssize(data));
+  const auto int_data_size = static_cast<int>(std::ssize(data));
 
-  // assert_always(std::cmp_equal(int_data_size, std::ssize(data)) && "Data size exceeds maximum value for
-  // MPI_Allreduce");
+  assert_always(std::cmp_equal(int_data_size, std::ssize(data)) && "Data size exceeds maximum value for MPI_Allreduce");
 
-  return MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator.data(),
-                       static_cast<int>(std::ssize(globals::gammaestimator)), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  return MPI_Allreduce(MPI_IN_PLACE, data.data(), int_data_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 }
 
 template <typename T>
