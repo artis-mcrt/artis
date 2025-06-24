@@ -404,7 +404,7 @@ constexpr auto MPI_TYPE() -> MPI_Datatype {
 }
 
 template <typename R>
-inline auto MPI_Allreduce_safe(R &data, auto op, auto comm) {
+inline auto MPI_Allreduce_safe(R &data, auto &op, auto &comm) {
   // std::ranges::random_access_range
   // using T = std::ranges::range_value_t<R>;
   // assert_always(!data.empty());
@@ -415,7 +415,7 @@ inline auto MPI_Allreduce_safe(R &data, auto op, auto comm) {
 
   assert_always(std::cmp_equal(int_data_size, std::ssize(data)) && "Data size exceeds maximum value for MPI_Allreduce");
 
-  return MPI_Allreduce(MPI_IN_PLACE, data.data(), int_data_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  return MPI_Allreduce(MPI_IN_PLACE, data.data(), int_data_size, MPI_DOUBLE, op, comm);
 }
 
 template <typename T>
