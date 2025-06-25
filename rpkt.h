@@ -21,22 +21,10 @@ struct Phixslist {
   std::unique_ptr<double[]> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or USE_LUT_BFHEATING = true
   std::unique_ptr<double[]> chi_bf_sum;
   std::unique_ptr<double[]> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
-  std::span<double> chi_bf_sum_span;
   int allcontend{-1};
   int allcontbegin{0};
   int bfestimend{-1};
   int bfestimbegin{0};
-
-  constexpr Phixslist(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
-      : groundcont_gamma_contr(std::make_unique<double[]>(nbfcontinua_ground)),
-        chi_bf_sum(std::make_unique<double[]>(nbfcontinua)),
-        gamma_contr(std::make_unique<double[]>(bfestimcount)) {
-#pragma clang unsafe_buffer_usage begin
-    chi_bf_sum_span = std::span<double>(chi_bf_sum.get(), nbfcontinua);
-#pragma clang unsafe_buffer_usage end
-  }
-
-  Phixslist() = default;
 };
 
 class Rpkt_continuum_absorptioncoeffs {
@@ -48,12 +36,16 @@ class Rpkt_continuum_absorptioncoeffs {
   double bf{0.};
   int nonemptymgi{-1};
   int timestep{-1};
-  Phixslist phixslist;
+  Phixslist phixslist{};
 
-  constexpr Rpkt_continuum_absorptioncoeffs(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
-      : phixslist(nbfcontinua_ground, nbfcontinua, bfestimcount) {}
+  constexpr Rpkt_continuum_absorptioncoeffs(const int nbfcontinua_ground, const int nbfcontinua,
+                                            const int bfestimcount) {
+    phixslist.groundcont_gamma_contr = std::make_unique<double[]>(nbfcontinua_ground);
+    phixslist.chi_bf_sum = std::make_unique<double[]>(nbfcontinua);
+    phixslist.gamma_contr = std::make_unique<double[]>(bfestimcount);
+  }
 
-  Rpkt_continuum_absorptioncoeffs() = default;
+  constexpr Rpkt_continuum_absorptioncoeffs() = default;
 };
 
 void do_rpkt(Packet &pkt, double t2);
