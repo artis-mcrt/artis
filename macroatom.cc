@@ -58,8 +58,10 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   double sum_coldeexc = 0.;
   const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
   const auto ndowntrans = get_ndowntrans(uniquelevelindex);
+#pragma clang unsafe_buffer_usage begin
   const auto arr_sum_epstrans_rad_deexc = std::span(chlevel.sum_epstrans_rad_deexc, ndowntrans);
   const auto arr_sum_internal_down_same = std::span(chlevel.sum_internal_down_same, ndowntrans);
+#pragma clang unsafe_buffer_usage end
   for (int i = 0; i < ndowntrans; i++) {
     const auto alltransindex = alltrans_startdown + i;
     const int lower = alltrans.targetlevelindex[alltransindex];
@@ -89,8 +91,11 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   // Calculate sum for upward internal transitions
   // transitions within the current ionisation stage
   double sum_internal_up_same = 0.;
-  const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
   const int nuptrans = get_nuptrans(uniquelevelindex);
+#pragma clang unsafe_buffer_usage begin
+  const auto cumulative_sum_internal_up_same = std::span(chlevel.sum_internal_up_same, nuptrans);
+#pragma clang unsafe_buffer_usage end
+  const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
   for (int ii = 0; ii < nuptrans; ii++) {
     const auto alltransindex = alltrans_startup + ii;
     const auto upper = alltrans.targetlevelindex[alltransindex];
@@ -105,7 +110,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex);
 
     sum_internal_up_same += (R + C + NT) * epsilon_current;
-    chlevel.sum_internal_up_same[ii] = sum_internal_up_same;
+    cumulative_sum_internal_up_same[ii] = sum_internal_up_same;
   }
   processrates[MA_ACTION_INTERNALUPSAME] = sum_internal_up_same;
 
@@ -405,8 +410,11 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
         // printout("[debug] do_ma:   radiative deexcitation\n");
+#pragma clang unsafe_buffer_usage begin
+        const auto sum_epstrans_rad_deexc = std::span(chlevel.sum_epstrans_rad_deexc, get_ndowntrans(uniquelevelindex));
+#pragma clang unsafe_buffer_usage end
         do_macroatom_raddeexcitation(pkt, element, ion, uniquelevelindex, epsilon_current, activatingline,
-                                     std::span(chlevel.sum_epstrans_rad_deexc, get_ndowntrans(uniquelevelindex)));
+                                     sum_epstrans_rad_deexc);
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC, pkt.e_cmf);
