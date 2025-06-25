@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <span>
 #include <string>
 
 #include "sn3d.h"
@@ -178,7 +179,7 @@ constexpr void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
   }
 }
 
-constexpr void md5_final(MD5_CTX *ctx, BYTE hash[MD5_BLOCK_SIZE]) {
+constexpr void md5_final(MD5_CTX *ctx, std::span<BYTE, MD5_BLOCK_SIZE> hash) {
   size_t i = 0;
 
   i = ctx->datalen;
@@ -242,7 +243,7 @@ auto md5_file(const std::string &filename) -> std::string {
 
   fclose(infile);
 
-  BYTE hashbytes[MD5_BLOCK_SIZE];
+  std::array<BYTE, MD5_BLOCK_SIZE> hashbytes{};
   md5_final(&ctx, hashbytes);
 
   std::string hashout(2 * MD5_BLOCK_SIZE, '0');  // Initialize with zeros
@@ -261,7 +262,7 @@ void md5_test() {
 
   md5_update(&ctx, buffer, sizeof(buffer) - 1);
 
-  BYTE hashbytes[MD5_BLOCK_SIZE];
+  std::array<BYTE, MD5_BLOCK_SIZE> hashbytes{};
   md5_final(&ctx, hashbytes);
 
   std::string hashout(2 * MD5_BLOCK_SIZE, '0');  // Initialize with zeros
