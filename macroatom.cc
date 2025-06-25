@@ -451,8 +451,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
       case MA_ACTION_INTERNALDOWNSAME: {
         stats::increment(stats::COUNTER_INTERACTIONS);
         const int ndowntrans = get_ndowntrans(uniquelevelindex);
-        const std::span<const double> sum_internal_down_same_exceptlast =
-            std::span(chlevel.sum_internal_down_same, ndowntrans - 1);
+        const auto sum_internal_down_same_exceptlast =
+            std::span<const double>(chlevel.sum_internal_down_same, ndowntrans - 1);
 
         // Randomly select the occurring transition
         const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNSAME];
@@ -563,8 +563,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         stats::increment(stats::COUNTER_INTERACTIONS);
 
         // randomly select the occurring transition
-        const std::span<const double> sum_internal_up_same_exceptlast =
-            std::span(chlevel.sum_internal_up_same, nuptrans - 1);
+        const auto sum_internal_up_same_exceptlast =
+            std::span<const double>(chlevel.sum_internal_up_same, nuptrans - 1);
 
         const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALUPSAME];
 
