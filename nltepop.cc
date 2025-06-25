@@ -655,7 +655,8 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 // return true if the solution is successful, or false if the matrix is singular
 [[nodiscard]] auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix,
                                         const gsl_vector *balance_vector, gsl_vector *popvec,
-                                        const gsl_vector *pop_normfactor_vec, const int max_nlte_dimension,
+                                        const gsl_vector *pop_normfactor_vec,
+                                        const std::vector<double> &superlevel_partfunc, const int max_nlte_dimension,
                                         const int first_ion_used, const int nions_used) -> bool {
   const size_t nlte_dimension = balance_vector->size;
   assert_always(pop_normfactor_vec->size == nlte_dimension);
@@ -780,7 +781,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
         return false;
       }
-      // Now check if any of the excited populations are negative
+      // Now check if any of the excited populations, including the superlevel population, are negative
       if (gsl_vector_get(popvec, row) < 0.0) {
         printout("  WARNING: NLTE solver gave negative population for index %zud (Z=%d ionstage %d level %d), pop = %g",
                  row, get_atomicnumber(element), get_ionstage(element, ion), level,
@@ -799,8 +800,8 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
             gsl_vector_get(popvec, row), MINPOP);
         gsl_vector_set(popvec, row, MINPOP);
       }
-      // Now check for population inversions.
-      if (row != index_ion_ground &&
+      // Now check for population inversions. First check all the excited levels excluding the superlevel
+      if (row != index_ion_ground && !level_isinsuperlevel(element, ion, level) &&
           gsl_vector_get(popvec, index_ion_ground) <
               (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row) &&
           (gsl_vector_get(popvec, index_ion_ground) * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
@@ -822,6 +823,32 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
           return false;
         }
         printout("relatively small pop inversion continue with NLTE solution\n");
+      }
+      // Now check if there is an inversion in the superlevel population relative to the ground state
+      else if (row != index_ion_ground && level_isinsuperlevel(element, ion, level) &&
+               gsl_vector_get(popvec, index_ion_ground) <
+                   (stat_weight(element, ion, 0) / superlevel_partfunc[ion]) * gsl_vector_get(popvec, row) &&
+               (gsl_vector_get(popvec, index_ion_ground) *
+                    STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
+                (stat_weight(element, ion, 0) / superlevel_partfunc[ion]) * gsl_vector_get(popvec, row))) {
+        assert_testmodeonly(ion_has_superlevel(element, ion));
+        printout(
+            "[debug] WARNING: superlevel pop inversion greater than factor %g: (g_pop %g)/(SL_pop %g) = %g is less than (g_sw "
+            "%g)/(SL_part_funct %g) = %g for index %zud Z=%d ionstage %d level %d (factor %g inversion) - ",
+            STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING, gsl_vector_get(popvec, index_ion_ground),
+            gsl_vector_get(popvec, row), gsl_vector_get(popvec, index_ion_ground) / gsl_vector_get(popvec, row),
+            stat_weight(element, ion, 0), superlevel_partfunc[ion],
+            stat_weight(element, ion, 0) / superlevel_partfunc[ion], row, get_atomicnumber(element),
+            get_ionstage(element, ion), level,
+            (stat_weight(element, ion, 0) / superlevel_partfunc[ion]) /
+                (gsl_vector_get(popvec, index_ion_ground) / gsl_vector_get(popvec, row)));
+
+        if (gsl_vector_get(popvec, index_ion_ground) * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL <
+            ((stat_weight(element, ion, 0) / superlevel_partfunc[ion]) * gsl_vector_get(popvec, row))) {
+          printout("large pop inversion for superlevel - return matrix solve fail\n");
+          return false;
+        }
+        printout("relatively small pop inversion for superlevel continue with NLTE solution\n");
       }
     } else if (gsl_vector_get(popvec, row) < 0.0) {
       printout(
@@ -1058,7 +1085,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     popvec = gsl_vector_view_array(vec_pop.data(), nlte_dimension).vector;
 
     matrix_solve_success = nltepop_matrix_solve(element, &rate_matrix, &balance_vector, &popvec, &pop_norm_factor_vec,
-                                                max_nlte_dimension, first_ion_used, nions_used);
+                                                superlevel_partfunc, max_nlte_dimension, first_ion_used, nions_used);
 
     if (matrix_solve_success) {
       matrix_solve_satisfied_with_ion_list = true;
