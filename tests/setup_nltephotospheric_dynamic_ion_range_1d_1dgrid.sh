@@ -31,20 +31,12 @@ perl -0777 -i -pe 's|constexpr bool LEVEL_IS_NLTE\(int element_z, int ionstage, 
 sed -i'' -e 's|constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {.*}|constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return (Z < 20) ? 20 : 40; }|g' artisoptions.h
 
 sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 20;/g' artisoptions.h
-sed -i'' -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 3500.;/g' artisoptions.h
-sed -i'' -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 140000.;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 4;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int RADFIELDBINCOUNT.*/constexpr int RADFIELDBINCOUNT = 24;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 4;/g' artisoptions.h
-
-sed -i'' -e 's/constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL.*/constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL = 50.0;/g' artisoptions.h
-
-sed -i'' -e 's/constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING.*/constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 2.0;/g' artisoptions.h
-
-sed -i'' -e 's/constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION.*/constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION = 1e-9;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' artisoptions.h
 
