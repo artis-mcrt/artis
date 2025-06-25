@@ -131,7 +131,9 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
   vsnprintf(outputlinebuf, sizeof(outputlinebuf), format, args);
   va_end(args);
 
+#pragma clang unsafe_buffer_usage begin
   outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n');
+#pragma clang unsafe_buffer_usage end
   output_file << outputlinebuf;
   output_file.flush();
 }
@@ -375,7 +377,9 @@ template <typename T>
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &ptr) == MPI_SUCCESS);
   MPI_Barrier(globals::mpi_comm_node);
   assert_always(ptr != nullptr);
+#pragma clang unsafe_buffer_usage begin
   return {std::span<T>(ptr, num_allranks), mpiwin};
+#pragma clang unsafe_buffer_usage end
 }
 
 template <typename T>
