@@ -20,7 +20,7 @@ cp ../artisoptions_nltephotospheric_dynamic_ion_range.h $runfolder/artisoptions.
 
 cd $runfolder
 
-sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 500;/g' artisoptions.h
+sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 400;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr auto GRID_TYPE.*/constexpr auto GRID_TYPE = GridType::SPHERICAL1D;/g' artisoptions.h
 
