@@ -454,7 +454,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         const int ndowntrans = get_ndowntrans(uniquelevelindex);
 
         // Randomly select the occurring transition
-        const double targetval = rng_uniform() * sum_internal_down_same[ndowntrans - 1];
+        const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNSAME];
 
         // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
         const auto downtransindex =
