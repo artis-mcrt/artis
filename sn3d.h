@@ -358,7 +358,7 @@ static_assert(get_range_chunk(10, 3, 2) == std::tuple{7, 3});
 template <typename T>
 [[nodiscard]] auto MPI_shared_malloc_span_keepwin(const ptrdiff_t num_allranks) -> std::tuple<std::span<T>, MPI_Win> {
   if (num_allranks == 0) {
-    return {{}, MPI_WIN_NULL};
+    return {std::span<T>{}, MPI_WIN_NULL};
   }
   assert_always(num_allranks >= 0);
 
