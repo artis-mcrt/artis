@@ -58,8 +58,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   double sum_coldeexc = 0.;
   const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
   const auto ndowntrans = get_ndowntrans(uniquelevelindex);
-  auto *const arr_sum_epstrans_rad_deexc = chlevel.sum_epstrans_rad_deexc;
-  auto *const arr_sum_internal_down_same = chlevel.sum_internal_down_same;
+  const auto arr_sum_epstrans_rad_deexc = std::span(chlevel.sum_epstrans_rad_deexc, ndowntrans);
+  const auto arr_sum_internal_down_same = std::span(chlevel.sum_internal_down_same, ndowntrans);
   for (int i = 0; i < ndowntrans; i++) {
     const auto alltransindex = alltrans_startdown + i;
     const int lower = alltrans.targetlevelindex[alltransindex];
