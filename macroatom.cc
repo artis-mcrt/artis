@@ -579,8 +579,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALUPSAME];
 
         // first sum_internal_up_same[i] such that sum_internal_up_same[i] > targetval
-        const auto uptransindex = std::upper_bound(sum_internal_up_same_exceptlast.begin(),
-                                                   sum_internal_up_same_exceptlast.end(), targetval) -
+        const auto uptransindex = std::ranges::upper_bound(sum_internal_up_same_exceptlast, targetval) -
                                   sum_internal_up_same_exceptlast.begin();
         const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
 
