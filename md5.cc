@@ -21,7 +21,7 @@ using BYTE = unsigned char;  // 8-bit byte
 using WORD = std::uint32_t;  // 32-bit word, change to "long" for 16-bit machines
 
 using MD5_CTX = struct {
-  BYTE data[64];
+  std::array<BYTE, 64> data;
   WORD datalen;
   std::uint64_t bitlen;
   WORD state[4];
@@ -61,7 +61,7 @@ constexpr auto ii_func(WORD a, const WORD b, const WORD c, const WORD d, const W
 }
 
 /*********************** FUNCTION DEFINITIONS ***********************/
-constexpr void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
+constexpr void md5_transform(MD5_CTX *ctx, std::span<const BYTE> data) {
   WORD a = 0;
   WORD b = 0;
   WORD c = 0;
@@ -196,7 +196,7 @@ constexpr void md5_final(MD5_CTX *ctx, std::span<BYTE, MD5_BLOCK_SIZE> hash) {
       ctx->data[i++] = 0x00;
     }
     md5_transform(ctx, ctx->data);
-    memset(ctx->data, 0, 56);
+    memset(ctx->data.data(), 0, 56);
   }
 
   // Append to the padding the total message's length in bits and transform.
