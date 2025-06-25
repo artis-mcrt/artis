@@ -490,7 +490,10 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
       return;
     }
 
-    auto phixstable = get_phixs_table(element, ion, level);
+    const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+    const auto phixsstart = globals::alllevels.phixsstart[uniquelevelindex];
+
+    auto phixstable = globals::allphixs.subspan(phixsstart * globals::NPHIXSPOINTS, globals::NPHIXSPOINTS);
     for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
       phixstable[n] = static_cast<float>(phixstable[n] * factor);
     }
