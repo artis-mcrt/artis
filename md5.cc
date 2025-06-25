@@ -66,7 +66,7 @@ constexpr void md5_transform(MD5_CTX *ctx, std::span<const BYTE> data) {
   WORD b = 0;
   WORD c = 0;
   WORD d = 0;
-  WORD m[16];
+  std::array<WORD, 16> m{};
   WORD i = 0;
   WORD j = 0;
 
