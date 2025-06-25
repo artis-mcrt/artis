@@ -1833,7 +1833,9 @@ void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int no
       auto [vec_xs_excitation_deltae, xsstartindex] =
           get_xs_excitation_vector(alltransindex, statweight_lower, epsilon_trans);
       if (xsstartindex >= 0) {
-        cblas_dscal(SFPTS - xsstartindex, DELTA_E, vec_xs_excitation_deltae.data() + xsstartindex, 1);
+        for (int j = xsstartindex; j < SFPTS; j++) {
+          vec_xs_excitation_deltae[j] *= DELTA_E;
+        }
 
         for (int i = 0; i < SFPTS; i++) {
           const int rowoffset = uppertriangular(i, 0);
