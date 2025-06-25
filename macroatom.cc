@@ -163,17 +163,15 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
 // radiative deexcitation
 void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion, const int uniquelevelindex,
                                   const double epsilon_current, const int activatingline,
-                                  std::span<const double> sum_epstrans_rad_deexc_exceptend) {
+                                  std::span<const double> sum_epstrans_rad_deexc) {
   // randomly select which line transitions occurs
 
-  const double targetval = rng_uniform() * sum_epstrans_rad_deexc_exceptend.back();
-
-#pragma clang unsafe_buffer_usage begin
+  const double targetval = rng_uniform() * sum_epstrans_rad_deexc.back();
+  const auto sum_epstrans_rad_deexc_exceptlast = sum_epstrans_rad_deexc.last(sum_epstrans_rad_deexc.size() - 1);
   // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
   const auto downtransindex =
-      std::upper_bound(sum_epstrans_rad_deexc_exceptend.begin(), sum_epstrans_rad_deexc_exceptend.end(), targetval) -
-      sum_epstrans_rad_deexc_exceptend.begin();
-#pragma clang unsafe_buffer_usage end
+      std::upper_bound(sum_epstrans_rad_deexc_exceptlast.begin(), sum_epstrans_rad_deexc_exceptlast.end(), targetval) -
+      sum_epstrans_rad_deexc.begin();
   const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
 
   const auto lineindex = globals::alltrans.lineindex[alltrans_startdown + downtransindex];
@@ -404,7 +402,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
       case MA_ACTION_RADDEEXC: {
         // printout("[debug] do_ma:   radiative deexcitation\n");
         do_macroatom_raddeexcitation(pkt, element, ion, uniquelevelindex, epsilon_current, activatingline,
-                                     std::span(chlevel.sum_epstrans_rad_deexc, get_ndowntrans(uniquelevelindex) - 1));
+                                     std::span(chlevel.sum_epstrans_rad_deexc, get_ndowntrans(uniquelevelindex)));
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC, pkt.e_cmf);
