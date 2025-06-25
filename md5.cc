@@ -165,10 +165,10 @@ constexpr void md5_init(MD5_CTX *ctx) {
   ctx->state[3] = 0x10325476;
 }
 
-constexpr void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
+constexpr void md5_update(MD5_CTX *ctx, std::span<const BYTE> data) {
   size_t i = 0;
 
-  for (i = 0; i < len; ++i) {
+  for (i = 0; i < data.size(); ++i) {
     ctx->data[ctx->datalen] = data[i];
     ctx->datalen++;
     if (ctx->datalen == 64) {
@@ -238,7 +238,7 @@ auto md5_file(const std::string &filename) -> std::string {
   while (numbytes != 0 && feof(infile) == 0) {
     numbytes = fread(buffer.data(), sizeof(BYTE), buffer.size(), infile);
     assert_always(ferror(infile) == 0);
-    md5_update(&ctx, buffer.data(), numbytes);
+    md5_update(&ctx, std::span{buffer}.first(numbytes));
   }
 
   fclose(infile);
@@ -260,7 +260,7 @@ void md5_test() {
 
   constexpr BYTE buffer[] = "md5 test string\n";
 
-  md5_update(&ctx, buffer, sizeof(buffer) - 1);
+  md5_update(&ctx, std::span{buffer}.first(sizeof(buffer) - 1));
 
   std::array<BYTE, MD5_BLOCK_SIZE> hashbytes{};
   md5_final(&ctx, hashbytes);
