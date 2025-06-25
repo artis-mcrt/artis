@@ -833,8 +833,8 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
                 (stat_weight(element, ion, 0) / superlevel_partfunc[ion]) * gsl_vector_get(popvec, row))) {
         assert_testmodeonly(ion_has_superlevel(element, ion));
         printout(
-            "[debug] WARNING: superlevel pop inversion greater than factor %g: (g_pop %g)/(SL_pop %g) = %g is less than (g_sw "
-            "%g)/(SL_part_funct %g) = %g for index %zud Z=%d ionstage %d level %d (factor %g inversion) - ",
+            "[debug] WARNING: superlevel pop inversion greater than factor %g: (g_pop %g)/(SL_pop %g) = %g is less "
+            "than (g_sw %g)/(SL_part_funct %g) = %g for index %zud Z=%d ionstage %d level %d (factor %g inversion) - ",
             STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING, gsl_vector_get(popvec, index_ion_ground),
             gsl_vector_get(popvec, row), gsl_vector_get(popvec, index_ion_ground) / gsl_vector_get(popvec, row),
             stat_weight(element, ion, 0), superlevel_partfunc[ion],
