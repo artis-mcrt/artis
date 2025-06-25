@@ -459,8 +459,10 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
       case MA_ACTION_INTERNALDOWNSAME: {
         stats::increment(stats::COUNTER_INTERACTIONS);
         const int ndowntrans = get_ndowntrans(uniquelevelindex);
+#pragma clang unsafe_buffer_usage begin
         const auto sum_internal_down_same_exceptlast =
             std::span<const double>(chlevel.sum_internal_down_same, ndowntrans - 1);
+#pragma clang unsafe_buffer_usage end
 
         // Randomly select the occurring transition
         const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNSAME];
@@ -570,9 +572,11 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         // printout("[debug] do_ma:   internal upward jump within current ionstage\n");
         stats::increment(stats::COUNTER_INTERACTIONS);
 
+#pragma clang unsafe_buffer_usage begin
         // randomly select the occurring transition
         const auto sum_internal_up_same_exceptlast =
             std::span<const double>(chlevel.sum_internal_up_same, nuptrans - 1);
+#pragma clang unsafe_buffer_usage end
 
         const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALUPSAME];
 
