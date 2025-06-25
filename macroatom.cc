@@ -178,8 +178,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
 
   // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
   const auto downtransindex =
-      std::min(std::upper_bound(sum_epstrans_rad_deexc.begin(), sum_epstrans_rad_deexc.end(), targetval) -
-                   sum_epstrans_rad_deexc.begin(),
+      std::min(std::ranges::upper_bound(sum_epstrans_rad_deexc, targetval) - sum_epstrans_rad_deexc.begin(),
                static_cast<ptrdiff_t>(ndowntrans - 1));
   const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
 
