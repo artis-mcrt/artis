@@ -562,14 +562,14 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         stats::increment(stats::COUNTER_INTERACTIONS);
 
         // randomly select the occurring transition
-        const auto sum_internal_up_same_exceptend = std::span(chlevel.sum_internal_up_same, nuptrans - 1);
+        const auto sum_internal_up_same_exceptlast = std::span(chlevel.sum_internal_up_same, nuptrans - 1);
 
         const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALUPSAME];
 
         // first sum_internal_up_same[i] such that sum_internal_up_same[i] > targetval
-        const auto uptransindex =
-            std::upper_bound(sum_internal_up_same_exceptend.begin(), sum_internal_up_same_exceptend.end(), targetval) -
-            sum_internal_up_same_exceptend.begin();
+        const auto uptransindex = std::upper_bound(sum_internal_up_same_exceptlast.begin(),
+                                                   sum_internal_up_same_exceptlast.end(), targetval) -
+                                  sum_internal_up_same_exceptlast.begin();
         const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
 
         const int upper = globals::alltrans.targetlevelindex[alltrans_startup + uptransindex];
