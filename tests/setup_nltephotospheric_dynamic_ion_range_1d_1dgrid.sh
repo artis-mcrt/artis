@@ -34,7 +34,7 @@ sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 50;/g' artiso
 
 sed -i'' -e 's/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 4;/g' artisoptions.h
 
-#sed -i'' -e 's/constexpr int RADFIELDBINCOUNT.*/constexpr int RADFIELDBINCOUNT = 24;/g' artisoptions.h
+sed -i'' -e 's/constexpr int RADFIELDBINCOUNT.*/constexpr int RADFIELDBINCOUNT = 24;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 4;/g' artisoptions.h
 
