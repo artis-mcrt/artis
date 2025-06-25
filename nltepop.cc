@@ -37,8 +37,7 @@ FILE *nlte_file{};
 // can save memory by using a combined rate matrix at the cost of diagnostic information
 constexpr bool individual_process_matrices = true;
 
-// this is the index for the NLTE solver that is handling all ions of a single element
-// This is NOT an index into grid::modelgrid[nonemptymgi].nlte_pops that contains all elements
+// this is the matrix/vector index for the NLTE solver that is handling all ions of a single element
 auto get_nlte_vector_index(const int element, const int ion, const int level, const int first_ion_used) -> int {
   // have to convert from nlte_pops index to nlte_vector index
   // the difference is that nlte vectors apply to a single element and include ground states
