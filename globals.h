@@ -125,7 +125,7 @@ struct TransitionLine {
 struct GSLIntegrationParas {
   double nu_edge;
   float T;
-  const float *photoion_xs;
+  std::span<const float> photoion_xs;
 };
 
 enum ma_action {

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <ranges>
+#include <span>
 #include <vector>
 
 #include "artisoptions.h"
@@ -37,7 +38,7 @@ struct BFHeatingIntegralParams {
   double nu_edge;
   int nonemptymgi;
   float T_R;
-  const float *photoion_xs;
+  std::span<const float> photoion_xs;
 };
 
 auto integrand_bfheatingcoeff_custom_radfield(const double nu, void *const voidparas) -> double

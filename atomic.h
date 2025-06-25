@@ -143,20 +143,20 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   return globals::elements[element].ions[ion].maxrecombininglevel;
 }
 
-[[nodiscard]] inline __host__ __device__ auto get_phixs_table(const int uniquelevelindex) -> float * {
+[[nodiscard]] inline __host__ __device__ auto get_phixs_table(const int uniquelevelindex) -> std::span<float> {
   const auto phixsstart = globals::alllevels.phixsstart[uniquelevelindex];
   assert_testmodeonly(phixsstart >= 0);
-  return globals::allphixs.data() + (phixsstart * globals::NPHIXSPOINTS);
+  return globals::allphixs.subspan(phixsstart * globals::NPHIXSPOINTS, globals::NPHIXSPOINTS);
 }
 
 [[nodiscard]] inline __host__ __device__ auto get_phixs_table(const int element, const int ion, const int level)
-    -> float * {
+    -> std::span<float> {
   return get_phixs_table(get_uniquelevelindex(element, ion, level));
 }
 
 // Calculate the photoionisation cross-section at frequency nu out of the atomic data.
-[[nodiscard]] inline auto photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge,
-                                                                 const double nu) -> float {
+[[nodiscard]] inline auto photoionization_crosssection_fromtable(std::span<const float> photoion_xs,
+                                                                 const double nu_edge, const double nu) -> float {
   // if (nu < nu_edge || nu > nu_edge * 1.05)
   //   return 0;
   // else
