@@ -1440,9 +1440,12 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
       get_xs_excitation_vector(alltransindex, statweight_lower, epsilon_trans);
 
   if (xsstartindex >= 0) {
-    const double y_xs_de =
-        std::inner_product(yvec.begin() + xsstartindex, yvec.end(), xs_excitation_vec.begin() + xsstartindex, 0.0) *
-        DELTA_E;
+    double y_xs_de = 0.;
+    for (int i = xsstartindex; i < SFPTS; i++) {
+      y_xs_de += yvec[i] * xs_excitation_vec[i];
+    }
+    // multiply by DELTA_E to get the integral over the energy grid
+    y_xs_de *= DELTA_E;
 
     return y_xs_de / E_init_ev / EV;
   }
