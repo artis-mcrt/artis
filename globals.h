@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstddef>
 #include <deque>
+#include <memory>
 #include <mutex>
 #include <span>
 #include <vector>
@@ -53,7 +54,7 @@ struct FullPhotoionTransition {
   int level;
   int phixstargetindex;
   int upperlevel;
-  const float *photoion_xs;
+  int uniquelevelindex;
   double probability;
   int index_in_groundphixslist;
   int bfestimindex;
@@ -103,7 +104,7 @@ struct Ion {
 };
 
 struct Element {
-  Ion *ions{};  // Carries information for each ion: 0,1,...,nions-1
+  std::unique_ptr<Ion[]> ions;  // Carries information for each ion: 0,1,...,nions-1
   int nions{0};  // Number of ions for the current element
   int anumber{-1};  // Atomic number
   int uniqueionindexstart{-1};  /// uniqueionindex index of the lowest ionisation stage of this element
@@ -158,17 +159,18 @@ struct CellCacheLevels {
 };
 
 struct CellCacheIons {
-  CellCacheLevels *chlevels;  // Pointer to the ions levellist.
+  std::span<CellCacheLevels> chlevels;  // Pointer to the ions levellist.
 };
 
 struct CellCacheElements {
-  CellCacheIons *chions;  // Pointer to the elements ionlist.
+  std::span<CellCacheIons> chions;  // Pointer to the elements ionlist.
 };
 
 struct CellCache {
   std::vector<double> cooling_contrib;  // Cooling contributions by the different processes.
-  CellCacheElements *chelements{};
+  std::vector<CellCacheElements> chelements;
   std::vector<CellCacheLevels> ch_all_levels;
+  std::vector<CellCacheIons> ch_all_ions;
   std::vector<double> ch_allcont_departureratios;
   std::vector<double> ch_allcont_nnlevel;
   std::vector<bool> ch_keep_this_cont;

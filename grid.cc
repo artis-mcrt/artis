@@ -562,13 +562,14 @@ void read_abundances() {
     // (or proportial to mass frac, e.g. element densities because they will be normalised anyway)
     // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
     double normfactor = 0.;
-    float abundances_in[150] = {0.};
+    std::array<float, 150> elem_abundances_in{};
     double abund_in = 0.;
-    for (int anumber = 1; anumber <= 150; anumber++) {
-      abundances_in[anumber - 1] = 0.;
+    for (int elem_z_index = 0; elem_z_index < std::ssize(elem_abundances_in); elem_z_index++) {
+      const int atomic_number = elem_z_index + 1;
+      elem_abundances_in[elem_z_index] = 0.;
       if (!(ssline >> abund_in)) {
         // at least one element (hydrogen) should have been specified for nonempty cells
-        assert_always(anumber > 1 || get_numpropcells(mgi) == 0);
+        assert_always(atomic_number > 1 || get_numpropcells(mgi) == 0);
         break;
       }
 
@@ -576,8 +577,8 @@ void read_abundances() {
         assert_always(abund_in > -1e-6);
         abund_in = 0.;
       }
-      abundances_in[anumber - 1] = static_cast<float>(abund_in);
-      normfactor += abundances_in[anumber - 1];
+      elem_abundances_in[elem_z_index] = static_cast<float>(abund_in);
+      normfactor += elem_abundances_in[elem_z_index];
     }
 
     if (get_numpropcells(mgi) > 0) {
@@ -589,8 +590,8 @@ void read_abundances() {
       for (int element = 0; element < get_nelements(); element++) {
         // now set the abundances (by mass) of included elements, i.e.
         // read out the abundances specified in the atomic data file
-        const int anumber = get_atomicnumber(element);
-        const auto elemabundance = static_cast<float>(abundances_in[anumber - 1] / normfactor);
+        const int atomic_number = get_atomicnumber(element);
+        const auto elemabundance = static_cast<float>(elem_abundances_in[atomic_number - 1] / normfactor);
         assert_always(elemabundance >= 0.);
 
         // radioactive nuclide abundances should have already been set by read_??_model
@@ -826,7 +827,7 @@ void calc_modelinit_totmassradionuclides() {
 
 void read_grid_restart_data(const int timestep) {
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "gridsave_ts%d.tmp", timestep);
+  snprintf(filename, std::size(filename), "gridsave_ts%d.tmp", timestep);
 
   printout("READIN GRID SNAPSHOT from %s\n", filename);
   FILE *gridsave_file = fopen_required(filename, "r");
@@ -2123,7 +2124,7 @@ void read_ejecta_model() {
 
 void write_grid_restart_data(const int timestep) {
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "gridsave_ts%d.tmp", timestep);
+  snprintf(filename, std::size(filename), "gridsave_ts%d.tmp", timestep);
 
   const auto sys_time_start_write_restart = std::time(nullptr);
   printout("Write grid restart data to %s...", filename);

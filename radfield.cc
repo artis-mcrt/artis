@@ -572,7 +572,7 @@ void init(const int my_rank, const int ndo_nonempty) {
              H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
     if (ndo_nonempty > 0) {
       char filename[MAXFILENAMELENGTH];
-      snprintf(filename, MAXFILENAMELENGTH, "radfield_%.4d.out", my_rank);
+      snprintf(filename, std::size(filename), "radfield_%.4d.out", my_rank);
       assert_always(radfieldfile == nullptr);
       radfieldfile = fopen_required(filename, "w");
       fprintf(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W\n");
@@ -1017,20 +1017,18 @@ void reduce_estimators()
 {
   const auto nonempty_npts_model = grid::get_nonempty_npts_model();
 
-  MPI_Allreduce(MPI_IN_PLACE, J.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, nuJ.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(J, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(nuJ, MPI_SUM, MPI_COMM_WORLD);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-      MPI_Reduce(globals::rank_in_node == 0 ? MPI_IN_PLACE : &bfrate_raw[nonemptymgi * globals::bfestimcount],
-                 &bfrate_raw[nonemptymgi * globals::bfestimcount], globals::bfestimcount, MPI_DOUBLE, MPI_SUM, 0,
-                 globals::mpi_comm_node);
+      MPI_Reduce_safe(std::span{bfrate_raw}.subspan(nonemptymgi * globals::bfestimcount, globals::bfestimcount),
+                      MPI_SUM, 0, globals::mpi_comm_node);
     }
     if (globals::rank_in_node == 0) {
-      MPI_Allreduce(MPI_IN_PLACE, bfrate_raw.data(), nonempty_npts_model * globals::bfestimcount, MPI_DOUBLE, MPI_SUM,
-                    globals::mpi_comm_internode);
+      MPI_Allreduce_safe(bfrate_raw, MPI_SUM, globals::mpi_comm_internode);
     }
-    MPI_Bcast(bfrate_raw.data(), nonempty_npts_model * globals::bfestimcount, MPI_DOUBLE, 0, globals::mpi_comm_node);
+    MPI_Bcast_safe(bfrate_raw, 0, globals::mpi_comm_node);
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -1040,9 +1038,9 @@ void reduce_estimators()
     for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
         const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
-        MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce_safe(radfieldbins[mgibinindex].J_raw, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce_safe(radfieldbins[mgibinindex].nuJ_raw, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce_safe(radfieldbins[mgibinindex].contribcount, MPI_SUM, MPI_COMM_WORLD);
       }
     }
     const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
@@ -1055,9 +1053,8 @@ void reduce_estimators()
 
     for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
       for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-        MPI_Allreduce(MPI_IN_PLACE, &Jb_lu_raw[nonemptymgi][jblueindex].value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, &Jb_lu_raw[nonemptymgi][jblueindex].contribcount, 1, MPI_INT, MPI_SUM,
-                      MPI_COMM_WORLD);
+        MPI_Allreduce_safe(Jb_lu_raw[nonemptymgi][jblueindex].value, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce_safe(Jb_lu_raw[nonemptymgi][jblueindex].contribcount, MPI_SUM, MPI_COMM_WORLD);
       }
     }
     const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
@@ -1069,22 +1066,22 @@ void reduce_estimators()
 // broadcast computed radfield results including parameters
 // from the cells belonging to root process to all processes
 void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_node_id) {
-  MPI_Bcast(&J_normfactor[nonemptymgi], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+  MPI_Bcast_safe(J_normfactor[nonemptymgi], root, MPI_COMM_WORLD);
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
       if (globals::rank_in_node == 0) {
-        MPI_Bcast(&radfieldbin_solutions[mgibinindex].W, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
-        MPI_Bcast(&radfieldbin_solutions[mgibinindex].T_R, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+        MPI_Bcast_safe(radfieldbin_solutions[mgibinindex].W, root_node_id, globals::mpi_comm_internode);
+        MPI_Bcast_safe(radfieldbin_solutions[mgibinindex].T_R, root_node_id, globals::mpi_comm_internode);
       }
     }
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-      MPI_Bcast(&prev_Jb_lu_normed[nonemptymgi][jblueindex].value, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-      MPI_Bcast(&prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
+      MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi][jblueindex].value, root, MPI_COMM_WORLD);
+      MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount, root, MPI_COMM_WORLD);
     }
   }
 

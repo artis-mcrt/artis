@@ -1137,7 +1137,7 @@ void ratecoefficients_init() {
   MPI_Barrier(MPI_COMM_WORLD);
   // all node-rank 0 should agree, but to be sure,
   // world rank 0 will decide if we need to regenerate rate coefficient tables
-  MPI_Bcast(&ratecoeff_match, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+  MPI_Bcast_safe(ratecoeff_match, 0, MPI_COMM_WORLD);
 
   if (!ratecoeff_match) {
     precalculate_rate_coefficient_integrals();

@@ -333,7 +333,7 @@ void read_binding_energies() {
                                           std::filesystem::exists("data/binding_energies_lotz_tab1and2.txt");
   bool binding_en_newformat = binding_en_newformat_local;
   // just in case the file system was faulty and the ranks disagree on the existence of the files
-  MPI_Allreduce(MPI_IN_PLACE, &binding_en_newformat, 1, MPI_C_BOOL, MPI_LOR, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(binding_en_newformat, MPI_LOR, MPI_COMM_WORLD);
 
   int nshells = 0;  // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in binding energy file
@@ -1183,7 +1183,8 @@ auto calculate_nt_frac_ionization_shell(const int nonemptymgi, const int element
   std::array<double, SFPTS> cross_section_vec{};
   get_xs_ionization_vector(cross_section_vec, collionrow);
 
-  const double y_dot_crosssection_de = cblas_ddot(SFPTS, yfunc.data(), 1, cross_section_vec.data(), 1) * DELTA_E;
+  const double y_dot_crosssection_de =
+      std::inner_product(yfunc.begin(), yfunc.end(), cross_section_vec.begin(), 0.0) * DELTA_E;
 
   return nnion * ionpot_ev * y_dot_crosssection_de / E_init_ev;
 }
@@ -1234,7 +1235,8 @@ auto calculate_nt_ionization_ratecoeff(const int nonemptymgi, const int element,
     }
   }
 
-  const double y_xs_de = cblas_ddot(SFPTS, yfunc.data(), 1, cross_section_vec_allshells.data(), 1) * DELTA_E;
+  const double y_xs_de =
+      std::inner_product(yfunc.begin(), yfunc.end(), cross_section_vec_allshells.begin(), 0.0) * DELTA_E;
 
   const double deposition_rate_density_ev = get_deposition_rate_density(nonemptymgi) / EV;
   const double yscalefactor = deposition_rate_density_ev / E_init_ev;
@@ -1437,7 +1439,7 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
 
   if (xsstartindex >= 0) {
     const double y_xs_de =
-        cblas_ddot(SFPTS - xsstartindex, xs_excitation_vec.data() + xsstartindex, 1, yvec.data() + xsstartindex, 1) *
+        std::inner_product(yvec.begin() + xsstartindex, yvec.end(), xs_excitation_vec.begin() + xsstartindex, 0.0) *
         DELTA_E;
 
     return y_xs_de / E_init_ev / EV;
@@ -2658,27 +2660,22 @@ void read_restart_data(FILE *gridsave_file) {
 }
 
 void nt_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root_node_id) {
-  MPI_Bcast(&deposition_rate_density_all_cells[nonemptymgi], 1, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
+  MPI_Bcast_safe(deposition_rate_density_all_cells[nonemptymgi], root_node_id, globals::mpi_comm_internode);
 
   if (NT_ON && NT_SOLVE_SPENCERFANO) {
     if (globals::rank_in_node == 0) {
-      MPI_Bcast(&nt_solution[nonemptymgi].nneperion_when_solved, 1, MPI_FLOAT, root_node_id,
-                globals::mpi_comm_internode);
-      MPI_Bcast(&nt_solution[nonemptymgi].timestep_last_solved, 1, MPI_INT, root_node_id, globals::mpi_comm_internode);
-      MPI_Bcast(&nt_solution[nonemptymgi].frac_heating, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
-      MPI_Bcast(&nt_solution[nonemptymgi].frac_ionization, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
-      MPI_Bcast(&nt_solution[nonemptymgi].frac_excitation, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(nt_solution[nonemptymgi].nneperion_when_solved, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(nt_solution[nonemptymgi].timestep_last_solved, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(nt_solution[nonemptymgi].frac_heating, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(nt_solution[nonemptymgi].frac_ionization, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(nt_solution[nonemptymgi].frac_excitation, root_node_id, globals::mpi_comm_internode);
 
-      MPI_Bcast(&nt_solution[nonemptymgi].frac_excitations_list_size, 1, MPI_INT, root_node_id,
-                globals::mpi_comm_internode);
+      MPI_Bcast_safe(nt_solution[nonemptymgi].frac_excitations_list_size, root_node_id, globals::mpi_comm_internode);
 
-      MPI_Bcast(get_cell_ntexcitations(nonemptymgi).data(),
-                static_cast<int>(nt_solution[nonemptymgi].frac_excitations_list_size * sizeof(NonThermalExcitation)),
-                MPI_BYTE, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(get_cell_ntexcitations(nonemptymgi), root_node_id, globals::mpi_comm_internode);
 
       const auto ion_data = get_cell_ion_data(nonemptymgi);
-      MPI_Bcast(ion_data.data(), static_cast<int>(std::ssize(ion_data) * sizeof(NonThermalSolutionIon)), MPI_BYTE,
-                root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(ion_data, root_node_id, globals::mpi_comm_internode);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);

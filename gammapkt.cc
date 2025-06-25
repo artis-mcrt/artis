@@ -125,7 +125,7 @@ void read_decaydata() {
 
     // look in the current folder
     char filename[MAXFILENAMELENGTH];
-    snprintf(filename, MAXFILENAMELENGTH, "%s%d_lines.txt", strelname.c_str(), a);
+    snprintf(filename, std::size(filename), "%s%d_lines.txt", strelname.c_str(), a);
 
     // look in the 'data' subfolder
     char filename2[MAXFILENAMELENGTH];
