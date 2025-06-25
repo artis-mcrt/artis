@@ -1526,20 +1526,20 @@ void setup_nlte_levels() {
       for (int ion = 0; ion < nions; ion++) {
         globals::elements[element].ions[ion].first_nlte = globals::total_nlte_levels;
         const int nlevels = get_nlevels(element, ion);
-        int fullnlteexcitedlevelcount = 0;
+        int nlevels_excited_nlte = 0;
         bool found_lte_only_level = false;
         for (int level = 1; level < nlevels; level++) {
           if (is_nlte(element, ion, level)) {
-            fullnlteexcitedlevelcount++;
+            nlevels_excited_nlte++;
             globals::total_nlte_levels++;
             assert_always(found_lte_only_level == false);  // NLTE levels must be consecutive
           } else {
             found_lte_only_level = true;
           }
         }
-        globals::elements[element].ions[ion].nlevels_nlte = fullnlteexcitedlevelcount;
+        globals::elements[element].ions[ion].nlevels_excited_nlte = nlevels_excited_nlte;
 
-        const bool has_superlevel = (nlevels > (fullnlteexcitedlevelcount + 1));
+        const bool has_superlevel = (nlevels > (nlevels_excited_nlte + 1));
         if (has_superlevel) {
           // If there are more levels that the ground state + the number of NLTE levels then we need an extra
           // slot to store data for the "superlevel", which is a representation of all the other levels that
@@ -1550,8 +1550,8 @@ void setup_nlte_levels() {
 
         assert_always(has_superlevel == ion_has_superlevel(element, ion));
 
-        printout("[input]  element %2d Z=%2d ionstage %2d has %5d NLTE excited levels%s. Starting at %d\n", element,
-                 get_atomicnumber(element), get_ionstage(element, ion), fullnlteexcitedlevelcount,
+        printout("[input]  element %2d Z=%2d ionstage %2d has %5d NLTE excited levels%s. Starting at index %d\n",
+                 element, get_atomicnumber(element), get_ionstage(element, ion), get_nlevels_excited_nlte(element, ion),
                  has_superlevel ? " plus a superlevel" : "", globals::elements[element].ions[ion].first_nlte);
       }
     }
