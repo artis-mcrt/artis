@@ -904,12 +904,11 @@ void allocate_expansionopacities() {
 __host__ __device__ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double {
   assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.);
 
-  const auto *kappa_planck_bins = &expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins];
+  const auto kappa_planck_bins = expansionopacity_planck_cumulative.subspan(nonemptymgi * expopac_nbins, expopac_nbins);
 
   const auto rnd_integral = rng_uniform() * kappa_planck_bins[expopac_nbins - 1];
-  const auto *selected_partintegral =
-      std::upper_bound(kappa_planck_bins, kappa_planck_bins + expopac_nbins, rnd_integral);
-  const auto binindex = std::min(selected_partintegral - kappa_planck_bins, expopac_nbins - 1);
+  const auto selected_partintegral = std::upper_bound(kappa_planck_bins.begin(), kappa_planck_bins.end(), rnd_integral);
+  const auto binindex = std::min(selected_partintegral - kappa_planck_bins.begin(), expopac_nbins - 1);
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < expopac_nbins);
 
