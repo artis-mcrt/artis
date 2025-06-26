@@ -827,37 +827,29 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       // Now check if the first level in the superlevel is inverted relative to the ground state. Only need to check the
       // first level as the superlevel is treated in Boltzmann equilibrium. Therefore if the first level in the
       // superlevel isn't inverted relative to the ground, none of the superlevel levels will be.
-      else if (row != index_ion_ground && level_isinsuperlevel(element, ion, level) &&
-               (gsl_vector_get(popvec, index_ion_ground) *
-                    STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
-                (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) *
-                    ((gsl_vector_get(popvec, row) / superlevel_partfunc[ion]) *
-                     superlevel_boltzmann(nonemptymgi, element, ion, level)))) {
-        assert_testmodeonly(ion_has_superlevel(element, ion));
-        printout(
-            "[debug] WARNING: superlevel pop inversion greater than factor %g: (g_pop %g)/(SL_first_level_pop %g) = %g "
-            "is less than (g_sw %g)/(SL_first_level_sw %g) = %g for index %zud Z=%d ionstage %d level %d (factor %g "
-            "inversion) - ",
-            STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING, gsl_vector_get(popvec, index_ion_ground),
-            ((gsl_vector_get(popvec, row) / superlevel_partfunc[ion]) *
-             superlevel_boltzmann(nonemptymgi, element, ion, level)),
-            gsl_vector_get(popvec, index_ion_ground) / ((gsl_vector_get(popvec, row) / superlevel_partfunc[ion]) *
-                                                        superlevel_boltzmann(nonemptymgi, element, ion, level)),
-            stat_weight(element, ion, 0), stat_weight(element, ion, level),
-            stat_weight(element, ion, 0) / stat_weight(element, ion, level), row, get_atomicnumber(element),
-            get_ionstage(element, ion), level,
-            (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) /
-                (gsl_vector_get(popvec, index_ion_ground) / ((gsl_vector_get(popvec, row) / superlevel_partfunc[ion]) *
-                                                             superlevel_boltzmann(nonemptymgi, element, ion, level))));
+      else if (row != index_ion_ground && level_isinsuperlevel(element, ion, level)) {
+        const double superlevel_pop = (gsl_vector_get(popvec, row) / superlevel_partfunc[ion]) *
+                                     superlevel_boltzmann(nonemptymgi, element, ion, level);
+        const double stat_weight_ratio = stat_weight(element, ion, 0) / stat_weight(element, ion, level);
+        const double ground_pop = gsl_vector_get(popvec, index_ion_ground);
 
-        if (gsl_vector_get(popvec, index_ion_ground) * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL <
-            (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) *
-                ((gsl_vector_get(popvec, row) / superlevel_partfunc[ion]) *
-                 superlevel_boltzmann(nonemptymgi, element, ion, level))) {
-          printout("large pop inversion for superlevel - return matrix solve fail\n");
-          return false;
+        if (ground_pop * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING < stat_weight_ratio * superlevel_pop) {
+          assert_testmodeonly(ion_has_superlevel(element, ion));
+          printout(
+              "[debug] WARNING: superlevel pop inversion greater than factor %g: (g_pop %g)/(SL_first_level_pop %g) = %g "
+              "is less than (g_sw %g)/(SL_first_level_sw %g) = %g for index %zud Z=%d ionstage %d level %d (factor %g "
+              "inversion) - ",
+              STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING, ground_pop, superlevel_pop,
+              ground_pop / superlevel_pop, stat_weight(element, ion, 0), stat_weight(element, ion, level),
+              stat_weight_ratio, row, get_atomicnumber(element), get_ionstage(element, ion), level,
+              stat_weight_ratio / (ground_pop / superlevel_pop));
+
+          if (ground_pop * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL < stat_weight_ratio * superlevel_pop) {
+            printout("large pop inversion for superlevel - return matrix solve fail\n");
+            return false;
+          }
+          printout("relatively small pop inversion for superlevel continue with NLTE solution\n");
         }
-        printout("relatively small pop inversion for superlevel continue with NLTE solution\n");
       }
     } else if (gsl_vector_get(popvec, row) < 0.0) {
       printout(
