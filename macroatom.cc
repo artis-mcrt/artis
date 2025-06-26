@@ -65,6 +65,13 @@ FILE *macroatom_file{};
       get_nuptrans(uniquelevelindex));
 }
 
+[[nodiscard]] auto get_sum_internal_up_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
+  return std::span{globals::cellcache[cellcacheslotid].chtransblock}.subspan(
+      globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex].start_sum_epstrans_rad_deexc +
+          (2 * get_ndowntrans(uniquelevelindex)),
+      get_nuptrans(uniquelevelindex) - 1);
+}
+
 auto calculate_macroatom_transitionrates(const int nonemptymgi, const int element, const int ion, const int level,
                                          const double t_mid, const globals::AllTransitions &alltrans) {
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
@@ -586,8 +593,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         stats::increment(stats::COUNTER_INTERACTIONS);
 
         // randomly select the occurring transition
-        const auto sum_internal_up_same = get_sum_internal_up_same(uniquelevelindex);
-        const auto sum_internal_up_same_exceptlast = sum_internal_up_same.first(sum_internal_up_same.size() - 1);
+        const auto sum_internal_up_same_exceptlast = get_sum_internal_up_same_exceptlast(uniquelevelindex);
 
         const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALUPSAME];
 
