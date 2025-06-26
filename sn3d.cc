@@ -881,9 +881,9 @@ auto main(int argc, char *argv[]) -> int {
     MPI_Barrier(MPI_COMM_WORLD);
 
     // titer example: Do 3 iterations on timestep 0-6
-    // globals::n_titer = (nts < 6) ? 3: 1;
+    // globals::n_titer = (globals::timestep < 6) ? 3 : 1;
 
-    globals::n_titer = 1;
+    globals::n_titer = (globals::timestep < -1) ? 3 : 1;
     globals::lte_iteration = (globals::timestep < globals::num_lte_timesteps);
     assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 

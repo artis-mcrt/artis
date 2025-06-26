@@ -617,7 +617,7 @@ void read_recombrate_file() {
             printout("    scaling phixs of levels in the superlevel by %.3f\n", phixs_multiplier_superlevel);
             assert_always(phixs_multiplier_superlevel >= 0);
 
-            const int first_superlevel_level = get_nlevels_nlte(element, ion - 1) + 1;
+            const int first_superlevel_level = get_nlevels_excited_nlte(element, ion - 1) + 1;
             for (int level = first_superlevel_level; level < nlevels; level++) {
               scale_level_phixs(element, ion - 1, level, phixs_multiplier_superlevel);
             }

@@ -356,9 +356,9 @@ static_assert(get_range_chunk(10, 3, 1) == std::tuple{4, 3});
 static_assert(get_range_chunk(10, 3, 2) == std::tuple{7, 3});
 
 template <typename T>
-[[nodiscard]] auto MPI_shared_malloc_keepwin(const ptrdiff_t num_allranks) -> std::tuple<T *, MPI_Win> {
+[[nodiscard]] auto MPI_shared_malloc_span_keepwin(const ptrdiff_t num_allranks) -> std::tuple<std::span<T>, MPI_Win> {
   if (num_allranks == 0) {
-    return {nullptr, MPI_WIN_NULL};
+    return {std::span<T>{}, MPI_WIN_NULL};
   }
   assert_always(num_allranks >= 0);
 
@@ -375,23 +375,12 @@ template <typename T>
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &ptr) == MPI_SUCCESS);
   MPI_Barrier(globals::mpi_comm_node);
   assert_always(ptr != nullptr);
-  return {ptr, mpiwin};
-}
-
-template <typename T>
-[[nodiscard]] auto MPI_shared_malloc_span_keepwin(const ptrdiff_t num_allranks) -> std::tuple<std::span<T>, MPI_Win> {
-  const auto [ptr, mpiwin] = MPI_shared_malloc_keepwin<T>(num_allranks);
-  return {std::span(ptr, num_allranks), mpiwin};
-}
-
-template <typename T>
-[[nodiscard]] auto MPI_shared_malloc(const ptrdiff_t num_allranks) -> T * {
-  return std::get<0>(MPI_shared_malloc_keepwin<T>(num_allranks));
+  return {std::span<T>(ptr, num_allranks), mpiwin};
 }
 
 template <typename T>
 [[nodiscard]] auto MPI_shared_malloc_span(const ptrdiff_t num_allranks) -> std::span<T> {
-  return std::span(MPI_shared_malloc<T>(num_allranks), num_allranks);
+  return std::get<0>(MPI_shared_malloc_span_keepwin<T>(num_allranks));
 }
 
 template <typename T>
@@ -428,6 +417,7 @@ inline void MPI_Allreduce_safe(R &&data, Op &&op, Comm &&comm) {
   assert_always(std::cmp_equal(int_data_size, true_size));
 
   const auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
+  assert_always(mpi_datatype != MPI_BYTE);  // we can't reduce MPI_BYTE types
 
   auto ret = MPI_Allreduce(MPI_IN_PLACE, std::forward<R>(data).data(), int_data_size, mpi_datatype,
                            std::forward<Op>(op), std::forward<Comm>(comm));
@@ -486,6 +476,7 @@ inline void MPI_Reduce_safe(R &&data, Op &&op, const int root, Comm &&comm) {
   assert_always(my_rank >= 0);
 
   const auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
+  assert_always(mpi_datatype != MPI_BYTE);  // we can't reduce MPI_BYTE types
 
   const auto ret = MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : std::forward<R>(data).data(), std::forward<R>(data).data(),
                               int_data_size, mpi_datatype, std::forward<Op>(op), root, std::forward<Comm>(comm));
