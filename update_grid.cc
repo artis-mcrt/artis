@@ -1187,12 +1187,13 @@ void cellcache_change_cell(const int nonemptymgi) {
     if (nonemptymgi >= 0) {
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
-        auto &chion = cacheslot.chelements[element].chions[ion];
+        const auto uniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
         for (int level = 0; level < nlevels; level++) {
-          chion.chlevels[level].population = calculate_levelpop(nonemptymgi, element, ion, level);
+          cacheslot.ch_all_levels[uniquelevelindexstart + level].population =
+              calculate_levelpop(nonemptymgi, element, ion, level);
         }
       }
     }
