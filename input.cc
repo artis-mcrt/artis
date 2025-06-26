@@ -1415,7 +1415,7 @@ void setup_cellcache() {
       resize_exactly(globals::cellcache[cellcachenum].chtransblock, chtransblocksize);
     }
 
-    int alllevelindex = 0;
+    int uniquelevelindex = 0;
     int chtransindex = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -1428,13 +1428,13 @@ void setup_cellcache() {
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
         auto &chion = globals::cellcache[cellcachenum].chelements[element].chions[ion];
-        chion.chlevels = std::span{globals::cellcache[cellcachenum].ch_all_levels}.subspan(alllevelindex, nlevels);
+        chion.chlevels = std::span{globals::cellcache[cellcachenum].ch_all_levels}.subspan(uniquelevelindex, nlevels);
 
-        assert_always(alllevelindex == get_uniquelevelindex(element, ion, 0));
-        alllevelindex += nlevels;
+        assert_always(uniquelevelindex == get_uniquelevelindex(element, ion, 0));
+        uniquelevelindex += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
-          chion.chlevels[level].start_sum_epstrans_rad_deexc = chtransindex;
+          globals::cellcache[cellcachenum].ch_all_levels[uniquelevelindex].start_sum_epstrans_rad_deexc = chtransindex;
           chtransindex += (2 * get_ndowntrans(element, ion, level) + get_nuptrans(element, ion, level));
         }
       }
