@@ -196,6 +196,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   processrates[MA_ACTION_INTERNALUPHIGHERNT] = sum_up_highernt;
   processrates[MA_ACTION_INTERNALUPHIGHER] = sum_up_higher;
 
+  std::partial_sum(processrates.begin(), processrates.end(), processrates.begin());
+
   return processrates;
 }
 
@@ -423,14 +425,12 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
     // }
 
     // select transition according to probabilities
-    std::array<double, MA_ACTION_COUNT> cumulative_transitions{};
-    std::partial_sum(processrates.cbegin(), processrates.cend(), cumulative_transitions.begin());
 
-    const double randomrate = rng_uniform() * cumulative_transitions[MA_ACTION_COUNT - 1];
+    const double randomrate = rng_uniform() * processrates[MA_ACTION_COUNT - 1];
 
     // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
-    const auto selected_action = static_cast<int>(std::ranges::upper_bound(cumulative_transitions, randomrate) -
-                                                  cumulative_transitions.cbegin());
+    const auto selected_action = static_cast<int>(std::ranges::upper_bound(processrates, randomrate) -
+                                                  processrates.cbegin());
 
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
