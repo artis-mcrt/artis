@@ -1438,16 +1438,11 @@ void setup_cellcache() {
           chion.chlevels[level].sum_epstrans_rad_deexc =
               std::span{globals::cellcache[cellcachenum].chtransblock}.subspan(chtransindex, ndowntrans).data();
           chtransindex += ndowntrans;
-        }
 
-        for (int level = 0; level < nlevels; level++) {
-          const int ndowntrans = get_ndowntrans(element, ion, level);
           chion.chlevels[level].sum_internal_down_same =
               std::span{globals::cellcache[cellcachenum].chtransblock}.subspan(chtransindex, ndowntrans).data();
           chtransindex += ndowntrans;
-        }
 
-        for (int level = 0; level < nlevels; level++) {
           const int nuptrans = get_nuptrans(element, ion, level);
           chion.chlevels[level].sum_internal_up_same =
               std::span{globals::cellcache[cellcachenum].chtransblock}.subspan(chtransindex, nuptrans).data();
