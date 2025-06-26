@@ -844,8 +844,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
               stat_weight_ground / stat_weight_first_level_SL, row, get_atomicnumber(element),
               get_ionstage(element, ion), level, inversion_factor);
 
-          if (ground_pop * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL <
-              (stat_weight_ground / stat_weight_first_level_SL) * (first_level_in_SL_pop)) {
+          if (inversion_factor > STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL) {
             printout("large pop inversion for superlevel - return matrix solve fail\n");
             return false;
           }
