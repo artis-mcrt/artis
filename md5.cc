@@ -24,7 +24,7 @@ using MD5_CTX = struct {
   std::array<BYTE, 64> data;
   WORD datalen;
   std::uint64_t bitlen;
-  WORD state[4];
+  std::array<WORD, 4> state;
 };
 
 constexpr auto F(const WORD x, const WORD y, const WORD z) -> WORD { return (x & y) | (~x & z); }
