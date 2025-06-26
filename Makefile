@@ -32,7 +32,7 @@ $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := CLANG
 	CXXFLAGS += -flto=thin
-	# CXXFLAGS += -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call -fsafe-buffer-usage-suggestions
+	CXXFLAGS += -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call -fsafe-buffer-usage-suggestions
 	ifeq '' '$(findstring Apple,$(COMPILER_VERSION))'
 		ifeq ($(if $(shell command -v lld),'true','false'), 'true')
 			LDFLAGS += -fuse-ld=lld
