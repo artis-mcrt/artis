@@ -69,7 +69,7 @@ FILE *macroatom_file{};
       get_nuptrans(uniquelevelindex) - 1);
 }
 
-[[nodiscard]] auto get_sum_epstrans_rad_deexc_exceptlast(const int uniquelevelindex) -> std::span<double> {
+[[nodiscard]] auto get_sum_epstrans_rad_deexc_exceptlast(const int uniquelevelindex) -> std::span<const double> {
   return std::span{globals::cellcache[cellcacheslotid].chtransblock}.subspan(
       globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex].start_sum_epstrans_rad_deexc,
       get_ndowntrans(uniquelevelindex) - 1);
