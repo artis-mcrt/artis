@@ -152,12 +152,12 @@ enum ma_action {
 
 struct CellCache {
   std::vector<double> cooling_contrib;  // Cooling contributions by the different processes.
-  std::vector<double> ch_all_levels_pops;
-  std::vector<std::array<double, MA_ACTION_COUNT>> ch_all_levels_processrates;
-  std::vector<int> ch_all_levels_chtransblock_start;  // index into chtransblock for each level
-  std::vector<double> ch_allcont_departureratios;
-  std::vector<double> ch_allcont_nnlevel;
-  std::vector<bool> ch_keep_this_cont;
+  std::vector<double> alllevels_pops;
+  std::vector<std::array<double, MA_ACTION_COUNT>> alllevels_processrates;
+  std::vector<int> alllevels_chtransblock_start;  // index into chtransblock for each level
+  std::vector<double> allcont_departureratios;
+  std::vector<double> allcont_nnlevel;
+  std::vector<bool> allcont_keep;
   double chi_ff_nnionpart{-1};
   int nonemptymgi{-1};  // Identifies the cell the data is valid for.
   std::vector<double> allphixstargets_corrphotoioncoeff;

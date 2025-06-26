@@ -829,11 +829,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
     // The bf process happens only if the current cell contains
     // the involved atomic species
     const bool should_keep_this_cont = USECELLHISTANDUPDATEPHIXSLIST
-                                           ? globals::cellcache[cellcacheslotid].ch_keep_this_cont[i]
+                                           ? globals::cellcache[cellcacheslotid].allcont_keep[i]
                                            : keep_this_cont(element, ion, level, nonemptymgi, nnetot);
 
     if (should_keep_this_cont) [[likely]] {
-      const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? globals::cellcache[cellcacheslotid].ch_allcont_nnlevel[i]
+      const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? globals::cellcache[cellcacheslotid].allcont_nnlevel[i]
                                                            : calculate_levelpop(nonemptymgi, element, ion, level);
 
       if (USECELLHISTANDUPDATEPHIXSLIST || nnlevel > 0) {
@@ -843,7 +843,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         if constexpr (!SEPARATE_STIMRECOMB) {
-          double departure_ratio = globals::cellcache[cellcacheslotid].ch_allcont_departureratios[i];
+          double departure_ratio = globals::cellcache[cellcacheslotid].allcont_departureratios[i];
           if (!USECELLHISTANDUPDATEPHIXSLIST || departure_ratio < 0) {
             const int upper = allcont[i].upperlevel;
             const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
@@ -852,7 +852,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
             const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
             departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
             if (USECELLHISTANDUPDATEPHIXSLIST) {
-              globals::cellcache[cellcacheslotid].ch_allcont_departureratios[i] = departure_ratio;
+              globals::cellcache[cellcacheslotid].allcont_departureratios[i] = departure_ratio;
             }
           }
 

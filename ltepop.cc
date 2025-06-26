@@ -507,7 +507,7 @@ auto calculate_levelpop(const int nonemptymgi, const int element, const int ion,
   double nn = 0.;
   if (use_cellcache) {
     assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
-    nn = globals::cellcache[cellcacheslotid].ch_all_levels_pops[uniquelevelindex];
+    nn = globals::cellcache[cellcacheslotid].alllevels_pops[uniquelevelindex];
   } else {
     const auto [element, ion, level] = get_levelfromuniquelevelindex(uniquelevelindex);
     nn = calculate_levelpop(nonemptymgi, element, ion, level);
@@ -526,7 +526,7 @@ auto calculate_levelpop(const int nonemptymgi, const int element, const int ion,
   if (use_cellcache) {
     assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
     const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-    nn = globals::cellcache[cellcacheslotid].ch_all_levels_pops[uniquelevelindex];
+    nn = globals::cellcache[cellcacheslotid].alllevels_pops[uniquelevelindex];
   } else {
     nn = calculate_levelpop(nonemptymgi, element, ion, level);
   }

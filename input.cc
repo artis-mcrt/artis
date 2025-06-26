@@ -1396,9 +1396,9 @@ void setup_cellcache() {
         }
       }
     }
-    resize_exactly(globals::cellcache[cellcachenum].ch_all_levels_pops, get_includedlevels());
-    resize_exactly(globals::cellcache[cellcachenum].ch_all_levels_processrates, get_includedlevels());
-    resize_exactly(globals::cellcache[cellcachenum].ch_all_levels_chtransblock_start, get_includedlevels());
+    resize_exactly(globals::cellcache[cellcachenum].alllevels_pops, get_includedlevels());
+    resize_exactly(globals::cellcache[cellcachenum].alllevels_processrates, get_includedlevels());
+    resize_exactly(globals::cellcache[cellcachenum].alllevels_chtransblock_start, get_includedlevels());
 
     if (allphixstargetcount > 0) {
       resize_exactly(globals::cellcache[cellcachenum].allphixstargets_corrphotoioncoeff, allphixstargetcount);
@@ -1416,16 +1416,16 @@ void setup_cellcache() {
 
     int chtransindex = 0;
     for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
-      std::ranges::fill(globals::cellcache[cellcachenum].ch_all_levels_processrates[uniquelevelindex], -99.);
-      globals::cellcache[cellcachenum].ch_all_levels_chtransblock_start[uniquelevelindex] = chtransindex;
+      std::ranges::fill(globals::cellcache[cellcachenum].alllevels_processrates[uniquelevelindex], -99.);
+      globals::cellcache[cellcachenum].alllevels_chtransblock_start[uniquelevelindex] = chtransindex;
       chtransindex += (2 * get_ndowntrans(uniquelevelindex) + get_nuptrans(uniquelevelindex));
     }
     assert_always(chtransindex == chtransblocksize);
 
     assert_always(globals::nbfcontinua >= 0);
-    resize_exactly(globals::cellcache[cellcachenum].ch_allcont_departureratios, globals::nbfcontinua);
-    resize_exactly(globals::cellcache[cellcachenum].ch_allcont_nnlevel, globals::nbfcontinua);
-    resize_exactly(globals::cellcache[cellcachenum].ch_keep_this_cont, globals::nbfcontinua);
+    resize_exactly(globals::cellcache[cellcachenum].allcont_departureratios, globals::nbfcontinua);
+    resize_exactly(globals::cellcache[cellcachenum].allcont_nnlevel, globals::nbfcontinua);
+    resize_exactly(globals::cellcache[cellcachenum].allcont_keep, globals::nbfcontinua);
     mem_usage_cellcache += 2 * globals::nbfcontinua * sizeof(double);
 
     printout("[info] mem_usage: cellcache for thread %d occupies %.3f MB\n", cellcachenum,
