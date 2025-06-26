@@ -1379,9 +1379,6 @@ void setup_cellcache() {
     printout("[info] mem_usage: cellcache coolinglist contribs for thread %d occupies %.3f MB\n", cellcachenum,
              ncoolingterms * sizeof(double) / 1024. / 1024.);
 
-    mem_usage_cellcache += get_nelements() * sizeof(CellCacheElement);
-    resize_exactly(globals::cellcache[cellcachenum].chelements, get_nelements());
-
     size_t allphixstargetcount = 0;
     int chtransblocksize = 0;
     for (int element = 0; element < get_nelements(); element++) {
@@ -1402,7 +1399,6 @@ void setup_cellcache() {
     resize_exactly(globals::cellcache[cellcachenum].ch_all_levels_pops, get_includedlevels());
     resize_exactly(globals::cellcache[cellcachenum].ch_all_levels_processrates, get_includedlevels());
     resize_exactly(globals::cellcache[cellcachenum].ch_all_levels_chtransblock_start, get_includedlevels());
-    resize_exactly(globals::cellcache[cellcachenum].ch_all_ions, get_includedions());
 
     if (allphixstargetcount > 0) {
       resize_exactly(globals::cellcache[cellcachenum].allphixstargets_corrphotoioncoeff, allphixstargetcount);
@@ -1410,7 +1406,8 @@ void setup_cellcache() {
         resize_exactly(globals::cellcache[cellcachenum].allphixstargets_stimrecombcoeff, allphixstargetcount);
       }
     }
-    mem_usage_cellcache += get_includedlevels() * sizeof(double) + allphixstargetcount * sizeof(double) * 2;
+    mem_usage_cellcache +=
+        get_includedlevels() * (2 * sizeof(double) + sizeof(int)) + allphixstargetcount * sizeof(double) * 2;
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
     if (chtransblocksize > 0) {
@@ -1421,17 +1418,9 @@ void setup_cellcache() {
     int chtransindex = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
-      mem_usage_cellcache += nions * sizeof(CellCacheIon);
-      if (nions > 0) {
-        globals::cellcache[cellcachenum].chelements[element].chions =
-            std::span{globals::cellcache[cellcachenum].ch_all_ions}.subspan(get_uniqueionindex(element, 0), nions);
-      }
 
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
-        globals::cellcache[cellcachenum].chelements[element].chions[ion].levelpops =
-            std::span{globals::cellcache[cellcachenum].ch_all_levels_pops}.subspan(uniquelevelindex, nlevels);
-
         assert_always(uniquelevelindex == get_uniquelevelindex(element, ion, 0));
 
         for (int level = 0; level < nlevels; level++) {
