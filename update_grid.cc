@@ -1216,8 +1216,8 @@ void cellcache_change_cell(const int nonemptymgi) {
       const int element = globals::allcont[i].element;
       const int ion = globals::allcont[i].ion;
       const int level = globals::allcont[i].level;
-      const auto nnlevel =
-          globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].population;
+      const auto uniquelevelindex = globals::allcont[i].uniquelevelindex;
+      const auto nnlevel = globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex].population;
       cacheslot.ch_allcont_nnlevel[i] = nnlevel;
       cacheslot.ch_keep_this_cont[i] = nnlevel > 0 && keep_this_cont(element, ion, level, nonemptymgi, nnetot);
     }
