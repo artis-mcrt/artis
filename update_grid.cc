@@ -1204,7 +1204,8 @@ void cellcache_change_cell(const int nonemptymgi) {
     std::ranges::fill(cacheslot.allphixstargets_stimrecombcoeff, -99.);
   }
 
-  for (int uniquelevelindex = 0; uniquelevelindex < std::ssize(cacheslot.ch_all_levels); uniquelevelindex++) {
+  for (int uniquelevelindex = 0; uniquelevelindex < std::ssize(cacheslot.ch_all_levels_processrates);
+       uniquelevelindex++) {
     cacheslot.ch_all_levels_processrates[uniquelevelindex][MA_ACTION_INTERNALUPHIGHER] = -99.;
   }
 
