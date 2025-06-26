@@ -802,8 +802,6 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       }
       // Now check for population inversions. First check all the excited levels excluding the superlevel
       if (row != index_ion_ground && !level_isinsuperlevel(element, ion, level) &&
-          gsl_vector_get(popvec, index_ion_ground) <
-              (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row) &&
           (gsl_vector_get(popvec, index_ion_ground) * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
            (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) * gsl_vector_get(popvec, row))) {
         printout(
@@ -826,8 +824,6 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       }
       // Now check if there is an inversion in the superlevel population relative to the ground state
       else if (row != index_ion_ground && level_isinsuperlevel(element, ion, level) &&
-               gsl_vector_get(popvec, index_ion_ground) <
-                   (stat_weight(element, ion, 0) / superlevel_partfunc[ion]) * gsl_vector_get(popvec, row) &&
                (gsl_vector_get(popvec, index_ion_ground) *
                     STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
                 (stat_weight(element, ion, 0) / superlevel_partfunc[ion]) * gsl_vector_get(popvec, row))) {
