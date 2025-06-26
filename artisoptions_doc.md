@@ -16,11 +16,11 @@ constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE;
 constexpr int NLTEITER;
 
 // The return of this function is passed to LEVEL_IS_NLTE and specifies how many levels will be treated in full NLTE.
-// It is only active when LEVEL_IS_NLTE does not return false. The additiopn of this function enables
-// NLEVELS_REQUIRETRANSITIONS to have a value specified for each ion relative to the number of NLTE levels for that ion:
-// It is advisable that if NLEVELS_REQUIRETRANSITIONS is active at least a subset of the levels treated in the superlevel
-// are alweays collisionally connected to lower levels even when transition data doesn't exist to avoid population versions
-// occuring in the superlevel
+// It is only active when LEVEL_IS_NLTE does not return false. The addition of this function enables
+// NLEVELS_REQUIRETRANSITIONS to be specified for each ion relative to the number of NLTE levels for that ion:
+// it is advisable that if NLEVELS_REQUIRETRANSITIONS is active at least a subset of the levels treated in the superlevel
+// are always collisionally connected to lower levels even when transitional data doesn't exist to avoid population inversions
+// occuring in the superlevel. 
 constexpr int ION_NLEVELS_NLTE(int element_z, int ionstage) {
   if (element_z < 20) {
     return 100;
