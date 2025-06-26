@@ -1294,7 +1294,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
               "  WARNING: Z=%d ionstage %d removed from NLTE rate matrix solution. Setting superlevel pop for "
               "ion to zero \n",
               get_atomicnumber(element), get_ionstage(element, ion));
-          set_nlte_superlevelpop_over_rho(nonemptymgi, element, ion, 0);
+          set_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion, 0);
         }
         printout(
             "  WARNING: Z=%d ionstage %d removed from NLTE rate matrix solution. Setting ground level pop for "
@@ -1325,7 +1325,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
         if (ion_has_superlevel(element, ion))  // a superlevel exists
         {
           const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1, first_ion_used);
-          set_nlte_superlevelpop_over_rho(
+          set_nlte_superlevelpop_over_rho_over_slpartfunc(
               nonemptymgi, element, ion,
               gsl_vector_get(&popvec, index_sl) / grid::get_rho(nonemptymgi) / superlevel_partfunc[ion]);
         }
@@ -1456,8 +1456,8 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
           }
         } else {
           // superlevel, so add the populations of all other levels in the superlevel
-          const double slpopfactor =
-              get_nlte_superlevelpop_over_rho(nonemptymgi, element, ion) * grid::modelgrid[nonemptymgi].rho;
+          const double slpopfactor = get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion) *
+                                     grid::modelgrid[nonemptymgi].rho;
 
           nnlevellte = 0;
           double superlevel_partfunc = 0;
@@ -1558,8 +1558,8 @@ __host__ __device__ auto get_nlte_levelpop_over_rho(const int nonemptymgi, const
                                  globals::elements[element].ions[ion].first_nlte + level - 1];
 }
 
-__host__ __device__ auto get_nlte_superlevelpop_over_rho(const int nonemptymgi, const int element, const int ion)
-    -> double {
+__host__ __device__ auto get_nlte_superlevelpop_over_rho_over_slpartfunc(const int nonemptymgi, const int element,
+                                                                         const int ion) -> double {
   assert_testmodeonly(ion_has_superlevel(element, ion));
   const int sl_nlte_index = globals::elements[element].ions[ion].first_nlte + get_nlevels_excited_nlte(element, ion);
   return grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + sl_nlte_index];
@@ -1573,7 +1573,8 @@ void set_nlte_levelpop_over_rho(const int nonemptymgi, const int element, const 
                           level - 1] = value;
 }
 
-void set_nlte_superlevelpop_over_rho(const int nonemptymgi, const int element, const int ion, const double value) {
+void set_nlte_superlevelpop_over_rho_over_slpartfunc(const int nonemptymgi, const int element, const int ion,
+                                                     const double value) {
   assert_testmodeonly(ion_has_superlevel(element, ion));
   const int sl_nlte_index = globals::elements[element].ions[ion].first_nlte + get_nlevels_excited_nlte(element, ion);
   grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + sl_nlte_index] = value;
