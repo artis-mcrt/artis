@@ -350,8 +350,8 @@ inline auto get_includedions() -> int {
   return false;
 }
 
-// Returns the number of NLTE levels associated with with a specific ion given
-// its elementindex and ionindex. Includes the superlevel if there is one but does not include the ground state
+// Return the number of NLTE levels associated with with a specific ion given
+// its elementindex and ionindex. Does not include the ground state or superlevel
 [[nodiscard]] inline auto get_nlevels_excited_nlte(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
