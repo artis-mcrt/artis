@@ -656,10 +656,9 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 // solve rate_matrix * x = balance_vector,
 // then popvec[i] = x[i] / pop_norm_factor_vec[i]
 // return true if the solution is successful, or false if the matrix is singular
-[[nodiscard]] auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix,
+[[nodiscard]] auto nltepop_matrix_solve(const int element, const int nonemptymgi, const gsl_matrix *rate_matrix,
                                         const gsl_vector *balance_vector, gsl_vector *popvec,
-                                        const gsl_vector *pop_normfactor_vec,
-                                        const std::vector<double> &superlevel_partfunc, const int max_nlte_dimension,
+                                        const gsl_vector *pop_normfactor_vec, const int max_nlte_dimension,
                                         const int first_ion_used, const int nions_used) -> bool {
   const size_t nlte_dimension = balance_vector->size;
   assert_always(pop_normfactor_vec->size == nlte_dimension);
@@ -758,7 +757,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   gsl_vector_memcpy(popvec, &x);
   gsl_vector_mul(popvec, pop_normfactor_vec);
   // popvec will be used contains the real population densities
-
+  const auto superlevel_partfunc = get_element_superlevelpartfuncs(nonemptymgi, element);
   for (size_t row = 0; row < nlte_dimension; row++) {
     double recovered_balance_vector_elem = 0.;
     gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
@@ -825,25 +824,36 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
         }
         printout("relatively small pop inversion continue with NLTE solution\n");
       }
-      // Now check if there is an inversion in the superlevel population relative to the ground state
+      // Now check if the first level in the superlevel is inverted relative to the ground state. Only need to check the
+      // first level as the superlevel is treated in Boltzmann equilibrium. Therefore if the first level in the
+      // superlevel isn't inverted relative to the ground, none of the superlevel levels will be.
       else if (row != index_ion_ground && level_isinsuperlevel(element, ion, level) &&
                (gsl_vector_get(popvec, index_ion_ground) *
                     STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
-                (stat_weight(element, ion, 0) / superlevel_partfunc[ion]) * gsl_vector_get(popvec, row))) {
+                (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) *
+                    ((gsl_vector_get(popvec, row) / superlevel_partfunc[ion]) *
+                     superlevel_boltzmann(nonemptymgi, element, ion, level)))) {
         assert_testmodeonly(ion_has_superlevel(element, ion));
         printout(
-            "[debug] WARNING: superlevel pop inversion greater than factor %g: (g_pop %g)/(SL_pop %g) = %g is less "
-            "than (g_sw %g)/(SL_part_funct %g) = %g for index %zud Z=%d ionstage %d level %d (factor %g inversion) - ",
+            "[debug] WARNING: superlevel pop inversion greater than factor %g: (g_pop %g)/(SL_first_level_pop %g) = %g "
+            "is less than (g_sw %g)/(SL_first_level_sw %g) = %g for index %zud Z=%d ionstage %d level %d (factor %g "
+            "inversion) - ",
             STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING, gsl_vector_get(popvec, index_ion_ground),
-            gsl_vector_get(popvec, row), gsl_vector_get(popvec, index_ion_ground) / gsl_vector_get(popvec, row),
-            stat_weight(element, ion, 0), superlevel_partfunc[ion],
-            stat_weight(element, ion, 0) / superlevel_partfunc[ion], row, get_atomicnumber(element),
+            ((gsl_vector_get(popvec, row) / superlevel_partfunc[ion]) *
+             superlevel_boltzmann(nonemptymgi, element, ion, level)),
+            gsl_vector_get(popvec, index_ion_ground) / ((gsl_vector_get(popvec, row) / superlevel_partfunc[ion]) *
+                                                        superlevel_boltzmann(nonemptymgi, element, ion, level)),
+            stat_weight(element, ion, 0), stat_weight(element, ion, level),
+            stat_weight(element, ion, 0) / stat_weight(element, ion, level), row, get_atomicnumber(element),
             get_ionstage(element, ion), level,
-            (stat_weight(element, ion, 0) / superlevel_partfunc[ion]) /
-                (gsl_vector_get(popvec, index_ion_ground) / gsl_vector_get(popvec, row)));
+            (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) /
+                (gsl_vector_get(popvec, index_ion_ground) / ((gsl_vector_get(popvec, row) / superlevel_partfunc[ion]) *
+                                                             superlevel_boltzmann(nonemptymgi, element, ion, level))));
 
         if (gsl_vector_get(popvec, index_ion_ground) * STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL <
-            ((stat_weight(element, ion, 0) / superlevel_partfunc[ion]) * gsl_vector_get(popvec, row))) {
+            (stat_weight(element, ion, 0) / stat_weight(element, ion, level)) *
+                ((gsl_vector_get(popvec, row) / superlevel_partfunc[ion]) *
+                 superlevel_boltzmann(nonemptymgi, element, ion, level))) {
           printout("large pop inversion for superlevel - return matrix solve fail\n");
           return false;
         }
@@ -1083,8 +1093,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     resize_exactly(vec_pop, max_nlte_dimension);
     popvec = gsl_vector_view_array(vec_pop.data(), nlte_dimension).vector;
 
-    matrix_solve_success = nltepop_matrix_solve(element, &rate_matrix, &balance_vector, &popvec, &pop_norm_factor_vec,
-                                                superlevel_partfunc, max_nlte_dimension, first_ion_used, nions_used);
+    matrix_solve_success = nltepop_matrix_solve(element, nonemptymgi, &rate_matrix, &balance_vector, &popvec,
+                                                &pop_norm_factor_vec, max_nlte_dimension, first_ion_used, nions_used);
 
     if (matrix_solve_success) {
       matrix_solve_satisfied_with_ion_list = true;
