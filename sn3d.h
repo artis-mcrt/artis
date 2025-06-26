@@ -59,7 +59,9 @@
 #include <omp.h>
 #endif
 
+#pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #ifdef __NVCOMPILER_CUDA_ARCH__
 #define THREADLOCALONHOST

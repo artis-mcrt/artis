@@ -4,7 +4,9 @@
 #include <gsl/gsl_interp.h>
 #include <gsl/gsl_spline.h>
 #pragma clang unsafe_buffer_usage end
+#pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include <algorithm>
 #include <array>
