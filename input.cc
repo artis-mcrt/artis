@@ -1414,22 +1414,11 @@ void setup_cellcache() {
       resize_exactly(globals::cellcache[cellcachenum].chtransblock, chtransblocksize);
     }
 
-    int uniquelevelindex = 0;
     int chtransindex = 0;
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-
-      for (int ion = 0; ion < nions; ion++) {
-        const int nlevels = get_nlevels(element, ion);
-        assert_always(uniquelevelindex == get_uniquelevelindex(element, ion, 0));
-
-        for (int level = 0; level < nlevels; level++) {
-          std::ranges::fill(globals::cellcache[cellcachenum].ch_all_levels_processrates[uniquelevelindex], -99.);
-          globals::cellcache[cellcachenum].ch_all_levels_chtransblock_start[uniquelevelindex] = chtransindex;
-          chtransindex += (2 * get_ndowntrans(element, ion, level) + get_nuptrans(element, ion, level));
-          uniquelevelindex++;
-        }
-      }
+    for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
+      std::ranges::fill(globals::cellcache[cellcachenum].ch_all_levels_processrates[uniquelevelindex], -99.);
+      globals::cellcache[cellcachenum].ch_all_levels_chtransblock_start[uniquelevelindex] = chtransindex;
+      chtransindex += (2 * get_ndowntrans(uniquelevelindex) + get_nuptrans(uniquelevelindex));
     }
     assert_always(chtransindex == chtransblocksize);
 
