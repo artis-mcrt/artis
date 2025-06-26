@@ -37,9 +37,36 @@ constexpr bool LOG_MACROATOM = false;
 
 FILE *macroatom_file{};
 
+[[nodiscard]] auto get_sum_epstrans_rad_deexc(const int uniquelevelindex) -> std::span<double> {
+  return std::span{globals::cellcache[cellcacheslotid].chtransblock}.subspan(
+      globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex].start_sum_epstrans_rad_deexc,
+      get_ndowntrans(uniquelevelindex));
+}
+
+[[nodiscard]] auto get_sum_internal_down_same(const int uniquelevelindex) -> std::span<double> {
+  return std::span{globals::cellcache[cellcacheslotid].chtransblock}.subspan(
+      globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex].start_sum_epstrans_rad_deexc +
+          get_ndowntrans(uniquelevelindex),
+      get_ndowntrans(uniquelevelindex));
+}
+
+[[nodiscard]] auto get_sum_internal_down_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
+  const auto ndowntrans = get_ndowntrans(uniquelevelindex);
+  return std::span{globals::cellcache[cellcacheslotid].chtransblock}.subspan(
+      globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex].start_sum_epstrans_rad_deexc +
+          get_ndowntrans(uniquelevelindex),
+      ndowntrans - 1);
+}
+
+[[nodiscard]] auto get_sum_internal_up_same(const int uniquelevelindex) -> std::span<double> {
+  return std::span{globals::cellcache[cellcacheslotid].chtransblock}.subspan(
+      globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex].start_sum_epstrans_rad_deexc +
+          (2 * get_ndowntrans(uniquelevelindex)),
+      get_nuptrans(uniquelevelindex));
+}
+
 auto calculate_macroatom_transitionrates(const int nonemptymgi, const int element, const int ion, const int level,
-                                         const double t_mid, CellCacheLevels &chlevel,
-                                         const globals::AllTransitions &alltrans) {
+                                         const double t_mid, const globals::AllTransitions &alltrans) {
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
   auto processrates = std::array<double, MA_ACTION_COUNT>{};
   const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
@@ -58,10 +85,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   double sum_coldeexc = 0.;
   const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
   const auto ndowntrans = get_ndowntrans(uniquelevelindex);
-#pragma clang unsafe_buffer_usage begin
-  const auto arr_sum_epstrans_rad_deexc = std::span(chlevel.sum_epstrans_rad_deexc, ndowntrans);
-  const auto arr_sum_internal_down_same = std::span(chlevel.sum_internal_down_same, ndowntrans);
-#pragma clang unsafe_buffer_usage end
+  auto arr_sum_epstrans_rad_deexc = get_sum_epstrans_rad_deexc(uniquelevelindex);
+  auto arr_sum_internal_down_same = get_sum_internal_down_same(uniquelevelindex);
   for (int i = 0; i < ndowntrans; i++) {
     const auto alltransindex = alltrans_startdown + i;
     const int lower = alltrans.targetlevelindex[alltransindex];
@@ -92,9 +117,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   // transitions within the current ionisation stage
   double sum_internal_up_same = 0.;
   const int nuptrans = get_nuptrans(uniquelevelindex);
-#pragma clang unsafe_buffer_usage begin
-  const auto cumulative_sum_internal_up_same = std::span(chlevel.sum_internal_up_same, nuptrans);
-#pragma clang unsafe_buffer_usage end
+  auto cumulative_sum_internal_up_same = get_sum_internal_up_same(uniquelevelindex);
   const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
   for (int ii = 0; ii < nuptrans; ii++) {
     const auto alltransindex = alltrans_startup + ii;
@@ -363,7 +386,6 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
     const int uniquelevelindex = ionuniquelevelindexstart + level;
 
     const double epsilon_current = epsilon(uniquelevelindex);
-    const int nuptrans = get_nuptrans(uniquelevelindex);
 
     auto &chlevel = globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex];
 
@@ -377,7 +399,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
       // If there are no precalculated rates available then calculate them
       if (chlevel.processrates[MA_ACTION_INTERNALUPHIGHER] < 0) {
         chlevel.processrates =
-            calculate_macroatom_transitionrates(nonemptymgi, element, ion, level, t_mid, chlevel, globals::alltrans);
+            calculate_macroatom_transitionrates(nonemptymgi, element, ion, level, t_mid, globals::alltrans);
       }
     }
 
@@ -409,9 +431,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
         // printout("[debug] do_ma:   radiative deexcitation\n");
-#pragma clang unsafe_buffer_usage begin
-        const auto sum_epstrans_rad_deexc = std::span(chlevel.sum_epstrans_rad_deexc, get_ndowntrans(uniquelevelindex));
-#pragma clang unsafe_buffer_usage end
+        const auto sum_epstrans_rad_deexc = get_sum_epstrans_rad_deexc(uniquelevelindex);
         do_macroatom_raddeexcitation(pkt, element, ion, uniquelevelindex, epsilon_current, activatingline,
                                      sum_epstrans_rad_deexc);
 
@@ -457,12 +477,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
       case MA_ACTION_INTERNALDOWNSAME: {
         stats::increment(stats::COUNTER_INTERACTIONS);
-        const int ndowntrans = get_ndowntrans(uniquelevelindex);
-#pragma clang unsafe_buffer_usage begin
-        const auto sum_internal_down_same_exceptlast =
-            std::span<const double>(chlevel.sum_internal_down_same, ndowntrans - 1);
-#pragma clang unsafe_buffer_usage end
-
+        const auto sum_internal_down_same_exceptlast = get_sum_internal_down_same_exceptlast(uniquelevelindex);
         // Randomly select the occurring transition
         const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNSAME];
 
@@ -570,11 +585,9 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         // printout("[debug] do_ma:   internal upward jump within current ionstage\n");
         stats::increment(stats::COUNTER_INTERACTIONS);
 
-#pragma clang unsafe_buffer_usage begin
         // randomly select the occurring transition
-        const auto sum_internal_up_same_exceptlast =
-            std::span<const double>(chlevel.sum_internal_up_same, nuptrans - 1);
-#pragma clang unsafe_buffer_usage end
+        const auto sum_internal_up_same = get_sum_internal_up_same(uniquelevelindex);
+        const auto sum_internal_up_same_exceptlast = sum_internal_up_same.first(sum_internal_up_same.size() - 1);
 
         const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALUPSAME];
 
