@@ -1400,6 +1400,7 @@ void setup_cellcache() {
       }
     }
     resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, get_includedlevels());
+    resize_exactly(globals::cellcache[cellcachenum].ch_all_levels_processrates, get_includedlevels());
     resize_exactly(globals::cellcache[cellcachenum].ch_all_ions, get_includedions());
 
     if (allphixstargetcount > 0) {
@@ -1431,11 +1432,12 @@ void setup_cellcache() {
             std::span{globals::cellcache[cellcachenum].ch_all_levels}.subspan(uniquelevelindex, nlevels);
 
         assert_always(uniquelevelindex == get_uniquelevelindex(element, ion, 0));
-        uniquelevelindex += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
           globals::cellcache[cellcachenum].ch_all_levels[uniquelevelindex].start_sum_epstrans_rad_deexc = chtransindex;
+          std::ranges::fill(globals::cellcache[cellcachenum].ch_all_levels_processrates[uniquelevelindex], -99.);
           chtransindex += (2 * get_ndowntrans(element, ion, level) + get_nuptrans(element, ion, level));
+          uniquelevelindex++;
         }
       }
     }

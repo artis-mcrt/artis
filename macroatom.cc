@@ -394,7 +394,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
     const double epsilon_current = epsilon(uniquelevelindex);
 
-    auto &chlevel = globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex];
+    auto &processrates = globals::cellcache[cellcacheslotid].ch_all_levels_processrates[uniquelevelindex];
 
     {
 #if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
@@ -404,13 +404,10 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
       assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
 
       // If there are no precalculated rates available then calculate them
-      if (chlevel.processrates[MA_ACTION_INTERNALUPHIGHER] < 0) {
-        chlevel.processrates =
-            calculate_macroatom_transitionrates(nonemptymgi, element, ion, level, t_mid, globals::alltrans);
+      if (processrates[MA_ACTION_INTERNALUPHIGHER] < 0) {
+        processrates = calculate_macroatom_transitionrates(nonemptymgi, element, ion, level, t_mid, globals::alltrans);
       }
     }
-
-    const auto &processrates = chlevel.processrates;
 
     // for debugging the transition rates:
     // {

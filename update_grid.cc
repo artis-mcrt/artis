@@ -1205,7 +1205,7 @@ void cellcache_change_cell(const int nonemptymgi) {
   }
 
   for (int uniquelevelindex = 0; uniquelevelindex < std::ssize(cacheslot.ch_all_levels); uniquelevelindex++) {
-    cacheslot.ch_all_levels[uniquelevelindex].processrates[MA_ACTION_INTERNALUPHIGHER] = -99.;
+    cacheslot.ch_all_levels_processrates[uniquelevelindex][MA_ACTION_INTERNALUPHIGHER] = -99.;
   }
 
   if (nonemptymgi >= 0) {
