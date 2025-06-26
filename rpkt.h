@@ -21,6 +21,8 @@ struct Phixslist {
   std::unique_ptr<double[]> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or USE_LUT_BFHEATING = true
   std::unique_ptr<double[]> chi_bf_sum;
   std::unique_ptr<double[]> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
+  std::span<double> chi_bf_sum_span;
+  std::span<double> chi_bf_sum_span_used;
   int allcontend{-1};
   int allcontbegin{0};
   int bfestimend{-1};
@@ -42,6 +44,9 @@ class Rpkt_continuum_absorptioncoeffs {
                                             const int bfestimcount) {
     phixslist.groundcont_gamma_contr = std::make_unique<double[]>(nbfcontinua_ground);
     phixslist.chi_bf_sum = std::make_unique<double[]>(nbfcontinua);
+#pragma clang unsafe_buffer_usage begin
+    phixslist.chi_bf_sum_span = std::span<double>(phixslist.chi_bf_sum.get(), nbfcontinua);
+#pragma clang unsafe_buffer_usage end
     phixslist.gamma_contr = std::make_unique<double[]>(bfestimcount);
   }
 

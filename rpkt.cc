@@ -461,16 +461,16 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     pkt.absorptiontype = -2;
 
     const double chi_bf_inrest = chi_rpkt_cont.bf;
-    assert_always(phixslist.chi_bf_sum[phixslist.allcontend - 1] == chi_bf_inrest);
+    assert_always(phixslist.chi_bf_sum_span_used.back() == chi_bf_inrest);
 
     // Determine in which continuum the bf-absorption occurs
     const double chi_bf_rand = rng_uniform() * chi_bf_inrest;
 
 #pragma clang unsafe_buffer_usage begin
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
-    const auto allcontindex = std::upper_bound(phixslist.chi_bf_sum.get() + phixslist.allcontbegin,
-                                               phixslist.chi_bf_sum.get() + phixslist.allcontend - 1, chi_bf_rand) -
-                              phixslist.chi_bf_sum.get();
+    const auto allcontindex =
+        std::upper_bound(phixslist.chi_bf_sum_span_used.begin(), phixslist.chi_bf_sum_span_used.end(), chi_bf_rand) -
+        phixslist.chi_bf_sum_span_used.begin();
 #pragma clang unsafe_buffer_usage end
     assert_always(allcontindex < phixslist.allcontend);
 
@@ -807,6 +807,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     phixslist.allcontbegin = allcontbegin;
     phixslist.allcontend = allcontend;
+    phixslist.chi_bf_sum_span_used = phixslist.chi_bf_sum_span.subspan(allcontbegin, allcontend - allcontbegin);
 
     phixslist.bfestimend =
         static_cast<int>(std::ranges::upper_bound(globals::bfestim_nu_edge, nu) - globals::bfestim_nu_edge.cbegin());
