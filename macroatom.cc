@@ -42,7 +42,7 @@ FILE *macroatom_file{};
     -> std::tuple<std::span<double>, std::span<double>, std::span<double>> {
   const auto transblock = std::span{globals::cellcache[cellcacheslotid].chtransblock};
   const auto start_sum_epstrans_rad_deexc =
-      globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex].start_sum_epstrans_rad_deexc;
+      globals::cellcache[cellcacheslotid].ch_all_levels_chtransblock_start[uniquelevelindex];
   const auto sum_epstrans_rad_deexc =
       transblock.subspan(start_sum_epstrans_rad_deexc, get_ndowntrans(uniquelevelindex));
 
@@ -57,21 +57,21 @@ FILE *macroatom_file{};
 [[nodiscard]] auto get_sum_internal_down_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
   const auto ndowntrans = get_ndowntrans(uniquelevelindex);
   return std::span{globals::cellcache[cellcacheslotid].chtransblock}.subspan(
-      globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex].start_sum_epstrans_rad_deexc +
+      globals::cellcache[cellcacheslotid].ch_all_levels_chtransblock_start[uniquelevelindex] +
           get_ndowntrans(uniquelevelindex),
       ndowntrans - 1);
 }
 
 [[nodiscard]] auto get_sum_internal_up_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
   return std::span{globals::cellcache[cellcacheslotid].chtransblock}.subspan(
-      globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex].start_sum_epstrans_rad_deexc +
+      globals::cellcache[cellcacheslotid].ch_all_levels_chtransblock_start[uniquelevelindex] +
           (2 * get_ndowntrans(uniquelevelindex)),
       get_nuptrans(uniquelevelindex) - 1);
 }
 
 [[nodiscard]] auto get_sum_epstrans_rad_deexc_exceptlast(const int uniquelevelindex) -> std::span<const double> {
   return std::span{globals::cellcache[cellcacheslotid].chtransblock}.subspan(
-      globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex].start_sum_epstrans_rad_deexc,
+      globals::cellcache[cellcacheslotid].ch_all_levels_chtransblock_start[uniquelevelindex],
       get_ndowntrans(uniquelevelindex) - 1);
 }
 

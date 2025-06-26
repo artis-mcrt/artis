@@ -152,7 +152,6 @@ enum ma_action {
 
 struct CellCacheLevels {
   double population{NAN};
-  int start_sum_epstrans_rad_deexc{-1};  // index into sum_epstrans_rad_deexc array
 };
 
 struct CellCacheIons {
@@ -168,6 +167,7 @@ struct CellCache {
   std::vector<CellCacheElements> chelements;
   std::vector<CellCacheLevels> ch_all_levels;
   std::vector<std::array<double, MA_ACTION_COUNT>> ch_all_levels_processrates;
+  std::vector<int> ch_all_levels_chtransblock_start;  // index into chtransblock for each level
   std::vector<CellCacheIons> ch_all_ions;
   std::vector<double> ch_allcont_departureratios;
   std::vector<double> ch_allcont_nnlevel;

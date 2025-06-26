@@ -1401,6 +1401,7 @@ void setup_cellcache() {
     }
     resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, get_includedlevels());
     resize_exactly(globals::cellcache[cellcachenum].ch_all_levels_processrates, get_includedlevels());
+    resize_exactly(globals::cellcache[cellcachenum].ch_all_levels_chtransblock_start, get_includedlevels());
     resize_exactly(globals::cellcache[cellcachenum].ch_all_ions, get_includedions());
 
     if (allphixstargetcount > 0) {
@@ -1434,8 +1435,8 @@ void setup_cellcache() {
         assert_always(uniquelevelindex == get_uniquelevelindex(element, ion, 0));
 
         for (int level = 0; level < nlevels; level++) {
-          globals::cellcache[cellcachenum].ch_all_levels[uniquelevelindex].start_sum_epstrans_rad_deexc = chtransindex;
           std::ranges::fill(globals::cellcache[cellcachenum].ch_all_levels_processrates[uniquelevelindex], -99.);
+          globals::cellcache[cellcachenum].ch_all_levels_chtransblock_start[uniquelevelindex] = chtransindex;
           chtransindex += (2 * get_ndowntrans(element, ion, level) + get_nuptrans(element, ion, level));
           uniquelevelindex++;
         }
