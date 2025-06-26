@@ -1192,7 +1192,7 @@ void cellcache_change_cell(const int nonemptymgi) {
 #pragma omp parallel for
 #endif
         for (int level = 0; level < nlevels; level++) {
-          cacheslot.ch_all_levels[uniquelevelindexstart + level].population =
+          cacheslot.ch_all_levels_pops[uniquelevelindexstart + level] =
               calculate_levelpop(nonemptymgi, element, ion, level);
         }
       }
@@ -1218,7 +1218,7 @@ void cellcache_change_cell(const int nonemptymgi) {
       const int ion = globals::allcont[i].ion;
       const int level = globals::allcont[i].level;
       const auto uniquelevelindex = globals::allcont[i].uniquelevelindex;
-      const auto nnlevel = globals::cellcache[cellcacheslotid].ch_all_levels[uniquelevelindex].population;
+      const auto nnlevel = globals::cellcache[cellcacheslotid].ch_all_levels_pops[uniquelevelindex];
       cacheslot.ch_allcont_nnlevel[i] = nnlevel;
       cacheslot.ch_keep_this_cont[i] = nnlevel > 0 && keep_this_cont(element, ion, level, nonemptymgi, nnetot);
     }

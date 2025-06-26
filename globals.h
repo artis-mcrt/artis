@@ -150,25 +150,21 @@ enum ma_action {
   MA_ACTION_COUNT = 9,
 };
 
-struct CellCacheLevels {
-  double population{NAN};
+struct CellCacheIon {
+  std::span<double> levelpops;
 };
 
-struct CellCacheIons {
-  std::span<CellCacheLevels> chlevels;  // Pointer to the ions levellist.
-};
-
-struct CellCacheElements {
-  std::span<CellCacheIons> chions;  // Pointer to the elements ionlist.
+struct CellCacheElement {
+  std::span<CellCacheIon> chions;
 };
 
 struct CellCache {
   std::vector<double> cooling_contrib;  // Cooling contributions by the different processes.
-  std::vector<CellCacheElements> chelements;
-  std::vector<CellCacheLevels> ch_all_levels;
+  std::vector<CellCacheElement> chelements;
+  std::vector<double> ch_all_levels_pops;
   std::vector<std::array<double, MA_ACTION_COUNT>> ch_all_levels_processrates;
   std::vector<int> ch_all_levels_chtransblock_start;  // index into chtransblock for each level
-  std::vector<CellCacheIons> ch_all_ions;
+  std::vector<CellCacheIon> ch_all_ions;
   std::vector<double> ch_allcont_departureratios;
   std::vector<double> ch_allcont_nnlevel;
   std::vector<bool> ch_keep_this_cont;
