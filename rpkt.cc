@@ -77,14 +77,13 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
 [[nodiscard]] auto get_tau_sobolev(const int nonemptymgi, const TransitionLine &line, const double t_current)
     -> double {
   const auto ionuniquelevelindexstart = globals::elements[line.elementindex].ions[line.ionindex].uniquelevelindexstart;
-  const int lower = line.lowerlevelindex;
-  const int upper = line.upperlevelindex;
+  const int uniquelevelindex_lower = ionuniquelevelindexstart + line.lowerlevelindex;
+  const int uniquelevelindex_upper = ionuniquelevelindexstart + line.upperlevelindex;
 
-  const double n_l = get_levelpop(nonemptymgi, ionuniquelevelindexstart + lower);
+  const double n_l = get_levelpop(nonemptymgi, uniquelevelindex_lower);
 
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * line.einstein_A;
-  const double B_lu =
-      stat_weight(ionuniquelevelindexstart + upper) / stat_weight(ionuniquelevelindexstart + lower) * B_ul;
+  const double B_lu = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * B_ul;
 
   return std::max(B_lu * n_l * HCLIGHTOVERFOURPI * t_current, 0.);
 }
@@ -92,16 +91,15 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
 [[nodiscard]] auto get_tau_sobolev_subupdown(const int nonemptymgi, const TransitionLine &line, const double t_current)
     -> double {
   const auto ionuniquelevelindexstart = globals::elements[line.elementindex].ions[line.ionindex].uniquelevelindexstart;
-  const int lower = line.lowerlevelindex;
-  const int upper = line.upperlevelindex;
+  const int uniquelevelindex_lower = ionuniquelevelindexstart + line.lowerlevelindex;
+  const int uniquelevelindex_upper = ionuniquelevelindexstart + line.upperlevelindex;
 
-  const double n_l = get_levelpop(nonemptymgi, ionuniquelevelindexstart + lower);
+  const double n_l = get_levelpop(nonemptymgi, uniquelevelindex_lower);
 
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * line.einstein_A;
-  const double B_lu =
-      stat_weight(ionuniquelevelindexstart + upper) / stat_weight(ionuniquelevelindexstart + lower) * B_ul;
+  const double B_lu = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * B_ul;
 
-  const double n_u = get_levelpop(nonemptymgi, ionuniquelevelindexstart + upper);
+  const double n_u = get_levelpop(nonemptymgi, uniquelevelindex_upper);
   return std::max((B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current, 0.);
 }
 
