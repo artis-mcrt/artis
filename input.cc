@@ -1392,7 +1392,9 @@ void setup_cellcache() {
 
           const int ndowntrans = get_ndowntrans(element, ion, level);
           const int nuptrans = get_nuptrans(element, ion, level);
-          chtransblocksize += (2 * ndowntrans + nuptrans);
+
+          const int nrecombtargets = (ion > 0) ? get_nlevels_ionising(element, ion - 1) : 0;
+          chtransblocksize += (2 * ndowntrans + nuptrans + nrecombtargets * 2);
         }
       }
     }
@@ -1420,7 +1422,9 @@ void setup_cellcache() {
     for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
       std::ranges::fill(globals::cellcache[cellcachenum].alllevels_processrates[uniquelevelindex], -99.);
       globals::cellcache[cellcachenum].alllevels_chtransblock_start[uniquelevelindex] = chtransindex;
-      chtransindex += (2 * get_ndowntrans(uniquelevelindex) + get_nuptrans(uniquelevelindex));
+      const auto [element, ion, level] = get_levelfromuniquelevelindex(uniquelevelindex);
+      const int nrecombtargets = (ion > 0) ? get_nlevels_ionising(element, ion - 1) : 0;
+      chtransindex += (2 * get_ndowntrans(uniquelevelindex) + get_nuptrans(uniquelevelindex) + nrecombtargets * 2);
     }
     assert_always(chtransindex == chtransblocksize);
 
