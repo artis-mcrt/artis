@@ -18,7 +18,9 @@ constexpr int NLTEITER = 30;
 
 constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return 0; }
 
-constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) { return false; }
+constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) {
+    return level < ION_NLEVELS_EXCITED_NLTE(element_z, ionstage);
+}
 
 constexpr bool LTEPOP_EXCITATION_USE_TJ = true;
 
