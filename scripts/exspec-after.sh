@@ -37,12 +37,14 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
   mkdir -p speclc_angle_res
   mv *_res_*.out* speclc_angle_res/ || true
 
+  export PATH="$(pwd)/../uv/bin:$PATH"
+  export PATH="$HOME/.local/bin/:$PATH"
   if ! command -v uv >/dev/null 2>&1
   then
     # curl -LsSf https://astral.sh/uv/install.sh | sh
     # cosma disallows curl, so install uv with pip
     python3 -m ensurepip --upgrade
-    python3 -m pip install --upgrade uv
+    python3 -m pip install --upgrade uv --target "$(pwd)/../uv"
   fi
   uv tool install -U --no-cache -p 3.13 artistools@latest
 
