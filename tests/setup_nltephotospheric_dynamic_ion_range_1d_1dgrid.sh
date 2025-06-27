@@ -26,7 +26,7 @@ sed -i'' -e 's/constexpr auto GRID_TYPE.*/constexpr auto GRID_TYPE = GridType::S
 
 sed -i'' -e 's/constexpr int NLTEITER.*/constexpr int NLTEITER = 2;/g' artisoptions.h
 
-perl -0777 -i -pe 's|constexpr bool LEVEL_IS_NLTE\(int element_z, int ionstage, int level\) \{.*?\n\}|constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) {\n  if (element_z == 26 && ionstage == 2) {\n    return (level <= 100);\n  }\n  return (level <= 50);\n}\n|s' artisoptions.h
+perl -0777 -i -pe 's|constexpr int ION_NLEVELS_EXCITED_NLTE\(int element_z, int ionstage\) \{.*?\n\}|constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {\n  if (element_z == 26 && ionstage == 2) {\n    return 100;\n  }\n  return 50;\n}\n|s' artisoptions.h
 
 sed -i'' -e 's|constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {.*}|constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return (Z < 20) ? 20 : 40; }|g' artisoptions.h
 
