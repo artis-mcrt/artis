@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
@@ -76,10 +77,10 @@ FILE *macroatom_file{};
 }
 
 auto calculate_macroatom_transitionrates(const int nonemptymgi, const int element, const int ion, const int level,
-                                         const double t_mid, const globals::AllTransitions &alltrans) {
+                                         const int ionuniquelevelindexstart, const double t_mid,
+                                         const globals::AllTransitions &alltrans) {
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
   auto processrates = std::array<double, MA_ACTION_COUNT>{};
-  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
   const auto uniquelevelindex = ionuniquelevelindexstart + level;
 
   const auto T_e = grid::get_Te(nonemptymgi);
@@ -200,7 +201,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
 }
 
 // radiative deexcitation
-void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion, const int uniquelevelindex,
+void do_macroatom_raddeexcitation(Packet &pkt, const int ionuniquelevelindexstart, const int uniquelevelindex,
                                   const int activatingline, const double epsilon_current, const double totalrate) {
   // randomly select which line transitions occurs
 
@@ -222,8 +223,8 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
     atomicadd(globals::ecounter[lineindex], 1);
   }
 
-  const auto uniquelevelindexlower = globals::elements[element].ions[ion].uniquelevelindexstart +
-                                     globals::alltrans.targetlevelindex[alltrans_startdown + downtransindex];
+  const auto uniquelevelindexlower =
+      ionuniquelevelindexstart + globals::alltrans.targetlevelindex[alltrans_startdown + downtransindex];
 
   const double epsilon_trans = epsilon_current - epsilon(uniquelevelindexlower);
 
@@ -259,27 +260,20 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int element, const int ion,
   const double targetval = rng_uniform() * rad_recomb;
   double rate = 0;
   const int nlevels = get_nlevels_ionising(element, upperion - 1);
-  int lowerionlevel = 0;
-  for (lowerionlevel = 0; lowerionlevel < nlevels; lowerionlevel++) {
-    const double epsilon_trans = epsilon_current - epsilon(element, upperion - 1, lowerionlevel);
+  int lowerionlevel = -1;
+  for (int tmp_lowerionlevel = 0; tmp_lowerionlevel < nlevels; tmp_lowerionlevel++) {
+    const double epsilon_trans = epsilon_current - epsilon(element, upperion - 1, tmp_lowerionlevel);
     const double R =
-        rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, lowerionlevel, nonemptymgi);
+        rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, tmp_lowerionlevel, nonemptymgi);
 
     rate += R * epsilon_trans;
 
     if (targetval < rate) {
+      lowerionlevel = tmp_lowerionlevel;
       break;
     }
   }
-  if (targetval >= rate) {
-    printout(
-        "%s: From Z=%d ionstage %d level %d, could not select lower level to recombine to. targetval %g * rad_recomb "
-        "%g >= "
-        "rate %g",
-        __func__, get_atomicnumber(element), get_ionstage(element, upperion), upperionlevel, targetval, rad_recomb,
-        rate);
-    std::abort();
-  }
+  assert_always(lowerionlevel >= 0);
 
   // set the new state
   const int lowerion = upperion - 1;
@@ -403,7 +397,8 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
       // If there are no precalculated rates available then calculate them
       if (processrates[0] < 0.) {
-        processrates = calculate_macroatom_transitionrates(nonemptymgi, element, ion, level, t_mid, globals::alltrans);
+        processrates = calculate_macroatom_transitionrates(nonemptymgi, element, ion, level, ionuniquelevelindexstart,
+                                                           t_mid, globals::alltrans);
       }
     }
 
@@ -433,7 +428,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
         // printout("[debug] do_ma:   radiative deexcitation\n");
-        do_macroatom_raddeexcitation(pkt, element, ion, uniquelevelindex, activatingline, epsilon_current,
+        do_macroatom_raddeexcitation(pkt, ionuniquelevelindexstart, uniquelevelindex, activatingline, epsilon_current,
                                      processrates[MA_ACTION_RADDEEXC]);
 
         if constexpr (TRACK_ION_STATS) {
