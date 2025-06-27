@@ -392,7 +392,7 @@ void precalculate_rate_coefficient_integrals() {
 
             const double sfac = calculate_sahafact(element, ion, level, upperlevel, T_e, E_threshold);
 
-            assert_always(get_phixs_table(element, ion, level).data() != nullptr);
+            assert_always(!get_phixs_table(element, ion, level).empty());
             // the threshold of the first target gives nu of the first phixstable point
             const GSLIntegrationParas intparas = {
                 .nu_edge = nu_threshold, .T = T_e, .photoion_xs = get_phixs_table(element, ion, level)};
