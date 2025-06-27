@@ -165,6 +165,7 @@ struct CellCache {
   std::vector<double> allphixstargets_corrphotoioncoeff;
   std::vector<double> allphixstargets_stimrecombcoeff;
   std::vector<double> chtransblock;  // cumulative macroatom transition rates for all levels
+  std::vector<bool> level_has_macroatomrates_set;
 };
 
 namespace globals {
