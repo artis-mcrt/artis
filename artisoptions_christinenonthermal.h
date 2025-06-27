@@ -16,11 +16,11 @@ constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
 
 constexpr int NLTEITER = 30;
 
-constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) {
+constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
   if (element_z < 22) {
-    return (level <= 200);
+    return 200;
   }
-  return (level <= 300);
+  return 300;
 }
 
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
