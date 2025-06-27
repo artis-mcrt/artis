@@ -40,9 +40,9 @@ FILE *macroatom_file{};
 
 [[nodiscard]] auto get_sum_epstrans_rad_deexc_downsame_upsame(const int uniquelevelindex)
     -> std::tuple<std::span<double>, std::span<double>, std::span<double>> {
-  const auto transblock = std::span{globals::cellcache[cellcacheslotid].chtransblock};
+  const auto transblock = std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions};
   const auto start_sum_epstrans_rad_deexc =
-      globals::cellcache[cellcacheslotid].alllevels_chtransblock_start[uniquelevelindex];
+      globals::cellcache[cellcacheslotid].alllevels_matransblock_start[uniquelevelindex];
   const auto sum_epstrans_rad_deexc =
       transblock.subspan(start_sum_epstrans_rad_deexc, get_ndowntrans(uniquelevelindex));
 
@@ -56,22 +56,22 @@ FILE *macroatom_file{};
 
 [[nodiscard]] auto get_sum_internal_down_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
   const auto ndowntrans = get_ndowntrans(uniquelevelindex);
-  return std::span{globals::cellcache[cellcacheslotid].chtransblock}.subspan(
-      globals::cellcache[cellcacheslotid].alllevels_chtransblock_start[uniquelevelindex] +
+  return std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions}.subspan(
+      globals::cellcache[cellcacheslotid].alllevels_matransblock_start[uniquelevelindex] +
           get_ndowntrans(uniquelevelindex),
       ndowntrans - 1);
 }
 
 [[nodiscard]] auto get_sum_internal_up_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
-  return std::span{globals::cellcache[cellcacheslotid].chtransblock}.subspan(
-      globals::cellcache[cellcacheslotid].alllevels_chtransblock_start[uniquelevelindex] +
+  return std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions}.subspan(
+      globals::cellcache[cellcacheslotid].alllevels_matransblock_start[uniquelevelindex] +
           (2 * get_ndowntrans(uniquelevelindex)),
       get_nuptrans(uniquelevelindex) - 1);
 }
 
 [[nodiscard]] auto get_sum_epstrans_rad_deexc_exceptlast(const int uniquelevelindex) -> std::span<const double> {
-  return std::span{globals::cellcache[cellcacheslotid].chtransblock}.subspan(
-      globals::cellcache[cellcacheslotid].alllevels_chtransblock_start[uniquelevelindex],
+  return std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions}.subspan(
+      globals::cellcache[cellcacheslotid].alllevels_matransblock_start[uniquelevelindex],
       get_ndowntrans(uniquelevelindex) - 1);
 }
 
@@ -81,7 +81,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
   const auto uniquelevelindex = ionuniquelevelindexstart + level;
 
-  auto &processrates = globals::cellcache[cellcacheslotid].alllevels_processrates[uniquelevelindex];
+  auto &processrates = globals::cellcache[cellcacheslotid].alllevels_maprocessrates[uniquelevelindex];
 
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
@@ -197,7 +197,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   processrates[MA_ACTION_INTERNALUPHIGHERNT] = sum_up_highernt;
   processrates[MA_ACTION_INTERNALUPHIGHER] = sum_up_higher;
 
-  globals::cellcache[cellcacheslotid].level_has_macroatomrates_set[uniquelevelindex] = true;
+  globals::cellcache[cellcacheslotid].alllevels_macroatomrates_set[uniquelevelindex] = true;
 }
 
 // radiative deexcitation
@@ -403,11 +403,11 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
       assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
 
       // If there are no precalculated rates available then calculate them
-      if (!globals::cellcache[cellcacheslotid].level_has_macroatomrates_set[uniquelevelindex]) {
+      if (!globals::cellcache[cellcacheslotid].alllevels_macroatomrates_set[uniquelevelindex]) {
         calculate_macroatom_transitionrates(nonemptymgi, element, ion, level, t_mid, globals::alltrans);
       }
     }
-    const auto &processrates = globals::cellcache[cellcacheslotid].alllevels_processrates[uniquelevelindex];
+    const auto &processrates = globals::cellcache[cellcacheslotid].alllevels_maprocessrates[uniquelevelindex];
 
     // for debugging the transition rates:
     // {
