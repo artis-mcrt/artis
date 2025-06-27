@@ -691,26 +691,22 @@ auto rad_excitation_ratecoeff(const int nonemptymgi, const int upper_uniquelevel
                               const double statweight_lower, const int alltransindex, const double t_current)
     -> double {
   const double n_u = get_levelpop(nonemptymgi, upper_uniquelevelindex);
-  const auto &n_l = nnlevel_lower;
   const double nu_trans = epsilon_trans / H;
-  const double A_ul = einstein_A;
-  const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * einstein_A;
   const double B_lu = upper_statweight / statweight_lower * B_ul;
 
-  const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
+  const double tau_sobolev = (B_lu * nnlevel_lower - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
   if (tau_sobolev > 1e-100) {
     const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
 
-    const double R_over_J_nu = n_l > 0. ? (B_lu - B_ul * n_u / n_l) * beta : B_lu * beta;
+    const double R_over_J_nu = nnlevel_lower > 0. ? (B_lu - B_ul * n_u / nnlevel_lower) * beta : B_lu * beta;
 
-    if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-      if (!globals::lte_iteration) {
-        // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
-        if (const int jblueindex = radfield::get_Jblueindex(globals::alltrans.lineindex[alltransindex]);
-            jblueindex >= 0) {
-          return R_over_J_nu * radfield::get_Jb_lu(nonemptymgi, jblueindex);
-        }
+    if (DETAILED_LINE_ESTIMATORS_ON && !globals::lte_iteration) {
+      // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
+      if (const int jblueindex = radfield::get_Jblueindex(globals::alltrans.lineindex[alltransindex]);
+          jblueindex >= 0) {
+        return R_over_J_nu * radfield::get_Jb_lu(nonemptymgi, jblueindex);
       }
     }
 
