@@ -6,6 +6,7 @@
         "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
         "editor.formatOnSave": true,
         "editor.semanticHighlighting.enabled": true,
+        "editor.stickyScroll.defaultModel": "outlineModel",
         "editor.suggest.insertMode": "replace",
         "editor.tabSize": 2,
         "editor.wordBasedSuggestions": "off"
