@@ -33,7 +33,7 @@ constexpr bool single_level_top_ion;
 // if false, read from file or autodetect
 constexpr bool single_ground_level;
 
-// Add collisional transitions between the lower n levels and all other levels with collisions (or disable by returning zero)
+// Add any missing collisional transitions between the lower n levels and all other levels (or disable by returning zero)
 // This can prevent fully disconnected levels, whose NLTE populations cannot be determined
 constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
   return ((Z == 26 || Z == 28) && ionstage >= 1) ? 80 : 0;
