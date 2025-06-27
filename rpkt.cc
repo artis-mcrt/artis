@@ -76,16 +76,13 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
 
 [[nodiscard]] auto get_tau_sobolev(const int nonemptymgi, const TransitionLine &line, const double t_current)
     -> double {
-  const int element = line.elementindex;
-  const int ion = line.ionindex;
+  const auto ionuniquelevelindexstart = globals::elements[line.elementindex].ions[line.ionindex].uniquelevelindexstart;
   const int lower = line.lowerlevelindex;
   const int upper = line.upperlevelindex;
-  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
 
   const double n_l = get_levelpop(nonemptymgi, ionuniquelevelindexstart + lower);
 
-  const double A_ul = line.einstein_A;
-  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * A_ul;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * line.einstein_A;
   const double B_lu =
       stat_weight(ionuniquelevelindexstart + upper) / stat_weight(ionuniquelevelindexstart + lower) * B_ul;
 
@@ -94,16 +91,13 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
 
 [[nodiscard]] auto get_tau_sobolev_subupdown(const int nonemptymgi, const TransitionLine &line, const double t_current)
     -> double {
-  const int element = line.elementindex;
-  const int ion = line.ionindex;
+  const auto ionuniquelevelindexstart = globals::elements[line.elementindex].ions[line.ionindex].uniquelevelindexstart;
   const int lower = line.lowerlevelindex;
   const int upper = line.upperlevelindex;
-  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
 
   const double n_l = get_levelpop(nonemptymgi, ionuniquelevelindexstart + lower);
 
-  const double A_ul = line.einstein_A;
-  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * A_ul;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * line.einstein_A;
   const double B_lu =
       stat_weight(ionuniquelevelindexstart + upper) / stat_weight(ionuniquelevelindexstart + lower) * B_ul;
 
