@@ -1399,8 +1399,6 @@ void setup_cellcache() {
     resize_exactly(globals::cellcache[cellcachenum].alllevels_pops, get_includedlevels());
     resize_exactly(globals::cellcache[cellcachenum].alllevels_maprocessrates, get_includedlevels());
     resize_exactly(globals::cellcache[cellcachenum].alllevels_matransblock_start, get_includedlevels());
-    resize_exactly(globals::cellcache[cellcachenum].alllevels_macroatomrates_set, get_includedlevels());
-    std::ranges::fill(globals::cellcache[cellcachenum].alllevels_macroatomrates_set, false);
 
     if (allphixstargetcount > 0) {
       resize_exactly(globals::cellcache[cellcachenum].allphixstargets_corrphotoioncoeff, allphixstargetcount);

@@ -1206,7 +1206,10 @@ void cellcache_change_cell(const int nonemptymgi) {
     std::ranges::fill(cacheslot.allphixstargets_stimrecombcoeff, -99.);
   }
 
-  std::ranges::fill(cacheslot.alllevels_macroatomrates_set, false);
+  for (int uniquelevelindex = 0; uniquelevelindex < std::ssize(cacheslot.alllevels_maprocessrates);
+       uniquelevelindex++) {
+    cacheslot.alllevels_maprocessrates[uniquelevelindex][0] = -99.;
+  }
 
   if (nonemptymgi >= 0) {
     std::ranges::fill(cacheslot.allcont_departureratios, -1.);

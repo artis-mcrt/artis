@@ -156,7 +156,6 @@ struct CellCache {
   int nonemptymgi{-1};  // non-empty model grid index for this cache slot
   std::vector<double> cooling_contrib;  // Cooling contributions by the different processes.
   std::vector<double> alllevels_pops;
-  std::vector<bool> alllevels_macroatomrates_set;
   std::vector<std::array<double, MA_ACTION_COUNT>> alllevels_maprocessrates;  // rates for macroatom processes
   std::vector<int> alllevels_matransblock_start;  // index into allmacroatomictransitions for each level
   std::vector<double> allmacroatomictransitions;  // cumulative macroatom transition rates for all levels

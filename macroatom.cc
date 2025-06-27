@@ -78,10 +78,9 @@ FILE *macroatom_file{};
 auto calculate_macroatom_transitionrates(const int nonemptymgi, const int element, const int ion, const int level,
                                          const double t_mid, const globals::AllTransitions &alltrans) {
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
+  auto processrates = std::array<double, MA_ACTION_COUNT>{};
   const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
   const auto uniquelevelindex = ionuniquelevelindexstart + level;
-
-  auto &processrates = globals::cellcache[cellcacheslotid].alllevels_maprocessrates[uniquelevelindex];
 
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
@@ -197,7 +196,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   processrates[MA_ACTION_INTERNALUPHIGHERNT] = sum_up_highernt;
   processrates[MA_ACTION_INTERNALUPHIGHER] = sum_up_higher;
 
-  globals::cellcache[cellcacheslotid].alllevels_macroatomrates_set[uniquelevelindex] = true;
+  return processrates;
 }
 
 // radiative deexcitation
@@ -394,7 +393,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
     const int uniquelevelindex = ionuniquelevelindexstart + level;
 
     const double epsilon_current = epsilon(uniquelevelindex);
-
+    auto &processrates = globals::cellcache[cellcacheslotid].alllevels_maprocessrates[uniquelevelindex];
     {
 #if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
       const auto lock = std::lock_guard<std::mutex>(globals::mutex_cellcachemacroatom[uniquelevelindex]);
@@ -403,11 +402,10 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
       assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
 
       // If there are no precalculated rates available then calculate them
-      if (!globals::cellcache[cellcacheslotid].alllevels_macroatomrates_set[uniquelevelindex]) {
-        calculate_macroatom_transitionrates(nonemptymgi, element, ion, level, t_mid, globals::alltrans);
+      if (processrates[0] < 0.) {
+        processrates = calculate_macroatom_transitionrates(nonemptymgi, element, ion, level, t_mid, globals::alltrans);
       }
     }
-    const auto &processrates = globals::cellcache[cellcacheslotid].alllevels_maprocessrates[uniquelevelindex];
 
     // for debugging the transition rates:
     // {
