@@ -82,11 +82,7 @@ constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
 
-constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) {
-  // To have only BF estimators for NLTE levels:
-  // return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage);
-  return true;
-}
+constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return true; }
 
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
 
