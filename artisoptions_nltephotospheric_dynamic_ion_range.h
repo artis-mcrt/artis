@@ -35,7 +35,7 @@ constexpr bool single_level_top_ion = false;
 
 constexpr bool single_ground_level = false;
 
-constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return ION_NLEVELS_NLTE(Z, ionstage); }
+constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return (Z < 20) ? 100 : 200; }
 
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
