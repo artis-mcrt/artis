@@ -256,8 +256,7 @@ inline auto get_atomicnumber(const int element) -> int {
 // (note this function returns true for the ground state,
 //  although it is stored separately from the excited NLTE states)
 [[nodiscard]] inline auto is_nlte(const int element, const int ion, const int level) -> bool {
-  return LEVEL_IS_NLTE(get_atomicnumber(element), get_ionstage(element, ion),
-                       level);  // defined in artisoptions.h
+  return level <= ION_NLEVELS_EXCITED_NLTE(get_atomicnumber(element), get_ionstage(element, ion));
 }
 
 // Return the elementindex associated with a given atomic number.

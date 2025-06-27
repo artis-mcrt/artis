@@ -16,11 +16,11 @@ constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
 
 constexpr int NLTEITER = 30;
 
-constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) {
+constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
   if (element_z < 20) {
-    return (level <= 100);
+    return 100;
   }
-  return (level <= 200);
+  return 200;
 }
 
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
@@ -83,8 +83,7 @@ constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
 
 constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) {
   // To only BF estimators for NLTE levels:
-  return LEVEL_IS_NLTE(element_z, ionstage, level);
-  return true;
+  return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage);
 }
 
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
