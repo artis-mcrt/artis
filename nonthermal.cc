@@ -1,5 +1,6 @@
 #include "nonthermal.h"
 
+#pragma clang unsafe_buffer_usage begin
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cblas.h>
 #include <gsl/gsl_linalg.h>
@@ -7,6 +8,7 @@
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_vector_double.h>
 #include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include <algorithm>
 #include <array>
@@ -1438,9 +1440,12 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
       get_xs_excitation_vector(alltransindex, statweight_lower, epsilon_trans);
 
   if (xsstartindex >= 0) {
-    const double y_xs_de =
-        std::inner_product(yvec.begin() + xsstartindex, yvec.end(), xs_excitation_vec.begin() + xsstartindex, 0.0) *
-        DELTA_E;
+    double y_xs_de = 0.;
+    for (int i = xsstartindex; i < SFPTS; i++) {
+      y_xs_de += yvec[i] * xs_excitation_vec[i];
+    }
+    // multiply by DELTA_E to get the integral over the energy grid
+    y_xs_de *= DELTA_E;
 
     return y_xs_de / E_init_ev / EV;
   }
@@ -1831,7 +1836,9 @@ void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int no
       auto [vec_xs_excitation_deltae, xsstartindex] =
           get_xs_excitation_vector(alltransindex, statweight_lower, epsilon_trans);
       if (xsstartindex >= 0) {
-        cblas_dscal(SFPTS - xsstartindex, DELTA_E, vec_xs_excitation_deltae.data() + xsstartindex, 1);
+        for (int j = xsstartindex; j < SFPTS; j++) {
+          vec_xs_excitation_deltae[j] *= DELTA_E;
+        }
 
         for (int i = 0; i < SFPTS; i++) {
           const int rowoffset = uppertriangular(i, 0);

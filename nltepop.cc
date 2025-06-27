@@ -1,5 +1,6 @@
 #include "nltepop.h"
 
+#pragma clang unsafe_buffer_usage begin
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cblas.h>
 #include <gsl/gsl_errno.h>
@@ -7,6 +8,7 @@
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_vector_double.h>
+#pragma clang unsafe_buffer_usage end
 
 #include <algorithm>
 #include <cmath>

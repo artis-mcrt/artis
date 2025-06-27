@@ -1,6 +1,8 @@
 #include "ratecoeff.h"
 
+#pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include <algorithm>
 #include <span>
@@ -47,7 +49,7 @@ std::span<double> bfheating_coeffs{};  // for USE_LUT_BFHEATING = true
 struct GSLIntegralParasGammaCorr {
   double nu_edge;
   double departure_ratio;
-  const float *photoion_xs;
+  std::span<const float> photoion_xs;
   float T_e;
   int nonemptymgi;
 };
@@ -390,7 +392,7 @@ void precalculate_rate_coefficient_integrals() {
 
             const double sfac = calculate_sahafact(element, ion, level, upperlevel, T_e, E_threshold);
 
-            assert_always(get_phixs_table(element, ion, level) != nullptr);
+            assert_always(!get_phixs_table(element, ion, level).empty());
             // the threshold of the first target gives nu of the first phixstable point
             const GSLIntegrationParas intparas = {
                 .nu_edge = nu_threshold, .T = T_e, .photoion_xs = get_phixs_table(element, ion, level)};
@@ -490,7 +492,10 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
       return;
     }
 
-    auto *phixstable = get_phixs_table(element, ion, level);
+    const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+    const auto phixsstart = globals::alllevels.phixsstart[uniquelevelindex];
+
+    auto phixstable = globals::allphixs.subspan(phixsstart * globals::NPHIXSPOINTS, globals::NPHIXSPOINTS);
     for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
       phixstable[n] = static_cast<float>(phixstable[n] * factor);
     }

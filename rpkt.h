@@ -25,10 +25,16 @@ struct Phixslist {
   int allcontbegin{0};
   int bfestimend{-1};
   int bfestimbegin{0};
+
+  constexpr Phixslist(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
+      : groundcont_gamma_contr{std::make_unique<double[]>(nbfcontinua_ground)},
+        chi_bf_sum{std::make_unique<double[]>(nbfcontinua)},
+        gamma_contr{std::make_unique<double[]>(bfestimcount)} {}
+
+  constexpr Phixslist() = default;
 };
 
-class Rpkt_continuum_absorptioncoeffs {
- public:
+struct Rpkt_continuum_absorptioncoeffs {
   double nu{-1.};  // frequency at which opacity was calculated
   double total{0.};
   double ffescat{0.};
@@ -36,14 +42,10 @@ class Rpkt_continuum_absorptioncoeffs {
   double bf{0.};
   int nonemptymgi{-1};
   int timestep{-1};
-  Phixslist phixslist{};
+  Phixslist phixslist;
 
-  constexpr Rpkt_continuum_absorptioncoeffs(const int nbfcontinua_ground, const int nbfcontinua,
-                                            const int bfestimcount) {
-    phixslist.groundcont_gamma_contr = std::make_unique<double[]>(nbfcontinua_ground);
-    phixslist.chi_bf_sum = std::make_unique<double[]>(nbfcontinua);
-    phixslist.gamma_contr = std::make_unique<double[]>(bfestimcount);
-  }
+  constexpr Rpkt_continuum_absorptioncoeffs(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
+      : phixslist{nbfcontinua_ground, nbfcontinua, bfestimcount} {}
 
   constexpr Rpkt_continuum_absorptioncoeffs() = default;
 };

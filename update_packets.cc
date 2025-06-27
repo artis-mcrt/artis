@@ -1,9 +1,12 @@
 #include "update_packets.h"
 
+#pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdlib>
 #include <ctime>
 #include <span>
@@ -380,9 +383,10 @@ void update_packets(const int nts, std::span<Packet> packets) {
     const int count_pktupdates = static_cast<int>(std::ranges::count_if(
         packets, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
     const auto updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
-    auto *packetgroupstart = packets.data();
+    std::ptrdiff_t packetgroupstart = 0;
 
     for (auto &pkt : packets) {
+      const auto pktindex = &pkt - packets.data();
       if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
         const int mgi = grid::get_propcell_modelgridindex(pkt.where);
         const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
@@ -391,8 +395,8 @@ void update_packets(const int nts, std::span<Packet> packets) {
              grid::modelgrid[nonemptymgi].thick != 1);
 
         if (cellcache_change_cell_required) {
-          if (packetgroupstart != &pkt) {
-            do_cell_packet_updates(std::span(packetgroupstart, &pkt - packetgroupstart), nts, ts_end);
+          if (packetgroupstart != pktindex) {
+            do_cell_packet_updates(packets.subspan(packetgroupstart, pktindex - packetgroupstart), nts, ts_end);
           }
 
 #ifdef _OPENMP
@@ -402,11 +406,11 @@ void update_packets(const int nts, std::span<Packet> packets) {
             stats::increment(stats::COUNTER_UPDATECELL);
             cellcache_change_cell(nonemptymgi);
           }
-          packetgroupstart = &pkt;
+          packetgroupstart = pktindex;
         }
       }
     }
-    const auto packets_remaining = packets.subspan(packetgroupstart - packets.data());
+    const auto packets_remaining = packets.subspan(packetgroupstart);
     if (!packets_remaining.empty()) {
       do_cell_packet_updates(packets_remaining, nts, ts_end);
     }

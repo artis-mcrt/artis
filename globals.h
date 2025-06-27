@@ -1,7 +1,9 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include <array>
 #include <cmath>
@@ -125,7 +127,7 @@ struct TransitionLine {
 struct GSLIntegrationParas {
   double nu_edge;
   float T;
-  const float *photoion_xs;
+  std::span<const float> photoion_xs;
 };
 
 enum ma_action {
@@ -150,35 +152,19 @@ enum ma_action {
   MA_ACTION_COUNT = 9,
 };
 
-struct CellCacheLevels {
-  std::array<double, MA_ACTION_COUNT> processrates{-1.};
-  double population{NAN};
-  double *sum_epstrans_rad_deexc{nullptr};
-  double *sum_internal_down_same{nullptr};
-  double *sum_internal_up_same{nullptr};
-};
-
-struct CellCacheIons {
-  std::span<CellCacheLevels> chlevels;  // Pointer to the ions levellist.
-};
-
-struct CellCacheElements {
-  std::span<CellCacheIons> chions;  // Pointer to the elements ionlist.
-};
-
 struct CellCache {
+  int nonemptymgi{-1};  // non-empty model grid index for this cache slot
   std::vector<double> cooling_contrib;  // Cooling contributions by the different processes.
-  std::vector<CellCacheElements> chelements;
-  std::vector<CellCacheLevels> ch_all_levels;
-  std::vector<CellCacheIons> ch_all_ions;
-  std::vector<double> ch_allcont_departureratios;
-  std::vector<double> ch_allcont_nnlevel;
-  std::vector<bool> ch_keep_this_cont;
+  std::vector<double> alllevels_pops;
+  std::vector<std::array<double, MA_ACTION_COUNT>> alllevels_maprocessrates;  // rates for macroatom processes
+  std::vector<int> alllevels_matransblock_start;  // index into allmacroatomictransitions for each level
+  std::vector<double> allmacroatomictransitions;  // cumulative macroatom transition rates for all levels
+  std::vector<double> allcont_departureratios;
+  std::vector<double> allcont_nnlevel;
+  std::vector<bool> allcont_keep;
   double chi_ff_nnionpart{-1};
-  int nonemptymgi{-1};  // Identifies the cell the data is valid for.
   std::vector<double> allphixstargets_corrphotoioncoeff;
   std::vector<double> allphixstargets_stimrecombcoeff;
-  std::vector<double> chtransblock;  // cumulative transition rates for all levels
 };
 
 namespace globals {

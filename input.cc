@@ -1,8 +1,10 @@
 #include "input.h"
 
+#pragma clang unsafe_buffer_usage begin
 #include <gsl/gsl_interp.h>
 #include <gsl/gsl_spline.h>
 #include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include <algorithm>
 #include <array>
@@ -1377,9 +1379,6 @@ void setup_cellcache() {
     printout("[info] mem_usage: cellcache coolinglist contribs for thread %d occupies %.3f MB\n", cellcachenum,
              ncoolingterms * sizeof(double) / 1024. / 1024.);
 
-    mem_usage_cellcache += get_nelements() * sizeof(CellCacheElements);
-    resize_exactly(globals::cellcache[cellcachenum].chelements, get_nelements());
-
     size_t allphixstargetcount = 0;
     int chtransblocksize = 0;
     for (int element = 0; element < get_nelements(); element++) {
@@ -1397,8 +1396,9 @@ void setup_cellcache() {
         }
       }
     }
-    resize_exactly(globals::cellcache[cellcachenum].ch_all_levels, get_includedlevels());
-    resize_exactly(globals::cellcache[cellcachenum].ch_all_ions, get_includedions());
+    resize_exactly(globals::cellcache[cellcachenum].alllevels_pops, get_includedlevels());
+    resize_exactly(globals::cellcache[cellcachenum].alllevels_maprocessrates, get_includedlevels());
+    resize_exactly(globals::cellcache[cellcachenum].alllevels_matransblock_start, get_includedlevels());
 
     if (allphixstargetcount > 0) {
       resize_exactly(globals::cellcache[cellcachenum].allphixstargets_corrphotoioncoeff, allphixstargetcount);
@@ -1406,59 +1406,26 @@ void setup_cellcache() {
         resize_exactly(globals::cellcache[cellcachenum].allphixstargets_stimrecombcoeff, allphixstargetcount);
       }
     }
-    mem_usage_cellcache += get_includedlevels() * sizeof(CellCacheLevels) + allphixstargetcount * sizeof(double) * 2;
+    mem_usage_cellcache +=
+        get_includedlevels() * (2 * sizeof(double) + sizeof(int)) + allphixstargetcount * sizeof(double) * 2;
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
     if (chtransblocksize > 0) {
-      resize_exactly(globals::cellcache[cellcachenum].chtransblock, chtransblocksize);
+      resize_exactly(globals::cellcache[cellcachenum].allmacroatomictransitions, chtransblocksize);
     }
 
-    int alllevelindex = 0;
     int chtransindex = 0;
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-      mem_usage_cellcache += nions * sizeof(CellCacheIons);
-      if (nions > 0) {
-        globals::cellcache[cellcachenum].chelements[element].chions =
-            std::span{globals::cellcache[cellcachenum].ch_all_ions}.subspan(get_uniqueionindex(element, 0), nions);
-      }
-
-      for (int ion = 0; ion < nions; ion++) {
-        const int nlevels = get_nlevels(element, ion);
-        auto &chion = globals::cellcache[cellcachenum].chelements[element].chions[ion];
-        chion.chlevels = std::span{globals::cellcache[cellcachenum].ch_all_levels}.subspan(alllevelindex, nlevels);
-
-        assert_always(alllevelindex == get_uniquelevelindex(element, ion, 0));
-        alllevelindex += nlevels;
-
-        for (int level = 0; level < nlevels; level++) {
-          const int ndowntrans = get_ndowntrans(element, ion, level);
-          chion.chlevels[level].sum_epstrans_rad_deexc =
-              std::span{globals::cellcache[cellcachenum].chtransblock}.subspan(chtransindex, ndowntrans).data();
-          chtransindex += ndowntrans;
-        }
-
-        for (int level = 0; level < nlevels; level++) {
-          const int ndowntrans = get_ndowntrans(element, ion, level);
-          chion.chlevels[level].sum_internal_down_same =
-              std::span{globals::cellcache[cellcachenum].chtransblock}.subspan(chtransindex, ndowntrans).data();
-          chtransindex += ndowntrans;
-        }
-
-        for (int level = 0; level < nlevels; level++) {
-          const int nuptrans = get_nuptrans(element, ion, level);
-          chion.chlevels[level].sum_internal_up_same =
-              std::span{globals::cellcache[cellcachenum].chtransblock}.subspan(chtransindex, nuptrans).data();
-          chtransindex += nuptrans;
-        }
-      }
+    for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
+      std::ranges::fill(globals::cellcache[cellcachenum].alllevels_maprocessrates[uniquelevelindex], -99.);
+      globals::cellcache[cellcachenum].alllevels_matransblock_start[uniquelevelindex] = chtransindex;
+      chtransindex += (2 * get_ndowntrans(uniquelevelindex) + get_nuptrans(uniquelevelindex));
     }
     assert_always(chtransindex == chtransblocksize);
 
     assert_always(globals::nbfcontinua >= 0);
-    resize_exactly(globals::cellcache[cellcachenum].ch_allcont_departureratios, globals::nbfcontinua);
-    resize_exactly(globals::cellcache[cellcachenum].ch_allcont_nnlevel, globals::nbfcontinua);
-    resize_exactly(globals::cellcache[cellcachenum].ch_keep_this_cont, globals::nbfcontinua);
+    resize_exactly(globals::cellcache[cellcachenum].allcont_departureratios, globals::nbfcontinua);
+    resize_exactly(globals::cellcache[cellcachenum].allcont_nnlevel, globals::nbfcontinua);
+    resize_exactly(globals::cellcache[cellcachenum].allcont_keep, globals::nbfcontinua);
     mem_usage_cellcache += 2 * globals::nbfcontinua * sizeof(double);
 
     printout("[info] mem_usage: cellcache for thread %d occupies %.3f MB\n", cellcachenum,

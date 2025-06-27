@@ -9,10 +9,8 @@
 #include <tuple>
 
 #include "artisoptions.h"
-#include "constants.h"
 #include "globals.h"
 #include "grid.h"
-#include "ltepop.h"
 #include "sn3d.h"
 
 // highest number of ions for any element
@@ -143,20 +141,20 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   return globals::elements[element].ions[ion].maxrecombininglevel;
 }
 
-[[nodiscard]] inline __host__ __device__ auto get_phixs_table(const int uniquelevelindex) -> float * {
+[[nodiscard]] inline __host__ __device__ auto get_phixs_table(const int uniquelevelindex) -> std::span<const float> {
   const auto phixsstart = globals::alllevels.phixsstart[uniquelevelindex];
   assert_testmodeonly(phixsstart >= 0);
-  return globals::allphixs.data() + (phixsstart * globals::NPHIXSPOINTS);
+  return globals::allphixs.subspan(phixsstart * globals::NPHIXSPOINTS, globals::NPHIXSPOINTS);
 }
 
 [[nodiscard]] inline __host__ __device__ auto get_phixs_table(const int element, const int ion, const int level)
-    -> float * {
+    -> std::span<const float> {
   return get_phixs_table(get_uniquelevelindex(element, ion, level));
 }
 
 // Calculate the photoionisation cross-section at frequency nu out of the atomic data.
-[[nodiscard]] inline auto photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge,
-                                                                 const double nu) -> float {
+[[nodiscard]] inline auto photoionization_crosssection_fromtable(std::span<const float> photoion_xs,
+                                                                 const double nu_edge, const double nu) -> float {
   // if (nu < nu_edge || nu > nu_edge * 1.05)
   //   return 0;
   // else
@@ -245,44 +243,6 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
   return epsilon(get_uniquelevelindex(element, ion, level));
-}
-
-[[nodiscard]] inline auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current)
-    -> double {
-  const auto &line = globals::linelist[lineindex];
-  const int element = line.elementindex;
-  const int ion = line.ionindex;
-  const int lower = line.lowerlevelindex;
-  const int upper = line.upperlevelindex;
-  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
-
-  const double n_l = get_levelpop(nonemptymgi, ionuniquelevelindexstart + lower);
-
-  const double A_ul = line.einstein_A;
-  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * A_ul;
-  const double B_lu =
-      stat_weight(ionuniquelevelindexstart + upper) / stat_weight(ionuniquelevelindexstart + lower) * B_ul;
-
-  return std::max(B_lu * n_l * HCLIGHTOVERFOURPI * t_current, 0.);
-}
-
-[[nodiscard]] inline auto get_tau_sobolev_subupdown(const int nonemptymgi, const TransitionLine &line,
-                                                    const double t_current) -> double {
-  const int element = line.elementindex;
-  const int ion = line.ionindex;
-  const int lower = line.lowerlevelindex;
-  const int upper = line.upperlevelindex;
-
-  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
-  const double n_l = get_levelpop(nonemptymgi, ionuniquelevelindexstart + lower);
-
-  const double A_ul = line.einstein_A;
-  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * A_ul;
-  const double B_lu =
-      stat_weight(ionuniquelevelindexstart + upper) / stat_weight(ionuniquelevelindexstart + lower) * B_ul;
-
-  const double n_u = get_levelpop(nonemptymgi, ionuniquelevelindexstart + upper);
-  return std::max((B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current, 0.);
 }
 
 // Returns the atomic number associated with a given elementindex.

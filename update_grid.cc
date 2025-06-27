@@ -1,6 +1,8 @@
 #include "update_grid.h"
 
+#pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include <algorithm>
 #include <cmath>
@@ -1187,12 +1189,13 @@ void cellcache_change_cell(const int nonemptymgi) {
     if (nonemptymgi >= 0) {
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
-        auto &chion = cacheslot.chelements[element].chions[ion];
+        const auto uniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
         for (int level = 0; level < nlevels; level++) {
-          chion.chlevels[level].population = calculate_levelpop(nonemptymgi, element, ion, level);
+          cacheslot.alllevels_pops[uniquelevelindexstart + level] =
+              calculate_levelpop(nonemptymgi, element, ion, level);
         }
       }
     }
@@ -1203,22 +1206,23 @@ void cellcache_change_cell(const int nonemptymgi) {
     std::ranges::fill(cacheslot.allphixstargets_stimrecombcoeff, -99.);
   }
 
-  for (int uniquelevelindex = 0; uniquelevelindex < std::ssize(cacheslot.ch_all_levels); uniquelevelindex++) {
-    cacheslot.ch_all_levels[uniquelevelindex].processrates[MA_ACTION_INTERNALUPHIGHER] = -99.;
+  for (int uniquelevelindex = 0; uniquelevelindex < std::ssize(cacheslot.alllevels_maprocessrates);
+       uniquelevelindex++) {
+    cacheslot.alllevels_maprocessrates[uniquelevelindex][0] = -99.;
   }
 
   if (nonemptymgi >= 0) {
-    std::ranges::fill(cacheslot.ch_allcont_departureratios, -1.);
+    std::ranges::fill(cacheslot.allcont_departureratios, -1.);
 
     const auto nnetot = grid::get_nnetot(nonemptymgi);
     for (int i = 0; i < globals::nbfcontinua; i++) {
       const int element = globals::allcont[i].element;
       const int ion = globals::allcont[i].ion;
       const int level = globals::allcont[i].level;
-      const auto nnlevel =
-          globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].population;
-      cacheslot.ch_allcont_nnlevel[i] = nnlevel;
-      cacheslot.ch_keep_this_cont[i] = nnlevel > 0 && keep_this_cont(element, ion, level, nonemptymgi, nnetot);
+      const auto uniquelevelindex = globals::allcont[i].uniquelevelindex;
+      const auto nnlevel = globals::cellcache[cellcacheslotid].alllevels_pops[uniquelevelindex];
+      cacheslot.allcont_nnlevel[i] = nnlevel;
+      cacheslot.allcont_keep[i] = nnlevel > 0 && keep_this_cont(element, ion, level, nonemptymgi, nnetot);
     }
   }
 }

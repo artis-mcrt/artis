@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <span>
 #include <string>
 
 #include "sn3d.h"
@@ -20,10 +21,10 @@ using BYTE = unsigned char;  // 8-bit byte
 using WORD = std::uint32_t;  // 32-bit word, change to "long" for 16-bit machines
 
 using MD5_CTX = struct {
-  BYTE data[64];
+  std::array<BYTE, 64> data;
   WORD datalen;
   std::uint64_t bitlen;
-  WORD state[4];
+  std::array<WORD, 4> state;
 };
 
 constexpr auto F(const WORD x, const WORD y, const WORD z) -> WORD { return (x & y) | (~x & z); }
@@ -60,12 +61,12 @@ constexpr auto ii_func(WORD a, const WORD b, const WORD c, const WORD d, const W
 }
 
 /*********************** FUNCTION DEFINITIONS ***********************/
-constexpr void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
+constexpr void md5_transform(MD5_CTX *ctx, std::span<const BYTE> data) {
   WORD a = 0;
   WORD b = 0;
   WORD c = 0;
   WORD d = 0;
-  WORD m[16];
+  std::array<WORD, 16> m{};
   WORD i = 0;
   WORD j = 0;
 
@@ -164,10 +165,10 @@ constexpr void md5_init(MD5_CTX *ctx) {
   ctx->state[3] = 0x10325476;
 }
 
-constexpr void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
+constexpr void md5_update(MD5_CTX *ctx, std::span<const BYTE> data) {
   size_t i = 0;
 
-  for (i = 0; i < len; ++i) {
+  for (i = 0; i < data.size(); ++i) {
     ctx->data[ctx->datalen] = data[i];
     ctx->datalen++;
     if (ctx->datalen == 64) {
@@ -178,7 +179,7 @@ constexpr void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
   }
 }
 
-constexpr void md5_final(MD5_CTX *ctx, BYTE hash[MD5_BLOCK_SIZE]) {
+constexpr void md5_final(MD5_CTX *ctx, std::span<BYTE, MD5_BLOCK_SIZE> hash) {
   size_t i = 0;
 
   i = ctx->datalen;
@@ -195,7 +196,7 @@ constexpr void md5_final(MD5_CTX *ctx, BYTE hash[MD5_BLOCK_SIZE]) {
       ctx->data[i++] = 0x00;
     }
     md5_transform(ctx, ctx->data);
-    memset(ctx->data, 0, 56);
+    memset(ctx->data.data(), 0, 56);
   }
 
   // Append to the padding the total message's length in bits and transform.
@@ -237,12 +238,12 @@ auto md5_file(const std::string &filename) -> std::string {
   while (numbytes != 0 && feof(infile) == 0) {
     numbytes = fread(buffer.data(), sizeof(BYTE), buffer.size(), infile);
     assert_always(ferror(infile) == 0);
-    md5_update(&ctx, buffer.data(), numbytes);
+    md5_update(&ctx, std::span{buffer}.first(numbytes));
   }
 
   fclose(infile);
 
-  BYTE hashbytes[MD5_BLOCK_SIZE];
+  std::array<BYTE, MD5_BLOCK_SIZE> hashbytes{};
   md5_final(&ctx, hashbytes);
 
   std::string hashout(2 * MD5_BLOCK_SIZE, '0');  // Initialize with zeros
@@ -259,9 +260,9 @@ void md5_test() {
 
   constexpr BYTE buffer[] = "md5 test string\n";
 
-  md5_update(&ctx, buffer, sizeof(buffer) - 1);
+  md5_update(&ctx, std::span{buffer}.first(sizeof(buffer) - 1));
 
-  BYTE hashbytes[MD5_BLOCK_SIZE];
+  std::array<BYTE, MD5_BLOCK_SIZE> hashbytes{};
   md5_final(&ctx, hashbytes);
 
   std::string hashout(2 * MD5_BLOCK_SIZE, '0');  // Initialize with zeros

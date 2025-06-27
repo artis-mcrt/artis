@@ -13,7 +13,9 @@
 #include "sn3d.h"
 
 #include <getopt.h>
+#pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 #include <unistd.h>
 
 #include <algorithm>

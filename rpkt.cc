@@ -1,6 +1,8 @@
 #include "rpkt.h"
 
+#pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include <algorithm>
 #include <array>
@@ -70,6 +72,35 @@ constexpr auto get_expopac_bin_nu_upper(const ptrdiff_t binindex) -> double {
 constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
   const auto lambda_upper = expopac_lambdamin + ((binindex + 1) * expopac_deltalambda);
   return 1e8 * CLIGHT / lambda_upper;
+}
+
+[[nodiscard]] auto get_tau_sobolev(const int nonemptymgi, const TransitionLine &line, const double t_current)
+    -> double {
+  const auto ionuniquelevelindexstart = globals::elements[line.elementindex].ions[line.ionindex].uniquelevelindexstart;
+  const int uniquelevelindex_lower = ionuniquelevelindexstart + line.lowerlevelindex;
+  const int uniquelevelindex_upper = ionuniquelevelindexstart + line.upperlevelindex;
+
+  const double n_l = get_levelpop(nonemptymgi, uniquelevelindex_lower);
+
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * line.einstein_A;
+  const double B_lu = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * B_ul;
+
+  return std::max(B_lu * n_l * HCLIGHTOVERFOURPI * t_current, 0.);
+}
+
+[[nodiscard]] auto get_tau_sobolev_subupdown(const int nonemptymgi, const TransitionLine &line, const double t_current)
+    -> double {
+  const auto ionuniquelevelindexstart = globals::elements[line.elementindex].ions[line.ionindex].uniquelevelindexstart;
+  const int uniquelevelindex_lower = ionuniquelevelindexstart + line.lowerlevelindex;
+  const int uniquelevelindex_upper = ionuniquelevelindexstart + line.upperlevelindex;
+
+  const double n_l = get_levelpop(nonemptymgi, uniquelevelindex_lower);
+
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * line.einstein_A;
+  const double B_lu = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * B_ul;
+
+  const double n_u = get_levelpop(nonemptymgi, uniquelevelindex_upper);
+  return std::max((B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current, 0.);
 }
 
 // find any line or continuum interaction occuring before frequency decreases to nu_cmf_abort at distance abort_dist
@@ -466,10 +497,12 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     // Determine in which continuum the bf-absorption occurs
     const double chi_bf_rand = rng_uniform() * chi_bf_inrest;
 
+#pragma clang unsafe_buffer_usage begin
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
     const auto allcontindex = std::upper_bound(phixslist.chi_bf_sum.get() + phixslist.allcontbegin,
                                                phixslist.chi_bf_sum.get() + phixslist.allcontend - 1, chi_bf_rand) -
                               phixslist.chi_bf_sum.get();
+#pragma clang unsafe_buffer_usage end
     assert_always(allcontindex < phixslist.allcontend);
 
     const double nu_edge = globals::allcont[allcontindex].nu_edge;
@@ -827,11 +860,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
     // The bf process happens only if the current cell contains
     // the involved atomic species
     const bool should_keep_this_cont = USECELLHISTANDUPDATEPHIXSLIST
-                                           ? globals::cellcache[cellcacheslotid].ch_keep_this_cont[i]
+                                           ? globals::cellcache[cellcacheslotid].allcont_keep[i]
                                            : keep_this_cont(element, ion, level, nonemptymgi, nnetot);
 
     if (should_keep_this_cont) [[likely]] {
-      const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? globals::cellcache[cellcacheslotid].ch_allcont_nnlevel[i]
+      const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? globals::cellcache[cellcacheslotid].allcont_nnlevel[i]
                                                            : calculate_levelpop(nonemptymgi, element, ion, level);
 
       if (USECELLHISTANDUPDATEPHIXSLIST || nnlevel > 0) {
@@ -841,7 +874,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         if constexpr (!SEPARATE_STIMRECOMB) {
-          double departure_ratio = globals::cellcache[cellcacheslotid].ch_allcont_departureratios[i];
+          double departure_ratio = globals::cellcache[cellcacheslotid].allcont_departureratios[i];
           if (!USECELLHISTANDUPDATEPHIXSLIST || departure_ratio < 0) {
             const int upper = allcont[i].upperlevel;
             const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
@@ -850,7 +883,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
             const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
             departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
             if (USECELLHISTANDUPDATEPHIXSLIST) {
-              globals::cellcache[cellcacheslotid].ch_allcont_departureratios[i] = departure_ratio;
+              globals::cellcache[cellcacheslotid].allcont_departureratios[i] = departure_ratio;
             }
           }
 
@@ -904,12 +937,11 @@ void allocate_expansionopacities() {
 __host__ __device__ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double {
   assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.);
 
-  const auto *kappa_planck_bins = &expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins];
+  const auto kappa_planck_bins = expansionopacity_planck_cumulative.subspan(nonemptymgi * expopac_nbins, expopac_nbins);
 
   const auto rnd_integral = rng_uniform() * kappa_planck_bins[expopac_nbins - 1];
-  const auto *selected_partintegral =
-      std::upper_bound(kappa_planck_bins, kappa_planck_bins + expopac_nbins, rnd_integral);
-  const auto binindex = std::min(selected_partintegral - kappa_planck_bins, expopac_nbins - 1);
+  const auto selected_partintegral = std::upper_bound(kappa_planck_bins.begin(), kappa_planck_bins.end(), rnd_integral);
+  const auto binindex = std::min(selected_partintegral - kappa_planck_bins.begin(), expopac_nbins - 1);
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < expopac_nbins);
 
@@ -1055,7 +1087,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
 
     while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= nu_lower) {
-      const auto tau_line = static_cast<float>(get_tau_sobolev(nonemptymgi, lineindex, t_mid));
+      const auto tau_line = static_cast<float>(get_tau_sobolev(nonemptymgi, globals::linelist[lineindex], t_mid));
       const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
       bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
       lineindex++;

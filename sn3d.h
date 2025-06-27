@@ -1,6 +1,7 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#include <array>
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
@@ -59,7 +60,9 @@
 #include <omp.h>
 #endif
 
+#pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #ifdef __NVCOMPILER_CUDA_ARCH__
 #define THREADLOCALONHOST
@@ -74,7 +77,7 @@ inline bool use_cellcache = false;
 
 extern std::ofstream output_file;
 
-inline char outputlinebuf[1024] = "";
+inline std::array<char, 1024> outputlinebuf = {};
 inline bool outputstartofline = true;
 inline tm timebuf{};
 
@@ -119,8 +122,8 @@ inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...args)
 inline void print_line_start() {
   if (outputstartofline) {
     const time_t now_time = time(nullptr);
-    strftime(outputlinebuf, 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
-    output_file << outputlinebuf << ' ';
+    strftime(outputlinebuf.data(), 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
+    output_file << outputlinebuf.data() << ' ';
   }
 }
 
@@ -128,31 +131,32 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
   print_line_start();
   va_list args{};
   va_start(args, format);
-  vsnprintf(outputlinebuf, sizeof(outputlinebuf), format, args);
+  vsnprintf(outputlinebuf.data(), outputlinebuf.size(), format, args);
   va_end(args);
 
-  outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n');
-  output_file << outputlinebuf;
+  const auto linebuflen = strlen(outputlinebuf.data());
+  outputstartofline = (linebuflen == 0 || (outputlinebuf[linebuflen - 1] == '\n'));
+  output_file << outputlinebuf.data();
   output_file.flush();
 }
 
 template <class... Args>
 inline auto logprintfmt(const std::format_string<Args...> fmt, Args &&...args) -> void {
   print_line_start();
-  std::format_to_n(outputlinebuf, std::size(outputlinebuf), fmt, std::forward<Args>(args)...);
+  std::format_to_n(outputlinebuf.data(), outputlinebuf.size(), fmt, std::forward<Args>(args)...);
 
-  outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n');
-  output_file << outputlinebuf;
+  outputstartofline = (outputlinebuf[strlen(outputlinebuf.data()) - 1] == '\n');
+  output_file << outputlinebuf.data();
   output_file.flush();
 }
 
 template <class... Args>
 inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...args) -> void {
   print_line_start();
-  std::format_to_n(outputlinebuf, std::size(outputlinebuf), fmt, std::forward<Args>(args)...);
+  std::format_to_n(outputlinebuf.data(), outputlinebuf.size(), fmt, std::forward<Args>(args)...);
 
   outputstartofline = true;
-  output_file << outputlinebuf << '\n';
+  output_file << outputlinebuf.data() << '\n';
   output_file.flush();
 }
 
@@ -375,7 +379,9 @@ template <typename T>
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &ptr) == MPI_SUCCESS);
   MPI_Barrier(globals::mpi_comm_node);
   assert_always(ptr != nullptr);
+#pragma clang unsafe_buffer_usage begin
   return {std::span<T>(ptr, num_allranks), mpiwin};
+#pragma clang unsafe_buffer_usage end
 }
 
 template <typename T>
