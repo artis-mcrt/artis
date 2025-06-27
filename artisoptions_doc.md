@@ -15,12 +15,7 @@ constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE;
 // maximum number of NLTE/Te/Spencer-Fano iterations
 constexpr int NLTEITER;
 
-// The return of this function is passed to LEVEL_IS_NLTE and specifies how many levels will be treated in full NLTE.
-// It is only active when LEVEL_IS_NLTE does not return false. The addition of this function enables
-// NLEVELS_REQUIRETRANSITIONS to be specified for each ion relative to the number of NLTE levels for that ion:
-// it is advisable that if NLEVELS_REQUIRETRANSITIONS is active at least a subset of the levels treated in the superlevel
-// are always collisionally connected to lower levels even when transitional data doesn't exist to avoid population inversions
-// occurring in the superlevel.
+// Specify how many levels will be treated in full NLTE, not including the ground state or the superlevel.
 constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
   if (element_z < 20) {
     return 100;
@@ -38,8 +33,8 @@ constexpr bool single_level_top_ion;
 // if false, read from file or autodetect
 constexpr bool single_ground_level;
 
-// option to enforce connecting the lower n levels to all other levels with collisions
-// disable by returning zero
+// Add collisional transitions between the lower n levels and all other levels with collisions (or disable by returning zero)
+// This can prevent fully disconnected levels, whose NLTE populations cannot be determined
 constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
   return ((Z == 26 || Z == 28) && ionstage >= 1) ? 80 : 0;
 }
