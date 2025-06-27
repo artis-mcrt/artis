@@ -8,7 +8,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <span>
-#include <tuple>
 
 #if defined(STDPAR_ON) || defined(_OPENMP_ON)
 #include <mutex>
@@ -39,22 +38,6 @@ constexpr bool LOG_MACROATOM = false;
 
 FILE *macroatom_file{};
 
-[[nodiscard]] auto get_sum_epstrans_rad_deexc_downsame_upsame(const int uniquelevelindex)
-    -> std::tuple<std::span<double>, std::span<double>, std::span<double>> {
-  const auto transblock = std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions};
-  const auto start_sum_epstrans_rad_deexc =
-      globals::cellcache[cellcacheslotid].alllevels_matransblock_start[uniquelevelindex];
-  const auto sum_epstrans_rad_deexc =
-      transblock.subspan(start_sum_epstrans_rad_deexc, get_ndowntrans(uniquelevelindex));
-
-  const auto sum_internal_down_same = transblock.subspan(
-      start_sum_epstrans_rad_deexc + get_ndowntrans(uniquelevelindex), get_ndowntrans(uniquelevelindex));
-
-  const auto sum_internal_up_same = transblock.subspan(
-      start_sum_epstrans_rad_deexc + (2 * get_ndowntrans(uniquelevelindex)), get_nuptrans(uniquelevelindex));
-  return {sum_epstrans_rad_deexc, sum_internal_down_same, sum_internal_up_same};
-}
-
 [[nodiscard]] auto get_sum_internal_down_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
   const auto ndowntrans = get_ndowntrans(uniquelevelindex);
   return std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions}.subspan(
@@ -81,7 +64,12 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
                                          const globals::AllTransitions &alltrans) {
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
   auto processrates = std::array<double, MA_ACTION_COUNT>{};
+
   const auto uniquelevelindex = ionuniquelevelindexstart + level;
+
+  const auto transblock = std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions};
+  const auto alllevels_matransblock_start =
+      globals::cellcache[cellcacheslotid].alllevels_matransblock_start[uniquelevelindex];
 
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
@@ -96,8 +84,9 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   double sum_coldeexc = 0.;
   const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
   const auto ndowntrans = get_ndowntrans(uniquelevelindex);
-  const auto [arr_sum_epstrans_rad_deexc, arr_sum_internal_down_same, cumulative_sum_internal_up_same] =
-      get_sum_epstrans_rad_deexc_downsame_upsame(uniquelevelindex);
+
+  const auto arr_sum_epstrans_rad_deexc = transblock.subspan(alllevels_matransblock_start, ndowntrans);
+  const auto arr_sum_internal_down_same = transblock.subspan(alllevels_matransblock_start + ndowntrans, ndowntrans);
   for (int i = 0; i < ndowntrans; i++) {
     const auto alltransindex = alltrans_startdown + i;
     const int lower = alltrans.targetlevelindex[alltransindex];
@@ -128,6 +117,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   // transitions within the current ionisation stage
   double sum_internal_up_same = 0.;
   const int nuptrans = get_nuptrans(uniquelevelindex);
+  const auto arr_sum_internal_up_same = transblock.subspan(alllevels_matransblock_start + (2 * ndowntrans), nuptrans);
   const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
   for (int ii = 0; ii < nuptrans; ii++) {
     const auto alltransindex = alltrans_startup + ii;
@@ -143,7 +133,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex);
 
     sum_internal_up_same += (R + C + NT) * epsilon_current;
-    cumulative_sum_internal_up_same[ii] = sum_internal_up_same;
+    arr_sum_internal_up_same[ii] = sum_internal_up_same;
   }
   processrates[MA_ACTION_INTERNALUPSAME] = sum_internal_up_same;
 
