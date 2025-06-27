@@ -28,11 +28,6 @@ constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
   return 200;
 }
 
-// this macro function determines which levels of which ions will be treated in full NLTE
-// for now, all NLTE levels should be contiguous and include the ground state
-// (i.e. level indices < X should return true for some X)
-constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) { return false; }
-
 // Use TJ radiation density temperature for Boltzmann excitation formula instead of electron temperature Te
 // This is default on for classic, and off for nebularnlte, where it affects the super-level
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;

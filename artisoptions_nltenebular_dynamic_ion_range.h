@@ -23,10 +23,6 @@ constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
   return 200;
 }
 
-constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) {
-  return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage);
-}
-
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
 
 constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }
@@ -87,8 +83,7 @@ constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
 
 constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) {
   // To only BF estimators for NLTE levels:
-  return LEVEL_IS_NLTE(element_z, ionstage, level);
-  // return true;
+  return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage);
 }
 
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
