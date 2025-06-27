@@ -392,19 +392,6 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
       }
     }
 
-    // for debugging the transition rates:
-    // {
-    //   printout("macroatom element %d ion %d level %d\n", element, ion, level);
-
-    //   const char *actionlabel[MA_ACTION_COUNT] = {
-    //       "MA_ACTION_RADDEEXC",       "MA_ACTION_COLDEEXC",         "MA_ACTION_RADRECOMB",
-    //       "MA_ACTION_COLRECOMB",      "MA_ACTION_INTERNALDOWNSAME", "MA_ACTION_INTERNALDOWNLOWER",
-    //       "MA_ACTION_INTERNALUPSAME", "MA_ACTION_INTERNALUPHIGHER", "MA_ACTION_INTERNALUPHIGHERNT"};
-
-    //   for (int action = 0; action < MA_ACTION_COUNT; action++)
-    //     printout("actions: %30s %g\n", actionlabel[action], processrates[action]);
-    // }
-
     // select transition according to probabilities
     std::array<double, MA_ACTION_COUNT> cumulative_transitions{};
     std::partial_sum(processrates.cbegin(), processrates.cend(), cumulative_transitions.begin());
