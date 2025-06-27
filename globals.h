@@ -164,7 +164,7 @@ struct CellCache {
   int nonemptymgi{-1};  // Identifies the cell the data is valid for.
   std::vector<double> allphixstargets_corrphotoioncoeff;
   std::vector<double> allphixstargets_stimrecombcoeff;
-  std::vector<double> chtransblock;  // cumulative transition rates for all levels
+  std::vector<double> chtransblock;  // cumulative macroatom transition rates for all levels
 };
 
 namespace globals {
