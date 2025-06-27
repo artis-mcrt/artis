@@ -74,6 +74,43 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
   return 1e8 * CLIGHT / lambda_upper;
 }
 
+[[nodiscard]] auto get_tau_sobolev(const int nonemptymgi, const TransitionLine &line, const double t_current)
+    -> double {
+  const int element = line.elementindex;
+  const int ion = line.ionindex;
+  const int lower = line.lowerlevelindex;
+  const int upper = line.upperlevelindex;
+  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+
+  const double n_l = get_levelpop(nonemptymgi, ionuniquelevelindexstart + lower);
+
+  const double A_ul = line.einstein_A;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * A_ul;
+  const double B_lu =
+      stat_weight(ionuniquelevelindexstart + upper) / stat_weight(ionuniquelevelindexstart + lower) * B_ul;
+
+  return std::max(B_lu * n_l * HCLIGHTOVERFOURPI * t_current, 0.);
+}
+
+[[nodiscard]] auto get_tau_sobolev_subupdown(const int nonemptymgi, const TransitionLine &line, const double t_current)
+    -> double {
+  const int element = line.elementindex;
+  const int ion = line.ionindex;
+  const int lower = line.lowerlevelindex;
+  const int upper = line.upperlevelindex;
+  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+
+  const double n_l = get_levelpop(nonemptymgi, ionuniquelevelindexstart + lower);
+
+  const double A_ul = line.einstein_A;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * A_ul;
+  const double B_lu =
+      stat_weight(ionuniquelevelindexstart + upper) / stat_weight(ionuniquelevelindexstart + lower) * B_ul;
+
+  const double n_u = get_levelpop(nonemptymgi, ionuniquelevelindexstart + upper);
+  return std::max((B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current, 0.);
+}
+
 // find any line or continuum interaction occuring before frequency decreases to nu_cmf_abort at distance abort_dist
 auto get_possible_event(const int nonemptymgi, const Packet &pkt, const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
                         MacroAtomState &mastate,
@@ -1058,7 +1095,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
 
     while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= nu_lower) {
-      const auto tau_line = static_cast<float>(get_tau_sobolev(nonemptymgi, lineindex, t_mid));
+      const auto tau_line = static_cast<float>(get_tau_sobolev(nonemptymgi, globals::linelist[lineindex], t_mid));
       const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
       bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
       lineindex++;
