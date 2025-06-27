@@ -16,7 +16,7 @@ constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
 
 constexpr int NLTEITER = 30;
 
-constexpr int ION_NLEVELS_NLTE(int element_z, int ionstage) {
+constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
   if (element_z == 26 && ionstage == 2) {
     return 197;
   }
@@ -24,7 +24,7 @@ constexpr int ION_NLEVELS_NLTE(int element_z, int ionstage) {
 }
 
 constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) {
-  return level <= ION_NLEVELS_NLTE(element_z, ionstage);
+  return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage);
 }
 
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;

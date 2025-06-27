@@ -20,8 +20,8 @@ constexpr int NLTEITER;
 // NLEVELS_REQUIRETRANSITIONS to be specified for each ion relative to the number of NLTE levels for that ion:
 // it is advisable that if NLEVELS_REQUIRETRANSITIONS is active at least a subset of the levels treated in the superlevel
 // are always collisionally connected to lower levels even when transitional data doesn't exist to avoid population inversions
-// occuring in the superlevel. 
-constexpr int ION_NLEVELS_NLTE(int element_z, int ionstage) {
+// occuring in the superlevel.
+constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
   if (element_z < 20) {
     return 100;
   }
