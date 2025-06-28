@@ -1242,7 +1242,9 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
           nions_used = nions_used - 1;  // remove the bottom ion from the solution
           first_ion_used++;  // increment the first ion used to the next ion
         } else {
-          printout("  WARNING: can't remove bottom ion stage from NLTE solution, returning matrix solve fail\n");
+          printout(
+              "  WARNING: can't remove bottom ion stage from NLTE solution either therefore unable to find an NLTE "
+              "solution for this element \n");
         }
       }
       if (!remove_bottom_ion_from_solution && !remove_top_ion_from_solution) {
