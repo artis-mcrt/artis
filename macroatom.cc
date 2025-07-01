@@ -502,54 +502,39 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
       case MA_ACTION_INTERNALDOWNLOWER: {
         // printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
         stats::increment(stats::COUNTER_INTERACTIONS);
-
         stats::increment(stats::COUNTER_MA_STAT_INTERNALDOWNLOWER);
-
-        // Randomly select the occurring transition
-        const double targetrate = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNLOWER];
-        // zrand = 1. - 1e-14;
-        double rate = 0.;
-        // nlevels = get_nlevels(element,ion-1);
-
-        const int nlevels = get_nlevels_ionising(element, ion - 1);
-        // nlevels = get_nlevels_ionising(element,ion-1);
-        int lower = 0;
-        for (lower = 0; lower < nlevels; lower++) {
-          const double epsilon_target = epsilon(element, ion - 1, lower);
-          const double epsilon_trans = epsilon_current - epsilon_target;
-          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, nonemptymgi);
-          const double C = col_recombination_ratecoeff(T_e, nne, element, ion, level, lower, epsilon_trans);
-          rate += (R + C) * epsilon_target;
-          if (targetrate < rate) {
-            break;
-          }
-        }
-        // and set the macroatom's new state
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
         }
 
-        ion -= 1;
+        // Randomly select the occurring transition
+        const double targetrate = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNLOWER];
+        double rate = 0.;
+
+        const int nlevels = get_nlevels_ionising(element, ion - 1);
+        int lower = -1;
+        const auto lowerionuniquelevelindexstart = globals::elements[element].ions[ion - 1].uniquelevelindexstart;
+        for (int tmp_lower = 0; tmp_lower < nlevels; tmp_lower++) {
+          const double epsilon_target = epsilon(lowerionuniquelevelindexstart + tmp_lower);
+          const double epsilon_trans = epsilon_current - epsilon_target;
+          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, tmp_lower, nonemptymgi);
+          const double C = col_recombination_ratecoeff(T_e, nne, element, ion, level, tmp_lower, epsilon_trans);
+          rate += (R + C) * epsilon_target;
+          if (rate > targetrate) {
+            lower = tmp_lower;
+            break;
+          }
+        }
+        assert_always(lower >= 0);
+
+        ion--;
         level = lower;
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
         }
 
-        if (lower >= nlevels) {
-          printout("internal_down_lower  %g\n", processrates[MA_ACTION_INTERNALDOWNLOWER]);
-          printout("abort at rate %g, targetrate %g\n", rate, targetrate);
-          std::abort();
-        }
-        if (get_ionstage(element, ion) == 0 && lower == 0) {
-          printout("internal downward transition to ground level occurred ... abort\n");
-          printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
-          printout("Z %d, ionstage %d, energy %g\n", get_atomicnumber(element), get_ionstage(element, ion - 1),
-                   epsilon(element, ion - 1, lower));
-          printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
-          std::abort();
-        }
         break;
       }
 

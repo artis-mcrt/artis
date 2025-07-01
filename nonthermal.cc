@@ -2608,10 +2608,7 @@ void read_restart_data(FILE *gridsave_file) {
 
   int code_check = 0;
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
-  if (code_check != 24724518) {
-    printout("ERROR: Beginning of non-thermal restart data not found! Found %d instead of 24724518\n", code_check);
-    std::abort();
-  }
+  assert_always(code_check == 24724518);  // special number marking the beginning of NT data
 
   int sfpts_in = 0;
   double SF_EMIN_in{NAN};

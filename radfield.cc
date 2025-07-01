@@ -1155,10 +1155,7 @@ void read_restart_data(FILE *gridsave_file) {
 
   int code_check = 0;
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
-  if (code_check != 30490824) {
-    printout("ERROR: Beginning of radfield restart data not found! Found %d instead of 30490824\n", code_check);
-    std::abort();
-  }
+  assert_always(code_check == 30490824);
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     double T_R_min_in{NAN};
@@ -1266,10 +1263,7 @@ void read_restart_data(FILE *gridsave_file) {
     }
   }
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
-  if (code_check != 42809403) {
-    printout("ERROR: End of radfield restart data not found! Found %d instead of 42809403\n", code_check);
-    std::abort();
-  }
+  assert_always(code_check == 42809403);
 }
 
 }  // namespace radfield

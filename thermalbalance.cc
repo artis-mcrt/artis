@@ -49,13 +49,8 @@ auto integrand_bfheatingcoeff_custom_radfield(const double nu, void *const voidp
   const int nonemptymgi = params->nonemptymgi;
   const double nu_edge = params->nu_edge;
   const float T_R = params->T_R;
-  // const double Te_TR_factor = params->Te_TR_factor; // = sqrt(T_e/T_R) * sahafac(Te) / sahafac(TR)
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
-
-  // const auto T_e = grid::get_Te(nonemptymgi);
-  // return sigma_bf * (1 - nu_edge/nu) * radfield::radfield(nu,nonemptymgi) * (1 - Te_TR_factor * exp(-HOVERKB * nu
-  // / T_e));
 
   return sigma_bf * (1 - nu_edge / nu) * radfield::radfield(nu, nonemptymgi) * (1 - exp(-HOVERKB * nu / T_R));
 }
@@ -67,23 +62,15 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   const double epsrelwarning = 1e-1;
   const double epsabs = 0.;
 
-  // const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-  // const double E_threshold = epsilon(element, ion + 1, upperionlevel) - epsilon(element, ion, level);
   const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
 
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  // const auto T_e = grid::get_Te(nonemptymgi);
-  // const double T_R = grid::get_TR(nonemptymgi);
-  // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
-  // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
   const BFHeatingIntegralParams intparas = {.nu_edge = nu_threshold,
                                             .nonemptymgi = nonemptymgi,
                                             .T_R = grid::get_TR(nonemptymgi),
                                             .photoion_xs = get_phixs_table(element, ion, level)};
-
-  // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
 
   double bfheating = 0.;
 
@@ -158,16 +145,8 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
     }
 
     // Collisional heating: recombination to lower ionization stage (not included)
-    // ------------------------------------------------------------
 
     // Bound-free heating (renormalised analytical calculation)
-    // --------------------------------------------------------
-    // We allow bound free-transitions only if there is a higher ionisation stage
-    // left in the model atom to match the bound-free absorption in the rpkt routine.
-    // There this condition is needed as we can only ionise to existing ionisation
-    // stage even if there would be further ionisation stages in nature which
-    // are not included in the model atom.
-
     for (int ion = 0; ion < nions - 1; ion++) {
       const int nbflevels = get_nlevels_ionising(element, ion);
       const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
@@ -180,7 +159,6 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
   }
 
   // Free-free heating (from estimators)
-
   ffheating = globals::ffheatingestimator[nonemptymgi];
 
   if constexpr (DIRECT_COL_HEAT) {
@@ -219,6 +197,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *const paras) -> doubl
       }
     }
   }
+
   // Set new T_e guess for the current cell and update populations
   grid::set_Te(nonemptymgi, fT_e);
 

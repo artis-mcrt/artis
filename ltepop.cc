@@ -46,7 +46,7 @@ auto interpolate_ions_spontrecombcoeff(const int uniqueionindex, const double T)
 }
 
 // use Saha equation for LTE ionization balance
-auto phi_saha(const int element, const int ion, const int nonemptymgi) -> double {
+[[nodiscard]] auto phi_saha(const int element, const int ion, const int nonemptymgi) -> double {
   const int uniqueionindex = get_uniqueionindex(element, ion);
   const auto partfunc_ion =
       grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex];
