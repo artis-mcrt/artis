@@ -294,18 +294,6 @@ auto std_compare_packets_bymodelgriddensity(const Packet &p1, const Packet &p2) 
     return false;
   }
 
-  // const auto ts_end = globals::timesteps[globals::timestep].start + globals::timesteps[globals::timestep].width;
-
-  // const bool pktdone1 = (p1.prop_time >= ts_end);
-  // const bool pktdone2 = (p2.prop_time >= ts_end);
-
-  // if (!pktdone1 && pktdone2) {
-  //   return true;
-  // }
-  // if (pktdone1) {
-  //   return false;
-  // }
-
   // for both non-escaped packets, order by descending cell density
   const int mgi1 = grid::get_propcell_modelgridindex(p1.where);
   const int mgi2 = grid::get_propcell_modelgridindex(p2.where);

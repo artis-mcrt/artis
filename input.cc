@@ -928,11 +928,6 @@ void read_phixs_data() {
           if (nlevels_groundterm != phixstargetlevels) {
             printout("WARNING: Z=%d ionstage %d nlevels_groundterm %d phixstargetlevels(ion-1) %d.\n",
                      get_atomicnumber(element), get_ionstage(element, ion), nlevels_groundterm, phixstargetlevels);
-            // if (nlevels_groundterm < phixstargetlevels)
-            // {
-            //   printout("  -> setting to %d\n", phixstargetlevels);
-            //   globals::elements[element].ions[ion].nlevels_groundterm = phixstargetlevels;
-            // }
           }
         }
       }
@@ -1054,11 +1049,6 @@ void read_atomicdata_files() {
       {
         nlevelsmax = 1;
       }
-
-      // if (adata_Z_in == 26 && ionstage == 1)
-      // {
-      //   nlevelsmax = 5;
-      // }
 
       if (nlevelsmax < 0) {
         nlevelsmax = nlevels;

@@ -200,7 +200,6 @@ void set_ncoolingterms() {
       // All the levels add number of col excitations
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
-        // if (ion < nions - 1) and (level < get_nlevels_ionising(element,ion))
         if (ion < nions - 1) {
           ionterms += 2 * get_nphixstargets(element, ion, level);
         }
@@ -398,7 +397,6 @@ __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
   emit_rpkt(pkt);
   // printout("[debug] calculate_chi_rpkt after kpkt to rpkt by ff\n");
   pkt.next_trans = -1;  // FLAG: transition history here not important, cont. process
-  // if (tid == 0) k_stat_to_r_bb++;
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
   stats::increment(stats::COUNTER_INTERACTIONS);
   pkt.emissiontype = EMTYPE_FREEFREE;

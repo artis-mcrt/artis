@@ -372,7 +372,6 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
 
   spec_file << "0 ";
   for (int p = 0; p < numtimesteps; p++) {
-    // fprintf(spec_file, "%g ", globals::timesteps[p].mid / DAY);
     spec_file << globals::timesteps[p].mid / DAY << ' ';
   }
   spec_file << '\n';

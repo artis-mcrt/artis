@@ -696,10 +696,6 @@ auto stim_recombination_ratecoeff(const float nne, const int element, const int 
 // multiply by upper level population to get a rate per second
 auto col_recombination_ratecoeff(const float T_e, const float nne, const int element, const int upperion,
                                  const int upper, const int lower, const double epsilon_trans) -> double {
-  // it's probably faster to only check this condition outside this function
-  // in a case where this wasn't checked, the function will return zero anyway
-  // if (upper > get_maxrecombininglevel(element, upperion))
-  //   return 0.;
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, upperion - 1, lower);
   const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
