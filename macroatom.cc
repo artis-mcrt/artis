@@ -5,8 +5,10 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
-#include <cstdio>
 #include <cstdlib>
+#include <format>
+#include <fstream>
+#include <ios>
 #include <span>
 
 #if defined(STDPAR_ON) || defined(_OPENMP_ON)
@@ -36,7 +38,7 @@ namespace {
 // save to the macroatom_*.out file
 constexpr bool LOG_MACROATOM = false;
 
-FILE *macroatom_file{};
+std::fstream macroatom_file;
 
 [[nodiscard]] auto get_sum_internal_down_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
   const auto ndowntrans = get_ndowntrans(uniquelevelindex);
@@ -418,10 +420,11 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         }
 
         if constexpr (LOG_MACROATOM) {
-          const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-          fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %9d %11.5e %11.5e %11.5e %11.5e\n", globals::timestep,
-                  modelgridindex, get_atomicnumber(element), get_ionstage(element, ion_in), get_ionstage(element, ion),
-                  level_in, level, activatingline, nu_cmf_in, pkt.nu_cmf, nu_rf_in, pkt.nu_rf);
+          macroatom_file << std::format(
+              "{:8d} {:14d} {:2d} {:12d} {:12d} {:9d} {:9d} {:9d} {:11.5e} {:11.5e} {:11.5e} {:11.5e}\n",
+              globals::timestep, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
+              get_ionstage(element, ion_in), get_ionstage(element, ion), level_in, level, activatingline, nu_cmf_in,
+              pkt.nu_cmf, nu_rf_in, pkt.nu_rf);
         }
 
         end_packet = true;
@@ -631,18 +634,17 @@ void macroatom_open_file(const int my_rank) {
   if constexpr (!LOG_MACROATOM) {
     return;
   }
-  char filename[MAXFILENAMELENGTH];
-  snprintf(filename, std::size(filename), "macroatom_%.4d.out", my_rank);
-  assert_always(macroatom_file == nullptr);
-  macroatom_file = fopen_required(filename, "w");
-  fprintf(macroatom_file, "%8s %14s %2s %12s %12s %9s %9s %9s %11s %11s %11s %11s\n", "timestep", "modelgridindex", "Z",
-          "ionstage_in", "ionstage_out", "level_in", "level_out", "activline", "nu_cmf_in", "nu_cmf_out", "nu_rf_in",
-          "nu_rf_out");
+
+  macroatom_file = fstream_required(std::format("macroatom_{:04d}.out", my_rank), std::ios::out | std::ios::trunc);
+
+  macroatom_file << std::format("{:8s} {:14s} {:2s} {:12s} {:12s} {:9s} {:9s} {:9s} {:11s} {:11s} {:11s} {:11s}\n",
+                                "timestep", "modelgridindex", "Z", "ionstage_in", "ionstage_out", "level_in",
+                                "level_out", "activline", "nu_cmf_in", "nu_cmf_out", "nu_rf_in", "nu_rf_out");
 }
 
 void macroatom_close_file() {
-  if (macroatom_file != nullptr) {
-    fclose(macroatom_file);
+  if (macroatom_file.is_open()) {
+    macroatom_file.close();
   }
 }
 
