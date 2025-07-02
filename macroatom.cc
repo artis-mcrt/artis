@@ -5,8 +5,10 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
-#include <cstdio>
 #include <cstdlib>
+#include <format>
+#include <fstream>
+#include <ios>
 #include <span>
 
 #if defined(STDPAR_ON) || defined(_OPENMP_ON)
@@ -36,7 +38,7 @@ namespace {
 // save to the macroatom_*.out file
 constexpr bool LOG_MACROATOM = false;
 
-FILE *macroatom_file{};
+std::fstream macroatom_file;
 
 [[nodiscard]] auto get_sum_internal_down_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
   const auto ndowntrans = get_ndowntrans(uniquelevelindex);
@@ -276,11 +278,6 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int ionuniquelevelindexstar
   // Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
   emit_rpkt(pkt);
 
-  if constexpr (TRACK_ION_STATS) {
-    stats::increment_ion_stats(nonemptymgi, element, upperion, stats::ION_RADRECOMB_MACROATOM,
-                               pkt.e_cmf / H / pkt.nu_cmf);
-  }
-
   pkt.next_trans = -1;  // continuum transition, no restrictions for further line interactions
   pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerionlevel, upperionlevel);
   pkt.em_pos = pkt.pos;
@@ -360,10 +357,6 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
   const double nu_cmf_in = pkt.nu_cmf;
   const double nu_rf_in = pkt.nu_rf;
 
-  if constexpr (TRACK_ION_STATS) {
-    stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_TOTAL, pkt.e_cmf);
-  }
-
   bool end_packet = false;
   while (!end_packet) {
     // Set this here to 1 to overcome problems in cells which have zero population
@@ -408,20 +401,12 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         do_macroatom_raddeexcitation(pkt, ionuniquelevelindexstart, uniquelevelindex, activatingline, epsilon_current,
                                      processrates[MA_ACTION_RADDEEXC]);
 
-        if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC, pkt.e_cmf);
-
-          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_BOUNDBOUND_MACROATOM,
-                                     pkt.e_cmf / H / pkt.nu_cmf);
-
-          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
-        }
-
         if constexpr (LOG_MACROATOM) {
-          const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-          fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %9d %11.5e %11.5e %11.5e %11.5e\n", globals::timestep,
-                  modelgridindex, get_atomicnumber(element), get_ionstage(element, ion_in), get_ionstage(element, ion),
-                  level_in, level, activatingline, nu_cmf_in, pkt.nu_cmf, nu_rf_in, pkt.nu_rf);
+          macroatom_file << std::format(
+              "{:8d} {:14d} {:2d} {:12d} {:12d} {:9d} {:9d} {:9d} {:11.5e} {:11.5e} {:11.5e} {:11.5e}\n",
+              globals::timestep, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
+              get_ionstage(element, ion_in), get_ionstage(element, ion), level_in, level, activatingline, nu_cmf_in,
+              pkt.nu_cmf, nu_rf_in, pkt.nu_rf);
         }
 
         end_packet = true;
@@ -434,11 +419,6 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
         stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC);
         stats::increment(stats::COUNTER_INTERACTIONS);
-
-        if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLDEEXC, pkt.e_cmf);
-          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
-        }
 
         pkt.type = TYPE_KPKT;
         end_packet = true;
@@ -468,12 +448,6 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         // printout("[debug] do_ma:   radiative recombination\n");
         // printout("[debug] do_ma:   element %d, ion %d, level %d\n", element, ion, level);
 
-        if constexpr (TRACK_ION_STATS) {
-          // stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADRECOMB,
-          // pkt.e_cmf); stats::increment_ion_stats(nonemptymgi, element, ion,
-          // stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
-        }
-
         level = do_macroatom_radrecomb(pkt, nonemptymgi, element, ion, level, processrates[MA_ACTION_RADRECOMB]);
         ion -= 1;
         end_packet = true;
@@ -485,11 +459,6 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         // printout("[debug] do_ma:   collisonal recombination\n");
         stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLRECOMB);
         stats::increment(stats::COUNTER_INTERACTIONS);
-
-        if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLRECOMB, pkt.e_cmf);
-          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt.e_cmf);
-        }
 
         pkt.type = TYPE_KPKT;
         end_packet = true;
@@ -503,10 +472,6 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
         // printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
         stats::increment(stats::COUNTER_INTERACTIONS);
         stats::increment(stats::COUNTER_MA_STAT_INTERNALDOWNLOWER);
-
-        if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
-        }
 
         // Randomly select the occurring transition
         const double targetrate = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNLOWER];
@@ -530,10 +495,6 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
         ion--;
         level = lower;
-
-        if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
-        }
 
         break;
       }
@@ -564,35 +525,20 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
 
         stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHER);
 
-        if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
-        }
-
         level = do_macroatom_ionisation(nonemptymgi, element, ion, level, epsilon_current,
                                         processrates[MA_ACTION_INTERNALUPHIGHER]);
         ion += 1;
-
-        if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
-        }
 
         break;
       }
 
       case MA_ACTION_INTERNALUPHIGHERNT: {
         stats::increment(stats::COUNTER_INTERACTIONS);
-        // ion += 1;
-        if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt.e_cmf);
-        }
 
         ion = nonthermal::nt_random_upperion(nonemptymgi, element, ion, false);
         level = 0;
         stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHERNT);
 
-        if constexpr (TRACK_ION_STATS) {
-          stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt.e_cmf);
-        }
         break;
       }
 
@@ -631,18 +577,17 @@ void macroatom_open_file(const int my_rank) {
   if constexpr (!LOG_MACROATOM) {
     return;
   }
-  char filename[MAXFILENAMELENGTH];
-  snprintf(filename, std::size(filename), "macroatom_%.4d.out", my_rank);
-  assert_always(macroatom_file == nullptr);
-  macroatom_file = fopen_required(filename, "w");
-  fprintf(macroatom_file, "%8s %14s %2s %12s %12s %9s %9s %9s %11s %11s %11s %11s\n", "timestep", "modelgridindex", "Z",
-          "ionstage_in", "ionstage_out", "level_in", "level_out", "activline", "nu_cmf_in", "nu_cmf_out", "nu_rf_in",
-          "nu_rf_out");
+
+  macroatom_file = fstream_required(std::format("macroatom_{:04d}.out", my_rank), std::ios::out | std::ios::trunc);
+
+  macroatom_file << std::format("{:8s} {:14s} {:2s} {:12s} {:12s} {:9s} {:9s} {:9s} {:11s} {:11s} {:11s} {:11s}\n",
+                                "timestep", "modelgridindex", "Z", "ionstage_in", "ionstage_out", "level_in",
+                                "level_out", "activline", "nu_cmf_in", "nu_cmf_out", "nu_rf_in", "nu_rf_out");
 }
 
 void macroatom_close_file() {
-  if (macroatom_file != nullptr) {
-    fclose(macroatom_file);
+  if (macroatom_file.is_open()) {
+    macroatom_file.close();
   }
 }
 

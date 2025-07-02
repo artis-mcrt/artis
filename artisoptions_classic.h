@@ -48,8 +48,6 @@ constexpr bool POL_ON = true;
 constexpr bool VPKT_ON = false;
 constexpr bool VPKT_WRITE_CONTRIBS = false;
 
-constexpr bool TRACK_ION_STATS = false;
-
 constexpr double MINPOP = 1e-30;
 
 constexpr double NU_MIN_R = 1e14;

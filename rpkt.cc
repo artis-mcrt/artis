@@ -437,7 +437,7 @@ void electron_scatter_rpkt(Packet &pkt) {
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 }
 
-void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const int nonemptymgi) {
+void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont) {
   const double nu = pkt.nu_cmf;
 
   const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
@@ -511,18 +511,10 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     const int level = globals::allcont[allcontindex].level;
     const int phixstargetindex = globals::allcont[allcontindex].phixstargetindex;
 
-    if constexpr (TRACK_ION_STATS) {
-      stats::increment_ion_stats_contabsorption(pkt, nonemptymgi, element, ion);
-    }
-
     // decide whether we go to ionisation energy or to the thermal pool
     if (rng_uniform() < nu_edge / nu) {
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BF);
       stats::increment(stats::COUNTER_INTERACTIONS);
-
-      if constexpr (TRACK_ION_STATS) {
-        stats::increment_ion_stats(nonemptymgi, element, ion + 1, stats::ION_MACROATOM_ENERGYIN_PHOTOION, pkt.e_cmf);
-      }
 
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
@@ -539,26 +531,12 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
 }
 
 // handle bound-bound transition and activate macro-atom in corresponding upper-level
-void rpkt_event_boundbound(Packet &pkt, const MacroAtomState &pktmastate, const int nonemptymgi) {
+void rpkt_event_boundbound(Packet &pkt, const MacroAtomState &pktmastate) {
   stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BB);
   stats::increment(stats::COUNTER_INTERACTIONS);
 
   pkt.absorptiontype = pktmastate.activatingline;
   pkt.absorptionfreq = pkt.nu_rf;
-
-  if constexpr (TRACK_ION_STATS) {
-    const int element = pktmastate.element;
-    const int ion = pktmastate.ion;
-    stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_RADEXC, pkt.e_cmf);
-
-    const int et = pkt.emissiontype;
-    if (et >= 0) {
-      const int emissionelement = globals::linelist[et].elementindex;
-      const int emissionion = globals::linelist[et].ionindex;
-      stats::increment_ion_stats(nonemptymgi, emissionelement, emissionion, stats::ION_BOUNDBOUND_ABSORBED,
-                                 pkt.e_cmf / H / pkt.nu_cmf);
-    }
-  }
 
   if constexpr (RECORD_LINESTAT) {
     atomicadd(globals::acounter[pkt.next_trans - 1], 1);
@@ -704,7 +682,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     if (thickcell) {
       rpkt_event_thickcell(pkt);
     } else if (event_is_boundbound && RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY < 0.) {
-      rpkt_event_boundbound(pkt, pktmastate, nonemptymgi);
+      rpkt_event_boundbound(pkt, pktmastate);
     } else if (event_is_boundbound) {
       // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
       if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 1. ||
@@ -714,7 +692,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
       }
       rpkt_event_thickcell(pkt);
     } else {
-      rpkt_event_continuum(pkt, chi_rpkt_cont, nonemptymgi);
+      rpkt_event_continuum(pkt, chi_rpkt_cont);
     }
 
     return (pkt.type == TYPE_RPKT);

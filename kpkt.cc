@@ -564,11 +564,6 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
     // and then emitt the packet randomly in the comoving frame
     emit_rpkt(pkt);
 
-    if constexpr (TRACK_ION_STATS) {
-      stats::increment_ion_stats(nonemptymgi, element, lowerion + 1, stats::ION_RADRECOMB_KPKT,
-                                 pkt.e_cmf / H / pkt.nu_cmf);
-    }
-
     pkt.next_trans = -1;  // FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FB);
     pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerlevel, upper);
@@ -618,10 +613,6 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
 
     assert_always(upper >= 0);
 
-    if constexpr (TRACK_ION_STATS) {
-      stats::increment_ion_stats(nonemptymgi, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC, pkt.e_cmf);
-    }
-
     stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLEXC);
     stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLEXC);
 
@@ -635,10 +626,6 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
 
     const int upperion = ion + 1;
     const int upper = coolinglist[i].upperlevel;
-
-    if constexpr (TRACK_ION_STATS) {
-      stats::increment_ion_stats(nonemptymgi, element, upperion, stats::ION_MACROATOM_ENERGYIN_COLLION, pkt.e_cmf);
-    }
 
     stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLION);
     stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLION);

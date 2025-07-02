@@ -2365,14 +2365,6 @@ __host__ __device__ void do_ntlepton_deposit(Packet &pkt) {
 
       stats::increment(stats::COUNTER_NT_STAT_TO_IONIZATION);
 
-      if constexpr (TRACK_ION_STATS) {
-        assert_always(upperion < get_nions(element));
-        assert_always(lowerion >= 0);
-        const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
-        stats::increment_ion_stats(nonemptymgi, element, lowerion, stats::ION_NTION, pkt.e_cmf / epsilon_trans);
-        stats::increment_ion_stats(nonemptymgi, element, upperion, stats::ION_MACROATOM_ENERGYIN_NTCOLLION, pkt.e_cmf);
-      }
-
       do_macroatom(pkt, {.element = element, .ion = upperion, .level = 0, .activatingline = -99});
       return;
     }
