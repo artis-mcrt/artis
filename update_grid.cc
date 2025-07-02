@@ -46,17 +46,13 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
   const auto Y_e = grid::get_electronfrac(nonemptymgi);
-  // fprintf(estimators_file,"%d %g %g %g %g %d
-  // ",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grid::modelgrid[n].thick); fprintf(estimators_file,"%d %g %g %g
-  // %g %g ",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);
+
   fprintf(estimators_file,
           "timestep %d modelgridindex %d titeration %d TR %g Te %g W %g TJ %g grey_depth %g thick %d nne %g Ye %g "
           "tdays %7.2f\n",
           timestep, mgi, titer, grid::get_TR(nonemptymgi), T_e, grid::get_W(nonemptymgi), grid::get_TJ(nonemptymgi),
           grid::modelgrid[nonemptymgi].grey_depth, grid::modelgrid[nonemptymgi].thick, nne, Y_e,
           globals::timesteps[timestep].mid / DAY);
-  // fprintf(estimators_file,"%d %g %g %g %g %g %g %g
-  //",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
   if (globals::total_nlte_levels > 0) {
     nltepop_write_to_file(nonemptymgi, timestep);
@@ -92,121 +88,7 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
       continue;
     }
 
-    // const bool printdebug = false;
-
-    bool assume_lte = true;
-    // bool per_gmpop = true;
-    // const bool lower_superlevel_only = false;
-
-    // if (timestep % 10 == 0)
-    // {
-    //   fprintf(estimators_file, "RRC_LTE_Nahar      Z=%2d", get_atomicnumber(element));
-    //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-    //     fprintf(estimators_file, "              ");
-    //   for (int ion = 0; ion < nions; ion++)
-    //   {
-    //     fprintf(estimators_file, "  %d: %9.3e",
-    //             get_ionstage(element, ion),
-    //             calculate_ionrecombcoeff(-1, T_e, element, ion, assume_lte, false, printdebug,
-    //             lower_superlevel_only, per_gmpop, false));
-    //   }
-    //   fprintf(estimators_file, "\n");
-    // }
-
-    // per_gmpop = false;
-
-    // fprintf(estimators_file, "AlphaLTE_R*nne Z=%2d", get_atomicnumber(element));
-    // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-    //   fprintf(estimators_file, "              ");
-    // for (int ion = 0; ion < nions; ion++)
-    // {
-    //   fprintf(estimators_file, "  %d: %9.3e",
-    //           get_ionstage(element, ion),
-    //           calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug,
-    //           lower_superlevel_only, per_gmpop) * nne);
-    // }
-    // fprintf(estimators_file, "\n");
-
-    assume_lte = false;
-
-    // // spontaneous radiative recombination rate coefficient (may or may not include stim. recomb)
-    // fprintf(estimators_file, "AlphaR*nne         Z=%2d", get_atomicnumber(element));
-    // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-    //   fprintf(estimators_file, "              ");
-    // for (int ion = 0; ion < nions; ion++)
-    // {
-    //   const bool printdebug = false;
-    //   // const bool printdebug = (get_atomicnumber(element) >= 26);
-    //
-    //   fprintf(estimators_file, "  %d: %9.3e",
-    //           get_ionstage(element, ion),
-    //           calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug,
-    //           lower_superlevel_only, per_gmpop, false) * nne);
-    // }
-    // fprintf(estimators_file, "\n");
-    //
-    // if (timestep % 10 == 0)
-    // {
-    //   fprintf(estimators_file, "AlphaR_toSL*nne    Z=%2d", get_atomicnumber(element));
-    //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-    //     fprintf(estimators_file, "              ");
-    //   for (int ion = 0; ion < nions; ion++)
-    //   {
-    //     const bool printdebug = false;
-    //     // const bool printdebug = (get_atomicnumber(element) >= 26);
-    //
-    //     fprintf(estimators_file, "  %d: %9.3e",
-    //             get_ionstage(element, ion),
-    //             calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug, true,
-    //             per_gmpop, false) * nne);
-    //   }
-    //   fprintf(estimators_file, "\n");
-    // }
-
-    // stimulated recombination rate coefficient
-    // fprintf(estimators_file, "Alpha_stim*nne   Z=%2d", get_atomicnumber(element));
-    // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-    //   fprintf(estimators_file, "              ");
-    // for (int ion = 0; ion < nions; ion++)
-    // {
-    //   // const bool printdebug = false;
-    //   const bool printdebug = (get_atomicnumber(element) >= 26);
-    //
-    //   fprintf(estimators_file, "  %d: %9.3e",
-    //           get_ionstage(element, ion),
-    //           calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug,
-    //           lower_superlevel_only, per_gmpop, true) * nne);
-    // }
-    // fprintf(estimators_file, "\n");
-
-    // thermal collisional recombination rate coefficient
-    // fprintf(estimators_file, "Alpha_C*nne      Z=%2d", get_atomicnumber(element));
-    // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-    //   fprintf(estimators_file, "              ");
-    // for (int ion = 0; ion < nions; ion++)
-    // {
-    //   fprintf(estimators_file, "  %d: %9.3e",
-    //           get_ionstage(element, ion),
-    //           calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion, assume_lte, true, printdebug,
-    //           lower_superlevel_only, per_gmpop) * nne);
-    // }
-    // fprintf(estimators_file, "\n");
-
-    // {
-    //   fprintf(estimators_file, "gamma_R            Z=%2d", get_atomicnumber(element));
-    //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-    //     fprintf(estimators_file, "              ");
-    //   for (int ion = 0; ion < nions - 1; ion++)
-    //   {
-    //     // const bool printdebug_gammar = (get_atomicnumber(element) == 26 && get_ionstage(element, ion) == 2);
-    //     const bool printdebug_gammar = false;
-    //     fprintf(estimators_file, "  %d: %9.3e",
-    //             get_ionstage(element, ion),
-    //             calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug_gammar,
-    //             false, false));
-    //   }
-    //   fprintf(estimators_file, "\n");
-    // }
+    const bool assume_lte = false;
 
     if (DETAILED_BF_ESTIMATORS_ON) {
       fprintf(estimators_file, "gamma_R_integral   Z=%2d", get_atomicnumber(element));
@@ -238,29 +120,6 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
       }
       fprintf(estimators_file, "\n");
     }
-
-    // fprintf(estimators_file, "gamma_R_MC_BFsameZ Z=%2d", get_atomicnumber(element));
-    // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-    //   fprintf(estimators_file, "              ");
-    // for (int ion = 0; ion < nions; ion++)
-    // {
-    //   fprintf(estimators_file, "  %d: %9.3e",
-    //           get_ionstage(element, ion),
-    //           get_ion_stats(nonemptymgi, element, ion, stats::ION_PHOTOION_FROMBFSAMEELEMENT]);
-    // }
-    // fprintf(estimators_file, "\n");
-
-    // fprintf(estimators_file, "gamma_C          Z=%2d", get_atomicnumber(element));
-    // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-    //   fprintf(estimators_file, "              ");
-    // for (int ion = 0; ion < nions - 1; ion++)
-    // {
-    //   fprintf(estimators_file, "  %d: %9.3e",
-    //           get_ionstage(element, ion),
-    //           calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, true,
-    //           printdebug));
-    // }
-    // fprintf(estimators_file, "\n");
 
     if (NT_ON) {
       fprintf(estimators_file, "gamma_NT           Z=%2d", get_atomicnumber(element));
@@ -296,9 +155,8 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
     }
   }
 
-  // power densities in erg / s / cm^3
-  // ana means analytical at t_mid, i.e. the rates calculated from the nuclear abundances and decay data, not from
-  // Monte Carlo
+  // power densities in erg / s / cm^3. 'ana' means analytical at t_mid, i.e. the rates calculated from the nuclear
+  // abundances and decay data, not from Monte Carlo events
   fprintf(estimators_file, "emission_ana: gamma %11.5e positron %11.5e electron %11.5e alpha %11.5e\n",
           heatingcoolingrates.eps_gamma_ana, heatingcoolingrates.eps_positron_ana, heatingcoolingrates.eps_electron_ana,
           heatingcoolingrates.eps_alpha_ana);
@@ -323,12 +181,10 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
 }
 
 void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
-                       HeatingCoolingRates &heatingcoolingrates)
-// nts is the timestep number
-{
+                       HeatingCoolingRates &heatingcoolingrates) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  // bfheating coefficients are needed for the T_e solver, but
-  // they only depend on the radiation field, which is fixed during the iterations below
+  // bfheating coefficients are needed for the T_e solver, but they only depend on the radiation field, which is fixed
+  // during the iterations below
   printout("calculate_bfheatingcoeffs for timestep %d cell %d...", nts, mgi);
   const auto sys_time_start_calculate_bfheatingcoeffs = std::time(nullptr);
   thread_local static auto bfheatingcoeffs = std::vector<double>(get_includedlevels());
