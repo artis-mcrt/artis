@@ -561,11 +561,8 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
   }
 
   if constexpr (RECORD_LINESTAT) {
-    // The same for absorption/emission of r-pkts in lines
-    for (int i = 0; i < globals::nlines; i++) {
-      globals::acounter[i] = 0;
-      globals::ecounter[i] = 0;
-    }
+    std::ranges::fill(globals::acounter, 0);
+    std::ranges::fill(globals::ecounter, 0);
   }
 
   // Update the matter quantities in the grid for the new timestep.
