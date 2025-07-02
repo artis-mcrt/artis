@@ -73,8 +73,6 @@ constexpr bool POL_ON;
 // Polarisation for virtual packets
 constexpr bool VPKT_ON;
 
-constexpr bool TRACK_ION_STATS;
-
 constexpr double MINPOP;
 
 constexpr double NU_MIN_R;  // lower frequency boundary for UVOIR spectra and BB sampling

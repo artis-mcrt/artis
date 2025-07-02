@@ -342,10 +342,6 @@ void mpi_reduce_estimators(const int nts) {
   MPI_Allreduce_safe(globals::timesteps[nts].gamma_emission, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].gamma_emission /= globals::nprocs;
 
-  if constexpr (TRACK_ION_STATS) {
-    stats::reduce_estimators();
-  }
-
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -491,11 +487,6 @@ void save_grid_and_packets(const int nts, std::span<const Packet> packets) {
 void zero_estimators() {
   MPI_Barrier(MPI_COMM_WORLD);
   radfield::zero_estimators();
-  if constexpr (TRACK_ION_STATS) {
-    for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-      stats::reset_ion_stats(nonemptymgi);
-    }
-  }
 
   std::ranges::fill(globals::ffheatingestimator, 0.);
   std::ranges::fill(globals::colheatingestimator, 0.);
@@ -814,8 +805,6 @@ auto main(int argc, char *argv[]) -> int {
   printout("barrier after tabulation of rate coefficients: time before barrier %ld, ", std::time(nullptr));
   MPI_Barrier(MPI_COMM_WORLD);
   printout("time after barrier %ld\n", std::time(nullptr));
-
-  stats::init();
 
   // Record the chosen syn_dir
   auto syn_file = std::fstream("syn_dir.txt", std::ios::out | std::ios::trunc);
