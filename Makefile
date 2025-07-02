@@ -224,7 +224,6 @@ else
 	CXXFLAGS += -O3
 	ifeq ($(FASTMATH),OFF)
 		BUILD_DIR := $(BUILD_DIR)_nofastmath
-		CXXFLAGS += -Wno-unknown-pragmas
 	else
 		ifeq ($(COMPILER_NAME),NVHPC)
 			CXXFLAGS += -fast
@@ -237,7 +236,7 @@ endif
 CXXFLAGS += -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow
 
 ifneq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -Wunused-macros -Werror -Wno-error=unknown-pragmas -Wno-error=cast-function-type -MD -MP -ftrivial-auto-var-init=pattern -Wno-unused-function
+	CXXFLAGS += -Wunused-macros -Werror -Wno-unknown-pragmas -Wno-error=cast-function-type -MD -MP -ftrivial-auto-var-init=pattern -Wno-unused-function
 endif
 
 ifeq ($(COMPILER_NAME),CLANG)
