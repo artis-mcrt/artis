@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
+#include <tuple>
 #include <vector>
 
 #include "artisoptions.h"
@@ -167,63 +168,48 @@ auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double {
   return nne_after - nne_assumed;
 }
 
-auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const int ion, const int level,
-                                 bool *const skipminpop) -> double {
+// return population and whether the population came from the nlte solver
+auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const int ion, const int level)
+    -> std::tuple<double, bool> {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
 
-  double nn{NAN};
-
   if (level == 0) {
-    nn = get_groundlevelpop(nonemptymgi, element, ion);
-  } else if (elem_has_nlte_levels(element)) {
+    return {get_groundlevelpop(nonemptymgi, element, ion), false};
+  }
+
+  if (elem_has_nlte_levels(element)) {
     if (is_nlte(element, ion, level)) {
       // first_nlte refers to the first excited state (level=1)
       const double nltepop_over_rho = get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level);
-      if (nltepop_over_rho < -0.9) {
+      if (nltepop_over_rho < 0.) {
         // Case for when no NLTE level information is available yet
-        nn = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
-      } else {
-        nn = nltepop_over_rho * grid::get_rho(nonemptymgi);
-        if (!std::isfinite(nn)) {
-          printout("[fatal] NLTE population failure.\n");
-          printout("element %d ion %d level %d\n", element, ion, level);
-          printout("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, grid::get_rho(nonemptymgi));
-          printout("ground level %g\n", get_groundlevelpop(nonemptymgi, element, ion));
-          std::abort();
-        }
-        *skipminpop = true;
-        return nn;
+        return {calculate_levelpop_boltzmann(nonemptymgi, element, ion, level), false};
       }
-    } else {
-      // level is in the superlevel
-      assert_testmodeonly(level_isinsuperlevel(element, ion, level));
-
-      const double superlevelpop_over_rho = get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion);
-      if (superlevelpop_over_rho < -0.9)  // TODO: should change this to less than zero?
-      {
-        // Case for when no NLTE level information is available yet
-        nn = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
-      } else {
-        nn = superlevelpop_over_rho * grid::get_rho(nonemptymgi) *
-             superlevel_boltzmann(nonemptymgi, element, ion, level);
-        if (!std::isfinite(nn)) {
-          printout("[fatal] NLTE population failure.\n");
-          printout("element %d ion %d level %d\n", element, ion, level);
-          printout("nn %g superlevelpop_over_rho %g rho %g\n", nn, superlevelpop_over_rho, grid::get_rho(nonemptymgi));
-          printout("ground level %g\n", get_groundlevelpop(nonemptymgi, element, ion));
-          std::abort();
-        }
-        *skipminpop = true;
-        return nn;
-      }
+      const double nn = nltepop_over_rho * grid::get_rho(nonemptymgi);
+      assert_testmodeonly(std::isfinite(nn));
+      assert_testmodeonly(nn >= 0.);
+      return {nn, true};
     }
-  } else {
-    nn = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
+
+    // level is in the superlevel
+    assert_testmodeonly(level_isinsuperlevel(element, ion, level));
+
+    const double superlevelpop_over_rho = get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion);
+    if (superlevelpop_over_rho < 0.) {
+      // Case for when no NLTE level information is available yet
+      return {calculate_levelpop_boltzmann(nonemptymgi, element, ion, level), false};
+    }
+
+    const double nn =
+        superlevelpop_over_rho * grid::get_rho(nonemptymgi) * superlevel_boltzmann(nonemptymgi, element, ion, level);
+    assert_testmodeonly(std::isfinite(nn));
+    assert_testmodeonly(nn >= 0.);
+    return {nn, true};
   }
-  *skipminpop = false;
-  return nn;
+
+  return {calculate_levelpop_boltzmann(nonemptymgi, element, ion, level), false};
 }
 
 auto calculate_partfunct(const int element, const int ion, const int nonemptymgi) -> float
@@ -252,9 +238,8 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   const int nlevels = get_nlevels(element, ion);
   const double groundpop = get_groundlevelpop(nonemptymgi, element, ion);
   for (int level = 1; level < nlevels; level++) {
-    bool skipminpop = false;
-    const double nn = calculate_levelpop_nominpop(nonemptymgi, element, ion, level, &skipminpop) / groundpop;
-    U += nn;
+    const auto nn = std::get<0>(calculate_levelpop_nominpop(nonemptymgi, element, ion, level));
+    U += nn / groundpop;
   }
   U *= stat_weight(element, ion, 0);
   const auto U_float = static_cast<float>(U);
@@ -490,8 +475,7 @@ auto calculate_levelpop_boltzmann(const int nonemptymgi, const int element, cons
 }
 
 auto calculate_levelpop(const int nonemptymgi, const int element, const int ion, const int level) -> double {
-  bool skipminpop = false;
-  double nn = calculate_levelpop_nominpop(nonemptymgi, element, ion, level, &skipminpop);
+  auto [nn, skipminpop] = calculate_levelpop_nominpop(nonemptymgi, element, ion, level);
   if (!skipminpop && nn < MINPOP) {
     if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
       nn = MINPOP;
