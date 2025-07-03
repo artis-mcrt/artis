@@ -65,24 +65,24 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
   // Check whether current atomic data and temperature range match
   // the precalculated rate coefficients
 
-  char adatafile_hash_in[33] = "UNKNOWN";
-  if (fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in) != 1) {
+  auto adatafile_hash_in = std::array<char, 33>("UNKNOWN");
+  if (fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in.data()) != 1) {
     return false;
   }
-  printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in);
-  if (strcmp(adatafile_hash.c_str(), adatafile_hash_in) == 0) {
+  printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in.data());
+  if (strcmp(adatafile_hash.c_str(), adatafile_hash_in.data()) == 0) {
     printout("(pass)\n");
   } else {
     printout("MISMATCH: MD5 adata.txt = %s\n", adatafile_hash.c_str());
     return false;
   }
 
-  char compositionfile_hash_in[33] = "UNKNOWN";
-  if (fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in) != 1) {
+  auto compositionfile_hash_in = std::array<char, 33>("UNKNOWN");
+  if (fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in.data()) != 1) {
     return false;
   }
-  printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in);
-  if (strcmp(compositionfile_hash.c_str(), compositionfile_hash_in) == 0) {
+  printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in.data());
+  if (strcmp(compositionfile_hash.c_str(), compositionfile_hash_in.data()) == 0) {
     printout("(pass)\n");
   } else {
     printout("\nMISMATCH: MD5 compositiondata.txt = %s\n", compositionfile_hash.c_str());
@@ -91,12 +91,12 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
-      char phixsfile_hash_in[33] = "UNKNOWN";
-      if (fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) != 1) {
+      auto phixsfile_hash_in = std::array<char, 33>("UNKNOWN");
+      if (fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in.data()) != 1) {
         return false;
       }
-      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver].c_str(), phixsfile_hash_in);
-      if (strcmp(phixsfile_hash[phixsver].data(), phixsfile_hash_in) == 0) {
+      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver].c_str(), phixsfile_hash_in.data());
+      if (strcmp(phixsfile_hash[phixsver].data(), phixsfile_hash_in.data()) == 0) {
         printout("(pass)\n");
       } else {
         printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[phixsver].c_str(), phixsfile_hash[phixsver].data());
