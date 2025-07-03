@@ -731,7 +731,8 @@ auto main(int argc, char *argv[]) -> int {
       walltimelimitseconds = static_cast<int>(walltimehours * 3600);
       printout("walltimelimitseconds = %d\n", walltimelimitseconds);
     } else {
-      fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n", argv[0]);
+      fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n",
+              argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic,)
       std::abort();
     }
   }
