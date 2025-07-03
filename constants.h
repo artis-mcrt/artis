@@ -55,7 +55,6 @@ enum class GridType {
 // constant for van-Regemorter approximation.
 constexpr double C_0 = 5.465e-11;
 
-constexpr int MAXFILENAMELENGTH = 128;
 constexpr size_t GSLWSIZE = 16384;  // GSL integration workspace size
 
 enum class TimeStepSizeMethod { LOGARITHMIC, CONSTANT, LOGARITHMIC_THEN_CONSTANT, CONSTANT_THEN_LOGARITHMIC };
