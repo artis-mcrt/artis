@@ -7,6 +7,7 @@
 #include <fstream>
 #include <functional>
 #include <ios>
+#include <ostream>
 #include <span>
 #include <string>
 #include <vector>
@@ -318,7 +319,7 @@ void mpi_reduce_spectra(Spectra &spectra) {
   }
 }
 
-void write_specpol_param(std::fstream &specpol_file, std::fstream &emissionpol_file, std::fstream &absorptionpol_file,
+void write_specpol_param(std::ostream &specpol_file, std::ostream &emissionpol_file, std::ostream &absorptionpol_file,
                          const Spectra &spec, const int nnu, const bool do_emission_absorption) {
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count

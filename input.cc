@@ -15,6 +15,7 @@
 #include <fstream>
 #include <functional>
 #include <ios>
+#include <istream>
 #include <iterator>
 #include <limits>
 #include <span>
@@ -93,7 +94,7 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     "time steps"};
 
 void read_phixs_data_table(
-    std::fstream &phixsfile, const int nphixspoints_inputtable, const int element, const int lowerion,
+    std::istream &phixsfile, const int nphixspoints_inputtable, const int element, const int lowerion,
     const int lowerlevel, const int upperion, int upperlevel_in, std::vector<float> &tmpallphixs,
     std::vector<PhotoionTarget> &tmpallphixstargets,  // cppcheck-suppress constParameterReference
     size_t *mem_usage_phixs, const int phixs_file_version) {
@@ -347,7 +348,7 @@ constexpr auto downtranslevelstart(const int level) {
   return level * (level + 1) / 2;
 }
 
-void read_ion_levels(std::fstream &adata, const int element, const int ion, const int nions, const int nlevels,
+void read_ion_levels(std::istream &adata, const int element, const int ion, const int nions, const int nlevels,
                      int nlevelsmax, const double energyoffset, const double ionpot,
                      std::vector<EnergyLevelInput> &temp_alllevels) {  // cppcheck-suppress constParameterReference
   for (int level = 0; level < nlevels; level++) {
@@ -382,7 +383,7 @@ void read_ion_levels(std::fstream &adata, const int element, const int ion, cons
   }
 }
 
-void read_ion_transitions(std::fstream &ftransitiondata, const int tottransitions_in_file, int &tottransitions,
+void read_ion_transitions(std::istream &ftransitiondata, const int tottransitions_in_file, int &tottransitions,
                           std::vector<Transition> &iontransitiontable, const int nlevels_requiretransitions,
                           const int nlevels_requiretransitions_upperlevels) {
   iontransitiontable.clear();
@@ -1613,7 +1614,7 @@ void input(int rank) {
 }
 
 // read the next line, skipping any comment lines beginning with '#'
-auto get_noncommentline(std::fstream &input, std::string &line) -> bool {
+auto get_noncommentline(std::istream &input, std::string &line) -> bool {
   while (true) {
     const bool linefound = !(!std::getline(input, line));
     if (!linefound) {
