@@ -1,5 +1,7 @@
 #include "nltepop.h"
 
+#include <format>
+
 #pragma clang unsafe_buffer_usage begin
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cblas.h>
@@ -1400,10 +1402,8 @@ __host__ __device__ auto superlevel_boltzmann(const int nonemptymgi, const int e
 }
 
 void nltepop_open_file(const int my_rank) {
-  char filename[MAXFILENAMELENGTH];
-  snprintf(filename, std::size(filename), "nlte_%.4d.out", my_rank);
   assert_always(nlte_file == nullptr);
-  nlte_file = fopen_required(filename, "w");
+  nlte_file = fopen_required(std::format("nlte_{:04d}.out", my_rank), "w");
   fprintf(nlte_file, "timestep modelgridindex Z ionstage level n_LTE n_NLTE ion_popfrac\n");
 }
 
