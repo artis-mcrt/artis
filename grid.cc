@@ -1776,7 +1776,6 @@ void calculate_kappagrey() {
       } else if (globals::opacity_case == 5) {
         // electron-fraction-dependent opacities
         // values from table 1 of Tanaka et al. (2020).
-        // const double Ye = get_electronfrac(mgi);
         const double Ye = get_initelectronfrac(mgi);
         if (Ye <= 0.1) {
           kappa = 19.5;
