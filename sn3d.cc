@@ -62,7 +62,7 @@ std::fstream output_file;
 namespace {
 constexpr bool VERIFY_WRITTEN_PACKETS_FILES = false;
 
-FILE *linestat_file{};
+std::fstream linestat_file;
 time_t real_time_start = -1;
 time_t time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
 FILE *estimators_file{};
@@ -73,34 +73,34 @@ void initialise_linestat_file() {
     return;
   }
 
-  linestat_file = fopen_required("linestat.out", "w");
+  linestat_file = fstream_required("linestat.out", std::ios::out | std::ios::trunc);
 
   for (int i = 0; i < globals::nlines; i++) {
-    fprintf(linestat_file, "%g ", CLIGHT / globals::linelist[i].nu);
+    linestat_file << CLIGHT / globals::linelist[i].nu;
   }
-  fprintf(linestat_file, "\n");
+  linestat_file << '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    fprintf(linestat_file, "%d ", get_atomicnumber(globals::linelist[i].elementindex));
+    linestat_file << get_atomicnumber(globals::linelist[i].elementindex) << ' ';
   }
-  fprintf(linestat_file, "\n");
+  linestat_file << '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    fprintf(linestat_file, "%d ", get_ionstage(globals::linelist[i].elementindex, globals::linelist[i].ionindex));
+    linestat_file << get_ionstage(globals::linelist[i].elementindex, globals::linelist[i].ionindex) << ' ';
   }
-  fprintf(linestat_file, "\n");
+  linestat_file << '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    fprintf(linestat_file, "%d ", globals::linelist[i].upperlevelindex + 1);
+    linestat_file << (globals::linelist[i].upperlevelindex + 1) << ' ';
   }
-  fprintf(linestat_file, "\n");
+  linestat_file << '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    fprintf(linestat_file, "%d ", globals::linelist[i].lowerlevelindex + 1);
+    linestat_file << (globals::linelist[i].lowerlevelindex + 1) << ' ';
   }
-  fprintf(linestat_file, "\n");
+  linestat_file << '\n';
 
-  fflush(linestat_file);
+  linestat_file.flush();
 }
 
 void write_deposition_file() {
@@ -638,14 +638,14 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
         // Currently linestat information is only properly implemented for MPI only runs
         // For hybrid runs only data from thread 0 is recorded
         for (int i = 0; i < globals::nlines; i++) {
-          fprintf(linestat_file, "%d ", globals::ecounter[i]);
+          linestat_file << globals::ecounter[i] << ' ';
         }
-        fprintf(linestat_file, "\n");
+        linestat_file << '\n';
         for (int i = 0; i < globals::nlines; i++) {
-          fprintf(linestat_file, "%d ", globals::acounter[i]);
+          linestat_file << globals::acounter[i] << ' ';
         }
-        fprintf(linestat_file, "\n");
-        fflush(linestat_file);
+        linestat_file << '\n';
+        linestat_file.flush();
       }
     }
 
@@ -875,8 +875,8 @@ auto main(int argc, char *argv[]) -> int {
   // code.
 
   MPI_Barrier(MPI_COMM_WORLD);
-  if (linestat_file != nullptr) {
-    fclose(linestat_file);
+  if (linestat_file.is_open()) {
+    linestat_file.close();
   }
 
   if ((globals::ntimesteps > globals::timestep_finish) || (terminate_early)) {
