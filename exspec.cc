@@ -1,6 +1,7 @@
 #include "exspec.h"
 
 #include <format>
+#include <ios>
 
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
@@ -8,7 +9,6 @@
 #include <unistd.h>
 
 #include <cstddef>
-#include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
