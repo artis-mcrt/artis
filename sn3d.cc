@@ -688,9 +688,7 @@ auto main(int argc, char *argv[]) -> int {
 #ifdef STDPAR_ON
   printout("C++ standard parallelism (stdpar) is enabled with %d hardware threads\n", get_max_threads());
   for (int t = 1; t < get_max_threads(); t++) {
-    char outputfilename[MAXFILENAMELENGTH];
-    snprintf(outputfilename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, t);
-    std::filesystem::remove(outputfilename);
+    std::filesystem::remove(std::format("output_{}-{}.txt", my_rank, t));
   }
 #endif
 
