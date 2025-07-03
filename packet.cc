@@ -1,5 +1,7 @@
 #include "packet.h"
 
+#include <format>
+
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
@@ -194,10 +196,9 @@ void write_packets(const std::string& filename, std::span<const Packet> pkt) {
 
 void read_temp_packetsfile(const int timestep, const int my_rank, std::span<Packet> pkt) {
   // read binary packets file
-  char filename[MAXFILENAMELENGTH];
-  snprintf(filename, std::size(filename), "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
-  printout("Reading %s...", filename);
+  logprintlnfmt("Reading {}", filename);
   auto packets_file = fopen_required_uniqueptr(filename, "rb");
   assert_always(std::fread(pkt.data(), sizeof(Packet), globals::npkts, packets_file.get()) ==
                 static_cast<size_t>(globals::npkts));
@@ -209,10 +210,9 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<co
   // return true if verification is good, otherwise return false
 
   // read binary packets file
-  char filename[MAXFILENAMELENGTH];
-  snprintf(filename, std::size(filename), "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
-  printout("Verifying file %s...", filename);
+  logprintlnfmt("Verifying file {}", filename);
   auto packets_file = fopen_required_uniqueptr(filename, "rb");
   Packet pkt_in;
   bool readback_passed = true;

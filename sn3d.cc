@@ -58,7 +58,7 @@
 #include "version.h"
 #include "vpkt.h"
 
-std::ofstream output_file;
+std::fstream output_file;
 
 namespace {
 constexpr bool VERIFY_WRITTEN_PACKETS_FILES = false;
@@ -349,34 +349,33 @@ void mpi_reduce_estimators(const int nts) {
 
 void write_temp_packetsfile(const int timestep, const int my_rank, std::span<const Packet> pkt) {
   // write packets binary file (and retry if the write fails)
-  char filename[MAXFILENAMELENGTH];
-  snprintf(filename, std::size(filename), "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
   bool write_success = false;
   while (!write_success) {
-    printout("Writing %s...", filename);
-    FILE *packets_file = fopen(filename, "wb");
+    logprintlnfmt("Writing {}", filename);
+    FILE *packets_file = fopen(filename.c_str(), "wb");
     if (packets_file == nullptr) {
-      printout("ERROR: Could not open file '%s' for mode 'wb'.\n", filename);
+      logprintlnfmt("ERROR: Could not open file '{}' for mode 'wb'.", filename);
       write_success = false;
     } else {
       write_success = (std::fwrite(pkt.data(), sizeof(Packet), globals::npkts, packets_file) ==
                        static_cast<size_t>(globals::npkts));
       if (!write_success) {
-        printout("fwrite() FAILED! will retry...\n");
+        logprintlnfmt("fwrite() FAILED! will retry...");
       }
 
       fclose(packets_file);
     }
 
     if (write_success) {
-      printout("done\n");
+      logprintlnfmt("done");
     }
   }
 }
 
 void remove_temp_packetsfile(const int timestep, const int my_rank) {
-  const auto filename = std::format("packets_{:04d}_ts{:02d}.tmp", my_rank, timestep);
+  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
   if (std::filesystem::exists(filename)) {
     std::filesystem::remove(filename);
@@ -703,10 +702,8 @@ auto main(int argc, char *argv[]) -> int {
 #endif
   {
     // initialise the thread and rank specific output file
-    char outputfilename[MAXFILENAMELENGTH];
-    snprintf(outputfilename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, get_thread_num());
-    output_file = std::ofstream(outputfilename);
-    assert_always(output_file.is_open());
+    output_file =
+        fstream_required(std::format("output_{}-{}.txt", my_rank, get_thread_num()), std::ios::out | std::ios::trunc);
 
 #ifdef _OPENMP
     printout("OpenMP parallelisation is active with %d threads (max %d)\n", omp_get_num_threads(), get_max_threads());

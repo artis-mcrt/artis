@@ -28,7 +28,7 @@
 #include "spectrum_lightcurve.h"
 #include "version.h"
 
-std::ofstream output_file;
+std::fstream output_file;
 
 namespace {
 
@@ -167,11 +167,8 @@ auto main(int argc, char *argv[]) -> int {
 
   check_already_running();
 
-  char filename[MAXFILENAMELENGTH];
   if (globals::my_rank == 0) {
-    snprintf(filename, std::size(filename), "exspec.txt");
-    output_file = std::ofstream(filename);
-    assert_always(output_file.is_open());
+    output_file = fstream_required("exspec.txt", std::ios::out | std::ios::trunc);
   }
 
   printout("git branch %s\n", GIT_BRANCH);

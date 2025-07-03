@@ -75,7 +75,7 @@
 constexpr int cellcacheslotid = 0;
 inline bool use_cellcache = false;
 
-extern std::ofstream output_file;
+extern std::fstream output_file;
 
 inline std::array<char, 1024> outputlinebuf = {};
 inline bool outputstartofline = true;
