@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <ios>
 #include <limits>
@@ -124,17 +125,12 @@ void read_decaydata() {
     std::ranges::transform(strelname, strelname.begin(), [](unsigned char c) { return std::tolower(c); });
 
     // look in the current folder
-    char filename[MAXFILENAMELENGTH];
-    snprintf(filename, std::size(filename), "%s%d_lines.txt", strelname.c_str(), a);
-
-    // look in the 'data' subfolder
-    char filename2[MAXFILENAMELENGTH];
-    snprintf(filename2, MAXFILENAMELENGTH, "data/%s%d_lines.txt", strelname.c_str(), a);
+    const std::string filename = std::format("{}{}_lines.txt", strelname, a);
 
     if (std::ifstream(filename)) {
       read_gamma_spectrum(nucindex, filename);
-    } else if (std::ifstream(filename2)) {
-      read_gamma_spectrum(nucindex, filename2);
+    } else if (std::ifstream("data/" + filename)) {
+      read_gamma_spectrum(nucindex, "data/" + filename);
     } else if (decay::nucdecayenergygamma(nucindex) > 0.) {
       // printout("%s does not exist. Setting 100%% chance of single gamma-line with energy %g MeV\n",
       //   filename, decay::nucdecayenergygamma(z, a) / EV / 1e6);
