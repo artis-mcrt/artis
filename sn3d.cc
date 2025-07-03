@@ -65,7 +65,7 @@ constexpr bool VERIFY_WRITTEN_PACKETS_FILES = false;
 std::fstream linestat_file;
 time_t real_time_start = -1;
 time_t time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
-FILE *estimators_file{};
+std::fstream estimators_file;
 
 void initialise_linestat_file() {
   if (globals::simulation_continued_from_saved && !RECORD_LINESTAT) {
@@ -838,8 +838,8 @@ auto main(int argc, char *argv[]) -> int {
 
   macroatom_open_file(my_rank);
   if (ndo > 0) {
-    assert_always(estimators_file == nullptr);
-    estimators_file = fopen_required(std::format("estimators_{:04d}.out", my_rank), "w");
+    assert_always(!estimators_file.is_open());
+    estimators_file = fstream_required(std::format("estimators_{:04d}.out", my_rank), std::ios::out | std::ios::trunc);
 
     if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {
       nltepop_open_file(my_rank);
@@ -895,8 +895,8 @@ auto main(int argc, char *argv[]) -> int {
       globals::nprocs, get_max_threads(),
       (real_time_end - real_time_start) / 3600. * globals::nprocs * get_max_threads());
 
-  if (estimators_file != nullptr) {
-    fclose(estimators_file);
+  if (estimators_file.is_open()) {
+    estimators_file.close();
   }
 
   macroatom_close_file();
