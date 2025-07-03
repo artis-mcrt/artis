@@ -447,6 +447,7 @@ void init_vspecpol() {
 }
 
 void write_vspecpol(const std::string &filename) {
+  logprintlnfmt("Writing {}", filename);
   auto vspecpol_file = fstream_required(filename, std::ios::out | std::ios::trunc);
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
     vspecpol_file << 0. << ' ';
@@ -783,7 +784,6 @@ void write_timestep(const int nts, const int my_rank, const bool is_final) {
   // write specpol of the virtual packets
   const auto filename_vspecpol =
       is_final ? std::format("vspecpol_{:04d}.out", my_rank) : std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
-  logprintlnfmt("Writing {}", filename_vspecpol);
   write_vspecpol(filename_vspecpol);
 
   if (vgrid_on) {
