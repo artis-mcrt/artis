@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <format>
 #include <iterator>
 #include <span>
 #include <tuple>
@@ -573,10 +574,8 @@ void init(const int my_rank, const int ndo_nonempty) {
              RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
              H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
     if (ndo_nonempty > 0) {
-      char filename[MAXFILENAMELENGTH];
-      snprintf(filename, std::size(filename), "radfield_%.4d.out", my_rank);
       assert_always(radfieldfile == nullptr);
-      radfieldfile = fopen_required(filename, "w");
+      radfieldfile = fopen_required(std::format("radfield_{:04d}", my_rank), "w");
       fprintf(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W\n");
       fflush(radfieldfile);
     }
