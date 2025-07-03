@@ -443,8 +443,6 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
       const int uniqueionindex = get_uniqueionindex(element, ion);
       coolingsum += grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
                                                         uniqueionindex];
-      // printout("Z=%d, ionstage %d, coolingsum %g\n", get_atomicnumber(element), get_ionstage(element, ion),
-      // coolingsum);
       if (coolingsum > rndcool_ion) {
         break;
       }
@@ -479,9 +477,6 @@ __host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
   double C_ion_procsum = globals::cellcache[cellcacheslotid].cooling_contrib[ihigh];
 
   if (C_ion_procsum < 0.) {
-    // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
-    // oldcoolingsum %g\n",
-    //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
     C_ion_procsum = calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ilow, cellcacheslotid, nullptr,
                                                       nullptr, nullptr, nullptr);
     assert_testmodeonly(
