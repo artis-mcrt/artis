@@ -1,5 +1,7 @@
 #include "exspec.h"
 
+#include <format>
+
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
@@ -54,15 +56,14 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     auto pkts_start = pkts.subspan(load_allrank_packets ? p * globals::npkts : 0, globals::npkts);
 
     if (a == -1 || !load_allrank_packets) {
-      char pktfilename[MAXFILENAMELENGTH];
-      snprintf(pktfilename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", 0, p);
-      printout("reading %s (file %d of %d)\n", pktfilename, p + 1, globals::nprocs_exspec);
+      auto pktfilename = std::format("packets{:02d}_{:04d}.out", 0, p);
+      logprintlnfmt("Reading {} (file {} of {})", pktfilename, p + 1, globals::nprocs_exspec);
 
       if (std::filesystem::exists(pktfilename)) {
         read_packets(pktfilename, pkts_start);
       } else {
-        printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n",
-                 pktfilename, globals::timestep_initial);
+        logprintlnfmt("   WARNING {} does not exist - trying temp packets file at beginning of timestep {}...",
+                      pktfilename, globals::timestep_initial);
         read_temp_packetsfile(globals::timestep_initial, p, pkts_start);
       }
     }
