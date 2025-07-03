@@ -446,39 +446,41 @@ void init_vspecpol() {
   }
 }
 
-void write_vspecpol(FILE *specpol_file) {
+void write_vspecpol(const std::string &filename) {
+  FILE *vspecpol_file = fopen_required(filename, "w");
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
-    fprintf(specpol_file, "%g ", 0.);
+    fprintf(vspecpol_file, "%g ", 0.);
 
     for (int l = 0; l < 3; l++) {
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", (vspecpol[p][ind_comb].lower_time + (vspecpol[p][ind_comb].delta_t / 2.)) / DAY);
+        fprintf(vspecpol_file, "%g ", (vspecpol[p][ind_comb].lower_time + (vspecpol[p][ind_comb].delta_t / 2.)) / DAY);
       }
     }
 
-    fprintf(specpol_file, "\n");
+    fprintf(vspecpol_file, "\n");
 
     for (int m = 0; m < VMNUBINS; m++) {
-      fprintf(specpol_file, "%g ", (lower_freq_vspec[m] + (delta_freq_vspec[m] / 2.)));
+      fprintf(vspecpol_file, "%g ", (lower_freq_vspec[m] + (delta_freq_vspec[m] / 2.)));
 
       // Stokes I
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux[m].i);
+        fprintf(vspecpol_file, "%g ", vspecpol[p][ind_comb].flux[m].i);
       }
 
       // Stokes Q
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux[m].q);
+        fprintf(vspecpol_file, "%g ", vspecpol[p][ind_comb].flux[m].q);
       }
 
       // Stokes U
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux[m].u);
+        fprintf(vspecpol_file, "%g ", vspecpol[p][ind_comb].flux[m].u);
       }
 
-      fprintf(specpol_file, "\n");
+      fprintf(vspecpol_file, "\n");
     }
   }
+  fclose(vspecpol_file);
 }
 
 void read_vspecpol(const int my_rank, const int nts) {
@@ -783,9 +785,7 @@ void write_timestep(const int nts, const int my_rank, const bool is_final) {
   const auto filename_vspecpol =
       is_final ? std::format("vspecpol_{:04d}.out", my_rank) : std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
   logprintlnfmt("Writing {}", filename_vspecpol);
-  FILE *vspecpol_file = fopen_required(filename_vspecpol, "w");
-  write_vspecpol(vspecpol_file);
-  fclose(vspecpol_file);
+  write_vspecpol(filename_vspecpol);
 
   if (vgrid_on) {
     const auto filename_vpktgrid = is_final ? std::format("vpkt_grid_{:04d}.out", my_rank)
