@@ -127,16 +127,8 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
                    rpkt_spectra, globals::ntimesteps);
 
     if constexpr (POL_ON) {
-      char specpol_filename[MAXFILENAMELENGTH] = "";
-      snprintf(specpol_filename, sizeof(specpol_filename), "specpol_res_%.2d.out", a);
-
-      char emissionpol_filename[MAXFILENAMELENGTH] = "";
-      snprintf(emissionpol_filename, sizeof(emissionpol_filename), "emissionpol_res_%.2d.out", a);
-
-      char absorptionpol_filename[MAXFILENAMELENGTH] = "";
-      snprintf(absorptionpol_filename, sizeof(absorptionpol_filename), "absorptionpol_res_%.2d.out", a);
-
-      write_specpol(specpol_filename, emissionpol_filename, absorptionpol_filename, &stokes_i, &stokes_q, &stokes_u);
+      write_specpol(std::format("specpol_res_{:02d}.out", a), std::format("emissionpol_res_{:02d}.out", a),
+                    std::format("absorptionpol_res_{:02d}.out", a), &stokes_i, &stokes_q, &stokes_u);
     }
 
     printout("Did %d of %d angle bins.\n", a + 1, MABINS);
