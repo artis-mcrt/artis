@@ -7,9 +7,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <filesystem>
+#include <ios>
 #include <span>
+#include <sstream>
 #include <string>
 #include <tuple>
+
+#include "input.h"
 
 #pragma clang unsafe_buffer_usage begin
 #include <gsl/gsl_errno.h>
@@ -518,13 +523,14 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
 // calibrate the recombination rates to tabulated values by scaling the photoionisation cross sections
 void read_recombrate_file() {
   use_cellcache = false;
-  FILE *recombrate_file = fopen("recombrates.txt", "r");
-  if (recombrate_file == nullptr) {
+
+  if (!std::filesystem::exists("recombrates.txt")) {
     printout("No recombrates.txt file found. Skipping recombination rate scaling...\n");
     return;
   }
 
   printout("Reading recombination rate file (recombrates.txt)...\n");
+  auto recombrate_file = fstream_required("recombrates.txt", std::ios::in);
 
   const float Te_estimate = RECOMBCALIBRATION_T_ELEC;
   const double log_Te_estimate = log10(RECOMBCALIBRATION_T_ELEC);
@@ -541,14 +547,18 @@ void read_recombrate_file() {
   int upperionstage = 0;
   int tablerows = 0;
 
-  while (fscanf(recombrate_file, "%d %d %d\n", &atomicnumber, &upperionstage, &tablerows) > 0) {
+  std::string line;
+  while (get_noncommentline(recombrate_file, line)) {
+    std::stringstream(line) >> atomicnumber >> upperionstage >> tablerows;
     RRCRow T_highestbelow = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
     RRCRow T_lowestabove = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
     T_highestbelow.log_Te = -1;
     T_lowestabove.log_Te = -1;
     for (int i = 0; i < tablerows; i++) {
       RRCRow row{};
-      assert_always(fscanf(recombrate_file, "%lg %lg %lg\n", &row.log_Te, &row.rrc_low_n, &row.rrc_total) == 3);
+      get_noncommentline(recombrate_file, line);
+      std::stringstream(line) >> row.log_Te >> row.rrc_low_n >> row.rrc_total;
+
       if (row.log_Te < log_Te_estimate && row.log_Te > T_highestbelow.log_Te) {
         T_highestbelow.log_Te = row.log_Te;
         T_highestbelow.rrc_low_n = row.rrc_low_n;
@@ -649,7 +659,6 @@ void read_recombrate_file() {
       }
     }
   }
-  fclose(recombrate_file);
 }
 
 void precalculate_ion_alpha_sp() {
