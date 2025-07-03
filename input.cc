@@ -22,7 +22,6 @@
 #include <ios>
 #include <iterator>
 #include <limits>
-#include <memory>
 #include <span>
 #include <sstream>
 #include <string>
@@ -1002,8 +1001,7 @@ void read_atomicdata_files() {
     globals::elements[element].uniqueionindexstart = uniqueionindex;
 
     // Initialize the elements ionlist
-    globals::elements[element].ions = std::make_unique<Ion[]>(nions);
-    assert_always(globals::elements[element].ions != nullptr);
+    resize_exactly(globals::elements[element].ions, nions);
 
     // now read in data for all ions of the current element. before doing so initialize
     // energy scale for the current element (all level energies are stored relative to
