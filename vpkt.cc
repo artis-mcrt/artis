@@ -447,40 +447,39 @@ void init_vspecpol() {
 }
 
 void write_vspecpol(const std::string &filename) {
-  FILE *vspecpol_file = fopen_required(filename, "w");
+  auto vspecpol_file = fstream_required(filename, std::ios::out | std::ios::trunc);
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
-    fprintf(vspecpol_file, "%g ", 0.);
+    vspecpol_file << 0. << ' ';
 
     for (int l = 0; l < 3; l++) {
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(vspecpol_file, "%g ", (vspecpol[p][ind_comb].lower_time + (vspecpol[p][ind_comb].delta_t / 2.)) / DAY);
+        vspecpol_file << (vspecpol[p][ind_comb].lower_time + (vspecpol[p][ind_comb].delta_t / 2.)) / DAY << ' ';
       }
     }
 
-    fprintf(vspecpol_file, "\n");
+    vspecpol_file << '\n';
 
     for (int m = 0; m < VMNUBINS; m++) {
-      fprintf(vspecpol_file, "%g ", (lower_freq_vspec[m] + (delta_freq_vspec[m] / 2.)));
+      vspecpol_file << (lower_freq_vspec[m] + (delta_freq_vspec[m] / 2.)) << ' ';
 
       // Stokes I
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(vspecpol_file, "%g ", vspecpol[p][ind_comb].flux[m].i);
+        vspecpol_file << vspecpol[p][ind_comb].flux[m].i << ' ';
       }
 
       // Stokes Q
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(vspecpol_file, "%g ", vspecpol[p][ind_comb].flux[m].q);
+        vspecpol_file << vspecpol[p][ind_comb].flux[m].q << ' ';
       }
 
       // Stokes U
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(vspecpol_file, "%g ", vspecpol[p][ind_comb].flux[m].u);
+        vspecpol_file << vspecpol[p][ind_comb].flux[m].u << ' ';
       }
 
-      fprintf(vspecpol_file, "\n");
+      vspecpol_file << '\n';
     }
   }
-  fclose(vspecpol_file);
 }
 
 void read_vspecpol(const int my_rank, const int nts) {
