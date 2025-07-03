@@ -117,8 +117,8 @@ auto read_ratecoeff_dat(std::fstream &ratecoeff_file) -> bool {
   int in_nbfcontinua = -1;
   double in_ratecoeff_integral_accuracy = -1.;
   auto ssline = std::stringstream(line);
-  ssline >> std::hexfloat >> in_T_min >> in_T_max >> in_tablesize >> in_nlines >> in_nbfcontinua >>
-      in_ratecoeff_integral_accuracy;
+  ssline >> in_T_min >> in_T_max >> in_tablesize >> in_nlines >> in_nbfcontinua >> in_ratecoeff_integral_accuracy;
+  printout("line: %s\n", line.c_str());
   printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d nbfcontinua %d in_ratecoeff_integral_accuracy %g ",
            in_T_min, in_T_max, in_tablesize, in_nlines, in_nbfcontinua, in_ratecoeff_integral_accuracy);
 
@@ -189,8 +189,8 @@ auto read_ratecoeff_dat(std::fstream &ratecoeff_file) -> bool {
             double in_corrphotoioncoeff{NAN};
             double in_bfheating_coeff{NAN};
             assert_always(std::getline(ratecoeff_file, line));
-            assert_always(std::stringstream(line) >> std::hexfloat >> in_alpha_sp >> in_bfcooling_coeff >>
-                          in_corrphotoioncoeff >> in_bfheating_coeff);
+            assert_always(std::stringstream(line) >> in_alpha_sp >> in_bfcooling_coeff >> in_corrphotoioncoeff >>
+                          in_bfheating_coeff);
 
             // assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
             spontrecombcoeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] = in_alpha_sp;
