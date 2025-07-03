@@ -841,9 +841,7 @@ auto main(int argc, char *argv[]) -> int {
   macroatom_open_file(my_rank);
   if (ndo > 0) {
     assert_always(estimators_file == nullptr);
-    char filename[MAXFILENAMELENGTH];
-    snprintf(filename, std::size(filename), "estimators_%.4d.out", my_rank);
-    estimators_file = fopen_required(filename, "w");
+    estimators_file = fopen_required(std::format("estimators_{:04d}.out", my_rank), "w");
 
     if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {
       nltepop_open_file(my_rank);
