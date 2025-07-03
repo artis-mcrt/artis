@@ -120,24 +120,11 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     // direction bin a
     // line-of-sight dependent spectra and light curves
 
-    char lc_filename[MAXFILENAMELENGTH] = "";
-    snprintf(lc_filename, sizeof(lc_filename), "light_curve_res_%.2d.out", a);
-
-    char spec_filename[MAXFILENAMELENGTH] = "";
-    snprintf(spec_filename, sizeof(spec_filename), "spec_res_%.2d.out", a);
-
-    char emission_filename[MAXFILENAMELENGTH] = "";
-    snprintf(emission_filename, sizeof(emission_filename), "emission_res_%.2d.out", a);
-
-    char trueemission_filename[MAXFILENAMELENGTH] = "";
-    snprintf(trueemission_filename, sizeof(trueemission_filename), "emissiontrue_res_%.2d.out", a);
-
-    char absorption_filename[MAXFILENAMELENGTH] = "";
-    snprintf(absorption_filename, sizeof(absorption_filename), "absorption_res_%.2d.out", a);
-
-    write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
-    write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra,
-                   globals::ntimesteps);
+    write_light_curve(std::format("light_curve_res_{:02d}.out", a), a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf,
+                      globals::ntimesteps);
+    write_spectrum(std::format("spec_res_{:02d}.out", a), std::format("emission_res_{:02d}.out", a),
+                   std::format("emissiontrue_res_{:02d}.out", a), std::format("absorption_res_{:02d}.out", a),
+                   rpkt_spectra, globals::ntimesteps);
 
     if constexpr (POL_ON) {
       char specpol_filename[MAXFILENAMELENGTH] = "";
