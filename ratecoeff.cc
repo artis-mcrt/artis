@@ -220,21 +220,22 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool {
 }
 
 void write_ratecoeff_dat() {
-  FILE *ratecoeff_file = fopen_required("ratecoeff.dat", "w");
-  fprintf(ratecoeff_file, "%32s\n", adatafile_hash.c_str());
-  fprintf(ratecoeff_file, "%32s\n", compositionfile_hash.c_str());
+  auto ratecoeff_file = fstream_required("ratecoeff.dat", std::ios::out | std::ios::trunc);
+  ratecoeff_file << std::hexfloat;
+  ratecoeff_file << adatafile_hash << '\n';
+  ratecoeff_file << compositionfile_hash << '\n';
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
-      fprintf(ratecoeff_file, "%32s\n", phixsfile_hash[phixsver].data());
+      ratecoeff_file << phixsfile_hash[phixsver] << '\n';
     }
   }
-  fprintf(ratecoeff_file, "%la %la %d %d %d %la\n", MINTEMP, MAXTEMP, TABLESIZE, globals::nlines, globals::nbfcontinua,
-          RATECOEFF_INTEGRAL_ACCURACY);
+  ratecoeff_file << MINTEMP << ' ' << MAXTEMP << ' ' << TABLESIZE << ' ' << globals::nlines << ' '
+                 << globals::nbfcontinua << ' ' << RATECOEFF_INTEGRAL_ACCURACY << '\n';
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      fprintf(ratecoeff_file, "%d %d %d %d\n", get_atomicnumber(element), get_ionstage(element, ion),
-              get_nlevels(element, ion), get_nlevels_ionising(element, ion));
+      ratecoeff_file << get_atomicnumber(element) << ' ' << get_ionstage(element, ion) << ' '
+                     << get_nlevels(element, ion) << ' ' << get_nlevels_ionising(element, ion) << '\n';
     }
   }
 
@@ -251,15 +252,14 @@ void write_ratecoeff_dat() {
           for (int iter = 0; iter < TABLESIZE; iter++) {
             const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
 
-            fprintf(ratecoeff_file, "%la %la %la %la\n", spontrecombcoeffs[bflutindex], bfcooling_coeffs[bflutindex],
-                    USE_LUT_PHOTOION ? corrphotoioncoeffs[bflutindex] : -1,
-                    USE_LUT_BFHEATING ? bfheating_coeffs[bflutindex] : -1);
+            ratecoeff_file << spontrecombcoeffs[bflutindex] << ' ' << bfcooling_coeffs[bflutindex] << ' '
+                           << (USE_LUT_PHOTOION ? corrphotoioncoeffs[bflutindex] : -1) << ' '
+                           << (USE_LUT_BFHEATING ? bfheating_coeffs[bflutindex] : -1) << '\n';
           }
         }
       }
     }
   }
-  fclose(ratecoeff_file);
 }
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
