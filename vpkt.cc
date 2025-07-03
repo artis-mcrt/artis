@@ -561,21 +561,19 @@ void read_vpkt_grid(const int my_rank, const int nts) {
 
   const std::string filename = std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts);
   logprintlnfmt("Reading {}", filename);
-  FILE *vpkt_grid_file = fopen_required(filename, "r");
+  auto vpkt_grid_file = fstream_required(filename, std::ios::in);
 
   for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
-          assert_always(fscanf(vpkt_grid_file, "%lg %lg %lg %lg %lg \n", &vgrid[n][m].yvel, &vgrid[n][m].zvel,
-                               &vgrid[n][m].flux[wlbin][obsdirindex].i, &vgrid[n][m].flux[wlbin][obsdirindex].q,
-                               &vgrid[n][m].flux[wlbin][obsdirindex].u) == 5);
+          assert_always(vpkt_grid_file >> vgrid[n][m].yvel >> vgrid[n][m].zvel >>
+                        vgrid[n][m].flux[wlbin][obsdirindex].i >> vgrid[n][m].flux[wlbin][obsdirindex].q >>
+                        vgrid[n][m].flux[wlbin][obsdirindex].u);
         }
       }
     }
   }
-
-  fclose(vpkt_grid_file);
 }
 
 }  // anonymous namespace
