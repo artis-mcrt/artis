@@ -12,9 +12,8 @@ void setup_timesteps();
 void write_timestep_file();
 auto get_noncommentline(std::fstream &input, std::string &line) -> bool;
 
-[[nodiscard]] constexpr auto lineiscommentonly(const std::string_view line) -> bool
 // return true for whitespace-only lines, and lines that are exclusively whitespace up to a '#' character
-{
+[[nodiscard]] constexpr auto lineiscommentonly(const std::string_view line) -> bool {
   for (char const i : line) {
     if (i == '#') {  // anything to the right of a # character doesn't count
       return true;

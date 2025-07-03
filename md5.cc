@@ -258,7 +258,7 @@ void md5_test() {
   MD5_CTX ctx;
   md5_init(&ctx);
 
-  constexpr BYTE buffer[] = "md5 test string\n";
+  constexpr auto buffer = std::array<BYTE, 17>{"md5 test string\n"};
 
   md5_update(&ctx, std::span{buffer}.first(sizeof(buffer) - 1));
 

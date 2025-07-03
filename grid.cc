@@ -1,9 +1,5 @@
 #include "grid.h"
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -15,6 +11,7 @@
 #include <cstring>
 #include <ctime>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -25,6 +22,10 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -828,10 +829,9 @@ void calc_modelinit_totmassradionuclides() {
 }
 
 void read_grid_restart_data(const int timestep) {
-  char filename[MAXFILENAMELENGTH];
-  snprintf(filename, std::size(filename), "gridsave_ts%d.tmp", timestep);
+  const auto filename = std::format("gridsave_ts{}.tmp", timestep);
 
-  printout("READIN GRID SNAPSHOT from %s\n", filename);
+  printout("READIN GRID SNAPSHOT from %s\n", filename.c_str());
   FILE *gridsave_file = fopen_required(filename, "r");
 
   int ntimesteps_in = -1;
@@ -2125,11 +2125,10 @@ void read_ejecta_model() {
 }
 
 void write_grid_restart_data(const int timestep) {
-  char filename[MAXFILENAMELENGTH];
-  snprintf(filename, std::size(filename), "gridsave_ts%d.tmp", timestep);
+  const auto filename = std::format("gridsave_ts{}.tmp", timestep);
 
   const auto sys_time_start_write_restart = std::time(nullptr);
-  printout("Write grid restart data to %s...", filename);
+  printout("Write grid restart data to %s...", filename.c_str());
 
   FILE *gridsave_file = fopen_required(filename, "w");
 

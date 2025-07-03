@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <ios>
 #include <limits>
@@ -124,17 +125,12 @@ void read_decaydata() {
     std::ranges::transform(strelname, strelname.begin(), [](unsigned char c) { return std::tolower(c); });
 
     // look in the current folder
-    char filename[MAXFILENAMELENGTH];
-    snprintf(filename, std::size(filename), "%s%d_lines.txt", strelname.c_str(), a);
-
-    // look in the 'data' subfolder
-    char filename2[MAXFILENAMELENGTH];
-    snprintf(filename2, MAXFILENAMELENGTH, "data/%s%d_lines.txt", strelname.c_str(), a);
+    const std::string filename = std::format("{}{}_lines.txt", strelname, a);
 
     if (std::ifstream(filename)) {
       read_gamma_spectrum(nucindex, filename);
-    } else if (std::ifstream(filename2)) {
-      read_gamma_spectrum(nucindex, filename2);
+    } else if (std::ifstream("data/" + filename)) {
+      read_gamma_spectrum(nucindex, "data/" + filename);
     } else if (decay::nucdecayenergygamma(nucindex) > 0.) {
       // printout("%s does not exist. Setting 100%% chance of single gamma-line with energy %g MeV\n",
       //   filename, decay::nucdecayenergygamma(z, a) / EV / 1e6);
@@ -202,9 +198,7 @@ void init_gamma_linelist() {
 }
 
 void init_xcom_photoion_data() {
-  // read the file
   printout("reading XCOM photoionization data...\n");
-  // reserve memory
   for (int Z = 0; Z < numb_xcom_elements; Z++) {
     photoion_data[Z].reserve(100);
   }
@@ -212,23 +206,18 @@ void init_xcom_photoion_data() {
   if (!std::filesystem::exists(filepath)) {
     filepath = "data/xcom_photoion_data.txt";
   }
-  assert_always(std::filesystem::exists(filepath));
 
-  std::ifstream data_fs(filepath);
+  auto data_fs = fstream_required(filepath, std::ios::in);
   std::string line_str;
-  // now read the file a second time to store the data
-  while (getline(data_fs, line_str)) {
-    if (line_str[0] != '#') {
-      int Z = 0;
-      double E = 0;
-      double sigma = 0;
-      if (3 == std::sscanf(line_str.c_str(), "%d %lg %lg", &Z, &E, &sigma)) {
-        assert_always(Z > 0);
-        assert_always(Z <= numb_xcom_elements);
-        // convert XCOM data to cgs units already here
-        photoion_data[Z - 1].push_back({.energy = E, .sigma_xcom = sigma * 1e-24});
-      }
-    }
+  while (get_noncommentline(data_fs, line_str)) {
+    int Z = 0;
+    double E = 0;
+    double sigma = 0;
+    std::stringstream(line_str) >> Z >> E >> sigma;
+    assert_always(Z > 0);
+    assert_always(Z <= numb_xcom_elements);
+    // convert XCOM data to cgs units already here
+    photoion_data[Z - 1].push_back({.energy = E, .sigma_xcom = sigma * 1e-24});
   }
 }
 
@@ -251,11 +240,10 @@ __host__ __device__ auto choose_gamma_ray(const int nucindex) -> double {
   return NAN;
 }
 
-constexpr auto sigma_compton_partial(const double x, const double f_max) -> double
-// Routine to compute the partial cross section for Compton scattering.
-//   xx is the photon energy (in units of electron mass) and f
-//  is the energy loss factor up to which we wish to integrate.
-{
+// The partial cross section for Compton scattering.
+// - xx: is the photon energy (in units of electron mass)
+// - f_max: is the energy loss factor up to which we wish to integrate
+constexpr auto sigma_compton_partial(const double x, const double f_max) -> double {
   const double term1 = ((x * x) - (2 * x) - 2) * std::log(f_max) / x / x;
   const double term2 = (((f_max * f_max) - 1) / (f_max * f_max)) / 2;
   const double term3 = ((f_max - 1) / x) * ((1 / x) + (2 / f_max) + (1 / (x * f_max)));
@@ -263,8 +251,8 @@ constexpr auto sigma_compton_partial(const double x, const double f_max) -> doub
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
 
+// the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
 auto get_chi_compton_rf(const Packet &pkt) -> double {
-  // calculate the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
   // Start by working out the compton x-section in the co-moving frame.
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
@@ -289,10 +277,8 @@ auto get_chi_compton_rf(const Packet &pkt) -> double {
   return chi_rf;
 }
 
-auto choose_f(const double xx, const double zrand) -> double
-// To choose the value of f to integrate to - idea is we want
-//   sigma_compton_partial(xx,f) = zrand.
-{
+// To choose the value of f to integrate to - idea is we want sigma_compton_partial(xx,f) = zrand.
+auto choose_f(const double xx, const double zrand) -> double {
   double f_max = 1 + (2 * xx);
   double f_min = 1;
 
@@ -312,7 +298,7 @@ auto choose_f(const double xx, const double zrand) -> double
       f_min = ftry;
       err = (norm - sigma_try) / norm;
     }
-    //      printout("error %g\n",err);
+
     count++;
     if (count == 1000) {
       printout("Compton hit 1000 tries. %g %g %g %g %g\n", f_max, f_min, ftry, sigma_try, norm);

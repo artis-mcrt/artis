@@ -1,9 +1,5 @@
 #include "decay.h"
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -24,6 +20,10 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -1235,38 +1235,6 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
     return static_cast<float>(nnetot_sum);
   }();
   grid::set_nnetot(nonemptymgi, nnetot);
-
-  // double initnucfracsum = 0.;
-  // double nucfracsum = 0.;
-  // for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
-  // {
-  //   const auto [z, a] = get_nuc_z_a(nucindex);
-  //   initnucfracsum += grid::get_modelinitnucmassfrac(modelgridindex, z, a);
-  //   nucfracsum += get_nuc_massfrac(nonemptymgi, z, a, t_current);
-  //
-  //   // printout_nuclidename(z, a);
-  //   // printout(" init: %g now: %g\n", grid::get_modelinitnucmassfrac(modelgridindex, z, a),
-  //   get_nuc_massfrac(nonemptymgi, z, a, t_current));
-  //
-  //   for (int dectypeindex = 0; dectypeindex < decaytypes::DECAYTYPE_COUNT; dectypeindex++)
-  //   {
-  //     if (!nuc_exists(decay_daughter_z(z, a, dectypeindex), decay_daughter_a(z, a, dectypeindex)) &&
-  //         get_nuc_decaybranchprob(z, a, dectypeindex) > 0.)
-  //     {
-  //       // printout_nuclidename(decay_daughter_z(z, a), decay_daughter_a(z, a));
-  //       // printout("(stable) init: 0 now: %g\n", get_nuc_massfrac(nonemptymgi, decay_daughter_z(z, a),
-  //       decay_daughter_a(z, a), t_current));
-  //       // this decay steps off the nuclide list, so add its daughter abundance to the total
-  //       nucfracsum += get_nuc_massfrac(nonemptymgi, decay_daughter_z(z, a, dectypeindex), decay_daughter_a(z, a,
-  //       dectypeindex), t_current);
-  //     }
-  //   }
-  // }
-
-  // printout("initnucfracsum %g\n", initnucfracsum);
-  // printout("nucfracsum %g\n", nucfracsum);
-
-  // assert_always(fabs(nucfracsum - initnucfracsum) < 0.001); // decays shouldn't change nuclear mass fraction sum
 }
 
 void fprint_nuc_abundances(FILE *estimators_file, const int nonemptymgi, const double t_current, const int element) {

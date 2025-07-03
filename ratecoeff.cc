@@ -1,27 +1,28 @@
 #include "ratecoeff.h"
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <filesystem>
+#include <ios>
 #include <span>
+#include <sstream>
 #include <string>
+#include <tuple>
 
+#include "input.h"
+
+#pragma clang unsafe_buffer_usage begin
+#include <gsl/gsl_errno.h>
 #if !USE_SIMPSON_INTEGRATOR
 #include <gsl/gsl_integration.h>
 #endif
-
-#include <array>
-#include <cmath>
-#include <cstring>
-#include <tuple>
-// #define D_POSIX_SOURCE
-#include <gsl/gsl_errno.h>
-
-#include <cstdio>
-#include <cstdlib>
-#include <ctime>
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -58,31 +59,27 @@ std::string adatafile_hash;
 std::string compositionfile_hash;
 std::array<std::string, 3> phixsfile_hash;
 
-auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
-// Try to read in the precalculated rate coefficients from file
+// Try to read in the precalculated rate coefficients from file (checking whether current atomic data matches)
 // return true if successful or false otherwise
-{
-  // Check whether current atomic data and temperature range match
-  // the precalculated rate coefficients
-
-  char adatafile_hash_in[33] = "UNKNOWN";
-  if (fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in) != 1) {
+auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool {
+  auto adatafile_hash_in = std::array<char, 33>("UNKNOWN");
+  if (fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in.data()) != 1) {
     return false;
   }
-  printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in);
-  if (strcmp(adatafile_hash.c_str(), adatafile_hash_in) == 0) {
+  printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in.data());
+  if (strcmp(adatafile_hash.c_str(), adatafile_hash_in.data()) == 0) {
     printout("(pass)\n");
   } else {
     printout("MISMATCH: MD5 adata.txt = %s\n", adatafile_hash.c_str());
     return false;
   }
 
-  char compositionfile_hash_in[33] = "UNKNOWN";
-  if (fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in) != 1) {
+  auto compositionfile_hash_in = std::array<char, 33>("UNKNOWN");
+  if (fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in.data()) != 1) {
     return false;
   }
-  printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in);
-  if (strcmp(compositionfile_hash.c_str(), compositionfile_hash_in) == 0) {
+  printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in.data());
+  if (strcmp(compositionfile_hash.c_str(), compositionfile_hash_in.data()) == 0) {
     printout("(pass)\n");
   } else {
     printout("\nMISMATCH: MD5 compositiondata.txt = %s\n", compositionfile_hash.c_str());
@@ -91,12 +88,12 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
-      char phixsfile_hash_in[33] = "UNKNOWN";
-      if (fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) != 1) {
+      auto phixsfile_hash_in = std::array<char, 33>("UNKNOWN");
+      if (fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in.data()) != 1) {
         return false;
       }
-      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver].c_str(), phixsfile_hash_in);
-      if (strcmp(phixsfile_hash[phixsver].data(), phixsfile_hash_in) == 0) {
+      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver].c_str(), phixsfile_hash_in.data());
+      if (strcmp(phixsfile_hash[phixsver].data(), phixsfile_hash_in.data()) == 0) {
         printout("(pass)\n");
       } else {
         printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[phixsver].c_str(), phixsfile_hash[phixsver].data());
@@ -223,21 +220,22 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 }
 
 void write_ratecoeff_dat() {
-  FILE *ratecoeff_file = fopen_required("ratecoeff.dat", "w");
-  fprintf(ratecoeff_file, "%32s\n", adatafile_hash.c_str());
-  fprintf(ratecoeff_file, "%32s\n", compositionfile_hash.c_str());
+  auto ratecoeff_file = fstream_required("ratecoeff.dat", std::ios::out | std::ios::trunc);
+  ratecoeff_file << std::hexfloat;
+  ratecoeff_file << adatafile_hash << '\n';
+  ratecoeff_file << compositionfile_hash << '\n';
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
-      fprintf(ratecoeff_file, "%32s\n", phixsfile_hash[phixsver].data());
+      ratecoeff_file << phixsfile_hash[phixsver] << '\n';
     }
   }
-  fprintf(ratecoeff_file, "%la %la %d %d %d %la\n", MINTEMP, MAXTEMP, TABLESIZE, globals::nlines, globals::nbfcontinua,
-          RATECOEFF_INTEGRAL_ACCURACY);
+  ratecoeff_file << MINTEMP << ' ' << MAXTEMP << ' ' << TABLESIZE << ' ' << globals::nlines << ' '
+                 << globals::nbfcontinua << ' ' << RATECOEFF_INTEGRAL_ACCURACY << '\n';
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      fprintf(ratecoeff_file, "%d %d %d %d\n", get_atomicnumber(element), get_ionstage(element, ion),
-              get_nlevels(element, ion), get_nlevels_ionising(element, ion));
+      ratecoeff_file << get_atomicnumber(element) << ' ' << get_ionstage(element, ion) << ' '
+                     << get_nlevels(element, ion) << ' ' << get_nlevels_ionising(element, ion) << '\n';
     }
   }
 
@@ -254,15 +252,14 @@ void write_ratecoeff_dat() {
           for (int iter = 0; iter < TABLESIZE; iter++) {
             const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
 
-            fprintf(ratecoeff_file, "%la %la %la %la\n", spontrecombcoeffs[bflutindex], bfcooling_coeffs[bflutindex],
-                    USE_LUT_PHOTOION ? corrphotoioncoeffs[bflutindex] : -1,
-                    USE_LUT_BFHEATING ? bfheating_coeffs[bflutindex] : -1);
+            ratecoeff_file << spontrecombcoeffs[bflutindex] << ' ' << bfcooling_coeffs[bflutindex] << ' '
+                           << (USE_LUT_PHOTOION ? corrphotoioncoeffs[bflutindex] : -1) << ' '
+                           << (USE_LUT_BFHEATING ? bfheating_coeffs[bflutindex] : -1) << '\n';
           }
         }
       }
     }
   }
-  fclose(ratecoeff_file);
 }
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
@@ -522,13 +519,14 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
 // calibrate the recombination rates to tabulated values by scaling the photoionisation cross sections
 void read_recombrate_file() {
   use_cellcache = false;
-  FILE *recombrate_file = fopen("recombrates.txt", "r");
-  if (recombrate_file == nullptr) {
+
+  if (!std::filesystem::exists("recombrates.txt")) {
     printout("No recombrates.txt file found. Skipping recombination rate scaling...\n");
     return;
   }
 
   printout("Reading recombination rate file (recombrates.txt)...\n");
+  auto recombrate_file = fstream_required("recombrates.txt", std::ios::in);
 
   const float Te_estimate = RECOMBCALIBRATION_T_ELEC;
   const double log_Te_estimate = log10(RECOMBCALIBRATION_T_ELEC);
@@ -545,14 +543,18 @@ void read_recombrate_file() {
   int upperionstage = 0;
   int tablerows = 0;
 
-  while (fscanf(recombrate_file, "%d %d %d\n", &atomicnumber, &upperionstage, &tablerows) > 0) {
+  std::string line;
+  while (get_noncommentline(recombrate_file, line)) {
+    std::stringstream(line) >> atomicnumber >> upperionstage >> tablerows;
     RRCRow T_highestbelow = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
     RRCRow T_lowestabove = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
     T_highestbelow.log_Te = -1;
     T_lowestabove.log_Te = -1;
     for (int i = 0; i < tablerows; i++) {
       RRCRow row{};
-      assert_always(fscanf(recombrate_file, "%lg %lg %lg\n", &row.log_Te, &row.rrc_low_n, &row.rrc_total) == 3);
+      get_noncommentline(recombrate_file, line);
+      std::stringstream(line) >> row.log_Te >> row.rrc_low_n >> row.rrc_total;
+
       if (row.log_Te < log_Te_estimate && row.log_Te > T_highestbelow.log_Te) {
         T_highestbelow.log_Te = row.log_Te;
         T_highestbelow.rrc_low_n = row.rrc_low_n;
@@ -653,7 +655,6 @@ void read_recombrate_file() {
       }
     }
   }
-  fclose(recombrate_file);
 }
 
 void precalculate_ion_alpha_sp() {

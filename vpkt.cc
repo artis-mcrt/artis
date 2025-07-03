@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <ios>
 #include <sstream>
@@ -445,46 +446,46 @@ void init_vspecpol() {
   }
 }
 
-void write_vspecpol(FILE *specpol_file) {
+void write_vspecpol(const std::string &filename) {
+  logprintlnfmt("Writing {}", filename);
+  auto vspecpol_file = fstream_required(filename, std::ios::out | std::ios::trunc);
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
-    fprintf(specpol_file, "%g ", 0.);
+    vspecpol_file << 0. << ' ';
 
     for (int l = 0; l < 3; l++) {
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", (vspecpol[p][ind_comb].lower_time + (vspecpol[p][ind_comb].delta_t / 2.)) / DAY);
+        vspecpol_file << (vspecpol[p][ind_comb].lower_time + (vspecpol[p][ind_comb].delta_t / 2.)) / DAY << ' ';
       }
     }
 
-    fprintf(specpol_file, "\n");
+    vspecpol_file << '\n';
 
     for (int m = 0; m < VMNUBINS; m++) {
-      fprintf(specpol_file, "%g ", (lower_freq_vspec[m] + (delta_freq_vspec[m] / 2.)));
+      vspecpol_file << (lower_freq_vspec[m] + (delta_freq_vspec[m] / 2.)) << ' ';
 
       // Stokes I
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux[m].i);
+        vspecpol_file << vspecpol[p][ind_comb].flux[m].i << ' ';
       }
 
       // Stokes Q
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux[m].q);
+        vspecpol_file << vspecpol[p][ind_comb].flux[m].q << ' ';
       }
 
       // Stokes U
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux[m].u);
+        vspecpol_file << vspecpol[p][ind_comb].flux[m].u << ' ';
       }
 
-      fprintf(specpol_file, "\n");
+      vspecpol_file << '\n';
     }
   }
 }
 
 void read_vspecpol(const int my_rank, const int nts) {
-  char filename[MAXFILENAMELENGTH];
-
-  snprintf(filename, std::size(filename), "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
-  printout("Reading %s\n", filename);
+  const auto filename = std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
+  logprintlnfmt("Reading {}", filename);
 
   auto vspecpol_file = fstream_required(filename, std::ios::in);
   std::string line;
@@ -539,14 +540,16 @@ void init_vpkt_grid() {
   }
 }
 
-void write_vpkt_grid(FILE *vpkt_grid_file) {
+void write_vpkt_grid(const std::string &filename) {
+  auto vpkt_grid_file = fstream_required(filename, std::ios::out | std::ios::trunc);
+
   for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
-          fprintf(vpkt_grid_file, "%g %g %g %g %g \n", vgrid[n][m].yvel, vgrid[n][m].zvel,
-                  vgrid[n][m].flux[wlbin][obsdirindex].i, vgrid[n][m].flux[wlbin][obsdirindex].q,
-                  vgrid[n][m].flux[wlbin][obsdirindex].u);
+          vpkt_grid_file << vgrid[n][m].yvel << ' ' << vgrid[n][m].zvel << ' ' << vgrid[n][m].flux[wlbin][obsdirindex].i
+                         << ' ' << vgrid[n][m].flux[wlbin][obsdirindex].q << ' '
+                         << vgrid[n][m].flux[wlbin][obsdirindex].u << ' ' << '\n';
         }
       }
     }
@@ -558,38 +561,34 @@ void read_vpkt_grid(const int my_rank, const int nts) {
     return;
   }
 
-  char filename[MAXFILENAMELENGTH];
-  snprintf(filename, std::size(filename), "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
-  printout("Reading vpkt grid file %s\n", filename);
-  FILE *vpkt_grid_file = fopen_required(filename, "r");
+  const std::string filename = std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts);
+  logprintlnfmt("Reading {}", filename);
+  auto vpkt_grid_file = fstream_required(filename, std::ios::in);
 
   for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
-          assert_always(fscanf(vpkt_grid_file, "%lg %lg %lg %lg %lg \n", &vgrid[n][m].yvel, &vgrid[n][m].zvel,
-                               &vgrid[n][m].flux[wlbin][obsdirindex].i, &vgrid[n][m].flux[wlbin][obsdirindex].q,
-                               &vgrid[n][m].flux[wlbin][obsdirindex].u) == 5);
+          assert_always(vpkt_grid_file >> vgrid[n][m].yvel >> vgrid[n][m].zvel >>
+                        vgrid[n][m].flux[wlbin][obsdirindex].i >> vgrid[n][m].flux[wlbin][obsdirindex].q >>
+                        vgrid[n][m].flux[wlbin][obsdirindex].u);
         }
       }
     }
   }
-
-  fclose(vpkt_grid_file);
 }
 
 }  // anonymous namespace
 
 void remove_temp_vpkt_file(const int nts, const int my_rank) {
-  std::array<char[MAXFILENAMELENGTH], 3> filenames{};
-  snprintf(filenames[0], MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
-  snprintf(filenames[1], MAXFILENAMELENGTH, "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
-  snprintf(filenames[2], MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
+  const std::array<std::string, 3> filenames{std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts),
+                                             std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts),
+                                             std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts)};
 
-  for (const auto *filename : filenames) {
+  for (const auto &filename : filenames) {
     if (std::filesystem::exists(filename)) {
-      std::remove(filename);
-      printout("Deleted %s\n", filename);
+      std::filesystem::remove(filename);
+      logprintlnfmt("Deleted {}", filename);
     }
   }
 }
@@ -783,50 +782,28 @@ void write_timestep(const int nts, const int my_rank, const bool is_final) {
   }
 
   // write specpol of the virtual packets
-  char filename_vspecpol[MAXFILENAMELENGTH];
-
-  if (is_final) {
-    snprintf(filename_vspecpol, MAXFILENAMELENGTH, "vspecpol_%.4d.out", my_rank);
-  } else {
-    snprintf(filename_vspecpol, MAXFILENAMELENGTH, "vspecpol_%.4d_ts%d.tmp", my_rank, nts);
-  }
-
-  printout("Writing %s\n", filename_vspecpol);
-  FILE *vspecpol_file = fopen_required(filename_vspecpol, "w");
-  write_vspecpol(vspecpol_file);
-  fclose(vspecpol_file);
+  const auto filename_vspecpol =
+      is_final ? std::format("vspecpol_{:04d}.out", my_rank) : std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
+  write_vspecpol(filename_vspecpol);
 
   if (vgrid_on) {
-    char filename_vpktgrid[MAXFILENAMELENGTH];
-    if (is_final) {
-      snprintf(filename_vpktgrid, MAXFILENAMELENGTH, "vpkt_grid_%.4d.out", my_rank);
-    } else {
-      snprintf(filename_vpktgrid, MAXFILENAMELENGTH, "vpkt_grid_%.4d_ts%d.tmp", my_rank, nts);
-    }
-
-    printout("Writing vpkt grid file %s\n", filename_vpktgrid);
-    FILE *vpkt_grid_file = fopen_required(filename_vpktgrid, "w");
-    write_vpkt_grid(vpkt_grid_file);
-    fclose(vpkt_grid_file);
+    const auto filename_vpktgrid = is_final ? std::format("vpkt_grid_{:04d}.out", my_rank)
+                                            : std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts);
+    logprintlnfmt("Writing vpkt grid file {}", filename_vpktgrid);
+    write_vpkt_grid(filename_vpktgrid);
   }
 
   if constexpr (VPKT_WRITE_CONTRIBS) {
     vpkt_contrib_file.close();
-    char filename_prev[MAXFILENAMELENGTH];
-    char filename[MAXFILENAMELENGTH];
-    if (is_final) {
-      snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
-      snprintf(filename, std::size(filename), "vpackets_%.4d.out", my_rank);
-    } else {
-      snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
-      snprintf(filename, std::size(filename), "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
-    }
+    const auto filename_source = std::format("vpackets_{:04d}_ts{}.tmp", my_rank, is_final ? nts + 1 : nts);
+    const auto filename_dest = is_final ? std::format("vpackets_{:04d}.out", my_rank)
+                                        : std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts + 1);
 
-    std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
-    printout("Copying %s to %s\n", filename_prev, filename);
+    std::filesystem::copy_file(filename_source, filename_dest, std::filesystem::copy_options::overwrite_existing);
+    logprintlnfmt("Copying {} to {}", filename_source, filename_dest);
 
     if (!is_final) {
-      vpkt_contrib_file = std::ofstream(filename, std::ios::app);
+      vpkt_contrib_file = std::ofstream(filename_dest, std::ios::app);
     }
   }
 }
@@ -842,14 +819,12 @@ void init(const int nts, const int my_rank, const bool continued_from_saved) {
   }
 
   if constexpr (VPKT_WRITE_CONTRIBS) {
-    char filename[MAXFILENAMELENGTH];
-    snprintf(filename, std::size(filename), "vpackets_%.4d_ts%d.tmp", my_rank, nts + 1);
+    const auto filename = std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts + 1);
 
     if (continued_from_saved) {
-      char filename_prev[MAXFILENAMELENGTH];
-      snprintf(filename_prev, MAXFILENAMELENGTH, "vpackets_%.4d_ts%d.tmp", my_rank, nts);
+      const auto filename_prev = std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts);
+      logprintlnfmt("Copying {} to {}", filename_prev, filename);
       std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
-      printout("Copying %s to %s\n", filename_prev, filename);
     } else {
       // Create new file with header line
       vpkt_contrib_file = std::ofstream(filename, std::ios::trunc);
