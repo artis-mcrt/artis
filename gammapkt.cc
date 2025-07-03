@@ -206,7 +206,6 @@ void init_xcom_photoion_data() {
   if (!std::filesystem::exists(filepath)) {
     filepath = "data/xcom_photoion_data.txt";
   }
-  assert_always(std::filesystem::exists(filepath));
 
   auto data_fs = fstream_required(filepath, std::ios::in);
   std::string line_str;
@@ -241,11 +240,10 @@ __host__ __device__ auto choose_gamma_ray(const int nucindex) -> double {
   return NAN;
 }
 
-constexpr auto sigma_compton_partial(const double x, const double f_max) -> double
-// Routine to compute the partial cross section for Compton scattering.
-//   xx is the photon energy (in units of electron mass) and f
-//  is the energy loss factor up to which we wish to integrate.
-{
+// The partial cross section for Compton scattering.
+// - xx: is the photon energy (in units of electron mass)
+// - f_max: is the energy loss factor up to which we wish to integrate
+constexpr auto sigma_compton_partial(const double x, const double f_max) -> double {
   const double term1 = ((x * x) - (2 * x) - 2) * std::log(f_max) / x / x;
   const double term2 = (((f_max * f_max) - 1) / (f_max * f_max)) / 2;
   const double term3 = ((f_max - 1) / x) * ((1 / x) + (2 / f_max) + (1 / (x * f_max)));
@@ -253,8 +251,8 @@ constexpr auto sigma_compton_partial(const double x, const double f_max) -> doub
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
 
+// the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
 auto get_chi_compton_rf(const Packet &pkt) -> double {
-  // calculate the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
   // Start by working out the compton x-section in the co-moving frame.
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
@@ -279,10 +277,8 @@ auto get_chi_compton_rf(const Packet &pkt) -> double {
   return chi_rf;
 }
 
-auto choose_f(const double xx, const double zrand) -> double
-// To choose the value of f to integrate to - idea is we want
-//   sigma_compton_partial(xx,f) = zrand.
-{
+// To choose the value of f to integrate to - idea is we want sigma_compton_partial(xx,f) = zrand.
+auto choose_f(const double xx, const double zrand) -> double {
   double f_max = 1 + (2 * xx);
   double f_min = 1;
 
@@ -302,7 +298,7 @@ auto choose_f(const double xx, const double zrand) -> double
       f_min = ftry;
       err = (norm - sigma_try) / norm;
     }
-    //      printout("error %g\n",err);
+
     count++;
     if (count == 1000) {
       printout("Compton hit 1000 tries. %g %g %g %g %g\n", f_max, f_min, ftry, sigma_try, norm);
