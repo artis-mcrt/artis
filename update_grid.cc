@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <format>
-#include <fstream>
+#include <ostream>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -35,7 +35,7 @@ namespace {
 
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
-void write_to_estimators_file(std::fstream &estimators_file, const int nonemptymgi, const int timestep, const int titer,
+void write_to_estimators_file(std::ostream &estimators_file, const int nonemptymgi, const int timestep, const int titer,
                               const HeatingCoolingRates &heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -81,7 +81,7 @@ void write_to_estimators_file(std::fstream &estimators_file, const int nonemptym
     }
     estimators_file << std::format("  SUM: {:9.3e}", elpop);
 
-    decay::fprint_nuc_abundances(estimators_file, nonemptymgi, globals::timesteps[timestep].mid, element);
+    decay::output_nuc_abundances(estimators_file, nonemptymgi, globals::timesteps[timestep].mid, element);
 
     if (nions == 0 || elpop <= 0.) {
       // dummy element for nuclear abundances only
@@ -586,7 +586,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
 }  // anonymous namespace
 
-void update_grid(std::fstream &estimators_file, const int nts, const int nts_prev, const int titer,
+void update_grid(std::ostream &estimators_file, const int nts, const int nts_prev, const int titer,
                  const std::time_t real_time_start)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.

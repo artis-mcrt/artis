@@ -5,7 +5,6 @@
 #include <cctype>
 #include <cmath>
 #include <cstddef>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <format>
@@ -1238,7 +1237,7 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
   grid::set_nnetot(nonemptymgi, nnetot);
 }
 
-void fprint_nuc_abundances(std::fstream &estimators_file, const int nonemptymgi, const double t_current,
+void output_nuc_abundances(std::ostream &estimators_file, const int nonemptymgi, const double t_current,
                            const int element) {
   const double rho = grid::get_rho(nonemptymgi);
 
