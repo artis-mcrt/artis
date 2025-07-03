@@ -198,9 +198,7 @@ void init_gamma_linelist() {
 }
 
 void init_xcom_photoion_data() {
-  // read the file
   printout("reading XCOM photoionization data...\n");
-  // reserve memory
   for (int Z = 0; Z < numb_xcom_elements; Z++) {
     photoion_data[Z].reserve(100);
   }
@@ -210,9 +208,8 @@ void init_xcom_photoion_data() {
   }
   assert_always(std::filesystem::exists(filepath));
 
-  std::ifstream data_fs(filepath);
+  auto data_fs = fstream_required(filepath, std::ios::in);
   std::string line_str;
-  // now read the file a second time to store the data
   while (getline(data_fs, line_str)) {
     if (line_str[0] != '#') {
       int Z = 0;
