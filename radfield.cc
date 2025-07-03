@@ -575,7 +575,7 @@ void init(const int my_rank, const int ndo_nonempty) {
              H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
     if (ndo_nonempty > 0) {
       assert_always(radfieldfile == nullptr);
-      radfieldfile = fopen_required(std::format("radfield_{:04d}", my_rank), "w");
+      radfieldfile = fopen_required(std::format("radfield_{:04d}.out", my_rank), "w");
       fprintf(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W\n");
       fflush(radfieldfile);
     }
