@@ -7,6 +7,8 @@
 #include <cstdlib>
 #include <ctime>
 #include <format>
+#include <fstream>
+#include <ios>
 #include <iterator>
 #include <span>
 #include <tuple>
@@ -97,7 +99,7 @@ struct GSLT_RSolverParams {
   int binindex;
 };
 
-FILE *radfieldfile{};
+std::fstream radfieldfile;
 
 constexpr auto get_bin_nu_upper(const int binindex) -> double {
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
@@ -488,11 +490,12 @@ void write_to_file(const int nonemptymgi, const int timestep) {
       }
 
       if (!skipoutput) {
-        fprintf(radfieldfile, "%d %d %d %.5e %.5e %.3e %.3e %.3e %d %.1f %.5e\n", timestep, modelgridindex, binindex,
-                nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, contribcount, T_R, W);
+        radfieldfile << std::format("{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:d} {:.1f} {:.5e}\n", timestep,
+                                    modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar,
+                                    contribcount, T_R, W);
       }
     }
-    fflush(radfieldfile);
+    radfieldfile.flush();
 #ifdef _OPENMP
   }
 #endif
@@ -574,10 +577,10 @@ void init(const int my_rank, const int ndo_nonempty) {
              RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
              H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
     if (ndo_nonempty > 0) {
-      assert_always(radfieldfile == nullptr);
-      radfieldfile = fopen_required(std::format("radfield_{:04d}.out", my_rank), "w");
-      fprintf(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W\n");
-      fflush(radfieldfile);
+      assert_always(!radfieldfile.is_open());
+      radfieldfile = fstream_required(std::format("radfield_{:04d}.out", my_rank), std::ios::out | std::ios::trunc);
+      radfieldfile << "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W\n";
+      radfieldfile.flush();
     }
 
     const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBin);
@@ -693,9 +696,8 @@ auto get_Jb_lu_contribcount(const int nonemptymgi, const int jblueindex) -> int 
 }
 
 void close_file() {
-  if (radfieldfile != nullptr) {
-    fclose(radfieldfile);
-    radfieldfile = nullptr;
+  if (radfieldfile.is_open()) {
+    radfieldfile.close();
   }
 
   if (MULTIBIN_RADFIELD_MODEL_ON) {
