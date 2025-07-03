@@ -59,13 +59,9 @@ std::string adatafile_hash;
 std::string compositionfile_hash;
 std::array<std::string, 3> phixsfile_hash;
 
-auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
-// Try to read in the precalculated rate coefficients from file
+// Try to read in the precalculated rate coefficients from file (checking whether current atomic data matches)
 // return true if successful or false otherwise
-{
-  // Check whether current atomic data and temperature range match
-  // the precalculated rate coefficients
-
+auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool {
   auto adatafile_hash_in = std::array<char, 33>("UNKNOWN");
   if (fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in.data()) != 1) {
     return false;
