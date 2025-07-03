@@ -586,12 +586,9 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
 }  // anonymous namespace
 
+//  update the matter quantities in the grid cells at the start of the new timestep.
 void update_grid(std::ostream &estimators_file, const int nts, const int nts_prev, const int titer,
-                 const std::time_t real_time_start)
-// Subroutine to update the matter quantities in the grid cells at the start
-//   of the new timestep.
-// nts timestep
-{
+                 const std::time_t real_time_start) {
   const auto my_rank = globals::my_rank;
   const auto sys_time_start_update_grid = std::time(nullptr);
   printout("\n");
