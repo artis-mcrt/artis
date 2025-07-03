@@ -251,6 +251,10 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
 }
 
 [[nodiscard]] inline auto fstream_required(const std::string &filename, std::ios_base::openmode mode) -> std::fstream {
+  if (filename.empty()) {
+    logprintlnfmt("ERROR: Cannot open file with empty filename.");
+    std::abort();
+  }
   const std::string datafolderfilename = "data/" + filename;
   if (mode == std::ios::in && std::filesystem::exists(datafolderfilename)) {
     return fstream_required(datafolderfilename, mode);
