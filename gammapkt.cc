@@ -210,18 +210,15 @@ void init_xcom_photoion_data() {
 
   auto data_fs = fstream_required(filepath, std::ios::in);
   std::string line_str;
-  while (getline(data_fs, line_str)) {
-    if (line_str[0] != '#') {
-      int Z = 0;
-      double E = 0;
-      double sigma = 0;
-      if (3 == std::sscanf(line_str.c_str(), "%d %lg %lg", &Z, &E, &sigma)) {
-        assert_always(Z > 0);
-        assert_always(Z <= numb_xcom_elements);
-        // convert XCOM data to cgs units already here
-        photoion_data[Z - 1].push_back({.energy = E, .sigma_xcom = sigma * 1e-24});
-      }
-    }
+  while (get_noncommentline(data_fs, line_str)) {
+    int Z = 0;
+    double E = 0;
+    double sigma = 0;
+    std::stringstream(line_str) >> Z >> E >> sigma;
+    assert_always(Z > 0);
+    assert_always(Z <= numb_xcom_elements);
+    // convert XCOM data to cgs units already here
+    photoion_data[Z - 1].push_back({.energy = E, .sigma_xcom = sigma * 1e-24});
   }
 }
 
