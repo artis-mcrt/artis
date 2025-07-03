@@ -671,7 +671,7 @@ auto get_token_count(std::string &line) -> int {
   return abundcolcount;
 }
 
-void read_model_radioabundances(std::fstream &fmodel, std::istringstream &ssline_in, const int mgi, const bool keepcell,
+void read_model_radioabundances(std::istream &fmodel, std::istringstream &ssline_in, const int mgi, const bool keepcell,
                                 const std::vector<std::string> &colnames, const std::vector<int> &nucindexlist,
                                 const bool one_line_per_cell) {
   std::string line;
@@ -712,7 +712,7 @@ void read_model_radioabundances(std::fstream &fmodel, std::istringstream &ssline
   assert_always(!(ssline >> valuein));  // should be no tokens left!
 }
 
-auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
+auto read_model_columns(std::istream &fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
   auto pos_data_start = fmodel.tellg();  // get position in case we need to undo getline
 
   std::vector<int> zlist;
