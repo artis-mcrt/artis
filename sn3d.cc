@@ -76,7 +76,7 @@ void initialise_linestat_file() {
   linestat_file = fstream_required("linestat.out", std::ios::out | std::ios::trunc);
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << CLIGHT / globals::linelist[i].nu;
+    linestat_file << CLIGHT / globals::linelist[i].nu << ' ';  // wavelength in cm
   }
   linestat_file << '\n';
 
