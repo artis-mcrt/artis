@@ -22,7 +22,6 @@ Checks: [
         -cppcoreguidelines-narrowing-conversions,  # alias for bugprone-narrowing-conversions
         -cppcoreguidelines-owning-memory,
         -cppcoreguidelines-pro-bounds-constant-array-index,
-        -cppcoreguidelines-pro-bounds-pointer-arithmetic,
         -cppcoreguidelines-pro-type-cstyle-cast,
         -cppcoreguidelines-pro-type-vararg,
         -fuchsia-*,
@@ -33,7 +32,6 @@ Checks: [
         -llvmlibc-*,
         -misc-no-recursion,
         -misc-non-private-member-variables-in-classes,
-        -modernize-avoid-c-arrays,
         -modernize-use-ranges, # things like sort and for_each don't support parallel execution policies yet (C++26 will?)
         -modernize-use-std-print, # replace printout macro with a function when we want to autofix to use std::format gcc >=13
         -performance-enum-size,
