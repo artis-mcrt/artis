@@ -1,14 +1,5 @@
 #include "radfield.h"
 
-#pragma clang unsafe_buffer_usage begin
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_roots.h>
-#include <gsl/gsl_sf_debye.h>
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -19,6 +10,15 @@
 #include <span>
 #include <tuple>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_integration.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_roots.h>
+#include <gsl/gsl_sf_debye.h>
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "atomic.h"

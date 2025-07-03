@@ -1,9 +1,5 @@
 #include "spectrum_lightcurve.h"
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -14,6 +10,10 @@
 #include <span>
 #include <string>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "atomic.h"

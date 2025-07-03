@@ -1,27 +1,23 @@
 #include "ratecoeff.h"
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
 #include <span>
 #include <string>
+#include <tuple>
 
+#pragma clang unsafe_buffer_usage begin
+#include <gsl/gsl_errno.h>
 #if !USE_SIMPSON_INTEGRATOR
 #include <gsl/gsl_integration.h>
 #endif
-
-#include <array>
-#include <cmath>
-#include <cstring>
-#include <tuple>
-// #define D_POSIX_SOURCE
-#include <gsl/gsl_errno.h>
-
-#include <cstdio>
-#include <cstdlib>
-#include <ctime>
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "atomic.h"

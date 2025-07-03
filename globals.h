@@ -1,10 +1,6 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -12,6 +8,10 @@
 #include <mutex>
 #include <span>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 

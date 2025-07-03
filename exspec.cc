@@ -1,21 +1,21 @@
 #include "exspec.h"
 
-#include <format>
-#include <ios>
-
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
 #include <unistd.h>
 
 #include <cstddef>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
+#include <format>
 #include <fstream>
+#include <ios>
 #include <new>
 #include <span>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "constants.h"

@@ -1,14 +1,32 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#include <gsl/gsl_integration.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#include <algorithm>
 #include <array>
+#include <cassert>
+#include <csignal>
+#include <cstdarg>
+#include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
+#include <filesystem>
 #include <format>
+#include <fstream>
+#include <iostream>
 #include <iterator>
+#include <memory>
 #include <ranges>
 #include <span>
+#include <sstream>
+#include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -18,25 +36,6 @@
 #ifndef __device__
 #define __device__
 #endif
-
-#include <gsl/gsl_integration.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
-#include <algorithm>
-#include <cassert>
-#include <csignal>
-#include <cstdarg>
-#include <cstddef>
-#include <cstdio>
-#include <cstring>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <tuple>
 
 #ifdef STACKTRACE_ON
 #include <stacktrace>

@@ -13,11 +13,6 @@
 #include "sn3d.h"
 
 #include <getopt.h>
-
-#include <format>
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
 #include <unistd.h>
 
 #include <algorithm>
@@ -27,15 +22,18 @@
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <ios>
-#include <span>
-#include <vector>
-
-#include "md5.h"
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
+#include <span>
+#include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -45,6 +43,7 @@
 #include "grid.h"
 #include "input.h"
 #include "macroatom.h"
+#include "md5.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "packet.h"

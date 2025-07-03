@@ -1,13 +1,5 @@
 #include "input.h"
 
-#include <format>
-
-#pragma clang unsafe_buffer_usage begin
-#include <gsl/gsl_interp.h>
-#include <gsl/gsl_spline.h>
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include <algorithm>
 #include <array>
 #include <cinttypes>
@@ -19,6 +11,7 @@
 #include <cstring>
 #include <ctime>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <functional>
 #include <ios>
@@ -31,6 +24,12 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <gsl/gsl_interp.h>
+#include <gsl/gsl_spline.h>
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "atomic.h"

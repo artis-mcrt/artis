@@ -1,6 +1,17 @@
 #include "nltepop.h"
 
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
 #include <format>
+#include <ranges>
+#include <span>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #pragma clang unsafe_buffer_usage begin
 #include <gsl/gsl_blas.h>
@@ -11,18 +22,6 @@
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_vector_double.h>
 #pragma clang unsafe_buffer_usage end
-
-#include <algorithm>
-#include <cmath>
-#include <cstddef>
-#include <cstdio>
-#include <cstdlib>
-#include <ctime>
-#include <ranges>
-#include <span>
-#include <tuple>
-#include <utility>
-#include <vector>
 
 #include "artisoptions.h"
 #include "atomic.h"
