@@ -1,14 +1,32 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#include <gsl/gsl_integration.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#include <algorithm>
 #include <array>
+#include <cassert>
+#include <csignal>
+#include <cstdarg>
+#include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
+#include <filesystem>
 #include <format>
+#include <fstream>
+#include <iostream>
 #include <iterator>
+#include <memory>
 #include <ranges>
 #include <span>
+#include <sstream>
+#include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -18,25 +36,6 @@
 #ifndef __device__
 #define __device__
 #endif
-
-#include <gsl/gsl_integration.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
-#include <algorithm>
-#include <cassert>
-#include <csignal>
-#include <cstdarg>
-#include <cstddef>
-#include <cstdio>
-#include <cstring>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <tuple>
 
 #ifdef STACKTRACE_ON
 #include <stacktrace>
@@ -75,7 +74,7 @@
 constexpr int cellcacheslotid = 0;
 inline bool use_cellcache = false;
 
-extern std::ofstream output_file;
+extern std::fstream output_file;
 
 inline std::array<char, 1024> outputlinebuf = {};
 inline bool outputstartofline = true;
@@ -229,35 +228,39 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   }
 }
 
-[[nodiscard]] inline auto fopen_required(const std::string &filename, const char *mode) -> FILE * {
+[[nodiscard]] inline auto fopen_required(const std::string &filename, std::span<const char> mode) -> FILE * {
   // look in the data folder first
   const std::string datafolderfilename = "data/" + filename;
   if (mode[0] == 'r' && std::filesystem::exists(datafolderfilename)) {
     return fopen_required(datafolderfilename, mode);
   }
 
-  FILE *file = std::fopen(filename.c_str(), mode);
+  FILE *file = std::fopen(filename.c_str(), mode.data());
   if (file == nullptr) {
-    printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename.c_str(), mode);
+    logprintlnfmt("ERROR: Could not open file '{}' for mode '{}'.", filename, mode.data());
     std::abort();
   }
 
   return file;
 }
 
-[[nodiscard]] inline auto fopen_required_uniqueptr(const std::string &filename, const char *mode) {
+[[nodiscard]] inline auto fopen_required_uniqueptr(const std::string &filename, std::span<const char> mode) {
   return std::unique_ptr<FILE, int (*)(FILE *)>(fopen_required(filename, mode),
                                                 [](FILE *fp) -> int { return std::fclose(fp); });
 }
 
 [[nodiscard]] inline auto fstream_required(const std::string &filename, std::ios_base::openmode mode) -> std::fstream {
+  if (filename.empty()) {
+    logprintlnfmt("ERROR: Cannot open file with empty filename.");
+    std::abort();
+  }
   const std::string datafolderfilename = "data/" + filename;
   if (mode == std::ios::in && std::filesystem::exists(datafolderfilename)) {
     return fstream_required(datafolderfilename, mode);
   }
   auto file = std::fstream(filename, mode);
   if (!file.is_open()) {
-    printout("ERROR: Could not open file '%s'\n", filename.c_str());
+    logprintlnfmt("ERROR: Could not open file '{}'", filename);
     std::abort();
   }
   return file;

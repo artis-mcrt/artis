@@ -13,9 +13,6 @@
 #include "sn3d.h"
 
 #include <getopt.h>
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
 #include <unistd.h>
 
 #include <algorithm>
@@ -25,15 +22,18 @@
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <ios>
-#include <span>
-#include <vector>
-
-#include "md5.h"
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
+#include <span>
+#include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -43,6 +43,7 @@
 #include "grid.h"
 #include "input.h"
 #include "macroatom.h"
+#include "md5.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "packet.h"
@@ -56,12 +57,12 @@
 #include "version.h"
 #include "vpkt.h"
 
-std::ofstream output_file;
+std::fstream output_file;
 
 namespace {
 constexpr bool VERIFY_WRITTEN_PACKETS_FILES = false;
 
-FILE *linestat_file{};
+std::fstream linestat_file;
 time_t real_time_start = -1;
 time_t time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
 FILE *estimators_file{};
@@ -72,34 +73,34 @@ void initialise_linestat_file() {
     return;
   }
 
-  linestat_file = fopen_required("linestat.out", "w");
+  linestat_file = fstream_required("linestat.out", std::ios::out | std::ios::trunc);
 
   for (int i = 0; i < globals::nlines; i++) {
-    fprintf(linestat_file, "%g ", CLIGHT / globals::linelist[i].nu);
+    linestat_file << CLIGHT / globals::linelist[i].nu << ' ';  // wavelength in cm
   }
-  fprintf(linestat_file, "\n");
+  linestat_file << '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    fprintf(linestat_file, "%d ", get_atomicnumber(globals::linelist[i].elementindex));
+    linestat_file << get_atomicnumber(globals::linelist[i].elementindex) << ' ';
   }
-  fprintf(linestat_file, "\n");
+  linestat_file << '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    fprintf(linestat_file, "%d ", get_ionstage(globals::linelist[i].elementindex, globals::linelist[i].ionindex));
+    linestat_file << get_ionstage(globals::linelist[i].elementindex, globals::linelist[i].ionindex) << ' ';
   }
-  fprintf(linestat_file, "\n");
+  linestat_file << '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    fprintf(linestat_file, "%d ", globals::linelist[i].upperlevelindex + 1);
+    linestat_file << (globals::linelist[i].upperlevelindex + 1) << ' ';
   }
-  fprintf(linestat_file, "\n");
+  linestat_file << '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    fprintf(linestat_file, "%d ", globals::linelist[i].lowerlevelindex + 1);
+    linestat_file << (globals::linelist[i].lowerlevelindex + 1) << ' ';
   }
-  fprintf(linestat_file, "\n");
+  linestat_file << '\n';
 
-  fflush(linestat_file);
+  linestat_file.flush();
 }
 
 void write_deposition_file() {
@@ -347,49 +348,46 @@ void mpi_reduce_estimators(const int nts) {
 
 void write_temp_packetsfile(const int timestep, const int my_rank, std::span<const Packet> pkt) {
   // write packets binary file (and retry if the write fails)
-  char filename[MAXFILENAMELENGTH];
-  snprintf(filename, std::size(filename), "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
   bool write_success = false;
   while (!write_success) {
-    printout("Writing %s...", filename);
-    FILE *packets_file = fopen(filename, "wb");
+    logprintlnfmt("Writing {}", filename);
+    FILE *packets_file = fopen(filename.c_str(), "wb");
     if (packets_file == nullptr) {
-      printout("ERROR: Could not open file '%s' for mode 'wb'.\n", filename);
+      logprintlnfmt("ERROR: Could not open file '{}' for mode 'wb'.", filename);
       write_success = false;
     } else {
       write_success = (std::fwrite(pkt.data(), sizeof(Packet), globals::npkts, packets_file) ==
                        static_cast<size_t>(globals::npkts));
       if (!write_success) {
-        printout("fwrite() FAILED! will retry...\n");
+        logprintlnfmt("fwrite() FAILED! will retry...");
       }
 
       fclose(packets_file);
     }
 
     if (write_success) {
-      printout("done\n");
+      logprintlnfmt("done");
     }
   }
 }
 
 void remove_temp_packetsfile(const int timestep, const int my_rank) {
-  char filename[MAXFILENAMELENGTH];
-  snprintf(filename, std::size(filename), "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
   if (std::filesystem::exists(filename)) {
-    std::remove(filename);
-    printout("Deleted %s\n", filename);
+    std::filesystem::remove(filename);
+    logprintlnfmt("Deleted {}", filename);
   }
 }
 
 void remove_grid_restart_data(const int timestep) {
-  char prevfilename[MAXFILENAMELENGTH];
-  snprintf(prevfilename, MAXFILENAMELENGTH, "gridsave_ts%d.tmp", timestep);
+  const auto filename = std::format("gridsave_ts{:02d}.tmp", timestep);
 
-  if (std::filesystem::exists(prevfilename)) {
-    std::remove(prevfilename);
-    printout("Deleted %s\n", prevfilename);
+  if (std::filesystem::exists(filename)) {
+    std::filesystem::remove(filename);
+    logprintlnfmt("Deleted {}", filename);
   }
 }
 
@@ -640,33 +638,24 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
         // Currently linestat information is only properly implemented for MPI only runs
         // For hybrid runs only data from thread 0 is recorded
         for (int i = 0; i < globals::nlines; i++) {
-          fprintf(linestat_file, "%d ", globals::ecounter[i]);
+          linestat_file << globals::ecounter[i] << ' ';
         }
-        fprintf(linestat_file, "\n");
+        linestat_file << '\n';
         for (int i = 0; i < globals::nlines; i++) {
-          fprintf(linestat_file, "%d ", globals::acounter[i]);
+          linestat_file << globals::acounter[i] << ' ';
         }
-        fprintf(linestat_file, "\n");
-        fflush(linestat_file);
+        linestat_file << '\n';
+        linestat_file.flush();
       }
     }
 
     if (nts == globals::timestep_finish - 1) {
-      char filename[MAXFILENAMELENGTH];
-      snprintf(filename, std::size(filename), "packets%.2d_%.4d.out", 0, my_rank);
-      // snprintf(filename, std::size(filename), "packets%.2d_%.4d.out", middle_iteration, my_rank);
+      const auto filename = std::format("packets{:02d}_{:04d}.out", 0, my_rank);
       write_packets(filename, packets);
 
       vpkt::write_timestep(nts, my_rank, true);
 
       printout("time after write final packets file %ld\n", std::time(nullptr));
-
-      // final packets*.out have been written, so remove the temporary packets files
-      // commented out because you might still want to resume the simulation
-      // snprintf(filename, std::size(filename), "packets%d_%d_odd.tmp", 0, my_rank);
-      // std::remove(filename);
-      // snprintf(filename, std::size(filename), "packets%d_%d_even.tmp", 0, my_rank);
-      // std::remove(filename);
     }
   }
   return !do_this_full_loop;
@@ -699,9 +688,7 @@ auto main(int argc, char *argv[]) -> int {
 #ifdef STDPAR_ON
   printout("C++ standard parallelism (stdpar) is enabled with %d hardware threads\n", get_max_threads());
   for (int t = 1; t < get_max_threads(); t++) {
-    char outputfilename[MAXFILENAMELENGTH];
-    snprintf(outputfilename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, t);
-    std::filesystem::remove(outputfilename);
+    std::filesystem::remove(std::format("output_{}-{}.txt", my_rank, t));
   }
 #endif
 
@@ -712,10 +699,8 @@ auto main(int argc, char *argv[]) -> int {
 #endif
   {
     // initialise the thread and rank specific output file
-    char outputfilename[MAXFILENAMELENGTH];
-    snprintf(outputfilename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, get_thread_num());
-    output_file = std::ofstream(outputfilename);
-    assert_always(output_file.is_open());
+    output_file =
+        fstream_required(std::format("output_{}-{}.txt", my_rank, get_thread_num()), std::ios::out | std::ios::trunc);
 
 #ifdef _OPENMP
     printout("OpenMP parallelisation is active with %d threads (max %d)\n", omp_get_num_threads(), get_max_threads());
@@ -746,7 +731,8 @@ auto main(int argc, char *argv[]) -> int {
       walltimelimitseconds = static_cast<int>(walltimehours * 3600);
       printout("walltimelimitseconds = %d\n", walltimelimitseconds);
     } else {
-      fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n", argv[0]);
+      fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n",
+              argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic,)
       std::abort();
     }
   }
@@ -853,9 +839,7 @@ auto main(int argc, char *argv[]) -> int {
   macroatom_open_file(my_rank);
   if (ndo > 0) {
     assert_always(estimators_file == nullptr);
-    char filename[MAXFILENAMELENGTH];
-    snprintf(filename, std::size(filename), "estimators_%.4d.out", my_rank);
-    estimators_file = fopen_required(filename, "w");
+    estimators_file = fopen_required(std::format("estimators_{:04d}.out", my_rank), "w");
 
     if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {
       nltepop_open_file(my_rank);
@@ -892,8 +876,8 @@ auto main(int argc, char *argv[]) -> int {
   // code.
 
   MPI_Barrier(MPI_COMM_WORLD);
-  if (linestat_file != nullptr) {
-    fclose(linestat_file);
+  if (linestat_file.is_open()) {
+    linestat_file.close();
   }
 
   if ((globals::ntimesteps > globals::timestep_finish) || (terminate_early)) {

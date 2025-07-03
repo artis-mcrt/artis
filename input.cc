@@ -1,11 +1,5 @@
 #include "input.h"
 
-#pragma clang unsafe_buffer_usage begin
-#include <gsl/gsl_interp.h>
-#include <gsl/gsl_spline.h>
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include <algorithm>
 #include <array>
 #include <cinttypes>
@@ -17,12 +11,12 @@
 #include <cstring>
 #include <ctime>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <functional>
 #include <ios>
 #include <iterator>
 #include <limits>
-#include <memory>
 #include <span>
 #include <sstream>
 #include <string>
@@ -30,6 +24,12 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <gsl/gsl_interp.h>
+#include <gsl/gsl_spline.h>
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -1002,8 +1002,7 @@ void read_atomicdata_files() {
     globals::elements[element].uniqueionindexstart = uniqueionindex;
 
     // Initialize the elements ionlist
-    globals::elements[element].ions = std::make_unique<Ion[]>(nions);
-    assert_always(globals::elements[element].ions != nullptr);
+    resize_exactly(globals::elements[element].ions, nions);
 
     // now read in data for all ions of the current element. before doing so initialize
     // energy scale for the current element (all level energies are stored relative to
@@ -1826,15 +1825,12 @@ void update_parameterfile(const int nts) {
     printout("Copying input.txt to input-newrun.txt...");
   }
 
-  std::ifstream file("input.txt");
-  assert_always(file.is_open());
+  auto file = fstream_required("input.txt", std::ios::in);
 
-  std::ofstream fileout("input.txt.tmp");
-  assert_always(fileout.is_open());
+  auto fileout = fstream_required("input.txt.tmp", std::ios::out | std::ios::trunc);
 
   std::string line;
 
-  char c_line[1024];
   int noncomment_linenum = -1;
   while (std::getline(file, line)) {
     if (!lineiscommentonly(line)) {
@@ -1844,21 +1840,17 @@ void update_parameterfile(const int nts) {
       if (nts >= 0) {
         if (noncomment_linenum == 2) {
           // Number of start and end time step
-          snprintf(c_line, sizeof(c_line), "%d %d", nts, globals::timestep_finish);
-          // line.assign(c_line);
-          line.replace(line.begin(), line.end(), c_line);
+          line = std::format("{:03d} {:03d}", nts, globals::timestep_finish);
         } else if (noncomment_linenum == 16) {
           // resume from gridsave file
-          snprintf(c_line, sizeof(c_line), "%d", 1);  // Force continuation
-          line.assign(c_line);
+          line = "1";  // Force continuation
         }
       }
 
       if (noncomment_linenum == 21) {
         // by default, exspec should use all available packet files
         globals::nprocs_exspec = globals::nprocs;
-        snprintf(c_line, sizeof(c_line), "%d", globals::nprocs_exspec);
-        line.assign(c_line);
+        line = std::format("{}", globals::nprocs_exspec);
       }
 
       if (noncomment_linenum < std::ssize(inputlinecomments)) {

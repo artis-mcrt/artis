@@ -1,9 +1,5 @@
 #include "rpkt.h"
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -15,6 +11,10 @@
 #include <span>
 #include <tuple>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "atomic.h"

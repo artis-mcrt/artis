@@ -1,18 +1,17 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <deque>
-#include <memory>
 #include <mutex>
 #include <span>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 
@@ -106,7 +105,7 @@ struct Ion {
 };
 
 struct Element {
-  std::unique_ptr<Ion[]> ions;  // Carries information for each ion: 0,1,...,nions-1
+  std::vector<Ion> ions;  // Carries information for each ion: 0,1,...,nions-1
   int nions{0};  // Number of ions for the current element
   int anumber{-1};  // Atomic number
   int uniqueionindexstart{-1};  /// uniqueionindex index of the lowest ionisation stage of this element

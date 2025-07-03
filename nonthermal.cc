@@ -1,15 +1,5 @@
 #include "nonthermal.h"
 
-#pragma clang unsafe_buffer_usage begin
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_cblas.h>
-#include <gsl/gsl_linalg.h>
-#include <gsl/gsl_matrix_double.h>
-#include <gsl/gsl_permutation.h>
-#include <gsl/gsl_vector_double.h>
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -27,6 +17,16 @@
 #include <string>
 #include <tuple>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <gsl/gsl_blas.h>
+#include <gsl/gsl_cblas.h>
+#include <gsl/gsl_linalg.h>
+#include <gsl/gsl_matrix_double.h>
+#include <gsl/gsl_permutation.h>
+#include <gsl/gsl_vector_double.h>
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "atomic.h"

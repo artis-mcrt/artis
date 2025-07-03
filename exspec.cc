@@ -1,19 +1,21 @@
 #include "exspec.h"
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
 #include <unistd.h>
 
 #include <cstddef>
-#include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
+#include <format>
 #include <fstream>
+#include <ios>
 #include <new>
 #include <span>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "constants.h"
@@ -26,7 +28,7 @@
 #include "spectrum_lightcurve.h"
 #include "version.h"
 
-std::ofstream output_file;
+std::fstream output_file;
 
 namespace {
 
@@ -54,15 +56,14 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     auto pkts_start = pkts.subspan(load_allrank_packets ? p * globals::npkts : 0, globals::npkts);
 
     if (a == -1 || !load_allrank_packets) {
-      char pktfilename[MAXFILENAMELENGTH];
-      snprintf(pktfilename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", 0, p);
-      printout("reading %s (file %d of %d)\n", pktfilename, p + 1, globals::nprocs_exspec);
+      auto pktfilename = std::format("packets{:02d}_{:04d}.out", 0, p);
+      logprintlnfmt("Reading {} (file {} of {})", pktfilename, p + 1, globals::nprocs_exspec);
 
       if (std::filesystem::exists(pktfilename)) {
         read_packets(pktfilename, pkts_start);
       } else {
-        printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n",
-                 pktfilename, globals::timestep_initial);
+        logprintlnfmt("   WARNING {} does not exist - trying temp packets file at beginning of timestep {}...",
+                      pktfilename, globals::timestep_initial);
         read_temp_packetsfile(globals::timestep_initial, p, pkts_start);
       }
     }
@@ -119,36 +120,15 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     // direction bin a
     // line-of-sight dependent spectra and light curves
 
-    char lc_filename[MAXFILENAMELENGTH] = "";
-    snprintf(lc_filename, sizeof(lc_filename), "light_curve_res_%.2d.out", a);
-
-    char spec_filename[MAXFILENAMELENGTH] = "";
-    snprintf(spec_filename, sizeof(spec_filename), "spec_res_%.2d.out", a);
-
-    char emission_filename[MAXFILENAMELENGTH] = "";
-    snprintf(emission_filename, sizeof(emission_filename), "emission_res_%.2d.out", a);
-
-    char trueemission_filename[MAXFILENAMELENGTH] = "";
-    snprintf(trueemission_filename, sizeof(trueemission_filename), "emissiontrue_res_%.2d.out", a);
-
-    char absorption_filename[MAXFILENAMELENGTH] = "";
-    snprintf(absorption_filename, sizeof(absorption_filename), "absorption_res_%.2d.out", a);
-
-    write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
-    write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra,
-                   globals::ntimesteps);
+    write_light_curve(std::format("light_curve_res_{:02d}.out", a), a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf,
+                      globals::ntimesteps);
+    write_spectrum(std::format("spec_res_{:02d}.out", a), std::format("emission_res_{:02d}.out", a),
+                   std::format("emissiontrue_res_{:02d}.out", a), std::format("absorption_res_{:02d}.out", a),
+                   rpkt_spectra, globals::ntimesteps);
 
     if constexpr (POL_ON) {
-      char specpol_filename[MAXFILENAMELENGTH] = "";
-      snprintf(specpol_filename, sizeof(specpol_filename), "specpol_res_%.2d.out", a);
-
-      char emissionpol_filename[MAXFILENAMELENGTH] = "";
-      snprintf(emissionpol_filename, sizeof(emissionpol_filename), "emissionpol_res_%.2d.out", a);
-
-      char absorptionpol_filename[MAXFILENAMELENGTH] = "";
-      snprintf(absorptionpol_filename, sizeof(absorptionpol_filename), "absorptionpol_res_%.2d.out", a);
-
-      write_specpol(specpol_filename, emissionpol_filename, absorptionpol_filename, &stokes_i, &stokes_q, &stokes_u);
+      write_specpol(std::format("specpol_res_{:02d}.out", a), std::format("emissionpol_res_{:02d}.out", a),
+                    std::format("absorptionpol_res_{:02d}.out", a), &stokes_i, &stokes_q, &stokes_u);
     }
 
     printout("Did %d of %d angle bins.\n", a + 1, MABINS);
@@ -166,11 +146,8 @@ auto main(int argc, char *argv[]) -> int {
 
   check_already_running();
 
-  char filename[MAXFILENAMELENGTH];
   if (globals::my_rank == 0) {
-    snprintf(filename, std::size(filename), "exspec.txt");
-    output_file = std::ofstream(filename);
-    assert_always(output_file.is_open());
+    output_file = fstream_required("exspec.txt", std::ios::out | std::ios::trunc);
   }
 
   printout("git branch %s\n", GIT_BRANCH);
