@@ -8,6 +8,7 @@
 #include <cstring>
 #include <ctime>
 #include <filesystem>
+#include <fstream>
 #include <ios>
 #include <span>
 #include <sstream>
@@ -59,31 +60,28 @@ std::string adatafile_hash;
 std::string compositionfile_hash;
 std::array<std::string, 3> phixsfile_hash;
 
-auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
-// Try to read in the precalculated rate coefficients from file
+// Try to read in the precalculated rate coefficients from file (checking whether current atomic data matches)
 // return true if successful or false otherwise
-{
-  // Check whether current atomic data and temperature range match
-  // the precalculated rate coefficients
-
-  auto adatafile_hash_in = std::array<char, 33>("UNKNOWN");
-  if (fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in.data()) != 1) {
+auto read_ratecoeff_dat(std::fstream &ratecoeff_file) -> bool {
+  std::string adatafile_hash_in;
+  if (!std::getline(ratecoeff_file, adatafile_hash_in)) {
     return false;
   }
-  printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in.data());
-  if (strcmp(adatafile_hash.c_str(), adatafile_hash_in.data()) == 0) {
+
+  printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in.c_str());
+  if (adatafile_hash == adatafile_hash_in) {
     printout("(pass)\n");
   } else {
     printout("MISMATCH: MD5 adata.txt = %s\n", adatafile_hash.c_str());
     return false;
   }
 
-  auto compositionfile_hash_in = std::array<char, 33>("UNKNOWN");
-  if (fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in.data()) != 1) {
+  std::string compositionfile_hash_in;
+  if (!std::getline(ratecoeff_file, compositionfile_hash_in)) {
     return false;
   }
-  printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in.data());
-  if (strcmp(compositionfile_hash.c_str(), compositionfile_hash_in.data()) == 0) {
+  printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in.c_str());
+  if (compositionfile_hash == compositionfile_hash_in) {
     printout("(pass)\n");
   } else {
     printout("\nMISMATCH: MD5 compositiondata.txt = %s\n", compositionfile_hash.c_str());
@@ -92,12 +90,12 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
-      auto phixsfile_hash_in = std::array<char, 33>("UNKNOWN");
-      if (fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in.data()) != 1) {
+      std::string phixsfile_hash_in;
+      if (!getline(ratecoeff_file, phixsfile_hash_in)) {
         return false;
       }
-      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver].c_str(), phixsfile_hash_in.data());
-      if (strcmp(phixsfile_hash[phixsver].data(), phixsfile_hash_in.data()) == 0) {
+      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver].c_str(), phixsfile_hash_in.c_str());
+      if (phixsfile_hash[phixsver] == phixsfile_hash_in) {
         printout("(pass)\n");
       } else {
         printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[phixsver].c_str(), phixsfile_hash[phixsver].data());
@@ -106,18 +104,21 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
     }
   }
 
+  std::string line;
+  if (!std::getline(ratecoeff_file, line)) {
+    printout("\nMISMATCH: error reading header line\n");
+    return false;
+  }
+
   double in_T_min = -1.;
   double in_T_max = -1.;
   int in_tablesize = -1;
   int in_nlines = -1;
   int in_nbfcontinua = -1;
   double in_ratecoeff_integral_accuracy = -1.;
-  const int items_read = fscanf(ratecoeff_file, "%la %la %d %d %d %la\n", &in_T_min, &in_T_max, &in_tablesize,
-                                &in_nlines, &in_nbfcontinua, &in_ratecoeff_integral_accuracy);
-  if (items_read != 6) {
-    printout("\nMISMATCH: error reading header line\n");
-    return false;
-  }
+  auto ssline = std::stringstream(line);
+  ssline >> std::hexfloat >> in_T_min >> in_T_max >> in_tablesize >> in_nlines >> in_nbfcontinua >>
+      in_ratecoeff_integral_accuracy;
   printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d nbfcontinua %d in_ratecoeff_integral_accuracy %g ",
            in_T_min, in_T_max, in_tablesize, in_nlines, in_nbfcontinua, in_ratecoeff_integral_accuracy);
 
@@ -155,8 +156,8 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
       int in_ionstage = 0;
       int in_levels = 0;
       int in_ionisinglevels = 0;
-      assert_always(
-          fscanf(ratecoeff_file, "%d %d %d %d\n", &in_element, &in_ionstage, &in_levels, &in_ionisinglevels) == 4);
+      assert_always(std::getline(ratecoeff_file, line));
+      assert_always(std::stringstream(line) >> in_element >> in_ionstage >> in_levels >> in_ionisinglevels);
       const int nlevels = get_nlevels(element, ion);
       const int ionisinglevels = get_nlevels_ionising(element, ion);
       if (get_atomicnumber(element) != in_element || get_ionstage(element, ion) != in_ionstage ||
@@ -187,8 +188,9 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
             double in_bfcooling_coeff{NAN};
             double in_corrphotoioncoeff{NAN};
             double in_bfheating_coeff{NAN};
-            assert_always(fscanf(ratecoeff_file, "%la %la %la %la\n", &in_alpha_sp, &in_bfcooling_coeff,
-                                 &in_corrphotoioncoeff, &in_bfheating_coeff) == 4);
+            assert_always(std::getline(ratecoeff_file, line));
+            assert_always(std::stringstream(line) >> std::hexfloat >> in_alpha_sp >> in_bfcooling_coeff >>
+                          in_corrphotoioncoeff >> in_bfheating_coeff);
 
             // assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
             spontrecombcoeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] = in_alpha_sp;
@@ -224,21 +226,22 @@ auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 }
 
 void write_ratecoeff_dat() {
-  FILE *ratecoeff_file = fopen_required("ratecoeff.dat", "w");
-  fprintf(ratecoeff_file, "%32s\n", adatafile_hash.c_str());
-  fprintf(ratecoeff_file, "%32s\n", compositionfile_hash.c_str());
+  auto ratecoeff_file = fstream_required("ratecoeff.dat", std::ios::out | std::ios::trunc);
+  ratecoeff_file << std::hexfloat;
+  ratecoeff_file << adatafile_hash << '\n';
+  ratecoeff_file << compositionfile_hash << '\n';
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
-      fprintf(ratecoeff_file, "%32s\n", phixsfile_hash[phixsver].data());
+      ratecoeff_file << phixsfile_hash[phixsver] << '\n';
     }
   }
-  fprintf(ratecoeff_file, "%la %la %d %d %d %la\n", MINTEMP, MAXTEMP, TABLESIZE, globals::nlines, globals::nbfcontinua,
-          RATECOEFF_INTEGRAL_ACCURACY);
+  ratecoeff_file << MINTEMP << ' ' << MAXTEMP << ' ' << TABLESIZE << ' ' << globals::nlines << ' '
+                 << globals::nbfcontinua << ' ' << RATECOEFF_INTEGRAL_ACCURACY << '\n';
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      fprintf(ratecoeff_file, "%d %d %d %d\n", get_atomicnumber(element), get_ionstage(element, ion),
-              get_nlevels(element, ion), get_nlevels_ionising(element, ion));
+      ratecoeff_file << get_atomicnumber(element) << ' ' << get_ionstage(element, ion) << ' '
+                     << get_nlevels(element, ion) << ' ' << get_nlevels_ionising(element, ion) << '\n';
     }
   }
 
@@ -255,15 +258,14 @@ void write_ratecoeff_dat() {
           for (int iter = 0; iter < TABLESIZE; iter++) {
             const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
 
-            fprintf(ratecoeff_file, "%la %la %la %la\n", spontrecombcoeffs[bflutindex], bfcooling_coeffs[bflutindex],
-                    USE_LUT_PHOTOION ? corrphotoioncoeffs[bflutindex] : -1,
-                    USE_LUT_BFHEATING ? bfheating_coeffs[bflutindex] : -1);
+            ratecoeff_file << spontrecombcoeffs[bflutindex] << ' ' << bfcooling_coeffs[bflutindex] << ' '
+                           << (USE_LUT_PHOTOION ? corrphotoioncoeffs[bflutindex] : -1) << ' '
+                           << (USE_LUT_BFHEATING ? bfheating_coeffs[bflutindex] : -1) << '\n';
           }
         }
       }
     }
   }
-  fclose(ratecoeff_file);
 }
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
@@ -1133,13 +1135,12 @@ void ratecoefficients_init() {
   // Check if we need to calculate the ratecoefficients or if we were able to read them from file
   bool ratecoeff_match = false;
   if (globals::rank_in_node == 0) {
-    FILE *ratecoeff_file = fopen("ratecoeff.dat", "r");
-    if (ratecoeff_file != nullptr) {
+    if (std::filesystem::exists("ratecoeff.dat")) {
+      auto ratecoeff_file = fstream_required("ratecoeff.dat", std::ios::in);
       ratecoeff_match = read_ratecoeff_dat(ratecoeff_file);
       if (!ratecoeff_match) {
         printout("[info] ratecoefficients_init: ratecoeff.dat does not match current simulation. Recalculating...\n");
       }
-      fclose(ratecoeff_file);
     } else {
       printout("[info] ratecoefficients_init: ratecoeff.dat file not found. Creating a new one...\n");
     }
