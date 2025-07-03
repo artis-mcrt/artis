@@ -658,10 +658,6 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
       vpkt::write_timestep(nts, my_rank, true);
 
       printout("time after write final packets file %ld\n", std::time(nullptr));
-
-      // final packets*.out have been written, so remove the temporary packets files
-      // commented out because you might still want to resume the simulation
-      // remove_temp_packetsfile(nts, my_rank);
     }
   }
   return !do_this_full_loop;
