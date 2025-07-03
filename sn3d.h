@@ -238,7 +238,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
 
   FILE *file = std::fopen(filename.c_str(), mode);
   if (file == nullptr) {
-    printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename.c_str(), mode);
+    logprintlnfmt("ERROR: Could not open file '{}' for mode '{}'.", filename, mode);
     std::abort();
   }
 
@@ -257,7 +257,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   }
   auto file = std::fstream(filename, mode);
   if (!file.is_open()) {
-    printout("ERROR: Could not open file '%s'\n", filename.c_str());
+    logprintlnfmt("ERROR: Could not open file '{}'", filename);
     std::abort();
   }
   return file;
