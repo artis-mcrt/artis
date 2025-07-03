@@ -13,6 +13,8 @@
 #include "sn3d.h"
 
 #include <getopt.h>
+
+#include <format>
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
@@ -374,22 +376,20 @@ void write_temp_packetsfile(const int timestep, const int my_rank, std::span<con
 }
 
 void remove_temp_packetsfile(const int timestep, const int my_rank) {
-  char filename[MAXFILENAMELENGTH];
-  snprintf(filename, std::size(filename), "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  const auto filename = std::format("packets_{:04d}_ts{:02d}.tmp", my_rank, timestep);
 
   if (std::filesystem::exists(filename)) {
-    std::remove(filename);
-    printout("Deleted %s\n", filename);
+    std::filesystem::remove(filename);
+    logprintlnfmt("Deleted {}", filename);
   }
 }
 
 void remove_grid_restart_data(const int timestep) {
-  char prevfilename[MAXFILENAMELENGTH];
-  snprintf(prevfilename, MAXFILENAMELENGTH, "gridsave_ts%d.tmp", timestep);
+  const auto filename = std::format("gridsave_ts{:02d}.tmp", timestep);
 
-  if (std::filesystem::exists(prevfilename)) {
-    std::remove(prevfilename);
-    printout("Deleted %s\n", prevfilename);
+  if (std::filesystem::exists(filename)) {
+    std::filesystem::remove(filename);
+    logprintlnfmt("Deleted {}", filename);
   }
 }
 
@@ -652,9 +652,7 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
     }
 
     if (nts == globals::timestep_finish - 1) {
-      char filename[MAXFILENAMELENGTH];
-      snprintf(filename, std::size(filename), "packets%.2d_%.4d.out", 0, my_rank);
-      // snprintf(filename, std::size(filename), "packets%.2d_%.4d.out", middle_iteration, my_rank);
+      const auto filename = std::format("packets{:02d}_{:04d}.out", 0, my_rank);
       write_packets(filename, packets);
 
       vpkt::write_timestep(nts, my_rank, true);
@@ -663,10 +661,7 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 
       // final packets*.out have been written, so remove the temporary packets files
       // commented out because you might still want to resume the simulation
-      // snprintf(filename, std::size(filename), "packets%d_%d_odd.tmp", 0, my_rank);
-      // std::remove(filename);
-      // snprintf(filename, std::size(filename), "packets%d_%d_even.tmp", 0, my_rank);
-      // std::remove(filename);
+      // remove_temp_packetsfile(nts, my_rank);
     }
   }
   return !do_this_full_loop;
