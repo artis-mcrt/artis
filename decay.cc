@@ -5,9 +5,9 @@
 #include <cctype>
 #include <cmath>
 #include <cstddef>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <format>
 #include <fstream>
 #include <iostream>
 #include <numbers>
@@ -1237,7 +1237,8 @@ void update_abundances(const int nonemptymgi, const int timestep, const double t
   grid::set_nnetot(nonemptymgi, nnetot);
 }
 
-void fprint_nuc_abundances(FILE *estimators_file, const int nonemptymgi, const double t_current, const int element) {
+void output_nuc_abundances(std::ostream &estimators_file, const int nonemptymgi, const double t_current,
+                           const int element) {
   const double rho = grid::get_rho(nonemptymgi);
 
   const int atomic_number = get_atomicnumber(element);
@@ -1253,7 +1254,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int nonemptymgi, const d
         if (massfrac > 0) {
           const double numberdens = massfrac / nucmass(atomic_number, nuc_a) * rho;
 
-          fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number).c_str(), nuc_a, numberdens);
+          estimators_file << std::format("  {}{}: {:9.3e}", get_elname(atomic_number), nuc_a, numberdens);
         }
       }
     } else {  // not the element that we want, but check if a decay produces it
@@ -1269,7 +1270,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int nonemptymgi, const d
             // stable
             const double massfrac = get_nuc_massfrac(nonemptymgi, atomic_number, nuc_a, t_current);
             const double numberdens = massfrac / nucmass(nuc_z, nuc_a) * rho;
-            fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number).c_str(), nuc_a, numberdens);
+            estimators_file << std::format("  {}{}: {:9.3e}", get_elname(atomic_number), nuc_a, numberdens);
           }
         }
       }
@@ -1281,9 +1282,9 @@ void fprint_nuc_abundances(FILE *estimators_file, const int nonemptymgi, const d
   if (otherstablemassfrac > 0) {
     const double meannucmass = globals::elements[element].initstablemeannucmass;
     const double otherstable_numberdens = otherstablemassfrac / meannucmass * grid::get_rho(nonemptymgi);
-    fprintf(estimators_file, "  %s_otherstable: %9.3e", get_elname(atomic_number).c_str(), otherstable_numberdens);
+    estimators_file << std::format("  {}_otherstable: {:9.3e}", get_elname(atomic_number), otherstable_numberdens);
   }
-  fprintf(estimators_file, "\n");
+  estimators_file << '\n';
 }
 
 void setup_radioactive_pellet(const double e0, const int nonemptymgi, Packet &pkt) {
