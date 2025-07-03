@@ -3,9 +3,10 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <format>
+#include <fstream>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -34,7 +35,7 @@ namespace {
 
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
-void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, const int timestep, const int titer,
+void write_to_estimators_file(std::fstream &estimators_file, const int nonemptymgi, const int timestep, const int titer,
                               const HeatingCoolingRates &heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -47,12 +48,12 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
   const auto nne = grid::get_nne(nonemptymgi);
   const auto Y_e = grid::get_electronfrac(nonemptymgi);
 
-  fprintf(estimators_file,
-          "timestep %d modelgridindex %d titeration %d TR %g Te %g W %g TJ %g grey_depth %g thick %d nne %g Ye %g "
-          "tdays %7.2f\n",
-          timestep, mgi, titer, grid::get_TR(nonemptymgi), T_e, grid::get_W(nonemptymgi), grid::get_TJ(nonemptymgi),
-          grid::modelgrid[nonemptymgi].grey_depth, grid::modelgrid[nonemptymgi].thick, nne, Y_e,
-          globals::timesteps[timestep].mid / DAY);
+  estimators_file << std::format(
+      "timestep {} modelgridindex {} titeration {} TR {} Te {} W {} TJ {} grey_depth {} thick {} nne {} Ye {} "
+      "tdays {:7.2f}\n",
+      timestep, mgi, titer, grid::get_TR(nonemptymgi), T_e, grid::get_W(nonemptymgi), grid::get_TJ(nonemptymgi),
+      grid::modelgrid[nonemptymgi].grey_depth, grid::modelgrid[nonemptymgi].thick, nne, Y_e,
+      globals::timesteps[timestep].mid / DAY);
 
   if (globals::total_nlte_levels > 0) {
     nltepop_write_to_file(nonemptymgi, timestep);
@@ -63,23 +64,23 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
       continue;
     }
 
-    fprintf(estimators_file, "populations        Z=%2d", get_atomicnumber(element));
+    estimators_file << std::format("populations        Z={:2d}", get_atomicnumber(element));
     const int nions = get_nions(element);
     if (nions > 0) {
       // add spaces for missing lowest ion stages to match other elements
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
-        fprintf(estimators_file, "              ");
+        estimators_file << "              ";
       }
     }
     double elpop = 0.;
     for (int ion = 0; ion < nions; ion++) {
       elpop += get_nnion(nonemptymgi, element, ion);
-      fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), get_nnion(nonemptymgi, element, ion));
+      estimators_file << std::format("  {}: {:9.3e}", get_ionstage(element, ion), get_nnion(nonemptymgi, element, ion));
     }
     if (nions == 0) {
       elpop = grid::get_elem_numberdens(nonemptymgi, element);
     }
-    fprintf(estimators_file, "  SUM: %9.3e", elpop);
+    estimators_file << std::format("  SUM: {:9.3e}", elpop);
 
     decay::fprint_nuc_abundances(estimators_file, nonemptymgi, globals::timesteps[timestep].mid, element);
 
@@ -91,88 +92,91 @@ void write_to_estimators_file(FILE *estimators_file, const int nonemptymgi, cons
     const bool assume_lte = false;
 
     if (DETAILED_BF_ESTIMATORS_ON) {
-      fprintf(estimators_file, "gamma_R_integral   Z=%2d", get_atomicnumber(element));
+      estimators_file << std::format("gamma_R_integral   Z={:2d}", get_atomicnumber(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
-        fprintf(estimators_file, "              ");
+        estimators_file << "              ";
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         // const bool printdebug_gammar = (get_atomicnumber(element) == 26 && get_ionstage(element, ion) == 2);
         const bool printdebug_gammar = false;
-        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug_gammar,
-                                              false, true));
+        estimators_file << std::format("  {}: {:9.3e}", get_ionstage(element, ion),
+                                       calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false,
+                                                                     printdebug_gammar, false, true));
       }
-      fprintf(estimators_file, "\n");
+      estimators_file << '\n';
     }
 
     if (DETAILED_BF_ESTIMATORS_ON) {
-      fprintf(estimators_file, "gamma_R_bfest      Z=%2d", get_atomicnumber(element));
+      estimators_file << std::format("gamma_R_bfest      Z={:2d}", get_atomicnumber(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
-        fprintf(estimators_file, "              ");
+        estimators_file << "              ";
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         // const bool printdebug_gammar = ((get_atomicnumber(element) == 26 || get_atomicnumber(element) == 28) &&
         // get_ionstage(element, ion) >= 2); const bool printdebug_gammar = (get_atomicnumber(element) >= 26);
         const bool printdebug_gammar = false;
-        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false, printdebug_gammar,
-                                              true, false));
+        estimators_file << std::format("  {}: {:9.3e}", get_ionstage(element, ion),
+                                       calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false,
+                                                                     printdebug_gammar, true, false));
       }
-      fprintf(estimators_file, "\n");
+      estimators_file << '\n';
     }
 
     if (NT_ON) {
-      fprintf(estimators_file, "gamma_NT           Z=%2d", get_atomicnumber(element));
+      estimators_file << std::format("gamma_NT           Z={:2d}", get_atomicnumber(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
-        fprintf(estimators_file, "              ");
+        estimators_file << "              ";
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         const double Y_nt = nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion);
-        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), Y_nt);
+        estimators_file << std::format("  {}: {:9.3e}", get_ionstage(element, ion), Y_nt);
       }
-      fprintf(estimators_file, "\n");
+      estimators_file << '\n';
     }
 
     if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
-      fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_atomicnumber(element));
+      estimators_file << std::format("corrphotoionrenorm Z={:2d}", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
         if (groundcontindex >= 0) {
-          fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                  globals::corrphotoionrenorm[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)]);
+          estimators_file << std::format(
+              "  {}: {:9.3e}", get_ionstage(element, ion),
+              globals::corrphotoionrenorm[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)]);
         }
       }
-      fprintf(estimators_file, "\n");
-      fprintf(estimators_file, "gammaestimator     Z=%2d", get_atomicnumber(element));
+      estimators_file << '\n';
+      estimators_file << std::format("gammaestimator     Z={:2d}", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
         if (groundcontindex >= 0) {
-          fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                  globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)]);
+          estimators_file << std::format(
+              "  {}: {:9.3e}", get_ionstage(element, ion),
+              globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)]);
         }
       }
-      fprintf(estimators_file, "\n");
+      estimators_file << '\n';
     }
   }
 
   // power densities in erg / s / cm^3. 'ana' means analytical at t_mid, i.e. the rates calculated from the nuclear
   // abundances and decay data, not from Monte Carlo events
-  fprintf(estimators_file, "emission_ana: gamma %11.5e positron %11.5e electron %11.5e alpha %11.5e\n",
-          heatingcoolingrates.eps_gamma_ana, heatingcoolingrates.eps_positron_ana, heatingcoolingrates.eps_electron_ana,
-          heatingcoolingrates.eps_alpha_ana);
-  fprintf(estimators_file, "deposition: gamma %11.5e positron %11.5e electron %11.5e alpha %11.5e\n",
-          heatingcoolingrates.dep_gamma, heatingcoolingrates.dep_positron, heatingcoolingrates.dep_electron,
-          heatingcoolingrates.dep_alpha);
-  fprintf(estimators_file, "heating: ff %11.5e bf %11.5e coll %11.5e       dep %11.5e heating_dep/total_dep %.3f\n",
-          heatingcoolingrates.heating_ff, heatingcoolingrates.heating_bf, heatingcoolingrates.heating_collisional,
-          heatingcoolingrates.heating_dep, heatingcoolingrates.dep_frac_heating);
-  fprintf(estimators_file, "cooling: ff %11.5e fb %11.5e coll %11.5e adiabatic %11.5e\n",
-          heatingcoolingrates.cooling_ff, heatingcoolingrates.cooling_fb, heatingcoolingrates.cooling_collisional,
-          heatingcoolingrates.cooling_adiabatic);
+  estimators_file << std::format("emission_ana: gamma {:11.5e} positron {:11.5e} electron {:11.5e} alpha {:11.5e}\n",
+                                 heatingcoolingrates.eps_gamma_ana, heatingcoolingrates.eps_positron_ana,
+                                 heatingcoolingrates.eps_electron_ana, heatingcoolingrates.eps_alpha_ana);
+  estimators_file << std::format("deposition: gamma {:11.5e} positron {:11.5e} electron {:11.5e} alpha {:11.5e}\n",
+                                 heatingcoolingrates.dep_gamma, heatingcoolingrates.dep_positron,
+                                 heatingcoolingrates.dep_electron, heatingcoolingrates.dep_alpha);
+  estimators_file << std::format(
+      "heating: ff {:11.5e} bf {:11.5e} coll {:11.5e}       dep {:11.5e} heating_dep/total_dep {:.3f}\n",
+      heatingcoolingrates.heating_ff, heatingcoolingrates.heating_bf, heatingcoolingrates.heating_collisional,
+      heatingcoolingrates.heating_dep, heatingcoolingrates.dep_frac_heating);
+  estimators_file << std::format("cooling: ff {:11.5e} fb {:11.5e} coll {:11.5e} adiabatic {:11.5e}\n",
+                                 heatingcoolingrates.cooling_ff, heatingcoolingrates.cooling_fb,
+                                 heatingcoolingrates.cooling_collisional, heatingcoolingrates.cooling_adiabatic);
 
-  fprintf(estimators_file, "\n");
+  estimators_file << '\n';
 
-  fflush(estimators_file);
+  estimators_file.flush();
 
   const auto write_estim_duration = std::time(nullptr) - sys_time_start_write_estimators;
   if (write_estim_duration >= 1) {
@@ -583,7 +587,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
 }  // anonymous namespace
 
-void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int titer,
+void update_grid(std::fstream &estimators_file, const int nts, const int nts_prev, const int titer,
                  const std::time_t real_time_start)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
@@ -645,8 +649,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
                                heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
     } else {
       // modelgrid cells that are not represented in the simulation grid
-      fprintf(estimators_file, "timestep %d modelgridindex %d EMPTYCELL\n\n", nts, mgi);
-      fflush(estimators_file);
+      estimators_file << std::format("timestep {} modelgridindex {} EMPTYCELL\n\n", nts, mgi);
+      estimators_file.flush();
     }
   }
 
