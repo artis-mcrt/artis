@@ -573,11 +573,13 @@ void add_to_spec_res(const Packet &pkt, const int dirbin, Spectra &spectra, Spec
 void write_partial_lightcurve_spectra(const int my_rank, const int nts, std::span<const Packet> pkts) {
   const auto time_func_start = std::time(nullptr);
   bool any_emission_absorption = false;
-  const int dirbinend = (grid::get_model_type() == GridType::SPHERICAL1D || (nts % 5 != 0)) ? 0 : MABINS;
+  const bool simulation_complete = (nts >= globals::timestep_finish - 1);
+  const bool multdimensional = grid::get_model_type() != GridType::SPHERICAL1D;
+  const int dirbinend = (multdimensional && (simulation_complete || (nts % 5 == 0))) ? MABINS : 0;
   for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
     // the emission resolved spectra are slow to generate, and require a lot of memory
     const bool do_emission_absorption =
-        dirbin < 0 && WRITE_PARTIAL_EMISSIONABSORPTIONSPEC && ((nts >= globals::timestep_finish - 1) || (nts % 5 == 0));
+        dirbin < 0 && WRITE_PARTIAL_EMISSIONABSORPTIONSPEC && (simulation_complete || (nts % 5 == 0));
     any_emission_absorption = any_emission_absorption || do_emission_absorption;
 
     write_partial_lightcurve_spectra_dirbin(my_rank, nts, pkts, do_emission_absorption, dirbin);
