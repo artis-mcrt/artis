@@ -1,7 +1,6 @@
 #include "spectrum_lightcurve.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <ctime>
@@ -217,19 +216,16 @@ void add_to_spec(const Packet &pkt, const int dirbin, Spectra &spectra, Spectra 
                           PARSEC / globals::nprocs_exspec * anglefactor;
 
     const auto fluxindex = (nnu * ntimesteps) + nts;
-    std::atomic_ref<double>(spectra.fluxalltimesteps[fluxindex]).fetch_add(deltaE, std::memory_order_relaxed);
+    atomicadd(spectra.fluxalltimesteps[fluxindex], deltaE);
 
     if (stokes_i != nullptr) {
-      std::atomic_ref<double>(stokes_i->fluxalltimesteps[fluxindex])
-          .fetch_add(pkt.stokes[0] * deltaE, std::memory_order_relaxed);
+      atomicadd(stokes_i->fluxalltimesteps[fluxindex], pkt.stokes[0] * deltaE);
     }
     if (stokes_q != nullptr) {
-      std::atomic_ref<double>(stokes_q->fluxalltimesteps[fluxindex])
-          .fetch_add(pkt.stokes[1] * deltaE, std::memory_order_relaxed);
+      atomicadd(stokes_q->fluxalltimesteps[fluxindex], pkt.stokes[1] * deltaE);
     }
     if (stokes_u != nullptr) {
-      std::atomic_ref<double>(stokes_u->fluxalltimesteps[fluxindex])
-          .fetch_add(pkt.stokes[2] * deltaE, std::memory_order_relaxed);
+      atomicadd(stokes_u->fluxalltimesteps[fluxindex], pkt.stokes[2] * deltaE);
     }
 
     if (spectra.do_emission_absorption) {
@@ -239,26 +235,23 @@ void add_to_spec(const Packet &pkt, const int dirbin, Spectra &spectra, Spectra 
       assert_always(truenproc < proccount);
       if (truenproc >= 0) {
         const auto emindex = (nnu * globals::ntimesteps * proccount) + (nts * proccount) + truenproc;
-        std::atomic_ref<double>(spectra.trueemissionalltimesteps[emindex]).fetch_add(deltaE, std::memory_order_relaxed);
+        atomicadd(spectra.trueemissionalltimesteps[emindex], deltaE);
       }
 
       const auto nproc = columnindex_from_emissiontype(pkt.emissiontype);
       assert_always(nproc < proccount);
       if (nproc >= 0) {  // -1 means EMTYPE_NOTSET
         const auto emindex = (nnu * globals::ntimesteps * proccount) + (nts * proccount) + nproc;
-        std::atomic_ref<double>(spectra.emissionalltimesteps[emindex]).fetch_add(deltaE, std::memory_order_relaxed);
+        atomicadd(spectra.emissionalltimesteps[emindex], deltaE);
 
         if (stokes_i != nullptr && stokes_i->do_emission_absorption) {
-          std::atomic_ref<double>(stokes_i->emissionalltimesteps[emindex])
-              .fetch_add(pkt.stokes[0] * deltaE, std::memory_order_relaxed);
+          atomicadd(stokes_i->emissionalltimesteps[emindex], pkt.stokes[0] * deltaE);
         }
         if (stokes_q != nullptr && stokes_q->do_emission_absorption) {
-          std::atomic_ref<double>(stokes_q->emissionalltimesteps[emindex])
-              .fetch_add(pkt.stokes[1] * deltaE, std::memory_order_relaxed);
+          atomicadd(stokes_q->emissionalltimesteps[emindex], pkt.stokes[1] * deltaE);
         }
         if (stokes_u != nullptr && stokes_u->do_emission_absorption) {
-          std::atomic_ref<double>(stokes_u->emissionalltimesteps[emindex])
-              .fetch_add(pkt.stokes[2] * deltaE, std::memory_order_relaxed);
+          atomicadd(stokes_u->emissionalltimesteps[emindex], pkt.stokes[2] * deltaE);
         }
       }
 
@@ -287,20 +280,16 @@ void add_to_spec(const Packet &pkt, const int dirbin, Spectra &spectra, Spectra 
           const int element = globals::linelist[at].elementindex;
           const int ion = globals::linelist[at].ionindex;
           const auto absindex = get_absindex(nts, nnu_abs) + (element * get_max_nions()) + ion;
-          std::atomic_ref<double>(spectra.absorptionalltimesteps[absindex])
-              .fetch_add(deltaE_absorption, std::memory_order_relaxed);
+          atomicadd(spectra.absorptionalltimesteps[absindex], deltaE_absorption);
 
           if (stokes_i != nullptr && stokes_i->do_emission_absorption) {
-            std::atomic_ref<double>(stokes_i->absorptionalltimesteps[absindex])
-                .fetch_add(pkt.stokes[0] * deltaE_absorption, std::memory_order_relaxed);
+            atomicadd(stokes_i->absorptionalltimesteps[absindex], pkt.stokes[0] * deltaE_absorption);
           }
           if (stokes_q != nullptr && stokes_q->do_emission_absorption) {
-            std::atomic_ref<double>(stokes_q->absorptionalltimesteps[absindex])
-                .fetch_add(pkt.stokes[1] * deltaE_absorption, std::memory_order_relaxed);
+            atomicadd(stokes_q->absorptionalltimesteps[absindex], pkt.stokes[1] * deltaE_absorption);
           }
           if (stokes_u != nullptr && stokes_u->do_emission_absorption) {
-            std::atomic_ref<double>(stokes_u->absorptionalltimesteps[absindex])
-                .fetch_add(pkt.stokes[2] * deltaE_absorption, std::memory_order_relaxed);
+            atomicadd(stokes_u->absorptionalltimesteps[absindex], pkt.stokes[2] * deltaE_absorption);
           }
 
           if (TRACE_EMISSION_ABSORPTION_REGION_ON && t_arrive >= traceemissabs_timemin &&
