@@ -382,6 +382,8 @@ void write_partial_lightcurve_spectra_dirbin(const int my_rank, const int nts, s
       if (!std::filesystem::exists(dir_res_outdir)) {
         std::filesystem::create_directory(dir_res_outdir);
       }
+      write_light_curve(std::format("{}light_curve_res_{:02d}.out", dir_res_outdir, dirbin), dirbin,
+                        rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
       write_spectrum(std::format("{}spec_res_{:02d}.out", dir_res_outdir, dirbin),
                      std::format("{}emission_res_{:02d}.out", dir_res_outdir, dirbin),
                      std::format("{}emissiontrue_res_{:02d}.out", dir_res_outdir, dirbin),
