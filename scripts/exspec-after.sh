@@ -6,6 +6,8 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
   # zstd does decent compression at high speeds
   cmdcompress="zstd -T0 -13 -v --rm -f"
 
+  mkdir -p speclc_angle_res
+  mv *_res_*.out* speclc_angle_res/ || true
   # join 3D direction files, if they exist
   python3 ./artis/scripts/mergeangleres.py
 
@@ -33,9 +35,6 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
   find . -maxdepth 2 -name '*.out' ! -name "slurm-*.out" -size +1M -print0 | sort -z | xargs -r0 $cmdcompress
 
   ./artis/scripts/tar_rm_logs.sh
-
-  mkdir -p speclc_angle_res
-  mv *_res_*.out* speclc_angle_res/ || true
 
   export PATH="$(pwd)/../uv/bin:$PATH"
   export PATH="$HOME/.local/bin/:$PATH"

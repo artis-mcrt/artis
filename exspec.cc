@@ -120,15 +120,20 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     // direction bin a
     // line-of-sight dependent spectra and light curves
 
-    write_light_curve(std::format("light_curve_res_{:02d}.out", a), a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf,
-                      globals::ntimesteps);
-    write_spectrum(std::format("spec_res_{:02d}.out", a), std::format("emission_res_{:02d}.out", a),
-                   std::format("emissiontrue_res_{:02d}.out", a), std::format("absorption_res_{:02d}.out", a),
-                   rpkt_spectra, globals::ntimesteps);
+    if (!std::filesystem::exists(outdir_resfiles)) {
+      std::filesystem::create_directory(outdir_resfiles);
+    }
+    write_light_curve(std::format("{}light_curve_res_{:02d}.out", outdir_resfiles, a), a, rpkt_light_curve_lum,
+                      rpkt_light_curve_lumcmf, globals::ntimesteps);
+    write_spectrum(std::format("{}spec_res_{:02d}.out", outdir_resfiles, a),
+                   std::format("{}emission_res_{:02d}.out", outdir_resfiles, a),
+                   std::format("{}emissiontrue_res_{:02d}.out", outdir_resfiles, a),
+                   std::format("{}absorption_res_{:02d}.out", outdir_resfiles, a), rpkt_spectra, globals::ntimesteps);
 
     if constexpr (POL_ON) {
-      write_specpol(std::format("specpol_res_{:02d}.out", a), std::format("emissionpol_res_{:02d}.out", a),
-                    std::format("absorptionpol_res_{:02d}.out", a), &stokes_i, &stokes_q, &stokes_u);
+      write_specpol(std::format("{}specpol_res_{:02d}.out", outdir_resfiles, a),
+                    std::format("{}emissionpol_res_{:02d}.out", outdir_resfiles, a),
+                    std::format("{}absorptionpol_res_{:02d}.out", outdir_resfiles, a), &stokes_i, &stokes_q, &stokes_u);
     }
 
     printout("Did %d of %d angle bins.\n", a + 1, MABINS);
@@ -214,10 +219,10 @@ auto main(int argc, char *argv[]) -> int {
 
   setup_timesteps();
 
-  const int amax = ((grid::get_model_type() == GridType::SPHERICAL1D)) ? 0 : MABINS;
+  const int dirbinend = (grid::get_model_type() == GridType::SPHERICAL1D) ? 0 : MABINS;
   // a is the escape direction angle bin
-  for (int a = -1; a < amax; a++) {
-    do_angle_bin(a, pkts, load_allrank_packets, rpkt_spectra, stokes_i, stokes_q, stokes_u, gamma_spectra);
+  for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
+    do_angle_bin(dirbin, pkts, load_allrank_packets, rpkt_spectra, stokes_i, stokes_q, stokes_u, gamma_spectra);
   }
 
   decay::cleanup();

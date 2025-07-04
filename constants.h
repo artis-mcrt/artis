@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <numbers>
+#include <string_view>
 
 // fundamental constants
 
@@ -63,5 +64,7 @@ enum class ThermalisationScheme { INSTANT, DETAILED, DETAILEDWITHGAMMAPRODUCTS, 
 
 using Vec3d = std::array<double, 3>;
 constexpr Vec3d syn_dir{0., 0., 1.};  // vector defining the theta=0 direction
+
+constexpr std::string_view outdir_resfiles{"speclc_angle_res/"};
 
 #endif
