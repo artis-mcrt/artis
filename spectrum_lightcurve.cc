@@ -611,6 +611,8 @@ void add_to_spec_res(const Packet &pkt, const int dirbin, Spectra &spectra, Spec
 }
 
 void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkts) {
+  // this is called by sn3d (not exspec) when each rank has its own set of packets
+  // in memory
   const auto time_func_start = std::time(nullptr);
   bool any_emission_absorption = false;
   const bool simulation_complete = (nts >= globals::timestep_finish - 1);
