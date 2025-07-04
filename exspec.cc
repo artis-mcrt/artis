@@ -214,10 +214,10 @@ auto main(int argc, char *argv[]) -> int {
 
   setup_timesteps();
 
-  const int amax = ((grid::get_model_type() == GridType::SPHERICAL1D)) ? 0 : MABINS;
+  const int dirbinend = (grid::get_model_type() == GridType::SPHERICAL1D) ? 0 : MABINS;
   // a is the escape direction angle bin
-  for (int a = -1; a < amax; a++) {
-    do_angle_bin(a, pkts, load_allrank_packets, rpkt_spectra, stokes_i, stokes_q, stokes_u, gamma_spectra);
+  for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
+    do_angle_bin(dirbin, pkts, load_allrank_packets, rpkt_spectra, stokes_i, stokes_q, stokes_u, gamma_spectra);
   }
 
   decay::cleanup();
