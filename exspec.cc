@@ -120,15 +120,20 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     // direction bin a
     // line-of-sight dependent spectra and light curves
 
-    write_light_curve(std::format("light_curve_res_{:02d}.out", a), a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf,
-                      globals::ntimesteps);
-    write_spectrum(std::format("spec_res_{:02d}.out", a), std::format("emission_res_{:02d}.out", a),
-                   std::format("emissiontrue_res_{:02d}.out", a), std::format("absorption_res_{:02d}.out", a),
-                   rpkt_spectra, globals::ntimesteps);
+    if (!std::filesystem::exists(dir_res_outdir)) {
+      std::filesystem::create_directory(dir_res_outdir);
+    }
+    write_light_curve(std::format("{}light_curve_res_{:02d}.out", dir_res_outdir, a), a, rpkt_light_curve_lum,
+                      rpkt_light_curve_lumcmf, globals::ntimesteps);
+    write_spectrum(std::format("{}spec_res_{:02d}.out", dir_res_outdir, a),
+                   std::format("{}emission_res_{:02d}.out", dir_res_outdir, a),
+                   std::format("{}emissiontrue_res_{:02d}.out", dir_res_outdir, a),
+                   std::format("{}absorption_res_{:02d}.out", dir_res_outdir, a), rpkt_spectra, globals::ntimesteps);
 
     if constexpr (POL_ON) {
-      write_specpol(std::format("specpol_res_{:02d}.out", a), std::format("emissionpol_res_{:02d}.out", a),
-                    std::format("absorptionpol_res_{:02d}.out", a), &stokes_i, &stokes_q, &stokes_u);
+      write_specpol(std::format("{}specpol_res_{:02d}.out", dir_res_outdir, a),
+                    std::format("{}emissionpol_res_{:02d}.out", dir_res_outdir, a),
+                    std::format("{}absorptionpol_res_{:02d}.out", dir_res_outdir, a), &stokes_i, &stokes_q, &stokes_u);
     }
 
     printout("Did %d of %d angle bins.\n", a + 1, MABINS);
