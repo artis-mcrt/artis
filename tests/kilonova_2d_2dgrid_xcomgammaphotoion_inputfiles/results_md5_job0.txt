@@ -1,8 +1,8 @@
-77b24c09dc260ab6a15f6b6bd96b5124  absorption.out
+6def0889d2d2d5fea1ed9a629110ea67  absorption.out
 897316929176464ebc9ad085f31e7284  bflist.out
 6e1ecb4e4c0127a59a8459b0b5b5623c  deposition.out
-4260ede324f222b0797fa9591057d223  emission.out
-0d8616ac0e315cf600d367dac8f8dc21  emissiontrue.out
+fc162ada2f89f1cc645736aaff92106b  emission.out
+6fea8c1076df65590eb8b2156b37410d  emissiontrue.out
 19b974363d361a1a847957b21f13ac25  gamma_light_curve.out
 b1ffa6ae3229fee1ce5c247f0129b7b0  gammalinelist.out
 29ac1cb06f3139df7cbca0bbdb426e1c  grid.out
@@ -123,7 +123,7 @@ a3214fe62f4e5b4075e0cdb813344f42  speclc_angle_res/light_curve_res_95.out
 70333f93a1c02dd8759a8820ebb199ae  speclc_angle_res/spec_res_00.out
 5e85ab3be4555f8e2f586a7eb2b4ead4  speclc_angle_res/spec_res_01.out
 cbdf18d68b1bfc27e7a2ebfb3e2a1dd3  speclc_angle_res/spec_res_02.out
-ec42ca11151067677d1247567af2df55  speclc_angle_res/spec_res_03.out
+e25d35265771c44c40d8bb6cad012db5  speclc_angle_res/spec_res_03.out
 5108b284cda129813645e36acc785d04  speclc_angle_res/spec_res_04.out
 2fa8aec242898e3fa5756c40b895812a  speclc_angle_res/spec_res_05.out
 a982d8e3b30870f1d87d6511379c519c  speclc_angle_res/spec_res_06.out
@@ -150,10 +150,10 @@ ec3b44cf8a81deea09001b946607013a  speclc_angle_res/spec_res_14.out
 b31ba55efacb1c2772e9e784eb4152fd  speclc_angle_res/spec_res_27.out
 fb1ce92c1a47691dfceb54996a284094  speclc_angle_res/spec_res_28.out
 da755279b6a1fd097b6a2d54e6f4390b  speclc_angle_res/spec_res_29.out
-ad2495335d060be14f8b62d3420cc778  speclc_angle_res/spec_res_30.out
+27b62b82b2b846218832eb5e456ec4d2  speclc_angle_res/spec_res_30.out
 a95d2618bec28ddfef708da2edb1a078  speclc_angle_res/spec_res_31.out
 0957cc23a544e78676478a62aad568ba  speclc_angle_res/spec_res_32.out
-492c90585830deef869c5f9444538f6b  speclc_angle_res/spec_res_33.out
+3256d288551b626ecb0042f2f3cda6ff  speclc_angle_res/spec_res_33.out
 25923ec226850918803beb05e43faf3b  speclc_angle_res/spec_res_34.out
 05d201188faaf95f4a1d72d776da7037  speclc_angle_res/spec_res_35.out
 cdf167a0966678149ae7accecd5e3457  speclc_angle_res/spec_res_36.out

@@ -135,10 +135,10 @@ c47adf8aadea68cfcfb2b9998d2d52b0  speclc_angle_res/spec_res_13.out
 884cbbe87bae52493310a74d0bdd2cfb  speclc_angle_res/spec_res_15.out
 6d43866a9346f3e15622b303d6b6a909  speclc_angle_res/spec_res_16.out
 5e34c8d7e302e3f0473c29f4fce3b56f  speclc_angle_res/spec_res_17.out
-60a5cb814f7fb65facbe9aef31ed81c6  speclc_angle_res/spec_res_18.out
+4def9b5a6e441b7eaa0c1ae3430593d1  speclc_angle_res/spec_res_18.out
 31828de9f793de3a820d06e5872f3b44  speclc_angle_res/spec_res_19.out
 edc42ba7ee0ed52f0e1d3b233c4b8def  speclc_angle_res/spec_res_20.out
-fdec4e968257f6f2de5b3839ab828378  speclc_angle_res/spec_res_21.out
+939b933dfed0b277d2e1c9350661965c  speclc_angle_res/spec_res_21.out
 6c9a5e9e47ec3e4db87b9d0c3c23cff5  speclc_angle_res/spec_res_22.out
 e607d3e57b33ee488348cb27be47a7c7  speclc_angle_res/spec_res_23.out
 9ace1706e9634eb28b7cf1979223aacb  speclc_angle_res/spec_res_24.out
@@ -149,8 +149,8 @@ f07780a0b2d7d031a10e73c9d5693cd9  speclc_angle_res/spec_res_26.out
 3e676ac97455f2669bf61f39cadd9cc7  speclc_angle_res/spec_res_29.out
 284825f9db39fd61593f246c56d4c8f6  speclc_angle_res/spec_res_30.out
 504568cf9bbfd589e7a995a3f6422bb4  speclc_angle_res/spec_res_31.out
-da11d3dfb8cd29065de33e68839fc06e  speclc_angle_res/spec_res_32.out
-6e80cef11f4372018b97545cb75d79f5  speclc_angle_res/spec_res_33.out
+65a553b99499218bc1e1d85466f270a2  speclc_angle_res/spec_res_32.out
+a565361cdec8ab71423c6c2f6c7521a4  speclc_angle_res/spec_res_33.out
 4d738ae1f8a79090ed1570720006470f  speclc_angle_res/spec_res_34.out
 a9fe0608ffb3c2d59b03d8d87d229e83  speclc_angle_res/spec_res_35.out
 43824897de83037cd62ed19993737c8d  speclc_angle_res/spec_res_36.out
@@ -170,7 +170,7 @@ a25e7ba8a48e8c90572ef183113ade7a  speclc_angle_res/spec_res_47.out
 e8f04bc0a8d5ba3186f650a314f6980e  speclc_angle_res/spec_res_50.out
 874ffc822061ba0cea67301e72ddbaea  speclc_angle_res/spec_res_51.out
 87400fc9fe60bef6847c8080806645ca  speclc_angle_res/spec_res_52.out
-6fb3315a0091b57f2868810f26448744  speclc_angle_res/spec_res_53.out
+0178654a117303fb891783ea49c08ba8  speclc_angle_res/spec_res_53.out
 02ff7fd0704571d57691e2f27254fa98  speclc_angle_res/spec_res_54.out
 25c5499d2372dc58080793c1a048aaa2  speclc_angle_res/spec_res_55.out
 5fcc56b9a6853a3d356f6978dc993a86  speclc_angle_res/spec_res_56.out
