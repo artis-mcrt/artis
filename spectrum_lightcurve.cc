@@ -341,6 +341,10 @@ void write_partial_lightcurve_spectra_dirbin(const int my_rank, const int nts, s
   thread_local static std::vector<double> rpkt_light_curve_lumcmf;
   thread_local static std::vector<double> gamma_light_curve_lum;
   thread_local static std::vector<double> gamma_light_curve_lumcmf;
+  resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
+  resize_exactly(rpkt_light_curve_lumcmf, globals::ntimesteps);
+  resize_exactly(gamma_light_curve_lum, globals::ntimesteps);
+  resize_exactly(gamma_light_curve_lumcmf, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lum, 0.);
   std::ranges::fill(rpkt_light_curve_lumcmf, 0.);
   std::ranges::fill(gamma_light_curve_lum, 0.);
