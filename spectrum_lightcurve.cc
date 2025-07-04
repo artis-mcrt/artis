@@ -433,10 +433,6 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
     emission_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
     trueemission_file = fstream_required(trueemission_filename, std::ios::out | std::ios::trunc);
     absorption_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
-    printout("Writing %s, %s, %s, and %s\n", spec_filename.c_str(), emission_filename.c_str(),
-             trueemission_filename.c_str(), absorption_filename.c_str());
-  } else {
-    printout("Writing %s\n", spec_filename.c_str());
   }
 
   if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_absorption && !traceemissionabsorption.empty()) {
@@ -637,8 +633,6 @@ void write_light_curve(const std::string &lc_filename, const int dirbin, const s
   assert_always(numtimesteps <= globals::ntimesteps);
 
   auto lc_file = fstream_required(lc_filename, std::ios::out | std::ios::trunc);
-
-  logprintlnfmt("Writing {}", lc_filename);
 
   // UVOIR bolometric light curve
   for (int nts = 0; nts < numtimesteps; nts++) {
