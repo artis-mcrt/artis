@@ -228,23 +228,23 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   }
 }
 
-[[nodiscard]] inline auto fopen_required(const std::string &filename, const char *mode) -> FILE * {
+[[nodiscard]] inline auto fopen_required(const std::string &filename, std::span<const char> mode) -> FILE * {
   // look in the data folder first
   const std::string datafolderfilename = "data/" + filename;
   if (mode[0] == 'r' && std::filesystem::exists(datafolderfilename)) {
     return fopen_required(datafolderfilename, mode);
   }
 
-  FILE *file = std::fopen(filename.c_str(), mode);
+  FILE *file = std::fopen(filename.c_str(), mode.data());
   if (file == nullptr) {
-    logprintlnfmt("ERROR: Could not open file '{}' for mode '{}'.", filename, mode);
+    logprintlnfmt("ERROR: Could not open file '{}' for mode '{}'.", filename, mode.data());
     std::abort();
   }
 
   return file;
 }
 
-[[nodiscard]] inline auto fopen_required_uniqueptr(const std::string &filename, const char *mode) {
+[[nodiscard]] inline auto fopen_required_uniqueptr(const std::string &filename, std::span<const char> mode) {
   return std::unique_ptr<FILE, int (*)(FILE *)>(fopen_required(filename, mode),
                                                 [](FILE *fp) -> int { return std::fclose(fp); });
 }
