@@ -210,6 +210,7 @@ void add_to_spec(const Packet &pkt, const int dirbin, Spectra &spectra, Spectra 
   if (t_arrive > globals::tmin && t_arrive < globals::tmax && pkt.nu_rf > nu_min && pkt.nu_rf < nu_max) {
     const auto nts = get_timestep(t_arrive);
 
+    // a binary search into freq_lower would probably be faster than this double logarithm
     const auto nnu = static_cast<ptrdiff_t>((log(pkt.nu_rf) - log(nu_min)) / dlognu);
 
     const double deltaE = pkt.e_rf / globals::timesteps[nts].width / spectra.delta_freq.at(nnu) / 4.e12 / PI / PARSEC /
@@ -624,7 +625,7 @@ void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkt
     write_partial_lightcurve_spectra_dirbin(nts, pkts, do_emission_absorption, dirbin);
   }
 
-  printout("timestep %d: Saving partial light curves and %sspectra took %lds\n", nts,
+  printout("timestep %d: Saving light curves and %sspectra took %lds\n", nts,
            any_emission_absorption ? "emission/absorption " : "", std::time(nullptr) - time_func_start);
 }
 
