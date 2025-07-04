@@ -337,10 +337,14 @@ void write_partial_lightcurve_spectra_dirbin(const int my_rank, const int nts, s
                                              const bool do_emission_absorption, const int dirbin) {
   thread_local static Spectra rpkt_spectra;
 
-  std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
-  std::vector<double> rpkt_light_curve_lumcmf(globals::ntimesteps, 0.);
-  std::vector<double> gamma_light_curve_lum(globals::ntimesteps, 0.);
-  std::vector<double> gamma_light_curve_lumcmf(globals::ntimesteps, 0.);
+  thread_local static std::vector<double> rpkt_light_curve_lum;
+  thread_local static std::vector<double> rpkt_light_curve_lumcmf;
+  thread_local static std::vector<double> gamma_light_curve_lum;
+  thread_local static std::vector<double> gamma_light_curve_lumcmf;
+  std::ranges::fill(rpkt_light_curve_lum, 0.);
+  std::ranges::fill(rpkt_light_curve_lumcmf, 0.);
+  std::ranges::fill(gamma_light_curve_lum, 0.);
+  std::ranges::fill(gamma_light_curve_lumcmf, 0.);
 
   TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 
