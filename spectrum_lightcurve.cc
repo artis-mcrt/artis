@@ -383,15 +383,15 @@ void write_partial_lightcurve_spectra_dirbin(const int my_rank, const int nts, s
       write_light_curve("gamma_light_curve.out", dirbin, gamma_light_curve_lum, gamma_light_curve_lumcmf, numtimesteps);
       write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, numtimesteps);
     } else {
-      if (!std::filesystem::exists(dir_res_outdir)) {
-        std::filesystem::create_directory(dir_res_outdir);
+      if (!std::filesystem::exists(outdir_resfiles)) {
+        std::filesystem::create_directory(outdir_resfiles);
       }
-      write_light_curve(std::format("{}light_curve_res_{:02d}.out", dir_res_outdir, dirbin), dirbin,
+      write_light_curve(std::format("{}light_curve_res_{:02d}.out", outdir_resfiles, dirbin), dirbin,
                         rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
-      write_spectrum(std::format("{}spec_res_{:02d}.out", dir_res_outdir, dirbin),
-                     std::format("{}emission_res_{:02d}.out", dir_res_outdir, dirbin),
-                     std::format("{}emissiontrue_res_{:02d}.out", dir_res_outdir, dirbin),
-                     std::format("{}absorption_res_{:02d}.out", dir_res_outdir, dirbin), rpkt_spectra, numtimesteps);
+      write_spectrum(std::format("{}spec_res_{:02d}.out", outdir_resfiles, dirbin),
+                     std::format("{}emission_res_{:02d}.out", outdir_resfiles, dirbin),
+                     std::format("{}emissiontrue_res_{:02d}.out", outdir_resfiles, dirbin),
+                     std::format("{}absorption_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_spectra, numtimesteps);
     }
   }
   MPI_Barrier(MPI_COMM_WORLD);
