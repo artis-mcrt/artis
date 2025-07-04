@@ -9,9 +9,7 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
   mkdir -p speclc_angle_res
   mv *_res_*.out* speclc_angle_res/ || true
   # join 3D direction files, if they exist
-  cd speclc_angle_res
   python3 ./artis/scripts/mergeangleres.py
-  cd ..
 
   mkdir -p packets
   mv packets*.out* packets/ || true
