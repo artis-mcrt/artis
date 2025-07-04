@@ -900,7 +900,6 @@ auto main(int argc, char *argv[]) -> int {
   }
 
   macroatom_close_file();
-  nltepop_close_file();
 
   radfield::close_file();
   nonthermal::close_file();
