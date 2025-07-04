@@ -1,15 +1,15 @@
 #ifndef SPECTRUM_H
 #define SPECTRUM_H
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include <array>
 #include <cstddef>
 #include <span>
 #include <string>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
 
 #include "exspec.h"
 #include "globals.h"
