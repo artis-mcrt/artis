@@ -440,7 +440,7 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
   for (ptrdiff_t nubin = 0; nubin < MNUBINS; nubin++) {
-    spec_file << ((spectra.lower_freq[nubin] + (spectra.delta_freq[nubin] / 2))) << ' ';
+    spec_file << (spectra.lower_freq[nubin] + (spectra.delta_freq[nubin] / 2)) << ' ';
 
     for (ptrdiff_t nts = 0; nts < numtimesteps; nts++) {
       spec_file << spectra.fluxalltimesteps[(nubin * ntimesteps_all) + nts] << ' ';
