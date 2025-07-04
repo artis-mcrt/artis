@@ -594,9 +594,9 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (print_memusage) {
-    printout("[info] mem_usage: set of spectra%s occupy %.3f MB\n",
-             do_emission_absorption ? " (with emission/absorption tracing)" : "",
-             spectra.mem_usage_bytes() / 1024. / 1024.);
+    logprintlnfmt("[info] mem_usage: set of spectra{} occupy {:.3f} MB (node shared memory)",
+                  do_emission_absorption ? " (with emission/absorption tracing)" : "",
+                  spectra.mem_usage_bytes() / 1024. / 1024.);
   }
 }
 
