@@ -39,17 +39,17 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
                    const std::string &absorption_filename, const Spectra *stokes_i, const Spectra *stokes_q,
                    const Spectra *stokes_u);
 
-void add_to_spec_res(const Packet &pkt, int current_abin, Spectra &spectra, Spectra *stokes_i, Spectra *stokes_q,
+void add_to_spec_res(const Packet &pkt, int dirbin, Spectra &spectra, Spectra *stokes_i, Spectra *stokes_q,
                      Spectra *stokes_u);
 
 void init_spectra(Spectra &spectra, double nu_min, double nu_max, bool do_emission_absorption);
 void init_spectrum_trace();
 void write_partial_lightcurve_spectra(int my_rank, int nts, std::span<const Packet> pkts);
 
-void add_to_lc_res(const Packet &pkt, int current_abin, std::span<double> light_curve_lum,
+void add_to_lc_res(const Packet &pkt, int dirbin, std::span<double> light_curve_lum,
                    std::span<double> light_curve_lumcmf);
 
-void write_light_curve(const std::string &lc_filename, int current_abin, const std::vector<double> &light_curve_lum,
+void write_light_curve(const std::string &lc_filename, int dirbin, const std::vector<double> &light_curve_lum,
                        const std::vector<double> &light_curve_lumcmf, int numtimesteps);
 
 #endif  // SPECTRUM_H

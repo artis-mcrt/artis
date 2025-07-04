@@ -192,14 +192,14 @@ auto columnindex_from_emissiontype(const int et) -> int {
   return (nnu_abs * globals::ntimesteps * nelements * max_nions) + (nts * nelements * max_nions);
 }
 
-void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Spectra *stokes_i, Spectra *stokes_q,
+void add_to_spec(const Packet &pkt, const int dirbin, Spectra &spectra, Spectra *stokes_i, Spectra *stokes_q,
                  Spectra *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
 
   // specific angle bins contain fewer packets than the full sphere, so must be normalised to match
-  const double anglefactor = (current_abin >= 0) ? MABINS : 1.;
+  const double anglefactor = (dirbin >= 0) ? MABINS : 1.;
   const auto ntimesteps = static_cast<ptrdiff_t>(globals::ntimesteps);
   const double nu_min = spectra.nu_min;
   const double nu_max = spectra.nu_max;
@@ -253,7 +253,7 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
         }
       }
 
-      if (TRACE_EMISSION_ABSORPTION_REGION_ON && (current_abin == -1)) {
+      if (TRACE_EMISSION_ABSORPTION_REGION_ON && (dirbin == -1)) {
         const int et = pkt.trueemissiontype;
         if (et >= 0) {
           if (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax) {
@@ -294,7 +294,7 @@ void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, Sp
 
           if (TRACE_EMISSION_ABSORPTION_REGION_ON && t_arrive >= traceemissabs_timemin &&
               t_arrive <= traceemissabs_timemax) {
-            if ((current_abin == -1) && (pkt.nu_rf >= traceemissabs_nulower) && (pkt.nu_rf <= traceemissabs_nuupper)) {
+            if ((dirbin == -1) && (pkt.nu_rf >= traceemissabs_nulower) && (pkt.nu_rf <= traceemissabs_nuupper)) {
               traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
 
               const auto vel_vec = get_velocity(pkt.em_pos, pkt.em_time);
@@ -562,11 +562,11 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
 }
 
 // Add a packet to the outgoing spectrum.
-void add_to_spec_res(const Packet &pkt, const int current_abin, Spectra &spectra, Spectra *stokes_i, Spectra *stokes_q,
+void add_to_spec_res(const Packet &pkt, const int dirbin, Spectra &spectra, Spectra *stokes_i, Spectra *stokes_q,
                      Spectra *stokes_u) {
-  if (current_abin == -1 || get_escapedirectionbin(pkt.dir) == current_abin) {
+  if (dirbin == -1 || get_escapedirectionbin(pkt.dir) == dirbin) {
     // either angle average spectrum or packet matches the selected angle bin
-    add_to_spec(pkt, current_abin, spectra, stokes_i, stokes_q, stokes_u);
+    add_to_spec(pkt, dirbin, spectra, stokes_i, stokes_q, stokes_u);
   }
 }
 
@@ -587,9 +587,8 @@ void write_partial_lightcurve_spectra(const int my_rank, const int nts, std::spa
            any_emission_absorption ? "emission/absorption " : "", std::time(nullptr) - time_func_start);
 }
 
-void write_light_curve(const std::string &lc_filename, const int current_abin,
-                       const std::vector<double> &light_curve_lum, const std::vector<double> &light_curve_lumcmf,
-                       const int numtimesteps) {
+void write_light_curve(const std::string &lc_filename, const int dirbin, const std::vector<double> &light_curve_lum,
+                       const std::vector<double> &light_curve_lumcmf, const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
 
   auto lc_file = fstream_required(lc_filename, std::ios::out | std::ios::trunc);
@@ -602,7 +601,7 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
             << light_curve_lumcmf[nts] / LSUN << '\n';
   }
 
-  if (current_abin == -1) {
+  if (dirbin == -1) {
     // Now print out the gamma ray deposition rate in the same file.
     for (int m = 0; m < numtimesteps; m++) {
       lc_file << globals::timesteps[m].mid / DAY << ' '
@@ -613,9 +612,9 @@ void write_light_curve(const std::string &lc_filename, const int current_abin,
 }
 
 // add a packet to the outgoing light-curve.
-void add_to_lc_res(const Packet &pkt, const int current_abin, std::span<double> light_curve_lum,
+void add_to_lc_res(const Packet &pkt, const int dirbin, std::span<double> light_curve_lum,
                    std::span<double> light_curve_lumcmf) {
-  if (current_abin == -1) {
+  if (dirbin == -1) {
     // -1 means all full 4π angle average (no angle filtering)
 
     // Put this into the time grid
@@ -636,7 +635,7 @@ void add_to_lc_res(const Packet &pkt, const int current_abin, std::span<double> 
                 pkt.e_cmf / globals::timesteps[nts].width / globals::nprocs_exspec / inverse_gamma);
     }
 
-  } else if (get_escapedirectionbin(pkt.dir) == current_abin) {
+  } else if (get_escapedirectionbin(pkt.dir) == dirbin) {
     // packets that escape in the select angle bin
 
     const double t_arrive = get_arrive_time(pkt);
