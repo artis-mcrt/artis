@@ -352,7 +352,7 @@ void write_temp_packetsfile(const int timestep, const int my_rank, std::span<con
 
   bool write_success = false;
   while (!write_success) {
-    logprintlnfmt("Writing {}", filename);
+    logprintfmt("Writing {}...", filename);
     FILE *packets_file = fopen(filename.c_str(), "wb");
     if (packets_file == nullptr) {
       logprintlnfmt("ERROR: Could not open file '{}' for mode 'wb'.", filename);
