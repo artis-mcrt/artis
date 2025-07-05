@@ -194,10 +194,6 @@ inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...args)
 #define SORT_OR_STABLE_SORT sort
 #endif
 
-#if defined(STDPAR_ON) && defined(__cpp_lib_atomic_ref)
-#include <atomic>
-#endif
-
 #ifdef _OPENMP
 #define atomicadd(var, val)                  \
   {                                          \
@@ -207,13 +203,9 @@ inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...args)
 #else
 #ifdef STDPAR_ON
 
-#ifdef __cpp_lib_atomic_ref
+#include <atomic>
 #define atomicadd(var, val) \
   std::atomic_ref<typename std::remove_reference<decltype(var)>::type>(var).fetch_add(val, std::memory_order_relaxed);
-#else
-// needed for Apple clang until Xcode 16.3 is released
-#define atomicadd(var, val) __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
-#endif
 
 #else
 #define atomicadd(var, val) var += (val);
@@ -224,7 +216,6 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   if (gsl_errno != 18)  // roundoff error
   {
     printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
-    // abort();
   }
 }
 

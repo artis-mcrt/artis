@@ -612,7 +612,7 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 
     write_deposition_file();
 
-    write_partial_lightcurve_spectra(my_rank, nts, packets);
+    write_partial_lightcurve_spectra(nts, packets);
 
     printout("During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (t=%gd)\n", nts, my_rank,
              globals::timesteps[nts].pellet_decays, globals::nesc, globals::timesteps[nts].mid / DAY);
@@ -906,6 +906,7 @@ auto main(int argc, char *argv[]) -> int {
 
   decay::cleanup();
 
+  globals::mpi_finalized = true;
   MPI_Finalize();
 
   const std::filesystem::path pid_file_path("artis.pid");
