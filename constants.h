@@ -25,7 +25,7 @@ constexpr double SIGMA_T = 6.6524e-25;  // Thomson cross-section [cm2]
 constexpr double THOMSON_LIMIT = 1e-2;  // Limit below which e-scattering is Thomson
 constexpr double PARSEC = 3.0857e+18;  // pc to cm [cm/pc]
 constexpr double KB = 1.38064852e-16;  // Boltzmann constant [erg/K]
-constexpr double STEBO = 5.670400e-5;  // Stefan-Boltzmann constant [erg cm^−2 s^−1 K^−4.]
+constexpr double STEBO = 5.670400e-5;  // Stefan-Boltzmann constant [erg cm^-2 s^-1 K^-4.]
                                        // (data from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
 constexpr double SAHACONST = 2.0706659e-16;  // Saha constant
 
