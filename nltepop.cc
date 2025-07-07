@@ -44,6 +44,68 @@ std::fstream nlte_file;
 
 // can save memory by using a combined rate matrix at the cost of diagnostic information
 constexpr bool individual_process_matrices = true;
+struct RateMatrices {
+  int max_nlte_dimension{0};
+  int used_nlte_dimension{0};
+
+  std::vector<double> vec_rate_matrix;
+  std::vector<double> vec_rate_matrix_rad_bb;
+  std::vector<double> vec_rate_matrix_coll_bb;
+  std::vector<double> vec_rate_matrix_ntcoll_bb;
+  std::vector<double> vec_rate_matrix_rad_bf;
+  std::vector<double> vec_rate_matrix_coll_bf;
+  std::vector<double> vec_rate_matrix_ntcoll_bf;
+
+  gsl_matrix rad_bb{};
+  gsl_matrix coll_bb{};
+  gsl_matrix ntcoll_bb{};
+  gsl_matrix rad_bf{};
+  gsl_matrix coll_bf{};
+  gsl_matrix ntcoll_bf{};
+
+  explicit RateMatrices(int max_nlte_dimension_in) : max_nlte_dimension(max_nlte_dimension_in) {
+    // allocation of the maximum required size is done once,
+    // while the used_nlte_dimension is set later
+    const auto max_dim_square = max_nlte_dimension * max_nlte_dimension;
+    resize_exactly(vec_rate_matrix, max_dim_square);
+    resize_exactly(vec_rate_matrix_rad_bb, max_dim_square);
+    resize_exactly(vec_rate_matrix_coll_bb, max_dim_square);
+    resize_exactly(vec_rate_matrix_ntcoll_bb, max_dim_square);
+    resize_exactly(vec_rate_matrix_rad_bf, max_dim_square);
+    resize_exactly(vec_rate_matrix_coll_bf, max_dim_square);
+    resize_exactly(vec_rate_matrix_ntcoll_bf, max_dim_square);
+  }
+
+  void set_used_dimension(int nlte_dimension) {
+    assert_always(std::cmp_less_equal(nlte_dimension, max_nlte_dimension));
+    used_nlte_dimension = nlte_dimension;
+    std::fill_n(vec_rate_matrix_rad_bb.data(), used_nlte_dimension * used_nlte_dimension, 0.);
+    std::fill_n(vec_rate_matrix_coll_bb.data(), used_nlte_dimension * used_nlte_dimension, 0.);
+    std::fill_n(vec_rate_matrix_ntcoll_bb.data(), used_nlte_dimension * used_nlte_dimension, 0.);
+    std::fill_n(vec_rate_matrix_rad_bf.data(), used_nlte_dimension * used_nlte_dimension, 0.);
+    std::fill_n(vec_rate_matrix_coll_bf.data(), used_nlte_dimension * used_nlte_dimension, 0.);
+    std::fill_n(vec_rate_matrix_ntcoll_bf.data(), used_nlte_dimension * used_nlte_dimension, 0.);
+
+    rad_bb = gsl_matrix_view_array(vec_rate_matrix_rad_bb.data(), used_nlte_dimension, used_nlte_dimension).matrix;
+    coll_bb = gsl_matrix_view_array(vec_rate_matrix_coll_bb.data(), used_nlte_dimension, used_nlte_dimension).matrix;
+    ntcoll_bb =
+        gsl_matrix_view_array(vec_rate_matrix_ntcoll_bb.data(), used_nlte_dimension, used_nlte_dimension).matrix;
+    rad_bf = gsl_matrix_view_array(vec_rate_matrix_rad_bf.data(), used_nlte_dimension, used_nlte_dimension).matrix;
+    coll_bf = gsl_matrix_view_array(vec_rate_matrix_coll_bf.data(), used_nlte_dimension, used_nlte_dimension).matrix;
+    ntcoll_bf =
+        gsl_matrix_view_array(vec_rate_matrix_ntcoll_bf.data(), used_nlte_dimension, used_nlte_dimension).matrix;
+  }
+
+  [[nodiscard]] auto get_summed_rate_matrix() -> gsl_matrix {
+    // sum the matrices for each transition type to get a total rate matrix
+    for (int i = 0; i < used_nlte_dimension * used_nlte_dimension; i++) {
+      vec_rate_matrix[i] = vec_rate_matrix_rad_bb[i] + vec_rate_matrix_coll_bb[i] + vec_rate_matrix_ntcoll_bb[i] +
+                           vec_rate_matrix_rad_bf[i] + vec_rate_matrix_coll_bf[i] + vec_rate_matrix_ntcoll_bf[i];
+    }
+
+    return gsl_matrix_view_array(vec_rate_matrix.data(), used_nlte_dimension, used_nlte_dimension).matrix;
+  }
+};
 
 // this is the matrix/vector index for the NLTE solver that is handling all ions of a single element
 auto get_nlte_vector_index(const int element, const int ion, const int level, const int first_ion_used) -> int {
