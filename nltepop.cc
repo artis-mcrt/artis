@@ -54,6 +54,7 @@ struct RateMatrices {
   std::vector<double> vec_rate_matrix_rad_bf;
   std::vector<double> vec_rate_matrix_coll_bf;
   std::vector<double> vec_rate_matrix_ntcoll_bf;
+  std::vector<double> vec_rate_matrix_autoion;
 
   gsl_matrix rad_bb{};
   gsl_matrix coll_bb{};
@@ -61,6 +62,7 @@ struct RateMatrices {
   gsl_matrix rad_bf{};
   gsl_matrix coll_bf{};
   gsl_matrix ntcoll_bf{};
+  gsl_matrix autoion{};
 
   explicit RateMatrices(int max_nlte_dimension_in) : max_nlte_dimension(max_nlte_dimension_in) {
     // allocation of the maximum required size is done once,
@@ -73,6 +75,7 @@ struct RateMatrices {
     resize_exactly(vec_rate_matrix_rad_bf, max_dim_square);
     resize_exactly(vec_rate_matrix_coll_bf, max_dim_square);
     resize_exactly(vec_rate_matrix_ntcoll_bf, max_dim_square);
+    resize_exactly(vec_rate_matrix_autoion, max_dim_square);
   }
 
   void set_used_dimension(int nlte_dimension) {
@@ -84,6 +87,7 @@ struct RateMatrices {
     std::fill_n(vec_rate_matrix_rad_bf.data(), used_nlte_dimension * used_nlte_dimension, 0.);
     std::fill_n(vec_rate_matrix_coll_bf.data(), used_nlte_dimension * used_nlte_dimension, 0.);
     std::fill_n(vec_rate_matrix_ntcoll_bf.data(), used_nlte_dimension * used_nlte_dimension, 0.);
+    std::fill_n(vec_rate_matrix_autoion.data(), used_nlte_dimension * used_nlte_dimension, 0.);
 
     rad_bb = gsl_matrix_view_array(vec_rate_matrix_rad_bb.data(), used_nlte_dimension, used_nlte_dimension).matrix;
     coll_bb = gsl_matrix_view_array(vec_rate_matrix_coll_bb.data(), used_nlte_dimension, used_nlte_dimension).matrix;
@@ -93,13 +97,15 @@ struct RateMatrices {
     coll_bf = gsl_matrix_view_array(vec_rate_matrix_coll_bf.data(), used_nlte_dimension, used_nlte_dimension).matrix;
     ntcoll_bf =
         gsl_matrix_view_array(vec_rate_matrix_ntcoll_bf.data(), used_nlte_dimension, used_nlte_dimension).matrix;
+    autoion = gsl_matrix_view_array(vec_rate_matrix_autoion.data(), used_nlte_dimension, used_nlte_dimension).matrix;
   }
 
   [[nodiscard]] auto get_summed_rate_matrix() -> gsl_matrix {
     // sum the matrices for each transition type to get a total rate matrix
     for (int i = 0; i < used_nlte_dimension * used_nlte_dimension; i++) {
       vec_rate_matrix[i] = vec_rate_matrix_rad_bb[i] + vec_rate_matrix_coll_bb[i] + vec_rate_matrix_ntcoll_bb[i] +
-                           vec_rate_matrix_rad_bf[i] + vec_rate_matrix_coll_bf[i] + vec_rate_matrix_ntcoll_bf[i];
+                           vec_rate_matrix_rad_bf[i] + vec_rate_matrix_coll_bf[i] + vec_rate_matrix_ntcoll_bf[i] +
+                           vec_rate_matrix_autoion[i];
     }
 
     return gsl_matrix_view_array(vec_rate_matrix.data(), used_nlte_dimension, used_nlte_dimension).matrix;
@@ -111,10 +117,19 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
   // have to convert from nlte_pops index to nlte_vector index
   // the difference is that nlte vectors apply to a single element and include ground states
   // The (+ ion) term accounts for the ground state population indices that are not counted in the NLTE array
+  int offset_autoion = 0;
+  for (int dion = first_ion_used; dion < ion; dion++) {
+    offset_autoion += get_nlevels_autoion(element, dion);
+  }
   assert_testmodeonly(first_ion_used >= 0);
   assert_testmodeonly(first_ion_used < get_nions(element));
   const int gs_index = globals::elements[element].ions[ion].first_nlte -
-                       globals::elements[element].ions[first_ion_used].first_nlte + (ion - first_ion_used);
+                       globals::elements[element].ions[first_ion_used].first_nlte + (ion - first_ion_used) +
+                       offset_autoion;
+  const int first_autoion = get_nlevels(element, ion) - get_nlevels_autoion(element, ion);
+  if (ion_has_superlevel(element, ion) && level > (first_autoion - 1)) {
+    return (gs_index + get_nlevels_excited_nlte(element, ion) + level - first_autoion + 2);
+  }
   // add in level or superlevel number
   const int level_index =
       gs_index + (is_nlte(element, ion, level) ? level : (get_nlevels_excited_nlte(element, ion) + 1));
@@ -390,8 +405,9 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
   resize_exactly(superlevel_partfuncs, get_nions(element));
   for (int ion = 0; ion < get_nions(element); ion++) {
     superlevel_partfuncs[ion] = std::ranges::fold_left(
-        std::views::iota(get_nlevels_excited_nlte(element, ion) + 1, get_nlevels(element, ion)), 0.0,
-        [&](double sum, int level) { return sum + superlevel_boltzmann(nonemptymgi, element, ion, level); });
+        std::views::iota(get_nlevels_excited_nlte(element, ion) + 1,
+                         get_nlevels(element, ion) - get_nlevels_autoion(element, ion)),
+        0.0, [&](double sum, int level) { return sum + superlevel_boltzmann(nonemptymgi, element, ion, level); });
   }
 
   return superlevel_partfuncs;
@@ -406,9 +422,16 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
   assert_testmodeonly((first_ion_used + nions_used - 1) < get_nions(element));
   int nlte_dimension = 0;
   for (int ion = first_ion_used; ion < (first_ion_used + nions_used); ion++) {
-    nlte_dimension += 1 + get_nlevels_excited_nlte(element, ion);
+    // add super level if it exists
     if (ion_has_superlevel(element, ion)) {
-      nlte_dimension++;
+      nlte_dimension += get_nlevels_excited_nlte(element, ion) + get_nlevels_autoion(element, ion) + 2;
+      // printout("Here 1: For element %d ion %d adding %d to nlte_dimension. \n", element, ion, nlevels_nlte +
+      // get_nlevels_autoion(element, ion) + 2); printout("checks: %d %d\n", nlevels_nlte, get_nlevels_autoion(element,
+      // ion)); if it has a superlevel then need + 2 for ground state and super and to add autionising levels
+    } else {  // if it doesn't have a superlevel
+      nlte_dimension += get_nlevels(element, ion);
+      // printout("Here 2: For element %d ion %d adding %d to nlte_dimension. \n", element, ion,
+      // get_nlevels(element,ion));
     }
   }
 
@@ -603,6 +626,59 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
   }
 }
 
+void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element, const int ion,
+                                       const std::vector<double> &s_renorm, RateMatrices &rate_matrices,
+                                       const int first_ion_used, const int nions_used) {
+  // Autoionization and inverse (i.e. collisional capture part of di-el)
+  const auto nlte_dimension = rate_matrices.used_nlte_dimension;
+  const int max_ion_used = first_ion_used + nions_used - 1;
+  assert_always(ion < max_ion_used);  // can't ionise top ion stage
+  const auto T_e = grid::get_Te(nonemptymgi);
+  const float nne = grid::get_nne(nonemptymgi);
+  const int nlevels = get_nlevels(element, ion);
+  for (int level = 0; level < nlevels; level++) {
+    const int level_index = get_nlte_vector_index(element, ion, level, first_ion_used);
+    const double epsilon_level = epsilon(element, ion, level);
+    const double statweight = stat_weight(element, ion, level);
+
+    const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+    const int nautoiondowntrans = get_nautoiondowntrans(uniquelevelindex);
+    for (int i = 0; i < nautoiondowntrans; i++) {
+      // autoionization (which is a de-excitation propcess)
+      const auto &autoiontransition = globals::allautoion[globals::alllevels.allautoion_start[uniquelevelindex] + i];
+      const double A_a = autoiontransition.autoion_A;
+      const int target_ion = autoiontransition.upperionindex;
+      const int target_level = autoiontransition.upperlevelindex;
+
+      const double epsilon_trans = epsilon_level - epsilon(element, target_ion, target_level);
+
+      double R = A_a * s_renorm[level];
+
+      const int upper_index = level_index;
+      const int lower_index = get_nlte_vector_index(element, target_ion, target_level, first_ion_used);
+
+      rate_matrices.vec_rate_matrix_autoion[(upper_index * nlte_dimension) + upper_index] -= R;
+      rate_matrices.vec_rate_matrix_autoion[(lower_index * nlte_dimension) + upper_index] += R;
+      if ((R < 0)) {
+        printout("  WARNING: Negative autoionization rate from ionstage %d level %d to level %d\n",
+                 get_ionstage(element, ion), level, target_level);
+      }
+
+      // capture (which is an excitation process, and the first part of di-electronic recomb)
+      R = nne * A_a * statweight / stat_weight(element, target_ion, target_level) * SAHACONST * pow(T_e, -1.5) *
+          exp(-1. * epsilon_trans / KB / T_e);
+      // renorm??
+
+      rate_matrices.vec_rate_matrix_autoion[(lower_index * nlte_dimension) + lower_index] -= R;
+      rate_matrices.vec_rate_matrix_autoion[(upper_index * nlte_dimension) + lower_index] += R;
+      if ((R < 0)) {
+        printout("  WARNING: Negative autoionization rate from ionstage %d level %d to level %d\n",
+                 get_ionstage(element, ion), level, target_level);
+      }
+    }
+  }
+}
+
 void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matrix *rate_matrix,
                               std::span<double> pop_norm_factors, const int first_ion_used, const int nions_used) {
   const size_t nlte_dimension = rate_matrix->size1;
@@ -617,7 +693,9 @@ void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matr
     if (level_isinsuperlevel(element, ion, level)) {
       // levels in the superlevel get combined together
       for (int dummylevel = level + 1; dummylevel < get_nlevels(element, ion); dummylevel++) {
-        pop_norm_factors[column] += calculate_levelpop_boltzmann(nonemptymgi, element, ion, dummylevel);
+        if (level_isinsuperlevel(element, ion, dummylevel)) {
+          pop_norm_factors[column] += calculate_levelpop_boltzmann(nonemptymgi, element, ion, dummylevel);
+        }
       }
     }
 
@@ -965,6 +1043,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
           nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, rate_matrices, first_ion_used,
                                            nions_used);
         }
+        nltepop_matrix_add_autoionisation(nonemptymgi, element, ion, s_renorm, rate_matrices, first_ion_used,
+                                          nions_used);
       }
     });
 
@@ -1315,7 +1395,9 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
           nnlevellte = 0;
           nlte_file << -1 << ' ';
           for (int level_sl = nlevels_excited_nlte + 1; level_sl < get_nlevels(element, ion); level_sl++) {
-            nnlevellte += calculate_levelpop_boltzmann(nonemptymgi, element, ion, level_sl);
+            if (level_isinsuperlevel(element, ion, level_sl)) {
+              nnlevellte += calculate_levelpop_boltzmann(nonemptymgi, element, ion, level_sl);
+            }
           }
 
           nnlevelnlte = slpopfactor * superlevel_partfuncs[ion];

@@ -836,6 +836,102 @@ void setup_phixs_list() {
   printout("[info] bound-free estimators track bfestimcount %d photoionisation transitions\n", globals::bfestimcount);
 }
 
+void read_autoion_data() {
+  // read in autoionisation rate data
+  if (!std::filesystem::exists("autoion.txt")) {
+    return;
+  }
+
+  std::vector<globals::LevelAutoion> temp_allautoion;
+
+  printout("Reading autoion.txt for autoionization data.\n");
+  auto autoionfile = fstream_required("autoion.txt", std::ios::in);
+  std::string autoionline;
+  int Z = -1;
+  int upperionstage = -1;
+  int upperlevel_in = -1;
+  int lowerionstage = -1;
+  int lowerlevel_in = -1;
+  double autoion_A = -1;
+  while (get_noncommentline(autoionfile, autoionline)) {
+    assert_always(std::istringstream(autoionline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >>
+                  lowerlevel_in >> autoion_A);
+
+    assert_always(Z > 0);
+    assert_always(upperionstage >= 2);
+    assert_always(lowerionstage >= 1);
+
+    const int element = get_elementindex(Z);
+
+    if (element >= 0 && get_nions(element) > 0) {
+      // translate readin ionstages to ion indices
+
+      const int upperion = upperionstage - get_ionstage(element, 0);
+      const int lowerion = lowerionstage - get_ionstage(element, 0);
+      const int lowerlevel = lowerlevel_in - groundstate_index_in;
+      const int upperlevel = upperlevel_in - groundstate_index_in;
+
+      assert_always(upperion >= 0 && upperion < get_nions(element));
+      assert_always(lowerion >= 0 && lowerion < get_nions(element));
+      assert_always(lowerlevel >= 0 && lowerlevel < get_nlevels(element, lowerion));
+      assert_always(upperlevel >= 0 && upperlevel < get_nlevels(element, upperion));
+
+      // store only for ions that are part of the current model atom
+      if (lowerion >= 0 && upperion < get_nions(element)) {
+        printout("Got to noting data for Z %d upperion %d upperlvl %d lowerion %d lowerlvl %d with A %g\n", Z, upperion,
+                 upperlevel, lowerion, lowerlevel, autoion_A);
+
+        const int nautoiondowntrans = get_nautoiondowntrans(element, lowerion, lowerlevel) + 1;
+        set_nautoiondowntrans(element, lowerion, lowerlevel, nautoiondowntrans);
+
+        const int nautoionuptrans = get_nautoionuptrans(element, upperion, upperlevel) + 1;
+        set_nautoionuptrans(element, upperion, upperlevel, nautoionuptrans);
+
+        if (globals::alllevels.allautoion_start[get_uniquelevelindex(element, lowerion, lowerlevel)] < 0) {
+          assert_always(nautoiondowntrans == 1);
+          assert_always(nautoionuptrans == 1);
+          // this is the first autoionizing transition for this level, so set the start index
+          globals::alllevels.allautoion_start[get_uniquelevelindex(element, lowerion, lowerlevel)] =
+              static_cast<int>(temp_allautoion.size());
+        }
+
+        temp_allautoion.push_back({.autoion_A = static_cast<float>(autoion_A),
+                                   .elementindex = element,
+                                   .lowerionindex = lowerion,
+                                   .lowerlevelindex = lowerlevel,
+                                   .upperionindex = upperion,
+                                   .upperlevelindex = upperlevel});
+      }
+    }
+  }
+
+  globals::allautoion = MPI_shared_malloc_span<globals::LevelAutoion>(temp_allautoion.size());
+  if (globals::rank_in_node == 0) {
+    std::copy_n(temp_allautoion.cbegin(), temp_allautoion.size(), globals::allautoion.data());
+  }
+  MPI_Barrier(globals::mpi_comm_node);
+
+  // Plan is that autoionizing levels will be explicitly included in the NLTE population solver, but that their level
+  // populations do not need to be accurately known - so if the ion has a superlevel already, then we will try to attach
+  // the autoionizing level populations to that for all purposes outside the NLTE solber. For this, the ions need to
+  // know how many autoionizing levels they have. So count those up now.
+
+  int checkautoall = 0;
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      const int nlevels = get_nlevels(element, ion);
+      int nauto = 0;
+      for (int level = 0; level < nlevels; level++) {
+        nauto += get_nautoiondowntrans(element, ion, level);
+      }
+      globals::elements[element].ions[ion].nlevels_autoion = nauto;
+      checkautoall += nauto;
+    }
+  }
+  assert_always(checkautoall == std::ssize(temp_allautoion));
+}
+
 void read_phixs_data() {
   globals::nbfcontinua_ground = 0;
   globals::nbfcontinua = 0;
@@ -1204,12 +1300,18 @@ void read_atomicdata_files() {
   auto alllevels_nuptrans = MPI_shared_malloc_span<int>(nlevels);
   auto alllevels_epsilon = MPI_shared_malloc_span<double>(nlevels);
   auto alllevels_statweight = MPI_shared_malloc_span<float>(nlevels);
+  globals::alllevels.allautoion_start = MPI_shared_malloc_span<int>(nlevels);
+  globals::alllevels.nautoiondowntrans = MPI_shared_malloc_span<int>(nlevels);
+  globals::alllevels.nautoionuptrans = MPI_shared_malloc_span<int>(nlevels);
   globals::alllevels.closestgroundlevelcont = MPI_shared_malloc_span<int>(nlevels);
   globals::alllevels.phixsstart = MPI_shared_malloc_span<int>(nlevels);
   globals::alllevels.nphixstargets = MPI_shared_malloc_span<int>(nlevels);
   globals::alllevels.phixstargetstart = MPI_shared_malloc_span<int>(nlevels);
   globals::alllevels.bflist_start = MPI_shared_malloc_span<int>(nlevels);
   if (globals::rank_in_node == 0) {
+    std::ranges::fill(globals::alllevels.nautoiondowntrans, 0);
+    std::ranges::fill(globals::alllevels.nautoionuptrans, 0);
+    std::ranges::fill(globals::alllevels.allautoion_start, -1);
     std::ranges::fill(globals::alllevels.phixsstart, -1);
     std::ranges::fill(globals::alllevels.nphixstargets, 0);
     std::ranges::fill(globals::alllevels.phixstargetstart, -1);
@@ -1343,6 +1445,7 @@ void read_atomicdata_files() {
     }
   }
 
+  read_autoion_data();
   read_phixs_data();
 }
 

@@ -96,6 +96,7 @@ struct Ion {
   int first_nlte{-1};  // index into nlte_pops array of a grid cell
   int nlevels_ionising{0};  // Number of levels which have a bf-continuum
   int maxrecombininglevel{-1};  // level index of the highest level with a non-zero recombination rate
+  int nlevels_autoion{0};  // Number of levels that can autoionise
   int nlevels_groundterm{0};
   int coolingoffset{-1};
   int ncoolingterms{0};
@@ -229,6 +230,17 @@ struct AllTransitions {
 };
 inline AllTransitions alltrans;
 
+struct LevelAutoion {
+  float autoion_A;  // Autoionization A-value
+  int elementindex;  // index (not atomic number) for the element involved
+  int lowerionindex;
+  int lowerlevelindex;  // this will be for a level index of the lower ion
+  int upperionindex;
+  int upperlevelindex;  // this will be for a level index of the upper ion.
+                        // Note: level of the lower ion should also be at higher energy than of the higher ion
+};
+inline std::span<LevelAutoion> allautoion;
+
 inline std::span<const int> allphixstargets_levelindex;  // index of upper ion level after photoionisation
 inline std::span<const double>
     allphixstargets_probability;  // fraction of phixs cross section leading to associated final level
@@ -246,6 +258,15 @@ struct AllLevels {
 
   // Number of up transitions from each level
   std::span<const int> nuptrans;
+
+  // Number of autoionizing transition from this level
+  std::span<int> nautoiondowntrans;
+
+  // Number of di-el captures up from this level
+  std::span<int> nautoionuptrans;
+
+  // index into globals::allautoion for first autoion from this level
+  std::span<int> allautoion_start;
 
   std::span<int> closestgroundlevelcont;
 
