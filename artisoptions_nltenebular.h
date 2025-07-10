@@ -145,7 +145,7 @@ constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
 
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = false;
 
-constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = false;
+constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END = false;
 
 constexpr auto TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
 

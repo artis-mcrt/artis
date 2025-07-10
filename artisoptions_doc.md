@@ -235,7 +235,7 @@ constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 // rather than just from the compositiondata.txt values
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
 
-constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC;
+constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END;
 
 constexpr bool INSTANT_PARTICLE_DEPOSITION;
 
