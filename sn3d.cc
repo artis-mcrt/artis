@@ -383,7 +383,7 @@ void remove_temp_packetsfile(const int timestep, const int my_rank) {
 }
 
 void remove_grid_restart_data(const int timestep) {
-  const auto filename = std::format("gridsave_ts{:02d}.tmp", timestep);
+  const auto filename = std::format("gridsave_ts{}.tmp", timestep);
 
   if (std::filesystem::exists(filename)) {
     std::filesystem::remove(filename);
