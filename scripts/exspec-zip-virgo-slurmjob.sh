@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 export APPTAINER_CONTAINER="/cvmfs/vae.gsi.de/vae25/containers/vae25-user_container_20250402T1038.sif"
 export APPTAINER_NAME="vae25-user_container"
