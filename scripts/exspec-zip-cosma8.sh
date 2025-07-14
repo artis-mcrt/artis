@@ -28,8 +28,8 @@ cd $SLURM_SUBMIT_DIR
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
-if [[ -f emission.out || -f emission.out.zst ]]; then
-  echo 'Not running exspec because emission.out[.zst] was found'
+if [[ -f emission.out || -f emission.out.zst ]] && [[ -f exspec.txt ]]; then
+  echo 'Not running exspec because emission.out[.zst] and exspec.txt were found'
 else
   ./artis/scripts/exspec-before.sh
   ./exspec
