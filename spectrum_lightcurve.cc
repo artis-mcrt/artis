@@ -246,7 +246,7 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
   init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, do_emission_absorption);
 
   MPI_Barrier(globals::mpi_comm_node);
-#if defined REPRODUCIBLE && REPRODUCIBLE
+#if defined _REPRODUCIBLE && REPRODUCIBLE
   for (int node_rank = 0; node_rank < globals::node_nprocs; node_rank++) {
     // do one rank at a time to keep the results reproducible (instead of simultaneous atomic adds to shared memory)
     if (node_rank == globals::rank_in_node) {
