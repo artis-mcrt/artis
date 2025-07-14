@@ -249,11 +249,13 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
 #if defined REPRODUCIBLE && REPRODUCIBLE
   for (int node_rank = 0; node_rank < globals::node_nprocs; node_rank++) {
     // do one rank at a time to keep the results reproducible (instead of simultaneous atomic adds to shared memory)
-    if (node_rank == globals::rank_in_node) {
 #else
   {
-    {
+    // all ranks on the node simultaneously contribute to the light curves and spectra in shared memory using
+    // atomic operations
+    const int node_rank = globals::rank_in_node;
 #endif
+    if (node_rank == globals::rank_in_node) {
       for (int ii = 0; ii < globals::npkts; ii++) {
         if (pkts[ii].type == TYPE_ESCAPE) {
           if (pkts[ii].escape_type == TYPE_RPKT) {
