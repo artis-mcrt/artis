@@ -593,16 +593,21 @@ void add_to_spec_res(const Packet &pkt, const int dirbin, Spectra &spectra, Spec
 void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkts) {
   // this is called by sn3d (not exspec) when each rank has its own set of packets
   // in memory
-  const auto time_func_start = std::time(nullptr);
   const bool simulation_complete = (nts >= globals::timestep_finish - 1);
+  if (!simulation_complete && nts % 5 != 0) {
+    // do not write spectra every timestep, only every 5th timestep
+    return;
+  }
 
+  // the emission resolved spectra are slow to generate, and require a lot of memory
   const bool do_emission_absorption = WRITE_EMISSIONABSORPTION_SPEC_AT_END && simulation_complete;
 
   const bool multdimensional = grid::get_model_type() != GridType::SPHERICAL1D;
   const int dirbinend = (multdimensional && simulation_complete) ? MABINS : 0;
-  for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
-    // the emission resolved spectra are slow to generate, and require a lot of memory
 
+  const auto time_func_start = std::time(nullptr);
+
+  for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
     write_partial_lightcurve_spectra_dirbin(nts, pkts, do_emission_absorption, dirbin);
   }
 
