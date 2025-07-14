@@ -203,9 +203,10 @@ inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...args)
 #ifdef STDPAR_ON
 
 #include <atomic>
-#define atomicadd(var, val) \
-  std::atomic_ref<typename std::remove_reference<decltype(var)>::type>(var).fetch_add(val, std::memory_order_relaxed);
-
+template <typename T, typename U>
+constexpr void atomicadd(T &var, U &&val) {
+  std::atomic_ref<T>(var).fetch_add(std::forward<U>(val), std::memory_order_relaxed);
+}
 #else
 #define atomicadd(var, val) var += (val);
 #endif

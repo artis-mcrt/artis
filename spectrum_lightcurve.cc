@@ -1,6 +1,7 @@
 #include "spectrum_lightcurve.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <ctime>
@@ -54,6 +55,13 @@ double traceemission_totalenergy = 0.;
 double traceabsorption_totalenergy = 0.;
 
 Spectra rpkt_spectra;
+
+// the other "atomicadd" function is atomic only for multithreaded modes (STDPAR or OpenMP), but here we need it to be
+// atomic for node-shared memory between processes even in single-threaded mode
+template <typename T, typename U>
+constexpr void atomicadd_always(T &var, U &&val) {
+  std::atomic_ref<T>(var).fetch_add(std::forward<U>(val), std::memory_order_relaxed);
+}
 
 void printout_tracemission_stats() {
   const int maxlinesprinted = 500;
@@ -238,8 +246,15 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
   init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, do_emission_absorption);
 
   MPI_Barrier(globals::mpi_comm_node);
+#if defined REPRODUCIBLE && REPRODUCIBLE
   for (int node_rank = 0; node_rank < globals::node_nprocs; node_rank++) {
     // do one rank at a time to keep the results reproducible (instead of simultaneous atomic adds to shared memory)
+#else
+  {
+    // all ranks on the node simultaneously contribute to the light curves and spectra in shared memory using
+    // atomic operations
+    const int node_rank = globals::rank_in_node;
+#endif
     if (node_rank == globals::rank_in_node) {
       for (int ii = 0; ii < globals::npkts; ii++) {
         if (pkts[ii].type == TYPE_ESCAPE) {
@@ -494,21 +509,21 @@ void add_to_spec_res(const Packet &pkt, const int dirbin, Spectra &spectra, Spec
     // a binary search into freq_lower would probably be faster than this double logarithm
     const auto nnu = static_cast<ptrdiff_t>((log(pkt.nu_rf) - log(nu_min)) / dlognu);
 
-    const double anglefactor = (dirbin >= 0) ? MABINS : 1.;
+    const double solidanglefactor = (dirbin >= 0) ? MABINS : 1.;
     const double deltaE = pkt.e_rf / globals::timesteps[nts].width / spectra.delta_freq.at(nnu) / 4.e12 / PI / PARSEC /
-                          PARSEC / globals::nprocs_exspec * anglefactor;
+                          PARSEC / globals::nprocs_exspec * solidanglefactor;
 
     const auto fluxindex = (nnu * static_cast<ptrdiff_t>(globals::ntimesteps)) + nts;
-    atomicadd(spectra.fluxalltimesteps[fluxindex], deltaE);
+    atomicadd_always(spectra.fluxalltimesteps[fluxindex], deltaE);
 
     if (stokes_i != nullptr) {
-      atomicadd(stokes_i->fluxalltimesteps[fluxindex], pkt.stokes[0] * deltaE);
+      atomicadd_always(stokes_i->fluxalltimesteps[fluxindex], pkt.stokes[0] * deltaE);
     }
     if (stokes_q != nullptr) {
-      atomicadd(stokes_q->fluxalltimesteps[fluxindex], pkt.stokes[1] * deltaE);
+      atomicadd_always(stokes_q->fluxalltimesteps[fluxindex], pkt.stokes[1] * deltaE);
     }
     if (stokes_u != nullptr) {
-      atomicadd(stokes_u->fluxalltimesteps[fluxindex], pkt.stokes[2] * deltaE);
+      atomicadd_always(stokes_u->fluxalltimesteps[fluxindex], pkt.stokes[2] * deltaE);
     }
 
     if (spectra.do_emission_absorption) {
@@ -518,23 +533,23 @@ void add_to_spec_res(const Packet &pkt, const int dirbin, Spectra &spectra, Spec
       assert_always(truenproc < proccount);
       if (truenproc >= 0) {
         const auto emindex = (nnu * globals::ntimesteps * proccount) + (nts * proccount) + truenproc;
-        atomicadd(spectra.trueemissionalltimesteps[emindex], deltaE);
+        atomicadd_always(spectra.trueemissionalltimesteps[emindex], deltaE);
       }
 
       const auto nproc = columnindex_from_emissiontype(pkt.emissiontype);
       assert_always(nproc < proccount);
       if (nproc >= 0) {  // -1 means EMTYPE_NOTSET
         const auto emindex = (nnu * globals::ntimesteps * proccount) + (nts * proccount) + nproc;
-        atomicadd(spectra.emissionalltimesteps[emindex], deltaE);
+        atomicadd_always(spectra.emissionalltimesteps[emindex], deltaE);
 
         if (stokes_i != nullptr && stokes_i->do_emission_absorption) {
-          atomicadd(stokes_i->emissionalltimesteps[emindex], pkt.stokes[0] * deltaE);
+          atomicadd_always(stokes_i->emissionalltimesteps[emindex], pkt.stokes[0] * deltaE);
         }
         if (stokes_q != nullptr && stokes_q->do_emission_absorption) {
-          atomicadd(stokes_q->emissionalltimesteps[emindex], pkt.stokes[1] * deltaE);
+          atomicadd_always(stokes_q->emissionalltimesteps[emindex], pkt.stokes[1] * deltaE);
         }
         if (stokes_u != nullptr && stokes_u->do_emission_absorption) {
-          atomicadd(stokes_u->emissionalltimesteps[emindex], pkt.stokes[2] * deltaE);
+          atomicadd_always(stokes_u->emissionalltimesteps[emindex], pkt.stokes[2] * deltaE);
         }
       }
 
@@ -556,23 +571,23 @@ void add_to_spec_res(const Packet &pkt, const int dirbin, Spectra &spectra, Spec
                               : -1;
       if (nnu_abs >= 0 && nnu_abs < MNUBINS) {
         const double deltaE_absorption = pkt.e_rf / globals::timesteps[nts].width / spectra.delta_freq[nnu_abs] /
-                                         4.e12 / PI / PARSEC / PARSEC / globals::nprocs_exspec * anglefactor;
+                                         4.e12 / PI / PARSEC / PARSEC / globals::nprocs_exspec * solidanglefactor;
         const int at = pkt.absorptiontype;
         if (at >= 0) {
           // bb-emission
           const int element = globals::linelist[at].elementindex;
           const int ion = globals::linelist[at].ionindex;
           const auto absindex = get_absindex(nts, nnu_abs) + (element * get_max_nions()) + ion;
-          atomicadd(spectra.absorptionalltimesteps[absindex], deltaE_absorption);
+          atomicadd_always(spectra.absorptionalltimesteps[absindex], deltaE_absorption);
 
           if (stokes_i != nullptr && stokes_i->do_emission_absorption) {
-            atomicadd(stokes_i->absorptionalltimesteps[absindex], pkt.stokes[0] * deltaE_absorption);
+            atomicadd_always(stokes_i->absorptionalltimesteps[absindex], pkt.stokes[0] * deltaE_absorption);
           }
           if (stokes_q != nullptr && stokes_q->do_emission_absorption) {
-            atomicadd(stokes_q->absorptionalltimesteps[absindex], pkt.stokes[1] * deltaE_absorption);
+            atomicadd_always(stokes_q->absorptionalltimesteps[absindex], pkt.stokes[1] * deltaE_absorption);
           }
           if (stokes_u != nullptr && stokes_u->do_emission_absorption) {
-            atomicadd(stokes_u->absorptionalltimesteps[absindex], pkt.stokes[2] * deltaE_absorption);
+            atomicadd_always(stokes_u->absorptionalltimesteps[absindex], pkt.stokes[2] * deltaE_absorption);
           }
 
           if (TRACE_EMISSION_ABSORPTION_REGION_ON && t_arrive >= traceemissabs_timemin &&
@@ -640,7 +655,7 @@ void write_light_curve(const std::string &lc_filename, const int dirbin, const s
 // add a packet to the outgoing light-curve.
 void add_to_lc_res(const Packet &pkt, const int dirbin, std::span<double> light_curve_lum,
                    std::span<double> light_curve_lumcmf) {
-  const double anglefactor = (dirbin >= 0) ? MABINS : 1.;
+  const double solidanglefactor = (dirbin >= 0) ? MABINS : 1.;
   if (dirbin == -1) {
     // -1 means all full 4π angle average (no angle filtering)
 
@@ -648,7 +663,8 @@ void add_to_lc_res(const Packet &pkt, const int dirbin, std::span<double> light_
     const double arrive_time = get_arrive_time(pkt);
     if (arrive_time > globals::tmin && arrive_time < globals::tmax) {
       const int nts = get_timestep(arrive_time);
-      atomicadd(light_curve_lum[nts], pkt.e_rf / globals::timesteps[nts].width * anglefactor / globals::nprocs_exspec);
+      atomicadd_always(light_curve_lum[nts],
+                       pkt.e_rf / globals::timesteps[nts].width * solidanglefactor / globals::nprocs_exspec);
     }
 
     const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
@@ -658,8 +674,8 @@ void add_to_lc_res(const Packet &pkt, const int dirbin, std::span<double> light_
 
     if (arrive_time_cmf > globals::tmin && arrive_time_cmf < globals::tmax) {
       const int nts = get_timestep(arrive_time_cmf);
-      atomicadd(light_curve_lumcmf[nts],
-                pkt.e_cmf / globals::timesteps[nts].width * anglefactor / globals::nprocs_exspec / inverse_gamma);
+      atomicadd_always(light_curve_lumcmf[nts], pkt.e_cmf / globals::timesteps[nts].width * solidanglefactor /
+                                                    globals::nprocs_exspec / inverse_gamma);
     }
 
   } else if (get_escapedirectionbin(pkt.dir) == dirbin) {
@@ -668,7 +684,8 @@ void add_to_lc_res(const Packet &pkt, const int dirbin, std::span<double> light_
     const double t_arrive = get_arrive_time(pkt);
     if (t_arrive > globals::tmin && t_arrive < globals::tmax) {
       const int nts = get_timestep(t_arrive);
-      atomicadd(light_curve_lum[nts], pkt.e_rf / globals::timesteps[nts].width * anglefactor / globals::nprocs_exspec);
+      atomicadd_always(light_curve_lum[nts],
+                       pkt.e_rf / globals::timesteps[nts].width * solidanglefactor / globals::nprocs_exspec);
     }
   }
 }
