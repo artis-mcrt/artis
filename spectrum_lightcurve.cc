@@ -507,9 +507,9 @@ void add_to_spec_res(const Packet &pkt, const int dirbin, Spectra &spectra, Spec
     // a binary search into freq_lower would probably be faster than this double logarithm
     const auto nnu = static_cast<ptrdiff_t>((log(pkt.nu_rf) - log(nu_min)) / dlognu);
 
-    const double anglefactor = (dirbin >= 0) ? MABINS : 1.;
+    const double solidanglefactor = (dirbin >= 0) ? MABINS : 1.;
     const double deltaE = pkt.e_rf / globals::timesteps[nts].width / spectra.delta_freq.at(nnu) / 4.e12 / PI / PARSEC /
-                          PARSEC / globals::nprocs_exspec * anglefactor;
+                          PARSEC / globals::nprocs_exspec * solidanglefactor;
 
     const auto fluxindex = (nnu * static_cast<ptrdiff_t>(globals::ntimesteps)) + nts;
     atomicadd_always(spectra.fluxalltimesteps[fluxindex], deltaE);
@@ -569,7 +569,7 @@ void add_to_spec_res(const Packet &pkt, const int dirbin, Spectra &spectra, Spec
                               : -1;
       if (nnu_abs >= 0 && nnu_abs < MNUBINS) {
         const double deltaE_absorption = pkt.e_rf / globals::timesteps[nts].width / spectra.delta_freq[nnu_abs] /
-                                         4.e12 / PI / PARSEC / PARSEC / globals::nprocs_exspec * anglefactor;
+                                         4.e12 / PI / PARSEC / PARSEC / globals::nprocs_exspec * solidanglefactor;
         const int at = pkt.absorptiontype;
         if (at >= 0) {
           // bb-emission
@@ -653,7 +653,7 @@ void write_light_curve(const std::string &lc_filename, const int dirbin, const s
 // add a packet to the outgoing light-curve.
 void add_to_lc_res(const Packet &pkt, const int dirbin, std::span<double> light_curve_lum,
                    std::span<double> light_curve_lumcmf) {
-  const double anglefactor = (dirbin >= 0) ? MABINS : 1.;
+  const double solidanglefactor = (dirbin >= 0) ? MABINS : 1.;
   if (dirbin == -1) {
     // -1 means all full 4π angle average (no angle filtering)
 
@@ -662,7 +662,7 @@ void add_to_lc_res(const Packet &pkt, const int dirbin, std::span<double> light_
     if (arrive_time > globals::tmin && arrive_time < globals::tmax) {
       const int nts = get_timestep(arrive_time);
       atomicadd_always(light_curve_lum[nts],
-                       pkt.e_rf / globals::timesteps[nts].width * anglefactor / globals::nprocs_exspec);
+                       pkt.e_rf / globals::timesteps[nts].width * solidanglefactor / globals::nprocs_exspec);
     }
 
     const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
@@ -672,7 +672,7 @@ void add_to_lc_res(const Packet &pkt, const int dirbin, std::span<double> light_
 
     if (arrive_time_cmf > globals::tmin && arrive_time_cmf < globals::tmax) {
       const int nts = get_timestep(arrive_time_cmf);
-      atomicadd_always(light_curve_lumcmf[nts], pkt.e_cmf / globals::timesteps[nts].width * anglefactor /
+      atomicadd_always(light_curve_lumcmf[nts], pkt.e_cmf / globals::timesteps[nts].width * solidanglefactor /
                                                     globals::nprocs_exspec / inverse_gamma);
     }
 
@@ -683,7 +683,7 @@ void add_to_lc_res(const Packet &pkt, const int dirbin, std::span<double> light_
     if (t_arrive > globals::tmin && t_arrive < globals::tmax) {
       const int nts = get_timestep(t_arrive);
       atomicadd_always(light_curve_lum[nts],
-                       pkt.e_rf / globals::timesteps[nts].width * anglefactor / globals::nprocs_exspec);
+                       pkt.e_rf / globals::timesteps[nts].width * solidanglefactor / globals::nprocs_exspec);
     }
   }
 }
