@@ -48,7 +48,7 @@ struct ModelGridCellInput {
   float rhoinit = -1.;
   float ffegrp = 0.;
   float initial_radial_pos_sum = 0.;
-  float initelectronfrac = -1;  // Ye: electrons (or protons) per nucleon
+  float initelectronfrac = 0.4;  // Ye: electrons (or protons) per nucleon
   float initenergyq = 0.;  // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
 };
 
