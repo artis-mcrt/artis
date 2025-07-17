@@ -81,7 +81,6 @@ inline std::string outputlinestr = {};
 inline bool outputstartofline = true;
 inline tm timebuf{};
 
-// if not set, force Simpson integrator on GPU mode (since gsl doesn't work there!)
 #ifndef USE_SIMPSON_INTEGRATOR
 #define USE_SIMPSON_INTEGRATOR false
 #endif
