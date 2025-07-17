@@ -30,6 +30,7 @@ Checks: [
         -hicpp-vararg,
         -hicpp-no-array-decay,
         -llvmlibc-*,
+        -llvm-prefer-static-over-anonymous-namespace,
         -misc-no-recursion,
         -misc-non-private-member-variables-in-classes,
         -modernize-use-ranges, # things like sort and for_each don't support parallel execution policies yet (C++26 will?)
