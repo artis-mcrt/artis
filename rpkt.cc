@@ -499,7 +499,7 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
 
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
     auto chi_bf_valid =
-        phixslist.chi_bf_sum.subspan(phixslist.allcontbegin, phixslist.allcontend - phixslist.allcontbegin);
+        phixslist.chi_bf_sum.subspan(phixslist.allcontbegin, phixslist.allcontend - phixslist.allcontbegin - 1);
     const auto allcontindex =
         std::ranges::upper_bound(chi_bf_valid, chi_bf_rand) - chi_bf_valid.begin() + phixslist.allcontbegin;
     assert_always(allcontindex < phixslist.allcontend);
