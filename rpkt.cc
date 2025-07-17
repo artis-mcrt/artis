@@ -209,7 +209,7 @@ auto get_possible_event(const int nonemptymgi, const Packet &pkt, const Rpkt_con
         pos[1] += (pkt.dir[1] * ldist);
         pos[2] += (pkt.dir[2] * ldist);
         prop_time += ldist / CLIGHT_PROP;
-        nu_cmf = pkt.nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
+        nu_cmf = pkt.nu_cmf + (d_nu_on_d_l * dist);  // should equal nu_trans;
         assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
       }
 
@@ -306,7 +306,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet &p
       pos[1] += (pkt.dir[1] * binedgedist);
       pos[2] += (pkt.dir[2] * binedgedist);
       prop_time += binedgedist / CLIGHT_PROP;
-      nu_cmf = pkt.nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
+      nu_cmf = pkt.nu_cmf + (d_nu_on_d_l * dist);  // should equal nu_trans;
       assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
     }
 
@@ -345,7 +345,7 @@ void electron_scatter_rpkt(Packet &pkt) {
     while (x > p) {
       const double zrand = rng_uniform();
 
-      M = 2 * zrand - 1;
+      M = (2 * zrand) - 1;
       const double mu = pow(M, 2.);
       phisc = 2 * PI * rng_uniform();
 
@@ -355,7 +355,7 @@ void electron_scatter_rpkt(Packet &pkt) {
       // with -i1. Here, instead, we calculate the angle in the clockwise direction from 0 to 2PI.
       // For instance, the i1 angle in Fig.2 of Bulla+2015 corresponds to 2PI-i1 here.
       // NB2: the i1 and i2 angles computed in the code (before and after scattering) are instead as in Bulla+2015
-      p = (mu + 1) + (mu - 1) * (cos(2 * phisc) * Qi + sin(2 * phisc) * Ui);
+      p = (mu + 1) + ((mu - 1) * (cos(2 * phisc) * Qi + sin(2 * phisc) * Ui));
 
       // generate a number between 0 and the maximum of the previous function (2)
       x = 2. * rng_uniform();
@@ -364,7 +364,7 @@ void electron_scatter_rpkt(Packet &pkt) {
     // Assume isotropic scattering
     const double zrand = rng_uniform();
 
-    M = 2. * zrand - 1;
+    M = (2. * zrand) - 1;
     phisc = 2 * PI * rng_uniform();
   }
 
@@ -372,13 +372,13 @@ void electron_scatter_rpkt(Packet &pkt) {
   Vec3d new_dir_cmf{};
 
   if (fabs(old_dir_cmf[2]) < 0.99999) {
-    new_dir_cmf[0] = sin(tsc) / sqrt(1. - pow(old_dir_cmf[2], 2.)) *
-                         (old_dir_cmf[1] * sin(phisc) - old_dir_cmf[0] * old_dir_cmf[2] * cos(phisc)) +
-                     old_dir_cmf[0] * cos(tsc);
-    new_dir_cmf[1] = sin(tsc) / sqrt(1 - pow(old_dir_cmf[2], 2.)) *
-                         (-old_dir_cmf[0] * sin(phisc) - old_dir_cmf[1] * old_dir_cmf[2] * cos(phisc)) +
-                     old_dir_cmf[1] * cos(tsc);
-    new_dir_cmf[2] = sin(tsc) * cos(phisc) * sqrt(1 - pow(old_dir_cmf[2], 2.)) + old_dir_cmf[2] * cos(tsc);
+    new_dir_cmf[0] = (sin(tsc) / sqrt(1. - pow(old_dir_cmf[2], 2.)) *
+                      (old_dir_cmf[1] * sin(phisc) - old_dir_cmf[0] * old_dir_cmf[2] * cos(phisc))) +
+                     (old_dir_cmf[0] * cos(tsc));
+    new_dir_cmf[1] = (sin(tsc) / sqrt(1 - pow(old_dir_cmf[2], 2.)) *
+                      (-old_dir_cmf[0] * sin(phisc) - old_dir_cmf[1] * old_dir_cmf[2] * cos(phisc))) +
+                     (old_dir_cmf[1] * cos(tsc));
+    new_dir_cmf[2] = (sin(tsc) * cos(phisc) * sqrt(1 - pow(old_dir_cmf[2], 2.))) + (old_dir_cmf[2] * cos(tsc));
   } else {
     new_dir_cmf = {sin(tsc) * cos(phisc), sin(tsc) * sin(phisc), (old_dir_cmf[2] > 0) ? cos(tsc) : -cos(tsc)};
   }
@@ -660,7 +660,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     const auto d_nu_on_d_l = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
     const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-    std::tie(edist, pkt.next_trans, event_is_boundbound) = [&]() {
+    std::tie(edist, pkt.next_trans, event_is_boundbound) = [&]() -> std::tuple<double, int, bool> {
       if constexpr (EXPANSIONOPACITIES_ON) {
         return get_possible_event_expansion_opacity(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, nu_cmf_abort,
                                                     d_nu_on_d_l, doppler);
@@ -802,7 +802,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.begin());
 
   const int allcontbegin = std::lower_bound(allcont_nu_edge.begin(), allcont_nu_edge.begin() + allcontend, nu,
-                                            [](const double nu_edge, const double nu_cmf) {
+                                            [](const double nu_edge, const double nu_cmf) -> auto {
                                               return nu_edge * last_phixs_nuovernuedge < nu_cmf;
                                             }) -
                            allcont_nu_edge.begin();
@@ -820,11 +820,12 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
     phixslist.bfestimend =
         static_cast<int>(std::ranges::upper_bound(globals::bfestim_nu_edge, nu) - globals::bfestim_nu_edge.cbegin());
 
-    phixslist.bfestimbegin =
-        std::lower_bound(
-            globals::bfestim_nu_edge.cbegin(), globals::bfestim_nu_edge.cbegin() + phixslist.bfestimend, nu,
-            [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }) -
-        globals::bfestim_nu_edge.cbegin();
+    phixslist.bfestimbegin = std::lower_bound(globals::bfestim_nu_edge.cbegin(),
+                                              globals::bfestim_nu_edge.cbegin() + phixslist.bfestimend, nu,
+                                              [](const double nu_edge, const double nu_cmf) -> auto {
+                                                return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                              }) -
+                             globals::bfestim_nu_edge.cbegin();
   }
 
   for (i = allcontbegin; i < allcontend; i++) {

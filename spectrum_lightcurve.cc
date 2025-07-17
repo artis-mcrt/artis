@@ -69,8 +69,9 @@ void printout_tracemission_stats() {
   // mode is 0 for emission and 1 for absorption
   for (int mode = 0; mode < 2; mode++) {
     if (mode == 0) {
-      std::ranges::SORT_OR_STABLE_SORT(traceemissionabsorption,
-                                       [](const auto &a, const auto &b) { return a.energyemitted > b.energyemitted; });
+      std::ranges::SORT_OR_STABLE_SORT(traceemissionabsorption, [](const auto &a, const auto &b) -> auto {
+        return a.energyemitted > b.energyemitted;
+      });
       printout("lambda [%5.1f, %5.1f] nu %g %g\n", traceemissabs_lambdamin, traceemissabs_lambdamax,
                traceemissabs_nulower, traceemissabs_nuupper);
 

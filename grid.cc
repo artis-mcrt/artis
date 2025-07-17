@@ -1252,12 +1252,12 @@ template <size_t S1>
     double dist1 = (-b + sqrt(discriminant)) / 2 / a;
     double dist2 = (-b - sqrt(discriminant)) / 2 / a;
 
-    const auto [posfinal1, posfinal2] = [&]() {
+    const auto [posfinal1, posfinal2] = [&]() -> auto {
       std::array<double, S1> posf1{};
       std::array<double, S1> posf2{};
       for (size_t d = 0; d < S1; d++) {
-        posf1[d] = pos[d] + dist1 * dir[d];
-        posf2[d] = pos[d] + dist2 * dir[d];
+        posf1[d] = pos[d] + (dist1 * dir[d]);
+        posf2[d] = pos[d] + (dist2 * dir[d]);
       }
       return std::tuple{posf1, posf2};
     }();
@@ -2368,7 +2368,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   // dir * CLIGHT_PROP converted from xyz to grid coordinates
   const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord);
 
-  const auto cellcoordmax = [cellindex] {
+  const auto cellcoordmax = [cellindex] -> std::array<double, get_ndim(GRID_TYPE)> {
     auto _cellcoordmax = std::array<double, get_ndim(GRID_TYPE)>{};  // position at time tmin
     for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
       _cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);

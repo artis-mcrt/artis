@@ -224,7 +224,7 @@ auto sample_planck_analytic(const double T) -> double {
   double part_integral = 0.;
   double bin_nu_lower = NU_MIN_R;
   for (ptrdiff_t i = 1; i < nubins; i++) {
-    bin_nu_lower = NU_MIN_R + (i - 1) * delta_nu;
+    bin_nu_lower = NU_MIN_R + ((i - 1) * delta_nu);
     const double nu_upper = NU_MIN_R + (i * delta_nu);
     prev_partintegral = part_integral;
     part_integral = radfield::planck_integral_analytic(T, NU_MIN_R, nu_upper, false);
@@ -262,7 +262,7 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates *heating
   double C_ionization_all = 0.;  // collisional ionisation of macroatoms
 
   const auto allionindices = std::ranges::iota_view{0, get_includedions()};
-  std::for_each(EXEC_PAR allionindices.begin(), allionindices.end(), [&](const int allionindex) {
+  std::for_each(EXEC_PAR allionindices.begin(), allionindices.end(), [&](const int allionindex) -> void {
     const auto [element, ion] = get_ionfromuniqueionindex(allionindex);
     grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + allionindex] =
         calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, -1, cellcacheslotid, &C_ff_all, &C_fb_all,

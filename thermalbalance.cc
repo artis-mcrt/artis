@@ -212,7 +212,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *const paras) -> doubl
   const auto ntlepton_dep = nonthermal::get_deposition_rate_density(nonemptymgi);
   const auto ntalpha_frac_heating = 1.;
   const auto ntalpha_dep = heatingcoolingrates.dep_alpha;
-  heatingcoolingrates.heating_dep = ntlepton_dep * ntlepton_frac_heating + ntalpha_dep * ntalpha_frac_heating;
+  heatingcoolingrates.heating_dep = (ntlepton_dep * ntlepton_frac_heating) + (ntalpha_dep * ntalpha_frac_heating);
   heatingcoolingrates.dep_frac_heating =
       (ntalpha_dep > 0) ? heatingcoolingrates.heating_dep / (ntlepton_dep + ntalpha_dep) : ntlepton_frac_heating;
 
@@ -248,7 +248,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels = get_nlevels(element, ion);
       const auto levels = std::ranges::iota_view{0, nlevels};
-      std::for_each(EXEC_PAR levels.begin(), levels.end(), [&](const int level) {
+      std::for_each(EXEC_PAR levels.begin(), levels.end(), [&](const int level) -> void {
         double bfheatingcoeff = 0.;
         if (grid::get_elem_abundance(nonemptymgi, element) > minelfrac || USE_LUT_BFHEATING) {
           const auto nphixstargets = get_nphixstargets(element, ion, level);

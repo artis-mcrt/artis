@@ -181,7 +181,7 @@ void read_phixs_data_table(
       assert_always(std::stringstream(phixsline) >> energy >> phixs);
       assert_always(energy >= 0);
       assert_always(phixs >= 0);
-      nugrid_in[i] = nu_edge + (energy * 13.6 * EV) / H;
+      nugrid_in[i] = nu_edge + ((energy * 13.6 * EV) / H);
       // the photoionisation cross-sections in the database are given in Mbarn=1e6 * 1e-28m^2
       // to convert to cgs units multiply by 1e-18
       phixs_in[i] = phixs * 1e-18;
@@ -232,7 +232,7 @@ void read_phixs_data_table(
     }
   }
 
-  *mem_usage_phixs += get_nphixstargets(lowerionlower_uniquelevelindex) * sizeof(double) + sizeof(int);
+  *mem_usage_phixs += (get_nphixstargets(lowerionlower_uniquelevelindex) * sizeof(double)) + sizeof(int);
   *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
   globals::nbfcontinua += get_nphixstargets(lowerionlower_uniquelevelindex);
   if (lowerlevel == 0 && get_nphixstargets(lowerionlower_uniquelevelindex) > 0) {
@@ -254,7 +254,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float> &tmpallphi
         "using NPHIXSPOINTS = %d and NPHIXSNUINCREMENT = %lg from phixsdata_v2.txt to interpolate "
         "phixsdata.txt data\n",
         globals::NPHIXSPOINTS, globals::NPHIXSNUINCREMENT);
-    last_phixs_nuovernuedge = (1.0 + globals::NPHIXSNUINCREMENT * (globals::NPHIXSPOINTS - 1));
+    last_phixs_nuovernuedge = (1.0 + (globals::NPHIXSNUINCREMENT * (globals::NPHIXSPOINTS - 1)));
   } else if (phixs_file_version == 1) {
     globals::NPHIXSPOINTS = 100;
     globals::NPHIXSNUINCREMENT = .1;
@@ -267,7 +267,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float> &tmpallphi
     assert_always(globals::NPHIXSPOINTS > 0);
     assert_always(phixsfile >> globals::NPHIXSNUINCREMENT);
     assert_always(globals::NPHIXSNUINCREMENT > 0.);
-    last_phixs_nuovernuedge = (1.0 + globals::NPHIXSNUINCREMENT * (globals::NPHIXSPOINTS - 1));
+    last_phixs_nuovernuedge = (1.0 + (globals::NPHIXSNUINCREMENT * (globals::NPHIXSPOINTS - 1)));
   }
 
   int Z = -1;
@@ -749,7 +749,7 @@ void setup_phixs_list() {
     for (int ion = 0; ion < nions - 1; ion++) {
       globals::elements[element].ions[ion].groundcontindex =
           static_cast<int>(std::ranges::find_if(globals::groundcont,
-                                                [=](const auto &groundcont) {
+                                                [=](const auto &groundcont) -> auto {
                                                   return (groundcont.element == element) && (groundcont.ion == ion);
                                                 }) -
                            globals::groundcont.begin());
@@ -1264,7 +1264,7 @@ void read_atomicdata_files() {
   if (globals::rank_in_node == 0) {
     // sort the lineline in descending frequency
     std::SORT_OR_STABLE_SORT(
-        EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(), [](const auto &a, const auto &b) {
+        EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(), [](const auto &a, const auto &b) -> auto {
           if (a.nu != b.nu) {
             return a.nu > b.nu;
           }
@@ -1485,7 +1485,7 @@ void setup_cellcache() {
 
           const int ndowntrans = get_ndowntrans(element, ion, level);
           const int nuptrans = get_nuptrans(element, ion, level);
-          chtransblocksize += (2 * ndowntrans + nuptrans);
+          chtransblocksize += ((2 * ndowntrans) + nuptrans);
         }
       }
     }
@@ -1500,7 +1500,7 @@ void setup_cellcache() {
       }
     }
     mem_usage_cellcache +=
-        get_includedlevels() * (2 * sizeof(double) + sizeof(int)) + allphixstargetcount * sizeof(double) * 2;
+        (get_includedlevels() * (2 * sizeof(double) + sizeof(int))) + (allphixstargetcount * sizeof(double) * 2);
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
     if (chtransblocksize > 0) {
@@ -1511,7 +1511,7 @@ void setup_cellcache() {
     for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
       std::ranges::fill(globals::cellcache[cellcachenum].alllevels_maprocessrates[uniquelevelindex], -99.);
       globals::cellcache[cellcachenum].alllevels_matransblock_start[uniquelevelindex] = chtransindex;
-      chtransindex += (2 * get_ndowntrans(uniquelevelindex) + get_nuptrans(uniquelevelindex));
+      chtransindex += ((2 * get_ndowntrans(uniquelevelindex)) + get_nuptrans(uniquelevelindex));
     }
     assert_always(chtransindex == chtransblocksize);
 
@@ -2010,9 +2010,9 @@ void setup_timesteps() {
       for (int n = 0; n < globals::ntimesteps; n++) {
         // for constant timesteps
         const double dt = (globals::tmax - globals::tmin) / globals::ntimesteps;
-        globals::timesteps[n].start = globals::tmin + n * dt;
+        globals::timesteps[n].start = globals::tmin + (n * dt);
         globals::timesteps[n].width = dt;
-        globals::timesteps[n].mid = globals::timesteps[n].start + 0.5 * globals::timesteps[n].width;
+        globals::timesteps[n].mid = globals::timesteps[n].start + (0.5 * globals::timesteps[n].width);
       }
       break;
     }
@@ -2044,7 +2044,7 @@ void setup_timesteps() {
               n > 0 ? (globals::timesteps[n - 1].start + globals::timesteps[n - 1].width) : globals::tmin;
           globals::timesteps[n].start = prev_start;
           globals::timesteps[n].width = fixed_tsdelta;
-          globals::timesteps[n].mid = globals::timesteps[n].start + 0.5 * globals::timesteps[n].width;
+          globals::timesteps[n].mid = globals::timesteps[n].start + (0.5 * globals::timesteps[n].width);
         }
       }
       break;
@@ -2067,9 +2067,9 @@ void setup_timesteps() {
       for (int n = 0; n < globals::ntimesteps; n++) {
         if (n < nts_fixed) {
           // for constant timesteps
-          globals::timesteps[n].start = globals::tmin + n * fixed_tsdelta;
+          globals::timesteps[n].start = globals::tmin + (n * fixed_tsdelta);
           globals::timesteps[n].width = fixed_tsdelta;
-          globals::timesteps[n].mid = globals::timesteps[n].start + 0.5 * globals::timesteps[n].width;
+          globals::timesteps[n].mid = globals::timesteps[n].start + (0.5 * globals::timesteps[n].width);
         } else {
           // For logarithmic time steps, the logarithmic interval will be
           const double dlogt = (log(globals::tmax) - log(t_transition)) / nts_log;
@@ -2077,7 +2077,7 @@ void setup_timesteps() {
               n > 0 ? (globals::timesteps[n - 1].start + globals::timesteps[n - 1].width) : globals::tmin;
           globals::timesteps[n].start = prev_start;
           globals::timesteps[n].width = (t_transition * exp((n - nts_fixed + 1) * dlogt)) - globals::timesteps[n].start;
-          globals::timesteps[n].mid = globals::timesteps[n].start + 0.5 * globals::timesteps[n].width;
+          globals::timesteps[n].mid = globals::timesteps[n].start + (0.5 * globals::timesteps[n].width);
         }
       }
       break;

@@ -88,7 +88,7 @@ const double dlognu_vspec = (std::log(VSPEC_NUMAX) - std::log(VSPEC_NUMIN)) / VM
 // because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could
 // thus contribute to the spectrum.
 constexpr auto all_taus_past_taumax(std::vector<double> &tau, const double tau_max) -> bool {
-  return std::ranges::all_of(tau, [tau_max](const double tau_i) { return tau_i > tau_max; });
+  return std::ranges::all_of(tau, [tau_max](const double tau_i) -> bool { return tau_i > tau_max; });
 }
 
 // Routine to add a packet to the outcoming spectrum.
@@ -133,10 +133,10 @@ void add_to_vpkt_grid(const Packet &vpkt, const Vec3d &vel, const int wlbin, con
   // Rotate velocity into projected area seen by the observer (see notes)
   else {
     // Rotate velocity from (x,y,z) to (n_obs,ref1,ref2) so that x correspond to n_obs (see notes)
-    vref1 = -obs[1] * vel[0] + (obs[0] + obs[2] * obs[2] / (1 + obs[0])) * vel[1] -
-            obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[2];
-    vref2 = -obs[2] * vel[0] - obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[1] +
-            (obs[0] + obs[1] * obs[1] / (1 + obs[0])) * vel[2];
+    vref1 = (-obs[1] * vel[0]) + ((obs[0] + obs[2] * obs[2] / (1 + obs[0])) * vel[1]) -
+            (obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[2]);
+    vref2 = (-obs[2] * vel[0]) - (obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[1]) +
+            ((obs[0] + obs[1] * obs[1] / (1 + obs[0])) * vel[2]);
   }
 
   // Outside the grid
@@ -229,8 +229,8 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     const double cos2i2 = cos(2 * i2);
     const double sin2i2 = sin(2 * i2);
 
-    Q = Qnew * cos2i2 + Unew * sin2i2;
-    U = -Qnew * sin2i2 + Unew * cos2i2;
+    Q = (Qnew * cos2i2) + (Unew * sin2i2);
+    U = (-Qnew * sin2i2) + (Unew * cos2i2);
 
     // Transform Stokes Parameters from the CMF to the RF
 

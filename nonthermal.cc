@@ -98,7 +98,7 @@ constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 // energy grid on which solution is sampled [eV]
 constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
 
-const auto logengrid = []() {
+const auto logengrid = []() -> std::vector<double> {
   std::vector<double> _logengrid(SFPTS);
   for (int i = 0; i < SFPTS; i++) {
     _logengrid[i] = std::log(engrid(i));
@@ -124,7 +124,7 @@ constexpr auto sourcevec(const int index) {
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
 // This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.
-constexpr double E_init_ev = []() {
+constexpr double E_init_ev = []() -> double {
   double integral = 0.;
   for (int s = 0; s < SFPTS; s++) {
     integral += sourcevec(s) * DELTA_E * engrid(s);
@@ -133,7 +133,7 @@ constexpr double E_init_ev = []() {
 }();
 
 // rhs is the constant term (not dependent on y func) in each equation
-constexpr auto rhsvec = []() {
+constexpr auto rhsvec = []() -> std::array<double, SFPTS> {
   std::array<double, SFPTS> _rhsvec{};
   double source_integral_to_SF_EMAX = 0.;
   for (int i = SFPTS - 1; i >= 0; i--) {
@@ -556,7 +556,7 @@ void read_auger_data() {
 
           prob_sum = 0.;
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-            collionrow.prob_num_auger[a] = oldweight * collionrow.prob_num_auger[a] + newweight * prob_num_auger[a];
+            collionrow.prob_num_auger[a] = (oldweight * collionrow.prob_num_auger[a]) + (newweight * prob_num_auger[a]);
             prob_sum += collionrow.prob_num_auger[a];
           }
           assert_always(fabs(prob_sum - 1.0) < 0.001);
@@ -655,9 +655,10 @@ void read_collion_data() {
       if (nbound <= 0) {
         continue;
       }
-      const bool any_data_matched = std::ranges::any_of(colliondata, [Z, ionstage](const collionrow &collionrow) {
-        return collionrow.Z == Z && collionrow.ionstage == ionstage;
-      });
+      const bool any_data_matched =
+          std::ranges::any_of(colliondata, [Z, ionstage](const collionrow &collionrow) -> bool {
+            return collionrow.Z == Z && collionrow.ionstage == ionstage;
+          });
       if (!any_data_matched) {
         const double ionpot_ev = globals::elements[element].ions[ion].ionpot / EV;
         printout("No collisional ionisation data for Z=%d ionstage %d. Using Lotz approximation with ionpot = %g eV\n",
@@ -707,7 +708,7 @@ void read_collion_data() {
     }
   }
   colliondata.shrink_to_fit();
-  std::ranges::stable_sort(colliondata, [](const collionrow &a, const collionrow &b) {
+  std::ranges::stable_sort(colliondata, [](const collionrow &a, const collionrow &b) -> bool {
     return std::tie(a.Z, a.ionstage, a.ionpot_ev, a.n, a.l) < std::tie(b.Z, b.ionstage, b.ionpot_ev, b.n, b.l);
   });
 
@@ -1814,7 +1815,7 @@ void sfmatrix_add_excitation(std::vector<double> &sfmatrixuppertri, const int no
   const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
 
   const auto lowers = std::ranges::iota_view{0, nlevels};
-  std::for_each(lowers.begin(), lowers.end(), [&](const int lower) {
+  std::for_each(lowers.begin(), lowers.end(), [&](const int lower) -> void {
     const auto uniquelevelindex = get_uniquelevelindex(element, ion, lower);
     const double statweight_lower = stat_weight(uniquelevelindex);
     const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
@@ -1917,7 +1918,7 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrixuppertri, const int Z,
         const double int_eps_lower2 = std::atan(en / J);
 
         // endash ranges from 2 * en + ionpot_ev to SF_EMAX
-        if (2 * en + ionpot_ev <= SF_EMAX) {
+        if ((2 * en) + ionpot_ev <= SF_EMAX) {
           const int secondintegralstartindex = std::max(xsstartindex, get_energyindex_ev_lteq((2 * en) + ionpot_ev));
           for (int j = secondintegralstartindex; j < SFPTS; j++) {
             // epsilon_lower = en + ionpot_ev;
