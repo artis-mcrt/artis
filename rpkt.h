@@ -30,16 +30,16 @@ struct Phixslist {
   constexpr Phixslist(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
       : groundcont_gamma_contr{std::make_unique<double[]>(nbfcontinua_ground)},
         gamma_contr{std::make_unique<double[]>(bfestimcount)},
-        chi_bf_sum_uptr{std::make_unique<double[]>(nbfcontinua)} {
+        chi_bf_sum_ptr{std::make_unique<double[]>(nbfcontinua)} {
 #pragma clang unsafe_buffer_usage begin
-    chi_bf_sum = std::span<double>(chi_bf_sum_uptr.get(), nbfcontinua);
+    chi_bf_sum = std::span<double>(chi_bf_sum_ptr.get(), nbfcontinua);
 #pragma clang unsafe_buffer_usage end
   }
 
   constexpr Phixslist() = default;
 
  private:
-  std::unique_ptr<double[]> chi_bf_sum_uptr;
+  std::unique_ptr<double[]> chi_bf_sum_ptr;
 };
 
 struct Rpkt_continuum_absorptioncoeffs {
