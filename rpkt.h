@@ -18,7 +18,7 @@
 #include "sn3d.h"
 
 struct Phixslist {
-  // NOLINTBEGIN(*avoid-c-arrays)
+  // NOLINTBEGIN(*-avoid-c-arrays)
   std::unique_ptr<double[]> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or USE_LUT_BFHEATING = true
   std::unique_ptr<double[]> chi_bf_sum;
   std::unique_ptr<double[]> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
@@ -31,7 +31,7 @@ struct Phixslist {
       : groundcont_gamma_contr{std::make_unique<double[]>(nbfcontinua_ground)},
         chi_bf_sum{std::make_unique<double[]>(nbfcontinua)},
         gamma_contr{std::make_unique<double[]>(bfestimcount)} {}
-  // NOLINTEND(*avoid-c-arrays)
+  // NOLINTEND(*-avoid-c-arrays)
 
   constexpr Phixslist() = default;
 };
