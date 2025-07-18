@@ -133,10 +133,10 @@ void add_to_vpkt_grid(const Packet &vpkt, const Vec3d &vel, const int wlbin, con
   // Rotate velocity into projected area seen by the observer (see notes)
   else {
     // Rotate velocity from (x,y,z) to (n_obs,ref1,ref2) so that x correspond to n_obs (see notes)
-    vref1 = -obs[1] * vel[0] + (obs[0] + obs[2] * obs[2] / (1 + obs[0])) * vel[1] -
-            obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[2];
-    vref2 = -obs[2] * vel[0] - obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[1] +
-            (obs[0] + obs[1] * obs[1] / (1 + obs[0])) * vel[2];
+    vref1 = (-obs[1] * vel[0]) + ((obs[0] + obs[2] * obs[2] / (1 + obs[0])) * vel[1]) -
+            (obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[2]);
+    vref2 = (-obs[2] * vel[0]) - (obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[1]) +
+            ((obs[0] + obs[1] * obs[1] / (1 + obs[0])) * vel[2]);
   }
 
   // Outside the grid
@@ -229,8 +229,8 @@ auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_ar
     const double cos2i2 = cos(2 * i2);
     const double sin2i2 = sin(2 * i2);
 
-    Q = Qnew * cos2i2 + Unew * sin2i2;
-    U = -Qnew * sin2i2 + Unew * cos2i2;
+    Q = (Qnew * cos2i2) + (Unew * sin2i2);
+    U = (-Qnew * sin2i2) + (Unew * cos2i2);
 
     // Transform Stokes Parameters from the CMF to the RF
 

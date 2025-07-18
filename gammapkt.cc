@@ -385,7 +385,7 @@ void compton_scatter(Packet &pkt) {
     f = choose_f(xx, rng_uniform());
 
     assert_always(f >= 1.);
-    assert_always(f <= (2 * xx + 1.));
+    assert_always(f <= ((2 * xx) + 1.));
 
     // Prob of keeping gamma ray is...
     const double prob_gamma = 1. / f;

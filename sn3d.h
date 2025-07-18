@@ -81,7 +81,6 @@ inline std::string outputlinestr = {};
 inline bool outputstartofline = true;
 inline tm timebuf{};
 
-// if not set, force Simpson integrator on GPU mode (since gsl doesn't work there!)
 #ifndef USE_SIMPSON_INTEGRATOR
 #define USE_SIMPSON_INTEGRATOR false
 #endif
@@ -89,7 +88,11 @@ inline tm timebuf{};
 inline thread_local auto gslworkspace =
     std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace *)>{
         USE_SIMPSON_INTEGRATOR ? nullptr : gsl_integration_workspace_alloc(GSLWSIZE),
-        USE_SIMPSON_INTEGRATOR ? [](gsl_integration_workspace *const w) {} : gsl_integration_workspace_free};
+        [](gsl_integration_workspace *const w) -> void {
+          if (!USE_SIMPSON_INTEGRATOR) {
+            gsl_integration_workspace_free(w);
+          }
+        }};
 
 #ifdef _OPENMP
 
@@ -226,7 +229,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
     return fopen_required(datafolderfilename, mode);
   }
 
-  FILE *file = std::fopen(filename.c_str(), mode.data());
+  auto *file = std::fopen(filename.c_str(), mode.data());
   if (file == nullptr) {
     logprintlnfmt("ERROR: Could not open file '{}' for mode '{}'.", filename, mode.data());
     std::abort();
@@ -286,7 +289,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
 }
 
 [[nodiscard]] inline auto get_thread_num() -> int {
-#if defined _OPENMP
+#ifdef _OPENMP
   return omp_get_thread_num();
 #else
   return 0;

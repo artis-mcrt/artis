@@ -224,7 +224,7 @@ auto sample_planck_analytic(const double T) -> double {
   double part_integral = 0.;
   double bin_nu_lower = NU_MIN_R;
   for (ptrdiff_t i = 1; i < nubins; i++) {
-    bin_nu_lower = NU_MIN_R + (i - 1) * delta_nu;
+    bin_nu_lower = NU_MIN_R + ((i - 1) * delta_nu);
     const double nu_upper = NU_MIN_R + (i * delta_nu);
     prev_partintegral = part_integral;
     part_integral = radfield::planck_integral_analytic(T, NU_MIN_R, nu_upper, false);

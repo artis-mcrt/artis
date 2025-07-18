@@ -209,7 +209,7 @@ auto get_possible_event(const int nonemptymgi, const Packet &pkt, const Rpkt_con
         pos[1] += (pkt.dir[1] * ldist);
         pos[2] += (pkt.dir[2] * ldist);
         prop_time += ldist / CLIGHT_PROP;
-        nu_cmf = pkt.nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
+        nu_cmf = pkt.nu_cmf + (d_nu_on_d_l * dist);  // should equal nu_trans;
         assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
       }
 
@@ -306,7 +306,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet &p
       pos[1] += (pkt.dir[1] * binedgedist);
       pos[2] += (pkt.dir[2] * binedgedist);
       prop_time += binedgedist / CLIGHT_PROP;
-      nu_cmf = pkt.nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
+      nu_cmf = pkt.nu_cmf + (d_nu_on_d_l * dist);  // should equal nu_trans;
       assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
     }
 
@@ -345,7 +345,7 @@ void electron_scatter_rpkt(Packet &pkt) {
     while (x > p) {
       const double zrand = rng_uniform();
 
-      M = 2 * zrand - 1;
+      M = (2 * zrand) - 1;
       const double mu = pow(M, 2.);
       phisc = 2 * PI * rng_uniform();
 
@@ -355,7 +355,7 @@ void electron_scatter_rpkt(Packet &pkt) {
       // with -i1. Here, instead, we calculate the angle in the clockwise direction from 0 to 2PI.
       // For instance, the i1 angle in Fig.2 of Bulla+2015 corresponds to 2PI-i1 here.
       // NB2: the i1 and i2 angles computed in the code (before and after scattering) are instead as in Bulla+2015
-      p = (mu + 1) + (mu - 1) * (cos(2 * phisc) * Qi + sin(2 * phisc) * Ui);
+      p = (mu + 1) + ((mu - 1) * (cos(2 * phisc) * Qi + sin(2 * phisc) * Ui));
 
       // generate a number between 0 and the maximum of the previous function (2)
       x = 2. * rng_uniform();
@@ -364,7 +364,7 @@ void electron_scatter_rpkt(Packet &pkt) {
     // Assume isotropic scattering
     const double zrand = rng_uniform();
 
-    M = 2. * zrand - 1;
+    M = (2. * zrand) - 1;
     phisc = 2 * PI * rng_uniform();
   }
 
@@ -372,13 +372,13 @@ void electron_scatter_rpkt(Packet &pkt) {
   Vec3d new_dir_cmf{};
 
   if (fabs(old_dir_cmf[2]) < 0.99999) {
-    new_dir_cmf[0] = sin(tsc) / sqrt(1. - pow(old_dir_cmf[2], 2.)) *
-                         (old_dir_cmf[1] * sin(phisc) - old_dir_cmf[0] * old_dir_cmf[2] * cos(phisc)) +
-                     old_dir_cmf[0] * cos(tsc);
-    new_dir_cmf[1] = sin(tsc) / sqrt(1 - pow(old_dir_cmf[2], 2.)) *
-                         (-old_dir_cmf[0] * sin(phisc) - old_dir_cmf[1] * old_dir_cmf[2] * cos(phisc)) +
-                     old_dir_cmf[1] * cos(tsc);
-    new_dir_cmf[2] = sin(tsc) * cos(phisc) * sqrt(1 - pow(old_dir_cmf[2], 2.)) + old_dir_cmf[2] * cos(tsc);
+    new_dir_cmf[0] = (sin(tsc) / sqrt(1. - pow(old_dir_cmf[2], 2.)) *
+                      (old_dir_cmf[1] * sin(phisc) - old_dir_cmf[0] * old_dir_cmf[2] * cos(phisc))) +
+                     (old_dir_cmf[0] * cos(tsc));
+    new_dir_cmf[1] = (sin(tsc) / sqrt(1 - pow(old_dir_cmf[2], 2.)) *
+                      (-old_dir_cmf[0] * sin(phisc) - old_dir_cmf[1] * old_dir_cmf[2] * cos(phisc))) +
+                     (old_dir_cmf[1] * cos(tsc));
+    new_dir_cmf[2] = (sin(tsc) * cos(phisc) * sqrt(1 - pow(old_dir_cmf[2], 2.))) + (old_dir_cmf[2] * cos(tsc));
   } else {
     new_dir_cmf = {sin(tsc) * cos(phisc), sin(tsc) * sin(phisc), (old_dir_cmf[2] > 0) ? cos(tsc) : -cos(tsc)};
   }
@@ -498,10 +498,12 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     const double chi_bf_rand = rng_uniform() * chi_bf_inrest;
 
 #pragma clang unsafe_buffer_usage begin
+    // NOLINTBEGIN(*-pointer-arithmetic)
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
     const auto allcontindex = std::upper_bound(phixslist.chi_bf_sum.get() + phixslist.allcontbegin,
                                                phixslist.chi_bf_sum.get() + phixslist.allcontend - 1, chi_bf_rand) -
                               phixslist.chi_bf_sum.get();
+    // NOLINTEND(*-pointer-arithmetic)
 #pragma clang unsafe_buffer_usage end
     assert_always(allcontindex < phixslist.allcontend);
 

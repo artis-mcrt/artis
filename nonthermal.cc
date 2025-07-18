@@ -556,7 +556,7 @@ void read_auger_data() {
 
           prob_sum = 0.;
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-            collionrow.prob_num_auger[a] = oldweight * collionrow.prob_num_auger[a] + newweight * prob_num_auger[a];
+            collionrow.prob_num_auger[a] = (oldweight * collionrow.prob_num_auger[a]) + (newweight * prob_num_auger[a]);
             prob_sum += collionrow.prob_num_auger[a];
           }
           assert_always(fabs(prob_sum - 1.0) < 0.001);
@@ -1917,7 +1917,7 @@ void sfmatrix_add_ionization(std::vector<double> &sfmatrixuppertri, const int Z,
         const double int_eps_lower2 = std::atan(en / J);
 
         // endash ranges from 2 * en + ionpot_ev to SF_EMAX
-        if (2 * en + ionpot_ev <= SF_EMAX) {
+        if ((2 * en) + ionpot_ev <= SF_EMAX) {
           const int secondintegralstartindex = std::max(xsstartindex, get_energyindex_ev_lteq((2 * en) + ionpot_ev));
           for (int j = secondintegralstartindex; j < SFPTS; j++) {
             // epsilon_lower = en + ionpot_ev;

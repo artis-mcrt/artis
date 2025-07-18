@@ -1001,7 +1001,7 @@ __host__ __device__ auto get_spontrecombcoeff(const int uniquelevelindex, const 
 
     const double f_upper = spontrecombcoeffs[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
     const double f_lower = spontrecombcoeffs[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
-    Alpha_sp = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
+    Alpha_sp = (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower)));
   } else {
     Alpha_sp = spontrecombcoeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
   }
@@ -1437,7 +1437,7 @@ __host__ __device__ auto get_bfheatingcoeff_ana(const int element, const int ion
     const double f_upper = bfheating_coeffs[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
     const double f_lower = bfheating_coeffs[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
 
-    bfheatingcoeff = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_R - T_lower));
+    bfheatingcoeff = (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_R - T_lower)));
   } else {
     bfheatingcoeff = bfheating_coeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
   }

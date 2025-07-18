@@ -1350,7 +1350,7 @@ void setup_radioactive_pellet(const double e0, const int nonemptymgi, Packet &pk
     // keeping the pellet decay rate constant will give better statistics at late times
     // when very little energy and few packets are released
     const double zrand = rng_uniform();
-    pkt.tdecay = zrand * tdecaymin + (1. - zrand) * globals::tmax;
+    pkt.tdecay = (zrand * tdecaymin) + ((1. - zrand) * globals::tmax);
 
     // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
     // e0 is the average energy per packet for this cell and decaypath, so we scale this up or down

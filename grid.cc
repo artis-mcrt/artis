@@ -110,7 +110,7 @@ consteval auto get_ndim(const GridType gridtype) -> int {
   }
 }
 
-constexpr auto coordlabel = [] -> std::array<char, 3> {
+constexpr auto coordlabel = []() -> std::array<char, 3> {
   if (GRID_TYPE == GridType::CARTESIAN3D) {
     return {'X', 'Y', 'Z'};
   }
@@ -1089,7 +1089,7 @@ void setup_grid_cartesian_3d() {
       propcell_pos_min[n][axis] = -globals::rmax + (2 * nxyz[axis] * globals::rmax / ncoordgrid[axis]);
     }
 
-    assert_always(n == nxyz[2] * ncoordgrid[1] * ncoordgrid[2] + nxyz[1] * ncoordgrid[0] + nxyz[0]);
+    assert_always(n == (nxyz[2] * ncoordgrid[1] * ncoordgrid[2]) + (nxyz[1] * ncoordgrid[0] + nxyz[0]));
 
     nxyz[0]++;  // increment x coordinate
     if (nxyz[0] == ncoordgrid[0]) {
@@ -1256,8 +1256,8 @@ template <size_t S1>
       std::array<double, S1> posf1{};
       std::array<double, S1> posf2{};
       for (size_t d = 0; d < S1; d++) {
-        posf1[d] = pos[d] + dist1 * dir[d];
-        posf2[d] = pos[d] + dist2 * dir[d];
+        posf1[d] = pos[d] + (dist1 * dir[d]);
+        posf2[d] = pos[d] + (dist2 * dir[d]);
       }
       return std::tuple{posf1, posf2};
     }();
@@ -2368,7 +2368,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   // dir * CLIGHT_PROP converted from xyz to grid coordinates
   const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord);
 
-  const auto cellcoordmax = [cellindex] {
+  const auto cellcoordmax = [cellindex]() {
     auto _cellcoordmax = std::array<double, get_ndim(GRID_TYPE)>{};  // position at time tmin
     for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
       _cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
