@@ -497,11 +497,12 @@ void rpkt_event_continuum(Packet &pkt, const Rpkt_continuum_absorptioncoeffs &ch
     // Determine in which continuum the bf-absorption occurs
     const double chi_bf_rand = rng_uniform() * chi_bf_inrest;
 
+#pragma clang unsafe_buffer_usage begin
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
-    auto chi_bf_valid =
-        phixslist.chi_bf_sum.subspan(phixslist.allcontbegin, phixslist.allcontend - phixslist.allcontbegin - 1);
-    const auto allcontindex =
-        std::ranges::upper_bound(chi_bf_valid, chi_bf_rand) - chi_bf_valid.begin() + phixslist.allcontbegin;
+    const auto allcontindex = std::upper_bound(phixslist.chi_bf_sum.get() + phixslist.allcontbegin,
+                                               phixslist.chi_bf_sum.get() + phixslist.allcontend - 1, chi_bf_rand) -
+                              phixslist.chi_bf_sum.get();
+#pragma clang unsafe_buffer_usage end
     assert_always(allcontindex < phixslist.allcontend);
 
     const double nu_edge = globals::allcont[allcontindex].nu_edge;
@@ -778,7 +779,7 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu) -> double {
 // get bound-free opacity
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
 auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixslist &phixslist) -> double {
-  assert_always(!USECELLHISTANDUPDATEPHIXSLIST || !(phixslist.chi_bf_sum.empty()));
+  assert_always(!USECELLHISTANDUPDATEPHIXSLIST || !(phixslist.chi_bf_sum.get() == nullptr));
 
   double chi_bf_sum = 0.;
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
@@ -987,7 +988,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
     chi_escat = SIGMA_T * nne;
 
     // Third contribution: bound-free absorption
-    chi_bf = chi_rpkt_cont.phixslist.chi_bf_sum.empty()
+    chi_bf = chi_rpkt_cont.phixslist.chi_bf_sum == nullptr
                  ? calculate_chi_bf_gammacontr<false>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist)
                  : calculate_chi_bf_gammacontr<true>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist);
 

@@ -18,9 +18,8 @@
 #include "sn3d.h"
 
 struct Phixslist {
- public:
   std::unique_ptr<double[]> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or USE_LUT_BFHEATING = true
-  std::span<double> chi_bf_sum{};
+  std::unique_ptr<double[]> chi_bf_sum;
   std::unique_ptr<double[]> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
   int allcontend{-1};
   int allcontbegin{0};
@@ -29,17 +28,10 @@ struct Phixslist {
 
   constexpr Phixslist(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
       : groundcont_gamma_contr{std::make_unique<double[]>(nbfcontinua_ground)},
-        gamma_contr{std::make_unique<double[]>(bfestimcount)},
-        chi_bf_sum_ptr{std::make_unique<double[]>(nbfcontinua)} {
-#pragma clang unsafe_buffer_usage begin
-    chi_bf_sum = std::span<double>(chi_bf_sum_ptr.get(), nbfcontinua);
-#pragma clang unsafe_buffer_usage end
-  }
+        chi_bf_sum{std::make_unique<double[]>(nbfcontinua)},
+        gamma_contr{std::make_unique<double[]>(bfestimcount)} {}
 
   constexpr Phixslist() = default;
-
- private:
-  std::unique_ptr<double[]> chi_bf_sum_ptr;
 };
 
 struct Rpkt_continuum_absorptioncoeffs {
