@@ -110,7 +110,7 @@ consteval auto get_ndim(const GridType gridtype) -> int {
   }
 }
 
-constexpr auto coordlabel = [] -> std::array<char, 3> {
+constexpr auto coordlabel = []() -> std::array<char, 3> {
   if (GRID_TYPE == GridType::CARTESIAN3D) {
     return {'X', 'Y', 'Z'};
   }
@@ -2368,7 +2368,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   // dir * CLIGHT_PROP converted from xyz to grid coordinates
   const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord);
 
-  const auto cellcoordmax = [cellindex] -> std::array<double, get_ndim(GRID_TYPE)> {
+  const auto cellcoordmax = [cellindex]() -> auto {
     auto _cellcoordmax = std::array<double, get_ndim(GRID_TYPE)>{};  // position at time tmin
     for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
       _cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
