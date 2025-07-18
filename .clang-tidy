@@ -68,3 +68,5 @@ CheckOptions:
       value: fprintf; absl::FPrintF
     - key: readability-identifier-naming.NamespaceCase
       value: lower_case
+    - key: modernize-use-trailing-return-type.TransformLambdas
+      value: 'none'

@@ -322,7 +322,7 @@ auto std_compare_packets_bymodelgriddensity(const Packet &p1, const Packet &p2) 
 }
 
 void do_cell_packet_updates(std::span<Packet> packets, const int nts, const double ts_end) {
-  auto update_packet = [ts_end, nts](auto &pkt) -> auto {
+  auto update_packet = [ts_end, nts](auto &pkt) {
     const int mgi = grid::get_propcell_modelgridindex(pkt.where);
     int newmgi = mgi;
     while (pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE && (newmgi == mgi || newmgi == grid::get_npts_model())) {
@@ -369,7 +369,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
     printout("  update_packets timestep %d pass %3d: started at %ld\n", nts, passnumber, sys_time_start_pass);
 
     const int count_pktupdates = static_cast<int>(std::ranges::count_if(
-        packets, [ts_end](const auto &pkt) -> auto { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
+        packets, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
     const auto updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
     std::ptrdiff_t packetgroupstart = 0;
 
@@ -404,7 +404,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
     }
 
     timestepcomplete = std::ranges::all_of(
-        packets, [ts_end](const auto &pkt) -> auto { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
+        packets, [ts_end](const auto &pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
 
     const auto cellcacheresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
     printout(

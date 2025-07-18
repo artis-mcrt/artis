@@ -749,7 +749,7 @@ void setup_phixs_list() {
     for (int ion = 0; ion < nions - 1; ion++) {
       globals::elements[element].ions[ion].groundcontindex =
           static_cast<int>(std::ranges::find_if(globals::groundcont,
-                                                [=](const auto &groundcont) -> auto {
+                                                [=](const auto &groundcont) {
                                                   return (groundcont.element == element) && (groundcont.ion == ion);
                                                 }) -
                            globals::groundcont.begin());
@@ -1264,7 +1264,7 @@ void read_atomicdata_files() {
   if (globals::rank_in_node == 0) {
     // sort the lineline in descending frequency
     std::SORT_OR_STABLE_SORT(
-        EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(), [](const auto &a, const auto &b) -> auto {
+        EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(), [](const auto &a, const auto &b) {
           if (a.nu != b.nu) {
             return a.nu > b.nu;
           }

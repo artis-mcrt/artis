@@ -228,7 +228,7 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
   const auto bfestimbegin = std::distance(globals::bfestim_nu_edge.cbegin(),
                                           std::lower_bound(globals::bfestim_nu_edge.cbegin() + phixslist.bfestimbegin,
                                                            globals::bfestim_nu_edge.cbegin() + bfestimend, nu_cmf,
-                                                           [](const double nu_edge, const double find_nu_cmf) -> bool {
+                                                           [](const double nu_edge, const double find_nu_cmf) {
                                                              return nu_edge * last_phixs_nuovernuedge < find_nu_cmf;
                                                            }));
 
@@ -421,7 +421,7 @@ auto get_bfcontindex(const int element, const int lowerion, const int lower, con
   // possibly because lower frequency transitions near start of list are more likely to be called?
   const auto bfcontindex =
       static_cast<int>(std::find_if(globals::allcont.begin(), globals::allcont.begin() + globals::nbfcontinua,
-                                    [=](const auto &bf) -> auto {
+                                    [=](const auto &bf) {
                                       return (bf.element == element) && (bf.ion == lowerion) && (bf.level == lower) &&
                                              (bf.phixstargetindex == phixstargetindex);
                                     }) -

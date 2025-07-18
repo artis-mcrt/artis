@@ -137,7 +137,7 @@ void packet_init(std::span<Packet> pkt)
 
   printout("Placing pellets...\n");
   const auto allpkts = std::ranges::iota_view{0, globals::npkts};
-  std::for_each(allpkts.begin(), allpkts.end(), [&, norm, e0](const int n) -> void {
+  std::for_each(allpkts.begin(), allpkts.end(), [&, norm, e0](const int n) {
     pkt[n] = Packet{};
     const double targetval = rng_uniform() * norm;
 

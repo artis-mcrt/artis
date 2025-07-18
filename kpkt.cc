@@ -262,7 +262,7 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates *heating
   double C_ionization_all = 0.;  // collisional ionisation of macroatoms
 
   const auto allionindices = std::ranges::iota_view{0, get_includedions()};
-  std::for_each(EXEC_PAR allionindices.begin(), allionindices.end(), [&](const int allionindex) -> void {
+  std::for_each(EXEC_PAR allionindices.begin(), allionindices.end(), [&](const int allionindex) {
     const auto [element, ion] = get_ionfromuniqueionindex(allionindex);
     grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + allionindex] =
         calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, -1, cellcacheslotid, &C_ff_all, &C_fb_all,

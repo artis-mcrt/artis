@@ -662,7 +662,7 @@ auto do_rpkt_step(Packet &pkt, const double t2) -> bool {
     const auto d_nu_on_d_l = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
     const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-    std::tie(edist, pkt.next_trans, event_is_boundbound) = [&]() -> std::tuple<double, int, bool> {
+    std::tie(edist, pkt.next_trans, event_is_boundbound) = [&]() {
       if constexpr (EXPANSIONOPACITIES_ON) {
         return get_possible_event_expansion_opacity(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, nu_cmf_abort,
                                                     d_nu_on_d_l, doppler);
@@ -804,7 +804,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.begin());
 
   const int allcontbegin = std::lower_bound(allcont_nu_edge.begin(), allcont_nu_edge.begin() + allcontend, nu,
-                                            [](const double nu_edge, const double nu_cmf) -> auto {
+                                            [](const double nu_edge, const double nu_cmf) {
                                               return nu_edge * last_phixs_nuovernuedge < nu_cmf;
                                             }) -
                            allcont_nu_edge.begin();
@@ -822,12 +822,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
     phixslist.bfestimend =
         static_cast<int>(std::ranges::upper_bound(globals::bfestim_nu_edge, nu) - globals::bfestim_nu_edge.cbegin());
 
-    phixslist.bfestimbegin = std::lower_bound(globals::bfestim_nu_edge.cbegin(),
-                                              globals::bfestim_nu_edge.cbegin() + phixslist.bfestimend, nu,
-                                              [](const double nu_edge, const double nu_cmf) -> auto {
-                                                return nu_edge * last_phixs_nuovernuedge < nu_cmf;
-                                              }) -
-                             globals::bfestim_nu_edge.cbegin();
+    phixslist.bfestimbegin =
+        std::lower_bound(
+            globals::bfestim_nu_edge.cbegin(), globals::bfestim_nu_edge.cbegin() + phixslist.bfestimend, nu,
+            [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }) -
+        globals::bfestim_nu_edge.cbegin();
   }
 
   for (i = allcontbegin; i < allcontend; i++) {

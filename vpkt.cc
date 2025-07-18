@@ -88,7 +88,7 @@ const double dlognu_vspec = (std::log(VSPEC_NUMAX) - std::log(VSPEC_NUMIN)) / VM
 // because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could
 // thus contribute to the spectrum.
 constexpr auto all_taus_past_taumax(std::vector<double> &tau, const double tau_max) -> bool {
-  return std::ranges::all_of(tau, [tau_max](const double tau_i) -> bool { return tau_i > tau_max; });
+  return std::ranges::all_of(tau, [tau_max](const double tau_i) { return tau_i > tau_max; });
 }
 
 // Routine to add a packet to the outcoming spectrum.

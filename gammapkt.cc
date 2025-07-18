@@ -122,7 +122,7 @@ void read_decaydata() {
     }
 
     auto strelname = decay::get_elname(z);
-    std::ranges::transform(strelname, strelname.begin(), [](unsigned char c) -> int { return std::tolower(c); });
+    std::ranges::transform(strelname, strelname.begin(), [](unsigned char c) { return std::tolower(c); });
 
     // look in the current folder
     const std::string filename = std::format("{}{}_lines.txt", strelname, a);
@@ -178,7 +178,7 @@ void init_gamma_linelist() {
   }
 
   assert_always(std::ssize(allnuc_gamma_line_list) == total_lines);
-  std::ranges::SORT_OR_STABLE_SORT(allnuc_gamma_line_list, [](const NucGammaLine &g1, const NucGammaLine &g2) -> bool {
+  std::ranges::SORT_OR_STABLE_SORT(allnuc_gamma_line_list, [](const NucGammaLine &g1, const NucGammaLine &g2) {
     return std::tie(g1.energy, g1.nucindex, g1.nucgammaindex) < std::tie(g2.energy, g2.nucindex, g2.nucgammaindex);
   });
 

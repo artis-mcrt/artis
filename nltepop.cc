@@ -407,8 +407,7 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
     superlevel_partfuncs[ion] = std::ranges::fold_left(
         std::views::iota(get_nlevels_excited_nlte(element, ion) + 1,
                          get_nlevels(element, ion) - get_nlevels_autoion(element, ion)),
-        0.0,
-        [&](double sum, int level) -> double { return sum + superlevel_boltzmann(nonemptymgi, element, ion, level); });
+        0.0, [&](double sum, int level) { return sum + superlevel_boltzmann(nonemptymgi, element, ion, level); });
   }
 
   return superlevel_partfuncs;
@@ -460,7 +459,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
 
   const auto levels = std::views::iota(0, nlevels);
-  std::for_each(levels.begin(), levels.end(), [&](const auto level) -> auto {
+  std::for_each(levels.begin(), levels.end(), [&](const auto level) {
     const int level_index = get_nlte_vector_index(element, ion, level, first_ion_used);
     const auto matrix_index_level_level = (level_index * nlte_dimension) + level_index;
     const auto uniquelevelindex = ionuniquelevelindexstart + level;
@@ -472,7 +471,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
     const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
     const int ndowntrans = get_ndowntrans(uniquelevelindex);
     const auto ndowntransindices = std::views::iota(0, ndowntrans);
-    std::for_each(ndowntransindices.begin(), ndowntransindices.end(), [&](const auto &i) -> auto {
+    std::for_each(ndowntransindices.begin(), ndowntransindices.end(), [&](const auto &i) {
       const auto alltransindex = alltrans_startdown + i;
       const int lower = globals::alltrans.targetlevelindex[alltransindex];
       const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
@@ -501,7 +500,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
     const int nuptrans = get_nuptrans(uniquelevelindex);
     const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
     const auto nuptransindices = std::views::iota(0, nuptrans);
-    std::for_each(nuptransindices.begin(), nuptransindices.end(), [&](const auto i) -> auto {
+    std::for_each(nuptransindices.begin(), nuptransindices.end(), [&](const auto i) {
       const auto alltransindex = alltrans_startup + i;
       const int upper = globals::alltrans.targetlevelindex[alltransindex];
       const auto upper_uniquelevelindex = ionuniquelevelindexstart + upper;
@@ -544,7 +543,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
 
   const auto levels = std::views::iota(0, nionisinglevels);
-  std::for_each(EXEC_PAR levels.begin(), levels.end(), [&](const auto level) -> auto {
+  std::for_each(EXEC_PAR levels.begin(), levels.end(), [&](const auto level) {
     const int lower_index = get_nlte_vector_index(element, ion, level, first_ion_used);
     const auto matrix_index_lower_lower = (lower_index * nlte_dimension) + lower_index;
 
@@ -1024,7 +1023,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
     const int max_ion_used = first_ion_used + nions_used - 1;
     const auto ions = std::views::iota(first_ion_used, max_ion_used + 1);
-    std::for_each(ions.begin(), ions.end(), [&](const auto ion) -> auto {
+    std::for_each(ions.begin(), ions.end(), [&](const auto ion) {
       const int nlevels = get_nlevels(element, ion);
       const int level_superlevel_start = get_nlevels_excited_nlte(element, ion) + 1;
 
@@ -1300,9 +1299,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     }
     calculate_cellpartfuncts(nonemptymgi, element);
 
-    const double elem_pop_matrix =
-        std::accumulate(popvec.begin(), popvec.end(), 0.0,
-                        [](const double sum, const double pop) -> double { return sum + fabs(pop); });
+    const double elem_pop_matrix = std::accumulate(popvec.begin(), popvec.end(), 0.0,
+                                                   [](const double sum, const double pop) { return sum + fabs(pop); });
     const double elem_pop_error_percent = fabs((nnelement / elem_pop_matrix) - 1) * 100;
     if (elem_pop_error_percent > 1.0) {
       printout(
