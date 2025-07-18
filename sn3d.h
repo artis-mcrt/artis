@@ -229,7 +229,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
     return fopen_required(datafolderfilename, mode);
   }
 
-  FILE *file = std::fopen(filename.c_str(), mode.data());
+  auto *file = std::fopen(filename.c_str(), mode.data());
   if (file == nullptr) {
     logprintlnfmt("ERROR: Could not open file '{}' for mode '{}'.", filename, mode.data());
     std::abort();
