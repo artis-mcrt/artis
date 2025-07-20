@@ -12,6 +12,7 @@
 #include <span>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -176,12 +177,12 @@ void write_packets(const std::string& filename, std::span<const Packet> pkt) {
                   "true_emission_velocity trueem_time pellet_nucindex pellet_decaytype\n";
 
   for (int i = 0; i < globals::npkts; i++) {
-    packets_file << pkt[i].number << ' ' << pkt[i].where << ' ' << static_cast<int>(pkt[i].type) << ' ';
+    packets_file << pkt[i].number << ' ' << pkt[i].where << ' ' << std::to_underlying(pkt[i].type) << ' ';
     packets_file << pkt[i].pos[0] << ' ' << pkt[i].pos[1] << ' ' << pkt[i].pos[2] << ' ';
     packets_file << pkt[i].dir[0] << ' ' << pkt[i].dir[1] << ' ' << pkt[i].dir[2] << ' ';
     packets_file << pkt[i].tdecay << ' ';
     packets_file << pkt[i].e_cmf << ' ' << pkt[i].e_rf << ' ' << pkt[i].nu_cmf << ' ' << pkt[i].nu_rf << ' ';
-    packets_file << static_cast<int>(pkt[i].escape_type) << ' ' << pkt[i].escape_time << ' ';
+    packets_file << std::to_underlying(pkt[i].escape_type) << ' ' << pkt[i].escape_time << ' ';
     packets_file << pkt[i].emissiontype << ' ' << pkt[i].trueemissiontype << ' ';
     packets_file << pkt[i].em_pos[0] << ' ' << pkt[i].em_pos[1] << ' ' << pkt[i].em_pos[2] << ' '
                  << pkt[i].absorptiontype << ' ' << pkt[i].absorptionfreq << ' ' << pkt[i].nscatterings << ' '
