@@ -75,7 +75,7 @@ jobs:
                         {name: gcc, ver: 14},
                         {name: gcc, ver: 15},
                         {name: clang, ver: 20},
-                        {name: nvc++, ver: '25.5'},
+                        {name: nvc++, ver: '25.7'},
                     ]
             fail-fast: false
 
