@@ -790,14 +790,7 @@ auto write_nuclides_list() {
 }
 
 // check if nuclide exists in the simulation
-[[nodiscard]] auto nuc_exists(const int z, const int a) -> bool {
-  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
-    if (nuclides[nucindex].z == z && nuclides[nucindex].a == a) {
-      return true;
-    }
-  }
-  return false;
-}
+[[nodiscard]] auto nuc_exists(const int z, const int a) -> bool { return get_nucindex_or_neg_one(z, a) >= 0; }
 
 // average energy per decay in the form of gamma rays [erg]
 [[nodiscard]] __host__ __device__ auto nucdecayenergygamma(const int nucindex) -> double {

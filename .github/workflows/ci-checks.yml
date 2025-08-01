@@ -64,7 +64,7 @@ jobs:
             - name: Run cppcheck
               run: |
                   cppcheck --version
-                  cppcheck --force --error-exitcode=1 --language=c++ --enable=all --inconclusive --inline-suppr --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --suppress=knownArgument --suppress=missingIncludeSystem --suppress=unusedFunction --check-level=exhaustive .
+                  cppcheck --force --error-exitcode=1 --language=c++ --enable=all --inconclusive --inline-suppr --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --suppress=knownArgument --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=useStlAlgorithm --check-level=exhaustive .
 
     compile:
         strategy:

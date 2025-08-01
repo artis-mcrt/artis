@@ -93,11 +93,10 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     "23: kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y "
     "time steps"};
 
-void read_phixs_data_table(
-    std::istream &phixsfile, const int nphixspoints_inputtable, const int element, const int lowerion,
-    const int lowerlevel, const int upperion, int upperlevel_in, std::vector<float> &tmpallphixs,
-    std::vector<PhotoionTarget> &tmpallphixstargets,  // cppcheck-suppress constParameterReference
-    size_t *mem_usage_phixs, const int phixs_file_version) {
+void read_phixs_data_table(std::istream &phixsfile, const int nphixspoints_inputtable, const int element,
+                           const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
+                           std::vector<float> &tmpallphixs, std::vector<PhotoionTarget> &tmpallphixstargets,
+                           size_t *mem_usage_phixs, const int phixs_file_version) {
   std::string phixsline;
   const auto phixstargetstart = static_cast<int>(tmpallphixstargets.size());
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
@@ -350,7 +349,7 @@ constexpr auto downtranslevelstart(const int level) {
 
 void read_ion_levels(std::istream &adata, const int element, const int ion, const int nions, const int nlevels,
                      int nlevelsmax, const double energyoffset, const double ionpot,
-                     std::vector<EnergyLevelInput> &temp_alllevels) {  // cppcheck-suppress constParameterReference
+                     std::vector<EnergyLevelInput> &temp_alllevels) {
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in = 0;
     double levelenergy{NAN};

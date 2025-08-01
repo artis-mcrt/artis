@@ -151,10 +151,7 @@ void packet_init(std::span<Packet> pkt)
 
   decay::free_decaypath_energy_per_mass();  // will no longer be needed after packets are set up
 
-  double e_cmf_total = 0.;
-  for (int n = 0; n < globals::npkts; n++) {
-    e_cmf_total += pkt[n].e_cmf;
-  }
+  double e_cmf_total = std::ranges::fold_left(pkt, 0., [](const double sum, const Packet& p) { return sum + p.e_cmf; });
   const double e_ratio = etot / e_cmf_total;
   printout("packet energy sum %g should be %g normalisation factor: %g\n", e_cmf_total, etot, e_ratio);
   assert_always(std::isfinite(e_cmf_total));

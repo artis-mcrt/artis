@@ -159,12 +159,10 @@ void read_decaydata() {
 void init_gamma_linelist() {
   read_decaydata();
 
-  // Now do the sorting.
+  // make a combined list of all gamma lines, sorted by energy, and write it to a file
 
-  ptrdiff_t total_lines = 0;
-  for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-    total_lines += std::ssize(gamma_spectra[nucindex]);
-  }
+  const ptrdiff_t total_lines = std::ranges::fold_left(
+      gamma_spectra, 0, [](const ptrdiff_t sum, const auto &lines) { return sum + std::ssize(lines); });
   printout("total gamma-ray lines %td\n", total_lines);
 
   std::vector<NucGammaLine> allnuc_gamma_line_list;
