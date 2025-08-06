@@ -1,0 +1,50 @@
+#!/bin/bash -l
+#SBATCH --time=24:00:00
+#SBATCH --ntasks=1024
+#SBATCH --ntasks-per-node=128
+#SBATCH --cpus-per-task=1
+#SBATCH --partition=cpu
+#SBATCH --qos=default
+#SBATCH --account=p200999
+#SBATCH --mail-type=ALL
+##SBATCH --mail-user=luke.shingles@gmail.com
+
+module load env/staging/2024.1 OpenMPI/5.0.3-GCC-13.3.0 zstd GSL git Python/3.12.3-GCCcore-13.3.0
+module list
+
+export OMPI_CXX=g++
+cd artis
+make clean
+make -j
+cd ..
+ln -sf artis/sn3d .
+ln -sf artis/exspec .
+
+cd $SLURM_SUBMIT_DIR
+
+mpicxx --version
+echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
+
+# decompress any zipped input files
+source ./artis/scripts/exspec-before.sh
+hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
+echo "$(date): before srun sn3d. hours left: $hoursleft"
+time srun --hint=nomultithread -- ./sn3d -w $hoursleft > out.txt
+hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
+echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
+hourselapsed=$(python3 -c "print($hoursleft - $hoursleftafter)")
+echo "hours of runtime: $hourselapsed"
+cpuhrs=$(python3 -c "print($SLURM_NTASKS * $hourselapsed)")
+echo "ntasks: $SLURM_NTASKS -> CPU core hrs: $cpuhrs"
+
+mkdir ${SLURM_JOB_ID}.slurm
+./artis/scripts/movefiles.sh ${SLURM_JOB_ID}.slurm
+
+if grep -q "RESTART_NEEDED" "output_0-0.txt"
+then
+    sbatch --job-name="$SLURM_JOB_NAME" ./artis/scripts/artis-meluxina.sh
+fi
+
+if [ -f packets00_0000.out ]; then
+    sbatch --job-name="exspec_$SLURM_JOB_NAME" ./artis/scripts/exspec-zip-meluxina.sh
+fi
