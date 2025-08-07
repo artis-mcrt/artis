@@ -12,10 +12,11 @@
 module load env/staging/2024.1 OpenMPI/5.0.3-GCC-13.3.0 zstd GSL git Python/3.12.3-GCCcore-13.3.0
 module list
 
+export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
 export OMPI_CXX=g++
 cd artis
 make clean
-make -j
+make
 cd ..
 ln -sf artis/sn3d .
 ln -sf artis/exspec .
