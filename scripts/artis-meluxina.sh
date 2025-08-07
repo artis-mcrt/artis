@@ -12,6 +12,8 @@
 module load env/staging/2024.1 OpenMPI/5.0.3-GCC-13.3.0 zstd GSL git Python/3.12.3-GCCcore-13.3.0
 module list
 
+cd $SLURM_SUBMIT_DIR
+
 export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
 export OMPI_CXX=g++
 cd artis
@@ -20,8 +22,6 @@ make
 cd ..
 ln -sf artis/sn3d .
 ln -sf artis/exspec .
-
-cd $SLURM_SUBMIT_DIR
 
 mpicxx --version
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
