@@ -782,14 +782,14 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       const size_t index_ion_ground = get_nlte_vector_index(element, ion, 0, first_ion_used);
       if (index == index_ion_ground && population < MINPOP) {
         printout(
-            "  WARNING: NLTE solver gave ground pop less than MINPOP for index %zud (Z=%d ionstage %d level %d), "
+            "  WARNING: NLTE solver gave ground pop less than MINPOP for index %zu (Z=%d ionstage %d level %d), "
             "pop = %g. Returning nltepop_matrix_solve fail\n",
             index, get_atomicnumber(element), ionstage, level, population);
         return false;
       }
 
       if (population < 0.0) {
-        printout("  WARNING: NLTE solver gave negative population for index %zud (Z=%d ionstage %d level %d), pop = %g",
+        printout("  WARNING: NLTE solver gave negative population for index %zu (Z=%d ionstage %d level %d), pop = %g",
                  index, get_atomicnumber(element), ionstage, level, population);
         if (population < -MINPOP) {
           printout(
@@ -816,7 +816,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
           if (inversion_factor > STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING) {
             printout(
                 "[debug] WARNING: pop inversion greater than factor %g: (g_pop %g)/(e_pop %g) = %g is less than (g_sw "
-                "%g)/(e_sw %g) = %g for index %zud Z=%d ionstage %d level %d (factor %g inversion) - ",
+                "%g)/(e_sw %g) = %g for index %zu Z=%d ionstage %d level %d (factor %g inversion) - ",
                 STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING, ground_pop, population,
                 ground_pop / population, statweight_ground, statweight, statweight_ground / statweight, index,
                 get_atomicnumber(element), ionstage, level, inversion_factor);
@@ -838,7 +838,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
             assert_testmodeonly(ion_has_superlevel(element, ion));
             printout(
                 "[debug] WARNING: superlevel pop inversion greater than factor %g: (g_pop %g)/(SL_first_level_pop %g) "
-                "= %g is less than (g_sw %g)/(SL_first_level_sw %g) = %g for index %zud Z=%d ionstage %d level %d "
+                "= %g is less than (g_sw %g)/(SL_first_level_sw %g) = %g for index %zu Z=%d ionstage %d level %d "
                 "(factor %g inversion) - ",
                 STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING, ground_pop, sublevel_pop,
                 ground_pop / sublevel_pop, statweight_ground, statweight, statweight_ground / statweight, index,
