@@ -9,7 +9,7 @@
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
 
-module load env/staging/2024.1 OpenMPI/5.0.3-GCC-13.3.0 zstd GSL git Python/3.12.3-GCCcore-13.3.0
+module load env/release/2024.1 gompi/2024a zstd GSL git Python
 module list
 
 cd $SLURM_SUBMIT_DIR
