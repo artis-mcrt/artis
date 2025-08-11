@@ -1011,9 +1011,9 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
     superlevel_pop = popvec[index_superlevel];
     if (superlevel_pop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
       printout(
-          "  WARNING: Bottom ion superlevel population too large to remove ion (superlevel_pop_bottom_ion / "
+          "  WARNING: %s ion superlevel population too large to remove ion (superlevel_pop_bottom_ion / "
           "nnelement (%g/%g) > (%g) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)\n",
-          superlevel_pop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+          ionname.c_str(), superlevel_pop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
       return false;
     }
   }
