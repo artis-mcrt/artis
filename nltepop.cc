@@ -1021,8 +1021,7 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
   printout(
       "  Passed checks: removing %s ion from NLTE matrix and attempting re-solve (ionstage %d, "
       "ground pop %g, fabs(excited pops) sum %g, superlevel pop %g, nnelement %g) matrix\n",
-      ionname.c_str(), get_ionstage(element, max_ion_used), ground_pop, nlte_excited_pop_sum, superlevel_pop,
-      nnelement);
+      ionname.c_str(), get_ionstage(element, ion), ground_pop, nlte_excited_pop_sum, superlevel_pop, nnelement);
 
   return true;
 }
