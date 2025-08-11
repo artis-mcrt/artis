@@ -2,6 +2,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1024
 #SBATCH --ntasks-per-node=128
+#SBATCH --exclusive
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=cpu
 #SBATCH --qos=default
