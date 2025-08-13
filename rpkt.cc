@@ -31,6 +31,13 @@
 #include "vectors.h"
 #include "vpkt.h"
 
+static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
+                  RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 0.,
+              "RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY must be >= 0. if set");
+static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
+                  RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() <= 1.,
+              "RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY must <= 1.0 if set");
+
 namespace {
 
 constexpr float expopac_lambdamin = 534.5;
@@ -239,8 +246,8 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
   auto e_cmf = pkt.e_cmf;
   auto prop_time = pkt.prop_time;
 
-  // with thermalisation, we don't keep track of line interactions
-  auto next_trans = RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0. ? -1 : pkt.next_trans;
+  // with thermalisation or pure scattering, we don't keep track of line interactions
+  auto next_trans = RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ? -1 : pkt.next_trans;
 
   assert_always(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
   double dist = 0.;
@@ -266,7 +273,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
 
     if (chi_tot * binedgedist > tau_rnd - tau) {
       // interaction occurs
-      if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
+      if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
         const auto edist = std::max(dist + ((tau_rnd - tau) / chi_tot), 0.);
         const bool event_is_boundbound = rng_uniform() <= chi_bb_expansionopac / chi_tot;
         return {edist, next_trans, event_is_boundbound};
@@ -683,14 +690,14 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     // The previously selected and in pkt stored event occurs. Handling is done by rpkt_event
     if (thickcell) {
       rpkt_event_thickcell(pkt);
-    } else if (event_is_boundbound && RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY < 0.) {
+    } else if (event_is_boundbound && !RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
       rpkt_event_boundbound(pkt, pktmastate);
     } else if (event_is_boundbound) {
       // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
-      if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 1. ||
-          rng_uniform() < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY) {
+      if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
+          rng_uniform() < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value()) {
+        // thermal redistribution of frequency
         pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
-        // When thermalised, we do not associate the packet with a specific line emission
       }
       rpkt_event_thickcell(pkt);
     } else {
@@ -907,7 +914,7 @@ void allocate_expansionopacities() {
       MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * expopac_nbins);
 
   assert_always(expansionopacity_planck_cumulative.data() == nullptr);
-  if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
+  if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
     std::tie(expansionopacity_planck_cumulative, win_expansionopacity_planck_cumulative) =
         MPI_shared_malloc_span_keepwin<double>(nonempty_npts_model * expopac_nbins);
   }
@@ -915,7 +922,7 @@ void allocate_expansionopacities() {
 
 // return a randomly chosen frequency with a distribution of Planck function times the expansion opacity
 __host__ __device__ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double {
-  assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.);
+  assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value());
 
   const auto kappa_planck_bins = expansionopacity_planck_cumulative.subspan(nonemptymgi * expopac_nbins, expopac_nbins);
 
@@ -1037,7 +1044,7 @@ void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node
       MPI_Bcast_safe(expansionopacities.subspan(nonemptymgi * expopac_nbins, expopac_nbins), root_node_id,
                      globals::mpi_comm_internode);
 
-      if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
+      if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
         MPI_Bcast_safe(expansionopacity_planck_cumulative.subspan(nonemptymgi * expopac_nbins, expopac_nbins),
                        root_node_id, globals::mpi_comm_internode);
       }
@@ -1077,7 +1084,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     assert_always(std::isfinite(bin_kappa_bb));
     expansionopacities[(nonemptymgi * expopac_nbins) + binindex] = bin_kappa_bb;
 
-    if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0.) {
+    if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
       // thread_local Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
       // calculate_chi_rpkt_cont(nu_mid, chi_rpkt_cont, nullptr, nonemptymgi);
       // const auto bin_kappa_cont = chi_rpkt_cont.total / rho;

@@ -263,7 +263,7 @@ constexpr bool EXPANSIONOPACITIES_ON;
 
 // thermalisation probability (1 - P is probabiltiy of scattering). EXPANSIONOPACITIES_ON must be true for this to work.
 // set this to < 0 to use the macroatom
-constexpr float RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
+constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
 // Use XCOM data for gamma photoionisation instead of Si+Fe Equation 2 of Ambwani & Sutherland (1988), Veigele (1973)
 constexpr bool USE_XCOM_GAMMAPHOTOION;
