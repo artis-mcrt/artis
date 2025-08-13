@@ -30,8 +30,8 @@ namespace {
 struct TeSolutionParams {
   double t_current;
   int nonemptymgi;
-  HeatingCoolingRates *heatingcoolingrates;
-  const std::vector<double> *bfheatingcoeffs;
+  HeatingCoolingRates* heatingcoolingrates;
+  const std::vector<double>* bfheatingcoeffs;
 };
 
 struct BFHeatingIntegralParams {
@@ -41,10 +41,10 @@ struct BFHeatingIntegralParams {
   std::span<const float> photoion_xs;
 };
 
-auto integrand_bfheatingcoeff_custom_radfield(const double nu, void *const voidparas) -> double
+auto integrand_bfheatingcoeff_custom_radfield(const double nu, void* const voidparas) -> double
 // Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
-  const auto *const params = static_cast<const BFHeatingIntegralParams *>(voidparas);
+  const auto* const params = static_cast<const BFHeatingIntegralParams*>(voidparas);
 
   const int nonemptymgi = params->nonemptymgi;
   const double nu_edge = params->nu_edge;
@@ -75,7 +75,7 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   double bfheating = 0.;
 
 #if !USE_SIMPSON_INTEGRATOR
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 #endif
 
   const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(
@@ -129,7 +129,7 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
 // Calculate the heating rates for a given cell. Results are returned via the elements of the heatingrates data
 // structure.
 void calculate_heating_rates(const int nonemptymgi, const float T_e, const float nne,
-                             HeatingCoolingRates &heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
+                             HeatingCoolingRates& heatingcoolingrates, const std::vector<double>& bfheatingcoeffs) {
   double C_deexc = 0.;
 
   // double C_recomb = 0.;
@@ -173,13 +173,13 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 }
 
 // Thermal balance equation on which we have to iterate to get T_e
-auto T_e_eqn_heating_minus_cooling(const double T_e, void *const paras) -> double {
-  const auto *const params = static_cast<const TeSolutionParams *>(paras);
+auto T_e_eqn_heating_minus_cooling(const double T_e, void* const paras) -> double {
+  const auto* const params = static_cast<const TeSolutionParams*>(paras);
   const auto fT_e = static_cast<float>(T_e);
 
   const auto nonemptymgi = params->nonemptymgi;
   const double t_current = params->t_current;
-  auto &heatingcoolingrates = *params->heatingcoolingrates;
+  auto& heatingcoolingrates = *params->heatingcoolingrates;
   if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
     if (std::abs((T_e / grid::get_Te(nonemptymgi)) - 1.) > 0.1) {
       grid::set_Te(nonemptymgi, fT_e);
@@ -236,7 +236,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void *const paras) -> doubl
 }  // anonymous namespace
 
 // depends only the radiation field - no dependence on T_e or populations
-void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingcoeffs) {
+void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double>& bfheatingcoeffs) {
   bfheatingcoeffs.resize(get_includedlevels());
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
@@ -282,7 +282,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double> &bfheatingco
 }
 
 void call_T_e_finder(const int nonemptymgi, const double t_current, const double T_min, const double T_max,
-                     HeatingCoolingRates &heatingcoolingrates, const std::vector<double> &bfheatingcoeffs) {
+                     HeatingCoolingRates& heatingcoolingrates, const std::vector<double>& bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::get_Te(nonemptymgi);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, globals::timestep);
@@ -311,7 +311,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
     // If it has, then solve for the root T_e
 
     // one-dimensional gsl root solver, bracketing type
-    gsl_root_fsolver *T_e_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
+    gsl_root_fsolver* T_e_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
 
     gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
     const int maxit = 100;

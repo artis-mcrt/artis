@@ -63,7 +63,7 @@ std::fstream macroatom_file;
 
 auto calculate_macroatom_transitionrates(const int nonemptymgi, const int element, const int ion, const int level,
                                          const int ionuniquelevelindexstart, const double t_mid,
-                                         const globals::AllTransitions &alltrans) {
+                                         const globals::AllTransitions& alltrans) {
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
   auto processrates = std::array<double, MA_ACTION_COUNT>{};
 
@@ -193,7 +193,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
 }
 
 // radiative deexcitation
-void do_macroatom_raddeexcitation(Packet &pkt, const int ionuniquelevelindexstart, const int uniquelevelindex,
+void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstart, const int uniquelevelindex,
                                   const int activatingline, const double epsilon_current, const double totalrate) {
   // randomly select which line transitions occurs
 
@@ -243,7 +243,7 @@ void do_macroatom_raddeexcitation(Packet &pkt, const int ionuniquelevelindexstar
 
 // get the level index of the lower ionisation stage after a randomly selected radiative recombination and update
 // counters
-[[nodiscard]] auto do_macroatom_radrecomb(Packet &pkt, const int nonemptymgi, const int element, const int upperion,
+[[nodiscard]] auto do_macroatom_radrecomb(Packet& pkt, const int nonemptymgi, const int element, const int upperion,
                                           const int upperionlevel, const double rad_recomb) -> int {
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
@@ -326,7 +326,7 @@ constexpr auto gaunt_factor(const int ionstage) -> double {
 }  // anonymous namespace
 
 // handle activated macro atoms
-__host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate) {
+__host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
   assert_testmodeonly(nonemptymgi >= 0);
   const auto T_e = grid::get_Te(nonemptymgi);
@@ -370,7 +370,7 @@ __host__ __device__ void do_macroatom(Packet &pkt, const MacroAtomState &pktmast
     const int uniquelevelindex = ionuniquelevelindexstart + level;
 
     const double epsilon_current = epsilon(uniquelevelindex);
-    auto &processrates = globals::cellcache[cellcacheslotid].alllevels_maprocessrates[uniquelevelindex];
+    auto& processrates = globals::cellcache[cellcacheslotid].alllevels_maprocessrates[uniquelevelindex];
     {
 #if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
       const auto lock = std::lock_guard<std::mutex>(globals::mutex_cellcachemacroatom[uniquelevelindex]);

@@ -48,8 +48,8 @@ float kpktdiffusion_timescale{0.};
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
 template <bool update_cooling_contrib_list>
 auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const int ion, const int indexionstart,
-                                 const int cellcacheslotid, double *const C_ff, double *const C_fb, double *const C_exc,
-                                 double *const C_ionization) -> double {
+                                 const int cellcacheslotid, double* const C_ff, double* const C_fb, double* const C_exc,
+                                 double* const C_ionization) -> double {
   const auto nne = grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
 
@@ -255,7 +255,7 @@ auto sample_planck_montecarlo(const double T) -> double {
 
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
-void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates *heatingcoolingrates) {
+void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heatingcoolingrates) {
   double C_ff_all = 0.;  // free-free creation of rpkts
   double C_fb_all = 0.;  // free-bound creation of rpkt
   double C_exc_all = 0.;  // collisional excitation of macroatoms
@@ -371,7 +371,7 @@ void setup_coolinglist() {
   printout("[info] read_atomicdata: number of coolingterms %d\n", ncoolingterms);
 }
 
-__host__ __device__ void do_kpkt_blackbody(Packet &pkt)
+__host__ __device__ void do_kpkt_blackbody(Packet& pkt)
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
@@ -398,7 +398,7 @@ __host__ __device__ void do_kpkt_blackbody(Packet &pkt)
 }
 
 // handle a k-packet (kinetic energy of the free electrons)
-__host__ __device__ void do_kpkt(Packet &pkt, const double t2, const int nts) {
+__host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const double t1 = pkt.prop_time;
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 

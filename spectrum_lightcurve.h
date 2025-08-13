@@ -44,10 +44,10 @@ struct Spectra {
     return mem_usage;
   }
 
-  auto operator=(Spectra &&) -> Spectra & = delete;
-  auto operator=(const Spectra &) -> Spectra & = delete;
-  Spectra(Spectra &&) = delete;
-  Spectra(const Spectra &) = delete;
+  auto operator=(Spectra&&) -> Spectra& = delete;
+  auto operator=(const Spectra&) -> Spectra& = delete;
+  Spectra(Spectra&&) = delete;
+  Spectra(const Spectra&) = delete;
 
   // constructor to allocate MPI windows
   Spectra() = default;
@@ -80,25 +80,25 @@ struct Spectra {
   }
 };
 
-void write_spectrum(const std::string &spec_filename, const std::string &emission_filename,
-                    const std::string &trueemission_filename, const std::string &absorption_filename,
-                    const Spectra &spectra, int numtimesteps);
+void write_spectrum(const std::string& spec_filename, const std::string& emission_filename,
+                    const std::string& trueemission_filename, const std::string& absorption_filename,
+                    const Spectra& spectra, int numtimesteps);
 
-void write_specpol(const std::string &specpol_filename, const std::string &emission_filename,
-                   const std::string &absorption_filename, const Spectra *stokes_i, const Spectra *stokes_q,
-                   const Spectra *stokes_u);
+void write_specpol(const std::string& specpol_filename, const std::string& emission_filename,
+                   const std::string& absorption_filename, const Spectra* stokes_i, const Spectra* stokes_q,
+                   const Spectra* stokes_u);
 
-void add_to_spec_res(const Packet &pkt, int dirbin, Spectra &spectra, Spectra *stokes_i, Spectra *stokes_q,
-                     Spectra *stokes_u);
+void add_to_spec_res(const Packet& pkt, int dirbin, Spectra& spectra, Spectra* stokes_i, Spectra* stokes_q,
+                     Spectra* stokes_u);
 
-void init_spectra(Spectra &spectra, double nu_min, double nu_max, bool do_emission_absorption);
+void init_spectra(Spectra& spectra, double nu_min, double nu_max, bool do_emission_absorption);
 void init_spectrum_trace();
 void write_partial_lightcurve_spectra(int nts, std::span<const Packet> pkts);
 
-void add_to_lc_res(const Packet &pkt, int dirbin, std::span<double> light_curve_lum,
+void add_to_lc_res(const Packet& pkt, int dirbin, std::span<double> light_curve_lum,
                    std::span<double> light_curve_lumcmf);
 
-void write_light_curve(const std::string &lc_filename, int dirbin, const std::vector<double> &light_curve_lum,
-                       const std::vector<double> &light_curve_lumcmf, int numtimesteps);
+void write_light_curve(const std::string& lc_filename, int dirbin, const std::vector<double>& light_curve_lum,
+                       const std::vector<double>& light_curve_lumcmf, int numtimesteps);
 
 #endif  // SPECTRUM_H

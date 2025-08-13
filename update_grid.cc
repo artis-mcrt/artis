@@ -35,8 +35,8 @@ namespace {
 
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
-void write_to_estimators_file(std::ostream &estimators_file, const int nonemptymgi, const int timestep, const int titer,
-                              const HeatingCoolingRates &heatingcoolingrates) {
+void write_to_estimators_file(std::ostream& estimators_file, const int nonemptymgi, const int timestep, const int titer,
+                              const HeatingCoolingRates& heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
@@ -184,7 +184,7 @@ void write_to_estimators_file(std::ostream &estimators_file, const int nonemptym
 }
 
 void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
-                       HeatingCoolingRates &heatingcoolingrates) {
+                       HeatingCoolingRates& heatingcoolingrates) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   // bfheating coefficients are needed for the T_e solver, but they only depend on the radiation field, which is fixed
   // during the iterations below
@@ -381,7 +381,7 @@ static void titer_average_estimators(const int nonemptymgi) {
 #endif
 
 void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, const int titer, const double tratmid,
-                      const double deltat, HeatingCoolingRates &heatingcoolingrates) {
+                      const double deltat, HeatingCoolingRates& heatingcoolingrates) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const double deltaV =
@@ -587,7 +587,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 }  // anonymous namespace
 
 //  update the matter quantities in the grid cells at the start of the new timestep.
-void update_grid(std::ostream &estimators_file, const int nts, const int nts_prev, const int titer,
+void update_grid(std::ostream& estimators_file, const int nts, const int nts_prev, const int titer,
                  const std::time_t real_time_start) {
   const auto my_rank = globals::my_rank;
   const auto sys_time_start_update_grid = std::time(nullptr);
@@ -673,7 +673,7 @@ void cellcache_change_cell(const int nonemptymgi) {
   // onset of the new timestep. Also, boundary crossing?
   // Calculate the level populations for this cell, and flag the other entries
   // as empty.
-  auto &cacheslot = globals::cellcache[cellcacheslotid];
+  auto& cacheslot = globals::cellcache[cellcacheslotid];
   if (nonemptymgi == cacheslot.nonemptymgi) {
     return;
   }

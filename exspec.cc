@@ -32,8 +32,8 @@ std::fstream output_file;
 
 namespace {
 
-void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets, Spectra &rpkt_spectra,
-                  Spectra &stokes_i, Spectra &stokes_q, Spectra &stokes_u, Spectra &gamma_spectra) {
+void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets, Spectra& rpkt_spectra,
+                  Spectra& stokes_i, Spectra& stokes_q, Spectra& stokes_u, Spectra& gamma_spectra) {
   std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
   std::vector<double> rpkt_light_curve_lumcmf(globals::ntimesteps, 0.);
   std::vector<double> gamma_light_curve_lum(globals::ntimesteps, 0.);
@@ -142,7 +142,7 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
 
 }  // anonymous namespace
 
-auto main(int argc, char *argv[]) -> int {
+auto main(int argc, char* argv[]) -> int {
   const auto sys_time_start = std::time(nullptr);
 
   MPI_Init(&argc, &argv);
@@ -197,7 +197,7 @@ auto main(int argc, char *argv[]) -> int {
         "mem_usage: loading %d packets from each %d processes simultaneously (total %td packets, %.1f MB memory)\n",
         globals::npkts, globals::nprocs_exspec, npkts_allranks, npkts_allranks * sizeof(Packet) / 1024. / 1024.);
     load_allrank_packets = true;
-  } catch (const std::bad_alloc &e) {
+  } catch (const std::bad_alloc& e) {
     // if we can't allocate memory for all packets, try to allocate memory for just one rank
     load_allrank_packets = false;
     printout("mem_usage: malloc failed to allocate memory for all packets\n");

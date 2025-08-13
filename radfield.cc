@@ -193,8 +193,8 @@ auto get_bin_T_R(const int nonemptymgi, const int binindex) -> float {
   return radfieldbin_solutions[(nonemptymgi * RADFIELDBINCOUNT) + binindex].T_R;
 }
 
-constexpr auto gsl_integrand_planck(const double nu, void *const voidparas) -> double {
-  const auto *paras = static_cast<const gsl_planck_integral_paras *>(voidparas);
+constexpr auto gsl_integrand_planck(const double nu, void* const voidparas) -> double {
+  const auto* paras = static_cast<const gsl_planck_integral_paras*>(voidparas);
   const auto T_R = paras->T_R;
 
   double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
@@ -207,7 +207,7 @@ constexpr auto gsl_integrand_planck(const double nu, void *const voidparas) -> d
 }
 
 void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                         const double doppler_nucmf_on_nurf, const Phixslist &phixslist) {
+                         const double doppler_nucmf_on_nurf, const Phixslist& phixslist) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
 
   const double distance_e_cmf_over_nu =
@@ -248,7 +248,7 @@ auto planck_integral(const double T_R, const double nu_lower, const double nu_up
   const gsl_planck_integral_paras intparas = {.T_R = T_R, .times_nu = times_nu};
 
 #if !USE_SIMPSON_INTEGRATOR
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 #endif
 
   const int status = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsabs, epsrel, GSL_INTEG_GAUSS61,
@@ -268,8 +268,8 @@ auto planck_integral(const double T_R, const double nu_lower, const double nu_up
 
 // difference between the average nu and the average nu of a Planck function
 // at temperature T_R, in the frequency range corresponding to a bin
-auto delta_nu_bar(const double T_R, void *const paras) -> double {
-  const auto *params = static_cast<const GSLT_RSolverParams *>(paras);
+auto delta_nu_bar(const double T_R, void* const paras) -> double {
+  const auto* params = static_cast<const GSLT_RSolverParams*>(paras);
   const auto nonemptymgi = params->nonemptymgi;
   const int binindex = params->binindex;
 
@@ -337,7 +337,7 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
     gsl_function find_T_R_f = {.function = &delta_nu_bar, .params = &paras};
 
     // one dimensional gsl root solver, bracketing type
-    gsl_root_fsolver *T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
+    gsl_root_fsolver* T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
     gsl_root_fsolver_set(T_R_solver, &find_T_R_f, T_R_min, T_R_max);
     int status = 0;
     for (int iteration_num = 0; iteration_num <= maxit; iteration_num++) {
@@ -421,7 +421,7 @@ auto get_bfcontindex(const int element, const int lowerion, const int lower, con
   // possibly because lower frequency transitions near start of list are more likely to be called?
   const auto bfcontindex =
       static_cast<int>(std::find_if(globals::allcont.begin(), globals::allcont.begin() + globals::nbfcontinua,
-                                    [=](const auto &bf) {
+                                    [=](const auto& bf) {
                                       return (bf.element == element) && (bf.ion == lowerion) && (bf.level == lower) &&
                                              (bf.phixstargetindex == phixstargetindex);
                                     }) -
@@ -740,7 +740,7 @@ void zero_estimators() {
 
 __host__ __device__ void update_estimators(const ptrdiff_t nonemptymgi, const double distance_e_cmf,
                                            const double nu_cmf, const double doppler_nucmf_on_nurf,
-                                           const Phixslist &phixslist, const bool thickcell) {
+                                           const Phixslist& phixslist, const bool thickcell) {
   if (distance_e_cmf == 0) {
     return;
   }
@@ -786,7 +786,7 @@ __host__ __device__ auto radfield(const double nu, const int nonemptymgi) -> dou
     if (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP) {
       const int binindex = select_bin(nu);
       if (binindex >= 0) {
-        const auto &bin = radfieldbin_solutions[(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex];
+        const auto& bin = radfieldbin_solutions[(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex];
         if (bin.W >= 0.) {
           const double J_nu = dbb(nu, bin.T_R, bin.W);
           return J_nu;
@@ -1091,7 +1091,7 @@ void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_no
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void write_restart_data(FILE *gridsave_file) {
+void write_restart_data(FILE* gridsave_file) {
   printout("binned radiation field and detailed lines, ");
 
   fprintf(gridsave_file, "%d\n", 30490824);  // special number marking the beginning of radfield data
@@ -1151,7 +1151,7 @@ void write_restart_data(FILE *gridsave_file) {
   fprintf(gridsave_file, "%d\n", 42809403);  // special number marking the end of radfield data
 }
 
-void read_restart_data(FILE *gridsave_file) {
+void read_restart_data(FILE* gridsave_file) {
   printout("Reading restart data for radiation field\n");
 
   int code_check = 0;

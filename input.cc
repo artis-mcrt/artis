@@ -93,10 +93,10 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     "23: kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y "
     "time steps"};
 
-void read_phixs_data_table(std::istream &phixsfile, const int nphixspoints_inputtable, const int element,
+void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
-                           std::vector<float> &tmpallphixs, std::vector<PhotoionTarget> &tmpallphixstargets,
-                           size_t *mem_usage_phixs, const int phixs_file_version) {
+                           std::vector<float>& tmpallphixs, std::vector<PhotoionTarget>& tmpallphixstargets,
+                           size_t* mem_usage_phixs, const int phixs_file_version) {
   std::string phixsline;
   const auto phixstargetstart = static_cast<int>(tmpallphixstargets.size());
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
@@ -190,8 +190,8 @@ void read_phixs_data_table(std::istream &phixsfile, const int nphixspoints_input
     // Now interpolate these cross-sections
     levelphixstable[0] = static_cast<float>(phixs_in[0]);
 
-    gsl_interp_accel *acc = gsl_interp_accel_alloc();
-    gsl_spline *spline = gsl_spline_alloc(gsl_interp_linear, nphixspoints_inputtable);
+    gsl_interp_accel* acc = gsl_interp_accel_alloc();
+    gsl_spline* spline = gsl_spline_alloc(gsl_interp_linear, nphixspoints_inputtable);
     gsl_spline_init(spline, nugrid_in.data(), phixs_in.data(), nphixspoints_inputtable);
     for (int i = 1; i < globals::NPHIXSPOINTS; i++) {
       const double nu = nu_edge * (1. + i * globals::NPHIXSNUINCREMENT);
@@ -239,8 +239,8 @@ void read_phixs_data_table(std::istream &phixsfile, const int nphixspoints_input
   }
 }
 
-void read_phixs_file(const int phixs_file_version, std::vector<float> &tmpallphixs,
-                     std::vector<PhotoionTarget> &tmpallphixstargets) {
+void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphixs,
+                     std::vector<PhotoionTarget>& tmpallphixstargets) {
   size_t mem_usage_phixs = 0;
 
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version].c_str());
@@ -347,9 +347,9 @@ constexpr auto downtranslevelstart(const int level) {
   return level * (level + 1) / 2;
 }
 
-void read_ion_levels(std::istream &adata, const int element, const int ion, const int nions, const int nlevels,
+void read_ion_levels(std::istream& adata, const int element, const int ion, const int nions, const int nlevels,
                      int nlevelsmax, const double energyoffset, const double ionpot,
-                     std::vector<EnergyLevelInput> &temp_alllevels) {
+                     std::vector<EnergyLevelInput>& temp_alllevels) {
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in = 0;
     double levelenergy{NAN};
@@ -382,8 +382,8 @@ void read_ion_levels(std::istream &adata, const int element, const int ion, cons
   }
 }
 
-void read_ion_transitions(std::istream &ftransitiondata, const int tottransitions_in_file, int &tottransitions,
-                          std::vector<Transition> &iontransitiontable, const int nlevels_requiretransitions,
+void read_ion_transitions(std::istream& ftransitiondata, const int tottransitions_in_file, int& tottransitions,
+                          std::vector<Transition>& iontransitiontable, const int nlevels_requiretransitions,
                           const int nlevels_requiretransitions_upperlevels) {
   iontransitiontable.clear();
   iontransitiontable.reserve(tottransitions);
@@ -469,11 +469,11 @@ void read_ion_transitions(std::istream &ftransitiondata, const int tottransition
 }
 
 void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
-                                          const std::vector<Transition> &transitiontable,
-                                          std::vector<int> &iondowntranstmplineindicies, int &lineindex,
-                                          std::vector<TransitionLine> &temp_linelist,
-                                          std::vector<LevelTransition> &temp_alltranslist,
-                                          size_t &temp_alltranslist_size, std::span<EnergyLevelInput> ion_levels) {
+                                          const std::vector<Transition>& transitiontable,
+                                          std::vector<int>& iondowntranstmplineindicies, int& lineindex,
+                                          std::vector<TransitionLine>& temp_linelist,
+                                          std::vector<LevelTransition>& temp_alltranslist,
+                                          size_t& temp_alltranslist_size, std::span<EnergyLevelInput> ion_levels) {
   const int lineindex_initial = lineindex;
   ptrdiff_t totupdowntrans = 0;
   // pass 0 to get transition counts of each level
@@ -502,7 +502,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
     std::ranges::fill(iondowntranstmplineindicies, -99);
 
     totupdowntrans = 0;
-    for (const auto &transition : transitiontable) {
+    for (const auto& transition : transitiontable) {
       const int level = transition.upper;
       const int lowerlevel = transition.lower;
       if (pass == 0) {
@@ -520,7 +520,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
       // Make sure that we don't allow duplicate. In that case take only the lines
       // first occurrence
-      int &downtranslineindex = iondowntranstmplineindicies[downtranslevelstart(level) + lowerlevel];
+      int& downtranslineindex = iondowntranstmplineindicies[downtranslevelstart(level) + lowerlevel];
 
       // negative means that the transition hasn't been seen yet
       if (downtranslineindex < 0) {
@@ -593,7 +593,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         const auto f_ul =
             static_cast<float>(g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A);
 
-        auto &downtransition =
+        auto& downtransition =
             temp_alltranslist[ion_levels[level].alltrans_startdown + ion_levels[level].ndowntrans - 1];
 
         assert_always(downtransition.targetlevelindex == lowerlevel);
@@ -603,7 +603,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         downtransition.coll_str = std::max(downtransition.coll_str, transition.coll_str);
 
         const auto lowerstartup = ion_levels[lowerlevel].alltrans_startup();
-        auto &uptransition = temp_alltranslist[lowerstartup + ion_levels[lowerlevel].nuptrans - 1];
+        auto& uptransition = temp_alltranslist[lowerstartup + ion_levels[lowerlevel].nuptrans - 1];
 
         // as above, the downtrans list should be searched to find the correct index instead of using the last one.
         // assert_always(uptransition.targetlevelindex == level);
@@ -748,7 +748,7 @@ void setup_phixs_list() {
     for (int ion = 0; ion < nions - 1; ion++) {
       globals::elements[element].ions[ion].groundcontindex =
           static_cast<int>(std::ranges::find_if(globals::groundcont,
-                                                [=](const auto &groundcont) {
+                                                [=](const auto& groundcont) {
                                                   return (groundcont.element == element) && (groundcont.ion == ion);
                                                 }) -
                            globals::groundcont.begin());
@@ -1225,7 +1225,7 @@ void read_atomicdata_files() {
                                            lineindex, temp_linelist, temp_alltranslist, temp_alltranslist_size,
                                            ion_levels);
 
-      for (const auto &level : ion_levels) {
+      for (const auto& level : ion_levels) {
         uniquelevelindex++;
         totaldowntrans += level.ndowntrans;
         totaluptrans += level.nuptrans;
@@ -1263,7 +1263,7 @@ void read_atomicdata_files() {
   if (globals::rank_in_node == 0) {
     // sort the lineline in descending frequency
     std::SORT_OR_STABLE_SORT(
-        EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(), [](const auto &a, const auto &b) {
+        EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(), [](const auto& a, const auto& b) {
           if (a.nu != b.nu) {
             return a.nu > b.nu;
           }
@@ -1275,8 +1275,8 @@ void read_atomicdata_files() {
       const double nu = temp_linelist[i].nu;
       const double nu_next = temp_linelist[i + 1].nu;
       if (fabs(nu_next - nu) < (1.e-10 * nu)) {
-        const auto &a1 = temp_linelist[i];
-        const auto &a2 = temp_linelist[i + 1];
+        const auto& a1 = temp_linelist[i];
+        const auto& a2 = temp_linelist[i + 1];
 
         if ((a1.elementindex == a2.elementindex) && (a1.ionindex == a2.ionindex) &&
             (a1.lowerlevelindex == a2.lowerlevelindex) && (a1.upperlevelindex == a2.upperlevelindex)) {
@@ -1392,7 +1392,7 @@ void read_atomicdata_files() {
       continue;
     }
 
-    const auto &line = globals::linelist[lineindex];
+    const auto& line = globals::linelist[lineindex];
     const int element = line.elementindex;
     const int ion = line.ionindex;
     const int lowerlevel = line.lowerlevelindex;
@@ -1716,7 +1716,7 @@ void input(int rank) {
 }
 
 // read the next line, skipping any comment lines beginning with '#'
-auto get_noncommentline(std::istream &input, std::string &line) -> bool {
+auto get_noncommentline(std::istream& input, std::string& line) -> bool {
   while (true) {
     const bool linefound = !(!std::getline(input, line));
     if (!linefound) {

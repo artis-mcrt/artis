@@ -151,7 +151,7 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
   return {-1, -1};
 }
 
-[[nodiscard]] auto get_total_rate(const size_t index_selected, const gsl_matrix &rate_matrix,
+[[nodiscard]] auto get_total_rate(const size_t index_selected, const gsl_matrix& rate_matrix,
                                   const std::span<const double> popvec, const bool into_level,
                                   const bool only_levels_below, const bool only_levels_above) -> double {
   double total_rate = 0.;
@@ -197,18 +197,18 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
   return total_rate;
 }
 
-auto get_total_rate_in(const int index_to, const gsl_matrix &rate_matrix, const std::span<const double> popvec)
+auto get_total_rate_in(const int index_to, const gsl_matrix& rate_matrix, const std::span<const double> popvec)
     -> double {
   return get_total_rate(index_to, rate_matrix, popvec, true, false, false);
 }
 
-auto get_total_rate_out(const int index_from, const gsl_matrix &rate_matrix, const std::span<const double> popvec)
+auto get_total_rate_out(const int index_from, const gsl_matrix& rate_matrix, const std::span<const double> popvec)
     -> double {
   return get_total_rate(index_from, rate_matrix, popvec, false, false, false);
 }
 
 void print_level_rates_summary(const int element, const int selected_ion, const int selected_level,
-                               std::span<const double> popvec, const RateMatrices &rate_matrices,
+                               std::span<const double> popvec, const RateMatrices& rate_matrices,
                                const int first_ion_used) {
   const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level, first_ion_used);
 
@@ -263,7 +263,7 @@ void print_level_rates_summary(const int element, const int selected_ion, const 
 }
 
 void print_element_rates_summary(const int element, const int modelgridindex, const int timestep, const int nlte_iter,
-                                 std::span<const double> popvec, const RateMatrices &rate_matrices,
+                                 std::span<const double> popvec, const RateMatrices& rate_matrices,
                                  const int first_ion_used, const int nions_used) {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   for (int ion = first_ion_used; ion < first_ion_used + nions_used - 1; ion++) {
@@ -298,7 +298,7 @@ void print_element_rates_summary(const int element, const int modelgridindex, co
 
 void print_level_rates(const int nonemptymgi, const int timestep, const int element, const int selected_ion,
                        const int selected_level, const std::span<const double> popvec,
-                       const RateMatrices &rate_matrices, const int first_ion_used, const int nions_used) {
+                       const RateMatrices& rate_matrices, const int first_ion_used, const int nions_used) {
   // very detailed output of each transition for a particular level
 
   assert_always(selected_ion >= first_ion_used);
@@ -451,7 +451,7 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
 }
 
 void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, const int ion, const double t_mid,
-                                   const std::span<double> s_renorm, RateMatrices &rate_matrices,
+                                   const std::span<double> s_renorm, RateMatrices& rate_matrices,
                                    const int first_ion_used) {
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
@@ -472,7 +472,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
     const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
     const int ndowntrans = get_ndowntrans(uniquelevelindex);
     const auto ndowntransindices = std::views::iota(0, ndowntrans);
-    std::for_each(ndowntransindices.begin(), ndowntransindices.end(), [&](const auto &i) {
+    std::for_each(ndowntransindices.begin(), ndowntransindices.end(), [&](const auto& i) {
       const auto alltransindex = alltrans_startdown + i;
       const int lower = globals::alltrans.targetlevelindex[alltransindex];
       const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
@@ -534,7 +534,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
 }
 
 void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, const int ion,
-                                   const std::span<double> s_renorm, RateMatrices &rate_matrices,
+                                   const std::span<double> s_renorm, RateMatrices& rate_matrices,
                                    const int first_ion_used, const int nions_used) {
   assert_always((ion + 1) < (nions_used + first_ion_used));  // can't ionise top ion stage
   const auto T_e = grid::get_Te(nonemptymgi);
@@ -596,7 +596,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
 }
 
 void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, const int ion,
-                                      const std::span<double> s_renorm, RateMatrices &rate_matrices,
+                                      const std::span<double> s_renorm, RateMatrices& rate_matrices,
                                       const int first_ion_used, const int nions_used) {
   // collisional ionization by non-thermal electrons
   const int max_ion_used = first_ion_used + nions_used - 1;
@@ -628,7 +628,7 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
 }
 
 void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element, const int ion,
-                                       const std::vector<double> &s_renorm, RateMatrices &rate_matrices,
+                                       const std::vector<double>& s_renorm, RateMatrices& rate_matrices,
                                        const int first_ion_used, const int nions_used) {
   // Autoionization and inverse (i.e. collisional capture part of di-el)
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
@@ -646,7 +646,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
     const int nautoiondowntrans = get_nautoiondowntrans(uniquelevelindex);
     for (int i = 0; i < nautoiondowntrans; i++) {
       // autoionization (which is a de-excitation propcess)
-      const auto &autoiontransition = globals::allautoion[globals::alllevels.allautoion_start[uniquelevelindex] + i];
+      const auto& autoiontransition = globals::allautoion[globals::alllevels.allautoion_start[uniquelevelindex] + i];
       const double A_a = autoiontransition.autoion_A;
       const int target_ion = autoiontransition.upperionindex;
       const int target_level = autoiontransition.upperlevelindex;
@@ -680,7 +680,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
   }
 }
 
-void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matrix *rate_matrix,
+void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matrix* rate_matrix,
                               std::span<double> pop_norm_factors, const int first_ion_used, const int nions_used) {
   const size_t nlte_dimension = rate_matrix->size1;
   assert_always(pop_norm_factors.size() == nlte_dimension);
@@ -738,7 +738,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   set_groundlevelpops(nonemptymgi, element, grid::get_nne(nonemptymgi), true);
 }
 
-[[nodiscard]] auto lumatrix_is_singular(const gsl_matrix *LU, const int element, const int first_ion_used,
+[[nodiscard]] auto lumatrix_is_singular(const gsl_matrix* LU, const int element, const int first_ion_used,
                                         const int nions_used) -> bool {
   for (size_t i = 0; i < LU->size1; i++) {
     // diagonal elements of LU matrix should not be zero
@@ -860,7 +860,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 // solve rate_matrix * x = balance_vector, so that popvec[i] = x[i] * pop_norm_factors[i]
 // return true if the solution is successful, or false if the matrix is singular, contains negative or inverted
 // populations.
-[[nodiscard]] auto nltepop_matrix_solve(const int element, const int nonemptymgi, const gsl_matrix *rate_matrix,
+[[nodiscard]] auto nltepop_matrix_solve(const int element, const int nonemptymgi, const gsl_matrix* rate_matrix,
                                         std::span<double> balance_vector, std::span<double> popvec,
                                         std::span<const double> pop_normfactors, const int max_nlte_dimension,
                                         const int first_ion_used, const int nions_used) -> bool {
@@ -898,7 +898,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   assert_always(gsl_linalg_LU_decomp(&rate_matrix_LU_decomp, &p, &s) == GSL_SUCCESS);
 
 #if !USE_SIMPSON_INTEGRATOR
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 #endif
 
   // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
@@ -1347,7 +1347,7 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
   nlte_file.flush();
 }
 
-void nltepop_write_restart_data(FILE *restart_file) {
+void nltepop_write_restart_data(FILE* restart_file) {
   printout("populations, ");
 
   fprintf(restart_file, "%d\n", 75618527);  // special number marking the beginning of nlte data
@@ -1373,7 +1373,7 @@ void nltepop_write_restart_data(FILE *restart_file) {
   }
 }
 
-void nltepop_read_restart_data(FILE *restart_file) {
+void nltepop_read_restart_data(FILE* restart_file) {
   printout("Reading restart data for populations\n");
 
   int code_check = 0;

@@ -264,7 +264,7 @@ inline auto get_atomicnumber(const int element) -> int {
 // then return a negative value
 inline auto get_elementindex(const int Z) -> int {
   const auto elem =
-      std::ranges::find_if(globals::elements, [Z](const Element &element) { return element.anumber == Z; });
+      std::ranges::find_if(globals::elements, [Z](const Element& element) { return element.anumber == Z; });
   if (elem != globals::elements.end()) {
     return static_cast<int>(elem - globals::elements.begin());
   }

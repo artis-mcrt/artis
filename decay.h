@@ -24,9 +24,9 @@ constexpr std::array<enum decaytypes, 5> all_decaytypes = {
     decaytypes::DECAYTYPE_ALPHA, decaytypes::DECAYTYPE_ELECTRONCAPTURE, decaytypes::DECAYTYPE_BETAPLUS,
     decaytypes::DECAYTYPE_BETAMINUS, decaytypes::DECAYTYPE_NONE};
 
-void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist);
-[[nodiscard]] auto get_nucstring_z(const std::string &strnuc) -> int;
-[[nodiscard]] auto get_nucstring_a(const std::string &strnuc) -> int;
+void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>& custom_alist);
+[[nodiscard]] auto get_nucstring_z(const std::string& strnuc) -> int;
+[[nodiscard]] auto get_nucstring_a(const std::string& strnuc) -> int;
 [[nodiscard]] auto get_num_nuclides() -> ptrdiff_t;
 [[nodiscard]] auto get_elname(int z) -> std::string;
 [[nodiscard]] auto get_nuc_z(int nucindex) -> int;
@@ -46,8 +46,8 @@ void free_decaypath_energy_per_mass();
 [[nodiscard]] auto get_particle_injection_rate(int nonemptymgi, double t, int decaytype) -> double;
 [[nodiscard]] auto get_gamma_emission_rate(int nonemptymgi, double t) -> double;
 [[nodiscard]] auto get_global_etot_t0_tinf() -> double;
-void output_nuc_abundances(std::ostream &estimators_file, int nonemptymgi, double t_current, int element);
-void setup_radioactive_pellet(double e0, int nonemptymgi, Packet &pkt);
+void output_nuc_abundances(std::ostream& estimators_file, int nonemptymgi, double t_current, int element);
+void setup_radioactive_pellet(double e0, int nonemptymgi, Packet& pkt);
 void cleanup();
 
 [[nodiscard]] auto constexpr nucmass(int /*z*/, int a) -> double { return a * MH; }

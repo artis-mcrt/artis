@@ -9,7 +9,7 @@ void solve_nlte_pops_element(int element, int nonemptymgi, int timestep, int nlt
 [[nodiscard]] auto get_nlte_superlevelpop_over_rho_over_slpartfunc(int nonemptymgi, int element, int ion) -> double;
 void nltepop_write_to_file(int nonemptymgi, int timestep);
 void nltepop_open_file(int my_rank);
-void nltepop_write_restart_data(FILE *restart_file);
-void nltepop_read_restart_data(FILE *restart_file);
+void nltepop_write_restart_data(FILE* restart_file);
+void nltepop_read_restart_data(FILE* restart_file);
 
 #endif  // NLTEPOP_H

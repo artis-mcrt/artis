@@ -608,8 +608,8 @@ void read_abundances() {
   printout("done.\n");
 }
 
-void parse_model_headerline(const std::string &line, std::vector<int> &zlist, std::vector<int> &alist,
-                            std::vector<std::string> &colnames) {
+void parse_model_headerline(const std::string& line, std::vector<int>& zlist, std::vector<int>& alist,
+                            std::vector<std::string>& colnames) {
   // custom header line
   std::istringstream iss(line);
   std::string token;
@@ -659,7 +659,7 @@ void parse_model_headerline(const std::string &line, std::vector<int> &zlist, st
   }
 }
 
-auto get_token_count(std::string &line) -> int {
+auto get_token_count(std::string& line) -> int {
   std::string token;
   int abundcolcount = 0;
   auto ssline = std::istringstream(line);
@@ -671,8 +671,8 @@ auto get_token_count(std::string &line) -> int {
   return abundcolcount;
 }
 
-void read_model_radioabundances(std::istream &fmodel, std::istringstream &ssline_in, const int mgi, const bool keepcell,
-                                const std::vector<std::string> &colnames, const std::vector<int> &nucindexlist,
+void read_model_radioabundances(std::istream& fmodel, std::istringstream& ssline_in, const int mgi, const bool keepcell,
+                                const std::vector<std::string>& colnames, const std::vector<int>& nucindexlist,
                                 const bool one_line_per_cell) {
   std::string line;
   if (!one_line_per_cell) {
@@ -712,7 +712,7 @@ void read_model_radioabundances(std::istream &fmodel, std::istringstream &ssline
   assert_always(!(ssline >> valuein));  // should be no tokens left!
 }
 
-auto read_model_columns(std::istream &fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
+auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
   auto pos_data_start = fmodel.tellg();  // get position in case we need to undo getline
 
   std::vector<int> zlist;
@@ -832,7 +832,7 @@ void read_grid_restart_data(const int timestep) {
   const auto filename = std::format("gridsave_ts{}.tmp", timestep);
 
   printout("READIN GRID SNAPSHOT from %s\n", filename.c_str());
-  FILE *gridsave_file = fopen_required(filename, "r");
+  FILE* gridsave_file = fopen_required(filename, "r");
 
   int ntimesteps_in = -1;
   assert_always(fscanf(gridsave_file, "%d ", &ntimesteps_in) == 1);
@@ -1184,7 +1184,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 
 // Convert a position in Cartesian xyz to the grid coordinate system (which might the same, or 2D cylindrical or 1D
 // spherical)
-[[nodiscard]] constexpr auto get_gridcoords_from_xyz(const Vec3d &pos_xyz) {
+[[nodiscard]] constexpr auto get_gridcoords_from_xyz(const Vec3d& pos_xyz) {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return pos_xyz;
   }
@@ -1202,7 +1202,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 
 // get the velocity in the grid coordinate system from the xyz position and direction
 [[nodiscard]] constexpr auto get_gridcoords_vel_from_xyz_pos_dir(
-    const Vec3d &pos_xyz, const Vec3d &dir_xyz, const std::array<double, get_ndim(GRID_TYPE)> &pktposgridcoord) {
+    const Vec3d& pos_xyz, const Vec3d& dir_xyz, const std::array<double, get_ndim(GRID_TYPE)>& pktposgridcoord) {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     // keep xyz Cartesian coordinates
     return Vec3d{dir_xyz[0] * CLIGHT_PROP, dir_xyz[1] * CLIGHT_PROP, dir_xyz[2] * CLIGHT_PROP};
@@ -1225,8 +1225,8 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 // returns -1 if there are no forward intersections (or if the intersection
 // is tangential to the shell)
 template <size_t S1>
-[[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, S1> &pos,
-                                                          const std::array<double, S1> &dir, const double speed,
+[[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, S1>& pos,
+                                                          const std::array<double, S1>& dir, const double speed,
                                                           const double shellradiuststart, const bool isinnerboundary,
                                                           const double tstart) -> double {
   static_assert(S1 == 2 || S1 == 3);
@@ -2129,7 +2129,7 @@ void write_grid_restart_data(const int timestep) {
   const auto sys_time_start_write_restart = std::time(nullptr);
   printout("Write grid restart data to %s...", filename.c_str());
 
-  FILE *gridsave_file = fopen_required(filename, "w");
+  FILE* gridsave_file = fopen_required(filename, "w");
 
   fprintf(gridsave_file, "%d ", globals::ntimesteps);
   fprintf(gridsave_file, "%d ", globals::nprocs);
@@ -2333,7 +2333,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 }
 
 // identify the cell index from an (x,y,z) position and a time.
-[[nodiscard]] __host__ __device__ auto get_cellindex_from_pos(const Vec3d &pos, const double time) -> int {
+[[nodiscard]] __host__ __device__ auto get_cellindex_from_pos(const Vec3d& pos, const double time) -> int {
   auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
@@ -2350,7 +2350,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 }
 
 // compute distance to a cell boundary.
-[[nodiscard]] __host__ __device__ auto boundary_distance(const Vec3d &dir, const Vec3d &pos, const double tstart,
+[[nodiscard]] __host__ __device__ auto boundary_distance(const Vec3d& dir, const Vec3d& pos, const double tstart,
                                                          const int cellindex) -> std::tuple<double, int> {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {

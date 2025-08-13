@@ -61,7 +61,7 @@ constexpr auto ii_func(WORD a, const WORD b, const WORD c, const WORD d, const W
 }
 
 /*********************** FUNCTION DEFINITIONS ***********************/
-constexpr void md5_transform(MD5_CTX *ctx, std::span<const BYTE> data) {
+constexpr void md5_transform(MD5_CTX* ctx, std::span<const BYTE> data) {
   WORD a = 0;
   WORD b = 0;
   WORD c = 0;
@@ -156,7 +156,7 @@ constexpr void md5_transform(MD5_CTX *ctx, std::span<const BYTE> data) {
   ctx->state[3] += d;
 }
 
-constexpr void md5_init(MD5_CTX *ctx) {
+constexpr void md5_init(MD5_CTX* ctx) {
   ctx->datalen = 0;
   ctx->bitlen = 0;
   ctx->state[0] = 0x67452301;
@@ -165,7 +165,7 @@ constexpr void md5_init(MD5_CTX *ctx) {
   ctx->state[3] = 0x10325476;
 }
 
-constexpr void md5_update(MD5_CTX *ctx, std::span<const BYTE> data) {
+constexpr void md5_update(MD5_CTX* ctx, std::span<const BYTE> data) {
   size_t i = 0;
 
   for (i = 0; i < data.size(); ++i) {
@@ -179,7 +179,7 @@ constexpr void md5_update(MD5_CTX *ctx, std::span<const BYTE> data) {
   }
 }
 
-constexpr void md5_final(MD5_CTX *ctx, std::span<BYTE, MD5_BLOCK_SIZE> hash) {
+constexpr void md5_final(MD5_CTX* ctx, std::span<BYTE, MD5_BLOCK_SIZE> hash) {
   size_t i = 0;
 
   i = ctx->datalen;
@@ -224,11 +224,11 @@ constexpr void md5_final(MD5_CTX *ctx, std::span<BYTE, MD5_BLOCK_SIZE> hash) {
 }  // anonymous namespace
 
 // added by Luke Shingles
-auto md5_file(const std::string &filename) -> std::string {
+auto md5_file(const std::string& filename) -> std::string {
   MD5_CTX ctx;
   md5_init(&ctx);
 
-  FILE *infile = fopen(filename.c_str(), "r");
+  FILE* infile = fopen(filename.c_str(), "r");
 
   assert_always(infile != nullptr);
 

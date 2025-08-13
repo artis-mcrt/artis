@@ -61,7 +61,7 @@ std::array<std::string, 3> phixsfile_hash;
 
 // Try to read in the precalculated rate coefficients from file (checking whether current atomic data matches)
 // return true if successful or false otherwise
-auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool {
+auto read_ratecoeff_dat(FILE* ratecoeff_file) -> bool {
   auto adatafile_hash_in = std::array<char, 33>("UNKNOWN");
   if (fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in.data()) != 1) {
     return false;
@@ -263,8 +263,8 @@ void write_ratecoeff_dat() {
 }
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
-auto alpha_sp_integrand_gsl(const double nu, void *const voidparas) -> double {
-  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
+auto alpha_sp_integrand_gsl(const double nu, void* const voidparas) -> double {
+  const auto* const params = static_cast<const GSLIntegrationParas*>(voidparas);
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 2) * exp(-HOVERKB * nu / params->T);
@@ -276,8 +276,8 @@ auto alpha_sp_integrand_gsl(const double nu, void *const voidparas) -> double {
 }
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
-auto alpha_sp_E_integrand_gsl(const double nu, void *const voidparas) -> double {
-  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
+auto alpha_sp_E_integrand_gsl(const double nu, void* const voidparas) -> double {
+  const auto* const params = static_cast<const GSLIntegrationParas*>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -292,8 +292,8 @@ auto alpha_sp_E_integrand_gsl(const double nu, void *const voidparas) -> double 
 }
 
 // Integrand to calculate the rate coefficient for photoionization corrected for stimulated recombination.
-auto gammacorr_integrand_gsl(const double nu, void *const voidparas) -> double {
-  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
+auto gammacorr_integrand_gsl(const double nu, void* const voidparas) -> double {
+  const auto* const params = static_cast<const GSLIntegrationParas*>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -310,8 +310,8 @@ auto gammacorr_integrand_gsl(const double nu, void *const voidparas) -> double {
 // on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 // formula. The radiation fields dependence on W is taken into account by multiplying
 // the resulting expression with the correct W later on.
-auto approx_bfheating_integrand_gsl(const double nu, void *const voidparas) -> double {
-  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
+auto approx_bfheating_integrand_gsl(const double nu, void* const voidparas) -> double {
+  const auto* const params = static_cast<const GSLIntegrationParas*>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -328,8 +328,8 @@ auto approx_bfheating_integrand_gsl(const double nu, void *const voidparas) -> d
 // on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 // formula. The radiation fields dependence on W is taken into account by multiplying
 // the resulting expression with the correct W later on.
-auto bfcooling_integrand_gsl(const double nu, void *const voidparas) -> double {
-  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
+auto bfcooling_integrand_gsl(const double nu, void* const voidparas) -> double {
+  const auto* const params = static_cast<const GSLIntegrationParas*>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -357,7 +357,7 @@ void precalculate_rate_coefficient_integrals() {
       printout("Performing rate integrals for Z = %d, ionstage %d...\n", atomic_number, ionstage);
 
 #if !USE_SIMPSON_INTEGRATOR
-      gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+      gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 #endif
 
       for (int level = 0; level < nlevels; level++) {
@@ -681,8 +681,8 @@ void precalculate_ion_alpha_sp() {
   }
 }
 
-auto integrand_stimrecombination_custom_radfield(const double nu, void *const voidparas) -> double {
-  const auto *const params = static_cast<const GSLIntegralParasGammaCorr *>(voidparas);
+auto integrand_stimrecombination_custom_radfield(const double nu, void* const voidparas) -> double {
+  const auto* const params = static_cast<const GSLIntegralParasGammaCorr*>(voidparas);
   const int nonemptymgi = params->nonemptymgi;
   const float T_e = params->T_e;
 
@@ -718,7 +718,7 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
   double error = 0.;
 
 #if !USE_SIMPSON_INTEGRATOR
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 #endif
   double stimrecombcoeff = 0.;
 
@@ -744,11 +744,11 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
   return stimrecombcoeff;
 }
 
-auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const voidparas) -> double
+auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void* const voidparas) -> double
 // Integrand to calculate the rate coefficient for photoionization
 // using gsl integrators. Corrected for stimulated recombination.
 {
-  const GSLIntegralParasGammaCorr *const params = static_cast<GSLIntegralParasGammaCorr *>(voidparas);
+  const GSLIntegralParasGammaCorr* const params = static_cast<GSLIntegralParasGammaCorr*>(voidparas);
   const int nonemptymgi = params->nonemptymgi;
 
 #if (SEPARATE_STIMRECOMB)
@@ -808,7 +808,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   double error = 0.;
 
 #if !USE_SIMPSON_INTEGRATOR
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 #endif
 
   double gammacorr = 0.;
@@ -951,7 +951,7 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
   double error{NAN};
 
 #if !USE_SIMPSON_INTEGRATOR
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 #endif
 
   double total_alpha_sp = 0.;
@@ -1129,7 +1129,7 @@ void ratecoefficients_init() {
   // Check if we need to calculate the ratecoefficients or if we were able to read them from file
   bool ratecoeff_match = false;
   if (globals::rank_in_node == 0) {
-    FILE *ratecoeff_file = fopen("ratecoeff.dat", "r");
+    FILE* ratecoeff_file = fopen("ratecoeff.dat", "r");
     if (ratecoeff_file != nullptr) {
       ratecoeff_match = read_ratecoeff_dat(ratecoeff_file);
       if (!ratecoeff_match) {

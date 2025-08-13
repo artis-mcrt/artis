@@ -59,7 +59,7 @@ Spectra rpkt_spectra;
 // the other "atomicadd" function is atomic only for multithreaded modes (STDPAR or OpenMP), but here we need it to be
 // atomic for node-shared memory between processes even in single-threaded mode
 template <typename T, typename U>
-constexpr void atomicadd_always(T &var, U &&val) {
+constexpr void atomicadd_always(T& var, U&& val) {
   std::atomic_ref<T>(var).fetch_add(std::forward<U>(val), std::memory_order_relaxed);
 }
 
@@ -70,7 +70,7 @@ void printout_tracemission_stats() {
   for (int mode = 0; mode < 2; mode++) {
     if (mode == 0) {
       std::ranges::SORT_OR_STABLE_SORT(traceemissionabsorption,
-                                       [](const auto &a, const auto &b) { return a.energyemitted > b.energyemitted; });
+                                       [](const auto& a, const auto& b) { return a.energyemitted > b.energyemitted; });
       printout("lambda [%5.1f, %5.1f] nu %g %g\n", traceemissabs_lambdamin, traceemissabs_lambdamax,
                traceemissabs_nulower, traceemissabs_nuupper);
 
@@ -202,8 +202,8 @@ auto columnindex_from_emissiontype(const int et) -> int {
   return (nnu_abs * globals::ntimesteps * nelements * max_nions) + (nts * nelements * max_nions);
 }
 
-void write_specpol_param(std::ostream &specpol_file, std::ostream &emissionpol_file, std::ostream &absorptionpol_file,
-                         const Spectra &spec, const int nnu, const bool do_emission_absorption) {
+void write_specpol_param(std::ostream& specpol_file, std::ostream& emissionpol_file, std::ostream& absorptionpol_file,
+                         const Spectra& spec, const int nnu, const bool do_emission_absorption) {
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
   // Stokes I, Q, or U
@@ -310,9 +310,9 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
 
 }  // anonymous namespace
 
-void write_spectrum(const std::string &spec_filename, const std::string &emission_filename,
-                    const std::string &trueemission_filename, const std::string &absorption_filename,
-                    const Spectra &spectra, const int numtimesteps) {
+void write_spectrum(const std::string& spec_filename, const std::string& emission_filename,
+                    const std::string& trueemission_filename, const std::string& absorption_filename,
+                    const Spectra& spectra, const int numtimesteps) {
   auto spec_file = fstream_required(spec_filename, std::ios::out | std::ios::trunc);
 
   const bool do_emission_absorption = spectra.do_emission_absorption;
@@ -370,9 +370,9 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
   }
 }
 
-void write_specpol(const std::string &specpol_filename, const std::string &emission_filename,
-                   const std::string &absorption_filename, const Spectra *stokes_i, const Spectra *stokes_q,
-                   const Spectra *stokes_u) {
+void write_specpol(const std::string& specpol_filename, const std::string& emission_filename,
+                   const std::string& absorption_filename, const Spectra* stokes_i, const Spectra* stokes_q,
+                   const Spectra* stokes_u) {
   auto specpol_file = fstream_required(specpol_filename, std::ios::out | std::ios::trunc);
   std::fstream emissionpol_file{};
   std::fstream absorptionpol_file{};
@@ -427,7 +427,7 @@ void init_spectrum_trace() {
 }
 
 // resize and initialize the spectra object
-void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, const bool do_emission_absorption) {
+void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, const bool do_emission_absorption) {
   // setup the time and frequency bins using a logarithmic spacing in both t and nu
 
   assert_always(MNUBINS > 0);
@@ -490,8 +490,8 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
 }
 
 // Add a packet to the outgoing spectrum.
-void add_to_spec_res(const Packet &pkt, const int dirbin, Spectra &spectra, Spectra *stokes_i, Spectra *stokes_q,
-                     Spectra *stokes_u) {
+void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra, Spectra* stokes_i, Spectra* stokes_q,
+                     Spectra* stokes_u) {
   if (dirbin != -1 && get_escapedirectionbin(pkt.dir) != dirbin) {
     return;  // do not add to the spectrum if the direction bin does not match
   }
@@ -630,8 +630,8 @@ void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkt
            do_emission_absorption ? "emission/absorption " : "", std::time(nullptr) - time_func_start);
 }
 
-void write_light_curve(const std::string &lc_filename, const int dirbin, const std::vector<double> &light_curve_lum,
-                       const std::vector<double> &light_curve_lumcmf, const int numtimesteps) {
+void write_light_curve(const std::string& lc_filename, const int dirbin, const std::vector<double>& light_curve_lum,
+                       const std::vector<double>& light_curve_lumcmf, const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
 
   auto lc_file = fstream_required(lc_filename, std::ios::out | std::ios::trunc);
@@ -653,7 +653,7 @@ void write_light_curve(const std::string &lc_filename, const int dirbin, const s
 }
 
 // add a packet to the outgoing light-curve.
-void add_to_lc_res(const Packet &pkt, const int dirbin, std::span<double> light_curve_lum,
+void add_to_lc_res(const Packet& pkt, const int dirbin, std::span<double> light_curve_lum,
                    std::span<double> light_curve_lumcmf) {
   const double solidanglefactor = (dirbin >= 0) ? MABINS : 1.;
   if (dirbin == -1) {

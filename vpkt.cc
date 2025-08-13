@@ -87,12 +87,12 @@ const double dlognu_vspec = (std::log(VSPEC_NUMAX) - std::log(VSPEC_NUMIN)) / VM
 // E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt
 // because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could
 // thus contribute to the spectrum.
-constexpr auto all_taus_past_taumax(std::vector<double> &tau, const double tau_max) -> bool {
+constexpr auto all_taus_past_taumax(std::vector<double>& tau, const double tau_max) -> bool {
   return std::ranges::all_of(tau, [tau_max](const double tau_i) { return tau_i > tau_max; });
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vspecpol(const Packet &vpkt, const int obsdirindex, const int opachoiceindex, const double t_arrive) {
+void add_to_vspecpol(const Packet& vpkt, const int obsdirindex, const int opachoiceindex, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
   const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
@@ -111,7 +111,7 @@ void add_to_vspecpol(const Packet &vpkt, const int obsdirindex, const int opacho
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vpkt_grid(const Packet &vpkt, const Vec3d &vel, const int wlbin, const int obsdirindex, const Vec3d &obs) {
+void add_to_vpkt_grid(const Packet& vpkt, const Vec3d& vel, const int wlbin, const int obsdirindex, const Vec3d& obs) {
   double vref1{NAN};
   double vref2{NAN};
 
@@ -158,9 +158,9 @@ void add_to_vpkt_grid(const Packet &vpkt, const Vec3d &vel, const int wlbin, con
   }
 }
 
-auto rlc_emiss_vpkt(const Packet &pkt, const double t_current, const double t_arrive, const double nu_rf,
-                    const double e_rf, const int obsdirindex, const Vec3d &obsdir,
-                    const enum packet_type type_before_rpkt, std::stringstream &vpkt_contrib_row) -> bool {
+auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_arrive, const double nu_rf,
+                    const double e_rf, const int obsdirindex, const Vec3d& obsdir,
+                    const enum packet_type type_before_rpkt, std::stringstream& vpkt_contrib_row) -> bool {
   int mgi = 0;
 
   Packet vpkt = pkt;
@@ -437,7 +437,7 @@ void init_vspecpol() {
       vspecpol[n][ind_comb].delta_t = static_cast<float>(std::exp(log(VSPEC_TIMEMIN) + ((n + 1) * (dlogt_vspec))) -
                                                          vspecpol[n][ind_comb].lower_time);
 
-      for (auto &flux : vspecpol[n][ind_comb].flux) {
+      for (auto& flux : vspecpol[n][ind_comb].flux) {
         flux.i = 0.;
         flux.q = 0.;
         flux.u = 0.;
@@ -446,7 +446,7 @@ void init_vspecpol() {
   }
 }
 
-void write_vspecpol(const std::string &filename) {
+void write_vspecpol(const std::string& filename) {
   logprintlnfmt("Writing {}", filename);
   auto vspecpol_file = fstream_required(filename, std::ios::out | std::ios::trunc);
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
@@ -540,7 +540,7 @@ void init_vpkt_grid() {
   }
 }
 
-void write_vpkt_grid(const std::string &filename) {
+void write_vpkt_grid(const std::string& filename) {
   auto vpkt_grid_file = fstream_required(filename, std::ios::out | std::ios::trunc);
 
   for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
@@ -585,7 +585,7 @@ void remove_temp_vpkt_file(const int nts, const int my_rank) {
                                              std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts),
                                              std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts)};
 
-  for (const auto &filename : filenames) {
+  for (const auto& filename : filenames) {
     if (std::filesystem::exists(filename)) {
       std::filesystem::remove(filename);
       logprintlnfmt("Deleted {}", filename);
@@ -594,7 +594,7 @@ void remove_temp_vpkt_file(const int nts, const int my_rank) {
 }
 
 void read_vpktparameterfile() {
-  FILE *input_file = fopen_required("vpkt.txt", "r");
+  FILE* input_file = fopen_required("vpkt.txt", "r");
 
   // Nobs
   assert_always(fscanf(input_file, "%d", &Nobs) == 1);
@@ -857,7 +857,7 @@ void init(const int nts, const int my_rank, const bool continued_from_saved) {
   }
 }
 
-auto call_estimators(const Packet &pkt, const enum packet_type type_before_rpkt) -> void {
+auto call_estimators(const Packet& pkt, const enum packet_type type_before_rpkt) -> void {
   if constexpr (!VPKT_ON) {
     return;
   }

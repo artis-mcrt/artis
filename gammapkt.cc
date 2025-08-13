@@ -59,7 +59,7 @@ struct NucGammaLine {
   double energy;  // in erg
 };
 
-void read_gamma_spectrum(const int nucindex, const std::string &filename)
+void read_gamma_spectrum(const int nucindex, const std::string& filename)
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
 {
   printout("reading gamma spectrum for Z=%d A=%d from %s...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
@@ -162,7 +162,7 @@ void init_gamma_linelist() {
   // make a combined list of all gamma lines, sorted by energy, and write it to a file
 
   const ptrdiff_t total_lines = std::ranges::fold_left(
-      gamma_spectra, 0, [](const ptrdiff_t sum, const auto &lines) { return sum + std::ssize(lines); });
+      gamma_spectra, 0, [](const ptrdiff_t sum, const auto& lines) { return sum + std::ssize(lines); });
   printout("total gamma-ray lines %td\n", total_lines);
 
   std::vector<NucGammaLine> allnuc_gamma_line_list;
@@ -176,7 +176,7 @@ void init_gamma_linelist() {
   }
 
   assert_always(std::ssize(allnuc_gamma_line_list) == total_lines);
-  std::ranges::SORT_OR_STABLE_SORT(allnuc_gamma_line_list, [](const NucGammaLine &g1, const NucGammaLine &g2) {
+  std::ranges::SORT_OR_STABLE_SORT(allnuc_gamma_line_list, [](const NucGammaLine& g1, const NucGammaLine& g2) {
     return std::tie(g1.energy, g1.nucindex, g1.nucgammaindex) < std::tie(g2.energy, g2.nucindex, g2.nucgammaindex);
   });
 
@@ -250,7 +250,7 @@ constexpr auto sigma_compton_partial(const double x, const double f_max) -> doub
 }
 
 // the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
-auto get_chi_compton_rf(const Packet &pkt) -> double {
+auto get_chi_compton_rf(const Packet& pkt) -> double {
   // Start by working out the compton x-section in the co-moving frame.
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
@@ -320,7 +320,7 @@ auto thomson_angle() -> double {
 }
 
 // scattering a direction through angle theta.
-[[nodiscard]] auto scatter_dir(const Vec3d &dir_in, const double cos_theta) -> Vec3d {
+[[nodiscard]] auto scatter_dir(const Vec3d& dir_in, const double cos_theta) -> Vec3d {
   // begin with setting the direction in coordinates where original direction
   // is parallel to z-hat.
 
@@ -358,7 +358,7 @@ auto thomson_angle() -> double {
 }
 
 // handle physical Compton scattering event
-void compton_scatter(Packet &pkt) {
+void compton_scatter(Packet& pkt) {
   //  printout("Compton scattering.\n");
 
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
@@ -438,7 +438,7 @@ void compton_scatter(Packet &pkt) {
 }
 
 // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the observer reference frame
-auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
+auto get_chi_photo_electric_rf(const Packet& pkt) -> double {
   // Start by working out the x-section in the co-moving frame.
 
   const int mgi = grid::get_propcell_modelgridindex(pkt.where);
@@ -535,7 +535,7 @@ auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
 }
 
 // calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
-auto get_chi_pair_prod_rf(const Packet &pkt) -> double {
+auto get_chi_pair_prod_rf(const Packet& pkt) -> double {
   const int mgi = grid::get_propcell_modelgridindex(pkt.where);
   if (mgi >= grid::get_npts_model()) {
     return 0.;  // empty cell
@@ -617,7 +617,7 @@ constexpr auto meanf_sigma(const double x) -> double {
 }
 
 // get the gamma-ray opacity (with the expected energy loss per interaction factor included)
-auto get_kappa(const Packet &pkt) -> double {
+auto get_kappa(const Packet& pkt) -> double {
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
   const int mgi = grid::get_propcell_modelgridindex(pkt.where);
   const double chi = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + get_chi_photo_electric_rf(pkt) +
@@ -627,7 +627,7 @@ auto get_kappa(const Packet &pkt) -> double {
 }
 
 // update the energy deposition estimator for gamma ray path increment
-void update_gamma_dep(const Packet &pkt, const double dist, const int nonemptymgi) {
+void update_gamma_dep(const Packet& pkt, const double dist, const int nonemptymgi) {
   if (!(dist > 0)) {
     return;
   }
@@ -663,7 +663,7 @@ void update_gamma_dep(const Packet &pkt, const double dist, const int nonemptymg
 //  the thermal pool. The positron annihilates with an electron locally making a pair of gamma rays
 //  at 0.511 MeV in the local cmf (isotropic). So all the thermal energy goes to the thermal pool
 //  immediately and the remainder goes into gamma-rays at 0.511 MeV.
-void pair_prod(Packet &pkt) {
+void pair_prod(Packet& pkt) {
   const double prob_gamma = 1.022 * MEV / (H * pkt.nu_cmf);
 
   assert_always(prob_gamma >= 0);
@@ -706,7 +706,7 @@ void pair_prod(Packet &pkt) {
 }
 
 // move a gamma packet until time t2
-void transport_gamma(Packet &pkt, const double t2) {
+void transport_gamma(Packet& pkt, const double t2) {
   // Assign optical depth to next physical event. And start counter of
   // optical depth for this path.
   const double zrand = rng_uniform_pos();
@@ -806,7 +806,7 @@ void transport_gamma(Packet &pkt, const double t2) {
   }
 }
 
-void barnes_thermalisation(Packet &pkt)
+void barnes_thermalisation(Packet& pkt)
 // Barnes treatment: packet is either getting absorbed immediately and locally
 // creating a k-packet or it escapes. The absorption probability matches the
 // Barnes thermalization efficiency, for expressions see the original paper:
@@ -841,7 +841,7 @@ void barnes_thermalisation(Packet &pkt)
   }
 }
 
-void wollaeger_thermalisation(Packet &pkt) {
+void wollaeger_thermalisation(Packet& pkt) {
   // corresponds to a local version of the Barnes scheme, i.e. it takes into account the local mass
   // density rather than a value averaged over the ejecta
   constexpr double mean_gamma_opac = 0.1;
@@ -884,7 +884,7 @@ void wollaeger_thermalisation(Packet &pkt) {
   }
 }
 
-void guttman_thermalisation(Packet &pkt) {
+void guttman_thermalisation(Packet& pkt) {
   // Guttman+2024, arXiv:2403.08769v1
   // extension of the Wollaeger scheme. Rather than calculating a single optical depth in radial outward
   // direction, it calculates a spherical average in all possible gamma-ray emission directions.
@@ -970,7 +970,7 @@ void init_gamma_data() {
 }
 
 // convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
-__host__ __device__ void pellet_gamma_decay(Packet &pkt) {
+__host__ __device__ void pellet_gamma_decay(Packet& pkt) {
   // Start by getting the position of the pellet at the point of decay. Pellet
   // is moving with the matter.
 
@@ -1013,7 +1013,7 @@ __host__ __device__ void pellet_gamma_decay(Packet &pkt) {
   pkt.stokes = {1., 0., 0.};
 }
 
-__host__ __device__ void do_gamma(Packet &pkt, const int nts, const double t2) {
+__host__ __device__ void do_gamma(Packet& pkt, const int nts, const double t2) {
   if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {

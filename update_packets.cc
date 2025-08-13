@@ -29,7 +29,7 @@
 
 namespace {
 
-void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
+void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
   double en_deposited = pkt.e_cmf;
   const auto mgi = grid::get_propcell_modelgridindex(pkt.where);
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
@@ -148,7 +148,7 @@ void do_nonthermal_predeposit(Packet &pkt, const int nts, const double t2) {
 // decays in this time step and if it does handle that. (b) if it doesn't decay in
 // this time step then just move the packet along with the matter for the
 // start of the next time step.
-void update_pellet(Packet &pkt, const int nts, const double t2) {
+void update_pellet(Packet& pkt, const int nts, const double t2) {
   assert_always(pkt.prop_time < t2);
   const double ts = pkt.prop_time;
 
@@ -212,7 +212,7 @@ void update_pellet(Packet &pkt, const int nts, const double t2) {
   }
 }
 
-void do_packet(Packet &pkt, const double t2, const int nts)
+void do_packet(Packet& pkt, const double t2, const int nts)
 // update a packet no further than time t2
 {
   switch (pkt.type) {
@@ -280,7 +280,7 @@ void do_packet(Packet &pkt, const double t2, const int nts)
   }
 }
 
-auto std_compare_packets_bymodelgriddensity(const Packet &p1, const Packet &p2) -> bool {
+auto std_compare_packets_bymodelgriddensity(const Packet& p1, const Packet& p2) -> bool {
   // return true if packet p1 goes before p2
 
   // move escaped packets to the end of the list for better performance
@@ -322,7 +322,7 @@ auto std_compare_packets_bymodelgriddensity(const Packet &p1, const Packet &p2) 
 }
 
 void do_cell_packet_updates(std::span<Packet> packets, const int nts, const double ts_end) {
-  auto update_packet = [ts_end, nts](auto &pkt) {
+  auto update_packet = [ts_end, nts](auto& pkt) {
     const int mgi = grid::get_propcell_modelgridindex(pkt.where);
     int newmgi = mgi;
     while (pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE && (newmgi == mgi || newmgi == grid::get_npts_model())) {
@@ -369,11 +369,11 @@ void update_packets(const int nts, std::span<Packet> packets) {
     printout("  update_packets timestep %d pass %3d: started at %ld\n", nts, passnumber, sys_time_start_pass);
 
     const int count_pktupdates = static_cast<int>(std::ranges::count_if(
-        packets, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
+        packets, [ts_end](const auto& pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
     const auto updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
     std::ptrdiff_t packetgroupstart = 0;
 
-    for (auto &pkt : packets) {
+    for (auto& pkt : packets) {
       const auto pktindex = &pkt - packets.data();
       if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
         const int mgi = grid::get_propcell_modelgridindex(pkt.where);
@@ -404,7 +404,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
     }
 
     timestepcomplete = std::ranges::all_of(
-        packets, [ts_end](const auto &pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
+        packets, [ts_end](const auto& pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
 
     const auto cellcacheresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
     printout(

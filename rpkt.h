@@ -52,9 +52,9 @@ struct Rpkt_continuum_absorptioncoeffs {
   constexpr Rpkt_continuum_absorptioncoeffs() = default;
 };
 
-void do_rpkt(Packet &pkt, double t2);
-void emit_rpkt(Packet &pkt);
-void calculate_chi_rpkt_cont(double nu_cmf, Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, int nonemptymgi);
+void do_rpkt(Packet& pkt, double t2);
+void emit_rpkt(Packet& pkt);
+void calculate_chi_rpkt_cont(double nu_cmf, Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont, int nonemptymgi);
 [[nodiscard]] auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
 void allocate_expansionopacities();
 void calculate_expansion_opacities(int nonemptymgi);

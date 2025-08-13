@@ -137,8 +137,8 @@ auto get_element_nne_contrib(const int nonemptymgi, const int element) -> double
 
 // assume a value for nne and then calculate the resulting nne
 // the difference between the assumed and calculated nne is returned
-auto nne_solution_f(const double nne_assumed, void *const voidparas) -> double {
-  const auto *paras = static_cast<const nneSolutionParas *>(voidparas);
+auto nne_solution_f(const double nne_assumed, void* const voidparas) -> double {
+  const auto* paras = static_cast<const nneSolutionParas*>(voidparas);
   const int nonemptymgi = paras->nonemptymgi;
   const bool force_saha = paras->force_saha;
 
@@ -330,7 +330,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 
   double nne_solution = 0.;
 
-  gsl_root_fsolver *solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
+  gsl_root_fsolver* solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
 
   gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
   constexpr int maxit = 50;

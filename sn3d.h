@@ -86,9 +86,9 @@ inline tm timebuf{};
 #endif
 
 inline thread_local auto gslworkspace =
-    std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace *)>{
+    std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace*)>{
         USE_SIMPSON_INTEGRATOR ? nullptr : gsl_integration_workspace_alloc(GSLWSIZE),
-        [](gsl_integration_workspace *const w) -> void {
+        [](gsl_integration_workspace* const w) -> void {
           if (!USE_SIMPSON_INTEGRATOR) {
             gsl_integration_workspace_free(w);
           }
@@ -106,12 +106,12 @@ inline thread_local auto gslworkspace =
 #define printout(...) printf(__VA_ARGS__)
 
 template <class... Args>
-inline auto logprintfmt(const std::format_string<Args...> fmt, Args &&...args) -> void {
+inline auto logprintfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
   printf("%s", std::format(fmt, std::forward<Args>(args)...).c_str());
 }
 
 template <class... Args>
-inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...args) -> void {
+inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
   printf("%s\n", std::format(fmt, std::forward<Args>(args)...).c_str());
 }
 
@@ -130,7 +130,7 @@ inline void print_line_start() {
   }
 }
 
-__attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *format, ...) -> void {
+__attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* format, ...) -> void {
   print_line_start();
   va_list args{};
   va_start(args, format);
@@ -144,7 +144,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char *f
 }
 
 template <class... Args>
-inline auto logprintfmt(const std::format_string<Args...> fmt, Args &&...args) -> void {
+inline auto logprintfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
   print_line_start();
   outputlinestr = std::format(fmt, std::forward<Args>(args)...);
   outputstartofline = (outputlinestr.back() == '\n');
@@ -153,7 +153,7 @@ inline auto logprintfmt(const std::format_string<Args...> fmt, Args &&...args) -
 }
 
 template <class... Args>
-inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...args) -> void {
+inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
   print_line_start();
   outputlinestr = std::format(fmt, std::forward<Args>(args)...);
   outputstartofline = true;
@@ -207,7 +207,7 @@ inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args &&...args)
 
 #include <atomic>
 template <typename T, typename U>
-constexpr void atomicadd(T &var, U &&val) {
+constexpr void atomicadd(T& var, U&& val) {
   std::atomic_ref<T>(var).fetch_add(std::forward<U>(val), std::memory_order_relaxed);
 }
 #else
@@ -215,21 +215,21 @@ constexpr void atomicadd(T &var, U &&val) {
 #endif
 #endif
 
-inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
+inline void gsl_error_handler_printout(const char* reason, const char* file, int line, int gsl_errno) {
   if (gsl_errno != 18)  // roundoff error
   {
     printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
   }
 }
 
-[[nodiscard]] inline auto fopen_required(const std::string &filename, std::span<const char> mode) -> FILE * {
+[[nodiscard]] inline auto fopen_required(const std::string& filename, std::span<const char> mode) -> FILE* {
   // look in the data folder first
   const std::string datafolderfilename = "data/" + filename;
   if (mode[0] == 'r' && std::filesystem::exists(datafolderfilename)) {
     return fopen_required(datafolderfilename, mode);
   }
 
-  auto *file = std::fopen(filename.c_str(), mode.data());
+  auto* file = std::fopen(filename.c_str(), mode.data());
   if (file == nullptr) {
     logprintlnfmt("ERROR: Could not open file '{}' for mode '{}'.", filename, mode.data());
     std::abort();
@@ -238,12 +238,12 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   return file;
 }
 
-[[nodiscard]] inline auto fopen_required_uniqueptr(const std::string &filename, std::span<const char> mode) {
-  return std::unique_ptr<FILE, int (*)(FILE *)>(fopen_required(filename, mode),
-                                                [](FILE *fp) -> int { return std::fclose(fp); });
+[[nodiscard]] inline auto fopen_required_uniqueptr(const std::string& filename, std::span<const char> mode) {
+  return std::unique_ptr<FILE, int (*)(FILE*)>(fopen_required(filename, mode),
+                                               [](FILE* fp) -> int { return std::fclose(fp); });
 }
 
-[[nodiscard]] inline auto fstream_required(const std::string &filename, std::ios_base::openmode mode) -> std::fstream {
+[[nodiscard]] inline auto fstream_required(const std::string& filename, std::ios_base::openmode mode) -> std::fstream {
   if (filename.empty()) {
     logprintlnfmt("ERROR: Cannot open file with empty filename.");
     std::abort();
@@ -369,7 +369,7 @@ template <typename T>
   auto size = static_cast<MPI_Aint>(num_thisnoderank * sizeof(T));
   int disp_unit = sizeof(T);
   MPI_Win mpiwin{MPI_WIN_NULL};
-  T *ptr{};
+  T* ptr{};
 
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &ptr, &mpiwin) ==
                 MPI_SUCCESS);
@@ -406,7 +406,7 @@ inline auto GET_MPI_TYPE() -> MPI_Datatype {
 // these wrappers add type, bounds, and overflow safety to the MPI calls
 template <typename R, typename Op, typename Comm>
   requires std::ranges::random_access_range<R>
-inline void MPI_Allreduce_safe(R &&data, Op &&op, Comm &&comm) {
+inline void MPI_Allreduce_safe(R&& data, Op&& op, Comm&& comm) {
   if (std::forward<R>(data).empty()) {
     return;
   }
@@ -429,13 +429,13 @@ inline void MPI_Allreduce_safe(R &&data, Op &&op, Comm &&comm) {
 
 template <typename T, typename Op, typename Comm>
   requires(!std::ranges::random_access_range<T>)
-inline void MPI_Allreduce_safe(T &data, Op &&op, Comm &&comm) {
+inline void MPI_Allreduce_safe(T& data, Op&& op, Comm&& comm) {
   MPI_Allreduce_safe(std::span(&data, 1), std::forward<Op>(op), std::forward<Comm>(comm));
 }
 
 template <typename R, typename Comm>
   requires std::ranges::random_access_range<R>
-inline void MPI_Bcast_safe(R &&data, const int root, Comm &&comm) {
+inline void MPI_Bcast_safe(R&& data, const int root, Comm&& comm) {
   if (std::forward<R>(data).empty()) {
     return;
   }
@@ -457,13 +457,13 @@ inline void MPI_Bcast_safe(R &&data, const int root, Comm &&comm) {
 
 template <typename T, typename Comm>
   requires(!std::ranges::random_access_range<T>)
-inline void MPI_Bcast_safe(T &data, const int root, Comm &&comm) {
+inline void MPI_Bcast_safe(T& data, const int root, Comm&& comm) {
   MPI_Bcast_safe(std::span(&data, 1), root, std::forward<Comm>(comm));
 }
 
 template <typename R, typename Op, typename Comm>
   requires std::ranges::random_access_range<R>
-inline void MPI_Reduce_safe(R &&data, Op &&op, const int root, Comm &&comm) {
+inline void MPI_Reduce_safe(R&& data, Op&& op, const int root, Comm&& comm) {
   if (std::forward<R>(data).empty()) {
     return;
   }
@@ -487,7 +487,7 @@ inline void MPI_Reduce_safe(R &&data, Op &&op, const int root, Comm &&comm) {
 }
 
 template <typename T>
-constexpr void resize_exactly(std::vector<T> &vec, const size_t size) {
+constexpr void resize_exactly(std::vector<T>& vec, const size_t size) {
   // just resizing can (only with libstdc++?) allocate a larger capacity than needed
   vec.reserve(size);
   vec.resize(size);

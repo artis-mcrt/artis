@@ -96,7 +96,7 @@ void set_model_type(GridType model_type_value);
 [[nodiscard]] auto get_t_model() -> double;
 [[nodiscard]] auto get_propcell_modelgridindex(int cellindex) -> int;
 [[nodiscard]] auto get_propcell_nonemptymgi(int cellindex) -> int;
-[[nodiscard]] auto get_cellindex_from_pos(const Vec3d &pos, double time) -> int;
+[[nodiscard]] auto get_cellindex_from_pos(const Vec3d& pos, double time) -> int;
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_nstart(int rank) -> int;
@@ -104,12 +104,12 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_ndo(int rank) -> int;
 [[nodiscard]] auto get_ndo_nonempty(int rank) -> int;
 [[nodiscard]] auto get_totmassradionuclide(int z, int a) -> double;
-[[nodiscard]] auto boundary_distance(const Vec3d &dir, const Vec3d &pos, double tstart, int cellindex)
+[[nodiscard]] auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
     -> std::tuple<double, int>;
 
 void calculate_kappagrey();
 
-inline void change_cell(Packet &pkt, const int snext)
+inline void change_cell(Packet& pkt, const int snext)
 // Routine to take a packet across a boundary.
 {
   if (snext >= 0) {

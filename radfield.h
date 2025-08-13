@@ -18,7 +18,7 @@ void init(int my_rank, int ndo_nonempty);
 void initialise_prev_titer_photoionestimators();
 void close_file();
 void update_estimators(ptrdiff_t nonemptymgi, double distance_e_cmf, double nu_cmf, double doppler_nucmf_on_nurf,
-                       const Phixslist &phixslist, bool thickcell);
+                       const Phixslist& phixslist, bool thickcell);
 void update_lineestimator(int nonemptymgi, int lineindex, double increment);
 [[nodiscard]] auto radfield(double nu, int nonemptymgi) -> double;
 void fit_parameters(int nonemptymgi, int timestep);
@@ -33,14 +33,14 @@ void titer_J(int nonemptymgi);
 void titer_nuJ(int nonemptymgi);
 void reduce_estimators();
 void do_MPI_Bcast(ptrdiff_t nonemptymgi, int root, int root_node_id);
-void write_restart_data(FILE *gridsave_file);
-void read_restart_data(FILE *gridsave_file);
+void write_restart_data(FILE* gridsave_file);
+void read_restart_data(FILE* gridsave_file);
 void normalise_bf_estimators(int nts, int nts_prev, int titer, double deltat);
 [[nodiscard]] auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int nonemptymgi)
     -> double;
-[[nodiscard]] auto integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel,
-                             size_t limit, int key, gsl_integration_workspace *workspace, double *result,
-                             double *abserr) -> int;
+[[nodiscard]] auto integrate(const gsl_function* f, double nu_a, double nu_b, double epsabs, double epsrel,
+                             size_t limit, int key, gsl_integration_workspace* workspace, double* result,
+                             double* abserr) -> int;
 auto planck_integral_analytic(double T_R, double nu_lower, double nu_upper, bool times_nu) -> double;
 
 // returns J_nu [ergs/s/sr/cm2/Hz] for a dilute black body with temperature T and dilution factor W
