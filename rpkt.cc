@@ -696,7 +696,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
       // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
       if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
           rng_uniform() < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value()) {
-        // thermal redistribution of frequency
+        // Thermal redistribution of frequency
         pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
       }
       rpkt_event_thickcell(pkt);
