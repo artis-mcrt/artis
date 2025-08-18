@@ -29,6 +29,7 @@ COMPILER_VERSION := $(shell $(CXX) --version)
 COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpversion -dumpfullversion)
 COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -f1 -d.)
 $(info $(COMPILER_VERSION))
+CXX_STD := c++26
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := CLANG
 	CXXFLAGS += -flto=thin
@@ -51,8 +52,13 @@ else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 			LDFLAGS += -lstdc++exp
 		endif
 	endif
+	# std=c++26 is not supported on gcc < 14
+	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \<= 13),1)
+	CXX_STD := c++23
+	endif
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := NVHPC
+	CXX_STD := c++23
 else
 	$(warning Unknown compiler)
 	COMPILER_NAME := unknown
@@ -60,7 +66,11 @@ endif
 
 $(info detected compiler is $(COMPILER_NAME) major version $(COMPILER_VERSION_NUMBER_MAJOR))
 
-CXXFLAGS += -std=c++23
+CXXFLAGS += -std=$(CXX_STD) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow
+
+ifneq ($(COMPILER_NAME),NVHPC)
+	CXXFLAGS += -Wunused-macros -Werror -Wno-unknown-pragmas -Wno-error=cast-function-type -MD -MP -Wno-unused-function
+endif
 
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
 
@@ -234,12 +244,6 @@ else
 			CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only
 		endif
 	endif
-endif
-
-CXXFLAGS += -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow
-
-ifneq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -Wunused-macros -Werror -Wno-unknown-pragmas -Wno-error=cast-function-type -MD -MP -Wno-unused-function
 endif
 
 # sn3d.cc and exspec.cc have main() defined
