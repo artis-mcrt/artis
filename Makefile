@@ -32,7 +32,9 @@ $(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := CLANG
 	CXXFLAGS += -flto=thin
-	CXXFLAGS += -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call -fsafe-buffer-usage-suggestions
+	CXXFLAGS += -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call -fsafe-buffer-usage-suggestions -Wno-unneeded-internal-declaration
+	LDFLAGS += -Wno-unused-command-line-argument
+
 	ifeq '' '$(findstring Apple,$(COMPILER_VERSION))'
 		ifeq ($(if $(shell command -v lld),'true','false'), 'true')
 			LDFLAGS += -fuse-ld=lld
@@ -119,6 +121,7 @@ ifeq ($(STDPAR),ON)
 		CXXFLAGS += -fexperimental-library
 		# LDFLAGS += -ltbb
 		# LDFLAGS += -Xlinker -debug_snapshot
+
   else ifeq ($(COMPILER_NAME),GCC)
 		LDFLAGS += -ltbb
   endif
@@ -237,11 +240,6 @@ CXXFLAGS += -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Ws
 
 ifneq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -Wunused-macros -Werror -Wno-unknown-pragmas -Wno-error=cast-function-type -MD -MP -Wno-unused-function
-endif
-
-ifeq ($(COMPILER_NAME),CLANG)
-	CXXFLAGS += -Wno-unneeded-internal-declaration
-	LDFLAGS += -Wno-unused-command-line-argument
 endif
 
 # sn3d.cc and exspec.cc have main() defined
