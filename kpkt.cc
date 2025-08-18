@@ -376,7 +376,7 @@ __host__ __device__ void do_kpkt_blackbody(Packet& pkt)
 {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
-  if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY >= 0. && grid::modelgrid[nonemptymgi].thick != 1) {
+  if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() && grid::modelgrid[nonemptymgi].thick != 1) {
     pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
   } else {
     pkt.nu_cmf = sample_planck_montecarlo(grid::get_Te(nonemptymgi));

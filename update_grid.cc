@@ -572,7 +572,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calc_kpkt_rates);
   }
 
-  if constexpr (EXPANSIONOPACITIES_ON || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
+  if constexpr (EXPANSIONOPACITIES_ON || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
     if (grid::modelgrid[nonemptymgi].thick != 1) {
       calculate_expansion_opacities(nonemptymgi);
     }

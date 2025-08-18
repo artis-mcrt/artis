@@ -3,6 +3,7 @@
 // NOLINTBEGIN(modernize*,misc-unused-parameters)
 
 #include <cstdlib>
+#include <optional>
 
 #include "constants.h"
 
@@ -156,7 +157,7 @@ constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = true;
 
 constexpr bool EXPANSIONOPACITIES_ON = false;
 
-constexpr float RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY = -1.;
+constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
 constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 

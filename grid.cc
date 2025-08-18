@@ -393,7 +393,7 @@ void allocate_nonemptymodelcells() {
   MPI_Barrier(globals::mpi_comm_node);
   allocate_nonemptycells_composition_cooling();
 
-  if constexpr (EXPANSIONOPACITIES_ON || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY > 0.) {
+  if constexpr (EXPANSIONOPACITIES_ON || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
     allocate_expansionopacities();
   }
 
