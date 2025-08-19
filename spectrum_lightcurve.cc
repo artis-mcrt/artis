@@ -667,16 +667,14 @@ void add_to_lc_res(const Packet& pkt, const int dirbin, std::span<double> light_
                      pkt.e_rf / globals::timesteps[nts].width * solidanglefactor / globals::nprocs_exspec);
   }
 
-  if (dirbin == -1) {
-    const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
+  const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
 
-    // Now do the cmf light curve.
-    const double arrive_time_cmf = pkt.escape_time * inverse_gamma;
+  // Now do the cmf light curve.
+  const double arrive_time_cmf = pkt.escape_time * inverse_gamma;
 
-    if (arrive_time_cmf > globals::tmin && arrive_time_cmf < globals::tmax) {
-      const int nts = get_timestep(arrive_time_cmf);
-      atomicadd_always(light_curve_lumcmf[nts], pkt.e_cmf / globals::timesteps[nts].width * solidanglefactor /
-                                                    globals::nprocs_exspec / inverse_gamma);
-    }
+  if (arrive_time_cmf > globals::tmin && arrive_time_cmf < globals::tmax) {
+    const int nts = get_timestep(arrive_time_cmf);
+    atomicadd_always(light_curve_lumcmf[nts], pkt.e_cmf / globals::timesteps[nts].width * solidanglefactor /
+                                                  globals::nprocs_exspec / inverse_gamma);
   }
 }
