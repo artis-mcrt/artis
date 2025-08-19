@@ -655,18 +655,19 @@ void write_light_curve(const std::string& lc_filename, const int dirbin, const s
 // add a packet to the outgoing light-curve.
 void add_to_lc_res(const Packet& pkt, const int dirbin, std::span<double> light_curve_lum,
                    std::span<double> light_curve_lumcmf) {
+  if (dirbin >= 0 && get_escapedirectionbin(pkt.dir) != dirbin) {
+    return;
+  }
   const double solidanglefactor = (dirbin >= 0) ? MABINS : 1.;
+  // dirbin -1 means all full 4π angle average (no angle filtering)
+  const double arrive_time = get_arrive_time(pkt);
+  if (arrive_time > globals::tmin && arrive_time < globals::tmax) {
+    const int nts = get_timestep(arrive_time);
+    atomicadd_always(light_curve_lum[nts],
+                     pkt.e_rf / globals::timesteps[nts].width * solidanglefactor / globals::nprocs_exspec);
+  }
+
   if (dirbin == -1) {
-    // -1 means all full 4π angle average (no angle filtering)
-
-    // Put this into the time grid
-    const double arrive_time = get_arrive_time(pkt);
-    if (arrive_time > globals::tmin && arrive_time < globals::tmax) {
-      const int nts = get_timestep(arrive_time);
-      atomicadd_always(light_curve_lum[nts],
-                       pkt.e_rf / globals::timesteps[nts].width * solidanglefactor / globals::nprocs_exspec);
-    }
-
     const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
 
     // Now do the cmf light curve.
@@ -676,16 +677,6 @@ void add_to_lc_res(const Packet& pkt, const int dirbin, std::span<double> light_
       const int nts = get_timestep(arrive_time_cmf);
       atomicadd_always(light_curve_lumcmf[nts], pkt.e_cmf / globals::timesteps[nts].width * solidanglefactor /
                                                     globals::nprocs_exspec / inverse_gamma);
-    }
-
-  } else if (get_escapedirectionbin(pkt.dir) == dirbin) {
-    // packets that escape in the select angle bin
-
-    const double t_arrive = get_arrive_time(pkt);
-    if (t_arrive > globals::tmin && t_arrive < globals::tmax) {
-      const int nts = get_timestep(t_arrive);
-      atomicadd_always(light_curve_lum[nts],
-                       pkt.e_rf / globals::timesteps[nts].width * solidanglefactor / globals::nprocs_exspec);
     }
   }
 }
