@@ -1865,6 +1865,7 @@ void read_ejecta_model() {
   assert_always(get_noncommentline(fmodel, line));
   std::istringstream(line) >> t_model_days;
   t_model = t_model_days * DAY;
+  assert_always(globals::tmin >= t_model);
 
   const auto pos_after_t_model = fmodel.tellg();
   // if the next line is a single float, it is the vmax (so 2D or 3D)
