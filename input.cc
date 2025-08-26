@@ -241,12 +241,12 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
 
 void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphixs,
                      std::vector<PhotoionTarget>& tmpallphixstargets) {
-  size_t mem_usage_phixs = 0;
-
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version].c_str());
 
   auto phixsfile = fstream_required(phixsdata_filenames[phixs_file_version], std::ios::in);
   std::string phixsline;
+  std::istringstream ssline;
+  size_t mem_usage_phixs = 0;
 
   if (phixs_file_version == 1 && phixs_file_version_exists[2]) {
     printout(
@@ -280,12 +280,14 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
     if (!get_noncommentline(phixsfile, phixsline)) {
       break;
     }
+    ssline.clear();
+    ssline.str(phixsline);
     if (phixs_file_version == 1) {
-      assert_always(std::istringstream(phixsline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >>
-                    lowerlevel_in >> nphixspoints_inputtable);
+      assert_always(ssline >> Z >> upperionstage >> upperlevel_in >> lowerionstage >> lowerlevel_in >>
+                    nphixspoints_inputtable);
     } else {
-      assert_always(std::istringstream(phixsline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >>
-                    lowerlevel_in >> phixs_threshold_ev);
+      assert_always(ssline >> Z >> upperionstage >> upperlevel_in >> lowerionstage >> lowerlevel_in >>
+                    phixs_threshold_ev);
       nphixspoints_inputtable = globals::NPHIXSPOINTS;
     }
     assert_always(Z > 0);
@@ -319,7 +321,9 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
       if (upperlevel_in < 0) {  // a table of target states and probabilities will follow, so read past those lines
         int nphixstargets = 0;
         assert_always(get_noncommentline(phixsfile, phixsline));
-        assert_always(std::stringstream(phixsline) >> nphixstargets);
+        ssline.clear();
+        ssline.str(phixsline);
+        assert_always(ssline >> nphixstargets);
         for (int i = 0; i < nphixstargets; i++) {
           assert_always(get_noncommentline(phixsfile, phixsline));
         }
@@ -350,14 +354,17 @@ constexpr auto downtranslevelstart(const int level) {
 void read_ion_levels(std::istream& adata, const int element, const int ion, const int nions, const int nlevels,
                      int nlevelsmax, const double energyoffset, const double ionpot,
                      std::vector<EnergyLevelInput>& temp_alllevels) {
+  std::string line;
+  static std::istringstream ssline;
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in = 0;
     double levelenergy{NAN};
     float statweight{NAN};
     int ntransitions = 0;
-    std::string line;
     assert_always(get_noncommentline(adata, line));
-    assert_always(std::istringstream(line) >> levelindex_in >> levelenergy >> statweight >> ntransitions);
+    ssline.clear();
+    ssline.str(line);
+    assert_always(ssline >> levelindex_in >> levelenergy >> statweight >> ntransitions);
     assert_always(levelindex_in == level + groundstate_index_in);
 
     if (level < nlevelsmax) {
@@ -389,6 +396,7 @@ void read_ion_transitions(std::istream& ftransitiondata, const int tottransition
   iontransitiontable.reserve(tottransitions);
 
   std::string line;
+  static std::istringstream ssline;
 
   if (tottransitions == 0) {
     // we will not read in any transitions, just skip past these lines in the file
@@ -409,20 +417,23 @@ void read_ion_transitions(std::istream& ftransitiondata, const int tottransition
       int intforbidden = 0;
       assert_always(getline(ftransitiondata, line));
       if (i == 0) {
-        std::istringstream ss(line);
+        ssline.clear();
+        ssline.str(line);
         std::string word;
         int column_count = 0;
-        while (ss >> word) {
+        while (ssline >> word) {
           column_count++;
         }
         assert_always(column_count == 4 || column_count == 5);
         oldtransitionformat = (column_count == 4);
       }
+      ssline.clear();
+      ssline.str(line);
       if (!oldtransitionformat) {
-        assert_always(std::istringstream(line) >> lower_in >> upper_in >> A >> coll_str >> intforbidden);
+        assert_always(ssline >> lower_in >> upper_in >> A >> coll_str >> intforbidden);
       } else {
         int transindex = 0;  // not used
-        assert_always(std::istringstream(line) >> transindex >> lower_in >> upper_in >> A);
+        assert_always(ssline >> transindex >> lower_in >> upper_in >> A);
       }
       const int lower = lower_in - groundstate_index_in;
       const int upper = upper_in - groundstate_index_in;
@@ -1057,6 +1068,9 @@ void read_atomicdata_files() {
   std::vector<Transition> iontransitiontable;
   std::vector<int> iondowntranstmplineindicies;
 
+  std::string line;
+  std::istringstream ssline;
+
   // temperature to determine relevant ionstages
   int T_preset = 0;
   assert_always(compositiondata >> T_preset);
@@ -1127,15 +1141,16 @@ void read_atomicdata_files() {
           double statweight{NAN};
           int levelindex = 0;
           int ntransitions = 0;
-          std::string line;
           std::getline(adata, line);
-
-          assert_always(std::istringstream(line) >> levelindex >> levelenergy >> statweight >> ntransitions);
+          ssline.clear();
+          ssline.str(line);
+          assert_always(ssline >> levelindex >> levelenergy >> statweight >> ntransitions);
         }
 
-        std::string line;
         assert_always(get_noncommentline(adata, line));
-        assert_always(std::istringstream(line) >> adata_Z_in >> ionstage >> nlevels >> ionpot);
+        ssline.clear();
+        ssline.str(line);
+        assert_always(ssline >> adata_Z_in >> ionstage >> nlevels >> ionpot);
       }
 
       printout("adata header matched: Z %d, ionstage %d, nlevels %d\n", adata_Z_in, ionstage, nlevels);
@@ -1162,14 +1177,15 @@ void read_atomicdata_files() {
       int transdata_Z_in = -1;
       int transdata_ionstage_in = -1;
       int tottransitions_in_file = 0;
-      std::string line;
       while (transdata_Z_in != Z || transdata_ionstage_in != ionstage) {
         // skip over table
         for (int i = 0; i < tottransitions_in_file; i++) {
           assert_always(getline(ftransitiondata, line));
         }
         assert_always(get_noncommentline(ftransitiondata, line));  // get_noncommentline to skip over blank lines
-        assert_always(std::istringstream(line) >> transdata_Z_in >> transdata_ionstage_in >> tottransitions_in_file);
+        ssline.clear();
+        ssline.str(line);
+        assert_always(ssline >> transdata_Z_in >> transdata_ionstage_in >> tottransitions_in_file);
       }
 
       printout("transdata header matched: transdata_Z_in %d, transdata_ionstage_in %d, tottransitions %d\n",
@@ -1392,11 +1408,10 @@ void read_atomicdata_files() {
       continue;
     }
 
-    const auto& line = globals::linelist[lineindex];
-    const int element = line.elementindex;
-    const int ion = line.ionindex;
-    const int lowerlevel = line.lowerlevelindex;
-    const int upperlevel = line.upperlevelindex;
+    const int element = globals::linelist[lineindex].elementindex;
+    const int ion = globals::linelist[lineindex].ionindex;
+    const int lowerlevel = globals::linelist[lineindex].lowerlevelindex;
+    const int upperlevel = globals::linelist[lineindex].upperlevelindex;
 
     // there is never more than one transition per pair of levels,
     // so find the first up and the first down transition that match: element, ion, lowerlevel, upperlevel
@@ -1733,11 +1748,10 @@ void read_parameterfile(int rank) {
   auto file = fstream_required("input.txt", std::ios::in);
 
   std::string line;
-
   assert_always(get_noncommentline(file, line));
 
   std::int64_t pre_zseed = -1;
-  std::istringstream(line) >> pre_zseed;
+  std::istringstream{line} >> pre_zseed;
 
   if (pre_zseed > 0) {
     printout("input.txt specified random number seed is %" PRId64 "\n", pre_zseed);
@@ -1768,11 +1782,11 @@ void read_parameterfile(int rank) {
   }
 
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> globals::ntimesteps;  // number of time steps
+  std::istringstream{line} >> globals::ntimesteps;  // number of time steps
   assert_always(globals::ntimesteps > 0);
 
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> globals::timestep_initial >>
+  std::istringstream{line} >> globals::timestep_initial >>
       globals::timestep_finish;  // number of start and end time step
   printout("input: timestep_start %d timestep_finish %d\n", globals::timestep_initial, globals::timestep_finish);
   assert_always(globals::timestep_initial < globals::ntimesteps);
@@ -1782,7 +1796,7 @@ void read_parameterfile(int rank) {
   double tmin_days = 0.;
   double tmax_days = 0.;
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> tmin_days >> tmax_days;  // start and end times
+  std::istringstream{line} >> tmin_days >> tmax_days;  // start and end times
   assert_always(tmin_days > 0);
   assert_always(tmax_days > 0);
   assert_always(tmin_days < tmax_days);
@@ -1804,28 +1818,28 @@ void read_parameterfile(int rank) {
   assert_always(get_noncommentline(file, line));  // UNUSED change speed of light
 
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> globals::gamma_kappagrey;  // use grey opacity for gammas?
+  std::istringstream{line} >> globals::gamma_kappagrey;  // use grey opacity for gammas?
 
   assert_always(get_noncommentline(file, line));  // UNUSED components of syn_dir
 
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> globals::opacity_case;  // opacity choice
+  std::istringstream{line} >> globals::opacity_case;  // opacity choice
 
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> globals::rho_crit_para;  // free parameter for calculation of rho_crit
+  std::istringstream{line} >> globals::rho_crit_para;  // free parameter for calculation of rho_crit
   printout("input: rho_crit_para %g\n", globals::rho_crit_para);
   // the calculation of rho_crit itself depends on the time, therefore it happens in grid_init and update_grid
 
   assert_always(get_noncommentline(file, line));
   int debug_packet = 0;
-  std::istringstream(line) >> debug_packet;  // activate debug output for packet
+  std::istringstream{line} >> debug_packet;  // activate debug output for packet
   assert_always(debug_packet == -1);
   // select a negative value to deactivate
 
   // Do we start a new simulation or, continue another one?
   int continue_flag = 0;
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> continue_flag;
+  std::istringstream{line} >> continue_flag;
   globals::simulation_continued_from_saved = (continue_flag == 1);
   if (globals::timestep_initial == 0) {
     // it's not possible to resume from a saved point if we start from timestep zero, so override the flag
@@ -1841,13 +1855,13 @@ void read_parameterfile(int rank) {
   // switches from the nebular approximation to LTE.
   float dum2{NAN};
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> dum2;  // free parameter for calculation of rho_crit
+  std::istringstream{line} >> dum2;  // free parameter for calculation of rho_crit
   globals::nu_rfcut = CLIGHT / (dum2 * 1e-8);
   printout("input: nu_rfcut %g\n", globals::nu_rfcut);
 
   // Sets the number of initial LTE timesteps for NLTE runs
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> globals::num_lte_timesteps;
+  std::istringstream{line} >> globals::num_lte_timesteps;
   printout("input: doing the first %d timesteps in LTE\n", globals::num_lte_timesteps);
 
   if (NT_ON) {
@@ -1880,7 +1894,7 @@ void read_parameterfile(int rank) {
 
   // Set up initial grey approximation?
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> globals::cell_is_optically_thick >> globals::num_grey_timesteps;
+  std::istringstream{line} >> globals::cell_is_optically_thick >> globals::num_grey_timesteps;
   printout(
       "input: cells with Thomson optical depth > %g are treated in grey approximation for the first %d timesteps\n",
       globals::cell_is_optically_thick, globals::num_grey_timesteps);
@@ -1888,12 +1902,12 @@ void read_parameterfile(int rank) {
   // Limit the number of bf-continua
   assert_always(get_noncommentline(file, line));
   int max_bf_continua = 0;
-  std::istringstream(line) >> max_bf_continua;
+  std::istringstream{line} >> max_bf_continua;
   assert_always(max_bf_continua == -1);
 
   // for exspec: read number of MPI tasks
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> globals::nprocs_exspec;
+  std::istringstream{line} >> globals::nprocs_exspec;
 
   // UNUSED: Extract line-of-sight dependent information of last emission for spectrum_res
   assert_always(get_noncommentline(file, line));
@@ -1908,7 +1922,7 @@ void read_parameterfile(int rank) {
   assert_always(get_noncommentline(file, line));
   int n_kpktdiffusion_timesteps{0};
   float kpktdiffusion_timescale{0.};
-  std::istringstream(line) >> kpktdiffusion_timescale >> n_kpktdiffusion_timesteps;
+  std::istringstream{line} >> kpktdiffusion_timescale >> n_kpktdiffusion_timesteps;
   kpkt::set_kpktdiffusion(kpktdiffusion_timescale, n_kpktdiffusion_timesteps);
 
   file.close();

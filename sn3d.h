@@ -313,10 +313,10 @@ inline void check_already_running() {
       pid_t artispid_in = 0;
       std::string line;
       std::getline(pidfile, line);
-      std::istringstream(line) >> artispid_in;
+      std::istringstream{line} >> artispid_in;
       std::getline(pidfile, line);
       std::string working_directory;
-      std::istringstream(line) >> working_directory;
+      std::istringstream{line} >> working_directory;
       pidfile.close();
       if (is_pid_running(artispid_in) && std::filesystem::current_path().generic_string() == working_directory) {
         fprintf(stderr,

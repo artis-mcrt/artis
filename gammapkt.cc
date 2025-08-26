@@ -79,7 +79,9 @@ void read_gamma_spectrum(const int nucindex, const std::string& filename)
     get_noncommentline(gammafile, line);
     double en_mev = 0.;
     double prob = 0.;
-    assert_always(std::istringstream(line) >> en_mev >> prob);
+    ssline.clear();
+    ssline.str(line);
+    assert_always(ssline >> en_mev >> prob);
     gamma_spectra[nucindex][n].energy = en_mev * MEV;
     gamma_spectra[nucindex][n].probability = prob;
     E_gamma_avg += en_mev * MEV * prob;

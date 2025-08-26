@@ -303,7 +303,7 @@ auto read_shell_configs() {
 
   std::string line;
   assert_always(get_noncommentline(shells_file, line));
-  std::istringstream(line) >> nshells >> n_z_binding;
+  std::istringstream{line} >> nshells >> n_z_binding;
   printout("Reading electron_shell_occupancy.txt with %d elements and %d shells\n", n_z_binding, nshells);
 
   std::vector<std::vector<int>> elements_shells_q;
@@ -345,7 +345,7 @@ void read_binding_energies() {
 
   std::string line;
   assert_always(get_noncommentline(binding_energies_file, line));
-  std::istringstream(line) >> nshells >> n_z_binding;
+  std::istringstream{line} >> nshells >> n_z_binding;
   printout("Reading binding energies file '%s' with %d elements and %d shells\n", filename, n_z_binding, nshells);
 
   elements_electron_binding.resize(n_z_binding, std::vector<double>(nshells, 0.));
@@ -624,7 +624,7 @@ void read_collion_data() {
     collionrow collionrow{};
     int nelec = -1;
     get_noncommentline(cifile, line);
-    assert_always(std::istringstream(line) >> collionrow.Z >> nelec >> collionrow.n >> collionrow.l >>
+    assert_always(std::istringstream{line} >> collionrow.Z >> nelec >> collionrow.n >> collionrow.l >>
                   collionrow.ionpot_ev >> collionrow.A >> collionrow.B >> collionrow.C >> collionrow.D);
 
     assert_always(nelec > 0);

@@ -20,7 +20,6 @@
 #include <sstream>
 #include <string>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -551,11 +550,14 @@ void read_abundances() {
   // element Z=1 (float) up to abundance for element Z=30 (float)
   // i.e. in total one integer and 30 floats.
 
+  static std::string line;
+  static std::istringstream ssline;
+
   // loop over propagation cells for 3D models, or modelgrid cells
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    std::string line;
     assert_always(get_noncommentline(abundance_file, line));
-    std::istringstream ssline(line);
+    ssline.clear();
+    ssline.str(line);
 
     int cellnumberinput = -1;
     assert_always(ssline >> cellnumberinput);
@@ -662,7 +664,7 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
 auto get_token_count(std::string& line) -> int {
   std::string token;
   int abundcolcount = 0;
-  auto ssline = std::istringstream(line);
+  auto ssline = std::istringstream{line};
   while (std::getline(ssline, token, ' ')) {
     if (!std::ranges::all_of(token, isspace)) {  // skip whitespace tokens
       abundcolcount++;
@@ -671,15 +673,15 @@ auto get_token_count(std::string& line) -> int {
   return abundcolcount;
 }
 
-void read_model_radioabundances(std::istream& fmodel, std::istringstream& ssline_in, const int mgi, const bool keepcell,
+void read_model_radioabundances(std::istream& fmodel, std::istringstream& ssline, const int mgi, const bool keepcell,
                                 const std::vector<std::string>& colnames, const std::vector<int>& nucindexlist,
                                 const bool one_line_per_cell) {
-  std::string line;
   if (!one_line_per_cell) {
+    static std::string line;
     assert_always(std::getline(fmodel, line));
+    ssline.clear();
+    ssline.str(line);
   }
-
-  auto ssline = one_line_per_cell ? std::move(ssline_in) : std::istringstream(line);
 
   if (!keepcell) {
     return;
@@ -1847,7 +1849,7 @@ void read_ejecta_model() {
   int npts_0 = 0;  // total model points for 1D/3D, and number of points in r for 2D
   int npts_1 = 0;  // number of points in z for 2D
   assert_always(get_noncommentline(fmodel, line));
-  auto ssline = std::istringstream(line);
+  auto ssline = std::istringstream{line};
   ssline >> npts_0;
   if (ssline >> npts_1) {
     // second number on the line for 2D means the line was n_r n_z
@@ -1863,7 +1865,7 @@ void read_ejecta_model() {
   // Now read the time (in days) at which the model is specified.
   double t_model_days{NAN};
   assert_always(get_noncommentline(fmodel, line));
-  std::istringstream(line) >> t_model_days;
+  std::istringstream{line} >> t_model_days;
   t_model = t_model_days * DAY;
   assert_always(globals::tmin >= t_model);
 
@@ -1873,7 +1875,7 @@ void read_ejecta_model() {
   std::getline(fmodel, line);
   if (!line.starts_with("#")) {
     double num_after_vmax{NAN};
-    auto sslinevmax = std::istringstream(line);
+    auto sslinevmax = std::istringstream{line};
     if ((sslinevmax >> globals::vmax) && !(sslinevmax >> num_after_vmax)) {
       // single value on the line is a vmax, so 2D or 3D
       // if it's not already know to be 2D (based on n_r n_z line), then it's 3D
@@ -1922,7 +1924,8 @@ void read_ejecta_model() {
       double vout_kmps{NAN};
       double log_rho{NAN};
       int cellnumberin = 0;
-      ssline = std::istringstream(line);
+      ssline.clear();
+      ssline.str(line);
 
       if (ssline >> cellnumberin >> vout_kmps >> log_rho) {
         if (mgi == 0) {
@@ -1971,7 +1974,8 @@ void read_ejecta_model() {
       float cell_r_in{NAN};
       float cell_z_in{NAN};
       double rho_tmodel{NAN};
-      ssline = std::istringstream(line);
+      ssline.clear();
+      ssline.str(line);
       assert_always(ssline >> cellnumberin >> cell_r_in >> cell_z_in >> rho_tmodel);
 
       if (mgi == 0) {
@@ -2031,7 +2035,8 @@ void read_ejecta_model() {
       int cellnumberin = 0;
       std::array<float, 3> cellpos_in{};
       float rho_model{NAN};
-      ssline = std::istringstream(line);
+      ssline.clear();
+      ssline.str(line);
 
       assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model);
 

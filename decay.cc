@@ -18,7 +18,6 @@
 #include <string>
 #include <string_view>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -153,7 +152,7 @@ MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
   });
 }
 
-[[nodiscard]] auto get_nuc_z_a(const int nucindex) -> std::pair<int, int> {
+[[nodiscard]] auto get_nuc_z_a(const int nucindex) -> std::tuple<int, int> {
   assert_testmodeonly(nucindex >= 0);
   assert_testmodeonly(nucindex < get_num_nuclides());
   return {nuclides[nucindex].z, nuclides[nucindex].a};
