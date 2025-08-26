@@ -55,7 +55,7 @@ struct Packet {
   double absorptionfreq{};  // records nu_rf of packet at last absorption
   Vec3d stokes{1., 0., 0.};  // I, Q and U Stokes parameters
   int trueemissiontype = EMTYPE_NOTSET;  // emission type coming from a kpkt to rpkt (last thermal emission)
-  float trueemissionvelocity{-1};
+  Vec3d trueemissionvelocity{0., 0., 0.};
   float trueem_time{-1.};  // first thermal emission time [s]
   enum packet_type type {};  // type of packet (k-, r-, etc.)
   int where{-1};  // The propagation grid cell that the packet is in.
