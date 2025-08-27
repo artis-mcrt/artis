@@ -30,7 +30,6 @@
 #include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
-#include "vectors.h"
 #include "vpkt.h"
 
 namespace {
