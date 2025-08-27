@@ -185,8 +185,8 @@ void write_packets(const std::string& filename, std::span<const Packet> pkt) {
                  << pkt[i].absorptiontype << ' ' << pkt[i].absorptionfreq << ' ' << pkt[i].nscatterings << ' '
                  << pkt[i].em_time << ' ';
     packets_file << pkt[i].stokes[0] << ' ' << pkt[i].stokes[1] << ' ' << pkt[i].stokes[2] << ' ';
-    packets_file << static_cast<int>(pkt[i].originated_from_particlenotgamma) << ' ' << pkt[i].trueem_pos[0]
-                 << pkt[i].trueem_pos[1] << pkt[i].trueem_pos[2] << ' ' << pkt[i].trueem_time << ' '
+    packets_file << static_cast<int>(pkt[i].originated_from_particlenotgamma) << ' ' << pkt[i].trueem_pos[0] << ' '
+                 << pkt[i].trueem_pos[1] << ' ' << pkt[i].trueem_pos[2] << ' ' << pkt[i].trueem_time << ' '
                  << pkt[i].pellet_nucindex << ' ' << pkt[i].pellet_decaytype;
     packets_file << '\n';
   }
