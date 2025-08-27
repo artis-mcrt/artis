@@ -562,7 +562,7 @@ __host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmast
   // nebular Type Ias then just fix it.
   if (pkt.trueemissiontype == EMTYPE_NOTSET) {
     pkt.trueemissiontype = pkt.emissiontype;
-    pkt.trueemissionvelocity = {pkt.em_pos[0] / pkt.em_time, pkt.em_pos[1] / pkt.em_time, pkt.em_pos[2] / pkt.em_time};
+    pkt.trueem_pos = pkt.em_pos;
     pkt.trueem_time = pkt.em_time;
   }
 

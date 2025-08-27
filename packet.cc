@@ -171,7 +171,7 @@ void write_packets(const std::string& filename, std::span<const Packet> pkt) {
                   "escape_type_id escape_time emissiontype trueemissiontype "
                   "em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time stokes1 stokes2 "
                   "stokes3 originated_from_particlenotgamma "
-                  "trueem_velox trueem_veloy trueem_veloz trueem_time pellet_nucindex pellet_decaytype\n";
+                  "trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex pellet_decaytype\n";
 
   for (int i = 0; i < globals::npkts; i++) {
     packets_file << pkt[i].number << ' ' << pkt[i].where << ' ' << std::to_underlying(pkt[i].type) << ' ';
@@ -185,8 +185,8 @@ void write_packets(const std::string& filename, std::span<const Packet> pkt) {
                  << pkt[i].absorptiontype << ' ' << pkt[i].absorptionfreq << ' ' << pkt[i].nscatterings << ' '
                  << pkt[i].em_time << ' ';
     packets_file << pkt[i].stokes[0] << ' ' << pkt[i].stokes[1] << ' ' << pkt[i].stokes[2] << ' ';
-    packets_file << static_cast<int>(pkt[i].originated_from_particlenotgamma) << ' ' << pkt[i].trueemissionvelocity[0]
-                 << pkt[i].trueemissionvelocity[1] << pkt[i].trueemissionvelocity[2] << ' ' << pkt[i].trueem_time << ' '
+    packets_file << static_cast<int>(pkt[i].originated_from_particlenotgamma) << ' ' << pkt[i].trueem_pos[0]
+                 << pkt[i].trueem_pos[1] << pkt[i].trueem_pos[2] << ' ' << pkt[i].trueem_time << ' '
                  << pkt[i].pellet_nucindex << ' ' << pkt[i].pellet_decaytype;
     packets_file << '\n';
   }
@@ -283,9 +283,9 @@ auto read_packets(const std::string& filename, std::span<Packet> packets) -> std
     ssline >> int_originated_from_particlenotgamma;
     packets[i].originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
 
-    ssline >> packets[i].trueemissionvelocity[0];
-    ssline >> packets[i].trueemissionvelocity[1];
-    ssline >> packets[i].trueemissionvelocity[2];
+    ssline >> packets[i].trueem_pos[0];
+    ssline >> packets[i].trueem_pos[1];
+    ssline >> packets[i].trueem_pos[2];
 
     ssline >> packets[i].trueem_time;
 
