@@ -2361,7 +2361,7 @@ __host__ __device__ void do_ntlepton_deposit(Packet& pkt) {
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLION);
       stats::increment(stats::COUNTER_INTERACTIONS);
       pkt.trueemissiontype = EMTYPE_NOTSET;
-      pkt.trueem_pos = {0., 0., 0.};
+      pkt.trueem_pos = {NAN, NAN, NAN};
 
       stats::increment(stats::COUNTER_NT_STAT_TO_IONIZATION);
 
@@ -2386,7 +2386,7 @@ __host__ __device__ void do_ntlepton_deposit(Packet& pkt) {
           stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC);
           stats::increment(stats::COUNTER_INTERACTIONS);
           pkt.trueemissiontype = EMTYPE_NOTSET;
-          pkt.trueem_pos = {0., 0., 0.};
+          pkt.trueem_pos = {NAN, NAN, NAN};
 
           stats::increment(stats::COUNTER_NT_STAT_TO_EXCITATION);
 

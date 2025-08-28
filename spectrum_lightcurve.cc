@@ -559,10 +559,8 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra, Spec
           if (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax) {
             if (pkt.nu_rf >= traceemissabs_nulower && pkt.nu_rf <= traceemissabs_nuupper) {
               traceemissionabsorption[et].energyemitted += deltaE;
-              const Vec3d trueemissionvelocity = {pkt.trueem_pos[0] / pkt.trueem_time,
-                                                  pkt.trueem_pos[1] / pkt.trueem_time,
-                                                  pkt.trueem_pos[2] / pkt.trueem_time};
-              traceemissionabsorption[et].emission_weightedvelocity_sum += vec_len(trueemissionvelocity) * deltaE;
+              traceemissionabsorption[et].emission_weightedvelocity_sum +=
+                  vec_len(pkt.trueem_pos) / pkt.trueem_time * deltaE;
               traceemission_totalenergy += deltaE;
             }
           }

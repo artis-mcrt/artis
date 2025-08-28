@@ -283,9 +283,7 @@ auto read_packets(const std::string& filename, std::span<Packet> packets) -> std
     ssline >> int_originated_from_particlenotgamma;
     packets[i].originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
 
-    ssline >> packets[i].trueem_pos[0];
-    ssline >> packets[i].trueem_pos[1];
-    ssline >> packets[i].trueem_pos[2];
+    ssline >> packets[i].trueem_pos[0] >> packets[i].trueem_pos[1] >> packets[i].trueem_pos[2];
 
     ssline >> packets[i].trueem_time;
 
