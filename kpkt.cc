@@ -579,7 +579,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
     stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLEXC);
 
     pkt.trueemissiontype = EMTYPE_NOTSET;
-    pkt.trueemissionvelocity = -1;
+    pkt.trueem_pos = {NAN, NAN, NAN};
 
     do_macroatom(pkt, {.element = element, .ion = ion, .level = upper, .activatingline = -99});
   } else if (rndcoolingtype == CoolingType::COLLION) {
@@ -592,7 +592,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
     stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLION);
 
     pkt.trueemissiontype = EMTYPE_NOTSET;
-    pkt.trueemissionvelocity = -1;
+    pkt.trueem_pos = {NAN, NAN, NAN};
 
     do_macroatom(pkt, {.element = element, .ion = upperion, .level = upper, .activatingline = -99});
   } else if constexpr (TESTMODE) {
