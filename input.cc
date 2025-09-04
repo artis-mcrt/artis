@@ -865,7 +865,7 @@ void read_autoion_data() {
   double autoion_A = -1;
   bool allautoion_in_superlevel = true;
   bool allautoion_outside_superlevel = true;
-  
+
   while (get_noncommentline(autoionfile, autoionline)) {
     assert_always(std::istringstream(autoionline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >>
                   lowerlevel_in >> autoion_A);
@@ -889,10 +889,10 @@ void read_autoion_data() {
       assert_always(lowerlevel >= 0 && lowerlevel < get_nlevels(element, lowerion));
       assert_always(upperlevel >= 0 && upperlevel < get_nlevels(element, upperion));
       assert_always(upperion > lowerion);
-      const bool in_superlevel = !is_nlte(element, lowerion, lowerlevel-1);
+      const bool in_superlevel = !is_nlte(element, lowerion, lowerlevel - 1);
       allautoion_in_superlevel = allautoion_in_superlevel && in_superlevel;
       allautoion_outside_superlevel = allautoion_outside_superlevel && !in_superlevel;
-       
+
       // store only for ions that are part of the current model atom
       if (lowerion >= 0 && upperion < get_nions(element)) {
         printout("Got to noting data for Z %d upperion %d upperlvl %d lowerion %d lowerlvl %d with A %g\n", Z, upperion,
@@ -922,7 +922,7 @@ void read_autoion_data() {
   }
 
   assert_always(allautoion_in_superlevel || allautoion_outside_superlevel);
-  
+
   globals::allautoion = MPI_shared_malloc_span<globals::LevelAutoion>(temp_allautoion.size());
   if (globals::rank_in_node == 0) {
     std::copy_n(temp_allautoion.cbegin(), temp_allautoion.size(), globals::allautoion.data());
