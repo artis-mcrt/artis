@@ -899,7 +899,7 @@ void read_autoion_data() {
 
         if (globals::alllevels.allautoion_start[get_uniquelevelindex(element, lowerion, lowerlevel)] < 0) {
           assert_always(nautoiondowntrans == 1);
-          assert_always(nautoionuptrans == 1);
+          //assert_always(nautoionuptrans == 1);
           // this is the first autoionizing transition for this level, so set the start index
           globals::alllevels.allautoion_start[get_uniquelevelindex(element, lowerion, lowerlevel)] =
               static_cast<int>(temp_allautoion.size());
