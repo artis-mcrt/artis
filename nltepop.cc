@@ -120,7 +120,9 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
   // The (+ ion) term accounts for the ground state population indices that are not counted in the NLTE array
   int offset_autoion = 0;
   for (int dion = first_ion_used; dion < ion; dion++) {
-    offset_autoion += get_nlevels_autoion(element, dion);
+    if (ion_has_superlevel(element, dion)) {
+      offset_autoion += get_nlevels_autoion(element, dion);
+    }
   }
   assert_testmodeonly(first_ion_used >= 0);
   assert_testmodeonly(first_ion_used < get_nions(element));
@@ -242,6 +244,8 @@ void print_level_rates_summary(const int element, const int selected_ion, const 
         get_total_rate(selected_index, rate_matrices.coll_bf, popvec, into_level, only_levels_below, only_levels_above);
     const double ntcoll_bf_total = get_total_rate(selected_index, rate_matrices.ntcoll_bf, popvec, into_level,
                                                   only_levels_below, only_levels_above);
+    const double autoion_total =
+        get_total_rate(selected_index, rate_matrices.autoion, popvec, into_level, only_levels_below, only_levels_above);
 
     if (into_level) {
       // into this level
@@ -257,8 +261,8 @@ void print_level_rates_summary(const int element, const int selected_ion, const 
       printout("above ");
     }
 
-    printout("%10.2e %10.2e %10.2e %10.2e %10.2e %10.2e\n", rad_bb_total, coll_bb_total, ntcoll_bb_total, rad_bf_total,
-             coll_bf_total, ntcoll_bf_total);
+    printout("%10.2e %10.2e %10.2e %10.2e %10.2e %10.2e %10.2e\n", rad_bb_total, coll_bb_total, ntcoll_bb_total,
+             rad_bf_total, coll_bf_total, ntcoll_bf_total, autoion_total);
   }
 }
 
@@ -282,7 +286,7 @@ void print_element_rates_summary(const int element, const int modelgridindex, co
                  atomic_number, ionstage);
         printout(
             "                         pop       rates     bb_rad     bb_col   bb_ntcol     bf_rad     bf_col   "
-            "bf_ntcol\n");
+            "bf_ntcol autoion\n");
       }
 
       print_level_rates_summary(element, ion, level, popvec, rate_matrices, first_ion_used);
@@ -405,10 +409,14 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
   std::vector<double> superlevel_partfuncs;
   resize_exactly(superlevel_partfuncs, get_nions(element));
   for (int ion = 0; ion < get_nions(element); ion++) {
-    superlevel_partfuncs[ion] = std::ranges::fold_left(
-        std::views::iota(get_nlevels_excited_nlte(element, ion) + 1,
-                         get_nlevels(element, ion) - get_nlevels_autoion(element, ion)),
-        0.0, [&](double sum, int level) { return sum + superlevel_boltzmann(nonemptymgi, element, ion, level); });
+    if (ion_has_superlevel(element, ion)) {
+      superlevel_partfuncs[ion] = std::ranges::fold_left(
+          std::views::iota(get_nlevels_excited_nlte(element, ion) + 1,
+                           get_nlevels(element, ion) - get_nlevels_autoion(element, ion)),
+          0.0, [&](double sum, int level) { return sum + superlevel_boltzmann(nonemptymgi, element, ion, level); });
+    } else {
+      superlevel_partfuncs[ion] = -1.;
+    }
   }
 
   return superlevel_partfuncs;
@@ -1067,10 +1075,12 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
       "Solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d (mass fraction "
       "%.2e, nnelement %.2e cm^-3)\n",
       modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_abundance(nonemptymgi, element), nnelement);
+
   const auto superlevel_partfuncs = get_element_superlevelpartfuncs(nonemptymgi, element);
   int nions_used = nions;
   int first_ion_used = 0;
   bool matrix_solve_success = false;
+
   const auto max_nlte_dimension = get_max_nlte_dimension();
 
   // will hold the un-normalised population densities [cm^-3]
