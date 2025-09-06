@@ -30,6 +30,6 @@ repos:
       hooks:
           - id: make
             name: make
-            entry: make OPTIMIZE=OFF
+            entry: make -j OPTIMIZE=OFF
             language: system
             pass_filenames: false
