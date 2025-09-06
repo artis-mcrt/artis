@@ -97,7 +97,7 @@ jobs:
               uses: actions/cache@v4
               with:
                   path: /opt/gcc-15
-                  key: gcc-${{ matrix.compiler.ver }}-${{ runner.os }}-${{ hashFiles('**/ChangeLog', '**/Makefile') }}
+                  key: gcc-${{ matrix.compiler.ver }}-${{ runner.os }}-${{ hashFiles('/opt/gcc-15/**/ChangeLog', '/opt/gcc-15/**/Makefile') }}
                   restore-keys: gcc-${{ matrix.compiler.ver }}-${{ runner.os }}-
 
             - name: Compile gcc-15
