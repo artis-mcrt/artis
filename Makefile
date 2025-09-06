@@ -32,7 +32,6 @@ $(info $(COMPILER_VERSION))
 CXX_STD := c++26
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := CLANG
-	CXXFLAGS += -flto=thin
 	CXXFLAGS += -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call -fsafe-buffer-usage-suggestions -Wno-unneeded-internal-declaration
 	LDFLAGS += -Wno-unused-command-line-argument
 
@@ -43,7 +42,6 @@ ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	endif
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 	COMPILER_NAME := GCC
-	CXXFLAGS += -flto=auto
 	# std::stacktrace is available in GCC 14 and later
 	# but it is not enabled by default because it slowed down the GitHub CI by > 2x
 	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \>= 14),1)
@@ -235,6 +233,13 @@ ifeq ($(OPTIMIZE),OFF)
 	CXXFLAGS += -O0
 else
 	CXXFLAGS += -O3
+
+	ifeq ($(COMPILER_NAME),CLANG)
+		CXXFLAGS += -flto=thin
+	else ifeq ($(COMPILER_NAME),GCC)
+		CXXFLAGS += -flto=auto
+	endif
+
 	ifeq ($(FASTMATH),OFF)
 		BUILD_DIR := $(BUILD_DIR)_nofastmath
 	else
