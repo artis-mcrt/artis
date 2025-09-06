@@ -237,7 +237,7 @@ else
 	ifeq ($(COMPILER_NAME),CLANG)
 		CXXFLAGS += -flto=thin
 	else ifeq ($(COMPILER_NAME),GCC)
-		CXXFLAGS += -flto=auto
+		CXXFLAGS += -flto=auto -pipe
 	endif
 
 	ifeq ($(FASTMATH),OFF)
