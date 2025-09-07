@@ -2,7 +2,7 @@
 ## SLURM META DIRECTIVES HERE DON'T WORK UNDER CENTOS VIRTUAL APPLICATION ENVIRONMENT
 ## So they are located in artis-virgo-submit.sh as cmd-line parameters to sbatch
 
-export APPTAINER_CONTAINER="/cvmfs/vae.gsi.de/vae25/containers/vae25-user_container_20250402T1038.sif"
+export APPTAINER_CONTAINER="/cvmfs/vae.gsi.de/vae25/containers/user_container-production.sif"
 export APPTAINER_NAME="vae25-user_container"
 export APPTAINER_SHARENS=true
 export APPTAINER_CONFIGDIR=/tmp/$USER
