@@ -1,0 +1,4 @@
+/home/runner/work/artis/artis/build_cmake/CMakeFiles/sn3d.dir
+/home/runner/work/artis/artis/build_cmake/CMakeFiles/exspec.dir
+/home/runner/work/artis/artis/build_cmake/CMakeFiles/edit_cache.dir
+/home/runner/work/artis/artis/build_cmake/CMakeFiles/rebuild_cache.dir

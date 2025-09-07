@@ -1,0 +1,14 @@
+2025-09-07T17:41:09Z OpenMP parallelisation is not enabled in this build (this is normal)
+2025-09-07T17:41:09Z time at start 1757266869
+2025-09-07T17:41:09Z integration method is GSL qag
+2025-09-07T17:41:09Z Command line argument specifies wall time hours '0.1', setting walltimelimitseconds = 360
+2025-09-07T17:41:09Z git branch copilot/fix-230
+2025-09-07T17:41:09Z git version: df63742
+2025-09-07T17:41:09Z git status 
+2025-09-07T17:41:09Z sn3d compiled at 17:40:36 on Sep  7 2025
+2025-09-07T17:41:09Z process id (pid): 5373
+2025-09-07T17:41:09Z MPI enabled:
+2025-09-07T17:41:09Z   rank 0 of [0..0] in MPI_COMM_WORLD
+2025-09-07T17:41:09Z   rank 0 of [0..0] in node 0 of [0..0]
+2025-09-07T17:41:09Z [info] input: do n_titer 1 iterations per timestep
+2025-09-07T17:41:09Z ERROR: Could not open file 'input.txt'
