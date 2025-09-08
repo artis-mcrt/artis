@@ -366,8 +366,6 @@ void update_packets(const int nts, std::span<Packet> packets) {
 
     std::ranges::SORT_OR_STABLE_SORT(packets, std_compare_packets_bymodelgriddensity);
 
-    printout("  update_packets timestep %d pass %3d: started at %ld\n", nts, passnumber, sys_time_start_pass);
-
     const int count_pktupdates = static_cast<int>(std::ranges::count_if(
         packets, [ts_end](const auto& pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
     const auto updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
@@ -407,10 +405,8 @@ void update_packets(const int nts, std::span<Packet> packets) {
         packets, [ts_end](const auto& pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
 
     const auto cellcacheresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
-    printout(
-        "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellcacheresets %7td (took %lds)\n",
-        nts, passnumber, std::time(nullptr), count_pktupdates, cellcacheresets,
-        std::time(nullptr) - sys_time_start_pass);
+    logprintlnfmt("  update_packets timestep {} pass {:3d}: packetsupdated {:7d} cellcacheresets {:7d} (took {}s)", nts,
+                  passnumber, count_pktupdates, cellcacheresets, std::time(nullptr) - sys_time_start_pass);
 
     passnumber++;
   }
@@ -418,11 +414,15 @@ void update_packets(const int nts, std::span<Packet> packets) {
   stats::pkt_action_counters_printout(nts);
 
   const auto time_update_packets_end_thisrank = std::time(nullptr);
-  printout("timestep %d: end of update_packets for this rank at time %ld\n", nts, time_update_packets_end_thisrank);
+  logprintlnfmt("timestep {}: finished update_packets for rank {} (took {}s)", nts, globals::my_rank,
+                time_update_packets_end_thisrank - time_update_packets_start);
 
   MPI_Barrier(MPI_COMM_WORLD);  // hold all processes once the packets are updated
+  const auto time_update_packets_end_allranks = std::time(nullptr);
   printout(
       "timestep %d: time after update packets for all processes %ld (rank %d took %lds, waited %lds, total %lds)\n",
-      nts, std::time(nullptr), globals::my_rank, time_update_packets_end_thisrank - time_update_packets_start,
-      std::time(nullptr) - time_update_packets_end_thisrank, std::time(nullptr) - time_update_packets_start);
+      nts, time_update_packets_end_allranks, globals::my_rank,
+      time_update_packets_end_thisrank - time_update_packets_start,
+      time_update_packets_end_allranks - time_update_packets_end_thisrank,
+      time_update_packets_end_allranks - time_update_packets_start);
 }
