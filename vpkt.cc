@@ -291,14 +291,14 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
       double ldist = 0;
       while (ldist < sdist) {
-        const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans, globals::linelist);
+        const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans, globals::linelist.nu);
 
         if (lineindex < 0) {
           // no more lines below the current frequency
           vpkt.next_trans = globals::nlines + 1;
           break;
         }
-        const double nutrans = globals::linelist[lineindex].nu;
+        const double nutrans = globals::linelist.nu[lineindex];
 
         vpkt.next_trans = lineindex + 1;
 
@@ -314,11 +314,11 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
         const double t_line = vpkt.prop_time + (ldist / CLIGHT);
 
-        const int element = globals::linelist[lineindex].elementindex;
-        const int ion = globals::linelist[lineindex].ionindex;
-        const int upper = globals::linelist[lineindex].upperlevelindex;
-        const int lower = globals::linelist[lineindex].lowerlevelindex;
-        const auto A_ul = globals::linelist[lineindex].einstein_A;
+        const int element = globals::linelist.elementindex[lineindex];
+        const int ion = globals::linelist.ionindex[lineindex];
+        const int upper = globals::linelist.upperlevelindex[lineindex];
+        const int lower = globals::linelist.lowerlevelindex[lineindex];
+        const auto A_ul = globals::linelist.einstein_A[lineindex];
 
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;

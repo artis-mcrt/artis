@@ -81,15 +81,17 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
   return 1e8 * CLIGHT / lambda_upper;
 }
 
-[[nodiscard]] auto get_tau_sobolev(const int nonemptymgi, const TransitionLine& line, const double t_current)
-    -> double {
-  const auto ionuniquelevelindexstart = globals::elements[line.elementindex].ions[line.ionindex].uniquelevelindexstart;
-  const int uniquelevelindex_lower = ionuniquelevelindexstart + line.lowerlevelindex;
-  const int uniquelevelindex_upper = ionuniquelevelindexstart + line.upperlevelindex;
+[[nodiscard]] auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current) -> double {
+  const auto ionuniquelevelindexstart = globals::elements[globals::linelist.elementindex[lineindex]]
+                                            .ions[globals::linelist.ionindex[lineindex]]
+                                            .uniquelevelindexstart;
+  const int uniquelevelindex_lower = ionuniquelevelindexstart + globals::linelist.lowerlevelindex[lineindex];
+  const int uniquelevelindex_upper = ionuniquelevelindexstart + globals::linelist.upperlevelindex[lineindex];
 
   const double n_l = get_levelpop(nonemptymgi, uniquelevelindex_lower);
 
-  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * line.einstein_A;
+  const double B_ul =
+      CLIGHTSQUAREDOVERTWOH / pow(globals::linelist.nu[lineindex], 3) * globals::linelist.einstein_A[lineindex];
   const double B_lu = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * B_ul;
 
   const double n_u = get_levelpop(nonemptymgi, uniquelevelindex_upper);
@@ -102,7 +104,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_con
                         const double tau_rnd,  // random optical depth until which the packet travels
                         const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
                         const double nu_cmf_abort, const double d_nu_on_d_l, const double doppler,
-                        const std::span<const TransitionLine> linelist) -> std::tuple<double, int, bool> {
+                        const TransitionLines& linelist) -> std::tuple<double, int, bool> {
   auto pos = pkt.pos;
   auto nu_cmf = pkt.nu_cmf;
   auto e_cmf = pkt.e_cmf;
@@ -119,7 +121,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_con
     // create therefore new variables in packet, which contain next_lowerlevel, ...
 
     // returns negative value if nu_cmf > nu_trans
-    const int lineindex = closest_transition(nu_cmf, next_trans, linelist);
+    const int lineindex = closest_transition(nu_cmf, next_trans, linelist.nu);
 
     if (lineindex < 0) [[unlikely]] {
       // no line interaction possible - check whether continuum process occurs in cell
@@ -136,9 +138,8 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_con
     }
 
     // line interaction is possible (nu_cmf > nu_trans)
-    const auto& line = globals::linelist[lineindex];
 
-    const double nu_trans = line.nu;
+    const double nu_trans = linelist.nu[lineindex];
 
     // helper variable to overcome numerical problems after line scattering
     // further scattering events should be located at lower frequencies to prevent
@@ -158,7 +159,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_con
         return {std::numeric_limits<double>::max(), next_trans - 1, false};
       }
 
-      const double tau_line = get_tau_sobolev(nonemptymgi, line, prop_time);
+      const double tau_line = get_tau_sobolev(nonemptymgi, lineindex, prop_time);
 
       // printout("[debug] get_event:     tau_line %g\n", tau_line);
       // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
@@ -167,9 +168,9 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_con
         // bound-bound process occurs
         // printout("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
 
-        mastate = {.element = line.elementindex,
-                   .ion = line.ionindex,
-                   .level = line.upperlevelindex,
+        mastate = {.element = linelist.elementindex[lineindex],
+                   .ion = linelist.ionindex[lineindex],
+                   .level = linelist.upperlevelindex[lineindex],
                    .activatingline = lineindex};
 
         if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
@@ -1049,9 +1050,9 @@ void calculate_expansion_opacities(const int nonemptymgi) {
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
   // find the first line with nu below the upper limit of the first bin
-  int lineindex = static_cast<int>(std::ranges::lower_bound(globals::linelist, get_expopac_bin_nu_upper(0),
-                                                            std::ranges::greater{}, &TransitionLine::nu) -
-                                   globals::linelist.begin());
+  int lineindex = static_cast<int>(
+      std::ranges::lower_bound(globals::linelist.nu, get_expopac_bin_nu_upper(0), std::ranges::greater{}) -
+      globals::linelist.nu.begin());
 
   double kappa_planck_cumulative = 0.;
 
@@ -1059,9 +1060,9 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     double bin_linesum = 0.;
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
 
-    while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= nu_lower) {
-      const auto tau_line = static_cast<float>(get_tau_sobolev(nonemptymgi, globals::linelist[lineindex], t_mid));
-      const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
+    while (lineindex < globals::nlines && globals::linelist.nu[lineindex] >= nu_lower) {
+      const auto tau_line = static_cast<float>(get_tau_sobolev(nonemptymgi, lineindex, t_mid));
+      const auto linelambda = 1e8 * CLIGHT / globals::linelist.nu[lineindex];
       bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
       lineindex++;
     }

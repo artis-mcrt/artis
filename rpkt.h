@@ -83,16 +83,16 @@ void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);
 // find the next transition lineindex redder than nu_cmf
 // for the propagation through non empty cells
 // return -1 if no transition can be reached
-constexpr auto closest_transition(const double nu_cmf, const int next_trans,
-                                  const std::span<const TransitionLine> linelist) -> int {
-  const int nlines = static_cast<int>(linelist.size());
+constexpr auto closest_transition(const double nu_cmf, const int next_trans, const std::span<const double>& linelistnu)
+    -> int {
+  const int nlines = static_cast<int>(linelistnu.size());
   if (next_trans > (nlines - 1)) {
     // packet is tagged as having no more line interactions
     return -1;
   }
   // if nu_cmf is smaller than the lowest frequency in the linelist,
   // no line interaction is possible: return negative value as a flag
-  if (nu_cmf < linelist[nlines - 1].nu) {
+  if (nu_cmf < linelistnu[nlines - 1]) {
     return -1;
   }
 
@@ -101,7 +101,7 @@ constexpr auto closest_transition(const double nu_cmf, const int next_trans,
     // current nu_cmf which might be smaller than globals::linelist[left].nu due to propagation errors
     return next_trans;
   }
-  if (nu_cmf >= linelist[0].nu) {
+  if (nu_cmf >= linelistnu[0]) {
     // if nu_cmf is larger than the highest frequency in the the linelist,
     // interaction with the first line occurs - no search
     return 0;
@@ -112,8 +112,8 @@ constexpr auto closest_transition(const double nu_cmf, const int next_trans,
 
   // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
   // lower_bound matches the first element where the comparison function is false
-  const int matchindex = static_cast<int>(
-      std::ranges::lower_bound(linelist, nu_cmf, std::ranges::greater{}, &TransitionLine::nu) - linelist.begin());
+  const int matchindex =
+      static_cast<int>(std::ranges::lower_bound(linelistnu, nu_cmf, std::ranges::greater{}) - linelistnu.begin());
 
   if (matchindex >= nlines) [[unlikely]] {
     return -1;

@@ -478,7 +478,7 @@ void write_to_file(const int nonemptymgi, const int timestep) {
       {
         const int jblueindex = -2 - binindex;  // -2 is the first detailed line, -3 is the second, etc
         const int lineindex = detailed_lineindicies[jblueindex];
-        const double nu_trans = globals::linelist[lineindex].nu;
+        const double nu_trans = globals::linelist.nu[lineindex];
         nu_lower = nu_trans;
         nu_upper = nu_trans;
         nuJ_out = -1.;
@@ -529,14 +529,14 @@ void init(const int my_rank, const int ndo_nonempty) {
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     for (int i = 0; i < globals::nlines; i++) {
-      const int element = globals::linelist[i].elementindex;
+      const int element = globals::linelist.elementindex[i];
       const int Z = get_atomicnumber(element);
       if (Z == 26) {
-        const int lowerlevel = globals::linelist[i].lowerlevelindex;
+        const int lowerlevel = globals::linelist.lowerlevelindex[i];
         // const int upperlevel = linelist[i].upperlevelindex;
         // const int ion = linelist[i].ionindex;
         // const int ionstage = get_ionstage(element, ion);
-        const double A_ul = globals::linelist[i].einstein_A;
+        const double A_ul = globals::linelist.einstein_A[i];
 
         bool addline = false;
         // if (ionstage == 1 && lowerlevel == 6 && upperlevel == 55)

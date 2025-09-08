@@ -114,14 +114,14 @@ struct Element {
   bool has_nlte_levels{false};
 };
 
-struct TransitionLine {
-  double nu;  // Frequency of the line transition
-  float einstein_A;
-  int elementindex;  // It's a transition of element (not its atomic number,
-                     // but the (x-1)th element included in the simulation.
-  int ionindex;  // The same for the elements ion
-  int upperlevelindex;  // And the participating upper
-  int lowerlevelindex;  // and lower levels
+struct TransitionLines {
+  std::span<const double> nu;  // Frequency of the line transition
+  std::span<const float> einstein_A;
+  std::span<const int> elementindex;  // It's a transition of element (not its atomic number,
+                                      // but the (x-1)th element included in the simulation.
+  std::span<const int> ionindex;  // The same for the elements ion
+  std::span<const int> upperlevelindex;  // And the participating upper
+  std::span<const int> lowerlevelindex;  // and lower levels
 };
 
 struct GSLIntegrationParas {
@@ -289,7 +289,7 @@ inline AllLevels alllevels{};
 inline std::vector<Element> elements;
 
 inline int nlines{-1};
-inline std::span<const TransitionLine> linelist{};
+inline TransitionLines linelist{};
 inline std::vector<BFListEntry> bflist;
 
 inline std::vector<double> bfestim_nu_edge{};

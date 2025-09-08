@@ -76,27 +76,27 @@ void initialise_linestat_file() {
   linestat_file = fstream_required("linestat.out", std::ios::out | std::ios::trunc);
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << CLIGHT / globals::linelist[i].nu << ' ';  // wavelength in cm
+    linestat_file << CLIGHT / globals::linelist.nu[i] << ' ';  // wavelength in cm
   }
   linestat_file << '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << get_atomicnumber(globals::linelist[i].elementindex) << ' ';
+    linestat_file << get_atomicnumber(globals::linelist.elementindex[i]) << ' ';
   }
   linestat_file << '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << get_ionstage(globals::linelist[i].elementindex, globals::linelist[i].ionindex) << ' ';
+    linestat_file << get_ionstage(globals::linelist.elementindex[i], globals::linelist.ionindex[i]) << ' ';
   }
   linestat_file << '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << (globals::linelist[i].upperlevelindex + 1) << ' ';
+    linestat_file << (globals::linelist.upperlevelindex[i] + 1) << ' ';
   }
   linestat_file << '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << (globals::linelist[i].lowerlevelindex + 1) << ' ';
+    linestat_file << (globals::linelist.lowerlevelindex[i] + 1) << ' ';
   }
   linestat_file << '\n';
 

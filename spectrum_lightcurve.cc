@@ -105,9 +105,9 @@ void printout_tracemission_stats() {
       if (encontrib > 0.)  // lines that emit/absorb some energy
       {
         const int lineindex = traceemissionabsorption[i].lineindex;
-        const int element = globals::linelist[lineindex].elementindex;
-        const int ion = globals::linelist[lineindex].ionindex;
-        const double linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
+        const int element = globals::linelist.elementindex[lineindex];
+        const int ion = globals::linelist.ionindex[lineindex];
+        const double linelambda = 1e8 * CLIGHT / globals::linelist.nu[lineindex];
         // flux-weighted average radial velocity of emission in km/s
         double v_rad{NAN};
         if (mode == 0) {
@@ -118,14 +118,14 @@ void printout_tracemission_stats() {
                   traceemissionabsorption[i].energyabsorbed / 1e5;
         }
 
-        const int lower = globals::linelist[lineindex].lowerlevelindex;
-        const int upper = globals::linelist[lineindex].upperlevelindex;
+        const int lower = globals::linelist.lowerlevelindex[lineindex];
+        const int upper = globals::linelist.upperlevelindex[lineindex];
 
         const double statweight_target = stat_weight(element, ion, upper);
         const double statweight_lower = stat_weight(element, ion, lower);
 
         const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
-        const double A_ul = globals::linelist[lineindex].einstein_A;
+        const double A_ul = globals::linelist.einstein_A[lineindex];
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = statweight_target / statweight_lower * B_ul;
 
@@ -144,8 +144,8 @@ void printout_tracemission_stats() {
 
         printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n", encontrib,
                  100 * encontrib / totalenergy, get_atomicnumber(element), get_ionstage(element, ion),
-                 globals::linelist[lineindex].upperlevelindex, globals::linelist[lineindex].lowerlevelindex,
-                 globals::alltrans.coll_str[downtransid], globals::linelist[lineindex].einstein_A,
+                 globals::linelist.upperlevelindex[lineindex], globals::linelist.lowerlevelindex[lineindex],
+                 globals::alltrans.coll_str[downtransid], globals::linelist.einstein_A[lineindex],
                  static_cast<int>(globals::alltrans.forbidden[downtransid]), linelambda, v_rad, B_lu, B_ul);
       } else {
         break;
@@ -163,8 +163,8 @@ auto get_proccount() -> int { return (2 * get_nelements() * get_max_nions()) + 1
 auto columnindex_from_emissiontype(const int et) -> int {
   if (et >= 0) {
     // bb-emission
-    const int element = globals::linelist[et].elementindex;
-    const int ion = globals::linelist[et].ionindex;
+    const int element = globals::linelist.elementindex[et];
+    const int ion = globals::linelist.ionindex[et];
     return (element * get_max_nions()) + ion;
   }
   if (et == EMTYPE_FREEFREE) {
@@ -576,8 +576,8 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra, Spec
         const int at = pkt.absorptiontype;
         if (at >= 0) {
           // bb-emission
-          const int element = globals::linelist[at].elementindex;
-          const int ion = globals::linelist[at].ionindex;
+          const int element = globals::linelist.elementindex[at];
+          const int ion = globals::linelist.ionindex[at];
           const auto absindex = get_absindex(nts, nnu_abs) + (element * get_max_nions()) + ion;
           atomicadd_always(spectra.absorptionalltimesteps[absindex], deltaE_absorption);
 
