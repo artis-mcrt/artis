@@ -92,20 +92,6 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * line.einstein_A;
   const double B_lu = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * B_ul;
 
-  return std::max(B_lu * n_l * HCLIGHTOVERFOURPI * t_current, 0.);
-}
-
-[[nodiscard]] auto get_tau_sobolev_subupdown(const int nonemptymgi, const TransitionLine& line, const double t_current)
-    -> double {
-  const auto ionuniquelevelindexstart = globals::elements[line.elementindex].ions[line.ionindex].uniquelevelindexstart;
-  const int uniquelevelindex_lower = ionuniquelevelindexstart + line.lowerlevelindex;
-  const int uniquelevelindex_upper = ionuniquelevelindexstart + line.upperlevelindex;
-
-  const double n_l = get_levelpop(nonemptymgi, uniquelevelindex_lower);
-
-  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(line.nu, 3) * line.einstein_A;
-  const double B_lu = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * B_ul;
-
   const double n_u = get_levelpop(nonemptymgi, uniquelevelindex_upper);
   return std::max((B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current, 0.);
 }
@@ -172,7 +158,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_con
         return {std::numeric_limits<double>::max(), next_trans - 1, false};
       }
 
-      const double tau_line = get_tau_sobolev_subupdown(nonemptymgi, line, prop_time);
+      const double tau_line = get_tau_sobolev(nonemptymgi, line, prop_time);
 
       // printout("[debug] get_event:     tau_line %g\n", tau_line);
       // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
