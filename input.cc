@@ -934,20 +934,20 @@ void read_autoion_data() {
   // the autoionizing level populations to that for all purposes outside the NLTE solber. For this, the ions need to
   // know how many autoionizing levels they have. So count those up now.
 
-  int checkautoall = 0;
+  int nlevels_autoion_sum = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels = get_nlevels(element, ion);
-      int nauto = 0;
+      int nlevels_autoion = 0;
       for (int level = 0; level < nlevels; level++) {
-        nauto += get_nautoiondowntrans(element, ion, level);
+        nlevels_autoion += get_nautoiondowntrans(element, ion, level);
       }
-      globals::elements[element].ions[ion].nlevels_autoion = nauto;
-      checkautoall += nauto;
+      globals::elements[element].ions[ion].nlevels_autoion = nlevels_autoion;
+      nlevels_autoion_sum += nlevels_autoion;
     }
   }
-  assert_always(checkautoall == std::ssize(temp_allautoion));
+  assert_always(nlevels_autoion_sum == std::ssize(temp_allautoion));
 }
 
 void read_phixs_data() {

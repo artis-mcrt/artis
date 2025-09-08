@@ -327,10 +327,30 @@ inline auto get_includedions() -> int {
   return globals::elements[element].ions[ion].nlevels_autoion;
 }
 
-// ion has NLTE levels, but this one is not NLTE => is in the superlevel
+// the number of downward autoionization transitions from the specified level
+[[nodiscard]] inline auto get_nautoiondowntrans(const int uniquelevelindex) -> int {
+  return globals::alllevels.nautoiondowntrans[uniquelevelindex];
+}
+
+[[nodiscard]] inline auto get_nautoiondowntrans(const int element, const int ion, const int level) -> int {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  return get_nautoiondowntrans(get_uniquelevelindex(element, ion, level));
+}
+
+// level has autoionising de-excitation transition
+[[nodiscard]] inline auto level_isautoionising(const int element, const int ion, const int level) -> bool {
+  assert_testmodeonly(get_nlevels_autoion(element, ion) < get_nlevels(element, ion));
+  const bool is_autoionising = level >= (get_nlevels(element, ion) - get_nlevels_autoion(element, ion));
+  assert_testmodeonly(is_autoionising == (get_nautoiondowntrans(element, ion, level) > 0));
+  return is_autoionising;
+}
+
+// ion has NLTE levels, but this one is not NLTE and not autoionising => is in the superlevel
 [[nodiscard]] inline auto level_isinsuperlevel(const int element, const int ion, const int level) -> bool {
   return (!is_nlte(element, ion, level) && level != 0 && (get_nlevels_excited_nlte(element, ion) > 0) &&
-          (level < (get_nlevels(element, ion) - get_nlevels_autoion(element, ion))));
+          !level_isautoionising(element, ion, level));
 }
 
 [[nodiscard]] inline auto get_nlevels_groundterm(const int element, const int ion) -> int {
@@ -412,18 +432,6 @@ inline auto get_includedions() -> int {
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
   return get_nuptrans(get_uniquelevelindex(element, ion, level));
-}
-
-// the number of downward autoionization transitions from the specified level
-[[nodiscard]] inline auto get_nautoiondowntrans(const int uniquelevelindex) -> int {
-  return globals::alllevels.nautoiondowntrans[uniquelevelindex];
-}
-
-[[nodiscard]] inline auto get_nautoiondowntrans(const int element, const int ion, const int level) -> int {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
-  return get_nautoiondowntrans(get_uniquelevelindex(element, ion, level));
 }
 
 // the number of upward autoionization transitions from the specified level
