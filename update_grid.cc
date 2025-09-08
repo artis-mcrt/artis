@@ -518,10 +518,10 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   }
 
   const float nne = grid::get_nne(nonemptymgi);
-  const double compton_optical_depth = SIGMA_T * nne * grid::wid_init(mgi, 0) * tratmid;
+  const double compton_optical_depth_across_cell = SIGMA_T * nne * grid::wid_init(mgi, 0) * tratmid;
 
   const double radial_pos = grid::get_modelcell_mean_radial_pos(mgi, tratmid);
-  const double grey_optical_deptha =
+  const double grey_optical_depth_across_cell =
       grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) * grid::wid_init(mgi, 0) * tratmid;
   // cube corners will have radial pos > rmax, so clamp to 0.
   const double dist_to_obs = std::max(0., (globals::rmax * tratmid) - radial_pos);
@@ -530,7 +530,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   printout(
       "modelgridcell %d, compton optical depth (/propgridcell) %g, grey optical depth "
       "(/propgridcell) %g\n",
-      mgi, compton_optical_depth, grey_optical_deptha);
+      mgi, compton_optical_depth_across_cell, grey_optical_depth_across_cell);
   printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, dist_to_obs, grey_optical_depth);
 
   grid::modelgrid[nonemptymgi].grey_depth = grey_optical_depth;
