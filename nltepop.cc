@@ -116,8 +116,7 @@ struct RateMatrices {
 // this is the matrix/vector index for the NLTE solver that is handling all ions of a single element
 auto get_nlte_vector_index(const int element, const int ion, const int level, const int first_ion_used) -> int {
   // have to convert from nlte_pops index to nlte_vector index
-  // the difference is that nlte vectors apply to a single element and include ground states
-  // The (+ ion) term accounts for the ground state population indices that are not counted in the NLTE array
+  // the difference is that nlte vectors apply to a single element and include ground and autoionising states
   int offset_autoion = 0;
   for (int dion = first_ion_used; dion < ion; dion++) {
     if (ion_has_superlevel(element, dion)) {
@@ -126,6 +125,8 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
   }
   assert_testmodeonly(first_ion_used >= 0);
   assert_testmodeonly(first_ion_used < get_nions(element));
+  // The (ion - first_ion_used) term accounts for the ground state population indices that are not counted in the NLTE
+  // array
   const int gs_index = globals::elements[element].ions[ion].first_nlte -
                        globals::elements[element].ions[first_ion_used].first_nlte + (ion - first_ion_used) +
                        offset_autoion;
