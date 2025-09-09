@@ -968,11 +968,11 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
     }
   }
 
-  printout("Number of nuclides before filtering: %td\n", get_num_nuclides());
+  logprintlnfmt("Number of nuclides before filtering: {}", get_num_nuclides());
   find_decaypaths(custom_zlist, custom_alist, standard_nuclides);
   filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
 
-  printout("Number of nuclides:  %td\n", get_num_nuclides());
+  logprintlnfmt("Number of nuclides: {}", get_num_nuclides());
 
   const int maxdecaypathlength = std::accumulate(
       decaypaths.cbegin(), decaypaths.cend(), 0,
