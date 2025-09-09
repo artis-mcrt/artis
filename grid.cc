@@ -769,9 +769,9 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
   fmodel.seekg(pos_data_start);  // get back to start of data
 
   if (header_specified) {
-    printout("model.txt has header line: %s\n", headerline.c_str());
+    logprintlnfmt("model.txt has header line: {}", headerline);
   } else {
-    printout("model.txt has no header line. Using default: %s\n", headerline.c_str());
+    logprintlnfmt("model.txt has no header line. Using default: {}", headerline);
   }
 
   parse_model_headerline(headerline, zlist, alist, colnames);
