@@ -1431,14 +1431,13 @@ void read_atomicdata_files() {
   globals::linelist.upperlevelindex = linelist_upperlevelindex;
   globals::linelist.lowerlevelindex = linelist_lowerlevelindex;
 
-  const double linelist_mem_MB =
-      (globals::nlines * sizeof(double)   // nu
-       + globals::nlines * sizeof(float)  // einstein_A
-       + globals::nlines * sizeof(int)    // elementindex
-       + globals::nlines * sizeof(int)    // ionindex
-       + globals::nlines * sizeof(int)    // upperlevelindex
-       + globals::nlines * sizeof(int))   // lowerlevelindex
-      / 1024. / 1024;
+  const double linelist_mem_MB = (globals::nlines * sizeof(double)  // nu
+                                  + globals::nlines * sizeof(float)  // einstein_A
+                                  + globals::nlines * sizeof(int)  // elementindex
+                                  + globals::nlines * sizeof(int)  // ionindex
+                                  + globals::nlines * sizeof(int)  // upperlevelindex
+                                  + globals::nlines * sizeof(int))  // lowerlevelindex
+                                 / 1024. / 1024;
   printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n", linelist_mem_MB);
 
   printout("establishing connection between transitions and sorted linelist...\n");
