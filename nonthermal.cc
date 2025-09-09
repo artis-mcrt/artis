@@ -2644,12 +2644,10 @@ void read_restart_data(FILE* gridsave_file) {
       assert_always(fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in) == 1);
 
       nt_solution[nonemptymgi].frac_excitations_list_size = frac_excitations_list_size_in;
-      const auto ntexclist = get_cell_ntexcitations(nonemptymgi);
 
-      for (int excitationindex = 0; excitationindex < frac_excitations_list_size_in; excitationindex++) {
-        assert_always(fscanf(gridsave_file, "%la %la %d\n", &ntexclist[excitationindex].frac_deposition,
-                             &ntexclist[excitationindex].ratecoeffperdeposition,
-                             &ntexclist[excitationindex].alltransindex) == 3);
+      for (auto& excitation : get_cell_ntexcitations(nonemptymgi)) {
+        assert_always(fscanf(gridsave_file, "%la %la %d\n", &excitation.frac_deposition,
+                             &excitation.ratecoeffperdeposition, &excitation.alltransindex) == 3);
       }
     }
   }
