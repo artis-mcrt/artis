@@ -6,6 +6,7 @@
 #include <cctype>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -93,6 +94,8 @@ std::vector<int> ranks_nstart_nonempty;
 std::vector<int> ranks_ndo;
 std::vector<int> ranks_ndo_nonempty;
 std::span<ModelGridCellInput> modelgrid_input{};
+
+enum class BoundaryType : std::uint8_t { INNER, OUTER };
 
 // Get number of dimensions
 consteval auto get_ndim(const GridType gridtype) -> int {
@@ -1226,13 +1229,13 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 // 2-vectors or 3-vectors) or expanding circle (2D vectors)
 // returns -1 if there are no forward intersections (or if the intersection
 // is tangential to the shell)
-template <size_t S1>
+template <BoundaryType boundarytype, size_t S1>
 [[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, S1>& pos,
                                                           const std::array<double, S1>& dir, const double speed,
-                                                          const double shellradiuststart, const bool isinnerboundary,
-                                                          const double tstart) -> double {
+                                                          const double shellradiuststart, const double tstart)
+    -> double {
   static_assert(S1 == 2 || S1 == 3);
-  assert_always(shellradiuststart > 0);
+  assert_testmodeonly(shellradiuststart > 0);
 
   // quadratic equation for intersection of ray with sphere
   // a*d^2 + b*d + c = 0
@@ -1244,8 +1247,8 @@ template <size_t S1>
 
   if (discriminant < 0) {
     // no intersection
-    assert_always(isinnerboundary);
-    assert_always(shellradiuststart < vec_len(pos));
+    assert_testmodeonly(boundarytype == BoundaryType::INNER);
+    assert_testmodeonly(shellradiuststart < vec_len(pos));
     return -1;
   }
 
@@ -1269,7 +1272,7 @@ template <size_t S1>
     const double v_rad_final2 = dot(dir, posfinal2) * speed / vec_len(posfinal2);
 
     // invalidate any solutions that require entering the boundary from the wrong radial direction
-    if (isinnerboundary) {
+    if constexpr (boundarytype == BoundaryType::INNER) {
       // if the packet's radial velocity at intersection is greater than the inner shell's radial velocity,
       // then it is catching up from below the inner shell and should pass through it
       if (v_rad_final1 > v_rad_shell) {
@@ -1317,7 +1320,7 @@ template <size_t S1>
 
   // one intersection
   // ignore this and don't change which cell the packet is in
-  assert_always(shellradiuststart <= vec_len(pos));
+  assert_testmodeonly(shellradiuststart <= vec_len(pos));
   return -1.;
 }
 
@@ -2427,7 +2430,8 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
     const double speed = vec_len(dir) * CLIGHT_PROP;  // just in case dir is not normalised
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
-    const double d_coordmaxboundary = expanding_shell_intersection(pos, dir, speed, r_outer, false, tstart);
+    const double d_coordmaxboundary =
+        expanding_shell_intersection<BoundaryType::OUTER>(pos, dir, speed, r_outer, tstart);
 
     // upper d coordinate of the current cell
     if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
@@ -2439,7 +2443,8 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 
     const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
     if (r_inner > 0.) {
-      const double d_coordminboundary = expanding_shell_intersection(pos, dir, speed, r_inner, true, tstart);
+      const double d_coordminboundary =
+          expanding_shell_intersection<BoundaryType::INNER>(pos, dir, speed, r_inner, tstart);
       // lower d coordinate of the current cell
       if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
         distance = d_coordminboundary;
@@ -2462,7 +2467,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
     const double d_rcyl_coordmaxboundary =
-        expanding_shell_intersection(posnoz, dirnoz, xyspeed, r_outer, false, tstart);
+        expanding_shell_intersection<BoundaryType::OUTER>(posnoz, dirnoz, xyspeed, r_outer, tstart);
     if (d_rcyl_coordmaxboundary >= 0.) {
       // how far did the packet travel in the z direction during this time?
       const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * dir[2] * CLIGHT_PROP;
@@ -2482,7 +2487,7 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
     if (r_inner > 0) {
       // calculate the distance in the xy plane to the inner boundary
       const double d_rcyl_coordminboundary =
-          expanding_shell_intersection(posnoz, dirnoz, xyspeed, r_inner, true, tstart);
+          expanding_shell_intersection<BoundaryType::INNER>(posnoz, dirnoz, xyspeed, r_inner, tstart);
       if (d_rcyl_coordminboundary >= 0.) {
         const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * dir[2] * CLIGHT_PROP;
         // distance from two perpendicular components to the r_cyl lower boundary
