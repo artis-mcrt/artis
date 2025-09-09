@@ -46,14 +46,14 @@ float kpktdiffusion_timescale{0.};
 
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
-template <bool update_cooling_contrib_list>
+template <bool update_cellcache_contribs>
 auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const int ion, const int indexionstart,
                                  const int cellcacheslotid, double* const C_ff, double* const C_fb, double* const C_exc,
                                  double* const C_ionisation) -> double {
   const auto nne = grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
 
-  if constexpr (update_cooling_contrib_list) {
+  if constexpr (update_cellcache_contribs) {
     assert_always(indexionstart >= 0);
   }
 
@@ -69,7 +69,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     const double C_ff_ion = 1.426e-27 * sqrt(T_e) * pow(ioncharge, 2) * nncurrention * nne;
     C_ion += C_ff_ion;
 
-    if constexpr (update_cooling_contrib_list) {
+    if constexpr (update_cellcache_contribs) {
       globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
       assert_testmodeonly(coolinglist[i].type == CoolingType::FREEFREE);
@@ -85,7 +85,8 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
     const auto uniquelevelindex = ionuniquelevelindexstart + level;
-    const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+    const double nnlevel = update_cellcache_contribs ? get_levelpop(nonemptymgi, uniquelevelindex)
+                                                     : calculate_levelpop(nonemptymgi, element, ion, level);
 
     const double epsilon_current = epsilon(uniquelevelindex);
     const double statweight = stat_weight(uniquelevelindex);
@@ -100,11 +101,11 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
                        col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight) *
                        epsilon_trans;
       C_ion += C;
-      if constexpr (!update_cooling_contrib_list) {
+      if constexpr (!update_cellcache_contribs) {
         *C_exc += C;
       }
     }
-    if constexpr (update_cooling_contrib_list) {
+    if constexpr (update_cellcache_contribs) {
       if (nuptrans > 0) {
         globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
@@ -115,7 +116,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     }
   }
 
-  if (ion < (get_nions(element) - 1)) {
+  if (ion < (get_nions(element) - 1) && globals::nbfcontinua > 0) {
     const double nnupperion = get_nnion(nonemptymgi, element, ion + 1);
 
     // ionisation to higher ionisation stage
@@ -133,7 +134,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
                          epsilon_trans;
 
         C_ion += C;
-        if constexpr (update_cooling_contrib_list) {
+        if constexpr (update_cellcache_contribs) {
           globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
           assert_testmodeonly(coolinglist[i].type == CoolingType::COLLION);
@@ -150,21 +151,22 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     // fb creation of r-pkt
     // free bound rates are calculated from the lower ion, but associated to the higher ion
     for (int level = 0; level < nionisinglevels; level++) {
-      const int nphixstargets = get_nphixstargets(element, ion, level);
+      const auto uniquelevelindex = ionuniquelevelindexstart + level;
+      const int nphixstargets = get_nphixstargets(uniquelevelindex);
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
         const double pop =
-            (BFCOOLING_USELEVELPOPNOTIONPOP ? get_levelpop(nonemptymgi, element, ion + 1,
-                                                           get_phixsupperlevel(element, ion, level, phixstargetindex))
-                                            : nnupperion);
+            (BFCOOLING_USELEVELPOPNOTIONPOP
+                 ? get_levelpop(nonemptymgi, element, ion + 1, get_phixsupperlevel(uniquelevelindex, phixstargetindex))
+                 : nnupperion);
         const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * pop * nne;
         C_ion += C;
 
-        if constexpr (update_cooling_contrib_list) {
+        if constexpr (update_cellcache_contribs) {
           globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
           assert_testmodeonly(coolinglist[i].type == CoolingType::FREEBOUND);
           assert_testmodeonly(coolinglist[i].level == level);
-          assert_testmodeonly(coolinglist[i].upperlevel == get_phixsupperlevel(element, ion, level, phixstargetindex));
+          assert_testmodeonly(coolinglist[i].upperlevel == get_phixsupperlevel(uniquelevelindex, phixstargetindex));
 
           i++;
         } else {
@@ -174,7 +176,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     }
   }
 
-  if constexpr (update_cooling_contrib_list) {
+  if constexpr (update_cellcache_contribs) {
     assert_testmodeonly(indexionstart == get_coolinglistoffset(element, ion));
     assert_always(i == indexionstart + get_ncoolingterms_ion(element, ion));
   }
