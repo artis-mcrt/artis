@@ -194,7 +194,7 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
     }
 
     // level is in the superlevel
-    assert_testmodeonly(level_isinsuperlevel(element, ion, level));
+    assert_testmodeonly(level_isinsuperlevel(element, ion, level) || level_isautoionising(element, ion, level));
 
     const double superlevelpop_over_rho = get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion);
     if (superlevelpop_over_rho < 0.) {
