@@ -1291,7 +1291,7 @@ void read_atomicdata_files() {
   printout("total uptrans %d\n", totaluptrans);
   printout("total downtrans %d\n", totaldowntrans);
 
-  printout("[info] mem_usage: transition lists occupy %.3f MB (shared on node)\n",
+  printout("[info] mem_usage: transition lists occupy %.3f MB (node shared memory)\n",
            (totaluptrans + totaldowntrans) * (2 * sizeof(int) + 3 * sizeof(float) + sizeof(bool)) / 1024. / 1024.);
 
   if (globals::rank_in_node == 0) {
