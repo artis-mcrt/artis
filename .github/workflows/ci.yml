@@ -222,7 +222,7 @@ jobs:
 
             - name: Set up Python
               if: always() && inputs.testmode != 'ON'
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v6
 
             - name: Install artistools
               if: always() && inputs.testmode != 'ON'
