@@ -1730,10 +1730,10 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
       if (ntexc.frac_deposition > 0.) {
         const auto alltransindex = ntexc.alltransindex;
         const auto lineindex = globals::alltrans.lineindex[alltransindex];
-        const int element = globals::linelist[lineindex].elementindex;
-        const int ion = globals::linelist[lineindex].ionindex;
-        const int lower = globals::linelist[lineindex].lowerlevelindex;
-        const int upper = globals::linelist[lineindex].upperlevelindex;
+        const int element = globals::linelist.elementindex[lineindex];
+        const int ion = globals::linelist.ionindex[lineindex];
+        const int lower = globals::linelist.lowerlevelindex[lineindex];
+        const int upper = globals::linelist.upperlevelindex[lineindex];
         const auto lower_uniquelevelindex = get_uniquelevelindex(element, ion, lower);
         const auto upper_uniquelevelindex = get_uniquelevelindex(element, ion, upper);
         const auto nnlevel_lower = get_levelpop(nonemptymgi, lower_uniquelevelindex);
@@ -2379,9 +2379,9 @@ __host__ __device__ void do_ntlepton_deposit(Packet& pkt) {
         const double frac_deposition_exc = ntexcitation.frac_deposition;
         if (zrand < frac_deposition_exc) {
           const auto lineindex = globals::alltrans.lineindex[ntexcitation.alltransindex];
-          const int element = globals::linelist[lineindex].elementindex;
-          const int ion = globals::linelist[lineindex].ionindex;
-          const int upper = globals::linelist[lineindex].upperlevelindex;
+          const int element = globals::linelist.elementindex[lineindex];
+          const int ion = globals::linelist.ionindex[lineindex];
+          const int upper = globals::linelist.upperlevelindex[lineindex];
 
           stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC);
           stats::increment(stats::COUNTER_INTERACTIONS);

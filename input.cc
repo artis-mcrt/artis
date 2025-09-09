@@ -49,7 +49,7 @@ namespace {
 
 const int groundstate_index_in = 1;  // starting level index in the input files
 
-// only used temporarily during input
+// temporary for input before copy to globals::alltrans structure of arrays
 struct Transition {
   int lower;
   int upper;
@@ -63,6 +63,16 @@ struct Transition {
 struct PhotoionTarget {
   double probability;  // fraction of phixs cross section leading to this final level
   int levelindex;  // index of upper ion level after photoionisation
+};
+
+// temporary for reading before sorting and copy to globals::linelist structure of arrays
+struct TransitionLine {
+  double nu;
+  float einstein_A;
+  int elementindex;
+  int ionindex;
+  int upperlevelindex;
+  int lowerlevelindex;
 };
 
 constexpr std::array<std::string_view, 24> inputlinecomments = {
@@ -1391,19 +1401,44 @@ void read_atomicdata_files() {
   globals::alltrans.forbidden = alltrans_forbidden;
 
   // create a linelist shared on node and then copy data across, freeing the local copy
-  auto linelist = MPI_shared_malloc_span<TransitionLine>(globals::nlines);
+
+  auto linelist_nu = MPI_shared_malloc_span<double>(globals::nlines);
+  auto linelist_einstein_A = MPI_shared_malloc_span<float>(globals::nlines);
+  auto linelist_elementindex = MPI_shared_malloc_span<int>(globals::nlines);
+  auto linelist_ionindex = MPI_shared_malloc_span<int>(globals::nlines);
+  auto linelist_upperlevelindex = MPI_shared_malloc_span<int>(globals::nlines);
+  auto linelist_lowerlevelindex = MPI_shared_malloc_span<int>(globals::nlines);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_linelist) == globals::nlines);
-    std::ranges::copy(temp_linelist, linelist.begin());
+    for (int t = 0; t < globals::nlines; t++) {
+      linelist_nu[t] = temp_linelist[t].nu;
+      linelist_einstein_A[t] = temp_linelist[t].einstein_A;
+      linelist_elementindex[t] = temp_linelist[t].elementindex;
+      linelist_ionindex[t] = temp_linelist[t].ionindex;
+      linelist_upperlevelindex[t] = temp_linelist[t].upperlevelindex;
+      linelist_lowerlevelindex[t] = temp_linelist[t].lowerlevelindex;
+    }
   }
   temp_linelist.clear();
   temp_linelist.shrink_to_fit();
-
   MPI_Barrier(MPI_COMM_WORLD);
-  globals::linelist = linelist;
-  printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
-           globals::nlines * sizeof(TransitionLine) / 1024. / 1024);
+
+  globals::linelist.nu = linelist_nu;
+  globals::linelist.einstein_A = linelist_einstein_A;
+  globals::linelist.elementindex = linelist_elementindex;
+  globals::linelist.ionindex = linelist_ionindex;
+  globals::linelist.upperlevelindex = linelist_upperlevelindex;
+  globals::linelist.lowerlevelindex = linelist_lowerlevelindex;
+
+  const double linelist_mem_MB =
+      (globals::nlines * sizeof(double)  // nu
+       + globals::nlines * sizeof(float)  // einstein_A
+       + globals::nlines * sizeof(int) * 4  // elementindex, ionindex, upperlevelindex, lowerlevelindex
+       ) /
+      1024. / 1024;
+
+  printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n", linelist_mem_MB);
 
   printout("establishing connection between transitions and sorted linelist...\n");
 
@@ -1416,10 +1451,10 @@ void read_atomicdata_files() {
       continue;
     }
 
-    const int element = globals::linelist[lineindex].elementindex;
-    const int ion = globals::linelist[lineindex].ionindex;
-    const int lowerlevel = globals::linelist[lineindex].lowerlevelindex;
-    const int upperlevel = globals::linelist[lineindex].upperlevelindex;
+    const int element = globals::linelist.elementindex[lineindex];
+    const int ion = globals::linelist.ionindex[lineindex];
+    const int lowerlevel = globals::linelist.lowerlevelindex[lineindex];
+    const int upperlevel = globals::linelist.upperlevelindex[lineindex];
 
     // there is never more than one transition per pair of levels,
     // so find the first up and the first down transition that match: element, ion, lowerlevel, upperlevel
