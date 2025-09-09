@@ -1333,6 +1333,7 @@ void read_atomicdata_files() {
   auto alllevels_nuptrans = MPI_shared_malloc_span<int>(nlevels);
   auto alllevels_epsilon = MPI_shared_malloc_span<double>(nlevels);
   auto alllevels_statweight = MPI_shared_malloc_span<float>(nlevels);
+  auto alllevels_matransblock_start = MPI_shared_malloc_span<int>(nlevels);
   globals::alllevels.allautoion_start = MPI_shared_malloc_span<int>(nlevels);
   globals::alllevels.nautoiondowntrans = MPI_shared_malloc_span<int>(nlevels);
   globals::alllevels.nautoionuptrans = MPI_shared_malloc_span<int>(nlevels);
@@ -1350,12 +1351,16 @@ void read_atomicdata_files() {
     std::ranges::fill(globals::alllevels.phixstargetstart, -1);
     std::ranges::fill(globals::alllevels.bflist_start, -1);
     std::ranges::fill(globals::alllevels.closestgroundlevelcont, -1);
+
+    int chtransindex = 0;
     for (size_t i = 0; i < temp_alllevels.size(); i++) {
       alllevels_alltrans_startdown[i] = temp_alllevels[i].alltrans_startdown;
       alllevels_ndowntrans[i] = temp_alllevels[i].ndowntrans;
       alllevels_nuptrans[i] = temp_alllevels[i].nuptrans;
       alllevels_epsilon[i] = temp_alllevels[i].epsilon;
       alllevels_statweight[i] = temp_alllevels[i].stat_weight;
+      alllevels_matransblock_start[i] = chtransindex;
+      chtransindex += ((2 * alllevels_ndowntrans[i]) + alllevels_nuptrans[i]);
     }
   }
   MPI_Barrier(globals::mpi_comm_node);
@@ -1364,6 +1369,7 @@ void read_atomicdata_files() {
   globals::alllevels.nuptrans = alllevels_nuptrans;
   globals::alllevels.epsilon = alllevels_epsilon;
   globals::alllevels.statweight = alllevels_statweight;
+  globals::alllevels.matransblock_start = alllevels_matransblock_start;
   temp_alllevels.clear();
   temp_alllevels.shrink_to_fit();
 
@@ -1548,7 +1554,6 @@ void setup_cellcache() {
     }
     resize_exactly(globals::cellcache[cellcachenum].alllevels_pops, get_includedlevels());
     resize_exactly(globals::cellcache[cellcachenum].alllevels_maprocessrates, get_includedlevels());
-    resize_exactly(globals::cellcache[cellcachenum].alllevels_matransblock_start, get_includedlevels());
 
     if (allphixstargetcount > 0) {
       resize_exactly(globals::cellcache[cellcachenum].allphixstargets_corrphotoioncoeff, allphixstargetcount);
@@ -1564,13 +1569,9 @@ void setup_cellcache() {
       resize_exactly(globals::cellcache[cellcachenum].allmacroatomictransitions, chtransblocksize);
     }
 
-    int chtransindex = 0;
     for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
       std::ranges::fill(globals::cellcache[cellcachenum].alllevels_maprocessrates[uniquelevelindex], -99.);
-      globals::cellcache[cellcachenum].alllevels_matransblock_start[uniquelevelindex] = chtransindex;
-      chtransindex += ((2 * get_ndowntrans(uniquelevelindex)) + get_nuptrans(uniquelevelindex));
     }
-    assert_always(chtransindex == chtransblocksize);
 
     assert_always(globals::nbfcontinua >= 0);
     resize_exactly(globals::cellcache[cellcachenum].allcont_departureratios, globals::nbfcontinua);

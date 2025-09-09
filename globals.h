@@ -157,7 +157,6 @@ struct CellCache {
   std::vector<double> cooling_contrib;  // Cooling contributions by the different processes.
   std::vector<double> alllevels_pops;
   std::vector<std::array<double, MA_ACTION_COUNT>> alllevels_maprocessrates;  // rates for macroatom processes
-  std::vector<int> alllevels_matransblock_start;  // index into allmacroatomictransitions for each level
   std::vector<double> allmacroatomictransitions;  // cumulative macroatom transition rates for all levels
   std::vector<double> allcont_departureratios;
   std::vector<double> allcont_nnlevel;
@@ -282,6 +281,11 @@ struct AllLevels {
   // index of the bound-free continuum (for first target) sorted by element/ion/level/phixstargetindex (not an index
   // into the nu_edge-sorted allcont list!)
   std::span<int> bflist_start;
+
+  // index into cellcache allmacroatomictransitions for each level. This is
+  // different to the alltrans index because two types of down transitions are stored separately
+  // per level as well as the up transitions
+  std::span<const int> matransblock_start;
 };
 
 inline AllLevels alllevels{};

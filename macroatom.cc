@@ -42,22 +42,18 @@ std::fstream macroatom_file;
 [[nodiscard]] auto get_sum_internal_down_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
   const auto ndowntrans = get_ndowntrans(uniquelevelindex);
   return std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions}.subspan(
-      globals::cellcache[cellcacheslotid].alllevels_matransblock_start[uniquelevelindex] +
-          get_ndowntrans(uniquelevelindex),
-      ndowntrans - 1);
+      globals::alllevels.matransblock_start[uniquelevelindex] + get_ndowntrans(uniquelevelindex), ndowntrans - 1);
 }
 
 [[nodiscard]] auto get_sum_internal_up_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
   return std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions}.subspan(
-      globals::cellcache[cellcacheslotid].alllevels_matransblock_start[uniquelevelindex] +
-          (2 * get_ndowntrans(uniquelevelindex)),
+      globals::alllevels.matransblock_start[uniquelevelindex] + (2 * get_ndowntrans(uniquelevelindex)),
       get_nuptrans(uniquelevelindex) - 1);
 }
 
 [[nodiscard]] auto get_sum_epstrans_rad_deexc_exceptlast(const int uniquelevelindex) -> std::span<const double> {
   return std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions}.subspan(
-      globals::cellcache[cellcacheslotid].alllevels_matransblock_start[uniquelevelindex],
-      get_ndowntrans(uniquelevelindex) - 1);
+      globals::alllevels.matransblock_start[uniquelevelindex], get_ndowntrans(uniquelevelindex) - 1);
 }
 
 auto calculate_macroatom_transitionrates(const int nonemptymgi, const int element, const int ion, const int level,
@@ -69,8 +65,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   const auto uniquelevelindex = ionuniquelevelindexstart + level;
 
   const auto transblock = std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions};
-  const auto alllevels_matransblock_start =
-      globals::cellcache[cellcacheslotid].alllevels_matransblock_start[uniquelevelindex];
+  const auto alllevels_matransblock_start = globals::alllevels.matransblock_start[uniquelevelindex];
 
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
