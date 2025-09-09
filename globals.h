@@ -230,7 +230,7 @@ struct AllTransitions {
 inline AllTransitions alltrans;
 
 struct LevelAutoion {
-  float autoion_A;  // Autoionization A-value
+  float autoion_A;  // Autoionisation A-value
   int elementindex;  // index (not atomic number) for the element involved
   int lowerionindex;
   int lowerlevelindex;  // this will be for a level index of the lower ion

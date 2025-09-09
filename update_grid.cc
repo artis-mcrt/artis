@@ -127,7 +127,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
         estimators_file << "              ";
       }
       for (int ion = 0; ion < nions - 1; ion++) {
-        const double Y_nt = nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion);
+        const double Y_nt = nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion);
         estimators_file << std::format("  {}: {:9.3e}", get_ionstage(element, ion), Y_nt);
       }
       estimators_file << '\n';
@@ -199,7 +199,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++) {
     const auto sys_time_start_spencerfano = std::time(nullptr);
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
-      // SF solution depends on the ionization balance, and weakly on nne
+      // SF solution depends on the ionisation balance, and weakly on nne
       nonthermal::solve_spencerfano(nonemptymgi, nts, nlte_iter);
     }
     const auto duration_solve_spencerfano = std::time(nullptr) - sys_time_start_spencerfano;
@@ -422,7 +422,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     // either by trapped energy release calculation, or reading from gridsave file
 
     if (USE_LUT_PHOTOION && !globals::simulation_continued_from_saved) {
-      // Determine renormalisation factor for corrected photoionization cross-sections
+      // Determine renormalisation factor for corrected photoionisation cross-sections
       std::ranges::fill(
           globals::corrphotoionrenorm.subspan(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground,
                                               globals::nbfcontinua_ground),

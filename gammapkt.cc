@@ -198,7 +198,7 @@ void init_gamma_linelist() {
 }
 
 void init_xcom_photoion_data() {
-  printout("reading XCOM photoionization data...\n");
+  printout("reading XCOM photoionisation data...\n");
   for (int Z = 0; Z < numb_xcom_elements; Z++) {
     photoion_data[Z].reserve(100);
   }

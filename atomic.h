@@ -85,12 +85,12 @@ __host__ __device__ inline auto get_nlevels(const int element, const int ion) ->
   return globals::elements[element].ions[ion].nlevels_ionising;
 }
 
-// Returns the number of target states for photoionization of (element,ion,level).
+// Returns the number of target states for photoionisation of (element,ion,level).
 __host__ __device__ inline auto get_nphixstargets(const int uniquelevelindex) -> int {
   return globals::alllevels.nphixstargets[uniquelevelindex];
 }
 
-// Returns the number of target states for photoionization of (element,ion,level).
+// Returns the number of target states for photoionisation of (element,ion,level).
 __host__ __device__ inline auto get_nphixstargets(const int element, const int ion, const int level) -> int {
   const auto nphixstargets = get_nphixstargets(get_uniquelevelindex(element, ion, level));
   assert_testmodeonly(nphixstargets == 0 ||
@@ -98,7 +98,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
   return nphixstargets;
 }
 
-// Return the index into the allphixstargets arrays for a target state for photoionization of (element,ion,level).
+// Return the index into the allphixstargets arrays for a target state for photoionisation of (element,ion,level).
 [[nodiscard]] __host__ __device__ inline auto get_allphixstargetindex(const int uniquelevelindex,
                                                                       const int phixstargetindex) -> int {
   assert_testmodeonly(phixstargetindex >= 0);
@@ -106,25 +106,25 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
 
   return globals::alllevels.phixstargetstart[uniquelevelindex] + phixstargetindex;
 }
-// Return the level index of a target state for photoionization of (element,ion,level).
+// Return the level index of a target state for photoionisation of (element,ion,level).
 [[nodiscard]] __host__ __device__ inline auto get_phixsupperlevel(const int uniquelevelindex,
                                                                   const int phixstargetindex) -> int {
   return globals::allphixstargets_levelindex[get_allphixstargetindex(uniquelevelindex, phixstargetindex)];
 }
 
-// Return the level index of a target state for photoionization of (element,ion,level).
+// Return the level index of a target state for photoionisation of (element,ion,level).
 [[nodiscard]] __host__ __device__ inline auto get_phixsupperlevel(const int element, const int ion, const int level,
                                                                   const int phixstargetindex) -> int {
   return get_phixsupperlevel(get_uniquelevelindex(element, ion, level), phixstargetindex);
 }
 
-// Return the probability of a target state for photoionization of (element,ion,level).
+// Return the probability of a target state for photoionisation of (element,ion,level).
 [[nodiscard]] __host__ __device__ inline auto get_phixsprobability(const int uniquelevelindex,
                                                                    const int phixstargetindex) -> double {
   return globals::allphixstargets_probability[get_allphixstargetindex(uniquelevelindex, phixstargetindex)];
 }
 
-// Return the probability of a target state for photoionization of (element,ion,level).
+// Return the probability of a target state for photoionisation of (element,ion,level).
 [[nodiscard]] __host__ __device__ inline auto get_phixsprobability(const int element, const int ion, const int level,
                                                                    const int phixstargetindex) -> double {
   assert_testmodeonly(element < get_nelements());
@@ -153,7 +153,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
 }
 
 // Calculate the photoionisation cross-section at frequency nu out of the atomic data.
-[[nodiscard]] inline auto photoionization_crosssection_fromtable(std::span<const float> photoion_xs,
+[[nodiscard]] inline auto photoionisation_crosssection_fromtable(std::span<const float> photoion_xs,
                                                                  const double nu_edge, const double nu) -> float {
   // if (nu < nu_edge || nu > nu_edge * 1.05)
   //   return 0;
@@ -327,7 +327,7 @@ inline auto get_includedions() -> int {
   return globals::elements[element].ions[ion].nlevels_autoion;
 }
 
-// the number of downward autoionization transitions from the specified level
+// the number of downward autoionisation transitions from the specified level
 [[nodiscard]] inline auto get_nautoiondowntrans(const int uniquelevelindex) -> int {
   return globals::alllevels.nautoiondowntrans[uniquelevelindex];
 }
@@ -434,7 +434,7 @@ inline auto get_includedions() -> int {
   return get_nuptrans(get_uniquelevelindex(element, ion, level));
 }
 
-// the number of upward autoionization transitions from the specified level
+// the number of upward autoionisation transitions from the specified level
 [[nodiscard]] inline auto get_nautoionuptrans(const int uniquelevelindex) -> int {
   return globals::alllevels.nautoionuptrans[uniquelevelindex];
 }

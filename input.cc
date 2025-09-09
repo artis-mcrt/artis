@@ -306,7 +306,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
 
     const int element = get_elementindex(Z);
 
-    // store only photoionization crosssections for elements that are part of the current model atom
+    // store only photoionisation crosssections for elements that are part of the current model atom
     bool skip_this_phixs_table = true;  // will be set to false for good data
     if (element >= 0 && get_nions(element) > 0) {
       // translate readin ionstages to ion indices
@@ -317,7 +317,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
       assert_always(lowerionstage >= 0);
       assert_always(lowerlevel >= 0);
 
-      // store only photoionization crosssections for ions that are part of the current model atom
+      // store only photoionisation crosssections for ions that are part of the current model atom
       if (lowerion >= 0 && upperion < get_nions(element) && lowerlevel < get_nlevels_ionising(element, lowerion)) {
         read_phixs_data_table(phixsfile, nphixspoints_inputtable, element, lowerion, lowerlevel, upperion,
                               upperlevel_in, tmpallphixs, tmpallphixstargets, &mem_usage_phixs, phixs_file_version);
@@ -389,7 +389,7 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
       });
 
       // The level contributes to the ionisinglevels if its energy
-      // is below the ionization potential and the level doesn't
+      // is below the ionisation potential and the level doesn't
       // belong to the topmost ion included.
       // Rate coefficients are only available for ionising levels.
       if (levelenergy < ionpot && ion < nions - 1) {
@@ -864,7 +864,7 @@ void read_autoion_data() {
 
   std::vector<globals::LevelAutoion> temp_allautoion;
 
-  printout("Reading autoion.txt for autoionization data.\n");
+  printout("Reading autoion.txt for autoionisation data.\n");
   auto autoionfile = fstream_required("autoion.txt", std::ios::in);
   std::string autoionline;
   int Z = -1;

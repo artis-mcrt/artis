@@ -167,7 +167,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   const int ionisinglevels = get_nlevels_ionising(element, ion);
   if (ion < get_nions(element) - 1 && level < ionisinglevels) {
     if (NT_ON) {
-      sum_up_highernt = nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion) * epsilon_current;
+      sum_up_highernt = nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion) * epsilon_current;
     }
 
     const auto nphixstargets = get_nphixstargets(uniquelevelindex);
@@ -175,7 +175,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
       const double epsilon_trans = get_phixs_threshold(uniquelevelindex, phixstargetindex);
 
       const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi);
-      const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+      const double C = col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
       sum_up_higher += (R + C) * epsilon_current;
     }
@@ -295,7 +295,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
     const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi);
-    const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+    const double C = col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
     rate += (R + C) * epsilon_current;
     if (rate > targetrate) {
       // set the macroatom's new state
@@ -715,9 +715,9 @@ auto col_recombination_ratecoeff(const float T_e, const float nne, const int ele
   return 0.;
 }
 
-// collisional ionization rate: paperII 3.5.1
+// collisional ionisation rate: paperII 3.5.1
 // multiply by lower level population to get a rate per second
-auto col_ionization_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
+auto col_ionisation_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
                               const int phixstargetindex, const double epsilon_trans) -> double {
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, lower));
@@ -730,7 +730,7 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 
   const double sigma_bf =
       get_phixs_table(element, ion, lower)[0] * get_phixsprobability(element, ion, lower, phixstargetindex);
-  const double C = nne * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;  // photoionization at the edge
+  const double C = nne * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;  // photoionisation at the edge
 
   // printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",
   // nne,T_e,g,epsilon_trans,sigma_bf);

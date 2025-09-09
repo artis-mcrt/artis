@@ -542,6 +542,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
   });
 }
 
+// add photoionisation and thermal collisional ionisation to NLTE matrix
 void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, const int ion,
                                    const std::span<double> s_renorm, RateMatrices& rate_matrices,
                                    const int first_ion_used, const int nions_used) {
@@ -565,10 +566,10 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
       const int upper_index = get_nlte_vector_index(element, ion + 1, upper, first_ion_used);
       const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
 
-      // photoionization and collisional ionization
+      // photoionisation and collisional ionisation
       const double R_ionisation = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi);
       const double C_ionisation =
-          col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+          col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
       const auto matrix_index_upper_lower = (upper_index * nlte_dimension) + lower_index;
 
@@ -578,7 +579,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
       atomicadd(rate_matrices.vec_rate_matrix_coll_bf[matrix_index_upper_lower], C_ionisation * s_renorm[level]);
 
       if ((R_ionisation < 0) || (C_ionisation < 0)) {
-        printout("  WARNING: Negative ionization rate from ionstage %d level %d phixstargetindex %d\n",
+        printout("  WARNING: Negative ionisation rate from ionstage %d level %d phixstargetindex %d\n",
                  get_ionstage(element, ion), level, phixstargetindex);
       }
 
@@ -604,20 +605,23 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
   });
 }
 
+// add collisional ionisation by non-thermal electrons to NLTE matrix
 void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, const int ion,
                                       const std::span<double> s_renorm, RateMatrices& rate_matrices,
                                       const int first_ion_used, const int nions_used) {
-  // collisional ionization by non-thermal electrons
+  if (!NT_ON) {
+    return;
+  }
   const int max_ion_used = first_ion_used + nions_used - 1;
   assert_always(ion < max_ion_used);  // can't ionise top ion stage
-  const double Y_nt = nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion);
+  const double Y_nt = nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion);
 
   const int nlevels = get_nlevels(element, ion);
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
 
   for (int upperion = ion + 1; upperion <= nonthermal::nt_ionisation_maxupperion(element, ion); upperion++) {
     const double Y_nt_thisupperion =
-        Y_nt * nonthermal::nt_ionization_upperion_probability(nonemptymgi, element, ion, upperion, false);
+        Y_nt * nonthermal::nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion, false);
 
     if (Y_nt_thisupperion > 0.) {
       // ensure if upperion here is past the upper ion used in the NLTE matrix the rates
@@ -636,10 +640,14 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
   }
 }
 
+// Add autoionisation and inverse (i.e. collisional capture part of di-el)
 void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element, const int ion,
                                        const std::vector<double>& s_renorm, RateMatrices& rate_matrices,
                                        const int first_ion_used, const int nions_used) {
-  // Autoionization and inverse (i.e. collisional capture part of di-el)
+  if (get_nlevels_autoion(element, ion) == 0) {
+    return;  // no autoionising levels for this ion
+  }
+
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
   const int max_ion_used = first_ion_used + nions_used - 1;
   assert_always(ion < max_ion_used);  // can't ionise top ion stage
@@ -654,7 +662,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
     const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
     const int nautoiondowntrans = get_nautoiondowntrans(uniquelevelindex);
     for (int i = 0; i < nautoiondowntrans; i++) {
-      // autoionization (which is a de-excitation propcess)
+      // autoionisation (which is a de-excitation propcess)
       const auto& autoiontransition = globals::allautoion[globals::alllevels.allautoion_start[uniquelevelindex] + i];
       const double A_a = autoiontransition.autoion_A;
       const int target_ion = autoiontransition.upperionindex;
@@ -670,7 +678,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
       rate_matrices.vec_rate_matrix_autoion[(upper_index * nlte_dimension) + upper_index] -= R;
       rate_matrices.vec_rate_matrix_autoion[(lower_index * nlte_dimension) + upper_index] += R;
       if ((R < 0)) {
-        printout("  WARNING: Negative autoionization rate from ionstage %d level %d to level %d\n",
+        printout("  WARNING: Negative autoionisation rate from ionstage %d level %d to level %d\n",
                  get_ionstage(element, ion), level, target_level);
       }
 
@@ -682,7 +690,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
       rate_matrices.vec_rate_matrix_autoion[(lower_index * nlte_dimension) + lower_index] -= R;
       rate_matrices.vec_rate_matrix_autoion[(upper_index * nlte_dimension) + lower_index] += R;
       if ((R < 0)) {
-        printout("  WARNING: Negative autoionization rate from ionstage %d level %d to level %d\n",
+        printout("  WARNING: Negative autoionisation rate from ionstage %d level %d to level %d\n",
                  get_ionstage(element, ion), level, target_level);
       }
     }
@@ -1114,10 +1122,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
       if (ion < max_ion_used) {
         nltepop_matrix_add_ionisation(nonemptymgi, element, ion, s_renorm, rate_matrices, first_ion_used, nions_used);
-        if (NT_ON) {
-          nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, rate_matrices, first_ion_used,
-                                           nions_used);
-        }
+        nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, rate_matrices, first_ion_used,
+                                         nions_used);
         nltepop_matrix_add_autoionisation(nonemptymgi, element, ion, s_renorm, rate_matrices, first_ion_used,
                                           nions_used);
       }

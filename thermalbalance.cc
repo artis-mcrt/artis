@@ -50,7 +50,7 @@ auto integrand_bfheatingcoeff_custom_radfield(const double nu, void* const voidp
   const double nu_edge = params->nu_edge;
   const float T_R = params->T_R;
 
-  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
   return sigma_bf * (1 - nu_edge / nu) * radfield::radfield(nu, nonemptymgi) * (1 - exp(-HOVERKB * nu / T_R));
 }
@@ -109,7 +109,7 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
     const double epsilon_level = epsilon(uniquelevelindex);
     const double statweight = stat_weight(uniquelevelindex);
 
-    // Collisional heating: deexcitation to same ionization stage
+    // Collisional heating: deexcitation to same ionisation stage
     const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
     const int ndowntrans = get_ndowntrans(uniquelevelindex);
     for (int i = 0; i < ndowntrans; i++) {
@@ -144,7 +144,7 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
       }
     }
 
-    // Collisional heating: recombination to lower ionization stage (not included)
+    // Collisional heating: recombination to lower ionisation stage (not included)
 
     // Bound-free heating (renormalised analytical calculation)
     for (int ion = 0; ion < nions - 1; ion++) {

@@ -266,7 +266,7 @@ void write_ratecoeff_dat() {
 auto alpha_sp_integrand_gsl(const double nu, void* const voidparas) -> double {
   const auto* const params = static_cast<const GSLIntegrationParas*>(voidparas);
 
-  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 2) * exp(-HOVERKB * nu / params->T);
   // in formula this looks like
   // x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
@@ -282,7 +282,7 @@ auto alpha_sp_E_integrand_gsl(const double nu, void* const voidparas) -> double 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
 
-  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 3) / nu_edge * exp(-HOVERKB * nu / T);
   // in formula this looks like
   // x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
@@ -291,14 +291,14 @@ auto alpha_sp_E_integrand_gsl(const double nu, void* const voidparas) -> double 
   return x;
 }
 
-// Integrand to calculate the rate coefficient for photoionization corrected for stimulated recombination.
+// Integrand to calculate the rate coefficient for photoionisation corrected for stimulated recombination.
 auto gammacorr_integrand_gsl(const double nu, void* const voidparas) -> double {
   const auto* const params = static_cast<const GSLIntegrationParas*>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
 
-  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
   // Dependence on dilution factor W is linear. This allows to set it here to
   // 1. and scale to its actual value later on.
@@ -316,7 +316,7 @@ auto approx_bfheating_integrand_gsl(const double nu, void* const voidparas) -> d
   const float T = params->T;
   const double nu_edge = params->nu_edge;
 
-  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
   // Precalculation for T_e=T_R and W=1
   const double x = sigma_bf * (1 - nu_edge / nu) * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
@@ -334,7 +334,7 @@ auto bfcooling_integrand_gsl(const double nu, void* const voidparas) -> double {
   const float T = params->T;
   const double nu_edge = params->nu_edge;
 
-  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
   // return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED * pow(nu,3) * exp(-HOVERKB*nu/T);
   return sigma_bf * (nu - nu_edge) * TWOHOVERCLIGHTSQUARED * nu * nu * exp(-HOVERKB * nu / T);
@@ -686,7 +686,7 @@ auto integrand_stimrecombination_custom_radfield(const double nu, void* const vo
   const int nonemptymgi = params->nonemptymgi;
   const float T_e = params->T_e;
 
-  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
 
   const double Jnu = radfield::radfield(nu, nonemptymgi);
 
@@ -745,7 +745,7 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
 }
 
 auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void* const voidparas) -> double
-// Integrand to calculate the rate coefficient for photoionization
+// Integrand to calculate the rate coefficient for photoionisation
 // using gsl integrators. Corrected for stimulated recombination.
 {
   const GSLIntegralParasGammaCorr* const params = static_cast<GSLIntegralParasGammaCorr*>(voidparas);
@@ -761,7 +761,7 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void* const vo
   }
 #endif
 
-  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
 
   const double Jnu = radfield::radfield(nu, nonemptymgi);
 
@@ -1288,7 +1288,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
 
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
 
-      if (nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) > 0) {
+      if (nnlevel * col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) > 0) {
         return false;
       }
     }
@@ -1321,7 +1321,7 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
 
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
 
-      Col_ion += nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+      Col_ion += nnlevel * col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
     }
   }
   Gamma += Col_ion;
@@ -1370,7 +1370,7 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
       if (collisional_not_radiative) {
         const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
         gamma_coeff_used +=
-            col_ionization_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex, epsilon_trans);
+            col_ionisation_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex, epsilon_trans);
       } else {
         // whatever ARTIS uses internally
         gamma_coeff_used = get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, nonemptymgi);

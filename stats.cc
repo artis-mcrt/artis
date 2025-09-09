@@ -76,7 +76,7 @@ void pkt_action_counters_printout(const int nts) {
   printout("timestep %d: k_stat_from_earlierdecay = %td\n", nts, get_counter(COUNTER_K_STAT_FROM_EARLIERDECAY));
 
   printout("timestep %d: nt_stat_from_gamma = %td\n", nts, get_counter(COUNTER_NT_STAT_FROM_GAMMA));
-  printout("timestep %d: nt_stat_to_ionization = %td\n", nts, get_counter(COUNTER_NT_STAT_TO_IONIZATION));
+  printout("timestep %d: nt_stat_to_ionisation = %td\n", nts, get_counter(COUNTER_NT_STAT_TO_ionisation));
   printout("timestep %d: nt_stat_to_excitation = %td\n", nts, get_counter(COUNTER_NT_STAT_TO_EXCITATION));
   printout("timestep %d: nt_stat_to_kpkt = %td\n", nts, get_counter(COUNTER_NT_STAT_TO_KPKT));
   nonthermal::print_stats(modelvolume, deltat);

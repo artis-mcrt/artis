@@ -844,7 +844,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
       if (USECELLHISTANDUPDATEPHIXSLIST || nnlevel > 0) {
         const double nu_edge = allcont[i].nu_edge;
         const double sigma_bf =
-            photoionization_crosssection_fromtable(get_phixs_table(allcont[i].uniquelevelindex), nu_edge, nu);
+            photoionisation_crosssection_fromtable(get_phixs_table(allcont[i].uniquelevelindex), nu_edge, nu);
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         if constexpr (!SEPARATE_STIMRECOMB) {

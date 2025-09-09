@@ -25,7 +25,7 @@ void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
 [[nodiscard]] auto col_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upper, int lower,
                                                double epsilon_trans) -> double;
 
-[[nodiscard]] auto col_ionization_ratecoeff(float T_e, float nne, int element, int ion, int lower, int phixstargetindex,
+[[nodiscard]] auto col_ionisation_ratecoeff(float T_e, float nne, int element, int ion, int lower, int phixstargetindex,
                                             double epsilon_trans) -> double;
 
 [[nodiscard]] auto col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, double upperstatweight,

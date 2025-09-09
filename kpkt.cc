@@ -49,7 +49,7 @@ float kpktdiffusion_timescale{0.};
 template <bool update_cooling_contrib_list>
 auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const int ion, const int indexionstart,
                                  const int cellcacheslotid, double* const C_ff, double* const C_fb, double* const C_exc,
-                                 double* const C_ionization) -> double {
+                                 double* const C_ionisation) -> double {
   const auto nne = grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
 
@@ -81,7 +81,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
   }
 
   const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
-  // excitation to same ionization stage
+  // excitation to same ionisation stage
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
     const auto uniquelevelindex = ionuniquelevelindexstart + level;
@@ -118,7 +118,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
   if (ion < (get_nions(element) - 1)) {
     const double nnupperion = get_nnion(nonemptymgi, element, ion + 1);
 
-    // ionization to higher ionization stage
+    // ionisation to higher ionisation stage
     for (int level = 0; level < nionisinglevels; level++) {
       const auto uniquelevelindex = ionuniquelevelindexstart + level;
       const double epsilon_current = epsilon(uniquelevelindex);
@@ -129,7 +129,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
         const double epsilon_upper = epsilon(element, ion + 1, upper);
         const double epsilon_trans = epsilon_upper - epsilon_current;
         const double C = nnlevel *
-                         col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) *
+                         col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) *
                          epsilon_trans;
 
         C_ion += C;
@@ -142,7 +142,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
 
           i++;
         } else {
-          *C_ionization += C;
+          *C_ionisation += C;
         }
       }
     }
@@ -259,14 +259,14 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
   double C_ff_all = 0.;  // free-free creation of rpkts
   double C_fb_all = 0.;  // free-bound creation of rpkt
   double C_exc_all = 0.;  // collisional excitation of macroatoms
-  double C_ionization_all = 0.;  // collisional ionisation of macroatoms
+  double C_ionisation_all = 0.;  // collisional ionisation of macroatoms
 
   const auto allionindices = std::ranges::iota_view{0, get_includedions()};
   std::for_each(EXEC_PAR allionindices.begin(), allionindices.end(), [&](const int allionindex) {
     const auto [element, ion] = get_ionfromuniqueionindex(allionindex);
     grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + allionindex] =
         calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, -1, cellcacheslotid, &C_ff_all, &C_fb_all,
-                                           &C_exc_all, &C_ionization_all);
+                                           &C_exc_all, &C_ionisation_all);
   });
 
   // this loop is made separate for future parallelisation of upper loop.
@@ -279,7 +279,7 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
 
   // only used in the T_e solver and write_to_estimators file
   if (heatingcoolingrates != nullptr) {
-    heatingcoolingrates->cooling_collisional = C_exc_all + C_ionization_all;
+    heatingcoolingrates->cooling_collisional = C_exc_all + C_ionisation_all;
     heatingcoolingrates->cooling_fb = C_fb_all;
     heatingcoolingrates->cooling_ff = C_ff_all;
   }
@@ -555,7 +555,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
     const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
     const double statweight = stat_weight(uniquelevelindex);
     int upper = -1;
-    // excitation to same ionization stage
+    // excitation to same ionisation stage
     const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
     const int nuptrans = get_nuptrans(uniquelevelindex);
     for (int alltransindex = alltrans_startup; alltransindex < (alltrans_startup + nuptrans); alltransindex++) {

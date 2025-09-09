@@ -46,7 +46,7 @@ auto interpolate_ions_spontrecombcoeff(const int uniqueionindex, const double T)
   return globals::ion_alpha_sp[(uniqueionindex * TABLESIZE) + TABLESIZE - 1];
 }
 
-// use Saha equation for LTE ionization balance
+// use Saha equation for LTE ionisation balance
 [[nodiscard]] auto phi_saha(const int element, const int ion, const int nonemptymgi) -> double {
   const int uniqueionindex = get_uniqueionindex(element, ion);
   const auto partfunc_ion =
@@ -80,7 +80,7 @@ auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -
   // photoionisation plus collisional ionisation rate coefficient per ground level pop
   const double Gamma = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
 
-  // Gamma is the photoionization rate per ground level pop
+  // Gamma is the photoionisation rate per ground level pop
   const double Gamma_ion = Gamma * stat_weight(element, ion, 0) / partfunc_ion;
 
   const double Alpha_sp = interpolate_ions_spontrecombcoeff(uniqueionindex, T_e);
@@ -89,7 +89,7 @@ auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -
   // false);
   const double Col_rec = 0.;
 
-  const double gamma_nt = NT_ON ? nonthermal::nt_ionization_ratecoeff(nonemptymgi, element, ion) : 0.;
+  const double gamma_nt = NT_ON ? nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion) : 0.;
 
   if ((Gamma_ion + gamma_nt) == 0) {
     printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);
@@ -403,7 +403,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
   return uppermost_ion;
 }
 
-// Calculate the fractions of an element's population in each ionization stage based on Saha LTE or ionisation
+// Calculate the fractions of an element's population in each ionisation stage based on Saha LTE or ionisation
 // equilibrium
 [[nodiscard]] auto calculate_ionfractions(const int element, const int nonemptymgi, const double nne,
                                           const bool use_phi_saha) -> std::vector<double> {
@@ -561,7 +561,7 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
 }
 
 // If not already set by the NLTE solver, set the ground level populations from either Saha LTE or
-// ionization/recombination balance (Photoionization Equilibrium)
+// ionisation/recombination balance (Photoionisation Equilibrium)
 void set_groundlevelpops(const int nonemptymgi, const int element, const float nne, const bool force_saha) {
   const int nions = get_nions(element);
 
