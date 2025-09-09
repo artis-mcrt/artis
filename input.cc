@@ -505,9 +505,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
       ptrdiff_t alltransindex = temp_alltranslist_size;
       temp_alltranslist_size += totupdowntrans;
       if (globals::rank_in_node == 0) {
-        resize_exactly(temp_alltranslist, temp_alltranslist_size);
+        temp_alltranslist.resize(temp_alltranslist_size);
         assert_always(temp_alltranslist_size >= temp_linelist.size());
-        temp_linelist.reserve(temp_alltranslist_size);
       }
       for (int level = 0; level < nlevelsmax; level++) {
         ion_levels[level].alltrans_startdown = static_cast<int>(alltransindex);
@@ -1079,6 +1078,9 @@ void read_atomicdata_files() {
 
   std::vector<TransitionLine> temp_linelist;
   std::vector<LevelTransition> temp_alltranslist;
+  temp_linelist.reserve(1 << 22);  // reserve initial space for 4 million lines to avoid too many reallocations
+  temp_alltranslist.reserve(1 << 22);
+
   size_t temp_alltranslist_size = 0;  // keep size separate because the vector is only resized on rank_in_node == 0
 
   std::vector<EnergyLevelInput> temp_alllevels;
