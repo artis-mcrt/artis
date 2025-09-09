@@ -1682,10 +1682,6 @@ auto get_electronfrac(const int nonemptymgi) -> double {
   return get_nnetot(nonemptymgi) / nucleondens;
 }
 
-auto get_initelectronfrac(const int modelgridindex) -> double {
-  return modelgrid_input[modelgridindex].initelectronfrac;
-}
-
 // q: energy in the model at tmin per gram to use with USE_MODEL_INITIAL_ENERGY option [erg/g]
 __host__ __device__ auto get_initenergyq(const int modelgridindex) -> double {
   return modelgrid_input[modelgridindex].initenergyq;
@@ -1778,7 +1774,9 @@ void calculate_kappagrey() {
       } else if (globals::opacity_case == 5) {
         // electron-fraction-dependent opacities
         // values from table 1 of Tanaka et al. (2020).
-        const double Ye = get_initelectronfrac(mgi);
+        const auto Ye = modelgrid_input[mgi].initelectronfrac;
+        assert_always(Ye > 0.);
+
         if (Ye <= 0.1) {
           kappa = 19.5;
         } else if (Ye <= 0.15) {
