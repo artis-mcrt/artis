@@ -12,6 +12,7 @@
 #include <iostream>
 #include <numbers>
 #include <numeric>
+#include <ranges>
 #include <set>
 #include <span>
 #include <sstream>
@@ -439,15 +440,15 @@ void filter_unused_nuclides(const std::vector<int>& custom_zlist, const std::vec
       return false;
     }
     // keep nucleus if it is in the custom list
-    for (ptrdiff_t i = 0; i < std::ssize(custom_zlist); i++) {
-      if ((nuc.z == custom_zlist[i]) && (nuc.a == custom_alist[i])) {
+    for (const auto [z, a] : std::views::zip(custom_zlist, custom_alist)) {
+      if ((z == nuc.z) && (a == nuc.a)) {
         return false;
       }
     }
 
     const bool in_any_decaypath = std::ranges::any_of(decaypaths, [&nuc](const auto& decaypath) {
-      for (ptrdiff_t i = 0; i < std::ssize(decaypath.z); i++) {
-        if (decaypath.z[i] == nuc.z && decaypath.a[i] == nuc.a) {
+      for (const auto [z, a] : std::views::zip(decaypath.z, decaypath.a)) {
+        if (z == nuc.z && a == nuc.a) {
           // nuc is in the decay path
           return true;
         }
