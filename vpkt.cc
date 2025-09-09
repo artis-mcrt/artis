@@ -318,9 +318,8 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
         const int ion = globals::linelist.ionindex[lineindex];
         const int upper = globals::linelist.upperlevelindex[lineindex];
         const int lower = globals::linelist.lowerlevelindex[lineindex];
-        const auto A_ul = globals::linelist.einstein_A[lineindex];
 
-        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
+        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * globals::linelist.einstein_A[lineindex];
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
         const auto n_u = calculate_levelpop(nonemptymgi, element, ion, upper);
