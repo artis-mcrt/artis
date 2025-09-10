@@ -223,7 +223,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 > 0)) {
     i = PI - acos(fabs(cos_stokes_rot_1));
   } else if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 < 0)) {
-    i = 2 * PI - acos(cos_stokes_rot_1);
+    i = (2 * PI) - acos(cos_stokes_rot_1);
   } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 < 0)) {
     i = PI + acos(fabs(cos_stokes_rot_1));
   }
@@ -347,7 +347,7 @@ constexpr auto frame_transform(const Vec3d& n_rf, double* Q, double* U, const Ve
   } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 < 0)) {
     theta_rot = PI - acos(fabs(cosine_elec_ref1));
   } else if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 > 0)) {
-    theta_rot = 2 * PI - acos(cosine_elec_ref1);
+    theta_rot = (2 * PI) - acos(cosine_elec_ref1);
   }
   if (cosine_elec_ref1 == 0) {
     theta_rot = PI / 2.;
