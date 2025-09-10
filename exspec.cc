@@ -177,12 +177,8 @@ auto main(int argc, char* argv[]) -> int {
   assert_always(globals::my_rank == 0);
   assert_always(globals::nprocs == 1);
 
-  printout("Beginning exspec.\n");
-
   // Get input stuff
-  printout("time before input %ld\n", std::time(nullptr));
   input(globals::my_rank);
-  printout("time after input %ld\n", std::time(nullptr));
 
   // nprocs_exspec is the number of rank output files to process with expec
   // however, we might be running exspec with 1 or just a few ranks

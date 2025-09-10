@@ -775,7 +775,6 @@ auto main(int argc, char* argv[]) -> int {
     initialise_linestat_file();
   }
 
-  printout("time after input %ld\n", std::time(nullptr));
   printout("timesteps %d\n", globals::ntimesteps);
 
   // Precalculate the rate coefficients for spontaneous and stimulated recombination
@@ -785,16 +784,13 @@ auto main(int argc, char* argv[]) -> int {
 
   ratecoefficients_init();
 
-  printout("barrier after tabulation of rate coefficients: time before barrier %ld, ", std::time(nullptr));
   MPI_Barrier(MPI_COMM_WORLD);
-  printout("time after barrier %ld\n", std::time(nullptr));
 
   // Record the chosen syn_dir
   auto syn_file = std::fstream("syn_dir.txt", std::ios::out | std::ios::trunc);
   assert_always(syn_file.is_open());
   syn_file << syn_dir[0] << ' ' << syn_dir[1] << ' ' << syn_dir[2];
   syn_file.close();
-  printout("time write syn_dir.txt file %ld\n", std::time(nullptr));
 
   bool terminate_early = false;
 
@@ -804,7 +800,6 @@ auto main(int argc, char* argv[]) -> int {
     write_timestep_file();
   }
 
-  printout("time grid_init %ld\n", std::time(nullptr));
   grid::init_grid(my_rank);
 
   printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts,
@@ -856,7 +851,11 @@ auto main(int argc, char* argv[]) -> int {
     // globals::n_titer = (globals::timestep < 6) ? 3 : 1;
 
     globals::n_titer = (globals::timestep < -1) ? 3 : 1;
+    if (globals::n_titer > 1) {
+      logprintlnfmt("Doing %d iterations on timestep %d", globals::n_titer, globals::timestep);
+    }
     globals::lte_iteration = (globals::timestep < globals::num_lte_timesteps);
+    logprintlnfmt("lte_iteration {}", globals::lte_iteration ? 1 : 0);
     assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 
     for (int titer = 0; titer < globals::n_titer; titer++) {
@@ -881,9 +880,9 @@ auto main(int argc, char* argv[]) -> int {
   }
 
   if ((globals::ntimesteps > globals::timestep_finish) || (terminate_early)) {
-    printout("RESTART_NEEDED to continue model\n");
+    logprintlnfmt("RESTART_NEEDED to continue model");
   } else {
-    printout("No need for restart\n");
+    logprintlnfmt("No need for restart");
   }
 
   MPI_Barrier(MPI_COMM_WORLD);

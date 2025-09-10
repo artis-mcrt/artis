@@ -1831,7 +1831,7 @@ void calculate_kappagrey() {
       set_kappagrey(nonemptymgi, 0.);
     } else if (get_rho_tmin(mgi) < 0.) {
       printout("Error: negative density. Abort.\n");
-      std::abort();
+      assert_always(false);
     }
 
     check1 = check1 + (get_kappagrey(nonemptymgi) * get_rho_tmin(mgi));

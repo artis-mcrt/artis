@@ -1070,7 +1070,6 @@ void read_atomicdata_files() {
   auto adata = fstream_required("adata.txt", std::ios::in);
 
   printout("single_level_top_ion: %s\n", single_level_top_ion ? "true" : "false");
-  printout("single_ground_level: %s\n", single_ground_level ? "true" : "false");
   // initialize atomic data structure to number of elements
   int nelements_in = 0;
   assert_always(compositiondata >> nelements_in);
@@ -1117,8 +1116,8 @@ void read_atomicdata_files() {
     double mass_amu{NAN};
     assert_always(compositiondata >> Z >> nions >> lowermost_ionstage >> uppermost_ionstage >> nlevelsmax_readin >>
                   uniformabundance >> mass_amu);
-    printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n", Z,
-             nions, lowermost_ionstage, uppermost_ionstage, nlevelsmax_readin);
+    printout("compositiondata.txt: Z %d nions %d lowermost %d uppermost %d nlevelsmax %d\n", Z, nions,
+             lowermost_ionstage, uppermost_ionstage, nlevelsmax_readin);
     assert_always(Z > 0);
     assert_always(nions >= 0);
     assert_always(nions == 0 || (nions == uppermost_ionstage - lowermost_ionstage + 1));
@@ -1173,24 +1172,18 @@ void read_atomicdata_files() {
         assert_always(ssline >> adata_Z_in >> ionstage >> nlevels >> ionpot);
       }
 
-      printout("adata header matched: Z %d, ionstage %d, nlevels %d\n", adata_Z_in, ionstage, nlevels);
+      printout("adata.txt: Z %d ionstage %d nlevels %d\n", adata_Z_in, ionstage, nlevels);
 
       if (single_level_top_ion && ion == nions - 1)  // limit the top ion to one level and no transitions
       {
         nlevelsmax = 1;
       }
 
-      if (nlevelsmax < 0) {
+      if (nlevelsmax < 0 || nlevelsmax > nlevels) {
         nlevelsmax = nlevels;
-      } else if (nlevels >= nlevelsmax) {
+      } else if (nlevels > nlevelsmax) {
         printout("[info] read_atomicdata: reduce number of levels from %d to %d for Z %2d ionstage %d\n", nlevels,
                  nlevelsmax, adata_Z_in, ionstage);
-      } else {
-        printout(
-            "[warning] read_atomicdata: requested nlevelsmax=%d > nlevels=%d for ion %d of element %d ... reduced "
-            "nlevelsmax to nlevels\n",
-            nlevelsmax, nlevels, ion, element);
-        nlevelsmax = nlevels;
       }
 
       // and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
@@ -1208,8 +1201,8 @@ void read_atomicdata_files() {
         assert_always(ssline >> transdata_Z_in >> transdata_ionstage_in >> tottransitions_in_file);
       }
 
-      printout("transdata header matched: transdata_Z_in %d, transdata_ionstage_in %d, tottransitions %d\n",
-               transdata_Z_in, transdata_ionstage_in, tottransitions_in_file);
+      printout("transitiondata.txt: Z %d ionstage %d tottransitions %d\n", transdata_Z_in, transdata_ionstage_in,
+               tottransitions_in_file);
       assert_always(tottransitions_in_file >= 0);
 
       // read the data for the levels and set up the list of possible transitions for each level

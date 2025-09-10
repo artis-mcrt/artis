@@ -98,12 +98,12 @@ void packet_init(std::span<Packet> pkt)
 
   // The total number of pellets that we want to start with is just
   // npkts. The total energy of the pellets is given by etot.
-  const double etot_tinf = decay::get_global_etot_t0_tinf();
+  const double etot_tinf = decay::get_global_etot_tmin_tinf();
 
-  printout("etot %g (t_0 to t_inf)\n", etot_tinf);
+  printout("etot %g (t_min to t_inf)\n", etot_tinf);
 
   const double e0_tinf = etot_tinf / globals::npkts;
-  printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
+  printout("packet e0 (t_min to t_inf) %g erg\n", e0_tinf);
 
   decay::setup_decaypath_energy_per_mass();
 
@@ -130,9 +130,9 @@ void packet_init(std::span<Packet> pkt)
   const double etot = norm;
   // So energy per pellet is
   const double e0 = etot / globals::npkts;
-  printout("packet e0 (in time range) %g erg\n", e0);
+  printout("packet e0 (tmin to tmax) %g erg\n", e0);
 
-  printout("etot %g erg (in time range) erg\n", etot);
+  printout("etot %g erg (tmin to tmax) erg\n", etot);
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
 

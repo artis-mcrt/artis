@@ -1044,7 +1044,6 @@ void setup_decaypath_energy_per_mass() {
 
   MPI_Barrier(MPI_COMM_WORLD);
   const auto time_min_decay = INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin;
-  printout("Calculating decaypath_energy_per_mass for all cells...");
   const ptrdiff_t num_decaypaths = get_num_decaypaths();
   for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
     if (nonemptymgi % globals::node_nprocs == globals::rank_in_node) {
@@ -1055,7 +1054,6 @@ void setup_decaypath_energy_per_mass() {
       }
     }
   }
-  printout("done.\n");
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -1140,7 +1138,7 @@ void free_decaypath_energy_per_mass() {
   return qdot;
 }
 
-auto get_global_etot_t0_tinf() -> double {
+auto get_global_etot_tmin_tinf() -> double {
   double etot_tinf = 0.;
   const auto num_decaypaths = get_num_decaypaths();
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
@@ -1150,14 +1148,13 @@ auto get_global_etot_t0_tinf() -> double {
     etot_tinf += (decaypaths[decaypathindex].branchproduct * grid::get_totmassradionuclide(z_top, a_top) /
                   nucmass(z_top, a_top) * get_decaypath_lastnucdecayenergy(decaypathindex));
   }
+  assert_always(std::isfinite(etot_tinf));
+  assert_always(etot_tinf > 0.);
   return etot_tinf;
 }
 
 // Update the mass fractions of elements using the current abundances of nuclides
-void update_abundances(const int nonemptymgi, const int timestep, const double t_current) {
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  printout("update_abundances for cell %d timestep %d\n", modelgridindex, timestep);
-
+void update_abundances(const int nonemptymgi, const double t_current) {
   for (int element = get_nelements() - 1; element >= 0; element--) {
     const int atomic_number = get_atomicnumber(element);
     std::set<int> a_isotopes;  // track which isotopes have been added to the sum to avoid double counting

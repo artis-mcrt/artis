@@ -559,9 +559,8 @@ void init(const int my_rank, const int ndo_nonempty) {
         }
       }
     }
+    printout("There are %d lines with detailed Jblue_lu estimators.\n", detailed_linecount);
   }
-
-  printout("There are %d lines with detailed Jblue_lu estimators.\n", detailed_linecount);
 
   printout("DETAILED_BF_ESTIMATORS %s", DETAILED_BF_ESTIMATORS_ON ? "ON" : "OFF");
   if (DETAILED_BF_ESTIMATORS_ON) {

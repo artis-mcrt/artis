@@ -29,8 +29,8 @@ brew install open-mpi
 ```
 Install the pre-commit hooks:
 ```sh
-pip install pre-commit
-pre-commit install
+pip install prek
+prek install
 ```
 For editing, the clangd language server is recommended (e.g., with the [VS Code plugin](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)).
 

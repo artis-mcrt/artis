@@ -395,7 +395,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   grid::set_rho(nonemptymgi, rho);
 
   // Update elemental abundances with radioactive decays
-  decay::update_abundances(nonemptymgi, nts, globals::timesteps[nts].mid);
+  decay::update_abundances(nonemptymgi, globals::timesteps[nts].mid);
   nonthermal::calculate_deposition_rate_density(nonemptymgi, nts, heatingcoolingrates);
 
   if (globals::opacity_case == 6) {
@@ -440,7 +440,6 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       grid::modelgrid[nonemptymgi].thick = 1;
     }
 
-    printout("lte_iteration %d\n", globals::lte_iteration ? 1 : 0);
     printout("mgi %d modelgrid.thick: %d (during grid update)\n", mgi, grid::modelgrid[nonemptymgi].thick);
 
     for (int element = 0; element < get_nelements(); element++) {
@@ -604,7 +603,9 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   // globals::timesteps[m].mid;
   globals::rho_crit = ME * CLIGHT * decay::nucmass(28, 56) /
                       (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::timesteps[nts].mid);
-  printout("update_grid: rho_crit = %g\n", globals::rho_crit);
+  if (globals::opacity_case == 3) {
+    printout("update_grid: rho_crit = %g\n", globals::rho_crit);
+  }
 
   // These values will not be used if nts == 0, but set them anyway
   // nts_prev is the previous timestep, unless this is timestep zero
