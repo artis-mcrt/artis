@@ -251,16 +251,16 @@ constexpr auto sigma_compton_partial(const double x, const double f_max) -> doub
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
 
-// the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
-auto get_chi_compton_rf(const Packet& pkt) -> double {
+// the absorption coefficient [cm^-1] for Compton scattering in the co-moving frame
+auto get_chi_compton_cmf(const int cellindex, const double nu_cmf) -> double {
   // Start by working out the compton x-section in the co-moving frame.
 
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
   if (nonemptymgi < 0) {
     return 0.;  // empty cell
   }
 
-  const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
+  const double xx = H * nu_cmf / ME / CLIGHT / CLIGHT;
 
   // Use this to decide whether the Thompson limit is acceptable.
 
@@ -269,12 +269,9 @@ auto get_chi_compton_rf(const Packet& pkt) -> double {
   // Now need to multiply by the electron number density.
   const double chi_cmf = sigma_cmf * grid::get_nnetot(nonemptymgi);
 
-  // convert between frames
-  const double chi_rf = chi_cmf * calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  assert_testmodeonly(std::isfinite(chi_cmf));
 
-  assert_testmodeonly(std::isfinite(chi_rf));
-
-  return chi_rf;
+  return chi_cmf;
 }
 
 // To choose the value of f to integrate to - idea is we want sigma_compton_partial(xx,f) = zrand.
@@ -439,11 +436,11 @@ void compton_scatter(Packet& pkt) {
   }
 }
 
-// calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the observer reference frame
-auto get_chi_photo_electric_rf(const Packet& pkt) -> double {
+// calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the co-moving frame
+auto get_chi_photo_electric_cmf(const int cellindex, const double nu_cmf) -> double {
   // Start by working out the x-section in the co-moving frame.
 
-  const int mgi = grid::get_propcell_modelgridindex(pkt.where);
+  const int mgi = grid::get_propcell_modelgridindex(cellindex);
 
   if (mgi >= grid::get_npts_model()) {
     return 0.;  // empty cell
@@ -458,7 +455,7 @@ auto get_chi_photo_electric_rf(const Packet& pkt) -> double {
       // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
 
       // 2.41326e19 Hz = 100 keV / H
-      const double hnu_over_100kev = pkt.nu_cmf / 2.41326e+19;
+      const double hnu_over_100kev = nu_cmf / 2.41326e+19;
 
       // double sigma_cmf_cno = 0.0448e-24 * pow(hnu_over_100kev, -3.2);
 
@@ -478,7 +475,7 @@ auto get_chi_photo_electric_rf(const Packet& pkt) -> double {
 
       chi_cmf = (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
     } else {
-      const double hnu_over_1MeV = pkt.nu_cmf / 2.41326e+20;
+      const double hnu_over_1MeV = nu_cmf / 2.41326e+20;
       const double log10_hnu_over_1MeV = log10(hnu_over_1MeV);
       for (int i = 0; i < get_nelements(); i++) {
         // determine charge number:
@@ -532,13 +529,12 @@ auto get_chi_photo_electric_rf(const Packet& pkt) -> double {
 
   // Now convert between frames.
 
-  const double chi_rf = chi_cmf * calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  return chi_rf;
+  return chi_cmf;
 }
 
-// calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
-auto get_chi_pair_prod_rf(const Packet& pkt) -> double {
-  const int mgi = grid::get_propcell_modelgridindex(pkt.where);
+// calculate the absorption coefficient [cm^-1] for pair production in the comoving frame
+auto get_chi_pair_prod_cmf(const int cellindex, const double nu_cmf) -> double {
+  const int mgi = grid::get_propcell_modelgridindex(cellindex);
   if (mgi >= grid::get_npts_model()) {
     return 0.;  // empty cell
   }
@@ -551,7 +547,7 @@ auto get_chi_pair_prod_rf(const Packet& pkt) -> double {
   }
 
   // 2.46636e+20 Hz = 1022 keV / H
-  if (pkt.nu_cmf <= 2.46636e+20) {
+  if (nu_cmf <= 2.46636e+20) {
     return 0.;
   }
 
@@ -563,8 +559,8 @@ auto get_chi_pair_prod_rf(const Packet& pkt) -> double {
   // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Hubbell (1969)
 
   // 3.61990e+20 = 1500 keV in frequency / H
-  const double hnu_over_mev = pkt.nu_cmf / 2.41326e+20;
-  if (pkt.nu_cmf > 3.61990e+20) {
+  const double hnu_over_mev = nu_cmf / 2.41326e+20;
+  if (nu_cmf > 3.61990e+20) {
     // sigma_cmf_cno = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 49.e-27;
 
     sigma_cmf_si = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 196.e-27;
@@ -593,14 +589,12 @@ auto get_chi_pair_prod_rf(const Packet& pkt) -> double {
 
   // Now need to convert between frames.
 
-  double chi_rf = chi_cmf * calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-
-  if (chi_rf < 0) {
-    printout("Negative pair production sigma. Setting to zero. Abort? %g\n", chi_rf);
-    chi_rf = 0.;
+  if (chi_cmf < 0) {
+    printout("Negative pair production sigma. Setting to zero. Abort? %g\n", chi_cmf);
+    return 0.;
   }
 
-  return chi_rf;
+  return chi_cmf;
 }
 
 // Routine to compute the mean energy converted to non-thermal electrons times the Klein-Nishina cross section.
@@ -622,8 +616,12 @@ constexpr auto meanf_sigma(const double x) -> double {
 auto get_kappa(const Packet& pkt) -> double {
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
   const int mgi = grid::get_propcell_modelgridindex(pkt.where);
-  const double chi = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + get_chi_photo_electric_rf(pkt) +
-                      (get_chi_pair_prod_rf(pkt) * (1. - (2.46636e+20 / pkt.nu_cmf))));
+  const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const auto chi_photo_electric_rf = get_chi_photo_electric_cmf(pkt.where, pkt.nu_cmf) * doppler;
+  const auto chi_pair_prod_rf = get_chi_pair_prod_cmf(pkt.where, pkt.nu_cmf) * doppler;
+
+  const double chi = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + chi_photo_electric_rf +
+                      (chi_pair_prod_rf * (1. - (2.46636e+20 / pkt.nu_cmf))));
   const double kappa = 1 / grid::get_rho(mgi) * chi;
   return kappa;
 }
@@ -638,11 +636,14 @@ void update_gamma_dep(const Packet& pkt, const double dist, const int nonemptymg
   }
 
   const double doppler_sq = doppler_squared_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const auto chi_photo_electric_rf = get_chi_photo_electric_cmf(pkt.where, pkt.nu_cmf) * doppler;
+  const auto chi_pair_prod_rf = get_chi_pair_prod_cmf(pkt.where, pkt.nu_cmf) * doppler;
 
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
-  double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + get_chi_photo_electric_rf(pkt) +
-                         (get_chi_pair_prod_rf(pkt) * (1. - (2.46636e+20 / pkt.nu_cmf))));
-  heating_cont = heating_cont * pkt.e_rf * dist * doppler_sq;
+  const double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_rf +
+                               (chi_pair_prod_rf * (1. - (2.46636e+20 / pkt.nu_cmf)))) *
+                              pkt.e_rf * dist * doppler_sq;
 
   // The terms in the above are for Compton, photoelectric and pair production. The pair production one
   // assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised.
@@ -725,13 +726,10 @@ void transport_gamma(Packet& pkt, const double t2) {
   // Compton scattering - need to determine the scattering co-efficient.
   // Routine returns the value in the rest frame.
 
-  double chi_compton = 0.;
-  if (globals::gamma_kappagrey < 0) {
-    chi_compton = get_chi_compton_rf(pkt);
-  }
-
-  const double chi_photo_electric = get_chi_photo_electric_rf(pkt);
-  const double chi_pair_prod = get_chi_pair_prod_rf(pkt);
+  const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double chi_compton = (globals::gamma_kappagrey < 0) ? get_chi_compton_cmf(pkt.where, pkt.nu_cmf) * doppler : 0.;
+  const double chi_photo_electric = get_chi_photo_electric_cmf(pkt.where, pkt.nu_cmf) * doppler;
+  const double chi_pair_prod = get_chi_pair_prod_cmf(pkt.where, pkt.nu_cmf) * doppler;
   const double chi_tot = chi_compton + chi_photo_electric + chi_pair_prod;
 
   assert_testmodeonly(std::isfinite(chi_compton));
