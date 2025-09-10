@@ -42,8 +42,6 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
 
   const auto sys_time_start_write_estimators = std::time(nullptr);
 
-  printout("writing to estimators file timestep %d cell %d...\n", timestep, mgi);
-
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
   const auto Y_e = grid::get_electronfrac(nonemptymgi);
@@ -388,7 +386,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
   const auto sys_time_start_update_cell = std::time(nullptr);
 
-  printout("update_grid_cell: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
+  printout("update_grid_cell: working on mgi %d before timestep %d titeration %d...\n", mgi, nts, titer);
 
   // Update current mass density of cell
   const auto rho = static_cast<float>(grid::get_rho_tmin(mgi) / pow(tratmid, 3));
@@ -527,7 +525,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   const auto grey_optical_depth =
       static_cast<float>(grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) * dist_to_obs);
   printout(
-      "modelgridcell %d, compton optical depth (/propgridcell) %g, grey optical depth "
+      "modelgridindex %d, compton optical depth (/propgridcell) %g, grey optical depth "
       "(/propgridcell) %g\n",
       mgi, compton_optical_depth_across_cell, grey_optical_depth_across_cell);
   printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, dist_to_obs, grey_optical_depth);
@@ -637,17 +635,20 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   // serial output of estimator data to this ranks estimator file cell by cell
   const auto nstart = grid::get_nstart(my_rank);
   const auto ndo = grid::get_ndo(my_rank);
-  for (int mgi = nstart; mgi < (nstart + ndo); mgi++) {
-    const auto nonemptymgi = (grid::get_numpropcells(mgi) > 0) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
-    if (nonemptymgi >= 0) {
-      assert_always(nonemptymgi >= nstart_nonempty);
-      assert_always(nonemptymgi < (nstart_nonempty + ndo_nonempty));
-      write_to_estimators_file(estimators_file, nonemptymgi, nts, titer,
-                               heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
-    } else {
-      // modelgrid cells that are not represented in the simulation grid
-      estimators_file << std::format("timestep {} modelgridindex {} EMPTYCELL\n\n", nts, mgi);
-      estimators_file.flush();
+  if (ndo > 0) {
+    logprintlnfmt("writing to estimators file timestep {} mgi {} to {} (inclusive)", nts, nstart, nstart + ndo - 1);
+    for (int mgi = nstart; mgi < (nstart + ndo); mgi++) {
+      const auto nonemptymgi = (grid::get_numpropcells(mgi) > 0) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
+      if (nonemptymgi >= 0) {
+        assert_always(nonemptymgi >= nstart_nonempty);
+        assert_always(nonemptymgi < (nstart_nonempty + ndo_nonempty));
+        write_to_estimators_file(estimators_file, nonemptymgi, nts, titer,
+                                 heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
+      } else {
+        // modelgrid cells that are not represented in the simulation grid
+        estimators_file << std::format("timestep {} modelgridindex {} EMPTYCELL\n\n", nts, mgi);
+        estimators_file.flush();
+      }
     }
   }
 
