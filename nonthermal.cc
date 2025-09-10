@@ -1723,7 +1723,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
     const auto T_e = grid::get_Te(nonemptymgi);
     printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
              nt_solution[nonemptymgi].frac_excitations_list_size);
-    const int ntransdisplayed = std::min(50, nt_solution[nonemptymgi].frac_excitations_list_size);
+    const int ntransdisplayed = std::min(10, nt_solution[nonemptymgi].frac_excitations_list_size);
 
     for (int excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++) {
       const auto& ntexc = tmp_excitation_list[excitationindex];
