@@ -449,86 +449,83 @@ auto get_chi_photo_electric_cmf(const int cellindex, const double nu_cmf) -> dou
 
   const double rho = grid::get_rho(nonemptymgi);
 
-  double chi_cmf{0.};
-  if (globals::gamma_kappagrey < 0) {
-    if constexpr (!USE_XCOM_GAMMAPHOTOION) {
-      // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
-
-      // 2.41326e19 Hz = 100 keV / H
-      const double hnu_over_100kev = nu_cmf / 2.41326e+19;
-
-      // double sigma_cmf_cno = 0.0448e-24 * pow(hnu_over_100kev, -3.2);
-
-      const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
-
-      const double sigma_cmf_fe = 25.7e-24 * pow(hnu_over_100kev, -3.0);
-
-      // Now need to multiply by the particle number density.
-
-      const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
-      // Assumes Z = 14. So mass = 28.
-
-      const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
-      // Assumes Z = 28. So mass = 56.
-
-      const double f_fe = grid::get_ffegrp(mgi);
-
-      chi_cmf = (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
-    } else {
-      const double hnu_over_1MeV = nu_cmf / 2.41326e+20;
-      const double log10_hnu_over_1MeV = log10(hnu_over_1MeV);
-      for (int i = 0; i < get_nelements(); i++) {
-        // determine charge number:
-        const int Z = get_atomicnumber(i);
-        auto numb_energies = std::ssize(photoion_data[Z - 1]);
-        if (numb_energies == 0) {
-          continue;
-        }
-        const double n_i = grid::get_elem_numberdens(nonemptymgi, i);  // number density in the current cell
-        if (n_i == 0) {
-          continue;
-        }
-        // get indices of lower and upper boundary
-        int E_gtr_idx = -1;
-
-        for (int j = 0; j < numb_energies; j++) {
-          if (photoion_data[Z - 1][j].energy > hnu_over_1MeV) {
-            E_gtr_idx = j;
-            break;
-          }
-        }
-        if (E_gtr_idx == 0) {  // packet energy smaller than all tabulated values
-          chi_cmf += photoion_data[Z - 1][0].sigma_xcom * n_i;
-          continue;
-        }
-        if (E_gtr_idx == -1) {  // packet energy greater than all tabulated values
-          chi_cmf += photoion_data[Z - 1][numb_energies - 1].sigma_xcom * n_i;
-          continue;
-        }
-        assert_always(E_gtr_idx > 0);
-        assert_always(E_gtr_idx < numb_energies);
-        const int E_smaller_idx = E_gtr_idx - 1;
-        assert_always(E_smaller_idx >= 0);
-        const double log10_E = log10_hnu_over_1MeV;
-        const double log10_E_gtr = log10(photoion_data[Z - 1][E_gtr_idx].energy);
-        const double log10_E_smaller = log10(photoion_data[Z - 1][E_smaller_idx].energy);
-        const double log10_sigma_lower = log10(photoion_data[Z - 1][E_smaller_idx].sigma_xcom);
-        const double log10_sigma_gtr = log10(photoion_data[Z - 1][E_gtr_idx].sigma_xcom);
-        // interpolate or extrapolate, both linear in log10-log10 space
-        const double log10_intpol = log10_E_smaller + ((log10_sigma_gtr - log10_sigma_lower) /
-                                                       (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller));
-        const double sigma_intpol = pow(10., log10_intpol);
-        const double chi_cmf_contrib = sigma_intpol * n_i;
-        assert_always(sigma_intpol >= 0.);
-        chi_cmf += chi_cmf_contrib;
-      }
-    }
-  } else {
-    chi_cmf = globals::gamma_kappagrey * rho;
+  if (globals::gamma_kappagrey >= 0.) {
+    return globals::gamma_kappagrey * rho;
   }
 
-  // Now convert between frames.
+  if constexpr (!USE_XCOM_GAMMAPHOTOION) {
+    // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
 
+    // 2.41326e19 Hz = 100 keV / H
+    const double hnu_over_100kev = nu_cmf / 2.41326e+19;
+
+    // double sigma_cmf_cno = 0.0448e-24 * pow(hnu_over_100kev, -3.2);
+
+    const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
+
+    const double sigma_cmf_fe = 25.7e-24 * pow(hnu_over_100kev, -3.0);
+
+    // Now need to multiply by the particle number density.
+
+    const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
+    // Assumes Z = 14. So mass = 28.
+
+    const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
+    // Assumes Z = 28. So mass = 56.
+
+    const double f_fe = grid::get_ffegrp(mgi);
+
+    return (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
+  }
+
+  const double hnu_over_1MeV = nu_cmf / 2.41326e+20;
+  const double log10_hnu_over_1MeV = log10(hnu_over_1MeV);
+  double chi_cmf{0.};
+  for (int i = 0; i < get_nelements(); i++) {
+    // determine charge number:
+    const int Z = get_atomicnumber(i);
+    auto numb_energies = std::ssize(photoion_data[Z - 1]);
+    if (numb_energies == 0) {
+      continue;
+    }
+    const double n_i = grid::get_elem_numberdens(nonemptymgi, i);  // number density in the current cell
+    if (n_i == 0) {
+      continue;
+    }
+    // get indices of lower and upper boundary
+    int E_gtr_idx = -1;
+
+    for (int j = 0; j < numb_energies; j++) {
+      if (photoion_data[Z - 1][j].energy > hnu_over_1MeV) {
+        E_gtr_idx = j;
+        break;
+      }
+    }
+    if (E_gtr_idx == 0) {  // packet energy smaller than all tabulated values
+      chi_cmf += photoion_data[Z - 1][0].sigma_xcom * n_i;
+      continue;
+    }
+    if (E_gtr_idx == -1) {  // packet energy greater than all tabulated values
+      chi_cmf += photoion_data[Z - 1][numb_energies - 1].sigma_xcom * n_i;
+      continue;
+    }
+    assert_always(E_gtr_idx > 0);
+    assert_always(E_gtr_idx < numb_energies);
+    const int E_smaller_idx = E_gtr_idx - 1;
+    assert_always(E_smaller_idx >= 0);
+    const double log10_E = log10_hnu_over_1MeV;
+    const double log10_E_gtr = log10(photoion_data[Z - 1][E_gtr_idx].energy);
+    const double log10_E_smaller = log10(photoion_data[Z - 1][E_smaller_idx].energy);
+    const double log10_sigma_lower = log10(photoion_data[Z - 1][E_smaller_idx].sigma_xcom);
+    const double log10_sigma_gtr = log10(photoion_data[Z - 1][E_gtr_idx].sigma_xcom);
+    // interpolate or extrapolate, both linear in log10-log10 space
+    const double log10_intpol = log10_E_smaller + ((log10_sigma_gtr - log10_sigma_lower) /
+                                                   (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller));
+    const double sigma_intpol = pow(10., log10_intpol);
+    const double chi_cmf_contrib = sigma_intpol * n_i;
+    assert_always(sigma_intpol >= 0.);
+    chi_cmf += chi_cmf_contrib;
+  }
   return chi_cmf;
 }
 
@@ -587,14 +584,7 @@ auto get_chi_pair_prod_cmf(const int cellindex, const double nu_cmf) -> double {
 
   const double chi_cmf = (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
 
-  // Now need to convert between frames.
-
-  if (chi_cmf < 0) {
-    printout("Negative pair production sigma. Setting to zero. Abort? %g\n", chi_cmf);
-    return 0.;
-  }
-
-  return chi_cmf;
+  return std::max(chi_cmf, 0.);
 }
 
 // Routine to compute the mean energy converted to non-thermal electrons times the Klein-Nishina cross section.
