@@ -13,6 +13,7 @@ Diagnostics:
     MissingIncludes: Strict
     Includes:
         AnalyzeAngledIncludes: true
+        IgnoreHeader: "(sys/_types/_pid_t.h|signal.h)"
 
 Completion:
     AllScopes: true
