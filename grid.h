@@ -102,7 +102,7 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_nstart_nonempty(int rank) -> int;
 [[nodiscard]] auto get_ndo(int rank) -> int;
 [[nodiscard]] auto get_ndo_nonempty(int rank) -> int;
-[[nodiscard]] auto get_totmassradionuclide(int z, int a) -> double;
+[[nodiscard]] auto get_totmassradionuclide_tmodel(int z, int a) -> double;
 [[nodiscard]] auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
     -> std::tuple<double, int>;
 

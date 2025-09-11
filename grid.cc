@@ -946,7 +946,7 @@ void assign_initial_temperatures() {
 
     const auto q = (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? get_initenergyq(mgi) : 0.;
     const double decayedenergy_per_mass =
-        decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(nonemptymgi, tstart) + q;
+        decay::get_endecay_per_ejectamass_tmodel_to_time_withexpansion(nonemptymgi, tstart) + q;
 
     auto T_initial = static_cast<float>(
         pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
@@ -2121,11 +2121,11 @@ void read_ejecta_model() {
 
   printout("Total input model mass: %9.3e [Msun]\n", mtot_input / MSUN);
   printout("Nuclide masses at t=t_model_init [Msun]:");
-  printout("  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n", get_totmassradionuclide(28, 56) / MSUN,
-           get_totmassradionuclide(27, 56) / MSUN, get_totmassradionuclide(26, 52) / MSUN,
-           get_totmassradionuclide(24, 48) / MSUN);
-  printout("  Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n", mfegroup / MSUN, get_totmassradionuclide(28, 57) / MSUN,
-           get_totmassradionuclide(27, 57) / MSUN);
+  printout("  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n", get_totmassradionuclide_tmodel(28, 56) / MSUN,
+           get_totmassradionuclide_tmodel(27, 56) / MSUN, get_totmassradionuclide_tmodel(26, 52) / MSUN,
+           get_totmassradionuclide_tmodel(24, 48) / MSUN);
+  printout("  Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n", mfegroup / MSUN,
+           get_totmassradionuclide_tmodel(28, 57) / MSUN, get_totmassradionuclide_tmodel(27, 57) / MSUN);
 
   read_possible_yefile();
 }
@@ -2335,7 +2335,7 @@ void init_grid(const int my_rank) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-auto get_totmassradionuclide(const int z, const int a) -> double {
+auto get_totmassradionuclide_tmodel(const int z, const int a) -> double {
   return totmassradionuclide[decay::get_nucindex(z, a)];
 }
 

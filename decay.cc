@@ -131,7 +131,7 @@ std::vector<DecayPath> decaypaths;
 
 // decaypath_energy_per_mass points to an array of length npts_model * num_decaypaths
 // the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
-// during the simulation time range
+// during the simulation time range tmin to tmax
 std::span<double> decaypath_energy_per_mass{};
 MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
 
@@ -640,10 +640,10 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
 }
 
 // Simple Euler integration as a check on the analytic result from
-// get_endecay_per_ejectamass_t0_to_time_withexpansion()
-auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const int nonemptymgi,
-                                                                         const int decaypathindex, const double tstart)
-    -> double {
+// get_endecay_per_ejectamass_tmodel_to_time_withexpansion()
+auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion_chain_numerical(const int nonemptymgi,
+                                                                             const int decaypathindex,
+                                                                             const double tstart) -> double {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double min_meanlife = -1;
   for (int i = 0; i < get_decaypathlength(decaypathindex); i++) {
@@ -695,7 +695,8 @@ auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypath
   return endiff;
 }
 
-// get the decay energy released during the simulation time per unit mass [erg/g]
+// get the decay energy released during the simulation [(tmodel if initial packets else tmin) to tmax] per unit mass
+// [erg/g]
 auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypathindex) -> double {
   const double chainendecay = decaypath_energy_per_mass[(nonemptymgi * get_num_decaypaths()) + decaypathindex];
   assert_testmodeonly(chainendecay >= 0.);
@@ -1000,7 +1001,7 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
 
 // calculate the decay energy per unit mass [erg/g] released from time t_model (can be before tmin) to tstart,
 // accounting for the photon energy loss due to expansion between time of decays and tstart (equation 18 of Lucy 2005)
-auto get_endecay_per_ejectamass_t0_to_time_withexpansion(const int nonemptymgi, const double tstart) -> double {
+auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(const int nonemptymgi, const double tstart) -> double {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double tot_endecay = 0.;
   for (const auto& decaypath : decaypaths) {
@@ -1138,14 +1139,16 @@ void free_decaypath_energy_per_mass() {
   return qdot;
 }
 
-auto get_global_etot_tmin_tinf() -> double {
+// total decay energy [erg] that will be released from all decay paths in the model from snapshot time until time
+// infinity
+auto get_global_etot_tmodel_tinf() -> double {
   double etot_tinf = 0.;
   const auto num_decaypaths = get_num_decaypaths();
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
     const int z_top = decaypaths[decaypathindex].z[0];
     const int a_top = decaypaths[decaypathindex].a[0];
 
-    etot_tinf += (decaypaths[decaypathindex].branchproduct * grid::get_totmassradionuclide(z_top, a_top) /
+    etot_tinf += (decaypaths[decaypathindex].branchproduct * grid::get_totmassradionuclide_tmodel(z_top, a_top) /
                   nucmass(z_top, a_top) * get_decaypath_lastnucdecayenergy(decaypathindex));
   }
   assert_always(std::isfinite(etot_tinf));
@@ -1277,7 +1280,7 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
   estimators_file << '\n';
 }
 
-void setup_radioactive_pellet(const double e0, const int nonemptymgi, Packet& pkt) {
+void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptymgi, Packet& pkt) {
   const int num_decaypaths = get_num_decaypaths();
 
   // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel
@@ -1320,8 +1323,8 @@ void setup_radioactive_pellet(const double e0, const int nonemptymgi, Packet& pk
     pkt.prop_time = globals::tmin;
     pkt.tdecay = globals::tmin;
     pkt.type = TYPE_RADIOACTIVE_PELLET;
-    pkt.e_cmf = e0;
-    pkt.nu_cmf = e0 / H;
+    pkt.e_cmf = e_cmf_per_packet;
+    pkt.nu_cmf = e_cmf_per_packet / H;
     pkt.pellet_nucindex = -1;
     pkt.pellet_decaytype = -1;
     return;
@@ -1334,7 +1337,7 @@ void setup_radioactive_pellet(const double e0, const int nonemptymgi, Packet& pk
 
   if constexpr (UNIFORM_PELLET_ENERGIES) {
     pkt.tdecay = sample_decaytime(decaypathindex, tdecaymin, globals::tmax);
-    pkt.e_cmf = e0;
+    pkt.e_cmf = e_cmf_per_packet;
   } else {
     // use uniform decay time distribution and scale the packet energies instead.
     // keeping the pellet decay rate constant will give better statistics at late times
@@ -1343,15 +1346,14 @@ void setup_radioactive_pellet(const double e0, const int nonemptymgi, Packet& pk
     pkt.tdecay = (zrand * tdecaymin) + ((1. - zrand) * globals::tmax);
 
     // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
-    // e0 is the average energy per packet for this cell and decaypath, so we scale this up or down
+    // e_cmf_average is the average energy per packet for this cell and decaypath, so we scale this up or down
     // according to: decay power at this time relative to the average decay power
     const double avgpower =
         get_simtime_endecay_per_ejectamass(nonemptymgi, decaypathindex) / (globals::tmax - tdecaymin);
     assert_always(avgpower > 0.);
-    assert_always(std::isfinite(avgpower));
-    pkt.e_cmf = e0 * get_decaypath_power_per_ejectamass(decaypathindex, nonemptymgi, pkt.tdecay) / avgpower;
+    pkt.e_cmf =
+        e_cmf_per_packet * get_decaypath_power_per_ejectamass(decaypathindex, nonemptymgi, pkt.tdecay) / avgpower;
     assert_always(pkt.e_cmf >= 0);
-    assert_always(std::isfinite(pkt.e_cmf));
   }
 
   // final decaying nuclide at the end of the chain

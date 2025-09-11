@@ -38,16 +38,16 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
 [[nodiscard]] auto get_decay_neutrino_frac(int nucindex, int decaytype) -> double;
 void set_nucdecayenergygamma(int nucindex, double value);
 void update_abundances(int nonemptymgi, double t_current);
-[[nodiscard]] auto get_endecay_per_ejectamass_t0_to_time_withexpansion(int nonemptymgi, double tstart) -> double;
+[[nodiscard]] auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(int nonemptymgi, double tstart) -> double;
 [[nodiscard]] auto get_modelcell_simtime_endecay_per_mass(int nonemptymgi) -> double;
 void setup_decaypath_energy_per_mass();
 void free_decaypath_energy_per_mass();
 [[nodiscard]] auto get_qdot_modelcell(int nonemptymgi, double t, int decaytype) -> double;
 [[nodiscard]] auto get_particle_injection_rate(int nonemptymgi, double t, int decaytype) -> double;
 [[nodiscard]] auto get_gamma_emission_rate(int nonemptymgi, double t) -> double;
-[[nodiscard]] auto get_global_etot_tmin_tinf() -> double;
+[[nodiscard]] auto get_global_etot_tmodel_tinf() -> double;
 void output_nuc_abundances(std::ostream& estimators_file, int nonemptymgi, double t_current, int element);
-void setup_radioactive_pellet(double e0, int nonemptymgi, Packet& pkt);
+void setup_radioactive_pellet(double e_cmf_per_packet, int nonemptymgi, Packet& pkt);
 void cleanup();
 
 [[nodiscard]] auto constexpr nucmass(int /*z*/, int a) -> double { return a * MH; }

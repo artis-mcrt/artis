@@ -31,8 +31,8 @@
 
 namespace {
 
-// Place pellet n with energy e0 in cell m
-void place_pellet(const double e0, const int cellindex, const int pktnumber, Packet& pkt) {
+// Place pellet n with energy e_cmf_per_packet in cell m
+void place_pellet(const double e_cmf_per_packet, const int cellindex, const int pktnumber, Packet& pkt) {
   // First choose a position for the pellet. In the cell.
   pkt.where = cellindex;
   pkt.number = pktnumber;  // record the packets number for debugging
@@ -73,7 +73,7 @@ void place_pellet(const double e0, const int cellindex, const int pktnumber, Pac
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
 
-  decay::setup_radioactive_pellet(e0, nonemptymgi, pkt);
+  decay::setup_radioactive_pellet(e_cmf_per_packet, nonemptymgi, pkt);
 
   // initial e_rf is probably never needed (e_rf is set at pellet decay time), but we
   // might as well give it a correct value since this code is fast and runs only once
@@ -98,19 +98,18 @@ void packet_init(std::span<Packet> pkt)
 
   // The total number of pellets that we want to start with is just
   // npkts. The total energy of the pellets is given by etot.
-  const double etot_tinf = decay::get_global_etot_tmin_tinf();
+  const double etot_tmodel_tinf = decay::get_global_etot_tmodel_tinf();
 
-  printout("etot %g (t_min to t_inf)\n", etot_tinf);
+  printout("etot %g (t_model to t_inf)\n", etot_tmodel_tinf);
 
-  const double e0_tinf = etot_tinf / globals::npkts;
-  printout("packet e0 (t_min to t_inf) %g erg\n", e0_tinf);
+  printout("e_cmf per packet (t_model to t_inf) %g erg\n", etot_tmodel_tinf / globals::npkts);
 
   decay::setup_decaypath_energy_per_mass();
 
   // Need to get a normalisation factor
   auto en_cumulative = std::vector<double>(grid::ngrid);
 
-  double norm = 0.;
+  double etot_simtime = 0.;
   for (int m = 0; m < grid::ngrid; m++) {
     const int mgi = grid::get_propcell_modelgridindex(m);
     if (mgi < grid::get_npts_model() && grid::get_numpropcells(mgi) > 0)  // some grid cells are empty
@@ -121,39 +120,39 @@ void packet_init(std::span<Packet> pkt)
         q += grid::get_initenergyq(mgi);
       }
 
-      norm += grid::get_propcell_volume_tmin(m) * grid::get_rho_tmin(mgi) * q;
+      etot_simtime += grid::get_propcell_volume_tmin(m) * grid::get_rho_tmin(mgi) * q;
     }
-    en_cumulative[m] = norm;
+    en_cumulative[m] = etot_simtime;
   }
-  assert_always(norm > 0);
+  assert_always(etot_simtime > 0);
 
-  const double etot = norm;
-  // So energy per pellet is
-  const double e0 = etot / globals::npkts;
-  printout("packet e0 (tmin to tmax) %g erg\n", e0);
+  constexpr auto strtimelow{INITIAL_PACKETS_ON ? "tmodel" : "tmin"};
+  logprintlnfmt("etot ({} to tmax) {} erg", strtimelow, etot_simtime);
 
-  printout("etot %g erg (tmin to tmax) erg\n", etot);
+  // So energy per pellet is:
+  const double e_cmf_per_packet = etot_simtime / globals::npkts;
+  logprintlnfmt("e_cmf per packet ({} to tmax) {} erg", strtimelow, e_cmf_per_packet);
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
-  printout("Placing pellets...\n");
+  logprintlnfmt("Placing pellets...");
   const auto allpkts = std::ranges::iota_view{0, globals::npkts};
-  std::for_each(allpkts.begin(), allpkts.end(), [&, norm, e0](const int n) {
+  std::for_each(allpkts.begin(), allpkts.end(), [&, etot_simtime, e_cmf_per_packet](const int n) {
     pkt[n] = Packet{};
-    const double targetval = rng_uniform() * norm;
+    const double targetval = rng_uniform() * etot_simtime;
 
     // first i such that en_cumulative[i] > targetval
     const int cellindex = static_cast<int>(std::ranges::upper_bound(en_cumulative, targetval) - en_cumulative.cbegin());
     assert_always(cellindex < grid::ngrid);
 
-    place_pellet(e0, cellindex, n, pkt[n]);
+    place_pellet(e_cmf_per_packet, cellindex, n, pkt[n]);
   });
 
   decay::free_decaypath_energy_per_mass();  // will no longer be needed after packets are set up
 
   double e_cmf_total = std::ranges::fold_left(pkt, 0., [](const double sum, const Packet& p) { return sum + p.e_cmf; });
-  const double e_ratio = etot / e_cmf_total;
-  printout("packet energy sum %g should be %g normalisation factor: %g\n", e_cmf_total, etot, e_ratio);
+  const double e_ratio = etot_simtime / e_cmf_total;
+  printout("packet energy sum %g should be %g normalisation factor: %g\n", e_cmf_total, etot_simtime, e_ratio);
   assert_always(std::isfinite(e_cmf_total));
   e_cmf_total *= e_ratio;
   for (int n = 0; n < globals::npkts; n++) {
