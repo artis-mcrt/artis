@@ -283,10 +283,13 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
         return false;
       }
 
-      Packet dummypkt_abort = vpkt;
-      move_pkt_withtime(dummypkt_abort, sdist);
-      const double nu_cmf_abort = dummypkt_abort.nu_cmf;
-      assert_testmodeonly(nu_cmf_abort <= vpkt.nu_cmf);
+      const Vec3d abort_pos{vpkt.pos[0] + (vpkt.dir[0] * sdist), vpkt.pos[1] + (vpkt.dir[1] * sdist),
+                            vpkt.pos[2] + (vpkt.dir[2] * sdist)};
+
+      const double nu_cmf_abort = std::min(
+          vpkt.nu_rf * calculate_doppler_nucmf_on_nurf(abort_pos, vpkt.dir, vpkt.prop_time + (sdist / CLIGHT_PROP)),
+          vpkt.nu_cmf);
+
       const double d_nu_on_d_l = (nu_cmf_abort - vpkt.nu_cmf) / sdist;
 
       double ldist = 0;
