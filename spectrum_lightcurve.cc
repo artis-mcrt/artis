@@ -293,9 +293,11 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
     write_light_curve("gamma_light_curve.out", dirbin, gamma_light_curve_lum, gamma_light_curve_lumcmf, numtimesteps);
     write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, numtimesteps);
   } else {
-    if (!std::filesystem::exists(outdir_resfiles)) {
+    if (globals::my_rank == 0 && !std::filesystem::exists(outdir_resfiles)) {
       std::filesystem::create_directory(outdir_resfiles);
     }
+    MPI_Barrier(MPI_COMM_WORLD);
+
     write_light_curve(std::format("{}light_curve_res_{:02d}.out", outdir_resfiles, dirbin), dirbin,
                       rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
     write_spectrum(std::format("{}spec_res_{:02d}.out", outdir_resfiles, dirbin),
