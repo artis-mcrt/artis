@@ -392,20 +392,24 @@ void write_spectra(const std::string& spec_filename, const std::string& emission
   }
 
   // do each file write on a different node, if available
-  if ((1 % globals::node_count == globals::node_id) && (1 % globals::node_nprocs == globals::rank_in_node)) {
+  // if ((1 % globals::node_count == globals::node_id) && (1 % globals::node_nprocs == globals::rank_in_node))
+  if (globals::my_rank == 0) {
     write_spectrum_file(spec_filename, spectra, numtimesteps);
   }
 
-  if (spectra.do_emission_absorption) {
-    if ((2 % globals::node_count == globals::node_id) && (2 % globals::node_nprocs == globals::rank_in_node)) {
+  if (spectra.do_emission_absorption && globals::my_rank == 0) {
+    // if ((2 % globals::node_count == globals::node_id) && (2 % globals::node_nprocs == globals::rank_in_node))
+    {
       write_emission_spectrum_file(emission_filename, spectra, numtimesteps);
     }
 
-    if ((3 % globals::node_count == globals::node_id) && (3 % globals::node_nprocs == globals::rank_in_node)) {
+    // if ((3 % globals::node_count == globals::node_id) && (3 % globals::node_nprocs == globals::rank_in_node))
+    {
       write_trueemission_spectrum_file(trueemission_filename, spectra, numtimesteps);
     }
 
-    if ((4 % globals::node_count == globals::node_id) && (4 % globals::node_nprocs == globals::rank_in_node)) {
+    // if ((4 % globals::node_count == globals::node_id) && (4 % globals::node_nprocs == globals::rank_in_node))
+    {
       write_absorption_spectrum_file(absorption_filename, spectra, numtimesteps);
     }
   }
