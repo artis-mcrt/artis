@@ -275,17 +275,17 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
 
   MPI_Barrier(MPI_COMM_WORLD);
   if (globals::rank_in_node == 0) {
-    MPI_Reduce_safe(rpkt_spectra.fluxalltimesteps, MPI_SUM, 0, globals::mpi_comm_internode);
+    MPI_Allreduce_safe(rpkt_spectra.fluxalltimesteps, MPI_SUM, globals::mpi_comm_internode);
     if (rpkt_spectra.do_emission_absorption) {
-      MPI_Reduce_safe(rpkt_spectra.absorptionalltimesteps, MPI_SUM, 0, globals::mpi_comm_internode);
-      MPI_Reduce_safe(rpkt_spectra.emissionalltimesteps, MPI_SUM, 0, globals::mpi_comm_internode);
-      MPI_Reduce_safe(rpkt_spectra.trueemissionalltimesteps, MPI_SUM, 0, globals::mpi_comm_internode);
+      MPI_Allreduce_safe(rpkt_spectra.absorptionalltimesteps, MPI_SUM, globals::mpi_comm_internode);
+      MPI_Allreduce_safe(rpkt_spectra.emissionalltimesteps, MPI_SUM, globals::mpi_comm_internode);
+      MPI_Allreduce_safe(rpkt_spectra.trueemissionalltimesteps, MPI_SUM, globals::mpi_comm_internode);
     }
   }
-  MPI_Reduce_safe(rpkt_light_curve_lum, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce_safe(rpkt_light_curve_lumcmf, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce_safe(gamma_light_curve_lum, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce_safe(gamma_light_curve_lumcmf, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(rpkt_light_curve_lum, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(rpkt_light_curve_lumcmf, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(gamma_light_curve_lum, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(gamma_light_curve_lumcmf, MPI_SUM, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (dirbin == -1) {
