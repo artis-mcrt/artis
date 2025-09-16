@@ -80,9 +80,9 @@ struct Spectra {
   }
 };
 
-void write_spectrum(const std::string& spec_filename, const std::string& emission_filename,
-                    const std::string& trueemission_filename, const std::string& absorption_filename,
-                    const Spectra& spectra, int numtimesteps);
+void write_spectra(const std::string& spec_filename, const std::string& emission_filename,
+                   const std::string& trueemission_filename, const std::string& absorption_filename,
+                   const Spectra& spectra, int numtimesteps);
 
 void write_specpol(const std::string& specpol_filename, const std::string& emission_filename,
                    const std::string& absorption_filename, const Spectra* stokes_i, const Spectra* stokes_q,

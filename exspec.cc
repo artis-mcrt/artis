@@ -107,13 +107,13 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf,
                       globals::ntimesteps);
 
-    write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntimesteps);
+    write_spectra("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntimesteps);
 
     if constexpr (POL_ON) {
       write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", &stokes_i, &stokes_q, &stokes_u);
     }
 
-    write_spectrum("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
+    write_spectra("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
 
     printout("finished angle-averaged stuff\n");
   } else {
@@ -125,10 +125,10 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     }
     write_light_curve(std::format("{}light_curve_res_{:02d}.out", outdir_resfiles, a), a, rpkt_light_curve_lum,
                       rpkt_light_curve_lumcmf, globals::ntimesteps);
-    write_spectrum(std::format("{}spec_res_{:02d}.out", outdir_resfiles, a),
-                   std::format("{}emission_res_{:02d}.out", outdir_resfiles, a),
-                   std::format("{}emissiontrue_res_{:02d}.out", outdir_resfiles, a),
-                   std::format("{}absorption_res_{:02d}.out", outdir_resfiles, a), rpkt_spectra, globals::ntimesteps);
+    write_spectra(std::format("{}spec_res_{:02d}.out", outdir_resfiles, a),
+                  std::format("{}emission_res_{:02d}.out", outdir_resfiles, a),
+                  std::format("{}emissiontrue_res_{:02d}.out", outdir_resfiles, a),
+                  std::format("{}absorption_res_{:02d}.out", outdir_resfiles, a), rpkt_spectra, globals::ntimesteps);
 
     if constexpr (POL_ON) {
       write_specpol(std::format("{}specpol_res_{:02d}.out", outdir_resfiles, a),
