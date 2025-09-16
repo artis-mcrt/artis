@@ -331,8 +331,6 @@ void write_spectrum(const std::string& spec_filename, const std::string& emissio
 
   const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
 
-  const int proccount = get_proccount();
-  const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
   for (ptrdiff_t nubin = 0; nubin < MNUBINS; nubin++) {
     spec_file << (spectra.lower_freq[nubin] + (spectra.delta_freq[nubin] / 2)) << ' ';
 
@@ -343,6 +341,7 @@ void write_spectrum(const std::string& spec_filename, const std::string& emissio
   }
 
   if (do_emission_absorption) {
+    const auto proccount = static_cast<ptrdiff_t>(get_proccount());
     auto emission_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
     for (ptrdiff_t nubin = 0; nubin < MNUBINS; nubin++) {
       for (ptrdiff_t nts = 0; nts < numtimesteps; nts++) {
@@ -366,6 +365,7 @@ void write_spectrum(const std::string& spec_filename, const std::string& emissio
     }
 
     auto absorption_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
+    const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
     for (ptrdiff_t nubin = 0; nubin < MNUBINS; nubin++) {
       for (ptrdiff_t nts = 0; nts < numtimesteps; nts++) {
         for (int i = 0; i < ioncount; i++) {
