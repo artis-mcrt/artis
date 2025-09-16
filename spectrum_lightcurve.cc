@@ -316,9 +316,6 @@ void write_spectrum(const std::string& spec_filename, const std::string& emissio
   auto spec_file = fstream_required(spec_filename, std::ios::out | std::ios::trunc);
 
   const bool do_emission_absorption = spectra.do_emission_absorption;
-  std::fstream emission_file{};
-  std::fstream trueemission_file{};
-  std::fstream absorption_file{};
 
   if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_absorption && !traceemissionabsorption.empty()) {
     printout_tracemission_stats();
@@ -346,9 +343,9 @@ void write_spectrum(const std::string& spec_filename, const std::string& emissio
   }
 
   if (do_emission_absorption) {
-    emission_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
-    trueemission_file = fstream_required(trueemission_filename, std::ios::out | std::ios::trunc);
-    absorption_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
+    std::fstream emission_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
+    std::fstream trueemission_file = fstream_required(trueemission_filename, std::ios::out | std::ios::trunc);
+    std::fstream absorption_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
     for (ptrdiff_t nubin = 0; nubin < MNUBINS; nubin++) {
       for (ptrdiff_t nts = 0; nts < numtimesteps; nts++) {
         const auto emindex_nts_nubin = (nubin * ntimesteps_all * proccount) + (nts * proccount);
