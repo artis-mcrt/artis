@@ -329,6 +329,7 @@ void write_spectrum_file(const std::string& spec_filename, const Spectra& spectr
 
 void write_emission_spectrum_file(const std::string& emission_filename, const Spectra& spectra,
                                   const int numtimesteps) {
+  assert_always(numtimesteps <= globals::ntimesteps);
   auto emission_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
   const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
   const auto proccount = static_cast<ptrdiff_t>(get_proccount());
@@ -345,6 +346,7 @@ void write_emission_spectrum_file(const std::string& emission_filename, const Sp
 
 void write_trueemission_spectrum_file(const std::string& trueemission_filename, const Spectra& spectra,
                                       const int numtimesteps) {
+  assert_always(numtimesteps <= globals::ntimesteps);
   auto trueemission_file = fstream_required(trueemission_filename, std::ios::out | std::ios::trunc);
   const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
   const auto proccount = static_cast<ptrdiff_t>(get_proccount());
@@ -361,6 +363,7 @@ void write_trueemission_spectrum_file(const std::string& trueemission_filename, 
 
 void write_absorption_spectrum_file(const std::string& absorption_filename, const Spectra& spectra,
                                     const int numtimesteps) {
+  assert_always(numtimesteps <= globals::ntimesteps);
   auto absorption_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
   for (ptrdiff_t nubin = 0; nubin < MNUBINS; nubin++) {
