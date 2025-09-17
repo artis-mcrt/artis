@@ -949,8 +949,19 @@ void read_autoion_data() {
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels = get_nlevels(element, ion);
       int nlevels_autoion = 0;
+      bool found_autoion_level = false;
       for (int level = 0; level < nlevels; level++) {
-        nlevels_autoion += get_nautoiondowntrans(element, ion, level);
+        const auto level_is_autoionizing = get_nautoiondowntrans(element, ion, level) > 0;
+
+        if (level_is_autoionizing) {
+          nlevels_autoion++;
+          found_autoion_level = true;
+        }
+
+        // once we have found one autoionizing level, all higher levels should also be autoionizing
+        if (found_autoion_level) {
+          assert_always(level_is_autoionizing);
+        }
       }
       globals::elements[element].ions[ion].nlevels_autoion = nlevels_autoion;
       nlevels_autoion_sum += nlevels_autoion;
