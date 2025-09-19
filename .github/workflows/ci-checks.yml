@@ -1,6 +1,7 @@
 ---
 name: Compile and lint
-
+permissions:
+  contents: read
 on:
     push:
         branches-ignore:

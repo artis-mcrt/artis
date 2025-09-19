@@ -1,6 +1,7 @@
 ---
 name: CI Extensive Test Mode
-
+permissions:
+  contents: read
 on:
     push:
         branches-ignore:
