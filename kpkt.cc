@@ -318,7 +318,6 @@ void setup_coolinglist() {
       // ff creation of rpkt
       // -------------------
       const int ioncharge = get_ionstage(element, ion) - 1;
-      // printout("[debug] ioncharge %d, nncurrention %g, nne %g\n",ion,nncurrention,nne);
       if (ioncharge > 0) {
         coolinglist[i].type = CoolingType::FREEFREE;
         coolinglist[i].level = -99;
@@ -373,9 +372,8 @@ void setup_coolinglist() {
   printout("[info] read_atomicdata: number of coolingterms %d\n", ncoolingterms);
 }
 
-__host__ __device__ void do_kpkt_blackbody(Packet& pkt)
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
-{
+__host__ __device__ void do_kpkt_blackbody(Packet& pkt) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
   if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() && grid::modelgrid[nonemptymgi].thick != 1) {
@@ -389,7 +387,6 @@ __host__ __device__ void do_kpkt_blackbody(Packet& pkt)
   assert_always(std::isfinite(pkt.nu_cmf));
   // and then emit the packet randomly in the comoving frame
   emit_rpkt(pkt);
-  // printout("[debug] calculate_chi_rpkt after kpkt to rpkt by ff\n");
   pkt.next_trans = -1;  // FLAG: transition history here not important, cont. process
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
   stats::increment(stats::COUNTER_INTERACTIONS);
@@ -402,12 +399,6 @@ __host__ __device__ void do_kpkt_blackbody(Packet& pkt)
 // handle a k-packet (kinetic energy of the free electrons)
 __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const double t1 = pkt.prop_time;
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
-
-  // don't calculate cooling rates after each cell crossings any longer
-  // but only if we really get a kpkt and they hadn't been calculated already
-
-  // printout("[debug] do_kpkt: propagate k-pkt\n");
 
   const double deltat =
       (nts < n_kpktdiffusion_timesteps) ? kpktdiffusion_timescale * globals::timesteps[nts].width : 0.;
@@ -424,6 +415,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   pkt.pos = vec_scale(pkt.pos, t_current / t1);
   pkt.prop_time = t_current;
 
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
   assert_always(grid::modelgrid[nonemptymgi].totalcooling > 0.);
   const double rndcool_ion = rng_uniform() * grid::modelgrid[nonemptymgi].totalcooling;
 
@@ -485,7 +477,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const auto T_e = grid::get_Te(nonemptymgi);
 
   if (rndcoolingtype == CoolingType::FREEFREE) {
-    // The k-packet converts directly into a r-packet by free-free-emission.
+    // The k-packet converts directly into a r-packet by free-free emission.
     // Need to select the r-packets frequency and a random direction in the
     // co-moving frame.
 

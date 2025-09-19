@@ -212,9 +212,8 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
   }
 }
 
-void do_packet(Packet& pkt, const double t2, const int nts)
 // update a packet no further than time t2
-{
+void do_packet(Packet& pkt, const double t2, const int nts) {
   switch (pkt.type) {
     case TYPE_RADIOACTIVE_PELLET: {
       update_pellet(pkt, nts, t2);

@@ -102,8 +102,6 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
 
     arr_sum_epstrans_rad_deexc[i] = sum_raddeexc;
     arr_sum_internal_down_same[i] = sum_internal_down_same;
-
-    // printout("checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,lower,R,C,epsilon_trans);
   }
   processrates[MA_ACTION_RADDEEXC] = sum_raddeexc;
   processrates[MA_ACTION_COLDEEXC] = sum_coldeexc;
@@ -327,8 +325,6 @@ __host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmast
 
   const double t_mid = globals::timesteps[globals::timestep].mid;
 
-  // printout("[debug] do MA\n");
-
   const auto nne = grid::get_nne(nonemptymgi);
 
   assert_testmodeonly(grid::modelgrid[nonemptymgi].thick != 1);  // macroatom should not be used in thick cells
@@ -391,7 +387,6 @@ __host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmast
 
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
-        // printout("[debug] do_ma:   radiative deexcitation\n");
         do_macroatom_raddeexcitation(pkt, ionuniquelevelindexstart, uniquelevelindex, activatingline, epsilon_current,
                                      processrates[MA_ACTION_RADDEEXC]);
 
@@ -409,7 +404,6 @@ __host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmast
 
       case MA_ACTION_COLDEEXC: {
         // collisional deexcitation of macro atom => convert the packet into a k-packet
-        // printout("[debug] do_ma:   collisional deexcitation\n");
 
         stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC);
         stats::increment(stats::COUNTER_INTERACTIONS);
@@ -439,8 +433,6 @@ __host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmast
 
       case MA_ACTION_RADRECOMB: {
         // Radiative recombination of MA: emitt a continuum-rpkt
-        // printout("[debug] do_ma:   radiative recombination\n");
-        // printout("[debug] do_ma:   element %d, ion %d, level %d\n", element, ion, level);
 
         level = do_macroatom_radrecomb(pkt, nonemptymgi, element, ion, level, processrates[MA_ACTION_RADRECOMB]);
         ion -= 1;
@@ -450,7 +442,6 @@ __host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmast
 
       case MA_ACTION_COLRECOMB: {
         // collisional recombination of macro atom => convert the packet into a k-packet
-        // printout("[debug] do_ma:   collisonal recombination\n");
         stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLRECOMB);
         stats::increment(stats::COUNTER_INTERACTIONS);
 
@@ -463,7 +454,6 @@ __host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmast
       }
 
       case MA_ACTION_INTERNALDOWNLOWER: {
-        // printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
         stats::increment(stats::COUNTER_INTERACTIONS);
         stats::increment(stats::COUNTER_MA_STAT_INTERNALDOWNLOWER);
 
