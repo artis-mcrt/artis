@@ -484,7 +484,6 @@ __host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmast
       }
 
       case MA_ACTION_INTERNALUPSAME: {
-        // printout("[debug] do_ma:   internal upward jump within current ionstage\n");
         stats::increment(stats::COUNTER_INTERACTIONS);
 
         // randomly select the occurring transition
@@ -504,7 +503,6 @@ __host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmast
       }
 
       case MA_ACTION_INTERNALUPHIGHER: {
-        // printout("[debug] do_ma:   internal upward jump to next ionstage\n");
         stats::increment(stats::COUNTER_INTERACTIONS);
 
         stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHER);
@@ -722,8 +720,6 @@ auto col_ionisation_ratecoeff(const float T_e, const float nne, const int elemen
       get_phixs_table(element, ion, lower)[0] * get_phixsprobability(element, ion, lower, phixstargetindex);
   const double C = nne * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;  // photoionisation at the edge
 
-  // printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",
-  // nne,T_e,g,epsilon_trans,sigma_bf);
   assert_testmodeonly(std::isfinite(C));
 
   return C;
