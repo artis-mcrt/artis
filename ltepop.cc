@@ -272,7 +272,7 @@ void set_calculated_nne(const int nonemptymgi) {
 }
 
 // Special case of only neutral ions, set nne to some finite value so that packets are not lost in kpkts
-void set_groundlevelpops_neutral(const int nonemptymgi) {
+void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
   printout("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n",
            grid::get_mgi_of_nonemptymgi(nonemptymgi));
   for (int element = 0; element < get_nelements(); element++) {
@@ -289,12 +289,11 @@ void set_groundlevelpops_neutral(const int nonemptymgi) {
       } else {
         nnion = 0.;
       }
-      const auto groundpop = static_cast<float>(
-          nnion * stat_weight(element, ion, 0) /
-          grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex]);
+      const auto groundpop =
+          static_cast<float>(nnion * stat_weight(element, ion, 0) /
+                             grid::ion_partfuncts_allcells[(nonemptymgi * get_includedions()) + uniqueionindex]);
 
-      grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex] =
-          groundpop;
+      grid::ion_groundlevelpops_allcells[(nonemptymgi * get_includedions()) + uniqueionindex] = groundpop;
     }
   }
 }

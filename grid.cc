@@ -708,7 +708,7 @@ void read_model_radioabundances(std::istream& fmodel, std::istringstream& ssline
     return;
   }
 
-  for (ptrdiff_t i = 0; i < std::ssize(colnames); i++) {
+  for (std::ptrdiff_t i = 0; i < std::ssize(colnames); i++) {
     double valuein = 0.;
     assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
 
@@ -800,7 +800,7 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
   decay::init_nuclides(zlist, alist);
 
   std::vector<int> nucindexlist(zlist.size());
-  for (ptrdiff_t i = 0; i < std::ssize(zlist); i++) {
+  for (std::ptrdiff_t i = 0; i < std::ssize(zlist); i++) {
     nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
@@ -1484,7 +1484,7 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
 
 auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[modelgridindex].rhoinit; }
 
-__host__ __device__ auto get_rho(const int nonemptymgi) -> float {
+__host__ __device__ auto get_rho(const std::ptrdiff_t nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return modelgrid[nonemptymgi].rho;
@@ -1511,10 +1511,10 @@ __host__ __device__ auto get_modelcell_mean_radial_pos(const int modelgridindex,
   return modelgrid_input[modelgridindex].initial_radial_pos_sum * tratmid / assoc_cells;
 }
 
-auto get_elem_abundance(const int nonemptymgi, const int element) -> float
+auto get_elem_abundance(const std::ptrdiff_t nonemptymgi, const int element) -> float
 // mass fraction of an element (all isotopes combined)
 {
-  const auto massfrac = elem_massfracs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element];
+  const auto massfrac = elem_massfracs_allcells[(nonemptymgi * get_nelements()) + element];
   assert_testmodeonly(massfrac >= 0.0);
   return massfrac;
 }
@@ -1525,9 +1525,9 @@ void set_elem_abundance(const ptrdiff_t nonemptymgi, const int element, const fl
 }
 
 // mass fraction of an element (all isotopes combined)
-__host__ __device__ auto get_elem_numberdens(const int nonemptymgi, const int element) -> double {
-  const double elem_meanweight = grid::get_element_meanweight(nonemptymgi, element);
-  return get_elem_abundance(nonemptymgi, element) / elem_meanweight * grid::get_rho(nonemptymgi);
+__host__ __device__ auto get_elem_numberdens(const ptrdiff_t nonemptymgi, const int element) -> double {
+  return get_elem_abundance(nonemptymgi, element) /
+         static_cast<double>(grid::get_element_meanweight(nonemptymgi, element)) * grid::get_rho(nonemptymgi);
 }
 
 __host__ __device__ auto get_kappagrey(const int nonemptymgi) -> float { return modelgrid[nonemptymgi].kappagrey; }
@@ -1677,14 +1677,13 @@ auto get_modelinitnucmassfrac(const int modelgridindex, const int nucindex) -> f
   return initnucmassfrac_allcells[(modelgridindex * num_nuclides) + nucindex];
 }
 
-auto get_stable_initabund(const int nonemptymgi, const int element) -> float {
-  return initmassfracuntrackedstable_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element];
+auto get_stable_initabund(const std::ptrdiff_t nonemptymgi, const int element) -> float {
+  return initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element];
 }
 
-auto get_element_meanweight(const int nonemptymgi, const int element) -> float
-// weight is in grams
-{
-  if (USE_CALCULATED_MEANATOMICWEIGHT) {
+// get element mean weight in grams
+auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element) -> float {
+  if constexpr (USE_CALCULATED_MEANATOMICWEIGHT) {
     const auto mu = elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element];
     if (mu > 0) {
       return mu;
@@ -1694,9 +1693,9 @@ auto get_element_meanweight(const int nonemptymgi, const int element) -> float
 }
 
 // set element weight in grams
-void set_element_meanweight(const int nonemptymgi, const int element, const float meanweight) {
+void set_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element, const float meanweight) {
   assert_always(meanweight > 0.);
-  elem_meanweight_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] = meanweight;
+  elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element] = meanweight;
 }
 
 auto get_electronfrac(const int nonemptymgi) -> double {
