@@ -1146,7 +1146,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     if (FORCE_SAHA_ION_BALANCE(atomic_number)) {
       const auto ionfractions = calculate_ionfractions(element, nonemptymgi, grid::get_nne(nonemptymgi), true);
       const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
-      for (int ion = 1; ion <= uppermost_ion; ion++) {
+      for (int ion = first_ion_used + 1; ion <= std::min(uppermost_ion, max_ion_used); ion++) {
         // replace matrix row for ion's ground state with sum of this ion's level populations is equal to the ion
         // population
         const double nnion = nnelement * ionfractions[ion];
