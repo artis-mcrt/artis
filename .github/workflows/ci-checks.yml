@@ -22,7 +22,7 @@ jobs:
 
     clang-tidy-cppcheck:
         name: clang-tidy and cppcheck
-        runs-on: macos-15
+        runs-on: macos-26
         steps:
             - uses: actions/checkout@v5
 
@@ -227,7 +227,7 @@ jobs:
                   find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nebular.h" -exec sh -c 'cp -v -p {} artisoptions.h && make sn3d' \;
 
     mac-clang:
-        runs-on: macos-15
+        runs-on: macos-26
         name: Apple Clang and LLVM Clang
         steps:
             - uses: actions/checkout@v5
