@@ -307,12 +307,10 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 
   double nne_lo = 0.;  // MINPOP;
   if (nne_solution_f(nne_lo, f.params) * nne_solution_f(nne_hi, f.params) > 0) {
-    const auto T_R = grid::get_TR(nonemptymgi);
-    const auto T_e = grid::get_Te(nonemptymgi);
-    const auto W = grid::get_W(nonemptymgi);
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi, T_R,
-             T_e, W, grid::get_rho(nonemptymgi));
+    printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi,
+             grid::get_TR(nonemptymgi), grid::get_Te(nonemptymgi), grid::get_W(nonemptymgi),
+             grid::get_rho(nonemptymgi));
     printout("nne@x_lo %g\n", nne_solution_f(nne_lo, f.params));
     printout("nne@x_hi %g\n", nne_solution_f(nne_hi, f.params));
 
@@ -405,7 +403,6 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 // equilibrium
 [[nodiscard]] auto calculate_ionfractions(const int element, const int nonemptymgi, const double nne,
                                           const bool use_phi_saha) -> std::vector<double> {
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   assert_testmodeonly(element < get_nelements());
   const int uppermost_ion = grid::get_elements_uppermost_ion(nonemptymgi, element);
 
@@ -430,8 +427,8 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 
     if (normfactor == 0. || !std::isfinite(ionfractions[ion])) {
       printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
-               get_ionstage(element, ion), get_atomicnumber(element), modelgridindex, grid::get_Te(nonemptymgi),
-               grid::get_TR(nonemptymgi));
+               get_ionstage(element, ion), get_atomicnumber(element), grid::get_mgi_of_nonemptymgi(nonemptymgi),
+               grid::get_Te(nonemptymgi), grid::get_TR(nonemptymgi));
       ionfractions[ion] = 0;
     }
   }
@@ -473,13 +470,12 @@ auto calculate_levelpop_boltzmann(const int nonemptymgi, const int element, cons
 }
 
 auto calculate_levelpop(const int nonemptymgi, const int element, const int ion, const int level) -> double {
-  auto [nn, skipminpop] = calculate_levelpop_nominpop(nonemptymgi, element, ion, level);
+  const auto [nn, skipminpop] = calculate_levelpop_nominpop(nonemptymgi, element, ion, level);
   if (!skipminpop && nn < MINPOP) {
     if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
-      nn = MINPOP;
-    } else {
-      nn = 0.;
+      return MINPOP;
     }
+    return 0.;
   }
 
   return nn;
