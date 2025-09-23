@@ -78,16 +78,17 @@ auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -
   const auto T_e = grid::get_Te(nonemptymgi);
 
   // photoionisation plus collisional ionisation rate coefficient per ground level pop
-  const double Gamma = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
+  const double Gamma_groundlevel = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
 
-  // Gamma is the photoionisation rate per ground level pop
-  const double Gamma_ion = Gamma * stat_weight(element, ion, 0) / partfunc_ion;
+  // Convert Gamma to the photoionisation rate per ion pop
+  const double Gamma_ion = Gamma_groundlevel * stat_weight(element, ion, 0) / partfunc_ion;
 
   const double Alpha_sp = interpolate_ions_spontrecombcoeff(uniqueionindex, T_e);
-
-  // const double Col_rec = calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion + 1, false, true, false, false,
-  // false);
-  const double Col_rec = 0.;
+  constexpr bool include_collisional_recombination = false;
+  const double Col_rec =
+      include_collisional_recombination
+          ? calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion + 1, false, true, false, false, false)
+          : 0.;
 
   const double gamma_nt = NT_ON ? nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion) : 0.;
 
@@ -369,9 +370,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
   }
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const bool use_phi_saha = force_saha || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
-  int uppermost_ion = 0;
-
-  uppermost_ion = nions - 1;
+  int uppermost_ion = nions - 1;
   if (!use_phi_saha) {
     for (int ion = 0; ion < nions - 1; ion++) {
       if (iongamma_is_zero(nonemptymgi, element, ion) &&

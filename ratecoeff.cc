@@ -581,12 +581,13 @@ void read_recombrate_file() {
         const double input_rrc_low_n = (x * T_highestbelow.rrc_low_n) + ((1 - x) * T_lowestabove.rrc_low_n);
         const double input_rrc_total = (x * T_highestbelow.rrc_total) + ((1 - x) * T_lowestabove.rrc_total);
 
-        const bool assume_lte = true;
-        const bool printdebug = false;
-        const bool per_groundmultipletpop = true;
+        constexpr bool assume_lte = true;
+        constexpr bool printdebug = false;
+        constexpr bool per_groundmultipletpop = true;
+        constexpr bool collisional_not_radiative = false;
 
-        double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false,
-                                              per_groundmultipletpop, false);
+        double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative,
+                                              printdebug, false, per_groundmultipletpop);
         printout("              rrc: %10.3e\n", rrc);
 
         if (input_rrc_low_n >= 0)  // if it's < 0, ignore it
@@ -603,8 +604,8 @@ void read_recombrate_file() {
               scale_level_phixs(element, ion - 1, level, phixs_multiplier);
             }
 
-            rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false,
-                                           per_groundmultipletpop, false);
+            rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative,
+                                           printdebug, false, per_groundmultipletpop);
             printout("              rrc: %10.3e\n", rrc);
           }
         }
@@ -615,8 +616,9 @@ void read_recombrate_file() {
         printout("  input_rrc_total: %10.3e\n", input_rrc_total);
 
         if (rrc < input_rrc_total) {
-          const double rrc_superlevel = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false,
-                                                                 printdebug, true, per_groundmultipletpop, false);
+          const double rrc_superlevel =
+              calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, printdebug,
+                                       true, per_groundmultipletpop);
           printout("  rrc(superlevel): %10.3e\n", rrc_superlevel);
 
           if (rrc_superlevel > 0) {
@@ -649,8 +651,8 @@ void read_recombrate_file() {
           }
         }
 
-        rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false,
-                                       per_groundmultipletpop, false);
+        rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, printdebug,
+                                       false, per_groundmultipletpop);
         printout("              rrc: %10.3e\n", rrc);
       }
     }
@@ -1011,92 +1013,87 @@ __host__ __device__ auto get_spontrecombcoeff(const int uniquelevelindex, const 
 // multiply by upper ion population (or ground population if per_groundmultipletpop is true) and nne to get a rate
 auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int element, const int upperion,
                               const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
-                              const bool lower_superlevel_only, const bool per_groundmultipletpop, const bool stimonly)
-    -> double {
-  const int lowerion = upperion - 1;
-  if (lowerion < 0) {
+                              const bool lower_superlevel_only, const bool per_groundmultipletpop) -> double {
+  if (upperion <= 0) {
     return 0.;
   }
 
-  double alpha = 0.;
-  if (lowerion < get_nions(element) - 1) {
-    // this gets divided and cancelled out in the radiative case anyway
-    const auto nne = (nonemptymgi >= 0) ? grid::get_nne(nonemptymgi) : 1.F;
+  const int lowerion = upperion - 1;
+  assert_always(lowerion < get_nions(element) - 1);
 
-    double nnupperion = 0;
-    int upper_nlevels = 0;
-    if (per_groundmultipletpop) {
-      // assume that photoionisation of the ion below is only to the ground multiplet levels of the current ion
-      // const int nphixstargets = get_nphixstargets(element, lowerion, 0);
-      // upper_nlevels = get_phixsupperlevel(element, lowerion, 0, nphixstargets - 1) + 1;
+  double nnupperion = 0;
+  int upper_nlevels = 0;
+  if (per_groundmultipletpop) {
+    // assume that photoionisation of the ion below is only to the ground multiplet levels of the current ion
+    // const int nphixstargets = get_nphixstargets(element, lowerion, 0);
+    // upper_nlevels = get_phixsupperlevel(element, lowerion, 0, nphixstargets - 1) + 1;
 
-      upper_nlevels = get_nlevels_groundterm(element, lowerion + 1);
+    upper_nlevels = get_nlevels_groundterm(element, lowerion + 1);
+  } else {
+    upper_nlevels = get_nlevels(element, lowerion + 1);
+  }
+
+  for (int upper = 0; upper < upper_nlevels; upper++) {
+    double nnupperlevel{NAN};
+    if (assume_lte) {
+      const double T_exc = T_e;
+      const double E_level = epsilon(element, lowerion + 1, upper);
+      const double E_ground = epsilon(element, lowerion + 1, 0);
+      const double nnground = (nonemptymgi >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
+
+      nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
+                      exp(-(E_level - E_ground) / KB / T_exc));
     } else {
-      upper_nlevels = get_nlevels(element, lowerion + 1);
+      nnupperlevel = get_levelpop(nonemptymgi, element, lowerion + 1, upper);
     }
+    nnupperion += nnupperlevel;
+  }
 
-    for (int upper = 0; upper < upper_nlevels; upper++) {
-      double nnupperlevel{NAN};
-      if (assume_lte) {
-        const double T_exc = T_e;
-        const double E_level = epsilon(element, lowerion + 1, upper);
-        const double E_ground = epsilon(element, lowerion + 1, 0);
-        const double nnground = (nonemptymgi >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
+  if (nnupperion <= 0.) {
+    return 0.;
+  }
 
-        nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
-                        exp(-(E_level - E_ground) / KB / T_exc));
-      } else {
-        nnupperlevel = get_levelpop(nonemptymgi, element, lowerion + 1, upper);
+  // this gets divided and cancelled out in the radiative case anyway
+  const auto nne = (nonemptymgi >= 0) ? grid::get_nne(nonemptymgi) : 1.F;
+  double alpha = 0.;
+  double nnupperlevel_so_far = 0.;
+  const int maxrecombininglevel = get_maxrecombininglevel(element, lowerion + 1);
+  for (int upper = 0; upper <= maxrecombininglevel; upper++) {
+    double nnupperlevel{NAN};
+    if (assume_lte) {
+      const double T_exc = T_e;
+      const double E_level = epsilon(element, lowerion + 1, upper);
+      const double E_ground = epsilon(element, lowerion + 1, 0);
+      const double nnground = (nonemptymgi >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
+
+      nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
+                      exp(-(E_level - E_ground) / KB / T_exc));
+    } else {
+      nnupperlevel = get_levelpop(nonemptymgi, element, lowerion + 1, upper);
+    }
+    nnupperlevel_so_far += nnupperlevel;
+    for (int lower = 0; lower < get_nlevels(element, lowerion); lower++) {
+      if (lower_superlevel_only && (!level_isinsuperlevel(element, lowerion, lower))) {
+        continue;
       }
-      nnupperion += nnupperlevel;
-    }
 
-    if (nnupperion <= 0.) {
-      return 0.;
-    }
-
-    double nnupperlevel_so_far = 0.;
-    const int maxrecombininglevel = get_maxrecombininglevel(element, lowerion + 1);
-    for (int upper = 0; upper <= maxrecombininglevel; upper++) {
-      double nnupperlevel{NAN};
-      if (assume_lte) {
-        const double T_exc = T_e;
-        const double E_level = epsilon(element, lowerion + 1, upper);
-        const double E_ground = epsilon(element, lowerion + 1, 0);
-        const double nnground = (nonemptymgi >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
-
-        nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
-                        exp(-(E_level - E_ground) / KB / T_exc));
+      double recomb_coeff = 0.;
+      if (collisional_not_radiative) {
+        const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
+        recomb_coeff += col_recombination_ratecoeff(T_e, nne, element, upperion, upper, lower, epsilon_trans);
       } else {
-        nnupperlevel = get_levelpop(nonemptymgi, element, lowerion + 1, upper);
+        recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower, nonemptymgi);
       }
-      nnupperlevel_so_far += nnupperlevel;
-      for (int lower = 0; lower < get_nlevels(element, lowerion); lower++) {
-        if (lower_superlevel_only && (!level_isinsuperlevel(element, lowerion, lower))) {
-          continue;
-        }
 
-        double recomb_coeff = 0.;
-        if (collisional_not_radiative) {
-          const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-          recomb_coeff += col_recombination_ratecoeff(T_e, nne, element, upperion, upper, lower, epsilon_trans);
-        } else if (!stimonly) {
-          recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower, nonemptymgi);
-        } else {
-          recomb_coeff += stim_recombination_ratecoeff(nne, element, upperion, upper, lower, nonemptymgi);
-        }
-
-        const double alpha_level = recomb_coeff / nne;
-        const double alpha_ion_contrib = alpha_level * nnupperlevel / nnupperion;
-        alpha += alpha_ion_contrib;
-        if (printdebug && alpha_ion_contrib > 0. && lower < 50) {
-          printout(
-              "recomb: Z=%d ionstage %d->%d upper+1 %5d lower+1 %5d alpha_level %7.2e alpha_ion_contrib %7.2e sum "
-              "%7.2e nnlevel %7.2e nnionfrac %7.2e\n",
-              get_atomicnumber(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion),
-              upper + 1, lower + 1, alpha_level, alpha_ion_contrib, alpha, nnupperlevel,
-              nnupperlevel_so_far / nnupperion);
-        }
+      const double alpha_level = recomb_coeff / nne;
+      const double alpha_ion_contrib = alpha_level * nnupperlevel / nnupperion;
+      alpha += alpha_ion_contrib;
+      if (printdebug && alpha_ion_contrib > 0. && lower < 50) {
+        printout(
+            "recomb: Z=%d ionstage %d->%d upper+1 %5d lower+1 %5d alpha_level %7.2e alpha_ion_contrib %7.2e sum "
+            "%7.2e nnlevel %7.2e nnionfrac %7.2e\n",
+            get_atomicnumber(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upper + 1,
+            lower + 1, alpha_level, alpha_ion_contrib, alpha, nnupperlevel, nnupperlevel_so_far / nnupperion);
       }
     }
   }
