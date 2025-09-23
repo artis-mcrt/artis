@@ -398,7 +398,6 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
       return ion;
     }
   }
-  uppermost_ion = ion;
   return uppermost_ion;
 }
 
