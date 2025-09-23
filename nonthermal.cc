@@ -1124,18 +1124,12 @@ auto get_nt_frac_ionisation(const int nonemptymgi) -> float {
     return 0.;
   }
   if (!NT_SOLVE_SPENCERFANO) {
-    return 0.03;
+    return 0.03;  // Axelrod 1980 approximation
   }
 
-  const float frac_ionisation = nt_solution[nonemptymgi].frac_ionisation;
+  assert_always(nt_solution[nonemptymgi].frac_ionisation >= 0.);
 
-  if (frac_ionisation < 0 || !std::isfinite(frac_ionisation)) {
-    printout("ERROR: get_nt_frac_ionisation called with no valid solution stored for cell %d. frac_ionisation = %g\n",
-             grid::get_mgi_of_nonemptymgi(nonemptymgi), frac_ionisation);
-    std::abort();
-  }
-
-  return frac_ionisation;
+  return nt_solution[nonemptymgi].frac_ionisation;
 }
 
 // fraction of deposited energy that goes into collisional excitation
