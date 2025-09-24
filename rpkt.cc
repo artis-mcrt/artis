@@ -639,15 +639,11 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     const auto d_nu_on_d_l = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
     const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-    std::tie(edist, pkt.next_trans, event_is_boundbound) = [&]() {
-      if constexpr (EXPANSIONOPACITIES_ON) {
-        return get_possible_event_expansion_opacity(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, nu_cmf_abort,
-                                                    d_nu_on_d_l, doppler);
-      } else {
-        return get_possible_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist, nu_cmf_abort,
-                                  d_nu_on_d_l, doppler, globals::linelist);
-      }
-    }();
+    std::tie(edist, pkt.next_trans, event_is_boundbound) =
+        (EXPANSIONOPACITIES_ON) ? get_possible_event_expansion_opacity(nonemptymgi, pkt, chi_rpkt_cont, pktmastate,
+                                                                       tau_next, nu_cmf_abort, d_nu_on_d_l, doppler)
+                                : get_possible_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist,
+                                                     nu_cmf_abort, d_nu_on_d_l, doppler, globals::linelist);
   }
   assert_always(edist >= 0);
 
