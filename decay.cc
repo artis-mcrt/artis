@@ -504,7 +504,8 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
 constexpr auto calculate_decaychain(const double firstinitabund, const std::vector<double>& lambdas,
                                     const int num_nuclides, const double timediff, const bool useexpansionfactor)
     -> double {
-  assert_always(num_nuclides >= 1);
+  assert_testmodeonly(num_nuclides >= 1);
+  assert_testmodeonly(std::ssize(lambdas) >= num_nuclides);
 
   double lambdaproduct = 1.;
   for (int j = 0; j < num_nuclides - 1; j++) {
@@ -956,9 +957,7 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
   }
 
   // add any extra nuclides that were specified but not in the decay data files
-  for (auto i = 0; i < std::ssize(custom_alist); i++) {
-    const int z = custom_zlist[i];
-    const int a = custom_alist[i];
+  for (const auto [z, a] : std::views::zip(custom_zlist, custom_alist)) {
     if (!nuc_exists(z, a)) {
       // printout("Adding Z %d A %d with no decay data (assuming stable)\n", z, a);
       nuclides.push_back({.z = z, .a = a, .meanlife = -1});
