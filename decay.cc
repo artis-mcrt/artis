@@ -19,6 +19,7 @@
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <type_traits>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -962,6 +963,23 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
       // printout("Adding Z %d A %d with no decay data (assuming stable)\n", z, a);
       nuclides.push_back({.z = z, .a = a, .meanlife = -1});
     }
+  }
+
+  std::vector<Nuclide> endpoint_nuclides;
+  for (auto& nuc : nuclides) {
+    for (std::underlying_type_t<decaytypes> decaytype = 0; decaytype < decaytypes::DECAYTYPE_COUNT; decaytype++) {
+      if (nuc.branchprobs[decaytype] > 0.) {
+        const auto z_daughter = decay_daughter_z(nuc.z, nuc.a, decaytype);
+        const auto a_daughter = decay_daughter_a(nuc.z, nuc.a, decaytype);
+        if (!nuc_exists(z_daughter, a_daughter)) {
+          endpoint_nuclides.push_back({.z = z_daughter, .a = a_daughter, .meanlife = -1});
+        }
+      }
+    }
+  }
+
+  for (const auto& nuclide : endpoint_nuclides) {
+    nuclides.push_back(nuclide);
   }
 
   logprintlnfmt("Number of nuclides before filtering: {}", get_num_nuclides());
