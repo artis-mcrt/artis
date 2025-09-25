@@ -724,10 +724,7 @@ void zero_estimators() {
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     assert_always(!radfieldbins.empty());
-    for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-      std::fill_n(&radfieldbins[nonemptymgi * RADFIELDBINCOUNT], RADFIELDBINCOUNT,
-                  RadFieldBin{.J_raw = 0., .nuJ_raw = 0., .contribcount = 0});
-    }
+    std::ranges::fill(radfieldbins, RadFieldBin{.J_raw = 0., .nuJ_raw = 0., .contribcount = 0});
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
