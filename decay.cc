@@ -299,13 +299,13 @@ void printout_decaypath(const int decaypathindex) {
   const auto& decaypath = decaypaths[decaypathindex];
   printout(" decaypath %d: ", decaypathindex);
 
-  for (int i = 0; i < get_decaypathlength(decaypathindex); i++) {
-    printout_nuclidename(decaypath.z[i], decaypath.a[i]);
-    printout_nuclidemeanlife(decaypath.z[i], decaypath.a[i]);
+  for (const auto [decaytype, z, a] : std::ranges::zip_view(decaypath.decaytypes, decaypath.z, decaypath.a)) {
+    printout_nuclidename(z, a);
+    printout_nuclidemeanlife(z, a);
 
-    if (decaypath.decaytypes[i] != DECAYTYPE_NONE) {
+    if (decaytype != DECAYTYPE_NONE) {
       printout(" -> ");
-      printout_decaytype(decaypath.decaytypes[i]);
+      printout_decaytype(decaytype);
       printout(" -> ");
     }
   }
@@ -334,8 +334,9 @@ void extend_lastdecaypath() {
       }
 
       // check for nuclide in existing path, which would indicate a loop
-      for (int i = 0; i < get_decaypathlength(startdecaypathindex); i++) {
-        if (decaypaths[startdecaypathindex].z[i] == daughter_z && decaypaths[startdecaypathindex].a[i] == daughter_a) {
+      for (const auto [z, a] :
+           std::ranges::zip_view(decaypaths[startdecaypathindex].z, decaypaths[startdecaypathindex].a)) {
+        if (z == daughter_z && a == daughter_a) {
           printout("\nERROR: Loop found in nuclear decay chain.\n");
           std::abort();
         }
@@ -481,9 +482,7 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
   while (tdecay <= tdecaymin || tdecay >= tdecaymax) {
     tdecay = t_model;  // can't decay before initial model snapshot time
 
-    const auto decaypathlength = get_decaypathlength(decaypathindex);
-    for (int i = 0; i < decaypathlength; i++) {
-      const int nucindex = decaypaths[decaypathindex].nucindex[i];
+    for (const int nucindex : decaypaths[decaypathindex].nucindex) {
       const double zrand = rng_uniform_pos();
       tdecay += -get_meanlife(nucindex) * std::log(zrand);
     }
@@ -645,13 +644,10 @@ auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion_chain_numerical(con
                                                                              const int decaypathindex,
                                                                              const double tstart) -> double {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  double min_meanlife = -1;
-  for (int i = 0; i < get_decaypathlength(decaypathindex); i++) {
-    const double meanlife = get_meanlife(decaypaths[decaypathindex].nucindex[i]);
-    if (min_meanlife < 0. || meanlife < min_meanlife) {
-      min_meanlife = meanlife;
-    }
-  }
+  const double min_meanlife =
+      std::ranges::min(decaypaths[decaypathindex].nucindex |
+                       std::views::transform([](const auto nucindex) { return get_meanlife(nucindex); }) |
+                       std::views::filter([](const auto meanlife) { return meanlife > 0.; }));
   // min steps across the meanlifetime
   const int nsteps = static_cast<int>(ceil((tstart - grid::get_t_model()) / min_meanlife) * 100000);
 
