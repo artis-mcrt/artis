@@ -536,11 +536,8 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::vect
   return lastabund;
 }
 
-// Get the mass fraction of a nuclide accounting for all decays including those of its parent and grandparent.
+// Get the mass fraction of a nuclide accounting for all decays and initial abundances.
 // e.g., Co56 abundance may first increase with time due to Ni56 decays, then decease due to Co56 decay
-// Can be called for stable nuclides that are one daughters of the radioactive nuclide list e.g., Fe56
-// For stable nuclides, abundance returned only comes from other decays (some could be included in init model elem
-// frac)
 auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const double time) -> double {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   assert_always(time >= 0.);
@@ -579,13 +576,11 @@ auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const dou
       continue;
     }
 
-    const int decaypathlength = get_decaypathlength(decaypath);
-
-    int fulldecaypathlength = decaypathlength;
+    int fulldecaypathlength = get_decaypathlength(decaypath);
     // if the nuclide is stable, it's one past the end of the chain
     // or if we're counting alpha particles and the last decaytype is alpha, then the alpha sink is one past the end
     if (nuc_is_stable || (z == 2 && a == 4 && last_decaytype == decaytypes::DECAYTYPE_ALPHA)) {
-      fulldecaypathlength = decaypathlength + 1;
+      fulldecaypathlength++;
     }
 
     const double massfraccontrib =
