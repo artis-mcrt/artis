@@ -1271,7 +1271,7 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
             // nuclide decays into correct atomic number but outside of the radionuclide list. Daughter is assumed
             // stable
             const double massfrac = get_nuc_massfrac(nonemptymgi, atomic_number, nuc_a, t_current);
-            const double numberdens = massfrac / nucmass(nuc_z, nuc_a) * rho;
+            const double numberdens = massfrac / nucmass(atomic_number, nuc_a) * rho;
             estimators_file << std::format("  {}{}: {:9.3e}", get_elname(atomic_number), nuc_a, numberdens);
           }
         }
