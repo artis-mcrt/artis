@@ -1203,10 +1203,8 @@ void update_abundances(const int nonemptymgi, const double t_current) {
 
     for (const int nuc_a : a_isotopes) {
       const double nuc_massfrac = get_nuc_massfrac(nonemptymgi, atomic_number, nuc_a, t_current);
-      if (nuc_massfrac > 0) {
-        isomassfracsum += nuc_massfrac;
-        isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(atomic_number, nuc_a);
-      }
+      isomassfracsum += nuc_massfrac;
+      isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(atomic_number, nuc_a);
     }
 
     const double stable_init_massfrac = grid::get_stable_initabund(nonemptymgi, element);
