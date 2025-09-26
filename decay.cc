@@ -595,7 +595,7 @@ auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const dou
     nuctotal += massfraccontrib;
   }
 
-  // for stable nuclei in the network, we need to contribute the initial abundance
+  // for stable nuclei, we also need to add the initial abundance because they won't have a decay path
   if (nuc_exists_z_a && get_meanlife(nucindex) <= 0.) {
     nuctotal += grid::get_modelinitnucmassfrac(modelgridindex, nucindex);
   }
@@ -1249,9 +1249,7 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const auto [nuc_z, nuc_a] = get_nuc_z_a(nucindex);
     if (nuc_z == atomic_number) {  // isotope of this element is on the network
-      if (!a_isotopes.contains(nuc_a)) {
-        a_isotopes.insert(nuc_a);
-      }
+      a_isotopes.insert(nuc_a);
     } else {  // not the element that we want, but check if a decay produces it
       for (const auto decaytype : all_decaytypes) {
         const int daughter_z = decay_daughter_z(nuc_z, nuc_a, decaytype);
@@ -1259,10 +1257,8 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
         // if the nucleus exists, it will be picked up by the upper condition
         if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
             get_nuc_decaybranchprob(nucindex, decaytype) > 0.) {
-          if (!a_isotopes.contains(nuc_a)) {
-            a_isotopes.insert(nuc_a);
-            // nuclide decays into correct atomic number but outside of the radionuclide list
-          }
+          a_isotopes.insert(nuc_a);
+          // nuclide decays into correct atomic number but outside of the radionuclide list
         }
       }
     }
