@@ -326,31 +326,35 @@ void extend_lastdecaypath() {
 
   const int daughter_z = decaypaths[startdecaypathindex].final_daughter_z();
   const int daughter_a = decaypaths[startdecaypathindex].final_daughter_a();
-  if (nuc_exists(daughter_z, daughter_a)) {
-    const int daughter_nucindex = get_nucindex(daughter_z, daughter_a);
-    for (enum decaytypes dectypeindex2 : all_decaytypes) {
-      if (get_nuc_decaybranchprob(daughter_nucindex, dectypeindex2) == 0.) {
-        continue;
-      }
-
-      // check for nuclide in existing path, which would indicate a loop
-      for (const auto [z, a] :
-           std::ranges::zip_view(decaypaths[startdecaypathindex].z, decaypaths[startdecaypathindex].a)) {
-        if (z == daughter_z && a == daughter_a) {
-          printout("\nERROR: Loop found in nuclear decay chain.\n");
-          std::abort();
-        }
-      }
-
-      decaypaths.push_back(decaypaths[startdecaypathindex]);
-
-      decaypaths.back().z.push_back(daughter_z);
-      decaypaths.back().a.push_back(daughter_a);
-      decaypaths.back().nucindex.push_back(daughter_nucindex);
-      decaypaths.back().decaytypes.push_back(dectypeindex2);
-
-      extend_lastdecaypath();
+  const int daughter_nucindex = get_nucindex_or_neg_one(daughter_z, daughter_a);
+  if (daughter_nucindex < 0) {
+    return;
+  }
+  if (get_meanlife(daughter_nucindex) <= 0.) {
+    return;
+  }
+  for (enum decaytypes dectypeindex2 : all_decaytypes) {
+    if (get_nuc_decaybranchprob(daughter_nucindex, dectypeindex2) == 0.) {
+      continue;
     }
+
+    // check for nuclide in existing path, which would indicate a loop
+    for (const auto [z, a] :
+         std::ranges::zip_view(decaypaths[startdecaypathindex].z, decaypaths[startdecaypathindex].a)) {
+      if (z == daughter_z && a == daughter_a) {
+        printout("\nERROR: Loop found in nuclear decay chain.\n");
+        std::abort();
+      }
+    }
+
+    decaypaths.push_back(decaypaths[startdecaypathindex]);
+
+    decaypaths.back().z.push_back(daughter_z);
+    decaypaths.back().a.push_back(daughter_a);
+    decaypaths.back().nucindex.push_back(daughter_nucindex);
+    decaypaths.back().decaytypes.push_back(dectypeindex2);
+
+    extend_lastdecaypath();
   }
 }
 
@@ -358,11 +362,14 @@ void find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
                      const std::vector<Nuclide>& standard_nuclides) {
   decaypaths.clear();
   for (int startnucindex = 0; startnucindex < get_num_nuclides(); startnucindex++) {
+    if (get_meanlife(startnucindex) <= 0.) {
+      continue;  // skip stable nuclides as start points
+    }
     const int z = get_nuc_z(startnucindex);
     const int a = get_nuc_a(startnucindex);
 
     for (const auto decaytype : all_decaytypes) {
-      if (get_nuc_decaybranchprob(startnucindex, decaytype) == 0. || get_meanlife(startnucindex) <= 0.) {
+      if (get_nuc_decaybranchprob(startnucindex, decaytype) == 0.) {
         continue;
       }
       bool is_custom_nuclide = false;
@@ -594,7 +601,6 @@ auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const dou
         (decaypath.branchproduct *
          calculate_decaychain(top_initabund, decaypath.lambdas, fulldecaypathlength, t_afterinit, false) *
          nucmass(z, a));
-    // assert_always(massfraccontrib >= 0.);
     nuctotal += massfraccontrib;
   }
 
@@ -963,6 +969,23 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
       nuclides.push_back({.z = z, .a = a, .meanlife = -1});
     }
   }
+
+  // TODO: include all relevant nuclides, including stable daughters that are not in the custom list
+  // std::vector<Nuclide> endpoint_nuclides;
+  // for (auto& nuc : nuclides) {
+  //   for (std::underlying_type_t<decaytypes> decaytype = 0; decaytype < decaytypes::DECAYTYPE_COUNT; decaytype++) {
+  //     if (nuc.branchprobs[decaytype] > 0.) {
+  //       const auto z_daughter = decay_daughter_z(nuc.z, nuc.a, decaytype);
+  //       const auto a_daughter = decay_daughter_a(nuc.z, nuc.a, decaytype);
+  //       if (!nuc_exists(z_daughter, a_daughter)) {
+  //         endpoint_nuclides.push_back({.z = z_daughter, .a = a_daughter, .meanlife = -1});
+  //       }
+  //     }
+  //   }
+  // }
+  // for (const auto& nuclide : endpoint_nuclides) {
+  //   nuclides.push_back(nuclide);
+  // }
 
   logprintlnfmt("Number of nuclides before filtering: {}", get_num_nuclides());
   find_decaypaths(custom_zlist, custom_alist, standard_nuclides);
