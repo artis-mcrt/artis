@@ -144,15 +144,6 @@ MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
   return nuclides[nucindex].branchprobs[decaytype];
 }
 
-// check if (z_parent, a_parent) is a parent of (z, a)
-[[nodiscard]] auto nuc_is_parent(const int z_parent, const int a_parent, const int z, const int a) -> bool {
-  assert_testmodeonly(nuc_exists(z_parent, a_parent));
-  // each radioactive nuclide is limited to one daughter nuclide
-  return std::ranges::any_of(all_decaytypes, [=](const auto decaytype) {
-    return decay_daughter_z(z_parent, a_parent, decaytype) == z && decay_daughter_a(z_parent, a_parent, decaytype) == a;
-  });
-}
-
 [[nodiscard]] auto get_nuc_z_a(const int nucindex) -> std::tuple<int, int> {
   assert_testmodeonly(nucindex >= 0);
   assert_testmodeonly(nucindex < get_num_nuclides());
@@ -561,18 +552,19 @@ auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const dou
 
   double nuctotal = 0.;  // abundance or decay rate, depending on mode parameter
   for (const auto& decaypath : decaypaths) {
-    const int z_end = decaypath.z.back();
-    const int a_end = decaypath.a.back();
-
+    const auto last_decaytype = decaypath.decaytypes.back();
     // match 4He abundance to alpha decay of any nucleus (no continue), otherwise check daughter nuclide matches
-    if (z != 2 || a != 4 || decaypath.decaytypes.back() != decaytypes::DECAYTYPE_ALPHA) {
+    if (z != 2 || a != 4 || last_decaytype != decaytypes::DECAYTYPE_ALPHA) {
+      const int z_end = decaypath.z.back();
+      const int a_end = decaypath.a.back();
       // radioactive nuclide in network: match last nuc in chain
       if (!nuc_is_stable && (z_end != z || a_end != a)) {
         continue;
       }
 
       // stable nuclide: match daughter of last nucleus in chain
-      if (nuc_is_stable && !nuc_is_parent(z_end, a_end, z, a)) {
+      if (nuc_is_stable && (decay_daughter_z(z_end, a_end, last_decaytype) != z ||
+                            decay_daughter_a(z_end, a_end, last_decaytype) != a)) {
         continue;
       }
     }
@@ -592,7 +584,7 @@ auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const dou
     int fulldecaypathlength = decaypathlength;
     // if the nuclide is stable, it's one past the end of the chain
     // or if we're counting alpha particles and the last decaytype is alpha, then the alpha sink is one past the end
-    if (nuc_is_stable || (z == 2 && a == 4 && decaypath.decaytypes.back() == decaytypes::DECAYTYPE_ALPHA)) {
+    if (nuc_is_stable || (z == 2 && a == 4 && last_decaytype == decaytypes::DECAYTYPE_ALPHA)) {
       fulldecaypathlength = decaypathlength + 1;
     }
 
