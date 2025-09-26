@@ -1196,7 +1196,7 @@ void update_abundances(const int nonemptymgi, const double t_current) {
       }
     }
 
-    if (atomic_number == 2 && !nuc_exists(2, 4) && (!a_isotopes.contains(4))) {
+    if (atomic_number == 2) {
       // Track He4 from alpha-decay, in case we left it out of the nuclide list
       a_isotopes.insert(4);
     }
@@ -1260,7 +1260,7 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
     }
   }
 
-  if (atomic_number == 2 && !nuc_exists(2, 4) && (!a_isotopes.contains(4))) {
+  if (atomic_number == 2) {
     // Track He4 from alpha-decay, in case we left it out of the nuclide list
     a_isotopes.insert(4);
   }
