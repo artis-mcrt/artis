@@ -1251,13 +1251,6 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
     if (nuc_z == atomic_number) {  // isotope of this element is on the network
       if (!a_isotopes.contains(nuc_a)) {
         a_isotopes.insert(nuc_a);
-        // radioactive isotope of the element
-        const double massfrac = get_nuc_massfrac(nonemptymgi, atomic_number, nuc_a, t_current);
-        if (massfrac > 0) {
-          const double numberdens = massfrac / nucmass(atomic_number, nuc_a) * rho;
-
-          estimators_file << std::format("  {}{}: {:9.3e}", get_elname(atomic_number), nuc_a, numberdens);
-        }
       }
     } else {  // not the element that we want, but check if a decay produces it
       for (const auto decaytype : all_decaytypes) {
@@ -1268,14 +1261,18 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
             get_nuc_decaybranchprob(nucindex, decaytype) > 0.) {
           if (!a_isotopes.contains(nuc_a)) {
             a_isotopes.insert(nuc_a);
-            // nuclide decays into correct atomic number but outside of the radionuclide list. Daughter is assumed
-            // stable
-            const double massfrac = get_nuc_massfrac(nonemptymgi, atomic_number, nuc_a, t_current);
-            const double numberdens = massfrac / nucmass(atomic_number, nuc_a) * rho;
-            estimators_file << std::format("  {}{}: {:9.3e}", get_elname(atomic_number), nuc_a, numberdens);
+            // nuclide decays into correct atomic number but outside of the radionuclide list
           }
         }
       }
+    }
+  }
+
+  for (const int nuc_a : a_isotopes) {
+    const double massfrac = get_nuc_massfrac(nonemptymgi, atomic_number, nuc_a, t_current);
+    if (massfrac > 0) {
+      const double numberdens = massfrac / nucmass(atomic_number, nuc_a) * rho;
+      estimators_file << std::format("  {}{}: {:9.3e}", get_elname(atomic_number), nuc_a, numberdens);
     }
   }
 
