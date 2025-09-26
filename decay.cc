@@ -1179,12 +1179,7 @@ void update_abundances(const int nonemptymgi, const double t_current) {
       const auto [nuc_z, a] = get_nuc_z_a(nucindex);
       if (nuc_z == atomic_number) {
         // this nucleus is an isotope of the element
-        if (!a_isotopes.contains(a)) {
-          a_isotopes.insert(a);
-          const double nuc_massfrac = get_nuc_massfrac(nonemptymgi, atomic_number, a, t_current);
-          isomassfracsum += nuc_massfrac;
-          isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(atomic_number, a);
-        }
+        a_isotopes.insert(a);
       } else {
         // check if the nucleus decays off the network but into the selected element
         for (const auto decaytype : all_decaytypes) {
@@ -1192,25 +1187,26 @@ void update_abundances(const int nonemptymgi, const double t_current) {
           const int daughter_a = decay_daughter_a(nuc_z, a, decaytype);
           if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
               get_nuc_decaybranchprob(nucindex, decaytype) > 0.) {
-            if (!a_isotopes.contains(daughter_a)) {
-              a_isotopes.insert(daughter_a);
-              // nuclide decays into correct atomic number but outside of the radionuclide list
-              // note: there could also be stable isotopes of this element included in stable_initabund(z), but
-              // here we only count the contribution from decays
-              const double nuc_massfrac = get_nuc_massfrac(nonemptymgi, atomic_number, daughter_a, t_current);
-              isomassfracsum += nuc_massfrac;
-              isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(atomic_number, daughter_a);
-            }
+            a_isotopes.insert(daughter_a);
+            // nuclide decays into correct atomic number but outside of the radionuclide list
+            // note: there could also be stable isotopes of this element included in stable_initabund(z), but
+            // here we only count the contribution from decays
           }
         }
       }
     }
 
     if (atomic_number == 2 && !nuc_exists(2, 4) && (!a_isotopes.contains(4))) {
-      // 4He will not be identified as a daughter nucleus of above decays, so add it in
-      const double nuc_massfrac = get_nuc_massfrac(nonemptymgi, 2, 4, t_current);
-      isomassfracsum += nuc_massfrac;
-      isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(2, 4);
+      // Track He4 from alpha-decay, in case we left it out of the nuclide list
+      a_isotopes.insert(4);
+    }
+
+    for (const int nuc_a : a_isotopes) {
+      const double nuc_massfrac = get_nuc_massfrac(nonemptymgi, atomic_number, nuc_a, t_current);
+      if (nuc_massfrac > 0) {
+        isomassfracsum += nuc_massfrac;
+        isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(atomic_number, nuc_a);
+      }
     }
 
     const double stable_init_massfrac = grid::get_stable_initabund(nonemptymgi, element);
@@ -1262,6 +1258,11 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
         }
       }
     }
+  }
+
+  if (atomic_number == 2 && !nuc_exists(2, 4) && (!a_isotopes.contains(4))) {
+    // Track He4 from alpha-decay, in case we left it out of the nuclide list
+    a_isotopes.insert(4);
   }
 
   for (const int nuc_a : a_isotopes) {
