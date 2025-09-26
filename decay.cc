@@ -1276,9 +1276,9 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
     }
   }
 
-  // factor to convert convert mass fraction to number density
   const double otherstablemassfrac = grid::get_stable_initabund(nonemptymgi, element);
   if (otherstablemassfrac > 0) {
+    // factor to convert convert mass fraction to number density
     const double meannucmass = globals::elements[element].initstablemeannucmass;
     const double otherstable_numberdens = otherstablemassfrac / meannucmass * grid::get_rho(nonemptymgi);
     estimators_file << std::format("  {}_otherstable: {:9.3e}", get_elname(atomic_number), otherstable_numberdens);
