@@ -13,10 +13,10 @@ d80043ce6bedca56511b9fd3f7c0a49f  modelgridrankassignments.out
 d5ecfb308a9447ec6c50c4aa23d87c56  packets00_0003.out
 0cb52910672861a78c68bbf427113cfc  spec.out
 a351f1711fecd60c023d0ba7332092db  timesteps.out
-5d83386053c097ddf869e1b6cb3d4529  job0/estimators_0000.out
-ce37e6b3477b9948ece12856d206bf41  job0/estimators_0001.out
-f6d0d1f06998340fd606fa227fa89f02  job0/estimators_0002.out
-e34a57403e66977622973d3ede0af8d5  job0/estimators_0003.out
+88b99693807b5f92e7ac8f92e7824364  job0/estimators_0000.out
+ff538998264c087a6057fe1b018da390  job0/estimators_0001.out
+379425c4024b6598c9fd84732c7c32c5  job0/estimators_0002.out
+b7ff85f76e62ef35a8bc918bffa9dbed  job0/estimators_0003.out
 df75783c376865f4f4b0ec9bf0e147a1  speclc_angle_res/light_curve_res_00.out
 67a6eb8a65bc7f48e175faa5168e99dd  speclc_angle_res/light_curve_res_01.out
 2852bc08bd787d6034cc8cd0492c90c7  speclc_angle_res/light_curve_res_02.out
