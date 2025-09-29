@@ -226,6 +226,19 @@ void mpi_communicate_grid_properties() {
       }
       MPI_Bcast_safe(grid::modelgrid.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
+
+      if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
+        assert_always(globals::corrphotoionrenorm.data() != nullptr);
+        MPI_Bcast_safe(globals::corrphotoionrenorm.subspan(root_nstart_nonempty * globals::nbfcontinua_ground,
+                                                           root_ndo_nonempty * globals::nbfcontinua_ground),
+                       root_node_id, globals::mpi_comm_internode);
+      }
+    }
+
+    if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
+      MPI_Bcast_safe(std::span{globals::gammaestimator}.subspan(root_nstart_nonempty * globals::nbfcontinua_ground,
+                                                                root_ndo_nonempty * globals::nbfcontinua_ground),
+                     root, MPI_COMM_WORLD);
     }
 
     for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
@@ -233,21 +246,6 @@ void mpi_communicate_grid_properties() {
       radfield::do_MPI_Bcast(nonemptymgi, root, root_node_id);
 
       nonthermal::nt_MPI_Bcast(nonemptymgi, root_node_id);
-
-      if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
-        assert_always(globals::corrphotoionrenorm.data() != nullptr);
-        if (globals::rank_in_node == 0) {
-          MPI_Bcast_safe(globals::corrphotoionrenorm.subspan(nonemptymgi * globals::nbfcontinua_ground,
-                                                             globals::nbfcontinua_ground),
-                         root_node_id, globals::mpi_comm_internode);
-        }
-
-        MPI_Barrier(MPI_COMM_WORLD);
-
-        MPI_Bcast_safe(std::span{globals::gammaestimator}.subspan(nonemptymgi * globals::nbfcontinua_ground,
-                                                                  globals::nbfcontinua_ground),
-                       root, MPI_COMM_WORLD);
-      }
 
       MPI_Bcast_binned_opacities(nonemptymgi, root_node_id);
     }
