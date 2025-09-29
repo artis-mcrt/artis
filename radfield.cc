@@ -99,12 +99,12 @@ std::vector<double> nuJ;  // after normalisation: [ergs/s/sr/cm2]
 std::vector<double> nuJ_reduced_save;
 #endif
 
-struct gsl_planck_integral_paras {
+struct GSL_PlanckIntegralParas {
   double T_R;
   bool times_nu;
 };
 
-struct GSLT_RSolverParams {
+struct GSLTempSolverParams {
   int nonemptymgi;
   int binindex;
 };
@@ -112,6 +112,7 @@ struct GSLT_RSolverParams {
 std::fstream radfieldfile;
 
 constexpr auto get_bin_nu_upper(const int binindex) -> double {
+  assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
   if (binindex == RADFIELDBINCOUNT - 1) {
     return nu_upper_superbin;
@@ -120,6 +121,9 @@ constexpr auto get_bin_nu_upper(const int binindex) -> double {
 }
 
 constexpr auto get_bin_nu_lower(const int binindex) -> double {
+  assert_testmodeonly(binindex >= 0);
+  assert_testmodeonly(binindex < RADFIELDBINCOUNT);
+
   if (binindex > 0) {
     return get_bin_nu_upper(binindex - 1);
   }
@@ -146,6 +150,8 @@ constexpr auto select_bin(const double nu) -> int {
     // exactly on the upper boundary of the bin, so add 1 to ensure we get the left-closed bin
     return binindex + 1;
   }
+  assert_testmodeonly(binindex >= 0);
+  assert_testmodeonly(binindex < (RADFIELDBINCOUNT - 1));  // -1 because the superbin is a special case
 
   return binindex;
 }
@@ -202,7 +208,7 @@ auto get_bin_T_R(const std::ptrdiff_t nonemptymgi, const int binindex) -> float 
 }
 
 constexpr auto gsl_integrand_planck(const double nu, void* const voidparas) -> double {
-  const auto* paras = static_cast<const gsl_planck_integral_paras*>(voidparas);
+  const auto* paras = static_cast<const GSL_PlanckIntegralParas*>(voidparas);
   const auto T_R = paras->T_R;
 
   double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
@@ -253,7 +259,7 @@ auto planck_integral(const double T_R, const double nu_lower, const double nu_up
   const double epsrel = 1e-10;
   const double epsabs = 0.;
 
-  const gsl_planck_integral_paras intparas = {.T_R = T_R, .times_nu = times_nu};
+  const GSL_PlanckIntegralParas intparas = {.T_R = T_R, .times_nu = times_nu};
 
 #if !USE_SIMPSON_INTEGRATOR
   gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
@@ -277,7 +283,7 @@ auto planck_integral(const double T_R, const double nu_lower, const double nu_up
 // difference between the average nu and the average nu of a Planck function
 // at temperature T_R, in the frequency range corresponding to a bin
 auto delta_nu_bar(const double T_R, void* const paras) -> double {
-  const auto* params = static_cast<const GSLT_RSolverParams*>(paras);
+  const auto* params = static_cast<const GSLTempSolverParams*>(paras);
   const auto nonemptymgi = params->nonemptymgi;
   const int binindex = params->binindex;
 
@@ -320,7 +326,7 @@ auto delta_nu_bar(const double T_R, void* const paras) -> double {
 auto find_T_R(const int nonemptymgi, const int binindex) -> float {
   float T_R = 0.;
 
-  GSLT_RSolverParams paras{};
+  GSLTempSolverParams paras{};
   paras.nonemptymgi = nonemptymgi;
   paras.binindex = binindex;
 
