@@ -167,39 +167,37 @@ void add_detailed_line(const int lineindex) {
 }
 
 // get the normalised J value for a bin
-auto get_bin_J(const int nonemptymgi, const int binindex) -> double {
+auto get_bin_J(const std::ptrdiff_t nonemptymgi, const int binindex) -> double {
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
-  return radfieldbins.J_raw[(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex] *
-         J_normfactor[nonemptymgi];
+  return radfieldbins.J_raw[(nonemptymgi * RADFIELDBINCOUNT) + binindex] * J_normfactor[nonemptymgi];
 }
 
 // get the normalised nuJ value for a bin
-auto get_bin_nuJ(const int nonemptymgi, const int binindex) -> double {
+auto get_bin_nuJ(const std::ptrdiff_t nonemptymgi, const int binindex) -> double {
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
-  return radfieldbins.nuJ_raw[(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex] *
-         J_normfactor[nonemptymgi];
+  return radfieldbins.nuJ_raw[(nonemptymgi * RADFIELDBINCOUNT) + binindex] * J_normfactor[nonemptymgi];
 }
 
 // get <nuJ> / <J> for a bin
-auto get_bin_nu_bar(const int nonemptymgi, const int binindex) -> double {
+auto get_bin_nu_bar(const std::ptrdiff_t nonemptymgi, const int binindex) -> double {
   const double nuJ_sum = get_bin_nuJ(nonemptymgi, binindex);
   const double J_sum = get_bin_J(nonemptymgi, binindex);
   return nuJ_sum / J_sum;
 }
 
-auto get_bin_contribcount(const int nonemptymgi, const int binindex) -> int {
+auto get_bin_contribcount(const std::ptrdiff_t nonemptymgi, const int binindex) -> int {
   return radfieldbins.contribcount[(nonemptymgi * RADFIELDBINCOUNT) + binindex];
 }
 
-auto get_bin_W(const int nonemptymgi, const int binindex) -> float {
+auto get_bin_W(const std::ptrdiff_t nonemptymgi, const int binindex) -> float {
   return radfieldbin_solutions_W[(nonemptymgi * RADFIELDBINCOUNT) + binindex];
 }
 
-auto get_bin_T_R(const int nonemptymgi, const int binindex) -> float {
+auto get_bin_T_R(const std::ptrdiff_t nonemptymgi, const int binindex) -> float {
   return radfieldbin_solutions_T_R[(nonemptymgi * RADFIELDBINCOUNT) + binindex];
 }
 
