@@ -45,16 +45,22 @@ struct RadFieldBinSolution {
   float T_R;  // radiation temperature
 };
 
-struct RadFieldBin {
-  double J_raw;  // value needs to be multiplied by J_normfactor to get the true value
-  double nuJ_raw;
-  int contribcount;
+struct RadFieldBins {
+  std::vector<double> J_raw;
+  std::vector<double> nuJ_raw;
+  std::vector<int> contribcount;
+
+  void resize(const ptrdiff_t nonempty_npts_model) {
+    resize_exactly(J_raw, nonempty_npts_model * RADFIELDBINCOUNT);
+    resize_exactly(nuJ_raw, nonempty_npts_model * RADFIELDBINCOUNT);
+    resize_exactly(contribcount, nonempty_npts_model * RADFIELDBINCOUNT);
+  }
 };
 
 constexpr double radfieldbins_delta_nu =
     (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
 
-std::vector<RadFieldBin> radfieldbins{};
+RadFieldBins radfieldbins;
 std::span<RadFieldBinSolution> radfieldbin_solutions{};
 
 MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
@@ -161,7 +167,7 @@ auto get_bin_J(const int nonemptymgi, const int binindex) -> double {
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
-  return radfieldbins[(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex].J_raw *
+  return radfieldbins.J_raw[(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex] *
          J_normfactor[nonemptymgi];
 }
 
@@ -170,7 +176,7 @@ auto get_bin_nuJ(const int nonemptymgi, const int binindex) -> double {
   assert_testmodeonly(J_normfactor[nonemptymgi] > 0.0);
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
-  return radfieldbins[(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex].nuJ_raw *
+  return radfieldbins.nuJ_raw[(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex] *
          J_normfactor[nonemptymgi];
 }
 
@@ -182,7 +188,7 @@ auto get_bin_nu_bar(const int nonemptymgi, const int binindex) -> double {
 }
 
 auto get_bin_contribcount(const int nonemptymgi, const int binindex) -> int {
-  return radfieldbins[(nonemptymgi * RADFIELDBINCOUNT) + binindex].contribcount;
+  return radfieldbins.contribcount[(nonemptymgi * RADFIELDBINCOUNT) + binindex];
 }
 
 auto get_bin_W(const int nonemptymgi, const int binindex) -> float {
@@ -582,8 +588,8 @@ void init(const int my_rank, const int ndo_nonempty) {
       radfieldfile.flush();
     }
 
-    const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBin);
-    resize_exactly(radfieldbins, nonempty_npts_model * RADFIELDBINCOUNT);
+    const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * (2 * sizeof(double) + sizeof(int));
+    radfieldbins.resize(nonempty_npts_model);
 
     const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
 
@@ -723,8 +729,9 @@ void zero_estimators() {
   std::ranges::fill(bfrate_raw, 0.0);
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    assert_always(!radfieldbins.empty());
-    std::ranges::fill(radfieldbins, RadFieldBin{.J_raw = 0., .nuJ_raw = 0., .contribcount = 0});
+    std::ranges::fill(radfieldbins.J_raw, 0.0);
+    std::ranges::fill(radfieldbins.nuJ_raw, 0.0);
+    std::ranges::fill(radfieldbins.contribcount, 0);
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
@@ -757,9 +764,9 @@ __host__ __device__ void update_estimators(const ptrdiff_t nonemptymgi, const do
 
     if (binindex >= 0) {
       const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
-      atomicadd(radfieldbins[mgibinindex].J_raw, distance_e_cmf);
-      atomicadd(radfieldbins[mgibinindex].nuJ_raw, distance_e_cmf * nu_cmf);
-      atomicadd(radfieldbins[mgibinindex].contribcount, 1);
+      atomicadd(radfieldbins.J_raw[mgibinindex], distance_e_cmf);
+      atomicadd(radfieldbins.nuJ_raw[mgibinindex], distance_e_cmf * nu_cmf);
+      atomicadd(radfieldbins.contribcount[mgibinindex], 1);
     }
   }
 }
@@ -1014,16 +1021,15 @@ void titer_nuJ(const int nonemptymgi) {
 void reduce_estimators()
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
-  const auto nonempty_npts_model = grid::get_nonempty_npts_model();
-
   MPI_Allreduce_safe(J, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce_safe(nuJ, MPI_SUM, MPI_COMM_WORLD);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-      MPI_Reduce_safe(std::span{bfrate_raw}.subspan(nonemptymgi * globals::bfestimcount, globals::bfestimcount),
-                      MPI_SUM, 0, globals::mpi_comm_node);
-    }
+    // reduce all ranks on each node first, then reduce the node leaders
+    // then broadcast the final result to all ranks on each node
+    // this seems necessary to avoid congestion compared to a single MPI_Allreduce
+    // when using many ranks per node
+    MPI_Reduce_safe(bfrate_raw, MPI_SUM, 0, globals::mpi_comm_node);
     if (globals::rank_in_node == 0) {
       MPI_Allreduce_safe(bfrate_raw, MPI_SUM, globals::mpi_comm_internode);
     }
@@ -1034,14 +1040,10 @@ void reduce_estimators()
     const auto sys_time_start_reduction = std::time(nullptr);
     printout("Reducing binned radiation field estimators");
 
-    for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-        const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
-        MPI_Allreduce_safe(radfieldbins[mgibinindex].J_raw, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce_safe(radfieldbins[mgibinindex].nuJ_raw, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce_safe(radfieldbins[mgibinindex].contribcount, MPI_SUM, MPI_COMM_WORLD);
-      }
-    }
+    MPI_Allreduce_safe(radfieldbins.J_raw, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce_safe(radfieldbins.nuJ_raw, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce_safe(radfieldbins.contribcount, MPI_SUM, MPI_COMM_WORLD);
+
     const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
     printout(" (took %ld s)\n", duration_reduction);
   }
@@ -1131,9 +1133,9 @@ void write_restart_data(FILE* gridsave_file) {
     if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
         const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
-        fprintf(gridsave_file, "%la %la %a %a %d\n", radfieldbins[mgibinindex].J_raw, radfieldbins[mgibinindex].nuJ_raw,
+        fprintf(gridsave_file, "%la %la %a %a %d\n", radfieldbins.J_raw[mgibinindex], radfieldbins.nuJ_raw[mgibinindex],
                 radfieldbin_solutions[mgibinindex].W, radfieldbin_solutions[mgibinindex].T_R,
-                radfieldbins[mgibinindex].contribcount);
+                radfieldbins.contribcount[mgibinindex]);
       }
     }
 
@@ -1242,9 +1244,9 @@ void read_restart_data(FILE* gridsave_file) {
         const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
         float W = 0;
         float T_R = 0;
-        assert_always(fscanf(gridsave_file, "%la %la %a %a %d\n", &radfieldbins[mgibinindex].J_raw,
-                             &radfieldbins[mgibinindex].nuJ_raw, &W, &T_R,
-                             &radfieldbins[mgibinindex].contribcount) == 5);
+        assert_always(fscanf(gridsave_file, "%la %la %a %a %d\n", &radfieldbins.J_raw[mgibinindex],
+                             &radfieldbins.nuJ_raw[mgibinindex], &W, &T_R,
+                             &radfieldbins.contribcount[mgibinindex]) == 5);
         if (globals::rank_in_node == 0) {
           radfieldbin_solutions[mgibinindex].W = W;
           radfieldbin_solutions[mgibinindex].T_R = T_R;
