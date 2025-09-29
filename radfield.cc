@@ -793,20 +793,16 @@ __host__ __device__ auto radfield(const double nu, const int nonemptymgi) -> dou
     if (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP) {
       const int binindex = select_bin(nu);
       if (binindex >= 0) {
-        const auto mgibinindex = (static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex;
-        if (radfieldbin_solutions_W[mgibinindex] >= 0.) {
-          const double J_nu = dbb(nu, radfieldbin_solutions_T_R[mgibinindex], radfieldbin_solutions_W[mgibinindex]);
-          return J_nu;
+        const auto W = get_bin_W(nonemptymgi, binindex);
+        if (W >= 0.) {
+          return dbb(nu, get_bin_T_R(nonemptymgi, binindex), W);
         }
       }
       return 0.;
     }
   }
-
-  const float T_R_fullspec = grid::get_TR(nonemptymgi);
-  const float W_fullspec = grid::get_W(nonemptymgi);
-  const double J_nu_fullspec = dbb(nu, T_R_fullspec, W_fullspec);
-  return J_nu_fullspec;
+  // full spectrum fit to a single dilute blackbody
+  return dbb(nu, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
 }
 
 // return the integral of nu^3 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
