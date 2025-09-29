@@ -21,6 +21,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -403,43 +404,54 @@ inline auto GET_MPI_TYPE() -> MPI_Datatype {
   }
 }
 
+// MPI operations use a 32-bit int for the count, so we need to chunk large arrays
+constexpr std::ptrdiff_t MPI_COUNT_MAX = std::numeric_limits<int>::max();
+
 // these wrappers add type, bounds, and overflow safety to the MPI calls
 template <typename R, typename Op, typename Comm>
   requires std::ranges::random_access_range<R>
 inline void MPI_Allreduce_safe(R&& data, Op&& op, Comm&& comm) {
-  if (std::forward<R>(data).empty()) {
+  auto dataspan = std::span{std::forward<R>(data)};
+  if (dataspan.empty()) {
     return;
   }
-  assert_always(!std::forward<R>(data).empty());
-  assert_always(std::forward<R>(data).data() != nullptr);
+  assert_always(dataspan.data() != nullptr);
   assert_always(op != MPI_OP_NULL);
   assert_always(comm != MPI_COMM_NULL);
-
-  const auto true_size = std::ssize(std::forward<R>(data));
-  const auto int_data_size = static_cast<int>(true_size);
-  assert_always(std::cmp_equal(int_data_size, true_size));
 
   const auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
   assert_always(mpi_datatype != MPI_BYTE);  // we can't reduce MPI_BYTE types
 
-  auto ret = MPI_Allreduce(MPI_IN_PLACE, std::forward<R>(data).data(), int_data_size, mpi_datatype,
-                           std::forward<Op>(op), std::forward<Comm>(comm));
-  assert_always(ret == MPI_SUCCESS);
+  const auto nchunks = (std::ssize(dataspan) / MPI_COUNT_MAX) + (std::ssize(dataspan) % MPI_COUNT_MAX) == 0 ? 0 : 1;
+  assert_always(nchunks >= 1);
+  std::ptrdiff_t items_processed{0};
+  for (std::ptrdiff_t chunk = 0; chunk < nchunks; chunk++) {
+    const auto [chunkstart, chunksize] = get_range_chunk(std::ssize(dataspan), nchunks, chunk);
+    assert_always(chunksize > 0);
+    const auto chunk_span = dataspan.subspan(chunkstart, chunksize);
+    const auto int_chunksize = static_cast<int>(chunk_span.size());
+    assert_always(std::cmp_equal(int_chunksize, chunksize));
+    assert_always(MPI_Allreduce(MPI_IN_PLACE, chunk_span.data(), int_chunksize, mpi_datatype, std::forward<Op>(op),
+                                std::forward<Comm>(comm)) == MPI_SUCCESS);
+    items_processed += chunksize;
+  }
+  assert_always(items_processed == std::ssize(dataspan));
 }
 
 template <typename T, typename Op, typename Comm>
   requires(!std::ranges::random_access_range<T>)
 inline void MPI_Allreduce_safe(T& data, Op&& op, Comm&& comm) {
-  MPI_Allreduce_safe(std::span(&data, 1), std::forward<Op>(op), std::forward<Comm>(comm));
+  MPI_Allreduce_safe(std::span{&data, 1}, std::forward<Op>(op), std::forward<Comm>(comm));
 }
 
 template <typename R, typename Comm>
   requires std::ranges::random_access_range<R>
 inline void MPI_Bcast_safe(R&& data, const int root, Comm&& comm) {
-  if (std::forward<R>(data).empty()) {
+  auto dataspan = std::span{std::forward<R>(data)};
+  if (dataspan.empty()) {
     return;
   }
-  assert_always(std::forward<R>(data).data() != nullptr);
+  assert_always(dataspan.data() != nullptr);
   assert_always(comm != MPI_COMM_NULL);
   using value_t = typename std::ranges::range_value_t<R>;
 
@@ -447,32 +459,45 @@ inline void MPI_Bcast_safe(R&& data, const int root, Comm&& comm) {
   // if we're transferring bytes, then we need multiply the array count by the byte size of the type
   const ptrdiff_t sizefactor = mpi_datatype == MPI_BYTE ? sizeof(value_t) : 1;
 
-  const auto true_size = std::ssize(std::forward<R>(data)) * sizefactor;
-  const auto int_data_size = static_cast<int>(true_size);
-  assert_always(std::cmp_equal(int_data_size, true_size));
-
-  auto ret = MPI_Bcast(std::forward<R>(data).data(), int_data_size, mpi_datatype, root, std::forward<Comm>(comm));
-  assert_always(ret == MPI_SUCCESS);
+  assert_always(MPI_COUNT_MAX > sizefactor);  // otherwise we can't make any progress
+  const auto nchunks = ((std::ssize(dataspan) * sizefactor) / (MPI_COUNT_MAX / sizefactor)) +
+                                   ((std::ssize(dataspan) * sizefactor) % (MPI_COUNT_MAX / sizefactor)) ==
+                               0
+                           ? 0
+                           : 1;
+  assert_always(nchunks >= 1);
+  std::ptrdiff_t items_processed{0};
+  for (std::ptrdiff_t chunk = 0; chunk < nchunks; chunk++) {
+    const auto [chunkstart, chunksize] = get_range_chunk(std::ssize(dataspan), nchunks, chunk);
+    assert_always(chunksize > 0);
+    const auto chunk_span = dataspan.subspan(chunkstart, chunksize);
+    const auto chunksize_mpitype = std::ssize(chunk_span) * sizefactor;
+    assert_always(chunksize_mpitype <= MPI_COUNT_MAX);
+    const auto int_chunksize_mpitype = static_cast<int>(chunksize_mpitype);
+    assert_always(std::cmp_equal(int_chunksize_mpitype, chunksize_mpitype));
+    assert_always(MPI_Bcast(chunk_span.data(), int_chunksize_mpitype, mpi_datatype, root, std::forward<Comm>(comm)) ==
+                  MPI_SUCCESS);
+    items_processed += chunksize;
+  }
+  assert_always(items_processed == std::ssize(dataspan));
 }
 
 template <typename T, typename Comm>
   requires(!std::ranges::random_access_range<T>)
 inline void MPI_Bcast_safe(T& data, const int root, Comm&& comm) {
-  MPI_Bcast_safe(std::span(&data, 1), root, std::forward<Comm>(comm));
+  MPI_Bcast_safe(std::span{&data, 1}, root, std::forward<Comm>(comm));
 }
 
 template <typename R, typename Op, typename Comm>
   requires std::ranges::random_access_range<R>
 inline void MPI_Reduce_safe(R&& data, Op&& op, const int root, Comm&& comm) {
-  if (std::forward<R>(data).empty()) {
+  auto dataspan = std::span{std::forward<R>(data)};
+  if (dataspan.empty()) {
     return;
   }
-  assert_always(std::forward<R>(data).data() != nullptr);
+  assert_always(dataspan.data() != nullptr);
+  assert_always(op != MPI_OP_NULL);
   assert_always(comm != MPI_COMM_NULL);
-
-  const auto true_size = std::ssize(std::forward<R>(data));
-  const auto int_data_size = static_cast<int>(true_size);
-  assert_always(std::cmp_equal(int_data_size, true_size));
 
   int my_rank{-1};
   assert_always(MPI_Comm_rank(std::forward<Comm>(comm), &my_rank) == MPI_SUCCESS);
@@ -481,9 +506,21 @@ inline void MPI_Reduce_safe(R&& data, Op&& op, const int root, Comm&& comm) {
   const auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
   assert_always(mpi_datatype != MPI_BYTE);  // we can't reduce MPI_BYTE types
 
-  const auto ret = MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : std::forward<R>(data).data(), std::forward<R>(data).data(),
-                              int_data_size, mpi_datatype, std::forward<Op>(op), root, std::forward<Comm>(comm));
-  assert_always(ret == MPI_SUCCESS);
+  const auto nchunks = (std::ssize(dataspan) / MPI_COUNT_MAX) + (std::ssize(dataspan) % MPI_COUNT_MAX) == 0 ? 0 : 1;
+  assert_always(nchunks >= 1);
+  std::ptrdiff_t items_processed{0};
+  for (std::ptrdiff_t chunk = 0; chunk < nchunks; chunk++) {
+    const auto [nstart, chunksize] = get_range_chunk(std::ssize(dataspan), nchunks, chunk);
+    assert_always(chunksize > 0);
+    const auto chunk_span = dataspan.subspan(nstart, chunksize);
+    const auto int_chunksize = static_cast<int>(chunk_span.size());
+    assert_always(std::cmp_equal(int_chunksize, chunksize));
+    assert_always(MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : chunk_span.data(), chunk_span.data(), int_chunksize,
+                             mpi_datatype, std::forward<Op>(op), root, std::forward<Comm>(comm)) == MPI_SUCCESS);
+
+    items_processed += chunksize;
+  }
+  assert_always(items_processed == std::ssize(dataspan));
 }
 
 template <typename T>
