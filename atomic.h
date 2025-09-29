@@ -327,6 +327,13 @@ inline auto get_includedions() -> int {
   return globals::elements[element].ions[ion].nlevels_autoion;
 }
 
+// get the number of levels that are not autoionising
+[[nodiscard]] inline auto get_nlevels_nonautoion(const int element, const int ion) -> int {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  return get_nlevels(element, ion) - get_nlevels_autoion(element, ion);
+}
+
 // the number of downward autoionisation transitions from the specified level
 [[nodiscard]] inline auto get_nautoiondowntrans(const int uniquelevelindex) -> int {
   return globals::alllevels.nautoiondowntrans[uniquelevelindex];
@@ -342,7 +349,7 @@ inline auto get_includedions() -> int {
 // level has autoionising de-excitation transition
 [[nodiscard]] inline auto level_isautoionising(const int element, const int ion, const int level) -> bool {
   assert_testmodeonly(get_nlevels_autoion(element, ion) < get_nlevels(element, ion));
-  const bool is_autoionising = level >= (get_nlevels(element, ion) - get_nlevels_autoion(element, ion));
+  const bool is_autoionising = level >= get_nlevels_nonautoion(element, ion);
   assert_testmodeonly(is_autoionising == (get_nautoiondowntrans(element, ion, level) > 0));
   return is_autoionising;
 }

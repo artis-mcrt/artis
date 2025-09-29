@@ -130,8 +130,8 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
   const int gs_index = globals::elements[element].ions[ion].first_nlte -
                        globals::elements[element].ions[first_ion_used].first_nlte + (ion - first_ion_used) +
                        offset_autoion;
-  const int first_autoion = get_nlevels(element, ion) - get_nlevels_autoion(element, ion);
-  if (ion_has_superlevel(element, ion) && level > (first_autoion - 1)) {
+  const int first_autoion = get_nlevels_nonautoion(element, ion);
+  if (ion_has_superlevel(element, ion) && level >= first_autoion) {
     return (gs_index + get_nlevels_excited_nlte(element, ion) + level - first_autoion + 2);
   }
   // add in level or superlevel number
@@ -411,10 +411,11 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
   resize_exactly(superlevel_partfuncs, get_nions(element));
   for (int ion = 0; ion < get_nions(element); ion++) {
     if (ion_has_superlevel(element, ion)) {
-      superlevel_partfuncs[ion] = std::ranges::fold_left(
-          std::views::iota(get_nlevels_excited_nlte(element, ion) + 1,
-                           get_nlevels(element, ion) - get_nlevels_autoion(element, ion)),
-          0.0, [&](double sum, int level) { return sum + superlevel_boltzmann(nonemptymgi, element, ion, level); });
+      superlevel_partfuncs[ion] = 0.;
+      for (int level = get_nlevels_excited_nlte(element, ion) + 1; level < get_nlevels_nonautoion(element, ion);
+           level++) {
+        superlevel_partfuncs[ion] += superlevel_boltzmann(nonemptymgi, element, ion, level);
+      }
     } else {
       superlevel_partfuncs[ion] = -1.;
     }
@@ -434,10 +435,11 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
   for (int ion = first_ion_used; ion < (first_ion_used + nions_used); ion++) {
     // add super level if it exists
     if (ion_has_superlevel(element, ion)) {
+      // if it has a superlevel then need +1 for ground state, +1 for superlevel and add autoionising levels
       nlte_dimension += get_nlevels_excited_nlte(element, ion) + get_nlevels_autoion(element, ion) + 2;
       // printout("Here 1: For element %d ion %d adding %d to nlte_dimension. \n", element, ion, nlevels_nlte +
       // get_nlevels_autoion(element, ion) + 2); printout("checks: %d %d\n", nlevels_nlte, get_nlevels_autoion(element,
-      // ion)); if it has a superlevel then need + 2 for ground state and super and to add autionising levels
+      // ion));
     } else {  // if it doesn't have a superlevel
       nlte_dimension += get_nlevels(element, ion);
       // printout("Here 2: For element %d ion %d adding %d to nlte_dimension. \n", element, ion,
