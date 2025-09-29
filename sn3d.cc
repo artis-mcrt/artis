@@ -213,59 +213,63 @@ void mpi_communicate_grid_properties() {
     int root_node_id = globals::node_id;
     MPI_Bcast_safe(root_node_id, root, MPI_COMM_WORLD);
 
-    const ptrdiff_t root_nstart_nonempty = grid::get_nstart_nonempty(root);
     const auto root_ndo_nonempty = grid::get_ndo_nonempty(root);
+    if (root_ndo_nonempty <= 0) {
+      continue;
+    }
+    const ptrdiff_t root_nstart_nonempty = grid::get_nstart_nonempty(root);
+    assert_always(root_nstart_nonempty >= 0);
+    assert_always((root_nstart_nonempty + root_ndo_nonempty - 1) <= grid::get_nonempty_npts_model());
+
+    if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
+      MPI_Bcast_safe(std::span{globals::gammaestimator}.subspan(root_nstart_nonempty * globals::nbfcontinua_ground,
+                                                                root_ndo_nonempty * globals::nbfcontinua_ground),
+                     root, MPI_COMM_WORLD);
+    }
 
     for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
          nonemptymgi++) {
-      assert_always(root_ndo_nonempty > 0);
-
       radfield::do_MPI_Bcast(nonemptymgi, root, root_node_id);
 
       nonthermal::nt_MPI_Bcast(nonemptymgi, root_node_id);
-
-      if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
-        MPI_Bcast_safe(
-            grid::nltepops_allcells.subspan(nonemptymgi * globals::total_nlte_levels, globals::total_nlte_levels),
-            root_node_id, globals::mpi_comm_internode);
-      }
-
-      if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
-        assert_always(globals::corrphotoionrenorm.data() != nullptr);
-        if (globals::rank_in_node == 0) {
-          MPI_Bcast_safe(globals::corrphotoionrenorm.subspan(nonemptymgi * globals::nbfcontinua_ground,
-                                                             globals::nbfcontinua_ground),
-                         root_node_id, globals::mpi_comm_internode);
-        }
-
-        MPI_Barrier(MPI_COMM_WORLD);
-
-        MPI_Bcast_safe(std::span{globals::gammaestimator}.subspan(nonemptymgi * globals::nbfcontinua_ground,
-                                                                  globals::nbfcontinua_ground),
-                       root, MPI_COMM_WORLD);
-      }
-
-      if (globals::rank_in_node == 0) {
-        MPI_Bcast_safe(grid::modelgrid[nonemptymgi], root_node_id, globals::mpi_comm_internode);
-      }
 
       MPI_Bcast_binned_opacities(nonemptymgi, root_node_id);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (globals::rank_in_node == 0) {
+      MPI_Bcast_safe(grid::modelgrid.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+                     globals::mpi_comm_internode);
+
+      if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
+        assert_always(globals::corrphotoionrenorm.data() != nullptr);
+        MPI_Bcast_safe(globals::corrphotoionrenorm.subspan(root_nstart_nonempty * globals::nbfcontinua_ground,
+                                                           root_ndo_nonempty * globals::nbfcontinua_ground),
+                       root_node_id, globals::mpi_comm_internode);
+      }
+
+      if (globals::total_nlte_levels > 0) {
+        MPI_Bcast_safe(grid::nltepops_allcells.subspan(root_nstart_nonempty * globals::total_nlte_levels,
+                                                       root_ndo_nonempty * globals::total_nlte_levels),
+                       root_node_id, globals::mpi_comm_internode);
+      }
+
       MPI_Bcast_safe(
           grid::elem_meanweight_allcells.subspan(root_nstart_nonempty * nelements, root_ndo_nonempty * nelements),
           root_node_id, globals::mpi_comm_internode);
+
       MPI_Bcast_safe(
           grid::elem_massfracs_allcells.subspan(root_nstart_nonempty * nelements, root_ndo_nonempty * nelements),
           root_node_id, globals::mpi_comm_internode);
+
       MPI_Bcast_safe(grid::ion_groundlevelpops_allcells.subspan(root_nstart_nonempty * nincludedions,
                                                                 root_ndo_nonempty * nincludedions),
                      root_node_id, globals::mpi_comm_internode);
+
       MPI_Bcast_safe(grid::ion_partfuncts_allcells.subspan(root_nstart_nonempty * nincludedions,
                                                            root_ndo_nonempty * nincludedions),
                      root_node_id, globals::mpi_comm_internode);
+
       MPI_Bcast_safe(grid::ion_cooling_contribs_allcells.subspan(root_nstart_nonempty * nincludedions,
                                                                  root_ndo_nonempty * nincludedions),
                      root_node_id, globals::mpi_comm_internode);
