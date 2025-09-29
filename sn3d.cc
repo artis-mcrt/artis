@@ -218,23 +218,6 @@ void mpi_communicate_grid_properties() {
     const auto root_ndo_nonempty = grid::get_ndo_nonempty(root);
     assert_always(root_ndo_nonempty > 0);
 
-    if (globals::rank_in_node == 0) {
-      if (globals::total_nlte_levels > 0) {
-        MPI_Bcast_safe(grid::nltepops_allcells.subspan(root_nstart_nonempty * globals::total_nlte_levels,
-                                                       root_ndo_nonempty * globals::total_nlte_levels),
-                       root_node_id, globals::mpi_comm_internode);
-      }
-      MPI_Bcast_safe(grid::modelgrid.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
-                     globals::mpi_comm_internode);
-
-      if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
-        assert_always(globals::corrphotoionrenorm.data() != nullptr);
-        MPI_Bcast_safe(globals::corrphotoionrenorm.subspan(root_nstart_nonempty * globals::nbfcontinua_ground,
-                                                           root_ndo_nonempty * globals::nbfcontinua_ground),
-                       root_node_id, globals::mpi_comm_internode);
-      }
-    }
-
     if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
       MPI_Bcast_safe(std::span{globals::gammaestimator}.subspan(root_nstart_nonempty * globals::nbfcontinua_ground,
                                                                 root_ndo_nonempty * globals::nbfcontinua_ground),
@@ -252,18 +235,38 @@ void mpi_communicate_grid_properties() {
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (globals::rank_in_node == 0) {
+      MPI_Bcast_safe(grid::modelgrid.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+                     globals::mpi_comm_internode);
+
+      if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
+        assert_always(globals::corrphotoionrenorm.data() != nullptr);
+        MPI_Bcast_safe(globals::corrphotoionrenorm.subspan(root_nstart_nonempty * globals::nbfcontinua_ground,
+                                                           root_ndo_nonempty * globals::nbfcontinua_ground),
+                       root_node_id, globals::mpi_comm_internode);
+      }
+
+      if (globals::total_nlte_levels > 0) {
+        MPI_Bcast_safe(grid::nltepops_allcells.subspan(root_nstart_nonempty * globals::total_nlte_levels,
+                                                       root_ndo_nonempty * globals::total_nlte_levels),
+                       root_node_id, globals::mpi_comm_internode);
+      }
+
       MPI_Bcast_safe(
           grid::elem_meanweight_allcells.subspan(root_nstart_nonempty * nelements, root_ndo_nonempty * nelements),
           root_node_id, globals::mpi_comm_internode);
+
       MPI_Bcast_safe(
           grid::elem_massfracs_allcells.subspan(root_nstart_nonempty * nelements, root_ndo_nonempty * nelements),
           root_node_id, globals::mpi_comm_internode);
+
       MPI_Bcast_safe(grid::ion_groundlevelpops_allcells.subspan(root_nstart_nonempty * nincludedions,
                                                                 root_ndo_nonempty * nincludedions),
                      root_node_id, globals::mpi_comm_internode);
+
       MPI_Bcast_safe(grid::ion_partfuncts_allcells.subspan(root_nstart_nonempty * nincludedions,
                                                            root_ndo_nonempty * nincludedions),
                      root_node_id, globals::mpi_comm_internode);
+
       MPI_Bcast_safe(grid::ion_cooling_contribs_allcells.subspan(root_nstart_nonempty * nincludedions,
                                                                  root_ndo_nonempty * nincludedions),
                      root_node_id, globals::mpi_comm_internode);
