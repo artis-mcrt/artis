@@ -216,6 +216,12 @@ void mpi_communicate_grid_properties() {
     const ptrdiff_t root_nstart_nonempty = grid::get_nstart_nonempty(root);
     const auto root_ndo_nonempty = grid::get_ndo_nonempty(root);
 
+    if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
+      MPI_Bcast_safe(grid::nltepops_allcells.subspan(root_nstart_nonempty * globals::total_nlte_levels,
+                                                     root_ndo_nonempty * globals::total_nlte_levels),
+                     root_node_id, globals::mpi_comm_internode);
+    }
+
     for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
          nonemptymgi++) {
       assert_always(root_ndo_nonempty > 0);
@@ -223,12 +229,6 @@ void mpi_communicate_grid_properties() {
       radfield::do_MPI_Bcast(nonemptymgi, root, root_node_id);
 
       nonthermal::nt_MPI_Bcast(nonemptymgi, root_node_id);
-
-      if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
-        MPI_Bcast_safe(
-            grid::nltepops_allcells.subspan(nonemptymgi * globals::total_nlte_levels, globals::total_nlte_levels),
-            root_node_id, globals::mpi_comm_internode);
-      }
 
       if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
         assert_always(globals::corrphotoionrenorm.data() != nullptr);
