@@ -216,7 +216,10 @@ void mpi_communicate_grid_properties() {
     const ptrdiff_t root_nstart_nonempty = grid::get_nstart_nonempty(root);
     assert_always(root_nstart_nonempty > 0);
     const auto root_ndo_nonempty = grid::get_ndo_nonempty(root);
-    assert_always(root_ndo_nonempty > 0);
+    if (root_ndo_nonempty <= 0) {
+      continue;
+    }
+    assert_always((root_nstart_nonempty + root_ndo_nonempty - 1) <= grid::get_nonempty_npts_model());
 
     if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
       MPI_Bcast_safe(std::span{globals::gammaestimator}.subspan(root_nstart_nonempty * globals::nbfcontinua_ground,
