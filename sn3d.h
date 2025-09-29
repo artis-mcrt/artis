@@ -460,8 +460,10 @@ inline void MPI_Bcast_safe(R&& data, const int root, Comm&& comm) {
   const ptrdiff_t sizefactor = mpi_datatype == MPI_BYTE ? sizeof(value_t) : 1;
 
   assert_always(MPI_COUNT_MAX > sizefactor);  // otherwise we can't make any progress
-  const auto nchunks = ((std::ssize(dataspan) * sizefactor) / (MPI_COUNT_MAX / sizefactor)) +
-                       (((std::ssize(dataspan) * sizefactor) % (MPI_COUNT_MAX / sizefactor)) == 0 ? 0 : 1);
+  const auto MPI_COUNT_MAX_MPITYPE = MPI_COUNT_MAX / sizefactor;
+  const auto datasize_mpitype = std::ssize(dataspan) * sizefactor;
+  const auto nchunks =
+      (datasize_mpitype / MPI_COUNT_MAX_MPITYPE) + ((datasize_mpitype % MPI_COUNT_MAX_MPITYPE) == 0 ? 0 : 1);
   assert_always(nchunks >= 1);
   std::ptrdiff_t items_processed{0};
   for (std::ptrdiff_t chunk = 0; chunk < nchunks; chunk++) {
