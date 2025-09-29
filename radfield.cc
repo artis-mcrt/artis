@@ -482,8 +482,7 @@ void write_to_file(const int nonemptymgi, const int timestep) {
         T_R = grid::get_TR(nonemptymgi);
         W = grid::get_W(nonemptymgi);
         contribcount = totalcontribs;
-      } else  // use binindex < -1 for detailed line Jb_lu estimators
-      {
+      } else {  // use binindex < -1 for detailed line Jb_lu estimators
         const int jblueindex = -2 - binindex;  // -2 is the first detailed line, -3 is the second, etc
         const int lineindex = detailed_lineindicies[jblueindex];
         const double nu_trans = globals::linelist.nu[lineindex];
@@ -516,18 +515,18 @@ void init(const int my_rank, const int ndo_nonempty) {
 
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
-  J_normfactor.resize(nonempty_npts_model + 1);
-  J.resize(nonempty_npts_model + 1);
+  resize_exactly(J_normfactor, nonempty_npts_model + 1);
+  resize_exactly(J, nonempty_npts_model + 1);
 
 #ifdef DO_TITER
-  J_reduced_save.resize(nonempty_npts_model + 1);
+  resize_exactly(J_reduced_save, nonempty_npts_model + 1);
 #endif
 
   // J and nuJ are accumulated and then normalised in-place
   // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
-  nuJ.resize(nonempty_npts_model + 1);
+  resize_exactly(nuJ, nonempty_npts_model + 1);
 #ifdef DO_TITER
-  nuJ.resize(nonempty_npts_model + 1);
+  resize_exactly(nuJ, nonempty_npts_model + 1);
 #endif
 
   resize_exactly(prev_Jb_lu_normed, nonempty_npts_model);
@@ -621,7 +620,7 @@ void init(const int my_rank, const int ndo_nonempty) {
     printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
              nonempty_npts_model * globals::bfestimcount * sizeof(float) / 1024. / 1024.);
 
-    bfrate_raw.resize(nonempty_npts_model * globals::bfestimcount);
+    resize_exactly(bfrate_raw, nonempty_npts_model * globals::bfestimcount);
 
     printout("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy %.3f MB\n",
              nonempty_npts_model * globals::bfestimcount * sizeof(double) / 1024. / 1024.);
