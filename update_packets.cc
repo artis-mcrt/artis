@@ -418,10 +418,9 @@ void update_packets(const int nts, std::span<Packet> packets) {
 
   MPI_Barrier(MPI_COMM_WORLD);  // hold all processes once the packets are updated
   const auto time_update_packets_end_allranks = std::time(nullptr);
-  printout(
-      "timestep %d: time after update packets for all processes %ld (rank %d took %lds, waited %lds, total %lds)\n",
-      nts, time_update_packets_end_allranks, globals::my_rank,
-      time_update_packets_end_thisrank - time_update_packets_start,
-      time_update_packets_end_allranks - time_update_packets_end_thisrank,
-      time_update_packets_end_allranks - time_update_packets_start);
+  logprintlnfmt("timestep {}: time after update packets for all processes {} (rank {} took {}s, waited {}s, total {}s)",
+                nts, time_update_packets_end_allranks, globals::my_rank,
+                time_update_packets_end_thisrank - time_update_packets_start,
+                time_update_packets_end_allranks - time_update_packets_end_thisrank,
+                time_update_packets_end_allranks - time_update_packets_start);
 }
