@@ -1099,8 +1099,8 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
     }
   }
   if (printdebug) {
-    printout("recomb: Z=%2d ionstage %d->%d upper+1 [all] lower+1 [all] Alpha %g\n\n", get_atomicnumber(element),
-             get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), alpha);
+    logprintlnfmt("recomb: Z={:2} ionstage {}->{} upper+1 [all] lower+1 [all] Alpha {:g}\n", get_atomicnumber(element),
+                  get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), alpha);
   }
   return alpha;
 }
@@ -1397,9 +1397,9 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
       if (printdebug && (gamma_ion_contribution_integral > 0. || gamma_ion_contribution_used > 0.) && lower < 20) {
         const double threshold_angstroms =
             1e8 * CLIGHT / (get_phixs_threshold(element, lowerion, lower, phixstargetindex) / H);
-        printout(
-            "Gamma_R: Z=%d ionstage %d->%d lower+1 %5d upper+1 %5d lambda_threshold %7.1f Gamma_integral %7.2e "
-            "Gamma_bfest %7.2e Gamma_used %7.2e Gamma_used_sum %7.2e\n",
+        logprintlnfmt(
+            "Gamma_R: Z={} ionstage {}->{} lower+1 {:5} upper+1 {:5} lambda_threshold {:7.1f} Gamma_integral {:7.2e} "
+            "Gamma_bfest {:7.2e} Gamma_used {:7.2e} Gamma_used_sum {:7.2e}",
             get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element, lowerion + 1), lower + 1,
             upper + 1, threshold_angstroms, gamma_ion_contribution_integral, gamma_ion_contribution_bfest,
             gamma_ion_contribution_used, gamma_ion_used);
@@ -1407,9 +1407,9 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
     }
   }
   if (printdebug) {
-    printout("Gamma_R: Z=%d ionstage %d->%d lower+1 [all] upper+1 [all] Gamma_used_ion %7.2e\n",
-             get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element, lowerion + 1),
-             gamma_ion_used);
+    logprintlnfmt("Gamma_R: Z={} ionstage {}->{} lower+1 [all] upper+1 [all] Gamma_used_ion {:7.2e}",
+                  get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element, lowerion + 1),
+                  gamma_ion_used);
   }
 
   return gamma_ion;
