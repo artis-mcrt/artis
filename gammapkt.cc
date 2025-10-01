@@ -62,8 +62,8 @@ struct NucGammaLine {
 void read_gamma_spectrum(const int nucindex, const std::string& filename)
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
 {
-  printout("reading gamma spectrum for Z=%d A=%d from %s...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
-           filename.c_str());
+  logprintfmt("reading gamma spectrum for Z={} A={} from {}...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
+              filename);
 
   auto gammafile = fstream_required(filename, std::ios::in);
   std::string line;
@@ -89,7 +89,7 @@ void read_gamma_spectrum(const int nucindex, const std::string& filename)
 
   decay::set_nucdecayenergygamma(nucindex, E_gamma_avg);
 
-  printout("nlines %d avg_en_gamma %g MeV\n", nlines, E_gamma_avg / MEV);
+  logprintlnfmt("nlines {} avg_en_gamma {:g} MeV", nlines, E_gamma_avg / MEV);
 }
 
 void set_trivial_gamma_spectrum(const int nucindex) {
@@ -103,13 +103,13 @@ void set_trivial_gamma_spectrum(const int nucindex) {
 void read_decaydata() {
   // migrate from old filename
   if (!std::filesystem::exists("ni56_lines.txt") && std::filesystem::exists("ni_lines.txt")) {
-    printout("Moving ni_lines.txt to ni56_lines.txt\n");
+    logprintlnfmt("Moving ni_lines.txt to ni56_lines.txt");
     std::rename("ni_lines.txt", "ni56_lines.txt");
   }
 
   // migrate from old filename
   if (!std::filesystem::exists("co56_lines.txt") && std::filesystem::exists("co_lines.txt")) {
-    printout("Moving co_lines.txt to co56_lines.txt\n");
+    logprintlnfmt("Moving co_lines.txt to co56_lines.txt");
     std::rename("co_lines.txt", "co56_lines.txt");
   }
 
@@ -165,7 +165,7 @@ void init_gamma_linelist() {
 
   const ptrdiff_t total_lines = std::ranges::fold_left(
       gamma_spectra, 0, [](const ptrdiff_t sum, const auto& lines) { return sum + std::ssize(lines); });
-  printout("total gamma-ray lines %td\n", total_lines);
+  logprintlnfmt("total gamma-ray lines {}", total_lines);
 
   std::vector<NucGammaLine> allnuc_gamma_line_list;
   allnuc_gamma_line_list.reserve(total_lines);
