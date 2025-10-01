@@ -2269,7 +2269,7 @@ void init_grid(const int my_rank) {
   // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(28, 56) * 3000e-8 * globals::timesteps[m].mid;
   globals::rho_crit =
       ME * CLIGHT * decay::nucmass(28, 56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
-  printout("grid_init: rho_crit = %g [g/cm3]\n", globals::rho_crit);
+  logprintlnfmt("grid_init: rho_crit = {:g} [g/cm3]", globals::rho_crit);
 
   if (get_model_type() == GRID_TYPE) {
     if (get_model_type() == GridType::CARTESIAN3D) {
@@ -2286,7 +2286,7 @@ void init_grid(const int my_rank) {
     assert_always(GRID_TYPE == GridType::CARTESIAN3D);
     map_2dmodelto3dgrid();
   } else {
-    printout("[fatal] grid_init: Error: Unknown density type. Abort.");
+    logprintfmt("[fatal] grid_init: Error: Unknown density type. Abort.");
     std::abort();
   }
 
@@ -2353,8 +2353,8 @@ void init_grid(const int my_rank) {
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     mtot_mapped += get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi);
   }
-  printout("Total grid-mapped mass: %9.3e [Msun] (%.1f%% of input mass)\n", mtot_mapped / MSUN,
-           mtot_mapped / mtot_input * 100.);
+  logprintlnfmt("Total grid-mapped mass: {:9.3e} [Msun] ({:.1f}% of input mass)", mtot_mapped / MSUN,
+                mtot_mapped / mtot_input * 100.);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
