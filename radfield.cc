@@ -1094,7 +1094,7 @@ void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_no
 }
 
 void write_restart_data(FILE* gridsave_file) {
-  printout("binned radiation field and detailed lines, ");
+  logprintfmt("binned radiation field and detailed lines, ");
 
   fprintf(gridsave_file, "%d\n", 30490824);  // special number marking the beginning of radfield data
 
@@ -1154,7 +1154,7 @@ void write_restart_data(FILE* gridsave_file) {
 }
 
 void read_restart_data(FILE* gridsave_file) {
-  printout("Reading restart data for radiation field\n");
+  logprintlnfmt("Reading restart data for radiation field");
 
   int code_check = 0;
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
@@ -1181,12 +1181,12 @@ void read_restart_data(FILE* gridsave_file) {
 
     if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != T_R_min || T_R_max_in != T_R_max ||
         nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999) {
-      printout(
-          "ERROR: gridsave file specifies %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg "
-          "T_R_max %lg\n",
+      logprintlnfmt(
+          "ERROR: gridsave file specifies {} bins, nu_lower_first_initial {:g} nu_upper_last_initial {:g} T_R_min {:g} "
+          "T_R_max {:g}",
           bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
-      printout("require %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
-               RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, T_R_min, T_R_max);
+      logprintlnfmt("require {} bins, nu_lower_first_initial {:g} nu_upper_last_initial {:g} T_R_min {:g} T_R_max {:g}",
+                    RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, T_R_min, T_R_max);
       std::abort();
     }
 
@@ -1228,8 +1228,8 @@ void read_restart_data(FILE* gridsave_file) {
     assert_always(fscanf(gridsave_file, "%d\n", &detailed_linecount_in) == 1);
 
     if (detailed_linecount_in != detailed_linecount) {
-      printout("ERROR: gridsave file specifies %d detailed lines but this simulation has %d.\n", detailed_linecount_in,
-               detailed_linecount);
+      logprintlnfmt("ERROR: gridsave file specifies {} detailed lines but this simulation has {}.",
+                    detailed_linecount_in, detailed_linecount);
       std::abort();
     }
 
