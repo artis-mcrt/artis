@@ -92,17 +92,17 @@ void packet_init(std::span<Packet> pkt)
 // Subroutine that initialises the packets if we start a new simulation.
 {
   MPI_Barrier(MPI_COMM_WORLD);
-  printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
+  logprintlnfmt("UNIFORM_PELLET_ENERGIES is {}", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
 
-  printout("INITIAL_PACKETS_ON is %s\n", (INITIAL_PACKETS_ON ? "on" : "off"));
+  logprintlnfmt("INITIAL_PACKETS_ON is {}", (INITIAL_PACKETS_ON ? "on" : "off"));
 
   // The total number of pellets that we want to start with is just
   // npkts. The total energy of the pellets is given by etot.
   const double etot_tmodel_tinf = decay::get_global_etot_tmodel_tinf();
 
-  printout("etot %g (t_model to t_inf)\n", etot_tmodel_tinf);
+  logprintlnfmt("etot {:g} (t_model to t_inf)", etot_tmodel_tinf);
 
-  printout("e_cmf per packet (t_model to t_inf) %g erg\n", etot_tmodel_tinf / globals::npkts);
+  logprintlnfmt("e_cmf per packet (t_model to t_inf) {:g} erg", etot_tmodel_tinf / globals::npkts);
 
   decay::setup_decaypath_energy_per_mass();
 
@@ -152,14 +152,14 @@ void packet_init(std::span<Packet> pkt)
 
   double e_cmf_total = std::ranges::fold_left(pkt, 0., [](const double sum, const Packet& p) { return sum + p.e_cmf; });
   const double e_ratio = etot_simtime / e_cmf_total;
-  printout("packet energy sum %g should be %g normalisation factor: %g\n", e_cmf_total, etot_simtime, e_ratio);
+  logprintlnfmt("packet energy sum {:g} should be {:g} normalisation factor: {:g}", e_cmf_total, etot_simtime, e_ratio);
   assert_always(std::isfinite(e_cmf_total));
   e_cmf_total *= e_ratio;
   for (int n = 0; n < globals::npkts; n++) {
     pkt[n].e_cmf *= e_ratio;
     pkt[n].e_rf *= e_ratio;
   }
-  printout("total energy that will be freed during simulation time: %g erg\n", e_cmf_total);
+  logprintlnfmt("total energy that will be freed during simulation time: {:g} erg", e_cmf_total);
 }
 
 // write packets text file
@@ -200,7 +200,7 @@ void read_temp_packetsfile(const int timestep, const int my_rank, std::span<Pack
   assert_always(std::fread(pkt.data(), sizeof(Packet), globals::npkts, packets_file.get()) ==
                 static_cast<size_t>(globals::npkts));
 
-  printout("done\n");
+  logprintlnfmt("done");
 }
 
 auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<const Packet> pkt) -> bool {
@@ -216,17 +216,17 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<co
   for (int n = 0; n < globals::npkts; n++) {
     assert_always(std::fread(&pkt_in, sizeof(Packet), 1, packets_file.get()) == 1);
     if (pkt_in != pkt[n]) {
-      printout("failed on packet %d\n", n);
-      printout(" compare number %d %d\n", pkt_in.number, pkt[n].number);
-      printout(" compare nu_cmf %lg %lg\n", pkt_in.nu_cmf, pkt[n].nu_cmf);
-      printout(" compare e_rf %lg %lg\n", pkt_in.e_rf, pkt[n].e_rf);
+      logprintlnfmt("failed on packet {}", n);
+      logprintlnfmt(" compare number {} {}", pkt_in.number, pkt[n].number);
+      logprintlnfmt(" compare nu_cmf {:g} {:g}", pkt_in.nu_cmf, pkt[n].nu_cmf);
+      logprintlnfmt(" compare e_rf {:g} {:g}", pkt_in.e_rf, pkt[n].e_rf);
       readback_passed = false;
     }
   }
   if (readback_passed) {
-    printout("  verification passed\n");
+    logprintlnfmt("  verification passed");
   } else {
-    printout("  verification FAILED\n");
+    logprintlnfmt("  verification FAILED");
   }
   return readback_passed;
 }
@@ -243,9 +243,9 @@ auto read_packets(const std::string& filename, std::span<Packet> packets) -> std
     const int i = packets_read - 1;
 
     if (i > globals::npkts - 1) {
-      printout(
-          "ERROR: More data found beyond packet %d (expecting %d packets). Recompile exspec with the correct number "
-          "of packets. Run (wc -l < packets00_0000.out) to count them.\n",
+      logprintlnfmt(
+          "ERROR: More data found beyond packet {} (expecting {} packets). Recompile exspec with the correct number of "
+          "packets. Run (wc -l < packets00_0000.out) to count them.",
           packets_read, globals::npkts);
       std::abort();
     }
@@ -290,9 +290,9 @@ auto read_packets(const std::string& filename, std::span<Packet> packets) -> std
   }
 
   if (packets_read < globals::npkts) {
-    printout(
-        "ERROR: Read failed after packet %d (expecting %d packets). Recompile exspec with the correct number of "
-        "packets. Run (wc -l < packets00_0000.out) to count them.\n",
+    logprintlnfmt(
+        "ERROR: Read failed after packet {} (expecting {} packets). Recompile exspec with the correct number of "
+        "packets. Run (wc -l < packets00_0000.out) to count them.",
         packets_read, globals::npkts);
     std::abort();
   }
