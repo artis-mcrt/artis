@@ -2556,7 +2556,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 }
 
 void write_restart_data(FILE* gridsave_file) {
-  printout("non-thermal solver, ");
+  logprintfmt("non-thermal solver, ");
 
   fprintf(gridsave_file, "%d\n", 24724518);  // special number marking the beginning of NT data
   fprintf(gridsave_file, "%d %la %la\n", SFPTS, SF_EMIN, SF_EMAX);
@@ -2593,7 +2593,7 @@ void write_restart_data(FILE* gridsave_file) {
 }
 
 void read_restart_data(FILE* gridsave_file) {
-  printout("Reading restart data for non-thermal solver\n");
+  logprintlnfmt("Reading restart data for non-thermal solver");
 
   int code_check = 0;
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
@@ -2605,9 +2605,10 @@ void read_restart_data(FILE* gridsave_file) {
   assert_always(fscanf(gridsave_file, "%d %la %la\n", &sfpts_in, &SF_EMIN_in, &SF_EMAX_in) == 3);
 
   if (sfpts_in != SFPTS || SF_EMIN_in != SF_EMIN || SF_EMAX_in != SF_EMAX) {
-    printout("ERROR: gridsave file specifies %d Spencer-Fano samples, SF_EMIN %lg SF_EMAX %lg\n", sfpts_in, SF_EMIN_in,
-             SF_EMAX_in);
-    printout("ERROR: This simulation has %d Spencer-Fano samples, SF_EMIN %lg SF_EMAX %lg\n", SFPTS, SF_EMIN, SF_EMAX);
+    logprintlnfmt("ERROR: gridsave file specifies {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", sfpts_in,
+                  SF_EMIN_in, SF_EMAX_in);
+    logprintlnfmt("ERROR: This simulation has {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", SFPTS, SF_EMIN,
+                  SF_EMAX);
     std::abort();
   }
 
@@ -2680,7 +2681,7 @@ void reset_stats() { nt_energy_deposited = 0.; }
 void print_stats(const double modelvolume, const double deltat) {
   const double deposition_rate_density_montecarlo = nt_energy_deposited / EV / modelvolume / deltat;
 
-  printout("nt_energy_deposited = %g [eV/s/cm^3]\n", deposition_rate_density_montecarlo);
+  logprintlnfmt("nt_energy_deposited = {:g} [eV/s/cm^3]", deposition_rate_density_montecarlo);
 }
 
 }  // namespace nonthermal
