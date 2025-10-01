@@ -151,7 +151,7 @@ void set_initelectronfrac(const int modelgridindex, const float electronfrac) {
 
 void read_possible_yefile() {
   if (!std::filesystem::exists("Ye.txt")) {
-    printout("Ye.txt not found\n");
+    logprintlnfmt("Ye.txt not found");
     return;
   }
 
@@ -178,8 +178,8 @@ void allocate_initradiobund() {
   const auto totalradioabundcount = (npts_model + 1) * num_nuclides;
   std::tie(initnucmassfrac_allcells, win_initnucmassfrac_allcells) =
       MPI_shared_malloc_span_keepwin<float>(totalradioabundcount);
-  printout(
-      "[info] mem_usage: radioabundance data for %td nuclides for %td cells occupies %.3f MB (node shared memory)\n",
+  logprintlnfmt(
+      "[info] mem_usage: radioabundance data for {} nuclides for {} cells occupies {:.3f} MB (node shared memory)",
       num_nuclides, npts_model, static_cast<double>(totalradioabundcount * sizeof(float)) / 1024. / 1024.);
 
   MPI_Barrier(globals::mpi_comm_node);
@@ -214,7 +214,7 @@ auto get_cell_r_inner(const int cellindex) -> double {
 
 void set_ffegrp(const int modelgridindex, float x) {
   if (!(x >= 0.)) {
-    printout("WARNING: Fe-group mass fraction %g is negative in cell %d\n", x, modelgridindex);
+    logprintlnfmt("WARNING: Fe-group mass fraction {:g} is negative in cell {}", x, modelgridindex);
     assert_always(x > -1e-6);
     x = 0.;
   }
@@ -237,8 +237,8 @@ void set_modelinitnucmassfrac(const int modelgridindex, const int nucindex, floa
   // initnucmassfrac array is in node shared memory
   assert_always(nucindex >= 0);
   if (!(abund >= 0.)) {
-    printout("WARNING: nuclear mass fraction for nucindex %d = %g is negative in cell %d\n", nucindex, abund,
-             modelgridindex);
+    logprintlnfmt("WARNING: nuclear mass fraction for nucindex {} = {:g} is negative in cell {}", nucindex, abund,
+                  modelgridindex);
     assert_always(abund > -1e-6);
     abund = 0.;
   }
@@ -275,10 +275,11 @@ void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int 
   if (massfrac_untrackedstable < 0.) {
     //  allow some roundoff error before we complain
     if ((isofracsum - elemabundance - 1.) > 1e-4 && std::abs(isofracsum - elemabundance) > 1e-6) {
-      printout("WARNING: cell %d Z=%d element abundance is less than the sum of its radioisotope abundances\n", mgi,
-               atomic_number);
-      printout("  massfrac(Z) %g massfrac_radioisotopes(Z) %g\n", elemabundance, isofracsum);
-      printout("  increasing elemental abundance to %g and setting stable isotopic abundance to zero\n", isofracsum);
+      logprintlnfmt("WARNING: cell {} Z={} element abundance is less than the sum of its radioisotope abundances", mgi,
+                    atomic_number);
+      logprintlnfmt("  massfrac(Z) {:g} massfrac_radioisotopes(Z) {:g}", elemabundance, isofracsum);
+      logprintlnfmt("  increasing elemental abundance to {:g} and setting stable isotopic abundance to zero",
+                    isofracsum);
     }
     // result is allowed to be slightly negative due to roundoff error
     assert_always(massfrac_untrackedstable >= -1e-2);
@@ -487,14 +488,14 @@ void allocate_nonemptymodelcells() {
   // barrier to make sure node master has set abundance values to node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
 
-  printout("[info] mem_usage: the modelgrid array occupies %.3f MB\n",
-           (get_npts_model() + 1) * sizeof(modelgrid[0]) / 1024. / 1024.);
+  logprintlnfmt("[info] mem_usage: the modelgrid array occupies {:.3f} MB",
+                (get_npts_model() + 1) * sizeof(modelgrid[0]) / 1024. / 1024.);
 
-  printout("There are %td modelgrid cells with associated propagation cells (nonempty_npts_model)\n",
-           nonempty_npts_model);
+  logprintlnfmt("There are {} modelgrid cells with associated propagation cells (nonempty_npts_model)",
+                nonempty_npts_model);
 
-  printout(
-      "[info] mem_usage: NLTE populations for all allocated cells occupy a total of %.3f MB (node shared memory)\n",
+  logprintlnfmt(
+      "[info] mem_usage: NLTE populations for all allocated cells occupy a total of {:.3f} MB (node shared memory)",
       get_nonempty_npts_model() * globals::total_nlte_levels * sizeof(double) / 1024. / 1024.);
 }
 
@@ -559,7 +560,7 @@ void map_modeltogrid_direct() {
 void read_abundances() {
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
-  printout("reading abundances.txt...");
+  logprintfmt("reading abundances.txt...");
   const bool threedimensional = (get_model_type() == GridType::CARTESIAN3D);
 
   // Open the abundances file
@@ -628,7 +629,7 @@ void read_abundances() {
 
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
-  printout("done.\n");
+  logprintlnfmt("done.");
 }
 
 void parse_model_headerline(const std::string& line, std::vector<int>& zlist, std::vector<int>& alist,
