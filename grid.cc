@@ -1583,9 +1583,9 @@ void set_Te(const int nonemptymgi, const float Te) {
     const double nu_peak = 5.879e10 * Te;
     if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
       const auto modelgridindex = get_mgi_of_nonemptymgi(nonemptymgi);
-      printout(
-          "[warning] modelgridindex %d B_planck(Te=%g K) peak at %g Hz is outside frequency range NU_MIN_R %g NU_MAX_R "
-          "%g\n",
+      logprintlnfmt(
+          "[warning] modelgridindex {} B_planck(Te={:g} K) peak at {:g} Hz is outside frequency range NU_MIN_R {:g} "
+          "NU_MAX_R {:g}",
           modelgridindex, Te, nu_peak, NU_MIN_R, NU_MAX_R);
     }
   }
