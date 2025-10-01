@@ -1771,7 +1771,7 @@ void calculate_kappagrey() {
       } else if (get_rho_tmin(mgi) == 0.) {
         set_kappagrey(nonemptymgi, 0.);
       } else if (get_rho_tmin(mgi) < 0.) {
-        printout("Error: negative density. Abort.\n");
+        logprintlnfmt("Error: negative density. Abort.");
         std::abort();
       }
       opcase3_sum += get_kappagrey(nonemptymgi) * get_rho_tmin(mgi);
@@ -1844,7 +1844,7 @@ void calculate_kappagrey() {
           kappa *= pow(T_rad / 2000., 5.);
         }
       } else {
-        printout("Unknown opacity case. Abort.\n");
+        logprintlnfmt("Unknown opacity case. Abort.");
         std::abort();
       }
 
@@ -1852,7 +1852,7 @@ void calculate_kappagrey() {
     } else if (get_rho_tmin(mgi) == 0.) {
       set_kappagrey(nonemptymgi, 0.);
     } else if (get_rho_tmin(mgi) < 0.) {
-      printout("Error: negative density. Abort.\n");
+      logprintlnfmt("Error: negative density. Abort.");
       assert_always(false);
     }
 
@@ -1860,7 +1860,7 @@ void calculate_kappagrey() {
     check2 = check2 + get_rho_tmin(mgi);
   }
 
-  printout("Grey normalisation check: %g\n", check1 / check2);
+  logprintlnfmt("Grey normalisation check: {:g}", check1 / check2);
 }
 
 void read_ejecta_model() {
@@ -1953,7 +1953,7 @@ void read_ejecta_model() {
       if (ssline >> cellnumberin >> vout_kmps >> log_rho) {
         if (mgi == 0) {
           first_cellindex = cellnumberin;
-          printout("first_cellindex %d\n", first_cellindex);
+          logprintlnfmt("first_cellindex {}", first_cellindex);
         }
         assert_always(cellnumberin == mgi + first_cellindex);
 
