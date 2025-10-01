@@ -1090,9 +1090,9 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
       const double alpha_ion_contrib = alpha_level * nnupperlevel / nnupperion;
       alpha += alpha_ion_contrib;
       if (printdebug && alpha_ion_contrib > 0. && lower < 50) {
-        printout(
-            "recomb: Z=%d ionstage %d->%d upper+1 %5d lower+1 %5d alpha_level %7.2e alpha_ion_contrib %7.2e sum "
-            "%7.2e nnlevel %7.2e nnionfrac %7.2e\n",
+        logprintlnfmt(
+            "recomb: Z={} ionstage {}->{} upper+1 {:5} lower+1 {:5} alpha_level {:7.2e} alpha_ion_contrib {:7.2e} sum "
+            "{:7.2e} nnlevel {:7.2e} nnionfrac {:7.2e}",
             get_atomicnumber(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upper + 1,
             lower + 1, alpha_level, alpha_ion_contrib, alpha, nnupperlevel, nnupperlevel_so_far / nnupperion);
       }
