@@ -727,8 +727,8 @@ void read_model_radioabundances(std::istream& fmodel, std::istringstream& ssline
       ;
     } else {
       if (mgi == 0) {
-        printout("WARNING: ignoring column '%s' nucindex %d valuein[mgi=0] %lg\n", colnames[i].c_str(), nucindexlist[i],
-                 valuein);
+        logprintlnfmt("WARNING: ignoring column '{}' nucindex {} valuein[mgi=0] {:g}", colnames[i], nucindexlist[i],
+                      valuein);
       }
     }
   }
@@ -775,7 +775,7 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
   int colcount = get_token_count(line);
   const bool one_line_per_cell = (colcount >= get_token_count(headerline));
 
-  printout("model.txt has %s line per cell format\n", one_line_per_cell ? "one" : "two");
+  logprintlnfmt("model.txt has {} line per cell format", one_line_per_cell ? "one" : "two");
 
   if (!one_line_per_cell) {  // add columns from the second line
     std::getline(fmodel, line);
@@ -855,7 +855,7 @@ void calc_modelinit_totmassradionuclides() {
 void read_grid_restart_data(const int timestep) {
   const auto filename = std::format("gridsave_ts{}.tmp", timestep);
 
-  printout("READIN GRID SNAPSHOT from %s\n", filename.c_str());
+  logprintlnfmt("READIN GRID SNAPSHOT from {}", filename);
   FILE* gridsave_file = fopen_required(filename, "r");
 
   int ntimesteps_in = -1;
@@ -903,8 +903,8 @@ void read_grid_restart_data(const int timestep) {
                          &modelgrid[nonemptymgi].nnetot) == 12);
 
     if (mgi_in != mgi) {
-      printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
-      printout("[fatal] read_grid_restart_data: read cellnumber %d, expected cellnumber %d\n", mgi_in, mgi);
+      logprintlnfmt("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort");
+      logprintlnfmt("[fatal] read_grid_restart_data: read cellnumber {}, expected cellnumber {}", mgi_in, mgi);
       assert_always(mgi_in == mgi);
     }
 
@@ -954,7 +954,7 @@ void assign_initial_temperatures() {
   // according to the local energy density resulting from the 56Ni decay.
   // The dilution factor is W=1 in LTE.
 
-  printout("Assigning initial temperatures...\n");
+  logprintlnfmt("Assigning initial temperatures...");
 
   const double tstart = globals::timesteps[0].mid;
   int cells_below_mintemp = 0;
@@ -979,7 +979,7 @@ void assign_initial_temperatures() {
       T_initial = MAXTEMP;
       cells_above_maxtemp++;
     } else if (!std::isfinite(T_initial)) {
-      printout("mgi %d: T_initial of %g is infinite!\n", mgi, T_initial);
+      logprintlnfmt("mgi {}: T_initial of {:g} is infinite!", mgi, T_initial);
     }
 
     if (globals::rank_in_node == 0) {
