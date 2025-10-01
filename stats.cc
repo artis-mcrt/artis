@@ -41,7 +41,7 @@ auto get_counter(enum eventcounters i) -> ptrdiff_t {
 
 void pkt_action_counters_printout(const int nts) {
   const double meaninteractions = static_cast<double>(get_counter(COUNTER_INTERACTIONS)) / globals::npkts;
-  printout("timestep %d: mean number of interactions per packet = %g\n", nts, meaninteractions);
+  logprintlnfmt("timestep {}: mean number of interactions per packet = {:g}", nts, meaninteractions);
 
   const double deltat = globals::timesteps[nts].width;
   double modelvolume = 0.;
@@ -49,45 +49,47 @@ void pkt_action_counters_printout(const int nts) {
     modelvolume += grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
   }
 
-  printout("timestep %d: ma_stat_activation_collexc = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_COLLEXC));
-  printout("timestep %d: ma_stat_activation_collion = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_COLLION));
-  printout("timestep %d: ma_stat_activation_ntcollexc = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC));
-  printout("timestep %d: ma_stat_activation_ntcollion = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_NTCOLLION));
-  printout("timestep %d: ma_stat_activation_bb = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_BB));
-  printout("timestep %d: ma_stat_activation_bf = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_BF));
-  printout("timestep %d: ma_stat_activation_fb = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_FB));
-  printout("timestep %d: ma_stat_deactivation_colldeexc = %td\n", nts,
-           get_counter(COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC));
-  printout("timestep %d: ma_stat_deactivation_collrecomb = %td\n", nts,
-           get_counter(COUNTER_MA_STAT_DEACTIVATION_COLLRECOMB));
-  printout("timestep %d: ma_stat_deactivation_bb = %td\n", nts, get_counter(COUNTER_MA_STAT_DEACTIVATION_BB));
-  printout("timestep %d: ma_stat_deactivation_fb = %td\n", nts, get_counter(COUNTER_MA_STAT_DEACTIVATION_FB));
-  printout("timestep %d: ma_stat_internaluphigher = %td\n", nts, get_counter(COUNTER_MA_STAT_INTERNALUPHIGHER));
-  printout("timestep %d: ma_stat_internaluphighernt = %td\n", nts, get_counter(COUNTER_MA_STAT_INTERNALUPHIGHERNT));
-  printout("timestep %d: ma_stat_internaldownlower = %td\n", nts, get_counter(COUNTER_MA_STAT_INTERNALDOWNLOWER));
+  logprintlnfmt("timestep {}: ma_stat_activation_collexc = {}", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_COLLEXC));
+  logprintlnfmt("timestep {}: ma_stat_activation_collion = {}", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_COLLION));
+  logprintlnfmt("timestep {}: ma_stat_activation_ntcollexc = {}", nts,
+                get_counter(COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC));
+  logprintlnfmt("timestep {}: ma_stat_activation_ntcollion = {}", nts,
+                get_counter(COUNTER_MA_STAT_ACTIVATION_NTCOLLION));
+  logprintlnfmt("timestep {}: ma_stat_activation_bb = {}", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_BB));
+  logprintlnfmt("timestep {}: ma_stat_activation_bf = {}", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_BF));
+  logprintlnfmt("timestep {}: ma_stat_activation_fb = {}", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_FB));
+  logprintlnfmt("timestep {}: ma_stat_deactivation_colldeexc = {}", nts,
+                get_counter(COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC));
+  logprintlnfmt("timestep {}: ma_stat_deactivation_collrecomb = {}", nts,
+                get_counter(COUNTER_MA_STAT_DEACTIVATION_COLLRECOMB));
+  logprintlnfmt("timestep {}: ma_stat_deactivation_bb = {}", nts, get_counter(COUNTER_MA_STAT_DEACTIVATION_BB));
+  logprintlnfmt("timestep {}: ma_stat_deactivation_fb = {}", nts, get_counter(COUNTER_MA_STAT_DEACTIVATION_FB));
+  logprintlnfmt("timestep {}: ma_stat_internaluphigher = {}", nts, get_counter(COUNTER_MA_STAT_INTERNALUPHIGHER));
+  logprintlnfmt("timestep {}: ma_stat_internaluphighernt = {}", nts, get_counter(COUNTER_MA_STAT_INTERNALUPHIGHERNT));
+  logprintlnfmt("timestep {}: ma_stat_internaldownlower = {}", nts, get_counter(COUNTER_MA_STAT_INTERNALDOWNLOWER));
 
-  printout("timestep %d: k_stat_to_ma_collexc = %td\n", nts, get_counter(COUNTER_K_STAT_TO_MA_COLLEXC));
-  printout("timestep %d: k_stat_to_ma_collion = %td\n", nts, get_counter(COUNTER_K_STAT_TO_MA_COLLION));
-  printout("timestep %d: k_stat_to_r_ff = %td\n", nts, get_counter(COUNTER_K_STAT_TO_R_FF));
-  printout("timestep %d: k_stat_to_r_fb = %td\n", nts, get_counter(COUNTER_K_STAT_TO_R_FB));
-  printout("timestep %d: k_stat_to_r_bb = %td\n", nts, get_counter(COUNTER_K_STAT_TO_R_BB));
-  printout("timestep %d: k_stat_from_ff = %td\n", nts, get_counter(COUNTER_K_STAT_FROM_FF));
-  printout("timestep %d: k_stat_from_bf = %td\n", nts, get_counter(COUNTER_K_STAT_FROM_BF));
-  printout("timestep %d: k_stat_from_earlierdecay = %td\n", nts, get_counter(COUNTER_K_STAT_FROM_EARLIERDECAY));
+  logprintlnfmt("timestep {}: k_stat_to_ma_collexc = {}", nts, get_counter(COUNTER_K_STAT_TO_MA_COLLEXC));
+  logprintlnfmt("timestep {}: k_stat_to_ma_collion = {}", nts, get_counter(COUNTER_K_STAT_TO_MA_COLLION));
+  logprintlnfmt("timestep {}: k_stat_to_r_ff = {}", nts, get_counter(COUNTER_K_STAT_TO_R_FF));
+  logprintlnfmt("timestep {}: k_stat_to_r_fb = {}", nts, get_counter(COUNTER_K_STAT_TO_R_FB));
+  logprintlnfmt("timestep {}: k_stat_to_r_bb = {}", nts, get_counter(COUNTER_K_STAT_TO_R_BB));
+  logprintlnfmt("timestep {}: k_stat_from_ff = {}", nts, get_counter(COUNTER_K_STAT_FROM_FF));
+  logprintlnfmt("timestep {}: k_stat_from_bf = {}", nts, get_counter(COUNTER_K_STAT_FROM_BF));
+  logprintlnfmt("timestep {}: k_stat_from_earlierdecay = {}", nts, get_counter(COUNTER_K_STAT_FROM_EARLIERDECAY));
 
-  printout("timestep %d: nt_stat_from_gamma = %td\n", nts, get_counter(COUNTER_NT_STAT_FROM_GAMMA));
-  printout("timestep %d: nt_stat_to_ionisation = %td\n", nts, get_counter(COUNTER_NT_STAT_TO_ionisation));
-  printout("timestep %d: nt_stat_to_excitation = %td\n", nts, get_counter(COUNTER_NT_STAT_TO_EXCITATION));
-  printout("timestep %d: nt_stat_to_kpkt = %td\n", nts, get_counter(COUNTER_NT_STAT_TO_KPKT));
+  logprintlnfmt("timestep {}: nt_stat_from_gamma = {}", nts, get_counter(COUNTER_NT_STAT_FROM_GAMMA));
+  logprintlnfmt("timestep {}: nt_stat_to_ionisation = {}", nts, get_counter(COUNTER_NT_STAT_TO_ionisation));
+  logprintlnfmt("timestep {}: nt_stat_to_excitation = {}", nts, get_counter(COUNTER_NT_STAT_TO_EXCITATION));
+  logprintlnfmt("timestep {}: nt_stat_to_kpkt = {}", nts, get_counter(COUNTER_NT_STAT_TO_KPKT));
   nonthermal::print_stats(modelvolume, deltat);
 
-  printout("timestep %d: escounter = %td\n", nts, get_counter(COUNTER_ESCOUNTER));
-  printout("timestep %d: cellcrossing  = %td\n", nts, get_counter(COUNTER_CELLCROSSINGS));
-  printout("timestep %d: updatecellcounter  = %td\n", nts, get_counter(COUNTER_UPDATECELL));
-  printout("timestep %d: resonancescatterings  = %td\n", nts, get_counter(COUNTER_RESONANCESCATTERINGS));
+  logprintlnfmt("timestep {}: escounter = {}", nts, get_counter(COUNTER_ESCOUNTER));
+  logprintlnfmt("timestep {}: cellcrossing  = {}", nts, get_counter(COUNTER_CELLCROSSINGS));
+  logprintlnfmt("timestep {}: updatecellcounter  = {}", nts, get_counter(COUNTER_UPDATECELL));
+  logprintlnfmt("timestep {}: resonancescatterings  = {}", nts, get_counter(COUNTER_RESONANCESCATTERINGS));
 
-  printout("timestep %d: upscatterings  = %td\n", nts, get_counter(COUNTER_UPSCATTER));
-  printout("timestep %d: downscatterings  = %td\n", nts, get_counter(COUNTER_DOWNSCATTER));
+  logprintlnfmt("timestep {}: upscatterings  = {}", nts, get_counter(COUNTER_UPSCATTER));
+  logprintlnfmt("timestep {}: downscatterings  = {}", nts, get_counter(COUNTER_DOWNSCATTER));
 }
 
 }  // namespace stats
