@@ -398,22 +398,20 @@ __host__ __device__ void do_kpkt_blackbody(Packet& pkt) {
 
 // handle a k-packet (kinetic energy of the free electrons)
 __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
-  const double t1 = pkt.prop_time;
-
   const double deltat =
       (nts < n_kpktdiffusion_timesteps) ? kpktdiffusion_timescale * globals::timesteps[nts].width : 0.;
 
-  const double t_current = t1 + deltat;
+  const double t_current = std::min(pkt.prop_time + deltat, t2);
 
-  if (t_current > t2) {
-    pkt.pos = vec_scale(pkt.pos, t2 / t1);
-    pkt.prop_time = t2;
+  pkt.pos = vec_scale(pkt.pos, t_current / pkt.prop_time);
+  pkt.prop_time = t_current;
+  // pkt.e_cmf *= t_current / t1;
+
+  if (t_current >= t2) {
     return;
   }
-  stats::increment(stats::COUNTER_INTERACTIONS);
 
-  pkt.pos = vec_scale(pkt.pos, t_current / t1);
-  pkt.prop_time = t_current;
+  stats::increment(stats::COUNTER_INTERACTIONS);
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
   assert_always(grid::modelgrid[nonemptymgi].totalcooling > 0.);
