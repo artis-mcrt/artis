@@ -462,13 +462,6 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
                        globals::cellcache[cellcacheslotid].cooling_contrib.begin() + ihigh + 1, rndcool_ion_process) -
       globals::cellcache[cellcacheslotid].cooling_contrib.begin();
 
-  if (i > ihigh) {
-    printout("do_kpkt: error occurred while selecting a cooling channel: low %d, high %d, i %td, rndcool %g\n", ilow,
-             ihigh, i, rndcool_ion_process);
-    printout("element %d, ion %d, offset %d, terms %d, coolingsum %g\n", element, ion, ilow, ncoolingterms_ion,
-             coolingsum);
-  }
-
   assert_always(i <= ihigh);
 
   const auto rndcoolingtype = coolinglist[i].type;
