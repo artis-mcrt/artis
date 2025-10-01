@@ -993,8 +993,8 @@ void assign_initial_temperatures() {
       modelgrid[nonemptymgi].thick = 0;
     }
   }
-  printout("  cells below MINTEMP %g: %d\n", MINTEMP, cells_below_mintemp);
-  printout("  cells above MAXTEMP %g: %d\n", MAXTEMP, cells_above_maxtemp);
+  logprintlnfmt("  cells below MINTEMP {:g}: {}", MINTEMP, cells_below_mintemp);
+  logprintlnfmt("  cells above MAXTEMP {:g}: {}", MAXTEMP, cells_above_maxtemp);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -1083,7 +1083,7 @@ void setup_grid_cartesian_3d() {
   // vmax is per coordinate, but the simulation volume corners will
   // have a higher expansion velocity than the sides
   const double vmax_corner = sqrt(3 * pow(globals::vmax, 2));
-  printout("corner vmax %g [cm/s] (%.2fc)\n", vmax_corner, vmax_corner / CLIGHT);
+  logprintlnfmt("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   if (!FORCE_SPHERICAL_ESCAPE_SURFACE) {
     assert_always(vmax_corner < CLIGHT);
   }
@@ -1145,7 +1145,7 @@ void setup_grid_spherical_1d() {
 
 void setup_grid_cylindrical_2d() {
   const double vmax_corner = sqrt(2 * pow(globals::vmax, 2));
-  printout("corner vmax %g [cm/s] (%.2fc)\n", vmax_corner, vmax_corner / CLIGHT);
+  logprintlnfmt("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   assert_always(vmax_corner < CLIGHT);
 
   assert_always(get_model_type() == GridType::CYLINDRICAL2D);
@@ -1877,7 +1877,7 @@ void read_ejecta_model() {
   if (ssline >> npts_1) {
     // second number on the line for 2D means the line was n_r n_z
     detected_dim = GridType::CYLINDRICAL2D;
-    printout("Detected 2D model\n");
+    logprintlnfmt("Detected 2D model");
     ssline >> npts_1;  // r and z (cylindrical polar)
     npts_model = npts_0 * npts_1;
   } else {
@@ -1905,14 +1905,14 @@ void read_ejecta_model() {
       if (detected_dim != GridType::CYLINDRICAL2D) {
         assert_always(!detected_dim.has_value());
         detected_dim = GridType::CARTESIAN3D;
-        printout("Detected 3D model\n");
+        logprintlnfmt("Detected 3D model");
       }
     }
   }
   if (!detected_dim.has_value()) {
     assert_always(!detected_dim.has_value());
     detected_dim = GridType::SPHERICAL1D;
-    printout("Detected 1D model\n");
+    logprintlnfmt("Detected 1D model");
     fmodel.seekg(pos_after_t_model);
   }
 
