@@ -304,7 +304,7 @@ auto read_shell_configs() {
   std::string line;
   assert_always(get_noncommentline(shells_file, line));
   std::istringstream{line} >> nshells >> n_z_binding;
-  printout("Reading electron_shell_occupancy.txt with %d elements and %d shells\n", n_z_binding, nshells);
+  logprintlnfmt("Reading electron_shell_occupancy.txt with {} elements and {} shells", n_z_binding, nshells);
 
   std::vector<std::vector<int>> elements_shells_q;
 
@@ -346,7 +346,7 @@ void read_binding_energies() {
   std::string line;
   assert_always(get_noncommentline(binding_energies_file, line));
   std::istringstream{line} >> nshells >> n_z_binding;
-  printout("Reading binding energies file '%s' with %d elements and %d shells\n", filename, n_z_binding, nshells);
+  logprintlnfmt("Reading binding energies file '{}' with {} elements and {} shells", filename, n_z_binding, nshells);
 
   elements_electron_binding.resize(n_z_binding, std::vector<double>(nshells, 0.));
 
@@ -369,8 +369,8 @@ void read_binding_energies() {
   std::vector<std::vector<int>> elements_neutral_shells_q;
   if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
     if (!binding_en_newformat) {
-      printout(
-          "NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE is true, but could not find binding_energies_lotz_tab1and2.txt\n");
+      logprintlnfmt(
+          "NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE is true, but could not find binding_energies_lotz_tab1and2.txt");
     }
     assert_always(binding_en_newformat);
     elements_neutral_shells_q = read_shell_configs();
@@ -427,21 +427,21 @@ void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
       }
 
       if (fabs(prob_sum - 1.0) > 0.001) {
-        printout("Problem with Auger probabilities for cell %d Z=%d ionstage %d prob_sum %g\n",
-                 grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
-                 prob_sum);
+        logprintlnfmt("Problem with Auger probabilities for cell {} Z={} ionstage {} prob_sum {:g}",
+                      grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
+                      prob_sum);
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          printout("%d: %g\n", a, get_auger_probability(nonemptymgi, element, ion, a));
+          logprintlnfmt("{}: {:g}", a, get_auger_probability(nonemptymgi, element, ion, a));
         }
         problem_found = true;
       }
 
       if (fabs(ionenfrac_sum - 1.0) > 0.001) {
-        printout("Problem with Auger energy frac sum for cell %d Z=%d ionstage %d ionenfrac_sum %g\n",
-                 grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
-                 ionenfrac_sum);
+        logprintlnfmt("Problem with Auger energy frac sum for cell {} Z={} ionstage {} ionenfrac_sum {:g}",
+                      grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
+                      ionenfrac_sum);
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          printout("%d: %g\n", a, get_ion_auger_enfrac(nonemptymgi, element, ion, a));
+          logprintlnfmt("{}: {:g}", a, get_ion_auger_enfrac(nonemptymgi, element, ion, a));
         }
         problem_found = true;
       }
@@ -452,7 +452,7 @@ void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
 }
 
 void read_auger_data() {
-  printout("Reading Auger effect data...\n");
+  logprintlnfmt("Reading Auger effect data...");
   auto augerfile = fstream_required("auger-km1993-table2.txt", std::ios::in);
 
   // map x-ray notation shells K L1 L2 L3 M1 M2 M3 to quantum numbers n and l
@@ -520,28 +520,28 @@ void read_auger_data() {
       const int g = xrayg[shellnum - 1];
 
       if (!std::isfinite(en_auger_ev) || en_auger_ev < 0) {
-        printout("  WARNING: Z=%2d ionstage %2d shellnum %d en_auger_ev is %g. Setting to zero.\n", Z, ionstage,
-                 shellnum, en_auger_ev);
+        logprintlnfmt("  WARNING: Z={:2} ionstage {:2} shellnum {} en_auger_ev is {:g}. Setting to zero.", Z, ionstage,
+                      shellnum, en_auger_ev);
         en_auger_ev = 0.;
       }
 
       // now loop through shells with impact ionisation cross sections and apply Auger data that matches n, l values
       for (auto& collionrow : colliondata) {
         if (collionrow.Z == Z && collionrow.ionstage == ionstage && collionrow.n == n && collionrow.l == l) {
-          printout(
-              "Z=%2d ionstage %2d shellnum %d n %d l %d ionpot %7.2f E_A %8.1f E_A' %8.1f epsilon %6d <n_Auger> %5.1f "
-              "P(n_Auger)",
+          logprintfmt(
+              "Z={:2} ionstage {:2} shellnum {} n {} l {} ionpot {:7.2f} E_A {:8.1f} E_A' {:8.1f} epsilon {:6} "
+              "<n_Auger> {:5.1f} P(n_Auger)",
               Z, ionstage, shellnum, n, l, ionpot_ev, en_auger_ev_total_nocorrection, en_auger_ev, epsilon_e3,
               n_auger_elec_avg);
 
           double prob_sum = 0.;
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
             prob_sum += prob_num_auger[a];
-            printout(" %d: %4.2f", a, prob_num_auger[a]);
+            logprintfmt(" {}: {:4.2f}", a, prob_num_auger[a]);
           }
           assert_always(fabs(prob_sum - 1.0) < 0.001);
 
-          printout("\n");
+          logprintlnfmt("");
           const bool found_existing_data = (collionrow.auger_g_accumulated > 0.);
 
           // keep existing data but update according to statistical weight represented by existing and new data
@@ -562,12 +562,12 @@ void read_auger_data() {
           assert_always(fabs(prob_sum - 1.0) < 0.001);
 
           if (found_existing_data) {
-            printout("  same NL shell already has data from another X-ray shell. New g-weighted values: P(n_Auger)");
+            logprintfmt("  same NL shell already has data from another X-ray shell. New g-weighted values: P(n_Auger)");
 
             for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-              printout(" %d: %4.2f", a, collionrow.prob_num_auger[a]);
+              logprintfmt(" {}: {:4.2f}", a, collionrow.prob_num_auger[a]);
             }
-            printout("\n");
+            logprintlnfmt("");
           }
         }
       }
@@ -608,7 +608,7 @@ auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
 }
 
 void read_collion_data() {
-  printout("Reading collisional ionisation data from collion.txt...\n");
+  logprintlnfmt("Reading collisional ionisation data from collion.txt...");
 
   auto cifile = std::fstream("collion.txt", std::ios::in);
   assert_always(cifile.is_open());
@@ -617,7 +617,7 @@ void read_collion_data() {
   std::istringstream ssline(line);
   int colliondatacount = 0;
   assert_always(ssline >> colliondatacount);
-  printout("Reading %d collisional transition rows\n", colliondatacount);
+  logprintlnfmt("Reading {} collisional transition rows", colliondatacount);
   assert_always(colliondatacount >= 0);
 
   for (int i = 0; i < colliondatacount; i++) {
@@ -645,7 +645,7 @@ void read_collion_data() {
 
     colliondata.push_back(collionrow);
   }
-  printout("Stored %zu of %d input shell cross sections\n", colliondata.size(), colliondatacount);
+  logprintlnfmt("Stored {} of {} input shell cross sections", colliondata.size(), colliondatacount);
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
     for (int ion = 0; ion < get_nions(element); ion++) {
@@ -660,8 +660,9 @@ void read_collion_data() {
       });
       if (!any_data_matched) {
         const double ionpot_ev = globals::elements[element].ions[ion].ionpot / EV;
-        printout("No collisional ionisation data for Z=%d ionstage %d. Using Lotz approximation with ionpot = %g eV\n",
-                 Z, ionstage, ionpot_ev);
+        logprintlnfmt(
+            "No collisional ionisation data for Z={} ionstage {}. Using Lotz approximation with ionpot = {:g} eV", Z,
+            ionstage, ionpot_ev);
 
         // get the approximate shell occupancy if we don't have the data file
         const auto& shells_q = allions_shell_occupancies[get_uniqueionindex(element, ion)];
