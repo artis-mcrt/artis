@@ -82,9 +82,9 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
       intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &bfheating, &error);
 
   if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning)) {
-    printout(
-        "bf_heating integrator gsl warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d "
-        "integral %g error %g\n",
+    logprintlnfmt(
+        "bf_heating integrator gsl warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
+        "integral {:g} error {:g}",
         status, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion), level,
         phixstargetindex, bfheating, error);
   }
@@ -241,7 +241,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double>& bfheatingco
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(nonemptymgi, element) <= minelfrac && !USE_LUT_BFHEATING) {
-      printout("skipping Z=%d X=%g, ", get_atomicnumber(element), grid::get_elem_abundance(nonemptymgi, element));
+      logprintfmt("skipping Z={} X={:g}, ", get_atomicnumber(element), grid::get_elem_abundance(nonemptymgi, element));
     }
 
     const int nions = get_nions(element);
@@ -285,7 +285,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
                      HeatingCoolingRates& heatingcoolingrates, const std::vector<double>& bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::get_Te(nonemptymgi);
-  printout("Finding T_e in cell %d at timestep %d...", modelgridindex, globals::timestep);
+  logprintfmt("Finding T_e in cell {} at timestep {}...", modelgridindex, globals::timestep);
 
   TeSolutionParams paras = {.t_current = t_current,
                             .nonemptymgi = nonemptymgi,
@@ -298,9 +298,9 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
   double thermalmax = T_e_eqn_heating_minus_cooling(T_max, find_T_e_f.params);
 
   if (!std::isfinite(thermalmin) || !std::isfinite(thermalmax)) {
-    printout(
-        "[abort request] call_T_e_finder: non-finite results in modelcell %d (T_R=%g, W=%g). T_e forced to be "
-        "MINTEMP\n",
+    logprintlnfmt(
+        "[abort request] call_T_e_finder: non-finite results in modelcell {} (T_R={:g}, W={:g}). T_e forced to be "
+        "MINTEMP",
         modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
     thermalmax = thermalmin = -1;
   }
@@ -324,13 +324,13 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
       status = gsl_root_test_interval(T_e_min, T_e_max, 0, TEMPERATURE_SOLVER_ACCURACY);
       // printout("iter %d, T_e interval [%g, %g], guess %g, status %d\n", iternum, T_e_min, T_e_max, T_e, status);
       if (status != GSL_CONTINUE) {
-        printout("after %d iterations, T_e = %g K, interval [%g, %g]\n", iternum + 1, T_e, T_e_min, T_e_max);
+        logprintlnfmt("after {} iterations, T_e = {:g} K, interval [{:g}, {:g}]", iternum + 1, T_e, T_e_min, T_e_max);
         break;
       }
     }
 
     if (status == GSL_CONTINUE) {
-      printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n", maxit);
+      logprintlnfmt("[warning] call_T_e_finder: T_e did not converge within {} iterations", maxit);
     }
 
     gsl_root_fsolver_free(T_e_solver);
@@ -340,26 +340,26 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
   else if (thermalmax < 0) {
     // Thermal balance equation always negative ===> T_e = T_min
     T_e = MINTEMP;
-    printout(
-        "[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in modelcell %d "
-        "(T_R=%g,W=%g). T_e forced to be MINTEMP\n",
+    logprintlnfmt(
+        "[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary {:g} in modelcell {} "
+        "(T_R={:g},W={:g}). T_e forced to be MINTEMP",
         MINTEMP, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
   } else {
     // Thermal balance equation always negative ===> T_e = T_max
     T_e = MAXTEMP;
-    printout(
-        "[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in modelcell %d "
-        "(T_R=%g,W=%g). T_e forced to be MAXTEMP\n",
+    logprintlnfmt(
+        "[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [{:g},{:g}] in modelcell {} "
+        "(T_R={:g},W={:g}). T_e forced to be MAXTEMP",
         MINTEMP, MAXTEMP, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
   }
 
   if (T_e > 2 * T_e_old) {
     T_e = 2 * T_e_old;
-    printout("use T_e damping in cell %d\n", modelgridindex);
+    logprintlnfmt("use T_e damping in cell {}", modelgridindex);
     T_e = std::min(T_e, MAXTEMP);
   } else if (T_e < 0.5 * T_e_old) {
     T_e = 0.5 * T_e_old;
-    printout("use T_e damping in cell %d\n", modelgridindex);
+    logprintlnfmt("use T_e damping in cell {}", modelgridindex);
     T_e = std::max(T_e, MINTEMP);
   }
 
