@@ -357,7 +357,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
   const double ts_end = ts + tw;
 
   const auto time_update_packets_start = std::time(nullptr);
-  printout("timestep %d: start update_packets at time %ld\n", nts, time_update_packets_start);
+  logprintlnfmt("timestep {}: start update_packets at time {}", nts, time_update_packets_start);
   bool timestepcomplete = false;
   int passnumber = 0;
   while (!timestepcomplete) {
