@@ -1023,7 +1023,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
   const auto sys_time_start_calc = std::time(nullptr);
   const auto temperature = grid::get_TR(nonemptymgi);
 
-  printout("calculating expansion opacities for cell %d...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
+  logprintfmt("calculating expansion opacities for cell {}...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
@@ -1067,5 +1067,5 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       expansionopacity_planck_cumulative[(nonemptymgi * expopac_nbins) + binindex] = kappa_planck_cumulative;
     }
   }
-  printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calc);
+  logprintlnfmt("took {} seconds", std::time(nullptr) - sys_time_start_calc);
 }
