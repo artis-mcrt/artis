@@ -1962,8 +1962,8 @@ void read_ejecta_model() {
         const auto rho_tmin = static_cast<float>(pow(10., log_rho) * pow(t_model / globals::tmin, 3));
         set_rho_tmin(mgi, rho_tmin);
       } else {
-        printout("Unexpected number of values in model.txt\n");
-        printout("line: %s\n", line.c_str());
+        logprintlnfmt("Unexpected number of values in model.txt");
+        logprintlnfmt("line: {}", line);
         assert_always(false);
       }
       read_model_radioabundances(fmodel, ssline, mgi, true, colnames, nucindexlist, one_line_per_cell);
@@ -1975,7 +1975,7 @@ void read_ejecta_model() {
     }
 
     if (mgi != get_npts_model()) {
-      printout("ERROR in model.txt. Found only %d cells instead of %d expected.\n", mgi - 1, get_npts_model());
+      logprintlnfmt("ERROR in model.txt. Found only {} cells instead of {} expected.", mgi - 1, get_npts_model());
       std::abort();
     }
 
@@ -2014,7 +2014,7 @@ void read_ejecta_model() {
       assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
 
       if (rho_tmodel < 0) {
-        printout("negative input density %g %d\n", rho_tmodel, mgi);
+        logprintlnfmt("negative input density {:g} {}", rho_tmodel, mgi);
         std::abort();
       }
 
@@ -2028,7 +2028,7 @@ void read_ejecta_model() {
     }
 
     if (mgi != get_npts_model()) {
-      printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, get_npts_model());
+      logprintlnfmt("ERROR in model.txt. Found {} only cells instead of {} expected.", mgi - 1, get_npts_model());
       std::abort();
     }
   } else if (get_model_type() == GridType::CARTESIAN3D) {
@@ -2069,7 +2069,7 @@ void read_ejecta_model() {
       assert_always(cellnumberin == mgi + first_cellindex);
 
       if (mgi % (ncoord_model[1] * ncoord_model[2]) == 0) {
-        printout("read up to cell mgi %d\n", mgi);
+        logprintlnfmt("read up to cell mgi {}", mgi);
       }
 
       // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
@@ -2091,7 +2091,7 @@ void read_ejecta_model() {
       }
 
       if (rho_model < 0) {
-        printout("negative input density %g %d\n", rho_model, mgi);
+        logprintlnfmt("negative input density {:g} {}", rho_model, mgi);
         std::abort();
       }
 
@@ -2109,45 +2109,47 @@ void read_ejecta_model() {
       mgi++;
     }
     if (mgi != npts_model) {
-      printout("ERROR in model.txt. Found %d cells instead of %td expected.\n", mgi, npts_model);
+      logprintlnfmt("ERROR in model.txt. Found {} cells instead of {} expected.", mgi, npts_model);
       std::abort();
     }
 
     //   assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
     if (posmatch_xyz) {
-      printout("Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.\n");
+      logprintlnfmt(
+          "Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.");
     }
     if (posmatch_zyx) {
-      printout("Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.\n");
+      logprintlnfmt(
+          "Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.");
     }
 
     if (!posmatch_xyz && !posmatch_zyx) {
-      printout(
+      logprintlnfmt(
           "WARNING: Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
-          "order.\n");
+          "order.");
     }
 
-    printout("min_den %g [g/cm3]\n", min_den);
+    logprintlnfmt("min_den {:g} [g/cm3]", min_den);
   }
 
   assert_always(get_npts_model() ==
                 std::max(1, ncoord_model[0]) * std::max(1, ncoord_model[1]) * std::max(1, ncoord_model[2]));
-  printout("npts_model: %d\n", get_npts_model());
+  logprintlnfmt("npts_model: {}", get_npts_model());
   globals::rmax = globals::vmax * globals::tmin;
-  printout("vmax %g [cm/s] (%.2fc)\n", globals::vmax, globals::vmax / CLIGHT);
+  logprintlnfmt("vmax {:g} [cm/s] ({:.2f}c)", globals::vmax, globals::vmax / CLIGHT);
   assert_always(globals::vmax < CLIGHT);
-  printout("tmin %g [s] = %.2f [d]\n", globals::tmin, globals::tmin / 86400.);
-  printout("rmax %g [cm] (at t=tmin)\n", globals::rmax);
+  logprintlnfmt("tmin {:g} [s] = {:.2f} [d]", globals::tmin, globals::tmin / 86400.);
+  logprintlnfmt("rmax {:g} [cm] (at t=tmin)", globals::rmax);
 
   calc_modelinit_totmassradionuclides();
 
-  printout("Total input model mass: %9.3e [Msun]\n", mtot_input / MSUN);
-  printout("Nuclide masses at t=t_model_init [Msun]:");
-  printout("  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n", get_totmassradionuclide_tmodel(28, 56) / MSUN,
-           get_totmassradionuclide_tmodel(27, 56) / MSUN, get_totmassradionuclide_tmodel(26, 52) / MSUN,
-           get_totmassradionuclide_tmodel(24, 48) / MSUN);
-  printout("  Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n", mfegroup / MSUN,
-           get_totmassradionuclide_tmodel(28, 57) / MSUN, get_totmassradionuclide_tmodel(27, 57) / MSUN);
+  logprintlnfmt("Total input model mass: {:9.3e} [Msun]", mtot_input / MSUN);
+  logprintfmt("Nuclide masses at t=t_model_init [Msun]:");
+  logprintlnfmt("  56Ni: {:9.3e}  56Co: {:9.3e}  52Fe: {:9.3e}  48Cr: {:9.3e}",
+                get_totmassradionuclide_tmodel(28, 56) / MSUN, get_totmassradionuclide_tmodel(27, 56) / MSUN,
+                get_totmassradionuclide_tmodel(26, 52) / MSUN, get_totmassradionuclide_tmodel(24, 48) / MSUN);
+  logprintlnfmt("  Fe-group: {:9.3e}  57Ni: {:9.3e}  57Co: {:9.3e}", mfegroup / MSUN,
+                get_totmassradionuclide_tmodel(28, 57) / MSUN, get_totmassradionuclide_tmodel(27, 57) / MSUN);
 
   read_possible_yefile();
 }
