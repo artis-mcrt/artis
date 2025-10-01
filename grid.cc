@@ -2158,7 +2158,7 @@ void write_grid_restart_data(const int timestep) {
   const auto filename = std::format("gridsave_ts{}.tmp", timestep);
 
   const auto sys_time_start_write_restart = std::time(nullptr);
-  printout("Write grid restart data to %s...", filename.c_str());
+  logprintfmt("Write grid restart data to {}...", filename);
 
   FILE* gridsave_file = fopen_required(filename, "w");
 
@@ -2206,7 +2206,7 @@ void write_grid_restart_data(const int timestep) {
   nonthermal::write_restart_data(gridsave_file);
   nltepop_write_restart_data(gridsave_file);
   fclose(gridsave_file);
-  printout("done in %ld seconds.\n", std::time(nullptr) - sys_time_start_write_restart);
+  logprintlnfmt("done in {} seconds.", std::time(nullptr) - sys_time_start_write_restart);
 }
 
 auto get_nstart(const int rank) -> int {
@@ -2249,17 +2249,18 @@ void init_grid(const int my_rank) {
   } else if (GRID_TYPE == GridType::SPHERICAL1D) {
     setup_grid_spherical_1d();
   } else {
-    printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
+    logprintfmt("[fatal] grid_init: Error: Unknown grid type. Abort.");
     std::abort();
   }
   propcell_mgi.resize(ngrid, -1);
 
-  printout("propagation grid: %d-dimensional %s\n", get_ndim(GRID_TYPE), get_grid_type_name(GRID_TYPE).c_str());
+  logprintlnfmt("propagation grid: {}-dimensional {}", get_ndim(GRID_TYPE), get_grid_type_name(GRID_TYPE));
 
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
-    printout("    coordinate %d '%c': cells have %d position values\n", d, get_coordlabel(GRID_TYPE, d), ncoordgrid[d]);
+    logprintlnfmt("    coordinate {} '{}': cells have {} position values", d, get_coordlabel(GRID_TYPE, d),
+                  ncoordgrid[d]);
   }
-  printout("    total propagation cells: %td\n", ngrid);
+  logprintlnfmt("    total propagation cells: {}", ngrid);
 
   // Now set up the density in each cell.
 
