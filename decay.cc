@@ -664,9 +664,9 @@ auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion_chain_numerical(con
       (get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, grid::get_t_model()) -
        get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, tstart));
 
-  logprintlnfmt("  chain_endecay:              {:g}", chain_endecay);
-  logprintlnfmt("  chain_endecay_noexpansion:  {:g}", chain_endecay_noexpansion);
-  logprintlnfmt("  expansion energy factor:    {:g}", chain_endecay / chain_endecay_noexpansion);
+  printout("  chain_endecay:              %g\n", chain_endecay);
+  printout("  chain_endecay_noexpansion:  %g\n", chain_endecay_noexpansion);
+  printout("  expansion energy factor:    %g\n", chain_endecay / chain_endecay_noexpansion);
 
   return chain_endecay;
 }
@@ -774,7 +774,7 @@ auto write_nuclides_list() {
   if (nucindex >= 0) {
     return nucindex;
   }
-  logprintlnfmt("Could not find nuclide Z={} A={}", z, a);
+  printout("Could not find nuclide Z=%d A=%d\n", z, a);
   assert_always(false);  // nuclide not found
   return -1;
 }
@@ -804,7 +804,7 @@ auto get_nucstring_z(const std::string& strnuc) -> int {
       return z;
     }
   }
-  logprintlnfmt("Could not get atomic number of '{}' '{}'", strnuc, elcode);
+  printout("Could not get atomic number of '%s' '%s'\n", strnuc.c_str(), elcode.c_str());
   assert_always(false);  // could not match to an element
   return -1;
 }
@@ -983,22 +983,20 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
       decaypaths.cbegin(), decaypaths.cend(), 0,
       [](const int maxlen, const auto& decaypath) { return std::max(maxlen, get_decaypathlength(decaypath)); });
 
-  logprintlnfmt("Number of decay paths: {} (max length {})", get_num_decaypaths(), maxdecaypathlength);
+  printout("Number of decay paths: %d (max length %d)\n", get_num_decaypaths(), maxdecaypathlength);
 
   // Read in data for gamma ray lines and make a list of them in energy order.
   gammapkt::init_gamma_data();
 
   // TODO: generalise this to all included nuclides
-  logprintlnfmt("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): {:g}, {:g}, {:g}",
-                nucdecayenergytotal(28, 56) / MEV, nucdecayenergytotal(27, 56) / MEV,
-                nucdecayenergygamma(27, 56) / MEV);
-  logprintlnfmt("decayenergy(NI57), decayenergy_gamma(NI57), nucdecayenergy(CO57): {:g}, {:g}, {:g}",
-                nucdecayenergytotal(28, 57) / MEV, nucdecayenergygamma(28, 57) / MEV,
-                nucdecayenergytotal(27, 57) / MEV);
-  logprintlnfmt("decayenergy(CR48), decayenergy(V48): {:g} {:g}", nucdecayenergytotal(24, 48) / MEV,
-                nucdecayenergytotal(23, 48) / MEV);
-  logprintlnfmt("decayenergy(FE52), decayenergy(MN52): {:g} {:g}", nucdecayenergytotal(26, 52) / MEV,
-                nucdecayenergytotal(25, 52) / MEV);
+  printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",
+           nucdecayenergytotal(28, 56) / MEV, nucdecayenergytotal(27, 56) / MEV, nucdecayenergygamma(27, 56) / MEV);
+  printout("decayenergy(NI57), decayenergy_gamma(NI57), nucdecayenergy(CO57): %g, %g, %g\n",
+           nucdecayenergytotal(28, 57) / MEV, nucdecayenergygamma(28, 57) / MEV, nucdecayenergytotal(27, 57) / MEV);
+  printout("decayenergy(CR48), decayenergy(V48): %g %g\n", nucdecayenergytotal(24, 48) / MEV,
+           nucdecayenergytotal(23, 48) / MEV);
+  printout("decayenergy(FE52), decayenergy(MN52): %g %g\n", nucdecayenergytotal(26, 52) / MEV,
+           nucdecayenergytotal(25, 52) / MEV);
 
   if (globals::my_rank == 0 && !globals::simulation_continued_from_saved) {
     write_nuclides_list();
@@ -1041,13 +1039,13 @@ auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi) -> double {
 
 void setup_decaypath_energy_per_mass() {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
-  logprintfmt(
-      "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies {:.1f} MB (node "
+  printout(
+      "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies %.1f MB (node "
       "shared)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
   std::tie(decaypath_energy_per_mass, win_decaypath_energy_per_mass) =
       MPI_shared_malloc_span_keepwin<double>(nonempty_npts_model * get_num_decaypaths());
-  logprintlnfmt("done.");
+  printout("done.\n");
 
   MPI_Barrier(MPI_COMM_WORLD);
   const auto time_min_decay = INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin;
@@ -1067,7 +1065,7 @@ void setup_decaypath_energy_per_mass() {
 
 void free_decaypath_energy_per_mass() {
   if (win_decaypath_energy_per_mass != MPI_WIN_NULL) {
-    logprintlnfmt("[info] mem_usage: decaypath_energy_per_mass was freed");
+    printout("[info] mem_usage: decaypath_energy_per_mass was freed\n");
     MPI_Win_free(&win_decaypath_energy_per_mass);
     win_decaypath_energy_per_mass = MPI_WIN_NULL;
   }
