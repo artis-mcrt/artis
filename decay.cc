@@ -169,17 +169,17 @@ MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
   return nuclides[nucindex].meanlife;
 }
 
-void printout_nuclidename(const int z, const int a) { printout("(Z=%d)%s%d", z, get_elname(z).c_str(), a); }
+void printout_nuclidename(const int z, const int a) { logprintfmt("(Z={}){}{}", z, get_elname(z), a); }
 
 void printout_nuclidemeanlife(const int z, const int a) {
   const int nucindex = get_nucindex_or_neg_one(z, a);
   const bool exists = (nucindex >= 0);
   if (exists && get_meanlife(nucindex) > 0.) {
-    printout("[tau %.1es]", get_meanlife(nucindex));
+    logprintfmt("[tau {:.1e}s]", get_meanlife(nucindex));
   } else if (exists) {
-    printout("[stable,in_net]");
+    logprintfmt("[stable,in_net]");
   } else {
-    printout("[stable,offnet]");
+    logprintfmt("[stable,offnet]");
   }
 }
 
@@ -261,23 +261,23 @@ void printout_nuclidemeanlife(const int z, const int a) {
 void printout_decaytype(const int decaytype) {
   switch (decaytype) {
     case decaytypes::DECAYTYPE_ALPHA: {
-      printout("alpha");
+      logprintfmt("alpha");
       break;
     }
     case decaytypes::DECAYTYPE_BETAPLUS: {
-      printout("beta+");
+      logprintfmt("beta+");
       break;
     }
     case decaytypes::DECAYTYPE_ELECTRONCAPTURE: {
-      printout("ec");
+      logprintfmt("ec");
       break;
     }
     case decaytypes::DECAYTYPE_BETAMINUS: {
-      printout("beta-");
+      logprintfmt("beta-");
       break;
     }
     case decaytypes::DECAYTYPE_NONE: {
-      printout("none");
+      logprintfmt("none");
       break;
     }
     default:
@@ -288,16 +288,16 @@ void printout_decaytype(const int decaytype) {
 void printout_decaypath(const int decaypathindex) {
   assert_always(!decaypaths.empty());
   const auto& decaypath = decaypaths[decaypathindex];
-  printout(" decaypath %d: ", decaypathindex);
+  logprintfmt(" decaypath {}: ", decaypathindex);
 
   for (const auto [decaytype, z, a] : std::ranges::zip_view(decaypath.decaytypes, decaypath.z, decaypath.a)) {
     printout_nuclidename(z, a);
     printout_nuclidemeanlife(z, a);
 
     if (decaytype != DECAYTYPE_NONE) {
-      printout(" -> ");
+      logprintfmt(" -> ");
       printout_decaytype(decaytype);
-      printout(" -> ");
+      logprintfmt(" -> ");
     }
   }
 
@@ -307,7 +307,7 @@ void printout_decaypath(const int decaypathindex) {
     printout_nuclidemeanlife(decaypath.final_daughter_z(), decaypath.final_daughter_a());
   }
 
-  printout("\n");
+  logprintlnfmt("");
 }
 
 // follow decays at the ends of the current list of decaypaths
@@ -333,7 +333,7 @@ void extend_lastdecaypath() {
     for (const auto [z, a] :
          std::ranges::zip_view(decaypaths[startdecaypathindex].z, decaypaths[startdecaypathindex].a)) {
       if (z == daughter_z && a == daughter_a) {
-        printout("\nERROR: Loop found in nuclear decay chain.\n");
+        logprintlnfmt("\nERROR: Loop found in nuclear decay chain.");
         std::abort();
       }
     }
