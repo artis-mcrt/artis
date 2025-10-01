@@ -2447,17 +2447,17 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   if ((nne_per_ion_fracdiff < NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS) &&
       (timestep - timestep_last_solved <= SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS) &&
       timestep_last_solved > globals::num_lte_timesteps) {
-    printout(
-        "Keeping Spencer-Fano solution from timestep %d because x_e fracdiff %g < %g and because timestep %d - %d < "
-        "%d\n",
+    logprintlnfmt(
+        "Keeping Spencer-Fano solution from timestep {} because x_e fracdiff {:g} < {:g} and because timestep {} - {} "
+        "< {}",
         timestep_last_solved, nne_per_ion_fracdiff, NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS, timestep,
         timestep_last_solved, SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS);
 
     return;
   }
-  printout(
-      "Setting up Spencer-Fano equation with %d energy points from %g eV to %g eV in cell %d at timestep %d iteration "
-      "%d (nne=%g e-/cm^3)\n",
+  logprintlnfmt(
+      "Setting up Spencer-Fano equation with {} energy points from {:g} eV to {:g} eV in cell {} at timestep {} "
+      "iteration {} (nne={:g} e-/cm^3)",
       SFPTS, SF_EMIN, SF_EMAX, modelgridindex, timestep, iteration, nne);
 
   nt_solution[nonemptymgi].nneperion_when_solved = static_cast<float>(nne_per_ion);
@@ -2512,14 +2512,14 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 
         const int ionstage = get_ionstage(element, ion);
         if (first_included_ion_of_element) {
-          printout("  including Z=%2d ionstages: ", Z);
+          logprintfmt("  including Z={:2} ionstages: ", Z);
           for (int i = 1; i < get_ionstage(element, ion); i++) {
-            printout("  ");
+            logprintfmt("  ");
           }
           first_included_ion_of_element = false;
         }
 
-        printout("%d ", ionstage);
+        logprintfmt("{} ", ionstage);
 
         if (enable_sfexcitation) {
           sfmatrix_add_excitation(sfmatrix, nonemptymgi, element, ion);
@@ -2530,7 +2530,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
         }
       }
       if (!first_included_ion_of_element) {
-        printout("\n");
+        logprintlnfmt("");
       }
     }
   }
