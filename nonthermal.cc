@@ -1665,29 +1665,29 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
 
       // the ion values (unlike shell ones) have been collapsed down to ensure that upperion < nions
       if (ion < nions - 1) {
-        printout("    probability to ionstage:");
+        logprintfmt("    probability to ionstage:");
         double prob_sum = 0.;
         for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
           const double probability = nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion, false);
           prob_sum += probability;
           if (probability > 0.) {
-            printout(" %d: %.3f", get_ionstage(element, upperion), probability);
+            logprintfmt(" {}: {:.3f}", get_ionstage(element, upperion), probability);
           }
         }
-        printout("\n");
+        logprintlnfmt("");
         assert_always((fabs(prob_sum - 1.0) <= 1e-2) ||
                       (nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion) < 1e-20));
 
-        printout("         enfrac to ionstage:");
+        logprintfmt("         enfrac to ionstage:");
         double enfrac_sum = 0.;
         for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
           const double probability = nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion, true);
           enfrac_sum += probability;
           if (probability > 0.) {
-            printout(" %d: %.3f", get_ionstage(element, upperion), probability);
+            logprintfmt(" {}: {:.3f}", get_ionstage(element, upperion), probability);
           }
         }
-        printout("\n");
+        logprintlnfmt("");
         assert_always(fabs(enfrac_sum - 1.0) <= 1e-2 ||
                       (nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion) < 1e-20));
       }
@@ -1704,20 +1704,21 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
 
     if (std::ssize(tmp_excitation_list) > nt_excitations_stored) {
       // truncate the sorted list to save memory
-      printout("  Truncating non-thermal excitation list from %zu to %d transitions.\n", tmp_excitation_list.size(),
-               nt_excitations_stored);
+      logprintlnfmt("  Truncating non-thermal excitation list from {} to {} transitions.", tmp_excitation_list.size(),
+                    nt_excitations_stored);
       tmp_excitation_list.resize(nt_excitations_stored);
     }
 
     nt_solution[nonemptymgi].frac_excitations_list_size = static_cast<int>(std::ssize(tmp_excitation_list));
     std::ranges::copy(tmp_excitation_list, get_cell_ntexcitations(nonemptymgi).begin());
 
-    printout("[info] mem_usage: non-thermal excitations for cell %d at this timestep occupy %.3f MB\n", modelgridindex,
-             nt_solution[nonemptymgi].frac_excitations_list_size * sizeof(NonThermalExcitation) / 1024. / 1024.);
+    logprintlnfmt("[info] mem_usage: non-thermal excitations for cell {} at this timestep occupy {:.3f} MB",
+                  modelgridindex,
+                  nt_solution[nonemptymgi].frac_excitations_list_size * sizeof(NonThermalExcitation) / 1024. / 1024.);
 
     const auto T_e = grid::get_Te(nonemptymgi);
-    printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
-             nt_solution[nonemptymgi].frac_excitations_list_size);
+    logprintlnfmt("  Top non-thermal excitation fractions (total excitations = {}):",
+                  nt_solution[nonemptymgi].frac_excitations_list_size);
     const int ntransdisplayed = std::min(10, nt_solution[nonemptymgi].frac_excitations_list_size);
 
     for (int excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++) {
@@ -1750,9 +1751,9 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
         const auto coll_str = globals::alltrans.coll_str[alltransindex];
 
-        printout(
-            "    frac_deposition %.3e Z=%2d ionstage %d lower %4d upper %4d rad_exc %.1e coll_exc %.1e nt_exc %.1e "
-            "nt/tot %.1e collstr %.1e lineindex %d\n",
+        logprintlnfmt(
+            "    frac_deposition {:.3e} Z={:2} ionstage {} lower {:4} upper {:4} rad_exc {:.1e} coll_exc {:.1e} nt_exc "
+            "{:.1e} nt/tot {:.1e} collstr {:.1e} lineindex {}",
             ntexc.frac_deposition, get_atomicnumber(element), get_ionstage(element, ion), lower, upper,
             radexc_ratecoeff, collexc_ratecoeff, ntcollexc_ratecoeff, ntcollexc_ratecoeff / exc_ratecoeff, coll_str,
             lineindex);
@@ -1780,25 +1781,25 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
   nt_solution[nonemptymgi].frac_excitation = static_cast<float>(frac_excitation_total);
   nt_solution[nonemptymgi].frac_ionisation = static_cast<float>(frac_ionisation_total);
 
-  printout("  E_init:      %9.2f eV/s/cm^3\n", E_init_ev);
-  printout("  deposition:  %9.2f eV/s/cm^3\n", deposition_rate_density_ev);
-  printout("  nne:         %9.3e e-/cm^3\n", nne);
-  printout("  nnetot:      %9.3e e-/cm^3\n", nnetot);
-  printout("  nne_nt     < %9.3e e-/cm^3\n", nne_nt_max);
-  printout("  nne_nt/nne < %9.3e\n", nne_nt_max / nne);
+  logprintlnfmt("  E_init:      {:9.2f} eV/s/cm^3", E_init_ev);
+  logprintlnfmt("  deposition:  {:9.2f} eV/s/cm^3", deposition_rate_density_ev);
+  logprintlnfmt("  nne:         {:9.3e} e-/cm^3", nne);
+  logprintlnfmt("  nnetot:      {:9.3e} e-/cm^3", nnetot);
+  logprintlnfmt("  nne_nt     < {:9.3e} e-/cm^3", nne_nt_max);
+  logprintlnfmt("  nne_nt/nne < {:9.3e}", nne_nt_max / nne);
 
   // store the solution properties now while the NT spectrum is in memory (in case we free before packet prop)
   nt_solution[nonemptymgi].frac_heating = calculate_frac_heating(nonemptymgi, yfunc);
 
-  printout("  frac_heating_tot:    %g\n", nt_solution[nonemptymgi].frac_heating);
-  printout("  frac_excitation_tot: %g\n", frac_excitation_total);
-  printout("  frac_ionisation_tot: %g\n", frac_ionisation_total);
+  logprintlnfmt("  frac_heating_tot:    {:g}", nt_solution[nonemptymgi].frac_heating);
+  logprintlnfmt("  frac_excitation_tot: {:g}", frac_excitation_total);
+  logprintlnfmt("  frac_ionisation_tot: {:g}", frac_ionisation_total);
   const double frac_sum = nt_solution[nonemptymgi].frac_heating + frac_excitation_total + frac_ionisation_total;
-  printout("  frac_sum:            %g (should be close to 1.0)\n", frac_sum);
+  logprintlnfmt("  frac_sum:            {:g} (should be close to 1.0)", frac_sum);
 
   nt_solution[nonemptymgi].frac_heating = static_cast<float>(1. - frac_excitation_total - frac_ionisation_total);
-  printout("  (replacing calculated frac_heating_tot with %g to make frac_sum = 1.0)\n",
-           nt_solution[nonemptymgi].frac_heating);
+  logprintlnfmt("  (replacing calculated frac_heating_tot with {:g} to make frac_sum = 1.0)",
+                nt_solution[nonemptymgi].frac_heating);
 }
 
 void sfmatrix_add_excitation(std::vector<double>& sfmatrixuppertri, const int nonemptymgi, const int element,
@@ -2024,8 +2025,9 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
   }
   if (error_best >= 0.) {
     if (error_best > 1e-10) {
-      printout("  SF solver LU_refine: After %d iterations, best solution vector has a max residual of %g (WARNING)\n",
-               iteration, error_best);
+      logprintlnfmt(
+          "  SF solver LU_refine: After {} iterations, best solution vector has a max residual of {:g} (WARNING)",
+          iteration, error_best);
     }
     gsl_vector_memcpy(&gsl_yvec, &gsl_yvec_best);
   }
