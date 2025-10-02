@@ -112,7 +112,7 @@ constexpr auto get_ndim(const GridType gridtype) -> int {
   }
 }
 
-constexpr auto get_coordlabel(const GridType gridtype, const int axis) -> char {
+[[nodiscard]] __host__ __device__ constexpr auto get_coordlabel(const GridType gridtype, const int axis) -> char {
   assert_always(axis >= 0 && axis < get_ndim(gridtype));
   switch (gridtype) {
     case GridType::CARTESIAN3D:
