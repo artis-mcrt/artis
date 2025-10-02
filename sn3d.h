@@ -104,6 +104,8 @@ inline thread_local auto gslworkspace =
 #endif
 
 #ifdef __NVCOMPILER_CUDA_ARCH__
+#include <string_view>
+
 #define printout(...) printf(__VA_ARGS__)
 
 template <typename... Args>
@@ -146,7 +148,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* f
   output_file.flush();
 }
 
-template <class... Args>
+template <typename... Args>
 inline auto logprintfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
   print_line_start();
   outputlinestr = std::format(fmt, std::forward<Args>(args)...);
@@ -155,12 +157,11 @@ inline auto logprintfmt(const std::format_string<Args...> fmt, Args&&... args) -
   output_file.flush();
 }
 
-template <class... Args>
+template <typename... Args>
 inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
   print_line_start();
-  outputlinestr = std::format(fmt, std::forward<Args>(args)...);
   outputstartofline = true;
-  output_file << outputlinestr << '\n';
+  output_file << std::format(fmt, std::forward<Args>(args)...) << '\n';
   output_file.flush();
 }
 
