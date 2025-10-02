@@ -226,14 +226,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   }
   U *= stat_weight(element, ion, 0);
   const auto U_float = static_cast<float>(U);
-
-  if (!std::isfinite(U_float)) {
-    printlnlog("element {} ion {}", element, ion);
-    printlnlog("modelgridindex {}", grid::get_mgi_of_nonemptymgi(nonemptymgi));
-    printlnlog("nlevels {}", nlevels);
-    printlnlog("sw {:g}", stat_weight(element, ion, 0));
-    std::abort();
-  }
+  assert_always(U_float > 0.);
 
   if (initial) {
     // put back the zero, just in case it matters for something
