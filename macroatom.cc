@@ -523,14 +523,8 @@ __host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmast
         break;
       }
 
-      case MA_ACTION_COUNT: {
-        printlnlog("ERROR: Problem selecting MA_ACTION");
-        std::abort();
-      }
-
       default:
         if constexpr (TESTMODE) {
-          printlnlog("ERROR: Unknown macroatom selected_action type {}", selected_action);
           assert_testmodeonly(false);
         } else {
           __builtin_unreachable();
