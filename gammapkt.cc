@@ -115,13 +115,6 @@ void read_decaydata() {
 
   gamma_spectra.resize(decay::get_num_nuclides(), {});
 
-  if (decay::nuc_exists(26, 52)) {
-    decay::set_nucdecayenergygamma(decay::get_nucindex(26, 52), 0.86 * MEV);  // Fe52
-  }
-  if (decay::nuc_exists(25, 52)) {
-    decay::set_nucdecayenergygamma(decay::get_nucindex(25, 52), 3.415 * MEV);  // Mn52
-  }
-
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     gamma_spectra[nucindex].clear();
     const int z = decay::get_nuc_z(nucindex);
@@ -149,6 +142,13 @@ void read_decaydata() {
       assert_always(z != 28 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
       set_trivial_gamma_spectrum(nucindex);
     }
+  }
+
+  if (decay::nuc_exists(26, 52)) {
+    decay::set_nucdecayenergygamma(decay::get_nucindex(26, 52), 0.86 * MEV);  // Fe52
+  }
+  if (decay::nuc_exists(25, 52)) {
+    decay::set_nucdecayenergygamma(decay::get_nucindex(25, 52), 3.415 * MEV);  // Mn52
   }
 }
 
