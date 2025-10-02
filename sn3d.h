@@ -220,9 +220,8 @@ constexpr void atomicadd(T& var, U&& val) {
 #endif
 
 inline void gsl_error_handler_printout(const char* reason, const char* file, int line, int gsl_errno) {
-  if (gsl_errno != 18)  // roundoff error
-  {
-    printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
+  if (gsl_errno != 18) {  // something other than roundoff error
+    logprintlnfmt("WARNING: gsl ({}:{}): {} (Error code {})", file, line, reason, gsl_errno);
   }
 }
 
