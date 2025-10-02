@@ -106,7 +106,7 @@ void initialise_linestat_file() {
 void write_deposition_file() {
   const int my_rank = globals::my_rank;
   const int nts = globals::timestep;
-  logprintlnfmt("Calculating deposition rates...");
+  printlnlog("Calculating deposition rates...");
   auto const time_write_deposition_file_start = std::time(nullptr);
   double mtot = 0.;
   const int nstart_nonempty = grid::get_nstart_nonempty(my_rank);
@@ -200,8 +200,8 @@ void write_deposition_file() {
     std::rename("deposition.out.tmp", "deposition.out");
   }
 
-  logprintlnfmt("calculating and writing deposition.out took {} seconds",
-                std::time(nullptr) - time_write_deposition_file_start);
+  printlnlog("calculating and writing deposition.out took {} seconds",
+             std::time(nullptr) - time_write_deposition_file_start);
 }
 
 void mpi_communicate_grid_properties() {
@@ -356,23 +356,23 @@ void write_temp_packetsfile(const int timestep, const int my_rank, std::span<con
 
   bool write_success = false;
   while (!write_success) {
-    logprintfmt("Writing {}...", filename);
+    printlog("Writing {}...", filename);
     FILE* packets_file = fopen(filename.c_str(), "wb");
     if (packets_file == nullptr) {
-      logprintlnfmt("ERROR: Could not open file '{}' for mode 'wb'.", filename);
+      printlnlog("ERROR: Could not open file '{}' for mode 'wb'.", filename);
       write_success = false;
     } else {
       write_success = (std::fwrite(pkt.data(), sizeof(Packet), globals::npkts, packets_file) ==
                        static_cast<size_t>(globals::npkts));
       if (!write_success) {
-        logprintlnfmt("fwrite() FAILED! will retry...");
+        printlnlog("fwrite() FAILED! will retry...");
       }
 
       fclose(packets_file);
     }
 
     if (write_success) {
-      logprintlnfmt("done");
+      printlnlog("done");
     }
   }
 }
@@ -382,7 +382,7 @@ void remove_temp_packetsfile(const int timestep, const int my_rank) {
 
   if (std::filesystem::exists(filename)) {
     std::filesystem::remove(filename);
-    logprintlnfmt("Deleted {}", filename);
+    printlnlog("Deleted {}", filename);
   }
 }
 
@@ -391,7 +391,7 @@ void remove_grid_restart_data(const int timestep) {
 
   if (std::filesystem::exists(filename)) {
     std::filesystem::remove(filename);
-    logprintlnfmt("Deleted {}", filename);
+    printlnlog("Deleted {}", filename);
   }
 }
 
@@ -399,14 +399,14 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
   MPI_Barrier(MPI_COMM_WORLD);
   // time is measured from just before packet propagation from one timestep to the next
   const auto estimated_time_per_timestep = std::time(nullptr) - time_timestep_start;
-  logprintlnfmt("TIME: time between timesteps is {} seconds (measured packet prop of ts {} and update grid of ts {})",
-                estimated_time_per_timestep, nts_prev, nts);
+  printlnlog("TIME: time between timesteps is {} seconds (measured packet prop of ts {} and update grid of ts {})",
+             estimated_time_per_timestep, nts_prev, nts);
 
   bool do_this_full_loop = true;
   if (walltimelimitseconds > 0 && nts < globals::timestep_finish) {
     const auto wallclock_used_seconds = std::time(nullptr) - real_time_start;
     const auto wallclock_remaining_seconds = walltimelimitseconds - wallclock_used_seconds;
-    logprintlnfmt("TIMED_RESTARTS: Used {} of {} seconds of wall time.", wallclock_used_seconds, walltimelimitseconds);
+    printlnlog("TIMED_RESTARTS: Used {} of {} seconds of wall time.", wallclock_used_seconds, walltimelimitseconds);
 
     // This flag being false will make it update_grid, and then exit
     do_this_full_loop = (wallclock_remaining_seconds >= (1.5 * estimated_time_per_timestep));
@@ -414,11 +414,11 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
     // communicate whatever decision the rank 0 process decided, just in case they differ
     MPI_Bcast_safe(do_this_full_loop, 0, MPI_COMM_WORLD);
     if (do_this_full_loop) {
-      logprintlnfmt("TIMED_RESTARTS: Going to continue since remaining time {} s >= 1.5 * time_per_timestep",
-                    wallclock_remaining_seconds);
+      printlnlog("TIMED_RESTARTS: Going to continue since remaining time {} s >= 1.5 * time_per_timestep",
+                 wallclock_remaining_seconds);
     } else {
-      logprintlnfmt("TIMED_RESTARTS: Going to terminate since remaining time {} s < 1.5 * time_per_timestep",
-                    wallclock_remaining_seconds);
+      printlnlog("TIMED_RESTARTS: Going to terminate since remaining time {} s < 1.5 * time_per_timestep",
+                 wallclock_remaining_seconds);
     }
   }
   return do_this_full_loop;
@@ -431,7 +431,7 @@ void save_grid_and_packets(const int nts, std::span<const Packet> packets) {
   bool write_successful = false;
   while (!write_successful) {
     const auto time_write_packets_file_start = std::time(nullptr);
-    logprintlnfmt("time before write temporary packets file {}", time_write_packets_file_start);
+    printlnlog("time before write temporary packets file {}", time_write_packets_file_start);
 
     // save packet state at start of current timestep (before propagation)
     write_temp_packetsfile(nts, globals::my_rank, packets);
@@ -444,24 +444,24 @@ void save_grid_and_packets(const int nts, std::span<const Packet> packets) {
 
     const auto timenow = std::time(nullptr);
 
-    logprintlnfmt("time after write temporary packets file {} (took {}s, waited {}s, total {}s)", timenow,
-                  time_write_packets_finished_thisrank - time_write_packets_file_start,
-                  timenow - time_write_packets_finished_thisrank, timenow - time_write_packets_file_start);
+    printlnlog("time after write temporary packets file {} (took {}s, waited {}s, total {}s)", timenow,
+               time_write_packets_finished_thisrank - time_write_packets_file_start,
+               timenow - time_write_packets_finished_thisrank, timenow - time_write_packets_file_start);
 
     if constexpr (VERIFY_WRITTEN_PACKETS_FILES) {
       MPI_Barrier(MPI_COMM_WORLD);
 
       const auto time_readback_packets_start = std::time(nullptr);
 
-      logprintlnfmt("reading back temporary packets file to check validity...");
+      printlnlog("reading back temporary packets file to check validity...");
 
       // read packets file back to check that the disk write didn't fail
       write_successful = verify_temp_packetsfile(nts, my_rank, packets);
 
       MPI_Barrier(MPI_COMM_WORLD);
 
-      logprintlnfmt("Verifying packets files for all ranks took {} seconds.",
-                    std::time(nullptr) - time_readback_packets_start);
+      printlnlog("Verifying packets files for all ranks took {} seconds.",
+                 std::time(nullptr) - time_readback_packets_start);
     } else {
       write_successful = true;
     }
@@ -576,8 +576,8 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
   // Each process has now updated its own set of cells. The results now need to be communicated between processes.
   mpi_communicate_grid_properties();
 
-  logprintlnfmt("timestep {}: time after grid properties have been communicated {} (took {} seconds)", nts,
-                std::time(nullptr), std::time(nullptr) - sys_time_start_communicate_grid);
+  printlnlog("timestep {}: time after grid properties have been communicated {} (took {} seconds)", nts,
+             std::time(nullptr), std::time(nullptr) - sys_time_start_communicate_grid);
 
   // If this is not the 0th time step of the current job step,
   // write out a snapshot of the grid properties for further restarts
@@ -606,8 +606,8 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
     const auto time_communicate_estimators_start = std::time(nullptr);
     mpi_reduce_estimators(nts);
 
-    logprintlnfmt("timestep {}: time after estimators have been communicated {} (took {} seconds)", nts,
-                  std::time(nullptr), std::time(nullptr) - time_communicate_estimators_start);
+    printlnlog("timestep {}: time after estimators have been communicated {} (took {} seconds)", nts,
+               std::time(nullptr), std::time(nullptr) - time_communicate_estimators_start);
 
     // The estimators have been summed across all processes and distributed.
     // They will now be normalised independently on all processes.
@@ -618,14 +618,14 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 
     write_partial_lightcurve_spectra(nts, packets);
 
-    logprintlnfmt("During timestep {} on MPI process {}, {} pellets decayed and {} packets escaped. (t={:g}d)", nts,
-                  my_rank, globals::timesteps[nts].pellet_decays, globals::nesc, globals::timesteps[nts].mid / DAY);
+    printlnlog("During timestep {} on MPI process {}, {} pellets decayed and {} packets escaped. (t={:g}d)", nts,
+               my_rank, globals::timesteps[nts].pellet_decays, globals::nesc, globals::timesteps[nts].mid / DAY);
 
     if (VPKT_ON) {
-      logprintlnfmt("During timestep {} on MPI process {}, {} virtual packets were generated and {} escaped.", nts,
-                    my_rank, vpkt::nvpkt_created,
-                    vpkt::nvpkt_esc_from_rpkt + vpkt::nvpkt_esc_from_kpkt + vpkt::nvpkt_esc_from_macroatom);
-      logprintlnfmt(
+      printlnlog("During timestep {} on MPI process {}, {} virtual packets were generated and {} escaped.", nts,
+                 my_rank, vpkt::nvpkt_created,
+                 vpkt::nvpkt_esc_from_rpkt + vpkt::nvpkt_esc_from_kpkt + vpkt::nvpkt_esc_from_macroatom);
+      printlnlog(
           "{} virtual packets came from an electron scattering event, {} from a kpkt deactivation and {} from a "
           "macroatom deactivation.",
           vpkt::nvpkt_esc_from_rpkt, vpkt::nvpkt_esc_from_kpkt, vpkt::nvpkt_esc_from_macroatom);
@@ -659,7 +659,7 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 
       vpkt::write_timestep(nts, my_rank, true);
 
-      logprintlnfmt("time after write final packets file {}", std::time(nullptr));
+      printlnlog("time after write final packets file {}", std::time(nullptr));
     }
   }
   return !do_this_full_loop;
@@ -709,7 +709,7 @@ auto main(int argc, char* argv[]) -> int {
 #ifdef _OPENMP
     printout("OpenMP parallelisation is active with %d threads (max %d)\n", omp_get_num_threads(), get_max_threads());
 #else
-    logprintlnfmt("OpenMP parallelisation is not enabled in this build (this is normal)");
+    printlnlog("OpenMP parallelisation is not enabled in this build (this is normal)");
 #endif
   }
 
@@ -717,9 +717,9 @@ auto main(int argc, char* argv[]) -> int {
   printout("GPU_ON is enabled\n");
 #endif
 
-  logprintlnfmt("time at start {}", real_time_start);
+  printlnlog("time at start {}", real_time_start);
 
-  logprintlnfmt("integration method is {}", USE_SIMPSON_INTEGRATOR ? "Simpson rule" : "GSL qag");
+  printlnlog("integration method is {}", USE_SIMPSON_INTEGRATOR ? "Simpson rule" : "GSL qag");
 
 #ifdef WALLTIMELIMITSECONDS
   int walltimelimitseconds = WALLTIMELIMITSECONDS;
@@ -730,10 +730,10 @@ auto main(int argc, char* argv[]) -> int {
   int opt = 0;
   while ((opt = getopt(argc, argv, "w:")) != -1) {  // NOLINT(concurrency-mt-unsafe)
     if (opt == 'w') {
-      logprintfmt("Command line argument specifies wall time hours '{}', setting ", optarg);
+      printlog("Command line argument specifies wall time hours '{}', setting ", optarg);
       const float walltimehours = strtof(optarg, nullptr);
       walltimelimitseconds = static_cast<int>(walltimehours * 3600);
-      logprintlnfmt("walltimelimitseconds = {}", walltimelimitseconds);
+      printlnlog("walltimelimitseconds = {}", walltimelimitseconds);
     } else {
       fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n",
               argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic,)
@@ -744,23 +744,23 @@ auto main(int argc, char* argv[]) -> int {
   std::vector<Packet> packets;
   resize_exactly(packets, globals::npkts);
 
-  logprintlnfmt("git branch {}", GIT_BRANCH);
+  printlnlog("git branch {}", GIT_BRANCH);
 
-  logprintlnfmt("git version: {}", GIT_VERSION);
+  printlnlog("git version: {}", GIT_VERSION);
 
-  logprintlnfmt("git status {}", GIT_STATUS);
+  printlnlog("git status {}", GIT_STATUS);
 
-  logprintlnfmt("sn3d compiled at {} on {}", __TIME__, __DATE__);
+  printlnlog("sn3d compiled at {} on {}", __TIME__, __DATE__);
 
 #if defined TESTMODE && TESTMODE
-  logprintlnfmt("TESTMODE is ON");
+  printlnlog("TESTMODE is ON");
 #endif
 
-  logprintlnfmt("process id (pid): {}", getpid());
-  logprintlnfmt("MPI enabled:");
-  logprintlnfmt("  rank {} of [0..{}] in MPI_COMM_WORLD", globals::my_rank, globals::nprocs - 1);
-  logprintlnfmt("  rank {} of [0..{}] in node {} of [0..{}]", globals::rank_in_node, globals::node_nprocs - 1,
-                globals::node_id, globals::node_count - 1);
+  printlnlog("process id (pid): {}", getpid());
+  printlnlog("MPI enabled:");
+  printlnlog("  rank {} of [0..{}] in MPI_COMM_WORLD", globals::my_rank, globals::nprocs - 1);
+  printlnlog("  rank {} of [0..{}] in node {} of [0..{}]", globals::rank_in_node, globals::node_nprocs - 1,
+             globals::node_id, globals::node_count - 1);
 #ifdef MAX_NODE_SIZE
   printout(
       "WARNING: Compiled with MAX_NODE_SIZE %d, which may mean mean that there are more nodes reported than physically "
@@ -779,7 +779,7 @@ auto main(int argc, char* argv[]) -> int {
     initialise_linestat_file();
   }
 
-  logprintlnfmt("timesteps {}", globals::ntimesteps);
+  printlnlog("timesteps {}", globals::ntimesteps);
 
   // Precalculate the rate coefficients for spontaneous and stimulated recombination
   // and for photoionisation. With the nebular approximation they only depend on T_e
@@ -806,10 +806,10 @@ auto main(int argc, char* argv[]) -> int {
 
   grid::init_grid(my_rank);
 
-  logprintlnfmt("Simulation propagates {:g} packets per process (total {:g} with nprocs {})", 1. * globals::npkts,
-                1. * globals::npkts * globals::nprocs, globals::nprocs);
+  printlnlog("Simulation propagates {:g} packets per process (total {:g} with nprocs {})", 1. * globals::npkts,
+             1. * globals::npkts * globals::nprocs, globals::nprocs);
 
-  logprintlnfmt("[info] mem_usage: packets occupy {:.3f} MB", MPKTS * sizeof(Packet) / 1024. / 1024.);
+  printlnlog("[info] mem_usage: packets occupy {:.3f} MB", MPKTS * sizeof(Packet) / 1024. / 1024.);
 
   if (!globals::simulation_continued_from_saved) {
     std::remove("deposition.out");
@@ -824,12 +824,12 @@ auto main(int argc, char* argv[]) -> int {
   const int nstart = grid::get_nstart(my_rank);
   const int ndo = grid::get_ndo(my_rank);
   const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
-  logprintfmt("process rank {} (global max rank {}) assigned {} modelgrid cells ({} nonempty)", my_rank,
-              globals::nprocs - 1, ndo, ndo_nonempty);
+  printlog("process rank {} (global max rank {}) assigned {} modelgrid cells ({} nonempty)", my_rank,
+           globals::nprocs - 1, ndo, ndo_nonempty);
   if (ndo > 0) {
-    logprintlnfmt(": cells [{}..{}] (model has max mgi {})", nstart, nstart + ndo - 1, grid::get_npts_model() - 1);
+    printlnlog(": cells [{}..{}] (model has max mgi {})", nstart, nstart + ndo - 1, grid::get_npts_model() - 1);
   } else {
-    logprintlnfmt("");
+    printlnlog("");
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -856,10 +856,10 @@ auto main(int argc, char* argv[]) -> int {
 
     globals::n_titer = (globals::timestep < -1) ? 3 : 1;
     if (globals::n_titer > 1) {
-      logprintlnfmt("Doing %d iterations on timestep %d", globals::n_titer, globals::timestep);
+      printlnlog("Doing %d iterations on timestep %d", globals::n_titer, globals::timestep);
     }
     globals::lte_iteration = (globals::timestep < globals::num_lte_timesteps);
-    logprintlnfmt("lte_iteration {}", globals::lte_iteration ? 1 : 0);
+    printlnlog("lte_iteration {}", globals::lte_iteration ? 1 : 0);
     assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 
     for (int titer = 0; titer < globals::n_titer; titer++) {
@@ -884,14 +884,14 @@ auto main(int argc, char* argv[]) -> int {
   }
 
   if ((globals::ntimesteps > globals::timestep_finish) || (terminate_early)) {
-    logprintlnfmt("RESTART_NEEDED to continue model");
+    printlnlog("RESTART_NEEDED to continue model");
   } else {
-    logprintlnfmt("No need for restart");
+    printlnlog("No need for restart");
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
   const auto real_time_end = std::time(nullptr);
-  logprintlnfmt(
+  printlnlog(
       "sn3d finished at {} (job: pktprop ts {} to ts {} grid-preprop, {:.3f} wallclock hours * {} processes * {} "
       "threads = {:.3f} core hours)",
       real_time_end, globals::timestep_initial, globals::timestep - 1, (real_time_end - real_time_start) / 3600.,

@@ -92,17 +92,17 @@ void packet_init(std::span<Packet> pkt)
 // Subroutine that initialises the packets if we start a new simulation.
 {
   MPI_Barrier(MPI_COMM_WORLD);
-  logprintlnfmt("UNIFORM_PELLET_ENERGIES is {}", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
+  printlnlog("UNIFORM_PELLET_ENERGIES is {}", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
 
-  logprintlnfmt("INITIAL_PACKETS_ON is {}", (INITIAL_PACKETS_ON ? "on" : "off"));
+  printlnlog("INITIAL_PACKETS_ON is {}", (INITIAL_PACKETS_ON ? "on" : "off"));
 
   // The total number of pellets that we want to start with is just
   // npkts. The total energy of the pellets is given by etot.
   const double etot_tmodel_tinf = decay::get_global_etot_tmodel_tinf();
 
-  logprintlnfmt("etot {:g} (t_model to t_inf)", etot_tmodel_tinf);
+  printlnlog("etot {:g} (t_model to t_inf)", etot_tmodel_tinf);
 
-  logprintlnfmt("e_cmf per packet (t_model to t_inf) {:g} erg", etot_tmodel_tinf / globals::npkts);
+  printlnlog("e_cmf per packet (t_model to t_inf) {:g} erg", etot_tmodel_tinf / globals::npkts);
 
   decay::setup_decaypath_energy_per_mass();
 
@@ -127,15 +127,15 @@ void packet_init(std::span<Packet> pkt)
   assert_always(etot_simtime > 0);
 
   constexpr auto strtimelow{INITIAL_PACKETS_ON ? "tmodel" : "tmin"};
-  logprintlnfmt("etot ({} to tmax) {} erg", strtimelow, etot_simtime);
+  printlnlog("etot ({} to tmax) {} erg", strtimelow, etot_simtime);
 
   // So energy per pellet is:
   const double e_cmf_per_packet = etot_simtime / globals::npkts;
-  logprintlnfmt("e_cmf per packet ({} to tmax) {} erg", strtimelow, e_cmf_per_packet);
+  printlnlog("e_cmf per packet ({} to tmax) {} erg", strtimelow, e_cmf_per_packet);
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
-  logprintlnfmt("Placing pellets...");
+  printlnlog("Placing pellets...");
   const auto allpkts = std::ranges::iota_view{0, globals::npkts};
   std::for_each(allpkts.begin(), allpkts.end(), [&, etot_simtime, e_cmf_per_packet](const int n) {
     pkt[n] = Packet{};
@@ -152,14 +152,14 @@ void packet_init(std::span<Packet> pkt)
 
   double e_cmf_total = std::ranges::fold_left(pkt, 0., [](const double sum, const Packet& p) { return sum + p.e_cmf; });
   const double e_ratio = etot_simtime / e_cmf_total;
-  logprintlnfmt("packet energy sum {:g} should be {:g} normalisation factor: {:g}", e_cmf_total, etot_simtime, e_ratio);
+  printlnlog("packet energy sum {:g} should be {:g} normalisation factor: {:g}", e_cmf_total, etot_simtime, e_ratio);
   assert_always(std::isfinite(e_cmf_total));
   e_cmf_total *= e_ratio;
   for (int n = 0; n < globals::npkts; n++) {
     pkt[n].e_cmf *= e_ratio;
     pkt[n].e_rf *= e_ratio;
   }
-  logprintlnfmt("total energy that will be freed during simulation time: {:g} erg", e_cmf_total);
+  printlnlog("total energy that will be freed during simulation time: {:g} erg", e_cmf_total);
 }
 
 // write packets text file
@@ -195,12 +195,12 @@ void read_temp_packetsfile(const int timestep, const int my_rank, std::span<Pack
   // read binary packets file
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
-  logprintlnfmt("Reading {}", filename);
+  printlnlog("Reading {}", filename);
   auto packets_file = fopen_required_uniqueptr(filename, "rb");
   assert_always(std::fread(pkt.data(), sizeof(Packet), globals::npkts, packets_file.get()) ==
                 static_cast<size_t>(globals::npkts));
 
-  logprintlnfmt("done");
+  printlnlog("done");
 }
 
 auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<const Packet> pkt) -> bool {
@@ -209,24 +209,24 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<co
   // read binary packets file
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
-  logprintlnfmt("Verifying file {}", filename);
+  printlnlog("Verifying file {}", filename);
   auto packets_file = fopen_required_uniqueptr(filename, "rb");
   Packet pkt_in;
   bool readback_passed = true;
   for (int n = 0; n < globals::npkts; n++) {
     assert_always(std::fread(&pkt_in, sizeof(Packet), 1, packets_file.get()) == 1);
     if (pkt_in != pkt[n]) {
-      logprintlnfmt("failed on packet {}", n);
-      logprintlnfmt(" compare number {} {}", pkt_in.number, pkt[n].number);
-      logprintlnfmt(" compare nu_cmf {:g} {:g}", pkt_in.nu_cmf, pkt[n].nu_cmf);
-      logprintlnfmt(" compare e_rf {:g} {:g}", pkt_in.e_rf, pkt[n].e_rf);
+      printlnlog("failed on packet {}", n);
+      printlnlog(" compare number {} {}", pkt_in.number, pkt[n].number);
+      printlnlog(" compare nu_cmf {:g} {:g}", pkt_in.nu_cmf, pkt[n].nu_cmf);
+      printlnlog(" compare e_rf {:g} {:g}", pkt_in.e_rf, pkt[n].e_rf);
       readback_passed = false;
     }
   }
   if (readback_passed) {
-    logprintlnfmt("  verification passed");
+    printlnlog("  verification passed");
   } else {
-    logprintlnfmt("  verification FAILED");
+    printlnlog("  verification FAILED");
   }
   return readback_passed;
 }
@@ -243,7 +243,7 @@ auto read_packets(const std::string& filename, std::span<Packet> packets) -> std
     const int i = packets_read - 1;
 
     if (i > globals::npkts - 1) {
-      logprintlnfmt(
+      printlnlog(
           "ERROR: More data found beyond packet {} (expecting {} packets). Recompile exspec with the correct number of "
           "packets. Run (wc -l < packets00_0000.out) to count them.",
           packets_read, globals::npkts);
@@ -290,7 +290,7 @@ auto read_packets(const std::string& filename, std::span<Packet> packets) -> std
   }
 
   if (packets_read < globals::npkts) {
-    logprintlnfmt(
+    printlnlog(
         "ERROR: Read failed after packet {} (expecting {} packets). Recompile exspec with the correct number of "
         "packets. Run (wc -l < packets00_0000.out) to count them.",
         packets_read, globals::npkts);

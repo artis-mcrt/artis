@@ -290,8 +290,8 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
 void set_kpktdiffusion(const float kpktdiffusion_timescale_in, const int n_kpktdiffusion_timesteps_in) {
   kpktdiffusion_timescale = kpktdiffusion_timescale_in;
   n_kpktdiffusion_timesteps = n_kpktdiffusion_timesteps_in;
-  logprintlnfmt("input: kpkts diffuse {:g} of a time step's length for the first {} time steps",
-                kpktdiffusion_timescale, n_kpktdiffusion_timesteps);
+  printlnlog("input: kpkts diffuse {:g} of a time step's length for the first {} time steps", kpktdiffusion_timescale,
+             n_kpktdiffusion_timesteps);
 }
 
 void setup_coolinglist() {
@@ -305,7 +305,7 @@ void setup_coolinglist() {
   const size_t mem_usage_coolinglist = ncoolingterms * sizeof(CellCacheCoolingList);
   assert_always(ncoolingterms > 0);
   coolinglist.resize(ncoolingterms);
-  logprintlnfmt("[info] mem_usage: coolinglist occupies {:.3f} MB", mem_usage_coolinglist / 1024. / 1024.);
+  printlnlog("[info] mem_usage: coolinglist occupies {:.3f} MB", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0;  // cooling list index
   for (int element = 0; element < get_nelements(); element++) {
@@ -369,7 +369,7 @@ void setup_coolinglist() {
   }
 
   assert_always(ncoolingterms == i);  // if this doesn't match, we miscalculated the number of cooling terms
-  logprintlnfmt("[info] read_atomicdata: number of coolingterms {}", ncoolingterms);
+  printlnlog("[info] read_atomicdata: number of coolingterms {}", ncoolingterms);
 }
 
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function

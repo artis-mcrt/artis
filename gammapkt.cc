@@ -62,8 +62,8 @@ struct NucGammaLine {
 void read_gamma_spectrum(const int nucindex, const std::string& filename)
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
 {
-  logprintfmt("reading gamma spectrum for Z={} A={} from {}...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
-              filename);
+  printlog("reading gamma spectrum for Z={} A={} from {}...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
+           filename);
 
   auto gammafile = fstream_required(filename, std::ios::in);
   std::string line;
@@ -89,7 +89,7 @@ void read_gamma_spectrum(const int nucindex, const std::string& filename)
 
   decay::set_nucdecayenergygamma(nucindex, E_gamma_avg);
 
-  logprintlnfmt("nlines {} avg_en_gamma {:g} MeV", nlines, E_gamma_avg / MEV);
+  printlnlog("nlines {} avg_en_gamma {:g} MeV", nlines, E_gamma_avg / MEV);
 }
 
 void set_trivial_gamma_spectrum(const int nucindex) {
@@ -104,13 +104,13 @@ void set_trivial_gamma_spectrum(const int nucindex) {
 void read_decaydata() {
   // migrate from old filename
   if (!std::filesystem::exists("ni56_lines.txt") && std::filesystem::exists("ni_lines.txt")) {
-    logprintlnfmt("Moving ni_lines.txt to ni56_lines.txt");
+    printlnlog("Moving ni_lines.txt to ni56_lines.txt");
     std::rename("ni_lines.txt", "ni56_lines.txt");
   }
 
   // migrate from old filename
   if (!std::filesystem::exists("co56_lines.txt") && std::filesystem::exists("co_lines.txt")) {
-    logprintlnfmt("Moving co_lines.txt to co56_lines.txt");
+    printlnlog("Moving co_lines.txt to co56_lines.txt");
     std::rename("co_lines.txt", "co56_lines.txt");
   }
 
@@ -161,7 +161,7 @@ void init_gamma_linelist() {
 
   const ptrdiff_t total_lines = std::ranges::fold_left(
       gamma_spectra, 0, [](const ptrdiff_t sum, const auto& lines) { return sum + std::ssize(lines); });
-  logprintlnfmt("total gamma-ray lines {}", total_lines);
+  printlnlog("total gamma-ray lines {}", total_lines);
 
   std::vector<NucGammaLine> allnuc_gamma_line_list;
   allnuc_gamma_line_list.reserve(total_lines);
@@ -194,7 +194,7 @@ void init_gamma_linelist() {
 }
 
 void init_xcom_photoion_data() {
-  logprintlnfmt("reading XCOM photoionisation data...");
+  printlnlog("reading XCOM photoionisation data...");
   for (int Z = 0; Z < numb_xcom_elements; Z++) {
     photoion_data[Z].reserve(100);
   }
@@ -231,7 +231,7 @@ void init_xcom_photoion_data() {
     }
   }
 
-  logprintlnfmt("Failure to choose line (pellet_nucindex {}). Abort. zrand {:g} runtot {:g}", nucindex, zrand, runtot);
+  printlnlog("Failure to choose line (pellet_nucindex {}). Abort. zrand {:g} runtot {:g}", nucindex, zrand, runtot);
   assert_always(false);
   return NAN;
 }
@@ -296,7 +296,7 @@ void init_xcom_photoion_data() {
 
     count++;
     if (count == 1000) {
-      logprintlnfmt("Compton hit 1000 tries. {:g} {:g} {:g} {:g} {:g}", f_max, f_min, ftry, sigma_try, norm);
+      printlnlog("Compton hit 1000 tries. {:g} {:g} {:g} {:g} {:g}", f_max, f_min, ftry, sigma_try, norm);
     }
   }
 
@@ -915,8 +915,8 @@ void guttman_thermalisation(Packet& pkt) {
   for (int i = 0; i < numb_rnd_dirs; i++) {
     const double summand =
         width * (1 - std::exp(-std::pow(t_gamma, 2.) / std::pow(t, 2.) * column_densities[i] / avg_column_density));
-    logprintfmt("width: {:f} t_gamma: {:f} t: {:f} column_densities[i]: {:f} avg_column_density: {:f} summand: {:f}",
-                width, t_gamma, t, column_densities[i], avg_column_density, summand);
+    printlog("width: {:f} t_gamma: {:f} t: {:f} column_densities[i]: {:f} avg_column_density: {:f} summand: {:f}",
+             width, t_gamma, t, column_densities[i], avg_column_density, summand);
     f_gamma += summand;
   }
   f_gamma /= (4 * PI);

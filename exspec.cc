@@ -57,13 +57,13 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
 
     if (a == -1 || !load_allrank_packets) {
       auto pktfilename = std::format("packets{:02d}_{:04d}.out", 0, p);
-      logprintlnfmt("Reading {} (file {} of {})", pktfilename, p + 1, globals::nprocs_exspec);
+      printlnlog("Reading {} (file {} of {})", pktfilename, p + 1, globals::nprocs_exspec);
 
       if (std::filesystem::exists(pktfilename)) {
         read_packets(pktfilename, pkts_start);
       } else {
-        logprintlnfmt("   WARNING {} does not exist - trying temp packets file at beginning of timestep {}...",
-                      pktfilename, globals::timestep_initial);
+        printlnlog("   WARNING {} does not exist - trying temp packets file at beginning of timestep {}...",
+                   pktfilename, globals::timestep_initial);
         read_temp_packetsfile(globals::timestep_initial, p, pkts_start);
       }
     }
@@ -71,7 +71,7 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     MPI_Barrier(MPI_COMM_WORLD);
 
     if (p % globals::nprocs != globals::my_rank) {
-      logprintlnfmt("skipping packets file {} {}", p + 1, globals::nprocs);
+      printlnlog("skipping packets file {} {}", p + 1, globals::nprocs);
       continue;
     }
 
@@ -96,8 +96,8 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
       }
     }
     if (a == -1 || !load_allrank_packets) {
-      logprintlnfmt("  {} of {} packets escaped ({} gamma-pkts and {} r-pkts)", nesc_tot, globals::npkts, nesc_gamma,
-                    nesc_rpkt);
+      printlnlog("  {} of {} packets escaped ({} gamma-pkts and {} r-pkts)", nesc_tot, globals::npkts, nesc_gamma,
+                 nesc_rpkt);
     }
   }
 
@@ -115,7 +115,7 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
 
     write_spectra("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
 
-    logprintlnfmt("finished angle-averaged stuff");
+    printlnlog("finished angle-averaged stuff");
   } else {
     // direction bin a
     // line-of-sight dependent spectra and light curves
@@ -136,7 +136,7 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
                     std::format("{}absorptionpol_res_{:02d}.out", outdir_resfiles, a), &stokes_i, &stokes_q, &stokes_u);
     }
 
-    logprintlnfmt("Did {} of {} angle bins.", a + 1, MABINS);
+    printlnlog("Did {} of {} angle bins.", a + 1, MABINS);
   }
 }
 
@@ -155,23 +155,23 @@ auto main(int argc, char* argv[]) -> int {
     output_file = fstream_required("exspec.txt", std::ios::out | std::ios::trunc);
   }
 
-  logprintlnfmt("git branch {}", GIT_BRANCH);
+  printlnlog("git branch {}", GIT_BRANCH);
 
-  logprintlnfmt("git version: {}", GIT_VERSION);
+  printlnlog("git version: {}", GIT_VERSION);
 
-  logprintlnfmt("git status {}", GIT_STATUS);
+  printlnlog("git status {}", GIT_STATUS);
 
-  logprintlnfmt("exspec compiled at {} on {}", __TIME__, __DATE__);
+  printlnlog("exspec compiled at {} on {}", __TIME__, __DATE__);
 
 #if defined TESTMODE && TESTMODE
-  logprintlnfmt("TESTMODE is ON");
+  printlnlog("TESTMODE is ON");
 #endif
 
-  logprintlnfmt("process id (pid): {}", getpid());
-  logprintlnfmt("MPI enabled:");
-  logprintlnfmt("  rank_global {} of [0..{}] in MPI_COMM_WORLD", globals::my_rank, globals::nprocs - 1);
-  logprintlnfmt("  rank_in_node {} of [0..{}] in node {} of [0..{}]", globals::rank_in_node, globals::node_nprocs - 1,
-                globals::node_id, globals::node_count - 1);
+  printlnlog("process id (pid): {}", getpid());
+  printlnlog("MPI enabled:");
+  printlnlog("  rank_global {} of [0..{}] in MPI_COMM_WORLD", globals::my_rank, globals::nprocs - 1);
+  printlnlog("  rank_in_node {} of [0..{}] in node {} of [0..{}]", globals::rank_in_node, globals::node_nprocs - 1,
+             globals::node_id, globals::node_count - 1);
 
   // single rank only for now
   assert_always(globals::my_rank == 0);
@@ -189,15 +189,15 @@ auto main(int argc, char* argv[]) -> int {
   try {
     // try to allocate memory for all packets from all ranks
     resize_exactly(pkts, npkts_allranks);
-    logprintlnfmt(
+    printlnlog(
         "mem_usage: loading {} packets from each {} processes simultaneously (total {} packets, {:.1f} MB memory)",
         globals::npkts, globals::nprocs_exspec, npkts_allranks, npkts_allranks * sizeof(Packet) / 1024. / 1024.);
     load_allrank_packets = true;
   } catch (const std::bad_alloc& e) {
     // if we can't allocate memory for all packets, try to allocate memory for just one rank
     load_allrank_packets = false;
-    logprintlnfmt("mem_usage: malloc failed to allocate memory for all packets");
-    logprintlnfmt(
+    printlnlog("mem_usage: malloc failed to allocate memory for all packets");
+    printlnlog(
         "mem_usage: loading {} packets from each of {} processes sequentially (total {} packets, {:.1f} MB memory)",
         globals::npkts, globals::nprocs_exspec, npkts_allranks, npkts_allranks * sizeof(Packet) / 1024. / 1024.);
     resize_exactly(pkts, globals::npkts);
@@ -222,7 +222,7 @@ auto main(int argc, char* argv[]) -> int {
   }
 
   decay::cleanup();
-  logprintlnfmt("exspec finished at {} (tstart + {} seconds)", std::time(nullptr), std::time(nullptr) - sys_time_start);
+  printlnlog("exspec finished at {} (tstart + {} seconds)", std::time(nullptr), std::time(nullptr) - sys_time_start);
 
   globals::mpi_finalized = true;
   MPI_Finalize();

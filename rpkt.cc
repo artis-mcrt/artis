@@ -702,9 +702,9 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     return false;
   }
 
-  logprintlnfmt("[fatal] do_rpkt: Failed to identify event . Rpkt. edist {:g}, sdist {:g}, tdist {:g} Abort.", edist,
-                sdist, tdist);
-  logprintlnfmt("[fatal] do_rpkt: Trouble was due to packet number {}.", pkt.number);
+  printlnlog("[fatal] do_rpkt: Failed to identify event . Rpkt. edist {:g}, sdist {:g}, tdist {:g} Abort.", edist,
+             sdist, tdist);
+  printlnlog("[fatal] do_rpkt: Trouble was due to packet number {}.", pkt.number);
   std::abort();
 }
 
@@ -986,12 +986,12 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   chi_rpkt_cont.total = chi_rpkt_cont.ffescat + chi_rpkt_cont.bf + chi_rpkt_cont.ffheat;
 
   if (!std::isfinite(chi_rpkt_cont.total)) {
-    logprintlnfmt("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort");
-    logprintlnfmt("[fatal] es {:g}, ff {:g}, bf {:g}", chi_rpkt_cont.ffescat, chi_rpkt_cont.ffheat, chi_rpkt_cont.bf);
-    logprintlnfmt("[fatal] nbfcontinua {}", globals::nbfcontinua);
-    logprintlnfmt("[fatal] in cell {} with density {:g}", grid::get_mgi_of_nonemptymgi(nonemptymgi),
-                  grid::get_rho(nonemptymgi));
-    logprintlnfmt("[fatal] pkt.nu_cmf {:g}", nu_cmf);
+    printlnlog("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort");
+    printlnlog("[fatal] es {:g}, ff {:g}, bf {:g}", chi_rpkt_cont.ffescat, chi_rpkt_cont.ffheat, chi_rpkt_cont.bf);
+    printlnlog("[fatal] nbfcontinua {}", globals::nbfcontinua);
+    printlnlog("[fatal] in cell {} with density {:g}", grid::get_mgi_of_nonemptymgi(nonemptymgi),
+               grid::get_rho(nonemptymgi));
+    printlnlog("[fatal] pkt.nu_cmf {:g}", nu_cmf);
     if (std::isfinite(chi_rpkt_cont.ffescat)) {
       chi_rpkt_cont.ffheat = 0.;
       chi_rpkt_cont.bf = 0.;
@@ -1023,7 +1023,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
   const auto sys_time_start_calc = std::time(nullptr);
   const auto temperature = grid::get_TR(nonemptymgi);
 
-  logprintfmt("calculating expansion opacities for cell {}...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
+  printlog("calculating expansion opacities for cell {}...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
@@ -1067,5 +1067,5 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       expansionopacity_planck_cumulative[(nonemptymgi * expopac_nbins) + binindex] = kappa_planck_cumulative;
     }
   }
-  logprintlnfmt("took {} seconds", std::time(nullptr) - sys_time_start_calc);
+  printlnlog("took {} seconds", std::time(nullptr) - sys_time_start_calc);
 }

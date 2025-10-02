@@ -66,11 +66,11 @@ auto read_ratecoeff_dat(FILE* ratecoeff_file) -> bool {
   if (fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in.data()) != 1) {
     return false;
   }
-  logprintfmt("ratecoeff.dat: MD5 adata.txt = {} ", adatafile_hash_in.data());
+  printlog("ratecoeff.dat: MD5 adata.txt = {} ", adatafile_hash_in.data());
   if (strcmp(adatafile_hash.c_str(), adatafile_hash_in.data()) == 0) {
-    logprintlnfmt("(pass)");
+    printlnlog("(pass)");
   } else {
-    logprintlnfmt("MISMATCH: MD5 adata.txt = {}", adatafile_hash);
+    printlnlog("MISMATCH: MD5 adata.txt = {}", adatafile_hash);
     return false;
   }
 
@@ -78,11 +78,11 @@ auto read_ratecoeff_dat(FILE* ratecoeff_file) -> bool {
   if (fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in.data()) != 1) {
     return false;
   }
-  logprintfmt("ratecoeff.dat: MD5 compositiondata.txt {} ", compositionfile_hash_in.data());
+  printlog("ratecoeff.dat: MD5 compositiondata.txt {} ", compositionfile_hash_in.data());
   if (strcmp(compositionfile_hash.c_str(), compositionfile_hash_in.data()) == 0) {
-    logprintlnfmt("(pass)");
+    printlnlog("(pass)");
   } else {
-    logprintlnfmt("\nMISMATCH: MD5 compositiondata.txt = {}", compositionfile_hash);
+    printlnlog("\nMISMATCH: MD5 compositiondata.txt = {}", compositionfile_hash);
     return false;
   }
 
@@ -92,11 +92,11 @@ auto read_ratecoeff_dat(FILE* ratecoeff_file) -> bool {
       if (fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in.data()) != 1) {
         return false;
       }
-      logprintfmt("ratecoeff.dat: MD5 {} = {} ", phixsdata_filenames[phixsver], phixsfile_hash_in.data());
+      printlog("ratecoeff.dat: MD5 {} = {} ", phixsdata_filenames[phixsver], phixsfile_hash_in.data());
       if (strcmp(phixsfile_hash[phixsver].data(), phixsfile_hash_in.data()) == 0) {
-        logprintlnfmt("(pass)");
+        printlnlog("(pass)");
       } else {
-        logprintlnfmt("\nMISMATCH: MD5 {} = {}", phixsdata_filenames[phixsver], phixsfile_hash[phixsver]);
+        printlnlog("\nMISMATCH: MD5 {} = {}", phixsdata_filenames[phixsver], phixsfile_hash[phixsver]);
         return false;
       }
     }
@@ -111,38 +111,38 @@ auto read_ratecoeff_dat(FILE* ratecoeff_file) -> bool {
   const int items_read = fscanf(ratecoeff_file, "%la %la %d %d %d %la\n", &in_T_min, &in_T_max, &in_tablesize,
                                 &in_nlines, &in_nbfcontinua, &in_ratecoeff_integral_accuracy);
   if (items_read != 6) {
-    logprintlnfmt("\nMISMATCH: error reading header line");
+    printlnlog("\nMISMATCH: error reading header line");
     return false;
   }
-  logprintfmt(
+  printlog(
       "ratecoeff.dat: Tmin {:g} Tmax {:g} TABLESIZE {} nlines {} nbfcontinua {} in_ratecoeff_integral_accuracy {:g} ",
       in_T_min, in_T_max, in_tablesize, in_nlines, in_nbfcontinua, in_ratecoeff_integral_accuracy);
 
   if (in_T_min != MINTEMP) {
-    logprintlnfmt("\nMISMATCH: this simulation has MINTEMP {:g}", MINTEMP);
+    printlnlog("\nMISMATCH: this simulation has MINTEMP {:g}", MINTEMP);
     return false;
   }
   if (in_T_max != MAXTEMP) {
-    logprintlnfmt("\nMISMATCH: this simulation has MAXTEMP {:g}", MAXTEMP);
+    printlnlog("\nMISMATCH: this simulation has MAXTEMP {:g}", MAXTEMP);
     return false;
   }
   if (in_tablesize != TABLESIZE) {
-    logprintlnfmt("\nMISMATCH: this simulation has TABLESIZE {}", TABLESIZE);
+    printlnlog("\nMISMATCH: this simulation has TABLESIZE {}", TABLESIZE);
     return false;
   }
   if (in_nlines != globals::nlines) {
-    logprintlnfmt("\nMISMATCH: this simulation has nlines {}", globals::nlines);
+    printlnlog("\nMISMATCH: this simulation has nlines {}", globals::nlines);
     return false;
   }
   if (in_nbfcontinua != globals::nbfcontinua) {
-    logprintlnfmt("\nMISMATCH: this simulation has nbfcontinua {}", globals::nbfcontinua);
+    printlnlog("\nMISMATCH: this simulation has nbfcontinua {}", globals::nbfcontinua);
     return false;
   }
   if (in_ratecoeff_integral_accuracy != RATECOEFF_INTEGRAL_ACCURACY) {
-    logprintlnfmt("\nMISMATCH: this simulation has RATECOEFF_INTEGRAL_ACCURACY {:g}", RATECOEFF_INTEGRAL_ACCURACY);
+    printlnlog("\nMISMATCH: this simulation has RATECOEFF_INTEGRAL_ACCURACY {:g}", RATECOEFF_INTEGRAL_ACCURACY);
     return false;
   }
-  logprintlnfmt("(pass)");
+  printlnlog("(pass)");
 
   // this is redundant if the adata and composition data matches, consider removing
   for (int element = 0; element < get_nelements(); element++) {
@@ -158,7 +158,7 @@ auto read_ratecoeff_dat(FILE* ratecoeff_file) -> bool {
       const int ionisinglevels = get_nlevels_ionising(element, ion);
       if (get_atomicnumber(element) != in_element || get_ionstage(element, ion) != in_ionstage ||
           nlevels != in_levels || ionisinglevels != in_ionisinglevels) {
-        logprintlnfmt(
+        printlnlog(
             "Levels or ionising levels count mismatch! element {} {} ionstage {} {} nlevels {} {} ionisinglevels {} {}",
             get_atomicnumber(element), in_element, get_ionstage(element, ion), in_ionstage, nlevels, in_levels,
             ionisinglevels, in_ionisinglevels);
@@ -167,7 +167,7 @@ auto read_ratecoeff_dat(FILE* ratecoeff_file) -> bool {
     }
   }
 
-  logprintlnfmt("Existing ratecoeff.dat is valid. Reading this file...");
+  printlnlog("Existing ratecoeff.dat is valid. Reading this file...");
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element) - 1;
     for (int ion = 0; ion < nions; ion++) {
@@ -196,7 +196,7 @@ auto read_ratecoeff_dat(FILE* ratecoeff_file) -> bool {
               if (in_corrphotoioncoeff >= 0) {
                 corrphotoioncoeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] = in_corrphotoioncoeff;
               } else {
-                logprintlnfmt(
+                printlnlog(
                     "ERROR: USE_LUT_PHOTOION is on, but there are no corrphotoioncoeff values in ratecoeff file");
                 std::abort();
               }
@@ -205,7 +205,7 @@ auto read_ratecoeff_dat(FILE* ratecoeff_file) -> bool {
               if (in_bfheating_coeff >= 0) {
                 bfheating_coeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] = in_bfheating_coeff;
               } else {
-                logprintlnfmt(
+                printlnlog(
                     "ERROR: USE_LUT_BFHEATING is on, but there are no bfheating_coeff values in the ratecoeff file");
                 std::abort();
               }
@@ -353,7 +353,7 @@ void precalculate_rate_coefficient_integrals() {
       const int atomic_number = get_atomicnumber(element);
       const int ionstage = get_ionstage(element, ion);
       const int nlevels = get_nlevels_ionising(element, ion);
-      logprintlnfmt("Performing rate integrals for Z = {}, ionstage {}...", atomic_number, ionstage);
+      printlnlog("Performing rate integrals for Z = {}, ionstage {}...", atomic_number, ionstage);
 
 #if !USE_SIMPSON_INTEGRATOR
       gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
@@ -361,7 +361,7 @@ void precalculate_rate_coefficient_integrals() {
 
       for (int level = 0; level < nlevels; level++) {
         if ((level > 0) && (level % 50 == 0)) {
-          logprintlnfmt("  completed up to level {} of {}", level, nlevels);
+          printlnlog("  completed up to level {} of {}", level, nlevels);
         }
 
         // coefficients are stored in node shared memory, so divide up the work on the node
@@ -400,13 +400,12 @@ void precalculate_rate_coefficient_integrals() {
                 integrator<alpha_sp_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
                                                    GSL_INTEG_GAUSS61, &alpha_sp, &error);
             if (status != 0 && (status != 18 || (error / alpha_sp) > epsrelwarning)) {
-              logprintlnfmt("alpha_sp integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status, alpha_sp,
-                            error);
+              printlnlog("alpha_sp integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status, alpha_sp, error);
             }
             alpha_sp *= FOURPI * sfac * phixstargetprobability;
 
             if (!std::isfinite(alpha_sp) || alpha_sp < 0) {
-              logprintlnfmt(
+              printlnlog(
                   "WARNING: alpha_sp was negative or non-finite for level {} Te {:g}. alpha_sp {:g} sfac {:g} "
                   "phixstargetindex {} phixstargetprobability {:g}",
                   level, T_e, alpha_sp, sfac, phixstargetindex, phixstargetprobability);
@@ -421,13 +420,13 @@ void precalculate_rate_coefficient_integrals() {
                                                            RATECOEFF_INTEGRAL_ACCURACY, GSL_INTEG_GAUSS61, &gammacorr,
                                                            &error);
               if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
-                logprintlnfmt("gammacorr integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status, gammacorr,
-                              error);
+                printlnlog("gammacorr integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status, gammacorr,
+                           error);
               }
               gammacorr *= FOURPI * phixstargetprobability;
               assert_always(gammacorr >= 0);
               if (gammacorr < 0) {
-                logprintlnfmt("WARNING: gammacorr was negative for level {}", level);
+                printlnlog("WARNING: gammacorr was negative for level {}", level);
                 gammacorr = 0;
               }
               corrphotoioncoeffs[bflutindex] = gammacorr;
@@ -441,12 +440,12 @@ void precalculate_rate_coefficient_integrals() {
                                                                   &this_bfheating_coeff, &error);
 
               if (status != 0 && (status != 18 || (error / this_bfheating_coeff) > epsrelwarning)) {
-                logprintlnfmt("bfheating_coeff integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status,
-                              this_bfheating_coeff, error);
+                printlnlog("bfheating_coeff integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status,
+                           this_bfheating_coeff, error);
               }
               this_bfheating_coeff *= FOURPI * phixstargetprobability;
               if (this_bfheating_coeff < 0) {
-                logprintlnfmt("WARNING: bfheating_coeff was negative for level {}", level);
+                printlnlog("WARNING: bfheating_coeff was negative for level {}", level);
                 this_bfheating_coeff = 0;
               }
               bfheating_coeffs[bflutindex] = this_bfheating_coeff;
@@ -458,12 +457,12 @@ void precalculate_rate_coefficient_integrals() {
                                                          RATECOEFF_INTEGRAL_ACCURACY, GSL_INTEG_GAUSS61,
                                                          &this_bfcooling_coeff, &error);
             if (status != 0 && (status != 18 || (error / this_bfcooling_coeff) > epsrelwarning)) {
-              logprintlnfmt("bfcooling_coeff integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status,
-                            this_bfcooling_coeff, error);
+              printlnlog("bfcooling_coeff integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status,
+                         this_bfcooling_coeff, error);
             }
             this_bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
             if (!std::isfinite(this_bfcooling_coeff) || this_bfcooling_coeff < 0) {
-              logprintlnfmt(
+              printlnlog(
                   "WARNING: bfcooling_coeff was negative or non-finite for level {} Te {:g}. bfcooling_coeff {:g} sfac "
                   "{:g} phixstargetindex {} phixstargetprobability {:g}",
                   level, T_e, this_bfcooling_coeff, sfac, phixstargetindex, phixstargetprobability);
@@ -522,17 +521,17 @@ void read_recombrate_file() {
   use_cellcache = false;
 
   if (!std::filesystem::exists("recombrates.txt")) {
-    logprintlnfmt("No recombrates.txt file found. Skipping recombination rate scaling...");
+    printlnlog("No recombrates.txt file found. Skipping recombination rate scaling...");
     return;
   }
 
-  logprintlnfmt("Reading recombination rate file (recombrates.txt)...");
+  printlnlog("Reading recombination rate file (recombrates.txt)...");
   auto recombrate_file = fstream_required("recombrates.txt", std::ios::in);
 
   const float Te_estimate = RECOMBCALIBRATION_T_ELEC;
   const double log_Te_estimate = log10(RECOMBCALIBRATION_T_ELEC);
 
-  logprintlnfmt("Calibrating recombination rates for a temperature of {:.1f} K", Te_estimate);
+  printlnlog("Calibrating recombination rates for a temperature of {:.1f} K", Te_estimate);
 
   struct RRCRow {
     double log_Te;
@@ -572,7 +571,7 @@ void read_recombrate_file() {
     if (element >= 0) {
       const int ion = upperionstage - get_ionstage(element, 0);  // the index of the upper ion
       if (ion > 0 && ion < get_nions(element)) {
-        logprintlnfmt("Z={} ionstage {}->{}", atomicnumber, upperionstage, upperionstage - 1);
+        printlnlog("Z={} ionstage {}->{}", atomicnumber, upperionstage, upperionstage - 1);
         assert_always(T_highestbelow.log_Te > 0);
         assert_always(T_lowestabove.log_Te > 0);
 
@@ -589,17 +588,17 @@ void read_recombrate_file() {
 
         double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative,
                                               printdebug, false, per_groundmultipletpop);
-        logprintlnfmt("              rrc: {:10.3e}", rrc);
+        printlnlog("              rrc: {:10.3e}", rrc);
 
         if (input_rrc_low_n >= 0)  // if it's < 0, ignore it
         {
-          logprintlnfmt("  input_rrc_low_n: {:10.3e}", input_rrc_low_n);
+          printlnlog("  input_rrc_low_n: {:10.3e}", input_rrc_low_n);
 
           const double phixs_multiplier = input_rrc_low_n / rrc;
           if (phixs_multiplier < 0.05 || phixs_multiplier >= 2.0) {
-            logprintlnfmt("    Not scaling phixs of all levels by {:.3f} (because < 0.05 or >= 2.0)", phixs_multiplier);
+            printlnlog("    Not scaling phixs of all levels by {:.3f} (because < 0.05 or >= 2.0)", phixs_multiplier);
           } else {
-            logprintlnfmt("    scaling phixs of all levels by {:.3f}", phixs_multiplier);
+            printlnlog("    scaling phixs of all levels by {:.3f}", phixs_multiplier);
 
             for (int level = 0; level < nlevels; level++) {
               scale_level_phixs(element, ion - 1, level, phixs_multiplier);
@@ -607,24 +606,24 @@ void read_recombrate_file() {
 
             rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative,
                                            printdebug, false, per_groundmultipletpop);
-            logprintlnfmt("              rrc: {:10.3e}", rrc);
+            printlnlog("              rrc: {:10.3e}", rrc);
           }
         }
 
         // hopefully the RRC now matches the low_n value well, if it was defined
         // Next, use the superlevel recombination rates to make up the excess needed to reach the total RRC
 
-        logprintlnfmt("  input_rrc_total: {:10.3e}", input_rrc_total);
+        printlnlog("  input_rrc_total: {:10.3e}", input_rrc_total);
 
         if (rrc < input_rrc_total) {
           const double rrc_superlevel =
               calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, printdebug,
                                        true, per_groundmultipletpop);
-          logprintlnfmt("  rrc(superlevel): {:10.3e}", rrc_superlevel);
+          printlnlog("  rrc(superlevel): {:10.3e}", rrc_superlevel);
 
           if (rrc_superlevel > 0) {
             const double phixs_multiplier_superlevel = 1.0 + ((input_rrc_total - rrc) / rrc_superlevel);
-            logprintlnfmt("    scaling phixs of levels in the superlevel by {:.3f}", phixs_multiplier_superlevel);
+            printlnlog("    scaling phixs of levels in the superlevel by {:.3f}", phixs_multiplier_superlevel);
             assert_always(phixs_multiplier_superlevel >= 0);
 
             const int first_superlevel_level = get_nlevels_excited_nlte(element, ion - 1) + 1;
@@ -632,9 +631,9 @@ void read_recombrate_file() {
               scale_level_phixs(element, ion - 1, level, phixs_multiplier_superlevel);
             }
           } else {
-            logprintlnfmt("There is no superlevel recombination, so multiplying all levels instead");
+            printlnlog("There is no superlevel recombination, so multiplying all levels instead");
             const double phixs_multiplier = input_rrc_total / rrc;
-            logprintlnfmt("    scaling phixs of all levels by {:.3f}", phixs_multiplier);
+            printlnlog("    scaling phixs of all levels by {:.3f}", phixs_multiplier);
             assert_always(phixs_multiplier >= 0);
 
             for (int level = 0; level < nlevels; level++) {
@@ -642,9 +641,9 @@ void read_recombrate_file() {
             }
           }
         } else {
-          logprintlnfmt("rrc >= input_rrc_total!");
+          printlnlog("rrc >= input_rrc_total!");
           const double phixs_multiplier = input_rrc_total / rrc;
-          logprintlnfmt("    scaling phixs of all levels by {:.3f}", phixs_multiplier);
+          printlnlog("    scaling phixs of all levels by {:.3f}", phixs_multiplier);
           assert_always(phixs_multiplier >= 0);
 
           for (int level = 0; level < nlevels; level++) {
@@ -654,7 +653,7 @@ void read_recombrate_file() {
 
         rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, printdebug,
                                        false, per_groundmultipletpop);
-        logprintlnfmt("              rrc: {:10.3e}", rrc);
+        printlnlog("              rrc: {:10.3e}", rrc);
       }
     }
   }
@@ -823,7 +822,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
 #endif
 
   if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
-    logprintlnfmt(
+    printlnlog(
         "corrphotoioncoeff gsl integrator warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
         "integral {:g} error {:g}",
         status, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion), level,
@@ -928,7 +927,7 @@ void setup_photoion_luts() {
   }
   MPI_Barrier(globals::mpi_comm_node);
 
-  logprintlnfmt(
+  printlnlog(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
       "corrphotoioncoeff/bfheating if enabled) occupy {:.3f} MB",
       mem_usage_photoionluts / 1024. / 1024.);
@@ -1090,7 +1089,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
       const double alpha_ion_contrib = alpha_level * nnupperlevel / nnupperion;
       alpha += alpha_ion_contrib;
       if (printdebug && alpha_ion_contrib > 0. && lower < 50) {
-        logprintlnfmt(
+        printlnlog(
             "recomb: Z={} ionstage {}->{} upper+1 {:5} lower+1 {:5} alpha_level {:7.2e} alpha_ion_contrib {:7.2e} sum "
             "{:7.2e} nnlevel {:7.2e} nnionfrac {:7.2e}",
             get_atomicnumber(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upper + 1,
@@ -1099,8 +1098,8 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
     }
   }
   if (printdebug) {
-    logprintlnfmt("recomb: Z={:2} ionstage {}->{} upper+1 [all] lower+1 [all] Alpha {:g}\n", get_atomicnumber(element),
-                  get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), alpha);
+    printlnlog("recomb: Z={:2} ionstage {}->{} upper+1 [all] lower+1 [all] Alpha {:g}\n", get_atomicnumber(element),
+               get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), alpha);
   }
   return alpha;
 }
@@ -1130,12 +1129,11 @@ void ratecoefficients_init() {
     if (ratecoeff_file != nullptr) {
       ratecoeff_match = read_ratecoeff_dat(ratecoeff_file);
       if (!ratecoeff_match) {
-        logprintlnfmt(
-            "[info] ratecoefficients_init: ratecoeff.dat does not match current simulation. Recalculating...");
+        printlnlog("[info] ratecoefficients_init: ratecoeff.dat does not match current simulation. Recalculating...");
       }
       fclose(ratecoeff_file);
     } else {
-      logprintlnfmt("[info] ratecoefficients_init: ratecoeff.dat file not found. Creating a new one...");
+      printlnlog("[info] ratecoefficients_init: ratecoeff.dat file not found. Creating a new one...");
     }
   }
   MPI_Barrier(MPI_COMM_WORLD);
@@ -1397,7 +1395,7 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
       if (printdebug && (gamma_ion_contribution_integral > 0. || gamma_ion_contribution_used > 0.) && lower < 20) {
         const double threshold_angstroms =
             1e8 * CLIGHT / (get_phixs_threshold(element, lowerion, lower, phixstargetindex) / H);
-        logprintlnfmt(
+        printlnlog(
             "Gamma_R: Z={} ionstage {}->{} lower+1 {:5} upper+1 {:5} lambda_threshold {:7.1f} Gamma_integral {:7.2e} "
             "Gamma_bfest {:7.2e} Gamma_used {:7.2e} Gamma_used_sum {:7.2e}",
             get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element, lowerion + 1), lower + 1,
@@ -1407,9 +1405,9 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
     }
   }
   if (printdebug) {
-    logprintlnfmt("Gamma_R: Z={} ionstage {}->{} lower+1 [all] upper+1 [all] Gamma_used_ion {:7.2e}",
-                  get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element, lowerion + 1),
-                  gamma_ion_used);
+    printlnlog("Gamma_R: Z={} ionstage {}->{} lower+1 [all] upper+1 [all] Gamma_used_ion {:7.2e}",
+               get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element, lowerion + 1),
+               gamma_ion_used);
   }
 
   return gamma_ion;

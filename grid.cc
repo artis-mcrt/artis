@@ -151,7 +151,7 @@ void set_initelectronfrac(const int modelgridindex, const float electronfrac) {
 
 void read_possible_yefile() {
   if (!std::filesystem::exists("Ye.txt")) {
-    logprintlnfmt("Ye.txt not found");
+    printlnlog("Ye.txt not found");
     return;
   }
 
@@ -178,7 +178,7 @@ void allocate_initradiobund() {
   const auto totalradioabundcount = (npts_model + 1) * num_nuclides;
   std::tie(initnucmassfrac_allcells, win_initnucmassfrac_allcells) =
       MPI_shared_malloc_span_keepwin<float>(totalradioabundcount);
-  logprintlnfmt(
+  printlnlog(
       "[info] mem_usage: radioabundance data for {} nuclides for {} cells occupies {:.3f} MB (node shared memory)",
       num_nuclides, npts_model, static_cast<double>(totalradioabundcount * sizeof(float)) / 1024. / 1024.);
 
@@ -214,7 +214,7 @@ auto get_cell_r_inner(const int cellindex) -> double {
 
 void set_ffegrp(const int modelgridindex, float x) {
   if (!(x >= 0.)) {
-    logprintlnfmt("WARNING: Fe-group mass fraction {:g} is negative in cell {}", x, modelgridindex);
+    printlnlog("WARNING: Fe-group mass fraction {:g} is negative in cell {}", x, modelgridindex);
     assert_always(x > -1e-6);
     x = 0.;
   }
@@ -237,8 +237,8 @@ void set_modelinitnucmassfrac(const int modelgridindex, const int nucindex, floa
   // initnucmassfrac array is in node shared memory
   assert_always(nucindex >= 0);
   if (!(abund >= 0.)) {
-    logprintlnfmt("WARNING: nuclear mass fraction for nucindex {} = {:g} is negative in cell {}", nucindex, abund,
-                  modelgridindex);
+    printlnlog("WARNING: nuclear mass fraction for nucindex {} = {:g} is negative in cell {}", nucindex, abund,
+               modelgridindex);
     assert_always(abund > -1e-6);
     abund = 0.;
   }
@@ -275,11 +275,10 @@ void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int 
   if (massfrac_untrackedstable < 0.) {
     //  allow some roundoff error before we complain
     if ((isofracsum - elemabundance - 1.) > 1e-4 && std::abs(isofracsum - elemabundance) > 1e-6) {
-      logprintlnfmt("WARNING: cell {} Z={} element abundance is less than the sum of its radioisotope abundances", mgi,
-                    atomic_number);
-      logprintlnfmt("  massfrac(Z) {:g} massfrac_radioisotopes(Z) {:g}", elemabundance, isofracsum);
-      logprintlnfmt("  increasing elemental abundance to {:g} and setting stable isotopic abundance to zero",
-                    isofracsum);
+      printlnlog("WARNING: cell {} Z={} element abundance is less than the sum of its radioisotope abundances", mgi,
+                 atomic_number);
+      printlnlog("  massfrac(Z) {:g} massfrac_radioisotopes(Z) {:g}", elemabundance, isofracsum);
+      printlnlog("  increasing elemental abundance to {:g} and setting stable isotopic abundance to zero", isofracsum);
     }
     // result is allowed to be slightly negative due to roundoff error
     assert_always(massfrac_untrackedstable >= -1e-2);
@@ -488,13 +487,13 @@ void allocate_nonemptymodelcells() {
   // barrier to make sure node master has set abundance values to node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
 
-  logprintlnfmt("[info] mem_usage: the modelgrid array occupies {:.3f} MB",
-                (get_npts_model() + 1) * sizeof(modelgrid[0]) / 1024. / 1024.);
+  printlnlog("[info] mem_usage: the modelgrid array occupies {:.3f} MB",
+             (get_npts_model() + 1) * sizeof(modelgrid[0]) / 1024. / 1024.);
 
-  logprintlnfmt("There are {} modelgrid cells with associated propagation cells (nonempty_npts_model)",
-                nonempty_npts_model);
+  printlnlog("There are {} modelgrid cells with associated propagation cells (nonempty_npts_model)",
+             nonempty_npts_model);
 
-  logprintlnfmt(
+  printlnlog(
       "[info] mem_usage: NLTE populations for all allocated cells occupy a total of {:.3f} MB (node shared memory)",
       get_nonempty_npts_model() * globals::total_nlte_levels * sizeof(double) / 1024. / 1024.);
 }
@@ -560,7 +559,7 @@ void map_modeltogrid_direct() {
 void read_abundances() {
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
-  logprintfmt("reading abundances.txt...");
+  printlog("reading abundances.txt...");
   const bool threedimensional = (get_model_type() == GridType::CARTESIAN3D);
 
   // Open the abundances file
@@ -629,7 +628,7 @@ void read_abundances() {
 
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
-  logprintlnfmt("done.");
+  printlnlog("done.");
 }
 
 void parse_model_headerline(const std::string& line, std::vector<int>& zlist, std::vector<int>& alist,
@@ -727,8 +726,8 @@ void read_model_radioabundances(std::istream& fmodel, std::istringstream& ssline
       ;
     } else {
       if (mgi == 0) {
-        logprintlnfmt("WARNING: ignoring column '{}' nucindex {} valuein[mgi=0] {:g}", colnames[i], nucindexlist[i],
-                      valuein);
+        printlnlog("WARNING: ignoring column '{}' nucindex {} valuein[mgi=0] {:g}", colnames[i], nucindexlist[i],
+                   valuein);
       }
     }
   }
@@ -775,7 +774,7 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
   int colcount = get_token_count(line);
   const bool one_line_per_cell = (colcount >= get_token_count(headerline));
 
-  logprintlnfmt("model.txt has {} line per cell format", one_line_per_cell ? "one" : "two");
+  printlnlog("model.txt has {} line per cell format", one_line_per_cell ? "one" : "two");
 
   if (!one_line_per_cell) {  // add columns from the second line
     std::getline(fmodel, line);
@@ -791,9 +790,9 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
   fmodel.seekg(pos_data_start);  // get back to start of data
 
   if (header_specified) {
-    logprintlnfmt("model.txt has header line: {}", headerline);
+    printlnlog("model.txt has header line: {}", headerline);
   } else {
-    logprintlnfmt("model.txt has no header line. Using default: {}", headerline);
+    printlnlog("model.txt has no header line. Using default: {}", headerline);
   }
 
   parse_model_headerline(headerline, zlist, alist, colnames);
@@ -855,7 +854,7 @@ void calc_modelinit_totmassradionuclides() {
 void read_grid_restart_data(const int timestep) {
   const auto filename = std::format("gridsave_ts{}.tmp", timestep);
 
-  logprintlnfmt("READIN GRID SNAPSHOT from {}", filename);
+  printlnlog("READIN GRID SNAPSHOT from {}", filename);
   FILE* gridsave_file = fopen_required(filename, "r");
 
   int ntimesteps_in = -1;
@@ -903,8 +902,8 @@ void read_grid_restart_data(const int timestep) {
                          &modelgrid[nonemptymgi].nnetot) == 12);
 
     if (mgi_in != mgi) {
-      logprintlnfmt("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort");
-      logprintlnfmt("[fatal] read_grid_restart_data: read cellnumber {}, expected cellnumber {}", mgi_in, mgi);
+      printlnlog("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort");
+      printlnlog("[fatal] read_grid_restart_data: read cellnumber {}, expected cellnumber {}", mgi_in, mgi);
       assert_always(mgi_in == mgi);
     }
 
@@ -954,7 +953,7 @@ void assign_initial_temperatures() {
   // according to the local energy density resulting from the 56Ni decay.
   // The dilution factor is W=1 in LTE.
 
-  logprintlnfmt("Assigning initial temperatures...");
+  printlnlog("Assigning initial temperatures...");
 
   const double tstart = globals::timesteps[0].mid;
   int cells_below_mintemp = 0;
@@ -979,7 +978,7 @@ void assign_initial_temperatures() {
       T_initial = MAXTEMP;
       cells_above_maxtemp++;
     } else if (!std::isfinite(T_initial)) {
-      logprintlnfmt("mgi {}: T_initial of {:g} is infinite!", mgi, T_initial);
+      printlnlog("mgi {}: T_initial of {:g} is infinite!", mgi, T_initial);
     }
 
     if (globals::rank_in_node == 0) {
@@ -993,8 +992,8 @@ void assign_initial_temperatures() {
       modelgrid[nonemptymgi].thick = 0;
     }
   }
-  logprintlnfmt("  cells below MINTEMP {:g}: {}", MINTEMP, cells_below_mintemp);
-  logprintlnfmt("  cells above MAXTEMP {:g}: {}", MAXTEMP, cells_above_maxtemp);
+  printlnlog("  cells below MINTEMP {:g}: {}", MINTEMP, cells_below_mintemp);
+  printlnlog("  cells above MAXTEMP {:g}: {}", MAXTEMP, cells_above_maxtemp);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -1083,7 +1082,7 @@ void setup_grid_cartesian_3d() {
   // vmax is per coordinate, but the simulation volume corners will
   // have a higher expansion velocity than the sides
   const double vmax_corner = sqrt(3 * pow(globals::vmax, 2));
-  logprintlnfmt("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
+  printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   if (!FORCE_SPHERICAL_ESCAPE_SURFACE) {
     assert_always(vmax_corner < CLIGHT);
   }
@@ -1145,7 +1144,7 @@ void setup_grid_spherical_1d() {
 
 void setup_grid_cylindrical_2d() {
   const double vmax_corner = sqrt(2 * pow(globals::vmax, 2));
-  logprintlnfmt("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
+  printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   assert_always(vmax_corner < CLIGHT);
 
   assert_always(get_model_type() == GridType::CYLINDRICAL2D);
@@ -1443,7 +1442,7 @@ auto get_coordcellindexincrement(const int axis) -> int {
 
     default:
       if constexpr (TESTMODE) {
-        logprintfmt("invalid coordinate index {}", axis);
+        printlog("invalid coordinate index {}", axis);
         assert_testmodeonly(false);
       } else {
         __builtin_unreachable();
@@ -1468,7 +1467,7 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
 
       default:
         if constexpr (TESTMODE) {
-          logprintfmt("invalid coordinate index {}", axis);
+          printlog("invalid coordinate index {}", axis);
           assert_testmodeonly(false);
         } else {
           __builtin_unreachable();
@@ -1583,7 +1582,7 @@ void set_Te(const int nonemptymgi, const float Te) {
     const double nu_peak = 5.879e10 * Te;
     if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
       const auto modelgridindex = get_mgi_of_nonemptymgi(nonemptymgi);
-      logprintlnfmt(
+      printlnlog(
           "[warning] modelgridindex {} B_planck(Te={:g} K) peak at {:g} Hz is outside frequency range NU_MIN_R {:g} "
           "NU_MAX_R {:g}",
           modelgridindex, Te, nu_peak, NU_MIN_R, NU_MAX_R);
@@ -1771,7 +1770,7 @@ void calculate_kappagrey() {
       } else if (get_rho_tmin(mgi) == 0.) {
         set_kappagrey(nonemptymgi, 0.);
       } else if (get_rho_tmin(mgi) < 0.) {
-        logprintlnfmt("Error: negative density. Abort.");
+        printlnlog("Error: negative density. Abort.");
         std::abort();
       }
       opcase3_sum += get_kappagrey(nonemptymgi) * get_rho_tmin(mgi);
@@ -1844,7 +1843,7 @@ void calculate_kappagrey() {
           kappa *= pow(T_rad / 2000., 5.);
         }
       } else {
-        logprintlnfmt("Unknown opacity case. Abort.");
+        printlnlog("Unknown opacity case. Abort.");
         std::abort();
       }
 
@@ -1852,7 +1851,7 @@ void calculate_kappagrey() {
     } else if (get_rho_tmin(mgi) == 0.) {
       set_kappagrey(nonemptymgi, 0.);
     } else if (get_rho_tmin(mgi) < 0.) {
-      logprintlnfmt("Error: negative density. Abort.");
+      printlnlog("Error: negative density. Abort.");
       assert_always(false);
     }
 
@@ -1860,7 +1859,7 @@ void calculate_kappagrey() {
     check2 = check2 + get_rho_tmin(mgi);
   }
 
-  logprintlnfmt("Grey normalisation check: {:g}", check1 / check2);
+  printlnlog("Grey normalisation check: {:g}", check1 / check2);
 }
 
 void read_ejecta_model() {
@@ -1877,7 +1876,7 @@ void read_ejecta_model() {
   if (ssline >> npts_1) {
     // second number on the line for 2D means the line was n_r n_z
     detected_dim = GridType::CYLINDRICAL2D;
-    logprintlnfmt("Detected 2D model");
+    printlnlog("Detected 2D model");
     ssline >> npts_1;  // r and z (cylindrical polar)
     npts_model = npts_0 * npts_1;
   } else {
@@ -1905,14 +1904,14 @@ void read_ejecta_model() {
       if (detected_dim != GridType::CYLINDRICAL2D) {
         assert_always(!detected_dim.has_value());
         detected_dim = GridType::CARTESIAN3D;
-        logprintlnfmt("Detected 3D model");
+        printlnlog("Detected 3D model");
       }
     }
   }
   if (!detected_dim.has_value()) {
     assert_always(!detected_dim.has_value());
     detected_dim = GridType::SPHERICAL1D;
-    logprintlnfmt("Detected 1D model");
+    printlnlog("Detected 1D model");
     fmodel.seekg(pos_after_t_model);
   }
 
@@ -1953,7 +1952,7 @@ void read_ejecta_model() {
       if (ssline >> cellnumberin >> vout_kmps >> log_rho) {
         if (mgi == 0) {
           first_cellindex = cellnumberin;
-          logprintlnfmt("first_cellindex {}", first_cellindex);
+          printlnlog("first_cellindex {}", first_cellindex);
         }
         assert_always(cellnumberin == mgi + first_cellindex);
 
@@ -1962,8 +1961,8 @@ void read_ejecta_model() {
         const auto rho_tmin = static_cast<float>(pow(10., log_rho) * pow(t_model / globals::tmin, 3));
         set_rho_tmin(mgi, rho_tmin);
       } else {
-        logprintlnfmt("Unexpected number of values in model.txt");
-        logprintlnfmt("line: {}", line);
+        printlnlog("Unexpected number of values in model.txt");
+        printlnlog("line: {}", line);
         assert_always(false);
       }
       read_model_radioabundances(fmodel, ssline, mgi, true, colnames, nucindexlist, one_line_per_cell);
@@ -1975,7 +1974,7 @@ void read_ejecta_model() {
     }
 
     if (mgi != get_npts_model()) {
-      logprintlnfmt("ERROR in model.txt. Found only {} cells instead of {} expected.", mgi - 1, get_npts_model());
+      printlnlog("ERROR in model.txt. Found only {} cells instead of {} expected.", mgi - 1, get_npts_model());
       std::abort();
     }
 
@@ -2014,7 +2013,7 @@ void read_ejecta_model() {
       assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
 
       if (rho_tmodel < 0) {
-        logprintlnfmt("negative input density {:g} {}", rho_tmodel, mgi);
+        printlnlog("negative input density {:g} {}", rho_tmodel, mgi);
         std::abort();
       }
 
@@ -2028,7 +2027,7 @@ void read_ejecta_model() {
     }
 
     if (mgi != get_npts_model()) {
-      logprintlnfmt("ERROR in model.txt. Found {} only cells instead of {} expected.", mgi - 1, get_npts_model());
+      printlnlog("ERROR in model.txt. Found {} only cells instead of {} expected.", mgi - 1, get_npts_model());
       std::abort();
     }
   } else if (get_model_type() == GridType::CARTESIAN3D) {
@@ -2069,7 +2068,7 @@ void read_ejecta_model() {
       assert_always(cellnumberin == mgi + first_cellindex);
 
       if (mgi % (ncoord_model[1] * ncoord_model[2]) == 0) {
-        logprintlnfmt("read up to cell mgi {}", mgi);
+        printlnlog("read up to cell mgi {}", mgi);
       }
 
       // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
@@ -2091,7 +2090,7 @@ void read_ejecta_model() {
       }
 
       if (rho_model < 0) {
-        logprintlnfmt("negative input density {:g} {}", rho_model, mgi);
+        printlnlog("negative input density {:g} {}", rho_model, mgi);
         std::abort();
       }
 
@@ -2109,47 +2108,45 @@ void read_ejecta_model() {
       mgi++;
     }
     if (mgi != npts_model) {
-      logprintlnfmt("ERROR in model.txt. Found {} cells instead of {} expected.", mgi, npts_model);
+      printlnlog("ERROR in model.txt. Found {} cells instead of {} expected.", mgi, npts_model);
       std::abort();
     }
 
     //   assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
     if (posmatch_xyz) {
-      logprintlnfmt(
-          "Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.");
+      printlnlog("Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.");
     }
     if (posmatch_zyx) {
-      logprintlnfmt(
-          "Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.");
+      printlnlog("Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.");
     }
 
     if (!posmatch_xyz && !posmatch_zyx) {
-      logprintlnfmt(
+      printlnlog(
           "WARNING: Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
           "order.");
     }
 
-    logprintlnfmt("min_den {:g} [g/cm3]", min_den);
+    printlnlog("min_den {:g} [g/cm3]", min_den);
   }
 
   assert_always(get_npts_model() ==
                 std::max(1, ncoord_model[0]) * std::max(1, ncoord_model[1]) * std::max(1, ncoord_model[2]));
-  logprintlnfmt("npts_model: {}", get_npts_model());
+  printlnlog("npts_model: {}", get_npts_model());
   globals::rmax = globals::vmax * globals::tmin;
-  logprintlnfmt("vmax {:g} [cm/s] ({:.2f}c)", globals::vmax, globals::vmax / CLIGHT);
+  printlnlog("vmax {:g} [cm/s] ({:.2f}c)", globals::vmax, globals::vmax / CLIGHT);
   assert_always(globals::vmax < CLIGHT);
-  logprintlnfmt("tmin {:g} [s] = {:.2f} [d]", globals::tmin, globals::tmin / 86400.);
-  logprintlnfmt("rmax {:g} [cm] (at t=tmin)", globals::rmax);
+  printlnlog("tmin {:g} [s] = {:.2f} [d]", globals::tmin, globals::tmin / 86400.);
+  printlnlog("rmax {:g} [cm] (at t=tmin)", globals::rmax);
 
   calc_modelinit_totmassradionuclides();
 
-  logprintlnfmt("Total input model mass: {:9.3e} [Msun]", mtot_input / MSUN);
-  logprintfmt("Nuclide masses at t=t_model_init [Msun]:");
-  logprintlnfmt("  56Ni: {:9.3e}  56Co: {:9.3e}  52Fe: {:9.3e}  48Cr: {:9.3e}",
-                get_totmassradionuclide_tmodel(28, 56) / MSUN, get_totmassradionuclide_tmodel(27, 56) / MSUN,
-                get_totmassradionuclide_tmodel(26, 52) / MSUN, get_totmassradionuclide_tmodel(24, 48) / MSUN);
-  logprintlnfmt("  Fe-group: {:9.3e}  57Ni: {:9.3e}  57Co: {:9.3e}", mfegroup / MSUN,
-                get_totmassradionuclide_tmodel(28, 57) / MSUN, get_totmassradionuclide_tmodel(27, 57) / MSUN);
+  printlnlog("Total input model mass: {:9.3e} [Msun]", mtot_input / MSUN);
+  printlog("Nuclide masses at t=t_model_init [Msun]:");
+  printlnlog("  56Ni: {:9.3e}  56Co: {:9.3e}  52Fe: {:9.3e}  48Cr: {:9.3e}",
+             get_totmassradionuclide_tmodel(28, 56) / MSUN, get_totmassradionuclide_tmodel(27, 56) / MSUN,
+             get_totmassradionuclide_tmodel(26, 52) / MSUN, get_totmassradionuclide_tmodel(24, 48) / MSUN);
+  printlnlog("  Fe-group: {:9.3e}  57Ni: {:9.3e}  57Co: {:9.3e}", mfegroup / MSUN,
+             get_totmassradionuclide_tmodel(28, 57) / MSUN, get_totmassradionuclide_tmodel(27, 57) / MSUN);
 
   read_possible_yefile();
 }
@@ -2158,7 +2155,7 @@ void write_grid_restart_data(const int timestep) {
   const auto filename = std::format("gridsave_ts{}.tmp", timestep);
 
   const auto sys_time_start_write_restart = std::time(nullptr);
-  logprintfmt("Write grid restart data to {}...", filename);
+  printlog("Write grid restart data to {}...", filename);
 
   FILE* gridsave_file = fopen_required(filename, "w");
 
@@ -2206,7 +2203,7 @@ void write_grid_restart_data(const int timestep) {
   nonthermal::write_restart_data(gridsave_file);
   nltepop_write_restart_data(gridsave_file);
   fclose(gridsave_file);
-  logprintlnfmt("done in {} seconds.", std::time(nullptr) - sys_time_start_write_restart);
+  printlnlog("done in {} seconds.", std::time(nullptr) - sys_time_start_write_restart);
 }
 
 auto get_nstart(const int rank) -> int {
@@ -2249,18 +2246,17 @@ void init_grid(const int my_rank) {
   } else if (GRID_TYPE == GridType::SPHERICAL1D) {
     setup_grid_spherical_1d();
   } else {
-    logprintfmt("[fatal] grid_init: Error: Unknown grid type. Abort.");
+    printlog("[fatal] grid_init: Error: Unknown grid type. Abort.");
     std::abort();
   }
   propcell_mgi.resize(ngrid, -1);
 
-  logprintlnfmt("propagation grid: {}-dimensional {}", get_ndim(GRID_TYPE), get_grid_type_name(GRID_TYPE));
+  printlnlog("propagation grid: {}-dimensional {}", get_ndim(GRID_TYPE), get_grid_type_name(GRID_TYPE));
 
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
-    logprintlnfmt("    coordinate {} '{}': cells have {} position values", d, get_coordlabel(GRID_TYPE, d),
-                  ncoordgrid[d]);
+    printlnlog("    coordinate {} '{}': cells have {} position values", d, get_coordlabel(GRID_TYPE, d), ncoordgrid[d]);
   }
-  logprintlnfmt("    total propagation cells: {}", ngrid);
+  printlnlog("    total propagation cells: {}", ngrid);
 
   // Now set up the density in each cell.
 
@@ -2270,7 +2266,7 @@ void init_grid(const int my_rank) {
   // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(28, 56) * 3000e-8 * globals::timesteps[m].mid;
   globals::rho_crit =
       ME * CLIGHT * decay::nucmass(28, 56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
-  logprintlnfmt("grid_init: rho_crit = {:g} [g/cm3]", globals::rho_crit);
+  printlnlog("grid_init: rho_crit = {:g} [g/cm3]", globals::rho_crit);
 
   if (get_model_type() == GRID_TYPE) {
     if (get_model_type() == GridType::CARTESIAN3D) {
@@ -2287,7 +2283,7 @@ void init_grid(const int my_rank) {
     assert_always(GRID_TYPE == GridType::CARTESIAN3D);
     map_2dmodelto3dgrid();
   } else {
-    logprintfmt("[fatal] grid_init: Error: Unknown density type. Abort.");
+    printlog("[fatal] grid_init: Error: Unknown density type. Abort.");
     std::abort();
   }
 
@@ -2354,8 +2350,8 @@ void init_grid(const int my_rank) {
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     mtot_mapped += get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi);
   }
-  logprintlnfmt("Total grid-mapped mass: {:9.3e} [Msun] ({:.1f}% of input mass)", mtot_mapped / MSUN,
-                mtot_mapped / mtot_input * 100.);
+  printlnlog("Total grid-mapped mass: {:9.3e} [Msun] ({:.1f}% of input mass)", mtot_mapped / MSUN,
+             mtot_mapped / mtot_input * 100.);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -2431,17 +2427,17 @@ auto get_totmassradionuclide_tmodel(const int z, const int a) -> double {
       }
 
       if (isoutside_error) {
-        logprintlnfmt(
+        printlnlog(
             "[ERROR] packet outside coord {} {}{} boundary of cell {}. vel {:g} initpos {:g} cellcoordmin {:g}, "
             "cellcoordmax {:g}",
             d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(GRID_TYPE, d), cellindex,
             pktvelgridcoord[d], pktposgridcoord[d], grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart,
             cellcoordmax[d] / globals::tmin * tstart);
-        logprintlnfmt("globals::tmin {:g} tstart {:g} tstart/globals::tmin {:g}", globals::tmin, tstart,
-                      tstart / globals::tmin);
-        logprintlnfmt(" delta {:g}", delta);
+        printlnlog("globals::tmin {:g} tstart {:g} tstart/globals::tmin {:g}", globals::tmin, tstart,
+                   tstart / globals::tmin);
+        printlnlog(" delta {:g}", delta);
 
-        logprintlnfmt("packet dir [{:g}, {:g}, {:g}]", dir[0], dir[1], dir[2]);
+        printlnlog("packet dir [{:g}, {:g}, {:g}]", dir[0], dir[1], dir[2]);
         assert_always(false);
       }
     }
@@ -2603,19 +2599,19 @@ auto get_totmassradionuclide_tmodel(const int z, const int a) -> double {
 
   if constexpr (TESTMODE) {
     if (snext == -1) {
-      logprintlnfmt("Something wrong in boundary crossing - didn't find anything.");
-      logprintlnfmt("packet cell {}", cellindex);
-      logprintlnfmt("globals::tmin {:g} tstart {:g}", globals::tmin, tstart);
+      printlnlog("Something wrong in boundary crossing - didn't find anything.");
+      printlnlog("packet cell {}", cellindex);
+      printlnlog("globals::tmin {:g} tstart {:g}", globals::tmin, tstart);
       for (int d2 = 0; d2 < 3; d2++) {
-        logprintlnfmt("coord {}: initpos {:g} dir {:g}", d2, pos[d2], dir[d2]);
+        printlnlog("coord {}: initpos {:g} dir {:g}", d2, pos[d2], dir[d2]);
       }
-      logprintlnfmt("|initpos| {:g} |dir| {:g} |pos.dir| {:g}", vec_len(pos), vec_len(dir), dot(pos, dir));
+      printlnlog("|initpos| {:g} |dir| {:g} |pos.dir| {:g}", vec_len(pos), vec_len(dir), dot(pos, dir));
       for (int d2 = 0; d2 < get_ndim(GRID_TYPE); d2++) {
-        logprintlnfmt("coord {}: cellcoordmin {:g} cellcoordmax {:g}", d2,
-                      grid::get_cellcoordmin(cellindex, d2) * tstart / globals::tmin,
-                      cellcoordmax[d2] * tstart / globals::tmin);
+        printlnlog("coord {}: cellcoordmin {:g} cellcoordmax {:g}", d2,
+                   grid::get_cellcoordmin(cellindex, d2) * tstart / globals::tmin,
+                   cellcoordmax[d2] * tstart / globals::tmin);
       }
-      logprintlnfmt("tstart {:g}", tstart);
+      printlnlog("tstart {:g}", tstart);
     }
   }
 

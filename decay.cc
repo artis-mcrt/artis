@@ -169,17 +169,17 @@ MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
   return nuclides[nucindex].meanlife;
 }
 
-void printout_nuclidename(const int z, const int a) { logprintfmt("(Z={}){}{}", z, get_elname(z), a); }
+void printout_nuclidename(const int z, const int a) { printlog("(Z={}){}{}", z, get_elname(z), a); }
 
 void printout_nuclidemeanlife(const int z, const int a) {
   const int nucindex = get_nucindex_or_neg_one(z, a);
   const bool exists = (nucindex >= 0);
   if (exists && get_meanlife(nucindex) > 0.) {
-    logprintfmt("[tau {:.1e}s]", get_meanlife(nucindex));
+    printlog("[tau {:.1e}s]", get_meanlife(nucindex));
   } else if (exists) {
-    logprintfmt("[stable,in_net]");
+    printlog("[stable,in_net]");
   } else {
-    logprintfmt("[stable,offnet]");
+    printlog("[stable,offnet]");
   }
 }
 
@@ -261,23 +261,23 @@ void printout_nuclidemeanlife(const int z, const int a) {
 void printout_decaytype(const int decaytype) {
   switch (decaytype) {
     case decaytypes::DECAYTYPE_ALPHA: {
-      logprintfmt("alpha");
+      printlog("alpha");
       break;
     }
     case decaytypes::DECAYTYPE_BETAPLUS: {
-      logprintfmt("beta+");
+      printlog("beta+");
       break;
     }
     case decaytypes::DECAYTYPE_ELECTRONCAPTURE: {
-      logprintfmt("ec");
+      printlog("ec");
       break;
     }
     case decaytypes::DECAYTYPE_BETAMINUS: {
-      logprintfmt("beta-");
+      printlog("beta-");
       break;
     }
     case decaytypes::DECAYTYPE_NONE: {
-      logprintfmt("none");
+      printlog("none");
       break;
     }
     default:
@@ -288,16 +288,16 @@ void printout_decaytype(const int decaytype) {
 void printout_decaypath(const int decaypathindex) {
   assert_always(!decaypaths.empty());
   const auto& decaypath = decaypaths[decaypathindex];
-  logprintfmt(" decaypath {}: ", decaypathindex);
+  printlog(" decaypath {}: ", decaypathindex);
 
   for (const auto [decaytype, z, a] : std::ranges::zip_view(decaypath.decaytypes, decaypath.z, decaypath.a)) {
     printout_nuclidename(z, a);
     printout_nuclidemeanlife(z, a);
 
     if (decaytype != DECAYTYPE_NONE) {
-      logprintfmt(" -> ");
+      printlog(" -> ");
       printout_decaytype(decaytype);
-      logprintfmt(" -> ");
+      printlog(" -> ");
     }
   }
 
@@ -307,7 +307,7 @@ void printout_decaypath(const int decaypathindex) {
     printout_nuclidemeanlife(decaypath.final_daughter_z(), decaypath.final_daughter_a());
   }
 
-  logprintlnfmt("");
+  printlnlog("");
 }
 
 // follow decays at the ends of the current list of decaypaths
@@ -333,7 +333,7 @@ void extend_lastdecaypath() {
     for (const auto [z, a] :
          std::ranges::zip_view(decaypaths[startdecaypathindex].z, decaypaths[startdecaypathindex].a)) {
       if (z == daughter_z && a == daughter_a) {
-        logprintlnfmt("\nERROR: Loop found in nuclear decay chain.");
+        printlnlog("\nERROR: Loop found in nuclear decay chain.");
         std::abort();
       }
     }
@@ -664,9 +664,9 @@ auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion_chain_numerical(con
       (get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, grid::get_t_model()) -
        get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, tstart));
 
-  logprintlnfmt("  chain_endecay:              {:g}", chain_endecay);
-  logprintlnfmt("  chain_endecay_noexpansion:  {:g}", chain_endecay_noexpansion);
-  logprintlnfmt("  expansion energy factor:    {:g}", chain_endecay / chain_endecay_noexpansion);
+  printlnlog("  chain_endecay:              {:g}", chain_endecay);
+  printlnlog("  chain_endecay_noexpansion:  {:g}", chain_endecay_noexpansion);
+  printlnlog("  expansion energy factor:    {:g}", chain_endecay / chain_endecay_noexpansion);
 
   return chain_endecay;
 }
@@ -774,7 +774,7 @@ auto write_nuclides_list() {
   if (nucindex >= 0) {
     return nucindex;
   }
-  logprintlnfmt("Could not find nuclide Z={} A={}", z, a);
+  printlnlog("Could not find nuclide Z={} A={}", z, a);
   assert_always(false);  // nuclide not found
   return -1;
 }
@@ -804,7 +804,7 @@ auto get_nucstring_z(const std::string& strnuc) -> int {
       return z;
     }
   }
-  logprintlnfmt("Could not get atomic number of '{}' '{}'", strnuc, elcode);
+  printlnlog("Could not get atomic number of '{}' '{}'", strnuc, elcode);
   assert_always(false);  // could not match to an element
   return -1;
 }
@@ -973,32 +973,30 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
   //   nuclides.push_back(nuclide);
   // }
 
-  logprintlnfmt("Number of nuclides before filtering: {}", get_num_nuclides());
+  printlnlog("Number of nuclides before filtering: {}", get_num_nuclides());
   find_decaypaths(custom_zlist, custom_alist, standard_nuclides);
   filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
 
-  logprintlnfmt("Number of nuclides: {}", get_num_nuclides());
+  printlnlog("Number of nuclides: {}", get_num_nuclides());
 
   const int maxdecaypathlength = std::accumulate(
       decaypaths.cbegin(), decaypaths.cend(), 0,
       [](const int maxlen, const auto& decaypath) { return std::max(maxlen, get_decaypathlength(decaypath)); });
 
-  logprintlnfmt("Number of decay paths: {} (max length {})", get_num_decaypaths(), maxdecaypathlength);
+  printlnlog("Number of decay paths: {} (max length {})", get_num_decaypaths(), maxdecaypathlength);
 
   // Read in data for gamma ray lines and make a list of them in energy order.
   gammapkt::init_gamma_data();
 
   // TODO: generalise this to all included nuclides
-  logprintlnfmt("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): {:g}, {:g}, {:g}",
-                nucdecayenergytotal(28, 56) / MEV, nucdecayenergytotal(27, 56) / MEV,
-                nucdecayenergygamma(27, 56) / MEV);
-  logprintlnfmt("decayenergy(NI57), decayenergy_gamma(NI57), nucdecayenergy(CO57): {:g}, {:g}, {:g}",
-                nucdecayenergytotal(28, 57) / MEV, nucdecayenergygamma(28, 57) / MEV,
-                nucdecayenergytotal(27, 57) / MEV);
-  logprintlnfmt("decayenergy(CR48), decayenergy(V48): {:g} {:g}", nucdecayenergytotal(24, 48) / MEV,
-                nucdecayenergytotal(23, 48) / MEV);
-  logprintlnfmt("decayenergy(FE52), decayenergy(MN52): {:g} {:g}", nucdecayenergytotal(26, 52) / MEV,
-                nucdecayenergytotal(25, 52) / MEV);
+  printlnlog("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): {:g}, {:g}, {:g}",
+             nucdecayenergytotal(28, 56) / MEV, nucdecayenergytotal(27, 56) / MEV, nucdecayenergygamma(27, 56) / MEV);
+  printlnlog("decayenergy(NI57), decayenergy_gamma(NI57), nucdecayenergy(CO57): {:g}, {:g}, {:g}",
+             nucdecayenergytotal(28, 57) / MEV, nucdecayenergygamma(28, 57) / MEV, nucdecayenergytotal(27, 57) / MEV);
+  printlnlog("decayenergy(CR48), decayenergy(V48): {:g} {:g}", nucdecayenergytotal(24, 48) / MEV,
+             nucdecayenergytotal(23, 48) / MEV);
+  printlnlog("decayenergy(FE52), decayenergy(MN52): {:g} {:g}", nucdecayenergytotal(26, 52) / MEV,
+             nucdecayenergytotal(25, 52) / MEV);
 
   if (globals::my_rank == 0 && !globals::simulation_continued_from_saved) {
     write_nuclides_list();
@@ -1041,13 +1039,13 @@ auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi) -> double {
 
 void setup_decaypath_energy_per_mass() {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
-  logprintfmt(
+  printlog(
       "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies {:.1f} MB (node "
       "shared)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
   std::tie(decaypath_energy_per_mass, win_decaypath_energy_per_mass) =
       MPI_shared_malloc_span_keepwin<double>(nonempty_npts_model * get_num_decaypaths());
-  logprintlnfmt("done.");
+  printlnlog("done.");
 
   MPI_Barrier(MPI_COMM_WORLD);
   const auto time_min_decay = INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin;
@@ -1067,7 +1065,7 @@ void setup_decaypath_energy_per_mass() {
 
 void free_decaypath_energy_per_mass() {
   if (win_decaypath_energy_per_mass != MPI_WIN_NULL) {
-    logprintlnfmt("[info] mem_usage: decaypath_energy_per_mass was freed");
+    printlnlog("[info] mem_usage: decaypath_energy_per_mass was freed");
     MPI_Win_free(&win_decaypath_energy_per_mass);
     win_decaypath_energy_per_mass = MPI_WIN_NULL;
   }
