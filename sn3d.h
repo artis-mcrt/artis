@@ -27,6 +27,7 @@
 #include <span>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -147,18 +148,18 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* f
 }
 
 template <class... Args>
-inline auto logprintfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
+inline auto logprintfmt(std::string_view fmt, Args&&... args) -> void {
   print_line_start();
-  outputlinestr = std::format(fmt, std::forward<Args>(args)...);
+  outputlinestr = std::vformat(fmt, std::make_format_args(args...));
   outputstartofline = (outputlinestr.back() == '\n');
   output_file << outputlinestr;
   output_file.flush();
 }
 
 template <class... Args>
-inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
+inline auto logprintlnfmt(std::string_view fmt, Args&&... args) -> void {
   print_line_start();
-  outputlinestr = std::format(fmt, std::forward<Args>(args)...);
+  outputlinestr = std::vformat(fmt, std::make_format_args(args...));
   outputstartofline = true;
   output_file << outputlinestr << '\n';
   output_file.flush();
