@@ -246,7 +246,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
 }
 
 // Returns the atomic number associated with a given elementindex.
-inline auto get_atomicnumber(const int element) -> int {
+[[nodiscard]] __host__ __device__ inline auto get_atomicnumber(const int element) -> int {
   assert_testmodeonly(element >= 0);
   assert_testmodeonly(element < get_nelements());
   return globals::elements[element].anumber;
