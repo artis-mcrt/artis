@@ -81,6 +81,7 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(
       intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &bfheating, &error);
 
+#if !USE_SIMPSON_INTEGRATOR
   if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning)) {
     printlnlog(
         "bf_heating integrator gsl warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
@@ -89,7 +90,6 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
         phixstargetindex, bfheating, error);
   }
 
-#if !USE_SIMPSON_INTEGRATOR
   gsl_set_error_handler(previous_handler);
 #endif
 
