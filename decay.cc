@@ -951,7 +951,6 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
   // add any extra nuclides that were specified but not in the decay data files
   for (const auto [z, a] : std::views::zip(custom_zlist, custom_alist)) {
     if (!nuc_exists(z, a)) {
-      // printout("Adding Z %d A %d with no decay data (assuming stable)\n", z, a);
       nuclides.push_back({.z = z, .a = a, .meanlife = -1});
     }
   }

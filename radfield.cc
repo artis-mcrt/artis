@@ -299,8 +299,6 @@ auto delta_nu_bar(const double T_R, void* const paras) -> double {
   // double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, false);
   // double nu_bar_planck = nu_times_planck_integral / planck_integral_result;
 
-  // // printout("nu_bar %g nu_bar_planck(T=%g) %g\n",nu_bar,T_R,nu_bar_planck);
-
   // if (!std::isfinite(nu_bar_planck)) {
   //   double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
   //   double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
@@ -334,9 +332,6 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
   double delta_nu_bar_min = delta_nu_bar(T_R_min, &paras);
   double delta_nu_bar_max = delta_nu_bar(T_R_max, &paras);
 
-  // printout("find_T_R: bin %4d delta_nu_bar(T_R_min) %g, delta_nu_bar(T_R_max) %g\n",
-  //          binindex, delta_nu_bar_min,delta_nu_bar_max);
-
   if (!std::isfinite(delta_nu_bar_min) || !std::isfinite(delta_nu_bar_max)) {
     delta_nu_bar_max = delta_nu_bar_min = -1;
   }
@@ -362,9 +357,6 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
       const double T_R_upper = gsl_root_fsolver_x_upper(T_R_solver);
       status = gsl_root_test_interval(T_R_lower, T_R_upper, epsabs, epsrel);
 
-      // printout("find_T_R: bin %4d iter %d, T_R is between %7.1f and %7.1f, guess %7.1f, delta_nu_bar %g, status
-      // %d\n",
-      //          binindex,iteration_num,T_R_lower,T_R_upper,T_R,delta_nu_bar(T_R,&paras),status);
       if (status != GSL_CONTINUE) {
         break;
       }
@@ -567,8 +559,6 @@ void init(const int my_rank, const int ndo_nonempty) {
         }
 
         if (addline) {
-          // printout("Adding Jblue estimator for lineindex %d Z=%02d ionstage %d lower %d upper %d A_ul %g\n",
-          //          i, Z, ionstage, lowerlevel, upperlevel, A_ul);
           add_detailed_line(i);
         }
       }
@@ -842,8 +832,8 @@ auto planck_integral_analytic(const double T_R, const double nu_lower, const dou
       //                   + 6 * polylog(4,lowerexp) / pow(HOVERKB,4);
       // double integral2 = TWOHOVERCLIGHTSQUARED * (upperint - lowerint);
 
-      // printout("planck_integral_analytic is zero. debye_upper %g debye_lower %g. Test alternative %g\n",
-      //          debye_upper,debye_lower,integral2);
+      // printlnlog("planck_integral_analytic is zero. debye_upper {:g} debye_lower {:g}. Test alternative {:g}",
+      //            debye_upper, debye_lower, integral2);
     }
   }
 

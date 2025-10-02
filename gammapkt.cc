@@ -94,7 +94,6 @@ void read_gamma_spectrum(const int nucindex, const std::string& filename)
 
 void set_trivial_gamma_spectrum(const int nucindex) {
   // there is no gamma-ray table, so just set a single gamma-ray line with 100% probability
-  // printout("Setting trivial gamma spectrum for z %d a %d engamma %g\n", z, a, decay::nucdecayenergygamma(z, a));
   const int nlines = 1;
   gamma_spectra[nucindex].resize(nlines, {});
   gamma_spectra[nucindex][0].energy = decay::nucdecayenergygamma(nucindex);
@@ -358,8 +357,6 @@ auto thomson_angle() -> double {
 
 // handle physical Compton scattering event
 void compton_scatter(Packet& pkt) {
-  //  printout("Compton scattering.\n");
-
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
 
   // It is known that a Compton scattering event is going to take place.

@@ -576,10 +576,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
       atomicadd(rate_matrices.vec_rate_matrix_coll_bf[matrix_index_lower_lower], -C_ionisation * s_renorm[level]);
       atomicadd(rate_matrices.vec_rate_matrix_coll_bf[matrix_index_upper_lower], C_ionisation * s_renorm[level]);
 
-      if ((R_ionisation < 0) || (C_ionisation < 0)) {
-        printout("  WARNING: Negative ionisation rate from ionstage %d level %d phixstargetindex %d\n",
-                 get_ionstage(element, ion), level, phixstargetindex);
-      }
+      assert_always((R_ionisation >= 0) && (C_ionisation >= 0));
 
       // recombination
       if (upper <= maxrecombininglevel) {
@@ -594,10 +591,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
         atomicadd(rate_matrices.vec_rate_matrix_coll_bf[matrix_index_upper_upper], -C_recomb * s_renorm[upper]);
         atomicadd(rate_matrices.vec_rate_matrix_coll_bf[matrix_index_lower_upper], C_recomb * s_renorm[upper]);
 
-        if ((R_recomb < 0) || (C_recomb < 0)) {
-          printout("  WARNING: Negative recombination rate to ionstage %d level %d phixstargetindex %d\n",
-                   get_ionstage(element, ion), level, phixstargetindex);
-        }
+        assert_always((R_recomb >= 0) && (C_recomb >= 0));
       }
     }
   });

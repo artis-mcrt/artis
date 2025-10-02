@@ -670,11 +670,9 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
       const int a = decay::get_nucstring_a(token.substr(2));
       assert_always(z >= 0);
       assert_always(a >= 0);
-      //   printout("Custom column: '%s' Z %d A %d\n", token.c_str(), z, a);
       zlist.push_back(z);
       alist.push_back(a);
     } else {
-      //   printout("Custom column: '%s' Z %d A %d\n", token.c_str(), -1, -1);
       colnames.push_back(token);
       zlist.push_back(-1);
       alist.push_back(-1);
@@ -970,11 +968,9 @@ void assign_initial_temperatures() {
         pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
 
     if (T_initial < MINTEMP) {
-      //   printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", mgi, T_initial, MINTEMP);
       T_initial = MINTEMP;
       cells_below_mintemp++;
     } else if (T_initial > MAXTEMP) {
-      //   printout("mgi %d: T_initial of %g is above MAXTEMP %g K, setting to MAXTEMP.\n", mgi, T_initial, MAXTEMP);
       T_initial = MAXTEMP;
       cells_above_maxtemp++;
     } else if (!std::isfinite(T_initial)) {
@@ -2077,10 +2073,6 @@ void read_ejecta_model() {
       for (int axis = 0; axis < 3; axis++) {
         const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
         const double cellpos_expected = -xmax_tmodel + (cellwidth * get_cellcoordpointnum(mgi, axis));
-        //   printout("mgi %d coord %d expected %g found %g or %g rmax %g get_cellcoordpointnum(mgi, axis) %d
-        //   ncoordgrid %d\n",
-        //            mgi, axis, cellpos_expected, cellpos_in[axis], cellpos_in[2 - axis], xmax_tmodel,
-        //            get_cellcoordpointnum(mgi, axis), ncoordgrid[axis]);
         if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth) {
           posmatch_xyz = false;
         }

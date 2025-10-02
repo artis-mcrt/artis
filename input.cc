@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cinttypes>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -1801,14 +1800,14 @@ void read_parameterfile(int rank) {
   std::istringstream{line} >> pre_zseed;
 
   if (pre_zseed > 0) {
-    printout("input.txt specified random number seed is %" PRId64 "\n", pre_zseed);
+    printlnlog("input.txt specified random number seed is {}\n", pre_zseed);
   } else {
     pre_zseed = get_rng_random_seed();
     // broadcast randomly-generated seed from rank 0 to all ranks
     MPI_Bcast_safe(pre_zseed, 0, MPI_COMM_WORLD);
-    printout("randomly-generated random number seed is %" PRId64 "\n", pre_zseed);
+    printlnlog("randomly-generated random number seed is {}", pre_zseed);
 #if defined REPRODUCIBLE && REPRODUCIBLE
-    printout("ERROR: reproducible mode is on, so random number seed is required.\n");
+    printlnlog("ERROR: reproducible mode is on, so random number seed is required.");
     std::abort();
 #endif
   }
@@ -1821,7 +1820,7 @@ void read_parameterfile(int rank) {
       (tid == 0) ? pre_zseed + static_cast<std::int64_t>(13 * (rank * get_max_threads() + tid)) : get_rng_random_seed();
 
   rng_seed(rngseed);
-  printout("rank %d: thread %d has rngseed %" PRId64 "\n", rank, tid, rngseed);
+  printlnlog("rank {}: thread {} has rngseed {}", rank, tid, rngseed);
 
   // call it a few times
   for (int n = 0; n < 100; n++) {

@@ -1952,8 +1952,6 @@ void sfmatrix_add_ionisation(std::vector<double>& sfmatrixuppertri, const int Z,
               }
             } else {
               assert_always(en < en_auger_ev);
-              // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en,
-              // en_auger_ev, nnion * xs, ij_contribution);
               sfmatrixuppertri[rowoffset + j] -= nnion * xs;  // * n_auger_elec_avg; // * en_auger_ev???
             }
           }
@@ -2020,7 +2018,6 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
       gsl_vector_memcpy(&gsl_yvec_best, &gsl_yvec);
       error_best = error;
     }
-    // printout("Linear algebra solver iteration %d has a maximum residual of %g\n", iteration, error);
   }
   if (error_best >= 0.) {
     if (error_best > 1e-10) {
@@ -2346,7 +2343,7 @@ __host__ __device__ void do_ntlepton_deposit(Packet& pkt) {
 
     // const double frac_ionisation = get_nt_frac_ionisation(nonemptymgi);
     const double frac_ionisation = get_ntion_energyrate(nonemptymgi) / get_deposition_rate_density(nonemptymgi);
-    // printout("frac_ionisation compare %g and %g\n", frac_ionisation, get_nt_frac_ionisation(nonemptymgi));
+    // printlnlog("frac_ionisation compare {:g} and {:g}", frac_ionisation, get_nt_frac_ionisation(nonemptymgi));
     // const double frac_ionisation = 0.;
 
     if (zrand < frac_ionisation) {
@@ -2533,20 +2530,6 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
       }
     }
   }
-
-  // printout("SF matrix | RHS vector:\n");
-  // for (int row = 0; row < 10; row++) {
-  //   for (int column = 0; column < 10; column++) {
-  //     char str[15];
-  //     snprintf(str, 15, "%+.1e ", gsl_matrix_get(sfmatrix, row, column));
-  //     printout(str);
-  //   }
-  //   printout("| ");
-  //   char str[15];
-  //   snprintf(str, 15, "%+.1e\n", gsl_vector_get(rhsvec, row));
-  //   printout(str);
-  // }
-  // printout("\n");
 
   decompactify_triangular_matrix(sfmatrix);
   const auto yfunc = sfmatrix_solve(sfmatrix);

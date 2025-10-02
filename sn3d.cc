@@ -1,15 +1,3 @@
-/* 2007-10-30 -- MK
-   Non-grey treatment of UVOIR opacity as opacity_case 4 added.
-   Still not fully commented.
-   Comments are marked by //  Deactivated code by // */
-/* 2007-01-17 -- MK
-   Several minor modifications (some marked in the code with //MK), these include
-     - global printout() routine (located in sn3d.c)
-     - opacity_cases 2 and 3 added (changes in grid_init.c and update_grid.c,
-       original opacity stuff was moved there from input.c) */
-/* This is a code copied from Lucy 2004 paper on t-dependent supernova
-   explosions. */
-
 #include "sn3d.h"
 
 #include <getopt.h>
@@ -690,7 +678,7 @@ auto main(int argc, char* argv[]) -> int {
   const int my_rank = globals::my_rank;
 
 #ifdef STDPAR_ON
-  printout("C++ standard parallelism (stdpar) is enabled with %d hardware threads\n", get_max_threads());
+  printlnlog("C++ standard parallelism (stdpar) is enabled with {} hardware threads", get_max_threads());
   for (int t = 1; t < get_max_threads(); t++) {
     std::filesystem::remove(std::format("output_{}-{}.txt", my_rank, t));
   }
@@ -707,14 +695,14 @@ auto main(int argc, char* argv[]) -> int {
         fstream_required(std::format("output_{}-{}.txt", my_rank, get_thread_num()), std::ios::out | std::ios::trunc);
 
 #ifdef _OPENMP
-    printout("OpenMP parallelisation is active with %d threads (max %d)\n", omp_get_num_threads(), get_max_threads());
+    printlnlog("OpenMP parallelisation is active with {} threads (max {})", omp_get_num_threads(), get_max_threads());
 #else
     printlnlog("OpenMP parallelisation is not enabled in this build (this is normal)");
 #endif
   }
 
 #ifdef GPU_ON
-  printout("GPU_ON is enabled\n");
+  printlnlog("GPU_ON is enabled");
 #endif
 
   printlnlog("time at start {}", real_time_start);
@@ -762,9 +750,9 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("  rank {} of [0..{}] in node {} of [0..{}]", globals::rank_in_node, globals::node_nprocs - 1,
              globals::node_id, globals::node_count - 1);
 #ifdef MAX_NODE_SIZE
-  printout(
-      "WARNING: Compiled with MAX_NODE_SIZE %d, which may mean mean that there are more nodes reported than physically "
-      "present\n",
+  printlnlog(
+      "WARNING: Compiled with MAX_NODE_SIZE {}, which may mean mean that there are more nodes reported than physically "
+      "present",
       MAX_NODE_SIZE);
 #endif
 
