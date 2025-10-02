@@ -124,9 +124,6 @@ struct DecayPath {
 
   [[nodiscard]] auto final_daughter_a() const -> int { return decay_daughter_a(z.back(), a.back(), decaytypes.back()); }
   [[nodiscard]] auto final_daughter_z() const -> int { return decay_daughter_z(z.back(), a.back(), decaytypes.back()); }
-  [[nodiscard]] auto final_daughter_z_a() const -> std::tuple<int, int> {
-    return {final_daughter_a(), final_daughter_z()};
-  }
 };
 
 std::vector<Nuclide> nuclides;
@@ -172,19 +169,18 @@ MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
   return nuclides[nucindex].meanlife;
 }
 
-auto get_nuclidename(const int z, const int a) -> std::string { return std::format("(Z={}){}{}", z, get_elname(z), a); }
+void printout_nuclidename(const int z, const int a) { printlog("(Z={}){}{}", z, get_elname(z), a); }
 
-auto get_str_nuclidemeanlife(const int z, const int a) -> std::string {
+void printout_nuclidemeanlife(const int z, const int a) {
   const int nucindex = get_nucindex_or_neg_one(z, a);
   const bool exists = (nucindex >= 0);
   if (exists && get_meanlife(nucindex) > 0.) {
-    return std::format("[tau {:.1e}s]", get_meanlife(nucindex));
+    printlog("[tau {:.1e}s]", get_meanlife(nucindex));
+  } else if (exists) {
+    printlog("[stable,in_net]");
+  } else {
+    printlog("[stable,offnet]");
   }
-  if (exists) {
-    return "[stable,in_net]";
-  }
-
-  return "[stable,offnet]";
 }
 
 // decay energy in the form of kinetic energy of electrons, positrons, or alpha particles,
@@ -290,7 +286,8 @@ void printout_decaypath(const int decaypathindex) {
   printlog(" decaypath {}: ", decaypathindex);
 
   for (const auto [decaytype, z, a] : std::ranges::zip_view(decaypath.decaytypes, decaypath.z, decaypath.a)) {
-    printlog("{}{}", get_nuclidename(z, a), get_str_nuclidemeanlife(z, a));
+    printout_nuclidename(z, a);
+    printout_nuclidemeanlife(z, a);
 
     if (decaytype != DECAYTYPE_NONE) {
       printlog(" -> {} -> ", get_str_decaytype(decaytype));
@@ -299,8 +296,8 @@ void printout_decaypath(const int decaypathindex) {
 
   // if the last nuclide is unstable, print its daughter nucleus
   if (decaypath.decaytypes.back() != DECAYTYPE_NONE) {
-    printlog("{}{}", get_nuclidename(decaypath.final_daughter_z(), decaypath.final_daughter_a()),
-             get_str_nuclidemeanlife(decaypath.final_daughter_z(), decaypath.final_daughter_a()));
+    printout_nuclidename(decaypath.final_daughter_z(), decaypath.final_daughter_a());
+    printout_nuclidemeanlife(decaypath.final_daughter_z(), decaypath.final_daughter_a());
   }
 
   printlnlog("");
@@ -311,7 +308,8 @@ void printout_decaypath(const int decaypathindex) {
 void extend_lastdecaypath() {
   const int startdecaypathindex = static_cast<int>(decaypaths.size() - 1);
 
-  const auto [daughter_z, daughter_a] = decaypaths[startdecaypathindex].final_daughter_z_a();
+  const int daughter_z = decaypaths[startdecaypathindex].final_daughter_z();
+  const int daughter_a = decaypaths[startdecaypathindex].final_daughter_a();
   const int daughter_nucindex = get_nucindex_or_neg_one(daughter_z, daughter_a);
   if (daughter_nucindex < 0) {
     return;
@@ -456,7 +454,7 @@ void filter_unused_nuclides(const std::vector<int>& custom_zlist, const std::vec
       return false;
     }
 
-    printlnlog("removing unused nuclide (Z={}){}{}\n", nuc.z, get_elname(nuc.z), nuc.a);
+    printout("removing unused nuclide (Z=%d)%s%d\n", nuc.z, get_elname(nuc.z).c_str(), nuc.a);
     return true;
   });
   nuclides.shrink_to_fit();
