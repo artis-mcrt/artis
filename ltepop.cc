@@ -92,30 +92,12 @@ auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -
 
   const double gamma_nt = NT_ON ? nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion) : 0.;
 
-  if ((Gamma_ion + gamma_nt) == 0) {
-    printlnlog("Fatal: Gamma = 0 for element {}, ion {} in phi ... abort", element, ion);
-    std::abort();
-  }
+  // gamma_nt should generally be higher than the Gamma term for nebular epoch
+
+  assert_always((Gamma_ion + gamma_nt) > 0);
 
   const double phi = (Alpha_sp + Col_rec) / (Gamma_ion + gamma_nt);
-
-  // Y_nt should generally be higher than the Gamma term for nebular epoch
-
-  if (!std::isfinite(phi) || phi == 0.) {
-    const auto partfunc_upperion =
-        grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex + 1];
-    printlnlog(
-        "[fatal] phi: phi {:g} exceeds numerically possible range for element {}, ion {}, T_e {:g} ... remove higher "
-        "or lower ionisation stages",
-        phi, element, ion, T_e);
-    printlnlog("[fatal] phi: Alpha_sp {:g}, Gamma {:g}, partfunct {:g}, stat_weight {:g}", Alpha_sp, Gamma_ion,
-               partfunc_ion, stat_weight(element, ion, 0));
-    printlnlog("[fatal] phi: upperionpartfunct {:g}, upperionstatweight {:g}", partfunc_upperion,
-               stat_weight(element, ion + 1, 0));
-    printlnlog("[fatal] phi: gamma_nt {:g} Col_rec {:g} grid::get_nne(nonemptymgi) {:g}", gamma_nt, Col_rec,
-               grid::get_nne(nonemptymgi));
-    std::abort();
-  }
+  assert_always(phi > 0.);
 
   return phi;
 }
