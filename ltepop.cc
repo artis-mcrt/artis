@@ -320,7 +320,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
     }
   }
   if (status == GSL_CONTINUE) {
-    printout("[warning] calculate_ion_balance_nne: nne did not converge within %d iterations\n", iter + 1);
+    printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations\n", iter + 1);
   }
 
   gsl_root_fsolver_free(solver);
