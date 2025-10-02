@@ -2434,26 +2434,24 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 
   const bool enable_sfexcitation = true;
   const bool enable_sfionisation = true;
-  // if (timestep <= globals::num_lte_timesteps)
-  // {
+  // if (timestep <= globals::num_lte_timesteps) {
   //   // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
   //   // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
   //   nt_solution[nonemptymgi].nneperion_when_solved = -1.;
   //   enable_sfexcitation = false;
   //   enable_sfionisation = false;
-  //
-  //   printout("Doing a fast initial solution without ionisation or excitation in the SF equation for the first NLTE
-  //   timestep.\n");
+
+  //   printlnlog(
+  //       "Doing a fast initial solution without ionisation or excitation in the SF equation for the first NLTE "
+  //       "timestep.");
   // }
-  // if (timestep <= globals::num_lte_timesteps + 2)
-  // {
+  // if (timestep <= globals::num_lte_timesteps + 2) {
   //   // run the solver in a faster mode for the first couple of NLTE timesteps
-  //   // nt_solution[nonemptymgi].nneperion_when_solved = -1.;
+  //   nt_solution[nonemptymgi].nneperion_when_solved = -1.;
   //   enable_sfexcitation = false;
   //   // enable_sfionisation = false;
-  //
-  //   printout("Doing a faster solution without excitation in the SF equation for the first couple of NLTE
-  //   timesteps.\n");
+  //   printlnlog("Doing a faster solution without excitation in the SF equation for the first couple of NLTE
+  //   timesteps.");
   // }
 
   // sfmatrix will be a compacted upper triangular matrix during construction and then expanded into a full matrix (with
