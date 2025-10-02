@@ -112,6 +112,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
 
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
     pkt.prop_time = t_new;
+    // pkt.e_cmf *= ts / t_new;
   }
 
   // contribute to the trajectory integrated deposition estimator
