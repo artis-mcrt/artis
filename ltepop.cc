@@ -248,8 +248,8 @@ void set_calculated_nne(const int nonemptymgi) {
 
 // Special case of only neutral ions, set nne to some finite value so that packets are not lost in kpkts
 void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
-  printlnlog("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex {}",
-             grid::get_mgi_of_nonemptymgi(nonemptymgi));
+  printout("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n",
+           grid::get_mgi_of_nonemptymgi(nonemptymgi));
   for (int element = 0; element < get_nelements(); element++) {
     const auto nnelement = grid::get_elem_numberdens(nonemptymgi, element);
     const int nions = get_nions(element);
@@ -282,20 +282,20 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
   double nne_lo = 0.;  // MINPOP;
   if (nne_solution_f(nne_lo, f.params) * nne_solution_f(nne_hi, f.params) > 0) {
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    printlnlog("n, nne_lo, nne_hi, T_R, T_e, W, rho {}, {:g}, {:g}, {:g}, {:g}, {:g}, {:g}", modelgridindex, nne_lo,
-               nne_hi, grid::get_TR(nonemptymgi), grid::get_Te(nonemptymgi), grid::get_W(nonemptymgi),
-               grid::get_rho(nonemptymgi));
-    printlnlog("nne@x_lo {:g}", nne_solution_f(nne_lo, f.params));
-    printlnlog("nne@x_hi {:g}", nne_solution_f(nne_hi, f.params));
+    printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi,
+             grid::get_TR(nonemptymgi), grid::get_Te(nonemptymgi), grid::get_W(nonemptymgi),
+             grid::get_rho(nonemptymgi));
+    printout("nne@x_lo %g\n", nne_solution_f(nne_lo, f.params));
+    printout("nne@x_hi %g\n", nne_solution_f(nne_hi, f.params));
 
     for (int element = 0; element < get_nelements(); element++) {
-      printlnlog("modelgridindex {}, element {}, uppermost_ion is {}", modelgridindex, element,
-                 grid::get_elements_uppermost_ion(nonemptymgi, element));
+      printout("modelgridindex %d, element %d, uppermost_ion is %d\n", modelgridindex, element,
+               grid::get_elements_uppermost_ion(nonemptymgi, element));
 
       if constexpr (USE_LUT_PHOTOION) {
         for (int ion = 0; ion <= grid::get_elements_uppermost_ion(nonemptymgi, element); ion++) {
-          printlnlog("element {}, ion {}, gammaionest {:g}", element, ion,
-                     globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)]);
+          printout("element %d, ion %d, gammaionest %g\n", element, ion,
+                   globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)]);
         }
       }
     }
@@ -321,7 +321,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
     }
   }
   if (status == GSL_CONTINUE) {
-    printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations", iter + 1);
+    printout("[warning] calculate_ion_balance_nne: nne did not converge within %d iterations\n", iter + 1);
   }
 
   gsl_root_fsolver_free(solver);
@@ -363,9 +363,9 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
     factor *= nne_hi * phifactor;
 
     if (!std::isfinite(factor)) {
-      printlnlog(
-          "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element Z={}, ionstage {} in "
-          "cell {}",
+      printout(
+          "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element "
+          "Z=%d, ionstage %d in cell %d\n",
           get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
       return ion;
     }
@@ -400,9 +400,9 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
     ionfractions[ion] = ionfractions[ion] / normfactor;
 
     if (normfactor == 0. || !std::isfinite(ionfractions[ion])) {
-      printlnlog("[warning] ionfract set to zero for ionstage {} of Z={} in cell {} with T_e {:g}, T_R {:g}",
-                 get_ionstage(element, ion), get_atomicnumber(element), grid::get_mgi_of_nonemptymgi(nonemptymgi),
-                 grid::get_Te(nonemptymgi), grid::get_TR(nonemptymgi));
+      printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
+               get_ionstage(element, ion), get_atomicnumber(element), grid::get_mgi_of_nonemptymgi(nonemptymgi),
+               grid::get_Te(nonemptymgi), grid::get_TR(nonemptymgi));
       ionfractions[ion] = 0;
     }
   }
@@ -508,9 +508,9 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
   const double g_upper = stat_weight(element, ion + 1, upperionlevel);
   const double sf = SAHACONST * g_lower / g_upper * pow(T, -1.5) * exp(E_threshold / KB / T);
   if (sf < 0) {
-    printlnlog(
-        "[fatal] calculate_sahafact: Negative Saha factor. sfac {:g} element {} ion {} level {} upperionlevel {} "
-        "g_lower {:g} g_upper {:g} T {:g} E_threshold {:g} exppart {:g}",
+    printout(
+        "[fatal] calculate_sahafact: Negative Saha factor. sfac %g element %d ion %d level %d upperionlevel %d "
+        "g_lower %g g_upper %g T %g E_threshold %g exppart %g\n",
         sf, element, ion, level, upperionlevel, g_lower, g_upper, T, E_threshold, exp(E_threshold / KB / T));
     std::abort();
   }
@@ -567,7 +567,7 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
                            grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex]);
 
     if (!std::isfinite(groundpop)) {
-      printlnlog("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP");
+      printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
     }
 
     grid::ion_groundlevelpops_allcells[(nonemptymgi * nincludedions) + uniqueionindex] = groundpop;
