@@ -1443,7 +1443,7 @@ auto get_coordcellindexincrement(const int axis) -> int {
 
     default:
       if constexpr (TESTMODE) {
-        printout("invalid coordinate index %d", axis);
+        logprintfmt("invalid coordinate index {}", axis);
         assert_testmodeonly(false);
       } else {
         __builtin_unreachable();
@@ -1468,7 +1468,7 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
 
       default:
         if constexpr (TESTMODE) {
-          printout("invalid coordinate index %d", axis);
+          logprintfmt("invalid coordinate index {}", axis);
           assert_testmodeonly(false);
         } else {
           __builtin_unreachable();
@@ -2431,16 +2431,17 @@ auto get_totmassradionuclide_tmodel(const int z, const int a) -> double {
       }
 
       if (isoutside_error) {
-        printout(
-            "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
-            "cellcoordmin %g, cellcoordmax %g\n",
+        logprintlnfmt(
+            "[ERROR] packet outside coord {} {}{} boundary of cell {}. vel {:g} initpos {:g} cellcoordmin {:g}, "
+            "cellcoordmax {:g}",
             d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(GRID_TYPE, d), cellindex,
             pktvelgridcoord[d], pktposgridcoord[d], grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart,
             cellcoordmax[d] / globals::tmin * tstart);
-        printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart, tstart / globals::tmin);
-        printout(" delta %g\n", delta);
+        logprintlnfmt("globals::tmin {:g} tstart {:g} tstart/globals::tmin {:g}", globals::tmin, tstart,
+                      tstart / globals::tmin);
+        logprintlnfmt(" delta {:g}", delta);
 
-        printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
+        logprintlnfmt("packet dir [{:g}, {:g}, {:g}]", dir[0], dir[1], dir[2]);
         assert_always(false);
       }
     }
@@ -2602,19 +2603,19 @@ auto get_totmassradionuclide_tmodel(const int z, const int a) -> double {
 
   if constexpr (TESTMODE) {
     if (snext == -1) {
-      printout("Something wrong in boundary crossing - didn't find anything.\n");
-      printout("packet cell %d\n", cellindex);
-      printout("globals::tmin %g tstart %g\n", globals::tmin, tstart);
+      logprintlnfmt("Something wrong in boundary crossing - didn't find anything.");
+      logprintlnfmt("packet cell {}", cellindex);
+      logprintlnfmt("globals::tmin {:g} tstart {:g}", globals::tmin, tstart);
       for (int d2 = 0; d2 < 3; d2++) {
-        printout("coord %d: initpos %g dir %g\n", d2, pos[d2], dir[d2]);
+        logprintlnfmt("coord {}: initpos {:g} dir {:g}", d2, pos[d2], dir[d2]);
       }
-      printout("|initpos| %g |dir| %g |pos.dir| %g\n", vec_len(pos), vec_len(dir), dot(pos, dir));
+      logprintlnfmt("|initpos| {:g} |dir| {:g} |pos.dir| {:g}", vec_len(pos), vec_len(dir), dot(pos, dir));
       for (int d2 = 0; d2 < get_ndim(GRID_TYPE); d2++) {
-        printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2,
-                 grid::get_cellcoordmin(cellindex, d2) * tstart / globals::tmin,
-                 cellcoordmax[d2] * tstart / globals::tmin);
+        logprintlnfmt("coord {}: cellcoordmin {:g} cellcoordmax {:g}", d2,
+                      grid::get_cellcoordmin(cellindex, d2) * tstart / globals::tmin,
+                      cellcoordmax[d2] * tstart / globals::tmin);
       }
-      printout("tstart %g\n", tstart);
+      logprintlnfmt("tstart {:g}", tstart);
     }
   }
 
