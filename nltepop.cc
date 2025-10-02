@@ -438,13 +438,8 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
     if (ion_has_superlevel(element, ion)) {
       // if it has a superlevel then need +1 for ground state, +1 for superlevel and add autoionising levels
       nlte_dimension += get_nlevels_excited_nlte(element, ion) + get_nlevels_autoion(element, ion) + 2;
-      // printout("Here 1: For element %d ion %d adding %d to nlte_dimension. \n", element, ion, nlevels_nlte +
-      // get_nlevels_autoion(element, ion) + 2); printout("checks: %d %d\n", nlevels_nlte, get_nlevels_autoion(element,
-      // ion));
     } else {  // if it doesn't have a superlevel
       nlte_dimension += get_nlevels(element, ion);
-      // printout("Here 2: For element %d ion %d adding %d to nlte_dimension. \n", element, ion,
-      // get_nlevels(element,ion));
     }
   }
 
