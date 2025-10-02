@@ -2203,20 +2203,11 @@ __host__ __device__ auto nt_ionisation_upperion_probability(const int nonemptymg
       if (energyweighted) {
         assert_always(fabs(prob_remaining - cell_ion_data.ionenfrac_num_auger[numaugerelec]) < 0.001);
       } else {
-        if (fabs(prob_remaining - cell_ion_data.prob_num_auger[numaugerelec]) >= 0.001) {
-          printlnlog("Auger probabilities issue for cell {} Z={:02} ionstage {} to {}",
-                     grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
-                     get_ionstage(element, lowerion), get_ionstage(element, upperion));
-          for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-            printlnlog("  a {} prob {:g}", a, cell_ion_data.prob_num_auger[a]);
-          }
-          std::abort();
-        }
+        assert_always(fabs(prob_remaining - cell_ion_data.prob_num_auger[numaugerelec]) < 0.001);
       }
       return prob_remaining;
     }
-    printlnlog("WARNING: tried to ionise from Z={:02} ionstage {} to {}", get_atomicnumber(element),
-               get_ionstage(element, lowerion), get_ionstage(element, upperion));
+
     return 0.;
   }
   return (upperion == lowerion + 1) ? 1.0 : 0.;
