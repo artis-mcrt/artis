@@ -230,7 +230,6 @@ void init_xcom_photoion_data() {
     }
   }
 
-  printlnlog("Failure to choose line (pellet_nucindex {}). Abort. zrand {:g} runtot {:g}", nucindex, zrand, runtot);
   assert_always(false);
   return NAN;
 }
@@ -294,9 +293,6 @@ void init_xcom_photoion_data() {
     }
 
     count++;
-    if (count == 1000) {
-      printlnlog("Compton hit 1000 tries. {:g} {:g} {:g} {:g} {:g}", f_max, f_min, ftry, sigma_try, norm);
-    }
   }
 
   assert_always(ftry >= 1.);
