@@ -237,7 +237,7 @@ auto get_approx_shell_occupancies(const int atomic_number, const int nbound) {
       } else if (q[8] < 6) {
         q[8]++;  // M5 3d[5/2]
       } else {
-        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+        logprintlnfmt("Going beyond the 4s shell in NT calculation. Abort!");
         std::abort();
       }
     } else if (ioncharge == 1) {
@@ -248,7 +248,7 @@ auto get_approx_shell_occupancies(const int atomic_number, const int nbound) {
       } else if (q[8] < 6) {
         q[8]++;  // M5 3d[5/2]
       } else {
-        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+        logprintlnfmt("Going beyond the 4s shell in NT calculation. Abort!");
         std::abort();
       }
     } else if (ioncharge > 1) {
@@ -257,7 +257,7 @@ auto get_approx_shell_occupancies(const int atomic_number, const int nbound) {
       } else if (q[8] < 6) {
         q[8]++;  // M5 3d[5/2]
       } else {
-        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+        logprintlnfmt("Going beyond the 4s shell in NT calculation. Abort!");
         std::abort();
       }
     }
@@ -1107,12 +1107,12 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
     N_e_contrib += N_e(nonemptymgi, endash * EV, yfunc) * endash * delta_endash;
   }
   frac_heating_Einit += N_e_contrib;
-  printout(" heating N_e contrib (en < EMIN) %g nsteps %d\n", N_e_contrib / E_init_ev, nsteps);
+  logprintlnfmt(" heating N_e contrib (en < EMIN) {:g} nsteps {}", N_e_contrib / E_init_ev, nsteps);
 
   const auto frac_heating = static_cast<float>(frac_heating_Einit / E_init_ev);
 
   if (!std::isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0) {
-    printout("WARNING: calculate_frac_heating: invalid result of %g. Setting to 1.0 instead\n", frac_heating);
+    logprintlnfmt("WARNING: calculate_frac_heating: invalid result of {:g}. Setting to 1.0 instead", frac_heating);
     return 1.;
   }
 
@@ -1142,8 +1142,9 @@ auto get_nt_frac_excitation(const int nonemptymgi) -> float {
   const float frac_excitation = nt_solution[nonemptymgi].frac_excitation;
 
   if (frac_excitation < 0 || !std::isfinite(frac_excitation)) {
-    printout("ERROR: get_nt_frac_excitation called with no valid solution stored for cell %d. frac_excitation = %g\n",
-             grid::get_mgi_of_nonemptymgi(nonemptymgi), frac_excitation);
+    logprintlnfmt(
+        "ERROR: get_nt_frac_excitation called with no valid solution stored for cell {}. frac_excitation = {:g}",
+        grid::get_mgi_of_nonemptymgi(nonemptymgi), frac_excitation);
     std::abort();
   }
 
@@ -1554,7 +1555,6 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
       double frac_ionisation_ion = 0.;
       double frac_excitation_ion = 0.;
       logprintlnfmt("  Z={} ionstage {}:", Z, ionstage);
-      // printout("    nnion: %g\n", nnion);
       logprintlnfmt("    nnion/nntot: {:g}", nnion / nntot);
 
       calculate_eff_ionpot_auger_rates(nonemptymgi, element, ion, yfunc);
@@ -2034,7 +2034,7 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
   }
 
   if (gsl_vector_isnonneg(&gsl_yvec) == 0) {
-    printout("solve_sfmatrix: WARNING: y function goes negative!\n");
+    logprintlnfmt("solve_sfmatrix: WARNING: y function goes negative!");
   }
   return yvec_arr;
 }
@@ -2209,19 +2209,19 @@ __host__ __device__ auto nt_ionisation_upperion_probability(const int nonemptymg
         assert_always(fabs(prob_remaining - cell_ion_data.ionenfrac_num_auger[numaugerelec]) < 0.001);
       } else {
         if (fabs(prob_remaining - cell_ion_data.prob_num_auger[numaugerelec]) >= 0.001) {
-          printout("Auger probabilities issue for cell %d Z=%02d ionstage %d to %d\n",
-                   grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
-                   get_ionstage(element, lowerion), get_ionstage(element, upperion));
+          logprintlnfmt("Auger probabilities issue for cell {} Z={:02} ionstage {} to {}",
+                        grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
+                        get_ionstage(element, lowerion), get_ionstage(element, upperion));
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-            printout("  a %d prob %g\n", a, cell_ion_data.prob_num_auger[a]);
+            logprintlnfmt("  a {} prob {:g}", a, cell_ion_data.prob_num_auger[a]);
           }
           std::abort();
         }
       }
       return prob_remaining;
     }
-    printout("WARNING: tried to ionise from Z=%02d ionstage %d to %d\n", get_atomicnumber(element),
-             get_ionstage(element, lowerion), get_ionstage(element, upperion));
+    logprintlnfmt("WARNING: tried to ionise from Z={:02} ionstage {} to {}", get_atomicnumber(element),
+                  get_ionstage(element, lowerion), get_ionstage(element, upperion));
     return 0.;
   }
   return (upperion == lowerion + 1) ? 1.0 : 0.;
@@ -2257,9 +2257,9 @@ __host__ __device__ auto nt_random_upperion(const int nonemptymgi, const int ele
         }
       }
 
-      printout(
-          "ERROR: nt_ionisation_upperion_probability did not sum to more than zrand = %lg, prob_sum = %lg (Z=%d "
-          "ionstage %d). Retrying with new random number.\n",
+      logprintlnfmt(
+          "ERROR: nt_ionisation_upperion_probability did not sum to more than zrand = {:g}, prob_sum = {:g} (Z={} "
+          "ionstage {}). Retrying with new random number.",
           zrand, prob_sum, get_atomicnumber(element), get_ionstage(element, lowerion));
       assert_always(fabs(prob_sum - 1.0) < 1e-3);
     }
@@ -2283,9 +2283,9 @@ __host__ __device__ auto nt_ionisation_ratecoeff(const int nonemptymgi, const in
     if (Y_nt <= 0) {
       const double Y_nt_wfapprox = nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion);
       if (Y_nt_wfapprox > 0) {
-        printout(
-            "Warning: Spencer-Fano solver gives negative or zero ionisation rate (%g) for element Z=%d ionstage %d "
-            "cell %d. Using WF approx instead = %g\n",
+        logprintlnfmt(
+            "Warning: Spencer-Fano solver gives negative or zero ionisation rate ({:g}) for element Z={} ionstage {} "
+            "cell {}. Using WF approx instead = {:g}",
             Y_nt, get_atomicnumber(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
       }
       return Y_nt_wfapprox;

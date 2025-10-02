@@ -823,9 +823,9 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
 #endif
 
   if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
-    printout(
-        "corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d "
-        "integral %g error %g\n",
+    logprintlnfmt(
+        "corrphotoioncoeff gsl integrator warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
+        "integral {:g} error {:g}",
         status, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion), level,
         phixstargetindex, gammacorr, error);
     if (!std::isfinite(gammacorr)) {

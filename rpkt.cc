@@ -702,9 +702,9 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     return false;
   }
 
-  printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist,
-           tdist);
-  printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt.number);
+  logprintlnfmt("[fatal] do_rpkt: Failed to identify event . Rpkt. edist {:g}, sdist {:g}, tdist {:g} Abort.", edist,
+                sdist, tdist);
+  logprintlnfmt("[fatal] do_rpkt: Trouble was due to packet number {}.", pkt.number);
   std::abort();
 }
 
@@ -986,12 +986,12 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   chi_rpkt_cont.total = chi_rpkt_cont.ffescat + chi_rpkt_cont.bf + chi_rpkt_cont.ffheat;
 
   if (!std::isfinite(chi_rpkt_cont.total)) {
-    printout("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
-    printout("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont.ffescat, chi_rpkt_cont.ffheat, chi_rpkt_cont.bf);
-    printout("[fatal] nbfcontinua %d\n", globals::nbfcontinua);
-    printout("[fatal] in cell %d with density %g\n", grid::get_mgi_of_nonemptymgi(nonemptymgi),
-             grid::get_rho(nonemptymgi));
-    printout("[fatal] pkt.nu_cmf %g\n", nu_cmf);
+    logprintlnfmt("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort");
+    logprintlnfmt("[fatal] es {:g}, ff {:g}, bf {:g}", chi_rpkt_cont.ffescat, chi_rpkt_cont.ffheat, chi_rpkt_cont.bf);
+    logprintlnfmt("[fatal] nbfcontinua {}", globals::nbfcontinua);
+    logprintlnfmt("[fatal] in cell {} with density {:g}", grid::get_mgi_of_nonemptymgi(nonemptymgi),
+                  grid::get_rho(nonemptymgi));
+    logprintlnfmt("[fatal] pkt.nu_cmf {:g}", nu_cmf);
     if (std::isfinite(chi_rpkt_cont.ffescat)) {
       chi_rpkt_cont.ffheat = 0.;
       chi_rpkt_cont.bf = 0.;

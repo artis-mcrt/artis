@@ -82,9 +82,9 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
       intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &bfheating, &error);
 
   if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning)) {
-    printout(
-        "bf_heating integrator gsl warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d "
-        "integral %g error %g\n",
+    logprintlnfmt(
+        "bf_heating integrator gsl warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
+        "integral {:g} error {:g}",
         status, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion), level,
         phixstargetindex, bfheating, error);
   }

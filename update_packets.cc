@@ -178,8 +178,8 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
         atomicadd(globals::timesteps[nts].alpha_emission, pkt.e_cmf);
         pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_ALPHA;
       } else if constexpr (TESTMODE) {
-        printout("ERROR: pellet marked as particle emission is for decaytype %d != any of (alpha, beta+, beta-)\n",
-                 pkt.pellet_decaytype);
+        logprintlnfmt("ERROR: pellet marked as particle emission is for decaytype {} != any of (alpha, beta+, beta-)",
+                      pkt.pellet_decaytype);
         std::abort();
       } else {
         __builtin_unreachable();
@@ -270,7 +270,7 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
 
     default: {
       if constexpr (TESTMODE) {
-        printout("ERROR: Unknown packet type %d\n", pkt.type);
+        logprintlnfmt("ERROR: Unknown packet type {}", static_cast<int>(pkt.type));
         assert_testmodeonly(false);
       } else {
         __builtin_unreachable();
