@@ -237,8 +237,7 @@ auto get_approx_shell_occupancies(const int atomic_number, const int nbound) {
       } else if (q[8] < 6) {
         q[8]++;  // M5 3d[5/2]
       } else {
-        printlnlog("Going beyond the 4s shell in NT calculation. Abort!");
-        std::abort();
+        assert_always(false);  // Going beyond the 4s shell
       }
     } else if (ioncharge == 1) {
       if (q[9] < 1) {
@@ -248,8 +247,7 @@ auto get_approx_shell_occupancies(const int atomic_number, const int nbound) {
       } else if (q[8] < 6) {
         q[8]++;  // M5 3d[5/2]
       } else {
-        printlnlog("Going beyond the 4s shell in NT calculation. Abort!");
-        std::abort();
+        assert_always(false);  // Going beyond the 4s shell
       }
     } else if (ioncharge > 1) {
       if (q[7] < 4) {
@@ -257,8 +255,7 @@ auto get_approx_shell_occupancies(const int atomic_number, const int nbound) {
       } else if (q[8] < 6) {
         q[8]++;  // M5 3d[5/2]
       } else {
-        printlnlog("Going beyond the 4s shell in NT calculation. Abort!");
-        std::abort();
+        assert_always(false);  // Going beyond the 4s shell
       }
     }
   }
