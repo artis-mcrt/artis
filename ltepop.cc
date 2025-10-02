@@ -85,10 +85,9 @@ auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -
 
   const double Alpha_sp = interpolate_ions_spontrecombcoeff(uniqueionindex, T_e);
   constexpr bool include_collisional_recombination = false;
-  const double Col_rec =
-      include_collisional_recombination
-          ? calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion + 1, false, true, false, false, false)
-          : 0.;
+  const double Col_rec = include_collisional_recombination
+                             ? calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion + 1, false, true, false, false)
+                             : 0.;
 
   const double gamma_nt = NT_ON ? nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion) : 0.;
 
