@@ -2231,32 +2231,25 @@ __host__ __device__ auto nt_random_upperion(const int nonemptymgi, const int ele
                                             const bool energyweighted) -> int {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
-    while (true) {
-      const double zrand = rng_uniform();
+    const double zrand = rng_uniform();
 
-      double prob_sum = 0.;
-      for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
-        prob_sum += nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion, energyweighted);
+    double prob_sum = 0.;
+    for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
+      prob_sum += nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion, energyweighted);
 
-        if (zrand <= prob_sum) {
-          return upperion;
-        }
+      if (zrand <= prob_sum) {
+        return upperion;
       }
-
-      printlnlog(
-          "ERROR: nt_ionisation_upperion_probability did not sum to more than zrand = {:g}, prob_sum = {:g} (Z={} "
-          "ionstage {}). Retrying with new random number.",
-          zrand, prob_sum, get_atomicnumber(element), get_ionstage(element, lowerion));
-      assert_always(fabs(prob_sum - 1.0) < 1e-3);
     }
-  } else {
-    return lowerion + 1;
+
+    assert_always(false);  // should never get here
+    return -1;
   }
+  return lowerion + 1;
 }
 
 __host__ __device__ auto nt_ionisation_ratecoeff(const int nonemptymgi, const int element, const int ion) -> double {
   assert_always(NT_ON);
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   if (NT_SOLVE_SPENCERFANO) {
     const double Y_nt = nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion);
@@ -2266,16 +2259,8 @@ __host__ __device__ auto nt_ionisation_ratecoeff(const int nonemptymgi, const in
       const double Y_nt_wfapprox = nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion);
       return Y_nt_wfapprox;
     }
-    if (Y_nt <= 0) {
-      const double Y_nt_wfapprox = nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion);
-      if (Y_nt_wfapprox > 0) {
-        printlnlog(
-            "Warning: Spencer-Fano solver gives negative or zero ionisation rate ({:g}) for element Z={} ionstage {} "
-            "cell {}. Using WF approx instead = {:g}",
-            Y_nt, get_atomicnumber(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
-      }
-      return Y_nt_wfapprox;
-    }
+    assert_always(Y_nt >= 0.);
+
     return Y_nt;
   }
   return nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion);
