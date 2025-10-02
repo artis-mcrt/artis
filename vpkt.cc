@@ -449,7 +449,7 @@ void init_vspecpol() {
 }
 
 void write_vspecpol(const std::string& filename) {
-  logprintlnfmt("Writing {}", filename);
+  printlnlog("Writing {}", filename);
   auto vspecpol_file = fstream_required(filename, std::ios::out | std::ios::trunc);
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
     vspecpol_file << 0. << ' ';
@@ -487,7 +487,7 @@ void write_vspecpol(const std::string& filename) {
 
 void read_vspecpol(const int my_rank, const int nts) {
   const auto filename = std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
-  logprintlnfmt("Reading {}", filename);
+  printlnlog("Reading {}", filename);
 
   auto vspecpol_file = fstream_required(filename, std::ios::in);
   std::string line;
@@ -564,7 +564,7 @@ void read_vpkt_grid(const int my_rank, const int nts) {
   }
 
   const std::string filename = std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts);
-  logprintlnfmt("Reading {}", filename);
+  printlnlog("Reading {}", filename);
   auto vpkt_grid_file = fstream_required(filename, std::ios::in);
 
   for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
@@ -590,7 +590,7 @@ void remove_temp_vpkt_file(const int nts, const int my_rank) {
   for (const auto& filename : filenames) {
     if (std::filesystem::exists(filename)) {
       std::filesystem::remove(filename);
-      logprintlnfmt("Deleted {}", filename);
+      printlnlog("Deleted {}", filename);
     }
   }
 }
@@ -601,7 +601,7 @@ void read_vpktparameterfile() {
   // Nobs
   assert_always(fscanf(input_file, "%d", &Nobs) == 1);
 
-  printout("vpkt.txt: Nobs %d directions\n", Nobs);
+  printlnlog("vpkt.txt: Nobs {} directions", Nobs);
 
   // nz_obs_vpkt. Cos(theta) to the observer. A list in the case of many observers
   nz_obs_vpkt.resize(Nobs);
@@ -609,7 +609,7 @@ void read_vpktparameterfile() {
     assert_always(fscanf(input_file, "%lg", &nz_obs_vpkt[i]) == 1);
 
     if (fabs(nz_obs_vpkt[i]) > 1) {
-      printout("Wrong observer direction\n");
+      printlnlog("Wrong observer direction");
       std::abort();
     } else if (nz_obs_vpkt[i] == 1) {
       nz_obs_vpkt[i] = 0.9999;
@@ -626,8 +626,8 @@ void read_vpktparameterfile() {
     phiobs[i] = phi_degrees * PI / 180.;
     const double theta_degrees = std::acos(nz_obs_vpkt[i]) / PI * 180.;
 
-    printout("vpkt.txt:   direction %d costheta %g (%.1f degrees) phi %g (%.1f degrees)\n", i, nz_obs_vpkt[i],
-             theta_degrees, phiobs[i], phi_degrees);
+    printlnlog("vpkt.txt:   direction {} costheta {:g} ({:.1f} degrees) phi {:g} ({:.1f} degrees)", i, nz_obs_vpkt[i],
+               theta_degrees, phiobs[i], phi_degrees);
   }
 
   // Nspectra opacity choices (i.e. Nspectra spectra for each observer)
@@ -651,7 +651,7 @@ void read_vpktparameterfile() {
     }
   }
 
-  printout("vpkt.txt: Nspectra %d per observer\n", Nspectra);
+  printlnlog("vpkt.txt: Nspectra {} per observer", Nspectra);
   tau_vpkt.resize(Nspectra, 0.);
 
   // time window. If dum4=1 it restrict vpkt to time windown (dum5,dum6)
@@ -660,19 +660,19 @@ void read_vpktparameterfile() {
   double vspec_tmax_in_days = 0.;
   assert_always(fscanf(input_file, "%d %lg %lg \n", &override_tminmax, &vspec_tmin_in_days, &vspec_tmax_in_days) == 3);
 
-  printout("vpkt: compiled with VSPEC_TIMEMIN %.1fd VSPEC_TIMEMAX %1.fd VMTBINS %d\n", VSPEC_TIMEMIN / DAY,
-           VSPEC_TIMEMAX / DAY, VMTBINS);
+  printlnlog("vpkt: compiled with VSPEC_TIMEMIN {:.1f}d VSPEC_TIMEMAX {:1f}d VMTBINS {}", VSPEC_TIMEMIN / DAY,
+             VSPEC_TIMEMAX / DAY, VMTBINS);
   if (override_tminmax == 1) {
     VSPEC_TIMEMIN_input = vspec_tmin_in_days * DAY;
     VSPEC_TIMEMAX_input = vspec_tmax_in_days * DAY;
-    printout("vpkt.txt: VSPEC_TIMEMIN_input %.1fd, VSPEC_TIMEMAX_input %.1fd\n", VSPEC_TIMEMIN_input / DAY,
-             VSPEC_TIMEMAX_input / DAY);
+    printlnlog("vpkt.txt: VSPEC_TIMEMIN_input {:.1f}d, VSPEC_TIMEMAX_input {:.1f}d", VSPEC_TIMEMIN_input / DAY,
+               VSPEC_TIMEMAX_input / DAY);
   } else {
     VSPEC_TIMEMIN_input = VSPEC_TIMEMIN;
     VSPEC_TIMEMAX_input = VSPEC_TIMEMAX;
-    printout(
-        "vpkt.txt: VSPEC_TIMEMIN_input %.1fd, VSPEC_TIMEMAX_input %.1fd (inherited from VSPEC_TIMEMIN and "
-        "VSPEC_TIMEMAX)\n",
+    printlnlog(
+        "vpkt.txt: VSPEC_TIMEMIN_input {:.1f}d, VSPEC_TIMEMAX_input {:.1f}d (inherited from VSPEC_TIMEMIN and "
+        "VSPEC_TIMEMAX)",
         VSPEC_TIMEMIN_input / DAY, VSPEC_TIMEMAX_input / DAY);
   }
 
@@ -686,17 +686,17 @@ void read_vpktparameterfile() {
   int flag_custom_freq_ranges = 0;
   assert_always(fscanf(input_file, "%d ", &flag_custom_freq_ranges) == 1);
 
-  printout("vpkt: compiled with VMNUBINS %d\n", VMNUBINS);
+  printlnlog("vpkt: compiled with VMNUBINS {}", VMNUBINS);
   assert_always(VSPEC_NUMAX > VSPEC_NUMIN);
-  printout("vpkt: compiled with VSPEC_NUMAX %g lambda_min %g Å\n", VSPEC_NUMAX, 1e8 * CLIGHT / VSPEC_NUMAX);
-  printout("vpkt: compiled with VSPEC_NUMIN %g lambda_max %g Å\n", VSPEC_NUMIN, 1e8 * CLIGHT / VSPEC_NUMIN);
+  printlnlog("vpkt: compiled with VSPEC_NUMAX {:g} lambda_min {:g} Angstroms", VSPEC_NUMAX, 1e8 * CLIGHT / VSPEC_NUMAX);
+  printlnlog("vpkt: compiled with VSPEC_NUMIN {:g} lambda_max {:g} Angstroms", VSPEC_NUMIN, 1e8 * CLIGHT / VSPEC_NUMIN);
 
   if (flag_custom_freq_ranges == 1) {
     assert_always(fscanf(input_file, "%d ", &Nrange) == 1);
     VSPEC_NUMIN_input.resize(Nrange, 0.);
     VSPEC_NUMAX_input.resize(Nrange, 0.);
 
-    printout("vpkt.txt: Nrange %d frequency intervals per spectrum per observer\n", Nrange);
+    printlnlog("vpkt.txt: Nrange {} frequency intervals per spectrum per observer", Nrange);
 
     for (int i = 0; i < Nrange; i++) {
       double lmin_vspec_input = 0.;
@@ -715,12 +715,12 @@ void read_vpktparameterfile() {
     VSPEC_NUMIN_input.push_back(VSPEC_NUMIN);
     VSPEC_NUMAX_input.push_back(VSPEC_NUMAX);
 
-    printout("vpkt.txt: Nrange 1 frequency interval (inherited from VSPEC_NUMIN and VSPEC_NUMAX)\n");
+    printlnlog("vpkt.txt: Nrange 1 frequency interval (inherited from VSPEC_NUMIN and VSPEC_NUMAX)");
   }
 
   for (int i = 0; i < Nrange; i++) {
-    printout("vpkt.txt:   range %d lambda [%g, %g] Angstroms\n", i, 1e8 * CLIGHT / VSPEC_NUMAX_input[i],
-             1e8 * CLIGHT / VSPEC_NUMIN_input[i]);
+    printlnlog("vpkt.txt:   range {} lambda [{:g}, {:g}] Angstroms", i, 1e8 * CLIGHT / VSPEC_NUMAX_input[i],
+               1e8 * CLIGHT / VSPEC_NUMIN_input[i]);
   }
 
   // if dum7=1, vpkt are not created when cell optical depth is larger than cell_is_optically_thick_vpkt
@@ -728,22 +728,22 @@ void read_vpktparameterfile() {
   assert_always(fscanf(input_file, "%d %lg \n", &override_thickcell_tau, &cell_is_optically_thick_vpkt) == 2);
 
   if (override_thickcell_tau == 1) {
-    printout("vpkt.txt: cell_is_optically_thick_vpkt %lg\n", cell_is_optically_thick_vpkt);
+    printlnlog("vpkt.txt: cell_is_optically_thick_vpkt {:g}", cell_is_optically_thick_vpkt);
   } else {
     cell_is_optically_thick_vpkt = globals::cell_is_optically_thick;
-    printout("vpkt.txt: cell_is_optically_thick_vpkt %lg (inherited from cell_is_optically_thick)\n",
-             cell_is_optically_thick_vpkt);
+    printlnlog("vpkt.txt: cell_is_optically_thick_vpkt {:g} (inherited from cell_is_optically_thick)",
+               cell_is_optically_thick_vpkt);
   }
 
   // Maximum optical depth. If a vpkt reaches dum7 is thrown away
   assert_always(fscanf(input_file, "%lg \n", &tau_max_vpkt) == 1);
-  printout("vpkt.txt: tau_max_vpkt %g\n", tau_max_vpkt);
+  printlnlog("vpkt.txt: tau_max_vpkt {:g}", tau_max_vpkt);
 
   // Produce velocity grid map if =1
   int in_vgrid_on = 0;
   assert_always(fscanf(input_file, "%d \n", &in_vgrid_on) == 1);
   vgrid_on = in_vgrid_on != 0;
-  printout("vpkt.txt: velocity grid map %s\n", (vgrid_on) ? "ENABLED" : "DISABLED");
+  printlnlog("vpkt.txt: velocity grid map {}", (vgrid_on) ? "ENABLED" : "DISABLED");
 
   if (vgrid_on) {
     double tmin_grid_in_days{NAN};
@@ -753,12 +753,12 @@ void read_vpktparameterfile() {
     tmin_grid = tmin_grid_in_days * DAY;
     tmax_grid = tmax_grid_in_days * DAY;
 
-    printout("vpkt.txt: velocity grid time range tmin_grid %gd tmax_grid %gd\n", tmin_grid / DAY, tmax_grid / DAY);
+    printlnlog("vpkt.txt: velocity grid time range tmin_grid {:g}d tmax_grid {:g}d", tmin_grid / DAY, tmax_grid / DAY);
 
     // Specify wavelength range: number of intervals (dum9) and limits (dum10,dum11)
     assert_always(fscanf(input_file, "%d ", &Nrange_grid) == 1);
 
-    printout("vpkt.txt: velocity grid frequency intervals %d\n", Nrange_grid);
+    printlnlog("vpkt.txt: velocity grid frequency intervals {}", Nrange_grid);
 
     nu_grid_max.resize(Nrange_grid, 0.);
     nu_grid_min.resize(Nrange_grid, 0.);
@@ -770,8 +770,8 @@ void read_vpktparameterfile() {
       nu_grid_max[i] = CLIGHT / (range_lambda_min * 1e-8);
       nu_grid_min[i] = CLIGHT / (range_lambda_max * 1e-8);
 
-      printout("vpkt.txt:   velgrid range %d lambda [%g, %g] Angstroms\n", i, 1e8 * CLIGHT / nu_grid_max[i],
-               1e8 * CLIGHT / nu_grid_min[i]);
+      printlnlog("vpkt.txt:   velgrid range {} lambda [{:g}, {:g}] Angstroms", i, 1e8 * CLIGHT / nu_grid_max[i],
+                 1e8 * CLIGHT / nu_grid_min[i]);
     }
   }
 
@@ -791,7 +791,7 @@ void write_timestep(const int nts, const int my_rank, const bool is_final) {
   if (vgrid_on) {
     const auto filename_vpktgrid = is_final ? std::format("vpkt_grid_{:04d}.out", my_rank)
                                             : std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts);
-    logprintlnfmt("Writing vpkt grid file {}", filename_vpktgrid);
+    printlnlog("Writing vpkt grid file {}", filename_vpktgrid);
     write_vpkt_grid(filename_vpktgrid);
   }
 
@@ -802,7 +802,7 @@ void write_timestep(const int nts, const int my_rank, const bool is_final) {
                                         : std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts + 1);
 
     std::filesystem::copy_file(filename_source, filename_dest, std::filesystem::copy_options::overwrite_existing);
-    logprintlnfmt("Copying {} to {}", filename_source, filename_dest);
+    printlnlog("Copying {} to {}", filename_source, filename_dest);
 
     if (!is_final) {
       vpkt_contrib_file = std::ofstream(filename_dest, std::ios::app);
@@ -825,7 +825,7 @@ void init(const int nts, const int my_rank, const bool continued_from_saved) {
 
     if (continued_from_saved) {
       const auto filename_prev = std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts);
-      logprintlnfmt("Copying {} to {}", filename_prev, filename);
+      printlnlog("Copying {} to {}", filename_prev, filename);
       std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
     } else {
       // Create new file with header line

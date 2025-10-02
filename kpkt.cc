@@ -290,8 +290,8 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
 void set_kpktdiffusion(const float kpktdiffusion_timescale_in, const int n_kpktdiffusion_timesteps_in) {
   kpktdiffusion_timescale = kpktdiffusion_timescale_in;
   n_kpktdiffusion_timesteps = n_kpktdiffusion_timesteps_in;
-  printout("input: kpkts diffuse %g of a time step's length for the first %d time steps\n", kpktdiffusion_timescale,
-           n_kpktdiffusion_timesteps);
+  printlnlog("input: kpkts diffuse {:g} of a time step's length for the first {} time steps", kpktdiffusion_timescale,
+             n_kpktdiffusion_timesteps);
 }
 
 void setup_coolinglist() {
@@ -305,7 +305,7 @@ void setup_coolinglist() {
   const size_t mem_usage_coolinglist = ncoolingterms * sizeof(CellCacheCoolingList);
   assert_always(ncoolingterms > 0);
   coolinglist.resize(ncoolingterms);
-  printout("[info] mem_usage: coolinglist occupies %.3f MB\n", mem_usage_coolinglist / 1024. / 1024.);
+  printlnlog("[info] mem_usage: coolinglist occupies {:.3f} MB", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0;  // cooling list index
   for (int element = 0; element < get_nelements(); element++) {
@@ -369,7 +369,7 @@ void setup_coolinglist() {
   }
 
   assert_always(ncoolingterms == i);  // if this doesn't match, we miscalculated the number of cooling terms
-  printout("[info] read_atomicdata: number of coolingterms %d\n", ncoolingterms);
+  printlnlog("[info] read_atomicdata: number of coolingterms {}", ncoolingterms);
 }
 
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
@@ -405,7 +405,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   pkt.pos = vec_scale(pkt.pos, t_current / pkt.prop_time);
   pkt.prop_time = t_current;
-  // pkt.e_cmf *= t_current / t1;
+  // pkt.e_cmf *=  pkt.prop_time / t_current
 
   if (t_current >= t2) {
     return;
@@ -461,13 +461,6 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
       std::upper_bound(globals::cellcache[cellcacheslotid].cooling_contrib.begin() + ilow,
                        globals::cellcache[cellcacheslotid].cooling_contrib.begin() + ihigh + 1, rndcool_ion_process) -
       globals::cellcache[cellcacheslotid].cooling_contrib.begin();
-
-  if (i > ihigh) {
-    printout("do_kpkt: error occurred while selecting a cooling channel: low %d, high %d, i %td, rndcool %g\n", ilow,
-             ihigh, i, rndcool_ion_process);
-    printout("element %d, ion %d, offset %d, terms %d, coolingsum %g\n", element, ion, ilow, ncoolingterms_ion,
-             coolingsum);
-  }
 
   assert_always(i <= ihigh);
 

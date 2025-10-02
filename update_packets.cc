@@ -112,6 +112,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
 
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
     pkt.prop_time = t_new;
+    // pkt.e_cmf *= ts / t_new;
   }
 
   // contribute to the trajectory integrated deposition estimator
@@ -178,8 +179,8 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
         atomicadd(globals::timesteps[nts].alpha_emission, pkt.e_cmf);
         pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_ALPHA;
       } else if constexpr (TESTMODE) {
-        printout("ERROR: pellet marked as particle emission is for decaytype %d != any of (alpha, beta+, beta-)\n",
-                 pkt.pellet_decaytype);
+        printlnlog("ERROR: pellet marked as particle emission is for decaytype {} != any of (alpha, beta+, beta-)",
+                   pkt.pellet_decaytype);
         std::abort();
       } else {
         __builtin_unreachable();
@@ -205,7 +206,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
 
     pkt.prop_time = globals::tmin;
   } else if constexpr (TESTMODE) {
-    printout("ERROR: Something wrong with decaying pellets. tdecay %g ts %g (ts + tw) %g\n", tdecay, ts, t2);
+    printlnlog("ERROR: Something wrong with decaying pellets. tdecay {:g} ts {:g} (ts + tw) {:g}", tdecay, ts, t2);
     assert_testmodeonly(false);
   } else {
     __builtin_unreachable();
@@ -270,7 +271,7 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
 
     default: {
       if constexpr (TESTMODE) {
-        printout("ERROR: Unknown packet type %d\n", pkt.type);
+        printlnlog("ERROR: Unknown packet type {}", static_cast<int>(pkt.type));
         assert_testmodeonly(false);
       } else {
         __builtin_unreachable();
@@ -357,7 +358,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
   const double ts_end = ts + tw;
 
   const auto time_update_packets_start = std::time(nullptr);
-  printout("timestep %d: start update_packets at time %ld\n", nts, time_update_packets_start);
+  printlnlog("timestep {}: start update_packets at time {}", nts, time_update_packets_start);
   bool timestepcomplete = false;
   int passnumber = 0;
   while (!timestepcomplete) {
@@ -404,8 +405,8 @@ void update_packets(const int nts, std::span<Packet> packets) {
         packets, [ts_end](const auto& pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
 
     const auto cellcacheresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
-    logprintlnfmt("  update_packets timestep {} pass {:3d}: packetsupdated {:7d} cellcacheresets {:7d} (took {}s)", nts,
-                  passnumber, count_pktupdates, cellcacheresets, std::time(nullptr) - sys_time_start_pass);
+    printlnlog("  update_packets timestep {} pass {:3d}: packetsupdated {:7d} cellcacheresets {:7d} (took {}s)", nts,
+               passnumber, count_pktupdates, cellcacheresets, std::time(nullptr) - sys_time_start_pass);
 
     passnumber++;
   }
@@ -413,15 +414,14 @@ void update_packets(const int nts, std::span<Packet> packets) {
   stats::pkt_action_counters_printout(nts);
 
   const auto time_update_packets_end_thisrank = std::time(nullptr);
-  logprintlnfmt("timestep {}: finished update_packets for rank {} (took {}s)", nts, globals::my_rank,
-                time_update_packets_end_thisrank - time_update_packets_start);
+  printlnlog("timestep {}: finished update_packets for rank {} (took {}s)", nts, globals::my_rank,
+             time_update_packets_end_thisrank - time_update_packets_start);
 
   MPI_Barrier(MPI_COMM_WORLD);  // hold all processes once the packets are updated
   const auto time_update_packets_end_allranks = std::time(nullptr);
-  printout(
-      "timestep %d: time after update packets for all processes %ld (rank %d took %lds, waited %lds, total %lds)\n",
-      nts, time_update_packets_end_allranks, globals::my_rank,
-      time_update_packets_end_thisrank - time_update_packets_start,
-      time_update_packets_end_allranks - time_update_packets_end_thisrank,
-      time_update_packets_end_allranks - time_update_packets_start);
+  printlnlog("timestep {}: time after update packets for all processes {} (rank {} took {}s, waited {}s, total {}s)",
+             nts, time_update_packets_end_allranks, globals::my_rank,
+             time_update_packets_end_thisrank - time_update_packets_start,
+             time_update_packets_end_allranks - time_update_packets_end_thisrank,
+             time_update_packets_end_allranks - time_update_packets_start);
 }

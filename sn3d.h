@@ -104,16 +104,20 @@ inline thread_local auto gslworkspace =
 #endif
 
 #ifdef __NVCOMPILER_CUDA_ARCH__
+#include <string_view>
+
 #define printout(...) printf(__VA_ARGS__)
 
-template <class... Args>
-inline auto logprintfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
-  printf("%s", std::format(fmt, std::forward<Args>(args)...).c_str());
+template <typename... Args>
+inline auto printlog(std::string_view fmt, Args&&... args) -> void {
+  const auto str = std::vformat(fmt, std::make_format_args(args...));
+  printf("%s", str.c_str());
 }
 
-template <class... Args>
-inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
-  printf("%s\n", std::format(fmt, std::forward<Args>(args)...).c_str());
+template <typename... Args>
+inline auto printlnlog(std::string_view fmt, Args&&... args) -> void {
+  const auto str = std::vformat(fmt, std::make_format_args(args...));
+  printf("%s\n", str.c_str());
 }
 
 #define __artis_assert(e)                         \
@@ -144,8 +148,8 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* f
   output_file.flush();
 }
 
-template <class... Args>
-inline auto logprintfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
+template <typename... Args>
+inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) -> void {
   print_line_start();
   outputlinestr = std::format(fmt, std::forward<Args>(args)...);
   outputstartofline = (outputlinestr.back() == '\n');
@@ -153,12 +157,11 @@ inline auto logprintfmt(const std::format_string<Args...> fmt, Args&&... args) -
   output_file.flush();
 }
 
-template <class... Args>
-inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
+template <typename... Args>
+inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) -> void {
   print_line_start();
-  outputlinestr = std::format(fmt, std::forward<Args>(args)...);
   outputstartofline = true;
-  output_file << outputlinestr << '\n';
+  output_file << std::format(fmt, std::forward<Args>(args)...) << '\n';
   output_file.flush();
 }
 
@@ -217,9 +220,8 @@ constexpr void atomicadd(T& var, U&& val) {
 #endif
 
 inline void gsl_error_handler_printout(const char* reason, const char* file, int line, int gsl_errno) {
-  if (gsl_errno != 18)  // roundoff error
-  {
-    printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
+  if (gsl_errno != 18) {  // something other than roundoff error
+    printlnlog("WARNING: gsl ({}:{}): {} (Error code {})", file, line, reason, gsl_errno);
   }
 }
 
@@ -232,7 +234,7 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
 
   auto* file = std::fopen(filename.c_str(), mode.data());
   if (file == nullptr) {
-    logprintlnfmt("ERROR: Could not open file '{}' for mode '{}'.", filename, mode.data());
+    printlnlog("ERROR: Could not open file '{}' for mode '{}'.", filename, mode.data());
     std::abort();
   }
 
@@ -246,7 +248,7 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
 
 [[nodiscard]] inline auto fstream_required(const std::string& filename, std::ios_base::openmode mode) -> std::fstream {
   if (filename.empty()) {
-    logprintlnfmt("ERROR: Cannot open file with empty filename.");
+    printlnlog("ERROR: Cannot open file with empty filename.");
     std::abort();
   }
   const std::string datafolderfilename = "data/" + filename;
@@ -255,7 +257,7 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
   }
   auto file = std::fstream(filename, mode);
   if (!file.is_open()) {
-    logprintlnfmt("ERROR: Could not open file '{}'", filename);
+    printlnlog("ERROR: Could not open file '{}'", filename);
     std::abort();
   }
   return file;

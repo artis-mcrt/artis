@@ -702,10 +702,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     return false;
   }
 
-  printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist,
-           tdist);
-  printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt.number);
-  std::abort();
+  assert_always(false);
 }
 
 auto calculate_chi_ffheat_nnionpart(const int nonemptymgi) -> double {
@@ -985,21 +982,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   chi_rpkt_cont.ffheat = chi_ff;
   chi_rpkt_cont.total = chi_rpkt_cont.ffescat + chi_rpkt_cont.bf + chi_rpkt_cont.ffheat;
 
-  if (!std::isfinite(chi_rpkt_cont.total)) {
-    printout("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
-    printout("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont.ffescat, chi_rpkt_cont.ffheat, chi_rpkt_cont.bf);
-    printout("[fatal] nbfcontinua %d\n", globals::nbfcontinua);
-    printout("[fatal] in cell %d with density %g\n", grid::get_mgi_of_nonemptymgi(nonemptymgi),
-             grid::get_rho(nonemptymgi));
-    printout("[fatal] pkt.nu_cmf %g\n", nu_cmf);
-    if (std::isfinite(chi_rpkt_cont.ffescat)) {
-      chi_rpkt_cont.ffheat = 0.;
-      chi_rpkt_cont.bf = 0.;
-      chi_rpkt_cont.total = chi_rpkt_cont.ffescat;
-    } else {
-      std::abort();
-    }
-  }
+  assert_always(std::isfinite(chi_rpkt_cont.total));
 }
 
 void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node_id) {
@@ -1023,7 +1006,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
   const auto sys_time_start_calc = std::time(nullptr);
   const auto temperature = grid::get_TR(nonemptymgi);
 
-  printout("calculating expansion opacities for cell %d...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
+  printlog("calculating expansion opacities for cell {}...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
@@ -1067,5 +1050,5 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       expansionopacity_planck_cumulative[(nonemptymgi * expopac_nbins) + binindex] = kappa_planck_cumulative;
     }
   }
-  printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calc);
+  printlnlog("took {} seconds", std::time(nullptr) - sys_time_start_calc);
 }

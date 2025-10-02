@@ -85,37 +85,18 @@ auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -
 
   const double Alpha_sp = interpolate_ions_spontrecombcoeff(uniqueionindex, T_e);
   constexpr bool include_collisional_recombination = false;
-  const double Col_rec =
-      include_collisional_recombination
-          ? calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion + 1, false, true, false, false, false)
-          : 0.;
+  const double Col_rec = include_collisional_recombination
+                             ? calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion + 1, false, true, false, false)
+                             : 0.;
 
   const double gamma_nt = NT_ON ? nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion) : 0.;
 
-  if ((Gamma_ion + gamma_nt) == 0) {
-    printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);
-    std::abort();
-  }
+  // gamma_nt should generally be higher than the Gamma term for nebular epoch
+
+  assert_always((Gamma_ion + gamma_nt) > 0);
 
   const double phi = (Alpha_sp + Col_rec) / (Gamma_ion + gamma_nt);
-
-  // Y_nt should generally be higher than the Gamma term for nebular epoch
-
-  if (!std::isfinite(phi) || phi == 0.) {
-    const auto partfunc_upperion =
-        grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex + 1];
-    printout(
-        "[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g ... remove higher or "
-        "lower ionisation stages\n",
-        phi, element, ion, T_e);
-    printout("[fatal] phi: Alpha_sp %g, Gamma %g, partfunct %g, stat_weight %g\n", Alpha_sp, Gamma_ion, partfunc_ion,
-             stat_weight(element, ion, 0));
-    printout("[fatal] phi: upperionpartfunct %g, upperionstatweight %g\n", partfunc_upperion,
-             stat_weight(element, ion + 1, 0));
-    printout("[fatal] phi: gamma_nt %g Col_rec %g grid::get_nne(nonemptymgi) %g\n", gamma_nt, Col_rec,
-             grid::get_nne(nonemptymgi));
-    std::abort();
-  }
+  assert_always(phi > 0.);
 
   return phi;
 }
@@ -244,14 +225,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   }
   U *= stat_weight(element, ion, 0);
   const auto U_float = static_cast<float>(U);
-
-  if (!std::isfinite(U_float)) {
-    printout("element %d ion %d\n", element, ion);
-    printout("modelgridindex %d\n", grid::get_mgi_of_nonemptymgi(nonemptymgi));
-    printout("nlevels %d\n", nlevels);
-    printout("sw %g\n", stat_weight(element, ion, 0));
-    std::abort();
-  }
+  assert_always(U_float > 0.);
 
   if (initial) {
     // put back the zero, just in case it matters for something
@@ -273,8 +247,8 @@ void set_calculated_nne(const int nonemptymgi) {
 
 // Special case of only neutral ions, set nne to some finite value so that packets are not lost in kpkts
 void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
-  printout("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n",
-           grid::get_mgi_of_nonemptymgi(nonemptymgi));
+  printlnlog("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d",
+             grid::get_mgi_of_nonemptymgi(nonemptymgi));
   for (int element = 0; element < get_nelements(); element++) {
     const auto nnelement = grid::get_elem_numberdens(nonemptymgi, element);
     const int nions = get_nions(element);
@@ -346,7 +320,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
     }
   }
   if (status == GSL_CONTINUE) {
-    printout("[warning] calculate_ion_balance_nne: nne did not converge within %d iterations\n", iter + 1);
+    printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations", iter + 1);
   }
 
   gsl_root_fsolver_free(solver);
@@ -532,13 +506,9 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
   const double g_lower = stat_weight(element, ion, level);
   const double g_upper = stat_weight(element, ion + 1, upperionlevel);
   const double sf = SAHACONST * g_lower / g_upper * pow(T, -1.5) * exp(E_threshold / KB / T);
-  if (sf < 0) {
-    printout(
-        "[fatal] calculate_sahafact: Negative Saha factor. sfac %g element %d ion %d level %d upperionlevel %d "
-        "g_lower %g g_upper %g T %g E_threshold %g exppart %g\n",
-        sf, element, ion, level, upperionlevel, g_lower, g_upper, T, E_threshold, exp(E_threshold / KB / T));
-    std::abort();
-  }
+
+  assert_testmodeonly(sf > 0);
+
   return sf;
 }
 
@@ -590,10 +560,7 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
     const auto groundpop =
         static_cast<float>(nnion * stat_weight(element, ion, 0) /
                            grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex]);
-
-    if (!std::isfinite(groundpop)) {
-      printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
-    }
+    assert_always(groundpop >= 0.);
 
     grid::ion_groundlevelpops_allcells[(nonemptymgi * nincludedions) + uniqueionindex] = groundpop;
   }

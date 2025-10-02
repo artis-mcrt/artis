@@ -237,8 +237,7 @@ auto get_approx_shell_occupancies(const int atomic_number, const int nbound) {
       } else if (q[8] < 6) {
         q[8]++;  // M5 3d[5/2]
       } else {
-        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-        std::abort();
+        assert_always(false);  // Going beyond the 4s shell
       }
     } else if (ioncharge == 1) {
       if (q[9] < 1) {
@@ -248,8 +247,7 @@ auto get_approx_shell_occupancies(const int atomic_number, const int nbound) {
       } else if (q[8] < 6) {
         q[8]++;  // M5 3d[5/2]
       } else {
-        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-        std::abort();
+        assert_always(false);  // Going beyond the 4s shell
       }
     } else if (ioncharge > 1) {
       if (q[7] < 4) {
@@ -257,8 +255,7 @@ auto get_approx_shell_occupancies(const int atomic_number, const int nbound) {
       } else if (q[8] < 6) {
         q[8]++;  // M5 3d[5/2]
       } else {
-        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-        std::abort();
+        assert_always(false);  // Going beyond the 4s shell
       }
     }
   }
@@ -304,7 +301,7 @@ auto read_shell_configs() {
   std::string line;
   assert_always(get_noncommentline(shells_file, line));
   std::istringstream{line} >> nshells >> n_z_binding;
-  printout("Reading electron_shell_occupancy.txt with %d elements and %d shells\n", n_z_binding, nshells);
+  printlnlog("Reading electron_shell_occupancy.txt with {} elements and {} shells", n_z_binding, nshells);
 
   std::vector<std::vector<int>> elements_shells_q;
 
@@ -346,7 +343,7 @@ void read_binding_energies() {
   std::string line;
   assert_always(get_noncommentline(binding_energies_file, line));
   std::istringstream{line} >> nshells >> n_z_binding;
-  printout("Reading binding energies file '%s' with %d elements and %d shells\n", filename, n_z_binding, nshells);
+  printlnlog("Reading binding energies file '{}' with {} elements and {} shells", filename, n_z_binding, nshells);
 
   elements_electron_binding.resize(n_z_binding, std::vector<double>(nshells, 0.));
 
@@ -369,8 +366,8 @@ void read_binding_energies() {
   std::vector<std::vector<int>> elements_neutral_shells_q;
   if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
     if (!binding_en_newformat) {
-      printout(
-          "NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE is true, but could not find binding_energies_lotz_tab1and2.txt\n");
+      printlnlog(
+          "NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE is true, but could not find binding_energies_lotz_tab1and2.txt");
     }
     assert_always(binding_en_newformat);
     elements_neutral_shells_q = read_shell_configs();
@@ -427,21 +424,21 @@ void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
       }
 
       if (fabs(prob_sum - 1.0) > 0.001) {
-        printout("Problem with Auger probabilities for cell %d Z=%d ionstage %d prob_sum %g\n",
-                 grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
-                 prob_sum);
+        printlnlog("Problem with Auger probabilities for cell {} Z={} ionstage {} prob_sum {:g}",
+                   grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
+                   prob_sum);
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          printout("%d: %g\n", a, get_auger_probability(nonemptymgi, element, ion, a));
+          printlnlog("{}: {:g}", a, get_auger_probability(nonemptymgi, element, ion, a));
         }
         problem_found = true;
       }
 
       if (fabs(ionenfrac_sum - 1.0) > 0.001) {
-        printout("Problem with Auger energy frac sum for cell %d Z=%d ionstage %d ionenfrac_sum %g\n",
-                 grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
-                 ionenfrac_sum);
+        printlnlog("Problem with Auger energy frac sum for cell {} Z={} ionstage {} ionenfrac_sum {:g}",
+                   grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
+                   ionenfrac_sum);
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          printout("%d: %g\n", a, get_ion_auger_enfrac(nonemptymgi, element, ion, a));
+          printlnlog("{}: {:g}", a, get_ion_auger_enfrac(nonemptymgi, element, ion, a));
         }
         problem_found = true;
       }
@@ -452,7 +449,7 @@ void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
 }
 
 void read_auger_data() {
-  printout("Reading Auger effect data...\n");
+  printlnlog("Reading Auger effect data...");
   auto augerfile = fstream_required("auger-km1993-table2.txt", std::ios::in);
 
   // map x-ray notation shells K L1 L2 L3 M1 M2 M3 to quantum numbers n and l
@@ -520,28 +517,28 @@ void read_auger_data() {
       const int g = xrayg[shellnum - 1];
 
       if (!std::isfinite(en_auger_ev) || en_auger_ev < 0) {
-        printout("  WARNING: Z=%2d ionstage %2d shellnum %d en_auger_ev is %g. Setting to zero.\n", Z, ionstage,
-                 shellnum, en_auger_ev);
+        printlnlog("  WARNING: Z={:2} ionstage {:2} shellnum {} en_auger_ev is {:g}. Setting to zero.", Z, ionstage,
+                   shellnum, en_auger_ev);
         en_auger_ev = 0.;
       }
 
       // now loop through shells with impact ionisation cross sections and apply Auger data that matches n, l values
       for (auto& collionrow : colliondata) {
         if (collionrow.Z == Z && collionrow.ionstage == ionstage && collionrow.n == n && collionrow.l == l) {
-          printout(
-              "Z=%2d ionstage %2d shellnum %d n %d l %d ionpot %7.2f E_A %8.1f E_A' %8.1f epsilon %6d <n_Auger> %5.1f "
-              "P(n_Auger)",
+          printlog(
+              "Z={:2} ionstage {:2} shellnum {} n {} l {} ionpot {:7.2f} E_A {:8.1f} E_A' {:8.1f} epsilon {:6} "
+              "<n_Auger> {:5.1f} P(n_Auger)",
               Z, ionstage, shellnum, n, l, ionpot_ev, en_auger_ev_total_nocorrection, en_auger_ev, epsilon_e3,
               n_auger_elec_avg);
 
           double prob_sum = 0.;
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
             prob_sum += prob_num_auger[a];
-            printout(" %d: %4.2f", a, prob_num_auger[a]);
+            printlog(" {}: {:4.2f}", a, prob_num_auger[a]);
           }
           assert_always(fabs(prob_sum - 1.0) < 0.001);
 
-          printout("\n");
+          printlnlog("");
           const bool found_existing_data = (collionrow.auger_g_accumulated > 0.);
 
           // keep existing data but update according to statistical weight represented by existing and new data
@@ -562,12 +559,12 @@ void read_auger_data() {
           assert_always(fabs(prob_sum - 1.0) < 0.001);
 
           if (found_existing_data) {
-            printout("  same NL shell already has data from another X-ray shell. New g-weighted values: P(n_Auger)");
+            printlog("  same NL shell already has data from another X-ray shell. New g-weighted values: P(n_Auger)");
 
             for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-              printout(" %d: %4.2f", a, collionrow.prob_num_auger[a]);
+              printlog(" {}: {:4.2f}", a, collionrow.prob_num_auger[a]);
             }
-            printout("\n");
+            printlnlog("");
           }
         }
       }
@@ -608,7 +605,7 @@ auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
 }
 
 void read_collion_data() {
-  printout("Reading collisional ionisation data from collion.txt...\n");
+  printlnlog("Reading collisional ionisation data from collion.txt...");
 
   auto cifile = std::fstream("collion.txt", std::ios::in);
   assert_always(cifile.is_open());
@@ -617,7 +614,7 @@ void read_collion_data() {
   std::istringstream ssline(line);
   int colliondatacount = 0;
   assert_always(ssline >> colliondatacount);
-  printout("Reading %d collisional transition rows\n", colliondatacount);
+  printlnlog("Reading {} collisional transition rows", colliondatacount);
   assert_always(colliondatacount >= 0);
 
   for (int i = 0; i < colliondatacount; i++) {
@@ -645,7 +642,7 @@ void read_collion_data() {
 
     colliondata.push_back(collionrow);
   }
-  printout("Stored %zu of %d input shell cross sections\n", colliondata.size(), colliondatacount);
+  printlnlog("Stored {} of {} input shell cross sections", colliondata.size(), colliondatacount);
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
     for (int ion = 0; ion < get_nions(element); ion++) {
@@ -660,8 +657,9 @@ void read_collion_data() {
       });
       if (!any_data_matched) {
         const double ionpot_ev = globals::elements[element].ions[ion].ionpot / EV;
-        printout("No collisional ionisation data for Z=%d ionstage %d. Using Lotz approximation with ionpot = %g eV\n",
-                 Z, ionstage, ionpot_ev);
+        printlnlog(
+            "No collisional ionisation data for Z={} ionstage {}. Using Lotz approximation with ionpot = {:g} eV", Z,
+            ionstage, ionpot_ev);
 
         // get the approximate shell occupancy if we don't have the data file
         const auto& shells_q = allions_shell_occupancies[get_uniqueionindex(element, ion)];
@@ -1106,12 +1104,12 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
     N_e_contrib += N_e(nonemptymgi, endash * EV, yfunc) * endash * delta_endash;
   }
   frac_heating_Einit += N_e_contrib;
-  printout(" heating N_e contrib (en < EMIN) %g nsteps %d\n", N_e_contrib / E_init_ev, nsteps);
+  printlnlog(" heating N_e contrib (en < EMIN) {:g} nsteps {}", N_e_contrib / E_init_ev, nsteps);
 
   const auto frac_heating = static_cast<float>(frac_heating_Einit / E_init_ev);
 
   if (!std::isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0) {
-    printout("WARNING: calculate_frac_heating: invalid result of %g. Setting to 1.0 instead\n", frac_heating);
+    printlnlog("WARNING: calculate_frac_heating: invalid result of {:g}. Setting to 1.0 instead", frac_heating);
     return 1.;
   }
 
@@ -1141,8 +1139,8 @@ auto get_nt_frac_excitation(const int nonemptymgi) -> float {
   const float frac_excitation = nt_solution[nonemptymgi].frac_excitation;
 
   if (frac_excitation < 0 || !std::isfinite(frac_excitation)) {
-    printout("ERROR: get_nt_frac_excitation called with no valid solution stored for cell %d. frac_excitation = %g\n",
-             grid::get_mgi_of_nonemptymgi(nonemptymgi), frac_excitation);
+    printlnlog("ERROR: get_nt_frac_excitation called with no valid solution stored for cell {}. frac_excitation = {:g}",
+               grid::get_mgi_of_nonemptymgi(nonemptymgi), frac_excitation);
     std::abort();
   }
 
@@ -1335,11 +1333,11 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
     }
     get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot = static_cast<float>(eff_ionpot);
   } else {
-    printout("WARNING! No matching subshells in NT impact ionisation cross section data for Z=%d ionstage %d.\n",
-             get_atomicnumber(element), get_ionstage(element, ion));
-    printout(
+    printlnlog("WARNING! No matching subshells in NT impact ionisation cross section data for Z={} ionstage {}.",
+               get_atomicnumber(element), get_ionstage(element, ion));
+    printlnlog(
         "-> Defaulting to work function approximation and ionisation energy is not accounted for in Spencer-Fano "
-        "solution.\n");
+        "solution.");
 
     get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot =
         static_cast<float>(1. / get_oneoverw(element, ion, nonemptymgi));
@@ -1552,9 +1550,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
 
       double frac_ionisation_ion = 0.;
       double frac_excitation_ion = 0.;
-      printout("  Z=%d ionstage %d:\n", Z, ionstage);
-      // printout("    nnion: %g\n", nnion);
-      printout("    nnion/nntot: %g\n", nnion / nntot);
+      printlnlog("  Z={} ionstage {}:", Z, ionstage);
+      printlnlog("    nnion/nntot: {:g}", nnion / nntot);
 
       calculate_eff_ionpot_auger_rates(nonemptymgi, element, ion, yfunc);
 
@@ -1565,21 +1562,21 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
               calculate_nt_frac_ionisation_shell(nonemptymgi, element, ion, collionrow, yfunc);
           frac_ionisation_ion += frac_ionisation_ion_shell;
           matching_subshell_count++;
-          printout("      shell ");
+          printlog("      shell ");
           if (collionrow.n >= 0) {
-            printout("n %d, l %d", collionrow.n, collionrow.l);
+            printlog("n {}, l {}", collionrow.n, collionrow.l);
           } else {
-            printout("%s (Lotz)", shellnames.at(-collionrow.l).c_str());
+            printlog("{} (Lotz)", shellnames.at(-collionrow.l));
           }
-          printout(" I %5.1f eV: frac_ionisation %10.4e", collionrow.ionpot_ev, frac_ionisation_ion_shell);
+          printlog(" I {:5.1f} eV: frac_ionisation {:10.4e}", collionrow.ionpot_ev, frac_ionisation_ion_shell);
 
           if (NT_MAX_AUGER_ELECTRONS > 0) {
-            printout("  prob(n Auger elec):");
+            printlog("  prob(n Auger elec):");
             for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-              printout(" %d: %.2f", a, collionrow.prob_num_auger[a]);
+              printlog(" {}: {:.2f}", a, collionrow.prob_num_auger[a]);
             }
           }
-          printout("\n");
+          printlnlog("");
         }
       }
 
@@ -1591,7 +1588,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
       } else {
         get_cell_ion_data(nonemptymgi)[uniqueionindex].fracdep_ionisation_ion = 0.;
       }
-      printout("    frac_ionisation: %g (%d subshells)\n", frac_ionisation_ion, matching_subshell_count);
+      printlnlog("    frac_ionisation: {:g} ({} subshells)", frac_ionisation_ion, matching_subshell_count);
 
       // excitation from all levels is very SLOW
       const int nlevels_all = get_nlevels(element, ion);
@@ -1642,51 +1639,51 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         }  // for t
       }  // for lower
 
-      printout("    frac_excitation: %g\n", frac_excitation_ion);
+      printlnlog("    frac_excitation: {:g}", frac_excitation_ion);
       if (frac_excitation_ion > 1. || !std::isfinite(frac_excitation_ion)) {
-        printout("      WARNING: invalid frac_excitation. Replacing with zero\n");
+        printlnlog("      WARNING: invalid frac_excitation. Replacing with zero");
         frac_excitation_ion = 0.;
       }
       frac_excitation_total += frac_excitation_ion;
-      printout("    workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, nonemptymgi)) / EV);
-      printout("    eff_ionpot:   %9.2f eV  (always use valence potential is %s)\n",
-               get_eff_ionpot(nonemptymgi, element, ion) / EV, (NT_USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
+      printlnlog("    workfn:       {:9.2f} eV", (1. / get_oneoverw(element, ion, nonemptymgi)) / EV);
+      printlnlog("    eff_ionpot:   {:9.2f} eV  (always use valence potential is {})",
+                 get_eff_ionpot(nonemptymgi, element, ion) / EV, (NT_USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
 
-      printout("    workfn approx Gamma:     %9.3e\n", nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion));
+      printlnlog("    workfn approx Gamma:     {:9.3e}", nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion));
 
-      printout("    SF integral Gamma:       %9.3e\n",
-               calculate_nt_ionisation_ratecoeff(nonemptymgi, element, ion, false, yfunc));
+      printlnlog("    SF integral Gamma:       {:9.3e}",
+                 calculate_nt_ionisation_ratecoeff(nonemptymgi, element, ion, false, yfunc));
 
-      printout("    SF integral(I=Iv) Gamma: %9.3e  (if always use valence potential)\n",
-               calculate_nt_ionisation_ratecoeff(nonemptymgi, element, ion, true, yfunc));
+      printlnlog("    SF integral(I=Iv) Gamma: {:9.3e}  (if always use valence potential)",
+                 calculate_nt_ionisation_ratecoeff(nonemptymgi, element, ion, true, yfunc));
 
-      printout("    ARTIS using Gamma:       %9.3e\n", nt_ionisation_ratecoeff(nonemptymgi, element, ion));
+      printlnlog("    ARTIS using Gamma:       {:9.3e}", nt_ionisation_ratecoeff(nonemptymgi, element, ion));
 
       // the ion values (unlike shell ones) have been collapsed down to ensure that upperion < nions
       if (ion < nions - 1) {
-        printout("    probability to ionstage:");
+        printlog("    probability to ionstage:");
         double prob_sum = 0.;
         for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
           const double probability = nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion, false);
           prob_sum += probability;
           if (probability > 0.) {
-            printout(" %d: %.3f", get_ionstage(element, upperion), probability);
+            printlog(" {}: {:.3f}", get_ionstage(element, upperion), probability);
           }
         }
-        printout("\n");
+        printlnlog("");
         assert_always((fabs(prob_sum - 1.0) <= 1e-2) ||
                       (nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion) < 1e-20));
 
-        printout("         enfrac to ionstage:");
+        printlog("         enfrac to ionstage:");
         double enfrac_sum = 0.;
         for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
           const double probability = nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion, true);
           enfrac_sum += probability;
           if (probability > 0.) {
-            printout(" %d: %.3f", get_ionstage(element, upperion), probability);
+            printlog(" {}: {:.3f}", get_ionstage(element, upperion), probability);
           }
         }
-        printout("\n");
+        printlnlog("");
         assert_always(fabs(enfrac_sum - 1.0) <= 1e-2 ||
                       (nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion) < 1e-20));
       }
@@ -1703,20 +1700,21 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
 
     if (std::ssize(tmp_excitation_list) > nt_excitations_stored) {
       // truncate the sorted list to save memory
-      printout("  Truncating non-thermal excitation list from %zu to %d transitions.\n", tmp_excitation_list.size(),
-               nt_excitations_stored);
+      printlnlog("  Truncating non-thermal excitation list from {} to {} transitions.", tmp_excitation_list.size(),
+                 nt_excitations_stored);
       tmp_excitation_list.resize(nt_excitations_stored);
     }
 
     nt_solution[nonemptymgi].frac_excitations_list_size = static_cast<int>(std::ssize(tmp_excitation_list));
     std::ranges::copy(tmp_excitation_list, get_cell_ntexcitations(nonemptymgi).begin());
 
-    printout("[info] mem_usage: non-thermal excitations for cell %d at this timestep occupy %.3f MB\n", modelgridindex,
-             nt_solution[nonemptymgi].frac_excitations_list_size * sizeof(NonThermalExcitation) / 1024. / 1024.);
+    printlnlog("[info] mem_usage: non-thermal excitations for cell {} at this timestep occupy {:.3f} MB",
+               modelgridindex,
+               nt_solution[nonemptymgi].frac_excitations_list_size * sizeof(NonThermalExcitation) / 1024. / 1024.);
 
     const auto T_e = grid::get_Te(nonemptymgi);
-    printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
-             nt_solution[nonemptymgi].frac_excitations_list_size);
+    printlnlog("  Top non-thermal excitation fractions (total excitations = {}):",
+               nt_solution[nonemptymgi].frac_excitations_list_size);
     const int ntransdisplayed = std::min(10, nt_solution[nonemptymgi].frac_excitations_list_size);
 
     for (int excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++) {
@@ -1749,9 +1747,9 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
         const auto coll_str = globals::alltrans.coll_str[alltransindex];
 
-        printout(
-            "    frac_deposition %.3e Z=%2d ionstage %d lower %4d upper %4d rad_exc %.1e coll_exc %.1e nt_exc %.1e "
-            "nt/tot %.1e collstr %.1e lineindex %d\n",
+        printlnlog(
+            "    frac_deposition {:.3e} Z={:2} ionstage {} lower {:4} upper {:4} rad_exc {:.1e} coll_exc {:.1e} nt_exc "
+            "{:.1e} nt/tot {:.1e} collstr {:.1e} lineindex {}",
             ntexc.frac_deposition, get_atomicnumber(element), get_ionstage(element, ion), lower, upper,
             radexc_ratecoeff, collexc_ratecoeff, ntcollexc_ratecoeff, ntcollexc_ratecoeff / exc_ratecoeff, coll_str,
             lineindex);
@@ -1779,25 +1777,25 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
   nt_solution[nonemptymgi].frac_excitation = static_cast<float>(frac_excitation_total);
   nt_solution[nonemptymgi].frac_ionisation = static_cast<float>(frac_ionisation_total);
 
-  printout("  E_init:      %9.2f eV/s/cm^3\n", E_init_ev);
-  printout("  deposition:  %9.2f eV/s/cm^3\n", deposition_rate_density_ev);
-  printout("  nne:         %9.3e e-/cm^3\n", nne);
-  printout("  nnetot:      %9.3e e-/cm^3\n", nnetot);
-  printout("  nne_nt     < %9.3e e-/cm^3\n", nne_nt_max);
-  printout("  nne_nt/nne < %9.3e\n", nne_nt_max / nne);
+  printlnlog("  E_init:      {:9.2f} eV/s/cm^3", E_init_ev);
+  printlnlog("  deposition:  {:9.2f} eV/s/cm^3", deposition_rate_density_ev);
+  printlnlog("  nne:         {:9.3e} e-/cm^3", nne);
+  printlnlog("  nnetot:      {:9.3e} e-/cm^3", nnetot);
+  printlnlog("  nne_nt     < {:9.3e} e-/cm^3", nne_nt_max);
+  printlnlog("  nne_nt/nne < {:9.3e}", nne_nt_max / nne);
 
   // store the solution properties now while the NT spectrum is in memory (in case we free before packet prop)
   nt_solution[nonemptymgi].frac_heating = calculate_frac_heating(nonemptymgi, yfunc);
 
-  printout("  frac_heating_tot:    %g\n", nt_solution[nonemptymgi].frac_heating);
-  printout("  frac_excitation_tot: %g\n", frac_excitation_total);
-  printout("  frac_ionisation_tot: %g\n", frac_ionisation_total);
+  printlnlog("  frac_heating_tot:    {:g}", nt_solution[nonemptymgi].frac_heating);
+  printlnlog("  frac_excitation_tot: {:g}", frac_excitation_total);
+  printlnlog("  frac_ionisation_tot: {:g}", frac_ionisation_total);
   const double frac_sum = nt_solution[nonemptymgi].frac_heating + frac_excitation_total + frac_ionisation_total;
-  printout("  frac_sum:            %g (should be close to 1.0)\n", frac_sum);
+  printlnlog("  frac_sum:            {:g} (should be close to 1.0)", frac_sum);
 
   nt_solution[nonemptymgi].frac_heating = static_cast<float>(1. - frac_excitation_total - frac_ionisation_total);
-  printout("  (replacing calculated frac_heating_tot with %g to make frac_sum = 1.0)\n",
-           nt_solution[nonemptymgi].frac_heating);
+  printlnlog("  (replacing calculated frac_heating_tot with {:g} to make frac_sum = 1.0)",
+             nt_solution[nonemptymgi].frac_heating);
 }
 
 void sfmatrix_add_excitation(std::vector<double>& sfmatrixuppertri, const int nonemptymgi, const int element,
@@ -1951,8 +1949,6 @@ void sfmatrix_add_ionisation(std::vector<double>& sfmatrixuppertri, const int Z,
               }
             } else {
               assert_always(en < en_auger_ev);
-              // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en,
-              // en_auger_ev, nnion * xs, ij_contribution);
               sfmatrixuppertri[rowoffset + j] -= nnion * xs;  // * n_auger_elec_avg; // * en_auger_ev???
             }
           }
@@ -2019,18 +2015,18 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
       gsl_vector_memcpy(&gsl_yvec_best, &gsl_yvec);
       error_best = error;
     }
-    // printout("Linear algebra solver iteration %d has a maximum residual of %g\n", iteration, error);
   }
   if (error_best >= 0.) {
     if (error_best > 1e-10) {
-      printout("  SF solver LU_refine: After %d iterations, best solution vector has a max residual of %g (WARNING)\n",
-               iteration, error_best);
+      printlnlog(
+          "  SF solver LU_refine: After {} iterations, best solution vector has a max residual of {:g} (WARNING)",
+          iteration, error_best);
     }
     gsl_vector_memcpy(&gsl_yvec, &gsl_yvec_best);
   }
 
   if (gsl_vector_isnonneg(&gsl_yvec) == 0) {
-    printout("solve_sfmatrix: WARNING: y function goes negative!\n");
+    printlnlog("solve_sfmatrix: WARNING: y function goes negative!");
   }
   return yvec_arr;
 }
@@ -2056,24 +2052,24 @@ void init() {
     return;
   }
 
-  printout("Initializing non-thermal solver with:\n");
-  printout("  NT_EXCITATION %s\n", NT_EXCITATION_ON ? "on" : "off");
-  printout("  MAX_NT_EXCITATIONS_STORED %d\n", MAX_NT_EXCITATIONS_STORED);
-  printout("  NTEXCITATION_MAXNLEVELS_LOWER %d\n", NTEXCITATION_MAXNLEVELS_LOWER);
-  printout("  NTEXCITATION_MAXNLEVELS_UPPER %d\n", NTEXCITATION_MAXNLEVELS_UPPER);
-  printout("  SFPTS %d\n", SFPTS);
-  printout("  SF_EMIN %g eV\n", SF_EMIN);
-  printout("  SF_EMAX %g eV\n", SF_EMAX);
-  printout("  NT_USE_VALENCE_IONPOTENTIAL %s\n", NT_USE_VALENCE_IONPOTENTIAL ? "on" : "off");
-  printout("  NT_MAX_AUGER_ELECTRONS %d\n", NT_MAX_AUGER_ELECTRONS);
-  printout("  SF_AUGER_CONTRIBUTION %s\n", SF_AUGER_CONTRIBUTION_ON ? "on" : "off");
-  printout("  SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN %s\n", SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN ? "on" : "off");
+  printlnlog("Initializing non-thermal solver with:");
+  printlnlog("  NT_EXCITATION {}", NT_EXCITATION_ON ? "on" : "off");
+  printlnlog("  MAX_NT_EXCITATIONS_STORED {}", MAX_NT_EXCITATIONS_STORED);
+  printlnlog("  NTEXCITATION_MAXNLEVELS_LOWER {}", NTEXCITATION_MAXNLEVELS_LOWER);
+  printlnlog("  NTEXCITATION_MAXNLEVELS_UPPER {}", NTEXCITATION_MAXNLEVELS_UPPER);
+  printlnlog("  SFPTS {}", SFPTS);
+  printlnlog("  SF_EMIN {:g} eV", SF_EMIN);
+  printlnlog("  SF_EMAX {:g} eV", SF_EMAX);
+  printlnlog("  NT_USE_VALENCE_IONPOTENTIAL {}", NT_USE_VALENCE_IONPOTENTIAL ? "on" : "off");
+  printlnlog("  NT_MAX_AUGER_ELECTRONS {}", NT_MAX_AUGER_ELECTRONS);
+  printlnlog("  SF_AUGER_CONTRIBUTION {}", SF_AUGER_CONTRIBUTION_ON ? "on" : "off");
+  printlnlog("  SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN {}", SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN ? "on" : "off");
 
   if (NT_EXCITATION_ON) {
     nt_excitations_stored = std::min(MAX_NT_EXCITATIONS_STORED, get_possible_nt_excitation_count());
-    printout("[info] mem_usage: storing %d non-thermal excitations for non-empty cells occupies %.3f MB\n",
-             nt_excitations_stored,
-             nonempty_npts_model * sizeof(NonThermalExcitation) * nt_excitations_stored / 1024. / 1024.);
+    printlnlog("[info] mem_usage: storing {} non-thermal excitations for non-empty cells occupies {:.3f} MB",
+               nt_excitations_stored,
+               nonempty_npts_model * sizeof(NonThermalExcitation) * nt_excitations_stored / 1024. / 1024.);
 
     excitations_list_all_cells =
         MPI_shared_malloc_span<NonThermalExcitation>(nonempty_npts_model * nt_excitations_stored);
@@ -2105,12 +2101,12 @@ void init() {
     sourceintegral += sourcevec(s) * DELTA_E;
   }
 
-  printout("E_init: %14.7e eV/s/cm3\n", E_init_ev);
-  printout("source function integral: %14.7e\n", sourceintegral);
+  printlnlog("E_init: {:14.7e} eV/s/cm3", E_init_ev);
+  printlnlog("source function integral: {:14.7e}", sourceintegral);
 
   read_collion_data();
 
-  printout("Finished initializing non-thermal solver\n");
+  printlnlog("Finished initializing non-thermal solver");
 }
 
 // set total non-thermal deposition rate from individual gamma/positron/electron/alpha rates. This should be called
@@ -2204,20 +2200,11 @@ __host__ __device__ auto nt_ionisation_upperion_probability(const int nonemptymg
       if (energyweighted) {
         assert_always(fabs(prob_remaining - cell_ion_data.ionenfrac_num_auger[numaugerelec]) < 0.001);
       } else {
-        if (fabs(prob_remaining - cell_ion_data.prob_num_auger[numaugerelec]) >= 0.001) {
-          printout("Auger probabilities issue for cell %d Z=%02d ionstage %d to %d\n",
-                   grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
-                   get_ionstage(element, lowerion), get_ionstage(element, upperion));
-          for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-            printout("  a %d prob %g\n", a, cell_ion_data.prob_num_auger[a]);
-          }
-          std::abort();
-        }
+        assert_always(fabs(prob_remaining - cell_ion_data.prob_num_auger[numaugerelec]) < 0.001);
       }
       return prob_remaining;
     }
-    printout("WARNING: tried to ionise from Z=%02d ionstage %d to %d\n", get_atomicnumber(element),
-             get_ionstage(element, lowerion), get_ionstage(element, upperion));
+
     return 0.;
   }
   return (upperion == lowerion + 1) ? 1.0 : 0.;
@@ -2241,32 +2228,25 @@ __host__ __device__ auto nt_random_upperion(const int nonemptymgi, const int ele
                                             const bool energyweighted) -> int {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
-    while (true) {
-      const double zrand = rng_uniform();
+    const double zrand = rng_uniform();
 
-      double prob_sum = 0.;
-      for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
-        prob_sum += nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion, energyweighted);
+    double prob_sum = 0.;
+    for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
+      prob_sum += nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion, energyweighted);
 
-        if (zrand <= prob_sum) {
-          return upperion;
-        }
+      if (zrand <= prob_sum) {
+        return upperion;
       }
-
-      printout(
-          "ERROR: nt_ionisation_upperion_probability did not sum to more than zrand = %lg, prob_sum = %lg (Z=%d "
-          "ionstage %d). Retrying with new random number.\n",
-          zrand, prob_sum, get_atomicnumber(element), get_ionstage(element, lowerion));
-      assert_always(fabs(prob_sum - 1.0) < 1e-3);
     }
-  } else {
-    return lowerion + 1;
+
+    assert_always(false);  // should never get here
+    return -1;
   }
+  return lowerion + 1;
 }
 
 __host__ __device__ auto nt_ionisation_ratecoeff(const int nonemptymgi, const int element, const int ion) -> double {
   assert_always(NT_ON);
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   if (NT_SOLVE_SPENCERFANO) {
     const double Y_nt = nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion);
@@ -2276,16 +2256,8 @@ __host__ __device__ auto nt_ionisation_ratecoeff(const int nonemptymgi, const in
       const double Y_nt_wfapprox = nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion);
       return Y_nt_wfapprox;
     }
-    if (Y_nt <= 0) {
-      const double Y_nt_wfapprox = nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion);
-      if (Y_nt_wfapprox > 0) {
-        printout(
-            "Warning: Spencer-Fano solver gives negative or zero ionisation rate (%g) for element Z=%d ionstage %d "
-            "cell %d. Using WF approx instead = %g\n",
-            Y_nt, get_atomicnumber(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
-      }
-      return Y_nt_wfapprox;
-    }
+    assert_always(Y_nt >= 0.);
+
     return Y_nt;
   }
   return nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion);
@@ -2344,7 +2316,7 @@ __host__ __device__ void do_ntlepton_deposit(Packet& pkt) {
 
     // const double frac_ionisation = get_nt_frac_ionisation(nonemptymgi);
     const double frac_ionisation = get_ntion_energyrate(nonemptymgi) / get_deposition_rate_density(nonemptymgi);
-    // printout("frac_ionisation compare %g and %g\n", frac_ionisation, get_nt_frac_ionisation(nonemptymgi));
+    // printlnlog("frac_ionisation compare {:g} and {:g}", frac_ionisation, get_nt_frac_ionisation(nonemptymgi));
     // const double frac_ionisation = 0.;
 
     if (zrand < frac_ionisation) {
@@ -2404,12 +2376,12 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   bool skip_solution = false;
   if (timestep < globals::num_lte_timesteps + 1) {
-    printout("Skipping Spencer-Fano solution for first NLTE timestep\n");
+    printlnlog("Skipping Spencer-Fano solution for first NLTE timestep");
     skip_solution = true;
   } else if (get_deposition_rate_density(nonemptymgi) / EV < MINDEPRATE) {
-    printout(
-        "Non-thermal deposition rate of %g eV/cm/s/cm^3 below  MINDEPRATE %g in cell %d at timestep %d. Skipping "
-        "Spencer-Fano solution.\n",
+    printlnlog(
+        "Non-thermal deposition rate of {:g} eV/cm/s/cm^3 below  MINDEPRATE {:g} in cell {} at timestep {}. Skipping "
+        "Spencer-Fano solution.",
         get_deposition_rate_density(nonemptymgi) / EV, MINDEPRATE, modelgridindex, timestep);
 
     skip_solution = true;
@@ -2436,25 +2408,25 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   const double nne_per_ion_fracdiff = fabs((nne_per_ion_last / nne_per_ion) - 1.);
   const int timestep_last_solved = nt_solution[nonemptymgi].timestep_last_solved;
 
-  printout(
-      "Spencer-Fano solver at timestep %d (last solution was at timestep %d) nne/niontot = %g, at last solution was %g "
-      "fracdiff %g\n",
+  printlnlog(
+      "Spencer-Fano solver at timestep {} (last solution was at timestep {}) nne/niontot = {:g}, at last solution was "
+      "{:g} fracdiff {:g}",
       timestep, timestep_last_solved, nne_per_ion, nne_per_ion_last, nne_per_ion_fracdiff);
 
   if ((nne_per_ion_fracdiff < NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS) &&
       (timestep - timestep_last_solved <= SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS) &&
       timestep_last_solved > globals::num_lte_timesteps) {
-    printout(
-        "Keeping Spencer-Fano solution from timestep %d because x_e fracdiff %g < %g and because timestep %d - %d < "
-        "%d\n",
+    printlnlog(
+        "Keeping Spencer-Fano solution from timestep {} because x_e fracdiff {:g} < {:g} and because timestep {} - {} "
+        "< {}",
         timestep_last_solved, nne_per_ion_fracdiff, NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS, timestep,
         timestep_last_solved, SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS);
 
     return;
   }
-  printout(
-      "Setting up Spencer-Fano equation with %d energy points from %g eV to %g eV in cell %d at timestep %d iteration "
-      "%d (nne=%g e-/cm^3)\n",
+  printlnlog(
+      "Setting up Spencer-Fano equation with {} energy points from {:g} eV to {:g} eV in cell {} at timestep {} "
+      "iteration {} (nne={:g} e-/cm^3)",
       SFPTS, SF_EMIN, SF_EMAX, modelgridindex, timestep, iteration, nne);
 
   nt_solution[nonemptymgi].nneperion_when_solved = static_cast<float>(nne_per_ion);
@@ -2462,26 +2434,24 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 
   const bool enable_sfexcitation = true;
   const bool enable_sfionisation = true;
-  // if (timestep <= globals::num_lte_timesteps)
-  // {
+  // if (timestep <= globals::num_lte_timesteps) {
   //   // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
   //   // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
   //   nt_solution[nonemptymgi].nneperion_when_solved = -1.;
   //   enable_sfexcitation = false;
   //   enable_sfionisation = false;
-  //
-  //   printout("Doing a fast initial solution without ionisation or excitation in the SF equation for the first NLTE
-  //   timestep.\n");
+
+  //   printlnlog(
+  //       "Doing a fast initial solution without ionisation or excitation in the SF equation for the first NLTE "
+  //       "timestep.");
   // }
-  // if (timestep <= globals::num_lte_timesteps + 2)
-  // {
+  // if (timestep <= globals::num_lte_timesteps + 2) {
   //   // run the solver in a faster mode for the first couple of NLTE timesteps
-  //   // nt_solution[nonemptymgi].nneperion_when_solved = -1.;
+  //   nt_solution[nonemptymgi].nneperion_when_solved = -1.;
   //   enable_sfexcitation = false;
   //   // enable_sfionisation = false;
-  //
-  //   printout("Doing a faster solution without excitation in the SF equation for the first couple of NLTE
-  //   timesteps.\n");
+  //   printlnlog("Doing a faster solution without excitation in the SF equation for the first couple of NLTE
+  //   timesteps.");
   // }
 
   // sfmatrix will be a compacted upper triangular matrix during construction and then expanded into a full matrix (with
@@ -2509,14 +2479,14 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 
         const int ionstage = get_ionstage(element, ion);
         if (first_included_ion_of_element) {
-          printout("  including Z=%2d ionstages: ", Z);
+          printlog("  including Z={:2} ionstages: ", Z);
           for (int i = 1; i < get_ionstage(element, ion); i++) {
-            printout("  ");
+            printlog("  ");
           }
           first_included_ion_of_element = false;
         }
 
-        printout("%d ", ionstage);
+        printlog("{} ", ionstage);
 
         if (enable_sfexcitation) {
           sfmatrix_add_excitation(sfmatrix, nonemptymgi, element, ion);
@@ -2527,24 +2497,10 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
         }
       }
       if (!first_included_ion_of_element) {
-        printout("\n");
+        printlnlog("");
       }
     }
   }
-
-  // printout("SF matrix | RHS vector:\n");
-  // for (int row = 0; row < 10; row++) {
-  //   for (int column = 0; column < 10; column++) {
-  //     char str[15];
-  //     snprintf(str, 15, "%+.1e ", gsl_matrix_get(sfmatrix, row, column));
-  //     printout(str);
-  //   }
-  //   printout("| ");
-  //   char str[15];
-  //   snprintf(str, 15, "%+.1e\n", gsl_vector_get(rhsvec, row));
-  //   printout(str);
-  // }
-  // printout("\n");
 
   decompactify_triangular_matrix(sfmatrix);
   const auto yfunc = sfmatrix_solve(sfmatrix);
@@ -2553,7 +2509,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 }
 
 void write_restart_data(FILE* gridsave_file) {
-  printout("non-thermal solver, ");
+  printlog("non-thermal solver, ");
 
   fprintf(gridsave_file, "%d\n", 24724518);  // special number marking the beginning of NT data
   fprintf(gridsave_file, "%d %la %la\n", SFPTS, SF_EMIN, SF_EMAX);
@@ -2590,7 +2546,7 @@ void write_restart_data(FILE* gridsave_file) {
 }
 
 void read_restart_data(FILE* gridsave_file) {
-  printout("Reading restart data for non-thermal solver\n");
+  printlnlog("Reading restart data for non-thermal solver");
 
   int code_check = 0;
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
@@ -2602,9 +2558,10 @@ void read_restart_data(FILE* gridsave_file) {
   assert_always(fscanf(gridsave_file, "%d %la %la\n", &sfpts_in, &SF_EMIN_in, &SF_EMAX_in) == 3);
 
   if (sfpts_in != SFPTS || SF_EMIN_in != SF_EMIN || SF_EMAX_in != SF_EMAX) {
-    printout("ERROR: gridsave file specifies %d Spencer-Fano samples, SF_EMIN %lg SF_EMAX %lg\n", sfpts_in, SF_EMIN_in,
-             SF_EMAX_in);
-    printout("ERROR: This simulation has %d Spencer-Fano samples, SF_EMIN %lg SF_EMAX %lg\n", SFPTS, SF_EMIN, SF_EMAX);
+    printlnlog("ERROR: gridsave file specifies {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", sfpts_in,
+               SF_EMIN_in, SF_EMAX_in);
+    printlnlog("ERROR: This simulation has {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", SFPTS, SF_EMIN,
+               SF_EMAX);
     std::abort();
   }
 
@@ -2677,7 +2634,7 @@ void reset_stats() { nt_energy_deposited = 0.; }
 void print_stats(const double modelvolume, const double deltat) {
   const double deposition_rate_density_montecarlo = nt_energy_deposited / EV / modelvolume / deltat;
 
-  printout("nt_energy_deposited = %g [eV/s/cm^3]\n", deposition_rate_density_montecarlo);
+  printlnlog("nt_energy_deposited = {:g} [eV/s/cm^3]", deposition_rate_density_montecarlo);
 }
 
 }  // namespace nonthermal

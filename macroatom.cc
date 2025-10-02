@@ -59,7 +59,6 @@ std::fstream macroatom_file;
 auto calculate_macroatom_transitionrates(const int nonemptymgi, const int element, const int ion, const int level,
                                          const int ionuniquelevelindexstart, const double t_mid,
                                          const globals::AllTransitions& alltrans) {
-  // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
   auto processrates = std::array<double, MA_ACTION_COUNT>{};
 
   const auto uniquelevelindex = ionuniquelevelindexstart + level;
@@ -524,14 +523,8 @@ __host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmast
         break;
       }
 
-      case MA_ACTION_COUNT: {
-        printout("ERROR: Problem selecting MA_ACTION\n");
-        std::abort();
-      }
-
       default:
         if constexpr (TESTMODE) {
-          printout("ERROR: Unknown macroatom selected_action type %d\n", selected_action);
           assert_testmodeonly(false);
         } else {
           __builtin_unreachable();

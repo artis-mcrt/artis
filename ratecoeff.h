@@ -38,7 +38,7 @@ void setup_photoion_luts();
                                                  bool force_bfintegral) -> double;
 
 [[nodiscard]] auto calculate_ionrecombcoeff(int nonemptymgi, float T_e, int element, int upperion, bool assume_lte,
-                                            bool collisional_not_radiative, bool printdebug, bool lower_superlevel_only,
+                                            bool collisional_not_radiative, bool lower_superlevel_only,
                                             bool per_groundmultipletpop) -> double;
 
 inline double T_step_log{};

@@ -59,11 +59,10 @@ struct NucGammaLine {
   double energy;  // in erg
 };
 
-void read_gamma_spectrum(const int nucindex, const std::string& filename)
-// reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
-{
-  printout("reading gamma spectrum for Z=%d A=%d from %s...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
-           filename.c_str());
+void read_gamma_spectrum(const int nucindex, const std::string& filename) {
+  // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
+  printlnlog("reading gamma spectrum for Z={} A={} from {}...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
+             filename);
 
   auto gammafile = fstream_required(filename, std::ios::in);
   std::string line;
@@ -89,11 +88,11 @@ void read_gamma_spectrum(const int nucindex, const std::string& filename)
 
   decay::set_nucdecayenergygamma(nucindex, E_gamma_avg);
 
-  printout("nlines %d avg_en_gamma %g MeV\n", nlines, E_gamma_avg / MEV);
+  printlnlog("nlines {} avg_en_gamma {:g} MeV", nlines, E_gamma_avg / MEV);
 }
 
 void set_trivial_gamma_spectrum(const int nucindex) {
-  // printout("Setting trivial gamma spectrum for z %d a %d engamma %g\n", z, a, decay::nucdecayenergygamma(z, a));
+  // there is no gamma-ray table, so just set a single gamma-ray line with 100% probability
   const int nlines = 1;
   gamma_spectra[nucindex].resize(nlines, {});
   gamma_spectra[nucindex][0].energy = decay::nucdecayenergygamma(nucindex);
@@ -103,13 +102,13 @@ void set_trivial_gamma_spectrum(const int nucindex) {
 void read_decaydata() {
   // migrate from old filename
   if (!std::filesystem::exists("ni56_lines.txt") && std::filesystem::exists("ni_lines.txt")) {
-    printout("Moving ni_lines.txt to ni56_lines.txt\n");
+    printlnlog("Moving ni_lines.txt to ni56_lines.txt");
     std::rename("ni_lines.txt", "ni56_lines.txt");
   }
 
   // migrate from old filename
   if (!std::filesystem::exists("co56_lines.txt") && std::filesystem::exists("co_lines.txt")) {
-    printout("Moving co_lines.txt to co56_lines.txt\n");
+    printlnlog("Moving co_lines.txt to co56_lines.txt");
     std::rename("co_lines.txt", "co56_lines.txt");
   }
 
@@ -134,18 +133,13 @@ void read_decaydata() {
     } else if (std::ifstream("data/" + filename)) {
       read_gamma_spectrum(nucindex, "data/" + filename);
     } else if (decay::nucdecayenergygamma(nucindex) > 0.) {
-      // printout("%s does not exist. Setting 100%% chance of single gamma-line with energy %g MeV\n",
-      //   filename, decay::nucdecayenergygamma(z, a) / EV / 1e6);
-      set_trivial_gamma_spectrum(nucindex);
-
       assert_always(z != 28 || a != 56);  // Ni-56 must have a gamma spectrum
       assert_always(z != 27 || a != 56);  // Co-56 must have a gamma spectrum
       assert_always(z != 23 || a != 48);  // V-48 must have a gamma spectrum
       assert_always(z != 24 || a != 48);  // Cr-48 must have a gamma spectrum
       assert_always(z != 28 || a != 57);  // Ni-57 must have a gamma spectrum if present in list of nuclides
       assert_always(z != 28 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
-    } else {
-      // printout("%s does not exist. No gamma decay from this nuclide.\n", filename);
+      set_trivial_gamma_spectrum(nucindex);
     }
   }
 
@@ -165,7 +159,7 @@ void init_gamma_linelist() {
 
   const ptrdiff_t total_lines = std::ranges::fold_left(
       gamma_spectra, 0, [](const ptrdiff_t sum, const auto& lines) { return sum + std::ssize(lines); });
-  printout("total gamma-ray lines %td\n", total_lines);
+  printlnlog("total gamma-ray lines {}", total_lines);
 
   std::vector<NucGammaLine> allnuc_gamma_line_list;
   allnuc_gamma_line_list.reserve(total_lines);
@@ -198,7 +192,7 @@ void init_gamma_linelist() {
 }
 
 void init_xcom_photoion_data() {
-  printout("reading XCOM photoionisation data...\n");
+  printlnlog("reading XCOM photoionisation data...");
   for (int Z = 0; Z < numb_xcom_elements; Z++) {
     photoion_data[Z].reserve(100);
   }
@@ -235,7 +229,6 @@ void init_xcom_photoion_data() {
     }
   }
 
-  printout("Failure to choose line (pellet_nucindex %d). Abort. zrand %g runtot %g\n", nucindex, zrand, runtot);
   assert_always(false);
   return NAN;
 }
@@ -299,9 +292,6 @@ void init_xcom_photoion_data() {
     }
 
     count++;
-    if (count == 1000) {
-      printout("Compton hit 1000 tries. %g %g %g %g %g\n", f_max, f_min, ftry, sigma_try, norm);
-    }
   }
 
   assert_always(ftry >= 1.);
@@ -362,8 +352,6 @@ auto thomson_angle() -> double {
 
 // handle physical Compton scattering event
 void compton_scatter(Packet& pkt) {
-  //  printout("Compton scattering.\n");
-
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
 
   // It is known that a Compton scattering event is going to take place.
@@ -919,8 +907,6 @@ void guttman_thermalisation(Packet& pkt) {
   for (int i = 0; i < numb_rnd_dirs; i++) {
     const double summand =
         width * (1 - std::exp(-std::pow(t_gamma, 2.) / std::pow(t, 2.) * column_densities[i] / avg_column_density));
-    printout("width: %f t_gamma: %f t: %f column_densities[i]: %f avg_column_density: %f summand: %f", width, t_gamma,
-             t, column_densities[i], avg_column_density, summand);
     f_gamma += summand;
   }
   f_gamma /= (4 * PI);

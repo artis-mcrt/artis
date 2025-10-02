@@ -71,18 +71,21 @@ void printout_tracemission_stats() {
     if (mode == 0) {
       std::ranges::SORT_OR_STABLE_SORT(traceemissionabsorption,
                                        [](const auto& a, const auto& b) { return a.energyemitted > b.energyemitted; });
-      printout("lambda [%5.1f, %5.1f] nu %g %g\n", traceemissabs_lambdamin, traceemissabs_lambdamax,
-               traceemissabs_nulower, traceemissabs_nuupper);
+      printlnlog("lambda [{:5.1f}, {:5.1f}] nu {:g} {:g}", traceemissabs_lambdamin, traceemissabs_lambdamax,
+                 traceemissabs_nulower, traceemissabs_nuupper);
 
-      printout("Top line emission contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
-               traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY,
-               traceemissabs_timemax / DAY, traceemission_totalenergy);
+      printlnlog(
+          "Top line emission contributions in the range lambda [{:5.1f}, {:5.1f}] time [{:5.1f}d, {:5.1f}d] ({:g} erg)",
+          traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
+          traceemission_totalenergy);
     } else {
       std::ranges::SORT_OR_STABLE_SORT(traceemissionabsorption, std::ranges::greater{},
                                        &emissionabsorptioncontrib::energyabsorbed);
-      printout("Top line absorption contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
-               traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY,
-               traceemissabs_timemax / DAY, traceabsorption_totalenergy);
+      printlnlog(
+          "Top line absorption contributions in the range lambda [{:5.1f}, {:5.1f}] time [{:5.1f}d, {:5.1f}d] ({:g} "
+          "erg)",
+          traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
+          traceabsorption_totalenergy);
     }
 
     // display the top entries of the sorted list
@@ -90,8 +93,8 @@ void printout_tracemission_stats() {
     if (globals::nlines > maxlinesprinted) {
       nlines_limited = maxlinesprinted;
     }
-    printout("%17s %4s %9s %5s %5s %8s %8s %4s %7s %7s %7s %7s\n", "energy", "Z", "ionstage", "upper", "lower",
-             "coll_str", "A", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
+    printlnlog("{:>17} {:>4} {:>9} {:>5} {:>5} {:>8} {:>8} {:>4} {:>7} {:>7} {:>7} {:>7}", "energy", "Z", "ionstage",
+               "upper", "lower", "coll_str", "A", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
     for (int i = 0; i < nlines_limited; i++) {
       double encontrib{NAN};
       double totalenergy{NAN};
@@ -142,16 +145,16 @@ void printout_tracemission_stats() {
         }
         assert_always(downtransid != -1);
 
-        printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n", encontrib,
-                 100 * encontrib / totalenergy, get_atomicnumber(element), get_ionstage(element, ion),
-                 globals::linelist.upperlevelindex[lineindex], globals::linelist.lowerlevelindex[lineindex],
-                 globals::alltrans.coll_str[downtransid], globals::linelist.einstein_A[lineindex],
-                 static_cast<int>(globals::alltrans.forbidden[downtransid]), linelambda, v_rad, B_lu, B_ul);
+        printlnlog("{:7.2e} ({:5.1f}%) {:4} {:9} {:5} {:5} {:8.1f} {:8.2e} {:4} {:7.1f} {:7.1f} {:7.1e} {:7.1e}",
+                   encontrib, 100 * encontrib / totalenergy, get_atomicnumber(element), get_ionstage(element, ion),
+                   globals::linelist.upperlevelindex[lineindex], globals::linelist.lowerlevelindex[lineindex],
+                   globals::alltrans.coll_str[downtransid], globals::linelist.einstein_A[lineindex],
+                   static_cast<int>(globals::alltrans.forbidden[downtransid]), linelambda, v_rad, B_lu, B_ul);
       } else {
         break;
       }
     }
-    printout("\n");
+    printlnlog("");
   }
 
   traceemissionabsorption.clear();
@@ -426,10 +429,9 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
   if (do_emission_absorption) {
     emissionpol_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
     absorptionpol_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
-    printout("Writing %s, %s, and %s\n", specpol_filename.c_str(), emission_filename.c_str(),
-             absorption_filename.c_str());
+    printlnlog("Writing {}, {}, and {}", specpol_filename, emission_filename, absorption_filename);
   } else {
-    printout("Writing %s\n", specpol_filename.c_str());
+    printlnlog("Writing {}", specpol_filename);
   }
 
   specpol_file << 0.0 << ' ';
@@ -527,9 +529,9 @@ void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, co
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (print_memusage) {
-    logprintlnfmt("[info] mem_usage: set of spectra{} occupy {:.3f} MB (node shared memory)",
-                  do_emission_absorption ? " (with emission/absorption tracing)" : "",
-                  spectra.mem_usage_bytes() / 1024. / 1024.);
+    printlnlog("[info] mem_usage: set of spectra{} occupy {:.3f} MB (node shared memory)",
+               do_emission_absorption ? " (with emission/absorption tracing)" : "",
+               spectra.mem_usage_bytes() / 1024. / 1024.);
   }
 }
 
@@ -667,8 +669,8 @@ void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkt
     write_partial_lightcurve_spectra_dirbin(nts, pkts, do_emission_absorption, dirbin);
   }
 
-  printout("timestep %d: Saving light curves and %sspectra took %lds\n", nts,
-           do_emission_absorption ? "emission/absorption " : "", std::time(nullptr) - time_func_start);
+  printlnlog("timestep {}: Saving light curves and {}spectra took {}s", nts,
+             do_emission_absorption ? "emission/absorption " : "", std::time(nullptr) - time_func_start);
 }
 
 void write_light_curve(const std::string& lc_filename, const int dirbin, const std::vector<double>& light_curve_lum,
