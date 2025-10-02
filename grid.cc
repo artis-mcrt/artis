@@ -1839,8 +1839,7 @@ void calculate_kappagrey() {
           kappa *= pow(T_rad / 2000., 5.);
         }
       } else {
-        printlnlog("Unknown opacity case. Abort.");
-        std::abort();
+        assert_always(false);
       }
 
       set_kappagrey(nonemptymgi, static_cast<float>(kappa));
@@ -2133,7 +2132,7 @@ void read_ejecta_model() {
   calc_modelinit_totmassradionuclides();
 
   printlnlog("Total input model mass: {:9.3e} [Msun]", mtot_input / MSUN);
-  printlog("Nuclide masses at t=t_model_init [Msun]:");
+  printlnlog("Nuclide masses at t=t_model_init [Msun]:");
   printlnlog("  56Ni: {:9.3e}  56Co: {:9.3e}  52Fe: {:9.3e}  48Cr: {:9.3e}",
              get_totmassradionuclide_tmodel(28, 56) / MSUN, get_totmassradionuclide_tmodel(27, 56) / MSUN,
              get_totmassradionuclide_tmodel(26, 52) / MSUN, get_totmassradionuclide_tmodel(24, 48) / MSUN);
@@ -2238,8 +2237,7 @@ void init_grid(const int my_rank) {
   } else if (GRID_TYPE == GridType::SPHERICAL1D) {
     setup_grid_spherical_1d();
   } else {
-    printlog("[fatal] grid_init: Error: Unknown grid type. Abort.");
-    std::abort();
+    assert_always(false);
   }
   propcell_mgi.resize(ngrid, -1);
 
@@ -2275,8 +2273,7 @@ void init_grid(const int my_rank) {
     assert_always(GRID_TYPE == GridType::CARTESIAN3D);
     map_2dmodelto3dgrid();
   } else {
-    printlog("[fatal] grid_init: Error: Unknown density type. Abort.");
-    std::abort();
+    assert_always(false);
   }
 
   if (globals::my_rank == 0) {
