@@ -59,11 +59,10 @@ struct NucGammaLine {
   double energy;  // in erg
 };
 
-void read_gamma_spectrum(const int nucindex, const std::string& filename)
-// reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
-{
-  printlog("reading gamma spectrum for Z={} A={} from {}...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
-           filename);
+void read_gamma_spectrum(const int nucindex, const std::string& filename) {
+  // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
+  printlnlog("reading gamma spectrum for Z={} A={} from {}...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
+             filename);
 
   auto gammafile = fstream_required(filename, std::ios::in);
   std::string line;
@@ -908,8 +907,6 @@ void guttman_thermalisation(Packet& pkt) {
   for (int i = 0; i < numb_rnd_dirs; i++) {
     const double summand =
         width * (1 - std::exp(-std::pow(t_gamma, 2.) / std::pow(t, 2.) * column_densities[i] / avg_column_density));
-    printlog("width: {:f} t_gamma: {:f} t: {:f} column_densities[i]: {:f} avg_column_density: {:f} summand: {:f}",
-             width, t_gamma, t, column_densities[i], avg_column_density, summand);
     f_gamma += summand;
   }
   f_gamma /= (4 * PI);
