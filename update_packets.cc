@@ -205,7 +205,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
 
     pkt.prop_time = globals::tmin;
   } else if constexpr (TESTMODE) {
-    printout("ERROR: Something wrong with decaying pellets. tdecay %g ts %g (ts + tw) %g\n", tdecay, ts, t2);
+    logprintlnfmt("ERROR: Something wrong with decaying pellets. tdecay {:g} ts {:g} (ts + tw) {:g}", tdecay, ts, t2);
     assert_testmodeonly(false);
   } else {
     __builtin_unreachable();

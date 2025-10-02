@@ -106,14 +106,16 @@ inline thread_local auto gslworkspace =
 #ifdef __NVCOMPILER_CUDA_ARCH__
 #define printout(...) printf(__VA_ARGS__)
 
-template <class... Args>
+template <typename... Args>
 inline auto logprintfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
-  printf("%s", std::format(fmt, std::forward<Args>(args)...).c_str());
+  const auto str = std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...));
+  printf("%s", str.c_str());
 }
 
-template <class... Args>
+template <typename... Args>
 inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
-  printf("%s\n", std::format(fmt, std::forward<Args>(args)...).c_str());
+  const auto str = std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...));
+  printf("%s\n", str.c_str());
 }
 
 #define __artis_assert(e)                         \
