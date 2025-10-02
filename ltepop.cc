@@ -506,13 +506,9 @@ __host__ __device__ auto calculate_sahafact(const int element, const int ion, co
   const double g_lower = stat_weight(element, ion, level);
   const double g_upper = stat_weight(element, ion + 1, upperionlevel);
   const double sf = SAHACONST * g_lower / g_upper * pow(T, -1.5) * exp(E_threshold / KB / T);
-  if (sf < 0) {
-    printout(
-        "[fatal] calculate_sahafact: Negative Saha factor. sfac %g element %d ion %d level %d upperionlevel %d "
-        "g_lower %g g_upper %g T %g E_threshold %g exppart %g\n",
-        sf, element, ion, level, upperionlevel, g_lower, g_upper, T, E_threshold, exp(E_threshold / KB / T));
-    std::abort();
-  }
+
+  assert_testmodeonly(sf > 0);
+
   return sf;
 }
 
