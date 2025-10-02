@@ -982,21 +982,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   chi_rpkt_cont.ffheat = chi_ff;
   chi_rpkt_cont.total = chi_rpkt_cont.ffescat + chi_rpkt_cont.bf + chi_rpkt_cont.ffheat;
 
-  if (!std::isfinite(chi_rpkt_cont.total)) {
-    printlnlog("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort");
-    printlnlog("[fatal] es {:g}, ff {:g}, bf {:g}", chi_rpkt_cont.ffescat, chi_rpkt_cont.ffheat, chi_rpkt_cont.bf);
-    printlnlog("[fatal] nbfcontinua {}", globals::nbfcontinua);
-    printlnlog("[fatal] in cell {} with density {:g}", grid::get_mgi_of_nonemptymgi(nonemptymgi),
-               grid::get_rho(nonemptymgi));
-    printlnlog("[fatal] pkt.nu_cmf {:g}", nu_cmf);
-    if (std::isfinite(chi_rpkt_cont.ffescat)) {
-      chi_rpkt_cont.ffheat = 0.;
-      chi_rpkt_cont.bf = 0.;
-      chi_rpkt_cont.total = chi_rpkt_cont.ffescat;
-    } else {
-      std::abort();
-    }
-  }
+  assert_always(std::isfinite(chi_rpkt_cont.total));
 }
 
 void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node_id) {
