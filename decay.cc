@@ -774,7 +774,6 @@ auto write_nuclides_list() {
   if (nucindex >= 0) {
     return nucindex;
   }
-  printlnlog("Could not find nuclide Z={} A={}", z, a);
   assert_always(false);  // nuclide not found
   return -1;
 }
@@ -804,7 +803,6 @@ auto get_nucstring_z(const std::string& strnuc) -> int {
       return z;
     }
   }
-  printlnlog("Could not get atomic number of '{}' '{}'", strnuc, elcode);
   assert_always(false);  // could not match to an element
   return -1;
 }
