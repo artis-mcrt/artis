@@ -724,7 +724,6 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
 #endif
   double stimrecombcoeff = 0.;
 
-  // const int status =
   integrator<integrand_stimrecombination_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsabs, epsrel,
                                                           GSL_INTEG_GAUSS61, &stimrecombcoeff, &error);
 
@@ -733,15 +732,6 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
 #endif
 
   stimrecombcoeff *= FOURPI * sf * get_phixsprobability(element, lowerion, level, phixstargetindex);
-
-  // if (status != 0)
-  // {
-  //   error *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
-  //   printout("stimrecombcoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d
-  //   phixstargetindex %d gamma %g error %g\n",
-  //            status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level,
-  //            phixstargetindex, gammacorr, error);
-  // }
 
   return stimrecombcoeff;
 }
@@ -819,7 +809,6 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
 
 #if !USE_SIMPSON_INTEGRATOR
   gsl_set_error_handler(previous_handler);
-#endif
 
   if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
     printlnlog(
@@ -831,6 +820,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
       gammacorr = 0.;
     }
   }
+#endif
 
   gammacorr *= FOURPI * get_phixsprobability(uniquelevelindex, phixstargetindex);
 
