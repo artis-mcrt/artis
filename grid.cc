@@ -1418,7 +1418,7 @@ auto get_cellcoordmax(const int cellindex, const int axis) -> double {
 
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
-[[nodiscard]] __host__ __device__ inline auto get_cellcoordmin(const int cellindex, const int axis) -> double {
+[[nodiscard]] __host__ __device__ auto get_cellcoordmin(const int cellindex, const int axis) -> double {
   return propcell_pos_min[cellindex][axis];
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
