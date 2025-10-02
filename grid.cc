@@ -1418,7 +1418,7 @@ auto get_cellcoordmax(const int cellindex, const int axis) -> double {
 
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
-auto get_cellcoordmin(const int cellindex, const int axis) -> double {
+[[nodiscard]] __host__ __device__ inline auto get_cellcoordmin(const int cellindex, const int axis) -> double {
   return propcell_pos_min[cellindex][axis];
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
@@ -2418,7 +2418,7 @@ auto get_totmassradionuclide_tmodel(const int z, const int a) -> double {
             "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
             "cellcoordmin %g, cellcoordmax %g\n",
             d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(GRID_TYPE, d), cellindex,
-            pktvelgridcoord[d], pktposgridcoord[d], grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart,
+            pktvelgridcoord[d], pktposgridcoord[d], get_cellcoordmin(cellindex, d) / globals::tmin * tstart,
             cellcoordmax[d] / globals::tmin * tstart);
         printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart, tstart / globals::tmin);
         printout(" delta %g\n", delta);
