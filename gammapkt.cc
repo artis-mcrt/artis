@@ -61,8 +61,8 @@ struct NucGammaLine {
 
 void read_gamma_spectrum(const int nucindex, const std::string& filename) {
   // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
-  printlnlog("reading gamma spectrum for Z={} A={} from {}...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
-             filename);
+  printout("reading gamma spectrum for Z=%d A=%d from %s...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
+           filename.c_str());
 
   auto gammafile = fstream_required(filename, std::ios::in);
   std::string line;
