@@ -107,14 +107,14 @@ inline thread_local auto gslworkspace =
 #define printout(...) printf(__VA_ARGS__)
 
 template <typename... Args>
-inline auto logprintfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
-  const auto str = std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...));
+inline auto logprintfmt(std::string_view fmt, Args&&... args) -> void {
+  const auto str = std::vformat(fmt, std::make_format_args(args...));
   printf("%s", str.c_str());
 }
 
 template <typename... Args>
-inline auto logprintlnfmt(const std::format_string<Args...> fmt, Args&&... args) -> void {
-  const auto str = std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...));
+inline auto logprintlnfmt(std::string_view fmt, Args&&... args) -> void {
+  const auto str = std::vformat(fmt, std::make_format_args(args...));
   printf("%s\n", str.c_str());
 }
 
