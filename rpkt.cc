@@ -702,10 +702,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     return false;
   }
 
-  printlnlog("[fatal] do_rpkt: Failed to identify event . Rpkt. edist {:g}, sdist {:g}, tdist {:g} Abort.", edist,
-             sdist, tdist);
-  printlnlog("[fatal] do_rpkt: Trouble was due to packet number {}.", pkt.number);
-  std::abort();
+  assert_always(false);
 }
 
 auto calculate_chi_ffheat_nnionpart(const int nonemptymgi) -> double {
