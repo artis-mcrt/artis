@@ -320,7 +320,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
     }
   }
   if (status == GSL_CONTINUE) {
-    printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations\n", iter + 1);
+    printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations", iter + 1);
   }
 
   gsl_root_fsolver_free(solver);
@@ -362,9 +362,9 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
     factor *= nne_hi * phifactor;
 
     if (!std::isfinite(factor)) {
-      printout(
+      printlnlog(
           "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element "
-          "Z=%d, ionstage %d in cell %d\n",
+          "Z={}, ionstage {} in cell {}",
           get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
       return ion;
     }
