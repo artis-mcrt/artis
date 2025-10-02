@@ -843,13 +843,8 @@ auto planck_integral_analytic(const double T_R, const double nu_lower, const dou
 // finds the best fitting W and temperature parameters in each spectral bin using J and nuJ
 void fit_parameters(const int nonemptymgi, const int timestep) {
   set_params_fullspec(nonemptymgi, timestep);
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    if (J_normfactor[nonemptymgi] <= 0) {
-      printlog("radfield: FATAL J_normfactor = {:g} in cell {} at call to fit_parameters", J_normfactor[nonemptymgi],
-               modelgridindex);
-      std::abort();
-    }
+    assert_always(J_normfactor[nonemptymgi] >= 0.);
 
     double J_bin_sum = 0.;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
