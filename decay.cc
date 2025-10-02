@@ -262,30 +262,25 @@ auto get_str_nuclidemeanlife(const int z, const int a) -> std::string {
   return get_decaypath_lastnucdecayenergy(decaypaths[decaypathindex]);
 }
 
-void printout_decaytype(const int decaytype) {
+[[nodiscard]] auto get_str_decaytype(const int decaytype) -> std::string {
   switch (decaytype) {
     case decaytypes::DECAYTYPE_ALPHA: {
-      printlog("alpha");
-      break;
+      return "alpha";
     }
     case decaytypes::DECAYTYPE_BETAPLUS: {
-      printlog("beta+");
-      break;
+      return "beta+";
     }
     case decaytypes::DECAYTYPE_ELECTRONCAPTURE: {
-      printlog("ec");
-      break;
+      return "ec";
     }
     case decaytypes::DECAYTYPE_BETAMINUS: {
-      printlog("beta-");
-      break;
+      return "beta-";
     }
     case decaytypes::DECAYTYPE_NONE: {
-      printlog("none");
-      break;
+      return "none";
     }
     default:
-      break;
+      return "unknown";
   }
 }
 
@@ -298,9 +293,7 @@ void printout_decaypath(const int decaypathindex) {
     printlog("{}{}", get_nuclidename(z, a), get_str_nuclidemeanlife(z, a));
 
     if (decaytype != DECAYTYPE_NONE) {
-      printlog(" -> ");
-      printout_decaytype(decaytype);
-      printlog(" -> ");
+      printlog(" -> {} -> ", get_str_decaytype(decaytype));
     }
   }
 
