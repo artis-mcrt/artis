@@ -1750,7 +1750,7 @@ void input(int rank) {
 #endif
   } else if (globals::n_titer == 1) {
 #ifdef DO_TITER
-    printout("[warning] input: n_titer = 1 but DO_TITER defined, remove DO_TITER to save memory\n");
+    printlnlog("[warning] input: n_titer = 1 but DO_TITER defined, remove DO_TITER to save memory");
 #endif
   } else {
     printlnlog("[fatal] input: no valid value for n_titer selected");
