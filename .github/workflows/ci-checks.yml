@@ -111,7 +111,7 @@ jobs:
                   cd ~/gcc-15
                   git clone https://gcc.gnu.org/git/gcc.git gcc-15-source
                   cd gcc-15-source
-                  git checkout releases/gcc-15.1.0
+                  git checkout releases/gcc-15
                   ./contrib/download_prerequisites
                   cd ~/gcc-15
                   mkdir gcc-15-build
