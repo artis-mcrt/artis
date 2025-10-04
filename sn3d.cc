@@ -94,7 +94,7 @@ void initialise_linestat_file() {
 void write_deposition_file() {
   const int my_rank = globals::my_rank;
   const int nts = globals::timestep;
-  printlnlog("Calculating deposition rates...");
+  printlog("Calculating and writing deposition.out...");
   auto const time_write_deposition_file_start = std::time(nullptr);
   double mtot = 0.;
   const int nstart_nonempty = grid::get_nstart_nonempty(my_rank);
@@ -188,8 +188,7 @@ void write_deposition_file() {
     std::rename("deposition.out.tmp", "deposition.out");
   }
 
-  printlnlog("calculating and writing deposition.out took {} seconds",
-             std::time(nullptr) - time_write_deposition_file_start);
+  printlnlog("took {} seconds", std::time(nullptr) - time_write_deposition_file_start);
 }
 
 void mpi_communicate_grid_properties() {
