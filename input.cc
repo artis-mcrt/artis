@@ -22,7 +22,6 @@
 #include <string>
 #include <string_view>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -397,93 +396,85 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
   }
 }
 
-void read_ion_transitions(std::istream& ftransitiondata, const int tottransitions_in_file, int& tottransitions,
+void read_ion_transitions(std::istream& ftransitiondata, const int ion_transition_count_in_file,
                           std::vector<Transition>& iontransitiontable, const int nlevels_requiretransitions,
                           const int nlevels_requiretransitions_upperlevels) {
   iontransitiontable.clear();
-  iontransitiontable.reserve(tottransitions);
+  iontransitiontable.reserve(ion_transition_count_in_file);
 
   std::string line;
   static std::istringstream ssline;
 
-  if (tottransitions == 0) {
-    // we will not read in any transitions, just skip past these lines in the file
-    for (int i = 0; i < tottransitions_in_file; i++) {
-      assert_always(getline(ftransitiondata, line));
-    }
-  } else {
-    // will be autodetected from first table row. old format had an index column and no collstr or forbidden columns
-    bool oldtransitionformat = false;
+  // will be autodetected from first table row. old format had an index column and no collstr or forbidden columns
+  bool oldtransitionformat = false;
 
-    int prev_upper = -1;
-    int prev_lower = 0;
-    for (int i = 0; i < tottransitions_in_file; i++) {
-      int lower_in = -1;
-      int upper_in = -1;
-      float A = 0;
-      float coll_str = -1.;
-      int intforbidden = 0;
-      assert_always(getline(ftransitiondata, line));
-      if (i == 0) {
-        ssline.clear();
-        ssline.str(line);
-        std::string word;
-        int column_count = 0;
-        while (ssline >> word) {
-          column_count++;
-        }
-        assert_always(column_count == 4 || column_count == 5);
-        oldtransitionformat = (column_count == 4);
-      }
+  int prev_upper = -1;
+  int prev_lower = 0;
+  for (int i = 0; i < ion_transition_count_in_file; i++) {
+    int lower_in = -1;
+    int upper_in = -1;
+    float A = 0;
+    float coll_str = -1.;
+    int intforbidden = 0;
+    assert_always(getline(ftransitiondata, line));
+    if (i == 0) {
       ssline.clear();
       ssline.str(line);
-      if (!oldtransitionformat) {
-        assert_always(ssline >> lower_in >> upper_in >> A >> coll_str >> intforbidden);
-      } else {
-        int transindex = 0;  // not used
-        assert_always(ssline >> transindex >> lower_in >> upper_in >> A);
+      std::string word;
+      int column_count = 0;
+      while (ssline >> word) {
+        column_count++;
       }
-      const int lower = lower_in - groundstate_index_in;
-      const int upper = upper_in - groundstate_index_in;
-      assert_always(lower >= 0);
-      assert_always(upper > lower);
-      assert_always(lower >= prev_lower);
-      assert_always(upper >= prev_upper || lower > prev_lower);
-
-      // this entire block can be removed if we don't want to add in extra collisonal
-      // transitions between levels
-      if (prev_lower < nlevels_requiretransitions) {
-        assert_always(prev_lower >= 0);
-        int stoplevel = 0;
-        if (lower == prev_lower && upper > prev_upper + 1) {
-          // same lower level, but some upper levels were skipped over
-          stoplevel = upper - 1;
-          if (stoplevel >= nlevels_requiretransitions_upperlevels) {
-            stoplevel = nlevels_requiretransitions_upperlevels - 1;
-          }
-        } else if ((lower > prev_lower) && prev_upper < (nlevels_requiretransitions_upperlevels - 1)) {
-          // we've moved onto another lower level, but the previous one was missing some required transitions
-          stoplevel = nlevels_requiretransitions_upperlevels - 1;
-        } else {
-          stoplevel = -1;
-        }
-
-        for (int tmplevel = prev_upper + 1; tmplevel <= stoplevel; tmplevel++) {
-          if (tmplevel == prev_lower) {
-            continue;
-          }
-          tottransitions++;
-          assert_always(tmplevel >= 0);
-          iontransitiontable.push_back(
-              {.lower = prev_lower, .upper = tmplevel, .A = 0., .coll_str = -2., .forbidden = true});
-        }
-      }
-
-      iontransitiontable.push_back(
-          {.lower = lower, .upper = upper, .A = A, .coll_str = coll_str, .forbidden = (intforbidden == 1)});
-      prev_lower = lower;
-      prev_upper = upper;
+      assert_always(column_count == 4 || column_count == 5);
+      oldtransitionformat = (column_count == 4);
     }
+    ssline.clear();
+    ssline.str(line);
+    if (!oldtransitionformat) {
+      assert_always(ssline >> lower_in >> upper_in >> A >> coll_str >> intforbidden);
+    } else {
+      int transindex = 0;  // not used
+      assert_always(ssline >> transindex >> lower_in >> upper_in >> A);
+    }
+    const int lower = lower_in - groundstate_index_in;
+    const int upper = upper_in - groundstate_index_in;
+    assert_always(lower >= 0);
+    assert_always(upper > lower);
+    assert_always(lower >= prev_lower);
+    assert_always(upper >= prev_upper || lower > prev_lower);
+
+    // this entire block can be removed if we don't want to add in extra collisonal
+    // transitions between levels
+    if (prev_lower < nlevels_requiretransitions) {
+      assert_always(prev_lower >= 0);
+      int stoplevel = 0;
+      if (lower == prev_lower && upper > prev_upper + 1) {
+        // same lower level, but some upper levels were skipped over
+        stoplevel = upper - 1;
+        if (stoplevel >= nlevels_requiretransitions_upperlevels) {
+          stoplevel = nlevels_requiretransitions_upperlevels - 1;
+        }
+      } else if ((lower > prev_lower) && prev_upper < (nlevels_requiretransitions_upperlevels - 1)) {
+        // we've moved onto another lower level, but the previous one was missing some required transitions
+        stoplevel = nlevels_requiretransitions_upperlevels - 1;
+      } else {
+        stoplevel = -1;
+      }
+
+      for (int tmplevel = prev_upper + 1; tmplevel <= stoplevel; tmplevel++) {
+        if (tmplevel == prev_lower) {
+          continue;
+        }
+        assert_always(tmplevel >= 0);
+        iontransitiontable.push_back(
+            {.lower = prev_lower, .upper = tmplevel, .A = 0., .coll_str = -2., .forbidden = true});
+      }
+    }
+
+    iontransitiontable.push_back(
+        {.lower = lower, .upper = upper, .A = A, .coll_str = coll_str, .forbidden = (intforbidden == 1)});
+    prev_lower = lower;
+    prev_upper = upper;
   }
 }
 
@@ -492,19 +483,18 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
                                           std::vector<int>& iondowntranstmplineindicies, int& lineindex,
                                           std::vector<TransitionLine>& temp_linelist,
                                           std::vector<LevelTransition>& temp_alltranslist,
-                                          size_t& temp_alltranslist_size, std::span<EnergyLevelInput> ion_levels) {
+                                          std::span<EnergyLevelInput> ion_levels) {
   const int lineindex_initial = lineindex;
-  ptrdiff_t totupdowntrans = 0;
+  ptrdiff_t ion_updowntranscount = 0;
   // pass 0 to get transition counts of each level
   // pass 1 to allocate and fill transition arrays
   for (int pass = 0; pass < 2; pass++) {
     lineindex = lineindex_initial;
     if (pass == 1) {
-      ptrdiff_t alltransindex = temp_alltranslist_size;
-      temp_alltranslist_size += totupdowntrans;
+      ptrdiff_t alltransindex = std::ssize(temp_alltranslist);
       if (globals::rank_in_node == 0) {
-        temp_alltranslist.resize(temp_alltranslist_size);
-        assert_always(temp_alltranslist_size >= temp_linelist.size());
+        temp_alltranslist.resize(std::ssize(temp_alltranslist) + ion_updowntranscount);
+        assert_always(std::ssize(temp_alltranslist) >= std::ssize(temp_linelist));
       }
       for (int level = 0; level < nlevelsmax; level++) {
         ion_levels[level].alltrans_startdown = static_cast<int>(alltransindex);
@@ -519,7 +509,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
     std::ranges::fill(iondowntranstmplineindicies, -99);
 
-    totupdowntrans = 0;
+    ion_updowntranscount = 0;
     for (const auto& transition : transitiontable) {
       const int level = transition.upper;
       const int lowerlevel = transition.lower;
@@ -550,7 +540,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         const int nloweruptrans = ion_levels[lowerlevel].nuptrans + 1;
         ion_levels[lowerlevel].nuptrans = nloweruptrans;
 
-        totupdowntrans += 2;
+        ion_updowntranscount += 2;
 
         if (pass == 1 && globals::rank_in_node == 0) {
           const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
@@ -1068,9 +1058,6 @@ void read_phixs_data() {
 }
 
 void read_atomicdata_files() {
-  int totaluptrans = 0;
-  int totaldowntrans = 0;
-
   auto compositiondata = fstream_required("compositiondata.txt", std::ios::in);
 
   auto adata = fstream_required("adata.txt", std::ios::in);
@@ -1085,8 +1072,6 @@ void read_atomicdata_files() {
   std::vector<LevelTransition> temp_alltranslist;
   temp_linelist.reserve(1 << 22);  // reserve initial space for 4 million lines to avoid too many reallocations
   temp_alltranslist.reserve(1 << 22);
-
-  size_t temp_alltranslist_size = 0;  // keep size separate because the vector is only resized on rank_in_node == 0
 
   std::vector<EnergyLevelInput> temp_alllevels;
 
@@ -1195,21 +1180,24 @@ void read_atomicdata_files() {
       // and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
       int transdata_Z_in = -1;
       int transdata_ionstage_in = -1;
-      int tottransitions_in_file = 0;
+      int ion_transition_count_in_file = 0;
       while (transdata_Z_in != Z || transdata_ionstage_in != ionstage) {
         // skip over table
-        for (int i = 0; i < tottransitions_in_file; i++) {
+        for (int i = 0; i < ion_transition_count_in_file; i++) {
           assert_always(getline(ftransitiondata, line));
         }
         assert_always(get_noncommentline(ftransitiondata, line));  // get_noncommentline to skip over blank lines
         ssline.clear();
         ssline.str(line);
-        assert_always(ssline >> transdata_Z_in >> transdata_ionstage_in >> tottransitions_in_file);
+        assert_always(ssline >> transdata_Z_in >> transdata_ionstage_in >> ion_transition_count_in_file);
       }
 
+      assert_always(transdata_Z_in == Z);
+      assert_always(transdata_ionstage_in == ionstage);
+
       printlnlog("transitiondata.txt: Z {} ionstage {} tottransitions {}", transdata_Z_in, transdata_ionstage_in,
-                 tottransitions_in_file);
-      assert_always(tottransitions_in_file >= 0);
+                 ion_transition_count_in_file);
+      assert_always(ion_transition_count_in_file >= 0);
 
       // read the data for the levels and set up the list of possible transitions for each level
       // store the ions data to memory and set up the ions zeta and levellist
@@ -1228,16 +1216,7 @@ void read_atomicdata_files() {
       assert_always(std::ssize(temp_alllevels) == uniquelevelindex);
 
       read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, temp_alllevels);
-
-      int tottransitions = tottransitions_in_file;
-
-      if (single_level_top_ion && ion == nions - 1)  // limit the top ion to one level and no transitions
-      {
-        tottransitions = 0;
-      }
-
-      assert_always(transdata_Z_in == Z);
-      assert_always(transdata_ionstage_in == ionstage);
+      uniquelevelindex += nlevelsmax;
 
       // first nlevels_requiretransitions levels will be collisionally
       // coupled to the first nlevels_requiretransitions_upperlevels levels (assumed forbidden)
@@ -1248,8 +1227,15 @@ void read_atomicdata_files() {
       const int nlevels_requiretransitions_upperlevels = nlevelsmax;
 
       // load transition table for the current ion to temporary memory
-      read_ion_transitions(ftransitiondata, tottransitions_in_file, tottransitions, iontransitiontable,
-                           nlevels_requiretransitions, nlevels_requiretransitions_upperlevels);
+      if (single_level_top_ion && ion == nions - 1) {
+        // we will not read in any transitions, just skip past these lines in the file
+        for (int i = 0; i < ion_transition_count_in_file; i++) {
+          assert_always(getline(ftransitiondata, line));
+        }
+      } else {
+        read_ion_transitions(ftransitiondata, ion_transition_count_in_file, iontransitiontable,
+                             nlevels_requiretransitions, nlevels_requiretransitions_upperlevels);
+      }
 
       // last level index is (nlevelsmax - 1), so this is the correct size
       iondowntranstmplineindicies.resize(downtranslevelstart(nlevelsmax));
@@ -1257,14 +1243,7 @@ void read_atomicdata_files() {
       auto ion_levels =
           std::span{temp_alllevels}.subspan(globals::elements[element].ions[ion].uniquelevelindexstart, nlevelsmax);
       add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, iontransitiontable, iondowntranstmplineindicies,
-                                           lineindex, temp_linelist, temp_alltranslist, temp_alltranslist_size,
-                                           ion_levels);
-
-      for (const auto& level : ion_levels) {
-        uniquelevelindex++;
-        totaldowntrans += level.ndowntrans;
-        totaluptrans += level.nuptrans;
-      }
+                                           lineindex, temp_linelist, temp_alltranslist, ion_levels);
 
       if (ion < nions - 1) {
         nbfcheck += globals::elements[element].ions[ion].nlevels_ionising;  // nlevelsmax;
@@ -1289,11 +1268,6 @@ void read_atomicdata_files() {
   }
 
   // Set up the list of allowed upward transitions for each level
-  printlnlog("total uptrans {}", totaluptrans);
-  printlnlog("total downtrans {}", totaldowntrans);
-
-  printlnlog("[info] mem_usage: transition lists occupy {:.3f} MB (node shared memory)",
-             (totaluptrans + totaldowntrans) * (2 * sizeof(int) + 3 * sizeof(float) + sizeof(bool)) / 1024. / 1024.);
 
   if (globals::rank_in_node == 0) {
     // sort the lineline in descending frequency
@@ -1374,22 +1348,30 @@ void read_atomicdata_files() {
   temp_alllevels.clear();
   temp_alllevels.shrink_to_fit();
 
-  const auto totupdowntrans = totaluptrans + totaldowntrans;
-  assert_always(std::cmp_equal(totupdowntrans, temp_alltranslist_size));
+  const int updowntranscount = []() -> int {
+    const int downtranscount = std::ranges::fold_left(globals::alllevels.ndowntrans, 0, std::plus<>());
+    const int uptranscount = std::ranges::fold_left(globals::alllevels.nuptrans, 0, std::plus<>());
+
+    printlnlog("total uptrans {}", uptranscount);
+    printlnlog("total downtrans {}", downtranscount);
+    return downtranscount + uptranscount;
+  }();
+  printlnlog("[info] mem_usage: transition lists occupy {:.3f} MB (node shared memory)",
+             updowntranscount * (2 * sizeof(int) + 3 * sizeof(float) + sizeof(bool)) / 1024. / 1024.);
 
   // create a shared all transitions list and then copy data across, freeing the local copy
   MPI_Barrier(globals::mpi_comm_node);
 
-  auto alltrans_lineindex = MPI_shared_malloc_span<int>(totupdowntrans);
-  auto alltrans_targetlevelindex = MPI_shared_malloc_span<int>(totupdowntrans);
-  auto alltrans_einstein_A = MPI_shared_malloc_span<float>(totupdowntrans);
-  auto alltrans_coll_str = MPI_shared_malloc_span<float>(totupdowntrans);
-  auto alltrans_osc_strength = MPI_shared_malloc_span<float>(totupdowntrans);
-  auto alltrans_forbidden = MPI_shared_malloc_span<bool>(totupdowntrans);
+  auto alltrans_lineindex = MPI_shared_malloc_span<int>(updowntranscount);
+  auto alltrans_targetlevelindex = MPI_shared_malloc_span<int>(updowntranscount);
+  auto alltrans_einstein_A = MPI_shared_malloc_span<float>(updowntranscount);
+  auto alltrans_coll_str = MPI_shared_malloc_span<float>(updowntranscount);
+  auto alltrans_osc_strength = MPI_shared_malloc_span<float>(updowntranscount);
+  auto alltrans_forbidden = MPI_shared_malloc_span<bool>(updowntranscount);
 
   if (globals::rank_in_node == 0) {
-    assert_always(std::ssize(temp_alltranslist) == totupdowntrans);
-    for (int t = 0; t < totupdowntrans; t++) {
+    assert_always(std::ssize(temp_alltranslist) == updowntranscount);
+    for (int t = 0; t < updowntranscount; t++) {
       alltrans_lineindex[t] = temp_alltranslist[t].lineindex;
       alltrans_targetlevelindex[t] = temp_alltranslist[t].targetlevelindex;
       alltrans_einstein_A[t] = temp_alltranslist[t].einstein_A;
