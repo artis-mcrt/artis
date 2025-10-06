@@ -389,7 +389,7 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
       // is below the ionisation potential and the level doesn't
       // belong to the topmost ion included.
       // Rate coefficients are only available for ionising levels.
-      if (levelenergy < ionpot && ion < nions - 1 && globals::rank_in_node == 0) {
+      if (levelenergy < ionpot && ion < nions - 1) {
         globals::elements[element].ions[ion].nlevels_ionising++;
       }
     }
@@ -1115,9 +1115,6 @@ auto read_compositiondata() -> std::vector<int> {
 }
 
 void read_atomicdata_files() {
-  std::string line;
-  std::istringstream ssline;
-
   auto nlevelsmax_readin = read_compositiondata();
 
   printlnlog("single_level_top_ion: {}", single_level_top_ion ? "true" : "false");
@@ -1129,14 +1126,14 @@ void read_atomicdata_files() {
     temp_linelist.reserve(1 << 22);  // reserve initial space for 4 million lines to avoid too many reallocations
     temp_alltranslist.reserve(1 << 22);
   }
-  std::vector<Transition> iontransitiontable;
-
-  auto adata = fstream_required("adata.txt", std::ios::in);
-  auto ftransitiondata =
-      (globals::rank_in_node == 0) ? fstream_required("transitiondata.txt", std::ios::in) : std::fstream{};
 
   globals::nlines = 0;
   if (globals::rank_in_node == 0) {
+    std::string line;
+    std::istringstream ssline;
+    std::vector<Transition> iontransitiontable;
+    auto adata = fstream_required("adata.txt", std::ios::in);
+    auto ftransitiondata = fstream_required("transitiondata.txt", std::ios::in);
     int uniquelevelindex = 0;  // index into list of all levels of all ions of all elements
     int nbfcheck = 0;
     for (int element = 0; element < get_nelements(); element++) {
