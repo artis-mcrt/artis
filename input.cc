@@ -480,16 +480,16 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
 
 void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
                                           const std::vector<Transition>& transitiontable,
-                                          std::vector<int>& iondowntranstmplineindicies, int& lineindex,
+                                          std::vector<int>& iondowntranstmplineindicies,
                                           std::vector<TransitionLine>& temp_linelist,
                                           std::vector<LevelTransition>& temp_alltranslist,
                                           std::span<EnergyLevelInput> ion_levels) {
-  const int lineindex_initial = lineindex;
+  const int nlines_initial = globals::nlines;
   ptrdiff_t ion_updowntranscount = 0;
   // pass 0 to get transition counts of each level
   // pass 1 to allocate and fill transition arrays
   for (int pass = 0; pass < 2; pass++) {
-    lineindex = lineindex_initial;
+    globals::nlines = nlines_initial;
     if (pass == 1) {
       ptrdiff_t alltransindex = std::ssize(temp_alltranslist);
       if (globals::rank_in_node == 0) {
@@ -532,7 +532,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
       // negative means that the transition hasn't been seen yet
       if (downtranslineindex < 0) {
-        downtranslineindex = lineindex++;
+        downtranslineindex = globals::nlines++;
 
         const int nupperdowntrans = ion_levels[level].ndowntrans + 1;
         ion_levels[level].ndowntrans = nupperdowntrans;
@@ -1093,7 +1093,7 @@ void read_atomicdata_files() {
   auto ftransitiondata =
       (globals::rank_in_node == 0) ? fstream_required("transitiondata.txt", std::ios::in) : std::fstream{};
 
-  int lineindex = 0;  // counter to determine the total number of lines
+  globals::nlines = 0;
   int uniqueionindex = 0;  // index into list of all ions of all elements
   int uniquelevelindex = 0;  // index into list of all levels of all ions of all elements
   int nbfcheck = 0;
@@ -1243,7 +1243,7 @@ void read_atomicdata_files() {
         auto ion_levels =
             std::span{temp_alllevels}.subspan(globals::elements[element].ions[ion].uniquelevelindexstart, nlevelsmax);
         add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, iontransitiontable, iondowntranstmplineindicies,
-                                             lineindex, temp_linelist, temp_alltranslist, ion_levels);
+                                             temp_linelist, temp_alltranslist, ion_levels);
       }
 
       if (ion < nions - 1) {
@@ -1256,9 +1256,9 @@ void read_atomicdata_files() {
 
   update_includedionslevels_maxnions();
 
-  // Save the linecounters value to the global variable containing the number of lines
-  globals::nlines = lineindex;
+  MPI_Bcast_safe(globals::nlines, 0, globals::mpi_comm_node);
   printlnlog("nlines {}", globals::nlines);
+
   if (globals::rank_in_node == 0) {
     assert_always(globals::nlines == std::ssize(temp_linelist));
     temp_linelist.shrink_to_fit();
@@ -1392,7 +1392,6 @@ void read_atomicdata_files() {
 
   // create a linelist shared on node and then copy data across, freeing the local copy
 
-  MPI_Bcast_safe(globals::nlines, 0, globals::mpi_comm_node);
   auto linelist_nu = MPI_shared_malloc_span<double>(globals::nlines);
   auto linelist_einstein_A = MPI_shared_malloc_span<float>(globals::nlines);
   auto linelist_elementindex = MPI_shared_malloc_span<int>(globals::nlines);
@@ -1437,7 +1436,7 @@ void read_atomicdata_files() {
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
-  for (lineindex = 0; lineindex < globals::nlines; lineindex++) {
+  for (int lineindex = 0; lineindex < globals::nlines; lineindex++) {
     if (lineindex % globals::node_nprocs != globals::rank_in_node) {
       continue;
     }
@@ -1479,7 +1478,8 @@ void read_atomicdata_files() {
   globals::alltrans.lineindex = alltrans_lineindex;
 
   printlnlog("  took {}s", std::time(nullptr) - time_start_establish_linelist_connections);
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(globals::mpi_comm_node);
+
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
