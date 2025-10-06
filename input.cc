@@ -621,7 +621,6 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
       }
     }
   }
-  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 auto calculate_nlevels_groundterm(const int element, const int ion) -> int {
