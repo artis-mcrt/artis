@@ -1392,6 +1392,7 @@ void read_atomicdata_files() {
 
   // create a linelist shared on node and then copy data across, freeing the local copy
 
+  MPI_Bcast_safe(globals::nlines, 0, globals::mpi_comm_node);
   auto linelist_nu = MPI_shared_malloc_span<double>(globals::nlines);
   auto linelist_einstein_A = MPI_shared_malloc_span<float>(globals::nlines);
   auto linelist_elementindex = MPI_shared_malloc_span<int>(globals::nlines);
