@@ -466,6 +466,7 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
           continue;
         }
         assert_always(tmplevel >= 0);
+        assert_always(tmplevel > prev_lower);
         iontransitiontable.push_back(
             {.lower = prev_lower, .upper = tmplevel, .A = 0., .coll_str = -2., .forbidden = true});
       }
@@ -518,10 +519,6 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
     for (const auto& transition : transitiontable) {
       const int level = transition.upper;
       const int lowerlevel = transition.lower;
-      if (pass == 0) {
-        assert_always(lowerlevel >= 0);
-        assert_always(level > lowerlevel);
-      }
 
       if ((lowerlevel >= nlevels) || (level >= nlevels)) {
         continue;
