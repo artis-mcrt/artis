@@ -76,19 +76,6 @@ struct LevelTransition {
   bool forbidden;
 };
 
-struct EnergyLevelInput {
-  double epsilon{-1};  // Excitation energy of this level relative to the neutral ground level.
-  int alltrans_startdown{};  // index into globals::alltrans for first down transition from this level
-  int ndowntrans{0};  // Number of down transitions from this level
-  int nuptrans{0};  // Number of up transitions to this level
-  float stat_weight{0.};  // statistical weight of this level
-
-  [[nodiscard]] constexpr auto alltrans_startup() const -> int {
-    // index into globals::alltrans for first up transition from this level
-    return alltrans_startdown + ndowntrans;
-  }
-};
-
 struct Ion {
   int nlevels{0};  // Number of levels for this ionisation stage
   int nlevels_excited_nlte{0};  // number of nlte levels for this ion
