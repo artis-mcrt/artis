@@ -1229,7 +1229,7 @@ void read_atomicdata_files() {
         const int nlevels_requiretransitions_upperlevels = nlevelskept;
 
         // load transition table for the current ion to temporary memory
-        if (single_level_top_ion && ion == (nions - 1)) {
+        if (nlevelskept <= 1) {
           // we will not read in any transitions, just skip past these lines in the file
           for (int i = 0; i < ion_transition_count_in_file; i++) {
             assert_always(getline(ftransitiondata, line));
