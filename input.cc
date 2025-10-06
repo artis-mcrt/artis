@@ -1074,33 +1074,40 @@ auto read_compositiondata() -> std::vector<int> {
   assert_always(homogeneous_abundances == 0);  // no longer in use
 
   auto nlevelsmax_readin = std::vector<int>(get_nelements());
+  auto nions_readin = std::vector<int>(get_nelements());
   int uniqueionindex = 0;  // index into list of all ions of all elements
   for (int element = 0; element < get_nelements(); element++) {
     // read information about the next element which should be stored to memory
     int atomicnumber = 0;
-    int nions = 0;
     int lowermost_ionstage = 0;
     int uppermost_ionstage = 0;
     double uniformabundance{NAN};  // no longer in use mode for setting uniform abundances
     double mass_amu{NAN};
-    assert_always(compositiondata >> atomicnumber >> nions >> lowermost_ionstage >> uppermost_ionstage >>
-                  nlevelsmax_readin[element] >> uniformabundance >> mass_amu);
-    printlnlog("compositiondata.txt: Z {} nions {} lowermost {} uppermost {} nlevelsmax {}", atomicnumber, nions,
-               lowermost_ionstage, uppermost_ionstage, nlevelsmax_readin[element]);
+    assert_always(compositiondata >> atomicnumber >> nions_readin[element] >> lowermost_ionstage >>
+                  uppermost_ionstage >> nlevelsmax_readin[element] >> uniformabundance >> mass_amu);
+    printlnlog("compositiondata.txt: Z {} nions {} lowermost {} uppermost {} nlevelsmax {}", atomicnumber,
+               nions_readin[element], lowermost_ionstage, uppermost_ionstage, nlevelsmax_readin[element]);
     assert_always(atomicnumber > 0);
-    assert_always(nions >= 0);
-    assert_always(nions == 0 || (nions == uppermost_ionstage - lowermost_ionstage + 1));
+    assert_always(nions_readin[element] >= 0);
+    assert_always(nions_readin[element] == 0 || (nions_readin[element] == uppermost_ionstage - lowermost_ionstage + 1));
     assert_always(uniformabundance >= 0);
     assert_always(mass_amu >= 0);
 
     globals::elements[element] = {
-        .ions = std::vector<Ion>(nions),
+        .ions = {},  // this will be set later after the total number of ions is known for the block allocation
         .anumber = atomicnumber,
         .lowest_ionstage = lowermost_ionstage,
         .uniqueionindexstart = uniqueionindex,
         .initstablemeannucmass = static_cast<float>(mass_amu * MH),
     };
-    uniqueionindex += nions;
+    uniqueionindex += nions_readin[element];
+  }
+
+  resize_exactly(globals::allions, uniqueionindex);
+
+  for (int element = 0; element < get_nelements(); element++) {
+    globals::elements[element].ions =
+        std::span{globals::allions}.subspan(globals::elements[element].uniqueionindexstart, nions_readin[element]);
   }
 
   return nlevelsmax_readin;
