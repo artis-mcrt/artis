@@ -1058,10 +1058,7 @@ void read_phixs_data() {
   setup_phixs_list();
 }
 
-void read_atomicdata_files() {
-  std::string line;
-  std::istringstream ssline;
-
+auto read_compositiondata() -> std::vector<int> {
   auto compositiondata = fstream_required("compositiondata.txt", std::ios::in);
 
   int nelements_in = 0;
@@ -1107,10 +1104,18 @@ void read_atomicdata_files() {
     uniqueionindex += nions;
   }
 
+  return nlevelsmax_readin;
+}
+
+void read_atomicdata_files() {
+  std::string line;
+  std::istringstream ssline;
+
+  auto nlevelsmax_readin = read_compositiondata();
+
   printlnlog("single_level_top_ion: {}", single_level_top_ion ? "true" : "false");
 
   std::vector<EnergyLevelInput> temp_alllevels;
-
   std::vector<TransitionLine> temp_linelist;
   std::vector<LevelTransition> temp_alltranslist;
   if (globals::rank_in_node == 0) {
@@ -1262,10 +1267,6 @@ void read_atomicdata_files() {
   if (globals::rank_in_node == 0) {
     assert_always(globals::nlines == std::ssize(temp_linelist));
     temp_linelist.shrink_to_fit();
-  }
-
-  if (T_preset > 0) {
-    std::abort();
   }
 
   // Set up the list of allowed upward transitions for each level
