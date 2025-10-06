@@ -1059,28 +1059,14 @@ void read_phixs_data() {
 }
 
 void read_atomicdata_files() {
+  std::string line;
+  std::istringstream ssline;
+
   auto compositiondata = fstream_required("compositiondata.txt", std::ios::in);
 
-  auto adata = fstream_required("adata.txt", std::ios::in);
-
-  printlnlog("single_level_top_ion: {}", single_level_top_ion ? "true" : "false");
-  // initialize atomic data structure to number of elements
   int nelements_in = 0;
   assert_always(compositiondata >> nelements_in);
   globals::elements.resize(nelements_in);
-
-  std::vector<EnergyLevelInput> temp_alllevels;
-
-  std::vector<TransitionLine> temp_linelist;
-  std::vector<LevelTransition> temp_alltranslist;
-  if (globals::rank_in_node == 0) {
-    temp_linelist.reserve(1 << 22);  // reserve initial space for 4 million lines to avoid too many reallocations
-    temp_alltranslist.reserve(1 << 22);
-  }
-  std::vector<Transition> iontransitiontable;
-
-  std::string line;
-  std::istringstream ssline;
 
   // temperature to determine relevant ionstages
   int T_preset = 0;
@@ -1121,7 +1107,19 @@ void read_atomicdata_files() {
     uniqueionindex += nions;
   }
 
-  // open transition data file
+  printlnlog("single_level_top_ion: {}", single_level_top_ion ? "true" : "false");
+
+  std::vector<EnergyLevelInput> temp_alllevels;
+
+  std::vector<TransitionLine> temp_linelist;
+  std::vector<LevelTransition> temp_alltranslist;
+  if (globals::rank_in_node == 0) {
+    temp_linelist.reserve(1 << 22);  // reserve initial space for 4 million lines to avoid too many reallocations
+    temp_alltranslist.reserve(1 << 22);
+  }
+  std::vector<Transition> iontransitiontable;
+
+  auto adata = fstream_required("adata.txt", std::ios::in);
   auto ftransitiondata =
       (globals::rank_in_node == 0) ? fstream_required("transitiondata.txt", std::ios::in) : std::fstream{};
 
