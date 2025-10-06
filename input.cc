@@ -1413,7 +1413,7 @@ void read_atomicdata_files() {
   }
   temp_linelist.clear();
   temp_linelist.shrink_to_fit();
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(globals::mpi_comm_node);
 
   globals::linelist.nu = linelist_nu;
   globals::linelist.einstein_A = linelist_einstein_A;
