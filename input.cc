@@ -1070,8 +1070,10 @@ void read_atomicdata_files() {
 
   std::vector<TransitionLine> temp_linelist;
   std::vector<LevelTransition> temp_alltranslist;
-  temp_linelist.reserve(1 << 22);  // reserve initial space for 4 million lines to avoid too many reallocations
-  temp_alltranslist.reserve(1 << 22);
+  if (globals::rank_in_node == 0) {
+    temp_linelist.reserve(1 << 22);  // reserve initial space for 4 million lines to avoid too many reallocations
+    temp_alltranslist.reserve(1 << 22);
+  }
 
   std::vector<EnergyLevelInput> temp_alllevels;
 
