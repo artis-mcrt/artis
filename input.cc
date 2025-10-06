@@ -1090,15 +1090,8 @@ void read_atomicdata_files() {
   assert_always(compositiondata >> homogeneous_abundances);
   assert_always(homogeneous_abundances == 0);  // no longer in use
 
-  // open transition data file
-  auto ftransitiondata =
-      (globals::rank_in_node == 0) ? fstream_required("transitiondata.txt", std::ios::in) : std::fstream{};
-
-  globals::nlines = 0;
-  int uniqueionindex = 0;  // index into list of all ions of all elements
-  int uniquelevelindex = 0;  // index into list of all levels of all ions of all elements
-  int nbfcheck = 0;
   auto nlevelsmax_readin = std::vector<int>(get_nelements());
+  int uniqueionindex = 0;  // index into list of all ions of all elements
   for (int element = 0; element < get_nelements(); element++) {
     // read information about the next element which should be stored to memory
     int Z = 0;
@@ -1125,8 +1118,16 @@ void read_atomicdata_files() {
         .uniqueionindexstart = uniqueionindex,
         .initstablemeannucmass = static_cast<float>(mass_amu * MH),
     };
+    uniqueionindex += nions;
   }
 
+  // open transition data file
+  auto ftransitiondata =
+      (globals::rank_in_node == 0) ? fstream_required("transitiondata.txt", std::ios::in) : std::fstream{};
+
+  globals::nlines = 0;
+  int uniquelevelindex = 0;  // index into list of all levels of all ions of all elements
+  int nbfcheck = 0;
   for (int element = 0; element < get_nelements(); element++) {
     // now read in data for all ions of the current element. before doing so initialize
     // energy scale for the current element (all level energies are stored relative to
@@ -1251,7 +1252,6 @@ void read_atomicdata_files() {
       if (ion < nions - 1) {
         nbfcheck += globals::elements[element].ions[ion].nlevels_ionising;  // nlevelsmax;
       }
-      uniqueionindex++;
     }
   }
   printlnlog("nbfcheck {}", nbfcheck);
