@@ -90,7 +90,6 @@ struct EnergyLevelInput {
 };
 
 struct Ion {
-  int ionstage{-1};  // Which ionisation stage: XI=0, XII=1, XIII=2, ...
   int nlevels{0};  // Number of levels for this ionisation stage
   int nlevels_excited_nlte{0};  // number of nlte levels for this ion
   int first_nlte{-1};  // index into nlte_pops array of a grid cell
@@ -109,6 +108,7 @@ struct Element {
   std::vector<Ion> ions;  // Carries information for each ion: 0,1,...,nions-1
   int nions{0};  // Number of ions for the current element
   int anumber{-1};  // Atomic number
+  int lowest_ionstage{-1};  // ionisation stage (charge - 1) of ion 0 for this element
   int uniqueionindexstart{-1};  /// uniqueionindex index of the lowest ionisation stage of this element
   float initstablemeannucmass = {0.};  // Atomic mass number in multiple of MH
   bool has_nlte_levels{false};

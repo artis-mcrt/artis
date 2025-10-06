@@ -1117,12 +1117,14 @@ void read_atomicdata_files() {
     assert_always(uniformabundance >= 0);
     assert_always(mass_amu >= 0);
 
-    globals::elements[element].anumber = Z;
-    globals::elements[element].nions = nions;
-    globals::elements[element].initstablemeannucmass = static_cast<float>(mass_amu * MH);
-    globals::elements[element].uniqueionindexstart = uniqueionindex;
-
-    resize_exactly(globals::elements[element].ions, nions);
+    globals::elements[element] = {
+        .ions = std::vector<Ion>(nions),
+        .nions = nions,
+        .anumber = Z,
+        .lowest_ionstage = lowermost_ionstage,
+        .uniqueionindexstart = uniqueionindex,
+        .initstablemeannucmass = static_cast<float>(mass_amu * MH),
+    };
 
     // now read in data for all ions of the current element. before doing so initialize
     // energy scale for the current element (all level energies are stored relative to
@@ -1164,8 +1166,9 @@ void read_atomicdata_files() {
       }
 
       printlnlog("adata.txt: Z {} ionstage {} nlevels_in_file {}", adata_Z_in, ionstage, nlevels_in_file);
+      assert_always(ionstage == (lowermost_ionstage + ion));
 
-      if (single_level_top_ion && ion == nions - 1) {  // limit the top ion to one level and no transitions
+      if (single_level_top_ion && ion == (nions - 1)) {  // limit the top ion to one level and no transitions
         nlevelsmax = 1;
       }
 
@@ -1179,7 +1182,6 @@ void read_atomicdata_files() {
       // read the data for the levels and set up the list of possible transitions for each level
       // store the ions data to memory and set up the ions zeta and levellist
       globals::elements[element].ions[ion] = {
-          .ionstage = ionstage,
           .nlevels = nlevelsmax,
           .first_nlte = -1,
           .nlevels_ionising = 0,

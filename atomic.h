@@ -74,8 +74,9 @@ __host__ __device__ inline auto get_nlevels(const int element, const int ion) ->
 // Return the ionisation stage of an ion specified by its elementindex and ionindex.
 [[nodiscard]] __host__ __device__ inline auto get_ionstage(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element));
-  return globals::elements[element].ions[ion].ionstage;
+  return globals::elements[element].lowest_ionstage + ion;
 }
 
 // Return the number of levels associated with an ion that have energies below the ionisation threshold.
