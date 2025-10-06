@@ -542,7 +542,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
 
         ion_updowntranscount += 2;
 
-        if (pass == 1 && globals::rank_in_node == 0) {
+        if (pass == 1) {
           const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
           const auto f_ul =
               static_cast<float>(g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A);
@@ -576,7 +576,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
                                                                  .forbidden = transition.forbidden};
         }
 
-      } else if (pass == 1 && globals::rank_in_node == 0) {
+      } else if (pass == 1) {
         // This is a new branch to deal with lines that have different types of transition. It should trip after a
         // transition is already known.
 
