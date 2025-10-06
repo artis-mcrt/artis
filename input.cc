@@ -478,15 +478,16 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
   }
 }
 
-void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
+void add_transitions_to_unsorted_linelist(const int element, const int ion,
                                           const std::vector<Transition>& transitiontable,
                                           std::vector<TransitionLine>& temp_linelist,
                                           std::vector<LevelTransition>& temp_alltranslist,
                                           std::vector<EnergyLevelInput>& temp_alllevels) {
+  const auto nlevels = get_nlevels(element, ion);
   auto ion_levels =
-      std::span{temp_alllevels}.subspan(globals::elements[element].ions[ion].uniquelevelindexstart, nlevelsmax);
+      std::span{temp_alllevels}.subspan(globals::elements[element].ions[ion].uniquelevelindexstart, nlevels);
   static std::vector<int> iondowntranstmplineindicies;
-  iondowntranstmplineindicies.resize(downtranslevelstart(nlevelsmax));
+  iondowntranstmplineindicies.resize(downtranslevelstart(nlevels));
 
   const int nlines_initial = globals::nlines;
   ptrdiff_t ion_updowntranscount = 0;
@@ -500,7 +501,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         temp_alltranslist.resize(std::ssize(temp_alltranslist) + ion_updowntranscount);
         assert_always(std::ssize(temp_alltranslist) >= std::ssize(temp_linelist));
       }
-      for (int level = 0; level < nlevelsmax; level++) {
+      for (int level = 0; level < nlevels; level++) {
         ion_levels[level].alltrans_startdown = static_cast<int>(alltransindex);
         alltransindex += ion_levels[level].ndowntrans;
         alltransindex += ion_levels[level].nuptrans;
@@ -522,7 +523,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
         assert_always(level > lowerlevel);
       }
 
-      if ((lowerlevel >= nlevelsmax) || (level >= nlevelsmax)) {
+      if ((lowerlevel >= nlevels) || (level >= nlevels)) {
         continue;
       }
       const double nu_trans = (ion_levels[level].epsilon - ion_levels[lowerlevel].epsilon) / H;
@@ -1142,7 +1143,7 @@ void read_atomicdata_files() {
       // read information for the elements next ionstage
       int adata_Z_in = -1;
       int ionstage = -1;
-      int nlevels = 0;
+      int nlevels_in_file = 0;
 
       while (adata_Z_in != Z || ionstage != lowermost_ionstage + ion)  // skip over this ion block
       {
@@ -1150,7 +1151,7 @@ void read_atomicdata_files() {
           printlnlog("increasing energyoffset by ionpot {:g}", ionpot);
           energyoffset += ionpot;
         }
-        for (int i = 0; i < nlevels; i++) {
+        for (int i = 0; i < nlevels_in_file; i++) {
           double levelenergy{NAN};
           double statweight{NAN};
           int levelindex = 0;
@@ -1164,21 +1165,20 @@ void read_atomicdata_files() {
         assert_always(get_noncommentline(adata, line));
         ssline.clear();
         ssline.str(line);
-        assert_always(ssline >> adata_Z_in >> ionstage >> nlevels >> ionpot);
+        assert_always(ssline >> adata_Z_in >> ionstage >> nlevels_in_file >> ionpot);
       }
 
-      printlnlog("adata.txt: Z {} ionstage {} nlevels {}", adata_Z_in, ionstage, nlevels);
+      printlnlog("adata.txt: Z {} ionstage {} nlevels_in_file {}", adata_Z_in, ionstage, nlevels_in_file);
 
-      if (single_level_top_ion && ion == nions - 1)  // limit the top ion to one level and no transitions
-      {
+      if (single_level_top_ion && ion == nions - 1) {  // limit the top ion to one level and no transitions
         nlevelsmax = 1;
       }
 
-      if (nlevelsmax < 0 || nlevelsmax > nlevels) {
-        nlevelsmax = nlevels;
-      } else if (nlevels > nlevelsmax) {
-        printlnlog("[info] read_atomicdata: reduce number of levels from {} to {} for Z {:2} ionstage {}", nlevels,
-                   nlevelsmax, adata_Z_in, ionstage);
+      if (nlevelsmax < 0 || nlevelsmax > nlevels_in_file) {
+        nlevelsmax = nlevels_in_file;
+      } else if (nlevels_in_file > nlevelsmax) {
+        printlnlog("[info] read_atomicdata: reduce number of levels from {} to {} for Z {:2} ionstage {}",
+                   nlevels_in_file, nlevelsmax, adata_Z_in, ionstage);
       }
 
       // read the data for the levels and set up the list of possible transitions for each level
@@ -1197,8 +1197,8 @@ void read_atomicdata_files() {
 
       assert_always(std::ssize(temp_alllevels) == uniquelevelindex);
 
-      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, temp_alllevels);
-      uniquelevelindex += nlevelsmax;
+      read_ion_levels(adata, element, ion, nions, nlevels_in_file, nlevelsmax, energyoffset, ionpot, temp_alllevels);
+      uniquelevelindex += get_nlevels(element, ion);
       if (globals::rank_in_node == 0) {
         // and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
         int transdata_Z_in = -1;
@@ -1242,8 +1242,8 @@ void read_atomicdata_files() {
         }
 
         // last level index is (nlevelsmax - 1), so this is the correct size
-        add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, iontransitiontable, temp_linelist,
-                                             temp_alltranslist, temp_alllevels);
+        add_transitions_to_unsorted_linelist(element, ion, iontransitiontable, temp_linelist, temp_alltranslist,
+                                             temp_alllevels);
       }
 
       if (ion < nions - 1) {
