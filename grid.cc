@@ -414,7 +414,7 @@ void allocate_nonemptymodelcells() {
   }
   MPI_Barrier(globals::mpi_comm_node);
 
-  printlnlog("[info] mem_usage: the modelgrid array occupies {:.3f} MB (shared on node)",
+  printlnlog("[info] mem_usage: the modelgrid array occupies {:.3f} MB (node shared memory)",
              std::ssize(modelgrid) * sizeof(modelgrid[0]) / 1024. / 1024.);
 
   allocate_nonemptycells_composition_cooling();

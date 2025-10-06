@@ -1030,8 +1030,8 @@ auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi) -> double {
 void setup_decaypath_energy_per_mass() {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
   printlog(
-      "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies {:.1f} MB (node "
-      "shared)...",
+      "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies {:.1f} MB (node shared "
+      "memory)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
   std::tie(decaypath_energy_per_mass, win_decaypath_energy_per_mass) =
       MPI_shared_malloc_span_keepwin<double>(nonempty_npts_model * get_num_decaypaths());
