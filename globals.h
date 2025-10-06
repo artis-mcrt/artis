@@ -106,7 +106,6 @@ struct Ion {
 
 struct Element {
   std::vector<Ion> ions;  // Carries information for each ion: 0,1,...,nions-1
-  int nions{0};  // Number of ions for the current element
   int anumber{-1};  // Atomic number
   int lowest_ionstage{-1};  // ionisation stage (charge - 1) of ion 0 for this element
   int uniqueionindexstart{-1};  /// uniqueionindex index of the lowest ionisation stage of this element

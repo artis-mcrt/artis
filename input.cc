@@ -1095,7 +1095,6 @@ auto read_compositiondata() -> std::vector<int> {
 
     globals::elements[element] = {
         .ions = std::vector<Ion>(nions),
-        .nions = nions,
         .anumber = atomicnumber,
         .lowest_ionstage = lowermost_ionstage,
         .uniqueionindexstart = uniqueionindex,
