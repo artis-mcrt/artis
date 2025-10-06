@@ -290,7 +290,7 @@ struct AllLevels {
 inline AllLevels alllevels{};
 
 inline std::vector<Element> elements;
-inline std::vector<Ion> allions;
+inline std::span<Ion> allions;
 
 inline int nlines{-1};
 inline TransitionLines linelist{};
