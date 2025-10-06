@@ -1158,14 +1158,7 @@ void read_atomicdata_files() {
           energyoffset += ionpot;
         }
         for (int i = 0; i < nlevels_in_file; i++) {
-          double levelenergy{NAN};
-          double statweight{NAN};
-          int levelindex = 0;
-          int ntransitions = 0;
           std::getline(adata, line);
-          ssline.clear();
-          ssline.str(line);
-          assert_always(ssline >> levelindex >> levelenergy >> statweight >> ntransitions);
         }
 
         assert_always(get_noncommentline(adata, line));
