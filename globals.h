@@ -90,10 +90,9 @@ struct EnergyLevelInput {
 };
 
 struct Ion {
-  int ionstage{-1};  // Which ionisation stage: XI=0, XII=1, XIII=2, ...
   int nlevels{0};  // Number of levels for this ionisation stage
   int nlevels_excited_nlte{0};  // number of nlte levels for this ion
-  int first_nlte{-1};  // index into nlte_pops array of a grid cell
+  int allnltelevelsindexstart{-1};  // index into nlte_pops array for first excited nlte level
   int nlevels_ionising{0};  // Number of levels which have a bf-continuum
   int maxrecombininglevel{-1};  // level index of the highest level with a non-zero recombination rate
   int nlevels_autoion{0};  // Number of levels that can autoionise
@@ -106,9 +105,9 @@ struct Ion {
 };
 
 struct Element {
-  std::vector<Ion> ions;  // Carries information for each ion: 0,1,...,nions-1
-  int nions{0};  // Number of ions for the current element
+  std::span<Ion> ions;  // subspan of the allions array for this element
   int anumber{-1};  // Atomic number
+  int lowest_ionstage{-1};  // ionisation stage (charge - 1) of ion 0 for this element
   int uniqueionindexstart{-1};  /// uniqueionindex index of the lowest ionisation stage of this element
   float initstablemeannucmass = {0.};  // Atomic mass number in multiple of MH
   bool has_nlte_levels{false};
@@ -291,6 +290,7 @@ struct AllLevels {
 inline AllLevels alllevels{};
 
 inline std::vector<Element> elements;
+inline std::span<Ion> allions;
 
 inline int nlines{-1};
 inline TransitionLines linelist{};

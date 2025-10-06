@@ -372,6 +372,8 @@ void allocate_nonemptymodelcells() {
     }
   }
   assert_always(nonempty_npts_model > 0);
+  printlnlog("There are {} modelgrid cells with associated propagation cells (nonempty_npts_model)",
+             nonempty_npts_model);
 
   resize_exactly(mgi_of_nonemptymgi, nonempty_npts_model);
   std::ranges::fill(mgi_of_nonemptymgi, -2);
@@ -411,6 +413,10 @@ void allocate_nonemptymodelcells() {
     std::ranges::fill(modelgrid, ModelGridCell{});
   }
   MPI_Barrier(globals::mpi_comm_node);
+
+  printlnlog("[info] mem_usage: the modelgrid array occupies {:.3f} MB (node shared memory)",
+             std::ssize(modelgrid) * sizeof(modelgrid[0]) / 1024. / 1024.);
+
   allocate_nonemptycells_composition_cooling();
 
   if constexpr (EXPANSIONOPACITIES_ON || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
@@ -481,17 +487,10 @@ void allocate_nonemptymodelcells() {
 
   resize_exactly(globals::colheatingestimator_save, DIRECT_COL_HEAT ? 0 : nonempty_npts_model);
   std::ranges::fill(globals::colheatingestimator_save, 0.);
-
 #endif
 
   // barrier to make sure node master has set abundance values to node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
-
-  printlnlog("[info] mem_usage: the modelgrid array occupies {:.3f} MB",
-             (get_npts_model() + 1) * sizeof(modelgrid[0]) / 1024. / 1024.);
-
-  printlnlog("There are {} modelgrid cells with associated propagation cells (nonempty_npts_model)",
-             nonempty_npts_model);
 
   printlnlog(
       "[info] mem_usage: NLTE populations for all allocated cells occupy a total of {:.3f} MB (node shared memory)",
