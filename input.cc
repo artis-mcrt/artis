@@ -483,7 +483,9 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion, cons
                                           std::vector<int>& iondowntranstmplineindicies,
                                           std::vector<TransitionLine>& temp_linelist,
                                           std::vector<LevelTransition>& temp_alltranslist,
-                                          std::span<EnergyLevelInput> ion_levels) {
+                                          std::vector<EnergyLevelInput>& temp_alllevels) {
+  auto ion_levels =
+      std::span{temp_alllevels}.subspan(globals::elements[element].ions[ion].uniquelevelindexstart, nlevelsmax);
   const int nlines_initial = globals::nlines;
   ptrdiff_t ion_updowntranscount = 0;
   // pass 0 to get transition counts of each level
@@ -1240,10 +1242,8 @@ void read_atomicdata_files() {
 
         // last level index is (nlevelsmax - 1), so this is the correct size
         iondowntranstmplineindicies.resize(downtranslevelstart(nlevelsmax));
-        auto ion_levels =
-            std::span{temp_alllevels}.subspan(globals::elements[element].ions[ion].uniquelevelindexstart, nlevelsmax);
         add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, iontransitiontable, iondowntranstmplineindicies,
-                                             temp_linelist, temp_alltranslist, ion_levels);
+                                             temp_linelist, temp_alltranslist, temp_alllevels);
       }
 
       if (ion < nions - 1) {
