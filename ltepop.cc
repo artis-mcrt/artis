@@ -163,7 +163,6 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
 
   if (elem_has_nlte_levels(element)) {
     if (is_nlte(element, ion, level)) {
-      // first_nlte refers to the first excited state (level=1)
       const double nltepop_over_rho = get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level);
       if (nltepop_over_rho < 0.) {
         // Case for when no NLTE level information is available yet

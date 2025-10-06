@@ -1183,7 +1183,7 @@ void read_atomicdata_files() {
       // store the ions data to memory and set up the ions zeta and levellist
       globals::elements[element].ions[ion] = {
           .nlevels = nlevelsmax,
-          .first_nlte = -1,
+          .allnltelevelsindexstart = -1,
           .nlevels_ionising = 0,
           .maxrecombininglevel = -1,
           .nlevels_groundterm = -1,
@@ -1624,7 +1624,7 @@ void setup_nlte_levels() {
     if (elem_has_nlte_levels(element)) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
-        globals::elements[element].ions[ion].first_nlte = globals::total_nlte_levels;
+        globals::elements[element].ions[ion].allnltelevelsindexstart = globals::total_nlte_levels;
         const int nlevels = get_nlevels(element, ion);
         int nlevels_excited_nlte = 0;
         bool found_lte_only_level = false;
@@ -1653,7 +1653,7 @@ void setup_nlte_levels() {
         printlnlog("[input]  element {:2} Z={:2} ionstage {:2} has {:5} NLTE excited levels{}. Starting at index {}",
                    element, get_atomicnumber(element), get_ionstage(element, ion),
                    get_nlevels_excited_nlte(element, ion), has_superlevel ? " plus a superlevel" : "",
-                   globals::elements[element].ions[ion].first_nlte);
+                   globals::elements[element].ions[ion].allnltelevelsindexstart);
       }
     }
   }

@@ -92,7 +92,7 @@ struct EnergyLevelInput {
 struct Ion {
   int nlevels{0};  // Number of levels for this ionisation stage
   int nlevels_excited_nlte{0};  // number of nlte levels for this ion
-  int first_nlte{-1};  // index into nlte_pops array of a grid cell
+  int allnltelevelsindexstart{-1};  // index into nlte_pops array for first excited nlte level
   int nlevels_ionising{0};  // Number of levels which have a bf-continuum
   int maxrecombininglevel{-1};  // level index of the highest level with a non-zero recombination rate
   int nlevels_autoion{0};  // Number of levels that can autoionise
