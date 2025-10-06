@@ -1077,17 +1077,17 @@ auto read_compositiondata() -> std::vector<int> {
   int uniqueionindex = 0;  // index into list of all ions of all elements
   for (int element = 0; element < get_nelements(); element++) {
     // read information about the next element which should be stored to memory
-    int Z = 0;
+    int atomicnumber = 0;
     int nions = 0;
     int lowermost_ionstage = 0;
     int uppermost_ionstage = 0;
     double uniformabundance{NAN};  // no longer in use mode for setting uniform abundances
     double mass_amu{NAN};
-    assert_always(compositiondata >> Z >> nions >> lowermost_ionstage >> uppermost_ionstage >>
+    assert_always(compositiondata >> atomicnumber >> nions >> lowermost_ionstage >> uppermost_ionstage >>
                   nlevelsmax_readin[element] >> uniformabundance >> mass_amu);
-    printlnlog("compositiondata.txt: Z {} nions {} lowermost {} uppermost {} nlevelsmax {}", Z, nions,
+    printlnlog("compositiondata.txt: Z {} nions {} lowermost {} uppermost {} nlevelsmax {}", atomicnumber, nions,
                lowermost_ionstage, uppermost_ionstage, nlevelsmax_readin[element]);
-    assert_always(Z > 0);
+    assert_always(atomicnumber > 0);
     assert_always(nions >= 0);
     assert_always(nions == 0 || (nions == uppermost_ionstage - lowermost_ionstage + 1));
     assert_always(uniformabundance >= 0);
@@ -1096,7 +1096,7 @@ auto read_compositiondata() -> std::vector<int> {
     globals::elements[element] = {
         .ions = std::vector<Ion>(nions),
         .nions = nions,
-        .anumber = Z,
+        .anumber = atomicnumber,
         .lowest_ionstage = lowermost_ionstage,
         .uniqueionindexstart = uniqueionindex,
         .initstablemeannucmass = static_cast<float>(mass_amu * MH),
@@ -1136,7 +1136,7 @@ void read_atomicdata_files() {
     // energy scale for the current element (all level energies are stored relative to
     // the ground level of the neutral ion)
     // const auto lowermost_ionstage = globals::elements[element].lowest_ionstage;
-    const auto Z = globals::elements[element].anumber;
+    const auto atomicnumber = globals::elements[element].anumber;
     double energyoffset = 0.;
     double ionpot = 0.;
     const auto nions = get_nions(element);
@@ -1152,9 +1152,9 @@ void read_atomicdata_files() {
       int adata_ionstage_in = -1;
       int nlevels_in_file = 0;
 
-      while (adata_Z_in != Z || adata_ionstage_in != ionstage) {
+      while (adata_Z_in != atomicnumber || adata_ionstage_in != ionstage) {
         // skip over this ion block
-        if (adata_Z_in == Z) {
+        if (adata_Z_in == atomicnumber) {
           printlnlog("increasing energyoffset by ionpot {:g}", ionpot);
           energyoffset += ionpot;
         }
@@ -1210,7 +1210,7 @@ void read_atomicdata_files() {
         int transdata_Z_in = -1;
         int transdata_ionstage_in = -1;
         int ion_transition_count_in_file = 0;
-        while (transdata_Z_in != Z || transdata_ionstage_in != ionstage) {
+        while (transdata_Z_in != atomicnumber || transdata_ionstage_in != ionstage) {
           // skip over table
           for (int i = 0; i < ion_transition_count_in_file; i++) {
             assert_always(getline(ftransitiondata, line));
@@ -1221,8 +1221,8 @@ void read_atomicdata_files() {
           assert_always(ssline >> transdata_Z_in >> transdata_ionstage_in >> ion_transition_count_in_file);
         }
 
-        assert_always(transdata_Z_in == Z);
-        assert_always(transdata_ionstage_in == adata_ionstage_in);
+        assert_always(transdata_Z_in == atomicnumber);
+        assert_always(transdata_ionstage_in == ionstage);
 
         printlnlog("transitiondata.txt: Z {} ionstage {} tottransitions {}", transdata_Z_in, transdata_ionstage_in,
                    ion_transition_count_in_file);
@@ -1232,7 +1232,8 @@ void read_atomicdata_files() {
         // coupled to the first nlevels_requiretransitions_upperlevels levels (assumed forbidden)
         // use 0 to disable adding extra transitions
 
-        const int nlevels_requiretransitions = std::min(nlevelsmax, NLEVELS_REQUIRETRANSITIONS(Z, adata_ionstage_in));
+        const int nlevels_requiretransitions =
+            std::min(nlevelsmax, NLEVELS_REQUIRETRANSITIONS(atomicnumber, adata_ionstage_in));
         // next value with have no effect if nlevels_requiretransitions = 0
         const int nlevels_requiretransitions_upperlevels = nlevelsmax;
 
@@ -1253,7 +1254,7 @@ void read_atomicdata_files() {
       }
 
       if (ion < nions - 1) {
-        nbfcheck += globals::elements[element].ions[ion].nlevels_ionising;  // nlevelsmax;
+        nbfcheck += globals::elements[element].ions[ion].nlevels_ionising;
       }
     }
   }
