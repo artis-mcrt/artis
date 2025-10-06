@@ -1120,13 +1120,11 @@ void read_atomicdata_files() {
     assert_always(uniformabundance >= 0);
     assert_always(mass_amu >= 0);
 
-    // write this element's data to memory
     globals::elements[element].anumber = Z;
     globals::elements[element].nions = nions;
     globals::elements[element].initstablemeannucmass = static_cast<float>(mass_amu * MH);
     globals::elements[element].uniqueionindexstart = uniqueionindex;
 
-    // Initialize the elements ionlist
     resize_exactly(globals::elements[element].ions, nions);
 
     // now read in data for all ions of the current element. before doing so initialize
@@ -1145,8 +1143,8 @@ void read_atomicdata_files() {
       int ionstage = -1;
       int nlevels_in_file = 0;
 
-      while (adata_Z_in != Z || ionstage != lowermost_ionstage + ion)  // skip over this ion block
-      {
+      while (adata_Z_in != Z || ionstage != lowermost_ionstage + ion) {
+        // skip over this ion block
         if (adata_Z_in == Z) {
           printlnlog("increasing energyoffset by ionpot {:g}", ionpot);
           energyoffset += ionpot;
