@@ -1128,7 +1128,6 @@ void read_levels_and_transitions(std::vector<EnergyLevelInput>& temp_alllevels,
     // now read in data for all ions of the current element. before doing so initialize
     // energy scale for the current element (all level energies are stored relative to
     // the ground level of the neutral ion)
-    // const auto lowermost_ionstage = globals::elements[element].lowest_ionstage;
     const auto atomicnumber = globals::elements[element].anumber;
     double energyoffset = 0.;
     double ionpot = 0.;
