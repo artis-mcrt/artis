@@ -498,10 +498,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
     globals::nlines = nlines_initial;
     if (pass == 1) {
       ptrdiff_t alltransindex = std::ssize(temp_alltranslist);
-      if (globals::rank_in_node == 0) {
-        temp_alltranslist.resize(std::ssize(temp_alltranslist) + ion_updowntranscount);
-        assert_always(std::ssize(temp_alltranslist) >= std::ssize(temp_linelist));
-      }
+      temp_alltranslist.resize(std::ssize(temp_alltranslist) + ion_updowntranscount);
+      assert_always(std::ssize(temp_alltranslist) >= std::ssize(temp_linelist));
       for (int level = 0; level < nlevels; level++) {
         ion_levels[level].alltrans_startdown = static_cast<int>(alltransindex);
         alltransindex += ion_levels[level].ndowntrans;
@@ -1114,6 +1112,137 @@ auto read_compositiondata() -> std::vector<int> {
   return nlevelsmax_readin;
 }
 
+void read_levels_and_transitions(std::vector<EnergyLevelInput>& temp_alllevels,
+                                 std::vector<TransitionLine>& temp_linelist,
+                                 std::vector<LevelTransition>& temp_alltranslist,
+                                 const std::vector<int>& nlevelsmax_readin) {
+  std::string line;
+  std::istringstream ssline;
+  globals::nlines = 0;
+  std::vector<Transition> iontransitiontable;
+  auto adata = fstream_required("adata.txt", std::ios::in);
+  auto ftransitiondata = fstream_required("transitiondata.txt", std::ios::in);
+  int uniquelevelindex = 0;  // index into list of all levels of all ions of all elements
+  int nbfcheck = 0;
+  for (int element = 0; element < get_nelements(); element++) {
+    // now read in data for all ions of the current element. before doing so initialize
+    // energy scale for the current element (all level energies are stored relative to
+    // the ground level of the neutral ion)
+    // const auto lowermost_ionstage = globals::elements[element].lowest_ionstage;
+    const auto atomicnumber = globals::elements[element].anumber;
+    double energyoffset = 0.;
+    double ionpot = 0.;
+    const auto nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      const int ionstage = globals::elements[element].lowest_ionstage + ion;
+      // calculate the current levels ground level energy
+      assert_always(ionpot >= 0);
+      energyoffset += ionpot;
+
+      // read information for the elements next ionstage
+      int adata_Z_in = -1;
+      int adata_ionstage_in = -1;
+      int nlevels_in_file = 0;
+
+      while (adata_Z_in != atomicnumber || adata_ionstage_in != ionstage) {
+        // skip over this ion block
+        if (adata_Z_in == atomicnumber) {
+          printlnlog("increasing energyoffset by ionpot {:g}", ionpot);
+          energyoffset += ionpot;
+        }
+        for (int i = 0; i < nlevels_in_file; i++) {
+          std::getline(adata, line);
+        }
+
+        assert_always(get_noncommentline(adata, line));
+        ssline.clear();
+        ssline.str(line);
+        assert_always(ssline >> adata_Z_in >> adata_ionstage_in >> nlevels_in_file >> ionpot);
+      }
+
+      printlnlog("adata.txt: Z {} ionstage {} nlevels_in_file {}", adata_Z_in, adata_ionstage_in, nlevels_in_file);
+
+      // optionally limit the top ion to one level and no transitions
+      const int nlevelslimit = (single_level_top_ion && ion == (nions - 1)) ? 1 : nlevelsmax_readin[element];
+      const int nlevelskept = (nlevelslimit < 0) ? nlevels_in_file : std::min(nlevelslimit, nlevels_in_file);
+
+      if (nlevels_in_file > nlevelskept) {
+        printlnlog("[info] read_atomicdata: reduce number of levels from {} to {} for Z {:2} ionstage {}",
+                   nlevels_in_file, nlevelskept, adata_Z_in, adata_ionstage_in);
+      }
+      assert_always(nlevelskept > 0);
+
+      // read the data for the levels and set up the list of possible transitions for each level
+      // store the ions data to memory and set up the ions zeta and levellist
+      globals::elements[element].ions[ion] = {
+          .nlevels = nlevelskept,
+          .allnltelevelsindexstart = -1,
+          .nlevels_ionising = 0,
+          .maxrecombininglevel = -1,
+          .nlevels_groundterm = -1,
+          .uniquelevelindexstart = uniquelevelindex,
+          .groundcontindex = -1,
+          .ionpot = ionpot * EV,
+      };
+
+      assert_always(std::ssize(temp_alllevels) == uniquelevelindex);
+
+      read_ion_levels(adata, element, ion, nions, nlevels_in_file, nlevelskept, energyoffset, ionpot, temp_alllevels);
+      uniquelevelindex += get_nlevels(element, ion);
+      // and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
+      int transdata_Z_in = -1;
+      int transdata_ionstage_in = -1;
+      int ion_transition_count_in_file = 0;
+      while (transdata_Z_in != atomicnumber || transdata_ionstage_in != ionstage) {
+        // skip over table
+        for (int i = 0; i < ion_transition_count_in_file; i++) {
+          assert_always(getline(ftransitiondata, line));
+        }
+        assert_always(get_noncommentline(ftransitiondata, line));  // get_noncommentline to skip over blank lines
+        ssline.clear();
+        ssline.str(line);
+        assert_always(ssline >> transdata_Z_in >> transdata_ionstage_in >> ion_transition_count_in_file);
+      }
+
+      assert_always(transdata_Z_in == atomicnumber);
+      assert_always(transdata_ionstage_in == ionstage);
+
+      printlnlog("transitiondata.txt: Z {} ionstage {} tottransitions {}", transdata_Z_in, transdata_ionstage_in,
+                 ion_transition_count_in_file);
+      assert_always(ion_transition_count_in_file >= 0);
+
+      // first nlevels_requiretransitions levels will be collisionally
+      // coupled to the first nlevels_requiretransitions_upperlevels levels (assumed forbidden)
+      // use 0 to disable adding extra transitions
+
+      const int nlevels_requiretransitions =
+          std::min(nlevelskept, NLEVELS_REQUIRETRANSITIONS(atomicnumber, adata_ionstage_in));
+      // next value with have no effect if nlevels_requiretransitions = 0
+      const int nlevels_requiretransitions_upperlevels = nlevelskept;
+
+      // load transition table for the current ion to temporary memory
+      if (nlevelskept <= 1) {
+        // we will not read in any transitions, just skip past these lines in the file
+        for (int i = 0; i < ion_transition_count_in_file; i++) {
+          assert_always(getline(ftransitiondata, line));
+        }
+      } else {
+        read_ion_transitions(ftransitiondata, ion_transition_count_in_file, iontransitiontable,
+                             nlevels_requiretransitions, nlevels_requiretransitions_upperlevels);
+      }
+
+      // last level index is (nlevelsmax - 1), so this is the correct size
+      add_transitions_to_unsorted_linelist(element, ion, iontransitiontable, temp_linelist, temp_alltranslist,
+                                           temp_alllevels);
+
+      if (ion < nions - 1) {
+        nbfcheck += globals::elements[element].ions[ion].nlevels_ionising;
+      }
+    }
+  }
+  printlnlog("nbfcheck {}", nbfcheck);
+}
+
 void read_atomicdata_files() {
   auto nlevelsmax_readin = read_compositiondata();
 
@@ -1122,137 +1251,11 @@ void read_atomicdata_files() {
   std::vector<EnergyLevelInput> temp_alllevels;
   std::vector<TransitionLine> temp_linelist;
   std::vector<LevelTransition> temp_alltranslist;
+
   if (globals::rank_in_node == 0) {
     temp_linelist.reserve(1 << 22);  // reserve initial space for 4 million lines to avoid too many reallocations
     temp_alltranslist.reserve(1 << 22);
-  }
-
-  globals::nlines = 0;
-  if (globals::rank_in_node == 0) {
-    std::string line;
-    std::istringstream ssline;
-    std::vector<Transition> iontransitiontable;
-    auto adata = fstream_required("adata.txt", std::ios::in);
-    auto ftransitiondata = fstream_required("transitiondata.txt", std::ios::in);
-    int uniquelevelindex = 0;  // index into list of all levels of all ions of all elements
-    int nbfcheck = 0;
-    for (int element = 0; element < get_nelements(); element++) {
-      // now read in data for all ions of the current element. before doing so initialize
-      // energy scale for the current element (all level energies are stored relative to
-      // the ground level of the neutral ion)
-      // const auto lowermost_ionstage = globals::elements[element].lowest_ionstage;
-      const auto atomicnumber = globals::elements[element].anumber;
-      double energyoffset = 0.;
-      double ionpot = 0.;
-      const auto nions = get_nions(element);
-      for (int ion = 0; ion < nions; ion++) {
-        const int ionstage = globals::elements[element].lowest_ionstage + ion;
-        // calculate the current levels ground level energy
-        assert_always(ionpot >= 0);
-        energyoffset += ionpot;
-
-        // read information for the elements next ionstage
-        int adata_Z_in = -1;
-        int adata_ionstage_in = -1;
-        int nlevels_in_file = 0;
-
-        while (adata_Z_in != atomicnumber || adata_ionstage_in != ionstage) {
-          // skip over this ion block
-          if (adata_Z_in == atomicnumber) {
-            printlnlog("increasing energyoffset by ionpot {:g}", ionpot);
-            energyoffset += ionpot;
-          }
-          for (int i = 0; i < nlevels_in_file; i++) {
-            std::getline(adata, line);
-          }
-
-          assert_always(get_noncommentline(adata, line));
-          ssline.clear();
-          ssline.str(line);
-          assert_always(ssline >> adata_Z_in >> adata_ionstage_in >> nlevels_in_file >> ionpot);
-        }
-
-        printlnlog("adata.txt: Z {} ionstage {} nlevels_in_file {}", adata_Z_in, adata_ionstage_in, nlevels_in_file);
-
-        // optionally limit the top ion to one level and no transitions
-        const int nlevelslimit = (single_level_top_ion && ion == (nions - 1)) ? 1 : nlevelsmax_readin[element];
-        const int nlevelskept = (nlevelslimit < 0) ? nlevels_in_file : std::min(nlevelslimit, nlevels_in_file);
-
-        if (nlevels_in_file > nlevelskept) {
-          printlnlog("[info] read_atomicdata: reduce number of levels from {} to {} for Z {:2} ionstage {}",
-                     nlevels_in_file, nlevelskept, adata_Z_in, adata_ionstage_in);
-        }
-        assert_always(nlevelskept > 0);
-
-        // read the data for the levels and set up the list of possible transitions for each level
-        // store the ions data to memory and set up the ions zeta and levellist
-        globals::elements[element].ions[ion] = {
-            .nlevels = nlevelskept,
-            .allnltelevelsindexstart = -1,
-            .nlevels_ionising = 0,
-            .maxrecombininglevel = -1,
-            .nlevels_groundterm = -1,
-            .uniquelevelindexstart = uniquelevelindex,
-            .groundcontindex = -1,
-            .ionpot = ionpot * EV,
-        };
-
-        assert_always(std::ssize(temp_alllevels) == uniquelevelindex);
-
-        read_ion_levels(adata, element, ion, nions, nlevels_in_file, nlevelskept, energyoffset, ionpot, temp_alllevels);
-        uniquelevelindex += get_nlevels(element, ion);
-        // and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
-        int transdata_Z_in = -1;
-        int transdata_ionstage_in = -1;
-        int ion_transition_count_in_file = 0;
-        while (transdata_Z_in != atomicnumber || transdata_ionstage_in != ionstage) {
-          // skip over table
-          for (int i = 0; i < ion_transition_count_in_file; i++) {
-            assert_always(getline(ftransitiondata, line));
-          }
-          assert_always(get_noncommentline(ftransitiondata, line));  // get_noncommentline to skip over blank lines
-          ssline.clear();
-          ssline.str(line);
-          assert_always(ssline >> transdata_Z_in >> transdata_ionstage_in >> ion_transition_count_in_file);
-        }
-
-        assert_always(transdata_Z_in == atomicnumber);
-        assert_always(transdata_ionstage_in == ionstage);
-
-        printlnlog("transitiondata.txt: Z {} ionstage {} tottransitions {}", transdata_Z_in, transdata_ionstage_in,
-                   ion_transition_count_in_file);
-        assert_always(ion_transition_count_in_file >= 0);
-
-        // first nlevels_requiretransitions levels will be collisionally
-        // coupled to the first nlevels_requiretransitions_upperlevels levels (assumed forbidden)
-        // use 0 to disable adding extra transitions
-
-        const int nlevels_requiretransitions =
-            std::min(nlevelskept, NLEVELS_REQUIRETRANSITIONS(atomicnumber, adata_ionstage_in));
-        // next value with have no effect if nlevels_requiretransitions = 0
-        const int nlevels_requiretransitions_upperlevels = nlevelskept;
-
-        // load transition table for the current ion to temporary memory
-        if (nlevelskept <= 1) {
-          // we will not read in any transitions, just skip past these lines in the file
-          for (int i = 0; i < ion_transition_count_in_file; i++) {
-            assert_always(getline(ftransitiondata, line));
-          }
-        } else {
-          read_ion_transitions(ftransitiondata, ion_transition_count_in_file, iontransitiontable,
-                               nlevels_requiretransitions, nlevels_requiretransitions_upperlevels);
-        }
-
-        // last level index is (nlevelsmax - 1), so this is the correct size
-        add_transitions_to_unsorted_linelist(element, ion, iontransitiontable, temp_linelist, temp_alltranslist,
-                                             temp_alllevels);
-
-        if (ion < nions - 1) {
-          nbfcheck += globals::elements[element].ions[ion].nlevels_ionising;
-        }
-      }
-    }
-    printlnlog("nbfcheck {}", nbfcheck);
+    read_levels_and_transitions(temp_alllevels, temp_linelist, temp_alltranslist, nlevelsmax_readin);
   }
   MPI_Barrier(globals::mpi_comm_node);
 
