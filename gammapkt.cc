@@ -922,8 +922,13 @@ void init_gamma_data() {
   // If no gamma spectrum is known, return -1.
 
   if (gamma_spectra[nucindex].empty()) {
+    // for historical consistency, Fe52 and Mn52 decay directly to k-packets, which is signalled by a negative nu_cmf
+    const auto nuc_z = decay::get_nuc_z(nucindex);
+    const auto nuc_a = decay::get_nuc_a(nucindex);
+    assert_always((nuc_z == 26 && nuc_a == 52) || (nuc_z == 25 && nuc_a == 52));
     return -1;
   }
+
   const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
 
   const double zrand = rng_uniform();
