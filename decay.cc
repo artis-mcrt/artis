@@ -1355,7 +1355,13 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
   const auto enparticle = nucdecayenergyparticle(nucindex, decaytype);
 
   pkt.originated_from_particlenotgamma = (rng_uniform() >= engamma / (engamma + enparticle));
-  pkt.nu_cmf = enparticle / H;  // will be overwritten for gamma rays, but affects the thermalisation of particles
+  if (pkt.originated_from_particlenotgamma) {
+    // particle (positron, electron, or alpha) emitted
+    pkt.nu_cmf = enparticle / H;
+  } else {
+    // gamma ray emitted
+    pkt.nu_cmf = gammapkt::choose_gamma_ray(pkt.pellet_nucindex);
+  }
 }
 
 void cleanup() { free_decaypath_energy_per_mass(); }

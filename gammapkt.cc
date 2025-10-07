@@ -215,24 +215,6 @@ void init_xcom_photoion_data() {
   }
 }
 
-[[nodiscard]] __host__ __device__ auto choose_gamma_ray(const int nucindex) -> double {
-  // Routine to choose which gamma ray line it'll be.
-
-  const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
-
-  const double zrand = rng_uniform();
-  double runtot = 0.;
-  for (ptrdiff_t n = 0; n < std::ssize(gamma_spectra[nucindex]); n++) {
-    runtot += gamma_spectra[nucindex][n].probability * gamma_spectra[nucindex][n].energy / E_gamma;
-    if (zrand <= runtot) {
-      return gamma_spectra[nucindex][n].energy / H;
-    }
-  }
-
-  assert_always(false);
-  return NAN;
-}
-
 // The partial cross section for Compton scattering.
 // - xx: is the photon energy (in units of electron mass)
 // - f_max: is the energy loss factor up to which we wish to integrate
@@ -935,13 +917,35 @@ void init_gamma_data() {
   }
 }
 
+[[nodiscard]] __host__ __device__ auto choose_gamma_ray(const int nucindex) -> double {
+  // Get the frequency [Hz] of a random gamma ray from the decay spectrum of a given nucleus.
+  // If no gamma spectrum is known, return -1.
+
+  if (gamma_spectra[nucindex].empty()) {
+    return -1;
+  }
+  const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
+
+  const double zrand = rng_uniform();
+  double runtot = 0.;
+  for (ptrdiff_t n = 0; n < std::ssize(gamma_spectra[nucindex]); n++) {
+    runtot += gamma_spectra[nucindex][n].probability * gamma_spectra[nucindex][n].energy / E_gamma;
+    if (zrand <= runtot) {
+      return gamma_spectra[nucindex][n].energy / H;
+    }
+  }
+
+  assert_always(false);
+  return NAN;
+}
+
 // convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
 __host__ __device__ void pellet_gamma_decay(Packet& pkt) {
   // Start by getting the position of the pellet at the point of decay. Pellet
   // is moving with the matter.
 
   // if no gamma spectra is known, then covert straight to kpkts (e.g., Fe52, Mn52)
-  if (gamma_spectra[pkt.pellet_nucindex].empty()) {
+  if (pkt.nu_cmf < 0) {
     pkt.type = TYPE_KPKT;
     pkt.absorptiontype = -6;
     return;
@@ -962,10 +966,6 @@ __host__ __device__ void pellet_gamma_decay(Packet& pkt) {
   // negative time since we want the backwards transformation here
 
   pkt.dir = angle_ab(dir_cmf, vel_vec);
-
-  // Now need to assign the frequency of the packet in the co-moving frame.
-
-  pkt.nu_cmf = choose_gamma_ray(pkt.pellet_nucindex);
 
   // Finally we want to put in the rest frame energy and frequency. And record
   // that it's now a gamma ray.
