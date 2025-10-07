@@ -180,7 +180,7 @@ auto main(int argc, char* argv[]) -> int {
   // Get input stuff
   input(globals::my_rank);
 
-  // nprocs_exspec is the number of rank output files to process with expec
+  // nprocs_exspec is the number of rank output files to process with exspec
   // however, we might be running exspec with 1 or just a few ranks
 
   std::vector<Packet> pkts;
