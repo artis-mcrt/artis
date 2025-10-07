@@ -947,6 +947,8 @@ __host__ __device__ void pellet_gamma_decay(Packet& pkt) {
     return;
   }
 
+  assert_testmodeonly(pkt.prop_time == pkt.tdecay);
+
   // Now let's give the gamma ray a direction.
   // Assuming isotropic emission in cmf
 
@@ -956,7 +958,7 @@ __host__ __device__ void pellet_gamma_decay(Packet& pkt) {
   // frame - use aberration of angles. We want to convert from cmf to
   // rest so need -ve velocity.
 
-  const auto vel_vec = get_velocity(pkt.pos, -1. * pkt.tdecay);
+  const auto vel_vec = get_velocity(pkt.pos, -pkt.prop_time);
   // negative time since we want the backwards transformation here
 
   pkt.dir = angle_ab(dir_cmf, vel_vec);
@@ -968,7 +970,6 @@ __host__ __device__ void pellet_gamma_decay(Packet& pkt) {
   // Finally we want to put in the rest frame energy and frequency. And record
   // that it's now a gamma ray.
 
-  pkt.prop_time = pkt.tdecay;
   const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
