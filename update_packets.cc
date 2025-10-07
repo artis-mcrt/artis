@@ -167,8 +167,8 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
     pkt.prop_time = tdecay;
     pkt.pos = vec_scale(pkt.pos, tdecay / ts);
 
-    if (pkt.originated_from_particlenotgamma)  // will decay to non-thermal particle
-    {
+    if (pkt.originated_from_particlenotgamma) {
+      // decay to non-thermal particle
       if (pkt.pellet_decaytype == decay::DECAYTYPE_BETAPLUS) {
         pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS;
         atomicadd(globals::timesteps[nts].positron_emission, pkt.e_cmf);
