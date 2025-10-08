@@ -206,17 +206,18 @@ inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) ->
     _Pragma("omp atomic update") var += val; \
   }
 
-#else
-#ifdef STDPAR_ON
+#elifdef STDPAR_ON
 
 #include <atomic>
 template <typename T, typename U>
 constexpr void atomicadd(T& var, U&& val) {
   std::atomic_ref<T>(var).fetch_add(std::forward<U>(val), std::memory_order_relaxed);
 }
+
 #else
+
 #define atomicadd(var, val) var += (val);
-#endif
+
 #endif
 
 inline void gsl_error_handler_printout(const char* reason, const char* file, int line, int gsl_errno) {
