@@ -45,8 +45,8 @@ struct GammaLine {
 std::vector<std::vector<GammaLine>> gamma_spectra;
 
 struct el_photoion_data {
-  double energy;  // energy in MeV
-  double sigma_xcom;  // cross section in barns/atom
+  double energy_mev;
+  double sigma_xcom_barn;
 };
 
 constexpr int numb_xcom_elements = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
@@ -211,7 +211,7 @@ void init_xcom_photoion_data() {
     assert_always(Z > 0);
     assert_always(Z <= numb_xcom_elements);
     // convert XCOM data to cgs units already here
-    photoion_data[Z - 1].push_back({.energy = E, .sigma_xcom = sigma * 1e-24});
+    photoion_data[Z - 1].push_back({.energy_mev = E, .sigma_xcom_barn = sigma});
   }
 }
 
@@ -428,11 +428,11 @@ void compton_scatter(Packet& pkt) {
     // 2.41326e19 Hz = 100 keV / H
     const double hnu_over_100kev = nu_cmf / 2.41326e+19;
 
-    // double sigma_cmf_cno = 0.0448e-24 * pow(hnu_over_100kev, -3.2);
+    // double sigma_cmf_cno = 0.0448 * BARN * pow(hnu_over_100kev, -3.2);
 
-    const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
+    const double sigma_cmf_si = 1.16 * BARN * pow(hnu_over_100kev, -3.13);
 
-    const double sigma_cmf_fe = 25.7e-24 * pow(hnu_over_100kev, -3.0);
+    const double sigma_cmf_fe = 25.7 * BARN * pow(hnu_over_100kev, -3.0);
 
     // Now need to multiply by the particle number density.
 
@@ -465,17 +465,17 @@ void compton_scatter(Packet& pkt) {
     int E_gtr_idx = -1;
 
     for (int j = 0; j < numb_energies; j++) {
-      if (photoion_data[Z - 1][j].energy > hnu_over_1MeV) {
+      if (photoion_data[Z - 1][j].energy_mev > hnu_over_1MeV) {
         E_gtr_idx = j;
         break;
       }
     }
     if (E_gtr_idx == 0) {  // packet energy smaller than all tabulated values
-      chi_cmf += photoion_data[Z - 1][0].sigma_xcom * n_i;
+      chi_cmf += photoion_data[Z - 1][0].sigma_xcom_barn * n_i * BARN;
       continue;
     }
     if (E_gtr_idx == -1) {  // packet energy greater than all tabulated values
-      chi_cmf += photoion_data[Z - 1][numb_energies - 1].sigma_xcom * n_i;
+      chi_cmf += photoion_data[Z - 1][numb_energies - 1].sigma_xcom_barn * n_i * BARN;
       continue;
     }
     assert_always(E_gtr_idx > 0);
@@ -483,15 +483,21 @@ void compton_scatter(Packet& pkt) {
     const int E_smaller_idx = E_gtr_idx - 1;
     assert_always(E_smaller_idx >= 0);
     const double log10_E = log10_hnu_over_1MeV;
-    const double log10_E_gtr = log10(photoion_data[Z - 1][E_gtr_idx].energy);
-    const double log10_E_smaller = log10(photoion_data[Z - 1][E_smaller_idx].energy);
-    const double log10_sigma_lower = log10(photoion_data[Z - 1][E_smaller_idx].sigma_xcom);
-    const double log10_sigma_gtr = log10(photoion_data[Z - 1][E_gtr_idx].sigma_xcom);
+    const double log10_E_gtr = log10(photoion_data[Z - 1][E_gtr_idx].energy_mev);
+    const double log10_E_smaller = log10(photoion_data[Z - 1][E_smaller_idx].energy_mev);
+    const double log10_sigma_lower = log10(photoion_data[Z - 1][E_smaller_idx].sigma_xcom_barn);
+    const double log10_sigma_gtr = log10(photoion_data[Z - 1][E_gtr_idx].sigma_xcom_barn);
     // interpolate or extrapolate, both linear in log10-log10 space
     const double log10_intpol = log10_E_smaller + ((log10_sigma_gtr - log10_sigma_lower) /
                                                    (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller));
-    const double sigma_intpol = pow(10., log10_intpol);
+    const double sigma_intpol = pow(10., log10_intpol) * BARN;
     const double chi_cmf_contrib = sigma_intpol * n_i;
+    // catch errors in interpolation of the cross section
+    if (sigma_intpol > 5e6) {
+      printout("Dangerous XCOM interpolation at Z=%d, E=%g, sigma_interpol=%g\n", Z, hnu_over_1MeV, sigma_intpol);
+    }
+    assert_always(sigma_intpol >= 0.);
+    assert_always(sigma_intpol < 1e7);  // maximum sigma from XCOM is 3.3e6, should never exceed that
     assert_always(sigma_intpol >= 0.);
     chi_cmf += chi_cmf_contrib;
   }
@@ -511,8 +517,7 @@ void compton_scatter(Packet& pkt) {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   const double rho = grid::get_rho(nonemptymgi);
 
-  // 2.46636e+20 Hz = 1022 keV / H
-  if (nu_cmf <= 2.46636e+20) {
+  if (nu_cmf <= PAIR_PROD_FREQUENCY) {
     return 0.;
   }
 
@@ -578,7 +583,7 @@ constexpr auto meanf_sigma(const double x) -> double {
   const auto chi_pair_prod_rf = get_chi_pair_prod_cmf(pkt.where, pkt.nu_cmf) * doppler;
 
   return ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_rf +
-          (chi_pair_prod_rf * (1. - (2.46636e+20 / pkt.nu_cmf))));
+          (chi_pair_prod_rf * (1. - (PAIR_PROD_FREQUENCY / pkt.nu_cmf))));
 }
 
 // update the energy deposition estimator for gamma ray path increment
@@ -659,6 +664,22 @@ void pair_prod(Packet& pkt) {
 
     pkt.type = TYPE_GAMMA;
   }
+}
+
+// functions to get the gamma-ray opacity (with the expected energy loss per interaction factor included)
+// and below the three contributing parts
+auto get_kappa(const Packet& pkt) -> std::vector<double> {
+  std::vector<double> kappa(4);  // four elements: three contributions and their sum
+  const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
+  const int mgi = grid::get_propcell_modelgridindex(pkt.where);
+  const double chi_pp = get_chi_pair_prod_cmf(pkt.where, pkt.nu_cmf) * (1. - (PAIR_PROD_FREQUENCY / pkt.nu_cmf));
+  kappa[1] = chi_pp / grid::get_rho(mgi);  // pair production
+  const double chi_pe = get_chi_photo_electric_cmf(pkt.where, pkt.nu_cmf);
+  kappa[2] = chi_pe / grid::get_rho(mgi);  // photoelectric
+  const double chi_c = meanf_sigma(xx) * grid::get_nnetot(mgi);
+  kappa[3] = chi_c / grid::get_rho(mgi);  // Compton
+  kappa[0] = kappa[1] + kappa[2] + kappa[3];
+  return kappa;
 }
 
 // move a gamma packet until time t2
@@ -756,7 +777,7 @@ void transport_gamma(Packet& pkt, const double t2) {
   }
 }
 
-void barnes_thermalisation(Packet& pkt)
+void global_thermalisation(Packet& pkt, auto SCHEME)
 // Barnes treatment: packet is either getting absorbed immediately and locally
 // creating a k-packet or it escapes. The absorption probability matches the
 // Barnes thermalization efficiency, for expressions see the original paper:
@@ -768,14 +789,66 @@ void barnes_thermalisation(Packet& pkt)
   // packets.
   // constexpr double mean_gamma_opac = 0.1;
 
-  // determine average initial density via kinetic energy
-  const double E_kin = grid::get_ejecta_kinetic_energy();
-  const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
+  double f_gamma = 0.;
+  if (SCHEME == ThermalisationScheme::BARNES) {
+    // determine average initial density via kinetic energy
+    const double E_kin = grid::get_ejecta_kinetic_energy();
+    const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
+    // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
+    double barnes_prefactor = 0.72;
+    if (USE_WRONG_BARNES_FACTOR) {
+      barnes_prefactor = 1.4;
+    }
+    const double t_ineff = barnes_prefactor * DAY * sqrt(grid::mtot_input / (5.e-3 * MSUN)) * ((0.2 * CLIGHT) / v_ej);
+    const double tau = pow(t_ineff / pkt.prop_time, 2.);
+    f_gamma = 1. - exp(-tau);
+  } else if (SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ34) {
+    // take the fit parameters closest to the e2e model for now
+    const double a = 0.27;
+    const double b = 0.1;
+    const double d = 0.6;
+    const double t_days = pkt.prop_time / DAY;
+    const double aux_term = 2 * b * pow(t_days, d);
+    const double f_tot = 0.36 * (exp(-a * t_days) + std::log1p(aux_term) / (aux_term));
+    f_gamma = f_tot;
+  } else if (SCHEME == ThermalisationScheme::TOT_THERM_FIT_MRW) {
+    // take the fit parameters closest to the e2e model for now
+    const double a = 2.01e-3;
+    const double b = 1.78;
+    const double t_gamma = 2.79;
+    const double d = 1.28;
+    const double t_days = pkt.prop_time / DAY;
+    const double aux_term_1 = a * pow(t_days, b);
+    const double f_1 = std::log1p(aux_term_1) / aux_term_1;
+    const double f_2 = 1 - exp(-pow(t_gamma / t_days, d));
+    const double f_tot = 0.25 * f_1 + 0.4 * f_2;
+    f_gamma = f_tot;
+  } else if (SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ32p33) {
+    const double zeta_elec = 0.25;
+    const double zeta_gamma = 0.4;
 
-  // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
-  const double t_ineff = 1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / v_ej);
-  const double tau = pow(t_ineff / pkt.prop_time, 2.);
-  const double f_gamma = 1. - exp(-tau);
+    // particle part first
+    const double E_kin = grid::get_ejecta_kinetic_energy();
+    const double v_ej = std::sqrt(E_kin * 2 / grid::mtot_input);
+
+    const double prefactor = 7.4;  // assume always beta particles, difference in factor small anyway
+    const double tau_ineff =
+        prefactor * DAY * std::sqrt(grid::mtot_input / (5.e-3 * MSUN)) * std::pow((0.2 * CLIGHT) / v_ej, 3. / 2.);
+    const double f_1 = std::log1p(2. * pkt.prop_time * pkt.prop_time / tau_ineff / tau_ineff) /
+                       (2. * pkt.prop_time * pkt.prop_time / tau_ineff / tau_ineff);  // represents particles
+
+    // gamma part
+    double barnes_prefactor = 0.72;
+    if (USE_WRONG_BARNES_FACTOR) {
+      barnes_prefactor = 1.4;
+    }
+    const double t_ineff = barnes_prefactor * DAY * sqrt(grid::mtot_input / (5.e-3 * MSUN)) * ((0.2 * CLIGHT) / v_ej);
+    const double tau = pow(t_ineff / pkt.prop_time, 2.);
+    const double f_2 = 1. - exp(-tau);  // represents gamma rays
+    const double f_tot = zeta_elec * f_1 + zeta_gamma * f_2;
+    f_gamma = f_tot;
+  }
+
   assert_always(f_gamma >= 0.);
   assert_always(f_gamma <= 1.);
 
@@ -794,7 +867,7 @@ void barnes_thermalisation(Packet& pkt)
 void wollaeger_thermalisation(Packet& pkt) {
   // corresponds to a local version of the Barnes scheme, i.e. it takes into account the local mass
   // density rather than a value averaged over the ejecta
-  constexpr double mean_gamma_opac = 0.1;
+  constexpr double mean_gamma_opac = WOLLAEGER_OPACITY_VALUE;
   // integration: requires distances within single cells in radial direction and the corresponding densities
   // need to create a packet copy which is moved during the integration
   Packet pkt_copy = pkt;
@@ -929,7 +1002,14 @@ void init_gamma_data() {
     return -1;
   }
 
-  const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
+  double E_gamma = 0.;  // Average energy per gamma line of a decay
+  if (USE_CONSTANT_BETAMINUS_SPLITUPS) {
+    for (ptrdiff_t n = 0; n < std::ssize(gamma_spectra[nucindex]); n++) {
+      E_gamma += gamma_spectra[nucindex][n].probability * gamma_spectra[nucindex][n].energy;
+    }
+  } else {
+    E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
+  }
 
   const double zrand = rng_uniform();
   double runtot = 0.;
@@ -983,13 +1063,25 @@ __host__ __device__ void pellet_gamma_decay(Packet& pkt) {
 
   // initialise polarisation information
   pkt.stokes = {1., 0., 0.};
+
+  if (PRINTOUT_EFFECTIVE_GAMMA_OPACITY) {
+    std::vector<double> kappa_gamma = get_kappa(pkt);
+    atomicadd(globals::estimator_gamma_kappa_decayspec, kappa_gamma[0] * pkt.e_cmf);
+    atomicadd(globals::estimator_gamma_kappa_pp_decayspec, kappa_gamma[1] * pkt.e_cmf);
+    atomicadd(globals::estimator_gamma_kappa_pe_decayspec, kappa_gamma[2] * pkt.e_cmf);
+    atomicadd(globals::estimator_gamma_kappa_c_decayspec, kappa_gamma[3] * pkt.e_cmf);
+    atomicadd(globals::estimator_gamma_nu_cmf_decayspec, pkt.nu_cmf * pkt.e_cmf);
+  }
 }
 
 __host__ __device__ void do_gamma(Packet& pkt, const int nts, const double t2) {
   if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
-  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
-    barnes_thermalisation(pkt);
+  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES ||
+                       GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ34 ||
+                       GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_MRW ||
+                       GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ32p33) {
+    global_thermalisation(pkt, GAMMA_THERMALISATION_SCHEME);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::WOLLAEGER) {
     wollaeger_thermalisation(pkt);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::GUTTMAN) {
@@ -1001,6 +1093,14 @@ __host__ __device__ void do_gamma(Packet& pkt, const int nts, const double t2) {
   if (pkt.type != TYPE_GAMMA && pkt.type != TYPE_ESCAPE) {
     if constexpr (PARTICLE_THERMALISATION_SCHEME != ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
       atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
+      if (PRINTOUT_EFFECTIVE_GAMMA_OPACITY) {
+        std::vector<double> kappa_gamma = get_kappa(pkt);
+        atomicadd(globals::estimator_gamma_kappa_absorbedspec, kappa_gamma[0] * pkt.e_cmf);
+        atomicadd(globals::estimator_gamma_kappa_pp_absorbedspec, kappa_gamma[1] * pkt.e_cmf);
+        atomicadd(globals::estimator_gamma_kappa_pe_absorbedspec, kappa_gamma[2] * pkt.e_cmf);
+        atomicadd(globals::estimator_gamma_kappa_c_absorbedspec, kappa_gamma[3] * pkt.e_cmf);
+        atomicadd(globals::estimator_gamma_nu_cmf_absorbedspec, pkt.nu_cmf * pkt.e_cmf);
+      }
     }
 
     if constexpr (GAMMA_THERMALISATION_SCHEME != ThermalisationScheme::DETAILED &&

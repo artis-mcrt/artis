@@ -46,8 +46,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     const double v_ej = std::sqrt(E_kin * 2 / grid::mtot_input);
 
     const double prefactor = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 7.74 : 7.4;
-    const double tau_ineff = prefactor * 86400 * std::sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) *
-                             std::pow((0.2 * 29979200000) / v_ej, 3. / 2.);
+    const double tau_ineff =
+        prefactor * DAY * std::sqrt(grid::mtot_input / (5.e-3 * MSUN)) * std::pow((0.2 * CLIGHT) / v_ej, 3. / 2.);
     const double f_p = std::log1p(2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
@@ -65,6 +65,79 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     // In Bulla 2023 (arXiv:2211.14348), the following line contains (<-> eq. 7) contains a typo. The way implemented
     // here is the original from Wollaeger paper without the typo
     const double f_p = std::log1p(aux_term) / aux_term;
+    assert_always(f_p >= 0.);
+    assert_always(f_p <= 1.);
+    if (rng_uniform() < f_p) {
+      pkt.type = deposit_type;
+    } else {
+      en_deposited = 0.;
+      pkt.type = TYPE_ESCAPE;
+      grid::change_cell(pkt, -99);
+    }
+  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ34) {
+    // take the fit parameters closest to the e2e model for now
+    const double a = 0.27;
+    const double b = 0.1;
+    const double d = 0.6;
+    const double t_days = pkt.prop_time / DAY;
+    const double aux_term = 2 * b * pow(t_days, d);
+    // const double f_p = 0.36 * (exp(-a * t_days) + std::log1p(aux_term) / (aux_term));
+    const double f_tot = 0.36 * (exp(-a * t_days) + std::log1p(aux_term) / (aux_term));
+    const auto f_p = f_tot;
+    assert_always(f_p >= 0.);
+    assert_always(f_p <= 1.);
+    if (rng_uniform() < f_p) {
+      pkt.type = deposit_type;
+    } else {
+      en_deposited = 0.;
+      pkt.type = TYPE_ESCAPE;
+      grid::change_cell(pkt, -99);
+    }
+  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_MRW) {
+    // take the fit parameters closest to the e2e model for now
+    const double a = 2.01e-3;
+    const double b = 1.78;
+    const double t_gamma = 2.79;
+    const double d = 1.28;
+    const double t_days = pkt.prop_time / DAY;
+    const double aux_term_1 = a * pow(t_days, b);
+    const double f_1 = std::log1p(aux_term_1) / aux_term_1;
+    const double f_2 = 1 - exp(-pow(t_gamma / t_days, d));
+    const double f_tot = 0.25 * f_1 + 0.4 * f_2;
+    const auto f_p = f_tot;
+    assert_always(f_p >= 0.);
+    assert_always(f_p <= 1.);
+    if (rng_uniform() < f_p) {
+      pkt.type = deposit_type;
+    } else {
+      en_deposited = 0.;
+      pkt.type = TYPE_ESCAPE;
+      grid::change_cell(pkt, -99);
+    }
+  } else if (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ32p33) {
+    const double zeta_elec = 0.25;
+    const double zeta_gamma = 0.4;
+
+    // particle part first
+    const double E_kin = grid::get_ejecta_kinetic_energy();
+    const double v_ej = std::sqrt(E_kin * 2 / grid::mtot_input);
+
+    const double prefactor = 7.4;  // assume always beta particles, difference in factor small anyway
+    const double tau_ineff =
+        prefactor * DAY * std::sqrt(grid::mtot_input / (5.e-3 * MSUN)) * std::pow((0.2 * CLIGHT) / v_ej, 3. / 2.);
+    const double f_1 = std::log1p(2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
+
+    // gamma part
+    double barnes_prefactor = 0.72;
+    if (USE_WRONG_BARNES_FACTOR) {
+      barnes_prefactor = 1.4;
+    }
+    const double t_ineff = barnes_prefactor * DAY * sqrt(grid::mtot_input / (5.e-3 * MSUN)) * ((0.2 * CLIGHT) / v_ej);
+    const double tau = pow(t_ineff / pkt.prop_time, 2.);
+    const double f_2 = 1. - exp(-tau);
+
+    const double f_tot = zeta_elec * f_1 + zeta_gamma * f_2;
+    const auto f_p = f_tot;
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
     if (rng_uniform() < f_p) {
@@ -163,6 +236,18 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
   } else if (tdecay > ts) {
     // The packet decays in the current timestep.
     atomicadd(globals::timesteps[nts].pellet_decays, 1);
+
+    // for f_tot tests, increase the packet energy to make up for the neutrino losses. That is done here to keep track
+    // of the packet energy change in all atomicadds
+    if ((GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ34 &&
+         PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ34) ||
+        (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_MRW &&
+         PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_MRW) ||
+        (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ32p33 &&
+         PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ32p33)) {
+      pkt.e_cmf *= 1 / (1 - nu_frac_e2e[nts]);
+      pkt.e_rf *= 1 / (1 - nu_frac_e2e[nts]);
+    }
 
     pkt.prop_time = tdecay;
     pkt.pos = vec_scale(pkt.pos, tdecay / ts);

@@ -163,6 +163,17 @@ inline std::vector<double> dep_estimator_positron;
 inline std::vector<double> dep_estimator_electron;
 inline std::vector<double> dep_estimator_alpha;
 
+inline double estimator_gamma_kappa_decayspec = 0.;
+inline double estimator_gamma_kappa_pp_decayspec = 0.;
+inline double estimator_gamma_kappa_pe_decayspec = 0.;
+inline double estimator_gamma_kappa_c_decayspec = 0.;
+inline double estimator_gamma_nu_cmf_decayspec = 0.;
+inline double estimator_gamma_kappa_absorbedspec = 0.;
+inline double estimator_gamma_kappa_pp_absorbedspec = 0.;
+inline double estimator_gamma_kappa_pe_absorbedspec = 0.;
+inline double estimator_gamma_kappa_c_absorbedspec = 0.;
+inline double estimator_gamma_nu_cmf_absorbedspec = 0.;
+
 inline int bfestimcount{0};
 
 // for USE_LUT_PHOTOION = true
