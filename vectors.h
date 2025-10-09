@@ -65,8 +65,8 @@ template <size_t S1>
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
   const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
-  const auto dir2 = Vec3d{(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
-                          (dir1[2] - (vel[2] * fact2)) / fact1};
+  const Vec3d dir2{(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
+                   (dir1[2] - (vel[2] * fact2)) / fact1};
 
   return vec_norm(dir2);
 }
