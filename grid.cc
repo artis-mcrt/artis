@@ -1247,10 +1247,11 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 // returns -1 if there are no forward intersections (or if the intersection
 // is tangential to the shell)
 template <BoundaryType boundarytype, size_t S1>
-[[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, S1>& pos,
-                                                          const std::array<double, S1>& dir, const double speed,
-                                                          const double shellradiuststart, const double tstart)
-    -> double {
+[[gnu::const]] [[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, S1>& pos,
+                                                                         const std::array<double, S1>& dir,
+                                                                         const double speed,
+                                                                         const double shellradiuststart,
+                                                                         const double tstart) -> double {
   static_assert(S1 == 2 || S1 == 3);
   assert_testmodeonly(shellradiuststart > 0);
 
@@ -1345,7 +1346,7 @@ template <BoundaryType boundarytype, size_t S1>
 
 // for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
 // for spherical grid get the radial extent (r_outer - r_inner) at time tmin
-auto wid_init(const int cellindex, const int axis) -> double {
+[[gnu::pure]] [[nodiscard]] auto wid_init(const int cellindex, const int axis) -> double {
   if (GRID_TYPE == GridType::CARTESIAN3D) {
     return 2 * globals::rmax / ncoordgrid[axis];
   }
@@ -1365,7 +1366,7 @@ auto wid_init(const int cellindex, const int axis) -> double {
 
 // return the model cell volume (when mapped to the propagation cells) at globals::tmin
 // for a uniform cubic grid this is constant
-auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
+[[gnu::pure]] [[nodiscard]] auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
   if (GRID_TYPE == GridType::CARTESIAN3D) {
     return (wid_init(modelgridindex, 0) * wid_init(modelgridindex, 1) * wid_init(modelgridindex, 2)) *
            get_numpropcells(modelgridindex);
@@ -1385,7 +1386,7 @@ auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
 
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
-auto get_propcell_volume_tmin(const int cellindex) -> double {
+[[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(const int cellindex) -> double {
   if (GRID_TYPE == GridType::CARTESIAN3D) {
     return (wid_init(cellindex, 0) * wid_init(cellindex, 0) * wid_init(cellindex, 0));
   }
@@ -1397,7 +1398,7 @@ auto get_propcell_volume_tmin(const int cellindex) -> double {
 
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
-auto get_cellcoordmax(const int cellindex, const int axis) -> double {
+[[gnu::pure]] [[nodiscard]] auto get_cellcoordmax(const int cellindex, const int axis) -> double {
   if (GRID_TYPE == GridType::CARTESIAN3D) {
     return grid::get_cellcoordmin(cellindex, axis) + grid::wid_init(0, axis);
   }
@@ -1417,14 +1418,14 @@ auto get_cellcoordmax(const int cellindex, const int axis) -> double {
 
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
-[[nodiscard]] __host__ __device__ auto get_cellcoordmin(const int cellindex, const int axis) -> double {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_cellcoordmin(const int cellindex, const int axis) -> double {
   return propcell_pos_min[cellindex][axis];
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
 
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r
 // direction)
-auto get_coordcellindexincrement(const int axis) -> int {
+[[gnu::pure]] [[nodiscard]] auto get_coordcellindexincrement(const int axis) -> int {
   switch (axis) {
     case 0:
       return 1;
@@ -1445,7 +1446,7 @@ auto get_coordcellindexincrement(const int axis) -> int {
 }
 
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
-auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
+[[gnu::pure]] [[nodiscard]] auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
   if (GRID_TYPE == GridType::CARTESIAN3D || GRID_TYPE == GridType::CYLINDRICAL2D) {
     switch (axis) {
       // 3D Cartesian: increment x first, then y, then z
@@ -1477,36 +1478,36 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
 
 auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[modelgridindex].rhoinit; }
 
-__host__ __device__ auto get_rho(const std::ptrdiff_t nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_rho(const std::ptrdiff_t nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return modelgrid[nonemptymgi].rho;
 }
 
-__host__ __device__ auto get_nne(const int nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nne(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return modelgrid[nonemptymgi].nne;
 }
 
-__host__ __device__ auto get_nnetot(const int nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nnetot(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return modelgrid[nonemptymgi].nnetot;
 }
 
-__host__ __device__ auto get_ffegrp(const int modelgridindex) -> float {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_ffegrp(const int modelgridindex) -> float {
   return modelgrid_input[modelgridindex].ffegrp;
 }
 
-__host__ __device__ auto get_modelcell_mean_radial_pos(const int modelgridindex, const double tratmid) -> double {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_modelcell_mean_radial_pos(const int modelgridindex,
+                                                                                   const double tratmid) -> double {
   const int assoc_cells = grid::get_numpropcells(modelgridindex);
   return modelgrid_input[modelgridindex].initial_radial_pos_sum * tratmid / assoc_cells;
 }
 
-auto get_elem_abundance(const std::ptrdiff_t nonemptymgi, const int element) -> float
 // mass fraction of an element (all isotopes combined)
-{
+[[gnu::pure]] [[nodiscard]] auto get_elem_abundance(const std::ptrdiff_t nonemptymgi, const int element) -> float {
   const auto massfrac = elem_massfracs_allcells[(nonemptymgi * get_nelements()) + element];
   assert_testmodeonly(massfrac >= 0.0);
   return massfrac;
@@ -1518,32 +1519,33 @@ void set_elem_abundance(const ptrdiff_t nonemptymgi, const int element, const fl
 }
 
 // mass fraction of an element (all isotopes combined)
-__host__ __device__ auto get_elem_numberdens(const ptrdiff_t nonemptymgi, const int element) -> double {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_elem_numberdens(const ptrdiff_t nonemptymgi, const int element)
+    -> double {
   return get_elem_abundance(nonemptymgi, element) /
          static_cast<double>(grid::get_element_meanweight(nonemptymgi, element)) * grid::get_rho(nonemptymgi);
 }
 
 __host__ __device__ auto get_kappagrey(const int nonemptymgi) -> float { return modelgrid[nonemptymgi].kappagrey; }
 
-__host__ __device__ auto get_Te(const int nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_Te(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return modelgrid[nonemptymgi].Te;
 }
 
-__host__ __device__ auto get_TR(const int nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_TR(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return modelgrid[nonemptymgi].TR;
 }
 
-__host__ __device__ auto get_TJ(const int nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_TJ(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return modelgrid[nonemptymgi].TJ;
 }
 
-__host__ __device__ auto get_W(const int nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_W(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return modelgrid[nonemptymgi].W;
@@ -1595,7 +1597,7 @@ auto get_model_type() -> GridType { return model_type; }
 
 void set_model_type(const GridType model_type_value) { model_type = model_type_value; }
 
-__host__ __device__ auto get_npts_model() -> int
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_npts_model() -> int
 // number of model grid cells
 {
   assert_testmodeonly(npts_model > 0);
@@ -1603,18 +1605,19 @@ __host__ __device__ auto get_npts_model() -> int
 }
 
 // number of model grid cells
-auto get_nonempty_npts_model() -> int {
+[[gnu::pure]] [[nodiscard]] auto get_nonempty_npts_model() -> int {
   assert_testmodeonly(nonempty_npts_model > 0);
   return static_cast<int>(nonempty_npts_model);
 }
 
 // get time at which model input densities are defined
-__host__ __device__ auto get_t_model() -> double {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_t_model() -> double {
   assert_testmodeonly(t_model > 0.);
   return t_model;
 }
 
-[[nodiscard]] __host__ __device__ auto get_propcell_modelgridindex(const int cellindex) -> int {
+[[gnu::pure]] [[nodiscard]] [[nodiscard]] __host__ __device__ auto get_propcell_modelgridindex(const int cellindex)
+    -> int {
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
   const auto mgi = propcell_mgi[cellindex];
@@ -1623,7 +1626,8 @@ __host__ __device__ auto get_t_model() -> double {
   return mgi;
 }
 
-[[nodiscard]] __host__ __device__ auto get_propcell_nonemptymgi(const int cellindex) -> int {
+[[gnu::pure]] [[nodiscard]] [[nodiscard]] __host__ __device__ auto get_propcell_nonemptymgi(const int cellindex)
+    -> int {
   const auto nonemptymgi = propcell_nonemptymgi[cellindex];
   assert_testmodeonly(nonemptymgi >= -1);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
@@ -1631,13 +1635,13 @@ __host__ __device__ auto get_t_model() -> double {
 }
 
 // number of propagation cells associated with each modelgrid cell
-__host__ __device__ auto get_numpropcells(const int modelgridindex) -> int {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_numpropcells(const int modelgridindex) -> int {
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid_numpropcells[modelgridindex];
 }
 
 // get the index in the list of non-empty cells for a given model grid cell
-__host__ __device__ auto get_nonemptymgi_of_mgi(const int mgi) -> int {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nonemptymgi_of_mgi(const int mgi) -> int {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
   assert_testmodeonly(mgi < get_npts_model());
 
@@ -1650,7 +1654,7 @@ __host__ __device__ auto get_nonemptymgi_of_mgi(const int mgi) -> int {
 }
 
 // get the index in the list of non-empty cells for a given model grid cell
-__host__ __device__ auto get_mgi_of_nonemptymgi(const ptrdiff_t nonemptymgi) -> int {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_mgi_of_nonemptymgi(const ptrdiff_t nonemptymgi) -> int {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
