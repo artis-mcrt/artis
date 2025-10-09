@@ -57,7 +57,7 @@ template <size_t S1>
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
 //   dir2: direction vector in frame2
-[[gnu::pure]] [[nodiscard]] constexpr auto angle_ab(const Vec3d& dir1, const Vec3d& vel) -> Vec3d {
+[[nodiscard]] constexpr auto angle_ab(const Vec3d& dir1, const Vec3d& vel) -> Vec3d {
   const double vsqr = dot(vel, vel) / CLIGHTSQUARED;
   const double gamma_rel = 1. / std::sqrt(1 - vsqr);
 
