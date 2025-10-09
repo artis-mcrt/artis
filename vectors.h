@@ -102,8 +102,8 @@ template <size_t S1>
 //   dir_rf: the rest frame direction (unit vector) of light propagation
 //   prop_time: the propagation time of the packet
 // returns: the ratio f = nu_cmf / nu_rf
-[[gnu::const]] [[nodiscard]] constexpr auto calculate_doppler_nucmf_on_nurf(const Vec3d& pos_rf, const Vec3d& dir_rf,
-                                                                            const double prop_time) -> double {
+[[nodiscard]] constexpr auto calculate_doppler_nucmf_on_nurf(const Vec3d& pos_rf, const Vec3d& dir_rf,
+                                                             const double prop_time) -> double {
   // velocity of the comoving frame relative to the rest frame
   const auto vel_rf = get_velocity(pos_rf, prop_time);
 
