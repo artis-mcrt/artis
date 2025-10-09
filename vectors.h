@@ -34,8 +34,7 @@ template <size_t VECDIM>
 
 // vector dot product
 template <size_t S1>
-[[gnu::const]] [[nodiscard]] constexpr auto dot(const std::array<double, S1>& x, const std::array<double, S1>& y)
-    -> double {
+[[nodiscard]] constexpr auto dot(const std::array<double, S1>& x, const std::array<double, S1>& y) -> double {
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
@@ -205,8 +204,8 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 }
 
 // Rotation angle from the scattering plane
-[[gnu::const]] [[nodiscard]] constexpr auto get_rot_angle(const Vec3d& n1, const Vec3d& n2, const Vec3d& ref1,
-                                                          const Vec3d& ref2) -> double {
+[[nodiscard]] constexpr auto get_rot_angle(const Vec3d& n1, const Vec3d& n2, const Vec3d& ref1, const Vec3d& ref2)
+    -> double {
   // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
   // the meridian frame such that Q=1 is in the scattering plane and along ref1
 
