@@ -34,7 +34,8 @@ template <size_t VECDIM>
 
 // vector dot product
 template <size_t S1>
-[[nodiscard]] constexpr auto dot(const std::array<double, S1>& x, const std::array<double, S1>& y) -> double {
+[[gnu::const]] [[nodiscard]] constexpr auto dot(const std::array<double, S1>& x, const std::array<double, S1>& y)
+    -> double {
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
