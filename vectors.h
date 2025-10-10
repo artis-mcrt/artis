@@ -32,7 +32,7 @@ template <size_t VECDIM>
 
 // vector dot product
 template <size_t S1>
-[[gnu::pure]] [[nodiscard]] constexpr auto dot(const std::array<double, S1>& x, const std::array<double, S1>& y)
+[[gnu::const]] [[nodiscard]] constexpr auto dot(const std::array<double, S1>& x, const std::array<double, S1>& y)
     -> double {
   double sum = 0.;
   for (size_t i = 0; i < S1; i++) {
