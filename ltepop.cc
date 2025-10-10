@@ -457,18 +457,11 @@ auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion)
 
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_levelpop(const int nonemptymgi, const int uniquelevelindex)
     -> double {
-  assert_always(use_cellcache);
-  double nn = 0.;
-  if (use_cellcache) {
-    assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
-    nn = globals::cellcache[cellcacheslotid].alllevels_pops[uniquelevelindex];
-  } else {
-    const auto [element, ion, level] = get_levelfromuniquelevelindex(uniquelevelindex);
-    nn = calculate_levelpop(nonemptymgi, element, ion, level);
-  }
+  assert_testmodeonly(use_cellcache);
+  assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
+  const auto nn = globals::cellcache[cellcacheslotid].alllevels_pops[uniquelevelindex];
 
   assert_testmodeonly(nn >= 0.);
-  assert_testmodeonly(std::isfinite(nn));
 
   return nn;
 }
@@ -476,18 +469,11 @@ auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion)
 // Calculate the population of a level from either LTE or NLTE information
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_levelpop(const int nonemptymgi, const int element,
                                                                   const int ion, const int level) -> double {
-  assert_always(use_cellcache);
-  double nn = 0.;
-  if (use_cellcache) {
-    assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
-    const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-    nn = globals::cellcache[cellcacheslotid].alllevels_pops[uniquelevelindex];
-  } else {
-    nn = calculate_levelpop(nonemptymgi, element, ion, level);
-  }
+  assert_testmodeonly(use_cellcache);
+  assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
+  const auto nn = globals::cellcache[cellcacheslotid].alllevels_pops[get_uniquelevelindex(element, ion, level)];
 
   assert_testmodeonly(nn >= 0.);
-  assert_testmodeonly(std::isfinite(nn));
 
   return nn;
 }
