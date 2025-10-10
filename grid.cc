@@ -1626,7 +1626,7 @@ void set_model_type(const GridType model_type_value) { model_type = model_type_v
   return mgi;
 }
 
-[[gnu::pure]] [[nodiscard]] [[nodiscard]] __host__ __device__ auto get_propcell_nonemptymgi(const int cellindex)
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_propcell_nonemptymgi(const int cellindex)
     -> int {
   const auto nonemptymgi = propcell_nonemptymgi[cellindex];
   assert_testmodeonly(nonemptymgi >= -1);
