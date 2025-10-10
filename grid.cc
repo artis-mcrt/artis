@@ -1247,11 +1247,11 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 // returns -1 if there are no forward intersections (or if the intersection
 // is tangential to the shell)
 template <BoundaryType boundarytype, size_t S1>
-[[gnu::const]] [[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, S1>& pos,
-                                                                         const std::array<double, S1>& dir,
-                                                                         const double speed,
-                                                                         const double shellradiuststart,
-                                                                         const double tstart) -> double {
+[[gnu::pure]] [[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, S1>& pos,
+                                                                        const std::array<double, S1>& dir,
+                                                                        const double speed,
+                                                                        const double shellradiuststart,
+                                                                        const double tstart) -> double {
   static_assert(S1 == 2 || S1 == 3);
   assert_testmodeonly(shellradiuststart > 0);
 
