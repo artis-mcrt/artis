@@ -42,7 +42,7 @@ template <size_t S1>
 }
 
 // Get velocity vector of the flow at a position with homologous expansion.
-[[gnu::const]] [[nodiscard]] constexpr auto get_velocity(const Vec3d& x, const double t) -> Vec3d {
+[[gnu::pure]] [[nodiscard]] constexpr auto get_velocity(const Vec3d& x, const double t) -> Vec3d {
   return Vec3d{x[0] / t, x[1] / t, x[2] / t};
 }
 
