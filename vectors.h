@@ -24,7 +24,7 @@ template <size_t VECDIM>
 }
 
 // get a normalized copy of vec_in
-[[gnu::pure]] [[nodiscard]] constexpr auto vec_norm(const Vec3d& vec_in) {
+[[gnu::const]] [[nodiscard]] constexpr auto vec_norm(const Vec3d& vec_in) {
   const double magnitude = vec_len(vec_in);
   const Vec3d vec_out{vec_in[0] / magnitude, vec_in[1] / magnitude, vec_in[2] / magnitude};
 
