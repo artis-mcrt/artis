@@ -53,7 +53,7 @@ template <size_t VECDIM>
                (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
 }
 
-[[nodiscard]] constexpr auto vec_scale(const Vec3d& vec, const double scalefactor) -> Vec3d {
+[[gnu::pure]] [[nodiscard]] constexpr auto vec_scale(const Vec3d& vec, const double scalefactor) -> Vec3d {
   return Vec3d{vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
 }
 
