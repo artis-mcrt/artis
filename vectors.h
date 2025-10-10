@@ -41,16 +41,16 @@ template <size_t S1>
 
 // Get velocity vector of the flow at a position with homologous expansion.
 [[nodiscard]] constexpr auto get_velocity(const Vec3d& x, const double t) -> Vec3d {
-  return {x[0] / t, x[1] / t, x[2] / t};
+  return Vec3d{x[0] / t, x[1] / t, x[2] / t};
 }
 
 [[nodiscard]] constexpr auto cross_prod(const Vec3d& vec_a, const Vec3d& vec_b) -> Vec3d {
-  return {(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]), (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
-          (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
+  return Vec3d{(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]), (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
+               (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
 }
 
 [[nodiscard]] constexpr auto vec_scale(const Vec3d& vec, const double scalefactor) -> Vec3d {
-  return {vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
+  return Vec3d{vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
 }
 
 // aberration of angles in special relativity
