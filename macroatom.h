@@ -13,11 +13,10 @@ void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
                                                             double lowerstatweight, double nnlevelupper,
                                                             double t_current) -> double;
 
-[[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, int upper_uniquelevelindex,
-                                                          double upper_statweight, double einstein_A,
+[[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, double upper_statweight, double einstein_A,
                                                           double epsilon_trans, double nnlevel_lower,
-                                                          double statweight_lower, int alltransindex, double t_current)
-    -> double;
+                                                          double nnlevel_upper, double statweight_lower,
+                                                          int alltransindex, double t_current) -> double;
 
 [[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(float T_e, float nne, int element, int upperion,
                                                              int upperionlevel, int lowerionlevel, int nonemptymgi)

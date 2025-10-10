@@ -1352,7 +1352,6 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
         }
 
         if (force_bfintegral) {
-          // use the cellcache but not the detailed bf estimators
           gamma_coeff_integral +=
               calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, nonemptymgi);
         }

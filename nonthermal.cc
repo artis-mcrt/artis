@@ -1729,6 +1729,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         const auto lower_uniquelevelindex = get_uniquelevelindex(element, ion, lower);
         const auto upper_uniquelevelindex = get_uniquelevelindex(element, ion, upper);
         const auto nnlevel_lower = calculate_levelpop(nonemptymgi, element, ion, lower);
+        const auto nnlevel_upper = calculate_levelpop(nonemptymgi, element, ion, upper);
         const auto statweight_lower = stat_weight(lower_uniquelevelindex);
 
         const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon(lower_uniquelevelindex);
@@ -1738,8 +1739,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
 
         const double t_mid = globals::timesteps[timestep].mid;
         const double radexc_ratecoeff = rad_excitation_ratecoeff(
-            nonemptymgi, upper_uniquelevelindex, statweight_upper, globals::alltrans.einstein_A[alltransindex],
-            epsilon_trans, nnlevel_lower, statweight_lower, alltransindex, t_mid);
+            nonemptymgi, statweight_upper, globals::alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel_lower,
+            nnlevel_upper, statweight_lower, alltransindex, t_mid);
 
         const double collexc_ratecoeff =
             col_excitation_ratecoeff(T_e, nne, statweight_upper, alltransindex, epsilon_trans, statweight_lower);

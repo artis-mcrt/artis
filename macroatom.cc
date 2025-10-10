@@ -119,9 +119,9 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_current;
     const auto upper_statweight = stat_weight(upper_uniquelevelindex);
 
-    const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, upper_statweight,
-                                              alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel, statweight,
-                                              alltransindex, t_mid);
+    const double R = rad_excitation_ratecoeff(nonemptymgi, upper_statweight, alltrans.einstein_A[alltransindex],
+                                              epsilon_trans, nnlevel, get_levelpop(nonemptymgi, upper_uniquelevelindex),
+                                              statweight, alltransindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight);
     const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex);
 
@@ -593,22 +593,21 @@ void macroatom_close_file() {
 
 // radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
-[[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(const int nonemptymgi, const int upper_uniquelevelindex,
-                                                          const double upper_statweight, const double einstein_A,
-                                                          const double epsilon_trans, const double nnlevel_lower,
+[[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(const int nonemptymgi, const double upper_statweight,
+                                                          const double einstein_A, const double epsilon_trans,
+                                                          const double nnlevel_lower, const double nnlevel_upper,
                                                           const double statweight_lower, const int alltransindex,
                                                           const double t_current) -> double {
-  const double n_u = get_levelpop(nonemptymgi, upper_uniquelevelindex);
   const double nu_trans = epsilon_trans / H;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * einstein_A;
   const double B_lu = upper_statweight / statweight_lower * B_ul;
 
-  const double tau_sobolev = (B_lu * nnlevel_lower - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
+  const double tau_sobolev = (B_lu * nnlevel_lower - B_ul * nnlevel_upper) * HCLIGHTOVERFOURPI * t_current;
 
   if (tau_sobolev > 1e-100) {
     const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
 
-    const double R_over_J_nu = nnlevel_lower > 0. ? (B_lu - B_ul * n_u / nnlevel_lower) * beta : B_lu * beta;
+    const double R_over_J_nu = nnlevel_lower > 0. ? (B_lu - B_ul * nnlevel_upper / nnlevel_lower) * beta : B_lu * beta;
 
     if (DETAILED_LINE_ESTIMATORS_ON && !globals::lte_iteration) {
       // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
