@@ -473,7 +473,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
     const auto uniquelevelindex = ionuniquelevelindexstart + level;
     const double epsilon_level = epsilon(uniquelevelindex);
     const double statweight = stat_weight(uniquelevelindex);
-    const auto nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+    const auto nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
 
     // de-excitation
     const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
