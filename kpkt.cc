@@ -155,10 +155,14 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
       const auto uniquelevelindex = ionuniquelevelindexstart + level;
       const int nphixstargets = get_nphixstargets(uniquelevelindex);
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-        const double pop =
-            (BFCOOLING_USELEVELPOPNOTIONPOP
-                 ? get_levelpop(nonemptymgi, element, ion + 1, get_phixsupperlevel(uniquelevelindex, phixstargetindex))
-                 : nnupperion);
+        const double pop = [&]() {
+          if constexpr (BFCOOLING_USELEVELPOPNOTIONPOP) {
+            const int upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
+            return (update_cellcache_contribs) ? get_levelpop(nonemptymgi, element, ion + 1, upperlevel)
+                                               : calculate_levelpop(nonemptymgi, element, ion + 1, upperlevel);
+          }
+          return nnupperion;
+        }();
         const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * pop * nne;
         C_ion += C;
 
