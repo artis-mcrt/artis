@@ -837,7 +837,8 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
             const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
                                                ? get_levelpop(nonemptymgi, element, ion + 1, upper)
                                                : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
-            const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
+            const double sf = calculate_sahafact(stat_weight(element, ion, level), stat_weight(element, ion + 1, upper),
+                                                 T_e, H * nu_edge);
             departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
             if (USECELLHISTANDUPDATEPHIXSLIST) {
               globals::cellcache[cellcacheslotid].allcont_departureratios[i] = departure_ratio;
