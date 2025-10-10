@@ -15,8 +15,6 @@
 
 [[gnu::pure]] [[nodiscard]] auto get_levelpop(int nonemptymgi, int uniquelevelindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_levelpop(int nonemptymgi, int element, int ion, int level) -> double;
-[[gnu::pure]] [[nodiscard]] auto calculate_sahafact(int element, int ion, int level, int upperionlevel, double T,
-                                                    double E_threshold) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_nnion(int nonemptymgi, int element, int ion) -> double;
 [[nodiscard]] auto find_uppermost_ion(int nonemptymgi, int element, double nne_hi, bool force_saha) -> int;
 void calculate_ion_balance_nne(int nonemptymgi);

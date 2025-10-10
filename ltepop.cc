@@ -504,20 +504,6 @@ void calculate_cellpartfuncts(const int nonemptymgi, const int element) {
   }
 }
 
-// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto calculate_sahafact(const int element, const int ion,
-                                                                        const int level, const int upperionlevel,
-                                                                        const double T, const double E_threshold)
-    -> double {
-  const double g_lower = stat_weight(element, ion, level);
-  const double g_upper = stat_weight(element, ion + 1, upperionlevel);
-  const double sf = SAHACONST * g_lower / g_upper * pow(T, -1.5) * exp(E_threshold / KB / T);
-
-  assert_testmodeonly(sf > 0);
-
-  return sf;
-}
-
 // Use the ground level population and partition function to get an ion population
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nnion(const int nonemptymgi, const int element, const int ion)
     -> double {
