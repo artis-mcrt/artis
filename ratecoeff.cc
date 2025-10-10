@@ -777,11 +777,13 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   const double departure_ratio = 0.;  // zero the stimulated recomb contribution
 #else
   // stimulated recombination is negative photoionisation
-  const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+  const double nnlevel = use_cellcache ? get_levelpop(nonemptymgi, uniquelevelindex)
+                                       : calculate_levelpop(nonemptymgi, element, ion, level);
   const double nne = grid::get_nne(nonemptymgi);
   const int upperionlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
   const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
-  const double nnupperionlevel = get_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
+  const double nnupperionlevel = use_cellcache ? get_levelpop(nonemptymgi, element, ion + 1, upperionlevel)
+                                               : calculate_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
   double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.;  // put that to phixslist
   if (!std::isfinite(departure_ratio)) {
     departure_ratio = 0.;
@@ -1032,7 +1034,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
       nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
     } else {
-      nnupperlevel = get_levelpop(nonemptymgi, element, lowerion + 1, upper);
+      nnupperlevel = calculate_levelpop(nonemptymgi, element, lowerion + 1, upper);
     }
     nnupperion += nnupperlevel;
   }
@@ -1056,7 +1058,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
       nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
     } else {
-      nnupperlevel = get_levelpop(nonemptymgi, element, lowerion + 1, upper);
+      nnupperlevel = calculate_levelpop(nonemptymgi, element, lowerion + 1, upper);
     }
     for (int lower = 0; lower < get_nlevels(element, lowerion); lower++) {
       if (lower_superlevel_only && (!level_isinsuperlevel(element, lowerion, lower))) {
