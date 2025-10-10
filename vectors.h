@@ -5,7 +5,6 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <numeric>
 #include <tuple>
 
 #include "artisoptions.h"
@@ -33,9 +32,13 @@ template <size_t VECDIM>
 
 // vector dot product
 template <size_t S1>
-[[gnu::const]] [[nodiscard]] constexpr auto dot(const std::array<double, S1>& x, const std::array<double, S1>& y)
+[[gnu::pure]] [[nodiscard]] constexpr auto dot(const std::array<double, S1>& x, const std::array<double, S1>& y)
     -> double {
-  return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
+  double sum = 0.;
+  for (size_t i = 0; i < S1; i++) {
+    sum += x[i] * y[i];
+  }
+  return sum;
 }
 
 // Get velocity vector of the flow at a position with homologous expansion.
