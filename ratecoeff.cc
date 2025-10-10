@@ -1244,7 +1244,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
   const auto nne = grid::get_nne(nonemptymgi);
 
   for (int level = 0; level < get_nlevels(element, ion); level++) {
-    const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
+    const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
     if (nnlevel == 0.) {
       continue;
     }
