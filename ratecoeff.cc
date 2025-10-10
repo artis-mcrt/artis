@@ -368,11 +368,12 @@ void precalculate_rate_coefficient_integrals() {
         if ((level % globals::node_nprocs) != globals::rank_in_node) {
           continue;
         }
-
+        const double statw_lower = stat_weight(element, ion, level);
         const int nphixstargets = get_nphixstargets(element, ion, level);
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
           const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
           const double phixstargetprobability = get_phixsprobability(element, ion, level, phixstargetindex);
+          const double statw_upper = stat_weight(element, ion + 1, upperlevel);
 
           // const double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
           const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
@@ -386,7 +387,7 @@ void precalculate_rate_coefficient_integrals() {
             int status = 0;
             const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
 
-            const double sfac = calculate_sahafact(element, ion, level, upperlevel, T_e, E_threshold);
+            const double sfac = calculate_sahafact(statw_lower, statw_upper, T_e, E_threshold);
 
             assert_always(!get_phixs_table(element, ion, level).empty());
             // the threshold of the first target gives nu of the first phixstable point
