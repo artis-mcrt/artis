@@ -652,6 +652,7 @@ void macroatom_close_file() {
                                                              const int upperion, const int upper, const int lower,
                                                              const double epsilon_trans) -> double {
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, upperion - 1, lower);
+  const double statw_lower = stat_weight(lowerionlower_uniquelevelindex);
   const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (get_phixsupperlevel(lowerionlower_uniquelevelindex, phixstargetindex) == upper) {
@@ -664,10 +665,10 @@ void macroatom_close_file() {
 
       const double sigma_bf = (get_phixs_table(lowerionlower_uniquelevelindex)[0] *
                                get_phixsprobability(lowerionlower_uniquelevelindex, phixstargetindex));
+      const double statw_upper = stat_weight(element, upperion, upper);
+      const double sf = calculate_sahafact(statw_lower, statw_upper, T_e, epsilon_trans);
 
-      const double sf = calculate_sahafact(element, upperion - 1, lower, upper, T_e, epsilon_trans);
-
-      const double C = nne * nne * sf * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;
+      const double C = nne * nne * sf * 1.55e13 * std::pow(T_e, -0.5) * g * sigma_bf * std::exp(-fac1) / fac1;
 
       return C;
     }
