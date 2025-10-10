@@ -1021,7 +1021,7 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
 
       for (int lower = 0; lower < nlevels; lower++) {
         const auto uniquelevelindex = get_uniquelevelindex(element, ion, lower);
-        const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+        const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, lower);
         const double epsilon_lower = epsilon(uniquelevelindex);
         const auto statweight_lower = stat_weight(uniquelevelindex);
         const int nuptrans = get_nuptrans(uniquelevelindex);
@@ -1604,7 +1604,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         const double statweight_lower = stat_weight(uniquelevelindex);
         const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
         const int nuptrans = get_nuptrans(uniquelevelindex);
-        const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+        const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, lower);
         const double epsilon_lower = epsilon(uniquelevelindex);
 
         for (int t = 0; t < nuptrans; t++) {
@@ -1728,7 +1728,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         const int upper = globals::linelist.upperlevelindex[lineindex];
         const auto lower_uniquelevelindex = get_uniquelevelindex(element, ion, lower);
         const auto upper_uniquelevelindex = get_uniquelevelindex(element, ion, upper);
-        const auto nnlevel_lower = get_levelpop(nonemptymgi, lower_uniquelevelindex);
+        const auto nnlevel_lower = calculate_levelpop(nonemptymgi, element, ion, lower);
         const auto statweight_lower = stat_weight(lower_uniquelevelindex);
 
         const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon(lower_uniquelevelindex);
@@ -1809,7 +1809,7 @@ void sfmatrix_add_excitation(std::vector<double>& sfmatrixuppertri, const int no
   std::for_each(lowers.begin(), lowers.end(), [&](const int lower) {
     const auto uniquelevelindex = get_uniquelevelindex(element, ion, lower);
     const double statweight_lower = stat_weight(uniquelevelindex);
-    const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+    const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, lower);
     const double epsilon_lower = epsilon(uniquelevelindex);
     const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
     const int nuptrans = get_nuptrans(uniquelevelindex);
