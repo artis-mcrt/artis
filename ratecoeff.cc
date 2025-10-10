@@ -1328,7 +1328,7 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
       nnlowerlevel = (nnground * stat_weight(element, lowerion, lower) / stat_weight(element, lowerion, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
     } else {
-      nnlowerlevel = get_levelpop(nonemptymgi, element, lowerion, lower);
+      nnlowerlevel = calculate_levelpop(nonemptymgi, element, lowerion, lower);
     }
 
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lower); phixstargetindex++) {
