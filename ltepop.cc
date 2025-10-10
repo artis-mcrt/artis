@@ -442,8 +442,8 @@ auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion)
           exp(-E_aboveground / KB / T_exc));
 }
 
-[[gnu::pure]] [[nodiscard]] auto calculate_levelpop(const int nonemptymgi, const int element, const int ion,
-                                                    const int level) -> double {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto calculate_levelpop(const int nonemptymgi, const int element,
+                                                                        const int ion, const int level) -> double {
   const auto [nn, skipminpop] = calculate_levelpop_nominpop(nonemptymgi, element, ion, level);
   if (!skipminpop && nn < MINPOP) {
     if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
