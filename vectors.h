@@ -17,8 +17,10 @@
 // return the the magnitude of a vector
 template <size_t VECDIM>
 [[gnu::pure]] [[nodiscard]] constexpr auto vec_len(const std::array<double, VECDIM>& vec) -> double {
-  const double squaredlen = std::accumulate(vec.begin(), vec.end(), 0., [](auto a, auto b) { return a + (b * b); });
-
+  double squaredlen = 0.;
+  for (size_t i = 0; i < VECDIM; i++) {
+    squaredlen += vec[i] * vec[i];
+  }
   return std::sqrt(squaredlen);
 }
 
