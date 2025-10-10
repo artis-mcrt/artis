@@ -1616,8 +1616,7 @@ void set_model_type(const GridType model_type_value) { model_type = model_type_v
   return t_model;
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_propcell_modelgridindex(const int cellindex)
-    -> int {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_propcell_modelgridindex(const int cellindex) -> int {
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
   const auto mgi = propcell_mgi[cellindex];
@@ -1626,8 +1625,7 @@ void set_model_type(const GridType model_type_value) { model_type = model_type_v
   return mgi;
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_propcell_nonemptymgi(const int cellindex)
-    -> int {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_propcell_nonemptymgi(const int cellindex) -> int {
   const auto nonemptymgi = propcell_nonemptymgi[cellindex];
   assert_testmodeonly(nonemptymgi >= -1);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
