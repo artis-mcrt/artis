@@ -24,7 +24,7 @@ template <size_t VECDIM>
 }
 
 // get a normalized copy of vec_in
-[[gnu::const]] [[nodiscard]] constexpr auto vec_norm(const Vec3d& vec_in) -> Vec3d {
+[[gnu::pure]] [[nodiscard]] constexpr auto vec_norm(const Vec3d& vec_in) -> Vec3d {
   const double magnitude = vec_len(vec_in);
   assert_testmodeonly(magnitude > 0.);
 
