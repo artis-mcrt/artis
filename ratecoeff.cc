@@ -783,7 +783,8 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
                                        : calculate_levelpop(nonemptymgi, element, ion, level);
   const double nne = grid::get_nne(nonemptymgi);
   const int upperionlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
-  const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
+  const double sf = calculate_sahafact(stat_weight(element, ion, level), stat_weight(element, ion + 1, upperionlevel),
+                                       T_e, H * nu_threshold);
   const double nnupperionlevel = use_cellcache ? get_levelpop(nonemptymgi, element, ion + 1, upperionlevel)
                                                : calculate_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
   double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.;  // put that to phixslist
