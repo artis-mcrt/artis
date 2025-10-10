@@ -89,7 +89,7 @@ template <bool USECELLCACHE>
   const int uniquelevelindex_lower = ionuniquelevelindexstart + globals::linelist.lowerlevelindex[lineindex];
   const int uniquelevelindex_upper = ionuniquelevelindexstart + globals::linelist.upperlevelindex[lineindex];
 
-  const double n_l = USECELLCACHE ? get_levelpop(nonemptymgi, uniquelevelindex_lower)
+  const double n_l = USECELLCACHE ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex_lower)
                                   : calculate_levelpop(nonemptymgi, globals::linelist.elementindex[lineindex],
                                                        globals::linelist.ionindex[lineindex],
                                                        globals::linelist.lowerlevelindex[lineindex]);
@@ -98,7 +98,7 @@ template <bool USECELLCACHE>
       CLIGHTSQUAREDOVERTWOH / pow(globals::linelist.nu[lineindex], 3) * globals::linelist.einstein_A[lineindex];
   const double B_lu = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * B_ul;
 
-  const double n_u = USECELLCACHE ? get_levelpop(nonemptymgi, uniquelevelindex_upper)
+  const double n_u = USECELLCACHE ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex_upper)
                                   : calculate_levelpop(nonemptymgi, globals::linelist.elementindex[lineindex],
                                                        globals::linelist.ionindex[lineindex],
                                                        globals::linelist.upperlevelindex[lineindex]);
@@ -835,7 +835,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
           if (!USECELLHISTANDUPDATEPHIXSLIST || departure_ratio < 0) {
             const int upper = allcont[i].upperlevel;
             const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
-                                               ? get_levelpop(nonemptymgi, element, ion + 1, upper)
+                                               ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upper)
                                                : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
             const double sf = calculate_sahafact(stat_weight(element, ion, level), stat_weight(element, ion + 1, upper),
                                                  T_e, H * nu_edge);

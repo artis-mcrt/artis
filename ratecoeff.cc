@@ -779,13 +779,13 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   const double departure_ratio = 0.;  // zero the stimulated recomb contribution
 #else
   // stimulated recombination is negative photoionisation
-  const double nnlevel = use_cellcache ? get_levelpop(nonemptymgi, uniquelevelindex)
+  const double nnlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex)
                                        : calculate_levelpop(nonemptymgi, element, ion, level);
   const double nne = grid::get_nne(nonemptymgi);
   const int upperionlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
   const double sf = calculate_sahafact(stat_weight(element, ion, level), stat_weight(element, ion + 1, upperionlevel),
                                        T_e, H * nu_threshold);
-  const double nnupperionlevel = use_cellcache ? get_levelpop(nonemptymgi, element, ion + 1, upperionlevel)
+  const double nnupperionlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upperionlevel)
                                                : calculate_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
   double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.;  // put that to phixslist
   if (!std::isfinite(departure_ratio)) {

@@ -455,8 +455,8 @@ auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion)
   return nn;
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_levelpop(const int nonemptymgi, const int uniquelevelindex)
-    -> double {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_cellcache_levelpop(const int nonemptymgi,
+                                                                            const int uniquelevelindex) -> double {
   assert_testmodeonly(use_cellcache);
   assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
   const auto nn = globals::cellcache[cellcacheslotid].alllevels_pops[uniquelevelindex];
@@ -467,8 +467,8 @@ auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion)
 }
 
 // Calculate the population of a level from either LTE or NLTE information
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_levelpop(const int nonemptymgi, const int element,
-                                                                  const int ion, const int level) -> double {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_cellcache_levelpop(const int nonemptymgi, const int element,
+                                                                            const int ion, const int level) -> double {
   assert_testmodeonly(use_cellcache);
   assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
   const auto nn = globals::cellcache[cellcacheslotid].alllevels_pops[get_uniquelevelindex(element, ion, level)];

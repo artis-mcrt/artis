@@ -70,7 +70,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   const auto nne = grid::get_nne(nonemptymgi);
   const double epsilon_current = epsilon(uniquelevelindex);
   const double statweight = stat_weight(uniquelevelindex);
-  const auto nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+  const auto nnlevel = get_cellcache_levelpop(nonemptymgi, uniquelevelindex);
 
   // Downward transitions within the current ionisation stage:
   // radiative/collisional deexcitation and internal downward jumps
@@ -92,7 +92,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     const auto lower_statweight = stat_weight(lower_uniquelevelindex);
 
     const double R = rad_deexcitation_ratecoeff(epsilon_trans, A_ul, statweight, lower_statweight, nnlevel,
-                                                get_levelpop(nonemptymgi, lower_uniquelevelindex), t_mid);
+                                                get_cellcache_levelpop(nonemptymgi, lower_uniquelevelindex), t_mid);
     const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex);
 
     sum_raddeexc += R * epsilon_trans;
@@ -119,9 +119,9 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_current;
     const auto upper_statweight = stat_weight(upper_uniquelevelindex);
 
-    const double R = rad_excitation_ratecoeff(nonemptymgi, upper_statweight, alltrans.einstein_A[alltransindex],
-                                              epsilon_trans, nnlevel, get_levelpop(nonemptymgi, upper_uniquelevelindex),
-                                              statweight, alltransindex, t_mid);
+    const double R = rad_excitation_ratecoeff(
+        nonemptymgi, upper_statweight, alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel,
+        get_cellcache_levelpop(nonemptymgi, upper_uniquelevelindex), statweight, alltransindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight);
     const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex);
 

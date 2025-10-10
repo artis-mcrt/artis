@@ -1455,7 +1455,7 @@ auto ion_ntion_energyrate(const int nonemptymgi, const int element, const int lo
     // for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
     // {
     //   const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, lower);
-    //   const double nnlower = get_levelpop(nonemptymgi, element, lowerion, lower);
+    //   const double nnlower = get_cellcache_levelpop(nonemptymgi, element, lowerion, lower);
     //   enrate += nnlower * upperionprobfrac * epsilon_trans;
     // }
     const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);

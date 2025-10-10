@@ -85,7 +85,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
     const auto uniquelevelindex = ionuniquelevelindexstart + level;
-    const double nnlevel = update_cellcache_contribs ? get_levelpop(nonemptymgi, uniquelevelindex)
+    const double nnlevel = update_cellcache_contribs ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex)
                                                      : calculate_levelpop(nonemptymgi, element, ion, level);
 
     const double epsilon_current = epsilon(uniquelevelindex);
@@ -123,7 +123,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     for (int level = 0; level < nionisinglevels; level++) {
       const auto uniquelevelindex = ionuniquelevelindexstart + level;
       const double epsilon_current = epsilon(uniquelevelindex);
-      const double nnlevel = update_cellcache_contribs ? get_levelpop(nonemptymgi, uniquelevelindex)
+      const double nnlevel = update_cellcache_contribs ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex)
                                                        : calculate_levelpop(nonemptymgi, element, ion, level);
       const int nphixstargets = get_nphixstargets(uniquelevelindex);
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
@@ -158,7 +158,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
         const double pop = [&]() {
           if constexpr (BFCOOLING_USELEVELPOPNOTIONPOP) {
             const int upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
-            return (update_cellcache_contribs) ? get_levelpop(nonemptymgi, element, ion + 1, upperlevel)
+            return (update_cellcache_contribs) ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upperlevel)
                                                : calculate_levelpop(nonemptymgi, element, ion + 1, upperlevel);
           }
           return nnupperion;
@@ -542,7 +542,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
     const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
     const auto uniquelevelindex = ionuniquelevelindexstart + level;
     const double epsilon_current = epsilon(uniquelevelindex);
-    const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+    const double nnlevel = get_cellcache_levelpop(nonemptymgi, uniquelevelindex);
     const double statweight = stat_weight(uniquelevelindex);
     int upper = -1;
     // excitation to same ionisation stage
