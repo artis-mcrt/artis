@@ -43,7 +43,7 @@ template <size_t S1>
   return Vec3d{x[0] / t, x[1] / t, x[2] / t};
 }
 
-[[gnu::const]] [[nodiscard]] constexpr auto cross_prod(const Vec3d& vec_a, const Vec3d& vec_b) -> Vec3d {
+[[gnu::pure]] [[nodiscard]] constexpr auto cross_prod(const Vec3d& vec_a, const Vec3d& vec_b) -> Vec3d {
   return Vec3d{(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]), (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
                (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
 }
