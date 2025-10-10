@@ -484,11 +484,11 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const int lower = globals::alltrans.targetlevelindex[alltransindex];
       const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
       const auto lower_statweight = stat_weight(lower_uniquelevelindex);
+      const auto nnlevel_lower = calculate_levelpop(nonemptymgi, element, ion, lower);
 
       const double epsilon_trans = epsilon_level - epsilon(lower_uniquelevelindex);
-      const double R = rad_deexcitation_ratecoeff(nonemptymgi, lower_uniquelevelindex, epsilon_trans,
-                                                  globals::alltrans.einstein_A[alltransindex], statweight,
-                                                  lower_statweight, nnlevel, t_mid) *
+      const double R = rad_deexcitation_ratecoeff(epsilon_trans, globals::alltrans.einstein_A[alltransindex],
+                                                  statweight, lower_statweight, nnlevel, nnlevel_lower, t_mid) *
                        s_renorm[level];
       const double C =
           col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex) *
@@ -514,11 +514,12 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const auto upper_uniquelevelindex = ionuniquelevelindexstart + upper;
       const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_level;
       const auto upper_statweight = stat_weight(upper_uniquelevelindex);
+      const auto nnlevel_upper = calculate_levelpop(nonemptymgi, element, ion, upper);
 
-      const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, upper_statweight,
-                                                globals::alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel,
-                                                statweight, alltransindex, t_mid) *
-                       s_renorm[level];
+      const double R =
+          rad_excitation_ratecoeff(nonemptymgi, upper_statweight, globals::alltrans.einstein_A[alltransindex],
+                                   epsilon_trans, nnlevel, nnlevel_upper, statweight, alltransindex, t_mid) *
+          s_renorm[level];
 
       const double C = col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight) *
                        s_renorm[level];

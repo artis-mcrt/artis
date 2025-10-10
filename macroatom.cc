@@ -91,8 +91,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     const double epsilon_trans = epsilon_current - epsilon_target;
     const auto lower_statweight = stat_weight(lower_uniquelevelindex);
 
-    const double R = rad_deexcitation_ratecoeff(nonemptymgi, lower_uniquelevelindex, epsilon_trans, A_ul, statweight,
-                                                lower_statweight, nnlevel, t_mid);
+    const double R = rad_deexcitation_ratecoeff(epsilon_trans, A_ul, statweight, lower_statweight, nnlevel,
+                                                get_levelpop(nonemptymgi, lower_uniquelevelindex), t_mid);
     const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex);
 
     sum_raddeexc += R * epsilon_trans;
@@ -566,31 +566,6 @@ void macroatom_close_file() {
   }
 }
 
-// radiative deexcitation rate: paperII 3.5.2
-// multiply by upper level population to get a rate per second
-[[gnu::pure]] [[nodiscard]] auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int lower_uniquelevelindex,
-                                                            const double epsilon_trans, const float A_ul,
-                                                            const double upperstatweight, const double lowerstatweight,
-                                                            const double nnlevelupper, const double t_current)
-    -> double {
-  const double n_l = get_levelpop(nonemptymgi, lower_uniquelevelindex);
-
-  const double nu_trans = epsilon_trans / H;
-
-  const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
-  const double B_lu = upperstatweight / lowerstatweight * B_ul;
-
-  const double tau_sobolev = (B_lu * n_l - B_ul * nnlevelupper) * HCLIGHTOVERFOURPI * t_current;
-
-  if (tau_sobolev > 1e-100) {
-    const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
-    const auto R = A_ul * beta;
-    assert_testmodeonly(std::isfinite(R));
-    return R;
-  }
-  return 0.;
-}
-
 // radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
 [[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(const int nonemptymgi, const double upper_statweight,
@@ -611,8 +586,8 @@ void macroatom_close_file() {
 
     if (DETAILED_LINE_ESTIMATORS_ON && !globals::lte_iteration) {
       // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
-      if (const int jblueindex = radfield::get_Jblueindex(globals::alltrans.lineindex[alltransindex]);
-          jblueindex >= 0) {
+      const int jblueindex = radfield::get_Jblueindex(globals::alltrans.lineindex[alltransindex]);
+      if (jblueindex >= 0) {
         return R_over_J_nu * radfield::get_Jb_lu(nonemptymgi, jblueindex);
       }
     }
