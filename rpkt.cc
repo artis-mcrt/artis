@@ -81,6 +81,7 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
   return 1e8 * CLIGHT / lambda_upper;
 }
 
+template <bool USECELLCACHE>
 [[nodiscard]] auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current) -> double {
   const auto ionuniquelevelindexstart = globals::elements[globals::linelist.elementindex[lineindex]]
                                             .ions[globals::linelist.ionindex[lineindex]]
@@ -88,13 +89,19 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
   const int uniquelevelindex_lower = ionuniquelevelindexstart + globals::linelist.lowerlevelindex[lineindex];
   const int uniquelevelindex_upper = ionuniquelevelindexstart + globals::linelist.upperlevelindex[lineindex];
 
-  const double n_l = get_levelpop(nonemptymgi, uniquelevelindex_lower);
+  const double n_l = USECELLCACHE ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex_lower)
+                                  : calculate_levelpop(nonemptymgi, globals::linelist.elementindex[lineindex],
+                                                       globals::linelist.ionindex[lineindex],
+                                                       globals::linelist.lowerlevelindex[lineindex]);
 
   const double B_ul =
       CLIGHTSQUAREDOVERTWOH / pow(globals::linelist.nu[lineindex], 3) * globals::linelist.einstein_A[lineindex];
   const double B_lu = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * B_ul;
 
-  const double n_u = get_levelpop(nonemptymgi, uniquelevelindex_upper);
+  const double n_u = USECELLCACHE ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex_upper)
+                                  : calculate_levelpop(nonemptymgi, globals::linelist.elementindex[lineindex],
+                                                       globals::linelist.ionindex[lineindex],
+                                                       globals::linelist.upperlevelindex[lineindex]);
   return std::max((B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current, 0.);
 }
 
@@ -159,7 +166,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_con
         return {std::numeric_limits<double>::max(), next_trans - 1, false};
       }
 
-      const double tau_line = get_tau_sobolev(nonemptymgi, lineindex, prop_time);
+      const double tau_line = get_tau_sobolev<true>(nonemptymgi, lineindex, prop_time);
 
       if ((tau_rnd - tau) <= (tau_cont + tau_line)) {
         // bound-bound process occurs
@@ -828,9 +835,10 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
           if (!USECELLHISTANDUPDATEPHIXSLIST || departure_ratio < 0) {
             const int upper = allcont[i].upperlevel;
             const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
-                                               ? get_levelpop(nonemptymgi, element, ion + 1, upper)
+                                               ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upper)
                                                : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
-            const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
+            const double sf = calculate_sahafact(stat_weight(element, ion, level), stat_weight(element, ion + 1, upper),
+                                                 T_e, H * nu_edge);
             departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
             if (USECELLHISTANDUPDATEPHIXSLIST) {
               globals::cellcache[cellcacheslotid].allcont_departureratios[i] = departure_ratio;
@@ -1022,7 +1030,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
 
     while (lineindex < globals::nlines && globals::linelist.nu[lineindex] >= nu_lower) {
-      const auto tau_line = static_cast<float>(get_tau_sobolev(nonemptymgi, lineindex, t_mid));
+      const auto tau_line = static_cast<float>(get_tau_sobolev<false>(nonemptymgi, lineindex, t_mid));
       const auto linelambda = 1e8 * CLIGHT / globals::linelist.nu[lineindex];
       bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
       lineindex++;

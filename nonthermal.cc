@@ -1021,7 +1021,7 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
 
       for (int lower = 0; lower < nlevels; lower++) {
         const auto uniquelevelindex = get_uniquelevelindex(element, ion, lower);
-        const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+        const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, lower);
         const double epsilon_lower = epsilon(uniquelevelindex);
         const auto statweight_lower = stat_weight(uniquelevelindex);
         const int nuptrans = get_nuptrans(uniquelevelindex);
@@ -1455,7 +1455,7 @@ auto ion_ntion_energyrate(const int nonemptymgi, const int element, const int lo
     // for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
     // {
     //   const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, lower);
-    //   const double nnlower = get_levelpop(nonemptymgi, element, lowerion, lower);
+    //   const double nnlower = get_cellcache_levelpop(nonemptymgi, element, lowerion, lower);
     //   enrate += nnlower * upperionprobfrac * epsilon_trans;
     // }
     const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
@@ -1604,7 +1604,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         const double statweight_lower = stat_weight(uniquelevelindex);
         const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
         const int nuptrans = get_nuptrans(uniquelevelindex);
-        const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+        const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, lower);
         const double epsilon_lower = epsilon(uniquelevelindex);
 
         for (int t = 0; t < nuptrans; t++) {
@@ -1728,7 +1728,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         const int upper = globals::linelist.upperlevelindex[lineindex];
         const auto lower_uniquelevelindex = get_uniquelevelindex(element, ion, lower);
         const auto upper_uniquelevelindex = get_uniquelevelindex(element, ion, upper);
-        const auto nnlevel_lower = get_levelpop(nonemptymgi, lower_uniquelevelindex);
+        const auto nnlevel_lower = calculate_levelpop(nonemptymgi, element, ion, lower);
+        const auto nnlevel_upper = calculate_levelpop(nonemptymgi, element, ion, upper);
         const auto statweight_lower = stat_weight(lower_uniquelevelindex);
 
         const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon(lower_uniquelevelindex);
@@ -1738,8 +1739,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
 
         const double t_mid = globals::timesteps[timestep].mid;
         const double radexc_ratecoeff = rad_excitation_ratecoeff(
-            nonemptymgi, upper_uniquelevelindex, statweight_upper, globals::alltrans.einstein_A[alltransindex],
-            epsilon_trans, nnlevel_lower, statweight_lower, alltransindex, t_mid);
+            nonemptymgi, statweight_upper, globals::alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel_lower,
+            nnlevel_upper, statweight_lower, alltransindex, t_mid);
 
         const double collexc_ratecoeff =
             col_excitation_ratecoeff(T_e, nne, statweight_upper, alltransindex, epsilon_trans, statweight_lower);
@@ -1809,7 +1810,7 @@ void sfmatrix_add_excitation(std::vector<double>& sfmatrixuppertri, const int no
   std::for_each(lowers.begin(), lowers.end(), [&](const int lower) {
     const auto uniquelevelindex = get_uniquelevelindex(element, ion, lower);
     const double statweight_lower = stat_weight(uniquelevelindex);
-    const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+    const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, lower);
     const double epsilon_lower = epsilon(uniquelevelindex);
     const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
     const int nuptrans = get_nuptrans(uniquelevelindex);

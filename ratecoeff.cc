@@ -368,11 +368,12 @@ void precalculate_rate_coefficient_integrals() {
         if ((level % globals::node_nprocs) != globals::rank_in_node) {
           continue;
         }
-
+        const double statw_lower = stat_weight(element, ion, level);
         const int nphixstargets = get_nphixstargets(element, ion, level);
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
           const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
           const double phixstargetprobability = get_phixsprobability(element, ion, level, phixstargetindex);
+          const double statw_upper = stat_weight(element, ion + 1, upperlevel);
 
           // const double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
           const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
@@ -386,7 +387,7 @@ void precalculate_rate_coefficient_integrals() {
             int status = 0;
             const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
 
-            const double sfac = calculate_sahafact(element, ion, level, upperlevel, T_e, E_threshold);
+            const double sfac = calculate_sahafact(statw_lower, statw_upper, T_e, E_threshold);
 
             assert_always(!get_phixs_table(element, ion, level).empty());
             // the threshold of the first target gives nu of the first phixstable point
@@ -713,7 +714,8 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
   };
 
   const int upperionlevel = get_phixsupperlevel(element, lowerion, level, phixstargetindex);
-  const double sf = calculate_sahafact(element, lowerion, level, upperionlevel, T_e, H * nu_threshold);
+  const double sf = calculate_sahafact(stat_weight(element, lowerion, level),
+                                       stat_weight(element, lowerion + 1, upperionlevel), T_e, H * nu_threshold);
 
   double error = 0.;
 
@@ -777,11 +779,14 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   const double departure_ratio = 0.;  // zero the stimulated recomb contribution
 #else
   // stimulated recombination is negative photoionisation
-  const double nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+  const double nnlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex)
+                                       : calculate_levelpop(nonemptymgi, element, ion, level);
   const double nne = grid::get_nne(nonemptymgi);
   const int upperionlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
-  const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
-  const double nnupperionlevel = get_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
+  const double sf = calculate_sahafact(stat_weight(element, ion, level), stat_weight(element, ion + 1, upperionlevel),
+                                       T_e, H * nu_threshold);
+  const double nnupperionlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upperionlevel)
+                                               : calculate_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
   double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.;  // put that to phixslist
   if (!std::isfinite(departure_ratio)) {
     departure_ratio = 0.;
@@ -854,7 +859,7 @@ auto get_nlevels_important(const int nonemptymgi, const int element, const int i
       nnlowerlevel = (nnground * stat_weight(element, ion, lower) / stat_weight(element, ion, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
     } else {
-      nnlowerlevel = get_levelpop(nonemptymgi, element, ion, lower);
+      nnlowerlevel = calculate_levelpop(nonemptymgi, element, ion, lower);
     }
     nnlevelsum += nnlowerlevel;
     nlevels_important = lower + 1;
@@ -1032,7 +1037,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
       nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
     } else {
-      nnupperlevel = get_levelpop(nonemptymgi, element, lowerion + 1, upper);
+      nnupperlevel = calculate_levelpop(nonemptymgi, element, lowerion + 1, upper);
     }
     nnupperion += nnupperlevel;
   }
@@ -1056,7 +1061,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
       nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
     } else {
-      nnupperlevel = get_levelpop(nonemptymgi, element, lowerion + 1, upper);
+      nnupperlevel = calculate_levelpop(nonemptymgi, element, lowerion + 1, upper);
     }
     for (int lower = 0; lower < get_nlevels(element, lowerion); lower++) {
       if (lower_superlevel_only && (!level_isinsuperlevel(element, lowerion, lower))) {
@@ -1244,7 +1249,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
   const auto nne = grid::get_nne(nonemptymgi);
 
   for (int level = 0; level < get_nlevels(element, ion); level++) {
-    const double nnlevel = get_levelpop(nonemptymgi, element, ion, level);
+    const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
     if (nnlevel == 0.) {
       continue;
     }
@@ -1328,7 +1333,7 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
       nnlowerlevel = (nnground * stat_weight(element, lowerion, lower) / stat_weight(element, lowerion, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
     } else {
-      nnlowerlevel = get_levelpop(nonemptymgi, element, lowerion, lower);
+      nnlowerlevel = calculate_levelpop(nonemptymgi, element, lowerion, lower);
     }
 
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lower); phixstargetindex++) {
@@ -1345,12 +1350,11 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
         // whatever ARTIS uses internally
         gamma_coeff_used = get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, nonemptymgi);
 
-        if (force_bfest || printdebug) {
+        if (force_bfest) {
           gamma_coeff_bfest = radfield::get_bfrate_estimator(element, lowerion, lower, phixstargetindex, nonemptymgi);
         }
 
-        if (force_bfintegral || printdebug) {
-          // use the cellcache but not the detailed bf estimators
+        if (force_bfintegral) {
           gamma_coeff_integral +=
               calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, nonemptymgi);
         }

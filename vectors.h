@@ -5,7 +5,6 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <numeric>
 #include <tuple>
 
 #include "artisoptions.h"
@@ -17,46 +16,52 @@
 
 // return the the magnitude of a vector
 template <size_t VECDIM>
-[[nodiscard]] constexpr auto vec_len(const std::array<double, VECDIM>& vec) -> double {
-  const double squaredlen = std::accumulate(vec.begin(), vec.end(), 0., [](auto a, auto b) { return a + (b * b); });
-
+[[gnu::pure]] [[nodiscard]] constexpr auto vec_len(const std::array<double, VECDIM>& vec) -> double {
+  double squaredlen = 0.;
+  for (size_t i = 0; i < VECDIM; i++) {
+    squaredlen += vec[i] * vec[i];
+  }
   return std::sqrt(squaredlen);
 }
 
 // get a normalized copy of vec_in
-[[nodiscard]] constexpr auto vec_norm(const Vec3d& vec_in) {
+[[gnu::pure]] [[nodiscard]] constexpr auto vec_norm(const Vec3d& vec_in) -> Vec3d {
   const double magnitude = vec_len(vec_in);
-  const Vec3d vec_out{vec_in[0] / magnitude, vec_in[1] / magnitude, vec_in[2] / magnitude};
+  assert_testmodeonly(magnitude > 0.);
 
-  assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
-  return vec_out;
+  return Vec3d{vec_in[0] / magnitude, vec_in[1] / magnitude, vec_in[2] / magnitude};
 }
 
 // vector dot product
-template <size_t S1>
-[[nodiscard]] constexpr auto dot(const std::array<double, S1>& x, const std::array<double, S1>& y) -> double {
-  return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
+template <size_t VECDIM>
+[[gnu::pure]] [[nodiscard]] constexpr auto dot(const std::array<double, VECDIM>& x, const std::array<double, VECDIM>& y)
+    -> double {
+  double sum = 0.;
+  for (size_t i = 0; i < VECDIM; i++) {
+    sum += x[i] * y[i];
+  }
+  return sum;
 }
 
 // Get velocity vector of the flow at a position with homologous expansion.
-[[nodiscard]] constexpr auto get_velocity(const Vec3d& x, const double t) -> Vec3d {
-  return {x[0] / t, x[1] / t, x[2] / t};
+[[gnu::pure]] [[nodiscard]] constexpr auto get_velocity(const Vec3d& x, const double t) -> Vec3d {
+  return Vec3d{x[0] / t, x[1] / t, x[2] / t};
 }
 
-[[nodiscard]] constexpr auto cross_prod(const Vec3d& vec_a, const Vec3d& vec_b) -> Vec3d {
-  return {(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]), (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
-          (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
+[[gnu::pure]] [[nodiscard]] constexpr auto cross_prod(const Vec3d& vec_a, const Vec3d& vec_b) -> Vec3d {
+  return Vec3d{(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]), (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
+               (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
 }
 
-[[nodiscard]] constexpr auto vec_scale(const Vec3d& vec, const double scalefactor) -> Vec3d {
-  return {vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
+[[gnu::pure]] [[nodiscard]] constexpr auto vec_scale(const Vec3d& vec, const double scalefactor) -> Vec3d {
+  return Vec3d{vec[0] * scalefactor, vec[1] * scalefactor, vec[2] * scalefactor};
 }
 
 // aberration of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
 //   dir2: direction vector in frame2
-[[nodiscard]] constexpr auto angle_ab(const Vec3d& dir1, const Vec3d& vel) -> Vec3d {
+[[gnu::pure]] [[nodiscard]] constexpr auto angle_ab(const Vec3d& dir1, const Vec3d& vel) -> Vec3d {
   const double vsqr = dot(vel, vel) / CLIGHTSQUARED;
   const double gamma_rel = 1. / std::sqrt(1 - vsqr);
 
@@ -64,10 +69,8 @@ template <size_t S1>
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
   const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
-  const auto dir2 = Vec3d{(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
-                          (dir1[2] - (vel[2] * fact2)) / fact1};
-
-  return vec_norm(dir2);
+  return vec_norm(Vec3d{(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
+                        (dir1[2] - (vel[2] * fact2)) / fact1});
 }
 
 // Doppler factor squared, either to first order v/c or fully relativisitic depending on USE_RELATIVISTIC_DOPPLER_SHIFT
@@ -76,8 +79,8 @@ template <size_t S1>
 //   dir_rf: the rest frame direction (unit vector) of light propagation
 //   prop_time: the propagation time of the packet
 // returns: the ratio f = (nu_cmf / nu_rf) ^ 2
-[[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(const Vec3d& pos_rf, const Vec3d& dir_rf,
-                                                           const double prop_time) -> double {
+[[gnu::pure]] [[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(const Vec3d& pos_rf, const Vec3d& dir_rf,
+                                                                         const double prop_time) -> double {
   // velocity of the comoving frame relative to the rest frame
   const auto vel_rf = get_velocity(pos_rf, prop_time);
 
@@ -156,11 +159,11 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 // We know that a packet escaped at "escape_time". However, we have
 // to allow for travel time. Use the formula in Leon's paper. The extra
 // distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
-[[nodiscard]] constexpr auto get_arrive_time(const Packet& pkt) -> double {
+[[gnu::pure]] [[nodiscard]] constexpr auto get_arrive_time(const Packet& pkt) -> double {
   return pkt.escape_time - (dot(pkt.pos, pkt.dir) / CLIGHT_PROP);
 }
 
-[[nodiscard]] constexpr auto get_escapedirectionbin(const Vec3d& dir_in) -> int {
+[[gnu::pure]] [[nodiscard]] constexpr auto get_escapedirectionbin(const Vec3d& dir_in) -> int {
   constexpr auto xhat = Vec3d{1.0, 0.0, 0.0};
 
   // sometimes dir vectors aren't accurately normalised
@@ -238,7 +241,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
-[[nodiscard]] constexpr auto meridian(const Vec3d& n) -> std::tuple<Vec3d, Vec3d> {
+[[gnu::pure]] [[nodiscard]] constexpr auto meridian(const Vec3d& n) -> std::tuple<Vec3d, Vec3d> {
   // for ref_1 use (from triple product rule)
   const double n_xylen = std::sqrt((n[0] * n[0]) + (n[1] * n[1]));
   const auto ref1 = Vec3d{-1. * n[0] * n[2] / n_xylen, -1. * n[1] * n[2] / n_xylen, (1 - (n[2] * n[2])) / n_xylen};
@@ -248,7 +251,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   return {ref1, ref2};
 }
 
-[[nodiscard]] constexpr auto lorentz(const Vec3d& e_rf, const Vec3d& n_rf, const Vec3d& v) -> Vec3d {
+[[gnu::pure]] [[nodiscard]] constexpr auto lorentz(const Vec3d& e_rf, const Vec3d& n_rf, const Vec3d& v) -> Vec3d {
   // Use Lorentz transformations to get e_cmf from e_rf
 
   const auto beta = Vec3d{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};

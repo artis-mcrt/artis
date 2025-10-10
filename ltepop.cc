@@ -30,7 +30,7 @@ struct nneSolutionParas {
   bool force_saha;
 };
 
-auto interpolate_ions_spontrecombcoeff(const int uniqueionindex, const double T) -> double {
+[[gnu::pure]] [[nodiscard]] auto interpolate_ions_spontrecombcoeff(const int uniqueionindex, const double T) -> double {
   const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
   assert_testmodeonly(lowerindex >= 0);
   if (lowerindex < TABLESIZE - 1) {
@@ -47,7 +47,7 @@ auto interpolate_ions_spontrecombcoeff(const int uniqueionindex, const double T)
 }
 
 // use Saha equation for LTE ionisation balance
-[[nodiscard]] auto phi_saha(const int element, const int ion, const int nonemptymgi) -> double {
+[[gnu::pure]] [[nodiscard]] auto phi_saha(const int element, const int ion, const int nonemptymgi) -> double {
   const int uniqueionindex = get_uniqueionindex(element, ion);
   const auto partfunc_ion =
       grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex];
@@ -62,7 +62,7 @@ auto interpolate_ions_spontrecombcoeff(const int uniqueionindex, const double T)
 
 // Calculate population ratio (a saha factor) of two consecutive ionisation stages in nebular approximation phi_j,k* =
 // N_j,k*/(N_j+1,k* * nne)
-auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -> double {
+[[gnu::pure]] [[nodiscard]] auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
 
@@ -102,7 +102,7 @@ auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -
 }
 
 // calculate the free electron contribution from an element
-auto get_element_nne_contrib(const int nonemptymgi, const int element) -> double {
+[[gnu::pure]] [[nodiscard]] auto get_element_nne_contrib(const int nonemptymgi, const int element) -> double {
   if (grid::get_elem_numberdens(nonemptymgi, element) <= 0.) {
     return 0.;
   }
@@ -424,7 +424,8 @@ auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion)
 }
 
 // Calculate occupation population of a level assuming LTE excitation
-auto calculate_levelpop_boltzmann(const int nonemptymgi, const int element, const int ion, const int level) -> double {
+[[gnu::pure]] [[nodiscard]] auto calculate_levelpop_boltzmann(const int nonemptymgi, const int element, const int ion,
+                                                              const int level) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
@@ -441,7 +442,8 @@ auto calculate_levelpop_boltzmann(const int nonemptymgi, const int element, cons
           exp(-E_aboveground / KB / T_exc));
 }
 
-auto calculate_levelpop(const int nonemptymgi, const int element, const int ion, const int level) -> double {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto calculate_levelpop(const int nonemptymgi, const int element,
+                                                                        const int ion, const int level) -> double {
   const auto [nn, skipminpop] = calculate_levelpop_nominpop(nonemptymgi, element, ion, level);
   if (!skipminpop && nn < MINPOP) {
     if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
@@ -453,36 +455,25 @@ auto calculate_levelpop(const int nonemptymgi, const int element, const int ion,
   return nn;
 }
 
-[[nodiscard]] __host__ __device__ auto get_levelpop(const int nonemptymgi, const int uniquelevelindex) -> double {
-  double nn = 0.;
-  if (use_cellcache) {
-    assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
-    nn = globals::cellcache[cellcacheslotid].alllevels_pops[uniquelevelindex];
-  } else {
-    const auto [element, ion, level] = get_levelfromuniquelevelindex(uniquelevelindex);
-    nn = calculate_levelpop(nonemptymgi, element, ion, level);
-  }
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_cellcache_levelpop(const int nonemptymgi,
+                                                                            const int uniquelevelindex) -> double {
+  assert_testmodeonly(use_cellcache);
+  assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
+  const auto nn = globals::cellcache[cellcacheslotid].alllevels_pops[uniquelevelindex];
 
   assert_testmodeonly(nn >= 0.);
-  assert_testmodeonly(std::isfinite(nn));
 
   return nn;
 }
 
 // Calculate the population of a level from either LTE or NLTE information
-[[nodiscard]] __host__ __device__ auto get_levelpop(const int nonemptymgi, const int element, const int ion,
-                                                    const int level) -> double {
-  double nn = 0.;
-  if (use_cellcache) {
-    assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
-    const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-    nn = globals::cellcache[cellcacheslotid].alllevels_pops[uniquelevelindex];
-  } else {
-    nn = calculate_levelpop(nonemptymgi, element, ion, level);
-  }
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_cellcache_levelpop(const int nonemptymgi, const int element,
+                                                                            const int ion, const int level) -> double {
+  assert_testmodeonly(use_cellcache);
+  assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
+  const auto nn = globals::cellcache[cellcacheslotid].alllevels_pops[get_uniquelevelindex(element, ion, level)];
 
   assert_testmodeonly(nn >= 0.);
-  assert_testmodeonly(std::isfinite(nn));
 
   return nn;
 }
@@ -499,20 +490,9 @@ void calculate_cellpartfuncts(const int nonemptymgi, const int element) {
   }
 }
 
-// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
-__host__ __device__ auto calculate_sahafact(const int element, const int ion, const int level, const int upperionlevel,
-                                            const double T, const double E_threshold) -> double {
-  const double g_lower = stat_weight(element, ion, level);
-  const double g_upper = stat_weight(element, ion + 1, upperionlevel);
-  const double sf = SAHACONST * g_lower / g_upper * pow(T, -1.5) * exp(E_threshold / KB / T);
-
-  assert_testmodeonly(sf > 0);
-
-  return sf;
-}
-
 // Use the ground level population and partition function to get an ion population
-[[nodiscard]] __host__ __device__ auto get_nnion(const int nonemptymgi, const int element, const int ion) -> double {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nnion(const int nonemptymgi, const int element, const int ion)
+    -> double {
   const auto nnion = get_groundlevelpop(nonemptymgi, element, ion) *
                      grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
                                                    get_uniqueionindex(element, ion)] /

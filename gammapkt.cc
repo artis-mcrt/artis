@@ -917,7 +917,7 @@ void init_gamma_data() {
   }
 }
 
-[[nodiscard]] __host__ __device__ auto choose_gamma_ray(const int nucindex) -> double {
+[[nodiscard]] auto choose_gamma_ray(const int nucindex) -> double {
   // Get the frequency [Hz] of a random gamma ray from the decay spectrum of a given nucleus.
   // If no gamma spectrum is known, return -1.
 

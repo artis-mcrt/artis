@@ -70,7 +70,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   const auto nne = grid::get_nne(nonemptymgi);
   const double epsilon_current = epsilon(uniquelevelindex);
   const double statweight = stat_weight(uniquelevelindex);
-  const auto nnlevel = get_levelpop(nonemptymgi, uniquelevelindex);
+  const auto nnlevel = get_cellcache_levelpop(nonemptymgi, uniquelevelindex);
 
   // Downward transitions within the current ionisation stage:
   // radiative/collisional deexcitation and internal downward jumps
@@ -91,8 +91,8 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     const double epsilon_trans = epsilon_current - epsilon_target;
     const auto lower_statweight = stat_weight(lower_uniquelevelindex);
 
-    const double R = rad_deexcitation_ratecoeff(nonemptymgi, lower_uniquelevelindex, epsilon_trans, A_ul, statweight,
-                                                lower_statweight, nnlevel, t_mid);
+    const double R = rad_deexcitation_ratecoeff(epsilon_trans, A_ul, statweight, lower_statweight, nnlevel,
+                                                get_cellcache_levelpop(nonemptymgi, lower_uniquelevelindex), t_mid);
     const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex);
 
     sum_raddeexc += R * epsilon_trans;
@@ -119,9 +119,9 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_current;
     const auto upper_statweight = stat_weight(upper_uniquelevelindex);
 
-    const double R = rad_excitation_ratecoeff(nonemptymgi, upper_uniquelevelindex, upper_statweight,
-                                              alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel, statweight,
-                                              alltransindex, t_mid);
+    const double R = rad_excitation_ratecoeff(
+        nonemptymgi, upper_statweight, alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel,
+        get_cellcache_levelpop(nonemptymgi, upper_uniquelevelindex), statweight, alltransindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight);
     const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex);
 
@@ -304,7 +304,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   return -1;
 }
 
-constexpr auto gaunt_factor(const int ionstage) -> double {
+[[gnu::const]] [[nodiscard]] constexpr auto gaunt_factor(const int ionstage) -> double {
   if (ionstage == 1) {
     return 0.1;
   }
@@ -566,51 +566,28 @@ void macroatom_close_file() {
   }
 }
 
-// radiative deexcitation rate: paperII 3.5.2
-// multiply by upper level population to get a rate per second
-auto rad_deexcitation_ratecoeff(const int nonemptymgi, const int lower_uniquelevelindex, const double epsilon_trans,
-                                const float A_ul, const double upperstatweight, const double lowerstatweight,
-                                const double nnlevelupper, const double t_current) -> double {
-  const double n_l = get_levelpop(nonemptymgi, lower_uniquelevelindex);
-
-  const double nu_trans = epsilon_trans / H;
-
-  const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
-  const double B_lu = upperstatweight / lowerstatweight * B_ul;
-
-  const double tau_sobolev = (B_lu * n_l - B_ul * nnlevelupper) * HCLIGHTOVERFOURPI * t_current;
-
-  if (tau_sobolev > 1e-100) {
-    const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
-    const auto R = A_ul * beta;
-    assert_testmodeonly(std::isfinite(R));
-    return R;
-  }
-  return 0.;
-}
-
 // radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
-auto rad_excitation_ratecoeff(const int nonemptymgi, const int upper_uniquelevelindex, const double upper_statweight,
-                              const double einstein_A, const double epsilon_trans, const double nnlevel_lower,
-                              const double statweight_lower, const int alltransindex, const double t_current)
-    -> double {
-  const double n_u = get_levelpop(nonemptymgi, upper_uniquelevelindex);
+[[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(const int nonemptymgi, const double upper_statweight,
+                                                          const double einstein_A, const double epsilon_trans,
+                                                          const double nnlevel_lower, const double nnlevel_upper,
+                                                          const double statweight_lower, const int alltransindex,
+                                                          const double t_current) -> double {
   const double nu_trans = epsilon_trans / H;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * einstein_A;
   const double B_lu = upper_statweight / statweight_lower * B_ul;
 
-  const double tau_sobolev = (B_lu * nnlevel_lower - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
+  const double tau_sobolev = (B_lu * nnlevel_lower - B_ul * nnlevel_upper) * HCLIGHTOVERFOURPI * t_current;
 
   if (tau_sobolev > 1e-100) {
     const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
 
-    const double R_over_J_nu = nnlevel_lower > 0. ? (B_lu - B_ul * n_u / nnlevel_lower) * beta : B_lu * beta;
+    const double R_over_J_nu = nnlevel_lower > 0. ? (B_lu - B_ul * nnlevel_upper / nnlevel_lower) * beta : B_lu * beta;
 
     if (DETAILED_LINE_ESTIMATORS_ON && !globals::lte_iteration) {
       // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
-      if (const int jblueindex = radfield::get_Jblueindex(globals::alltrans.lineindex[alltransindex]);
-          jblueindex >= 0) {
+      const int jblueindex = radfield::get_Jblueindex(globals::alltrans.lineindex[alltransindex]);
+      if (jblueindex >= 0) {
         return R_over_J_nu * radfield::get_Jb_lu(nonemptymgi, jblueindex);
       }
     }
@@ -627,8 +604,9 @@ auto rad_excitation_ratecoeff(const int nonemptymgi, const int upper_uniquelevel
 
 // radiative recombination rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
-auto rad_recombination_ratecoeff(const float T_e, const float nne, const int element, const int upperion,
-                                 const int upperionlevel, const int lowerionlevel, const int nonemptymgi) -> double {
+[[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(const float T_e, const float nne, const int element,
+                                                             const int upperion, const int upperionlevel,
+                                                             const int lowerionlevel, const int nonemptymgi) -> double {
   // it's faster to only check this condition outside this function than to check it for every level
   assert_testmodeonly(upperionlevel <= get_maxrecombininglevel(element, upperion));
 
@@ -653,8 +631,9 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
   return 0.;
 }
 
-auto stim_recombination_ratecoeff(const float nne, const int element, const int upperion, const int upper,
-                                  const int lower, const int nonemptymgi) -> double {
+[[gnu::pure]] [[nodiscard]] auto stim_recombination_ratecoeff(const float nne, const int element, const int upperion,
+                                                              const int upper, const int lower, const int nonemptymgi)
+    -> double {
   if constexpr (SEPARATE_STIMRECOMB) {
     const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
@@ -669,9 +648,11 @@ auto stim_recombination_ratecoeff(const float nne, const int element, const int 
 }
 
 // multiply by upper level population to get a rate per second
-auto col_recombination_ratecoeff(const float T_e, const float nne, const int element, const int upperion,
-                                 const int upper, const int lower, const double epsilon_trans) -> double {
+[[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(const float T_e, const float nne, const int element,
+                                                             const int upperion, const int upper, const int lower,
+                                                             const double epsilon_trans) -> double {
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, upperion - 1, lower);
+  const double statw_lower = stat_weight(lowerionlower_uniquelevelindex);
   const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (get_phixsupperlevel(lowerionlower_uniquelevelindex, phixstargetindex) == upper) {
@@ -684,10 +665,10 @@ auto col_recombination_ratecoeff(const float T_e, const float nne, const int ele
 
       const double sigma_bf = (get_phixs_table(lowerionlower_uniquelevelindex)[0] *
                                get_phixsprobability(lowerionlower_uniquelevelindex, phixstargetindex));
+      const double statw_upper = stat_weight(element, upperion, upper);
+      const double sf = calculate_sahafact(statw_lower, statw_upper, T_e, epsilon_trans);
 
-      const double sf = calculate_sahafact(element, upperion - 1, lower, upper, T_e, epsilon_trans);
-
-      const double C = nne * nne * sf * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;
+      const double C = nne * nne * sf * 1.55e13 * std::pow(T_e, -0.5) * g * sigma_bf * std::exp(-fac1) / fac1;
 
       return C;
     }
@@ -698,8 +679,9 @@ auto col_recombination_ratecoeff(const float T_e, const float nne, const int ele
 
 // collisional ionisation rate: paperII 3.5.1
 // multiply by lower level population to get a rate per second
-auto col_ionisation_ratecoeff(const float T_e, const float nne, const int element, const int ion, const int lower,
-                              const int phixstargetindex, const double epsilon_trans) -> double {
+[[gnu::pure]] [[nodiscard]] auto col_ionisation_ratecoeff(const float T_e, const float nne, const int element,
+                                                          const int ion, const int lower, const int phixstargetindex,
+                                                          const double epsilon_trans) -> double {
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, lower));
 
@@ -719,8 +701,9 @@ auto col_ionisation_ratecoeff(const float T_e, const float nne, const int elemen
 }
 
 // multiply by upper level population to get a rate per second
-auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans,
-                                const double upperstatweight, const double lowerstatweight, const int alltransindex)
+[[gnu::pure]] [[nodiscard]] auto col_deexcitation_ratecoeff(const float T_e, const float nne,
+                                                            const double epsilon_trans, const double upperstatweight,
+                                                            const double lowerstatweight, const int alltransindex)
     -> double {
   const auto coll_strength = globals::alltrans.coll_str[alltransindex];
   if (coll_strength < 0) {
@@ -766,15 +749,16 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
 }
 
 // multiply by lower level population to get a rate per second
-auto col_excitation_ratecoeff(const float T_e, const float nne, const double upperstatweight, const int alltransindex,
-                              const double epsilon_trans, const double lowerstatweight) -> double {
+[[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(const float T_e, const float nne,
+                                                          const double upperstatweight, const int alltransindex,
+                                                          const double epsilon_trans, const double lowerstatweight)
+    -> double {
   const auto coll_strength = globals::alltrans.coll_str[alltransindex];
   const double eoverkt = epsilon_trans / (KB * T_e);
 
   if (coll_strength < 0) {
     const bool forbidden = globals::alltrans.forbidden[alltransindex];
     if (!forbidden) {
-      // alternative condition: (coll_strength > -1.5) i.e. to catch -1
       const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
       // permitted E1 electric dipole transitions
       // collisional excitation: formula valid only for atoms!!!!!!!!!!!
@@ -789,13 +773,10 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, const double upp
       // crude approximation to the already crude Van-Regemorter formula
       const double exp_eoverkt = std::exp(eoverkt);
 
-      const double test = 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt));
-      const double Gamma = g_bar > test ? g_bar : test;
+      const double Gamma = std::max(g_bar, 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt)));
       return C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow(H_ionpot / epsilon_trans, 2) *
              eoverkt / exp_eoverkt * Gamma;
     }
-
-    // alternative condition: (coll_strength > -3.5) to catch -2 or -3
 
     // forbidden transitions: magnetic dipole, electric quadropole...
     // Axelrod's approximation (thesis 1980)

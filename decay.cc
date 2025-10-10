@@ -742,7 +742,7 @@ auto write_nuclides_list() {
   return nu_frac;
 }
 
-[[nodiscard]] auto get_num_nuclides() -> ptrdiff_t { return std::ssize(nuclides); }
+[[gnu::pure]] [[nodiscard]] auto get_num_nuclides() -> ptrdiff_t { return std::ssize(nuclides); }
 
 [[nodiscard]] auto get_elname(const int z) -> std::string {
   assert_testmodeonly(z <= Z_MAX);

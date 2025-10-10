@@ -83,8 +83,8 @@ void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);
 // find the next transition lineindex redder than nu_cmf
 // for the propagation through non empty cells
 // return -1 if no transition can be reached
-constexpr auto closest_transition(const double nu_cmf, const int next_trans, const std::span<const double>& linelistnu)
-    -> int {
+[[gnu::pure]] [[nodiscard]] constexpr auto closest_transition(const double nu_cmf, const int next_trans,
+                                                              const std::span<const double> linelistnu) -> int {
   const int nlines = static_cast<int>(linelistnu.size());
   if (next_trans > (nlines - 1)) {
     // packet is tagged as having no more line interactions
@@ -122,8 +122,8 @@ constexpr auto closest_transition(const double nu_cmf, const int next_trans, con
   return matchindex;
 }
 
-[[nodiscard]] inline auto get_ionestimindex_nonemptymgi(const int nonemptymgi, const int element, const int ion)
-    -> int {
+[[gnu::pure]] [[nodiscard]] inline auto get_ionestimindex_nonemptymgi(const int nonemptymgi, const int element,
+                                                                      const int ion) -> int {
   assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element) - 1);
   const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
@@ -131,8 +131,8 @@ constexpr auto closest_transition(const double nu_cmf, const int next_trans, con
   return (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 }
 
-inline auto keep_this_cont(int element, const int ion, const int level, const int nonemptymgi, const float nnetot)
-    -> bool {
+[[gnu::pure]] [[nodiscard]] inline auto keep_this_cont(int element, const int ion, const int level,
+                                                       const int nonemptymgi, const float nnetot) -> bool {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     return grid::get_elem_abundance(nonemptymgi, element) > 0;
   }
