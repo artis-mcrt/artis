@@ -239,7 +239,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
-[[gnu::pure]] [[nodiscard]] constexpr auto meridian(const Vec3d& n) -> std::tuple<Vec3d, Vec3d> {
+[[gnu::const]] [[nodiscard]] constexpr auto meridian(const Vec3d& n) -> std::tuple<Vec3d, Vec3d> {
   // for ref_1 use (from triple product rule)
   const double n_xylen = std::sqrt((n[0] * n[0]) + (n[1] * n[1]));
   const auto ref1 = Vec3d{-1. * n[0] * n[2] / n_xylen, -1. * n[1] * n[2] / n_xylen, (1 - (n[2] * n[2])) / n_xylen};
@@ -249,7 +249,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   return {ref1, ref2};
 }
 
-[[gnu::pure]] [[nodiscard]] constexpr auto lorentz(const Vec3d& e_rf, const Vec3d& n_rf, const Vec3d& v) -> Vec3d {
+[[gnu::const]] [[nodiscard]] constexpr auto lorentz(const Vec3d& e_rf, const Vec3d& n_rf, const Vec3d& v) -> Vec3d {
   // Use Lorentz transformations to get e_cmf from e_rf
 
   const auto beta = Vec3d{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
