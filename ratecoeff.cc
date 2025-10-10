@@ -714,7 +714,8 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
   };
 
   const int upperionlevel = get_phixsupperlevel(element, lowerion, level, phixstargetindex);
-  const double sf = calculate_sahafact(element, lowerion, level, upperionlevel, T_e, H * nu_threshold);
+  const double sf = calculate_sahafact(stat_weight(element, lowerion, level),
+                                       stat_weight(element, lowerion + 1, upperionlevel), T_e, H * nu_threshold);
 
   double error = 0.;
 
