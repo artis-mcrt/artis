@@ -854,7 +854,7 @@ auto get_nlevels_important(const int nonemptymgi, const int element, const int i
       nnlowerlevel = (nnground * stat_weight(element, ion, lower) / stat_weight(element, ion, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
     } else {
-      nnlowerlevel = get_levelpop(nonemptymgi, element, ion, lower);
+      nnlowerlevel = calculate_levelpop(nonemptymgi, element, ion, lower);
     }
     nnlevelsum += nnlowerlevel;
     nlevels_important = lower + 1;
@@ -1345,11 +1345,11 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
         // whatever ARTIS uses internally
         gamma_coeff_used = get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, nonemptymgi);
 
-        if (force_bfest || printdebug) {
+        if (force_bfest) {
           gamma_coeff_bfest = radfield::get_bfrate_estimator(element, lowerion, lower, phixstargetindex, nonemptymgi);
         }
 
-        if (force_bfintegral || printdebug) {
+        if (force_bfintegral) {
           // use the cellcache but not the detailed bf estimators
           gamma_coeff_integral +=
               calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, nonemptymgi);
