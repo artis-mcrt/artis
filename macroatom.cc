@@ -759,7 +759,6 @@ void macroatom_close_file() {
   if (coll_strength < 0) {
     const bool forbidden = globals::alltrans.forbidden[alltransindex];
     if (!forbidden) {
-      // alternative condition: (coll_strength > -1.5) i.e. to catch -1
       const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
       // permitted E1 electric dipole transitions
       // collisional excitation: formula valid only for atoms!!!!!!!!!!!
@@ -779,8 +778,6 @@ void macroatom_close_file() {
       return C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow(H_ionpot / epsilon_trans, 2) *
              eoverkt / exp_eoverkt * Gamma;
     }
-
-    // alternative condition: (coll_strength > -3.5) to catch -2 or -3
 
     // forbidden transitions: magnetic dipole, electric quadropole...
     // Axelrod's approximation (thesis 1980)
