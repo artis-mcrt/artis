@@ -26,10 +26,9 @@ template <size_t VECDIM>
 // get a normalized copy of vec_in
 [[gnu::const]] [[nodiscard]] constexpr auto vec_norm(const Vec3d vec_in) -> Vec3d {
   const double magnitude = vec_len(vec_in);
-  const Vec3d vec_out{vec_in[0] / magnitude, vec_in[1] / magnitude, vec_in[2] / magnitude};
+  assert_testmodeonly(magnitude > 0.);
 
-  assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
-  return vec_out;
+  return Vec3d{vec_in[0] / magnitude, vec_in[1] / magnitude, vec_in[2] / magnitude};
 }
 
 // vector dot product
