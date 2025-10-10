@@ -773,8 +773,7 @@ void macroatom_close_file() {
       // crude approximation to the already crude Van-Regemorter formula
       const double exp_eoverkt = std::exp(eoverkt);
 
-      const double test = 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt));
-      const double Gamma = g_bar > test ? g_bar : test;
+      const double Gamma = std::max(g_bar, 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt)));
       return C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow(H_ionpot / epsilon_trans, 2) *
              eoverkt / exp_eoverkt * Gamma;
     }
