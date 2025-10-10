@@ -1616,7 +1616,7 @@ void set_model_type(const GridType model_type_value) { model_type = model_type_v
   return t_model;
 }
 
-[[gnu::pure]] [[nodiscard]] [[nodiscard]] __host__ __device__ auto get_propcell_modelgridindex(const int cellindex)
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_propcell_modelgridindex(const int cellindex)
     -> int {
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
