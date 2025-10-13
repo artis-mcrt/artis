@@ -624,8 +624,7 @@ void pair_prod(Packet& pkt) {
 
   assert_always(prob_gamma >= 0);
 
-  const auto zrand = rng_uniform();
-  if (zrand > prob_gamma) {
+  if (rng_uniform() > prob_gamma) {
     if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
       // Convert it to an e-minus or positron kinetic energy packet
       pkt.type = (rng_uniform() > 0.5) ? TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS : TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS;
@@ -665,8 +664,7 @@ void pair_prod(Packet& pkt) {
 void transport_gamma(Packet& pkt, const double t2) {
   // Assign optical depth to next physical event. And start counter of
   // optical depth for this path.
-  const double zrand = rng_uniform_pos();
-  const double tau_next = -1. * log(zrand);
+  const double tau_next = -std::log(static_cast<double>(rng_uniform_pos()));
   const double tau_current = 0.;
 
   // Start by finding the distance to the crossing of the grid cell

@@ -61,7 +61,7 @@ void calculate_expansion_opacities(int nonemptymgi);
 void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);
 
 [[nodiscard]] constexpr auto get_linedistance(const double prop_time, const double nu_cmf, const double nu_trans,
-                                              const double d_nu_on_d_l) -> double {
+                                              const double dnu_on_dl) -> double {
   // distance from packet position to redshifting into line at frequency nu_trans
 
   if (nu_cmf <= nu_trans) {
@@ -74,7 +74,7 @@ void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);
     // on packet position and direction
 
     // use linear interpolation of frequency along the path
-    return (nu_trans - nu_cmf) / d_nu_on_d_l;
+    return (nu_trans - nu_cmf) / dnu_on_dl;
   }
 
   return CLIGHT * prop_time * (nu_cmf / nu_trans - 1);

@@ -474,8 +474,7 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
     tdecay = t_model;  // can't decay before initial model snapshot time
 
     for (const int nucindex : decaypaths[decaypathindex].nucindex) {
-      const double zrand = rng_uniform_pos();
-      tdecay += -get_meanlife(nucindex) * std::log(zrand);
+      tdecay += -get_meanlife(nucindex) * std::log(static_cast<double>(rng_uniform_pos()));
     }
   }
   return tdecay;

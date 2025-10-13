@@ -290,7 +290,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
           vpkt.nu_rf * calculate_doppler_nucmf_on_nurf(abort_pos, vpkt.dir, vpkt.prop_time + (sdist / CLIGHT_PROP)),
           vpkt.nu_cmf);
 
-      const double d_nu_on_d_l = (nu_cmf_abort - vpkt.nu_cmf) / sdist;
+      const double dnu_on_dl = (nu_cmf_abort - vpkt.nu_cmf) / sdist;
 
       double ldist = 0;
       while (ldist < sdist) {
@@ -305,7 +305,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
         vpkt.next_trans = lineindex + 1;
 
-        ldist = get_linedistance(vpkt.prop_time, vpkt.nu_cmf, nutrans, d_nu_on_d_l);
+        ldist = get_linedistance(vpkt.prop_time, vpkt.nu_cmf, nutrans, dnu_on_dl);
 
         if (ldist > sdist) {
           // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with

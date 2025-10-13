@@ -110,7 +110,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_con
                         MacroAtomState& mastate,
                         const double tau_rnd,  // random optical depth until which the packet travels
                         const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
-                        const double nu_cmf_abort, const double d_nu_on_d_l, const double doppler,
+                        const double nu_cmf_abort, const double dnu_on_dl, const double doppler,
                         const TransitionLines& linelist) -> std::tuple<double, int, bool> {
   auto pos = pkt.pos;
   auto nu_cmf = pkt.nu_cmf;
@@ -153,7 +153,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_con
     // multiple scattering events of one packet in a single line
     next_trans = lineindex + 1;
 
-    const double ldist = get_linedistance(prop_time, nu_cmf, nu_trans, d_nu_on_d_l);
+    const double ldist = get_linedistance(prop_time, nu_cmf, nu_trans, dnu_on_dl);
 
     const double tau_cont = chi_cont * ldist;
 
@@ -200,7 +200,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_con
         pos[1] += (pkt.dir[1] * ldist);
         pos[2] += (pkt.dir[2] * ldist);
         prop_time += ldist / CLIGHT_PROP;
-        nu_cmf = pkt.nu_cmf + (d_nu_on_d_l * dist);  // should equal nu_trans;
+        nu_cmf = pkt.nu_cmf + (dnu_on_dl * dist);  // should equal nu_trans;
         assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
       }
 
@@ -221,7 +221,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_con
 
 auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& pkt,
                                           const Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont, MacroAtomState& mastate,
-                                          const double tau_rnd, const double nu_cmf_abort, const double d_nu_on_d_l,
+                                          const double tau_rnd, const double nu_cmf_abort, const double dnu_on_dl,
                                           const double doppler) -> std::tuple<double, int, bool> {
   auto pos = pkt.pos;
   const auto nu_rf = pkt.nu_rf;
@@ -243,7 +243,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
 
   for (ptrdiff_t binindex = binindex_start; binindex < expopac_nbins; binindex++) {
     const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
-    const auto binedgedist = get_linedistance(prop_time, nu_cmf, next_bin_edge_nu, d_nu_on_d_l);
+    const auto binedgedist = get_linedistance(prop_time, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
     const double chi_cont = chi_rpkt_cont.total * doppler;
     // const auto chi_cont = 0.;
@@ -277,7 +277,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
       bool event_is_boundbound = false;
       std::tie(edist_after_bin, next_trans, event_is_boundbound) =
           get_possible_event(nonemptymgi, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
-                             std::numeric_limits<double>::max(), 0., d_nu_on_d_l, doppler, globals::linelist);
+                             std::numeric_limits<double>::max(), 0., dnu_on_dl, doppler, globals::linelist);
       // assert_always(edist_after_bin <= 1.1 * binedgedist);
       dist = dist + edist_after_bin;
 
@@ -297,7 +297,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
       pos[1] += (pkt.dir[1] * binedgedist);
       pos[2] += (pkt.dir[2] * binedgedist);
       prop_time += binedgedist / CLIGHT_PROP;
-      nu_cmf = pkt.nu_cmf + (d_nu_on_d_l * dist);  // should equal nu_trans;
+      nu_cmf = pkt.nu_cmf + (dnu_on_dl * dist);  // should equal nu_trans;
       assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
     }
 
@@ -599,8 +599,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
       Rpkt_continuum_absorptioncoeffs{globals::nbfcontinua_ground, globals::nbfcontinua, globals::bfestimcount};
 
   // draw random optical depth to next physical event
-  const double zrand = rng_uniform_pos();
-  const double tau_next = -1. * log(zrand);
+  const double tau_rnd = -std::log(static_cast<double>(rng_uniform_pos()));
 
   // Finding the distance to the crossing of the grid cell boundaries.
   // sdist is the boundary distance to the next grid cell snext
@@ -634,7 +633,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     const double chi_grey = grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) *
                             calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-    edist = tau_next / chi_grey;
+    edist = tau_rnd / chi_grey;
     pkt.next_trans = -1;
   } else {
     calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, nonemptymgi);
@@ -643,14 +642,14 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     // the frequency change from start to abort (cell boundary/timestep end)
 
     const auto nu_cmf_abort = get_nu_cmf_abort(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, abort_dist);
-    const auto d_nu_on_d_l = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
+    const auto dnu_on_dl = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
     const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
     std::tie(edist, pkt.next_trans, event_is_boundbound) =
         (EXPANSIONOPACITIES_ON) ? get_possible_event_expansion_opacity(nonemptymgi, pkt, chi_rpkt_cont, pktmastate,
-                                                                       tau_next, nu_cmf_abort, d_nu_on_d_l, doppler)
-                                : get_possible_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_next, abort_dist,
-                                                     nu_cmf_abort, d_nu_on_d_l, doppler, globals::linelist);
+                                                                       tau_rnd, nu_cmf_abort, dnu_on_dl, doppler)
+                                : get_possible_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, abort_dist,
+                                                     nu_cmf_abort, dnu_on_dl, doppler, globals::linelist);
   }
   assert_always(edist >= 0);
 
