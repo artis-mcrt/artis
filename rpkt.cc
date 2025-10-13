@@ -241,7 +241,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
     binindex_start = -1;
   }
 
-  for (ptrdiff_t binindex = binindex_start; binindex < expopac_nbins; binindex++) {
+  for (auto binindex = binindex_start; binindex < expopac_nbins; binindex++) {
     const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
     const auto binedgedist = get_linedistance(prop_time, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
@@ -1024,7 +1024,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
 
   double kappa_planck_cumulative = 0.;
 
-  for (ptrdiff_t binindex = 0; binindex < expopac_nbins; binindex++) {
+  for (auto binindex = 0z; binindex < expopac_nbins; binindex++) {
     double bin_linesum = 0.;
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
 

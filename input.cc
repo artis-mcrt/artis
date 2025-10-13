@@ -267,7 +267,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
   auto phixsfile = fstream_required(phixsdata_filenames[phixs_file_version], std::ios::in);
   std::string phixsline;
   std::istringstream ssline;
-  size_t mem_usage_phixs = 0;
+  auto mem_usage_phixs = 0zU;
 
   if (phixs_file_version == 1 && phixs_file_version_exists[2]) {
     printlnlog(
@@ -1340,7 +1340,7 @@ void read_atomicdata_files() {
     std::ranges::fill(globals::alllevels.closestgroundlevelcont, -1);
 
     int chtransindex = 0;
-    for (size_t i = 0; i < temp_alllevels.size(); i++) {
+    for (auto i = 0zU; i < temp_alllevels.size(); i++) {
       alllevels_alltrans_startdown[i] = temp_alllevels[i].alltrans_startdown;
       alllevels_ndowntrans[i] = temp_alllevels[i].ndowntrans;
       alllevels_nuptrans[i] = temp_alllevels[i].nuptrans;
@@ -1516,7 +1516,7 @@ void setup_cellcache() {
   globals::cellcache.resize(num_cellcache_slots);
 
   for (int cellcachenum = 0; cellcachenum < num_cellcache_slots; cellcachenum++) {
-    size_t mem_usage_cellcache = 0;
+    auto mem_usage_cellcache = 0zU;
     mem_usage_cellcache += sizeof(CellCache);
 
     printlnlog("[info] input: initializing cellcache for thread {} ...", cellcachenum);
@@ -1531,8 +1531,8 @@ void setup_cellcache() {
     printlnlog("[info] mem_usage: cellcache coolinglist contribs for thread {} occupies {:.3f} MB", cellcachenum,
                ncoolingterms * sizeof(double) / 1024. / 1024.);
 
-    size_t allphixstargetcount = 0;
-    int chtransblocksize = 0;
+    auto allphixstargetcount = 0zU;
+    auto chtransblocksize = 0zU;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
@@ -1560,6 +1560,7 @@ void setup_cellcache() {
     mem_usage_cellcache +=
         (get_includedlevels() * (2 * sizeof(double) + sizeof(int))) + (allphixstargetcount * sizeof(double) * 2);
 
+    assert_always(chtransblocksize <= std::numeric_limits<int>::max());
     mem_usage_cellcache += chtransblocksize * sizeof(double);
     if (chtransblocksize > 0) {
       resize_exactly(globals::cellcache[cellcachenum].allmacroatomictransitions, chtransblocksize);

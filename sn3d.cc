@@ -214,7 +214,7 @@ void mpi_communicate_grid_properties() {
                      root, MPI_COMM_WORLD);
     }
 
-    for (ptrdiff_t nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
+    for (auto nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
          nonemptymgi++) {
       radfield::do_MPI_Bcast(nonemptymgi, root, root_node_id);
 

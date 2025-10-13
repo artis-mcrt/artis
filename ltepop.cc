@@ -407,22 +407,6 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
   return ionfractions;
 }
 
-// Return the given ions groundlevel population for modelgridindex which was precalculated
-// during update_grid and stored to the grid.
-auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion) -> double {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  const double nn = grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                                       get_uniqueionindex(element, ion)];
-  if (nn < MINPOP) {
-    if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
-      return MINPOP;
-    }
-    return 0.;
-  }
-  return nn;
-}
-
 // Calculate occupation population of a level assuming LTE excitation
 [[gnu::pure]] [[nodiscard]] auto calculate_levelpop_boltzmann(const int nonemptymgi, const int element, const int ion,
                                                               const int level) -> double {
@@ -455,29 +439,6 @@ auto get_groundlevelpop(const int nonemptymgi, const int element, const int ion)
   return nn;
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_cellcache_levelpop(const int nonemptymgi,
-                                                                            const int uniquelevelindex) -> double {
-  assert_testmodeonly(use_cellcache);
-  assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
-  const auto nn = globals::cellcache[cellcacheslotid].alllevels_pops[uniquelevelindex];
-
-  assert_testmodeonly(nn >= 0.);
-
-  return nn;
-}
-
-// Calculate the population of a level from either LTE or NLTE information
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_cellcache_levelpop(const int nonemptymgi, const int element,
-                                                                            const int ion, const int level) -> double {
-  assert_testmodeonly(use_cellcache);
-  assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
-  const auto nn = globals::cellcache[cellcacheslotid].alllevels_pops[get_uniquelevelindex(element, ion, level)];
-
-  assert_testmodeonly(nn >= 0.);
-
-  return nn;
-}
-
 // The partition functions depend only on T_R and W. This means they don't
 // change during any iteration on T_e. Therefore their precalculation was
 // taken out of calculate_ion_balance_nne to save runtime.
@@ -488,18 +449,6 @@ void calculate_cellpartfuncts(const int nonemptymgi, const int element) {
     grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
                                   get_uniqueionindex(element, ion)] = calculate_partfunct(element, ion, nonemptymgi);
   }
-}
-
-// Use the ground level population and partition function to get an ion population
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nnion(const int nonemptymgi, const int element, const int ion)
-    -> double {
-  const auto nnion = get_groundlevelpop(nonemptymgi, element, ion) *
-                     grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                                   get_uniqueionindex(element, ion)] /
-                     stat_weight(element, ion, 0);
-  assert_testmodeonly(nnion >= 0.);
-  assert_testmodeonly(std::isfinite(nnion));
-  return nnion;
 }
 
 // If not already set by the NLTE solver, set the ground level populations from either Saha LTE or

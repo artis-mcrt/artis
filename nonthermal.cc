@@ -267,13 +267,13 @@ auto calculate_ion_shell_occupancies(const int atomic_number, const int nbound,
                                      const std::vector<int>& element_shells_q_neutral) {
   assert_testmodeonly(nbound >= 0);
 
-  const size_t shellcount =
+  const auto shellcount =
       std::min(element_shells_q_neutral.size(), elements_electron_binding[atomic_number - 1].size());
   std::vector<int> element_shells_q;
   resize_exactly(element_shells_q, shellcount);
 
   int electron_count = 0;
-  for (size_t shellindex = 0; shellindex < shellcount; shellindex++) {
+  for (auto shellindex = 0zU; shellindex < shellcount; shellindex++) {
     const int electronsinshell_neutral = element_shells_q_neutral.at(shellindex);
 
     int electronsinshell = 0;
@@ -1287,7 +1287,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
 
       eta_over_ionpot_sum += eta_over_ionpot;
 
-      for (ptrdiff_t a = 0; a < std::ssize(eta_nauger_ionise_sum); a++) {
+      for (auto a = 0z; a < std::ssize(eta_nauger_ionise_sum); a++) {
         eta_nauger_ionise_over_ionpot_sum[a] += eta_over_ionpot * collionrow.prob_num_auger[a];
         eta_nauger_ionise_sum[a] += frac_ionisation_shell * collionrow.prob_num_auger[a];
       }
@@ -2081,7 +2081,7 @@ void init() {
   nt_solution = MPI_shared_malloc_span<NonThermalCellSolution>(nonempty_npts_model);
 
   if (globals::rank_in_node == 0) {
-    for (ptrdiff_t nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
+    for (auto nonemptymgi = 0z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
       // should make these negative?
       nt_solution[nonemptymgi].frac_heating = 0.97;
       nt_solution[nonemptymgi].frac_ionisation = 0.03;

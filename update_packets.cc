@@ -339,7 +339,7 @@ void do_cell_packet_updates(std::span<Packet> packets, const int nts, const doub
 #else
 #pragma omp parallel for schedule(nonmonotonic : dynamic)
 #endif
-  for (ptrdiff_t i = 0; i < std::ssize(packets); i++) {
+  for (auto i = 0z; i < std::ssize(packets); i++) {
     update_packet(packets[i]);
   }
 #endif

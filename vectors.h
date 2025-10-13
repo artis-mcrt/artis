@@ -18,7 +18,7 @@
 template <size_t VECDIM>
 [[gnu::pure]] [[nodiscard]] constexpr auto vec_len(const std::array<double, VECDIM>& vec) -> double {
   double squaredlen = 0.;
-  for (size_t i = 0; i < VECDIM; i++) {
+  for (auto i = 0zU; i < VECDIM; i++) {
     squaredlen += vec[i] * vec[i];
   }
   return std::sqrt(squaredlen);
@@ -37,7 +37,7 @@ template <size_t VECDIM>
 [[gnu::pure]] [[nodiscard]] constexpr auto dot(const std::array<double, VECDIM>& x, const std::array<double, VECDIM>& y)
     -> double {
   double sum = 0.;
-  for (size_t i = 0; i < VECDIM; i++) {
+  for (auto i = 0zU; i < VECDIM; i++) {
     sum += x[i] * y[i];
   }
   return sum;

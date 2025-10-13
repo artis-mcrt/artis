@@ -140,8 +140,9 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
   return level_index;
 }
 
-[[nodiscard]] auto get_ion_level_of_nlte_vector_index(const int index, const int element, const int first_ion_used,
-                                                      const int nions_used) -> std::tuple<int, int> {
+[[nodiscard]] auto get_ion_level_of_nlte_vector_index(const std::ptrdiff_t index, const int element,
+                                                      const int first_ion_used, const int nions_used)
+    -> std::tuple<int, int> {
   // this could easily be optimized if need be
   for (int dion = first_ion_used; dion < first_ion_used + nions_used; dion++) {
     for (int dlevel = 0; dlevel < get_nlevels(element, dion); dlevel++) {
@@ -166,7 +167,7 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
 
     // multiply incoming rate coefficients by their corresponding populations to get rates
     if (!only_levels_above) {  // add levels below
-      for (size_t index = 0; index < index_selected; index++) {
+      for (auto index = 0zU; index < index_selected; index++) {
         total_rate += gsl_vector_get(&row_vec, index) * popvec[index];
       }
     }
@@ -183,7 +184,7 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
     // multiply outgoing rate coefficients by the population of the selected level to get rates
 
     if (!only_levels_above) {  // add levels below
-      for (size_t index = 0; index < index_selected; index++) {
+      for (auto index = 0zU; index < index_selected; index++) {
         total_rate += gsl_vector_get(&col_vec, index);
       }
     }
@@ -751,7 +752,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
 [[nodiscard]] auto lumatrix_is_singular(const gsl_matrix* LU, const int element, const int first_ion_used,
                                         const int nions_used) -> bool {
-  for (size_t i = 0; i < LU->size1; i++) {
+  for (auto i = 0zU; i < LU->size1; i++) {
     // diagonal elements of LU matrix should not be zero
     // if they are, then the matrix is singular and the NLTE solution will fail
     if (gsl_matrix_get(LU, i, i) == 0) {
@@ -775,7 +776,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
                                            const int nions_used) -> bool {
   const size_t nlte_dimension = popvec.size();
   const auto superlevel_partfuncs = get_element_superlevelpartfuncs(nonemptymgi, element);
-  for (size_t index = 0; index < nlte_dimension; index++) {
+  for (auto index = 0zU; index < nlte_dimension; index++) {
     const auto [ion, level] = get_ion_level_of_nlte_vector_index(index, element, first_ion_used, nions_used);
     const auto ionstage = get_ionstage(element, ion);
     const auto population = popvec[index];
@@ -966,7 +967,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   }
 
   // get the unnormalised populations from the x solution vector and the normalisation factors
-  for (size_t i = 0; i < nlte_dimension; i++) {
+  for (auto i = 0zU; i < nlte_dimension; i++) {
     popvec[i] = gsl_vector_get(&x, i) * pop_normfactors[i];
   }
 
@@ -1365,7 +1366,7 @@ void nltepop_write_restart_data(FILE* restart_file) {
   fprintf(restart_file, "%d\n", globals::total_nlte_levels);
   const auto nincludedions = get_includedions();
 
-  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+  for (auto nonemptymgi = 0z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     fprintf(restart_file, "%d %la\n", modelgridindex, grid::modelgrid[nonemptymgi].totalcooling);
     for (int element = 0; element < get_nelements(); element++) {
@@ -1399,7 +1400,7 @@ void nltepop_read_restart_data(FILE* restart_file) {
   }
   const auto nincludedions = get_includedions();
 
-  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+  for (auto nonemptymgi = 0z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     int mgi_in = 0;
     assert_always(fscanf(restart_file, "%d %la\n", &mgi_in, &grid::modelgrid[nonemptymgi].totalcooling) == 2);
     assert_always(mgi_in == grid::get_mgi_of_nonemptymgi(nonemptymgi));

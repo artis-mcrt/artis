@@ -428,7 +428,7 @@ inline void MPI_Allreduce_safe(R&& data, Op&& op, Comm&& comm) {
   const auto nchunks = (std::ssize(dataspan) / MPI_COUNT_MAX) + ((std::ssize(dataspan) % MPI_COUNT_MAX) == 0 ? 0 : 1);
   assert_always(nchunks >= 1);
   std::ptrdiff_t items_processed{0};
-  for (std::ptrdiff_t chunk = 0; chunk < nchunks; chunk++) {
+  for (auto chunk = 0z; chunk < nchunks; chunk++) {
     const auto [chunkstart, chunksize] = get_range_chunk(std::ssize(dataspan), nchunks, chunk);
     assert_always(chunksize > 0);
     const auto chunk_span = dataspan.subspan(chunkstart, chunksize);
@@ -469,7 +469,7 @@ inline void MPI_Bcast_safe(R&& data, const int root, Comm&& comm) {
       (datasize_mpitype / MPI_COUNT_MAX_MPITYPE) + ((datasize_mpitype % MPI_COUNT_MAX_MPITYPE) == 0 ? 0 : 1);
   assert_always(nchunks >= 1);
   std::ptrdiff_t items_processed{0};
-  for (std::ptrdiff_t chunk = 0; chunk < nchunks; chunk++) {
+  for (auto chunk = 0z; chunk < nchunks; chunk++) {
     const auto [chunkstart, chunksize] = get_range_chunk(std::ssize(dataspan), nchunks, chunk);
     assert_always(chunksize > 0);
     const auto chunk_span = dataspan.subspan(chunkstart, chunksize);
@@ -511,7 +511,7 @@ inline void MPI_Reduce_safe(R&& data, Op&& op, const int root, Comm&& comm) {
   const auto nchunks = (std::ssize(dataspan) / MPI_COUNT_MAX) + ((std::ssize(dataspan) % MPI_COUNT_MAX) == 0 ? 0 : 1);
   assert_always(nchunks >= 1);
   std::ptrdiff_t items_processed{0};
-  for (std::ptrdiff_t chunk = 0; chunk < nchunks; chunk++) {
+  for (auto chunk = 0z; chunk < nchunks; chunk++) {
     const auto [nstart, chunksize] = get_range_chunk(std::ssize(dataspan), nchunks, chunk);
     assert_always(chunksize > 0);
     const auto chunk_span = dataspan.subspan(nstart, chunksize);

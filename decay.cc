@@ -357,7 +357,7 @@ void find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
         continue;
       }
       bool is_custom_nuclide = false;
-      for (ptrdiff_t i = 0; i < std::ssize(custom_zlist); i++) {
+      for (auto i = 0z; i < std::ssize(custom_zlist); i++) {
         if ((z == custom_zlist[i]) && (a == custom_alist[i])) {
           is_custom_nuclide = true;
           break;
@@ -802,7 +802,7 @@ auto get_nucstring_z(const std::string& strnuc) -> int {
 // convert something like Ni56 to integer 56
 auto get_nucstring_a(const std::string& strnuc) -> int {
   // find first digit character
-  size_t i = 0;
+  auto i = 0zU;
   for (; i < strnuc.length(); i++) {
     if (isdigit(strnuc[i]) != 0) {
       break;
@@ -863,7 +863,7 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
   // any nuclides in the custom list that are not in the standard list need beta and alpha decay data
 
   bool use_custom_nuclides = false;
-  for (ptrdiff_t i = 0; i < std::ssize(custom_zlist); i++) {
+  for (auto i = 0z; i < std::ssize(custom_zlist); i++) {
     if (custom_zlist[i] < 0 || custom_alist[i] < 0) {
       continue;
     }

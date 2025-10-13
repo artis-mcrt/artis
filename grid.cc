@@ -705,7 +705,7 @@ void read_model_radioabundances(std::istream& fmodel, std::istringstream& ssline
     return;
   }
 
-  for (std::ptrdiff_t i = 0; i < std::ssize(colnames); i++) {
+  for (auto i = 0z; i < std::ssize(colnames); i++) {
     double valuein = 0.;
     assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
 
@@ -797,7 +797,7 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
   decay::init_nuclides(zlist, alist);
 
   std::vector<int> nucindexlist(zlist.size());
-  for (std::ptrdiff_t i = 0; i < std::ssize(zlist); i++) {
+  for (auto i = 0z; i < std::ssize(zlist); i++) {
     nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
@@ -1278,7 +1278,7 @@ template <BoundaryType boundarytype, size_t S1>
     const auto [posfinal1, posfinal2] = [&]() {
       std::array<double, S1> posf1{};
       std::array<double, S1> posf2{};
-      for (size_t d = 0; d < S1; d++) {
+      for (auto d = 0zU; d < S1; d++) {
         posf1[d] = pos[d] + (dist1 * dir[d]);
         posf2[d] = pos[d] + (dist2 * dir[d]);
       }

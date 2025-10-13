@@ -230,7 +230,7 @@ auto sample_planck_analytic(const double T) -> double {
   double prev_partintegral = 0.;
   double part_integral = 0.;
   double bin_nu_lower = NU_MIN_R;
-  for (ptrdiff_t i = 1; i < nubins; i++) {
+  for (auto i = 1z; i < nubins; i++) {
     bin_nu_lower = NU_MIN_R + ((i - 1) * delta_nu);
     const double nu_upper = NU_MIN_R + (i * delta_nu);
     prev_partintegral = part_integral;
