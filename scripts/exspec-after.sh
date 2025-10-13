@@ -3,9 +3,6 @@
 # only compress the files if we successfully ran exspec
 if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
 
-  # zstd does decent compression at high speeds
-  cmdcompress="zstd -T0 -13 -v --rm -f"
-
   mkdir -p speclc_angle_res
   mv *_res_*.out* speclc_angle_res/ || true
   # join 3D direction files, if they exist
@@ -25,14 +22,14 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
 
   # 3D kilonova model.txt and abundances.txt can be huge, so compress txt files
   # do maxdepth 1 first in case job gets killed during run folder compression
-  find . -maxdepth 1 -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 $cmdcompress
-  find . -maxdepth 1 -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 $cmdcompress
-  find . -maxdepth 1 -name 'ratecoeff.dat' -size +200k -print0 | sort -z | xargs -r0 $cmdcompress
+  find . -maxdepth 1 -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
+  find . -maxdepth 1 -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
+  find . -maxdepth 1 -name 'ratecoeff.dat' -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
 
-  find packets/ -name 'packets*.out' -size +200k -print0 | sort -z | xargs -r0 $cmdcompress
+  find packets/ -name 'packets*.out' -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
 
-  find . -maxdepth 2 -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 $cmdcompress
-  find . -maxdepth 2 -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 $cmdcompress
+  find . -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
+  find . -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
 
   ./artis/scripts/tar_rm_logs.sh
 
