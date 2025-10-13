@@ -242,7 +242,7 @@ jobs:
               if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'nebular')
               working-directory: tests/
               run: |
-                  artistools plotspectra --frompackets -ts 8 ${{ matrix.testname }}_testrun
+                  artistools plotspectra --frompackets -t 200 ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum classicmode
               if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'classicmode_')
@@ -260,7 +260,7 @@ jobs:
               if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'kilonova')
               working-directory: tests/
               run: |
-                  artistools plotspectra --frompackets -t 2 ${{ matrix.testname }}_testrun
+                  artistools plotspectra --frompackets -t 1.5 ${{ matrix.testname }}_testrun
 
             - name: Upload plot files
               if: always() && inputs.testmode != 'ON'
