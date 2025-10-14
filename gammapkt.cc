@@ -777,12 +777,11 @@ void transport_gamma(Packet& pkt, const double t2) {
   }
 }
 
-void global_thermalisation(Packet& pkt, auto SCHEME)
 // Barnes treatment: packet is either getting absorbed immediately and locally
 // creating a k-packet or it escapes. The absorption probability matches the
 // Barnes thermalization efficiency, for expressions see the original paper:
 // https://ui.adsabs.harvard.edu/abs/2016ApJ...829..110B
-{
+void global_thermalisation(Packet& pkt) {
   // compute thermalization efficiency (= absorption probability)
   // 0.1 is an average value to fit the analytic approximations from the paper.
   // Alternative: Distinguish between low-E (kappa = 1) or high-E (kappa = 0.05)
@@ -790,7 +789,7 @@ void global_thermalisation(Packet& pkt, auto SCHEME)
   // constexpr double mean_gamma_opac = 0.1;
 
   double f_gamma = 0.;
-  if (SCHEME == ThermalisationScheme::BARNES) {
+  if (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
     // determine average initial density via kinetic energy
     const double E_kin = grid::get_ejecta_kinetic_energy();
     const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
@@ -802,7 +801,7 @@ void global_thermalisation(Packet& pkt, auto SCHEME)
     const double t_ineff = barnes_prefactor * DAY * sqrt(grid::mtot_input / (5.e-3 * MSUN)) * ((0.2 * CLIGHT) / v_ej);
     const double tau = pow(t_ineff / pkt.prop_time, 2.);
     f_gamma = 1. - exp(-tau);
-  } else if (SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ34) {
+  } else if (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ34) {
     // take the fit parameters closest to the e2e model for now
     const double a = 0.27;
     const double b = 0.1;
@@ -811,7 +810,7 @@ void global_thermalisation(Packet& pkt, auto SCHEME)
     const double aux_term = 2 * b * pow(t_days, d);
     const double f_tot = 0.36 * (exp(-a * t_days) + std::log1p(aux_term) / (aux_term));
     f_gamma = f_tot;
-  } else if (SCHEME == ThermalisationScheme::TOT_THERM_FIT_MRW) {
+  } else if (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_MRW) {
     // take the fit parameters closest to the e2e model for now
     const double a = 2.01e-3;
     const double b = 1.78;
@@ -823,7 +822,7 @@ void global_thermalisation(Packet& pkt, auto SCHEME)
     const double f_2 = 1 - exp(-pow(t_gamma / t_days, d));
     const double f_tot = (0.25 * f_1) + (0.4 * f_2);
     f_gamma = f_tot;
-  } else if (SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ32p33) {
+  } else if (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ32p33) {
     const double zeta_elec = 0.25;
     const double zeta_gamma = 0.4;
 
@@ -1081,7 +1080,7 @@ __host__ __device__ void do_gamma(Packet& pkt, const int nts, const double t2) {
                        GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ34 ||
                        GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_MRW ||
                        GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ32p33) {
-    global_thermalisation(pkt, GAMMA_THERMALISATION_SCHEME);
+    global_thermalisation(pkt);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::WOLLAEGER) {
     wollaeger_thermalisation(pkt);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::GUTTMAN) {
