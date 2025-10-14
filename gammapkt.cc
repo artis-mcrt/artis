@@ -428,11 +428,11 @@ void compton_scatter(Packet& pkt) {
     // 2.41326e19 Hz = 100 keV / H
     const double hnu_over_100kev = nu_cmf / 2.41326e+19;
 
-    // double sigma_cmf_cno = 0.0448 * BARN * pow(hnu_over_100kev, -3.2);
+    // double sigma_cmf_cno = 0.0448e-24 * pow(hnu_over_100kev, -3.2);
 
-    const double sigma_cmf_si = 1.16 * BARN * pow(hnu_over_100kev, -3.13);
+    const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
 
-    const double sigma_cmf_fe = 25.7 * BARN * pow(hnu_over_100kev, -3.0);
+    const double sigma_cmf_fe = 25.7e-24 * pow(hnu_over_100kev, -3.0);
 
     // Now need to multiply by the particle number density.
 
