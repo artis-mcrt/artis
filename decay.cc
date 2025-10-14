@@ -977,6 +977,14 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
   // Read in data for gamma ray lines and make a list of them in energy order.
   gammapkt::init_gamma_data();
 
+  // manipulate betaminus decay splitup ratios here
+  if (USE_CONSTANT_BETAMINUS_SPLITUPS) {
+    for (auto& nuclide : nuclides) {
+      nuclide.endecay_gamma = BETAMINUS_ENERGY_GAMMA_SPLITUP * nuclide.endecay_q[DECAYTYPE_BETAMINUS];
+      nuclide.endecay_electron = BETAMINUS_ENERGY_ELECTRON_SPLITUP * nuclide.endecay_q[DECAYTYPE_BETAMINUS];
+    }
+  }
+
   // TODO: generalise this to all included nuclides
   printlnlog("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): {:g}, {:g}, {:g}",
              nucdecayenergytotal(28, 56) / MEV, nucdecayenergytotal(27, 56) / MEV, nucdecayenergygamma(27, 56) / MEV);

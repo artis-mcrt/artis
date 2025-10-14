@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <numbers>
 #include <string_view>
+#include <vector>
 
 // fundamental constants
 
@@ -28,8 +29,11 @@ constexpr double KB = 1.38064852e-16;  // Boltzmann constant [erg/K]
 constexpr double STEBO = 5.670400e-5;  // Stefan-Boltzmann constant [erg cm^-2 s^-1 K^-4.]
                                        // (data from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
 constexpr double SAHACONST = 2.0706659e-16;  // Saha constant
+constexpr double BARN = 1e-24;  // barn in cgs units [cm2]
 
 constexpr double EULERGAMMA = std::numbers::egamma;
+constexpr double PAIR_PROD_FREQUENCY =
+    2.46636e+20;  // frequency of wave having the energy corresponding to the rest energy of an electron-positron pair
 
 // numerical constants
 
@@ -60,7 +64,27 @@ constexpr size_t GSLWSIZE = 16384;  // GSL integration workspace size
 
 enum class TimeStepSizeMethod { LOGARITHMIC, CONSTANT, LOGARITHMIC_THEN_CONSTANT, CONSTANT_THEN_LOGARITHMIC };
 
-enum class ThermalisationScheme { INSTANT, DETAILED, DETAILEDWITHGAMMAPRODUCTS, BARNES, WOLLAEGER, GUTTMAN };
+enum class ThermalisationScheme {
+  INSTANT,
+  DETAILED,
+  DETAILEDWITHGAMMAPRODUCTS,
+  BARNES,
+  WOLLAEGER,
+  GUTTMAN,
+  TOT_THERM_FIT_BARNES_EQ34,
+  TOT_THERM_FIT_BARNES_EQ32p33,
+  TOT_THERM_FIT_MRW
+};
+
+// neutrino fractions for the e2e model, ONLY applicable for 50 timesteps from
+// 0.1 to 20 days. TODO: improve
+const std::vector<double> nu_frac_e2e = {
+    0.37343442, 0.37479627, 0.37677179, 0.37912375, 0.38102108, 0.38384897, 0.38783418, 0.39096066, 0.39535378,
+    0.39773747, 0.4006056,  0.40353313, 0.40539669, 0.40861926, 0.40818127, 0.40906144, 0.40954452, 0.40881866,
+    0.40999089, 0.40937853, 0.41115956, 0.41162955, 0.41207718, 0.41291792, 0.41246466, 0.41429677, 0.41627379,
+    0.41932937, 0.41619559, 0.41700607, 0.41727353, 0.41419981, 0.41302095, 0.40955967, 0.40755307, 0.40660224,
+    0.4047616,  0.40244544, 0.4011143,  0.4013594,  0.40162403, 0.4025424,  0.40364484, 0.40789019, 0.4127288,
+    0.41533031, 0.41929123, 0.42236189, 0.42632201, 0.43183402};
 
 using Vec3d = std::array<double, 3>;
 constexpr Vec3d syn_dir{0., 0., 1.};  // vector defining the theta=0 direction
