@@ -616,6 +616,7 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
   // after update_grid so that, if requires, the gamma-ray heating estimator is known there
   // and also the photoion and stimrecomb estimators
   zero_estimators();
+  neutrino_release_fraction = calc_neutrino_release_fraction();
 
   MPI_Barrier(MPI_COMM_WORLD);
   if ((nts < globals::timestep_finish) && do_this_full_loop) {

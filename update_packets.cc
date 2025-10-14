@@ -247,6 +247,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
          PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ32p33)) {
       pkt.e_cmf *= 1 / (1 - nu_frac_e2e[nts]);
       pkt.e_rf *= 1 / (1 - nu_frac_e2e[nts]);
+      assert_always((nu_frac_e2e[nts] / neutrino_release_fraction) - 1. < 1e-3);
     }
 
     pkt.prop_time = tdecay;
