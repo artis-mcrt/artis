@@ -980,9 +980,9 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
 
   // manipulate betaminus decay splitup ratios here
   if (USE_CONSTANT_BETAMINUS_SPLITUPS) {
-    for (int i = 0; i < static_cast<int>(nuclides.size()); i++) {
-      nuclides[i].endecay_gamma = BETAMINUS_ENERGY_GAMMA_SPLITUP * nuclides[i].endecay_q[DECAYTYPE_BETAMINUS];
-      nuclides[i].endecay_electron = BETAMINUS_ENERGY_ELECTRON_SPLITUP * nuclides[i].endecay_q[DECAYTYPE_BETAMINUS];
+    for (auto& nuclide : nuclides) {
+      nuclide.endecay_gamma = BETAMINUS_ENERGY_GAMMA_SPLITUP * nuclide.endecay_q[DECAYTYPE_BETAMINUS];
+      nuclide.endecay_electron = BETAMINUS_ENERGY_ELECTRON_SPLITUP * nuclide.endecay_q[DECAYTYPE_BETAMINUS];
     }
   }
 

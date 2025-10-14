@@ -103,7 +103,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     const double aux_term_1 = a * pow(t_days, b);
     const double f_1 = std::log1p(aux_term_1) / aux_term_1;
     const double f_2 = 1 - exp(-pow(t_gamma / t_days, d));
-    const double f_tot = 0.25 * f_1 + 0.4 * f_2;
+    const double f_tot = (0.25 * f_1) + (0.4 * f_2);
     const auto f_p = f_tot;
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
@@ -136,7 +136,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     const double tau = pow(t_ineff / pkt.prop_time, 2.);
     const double f_2 = 1. - exp(-tau);
 
-    const double f_tot = zeta_elec * f_1 + zeta_gamma * f_2;
+    const double f_tot = (zeta_elec * f_1) + (zeta_gamma * f_2);
     const auto f_p = f_tot;
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);

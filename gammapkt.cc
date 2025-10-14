@@ -821,7 +821,7 @@ void global_thermalisation(Packet& pkt, auto SCHEME)
     const double aux_term_1 = a * pow(t_days, b);
     const double f_1 = std::log1p(aux_term_1) / aux_term_1;
     const double f_2 = 1 - exp(-pow(t_gamma / t_days, d));
-    const double f_tot = 0.25 * f_1 + 0.4 * f_2;
+    const double f_tot = (0.25 * f_1) + (0.4 * f_2);
     f_gamma = f_tot;
   } else if (SCHEME == ThermalisationScheme::TOT_THERM_FIT_BARNES_EQ32p33) {
     const double zeta_elec = 0.25;
@@ -845,7 +845,7 @@ void global_thermalisation(Packet& pkt, auto SCHEME)
     const double t_ineff = barnes_prefactor * DAY * sqrt(grid::mtot_input / (5.e-3 * MSUN)) * ((0.2 * CLIGHT) / v_ej);
     const double tau = pow(t_ineff / pkt.prop_time, 2.);
     const double f_2 = 1. - exp(-tau);  // represents gamma rays
-    const double f_tot = zeta_elec * f_1 + zeta_gamma * f_2;
+    const double f_tot = (zeta_elec * f_1) + (zeta_gamma * f_2);
     f_gamma = f_tot;
   }
 
