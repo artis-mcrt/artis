@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 import argparse
+import sys
 from pathlib import Path
-
-import compression
 
 import artistools as at
 
@@ -15,11 +14,12 @@ def get_type_escapetype(line: str) -> tuple[str, str]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='Plot text file')
-    parser.add_argument('--rm', action='store_true',
-                        help='Remove original files after processing')
-    parser.add_argument('-f', action='store_true',
-                        help='Confirm performing the filtering')
+    assert sys.version_info >= (3, 14), "This script requires Python 3.14 or higher."
+    import compression
+
+    parser = argparse.ArgumentParser(description="Plot text file")
+    parser.add_argument("--rm", action="store_true", help="Remove original files after processing")
+    parser.add_argument("-f", action="store_true", help="Confirm performing the filtering")
     args = parser.parse_args()
     TYPE_ESCAPE = str(at.packets.type_ids["TYPE_ESCAPE"])
     TYPE_RPKT = str(at.packets.type_ids["TYPE_RPKT"])
