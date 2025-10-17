@@ -4,10 +4,12 @@
     "config:recommended"
   ],
   "labels": ["dependencies"],
-  "bumpVersion": "minor",
+  "bumpVersion": "major",
   "pre-commit": {
+    "automerge": true,
     "enabled": true
   },
+  "rebaseWhen": "conflicted",
   "schedule": [
     "* 9-15 * * 2"
   ]
