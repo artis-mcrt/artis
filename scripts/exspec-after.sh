@@ -2,6 +2,7 @@
 
 # only compress the files if we successfully ran exspec
 if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
+  rm packets_*.tmp gridsave_*.tmp
 
   mkdir -p speclc_angle_res
   mv *_res_*.out* speclc_angle_res/ || true
@@ -42,7 +43,7 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
     python3 -m ensurepip --upgrade
     python3 -m pip install --upgrade uv --target "$(pwd)/../uv"
   fi
-  uv tool install -U --no-cache -p 3.13 artistools@latest
+  uv tool install -U --no-cache artistools@latest
 
   # convert packets to parquet for fast reading
   uvx artistools lc --frompackets || true
