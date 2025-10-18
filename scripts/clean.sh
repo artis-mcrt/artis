@@ -18,6 +18,10 @@ if [ 0 -lt $(ls $paths 2>/dev/null | wc -w) ]; then
   if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Deleting:"
     rm -v -rf -- $paths 2>/dev/null
+    if [[ -f "input-newrun.txt" ]]; then
+      echo "mv input-newrun.txt input.txt"
+      mv input-newrun.txt input.txt
+    fi
   fi
 else
   echo "No ARTIS run files to delete"
