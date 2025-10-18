@@ -54,6 +54,7 @@ else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \<= 13),1)
 		CXX_STD := c++23
 	endif
+# 	CXXFLAGS += -Wsuggest-attribute=pure -Wsuggest-attribute=const
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := NVHPC
 	CXX_STD := c++23
