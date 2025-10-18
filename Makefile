@@ -52,7 +52,7 @@ else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 	endif
 	# std=c++26 is not supported on gcc < 14
 	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \<= 13),1)
-	CXX_STD := c++23
+		CXX_STD := c++23
 	endif
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := NVHPC
