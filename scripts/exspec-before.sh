@@ -18,3 +18,5 @@ find . -maxdepth 1 -name '*.dat.gz' -exec gzip -d -v {} \;
 find . -maxdepth 1 -name '*.txt.zst' -exec zstd -d -v -T0 --rm {} \;
 find . -maxdepth 1 -name '*.txt.xz' -exec xz -d -v -T0 {} \;
 find . -maxdepth 1 -name '*.txt.gz' -exec gzip -d -v {} \;
+
+find data/ -name '*.txt.zst' -exec zstd -d -v -T0 --rm {} \;
