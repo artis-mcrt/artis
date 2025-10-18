@@ -6,10 +6,10 @@ from pathlib import Path
 import artistools as at
 
 
-def get_type_escapetype(line: str) -> tuple[str, str]:
+def get_type_escapetype(line: str, type_id_index: int, escape_type_id_index: int) -> tuple[str, str]:
     linesplit = line.split()
-    type_id = linesplit[2]
-    escape_type_id = linesplit[15]
+    type_id = linesplit[type_id_index]
+    escape_type_id = linesplit[escape_type_id_index]
     return type_id, escape_type_id
 
 
@@ -34,8 +34,18 @@ def main() -> None:
             continue
         print(f"\n{filein}")
         linesin = at.zopen(filein).readlines()
+        if linesin[0].startswith("#"):
+            header_cols = linesin[0].split()
+            type_id_index = header_cols.index("type_id")
+            escape_type_id_index = header_cols.index("escape_type_id")
+        else:
+            type_id_index, escape_type_id_index = 2, 15
 
-        if all(get_type_escapetype(line) == (TYPE_ESCAPE, TYPE_RPKT) for line in linesin if not line.startswith("#")):
+        if all(
+            get_type_escapetype(line, type_id_index, escape_type_id_index) == (TYPE_ESCAPE, TYPE_RPKT)
+            for line in linesin
+            if not line.startswith("#")
+        ):
             print("  contains only escaped rpkts, skipping...")
             continue
 
@@ -58,7 +68,7 @@ def main() -> None:
 
         with compression.zstd.open(fileout_rpkt_temp, "wt", level=12) as foutrpkt:
             for line in linesin:
-                type_id, escape_type_id = get_type_escapetype(line)
+                type_id, escape_type_id = get_type_escapetype(line, type_id_index, escape_type_id_index)
                 if line.startswith("#"):
                     assert type_id == "type_id"
                     assert escape_type_id == "escape_type_id"
