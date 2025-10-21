@@ -47,7 +47,7 @@ namespace {
 
 const int groundstate_index_in = 1;  // starting level index in the input files
 
-struct EnergyLevelInput {
+struct TempEnergyLevel {
   double epsilon{-1};  // Excitation energy of this level relative to the neutral ground level.
   int alltrans_startdown{};  // index into globals::alltrans for first down transition from this level
   int ndowntrans{0};  // Number of down transitions from this level
@@ -60,12 +60,20 @@ struct EnergyLevelInput {
   }
 };
 
-// temporary for input before copy to globals::alltrans structure of arrays
-struct Transition {
+struct IonTransitionsInput {
   int lower;
   int upper;
   float A;
   float coll_str;
+  bool forbidden;
+};
+
+struct TempAllTransInput {
+  int lineindex;
+  int targetlevelindex;
+  float einstein_A;
+  float coll_str;
+  float osc_strength;
   bool forbidden;
 };
 
@@ -77,7 +85,7 @@ struct PhotoionTarget {
 };
 
 // temporary for reading before sorting and copy to globals::linelist structure of arrays
-struct TransitionLine {
+struct TempLineTransitionInput {
   double nu;
   float einstein_A;
   int elementindex;
@@ -373,7 +381,7 @@ constexpr auto downtranslevelstart(const int level) {
 
 void read_ion_levels(std::istream& adata, const int element, const int ion, const int nions, const int nlevels,
                      int nlevelsmax, const double energyoffset, const double ionpot,
-                     std::vector<EnergyLevelInput>& temp_alllevels) {
+                     std::vector<TempEnergyLevel>& temp_alllevels) {
   std::string line;
   static std::istringstream ssline;
   for (int level = 0; level < nlevels; level++) {
@@ -410,7 +418,7 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
 }
 
 void read_ion_transitions(std::istream& ftransitiondata, const int ion_transition_count_in_file,
-                          std::vector<Transition>& iontransitiontable, const int nlevels_requiretransitions,
+                          std::vector<IonTransitionsInput>& iontransitiontable, const int nlevels_requiretransitions,
                           const int nlevels_requiretransitions_upperlevels) {
   iontransitiontable.clear();
   iontransitiontable.reserve(ion_transition_count_in_file);
@@ -493,10 +501,10 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
 }
 
 void add_transitions_to_unsorted_linelist(const int element, const int ion,
-                                          const std::vector<Transition>& transitiontable,
-                                          std::vector<TransitionLine>& temp_linelist,
-                                          std::vector<LevelTransition>& temp_alltranslist,
-                                          std::vector<EnergyLevelInput>& temp_alllevels) {
+                                          const std::vector<IonTransitionsInput>& iontransitiontable,
+                                          std::vector<TempLineTransitionInput>& temp_linelist,
+                                          std::vector<TempAllTransInput>& temp_alltranslist,
+                                          std::vector<TempEnergyLevel>& temp_alllevels) {
   const auto nlevels = get_nlevels(element, ion);
   auto ion_levels =
       std::span{temp_alllevels}.subspan(globals::elements[element].ions[ion].uniquelevelindexstart, nlevels);
@@ -527,7 +535,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
     std::ranges::fill(iondowntranstmplineindicies, -99);
 
     ion_updowntranscount = 0;
-    for (const auto& transition : transitiontable) {
+    for (const auto& transition : iontransitiontable) {
       const int level = transition.upper;
       const int lowerlevel = transition.lower;
 
@@ -1125,14 +1133,14 @@ auto read_compositiondata() -> std::vector<int> {
   return nlevelsmax_readin;
 }
 
-void read_levels_and_transitions(std::vector<EnergyLevelInput>& temp_alllevels,
-                                 std::vector<TransitionLine>& temp_linelist,
-                                 std::vector<LevelTransition>& temp_alltranslist,
+void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
+                                 std::vector<TempLineTransitionInput>& temp_linelist,
+                                 std::vector<TempAllTransInput>& temp_alltranslist,
                                  const std::vector<int>& nlevelsmax_readin) {
   std::string line;
   std::istringstream ssline;
   globals::nlines = 0;
-  std::vector<Transition> iontransitiontable;
+  std::vector<IonTransitionsInput> iontransitiontable;
   auto adata = fstream_required("adata.txt", std::ios::in);
   auto ftransitiondata = fstream_required("transitiondata.txt", std::ios::in);
   int uniquelevelindex = 0;  // index into list of all levels of all ions of all elements
@@ -1201,6 +1209,10 @@ void read_levels_and_transitions(std::vector<EnergyLevelInput>& temp_alllevels,
 
       read_ion_levels(adata, element, ion, nions, nlevels_in_file, nlevelskept, energyoffset, ionpot, temp_alllevels);
       uniquelevelindex += get_nlevels(element, ion);
+
+      if (ion < nions - 1) {
+        nbfcheck += globals::elements[element].ions[ion].nlevels_ionising;
+      }
       // and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
       int transdata_Z_in = -1;
       int transdata_ionstage_in = -1;
@@ -1241,13 +1253,8 @@ void read_levels_and_transitions(std::vector<EnergyLevelInput>& temp_alllevels,
       } else {
         read_ion_transitions(ftransitiondata, ion_transition_count_in_file, iontransitiontable,
                              nlevels_requiretransitions, nlevels_requiretransitions_upperlevels);
-        // last level index is (nlevelsmax - 1), so this is the correct size
         add_transitions_to_unsorted_linelist(element, ion, iontransitiontable, temp_linelist, temp_alltranslist,
                                              temp_alllevels);
-      }
-
-      if (ion < nions - 1) {
-        nbfcheck += globals::elements[element].ions[ion].nlevels_ionising;
       }
     }
   }
@@ -1259,9 +1266,9 @@ void read_atomicdata_files() {
 
   printlnlog("single_level_top_ion: {}", single_level_top_ion ? "true" : "false");
 
-  std::vector<EnergyLevelInput> temp_alllevels;
-  std::vector<TransitionLine> temp_linelist;
-  std::vector<LevelTransition> temp_alltranslist;
+  std::vector<TempEnergyLevel> temp_alllevels;
+  std::vector<TempLineTransitionInput> temp_linelist;
+  std::vector<TempAllTransInput> temp_alltranslist;
 
   if (globals::rank_in_node == 0) {
     temp_linelist.reserve(1 << 22);  // reserve initial space for 4 million lines to avoid too many reallocations

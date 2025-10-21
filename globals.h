@@ -67,15 +67,6 @@ struct GroundPhotoion {
   int ion;
 };
 
-struct LevelTransition {
-  int lineindex;
-  int targetlevelindex;
-  float einstein_A;
-  float coll_str;
-  float osc_strength;
-  bool forbidden;
-};
-
 struct Ion {
   int nlevels{0};  // Number of levels for this ionisation stage
   int nlevels_excited_nlte{0};  // number of nlte levels for this ion
