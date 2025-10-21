@@ -25,4 +25,5 @@ if [ 0 -lt $(ls $paths 2>/dev/null | wc -w) ]; then
   fi
 else
   echo "No ARTIS run files to delete"
+  cp -i -v input-newrun.txt input.txt
 fi
