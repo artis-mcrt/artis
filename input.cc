@@ -1241,11 +1241,10 @@ void read_levels_and_transitions(std::vector<EnergyLevelInput>& temp_alllevels,
       } else {
         read_ion_transitions(ftransitiondata, ion_transition_count_in_file, iontransitiontable,
                              nlevels_requiretransitions, nlevels_requiretransitions_upperlevels);
+        // last level index is (nlevelsmax - 1), so this is the correct size
+        add_transitions_to_unsorted_linelist(element, ion, iontransitiontable, temp_linelist, temp_alltranslist,
+                                             temp_alllevels);
       }
-
-      // last level index is (nlevelsmax - 1), so this is the correct size
-      add_transitions_to_unsorted_linelist(element, ion, iontransitiontable, temp_linelist, temp_alltranslist,
-                                           temp_alllevels);
 
       if (ion < nions - 1) {
         nbfcheck += globals::elements[element].ions[ion].nlevels_ionising;
