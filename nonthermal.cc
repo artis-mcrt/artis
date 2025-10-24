@@ -592,13 +592,12 @@ auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
       continue;
     }
     double enbinding = binding_energies.at(shellindex);
-    const double ionpot = globals::elements[element].ions[ion].ionpot;
     if (enbinding <= 0) {
       // if we don't have the shell's binding energy, use the previous one
       enbinding = binding_energies.at(shellindex - 1);
       assert_always(enbinding > 0);
     }
-    total += electronsinshell / std::max(ionpot, enbinding);
+    total += electronsinshell / std::max(get_ionpot(element, ion), enbinding);
   }
 
   return total;
@@ -656,7 +655,7 @@ void read_collion_data() {
         return collionrow.Z == Z && collionrow.ionstage == ionstage;
       });
       if (!any_data_matched) {
-        const double ionpot_ev = globals::elements[element].ions[ion].ionpot / EV;
+        const double ionpot_ev = get_ionpot(element, ion) / EV;
         printlnlog(
             "No collisional ionisation data for Z={} ionstage {}. Using Lotz approximation with ionpot = {:g} eV", Z,
             ionstage, ionpot_ev);
