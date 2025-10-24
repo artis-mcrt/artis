@@ -86,6 +86,13 @@ inline const std::array<const std::string, 3> phixsdata_filenames = {"IGNORE", "
   return globals::elements[element].ions[ion].ionpot;
 }
 
+// Return the index in the groundcont array for the ground state photoion continuum of an ion.
+[[nodiscard]] __host__ __device__ inline auto get_groundcontindex(const int element, const int ion) -> int {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  return globals::elements[element].ions[ion].groundcontindex;
+}
+
 // Return the number of levels associated with an ion that have energies below the ionisation threshold.
 [[nodiscard]] __host__ __device__ inline auto get_nlevels_ionising(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());

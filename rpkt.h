@@ -7,7 +7,6 @@
 #include <functional>
 #include <memory>
 #include <span>
-#include <vector>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -126,7 +125,7 @@ void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);
                                                                       const int ion) -> int {
   assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element) - 1);
-  const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
+  const int groundcontindex = get_groundcontindex(element, ion);
   assert_always(groundcontindex >= 0);
   return (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 }
