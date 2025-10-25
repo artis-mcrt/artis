@@ -17,10 +17,6 @@ namespace grid {
 
 struct ModelGridCell {
   float Te = -1.;
-  float TR = -1.;
-  float TJ = -1.;
-  float W = -1.;
-  float nne = -1.;
   float rho = -1.;
   // modelgrid nn_tot
   float nnetot = -1.;  // total electron density (free + bound).
@@ -33,13 +29,17 @@ struct ModelGridCell {
 };
 
 inline std::span<ModelGridCell> modelgrid{};
+inline std::span<float> modelgrid_TJ{};
+inline std::span<float> modelgrid_TR{};
+inline std::span<float> modelgrid_W{};
+inline std::span<float> modelgrid_nne{};
 
 inline ptrdiff_t ngrid{0};
 
 inline double mtot_input{0.};
 
 inline std::span<float> elem_meanweight_allcells{};
-inline std::span<float> elem_massfracs_allcells;  // mass fractions of elements in each cell for the current timestep
+inline std::span<float> elem_massfracs_allcells{};  // mass fractions of elements in each cell for the current timestep
 
 inline std::span<double> nltepops_allcells{};
 inline std::span<float> ion_groundlevelpops_allcells{};
