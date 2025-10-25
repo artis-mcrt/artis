@@ -19,8 +19,8 @@ if [ 0 -lt $(ls $paths 2>/dev/null | wc -w) ]; then
     echo "Deleting:"
     rm -v -rf -- $paths 2>/dev/null
     if [[ -f "input-newrun.txt" ]]; then
-      echo "mv input-newrun.txt input.txt"
-      mv input-newrun.txt input.txt
+      echo "cp input-newrun.txt input.txt"
+      cp input-newrun.txt input.txt
     fi
   fi
 else
