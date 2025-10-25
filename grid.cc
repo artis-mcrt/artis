@@ -372,6 +372,8 @@ void allocate_nonemptymodelcells() {
 
   assert_always(modelgrid.data() == nullptr);
   modelgrid = MPI_shared_malloc_span<ModelGridCell>(nonempty_npts_model, ModelGridCell{});
+  modelgrid_rho = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
+  modelgrid_Te = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
   modelgrid_TJ = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
   modelgrid_TR = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
   modelgrid_W = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
@@ -1448,7 +1450,7 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_rho(const std::ptrdiff_t nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  return modelgrid[nonemptymgi].rho;
+  return modelgrid_rho[nonemptymgi];
 }
 
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nne(const int nonemptymgi) -> float {
@@ -1497,7 +1499,7 @@ __host__ __device__ auto get_kappagrey(const int nonemptymgi) -> float { return 
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_Te(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  return modelgrid[nonemptymgi].Te;
+  return modelgrid_Te[nonemptymgi];
 }
 
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_TR(const int nonemptymgi) -> float {
@@ -1521,7 +1523,7 @@ __host__ __device__ auto get_kappagrey(const int nonemptymgi) -> float { return 
 void set_rho(const int nonemptymgi, const float rho) {
   assert_always(rho >= 0.);
   assert_always(std::isfinite(rho));
-  modelgrid[nonemptymgi].rho = rho;
+  modelgrid_rho[nonemptymgi] = rho;
 }
 
 void set_nne(const int nonemptymgi, const float nne) {
@@ -1559,7 +1561,7 @@ void set_Te(const int nonemptymgi, const float Te) {
     }
   }
 
-  modelgrid[nonemptymgi].Te = Te;
+  modelgrid_Te[nonemptymgi] = Te;
 }
 
 void set_TR(const int nonemptymgi, const float TR) { modelgrid_TR[nonemptymgi] = TR; }

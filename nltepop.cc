@@ -1332,12 +1332,12 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
             nnlevelnlte = get_groundlevelpop(nonemptymgi, element, ion);
           } else {
             nnlevelnlte =
-                get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level) * grid::modelgrid[nonemptymgi].rho;
+                get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level) * grid::modelgrid_rho[nonemptymgi];
           }
         } else {
           // superlevel, so add the populations of all other levels in the superlevel
           const double slpopfactor = get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion) *
-                                     grid::modelgrid[nonemptymgi].rho;
+                                     grid::modelgrid_rho[nonemptymgi];
 
           nnlevellte = 0;
           nlte_file << -1 << ' ';

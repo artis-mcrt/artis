@@ -16,9 +16,6 @@
 namespace grid {
 
 struct ModelGridCell {
-  float Te = -1.;
-  float rho = -1.;
-  // modelgrid nn_tot
   float nnetot = -1.;  // total electron density (free + bound).
   float kappagrey = 0.;
   float grey_depth = 0.;  // Grey optical depth to surface of the modelgridcell
@@ -29,6 +26,8 @@ struct ModelGridCell {
 };
 
 inline std::span<ModelGridCell> modelgrid{};
+inline std::span<float> modelgrid_rho{};
+inline std::span<float> modelgrid_Te{};
 inline std::span<float> modelgrid_TJ{};
 inline std::span<float> modelgrid_TR{};
 inline std::span<float> modelgrid_W{};
