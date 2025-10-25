@@ -1328,24 +1328,15 @@ void read_atomicdata_files() {
   auto alllevels_epsilon = MPI_shared_malloc_span<double>(nlevels);
   auto alllevels_statweight = MPI_shared_malloc_span<float>(nlevels);
   auto alllevels_matransblock_start = MPI_shared_malloc_span<int>(nlevels);
-  globals::alllevels.allautoion_start = MPI_shared_malloc_span<int>(nlevels);
-  globals::alllevels.nautoiondowntrans = MPI_shared_malloc_span<int>(nlevels);
-  globals::alllevels.nautoionuptrans = MPI_shared_malloc_span<int>(nlevels);
-  globals::alllevels.closestgroundlevelcont = MPI_shared_malloc_span<int>(nlevels);
-  globals::alllevels.phixsstart = MPI_shared_malloc_span<int>(nlevels);
-  globals::alllevels.nphixstargets = MPI_shared_malloc_span<int>(nlevels);
-  globals::alllevels.phixstargetstart = MPI_shared_malloc_span<int>(nlevels);
-  globals::alllevels.bflist_start = MPI_shared_malloc_span<int>(nlevels);
+  globals::alllevels.allautoion_start = MPI_shared_malloc_span<int>(nlevels, -1);
+  globals::alllevels.nautoiondowntrans = MPI_shared_malloc_span<int>(nlevels, 0);
+  globals::alllevels.nautoionuptrans = MPI_shared_malloc_span<int>(nlevels, 0);
+  globals::alllevels.closestgroundlevelcont = MPI_shared_malloc_span<int>(nlevels, -1);
+  globals::alllevels.phixsstart = MPI_shared_malloc_span<int>(nlevels, -1);
+  globals::alllevels.nphixstargets = MPI_shared_malloc_span<int>(nlevels, 0);
+  globals::alllevels.phixstargetstart = MPI_shared_malloc_span<int>(nlevels, -1);
+  globals::alllevels.bflist_start = MPI_shared_malloc_span<int>(nlevels, -1);
   if (globals::rank_in_node == 0) {
-    std::ranges::fill(globals::alllevels.nautoiondowntrans, 0);
-    std::ranges::fill(globals::alllevels.nautoionuptrans, 0);
-    std::ranges::fill(globals::alllevels.allautoion_start, -1);
-    std::ranges::fill(globals::alllevels.phixsstart, -1);
-    std::ranges::fill(globals::alllevels.nphixstargets, 0);
-    std::ranges::fill(globals::alllevels.phixstargetstart, -1);
-    std::ranges::fill(globals::alllevels.bflist_start, -1);
-    std::ranges::fill(globals::alllevels.closestgroundlevelcont, -1);
-
     int chtransindex = 0;
     for (auto i = 0zU; i < temp_alllevels.size(); i++) {
       alllevels_alltrans_startdown[i] = temp_alllevels[i].alltrans_startdown;

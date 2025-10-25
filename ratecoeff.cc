@@ -914,11 +914,7 @@ void setup_photoion_luts() {
     mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
   }
 
-  bfcooling_coeffs = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua);
-  if (globals::rank_in_node == 0) {
-    std::ranges::fill(bfcooling_coeffs, 0.);
-  }
-  MPI_Barrier(globals::mpi_comm_node);
+  bfcooling_coeffs = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua, 0.);
 
   printlnlog(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
