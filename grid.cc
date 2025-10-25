@@ -1526,10 +1526,18 @@ void set_nne(const int nonemptymgi, const float nne) {
   modelgrid[nonemptymgi].nne = nne;
 }
 
-void set_nnetot(const int nonemptymgi, const float nnetot) {
-  assert_always(nnetot >= 0.);
-  assert_always(std::isfinite(nnetot));
-  modelgrid[nonemptymgi].nnetot = nnetot;
+// Calculate and set the total density of electrons (free and bound) in grid cell. These are targets for Compton
+// scattering of gamma rays
+void set_nnetot(const int nonemptymgi) {
+  double nnetot = 0.;
+  const auto nelements = get_nelements();
+  for (int element = 0; element < nelements; element++) {
+    nnetot += get_elem_numberdens(nonemptymgi, element) * get_atomicnumber(element);
+  }
+
+  const auto f_nnetot = static_cast<float>(nnetot);
+  assert_always(f_nnetot >= 0.);
+  modelgrid[nonemptymgi].nnetot = f_nnetot;
 }
 
 void set_kappagrey(const int nonemptymgi, const float kappagrey) { modelgrid[nonemptymgi].kappagrey = kappagrey; }

@@ -71,7 +71,7 @@ void set_elem_abundance(std::ptrdiff_t nonemptymgi, int element, float newabunda
 [[gnu::pure]] [[nodiscard]] auto get_TJ(int nonemptymgi) -> float;
 [[gnu::pure]] [[nodiscard]] auto get_W(int nonemptymgi) -> float;
 void set_nne(int nonemptymgi, float nne);
-void set_nnetot(int nonemptymgi, float nnetot);
+void set_nnetot(int nonemptymgi);
 void set_kappagrey(int nonemptymgi, float kappagrey);
 void set_rho(int nonemptymgi, float rho);
 void set_Te(int nonemptymgi, float Te);
