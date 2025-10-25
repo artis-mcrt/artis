@@ -15,7 +15,7 @@
 
 namespace grid {
 
-struct ModelGridCell {
+struct ModelGridCells {
   std::span<float> rho;
   std::span<float> Te;
   std::span<float> TJ;
@@ -33,7 +33,7 @@ struct ModelGridCell {
   }
 };
 
-inline ModelGridCell modelgrid;
+inline ModelGridCells modelgrid;
 
 inline ptrdiff_t ngrid{0};
 
