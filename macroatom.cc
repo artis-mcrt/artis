@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <ios>
 #include <span>
 
@@ -179,6 +180,9 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   }
   processrates[MA_ACTION_INTERNALUPHIGHERNT] = sum_up_highernt;
   processrates[MA_ACTION_INTERNALUPHIGHER] = sum_up_higher;
+
+  // a level cannot have all zero transition rates
+  assert_always(std::ranges::fold_left(processrates, 0.0, std::plus<>{}) > 0.0);
 
   return processrates;
 }
