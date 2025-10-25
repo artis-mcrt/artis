@@ -845,9 +845,6 @@ auto main(int argc, char* argv[]) -> int {
     if (globals::n_titer > 1) {
       printlnlog("Doing %d iterations on timestep %d", globals::n_titer, globals::timestep);
     }
-    globals::lte_iteration = (globals::timestep < globals::num_lte_timesteps);
-    printlnlog("lte_iteration {}", globals::lte_iteration ? 1 : 0);
-    assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 
     for (int titer = 0; titer < globals::n_titer; titer++) {
       terminate_early = do_timestep(globals::timestep, titer, packets, walltimelimitseconds);
