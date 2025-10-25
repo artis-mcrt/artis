@@ -193,10 +193,8 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
   return {calculate_levelpop_boltzmann(nonemptymgi, element, ion, level), false};
 }
 
-auto calculate_partfunct(const int element, const int ion, const int nonemptymgi) -> float
-// Calculates the partition function for ion=ion of element=element in
-// cell modelgridindex
-{
+// Calculate the partition function for ion=ion of element=element in a cell modelgridindex
+auto calculate_partfunct(const int element, const int ion, const int nonemptymgi) -> float {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   double pop_store{NAN};
