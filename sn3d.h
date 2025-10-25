@@ -361,7 +361,8 @@ static_assert(get_range_chunk(10, 3, 1) == std::tuple{4, 3});
 static_assert(get_range_chunk(10, 3, 2) == std::tuple{7, 3});
 
 template <typename T>
-[[nodiscard]] auto MPI_shared_malloc_span_keepwin(const ptrdiff_t num_allranks) -> std::tuple<std::span<T>, MPI_Win> {
+[[nodiscard]] auto MPI_shared_malloc_span_keepwin(const ptrdiff_t num_allranks, const T initval = {})
+    -> std::tuple<std::span<T>, MPI_Win> {
   if (num_allranks == 0) {
     return {std::span<T>{}, MPI_WIN_NULL};
   }
@@ -378,16 +379,21 @@ template <typename T>
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &ptr, &mpiwin) ==
                 MPI_SUCCESS);
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &ptr) == MPI_SUCCESS);
-  MPI_Barrier(globals::mpi_comm_node);
   assert_always(ptr != nullptr);
 #pragma clang unsafe_buffer_usage begin
-  return {std::span<T>(ptr, num_allranks), mpiwin};
+  const auto newspan = std::span<T>(ptr, num_allranks);
 #pragma clang unsafe_buffer_usage end
+  // initialise the shared memory
+  if (globals::rank_in_node == 0) {
+    std::ranges::fill(newspan, initval);
+  }
+  MPI_Barrier(globals::mpi_comm_node);
+  return {newspan, mpiwin};
 }
 
 template <typename T>
-[[nodiscard]] auto MPI_shared_malloc_span(const ptrdiff_t num_allranks) -> std::span<T> {
-  return std::get<0>(MPI_shared_malloc_span_keepwin<T>(num_allranks));
+[[nodiscard]] auto MPI_shared_malloc_span(const ptrdiff_t num_allranks, const T initval = {}) -> std::span<T> {
+  return std::get<0>(MPI_shared_malloc_span_keepwin<T>(num_allranks, initval));
 }
 
 template <typename T>
