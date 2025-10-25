@@ -185,7 +185,7 @@ void allocate_initradiobund() {
   MPI_Barrier(globals::mpi_comm_node);
 
   if (globals::rank_in_node == 0) {
-    std::ranges::fill(initmassfracuntrackedstable_allcells, 0.);
+    std::ranges::fill(initnucmassfrac_allcells, 0.);
   }
   MPI_Barrier(globals::mpi_comm_node);
 }
