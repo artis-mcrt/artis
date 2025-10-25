@@ -361,7 +361,7 @@ static_assert(get_range_chunk(10, 3, 1) == std::tuple{4, 3});
 static_assert(get_range_chunk(10, 3, 2) == std::tuple{7, 3});
 
 template <typename T>
-[[nodiscard]] auto MPI_shared_malloc_span_keepwin(const ptrdiff_t num_allranks, const T initval = {})
+[[nodiscard]] auto MPI_shared_malloc_span_keepwin(const ptrdiff_t num_allranks, const T& initval = {})
     -> std::tuple<std::span<T>, MPI_Win> {
   if (num_allranks == 0) {
     return {std::span<T>{}, MPI_WIN_NULL};
@@ -392,7 +392,7 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto MPI_shared_malloc_span(const ptrdiff_t num_allranks, const T initval = {}) -> std::span<T> {
+[[nodiscard]] auto MPI_shared_malloc_span(const ptrdiff_t num_allranks, const T& initval = {}) -> std::span<T> {
   return std::get<0>(MPI_shared_malloc_span_keepwin<T>(num_allranks, initval));
 }
 
