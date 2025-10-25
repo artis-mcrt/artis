@@ -939,7 +939,7 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
   const auto bfestimcount = globals::bfestimcount;
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
   for (auto nonemptymgi = 0z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-    if (grid::modelgrid[nonemptymgi].thick == 1) {
+    if (grid::modelgrid.thick[nonemptymgi] == 1) {
       continue;
     }
     const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);

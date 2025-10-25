@@ -622,7 +622,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
   // Get distance to the next physical event (continuum or bound-bound)
   double edist = -1;
   bool event_is_boundbound = true;
-  const bool thickcell = (nonemptymgi >= 0) && (grid::modelgrid[nonemptymgi].thick == 1);
+  const bool thickcell = (nonemptymgi >= 0) && (grid::modelgrid.thick[nonemptymgi] == 1);
   if (nonemptymgi < 0) {
     // for empty cells no physical event occurs. The packets just propagate.
     edist = std::numeric_limits<double>::max();
@@ -946,7 +946,7 @@ __host__ __device__ void emit_rpkt(Packet& pkt) {
 
 void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont,
                              const int nonemptymgi) {
-  assert_testmodeonly(grid::modelgrid[nonemptymgi].thick != 1);
+  assert_testmodeonly(grid::modelgrid.thick[nonemptymgi] != 1);
   if ((nonemptymgi == chi_rpkt_cont.nonemptymgi) && (globals::timestep == chi_rpkt_cont.timestep) &&
       (fabs((chi_rpkt_cont.nu / nu_cmf) - 1.0) < 1e-4)) {
     // calculated values are a match already

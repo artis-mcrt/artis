@@ -16,22 +16,24 @@
 namespace grid {
 
 struct ModelGridCell {
-  float nnetot = -1.;  // total electron density (free + bound).
-  float kappagrey = 0.;
-  float grey_depth = 0.;  // Grey optical depth to surface of the modelgridcell
-                          // This is only stored to print it outside the OpenMP loop in update_grid to the
-                          // estimatorsfile so there is no need to communicate it via MPI so far!
-  double totalcooling = -1;
-  int thick = 0;
+  std::span<float> rho;
+  std::span<float> Te;
+  std::span<float> TJ;
+  std::span<float> TR;
+  std::span<float> W;
+  std::span<float> nne;
+  std::span<float> nnetot;  // total electron density (free + bound).
+  std::span<float> kappagrey;
+  std::span<float> grey_depth;  // Grey optical depth to surface of the modelgridcell
+  std::span<double> totalcooling;
+  std::span<int> thick;
+
+  [[nodiscard]] auto get_mem_usage() const -> std::size_t {
+    return (rho.size() * sizeof(float) * 9) + (totalcooling.size() * sizeof(double)) + (thick.size() * sizeof(int));
+  }
 };
 
-inline std::span<ModelGridCell> modelgrid{};
-inline std::span<float> modelgrid_rho{};
-inline std::span<float> modelgrid_Te{};
-inline std::span<float> modelgrid_TJ{};
-inline std::span<float> modelgrid_TR{};
-inline std::span<float> modelgrid_W{};
-inline std::span<float> modelgrid_nne{};
+inline ModelGridCell modelgrid;
 
 inline ptrdiff_t ngrid{0};
 
