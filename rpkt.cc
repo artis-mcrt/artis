@@ -776,11 +776,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.begin());
 
   // require that nu > nu_edge * last_phixs_nuovernuedge, which can exclude some low-nu edges
-  const int allcontbegin = std::ranges::lower_bound(allcont_nu_edge.first(allcontend), nu,
-                                                    [](const double nu_edge, const double nu_cmf) {
-                                                      return nu_edge * last_phixs_nuovernuedge < nu_cmf;
-                                                    }) -
-                           allcont_nu_edge.begin();
+  const int allcontbegin = std::distance(
+      allcont_nu_edge.begin(),
+      std::ranges::lower_bound(allcont_nu_edge.first(allcontend), nu, [](const double nu_edge, const double nu_cmf) {
+        return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+      }));
 
   assert_testmodeonly(allcontbegin >= 0);
   assert_testmodeonly(allcontend <= globals::nbfcontinua);
@@ -793,11 +793,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
     phixslist.bfestimend =
         static_cast<int>(std::ranges::upper_bound(globals::bfestim_nu_edge, nu) - globals::bfestim_nu_edge.begin());
 
-    phixslist.bfestimbegin = std::ranges::lower_bound(globals::bfestim_nu_edge.first(phixslist.bfestimend), nu,
-                                                      [](const double nu_edge, const double nu_cmf) {
-                                                        return nu_edge * last_phixs_nuovernuedge < nu_cmf;
-                                                      }) -
-                             globals::bfestim_nu_edge.begin();
+    phixslist.bfestimbegin = std::distance(
+        globals::bfestim_nu_edge.begin(), std::ranges::lower_bound(globals::bfestim_nu_edge.first(phixslist.bfestimend),
+                                                                   nu, [](const double nu_edge, const double nu_cmf) {
+                                                                     return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                                                   }));
   }
 
   // const ref these so that the compiler knows they don't change in the loop (and shortens the names)
