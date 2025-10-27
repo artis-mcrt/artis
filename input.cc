@@ -805,8 +805,8 @@ void setup_phixs_list() {
     for (int ion = 0; ion < nions - 1; ion++) {
       int groundcontindex = static_cast<int>(std::ranges::find_if(groundcont_zip,
                                                                   [=](const auto& groundcont) {
-                                                                    return (std::get<1>(groundcont) == element) &&
-                                                                           (std::get<2>(groundcont) == ion);
+                                                                    const auto [_, thiselem, thision] = groundcont;
+                                                                    return (thiselem == element) && (thision == ion);
                                                                   }) -
                                              groundcont_zip.begin());
       if (groundcontindex >= globals::nbfcontinua_ground) {
