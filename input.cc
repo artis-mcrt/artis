@@ -17,6 +17,7 @@
 #include <istream>
 #include <iterator>
 #include <limits>
+#include <ranges>
 #include <span>
 #include <sstream>
 #include <string>
@@ -760,34 +761,33 @@ void setup_phixs_list() {
     int ion;
   };
 
-  std::vector<TempGroundPhotoion> temp_groundcont;
-  temp_groundcont.reserve(globals::nbfcontinua_ground);
-
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions - 1; ion++) {
-      const int level = 0;
-      const int nphixstargets = get_nphixstargets(element, ion, level);
-      if (nphixstargets == 0) {
-        continue;
-      }
-      const double E_threshold = get_phixs_threshold(element, ion, level, 0);
-      const double nu_edge = E_threshold / H;
-
-      temp_groundcont.push_back({.nu_edge = nu_edge, .element = element, .ion = ion});
-    }
-  }
-  assert_always(std::ssize(temp_groundcont) == globals::nbfcontinua_ground);
-  std::ranges::SORT_OR_STABLE_SORT(temp_groundcont, std::ranges::less{}, &TempGroundPhotoion::nu_edge);
   auto groundcont_nu_edge = MPI_shared_malloc_span<double>(globals::nbfcontinua_ground);
   auto groundcont_element = MPI_shared_malloc_span<int>(globals::nbfcontinua_ground);
   auto groundcont_ion = MPI_shared_malloc_span<int>(globals::nbfcontinua_ground);
+
   if (globals::rank_in_node == 0) {
-    for (int i = 0; i < std::ssize(temp_groundcont); i++) {
-      groundcont_nu_edge[i] = temp_groundcont[i].nu_edge;
-      groundcont_element[i] = temp_groundcont[i].element;
-      groundcont_ion[i] = temp_groundcont[i].ion;
+    int nextgroundcontindex = 0;
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions - 1; ion++) {
+        const int level = 0;
+        const int nphixstargets = get_nphixstargets(element, ion, level);
+        if (nphixstargets == 0) {
+          continue;
+        }
+        const double E_threshold = get_phixs_threshold(element, ion, level, 0);
+        const double nu_edge = E_threshold / H;
+
+        assert_testmodeonly(nextgroundcontindex < globals::nbfcontinua_ground);
+        groundcont_nu_edge[nextgroundcontindex] = nu_edge;
+        groundcont_element[nextgroundcontindex] = element;
+        groundcont_ion[nextgroundcontindex] = ion;
+        nextgroundcontindex++;
+      }
     }
+    assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
+    auto zip = std::views::zip(groundcont_nu_edge, groundcont_element, groundcont_ion);
+    std::ranges::sort(zip, [](const auto& lhs, const auto& rhs) { return std::get<0>(lhs) < std::get<0>(rhs); });
   }
   MPI_Barrier(globals::mpi_comm_node);
   globals::groundcont_nu_edge = groundcont_nu_edge;
@@ -797,16 +797,17 @@ void setup_phixs_list() {
   auto allcont = MPI_shared_malloc_span<TempPhotoionTransitionInput>(globals::nbfcontinua);
   printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",
              globals::nbfcontinua * (sizeof(TempPhotoionTransitionInput)) / 1024. / 1024.);
+  auto groundcont_zip = std::views::zip(groundcont_nu_edge, groundcont_element, groundcont_ion);
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions - 1; ion++) {
-      int groundcontindex =
-          static_cast<int>(std::ranges::find_if(temp_groundcont,
-                                                [=](const auto& groundcont) {
-                                                  return (groundcont.element == element) && (groundcont.ion == ion);
-                                                }) -
-                           temp_groundcont.begin());
+      int groundcontindex = static_cast<int>(std::ranges::find_if(groundcont_zip,
+                                                                  [=](const auto& groundcont) {
+                                                                    return (std::get<1>(groundcont) == element) &&
+                                                                           (std::get<2>(groundcont) == ion);
+                                                                  }) -
+                                             groundcont_zip.begin());
       if (groundcontindex >= globals::nbfcontinua_ground) {
         groundcontindex = -1;
       }
