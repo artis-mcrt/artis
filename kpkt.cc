@@ -5,8 +5,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <numeric>
-#include <ranges>
 #include <span>
 #include <vector>
 
@@ -269,19 +267,17 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
   double C_exc_all = 0.;  // collisional excitation of macroatoms
   double C_ionisation_all = 0.;  // collisional ionisation of macroatoms
 
-  const auto allionindices = std::ranges::iota_view{0, get_includedions()};
-  std::for_each(EXEC_PAR allionindices.begin(), allionindices.end(), [&](const int allionindex) {
-    const auto [element, ion] = get_ionfromuniqueionindex(allionindex);
-    grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + allionindex] =
-        calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, -1, cellcacheslotid, &C_ff_all, &C_fb_all,
-                                           &C_exc_all, &C_ionisation_all);
-  });
-
-  // this loop is made separate for future parallelisation of upper loop.
-  // the ion contributions must be added in this exact order
   const auto cellioncontribs = grid::ion_cooling_contribs_allcells.subspan(
       (static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()), get_includedions());
-  const double C_total = std::accumulate(cellioncontribs.begin(), cellioncontribs.end(), 0.0);
+  double cumulative_cooling = 0.;
+  for (int allionindex = 0; allionindex < get_includedions(); allionindex++) {
+    const auto [element, ion] = get_ionfromuniqueionindex(allionindex);
+    cumulative_cooling += calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, -1, cellcacheslotid, &C_ff_all,
+                                                             &C_fb_all, &C_exc_all, &C_ionisation_all);
+    cellioncontribs[allionindex] = cumulative_cooling;
+  }
+
+  const double C_total = cellioncontribs.back();
 
   grid::totalcooling_allcells[nonemptymgi] = C_total;
 
@@ -433,7 +429,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
     const int nions = get_nions(element);
     for (ion = 0; ion < nions; ion++) {
       const int uniqueionindex = get_uniqueionindex(element, ion);
-      coolingsum += ion_cooling_contribs_thiscell[uniqueionindex];
+      coolingsum = ion_cooling_contribs_thiscell[uniqueionindex];
       if (coolingsum > rndcool_ion) {
         break;
       }
