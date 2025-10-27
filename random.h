@@ -146,7 +146,7 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
   constexpr generated_type type_range = std::numeric_limits<generated_type>::max();
   constexpr bool prng_is_bit_uniform = (prng_range == type_range);
 
-  constexpr int exponent_bits_32 = 8;
+  constexpr unsigned int exponent_bits_32 = 8;
 
   constexpr float mantissa_hex_32 = 0x1.0p-24F;  // == 2^-24, corresponds to 24 significant bits of float
 
@@ -163,12 +163,12 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
 
 }  // namespace utlrandom
 
-#ifndef GPU_ON
+#ifdef GPU_ON
+inline thread_local auto rng{utlrandom::generators::Xoshiro128PP{}};
+#else
 #include <limits>
 #include <random>
 inline thread_local auto rng{std::mt19937{std::random_device{}()}};
-#else
-inline thread_local auto rng{utlrandom::generators::Xoshiro128PP{}};
 #endif
 
 inline auto rng_seed(auto&& seedval) { rng.seed(seedval); }

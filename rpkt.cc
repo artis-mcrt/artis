@@ -492,11 +492,11 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
 #pragma clang unsafe_buffer_usage end
     assert_always(allcontindex < phixslist.allcontend);
 
-    const double nu_edge = globals::allcont[allcontindex].nu_edge;
-    const int element = globals::allcont[allcontindex].element;
-    const int ion = globals::allcont[allcontindex].ion;
-    const int level = globals::allcont[allcontindex].level;
-    const int phixstargetindex = globals::allcont[allcontindex].phixstargetindex;
+    const double nu_edge = globals::allcont_nu_edge[allcontindex];
+    const int element = globals::allcont_element[allcontindex];
+    const int ion = globals::allcont_ion[allcontindex];
+    const int level = globals::allcont_level[allcontindex];
+    const int phixstargetindex = globals::allcont_phixstargetindex[allcontindex];
 
     // decide whether we go to ionisation energy or to the thermal pool
     if (rng_uniform() < nu_edge / nu) {
@@ -568,9 +568,9 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
-      const double nu_edge = globals::groundcont[i].nu_edge;
+      const double nu_edge = globals::groundcont_nu_edge[i];
       if (nu_cmf <= nu_edge) {
-        // because groundcont is sorted by nu_edge descending, nu < nu_edge for all remaining items
+        // because groundcont is sorted by nu_edge ascending, nu_cmf < nu_edge for all remaining items
         return;
       }
       const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + i;
@@ -595,8 +595,8 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
 
   MacroAtomState pktmastate{};
 
-  THREADLOCALONHOST auto chi_rpkt_cont =
-      Rpkt_continuum_absorptioncoeffs{globals::nbfcontinua_ground, globals::nbfcontinua, globals::bfestimcount};
+  THREADLOCALONHOST auto chi_rpkt_cont = Rpkt_continuum_absorptioncoeffs{
+      globals::nbfcontinua_ground, globals::nbfcontinua, static_cast<int>(globals::bfestim_nu_edge.size())};
 
   // draw random optical depth to next physical event
   const double tau_rnd = -std::log(static_cast<double>(rng_uniform_pos()));
@@ -771,46 +771,52 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   const auto& allcont_nu_edge = globals::allcont_nu_edge;
 
-  // The phixslist is sorted by nu_edge in ascending order (longest to shortest wavelength)
-  // If nu < allcont[i].nu_edge no absorption in any of the following continua
-  // is possible, so set their kappas to zero
-  // break the list into nu >= nu_edge and the remainder (nu < nu_edge)
-
-  int i = 0;
+  // The phixslist is sorted by nu_edge in ascending order, so if nu < allcont[i].nu_edge then no absorption in any of
+  // the remaining continua is possible. so set their kappas to zero and break
   const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.begin());
 
-  const int allcontbegin = std::lower_bound(allcont_nu_edge.begin(), allcont_nu_edge.begin() + allcontend, nu,
-                                            [](const double nu_edge, const double nu_cmf) {
-                                              return nu_edge * last_phixs_nuovernuedge < nu_cmf;
-                                            }) -
-                           allcont_nu_edge.begin();
+  // require that nu > nu_edge * last_phixs_nuovernuedge, which can exclude some low-nu edges
+  const int allcontbegin = std::distance(
+      allcont_nu_edge.begin(),
+      std::ranges::lower_bound(allcont_nu_edge.first(allcontend), nu, [](const double nu_edge, const double nu_cmf) {
+        return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+      }));
 
   assert_testmodeonly(allcontbegin >= 0);
   assert_testmodeonly(allcontend <= globals::nbfcontinua);
   assert_testmodeonly(allcontbegin <= allcontend);
-
-  const auto allcont = globals::allcont;
 
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     phixslist.allcontbegin = allcontbegin;
     phixslist.allcontend = allcontend;
 
     phixslist.bfestimend =
-        static_cast<int>(std::ranges::upper_bound(globals::bfestim_nu_edge, nu) - globals::bfestim_nu_edge.cbegin());
+        static_cast<int>(std::ranges::upper_bound(globals::bfestim_nu_edge, nu) - globals::bfestim_nu_edge.begin());
 
-    phixslist.bfestimbegin =
-        std::lower_bound(
-            globals::bfestim_nu_edge.cbegin(), globals::bfestim_nu_edge.cbegin() + phixslist.bfestimend, nu,
-            [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }) -
-        globals::bfestim_nu_edge.cbegin();
+    phixslist.bfestimbegin = std::distance(
+        globals::bfestim_nu_edge.begin(), std::ranges::lower_bound(globals::bfestim_nu_edge.first(phixslist.bfestimend),
+                                                                   nu, [](const double nu_edge, const double nu_cmf) {
+                                                                     return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                                                   }));
   }
 
-  for (i = allcontbegin; i < allcontend; i++) {
-    const int element = allcont[i].element;
-    const int ion = allcont[i].ion;
-    const int level = allcont[i].level;
+  // const ref these so that the compiler knows they don't change in the loop (and shortens the names)
+  const auto& allcont_element = globals::allcont_element;
+  const auto& allcont_ion = globals::allcont_ion;
+  const auto& allcont_level = globals::allcont_level;
+  const auto& allcont_bfestimindex = globals::allcont_bfestimindex;
+  const auto& allcont_upperlevel = globals::allcont_upperlevel;
+  const auto& allcont_uniquelevelindex = globals::allcont_uniquelevelindex;
+  const auto& allcont_index_in_groundphixslist = globals::allcont_index_in_groundphixslist;
+  const auto& allcont_probability = globals::allcont_probability;
+  const auto& allcont_phixstargetindex = globals::allcont_phixstargetindex;
+
+  for (int i = allcontbegin; i < allcontend; i++) {
+    const int element = allcont_element[i];
+    const int ion = allcont_ion[i];
+    const int level = allcont_level[i];
     const auto bfestimindex =
-        (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) ? allcont[i].bfestimindex : -1;
+        (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) ? allcont_bfestimindex[i] : -1;
     double sigma_contr = 0.;
 
     // The bf process happens only if the current cell contains
@@ -824,15 +830,15 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
                                                            : calculate_levelpop(nonemptymgi, element, ion, level);
 
       if (USECELLHISTANDUPDATEPHIXSLIST || nnlevel > 0) {
-        const double nu_edge = allcont[i].nu_edge;
+        const double nu_edge = allcont_nu_edge[i];
         const double sigma_bf =
-            photoionisation_crosssection_fromtable(get_phixs_table(allcont[i].uniquelevelindex), nu_edge, nu);
+            photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, nu);
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         if constexpr (!SEPARATE_STIMRECOMB) {
           double departure_ratio = globals::cellcache[cellcacheslotid].allcont_departureratios[i];
           if (!USECELLHISTANDUPDATEPHIXSLIST || departure_ratio < 0) {
-            const int upper = allcont[i].upperlevel;
+            const int upper = allcont_upperlevel[i];
             const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
                                                ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upper)
                                                : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
@@ -848,11 +854,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
           corrfactor = std::max(0., 1 - stimfactor);  // photoionisation minus stimulated recombination
         }
 
-        sigma_contr = sigma_bf * allcont[i].probability * corrfactor;
+        sigma_contr = sigma_bf * allcont_probability[i] * corrfactor;
 
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-          if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && level == 0 && allcont[i].phixstargetindex == 0) {
-            phixslist.groundcont_gamma_contr[allcont[i].index_in_groundphixslist] = sigma_contr;
+          if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && level == 0 && allcont_phixstargetindex[i] == 0) {
+            phixslist.groundcont_gamma_contr[allcont_index_in_groundphixslist[i]] = sigma_contr;
           }
         }
 
@@ -894,7 +900,8 @@ void allocate_expansionopacities() {
 __host__ __device__ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double {
   assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value());
 
-  const auto kappa_planck_bins = expansionopacity_planck_cumulative.subspan(nonemptymgi * expopac_nbins, expopac_nbins);
+  const std::span<const double> kappa_planck_bins =
+      expansionopacity_planck_cumulative.subspan(nonemptymgi * expopac_nbins, expopac_nbins);
 
   const auto rnd_integral = rng_uniform() * kappa_planck_bins[expopac_nbins - 1];
   const auto selected_partintegral = std::upper_bound(kappa_planck_bins.begin(), kappa_planck_bins.end(), rnd_integral);

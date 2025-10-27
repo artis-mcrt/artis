@@ -102,8 +102,6 @@ inline std::vector<double> dep_estimator_positron;
 inline std::vector<double> dep_estimator_electron;
 inline std::vector<double> dep_estimator_alpha;
 
-inline int bfestimcount{0};
-
 // for USE_LUT_PHOTOION = true
 inline std::span<double> corrphotoionrenorm{};
 inline MPI_Win win_corrphotoionrenorm{MPI_WIN_NULL};
@@ -238,32 +236,26 @@ struct BFListEntry {
   int levelindex;
   int phixstargetindex;
 };
+// the bound-free list sorted by element/ion/level/phixstargetindex (not nu_edge)
 inline std::vector<BFListEntry> bflist;
 
-inline std::vector<double> bfestim_nu_edge{};
+inline std::span<const double> bfestim_nu_edge{};
 
-struct FullPhotoionTransition {
-  double nu_edge;
-  int element;
-  int ion;
-  int level;
-  int phixstargetindex;
-  int upperlevel;
-  int uniquelevelindex;
-  double probability;
-  int index_in_groundphixslist;
-  int bfestimindex;
-};
-inline std::span<const FullPhotoionTransition> allcont{};
 inline std::span<const double> allcont_nu_edge{};
+inline std::span<const int> allcont_element{};
+inline std::span<const int> allcont_ion{};
+inline std::span<const int> allcont_level{};
+inline std::span<const int> allcont_phixstargetindex{};
+inline std::span<const int> allcont_upperlevel{};
+inline std::span<const int> allcont_uniquelevelindex{};
+inline std::span<const double> allcont_probability{};
+inline std::span<const int> allcont_index_in_groundphixslist{};
+inline std::span<const int> allcont_bfestimindex{};
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-struct GroundPhotoion {
-  double nu_edge;
-  int element;
-  int ion;
-};
-inline std::vector<GroundPhotoion> groundcont{};
+inline std::span<const double> groundcont_nu_edge{};
+inline std::span<const int> groundcont_element{};
+inline std::span<const int> groundcont_ion{};
 
 inline int nbfcontinua{-1};  // number of bf-continua
 inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels

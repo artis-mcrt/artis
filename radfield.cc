@@ -230,21 +230,21 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
   // I think the nu_cmf slightly differs from when the phixslist was calculated
   // so the nu condition on this nu_cmf can truncate the list further compared to what was used in the calculation
   // of phixslist.gamma_contr
-  const auto bfestimcount = globals::bfestimcount;
+  const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
 
   assert_testmodeonly(phixslist.bfestimend <= bfestimcount);
   const auto bfestimend =
-      std::distance(globals::bfestim_nu_edge.cbegin(),
-                    std::upper_bound(globals::bfestim_nu_edge.cbegin(),
-                                     globals::bfestim_nu_edge.cbegin() + phixslist.bfestimend, nu_cmf));
+      std::distance(globals::bfestim_nu_edge.begin(),
+                    std::ranges::upper_bound(globals::bfestim_nu_edge.first(phixslist.bfestimend), nu_cmf));
   assert_testmodeonly(bfestimend <= bfestimcount);
   assert_testmodeonly(phixslist.bfestimbegin >= 0);
-  const auto bfestimbegin = std::distance(globals::bfestim_nu_edge.cbegin(),
-                                          std::lower_bound(globals::bfestim_nu_edge.cbegin() + phixslist.bfestimbegin,
-                                                           globals::bfestim_nu_edge.cbegin() + bfestimend, nu_cmf,
-                                                           [](const double nu_edge, const double find_nu_cmf) {
-                                                             return nu_edge * last_phixs_nuovernuedge < find_nu_cmf;
-                                                           }));
+  const auto bfestimbegin =
+      std::distance(globals::bfestim_nu_edge.begin(),
+                    std::ranges::lower_bound(
+                        globals::bfestim_nu_edge.subspan(phixslist.bfestimbegin, bfestimend - phixslist.bfestimbegin),
+                        nu_cmf, [](const double nu_edge, const double find_nu_cmf) {
+                          return nu_edge * last_phixs_nuovernuedge < find_nu_cmf;
+                        }));
 
   for (auto bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
     atomicadd(bfrate_raw[(nonemptymgi * bfestimcount) + bfestimindex],
@@ -426,14 +426,14 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
 auto get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
   // simple linear search seems to be faster than the binary search
   // possibly because lower frequency transitions near start of list are more likely to be called?
-  const auto bfcontindex =
-      static_cast<int>(std::find_if(globals::allcont.begin(), globals::allcont.begin() + globals::nbfcontinua,
-                                    [=](const auto& bf) {
-                                      return (bf.element == element) && (bf.ion == lowerion) && (bf.level == lower) &&
-                                             (bf.phixstargetindex == phixstargetindex);
-                                    }) -
-                       globals::allcont.begin());
-
+  int bfcontindex = 0;
+  for (; bfcontindex < globals::nbfcontinua; bfcontindex++) {
+    if ((globals::allcont_element[bfcontindex] == element) && (globals::allcont_ion[bfcontindex] == lowerion) &&
+        (globals::allcont_level[bfcontindex] == lower) &&
+        (globals::allcont_phixstargetindex[bfcontindex] == phixstargetindex)) {
+      break;
+    }
+  }
   if (bfcontindex < globals::nbfcontinua) {
     return bfcontindex;
   }
@@ -608,20 +608,20 @@ void init(const int my_rank, const int ndo_nonempty) {
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    {
-      std::tie(prev_bfrate_normed, win_prev_bfrate_normed) =
-          MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * globals::bfestimcount);
-      if (globals::rank_in_node == 0) {
-        std::ranges::fill(prev_bfrate_normed, 0.);
-      }
+    const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
+    std::tie(prev_bfrate_normed, win_prev_bfrate_normed) =
+        MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * bfestimcount);
+    if (globals::rank_in_node == 0) {
+      std::ranges::fill(prev_bfrate_normed, 0.);
     }
+    MPI_Barrier(globals::mpi_comm_node);
     printlnlog("[info] mem_usage: detailed bf estimators for non-empty cells occupy {:.3f} MB (node shared memory)",
-               nonempty_npts_model * globals::bfestimcount * sizeof(float) / 1024. / 1024.);
+               nonempty_npts_model * bfestimcount * sizeof(float) / 1024. / 1024.);
 
-    resize_exactly(bfrate_raw, nonempty_npts_model * globals::bfestimcount);
+    resize_exactly(bfrate_raw, nonempty_npts_model * bfestimcount);
 
     printlnlog("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy {:.3f} MB",
-               nonempty_npts_model * globals::bfestimcount * sizeof(double) / 1024. / 1024.);
+               nonempty_npts_model * bfestimcount * sizeof(double) / 1024. / 1024.);
   }
 
   zero_estimators();
@@ -936,7 +936,7 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
   if (nts == globals::timestep_initial && titer == 0) {
     return;
   }
-  const auto bfestimcount = globals::bfestimcount;
+  const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
   for (auto nonemptymgi = 0z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
     if (grid::thick_allcells[nonemptymgi] == 1) {
@@ -958,9 +958,9 @@ __host__ __device__ auto get_bfrate_estimator(const int element, const int lower
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {
-      const auto bfestimindex = globals::allcont[allcontindex].bfestimindex;
+      const auto bfestimindex = globals::allcont_bfestimindex[allcontindex];
       if (bfestimindex >= 0) {
-        return prev_bfrate_normed[(nonemptymgi * globals::bfestimcount) + bfestimindex];
+        return prev_bfrate_normed[(nonemptymgi * std::ssize(globals::bfestim_nu_edge)) + bfestimindex];
       }
     }
   }
@@ -1098,7 +1098,7 @@ void write_restart_data(FILE* gridsave_file) {
     const int nbfcontinua = globals::nbfcontinua;
     fprintf(gridsave_file, "%d\n", nbfcontinua);
 
-    const int bfestimcount = globals::bfestimcount;
+    const int bfestimcount = static_cast<int>(globals::bfestim_nu_edge.size());
     fprintf(gridsave_file, "%d\n", bfestimcount);
 
     for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
@@ -1191,20 +1191,21 @@ void read_restart_data(FILE* gridsave_file) {
     assert_always(fscanf(gridsave_file, "%d\n", &gridsave_nbf_in) == 1);
     assert_always(gridsave_nbf_in == globals::nbfcontinua);
 
+    const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
     int gridsave_nbfestim_in = 0;
     assert_always(fscanf(gridsave_file, "%d\n", &gridsave_nbfestim_in) == 1);
-    assert_always(gridsave_nbfestim_in == globals::bfestimcount);
+    assert_always(gridsave_nbfestim_in == bfestimcount);
 
     for (auto nonemptymgi = 0z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
       int nonemptymgi_in = 0;
       assert_always(fscanf(gridsave_file, "%d\n", &nonemptymgi_in) == 1);
       assert_always(nonemptymgi_in == nonemptymgi);
-      for (int i = 0; i < globals::bfestimcount; i++) {
+      for (int i = 0; i < bfestimcount; i++) {
         float bfrate_normed = 0;
         assert_always(fscanf(gridsave_file, "%a ", &bfrate_normed) == 1);
 
         if (globals::rank_in_node == 0) {
-          prev_bfrate_normed[(nonemptymgi * globals::bfestimcount) + i] = bfrate_normed;
+          prev_bfrate_normed[(nonemptymgi * bfestimcount) + i] = bfrate_normed;
         }
       }
     }

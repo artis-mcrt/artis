@@ -17,6 +17,7 @@
 #include <istream>
 #include <iterator>
 #include <limits>
+#include <ranges>
 #include <span>
 #include <sstream>
 #include <string>
@@ -92,6 +93,19 @@ struct TempLineTransitionInput {
   int ionindex;
   int upperlevelindex;
   int lowerlevelindex;
+};
+
+struct TempPhotoionTransitionInput {
+  double nu_edge;
+  int element;
+  int ion;
+  int level;
+  int phixstargetindex;
+  int upperlevel;
+  int uniquelevelindex;
+  double probability;
+  int index_in_groundphixslist;
+  int bfestimindex;
 };
 
 constexpr std::array<std::string_view, 24> inputlinecomments = {
@@ -693,20 +707,20 @@ auto search_groundphixslist(const double nu_edge, const int element_in, const in
 {
   assert_always((USE_LUT_PHOTOION || USE_LUT_BFHEATING));
 
-  if (nu_edge < globals::groundcont[0].nu_edge) {
+  if (nu_edge < globals::groundcont_nu_edge[0]) {
     return -1;
   }
 
   int i = 1;
   for (i = 1; i < globals::nbfcontinua_ground; i++) {
-    if (nu_edge < globals::groundcont[i].nu_edge) {
+    if (nu_edge < globals::groundcont_nu_edge[i]) {
       break;
     }
   }
 
   if (i == globals::nbfcontinua_ground) {
-    const int element = globals::groundcont[i - 1].element;
-    const int ion = globals::groundcont[i - 1].ion;
+    const int element = globals::groundcont_element[i - 1];
+    const int ion = globals::groundcont_ion[i - 1];
     if (element == element_in && ion == ion_in && level_in == 0) {
       return i - 1;
     }
@@ -716,7 +730,7 @@ auto search_groundphixslist(const double nu_edge, const int element_in, const in
         "ground-level continuum",
         element_in, ion_in, level_in, nu_edge);
     printlnlog("[fatal] search_groundphixslist: bluest ground level continuum is element {}, ion {} at nu_edge {:g}",
-               element, ion, globals::groundcont[i - 1].nu_edge);
+               element, ion, globals::groundcont_nu_edge[i - 1]);
     printlnlog("[fatal] search_groundphixslist: i {}, nbfcontinua_ground {}", i, globals::nbfcontinua_ground);
     printlnlog(
         "[fatal] This shouldn't happen, is hoewever possible if there are multiple levels in the adata file at "
@@ -730,8 +744,8 @@ auto search_groundphixslist(const double nu_edge, const int element_in, const in
     // abort();
   }
 
-  const double left_diff = nu_edge - globals::groundcont[i - 1].nu_edge;
-  const double right_diff = globals::groundcont[i].nu_edge - nu_edge;
+  const double left_diff = nu_edge - globals::groundcont_nu_edge[i - 1];
+  const double right_diff = globals::groundcont_nu_edge[i] - nu_edge;
   return (left_diff <= right_diff) ? i - 1 : i;
 }
 
@@ -741,42 +755,60 @@ void setup_phixs_list() {
   printlnlog("[info] read_atomicdata: number of bfcontinua {}", globals::nbfcontinua);
   printlnlog("[info] read_atomicdata: number of ground-level bfcontinua {}", globals::nbfcontinua_ground);
 
-  globals::groundcont.resize(globals::nbfcontinua_ground);
+  struct TempGroundPhotoion {
+    double nu_edge;
+    int element;
+    int ion;
+  };
 
-  int nextgroundcontindex = 0;
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions - 1; ion++) {
-      const int level = 0;
-      const int nphixstargets = get_nphixstargets(element, ion, level);
-      if (nphixstargets == 0) {
-        continue;
+  auto groundcont_nu_edge = MPI_shared_malloc_span<double>(globals::nbfcontinua_ground);
+  auto groundcont_element = MPI_shared_malloc_span<int>(globals::nbfcontinua_ground);
+  auto groundcont_ion = MPI_shared_malloc_span<int>(globals::nbfcontinua_ground);
+
+  if (globals::rank_in_node == 0) {
+    int nextgroundcontindex = 0;
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions - 1; ion++) {
+        const int level = 0;
+        const int nphixstargets = get_nphixstargets(element, ion, level);
+        if (nphixstargets == 0) {
+          continue;
+        }
+        const double E_threshold = get_phixs_threshold(element, ion, level, 0);
+        const double nu_edge = E_threshold / H;
+
+        assert_testmodeonly(nextgroundcontindex < globals::nbfcontinua_ground);
+        groundcont_nu_edge[nextgroundcontindex] = nu_edge;
+        groundcont_element[nextgroundcontindex] = element;
+        groundcont_ion[nextgroundcontindex] = ion;
+        nextgroundcontindex++;
       }
-      const double E_threshold = get_phixs_threshold(element, ion, level, 0);
-      const double nu_edge = E_threshold / H;
-      assert_always(nextgroundcontindex < globals::nbfcontinua_ground);
-
-      globals::groundcont[nextgroundcontindex] = {.nu_edge = nu_edge, .element = element, .ion = ion};
-
-      nextgroundcontindex++;
     }
+    assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
+    std::ranges::sort(std::views::zip(groundcont_nu_edge, groundcont_element, groundcont_ion),
+                      [](const auto& lhs, const auto& rhs) { return std::get<0>(lhs) < std::get<0>(rhs); });
   }
-  assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
-  std::ranges::SORT_OR_STABLE_SORT(globals::groundcont, std::ranges::less{}, &globals::GroundPhotoion::nu_edge);
+  MPI_Barrier(globals::mpi_comm_node);
+  globals::groundcont_nu_edge = groundcont_nu_edge;
+  globals::groundcont_element = groundcont_element;
+  globals::groundcont_ion = groundcont_ion;
 
-  auto allcont = MPI_shared_malloc_span<globals::FullPhotoionTransition>(globals::nbfcontinua);
+  auto allcont = MPI_shared_malloc_span<TempPhotoionTransitionInput>(globals::nbfcontinua);
   printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",
-             globals::nbfcontinua * (sizeof(globals::FullPhotoionTransition)) / 1024. / 1024.);
+             globals::nbfcontinua * (sizeof(TempPhotoionTransitionInput)) / 1024. / 1024.);
+  const auto groundcontindices = std::ranges::iota_view{0, globals::nbfcontinua_ground};
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions - 1; ion++) {
       int groundcontindex =
-          static_cast<int>(std::ranges::find_if(globals::groundcont,
-                                                [=](const auto& groundcont) {
-                                                  return (groundcont.element == element) && (groundcont.ion == ion);
+          static_cast<int>(std::ranges::find_if(groundcontindices,
+                                                [=](const auto& i) {
+                                                  return (globals::groundcont_element[i] == element) &&
+                                                         (globals::groundcont_ion[i] == ion);
                                                 }) -
-                           globals::groundcont.begin());
+                           groundcontindices.begin());
       if (groundcontindex >= globals::nbfcontinua_ground) {
         groundcontindex = -1;
       }
@@ -821,44 +853,71 @@ void setup_phixs_list() {
   // just so that clang-tidy doesn't throw errors on the assumption that nbfcontinua is changing
   const auto nbfcontinua = globals::nbfcontinua;
 
-  globals::bfestimcount = 0;
+  std::vector<double> temp_bfestim_nu_edge;
   if (nbfcontinua > 0) {
     // indices above were temporary only. continuum index should be to the sorted list
     MPI_Barrier(globals::mpi_comm_node);
     if (globals::rank_in_node == 0) {
-      std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &globals::FullPhotoionTransition::nu_edge);
+      std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &TempPhotoionTransitionInput::nu_edge);
     }
     MPI_Barrier(globals::mpi_comm_node);
 
-    globals::bfestim_nu_edge.clear();
     for (int i = 0; i < nbfcontinua; i++) {
       if (DETAILED_BF_ESTIMATORS_ON &&
           LEVEL_HAS_BFEST(get_atomicnumber(allcont[i].element), get_ionstage(allcont[i].element, allcont[i].ion),
                           allcont[i].level)) {
-        allcont[i].bfestimindex = globals::bfestimcount;
-        globals::bfestim_nu_edge.push_back(allcont[i].nu_edge);
-        globals::bfestimcount++;
+        allcont[i].bfestimindex = static_cast<int>(temp_bfestim_nu_edge.size());
+        temp_bfestim_nu_edge.push_back(allcont[i].nu_edge);
       } else {
         allcont[i].bfestimindex = -1;
       }
     }
 
-    MPI_Barrier(globals::mpi_comm_node);
-    globals::allcont = allcont;
-
-    globals::bfestim_nu_edge.shrink_to_fit();
-    assert_always(globals::bfestimcount == std::ssize(globals::bfestim_nu_edge));
-
+    auto bfestim_nu_edge = MPI_shared_malloc_span<double>(std::ssize(temp_bfestim_nu_edge));
     auto allcont_nu_edge = MPI_shared_malloc_span<double>(nbfcontinua);
-    for (int i = 0; i < nbfcontinua; i++) {
-      allcont_nu_edge[i] = globals::allcont[i].nu_edge;
+    auto allcont_element = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_ion = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_level = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_phixstargetindex = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_upperlevel = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_uniquelevelindex = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_probability = MPI_shared_malloc_span<double>(nbfcontinua);
+    auto allcont_index_in_groundphixslist = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_bfestimindex = MPI_shared_malloc_span<int>(nbfcontinua);
+    if (globals::rank_in_node == 0) {
+      for (int i = 0; i < std::ssize(temp_bfestim_nu_edge); i++) {
+        bfestim_nu_edge[i] = temp_bfestim_nu_edge[i];
+      }
+      for (int i = 0; i < nbfcontinua; i++) {
+        allcont_nu_edge[i] = allcont[i].nu_edge;
+        allcont_element[i] = allcont[i].element;
+        allcont_ion[i] = allcont[i].ion;
+        allcont_level[i] = allcont[i].level;
+        allcont_phixstargetindex[i] = allcont[i].phixstargetindex;
+        allcont_upperlevel[i] = allcont[i].upperlevel;
+        allcont_uniquelevelindex[i] = allcont[i].uniquelevelindex;
+        allcont_probability[i] = allcont[i].probability;
+        allcont_index_in_groundphixslist[i] = allcont[i].index_in_groundphixslist;
+        allcont_bfestimindex[i] = allcont[i].bfestimindex;
+      }
     }
     MPI_Barrier(globals::mpi_comm_node);
+    globals::bfestim_nu_edge = bfestim_nu_edge;
     globals::allcont_nu_edge = allcont_nu_edge;
+    globals::allcont_element = allcont_element;
+    globals::allcont_ion = allcont_ion;
+    globals::allcont_level = allcont_level;
+    globals::allcont_phixstargetindex = allcont_phixstargetindex;
+    globals::allcont_upperlevel = allcont_upperlevel;
+    globals::allcont_uniquelevelindex = allcont_uniquelevelindex;
+    globals::allcont_probability = allcont_probability;
+    globals::allcont_index_in_groundphixslist = allcont_index_in_groundphixslist;
+    globals::allcont_bfestimindex = allcont_bfestimindex;
 
     setup_photoion_luts();
   }
-  printlnlog("[info] bound-free estimators track bfestimcount {} photoionisation transitions", globals::bfestimcount);
+  printlnlog("[info] bound-free estimators track bfestimcount {} photoionisation transitions",
+             globals::bfestim_nu_edge.size());
 }
 
 void read_autoion_data() {

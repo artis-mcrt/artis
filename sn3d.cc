@@ -554,7 +554,6 @@ void normalise_deposition_estimators(int nts) {
 }
 
 auto do_timestep(const int nts, const int titer, std::span<Packet> packets, const int walltimelimitseconds) -> bool {
-  const auto my_rank = globals::my_rank;
   bool do_this_full_loop = true;
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
   if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
@@ -626,11 +625,12 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
     write_partial_lightcurve_spectra(nts, packets);
 
     printlnlog("During timestep {} on MPI process {}, {} pellets decayed and {} packets escaped. (t={:g}d)", nts,
-               my_rank, globals::timesteps[nts].pellet_decays, globals::nesc, globals::timesteps[nts].mid / DAY);
+               globals::my_rank, globals::timesteps[nts].pellet_decays, globals::nesc,
+               globals::timesteps[nts].mid / DAY);
 
     if (VPKT_ON) {
       printlnlog("During timestep {} on MPI process {}, {} virtual packets were generated and {} escaped.", nts,
-                 my_rank, vpkt::nvpkt_created,
+                 globals::my_rank, vpkt::nvpkt_created,
                  vpkt::nvpkt_esc_from_rpkt + vpkt::nvpkt_esc_from_kpkt + vpkt::nvpkt_esc_from_macroatom);
       printlnlog(
           "{} virtual packets came from an electron scattering event, {} from a kpkt deactivation and {} from a "
@@ -644,7 +644,7 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
     }
 
     if constexpr (RECORD_LINESTAT) {
-      if (my_rank == 0) {
+      if (globals::my_rank == 0) {
         // Print net absorption/emission in lines to the linestat_file
         // Currently linestat information is only properly implemented for MPI only runs
         // For hybrid runs only data from thread 0 is recorded
@@ -661,10 +661,10 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
     }
 
     if (nts == globals::timestep_finish - 1) {
-      const auto filename = std::format("packets{:02d}_{:04d}.out", 0, my_rank);
+      const auto filename = std::format("packets{:02d}_{:04d}.out", 0, globals::my_rank);
       write_packets(filename, packets);
 
-      vpkt::write_timestep(nts, my_rank, true);
+      vpkt::write_timestep(nts, globals::my_rank, true);
 
       printlnlog("time after write final packets file {}", std::time(nullptr));
     }

@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <span>
+#include <tuple>
 
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
@@ -280,7 +281,7 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
   }
 }
 
-auto std_compare_packets_bymodelgriddensity(const Packet& p1, const Packet& p2) -> bool {
+auto compare_packet_order(const Packet& p1, const Packet& p2) -> bool {
   // return true if packet p1 goes before p2
 
   // move escaped packets to the end of the list for better performance
@@ -300,25 +301,7 @@ auto std_compare_packets_bymodelgriddensity(const Packet& p1, const Packet& p2) 
   const auto rho1 = mgi1 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi1)) : 0.0;
   const auto rho2 = mgi2 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi2)) : 0.0;
 
-  if (rho1 > rho2) {
-    return true;
-  }
-
-  if (rho1 == rho2 && (mgi1 < mgi2)) {
-    return true;
-  }
-
-  // same cell, order by type
-  if ((mgi1 == mgi2) && (p1.type < p2.type)) {
-    return true;
-  }
-
-  // same cell and type, order by decreasing frequency
-  if ((mgi1 == mgi2) && (p1.type == p2.type) && (p1.nu_cmf > p2.nu_cmf)) {
-    return true;
-  }
-
-  return false;
+  return std::tie(rho2, mgi1, p1.type, p2.nu_cmf) < std::tie(rho1, mgi2, p2.type, p1.nu_cmf);
 }
 
 void do_cell_packet_updates(std::span<Packet> packets, const int nts, const double ts_end) {
@@ -364,7 +347,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
   while (!timestepcomplete) {
     const auto sys_time_start_pass = std::time(nullptr);
 
-    std::ranges::SORT_OR_STABLE_SORT(packets, std_compare_packets_bymodelgriddensity);
+    std::ranges::SORT_OR_STABLE_SORT(packets, compare_packet_order);
 
     const int count_pktupdates = static_cast<int>(std::ranges::count_if(
         packets, [ts_end](const auto& pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
