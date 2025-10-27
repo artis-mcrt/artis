@@ -1,6 +1,10 @@
 #ifndef KPKT_H
 #define KPKT_H
 
+#include <cstddef>
+#include <span>
+
+#include "atomic.h"
 #include "globals.h"
 #include "packet.h"
 #include "thermalbalance.h"
@@ -9,6 +13,7 @@ constexpr double COOLING_UNDEFINED = -99;
 
 namespace kpkt {
 
+inline std::span<double> ion_cooling_contribs_allcells{};
 inline int ncoolingterms{0};
 
 auto get_ncoolingterms() -> int;
@@ -26,6 +31,9 @@ void do_kpkt(Packet& pkt, double t2, int nts);
   return globals::elements[element].ions[ion].ncoolingterms;
 }
 
+[[nodiscard]] inline auto get_cell_ion_cooling_contribs(const std::ptrdiff_t nonemptymgi) -> std::span<double> {
+  return kpkt::ion_cooling_contribs_allcells.subspan(nonemptymgi * get_includedions(), get_includedions());
+}
 }  // namespace kpkt
 
 #endif  // KPKT_H

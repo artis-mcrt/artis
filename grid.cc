@@ -1,5 +1,3 @@
-#include "grid.h"
-
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -32,7 +30,9 @@
 #include "constants.h"
 #include "decay.h"
 #include "globals.h"
+#include "grid.h"
 #include "input.h"
+#include "kpkt.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"
@@ -287,7 +287,8 @@ void allocate_nonemptycells_composition_cooling()
   elem_massfracs_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
   ion_groundlevelpops_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
   ion_partfuncts_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
-  ion_cooling_contribs_allcells = MPI_shared_malloc_span<double>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
+  kpkt::ion_cooling_contribs_allcells =
+      MPI_shared_malloc_span<double>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
 
   // -1 indicates that there is currently no information on the nlte populations
   std::tie(nltepops_allcells, win_nltepops_allcells) =
@@ -380,7 +381,6 @@ void allocate_nonemptymodelcells() {
   nnetot_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
   kappagrey_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
   grey_depth_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
-  totalcooling_allcells = MPI_shared_malloc_span<double>(nonempty_npts_model, -1.);
   thick_allcells = MPI_shared_malloc_span<int>(nonempty_npts_model, 0);
   const auto modelgrid_mem_usage = nonempty_npts_model * (sizeof(float) * 9 + sizeof(double) + sizeof(int));
   printlnlog(

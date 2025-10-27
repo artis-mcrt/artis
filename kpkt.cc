@@ -5,8 +5,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <numeric>
-#include <ranges>
 #include <span>
 #include <vector>
 
@@ -268,22 +266,15 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
   double C_fb_all = 0.;  // free-bound creation of rpkt
   double C_exc_all = 0.;  // collisional excitation of macroatoms
   double C_ionisation_all = 0.;  // collisional ionisation of macroatoms
-
-  const auto allionindices = std::ranges::iota_view{0, get_includedions()};
-  std::for_each(EXEC_PAR allionindices.begin(), allionindices.end(), [&](const int allionindex) {
+  const auto nincludedions = get_includedions();
+  const auto cellioncontribs = get_cell_ion_cooling_contribs(nonemptymgi);
+  double cumulative_cooling = 0.;
+  for (int allionindex = 0; allionindex < nincludedions; allionindex++) {
     const auto [element, ion] = get_ionfromuniqueionindex(allionindex);
-    grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + allionindex] =
-        calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, -1, cellcacheslotid, &C_ff_all, &C_fb_all,
-                                           &C_exc_all, &C_ionisation_all);
-  });
-
-  // this loop is made separate for future parallelisation of upper loop.
-  // the ion contributions must be added in this exact order
-  const auto cellioncontribs = grid::ion_cooling_contribs_allcells.subspan(
-      (static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()), get_includedions());
-  const double C_total = std::accumulate(cellioncontribs.begin(), cellioncontribs.end(), 0.0);
-
-  grid::totalcooling_allcells[nonemptymgi] = C_total;
+    cumulative_cooling += calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, -1, cellcacheslotid, &C_ff_all,
+                                                             &C_fb_all, &C_exc_all, &C_ionisation_all);
+    cellioncontribs[allionindex] = cumulative_cooling;
+  }
 
   // only used in the T_e solver and write_to_estimators file
   if (heatingcoolingrates != nullptr) {
@@ -420,29 +411,14 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   stats::increment(stats::COUNTER_INTERACTIONS);
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
-  assert_always(grid::totalcooling_allcells[nonemptymgi] > 0.);
-  const double rndcool_ion = rng_uniform() * grid::totalcooling_allcells[nonemptymgi];
-  const std::span<const double> ion_cooling_contribs_thiscell = grid::ion_cooling_contribs_allcells.subspan(
-      (static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()), get_includedions());
+  const std::span<const double> ion_cooling_contribs_thiscell = get_cell_ion_cooling_contribs(nonemptymgi);
+  const double rndcool_ion = rng_uniform() * ion_cooling_contribs_thiscell.back();
 
   // Randomly select the occurring cooling process
-  double coolingsum = 0.;
-  int element = -1;
-  int ion = -1;
-  for (element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (ion = 0; ion < nions; ion++) {
-      const int uniqueionindex = get_uniqueionindex(element, ion);
-      coolingsum += ion_cooling_contribs_thiscell[uniqueionindex];
-      if (coolingsum > rndcool_ion) {
-        break;
-      }
-    }
-    if (coolingsum > rndcool_ion) {
-      break;
-    }
-  }
-  assert_always(coolingsum > rndcool_ion);
+  const int uniqueionindex = static_cast<int>(std::ranges::lower_bound(ion_cooling_contribs_thiscell, rndcool_ion) -
+                                              ion_cooling_contribs_thiscell.begin());
+  assert_always(uniqueionindex < get_includedions());
+  const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
 
   const int ilow = get_coolinglistoffset(element, ion);
   const int ncoolingterms_ion = get_ncoolingterms_ion(element, ion);
@@ -452,8 +428,6 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   if (C_ion_procsum < 0.) {
     C_ion_procsum = calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ilow, cellcacheslotid, nullptr,
                                                       nullptr, nullptr, nullptr);
-    assert_testmodeonly((std::fabs(C_ion_procsum - ion_cooling_contribs_thiscell[get_uniqueionindex(element, ion)]) /
-                         C_ion_procsum) < 1e-3);
   }
 
   // with the ion selected, we now select a level and transition type
