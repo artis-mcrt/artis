@@ -1303,7 +1303,7 @@ void nltepop_open_file(const int my_rank) {
 
 void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  if (globals::lte_iteration || grid::modelgrid[nonemptymgi].thick == 1) {  // NLTE solver hasn't been run yet
+  if (globals::lte_iteration || grid::thick_allcells[nonemptymgi] == 1) {  // NLTE solver hasn't been run yet
     return;
   }
 
@@ -1332,12 +1332,12 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
             nnlevelnlte = get_groundlevelpop(nonemptymgi, element, ion);
           } else {
             nnlevelnlte =
-                get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level) * grid::modelgrid[nonemptymgi].rho;
+                get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level) * grid::rho_allcells[nonemptymgi];
           }
         } else {
           // superlevel, so add the populations of all other levels in the superlevel
           const double slpopfactor = get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion) *
-                                     grid::modelgrid[nonemptymgi].rho;
+                                     grid::rho_allcells[nonemptymgi];
 
           nnlevellte = 0;
           nlte_file << -1 << ' ';
@@ -1368,7 +1368,7 @@ void nltepop_write_restart_data(FILE* restart_file) {
 
   for (auto nonemptymgi = 0z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    fprintf(restart_file, "%d %la\n", modelgridindex, grid::modelgrid[nonemptymgi].totalcooling);
+    fprintf(restart_file, "%d %la\n", modelgridindex, grid::totalcooling_allcells[nonemptymgi]);
     for (int element = 0; element < get_nelements(); element++) {
       for (int ion = 0; ion < get_nions(element); ion++) {
         const int uniqueionindex = get_uniqueionindex(element, ion);
@@ -1402,7 +1402,7 @@ void nltepop_read_restart_data(FILE* restart_file) {
 
   for (auto nonemptymgi = 0z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     int mgi_in = 0;
-    assert_always(fscanf(restart_file, "%d %la\n", &mgi_in, &grid::modelgrid[nonemptymgi].totalcooling) == 2);
+    assert_always(fscanf(restart_file, "%d %la\n", &mgi_in, &grid::totalcooling_allcells[nonemptymgi]) == 2);
     assert_always(mgi_in == grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
     for (int element = 0; element < get_nelements(); element++) {

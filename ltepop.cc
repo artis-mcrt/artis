@@ -67,7 +67,7 @@ struct nneSolutionParas {
   assert_testmodeonly(ion < get_nions(element));
 
   assert_testmodeonly(!globals::lte_iteration);
-  assert_testmodeonly(grid::modelgrid[nonemptymgi].thick != 1);  // should use use phi_lte instead
+  assert_testmodeonly(grid::thick_allcells[nonemptymgi] != 1);  // should use use phi_lte instead
 
   assert_testmodeonly(!elem_has_nlte_levels(element));  // don't use this function if the NLTE solver is active
 
@@ -495,7 +495,7 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
 // Determine the electron number density for a given cell using one of
 // libgsl's root_solvers and calculates the depending level populations.
 auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
-  const bool force_saha = globals::lte_iteration || grid::modelgrid[nonemptymgi].thick == 1;
+  const bool force_saha = globals::lte_iteration || grid::thick_allcells[nonemptymgi] == 1;
 
   const double nne_hi = grid::get_rho(nonemptymgi) / MH;
 

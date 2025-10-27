@@ -359,7 +359,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
       // kill vpkt with pass through a thick cell
-      if (grid::modelgrid[nonemptymgi].thick != 0) {
+      if (grid::thick_allcells[nonemptymgi] != 0) {
         return false;
       }
     }
@@ -867,7 +867,7 @@ auto call_estimators(const Packet& pkt, const enum packet_type type_before_rpkt)
   // Cut on vpkts
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
-  if (grid::modelgrid[nonemptymgi].thick != 0) {
+  if (grid::thick_allcells[nonemptymgi] != 0) {
     return;
   }
 

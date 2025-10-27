@@ -15,31 +15,26 @@
 
 namespace grid {
 
-struct ModelGridCell {
-  float Te = -1.;
-  float TR = -1.;
-  float TJ = -1.;
-  float W = -1.;
-  float nne = -1.;
-  float rho = -1.;
-  // modelgrid nn_tot
-  float nnetot = -1.;  // total electron density (free + bound).
-  float kappagrey = 0.;
-  float grey_depth = 0.;  // Grey optical depth to surface of the modelgridcell
-                          // This is only stored to print it outside the OpenMP loop in update_grid to the
-                          // estimatorsfile so there is no need to communicate it via MPI so far!
-  double totalcooling = -1;
-  int thick = 0;
-};
-
-inline std::span<ModelGridCell> modelgrid{};
+// these arrays are indexed by nonemptymgi
+inline std::span<float> rho_allcells;
+inline std::span<float> Te_allcells;
+inline std::span<float> TJ_allcells;
+inline std::span<float> TR_allcells;
+inline std::span<float> W_allcells;
+inline std::span<float> nne_allcells;
+inline std::span<float> nnetot_allcells;  // total electron density (free + bound).
+inline std::span<float> kappagrey_allcells;
+inline std::span<float> grey_depth_allcells;  // Grey optical depth to surface of the modelgridcell
+inline std::span<double> totalcooling_allcells;
+inline std::span<int>
+    thick_allcells;  // whether the cell is optically thick (1) or not (0), or (2) thick for vpkts only
 
 inline ptrdiff_t ngrid{0};
 
 inline double mtot_input{0.};
 
 inline std::span<float> elem_meanweight_allcells{};
-inline std::span<float> elem_massfracs_allcells;  // mass fractions of elements in each cell for the current timestep
+inline std::span<float> elem_massfracs_allcells{};  // mass fractions of elements in each cell for the current timestep
 
 inline std::span<double> nltepops_allcells{};
 inline std::span<float> ion_groundlevelpops_allcells{};
