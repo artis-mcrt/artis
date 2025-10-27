@@ -208,14 +208,14 @@ jobs:
                   find . -name "*_res_*.out" -exec zstd -v -T0 --rm -f {} \;
 
             - name: Upload output files
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v5
               if: always() && inputs.testmode != 'ON'
               with:
                   name: test-${{ matrix.testname }}-output
                   path: tests/${{ matrix.testname }}_testrun
 
             - name: Upload checksum files
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v5
               if: always() && inputs.testmode != 'ON'
               with:
                   name: ${{ matrix.testname }}_inputfiles
@@ -264,7 +264,7 @@ jobs:
 
             - name: Upload plot files
               if: always() && inputs.testmode != 'ON'
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v5
               with:
                   name: test-${{ matrix.testname }}-output-pdf
                   path: tests/*.pdf
@@ -282,7 +282,7 @@ jobs:
               run: find .
 
             - name: Upload bundled checksum files
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v5
               with:
                   name: checksums
                   path: '*_inputfiles/results_md5*.txt'
