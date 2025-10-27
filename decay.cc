@@ -285,7 +285,7 @@ void printout_decaypath(const int decaypathindex) {
   const auto& decaypath = decaypaths[decaypathindex];
   printlog(" decaypath {}: ", decaypathindex);
 
-  for (const auto [decaytype, z, a] : std::ranges::zip_view(decaypath.decaytypes, decaypath.z, decaypath.a)) {
+  for (const auto [decaytype, z, a] : std::views::zip(decaypath.decaytypes, decaypath.z, decaypath.a)) {
     printout_nuclidename(z, a);
     printout_nuclidemeanlife(z, a);
 
@@ -323,8 +323,7 @@ void extend_lastdecaypath() {
     }
 
     // check for nuclide in existing path, which would indicate a loop
-    for (const auto [z, a] :
-         std::ranges::zip_view(decaypaths[startdecaypathindex].z, decaypaths[startdecaypathindex].a)) {
+    for (const auto [z, a] : std::views::zip(decaypaths[startdecaypathindex].z, decaypaths[startdecaypathindex].a)) {
       if (z == daughter_z && a == daughter_a) {
         printlnlog("\nERROR: Loop found in nuclear decay chain.");
         std::abort();
