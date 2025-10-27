@@ -15,8 +15,6 @@
 #include <utility>
 #include <vector>
 
-#include "kpkt.h"
-
 #pragma clang unsafe_buffer_usage begin
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cblas.h>
@@ -32,6 +30,7 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
+#include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nltepop.h"
