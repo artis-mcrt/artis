@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <numeric>
 #include <ranges>
+#include <span>
 #include <vector>
 
 #include "artisoptions.h"
@@ -421,6 +422,8 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
   assert_always(grid::totalcooling_allcells[nonemptymgi] > 0.);
   const double rndcool_ion = rng_uniform() * grid::totalcooling_allcells[nonemptymgi];
+  const std::span<const double> ion_cooling_contribs_thiscell = grid::ion_cooling_contribs_allcells.subspan(
+      (static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()), get_includedions());
 
   // Randomly select the occurring cooling process
   double coolingsum = 0.;
@@ -430,8 +433,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
     const int nions = get_nions(element);
     for (ion = 0; ion < nions; ion++) {
       const int uniqueionindex = get_uniqueionindex(element, ion);
-      coolingsum += grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                                        uniqueionindex];
+      coolingsum += ion_cooling_contribs_thiscell[uniqueionindex];
       if (coolingsum > rndcool_ion) {
         break;
       }
@@ -440,7 +442,6 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
       break;
     }
   }
-
   assert_always(coolingsum > rndcool_ion);
 
   const int ilow = get_coolinglistoffset(element, ion);
@@ -451,21 +452,18 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   if (C_ion_procsum < 0.) {
     C_ion_procsum = calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ilow, cellcacheslotid, nullptr,
                                                       nullptr, nullptr, nullptr);
-    assert_testmodeonly(
-        (std::fabs(C_ion_procsum -
-                   grid::ion_cooling_contribs_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                                       get_uniqueionindex(element, ion)]) /
-         C_ion_procsum) < 1e-3);
+    assert_testmodeonly((std::fabs(C_ion_procsum - ion_cooling_contribs_thiscell[get_uniqueionindex(element, ion)]) /
+                         C_ion_procsum) < 1e-3);
   }
 
   // with the ion selected, we now select a level and transition type
 
   const double rndcool_ion_process = rng_uniform() * C_ion_procsum;
+  const auto& cooling_contrib = globals::cellcache[cellcacheslotid].cooling_contrib;
 
   const auto i =
-      std::upper_bound(globals::cellcache[cellcacheslotid].cooling_contrib.begin() + ilow,
-                       globals::cellcache[cellcacheslotid].cooling_contrib.begin() + ihigh + 1, rndcool_ion_process) -
-      globals::cellcache[cellcacheslotid].cooling_contrib.begin();
+      std::upper_bound(cooling_contrib.begin() + ilow, cooling_contrib.begin() + ihigh + 1, rndcool_ion_process) -
+      cooling_contrib.begin();
 
   assert_always(i <= ihigh);
 
