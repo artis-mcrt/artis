@@ -787,12 +787,11 @@ auto get_inputcellvolume(const int mgi) -> double {
     const int n_r = mgi % ncoord_model[0];
     const double delta_rcyl = globals::vmax * t_model / ncoord_model[0];
     const double delta_z = 2. * globals::vmax * t_model / ncoord_model[1];
-    return pow(globals::tmin / t_model, 3) * delta_z * PI *
-           (pow((n_r + 1) * delta_rcyl, 2.) - pow(n_r * delta_rcyl, 2.));
+    return pow(globals::tmin / t_model, 3) * delta_z * PI * (pow((n_r + 1) * delta_rcyl, 2) - pow(n_r * delta_rcyl, 2));
   }
   if (get_model_type() == GridType::CARTESIAN3D) {
     // Assumes cells are cubes here - all same volume.
-    return pow((2 * globals::vmax * globals::tmin), 3.) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
+    return pow((2 * globals::vmax * globals::tmin), 3) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
   }
   assert_always(false);
   return NAN;
