@@ -769,12 +769,11 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
 
   const ptrdiff_t num_nuclides = decay::get_num_nuclides();
 
-  const auto totalradioabundcount = (npts_model + 1) * num_nuclides;
   std::tie(initnucmassfrac_allcells, win_initnucmassfrac_allcells) =
-      MPI_shared_malloc_span_keepwin<float>(totalradioabundcount, 0.);
+      MPI_shared_malloc_span_keepwin<float>((npts_model + 1) * num_nuclides, 0.);
   printlnlog(
-      "[info] mem_usage: radioabundance data for {} nuclides for {} cells occupies {:.3f} MB (node shared memory)",
-      num_nuclides, npts_model, static_cast<double>(totalradioabundcount * sizeof(float)) / 1024. / 1024.);
+      "[info] mem_usage: input abundance data for {} nuclides for {} cells occupies {:.3f} MB (node shared memory)",
+      num_nuclides, npts_model, (initnucmassfrac_allcells.size() * sizeof(float)) / 1024. / 1024.);
 
   return {colnames, nucindexlist, one_line_per_cell};
 }
@@ -782,15 +781,14 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
 auto get_inputcellvolume(const int mgi) -> double {
   if (get_model_type() == GridType::SPHERICAL1D) {
     const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
-    // mass_in_shell = rho_model[mgi] * (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(t_model, 3) / 3.;
     return (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
   }
   if (get_model_type() == GridType::CYLINDRICAL2D) {
     const int n_r = mgi % ncoord_model[0];
-    const double dcoord_rcyl = globals::vmax * t_model / ncoord_model[0];  // dr 2D for input model
-    const double dcoord_z = 2. * globals::vmax * t_model / ncoord_model[1];  // dz 2D for input model
-    return pow(globals::tmin / t_model, 3) * dcoord_z * PI *
-           (pow((n_r + 1) * dcoord_rcyl, 2.) - pow(n_r * dcoord_rcyl, 2.));
+    const double delta_rcyl = globals::vmax * t_model / ncoord_model[0];
+    const double delta_z = 2. * globals::vmax * t_model / ncoord_model[1];
+    return pow(globals::tmin / t_model, 3) * delta_z * PI *
+           (pow((n_r + 1) * delta_rcyl, 2.) - pow(n_r * delta_rcyl, 2.));
   }
   if (get_model_type() == GridType::CARTESIAN3D) {
     // Assumes cells are cubes here - all same volume.
