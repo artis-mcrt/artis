@@ -15,25 +15,19 @@
 
 namespace grid {
 
-struct ModelGridCells {
-  std::span<float> rho;
-  std::span<float> Te;
-  std::span<float> TJ;
-  std::span<float> TR;
-  std::span<float> W;
-  std::span<float> nne;
-  std::span<float> nnetot;  // total electron density (free + bound).
-  std::span<float> kappagrey;
-  std::span<float> grey_depth;  // Grey optical depth to surface of the modelgridcell
-  std::span<double> totalcooling;
-  std::span<int> thick;
-
-  [[nodiscard]] auto get_mem_usage() const -> std::size_t {
-    return (rho.size() * sizeof(float) * 9) + (totalcooling.size() * sizeof(double)) + (thick.size() * sizeof(int));
-  }
-};
-
-inline ModelGridCells modelgrid;
+// these arrays are indexed by nonemptymgi
+inline std::span<float> rho_allcells;
+inline std::span<float> Te_allcells;
+inline std::span<float> TJ_allcells;
+inline std::span<float> TR_allcells;
+inline std::span<float> W_allcells;
+inline std::span<float> nne_allcells;
+inline std::span<float> nnetot_allcells;  // total electron density (free + bound).
+inline std::span<float> kappagrey_allcells;
+inline std::span<float> grey_depth_allcells;  // Grey optical depth to surface of the modelgridcell
+inline std::span<double> totalcooling_allcells;
+inline std::span<int>
+    thick_allcells;  // whether the cell is optically thick (1) or not (0), or (2) thick for vpkts only
 
 inline ptrdiff_t ngrid{0};
 

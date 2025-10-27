@@ -225,27 +225,27 @@ void mpi_communicate_grid_properties() {
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (globals::rank_in_node == 0) {
-      MPI_Bcast_safe(grid::modelgrid.rho.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+      MPI_Bcast_safe(grid::rho_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
-      MPI_Bcast_safe(grid::modelgrid.Te.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+      MPI_Bcast_safe(grid::Te_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
-      MPI_Bcast_safe(grid::modelgrid.TJ.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+      MPI_Bcast_safe(grid::TJ_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
-      MPI_Bcast_safe(grid::modelgrid.TR.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+      MPI_Bcast_safe(grid::TR_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
-      MPI_Bcast_safe(grid::modelgrid.W.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+      MPI_Bcast_safe(grid::W_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
-      MPI_Bcast_safe(grid::modelgrid.nne.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+      MPI_Bcast_safe(grid::nne_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
-      MPI_Bcast_safe(grid::modelgrid.nnetot.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+      MPI_Bcast_safe(grid::nnetot_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
-      MPI_Bcast_safe(grid::modelgrid.kappagrey.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+      MPI_Bcast_safe(grid::kappagrey_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
-      MPI_Bcast_safe(grid::modelgrid.grey_depth.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+      MPI_Bcast_safe(grid::grey_depth_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
-      MPI_Bcast_safe(grid::modelgrid.totalcooling.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+      MPI_Bcast_safe(grid::totalcooling_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
-      MPI_Bcast_safe(grid::modelgrid.thick.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+      MPI_Bcast_safe(grid::thick_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
 
       if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {

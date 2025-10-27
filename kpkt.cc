@@ -282,7 +282,7 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
       (static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()), get_includedions());
   const double C_total = std::accumulate(cellioncontribs.begin(), cellioncontribs.end(), 0.0);
 
-  grid::modelgrid.totalcooling[nonemptymgi] = C_total;
+  grid::totalcooling_allcells[nonemptymgi] = C_total;
 
   // only used in the T_e solver and write_to_estimators file
   if (heatingcoolingrates != nullptr) {
@@ -381,7 +381,7 @@ void setup_coolinglist() {
 __host__ __device__ void do_kpkt_blackbody(Packet& pkt) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
-  if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() && grid::modelgrid.thick[nonemptymgi] != 1) {
+  if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() && grid::thick_allcells[nonemptymgi] != 1) {
     pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
   } else {
     pkt.nu_cmf = sample_planck_montecarlo(grid::get_Te(nonemptymgi));
@@ -419,8 +419,8 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   stats::increment(stats::COUNTER_INTERACTIONS);
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
-  assert_always(grid::modelgrid.totalcooling[nonemptymgi] > 0.);
-  const double rndcool_ion = rng_uniform() * grid::modelgrid.totalcooling[nonemptymgi];
+  assert_always(grid::totalcooling_allcells[nonemptymgi] > 0.);
+  const double rndcool_ion = rng_uniform() * grid::totalcooling_allcells[nonemptymgi];
 
   // Randomly select the occurring cooling process
   double coolingsum = 0.;

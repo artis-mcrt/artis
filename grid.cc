@@ -370,21 +370,23 @@ void allocate_nonemptymodelcells() {
     }
   }
 
-  assert_always(modelgrid.rho.data() == nullptr);
-  modelgrid.rho = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  modelgrid.Te = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  modelgrid.TJ = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  modelgrid.TR = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  modelgrid.W = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  modelgrid.nne = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  modelgrid.nnetot = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  modelgrid.kappagrey = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
-  modelgrid.grey_depth = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
-  modelgrid.totalcooling = MPI_shared_malloc_span<double>(nonempty_npts_model, -1.);
-  modelgrid.thick = MPI_shared_malloc_span<int>(nonempty_npts_model, 0);
-
-  printlnlog("[info] mem_usage: the modelgrid array occupies {:.3f} MB (node shared memory)",
-             modelgrid.get_mem_usage() / 1024. / 1024.);
+  assert_always(rho_allcells.data() == nullptr);
+  rho_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
+  Te_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
+  TJ_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
+  TR_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
+  W_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
+  nne_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
+  nnetot_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
+  kappagrey_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
+  grey_depth_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
+  totalcooling_allcells = MPI_shared_malloc_span<double>(nonempty_npts_model, -1.);
+  thick_allcells = MPI_shared_malloc_span<int>(nonempty_npts_model, 0);
+  const auto modelgrid_mem_usage = nonempty_npts_model * (sizeof(float) * 9 + sizeof(double) + sizeof(int));
+  printlnlog(
+      "[info] mem_usage: the modelgrid properties (temperatures and electron densities) occupies {:.3f} MB (node "
+      "shared memory)",
+      modelgrid_mem_usage / 1024. / 1024.);
 
   allocate_nonemptycells_composition_cooling();
 
@@ -865,8 +867,8 @@ void read_grid_restart_data(const int timestep) {
     assert_always(fscanf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", &mgi_in, &T_R, &T_e, &W, &T_J,
                          &thick, &globals::dep_estimator_gamma[nonemptymgi],
                          &globals::dep_estimator_positron[nonemptymgi], &globals::dep_estimator_electron[nonemptymgi],
-                         &globals::dep_estimator_alpha[nonemptymgi], &modelgrid.nne[nonemptymgi],
-                         &modelgrid.nnetot[nonemptymgi]) == 12);
+                         &globals::dep_estimator_alpha[nonemptymgi], &nne_allcells[nonemptymgi],
+                         &nnetot_allcells[nonemptymgi]) == 12);
 
     if (mgi_in != mgi) {
       printlnlog("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort");
@@ -887,7 +889,7 @@ void read_grid_restart_data(const int timestep) {
     set_Te(nonemptymgi, T_e);
     set_W(nonemptymgi, W);
     set_TJ(nonemptymgi, T_J);
-    modelgrid.thick[nonemptymgi] = thick;
+    thick_allcells[nonemptymgi] = thick;
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
@@ -954,7 +956,7 @@ void assign_initial_temperatures() {
       set_TJ(nonemptymgi, T_initial);
       set_TR(nonemptymgi, T_initial);
       set_W(nonemptymgi, 1.);
-      modelgrid.thick[nonemptymgi] = 0;
+      thick_allcells[nonemptymgi] = 0;
     }
   }
   printlnlog("  cells below MINTEMP {:g}: {}", MINTEMP, cells_below_mintemp);
@@ -1451,19 +1453,19 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_rho(const std::ptrdiff_t nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  return modelgrid.rho[nonemptymgi];
+  return rho_allcells[nonemptymgi];
 }
 
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nne(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  return modelgrid.nne[nonemptymgi];
+  return nne_allcells[nonemptymgi];
 }
 
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nnetot(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  return modelgrid.nnetot[nonemptymgi];
+  return nnetot_allcells[nonemptymgi];
 }
 
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_ffegrp(const int modelgridindex) -> float {
@@ -1495,42 +1497,42 @@ void set_elem_abundance(const ptrdiff_t nonemptymgi, const int element, const fl
          static_cast<double>(grid::get_element_meanweight(nonemptymgi, element)) * grid::get_rho(nonemptymgi);
 }
 
-__host__ __device__ auto get_kappagrey(const int nonemptymgi) -> float { return modelgrid.kappagrey[nonemptymgi]; }
+__host__ __device__ auto get_kappagrey(const int nonemptymgi) -> float { return kappagrey_allcells[nonemptymgi]; }
 
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_Te(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  return modelgrid.Te[nonemptymgi];
+  return Te_allcells[nonemptymgi];
 }
 
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_TR(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  return modelgrid.TR[nonemptymgi];
+  return TR_allcells[nonemptymgi];
 }
 
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_TJ(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  return modelgrid.TJ[nonemptymgi];
+  return TJ_allcells[nonemptymgi];
 }
 
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_W(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  return modelgrid.W[nonemptymgi];
+  return W_allcells[nonemptymgi];
 }
 
 void set_rho(const int nonemptymgi, const float rho) {
   assert_always(rho >= 0.);
   assert_always(std::isfinite(rho));
-  modelgrid.rho[nonemptymgi] = rho;
+  rho_allcells[nonemptymgi] = rho;
 }
 
 void set_nne(const int nonemptymgi, const float nne) {
   assert_always(nne >= 0.);
   assert_always(std::isfinite(nne));
-  modelgrid.nne[nonemptymgi] = nne;
+  nne_allcells[nonemptymgi] = nne;
 }
 
 // Calculate and set the total density of electrons (free and bound) in grid cell. These are targets for Compton
@@ -1544,10 +1546,10 @@ void set_nnetot(const int nonemptymgi) {
 
   const auto f_nnetot = static_cast<float>(nnetot);
   assert_always(f_nnetot >= 0.);
-  modelgrid.nnetot[nonemptymgi] = f_nnetot;
+  nnetot_allcells[nonemptymgi] = f_nnetot;
 }
 
-void set_kappagrey(const int nonemptymgi, const float kappagrey) { modelgrid.kappagrey[nonemptymgi] = kappagrey; }
+void set_kappagrey(const int nonemptymgi, const float kappagrey) { kappagrey_allcells[nonemptymgi] = kappagrey; }
 
 void set_Te(const int nonemptymgi, const float Te) {
   if (Te > 0.) {
@@ -1562,14 +1564,14 @@ void set_Te(const int nonemptymgi, const float Te) {
     }
   }
 
-  modelgrid.Te[nonemptymgi] = Te;
+  Te_allcells[nonemptymgi] = Te;
 }
 
-void set_TR(const int nonemptymgi, const float TR) { modelgrid.TR[nonemptymgi] = TR; }
+void set_TR(const int nonemptymgi, const float TR) { TR_allcells[nonemptymgi] = TR; }
 
-void set_TJ(const int nonemptymgi, const float TJ) { modelgrid.TJ[nonemptymgi] = TJ; }
+void set_TJ(const int nonemptymgi, const float TJ) { TJ_allcells[nonemptymgi] = TJ; }
 
-void set_W(const int nonemptymgi, const float W) { modelgrid.W[nonemptymgi] = W; }
+void set_W(const int nonemptymgi, const float W) { W_allcells[nonemptymgi] = W; }
 
 auto get_model_type() -> GridType { return model_type; }
 
@@ -2147,10 +2149,10 @@ void write_grid_restart_data(const int timestep) {
 
     assert_always(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
     fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", mgi, get_TR(nonemptymgi), get_Te(nonemptymgi),
-            get_W(nonemptymgi), get_TJ(nonemptymgi), modelgrid.thick[nonemptymgi],
+            get_W(nonemptymgi), get_TJ(nonemptymgi), thick_allcells[nonemptymgi],
             globals::dep_estimator_gamma[nonemptymgi], globals::dep_estimator_positron[nonemptymgi],
             globals::dep_estimator_electron[nonemptymgi], globals::dep_estimator_alpha[nonemptymgi],
-            modelgrid.nne[nonemptymgi], modelgrid.nnetot[nonemptymgi]);
+            nne_allcells[nonemptymgi], nnetot_allcells[nonemptymgi]);
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {

@@ -196,6 +196,7 @@ inline int opacity_case{};  // 0 grey, 1 for Fe-grp dependence.
 inline std::vector<float> ion_alpha_sp;  // alpha_sp for each ion and temperature table value
 
 inline std::span<float> allphixs{};
+
 struct AllTransitions {
   std::span<const int> lineindex;
   std::span<const int> targetlevelindex;
@@ -222,10 +223,11 @@ inline std::span<const double>
     allphixstargets_probability;  // fraction of phixs cross section leading to associated final level
 
 struct AllLevels {
-  // all of these arrays are indexed by uniquelevelindex, which can be derived from the element, ion, level
+  // these arrays are indexed by uniquelevelindex, which can be derived from the element, ion, level
 
   std::span<const double> epsilon;
   std::span<const float> statweight;
+
   // index into globals::alltrans for first down transition from each level
   std::span<const int> alltrans_startdown;
 
