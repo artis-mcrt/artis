@@ -791,13 +791,13 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
     phixslist.allcontend = allcontend;
 
     phixslist.bfestimend =
-        static_cast<int>(std::ranges::upper_bound(globals::bfestim_nu_edge, nu) - globals::bfestim_nu_edge.cbegin());
+        static_cast<int>(std::ranges::upper_bound(globals::bfestim_nu_edge, nu) - globals::bfestim_nu_edge.begin());
 
-    phixslist.bfestimbegin =
-        std::lower_bound(
-            globals::bfestim_nu_edge.cbegin(), globals::bfestim_nu_edge.cbegin() + phixslist.bfestimend, nu,
-            [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }) -
-        globals::bfestim_nu_edge.cbegin();
+    phixslist.bfestimbegin = std::ranges::lower_bound(globals::bfestim_nu_edge.first(phixslist.bfestimend), nu,
+                                                      [](const double nu_edge, const double nu_cmf) {
+                                                        return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                                      }) -
+                             globals::bfestim_nu_edge.begin();
   }
 
   // const ref these so that the compiler knows they don't change in the loop (and shortens the names)

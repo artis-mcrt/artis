@@ -241,7 +241,7 @@ struct BFListEntry {
 // the bound-free list sorted by element/ion/level/phixstargetindex (not nu_edge)
 inline std::vector<BFListEntry> bflist;
 
-inline std::vector<double> bfestim_nu_edge{};
+inline std::span<const double> bfestim_nu_edge{};
 
 inline std::span<const double> allcont_nu_edge{};
 inline std::span<const int> allcont_element{};

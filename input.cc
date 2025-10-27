@@ -853,7 +853,7 @@ void setup_phixs_list() {
   // just so that clang-tidy doesn't throw errors on the assumption that nbfcontinua is changing
   const auto nbfcontinua = globals::nbfcontinua;
 
-  globals::bfestimcount = 0;
+  std::vector<double> temp_bfestim_nu_edge;
   if (nbfcontinua > 0) {
     // indices above were temporary only. continuum index should be to the sorted list
     MPI_Barrier(globals::mpi_comm_node);
@@ -862,24 +862,21 @@ void setup_phixs_list() {
     }
     MPI_Barrier(globals::mpi_comm_node);
 
-    globals::bfestim_nu_edge.clear();
     for (int i = 0; i < nbfcontinua; i++) {
       if (DETAILED_BF_ESTIMATORS_ON &&
           LEVEL_HAS_BFEST(get_atomicnumber(allcont[i].element), get_ionstage(allcont[i].element, allcont[i].ion),
                           allcont[i].level)) {
-        allcont[i].bfestimindex = globals::bfestimcount;
-        globals::bfestim_nu_edge.push_back(allcont[i].nu_edge);
-        globals::bfestimcount++;
+        allcont[i].bfestimindex = static_cast<int>(temp_bfestim_nu_edge.size());
+        temp_bfestim_nu_edge.push_back(allcont[i].nu_edge);
       } else {
         allcont[i].bfestimindex = -1;
       }
     }
 
+    globals::bfestimcount = static_cast<int>(temp_bfestim_nu_edge.size());
     MPI_Barrier(globals::mpi_comm_node);
 
-    globals::bfestim_nu_edge.shrink_to_fit();
-    assert_always(globals::bfestimcount == std::ssize(globals::bfestim_nu_edge));
-
+    auto bfestim_nu_edge = MPI_shared_malloc_span<double>(std::ssize(temp_bfestim_nu_edge));
     auto allcont_nu_edge = MPI_shared_malloc_span<double>(nbfcontinua);
     auto allcont_element = MPI_shared_malloc_span<int>(nbfcontinua);
     auto allcont_ion = MPI_shared_malloc_span<int>(nbfcontinua);
@@ -891,6 +888,9 @@ void setup_phixs_list() {
     auto allcont_index_in_groundphixslist = MPI_shared_malloc_span<int>(nbfcontinua);
     auto allcont_bfestimindex = MPI_shared_malloc_span<int>(nbfcontinua);
     if (globals::rank_in_node == 0) {
+      for (int i = 0; i < std::ssize(temp_bfestim_nu_edge); i++) {
+        bfestim_nu_edge[i] = temp_bfestim_nu_edge[i];
+      }
       for (int i = 0; i < nbfcontinua; i++) {
         allcont_nu_edge[i] = allcont[i].nu_edge;
         allcont_element[i] = allcont[i].element;
@@ -905,6 +905,7 @@ void setup_phixs_list() {
       }
     }
     MPI_Barrier(globals::mpi_comm_node);
+    globals::bfestim_nu_edge = bfestim_nu_edge;
     globals::allcont_nu_edge = allcont_nu_edge;
     globals::allcont_element = allcont_element;
     globals::allcont_ion = allcont_ion;
