@@ -2,7 +2,7 @@
 
 # only compress the files if we successfully ran exspec
 if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
-  rm packets_*.tmp gridsave_*.tmp
+  rm packets_*.tmp gridsave_*.tmp vspecpol_*.tmp vpkt_grid_*.tmp
 
   mkdir -p speclc_angle_res
   mv *_res_*.out* speclc_angle_res/ || true
@@ -17,6 +17,9 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
 
   mkdir -p vspecpol
   mv vspecpol*.out* vspecpol/ || true
+
+  mkdir -p vpkt_grid
+  mv vpkt_grid*.out* vpkt_grid/ || true
 
   # remove empty directories
   find . -maxdepth 1 -type d -empty -delete
