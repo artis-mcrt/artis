@@ -797,7 +797,8 @@ void setup_phixs_list() {
   auto allcont = MPI_shared_malloc_span<TempPhotoionTransitionInput>(globals::nbfcontinua);
   printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",
              globals::nbfcontinua * (sizeof(TempPhotoionTransitionInput)) / 1024. / 1024.);
-  auto groundcont_zip = std::views::zip(groundcont_nu_edge, groundcont_element, groundcont_ion);
+  auto groundcont_zip =
+      std::views::zip(globals::groundcont_nu_edge, globals::groundcont_element, globals::groundcont_ion);
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
