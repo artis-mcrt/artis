@@ -281,29 +281,6 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
   }
 }
 
-auto std_compare_packets_bymodelgriddensity(const Packet& p1, const Packet& p2) -> bool {
-  // return true if packet p1 goes before p2
-
-  // move escaped packets to the end of the list for better performance
-  const bool esc1 = (p1.type == TYPE_ESCAPE);
-  const bool esc2 = (p2.type == TYPE_ESCAPE);
-
-  if (!esc1 && esc2) {
-    return true;
-  }
-  if (esc1) {
-    return false;
-  }
-
-  // for both non-escaped packets, order by descending cell density
-  const int mgi1 = grid::get_propcell_modelgridindex(p1.where);
-  const int mgi2 = grid::get_propcell_modelgridindex(p2.where);
-  const auto rho1 = mgi1 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi1)) : 0.0;
-  const auto rho2 = mgi2 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi2)) : 0.0;
-
-  return std::tie(rho2, mgi1, p1.type, p2.nu_cmf) < std::tie(rho1, mgi2, p2.type, p1.nu_cmf);
-}
-
 void do_cell_packet_updates(std::span<Packet> packets, const int nts, const double ts_end) {
   auto update_packet = [ts_end, nts](auto& pkt) {
     const int mgi = grid::get_propcell_modelgridindex(pkt.where);
@@ -347,7 +324,25 @@ void update_packets(const int nts, std::span<Packet> packets) {
   while (!timestepcomplete) {
     const auto sys_time_start_pass = std::time(nullptr);
 
-    std::ranges::SORT_OR_STABLE_SORT(packets, std_compare_packets_bymodelgriddensity);
+    std::ranges::SORT_OR_STABLE_SORT(packets, [](const Packet& p1, const Packet& p2) -> bool {
+      // return true if packet p1 goes before p2
+      // move escaped packets to the end of the list for better performance
+      if ((p1.type != TYPE_ESCAPE) && (p2.type == TYPE_ESCAPE)) {
+        return true;
+      }
+      // don't bother ordering escaped packets among themselves
+      if (p1.type == TYPE_ESCAPE) {
+        return false;
+      }
+
+      // for both non-escaped packets, order by cell density, type, and frequency
+      const auto mgi1 = grid::get_propcell_modelgridindex(p1.where);
+      const auto mgi2 = grid::get_propcell_modelgridindex(p2.where);
+      const auto rho1 = mgi1 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi1)) : 0.0;
+      const auto rho2 = mgi2 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi2)) : 0.0;
+
+      return std::tie(rho2, mgi1, p1.type, p2.nu_cmf) < std::tie(rho1, mgi2, p2.type, p1.nu_cmf);
+    });
 
     const int count_pktupdates = static_cast<int>(std::ranges::count_if(
         packets, [ts_end](const auto& pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
