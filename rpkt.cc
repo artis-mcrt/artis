@@ -570,7 +570,7 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
       const double nu_edge = globals::groundcont_nu_edge[i];
       if (nu_cmf <= nu_edge) {
-        // because groundcont is sorted by nu_edge descending, nu < nu_edge for all remaining items
+        // because groundcont is sorted by nu_edge ascending, nu_cmf < nu_edge for all remaining items
         return;
       }
       const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + i;
@@ -771,14 +771,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   const auto& allcont_nu_edge = globals::allcont_nu_edge;
 
-  // The phixslist is sorted by nu_edge in ascending order (longest to shortest wavelength)
-  // If nu < allcont[i].nu_edge no absorption in any of the following continua
-  // is possible, so set their kappas to zero
-  // break the list into nu >= nu_edge and the remainder (nu < nu_edge)
-
-  int i = 0;
+  // The phixslist is sorted by nu_edge in ascending order, so if nu < allcont[i].nu_edge then no absorption in any of
+  // the remaining continua is possible. so set their kappas to zero and break
   const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.begin());
 
+  // require that nu > nu_edge * last_phixs_nuovernuedge, which can exclude some low-nu edges
   const int allcontbegin = std::lower_bound(allcont_nu_edge.begin(), allcont_nu_edge.begin() + allcontend, nu,
                                             [](const double nu_edge, const double nu_cmf) {
                                               return nu_edge * last_phixs_nuovernuedge < nu_cmf;
@@ -814,7 +811,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const auto& allcont_probability = globals::allcont_probability;
   const auto& allcont_phixstargetindex = globals::allcont_phixstargetindex;
 
-  for (i = allcontbegin; i < allcontend; i++) {
+  for (int i = allcontbegin; i < allcontend; i++) {
     const int element = allcont_element[i];
     const int ion = allcont_ion[i];
     const int level = allcont_level[i];
