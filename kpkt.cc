@@ -267,8 +267,7 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
   double C_exc_all = 0.;  // collisional excitation of macroatoms
   double C_ionisation_all = 0.;  // collisional ionisation of macroatoms
   const auto nincludedions = get_includedions();
-  const auto cellioncontribs =
-      grid::ion_cooling_contribs_allcells.subspan((static_cast<ptrdiff_t>(nonemptymgi) * nincludedions), nincludedions);
+  const auto cellioncontribs = get_cell_ion_cooling_contribs(nonemptymgi);
   double cumulative_cooling = 0.;
   for (int allionindex = 0; allionindex < nincludedions; allionindex++) {
     const auto [element, ion] = get_ionfromuniqueionindex(allionindex);
@@ -276,10 +275,6 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
                                                              &C_fb_all, &C_exc_all, &C_ionisation_all);
     cellioncontribs[allionindex] = cumulative_cooling;
   }
-
-  const double C_total = cellioncontribs.back();
-
-  grid::totalcooling_allcells[nonemptymgi] = C_total;
 
   // only used in the T_e solver and write_to_estimators file
   if (heatingcoolingrates != nullptr) {
@@ -416,11 +411,9 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   stats::increment(stats::COUNTER_INTERACTIONS);
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
-  assert_always(grid::totalcooling_allcells[nonemptymgi] > 0.);
   const auto nincludedions = get_includedions();
-  const double rndcool_ion = rng_uniform() * grid::totalcooling_allcells[nonemptymgi];
-  const std::span<const double> ion_cooling_contribs_thiscell =
-      grid::ion_cooling_contribs_allcells.subspan((static_cast<ptrdiff_t>(nonemptymgi) * nincludedions), nincludedions);
+  const std::span<const double> ion_cooling_contribs_thiscell = get_cell_ion_cooling_contribs(nonemptymgi);
+  const double rndcool_ion = rng_uniform() * ion_cooling_contribs_thiscell.back();
 
   // Randomly select the occurring cooling process
   const int uniqueionindex = static_cast<int>(std::ranges::upper_bound(ion_cooling_contribs_thiscell, rndcool_ion) -

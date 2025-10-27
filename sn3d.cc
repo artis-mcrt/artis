@@ -13,6 +13,7 @@
 #include <format>
 #include <fstream>
 #include <ios>
+
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
@@ -30,6 +31,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "kpkt.h"
 #include "macroatom.h"
 #include "md5.h"
 #include "nltepop.h"
@@ -243,8 +245,6 @@ void mpi_communicate_grid_properties() {
                      globals::mpi_comm_internode);
       MPI_Bcast_safe(grid::grey_depth_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
-      MPI_Bcast_safe(grid::totalcooling_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
-                     globals::mpi_comm_internode);
       MPI_Bcast_safe(grid::thick_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
 
@@ -277,7 +277,7 @@ void mpi_communicate_grid_properties() {
                                                            root_ndo_nonempty * nincludedions),
                      root_node_id, globals::mpi_comm_internode);
 
-      MPI_Bcast_safe(grid::ion_cooling_contribs_allcells.subspan(root_nstart_nonempty * nincludedions,
+      MPI_Bcast_safe(kpkt::ion_cooling_contribs_allcells.subspan(root_nstart_nonempty * nincludedions,
                                                                  root_ndo_nonempty * nincludedions),
                      root_node_id, globals::mpi_comm_internode);
     }

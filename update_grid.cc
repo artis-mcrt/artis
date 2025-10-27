@@ -540,13 +540,15 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   if (grid::thick_allcells[nonemptymgi] == 1) {
     // cooling rates calculation can be skipped for thick cells
     // flag with negative numbers to indicate that the rates are invalid
-    grid::totalcooling_allcells[nonemptymgi] = -1.;
-    grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + 0] = -1.;
+    const auto ioncooling_contribs = kpkt::get_cell_ion_cooling_contribs(nonemptymgi);
+    ioncooling_contribs[0] = -1.;
+    ioncooling_contribs.back() = -1.;
   } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial) {
     // cooling rates were read from the gridsave file for this timestep
     // make sure they are valid
-    assert_always(grid::totalcooling_allcells[nonemptymgi] >= 0.);
-    assert_always(grid::ion_cooling_contribs_allcells[(nonemptymgi * get_includedions()) + 0] >= 0.);
+    const auto ioncooling_contribs = kpkt::get_cell_ion_cooling_contribs(nonemptymgi);
+    assert_always(ioncooling_contribs[0] >= 0.);
+    assert_always(ioncooling_contribs.back() >= 0.);
   } else {
     // Cooling rates depend only on cell properties, precalculate total cooling
     // and ion contributions inside update grid and communicate between MPI tasks

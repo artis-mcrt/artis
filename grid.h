@@ -25,7 +25,6 @@ inline std::span<float> nne_allcells;
 inline std::span<float> nnetot_allcells;  // total electron density (free + bound).
 inline std::span<float> kappagrey_allcells;
 inline std::span<float> grey_depth_allcells;  // Grey optical depth to surface of the modelgridcell
-inline std::span<double> totalcooling_allcells;
 inline std::span<int>
     thick_allcells;  // whether the cell is optically thick (1) or not (0), or (2) thick for vpkts only
 
@@ -39,7 +38,6 @@ inline std::span<float> elem_massfracs_allcells{};  // mass fractions of element
 inline std::span<double> nltepops_allcells{};
 inline std::span<float> ion_groundlevelpops_allcells{};
 inline std::span<float> ion_partfuncts_allcells{};
-inline std::span<double> ion_cooling_contribs_allcells{};
 
 [[nodiscard]] auto get_elements_uppermost_ion(int nonemptymgi, int element) -> int;
 void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion);
