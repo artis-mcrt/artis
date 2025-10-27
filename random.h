@@ -146,7 +146,7 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
   constexpr generated_type type_range = std::numeric_limits<generated_type>::max();
   constexpr bool prng_is_bit_uniform = (prng_range == type_range);
 
-  constexpr int exponent_bits_32 = 8;
+  constexpr unsigned int exponent_bits_32 = 8;
 
   constexpr float mantissa_hex_32 = 0x1.0p-24F;  // == 2^-24, corresponds to 24 significant bits of float
 
