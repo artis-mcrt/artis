@@ -102,8 +102,6 @@ inline std::vector<double> dep_estimator_positron;
 inline std::vector<double> dep_estimator_electron;
 inline std::vector<double> dep_estimator_alpha;
 
-inline int bfestimcount{0};
-
 // for USE_LUT_PHOTOION = true
 inline std::span<double> corrphotoionrenorm{};
 inline MPI_Win win_corrphotoionrenorm{MPI_WIN_NULL};

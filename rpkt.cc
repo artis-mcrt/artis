@@ -594,8 +594,8 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
 
   MacroAtomState pktmastate{};
 
-  THREADLOCALONHOST auto chi_rpkt_cont =
-      Rpkt_continuum_absorptioncoeffs{globals::nbfcontinua_ground, globals::nbfcontinua, globals::bfestimcount};
+  THREADLOCALONHOST auto chi_rpkt_cont = Rpkt_continuum_absorptioncoeffs{
+      globals::nbfcontinua_ground, globals::nbfcontinua, static_cast<int>(globals::bfestim_nu_edge.size())};
 
   // draw random optical depth to next physical event
   const double tau_rnd = -std::log(static_cast<double>(rng_uniform_pos()));

@@ -873,9 +873,6 @@ void setup_phixs_list() {
       }
     }
 
-    globals::bfestimcount = static_cast<int>(temp_bfestim_nu_edge.size());
-    MPI_Barrier(globals::mpi_comm_node);
-
     auto bfestim_nu_edge = MPI_shared_malloc_span<double>(std::ssize(temp_bfestim_nu_edge));
     auto allcont_nu_edge = MPI_shared_malloc_span<double>(nbfcontinua);
     auto allcont_element = MPI_shared_malloc_span<int>(nbfcontinua);
@@ -919,7 +916,8 @@ void setup_phixs_list() {
 
     setup_photoion_luts();
   }
-  printlnlog("[info] bound-free estimators track bfestimcount {} photoionisation transitions", globals::bfestimcount);
+  printlnlog("[info] bound-free estimators track bfestimcount {} photoionisation transitions",
+             globals::bfestim_nu_edge.size());
 }
 
 void read_autoion_data() {
