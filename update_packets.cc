@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <span>
+#include <tuple>
 
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
@@ -300,25 +301,7 @@ auto std_compare_packets_bymodelgriddensity(const Packet& p1, const Packet& p2) 
   const auto rho1 = mgi1 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi1)) : 0.0;
   const auto rho2 = mgi2 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi2)) : 0.0;
 
-  if (rho1 > rho2) {
-    return true;
-  }
-
-  if (rho1 == rho2 && (mgi1 < mgi2)) {
-    return true;
-  }
-
-  // same cell, order by type
-  if ((mgi1 == mgi2) && (p1.type < p2.type)) {
-    return true;
-  }
-
-  // same cell and type, order by decreasing frequency
-  if ((mgi1 == mgi2) && (p1.type == p2.type) && (p1.nu_cmf > p2.nu_cmf)) {
-    return true;
-  }
-
-  return false;
+  return std::tie(rho2, mgi1, p1.type, p2.nu_cmf) < std::tie(rho1, mgi2, p2.type, p1.nu_cmf);
 }
 
 void do_cell_packet_updates(std::span<Packet> packets, const int nts, const double ts_end) {
