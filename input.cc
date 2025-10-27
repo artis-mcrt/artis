@@ -786,8 +786,8 @@ void setup_phixs_list() {
       }
     }
     assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
-    auto zip = std::views::zip(groundcont_nu_edge, groundcont_element, groundcont_ion);
-    std::ranges::sort(zip, [](const auto& lhs, const auto& rhs) { return std::get<0>(lhs) < std::get<0>(rhs); });
+    std::ranges::sort(std::views::zip(groundcont_nu_edge, groundcont_element, groundcont_ion),
+                      [](const auto& lhs, const auto& rhs) { return std::get<0>(lhs) < std::get<0>(rhs); });
   }
   MPI_Barrier(globals::mpi_comm_node);
   globals::groundcont_nu_edge = groundcont_nu_edge;
