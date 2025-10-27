@@ -111,7 +111,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_con
                         const double tau_rnd,  // random optical depth until which the packet travels
                         const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
                         const double nu_cmf_abort, const double dnu_on_dl, const double doppler,
-                        const TransitionLines& linelist) -> std::tuple<double, int, bool> {
+                        const globals::TransitionLines& linelist) -> std::tuple<double, int, bool> {
   auto pos = pkt.pos;
   auto nu_cmf = pkt.nu_cmf;
   auto e_cmf = pkt.e_cmf;

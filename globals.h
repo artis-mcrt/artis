@@ -15,92 +15,6 @@
 
 #include "artisoptions.h"
 
-struct TimeStep {
-  double start{0.};  // time at start of this timestep. [s]
-  double width{0.};  // Width of timestep. [s]
-  double mid{0.};  // Mid time in step - computed logarithmically. [s]
-  double gamma_dep{0.};  // cmf gamma ray energy deposition from packet trajectories [erg]
-  double gamma_dep_discrete{0.};  // cmf gamma ray energy deposition from absorption events [erg]
-  double positron_dep{0.};  // cmf positron energy deposition from packet trajectories [erg]
-  double positron_dep_discrete{0.};  // cmf positron energy deposition from absorption events [erg]
-  double positron_emission{0.};  // cmf positron KE energy generation [erg]
-  double eps_positron_ana_power{0.};  // cmf positron KE energy generation rate analytical [erg/s]
-  double electron_dep{0.};  // cmf electron energy deposition from packet trajectories [erg]
-  double electron_dep_discrete{0.};  // cmf electron energy deposition from absorption events [erg]
-  double electron_emission{0.};  // cmf electron KE energy generation [erg]
-  double eps_electron_ana_power{0.};  // cmf electron KE energy generation rate analytical [erg/s]
-  double alpha_dep{0.};  // cmf alpha energy deposition from packet trajectories [erg]
-  double alpha_dep_discrete{0.};  // cmf alpha energy deposition from absorption events [erg]
-  double alpha_emission{0.};  // cmf alpha KE energy generation [erg]
-  double eps_alpha_ana_power{0.};  // cmf alpha KE energy generation rate analytical [erg/s]
-  double gamma_emission{0.};  // gamma decay energy generation in this timestep [erg]
-  double qdot_betaminus{0.};  // energy generation from beta-minus decays (including neutrinos) [erg/s/g]
-  double qdot_alpha{0.};  // energy generation from alpha decays (including neutrinos) [erg/s/g]
-  double qdot_total{0.};  // energy generation from all decays (including neutrinos) [erg/s/g]
-  double cmf_lum{0.};  // cmf luminosity light curve [erg]
-  int pellet_decays{0};  // Number of pellets that decay in this time step.
-};
-
-struct BFListEntry {
-  int elementindex;
-  int ionindex;
-  int levelindex;
-  int phixstargetindex;
-};
-
-struct FullPhotoionTransition {
-  double nu_edge;
-  int element;
-  int ion;
-  int level;
-  int phixstargetindex;
-  int upperlevel;
-  int uniquelevelindex;
-  double probability;
-  int index_in_groundphixslist;
-  int bfestimindex;
-};
-
-struct GroundPhotoion {
-  double nu_edge;
-  int element;
-  int ion;
-};
-
-struct Ion {
-  int nlevels{0};  // Number of levels for this ionisation stage
-  int nlevels_excited_nlte{0};  // number of nlte levels for this ion
-  int allnltelevelsindexstart{-1};  // index into nlte_pops array for first excited nlte level
-  int nlevels_ionising{0};  // Number of levels which have a bf-continuum
-  int maxrecombininglevel{-1};  // level index of the highest level with a non-zero recombination rate
-  int nlevels_autoion{0};  // Number of levels that can autoionise
-  int nlevels_groundterm{0};
-  int coolingoffset{-1};
-  int ncoolingterms{0};
-  int uniquelevelindexstart{-1};  // index of the first level in the alllevels list
-  int groundcontindex{-1};
-  double ionpot{NAN};  // Ionisation threshold to the next ionstage
-};
-
-struct Element {
-  std::span<Ion> ions;  // subspan of the allions array for this element
-  int anumber{-1};  // Atomic number
-  int lowest_ionstage{-1};  // ionisation stage (charge - 1) of ion 0 for this element
-  int uniqueionindexstart{-1};  /// uniqueionindex index of the lowest ionisation stage of this element
-  float initstablemeannucmass = {0.};  // Atomic mass number in multiple of MH
-  bool has_nlte_levels{false};
-};
-
-struct TransitionLines {
-  std::span<const double> nu;  // Frequency of the line transition
-  std::span<const float> einstein_A;
-  std::span<const int> elementindex;  // It's a transition of element (not its atomic number,
-                                      // but the (x-1)th element included in the simulation.
-  std::span<const int> ionindex;  // The same for the elements ion
-  std::span<const int> upperlevelindex;  // And the participating upper
-  std::span<const int> lowerlevelindex;  // and lower levels
-};
-
 struct GSLIntegrationParas {
   double nu_edge;
   float T;
@@ -129,22 +43,56 @@ enum ma_action {
   MA_ACTION_COUNT = 9,
 };
 
-struct CellCache {
-  int nonemptymgi{-1};  // non-empty model grid index for this cache slot
-  std::vector<double> cooling_contrib;  // Cooling contributions by the different processes.
-  std::vector<double> alllevels_pops;
-  std::vector<std::array<double, MA_ACTION_COUNT>> alllevels_maprocessrates;  // rates for macroatom processes
-  std::vector<double> allmacroatomictransitions;  // cumulative macroatom transition rates for all levels
-  std::vector<double> allcont_departureratios;
-  std::vector<double> allcont_nnlevel;
-  std::vector<bool> allcont_keep;
-  double chi_ff_nnionpart{-1};
-  std::vector<double> allphixstargets_corrphotoioncoeff;
-  std::vector<double> allphixstargets_stimrecombcoeff;
+struct Ion {
+  int nlevels{0};  // Number of levels for this ionisation stage
+  int nlevels_excited_nlte{0};  // number of nlte levels for this ion
+  int allnltelevelsindexstart{-1};  // index into nlte_pops array for first excited nlte level
+  int nlevels_ionising{0};  // Number of levels which have a bf-continuum
+  int maxrecombininglevel{-1};  // level index of the highest level with a non-zero recombination rate
+  int nlevels_autoion{0};  // Number of levels that can autoionise
+  int nlevels_groundterm{0};
+  int coolingoffset{-1};
+  int ncoolingterms{0};
+  int uniquelevelindexstart{-1};  // index of the first level in the alllevels list
+  int groundcontindex{-1};
+  double ionpot{NAN};  // Ionisation threshold to the next ionstage
+};
+struct Element {
+  std::span<Ion> ions;  // subspan of the allions array for this element
+  int anumber{-1};  // Atomic number
+  int lowest_ionstage{-1};  // ionisation stage (charge - 1) of ion 0 for this element
+  int uniqueionindexstart{-1};  /// uniqueionindex index of the lowest ionisation stage of this element
+  float initstablemeannucmass = {0.};  // Atomic mass number in multiple of MH
+  bool has_nlte_levels{false};
 };
 
 namespace globals {
 
+struct TimeStep {
+  double start{0.};  // time at start of this timestep. [s]
+  double width{0.};  // Width of timestep. [s]
+  double mid{0.};  // Mid time in step - computed logarithmically. [s]
+  double gamma_dep{0.};  // cmf gamma ray energy deposition from packet trajectories [erg]
+  double gamma_dep_discrete{0.};  // cmf gamma ray energy deposition from absorption events [erg]
+  double positron_dep{0.};  // cmf positron energy deposition from packet trajectories [erg]
+  double positron_dep_discrete{0.};  // cmf positron energy deposition from absorption events [erg]
+  double positron_emission{0.};  // cmf positron KE energy generation [erg]
+  double eps_positron_ana_power{0.};  // cmf positron KE energy generation rate analytical [erg/s]
+  double electron_dep{0.};  // cmf electron energy deposition from packet trajectories [erg]
+  double electron_dep_discrete{0.};  // cmf electron energy deposition from absorption events [erg]
+  double electron_emission{0.};  // cmf electron KE energy generation [erg]
+  double eps_electron_ana_power{0.};  // cmf electron KE energy generation rate analytical [erg/s]
+  double alpha_dep{0.};  // cmf alpha energy deposition from packet trajectories [erg]
+  double alpha_dep_discrete{0.};  // cmf alpha energy deposition from absorption events [erg]
+  double alpha_emission{0.};  // cmf alpha KE energy generation [erg]
+  double eps_alpha_ana_power{0.};  // cmf alpha KE energy generation rate analytical [erg/s]
+  double gamma_emission{0.};  // gamma decay energy generation in this timestep [erg]
+  double qdot_betaminus{0.};  // energy generation from beta-minus decays (including neutrinos) [erg/s/g]
+  double qdot_alpha{0.};  // energy generation from alpha decays (including neutrinos) [erg/s/g]
+  double qdot_total{0.};  // energy generation from all decays (including neutrinos) [erg/s/g]
+  double cmf_lum{0.};  // cmf luminosity light curve [erg]
+  int pellet_decays{0};  // Number of pellets that decay in this time step.
+};
 inline std::vector<TimeStep> timesteps;
 
 // deposition estimators index by non-empty modelgridindex
@@ -272,23 +220,70 @@ inline AllLevels alllevels{};
 inline std::vector<Element> elements;
 inline std::span<Ion> allions;
 
-inline int nlines{-1};
+struct TransitionLines {
+  std::span<const double> nu;  // Frequency of the line transition
+  std::span<const float> einstein_A;
+  std::span<const int> elementindex;  // It's a transition of element (not its atomic number,
+                                      // but the (x-1)th element included in the simulation.
+  std::span<const int> ionindex;  // The same for the elements ion
+  std::span<const int> upperlevelindex;  // And the participating upper
+  std::span<const int> lowerlevelindex;  // and lower levels
+};
 inline TransitionLines linelist{};
+inline int nlines{-1};
+
+struct BFListEntry {
+  int elementindex;
+  int ionindex;
+  int levelindex;
+  int phixstargetindex;
+};
 inline std::vector<BFListEntry> bflist;
 
 inline std::vector<double> bfestim_nu_edge{};
-inline std::span<const double> allcont_nu_edge{};
+
+struct FullPhotoionTransition {
+  double nu_edge;
+  int element;
+  int ion;
+  int level;
+  int phixstargetindex;
+  int upperlevel;
+  int uniquelevelindex;
+  double probability;
+  int index_in_groundphixslist;
+  int bfestimindex;
+};
 inline std::span<const FullPhotoionTransition> allcont{};
+inline std::span<const double> allcont_nu_edge{};
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
+struct GroundPhotoion {
+  double nu_edge;
+  int element;
+  int ion;
+};
 inline std::vector<GroundPhotoion> groundcont{};
 
 inline int nbfcontinua{-1};  // number of bf-continua
 inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels
 
-inline int NPHIXSPOINTS{-1};
-inline double NPHIXSNUINCREMENT{-1};
+inline int NPHIXSPOINTS{-1};  // number of photoionisation cross-section points per level
+inline double NPHIXSNUINCREMENT{-1};  // frequency increment between points as a fraction of nu_edge
 
+struct CellCache {
+  int nonemptymgi{-1};  // non-empty model grid index for this cache slot
+  std::vector<double> cooling_contrib;  // Cooling contributions by the different processes.
+  std::vector<double> alllevels_pops;
+  std::vector<std::array<double, MA_ACTION_COUNT>> alllevels_maprocessrates;  // rates for macroatom processes
+  std::vector<double> allmacroatomictransitions;  // cumulative macroatom transition rates for all levels
+  std::vector<double> allcont_departureratios;
+  std::vector<double> allcont_nnlevel;
+  std::vector<bool> allcont_keep;
+  double chi_ff_nnionpart{-1};
+  std::vector<double> allphixstargets_corrphotoioncoeff;
+  std::vector<double> allphixstargets_stimrecombcoeff;
+};
 inline std::vector<CellCache> cellcache{};
 
 inline MPI_Comm mpi_comm_node{MPI_COMM_NULL};

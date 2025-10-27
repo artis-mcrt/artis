@@ -762,11 +762,11 @@ void setup_phixs_list() {
     }
   }
   assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
-  std::ranges::SORT_OR_STABLE_SORT(globals::groundcont, std::ranges::less{}, &GroundPhotoion::nu_edge);
+  std::ranges::SORT_OR_STABLE_SORT(globals::groundcont, std::ranges::less{}, &globals::GroundPhotoion::nu_edge);
 
-  auto allcont = MPI_shared_malloc_span<FullPhotoionTransition>(globals::nbfcontinua);
+  auto allcont = MPI_shared_malloc_span<globals::FullPhotoionTransition>(globals::nbfcontinua);
   printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",
-             globals::nbfcontinua * (sizeof(FullPhotoionTransition)) / 1024. / 1024.);
+             globals::nbfcontinua * (sizeof(globals::FullPhotoionTransition)) / 1024. / 1024.);
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -826,7 +826,7 @@ void setup_phixs_list() {
     // indices above were temporary only. continuum index should be to the sorted list
     MPI_Barrier(globals::mpi_comm_node);
     if (globals::rank_in_node == 0) {
-      std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &FullPhotoionTransition::nu_edge);
+      std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &globals::FullPhotoionTransition::nu_edge);
     }
     MPI_Barrier(globals::mpi_comm_node);
 
@@ -1515,7 +1515,7 @@ void setup_cellcache() {
 
   for (int cellcachenum = 0; cellcachenum < num_cellcache_slots; cellcachenum++) {
     auto mem_usage_cellcache = 0zU;
-    mem_usage_cellcache += sizeof(CellCache);
+    mem_usage_cellcache += sizeof(globals::CellCache);
 
     printlnlog("[info] input: initializing cellcache for thread {} ...", cellcachenum);
 
