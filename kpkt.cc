@@ -411,14 +411,13 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   stats::increment(stats::COUNTER_INTERACTIONS);
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
-  const auto nincludedions = get_includedions();
   const std::span<const double> ion_cooling_contribs_thiscell = get_cell_ion_cooling_contribs(nonemptymgi);
   const double rndcool_ion = rng_uniform() * ion_cooling_contribs_thiscell.back();
 
   // Randomly select the occurring cooling process
   const int uniqueionindex = static_cast<int>(std::ranges::upper_bound(ion_cooling_contribs_thiscell, rndcool_ion) -
                                               ion_cooling_contribs_thiscell.begin());
-  assert_always(uniqueionindex < nincludedions);
+  assert_always(uniqueionindex < get_includedions());
   const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
 
   const int ilow = get_coolinglistoffset(element, ion);
