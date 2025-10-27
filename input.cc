@@ -797,18 +797,18 @@ void setup_phixs_list() {
   auto allcont = MPI_shared_malloc_span<TempPhotoionTransitionInput>(globals::nbfcontinua);
   printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",
              globals::nbfcontinua * (sizeof(TempPhotoionTransitionInput)) / 1024. / 1024.);
-  auto groundcont_zip =
-      std::views::zip(globals::groundcont_nu_edge, globals::groundcont_element, globals::groundcont_ion);
+  const auto groundcontindices = std::ranges::iota_view{0, globals::nbfcontinua_ground};
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions - 1; ion++) {
-      int groundcontindex = static_cast<int>(std::ranges::find_if(groundcont_zip,
-                                                                  [=](const auto& groundcont) {
-                                                                    const auto [_, thiselem, thision] = groundcont;
-                                                                    return (thiselem == element) && (thision == ion);
-                                                                  }) -
-                                             groundcont_zip.begin());
+      int groundcontindex =
+          static_cast<int>(std::ranges::find_if(groundcontindices,
+                                                [=](const auto& i) {
+                                                  return (globals::groundcont_element[i] == element) &&
+                                                         (globals::groundcont_ion[i] == ion);
+                                                }) -
+                           groundcontindices.begin());
       if (groundcontindex >= globals::nbfcontinua_ground) {
         groundcontindex = -1;
       }
