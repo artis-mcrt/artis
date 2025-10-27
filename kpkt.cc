@@ -415,7 +415,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const double rndcool_ion = rng_uniform() * ion_cooling_contribs_thiscell.back();
 
   // Randomly select the occurring cooling process
-  const int uniqueionindex = static_cast<int>(std::ranges::upper_bound(ion_cooling_contribs_thiscell, rndcool_ion) -
+  const int uniqueionindex = static_cast<int>(std::ranges::lower_bound(ion_cooling_contribs_thiscell, rndcool_ion) -
                                               ion_cooling_contribs_thiscell.begin());
   assert_always(uniqueionindex < get_includedions());
   const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
