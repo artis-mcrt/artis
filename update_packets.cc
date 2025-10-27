@@ -281,7 +281,7 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
   }
 }
 
-auto std_compare_packets_bymodelgriddensity(const Packet& p1, const Packet& p2) -> bool {
+auto compare_packet_order(const Packet& p1, const Packet& p2) -> bool {
   // return true if packet p1 goes before p2
 
   // move escaped packets to the end of the list for better performance
@@ -347,7 +347,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
   while (!timestepcomplete) {
     const auto sys_time_start_pass = std::time(nullptr);
 
-    std::ranges::SORT_OR_STABLE_SORT(packets, std_compare_packets_bymodelgriddensity);
+    std::ranges::SORT_OR_STABLE_SORT(packets, compare_packet_order);
 
     const int count_pktupdates = static_cast<int>(std::ranges::count_if(
         packets, [ts_end](const auto& pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
