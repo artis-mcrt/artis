@@ -541,8 +541,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     // cooling rates calculation can be skipped for thick cells
     // flag with negative numbers to indicate that the rates are invalid
     const auto ioncooling_contribs = kpkt::get_cell_ion_cooling_contribs(nonemptymgi);
-    ioncooling_contribs[0] = -1.;
-    ioncooling_contribs.back() = -1.;
+    std::ranges::fill(ioncooling_contribs, -1.);
   } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial) {
     // cooling rates were read from the gridsave file for this timestep
     // make sure they are valid
