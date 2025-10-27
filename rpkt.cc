@@ -568,7 +568,7 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
-      const double nu_edge = globals::groundcont[i].nu_edge;
+      const double nu_edge = globals::groundcont_nu_edge[i];
       if (nu_cmf <= nu_edge) {
         // because groundcont is sorted by nu_edge descending, nu < nu_edge for all remaining items
         return;

@@ -255,12 +255,9 @@ inline std::span<const int> allcont_index_in_groundphixslist{};
 inline std::span<const int> allcont_bfestimindex{};
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-struct GroundPhotoion {
-  double nu_edge;
-  int element;
-  int ion;
-};
-inline std::vector<GroundPhotoion> groundcont{};
+inline std::span<const double> groundcont_nu_edge{};
+inline std::span<const int> groundcont_element{};
+inline std::span<const int> groundcont_ion{};
 
 inline int nbfcontinua{-1};  // number of bf-continua
 inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels
