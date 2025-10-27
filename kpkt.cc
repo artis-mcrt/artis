@@ -266,11 +266,11 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
   double C_fb_all = 0.;  // free-bound creation of rpkt
   double C_exc_all = 0.;  // collisional excitation of macroatoms
   double C_ionisation_all = 0.;  // collisional ionisation of macroatoms
-
-  const auto cellioncontribs = grid::ion_cooling_contribs_allcells.subspan(
-      (static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()), get_includedions());
+  const auto nincludedions = get_includedions();
+  const auto cellioncontribs =
+      grid::ion_cooling_contribs_allcells.subspan((static_cast<ptrdiff_t>(nonemptymgi) * nincludedions), nincludedions);
   double cumulative_cooling = 0.;
-  for (int allionindex = 0; allionindex < get_includedions(); allionindex++) {
+  for (int allionindex = 0; allionindex < nincludedions; allionindex++) {
     const auto [element, ion] = get_ionfromuniqueionindex(allionindex);
     cumulative_cooling += calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, -1, cellcacheslotid, &C_ff_all,
                                                              &C_fb_all, &C_exc_all, &C_ionisation_all);
@@ -417,28 +417,16 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
   assert_always(grid::totalcooling_allcells[nonemptymgi] > 0.);
+  const auto nincludedions = get_includedions();
   const double rndcool_ion = rng_uniform() * grid::totalcooling_allcells[nonemptymgi];
-  const std::span<const double> ion_cooling_contribs_thiscell = grid::ion_cooling_contribs_allcells.subspan(
-      (static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()), get_includedions());
+  const std::span<const double> ion_cooling_contribs_thiscell =
+      grid::ion_cooling_contribs_allcells.subspan((static_cast<ptrdiff_t>(nonemptymgi) * nincludedions), nincludedions);
 
   // Randomly select the occurring cooling process
-  double coolingsum = 0.;
-  int element = -1;
-  int ion = -1;
-  for (element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (ion = 0; ion < nions; ion++) {
-      const int uniqueionindex = get_uniqueionindex(element, ion);
-      coolingsum = ion_cooling_contribs_thiscell[uniqueionindex];
-      if (coolingsum > rndcool_ion) {
-        break;
-      }
-    }
-    if (coolingsum > rndcool_ion) {
-      break;
-    }
-  }
-  assert_always(coolingsum > rndcool_ion);
+  const int uniqueionindex = static_cast<int>(std::ranges::upper_bound(ion_cooling_contribs_thiscell, rndcool_ion) -
+                                              ion_cooling_contribs_thiscell.begin());
+  assert_always(uniqueionindex < nincludedions);
+  const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
 
   const int ilow = get_coolinglistoffset(element, ion);
   const int ncoolingterms_ion = get_ncoolingterms_ion(element, ion);
