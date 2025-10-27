@@ -94,6 +94,19 @@ struct TempLineTransitionInput {
   int lowerlevelindex;
 };
 
+struct TempPhotoionTransitionInput {
+  double nu_edge;
+  int element;
+  int ion;
+  int level;
+  int phixstargetindex;
+  int upperlevel;
+  int uniquelevelindex;
+  double probability;
+  int index_in_groundphixslist;
+  int bfestimindex;
+};
+
 constexpr std::array<std::string_view, 24> inputlinecomments = {
     " 0: pre_zseed: specific random number seed if > 0 or random if negative",
     " 1: ntimesteps: number of timesteps",
@@ -764,9 +777,9 @@ void setup_phixs_list() {
   assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
   std::ranges::SORT_OR_STABLE_SORT(globals::groundcont, std::ranges::less{}, &globals::GroundPhotoion::nu_edge);
 
-  auto allcont = MPI_shared_malloc_span<globals::FullPhotoionTransition>(globals::nbfcontinua);
+  auto allcont = MPI_shared_malloc_span<TempPhotoionTransitionInput>(globals::nbfcontinua);
   printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",
-             globals::nbfcontinua * (sizeof(globals::FullPhotoionTransition)) / 1024. / 1024.);
+             globals::nbfcontinua * (sizeof(TempPhotoionTransitionInput)) / 1024. / 1024.);
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -826,7 +839,7 @@ void setup_phixs_list() {
     // indices above were temporary only. continuum index should be to the sorted list
     MPI_Barrier(globals::mpi_comm_node);
     if (globals::rank_in_node == 0) {
-      std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &globals::FullPhotoionTransition::nu_edge);
+      std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &TempPhotoionTransitionInput::nu_edge);
     }
     MPI_Barrier(globals::mpi_comm_node);
 
@@ -844,17 +857,45 @@ void setup_phixs_list() {
     }
 
     MPI_Barrier(globals::mpi_comm_node);
-    globals::allcont = allcont;
 
     globals::bfestim_nu_edge.shrink_to_fit();
     assert_always(globals::bfestimcount == std::ssize(globals::bfestim_nu_edge));
 
     auto allcont_nu_edge = MPI_shared_malloc_span<double>(nbfcontinua);
-    for (int i = 0; i < nbfcontinua; i++) {
-      allcont_nu_edge[i] = globals::allcont[i].nu_edge;
+    auto allcont_element = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_ion = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_level = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_phixstargetindex = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_upperlevel = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_uniquelevelindex = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_probability = MPI_shared_malloc_span<double>(nbfcontinua);
+    auto allcont_index_in_groundphixslist = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_bfestimindex = MPI_shared_malloc_span<int>(nbfcontinua);
+    if (globals::rank_in_node == 0) {
+      for (int i = 0; i < nbfcontinua; i++) {
+        allcont_nu_edge[i] = allcont[i].nu_edge;
+        allcont_element[i] = allcont[i].element;
+        allcont_ion[i] = allcont[i].ion;
+        allcont_level[i] = allcont[i].level;
+        allcont_phixstargetindex[i] = allcont[i].phixstargetindex;
+        allcont_upperlevel[i] = allcont[i].upperlevel;
+        allcont_uniquelevelindex[i] = allcont[i].uniquelevelindex;
+        allcont_probability[i] = allcont[i].probability;
+        allcont_index_in_groundphixslist[i] = allcont[i].index_in_groundphixslist;
+        allcont_bfestimindex[i] = allcont[i].bfestimindex;
+      }
     }
     MPI_Barrier(globals::mpi_comm_node);
     globals::allcont_nu_edge = allcont_nu_edge;
+    globals::allcont_element = allcont_element;
+    globals::allcont_ion = allcont_ion;
+    globals::allcont_level = allcont_level;
+    globals::allcont_phixstargetindex = allcont_phixstargetindex;
+    globals::allcont_upperlevel = allcont_upperlevel;
+    globals::allcont_uniquelevelindex = allcont_uniquelevelindex;
+    globals::allcont_probability = allcont_probability;
+    globals::allcont_index_in_groundphixslist = allcont_index_in_groundphixslist;
+    globals::allcont_bfestimindex = allcont_bfestimindex;
 
     setup_photoion_luts();
   }

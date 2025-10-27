@@ -492,11 +492,11 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
 #pragma clang unsafe_buffer_usage end
     assert_always(allcontindex < phixslist.allcontend);
 
-    const double nu_edge = globals::allcont[allcontindex].nu_edge;
-    const int element = globals::allcont[allcontindex].element;
-    const int ion = globals::allcont[allcontindex].ion;
-    const int level = globals::allcont[allcontindex].level;
-    const int phixstargetindex = globals::allcont[allcontindex].phixstargetindex;
+    const double nu_edge = globals::allcont_nu_edge[allcontindex];
+    const int element = globals::allcont_element[allcontindex];
+    const int ion = globals::allcont_ion[allcontindex];
+    const int level = globals::allcont_level[allcontindex];
+    const int phixstargetindex = globals::allcont_phixstargetindex[allcontindex];
 
     // decide whether we go to ionisation energy or to the thermal pool
     if (rng_uniform() < nu_edge / nu) {
@@ -789,8 +789,6 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   assert_testmodeonly(allcontend <= globals::nbfcontinua);
   assert_testmodeonly(allcontbegin <= allcontend);
 
-  const auto allcont = globals::allcont;
-
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     phixslist.allcontbegin = allcontbegin;
     phixslist.allcontend = allcontend;
@@ -805,12 +803,23 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
         globals::bfestim_nu_edge.cbegin();
   }
 
+  // const ref these so that the compiler knows they don't change in the loop (and shortens the names)
+  const auto& allcont_element = globals::allcont_element;
+  const auto& allcont_ion = globals::allcont_ion;
+  const auto& allcont_level = globals::allcont_level;
+  const auto& allcont_bfestimindex = globals::allcont_bfestimindex;
+  const auto& allcont_upperlevel = globals::allcont_upperlevel;
+  const auto& allcont_uniquelevelindex = globals::allcont_uniquelevelindex;
+  const auto& allcont_index_in_groundphixslist = globals::allcont_index_in_groundphixslist;
+  const auto& allcont_probability = globals::allcont_probability;
+  const auto& allcont_phixstargetindex = globals::allcont_phixstargetindex;
+
   for (i = allcontbegin; i < allcontend; i++) {
-    const int element = allcont[i].element;
-    const int ion = allcont[i].ion;
-    const int level = allcont[i].level;
+    const int element = allcont_element[i];
+    const int ion = allcont_ion[i];
+    const int level = allcont_level[i];
     const auto bfestimindex =
-        (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) ? allcont[i].bfestimindex : -1;
+        (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) ? allcont_bfestimindex[i] : -1;
     double sigma_contr = 0.;
 
     // The bf process happens only if the current cell contains
@@ -824,15 +833,15 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
                                                            : calculate_levelpop(nonemptymgi, element, ion, level);
 
       if (USECELLHISTANDUPDATEPHIXSLIST || nnlevel > 0) {
-        const double nu_edge = allcont[i].nu_edge;
+        const double nu_edge = allcont_nu_edge[i];
         const double sigma_bf =
-            photoionisation_crosssection_fromtable(get_phixs_table(allcont[i].uniquelevelindex), nu_edge, nu);
+            photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, nu);
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         if constexpr (!SEPARATE_STIMRECOMB) {
           double departure_ratio = globals::cellcache[cellcacheslotid].allcont_departureratios[i];
           if (!USECELLHISTANDUPDATEPHIXSLIST || departure_ratio < 0) {
-            const int upper = allcont[i].upperlevel;
+            const int upper = allcont_upperlevel[i];
             const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
                                                ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upper)
                                                : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
@@ -848,11 +857,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
           corrfactor = std::max(0., 1 - stimfactor);  // photoionisation minus stimulated recombination
         }
 
-        sigma_contr = sigma_bf * allcont[i].probability * corrfactor;
+        sigma_contr = sigma_bf * allcont_probability[i] * corrfactor;
 
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-          if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && level == 0 && allcont[i].phixstargetindex == 0) {
-            phixslist.groundcont_gamma_contr[allcont[i].index_in_groundphixslist] = sigma_contr;
+          if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && level == 0 && allcont_phixstargetindex[i] == 0) {
+            phixslist.groundcont_gamma_contr[allcont_index_in_groundphixslist[i]] = sigma_contr;
           }
         }
 

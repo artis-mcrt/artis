@@ -426,14 +426,14 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
 auto get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
   // simple linear search seems to be faster than the binary search
   // possibly because lower frequency transitions near start of list are more likely to be called?
-  const auto bfcontindex =
-      static_cast<int>(std::find_if(globals::allcont.begin(), globals::allcont.begin() + globals::nbfcontinua,
-                                    [=](const auto& bf) {
-                                      return (bf.element == element) && (bf.ion == lowerion) && (bf.level == lower) &&
-                                             (bf.phixstargetindex == phixstargetindex);
-                                    }) -
-                       globals::allcont.begin());
-
+  int bfcontindex = 0;
+  for (; bfcontindex < globals::nbfcontinua; bfcontindex++) {
+    if ((globals::allcont_element[bfcontindex] == element) && (globals::allcont_ion[bfcontindex] == lowerion) &&
+        (globals::allcont_level[bfcontindex] == lower) &&
+        (globals::allcont_phixstargetindex[bfcontindex] == phixstargetindex)) {
+      break;
+    }
+  }
   if (bfcontindex < globals::nbfcontinua) {
     return bfcontindex;
   }
@@ -958,7 +958,7 @@ __host__ __device__ auto get_bfrate_estimator(const int element, const int lower
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {
-      const auto bfestimindex = globals::allcont[allcontindex].bfestimindex;
+      const auto bfestimindex = globals::allcont_bfestimindex[allcontindex];
       if (bfestimindex >= 0) {
         return prev_bfrate_normed[(nonemptymgi * globals::bfestimcount) + bfestimindex];
       }

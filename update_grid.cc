@@ -717,13 +717,10 @@ void cellcache_change_cell(const int nonemptymgi) {
 
     const auto nnetot = grid::get_nnetot(nonemptymgi);
     for (int i = 0; i < globals::nbfcontinua; i++) {
-      const int element = globals::allcont[i].element;
-      const int ion = globals::allcont[i].ion;
-      const int level = globals::allcont[i].level;
-      const auto uniquelevelindex = globals::allcont[i].uniquelevelindex;
-      const auto nnlevel = globals::cellcache[cellcacheslotid].alllevels_pops[uniquelevelindex];
+      const auto nnlevel = globals::cellcache[cellcacheslotid].alllevels_pops[globals::allcont_uniquelevelindex[i]];
       cacheslot.allcont_nnlevel[i] = nnlevel;
-      cacheslot.allcont_keep[i] = nnlevel > 0 && keep_this_cont(element, ion, level, nonemptymgi, nnetot);
+      cacheslot.allcont_keep[i] = nnlevel > 0 && keep_this_cont(globals::allcont_element[i], globals::allcont_ion[i],
+                                                                globals::allcont_level[i], nonemptymgi, nnetot);
     }
   }
 }
