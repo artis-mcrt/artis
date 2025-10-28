@@ -249,9 +249,7 @@ void printout_nuclidemeanlife(const int z, const int a) {
 
 // a decaypath's energy is the decay energy of the last nuclide and decaytype in the chain
 [[nodiscard]] auto get_decaypath_lastnucdecayenergy(const DecayPath& dpath) -> double {
-  const int nucindex_end = dpath.nucindex.back();
-  const int decaytype_end = dpath.decaytypes.back();
-  return nucdecayenergy(nucindex_end, decaytype_end);
+  return nucdecayenergy(dpath.nucindex.back(), dpath.decaytypes.back());
 }
 
 [[nodiscard]] auto get_decaypath_lastnucdecayenergy(const int decaypathindex) -> double {
@@ -1140,7 +1138,7 @@ auto get_global_etot_tmodel_tinf() -> double {
     const int z_top = decaypaths[decaypathindex].z[0];
     const int a_top = decaypaths[decaypathindex].a[0];
 
-    etot_tinf += (decaypaths[decaypathindex].branchproduct * grid::get_totmassradionuclide_tmodel(z_top, a_top) /
+    etot_tinf += (decaypaths[decaypathindex].branchproduct * grid::get_totmassnuclide_tmodel(z_top, a_top) /
                   nucmass(z_top, a_top) * get_decaypath_lastnucdecayenergy(decaypathindex));
   }
   assert_always(std::isfinite(etot_tinf));
@@ -1171,7 +1169,7 @@ void update_abundances(const int nonemptymgi, const double t_current) {
           if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
               get_nuc_decaybranchprob(nucindex, decaytype) > 0.) {
             a_isotopes.insert(daughter_a);
-            // nuclide decays into correct atomic number but outside of the radionuclide list
+            // nuclide decays into correct atomic number but outside of the nuclide list
             // note: there could also be stable isotopes of this element included in stable_initabund(z), but
             // here we only count the contribution from decays
           }
@@ -1226,7 +1224,7 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
         if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
             get_nuc_decaybranchprob(nucindex, decaytype) > 0.) {
           a_isotopes.insert(nuc_a);
-          // nuclide decays into correct atomic number but outside of the radionuclide list
+          // nuclide decays into correct atomic number but outside of the nuclide list
         }
       }
     }

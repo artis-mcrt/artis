@@ -72,7 +72,7 @@ std::vector<int> modelgrid_numpropcells;
 std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
 
-std::vector<double> totmassradionuclide{};  // total mass of each radionuclide in the ejecta
+std::vector<double> totmassnuclide{};  // total mass of each nuclide in the ejecta
 
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
 MPI_Win win_initnucmassfrac_allcells = MPI_WIN_NULL;
@@ -800,12 +800,12 @@ auto get_inputcellvolume(const int mgi) -> double {
   return NAN;
 }
 
-void calc_modelinit_totmassradionuclides() {
+void calc_modelinit_totmassnuclides() {
   mtot_input = 0.;
   mfegroup = 0.;
 
-  resize_exactly(totmassradionuclide, decay::get_num_nuclides());
-  std::ranges::fill(totmassradionuclide, 0.);
+  resize_exactly(totmassnuclide, decay::get_num_nuclides());
+  std::ranges::fill(totmassnuclide, 0.);
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     const double mass_in_shell = get_rho_tmin(mgi) * get_inputcellvolume(mgi);
@@ -813,7 +813,7 @@ void calc_modelinit_totmassradionuclides() {
       mtot_input += mass_in_shell;
 
       for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-        totmassradionuclide[nucindex] += mass_in_shell * get_modelinitnucmassfrac(mgi, nucindex);
+        totmassnuclide[nucindex] += mass_in_shell * get_modelinitnucmassfrac(mgi, nucindex);
       }
 
       mfegroup += mass_in_shell * get_ffegrp(mgi);
@@ -2105,15 +2105,15 @@ void read_ejecta_model() {
   printlnlog("tmin {:g} [s] = {:.2f} [d]", globals::tmin, globals::tmin / 86400.);
   printlnlog("rmax {:g} [cm] (at t=tmin)", globals::rmax);
 
-  calc_modelinit_totmassradionuclides();
+  calc_modelinit_totmassnuclides();
 
   printlnlog("Total input model mass: {:9.3e} [Msun]", mtot_input / MSUN);
   printlnlog("Nuclide masses at t=t_model_init [Msun]:");
-  printlnlog("  56Ni: {:9.3e}  56Co: {:9.3e}  52Fe: {:9.3e}  48Cr: {:9.3e}",
-             get_totmassradionuclide_tmodel(28, 56) / MSUN, get_totmassradionuclide_tmodel(27, 56) / MSUN,
-             get_totmassradionuclide_tmodel(26, 52) / MSUN, get_totmassradionuclide_tmodel(24, 48) / MSUN);
+  printlnlog("  56Ni: {:9.3e}  56Co: {:9.3e}  52Fe: {:9.3e}  48Cr: {:9.3e}", get_totmassnuclide_tmodel(28, 56) / MSUN,
+             get_totmassnuclide_tmodel(27, 56) / MSUN, get_totmassnuclide_tmodel(26, 52) / MSUN,
+             get_totmassnuclide_tmodel(24, 48) / MSUN);
   printlnlog("  Fe-group: {:9.3e}  57Ni: {:9.3e}  57Co: {:9.3e}", mfegroup / MSUN,
-             get_totmassradionuclide_tmodel(28, 57) / MSUN, get_totmassradionuclide_tmodel(27, 57) / MSUN);
+             get_totmassnuclide_tmodel(28, 57) / MSUN, get_totmassnuclide_tmodel(27, 57) / MSUN);
 
   read_possible_yefile();
 }
@@ -2286,19 +2286,19 @@ void init_grid(const int my_rank) {
   // the model cells that are not associated with any propagation cells
   if (GRID_TYPE == GridType::CARTESIAN3D && get_model_type() == GridType::SPHERICAL1D && globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-      if (totmassradionuclide[nucindex] <= 0) {
+      if (totmassnuclide[nucindex] <= 0) {
         continue;
       }
 
-      double totmassradionuclide_actual = 0.;
+      double totmassnuclide_actual = 0.;
       for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
         const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-        totmassradionuclide_actual +=
+        totmassnuclide_actual +=
             get_modelinitnucmassfrac(mgi, nucindex) * get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi);
       }
 
-      if (totmassradionuclide_actual > 0.) {
-        const double ratio = totmassradionuclide[nucindex] / totmassradionuclide_actual;
+      if (totmassnuclide_actual > 0.) {
+        const double ratio = totmassnuclide[nucindex] / totmassnuclide_actual;
         for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
           const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
           const double prev_abund = get_modelinitnucmassfrac(mgi, nucindex);
@@ -2321,9 +2321,7 @@ void init_grid(const int my_rank) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-auto get_totmassradionuclide_tmodel(const int z, const int a) -> double {
-  return totmassradionuclide[decay::get_nucindex(z, a)];
-}
+auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totmassnuclide[decay::get_nucindex(z, a)]; }
 
 // identify the cell index from an (x,y,z) position and a time.
 [[nodiscard]] __host__ __device__ auto get_cellindex_from_pos(const Vec3d& pos, const double time) -> int {
