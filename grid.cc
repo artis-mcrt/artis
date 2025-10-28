@@ -44,14 +44,6 @@ namespace grid {
 
 namespace {
 
-struct ModelGridCellInput {
-  float rhoinit = -1.;
-  float ffegrp = 0.;
-  float initial_radial_pos_sum = 0.;
-  float initelectronfrac = 0.4;  // Ye: electrons (or protons) per nucleon
-  float initenergyq = 0.;  // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
-};
-
 std::array<int, 3> ncoordgrid{};  // propagation grid dimensions
 
 GridType model_type = GridType::CARTESIAN3D;
@@ -89,10 +81,19 @@ std::span<float> initnucmassfrac_allcells{};
 std::span<float> initmassfracuntrackedstable_allcells{};
 std::span<int> elements_uppermost_ion_allcells{};  // Highest ion index that has a significant population
 
+// indexed by global rank
 std::vector<int> ranks_nstart;
 std::vector<int> ranks_nstart_nonempty;
 std::vector<int> ranks_ndo;
 std::vector<int> ranks_ndo_nonempty;
+
+struct ModelGridCellInput {
+  float rhoinit = -1.;
+  float ffegrp = 0.;
+  float initial_radial_pos_sum = 0.;
+  float initelectronfrac = 0.4;  // Ye: electrons (or protons) per nucleon
+  float initenergyq = 0.;  // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
+};
 std::span<ModelGridCellInput> modelgrid_input{};
 
 enum class BoundaryType : std::uint8_t { INNER, OUTER };

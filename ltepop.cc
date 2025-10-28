@@ -30,22 +30,6 @@ struct nneSolutionParas {
   bool force_saha;
 };
 
-[[gnu::pure]] [[nodiscard]] auto interpolate_ions_spontrecombcoeff(const int uniqueionindex, const double T) -> double {
-  const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
-  assert_testmodeonly(lowerindex >= 0);
-  if (lowerindex < TABLESIZE - 1) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
-
-    const double f_upper = globals::ion_alpha_sp[(uniqueionindex * TABLESIZE) + upperindex];
-    const double f_lower = globals::ion_alpha_sp[(uniqueionindex * TABLESIZE) + lowerindex];
-
-    return f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower));
-  }
-  return globals::ion_alpha_sp[(uniqueionindex * TABLESIZE) + TABLESIZE - 1];
-}
-
 // use Saha equation for LTE ionisation balance
 [[gnu::pure]] [[nodiscard]] auto phi_saha(const int element, const int ion, const int nonemptymgi) -> double {
   const int uniqueionindex = get_uniqueionindex(element, ion);
@@ -83,7 +67,7 @@ struct nneSolutionParas {
   // Convert Gamma to the photoionisation rate per ion pop
   const double Gamma_ion = Gamma_groundlevel * stat_weight(element, ion, 0) / partfunc_ion;
 
-  const double Alpha_sp = interpolate_ions_spontrecombcoeff(uniqueionindex, T_e);
+  const double Alpha_sp = get_ion_spontrecombcoeff(uniqueionindex, T_e);
   constexpr bool include_collisional_recombination = false;
   const double Col_rec = include_collisional_recombination
                              ? calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion + 1, false, true, false, false)

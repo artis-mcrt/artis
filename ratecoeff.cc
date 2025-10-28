@@ -14,8 +14,6 @@
 #include <string>
 #include <tuple>
 
-#include "input.h"
-
 #pragma clang unsafe_buffer_usage begin
 #include <gsl/gsl_errno.h>
 #if !USE_SIMPSON_INTEGRATOR
@@ -29,6 +27,7 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
+#include "input.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "md5.h"
@@ -39,11 +38,14 @@
 
 namespace {
 
-std::span<double> spontrecombcoeffs{};
+double T_step_log{};
 
-// for USE_LUT_PHOTOION = true
-std::span<double> corrphotoioncoeffs{};
+std::span<const float> ion_alpha_sp;  // size is nincludedions * TABLESIZE
+                                      //
 
+// the following spans are indexed by get_bflutindex()
+std::span<double> spontrecombcoeffs{};  // indexed by get_bflutindex()
+std::span<double> corrphotoioncoeffs{};  // for USE_LUT_PHOTOION = true
 std::span<double> bfcooling_coeffs{};
 std::span<double> bfheating_coeffs{};  // for USE_LUT_BFHEATING = true
 
@@ -659,27 +661,32 @@ void read_recombrate_file() {
 }
 
 void precalculate_ion_alpha_sp() {
-  globals::ion_alpha_sp.resize(get_includedions() * TABLESIZE);
-  for (int iter = 0; iter < TABLESIZE; iter++) {
-    const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element) - 1;
-      for (int ion = 0; ion < nions; ion++) {
-        const auto uniqueionindex = get_uniqueionindex(element, ion);
-        const int nionisinglevels = get_nlevels_ionising(element, ion);
-        double zeta = 0.;
-        for (int level = 0; level < nionisinglevels; level++) {
-          const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-          const auto nphixstargets = get_nphixstargets(uniquelevelindex);
-          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            const double zeta_level = get_spontrecombcoeff(uniquelevelindex, phixstargetindex, T_e);
-            zeta += zeta_level;
+  const auto temp_ion_alpha_sp = MPI_shared_malloc_span<float>(get_includedions() * TABLESIZE, 0.);
+  if (globals::rank_in_node == 0) {
+    for (int iter = 0; iter < TABLESIZE; iter++) {
+      const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
+      for (int element = 0; element < get_nelements(); element++) {
+        const int nions = get_nions(element) - 1;
+        for (int ion = 0; ion < nions; ion++) {
+          const auto uniqueionindex = get_uniqueionindex(element, ion);
+          const int nionisinglevels = get_nlevels_ionising(element, ion);
+          double zeta = 0.;
+          for (int level = 0; level < nionisinglevels; level++) {
+            const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+            const auto nphixstargets = get_nphixstargets(uniquelevelindex);
+            for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+              const double zeta_level = get_spontrecombcoeff(uniquelevelindex, phixstargetindex, T_e);
+              zeta += zeta_level;
+            }
           }
+          temp_ion_alpha_sp[(uniqueionindex * TABLESIZE) + iter] = static_cast<float>(zeta);
         }
-        globals::ion_alpha_sp[(uniqueionindex * TABLESIZE) + iter] = static_cast<float>(zeta);
       }
     }
   }
+  assert_always(ion_alpha_sp.empty());
+  ion_alpha_sp = temp_ion_alpha_sp;
+  MPI_Barrier(globals::mpi_comm_node);
 }
 
 auto integrand_stimrecombination_custom_radfield(const double nu, void* const voidparas) -> double {
@@ -979,24 +986,43 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
   return nu_lower;
 }
 
-// Return the rate coefficient for spontaneous recombination.
-__host__ __device__ auto get_spontrecombcoeff(const int uniquelevelindex, const int phixstargetindex, float T_e)
+// Get an ion's rate coefficient for spontaneous recombination in LTE
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_ion_spontrecombcoeff(const int uniqueionindex, const float T_e)
     -> double {
-  double Alpha_sp{NAN};
+  const int lowerindex = std::floor(std::log(T_e / MINTEMP) / T_step_log);
+  assert_testmodeonly(lowerindex >= 0);
+  if (lowerindex < (TABLESIZE - 1)) {
+    const int upperindex = lowerindex + 1;
+    const double T_lower = MINTEMP * std::exp(lowerindex * T_step_log);
+    const double T_upper = MINTEMP * std::exp(upperindex * T_step_log);
+
+    const double f_upper = ion_alpha_sp[(uniqueionindex * TABLESIZE) + upperindex];
+    const double f_lower = ion_alpha_sp[(uniqueionindex * TABLESIZE) + lowerindex];
+
+    return f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
+  }
+  return ion_alpha_sp[(uniqueionindex * TABLESIZE) + TABLESIZE - 1];
+}
+
+// Return a level's rate coefficient for spontaneous recombination in LTE
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_spontrecombcoeff(const int uniquelevelindex,
+                                                                          const int phixstargetindex, float T_e)
+    -> double {
+  double alpha_sp{NAN};
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   assert_always(lowerindex >= 0);
-  if (lowerindex < TABLESIZE - 1) {
+  if (lowerindex < (TABLESIZE - 1)) {
     const int upperindex = lowerindex + 1;
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
     const double f_upper = spontrecombcoeffs[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
     const double f_lower = spontrecombcoeffs[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
-    Alpha_sp = (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower)));
+    alpha_sp = (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower)));
   } else {
-    Alpha_sp = spontrecombcoeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
+    alpha_sp = spontrecombcoeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
   }
-  return Alpha_sp;
+  return alpha_sp;
 }
 
 // multiply by upper ion population (or ground population if per_groundmultipletpop is true) and nne to get a rate

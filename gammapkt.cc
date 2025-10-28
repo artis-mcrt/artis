@@ -53,12 +53,6 @@ constexpr int numb_xcom_elements = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
 
 std::array<std::vector<el_photoion_data>, numb_xcom_elements> photoion_data;
 
-struct NucGammaLine {
-  int nucindex;  // is it a Ni56, Co56, a fake line, etc
-  int nucgammaindex;  // which of the lines of that nuclide is it
-  double energy;  // in erg
-};
-
 void read_gamma_spectrum(const int nucindex, const std::string& filename) {
   // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
   printlog("reading gamma spectrum for Z={} A={} from {}...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
@@ -161,6 +155,11 @@ void init_gamma_linelist() {
       gamma_spectra, 0, [](const ptrdiff_t sum, const auto& lines) { return sum + std::ssize(lines); });
   printlnlog("total gamma-ray lines {}", total_lines);
 
+  struct NucGammaLine {
+    int nucindex;  // is it a Ni56, Co56, a fake line, etc
+    int nucgammaindex;  // which of the lines of that nuclide is it
+    double energy;  // in erg
+  };
   std::vector<NucGammaLine> allnuc_gamma_line_list;
   allnuc_gamma_line_list.reserve(total_lines);
 

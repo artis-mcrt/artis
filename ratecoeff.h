@@ -5,6 +5,7 @@
 
 #include "globals.h"
 #include "sn3d.h"
+
 #if !USE_SIMPSON_INTEGRATOR
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_math.h>
@@ -41,7 +42,7 @@ void setup_photoion_luts();
                                             bool collisional_not_radiative, bool lower_superlevel_only,
                                             bool per_groundmultipletpop) -> double;
 
-inline double T_step_log{};
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_ion_spontrecombcoeff(int uniqueionindex, float T_e) -> double;
 
 template <double func_integrand(double, void* const)>
 constexpr auto simpson_integrator(auto& params, const double a, const double b, const int samplecount) -> double {
