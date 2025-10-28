@@ -549,8 +549,7 @@ auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const dou
       }
 
       // stable nuclide: match daughter of last nucleus in chain
-      if (nuc_is_stable && (decay_daughter_z(z_end, a_end, last_decaytype) != z ||
-                            decay_daughter_a(z_end, a_end, last_decaytype) != a)) {
+      if (nuc_is_stable && (decaypath.final_daughter_z() != z || decaypath.final_daughter_a() != a)) {
         continue;
       }
     }
