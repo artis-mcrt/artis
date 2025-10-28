@@ -31,6 +31,7 @@ void do_kpkt(Packet& pkt, double t2, int nts);
   return globals::elements[element].ions[ion].ncoolingterms;
 }
 
+// get an array of per-ion cumulative cooling contributions for a given cell
 [[nodiscard]] inline auto get_cell_ion_cooling_contribs(const std::ptrdiff_t nonemptymgi) -> std::span<double> {
   return kpkt::ion_cooling_contribs_allcells.subspan(nonemptymgi * get_includedions(), get_includedions());
 }

@@ -78,7 +78,7 @@ struct Jb_lu_estimator {
 int detailed_linecount = 0;
 
 // array of indices into the linelist[] array for selected lines
-std::vector<int> detailed_lineindicies;
+std::vector<int> detailed_lineindices;
 
 std::vector<std::vector<Jb_lu_estimator>> prev_Jb_lu_normed{};  // value from the previous timestep
 std::vector<std::vector<Jb_lu_estimator>> Jb_lu_raw{};  // unnormalised estimator for the current timestep
@@ -168,8 +168,8 @@ void add_detailed_line(const int lineindex) {
     Jb_lu_raw[nonemptymgi].push_back({.value = 0, .contribcount = 0});
     assert_always(detailed_linecount == std::ssize(Jb_lu_raw[nonemptymgi]));
   }
-  detailed_lineindicies.push_back(lineindex);
-  assert_always(detailed_linecount == std::ssize(detailed_lineindicies));
+  detailed_lineindices.push_back(lineindex);
+  assert_always(detailed_linecount == std::ssize(detailed_lineindices));
 }
 
 // get the normalised J value for a bin
@@ -483,7 +483,7 @@ void write_to_file(const int nonemptymgi, const int timestep) {
         contribcount = totalcontribs;
       } else {  // use binindex < -1 for detailed line Jb_lu estimators
         const int jblueindex = -2 - binindex;  // -2 is the first detailed line, -3 is the second, etc
-        const int lineindex = detailed_lineindicies[jblueindex];
+        const int lineindex = detailed_lineindices[jblueindex];
         const double nu_trans = globals::linelist.nu[lineindex];
         nu_lower = nu_trans;
         nu_upper = nu_trans;
@@ -672,9 +672,9 @@ auto get_Jblueindex(const int lineindex) -> int {
   int high = detailed_linecount - 1;
   while (low <= high) {
     const int mid = low + ((high - low) / 2);
-    if (detailed_lineindicies[mid] < lineindex) {
+    if (detailed_lineindices[mid] < lineindex) {
       low = mid + 1;
-    } else if (detailed_lineindicies[mid] > lineindex) {
+    } else if (detailed_lineindices[mid] > lineindex) {
       high = mid - 1;
     } else {
       assert_always(mid < detailed_linecount);
@@ -1113,7 +1113,7 @@ void write_restart_data(FILE* gridsave_file) {
     fprintf(gridsave_file, "%d\n", detailed_linecount);
 
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-      fprintf(gridsave_file, "%d ", detailed_lineindicies[jblueindex]);
+      fprintf(gridsave_file, "%d ", detailed_lineindices[jblueindex]);
     }
   }
 
@@ -1222,7 +1222,7 @@ void read_restart_data(FILE* gridsave_file) {
     }
 
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-      assert_always(fscanf(gridsave_file, "%d ", &detailed_lineindicies[jblueindex]) == 1);
+      assert_always(fscanf(gridsave_file, "%d ", &detailed_lineindices[jblueindex]) == 1);
     }
   }
 

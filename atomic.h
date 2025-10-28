@@ -427,20 +427,20 @@ inline void update_includedionslevels_maxnions() {
   return uniqueionindex;
 }
 
-[[gnu::pure]] [[nodiscard]] inline auto get_ionfromuniqueionindex(const int allionsindex) -> std::tuple<int, int> {
-  assert_testmodeonly(allionsindex < get_includedions());
+[[gnu::pure]] [[nodiscard]] inline auto get_ionfromuniqueionindex(const int uniqueionindex) -> std::tuple<int, int> {
+  assert_testmodeonly(uniqueionindex < get_includedions());
 
   for (int element = 0; element < get_nelements(); element++) {
     if (get_nions(element) == 0) {
       continue;
     }
-    const int ion = allionsindex - globals::elements[element].uniqueionindexstart;
+    const int ion = uniqueionindex - globals::elements[element].uniqueionindexstart;
     if (ion < get_nions(element)) {
-      assert_testmodeonly(get_uniqueionindex(element, ion) == allionsindex);
+      assert_testmodeonly(get_uniqueionindex(element, ion) == uniqueionindex);
       return {element, ion};
     }
   }
-  assert_always(false);  // allionsindex too high to be valid
+  assert_always(false);  // uniqueionindex too high to be valid
   return {-1, -1};
 }
 

@@ -2350,7 +2350,7 @@ auto get_totmassradionuclide_tmodel(const int z, const int a) -> double {
     }
   }
 
-  // d is used to loop over the coordinate indicies 0,1,2 for x,y,z
+  // d is used to loop over the coordinate indices 0,1,2 for x,y,z
 
   // the following vector are in grid coordinates, so either x,y,z (3D) or r (1D), or r_xy, z (2D)
   static_assert(get_ndim(GRID_TYPE) <= 3);

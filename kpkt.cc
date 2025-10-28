@@ -269,11 +269,11 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
   const auto nincludedions = get_includedions();
   const auto cellioncontribs = get_cell_ion_cooling_contribs(nonemptymgi);
   double cumulative_cooling = 0.;
-  for (int allionindex = 0; allionindex < nincludedions; allionindex++) {
-    const auto [element, ion] = get_ionfromuniqueionindex(allionindex);
+  for (int uniqueionindex = 0; uniqueionindex < nincludedions; uniqueionindex++) {
+    const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
     cumulative_cooling += calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, -1, cellcacheslotid, &C_ff_all,
                                                              &C_fb_all, &C_exc_all, &C_ionisation_all);
-    cellioncontribs[allionindex] = cumulative_cooling;
+    cellioncontribs[uniqueionindex] = cumulative_cooling;
   }
 
   // only used in the T_e solver and write_to_estimators file

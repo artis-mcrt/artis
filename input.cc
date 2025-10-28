@@ -95,19 +95,6 @@ struct TempLineTransitionInput {
   int lowerlevelindex;
 };
 
-struct TempPhotoionTransitionInput {
-  double nu_edge;
-  int element;
-  int ion;
-  int level;
-  int phixstargetindex;
-  int upperlevel;
-  int uniquelevelindex;
-  double probability;
-  int index_in_groundphixslist;
-  int bfestimindex;
-};
-
 constexpr std::array<std::string_view, 24> inputlinecomments = {
     " 0: pre_zseed: specific random number seed if > 0 or random if negative",
     " 1: ntimesteps: number of timesteps",
@@ -521,8 +508,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
                                           std::vector<TempEnergyLevel>& temp_alllevels) {
   const auto nlevels = get_nlevels(element, ion);
   auto ion_levels = std::span{temp_alllevels}.subspan(get_ionuniquelevelindexstart(element, ion), nlevels);
-  static std::vector<int> iondowntranstmplineindicies;
-  iondowntranstmplineindicies.resize(downtranslevelstart(nlevels));
+  static std::vector<int> iondowntranstmplineindices;
+  iondowntranstmplineindices.resize(downtranslevelstart(nlevels));
 
   const int nlines_initial = globals::nlines;
   ptrdiff_t ion_updowntranscount = 0;
@@ -545,7 +532,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
       assert_always(alltransindex < std::numeric_limits<int>::max());
     }
 
-    std::ranges::fill(iondowntranstmplineindicies, -99);
+    std::ranges::fill(iondowntranstmplineindices, -99);
 
     ion_updowntranscount = 0;
     for (const auto& transition : iontransitiontable) {
@@ -562,7 +549,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
 
       // Make sure that we don't allow duplicate. In that case take only the lines
       // first occurrence
-      int& downtranslineindex = iondowntranstmplineindicies[downtranslevelstart(level) + lowerlevel];
+      int& downtranslineindex = iondowntranstmplineindices[downtranslevelstart(level) + lowerlevel];
 
       // negative means that the transition hasn't been seen yet
       if (downtranslineindex < 0) {
@@ -758,6 +745,19 @@ void setup_phixs_list() {
     double nu_edge;
     int element;
     int ion;
+  };
+
+  struct TempPhotoionTransitionInput {
+    double nu_edge;
+    int element;
+    int ion;
+    int level;
+    int phixstargetindex;
+    int upperlevel;
+    int uniquelevelindex;
+    double probability;
+    int index_in_groundphixslist;
+    int bfestimindex;
   };
 
   auto groundcont_nu_edge = MPI_shared_malloc_span<double>(globals::nbfcontinua_ground);
