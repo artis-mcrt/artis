@@ -1,12 +1,15 @@
 #include "kpkt.h"
 
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <span>
-#include <vector>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -32,13 +35,9 @@ namespace {
 
 enum class CoolingType : std::uint8_t { FREEFREE, FREEBOUND, COLLEXC, COLLION };
 
-struct CellCacheCoolingList {
-  CoolingType type;
-  int level;
-  int upperlevel;
-};
-
-std::vector<CellCacheCoolingList> coolinglist;
+std::span<const CoolingType> coolinglist_type;
+std::span<const int> coolinglist_level;
+std::span<const int> coolinglist_upperlevel;
 
 int n_kpktdiffusion_timesteps{0};
 float kpktdiffusion_timescale{0.};
@@ -71,7 +70,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     if constexpr (update_cellcache_contribs) {
       globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
-      assert_testmodeonly(coolinglist[i].type == CoolingType::FREEFREE);
+      assert_testmodeonly(coolinglist_type[i] == CoolingType::FREEFREE);
 
       i++;
     } else {
@@ -108,7 +107,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
       if (nuptrans > 0) {
         globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
-        assert_testmodeonly(coolinglist[i].type == CoolingType::COLLEXC);
+        assert_testmodeonly(coolinglist_type[i] == CoolingType::COLLEXC);
 
         i++;
       }
@@ -137,9 +136,9 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
         if constexpr (update_cellcache_contribs) {
           globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
-          assert_testmodeonly(coolinglist[i].type == CoolingType::COLLION);
-          assert_testmodeonly(coolinglist[i].level == level);
-          assert_testmodeonly(coolinglist[i].upperlevel == upper);
+          assert_testmodeonly(coolinglist_type[i] == CoolingType::COLLION);
+          assert_testmodeonly(coolinglist_level[i] == level);
+          assert_testmodeonly(coolinglist_upperlevel[i] == upper);
 
           i++;
         } else {
@@ -149,7 +148,6 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     }
 
     // fb creation of r-pkt
-    // free bound rates are calculated from the lower ion, but associated to the higher ion
     for (int level = 0; level < nionisinglevels; level++) {
       const auto uniquelevelindex = ionuniquelevelindexstart + level;
       const int nphixstargets = get_nphixstargets(uniquelevelindex);
@@ -168,9 +166,9 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
         if constexpr (update_cellcache_contribs) {
           globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
 
-          assert_testmodeonly(coolinglist[i].type == CoolingType::FREEBOUND);
-          assert_testmodeonly(coolinglist[i].level == level);
-          assert_testmodeonly(coolinglist[i].upperlevel == get_phixsupperlevel(uniquelevelindex, phixstargetindex));
+          assert_testmodeonly(coolinglist_type[i] == CoolingType::FREEBOUND);
+          assert_testmodeonly(coolinglist_level[i] == level);
+          assert_testmodeonly(coolinglist_upperlevel[i] == get_phixsupperlevel(uniquelevelindex, phixstargetindex));
 
           i++;
         } else {
@@ -299,9 +297,11 @@ void setup_coolinglist() {
   // \sum_{elements,ions}get_nlevels(element,ion) and free-free which is \sum_{elements} get_nions(element)-1
 
   set_ncoolingterms();
-  const size_t mem_usage_coolinglist = ncoolingterms * sizeof(CellCacheCoolingList);
   assert_always(ncoolingterms > 0);
-  coolinglist.resize(ncoolingterms);
+  const auto temp_coolinglist_type = MPI_shared_malloc_span<CoolingType>(ncoolingterms);
+  const auto temp_coolinglist_level = MPI_shared_malloc_span<int>(ncoolingterms);
+  const auto temp_coolinglist_upperlevel = MPI_shared_malloc_span<int>(ncoolingterms);
+  const size_t mem_usage_coolinglist = ncoolingterms * (sizeof(CoolingType) + 2 * sizeof(int));
   printlnlog("[info] mem_usage: coolinglist occupies {:.3f} MB", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0;  // cooling list index
@@ -309,54 +309,56 @@ void setup_coolinglist() {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels_currention = get_nlevels(element, ion);
-
       const int nionisinglevels = get_nlevels_ionising(element, ion);
 
       // ff creation of rpkt
-      // -------------------
       const int ioncharge = get_ionstage(element, ion) - 1;
       if (ioncharge > 0) {
-        coolinglist[i].type = CoolingType::FREEFREE;
-        coolinglist[i].level = -99;
-        coolinglist[i].upperlevel = -99;
+        temp_coolinglist_type[i] = CoolingType::FREEFREE;
+        temp_coolinglist_level[i] = -99;
+        temp_coolinglist_upperlevel[i] = -99;
         i++;
       }
 
       for (int level = 0; level < nlevels_currention; level++) {
         if (get_nuptrans(element, ion, level) > 0) {
-          coolinglist[i].type = CoolingType::COLLEXC;
-          coolinglist[i].level = level;
+          temp_coolinglist_type[i] = CoolingType::COLLEXC;
+          temp_coolinglist_level[i] = level;
           // upper level is not valid because this is the contribution of all upper levels combined - have to
           // calculate individually when selecting a random process
-          coolinglist[i].upperlevel = -1;
+          temp_coolinglist_upperlevel[i] = -1;
           i++;
         }
       }
 
-      if (ion < (nions - 1))  // check whether further ionisation stage available
-      {
+      // check whether further ionisation stage available
+      if (ion < (nions - 1)) {
+        // free-bound creation of r-pkt
+
+        // collisional ionisation to higher ionisation stage
         for (int level = 0; level < nionisinglevels; level++) {
           const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
           const int nphixstargets = get_nphixstargets(uniquelevelindex);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const int upper = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
-            coolinglist[i].type = CoolingType::COLLION;
-            coolinglist[i].level = level;
-            coolinglist[i].upperlevel = upper;
+            temp_coolinglist_type[i] = CoolingType::COLLION;
+            temp_coolinglist_level[i] = level;
+            temp_coolinglist_upperlevel[i] = upper;
             i++;
           }
         }
 
-        // fb creation of r-pkt
-        // free bound rates are calculated from the lower ion, but associated to the higher ion
+        // free-bound creation of r-pkt from recombination
+        // this should probably be considered cooling of the higher ion, but for simplicity we store in the list of the
+        // lower ion
         for (int level = 0; level < nionisinglevels; level++) {
           const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
           const int nphixstargets = get_nphixstargets(uniquelevelindex);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const int upper = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
-            coolinglist[i].type = CoolingType::FREEBOUND;
-            coolinglist[i].level = level;
-            coolinglist[i].upperlevel = upper;
+            temp_coolinglist_type[i] = CoolingType::FREEBOUND;
+            temp_coolinglist_level[i] = level;
+            temp_coolinglist_upperlevel[i] = upper;
             i++;
           }
         }
@@ -367,6 +369,10 @@ void setup_coolinglist() {
 
   assert_always(ncoolingterms == i);  // if this doesn't match, we miscalculated the number of cooling terms
   printlnlog("[info] read_atomicdata: number of coolingterms {}", ncoolingterms);
+  coolinglist_type = temp_coolinglist_type;
+  coolinglist_level = temp_coolinglist_level;
+  coolinglist_upperlevel = temp_coolinglist_upperlevel;
+  MPI_Barrier(globals::mpi_comm_node);
 }
 
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
@@ -440,7 +446,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   assert_always(ionoffset < ncoolingterms_ion);
   const auto i = ionstart + ionoffset;
 
-  const auto rndcoolingtype = coolinglist[i].type;
+  const auto rndcoolingtype = coolinglist_type[i];
   const auto T_e = grid::get_Te(nonemptymgi);
 
   if (rndcoolingtype == CoolingType::FREEFREE) {
@@ -471,8 +477,8 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
     // The k-packet converts directly into a r-packet by free-bound-emission.
     // Need to select the r-packets frequency and a random direction in the co-moving frame.
     const int lowerion = ion;
-    const int lowerlevel = coolinglist[i].level;
-    const int upper = coolinglist[i].upperlevel;
+    const int lowerlevel = coolinglist_level[i];
+    const int upper = coolinglist_upperlevel[i];
 
     // then randomly sample the packets frequency according to the continuums energy distribution
 
@@ -508,7 +514,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
     const double contrib_low = (i > ionstart) ? globals::cellcache[cellcacheslotid].cooling_contrib[i - 1] : 0.;
 
     double contrib = contrib_low;
-    const int level = coolinglist[i].level;
+    const int level = coolinglist_level[i];
     const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
     const auto uniquelevelindex = ionuniquelevelindexstart + level;
     const double epsilon_current = epsilon(uniquelevelindex);
@@ -546,7 +552,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
     // the k-packet activates a macro-atom due to collisional ionisation
 
     const int upperion = ion + 1;
-    const int upper = coolinglist[i].upperlevel;
+    const int upper = coolinglist_upperlevel[i];
 
     stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLION);
     stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLION);

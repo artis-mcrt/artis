@@ -1200,10 +1200,10 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
   return stimrecombcoeff;
 }
 
-__host__ __device__ auto get_bfcoolingcoeff(const int element, const int ion, const int level,
+__host__ __device__ auto get_bfcoolingcoeff(const int element, const int lowerion, const int lowerionlevel,
                                             const int phixstargetindex, const float T_e) -> double {
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
-  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+  const auto uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerionlevel);
   if (lowerindex < TABLESIZE - 1) {
     const int upperindex = lowerindex + 1;
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
