@@ -423,12 +423,12 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const int ilow = get_coolinglistoffset(element, ion);
   const int ncoolingterms_ion = get_ncoolingterms_ion(element, ion);
   const int ihigh = ilow + ncoolingterms_ion - 1;
-  double C_ion_procsum = globals::cellcache[cellcacheslotid].cooling_contrib[ihigh];
 
-  if (C_ion_procsum < 0.) {
-    C_ion_procsum = calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ilow, cellcacheslotid, nullptr,
-                                                      nullptr, nullptr, nullptr);
+  if (globals::cellcache[cellcacheslotid].cooling_contrib[ilow] < 0.) {
+    calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ilow, cellcacheslotid, nullptr, nullptr, nullptr,
+                                      nullptr);
   }
+  const double C_ion_procsum = globals::cellcache[cellcacheslotid].cooling_contrib[ihigh];
 
   // with the ion selected, we now select a level and transition type
 
