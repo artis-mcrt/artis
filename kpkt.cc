@@ -420,26 +420,25 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
   assert_always(uniqueionindex < get_includedions());
   const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
 
-  const int ilow = get_coolinglistoffset(element, ion);
-  const int ncoolingterms_ion = get_ncoolingterms_ion(element, ion);
-  const int ihigh = ilow + ncoolingterms_ion - 1;
+  const int ionstart = get_coolinglistoffset(element, ion);
 
-  if (globals::cellcache[cellcacheslotid].cooling_contrib[ilow] < 0.) {
-    calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ilow, cellcacheslotid, nullptr, nullptr, nullptr,
+  if (globals::cellcache[cellcacheslotid].cooling_contrib[ionstart] < 0.) {
+    calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ionstart, cellcacheslotid, nullptr, nullptr, nullptr,
                                       nullptr);
   }
-  const double C_ion_procsum = globals::cellcache[cellcacheslotid].cooling_contrib[ihigh];
+  const int ncoolingterms_ion = get_ncoolingterms_ion(element, ion);
+  // subspan for this ion's region of the cumulative sum of cooling contributions
+  const std::span<const double> ion_contribs =
+      std::span{globals::cellcache[cellcacheslotid].cooling_contrib}.subspan(ionstart, ncoolingterms_ion);
+  const double C_ion_procsum = ion_contribs.back();
 
   // with the ion selected, we now select a level and transition type
 
   const double rndcool_ion_process = rng_uniform() * C_ion_procsum;
-  const auto& cooling_contrib = globals::cellcache[cellcacheslotid].cooling_contrib;
 
-  const auto i =
-      std::upper_bound(cooling_contrib.begin() + ilow, cooling_contrib.begin() + ihigh + 1, rndcool_ion_process) -
-      cooling_contrib.begin();
-
-  assert_always(i <= ihigh);
+  const auto ionoffset = std::ranges::upper_bound(ion_contribs, rndcool_ion_process) - ion_contribs.begin();
+  assert_always(ionoffset < ncoolingterms_ion);
+  const auto i = ionstart + ionoffset;
 
   const auto rndcoolingtype = coolinglist[i].type;
   const auto T_e = grid::get_Te(nonemptymgi);
@@ -506,7 +505,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
     // if the previous entry belongs to the same ion, then pick up the cumulative sum from
     // the previous entry, otherwise start from zero
-    const double contrib_low = (i > ilow) ? globals::cellcache[cellcacheslotid].cooling_contrib[i - 1] : 0.;
+    const double contrib_low = (i > ionstart) ? globals::cellcache[cellcacheslotid].cooling_contrib[i - 1] : 0.;
 
     double contrib = contrib_low;
     const int level = coolinglist[i].level;
