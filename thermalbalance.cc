@@ -102,7 +102,7 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
                                 const float nne) -> double {
   double C_deexc = 0.;
   const int nlevels = get_nlevels(element, ion);
-  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+  const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
   for (int level = 0; level < nlevels; level++) {
     const auto uniquelevelindex = ionuniquelevelindexstart + level;
     const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
@@ -149,7 +149,7 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
     // Bound-free heating (renormalised analytical calculation)
     for (int ion = 0; ion < nions - 1; ion++) {
       const int nbflevels = get_nlevels_ionising(element, ion);
-      const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+      const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
       for (int level = 0; level < nbflevels; level++) {
         const auto uniquelevelindex = ionuniquelevelindexstart + level;
         const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);

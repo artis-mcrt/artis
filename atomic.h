@@ -56,16 +56,35 @@ inline const std::array<const std::string, 3> phixsdata_filenames = {"IGNORE", "
 // Return the number of levels associated with a specific ion given its elementindex and ionindex.
 [[gnu::pure]] __host__ __device__ inline auto get_nlevels(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].nlevels;
+}
+
+// get the uniquelevelindex of the lowest level of an ion (excited levels are offset from this)
+[[nodiscard]] __host__ __device__ inline auto get_ionuniquelevelindexstart(const int element, const int ion) -> int {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion >= 0);
+  assert_testmodeonly(ion < get_nions(element));
+  return globals::elements[element].ions[ion].uniquelevelindexstart;
+}
+
+// get the index into the nltepops_allcells array of the lowest NLTE level of an ion
+// higher levels are consecutive offsets from this
+[[nodiscard]] __host__ __device__ inline auto get_allnltelevelsindexstart(const int element, const int ion) -> int {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion >= 0);
+  assert_testmodeonly(ion < get_nions(element));
+  return globals::elements[element].ions[ion].allnltelevelsindexstart;
 }
 
 // Get an index for level of an ionstage of an element that is unique across every ion of every element
 [[nodiscard]] inline auto get_uniquelevelindex(const int element, const int ion, const int level) -> int {
   assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  const auto uniquelevelindex = globals::elements[element].ions[ion].uniquelevelindexstart + level;
+  const auto uniquelevelindex = get_ionuniquelevelindexstart(element, ion) + level;
   assert_testmodeonly(uniquelevelindex < get_includedlevels());
 
   return uniquelevelindex;
@@ -82,6 +101,7 @@ inline const std::array<const std::string, 3> phixsdata_filenames = {"IGNORE", "
 // Return the ionisation potential of an ion in erg.
 [[nodiscard]] __host__ __device__ inline auto get_ionpot(const int element, const int ion) -> double {
   assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].ionpot;
 }
@@ -89,6 +109,7 @@ inline const std::array<const std::string, 3> phixsdata_filenames = {"IGNORE", "
 // Return the index in the groundcont array for the ground state photoion continuum of an ion.
 [[nodiscard]] __host__ __device__ inline auto get_groundcontindex(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].groundcontindex;
 }
@@ -96,6 +117,7 @@ inline const std::array<const std::string, 3> phixsdata_filenames = {"IGNORE", "
 // Return the number of levels associated with an ion that have energies below the ionisation threshold.
 [[nodiscard]] __host__ __device__ inline auto get_nlevels_ionising(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].nlevels_ionising;
 }
@@ -107,6 +129,9 @@ __host__ __device__ inline auto get_nphixstargets(const int uniquelevelindex) ->
 
 // Returns the number of target states for photoionisation of (element,ion,level).
 __host__ __device__ inline auto get_nphixstargets(const int element, const int ion, const int level) -> int {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion >= 0);
+  assert_testmodeonly(ion < get_nions(element));
   const auto nphixstargets = get_nphixstargets(get_uniquelevelindex(element, ion, level));
   assert_testmodeonly(nphixstargets == 0 ||
                       ((ion < (get_nions(element) - 1)) && (level < get_nlevels_ionising(element, ion))));
@@ -230,7 +255,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
       if (get_nlevels(element, ion) == 0) {
         continue;
       }
-      const int level = uniquelevelindex - globals::elements[element].ions[ion].uniquelevelindexstart;
+      const int level = uniquelevelindex - get_ionuniquelevelindexstart(element, ion);
       if (level >= 0 && level < get_nlevels(element, ion)) {
         assert_testmodeonly(get_uniquelevelindex(element, ion, level) == uniquelevelindex);
         return {element, ion, level};

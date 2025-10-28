@@ -83,9 +83,8 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
 
 template <bool USECELLCACHE>
 [[nodiscard]] auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current) -> double {
-  const auto ionuniquelevelindexstart = globals::elements[globals::linelist.elementindex[lineindex]]
-                                            .ions[globals::linelist.ionindex[lineindex]]
-                                            .uniquelevelindexstart;
+  const auto ionuniquelevelindexstart =
+      get_ionuniquelevelindexstart(globals::linelist.elementindex[lineindex], globals::linelist.ionindex[lineindex]);
   const int uniquelevelindex_lower = ionuniquelevelindexstart + globals::linelist.lowerlevelindex[lineindex];
   const int uniquelevelindex_upper = ionuniquelevelindexstart + globals::linelist.upperlevelindex[lineindex];
 

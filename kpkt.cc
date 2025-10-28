@@ -79,7 +79,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     }
   }
 
-  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+  const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
   // excitation to same ionisation stage
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
@@ -510,7 +510,7 @@ __host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
     double contrib = contrib_low;
     const int level = coolinglist[i].level;
-    const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+    const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
     const auto uniquelevelindex = ionuniquelevelindexstart + level;
     const double epsilon_current = epsilon(uniquelevelindex);
     const double nnlevel = get_cellcache_levelpop(nonemptymgi, uniquelevelindex);

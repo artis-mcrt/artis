@@ -141,7 +141,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   double sum_colrecomb = 0.;
   if (ion > 0 && level <= get_maxrecombininglevel(element, ion)) {
     const int nlevels = get_nlevels_ionising(element, ion - 1);
-    const auto lowerionuniquelevelindexstart = globals::elements[element].ions[ion - 1].uniquelevelindexstart;
+    const auto lowerionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion - 1);
     for (int lower = 0; lower < nlevels; lower++) {
       const double epsilon_target = epsilon(lowerionuniquelevelindexstart + lower);
       const double epsilon_trans = epsilon_current - epsilon_target;
@@ -359,7 +359,7 @@ __host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmast
 
     assert_testmodeonly(ion >= 0);
     assert_testmodeonly(ion < get_nions(element));
-    const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+    const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
     const int uniquelevelindex = ionuniquelevelindexstart + level;
 
     const double epsilon_current = epsilon(uniquelevelindex);
@@ -468,7 +468,7 @@ __host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmast
 
         const int nlevels = get_nlevels_ionising(element, ion - 1);
         int lower = -1;
-        const auto lowerionuniquelevelindexstart = globals::elements[element].ions[ion - 1].uniquelevelindexstart;
+        const auto lowerionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion - 1);
         for (int tmp_lower = 0; tmp_lower < nlevels; tmp_lower++) {
           const double epsilon_target = epsilon(lowerionuniquelevelindexstart + tmp_lower);
           const double epsilon_trans = epsilon_current - epsilon_target;

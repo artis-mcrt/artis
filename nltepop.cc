@@ -127,9 +127,8 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
   assert_testmodeonly(first_ion_used < get_nions(element));
   // The (ion - first_ion_used) term accounts for the ground state population indices that are not counted in the NLTE
   // array
-  const int gs_index = globals::elements[element].ions[ion].allnltelevelsindexstart -
-                       globals::elements[element].ions[first_ion_used].allnltelevelsindexstart +
-                       (ion - first_ion_used) + offset_autoion;
+  const int gs_index = get_allnltelevelsindexstart(element, ion) -
+                       get_allnltelevelsindexstart(element, first_ion_used) + (ion - first_ion_used) + offset_autoion;
   const int first_autoion = get_nlevels_nonautoion(element, ion);
   if (ion_has_superlevel(element, ion) && level >= first_autoion) {
     return (gs_index + get_nlevels_excited_nlte(element, ion) + level - first_autoion + 2);
@@ -402,7 +401,7 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
 
 void nltepop_reset_element(const int nonemptymgi, const int element) {
   for (int ion = 0; ion < get_nions(element); ion++) {
-    const int nlte_start = globals::elements[element].ions[ion].allnltelevelsindexstart;
+    const int nlte_start = get_allnltelevelsindexstart(element, ion);
     std::fill_n(&grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlte_start],
                 get_nlevels_excited_nlte(element, ion) + (ion_has_superlevel(element, ion) ? 1 : 0), -1.);
   }
@@ -464,7 +463,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
   const int nlevels = get_nlevels(element, ion);
-  const auto ionuniquelevelindexstart = globals::elements[element].ions[ion].uniquelevelindexstart;
+  const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
 
   const auto levels = std::views::iota(0, nlevels);
@@ -721,15 +720,14 @@ void set_nlte_levelpop_over_rho(const int nonemptymgi, const int element, const 
                                 const double value) {
   assert_testmodeonly(level > 0);  // ground state is stored separately
   assert_testmodeonly(level <= get_nlevels_excited_nlte(element, ion));
-  grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) +
-                          globals::elements[element].ions[ion].allnltelevelsindexstart + level - 1] = value;
+  grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + get_allnltelevelsindexstart(element, ion) +
+                          level - 1] = value;
 }
 
 void set_nlte_superlevelpop_over_rho_over_slpartfunc(const int nonemptymgi, const int element, const int ion,
                                                      const double value) {
   assert_testmodeonly(ion_has_superlevel(element, ion));
-  const int sl_nlte_index =
-      globals::elements[element].ions[ion].allnltelevelsindexstart + get_nlevels_excited_nlte(element, ion);
+  const int sl_nlte_index = get_allnltelevelsindexstart(element, ion) + get_nlevels_excited_nlte(element, ion);
   grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + sl_nlte_index] = value;
 }
 
@@ -1430,14 +1428,13 @@ __host__ __device__ auto get_nlte_levelpop_over_rho(const int nonemptymgi, const
   assert_testmodeonly(level > 0);  // ground state is stored separately
   assert_testmodeonly(level <= get_nlevels_excited_nlte(element, ion));
   return grid::nltepops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) +
-                                 globals::elements[element].ions[ion].allnltelevelsindexstart + level - 1];
+                                 get_allnltelevelsindexstart(element, ion) + level - 1];
 }
 
 [[nodiscard]] __host__ __device__ auto get_nlte_superlevelpop_over_rho_over_slpartfunc(const int nonemptymgi,
                                                                                        const int element, const int ion)
     -> double {
   assert_testmodeonly(ion_has_superlevel(element, ion));
-  const int sl_nlte_index =
-      globals::elements[element].ions[ion].allnltelevelsindexstart + get_nlevels_excited_nlte(element, ion);
+  const int sl_nlte_index = get_allnltelevelsindexstart(element, ion) + get_nlevels_excited_nlte(element, ion);
   return grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + sl_nlte_index];
 }

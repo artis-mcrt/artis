@@ -412,7 +412,7 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
     if (level < nlevelsmax) {
       assert_always(statweight > 0.);
       const double currentlevelenergy = (energyoffset + levelenergy) * EV;
-      assert_always(std::ssize(temp_alllevels) == globals::elements[element].ions[ion].uniquelevelindexstart + level);
+      assert_always(std::ssize(temp_alllevels) == get_ionuniquelevelindexstart(element, ion) + level);
       temp_alllevels.push_back({
           .epsilon = currentlevelenergy,
           .ndowntrans = 0,
@@ -520,8 +520,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
                                           std::vector<TempAllTransInput>& temp_alltranslist,
                                           std::vector<TempEnergyLevel>& temp_alllevels) {
   const auto nlevels = get_nlevels(element, ion);
-  auto ion_levels =
-      std::span{temp_alllevels}.subspan(globals::elements[element].ions[ion].uniquelevelindexstart, nlevels);
+  auto ion_levels = std::span{temp_alllevels}.subspan(get_ionuniquelevelindexstart(element, ion), nlevels);
   static std::vector<int> iondowntranstmplineindicies;
   iondowntranstmplineindicies.resize(downtranslevelstart(nlevels));
 
@@ -1271,7 +1270,7 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
       uniquelevelindex += get_nlevels(element, ion);
 
       if (ion < nions - 1) {
-        nbfcheck += globals::elements[element].ions[ion].nlevels_ionising;
+        nbfcheck += get_nlevels_ionising(element, ion);
       }
       // and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
       int transdata_Z_in = -1;
@@ -1725,7 +1724,7 @@ void setup_nlte_levels() {
         printlnlog("[input]  element {:2} Z={:2} ionstage {:2} has {:5} NLTE excited levels{}. Starting at index {}",
                    element, get_atomicnumber(element), get_ionstage(element, ion),
                    get_nlevels_excited_nlte(element, ion), has_superlevel ? " plus a superlevel" : "",
-                   globals::elements[element].ions[ion].allnltelevelsindexstart);
+                   get_allnltelevelsindexstart(element, ion));
       }
     }
   }
