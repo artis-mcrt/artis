@@ -32,7 +32,7 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
 
   find packets/ -name 'packets*.out' -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
 
-  find . -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
+  find . -name '*.txt' ! -name "output_0-0.txt" -size +400k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
   find . -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
 
   ./artis/scripts/tar_rm_logs.sh
