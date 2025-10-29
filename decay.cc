@@ -291,7 +291,7 @@ void extend_lastdecaypath() {
   const int daughter_a = decaypaths[startdecaypathindex].final_daughter_a();
   const int daughter_nucindex = get_nucindex(daughter_z, daughter_a);
   if ((get_meanlife(daughter_nucindex) <= 0.)) {
-    // daughter is is stable: no extension possible
+    // daughter is stable: no extension possible
     return;
   }
   for (enum decaytypes dectypeindex2 : all_decaytypes) {
