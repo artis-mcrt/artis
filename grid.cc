@@ -1653,7 +1653,7 @@ auto get_modelinitnucmassfrac(const int modelgridindex, const int nucindex) -> f
   return initnucmassfrac_allcells[(modelgridindex * num_nuclides) + nucindex];
 }
 
-auto get_stable_initabund(const std::ptrdiff_t nonemptymgi, const int element) -> float {
+auto get_otherstable_initabund(const std::ptrdiff_t nonemptymgi, const int element) -> float {
   return initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element];
 }
 

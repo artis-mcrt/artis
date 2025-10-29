@@ -12,7 +12,7 @@ bae7ca634efad934ae81afffb6058d99  gamma_spec.out
 88b3c6b50c25bcf737c335e9af59b839  light_curve.out
 87aa0a1a8eebc5b15f95c5c7ba6325a3  linestat.out
 41a1c375110d8edbf421edca3fc426e8  modelgridrankassignments.out
-bbcd1415c9d43c008cff65da19b32bab  nuclides.out
+71f968bc58f3151bb6e39bc3b2b8902e  nuclides.out
 42ac18b3274f811f925cbda5ea551059  packets00_0000.out
 20a60ef903c63866e71754d9d9e65c2d  packets00_0001.out
 cc348191490a01e6e41df3be44b176e0  packets00_0002.out
