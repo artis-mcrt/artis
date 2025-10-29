@@ -513,21 +513,14 @@ auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const dou
   const double t_afterinit = time - grid::get_t_model();
   const int nucindex = get_nucindex(z, a);
   const bool nuc_is_stable = (get_meanlife(nucindex) <= 0.);
+  const auto lambda = nuc_is_stable ? 0. : 1. / get_meanlife(nucindex);
 
   double nuctotal = 0.;  // abundance or decay rate, depending on mode parameter
   for (const auto& decaypath : decaypaths) {
     const auto last_decaytype = decaypath.decaytypes.back();
     // match 4He abundance to alpha decay of any nucleus (no continue), otherwise check daughter nuclide matches
     if (z != 2 || a != 4 || last_decaytype != decaytypes::DECAYTYPE_ALPHA) {
-      const int z_end = decaypath.z.back();
-      const int a_end = decaypath.a.back();
-      // radioactive nuclide in network: match last nuc in chain
-      if (!nuc_is_stable && (z_end != z || a_end != a)) {
-        continue;
-      }
-
-      // stable nuclide: match daughter of last nucleus in chain
-      if (nuc_is_stable && (decaypath.final_daughter_z() != z || decaypath.final_daughter_a() != a)) {
+      if (decaypath.final_daughter_z() != z || decaypath.final_daughter_a() != a) {
         continue;
       }
     }
@@ -542,24 +535,25 @@ auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const dou
       continue;
     }
 
-    int fulldecaypathlength = get_decaypathlength(decaypath);
-    // if the nuclide is stable, it's one past the end of the chain
-    // or if we're counting alpha particles and the last decaytype is alpha, then the alpha sink is one past the end
-    if (nuc_is_stable || (z == 2 && a == 4 && last_decaytype == decaytypes::DECAYTYPE_ALPHA)) {
-      fulldecaypathlength++;
+    const int decaypathlength = get_decaypathlength(decaypath);
+    auto lambdas = decaypath.lambdas;
+    if (nuc_is_stable) {
+      // stable sink at end
+      assert_testmodeonly(lambdas.back() == 0.);
+    } else {
+      // replace last lambda with that of the nuclide we're calculating
+      assert_testmodeonly(std::ssize(lambdas) == decaypathlength + 1);
+      lambdas.back() = lambda;
     }
 
     const double massfraccontrib =
         (decaypath.branchproduct *
-         calculate_decaychain(top_initabund, decaypath.lambdas, fulldecaypathlength, t_afterinit, false) *
-         nucmass(z, a));
+         calculate_decaychain(top_initabund, lambdas, decaypathlength + 1, t_afterinit, false) * nucmass(z, a));
     nuctotal += massfraccontrib;
   }
 
-  // for stable nuclei, we also need to add the initial abundance because they won't have a decay path
-  if (get_meanlife(nucindex) <= 0.) {
-    nuctotal += grid::get_modelinitnucmassfrac(modelgridindex, nucindex);
-  }
+  // add the initial abundance
+  nuctotal += grid::get_modelinitnucmassfrac(modelgridindex, nucindex) * exp(-t_afterinit * lambda);
 
   return nuctotal;
 }
@@ -659,9 +653,8 @@ auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypa
   return chainendecay;
 }
 
-auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int nonemptymgi, const double time) -> double
 // total decay power per mass [erg/s/g] for a given decaypath
-{
+auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int nonemptymgi, const double time) -> double {
   // only decays at the end of the chain contributed from the initial abundance of the top of the chain are counted
   // (these can be can be same for a chain of length one)
 
