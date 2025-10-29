@@ -172,14 +172,11 @@ MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
 void printout_nuclidename(const int z, const int a) { printlog("(Z={}){}{}", z, get_elname(z), a); }
 
 void printout_nuclidemeanlife(const int z, const int a) {
-  const int nucindex = get_nucindex_or_neg_one(z, a);
-  const bool exists = (nucindex >= 0);
-  if (exists && get_meanlife(nucindex) > 0.) {
+  const int nucindex = get_nucindex(z, a);
+  if (get_meanlife(nucindex) > 0.) {
     printlog("[tau {:.1e}s]", get_meanlife(nucindex));
-  } else if (exists) {
-    printlog("[stable,in_net]");
   } else {
-    printlog("[stable,offnet]");
+    printlog("[stable]");
   }
 }
 
@@ -308,9 +305,9 @@ void extend_lastdecaypath() {
 
   const int daughter_z = decaypaths[startdecaypathindex].final_daughter_z();
   const int daughter_a = decaypaths[startdecaypathindex].final_daughter_a();
-  const int daughter_nucindex = get_nucindex_or_neg_one(daughter_z, daughter_a);
-  if ((daughter_nucindex < 0) || (get_meanlife(daughter_nucindex) <= 0.)) {
-    // daughter is either not in the network or is stable: no extension possible
+  const int daughter_nucindex = get_nucindex(daughter_z, daughter_a);
+  if ((get_meanlife(daughter_nucindex) <= 0.)) {
+    // daughter is is stable: no extension possible
     return;
   }
   for (enum decaytypes dectypeindex2 : all_decaytypes) {
@@ -530,9 +527,8 @@ auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const dou
   assert_always(time >= 0.);
 
   const double t_afterinit = time - grid::get_t_model();
-  const int nucindex = get_nucindex_or_neg_one(z, a);
-  const bool nuc_exists_z_a = (nucindex >= 0);
-  const bool nuc_is_stable = !nuc_exists_z_a || (get_meanlife(nucindex) <= 0.);
+  const int nucindex = get_nucindex(z, a);
+  const bool nuc_is_stable = (get_meanlife(nucindex) <= 0.);
 
   double nuctotal = 0.;  // abundance or decay rate, depending on mode parameter
   for (const auto& decaypath : decaypaths) {
@@ -577,7 +573,7 @@ auto get_nuc_massfrac(const int nonemptymgi, const int z, const int a, const dou
   }
 
   // for stable nuclei, we also need to add the initial abundance because they won't have a decay path
-  if (nuc_exists_z_a && get_meanlife(nucindex) <= 0.) {
+  if (get_meanlife(nucindex) <= 0.) {
     nuctotal += grid::get_modelinitnucmassfrac(modelgridindex, nucindex);
   }
 
@@ -897,6 +893,9 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
 
     auto falpha = fstream_required("alphadecays.txt", std::ios::in);
     assert_always(falpha.is_open());
+    if (!nuc_exists(2, 4)) {
+      nuclides.push_back({.z = 2, .a = 4, .meanlife = -1});
+    }
     while (get_noncommentline(falpha, line)) {
       // columns: # A, Z, branch_alpha, branch_beta, halflife[s], Q_total_alphadec[MeV], Q_total_betadec[MeV],
       // E_alpha[MeV], E_gamma[MeV], E_beta[MeV]
@@ -939,22 +938,23 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
     }
   }
 
-  // TODO: include all relevant nuclides, including stable daughters that are not in the custom list
-  // std::vector<Nuclide> endpoint_nuclides;
-  // for (auto& nuc : nuclides) {
-  //   for (std::underlying_type_t<decaytypes> decaytype = 0; decaytype < decaytypes::DECAYTYPE_COUNT; decaytype++) {
-  //     if (nuc.branchprobs[decaytype] > 0.) {
-  //       const auto z_daughter = decay_daughter_z(nuc.z, nuc.a, decaytype);
-  //       const auto a_daughter = decay_daughter_a(nuc.z, nuc.a, decaytype);
-  //       if (!nuc_exists(z_daughter, a_daughter)) {
-  //         endpoint_nuclides.push_back({.z = z_daughter, .a = a_daughter, .meanlife = -1});
-  //       }
-  //     }
-  //   }
-  // }
-  // for (const auto& nuclide : endpoint_nuclides) {
-  //   nuclides.push_back(nuclide);
-  // }
+  // include any daughters nuclei that are not in the custom list (assume they are stable)
+  std::vector<Nuclide> endpoint_nuclides;
+  for (auto& nuc : nuclides) {
+    for (const auto& decaytype : all_decaytypes) {
+      if (nuc.branchprobs[decaytype] > 0.) {
+        const auto z_daughter = decay_daughter_z(nuc.z, nuc.a, decaytype);
+        const auto a_daughter = decay_daughter_a(nuc.z, nuc.a, decaytype);
+        if (!nuc_exists(z_daughter, a_daughter)) {
+          printlnlog("Adding daughter nuclide Z={} A={} from decay of Z={} A={}", z_daughter, a_daughter, nuc.z, nuc.a);
+          endpoint_nuclides.push_back({.z = z_daughter, .a = a_daughter, .meanlife = -1});
+        }
+      }
+    }
+  }
+  for (const auto& nuclide : endpoint_nuclides) {
+    nuclides.push_back(nuclide);
+  }
 
   printlnlog("Number of nuclides before filtering: {}", get_num_nuclides());
   find_decaypaths(custom_zlist, custom_alist, standard_nuclides);
@@ -1156,27 +1156,8 @@ void update_abundances(const int nonemptymgi, const double t_current) {
     for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
       const auto [nuc_z, a] = get_nuc_z_a(nucindex);
       if (nuc_z == atomic_number) {
-        // this nucleus is an isotope of the element
         a_isotopes.insert(a);
-      } else {
-        // check if the nucleus decays off the network but into the selected element
-        for (const auto decaytype : all_decaytypes) {
-          const int daughter_z = decay_daughter_z(nuc_z, a, decaytype);
-          const int daughter_a = decay_daughter_a(nuc_z, a, decaytype);
-          if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
-              get_nuc_decaybranchprob(nucindex, decaytype) > 0.) {
-            a_isotopes.insert(daughter_a);
-            // nuclide decays into correct atomic number but outside of the nuclide list
-            // note: there could also be stable isotopes of this element included in stable_initabund(z), but
-            // here we only count the contribution from decays
-          }
-        }
       }
-    }
-
-    if (atomic_number == 2) {
-      // Track He4 from alpha-decay, in case we left it out of the nuclide list
-      a_isotopes.insert(4);
     }
 
     for (const int nuc_a : a_isotopes) {
@@ -1211,25 +1192,9 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
   const auto num_nuclides = get_num_nuclides();
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const auto [nuc_z, nuc_a] = get_nuc_z_a(nucindex);
-    if (nuc_z == atomic_number) {  // isotope of this element is on the network
+    if (nuc_z == atomic_number) {
       a_isotopes.insert(nuc_a);
-    } else {  // not the element that we want, but check if a decay produces it
-      for (const auto decaytype : all_decaytypes) {
-        const int daughter_z = decay_daughter_z(nuc_z, nuc_a, decaytype);
-        const int daughter_a = decay_daughter_a(nuc_z, nuc_a, decaytype);
-        // if the nucleus exists, it will be picked up by the upper condition
-        if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
-            get_nuc_decaybranchprob(nucindex, decaytype) > 0.) {
-          a_isotopes.insert(nuc_a);
-          // nuclide decays into correct atomic number but outside of the nuclide list
-        }
-      }
     }
-  }
-
-  if (atomic_number == 2) {
-    // Track He4 from alpha-decay, in case we left it out of the nuclide list
-    a_isotopes.insert(4);
   }
 
   for (const int nuc_a : a_isotopes) {
