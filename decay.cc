@@ -215,7 +215,9 @@ void printout_nuclidemeanlife(const int z, const int a) {
 
 [[nodiscard]] auto get_num_decaypaths() -> int { return static_cast<int>(decaypaths.size()); }
 
-[[nodiscard]] auto get_decaypathlength(const DecayPath& dpath) -> int { return static_cast<int>(dpath.z.size()); }
+[[nodiscard]] auto get_decaypathlength(const DecayPath& dpath) -> int {
+  return static_cast<int>(dpath.decaytypes.size());
+}
 [[nodiscard]] auto get_decaypathlength(const int decaypathindex) -> int {
   return get_decaypathlength(decaypaths[decaypathindex]);
 }
@@ -347,11 +349,12 @@ void find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
           })) {
         continue;
       }
+      const auto test = std::vector<int>{1, 2, 3, 4};
 
-      decaypaths.push_back({.z = std::vector<int>(1, z),
-                            .a = std::vector<int>(1, a),
-                            .nucindex = std::vector<int>(1, startnucindex),
-                            .decaytypes = std::vector<int>(1, decaytype),
+      decaypaths.push_back({.z = {z},
+                            .a = {a},
+                            .nucindex = {startnucindex},
+                            .decaytypes = {decaytype},
                             .lambdas = {},
                             .branchproduct = 0.});
 
@@ -1162,7 +1165,7 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
     }
   }
 
-  for (const auto [nuc_a, nucindex] : a_isotopes) {
+  for (const auto& [nuc_a, nucindex] : a_isotopes) {
     const double massfrac = get_nuc_massfrac(nonemptymgi, nucindex, t_current);
     if (massfrac > 0) {
       const double numberdens = massfrac / nucmass(nucindex) * rho;
