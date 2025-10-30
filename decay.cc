@@ -565,12 +565,12 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
     -> double {
   assert_testmodeonly(decaypathindex >= 0);
   assert_testmodeonly(decaypathindex < get_num_decaypaths());
+  const auto& decaypath = decaypaths[decaypathindex];
 
-  const int z_top = decaypaths[decaypathindex].z[0];
-  const int a_top = decaypaths[decaypathindex].a[0];
-  const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
+  const auto nucmass_top = nucmass(decaypath.z[0], decaypath.a[0]);
+  const int nucindex_top = decaypath.nucindex[0];
 
-  const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
+  const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top) / nucmass_top;
   if (top_initabund <= 0.) {
     return 0.;
   }
@@ -583,8 +583,8 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
   // count the number of chain-top nuclei that haven't decayed past the end of the chain
 
   const double abund_endplusone =
-      calculate_decaychain(top_initabund, decaypaths[decaypathindex].lambdas, decaypathlength + 1, t_afterinit, false);
-  const double ndecays_remaining = decaypaths[decaypathindex].branchproduct * (top_initabund - abund_endplusone);
+      calculate_decaychain(top_initabund, decaypath.lambdas, decaypathlength + 1, t_afterinit, false);
+  const double ndecays_remaining = decaypath.branchproduct * (top_initabund - abund_endplusone);
 
   const double endecay = ndecays_remaining * get_decaypath_lastnucdecayenergy(decaypathindex);
 
@@ -658,9 +658,10 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int none
   // only decays at the end of the chain contributed from the initial abundance of the top of the chain are counted
   // (these can be can be same for a chain of length one)
 
-  const int z_top = decaypaths[decaypathindex].z[0];
-  const int a_top = decaypaths[decaypathindex].a[0];
-  const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
+  const auto& decaypath = decaypaths[decaypathindex];
+  const int z_top = decaypath.z[0];
+  const int a_top = decaypath.a[0];
+  const int nucindex_top = decaypath.nucindex[0];
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top);
@@ -669,7 +670,7 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int none
     return 0.;
   }
 
-  const int nucindex_end = decaypaths[decaypathindex].nucindex[get_decaypathlength(decaypathindex) - 1];
+  const int nucindex_end = decaypath.nucindex[get_decaypathlength(decaypathindex) - 1];
 
   const double t_afterinit = time - grid::get_t_model();
 
@@ -677,9 +678,8 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int none
 
   // contribution to the end nuclide abundance from the top of chain (could be a length-one chain Z,A_top = Z,A_end
   // so contribution would be from init abundance only)
-  const double endnucabund =
-      decaypaths[decaypathindex].branchproduct *
-      calculate_decaychain(top_initabund, decaypaths[decaypathindex].lambdas, decaypathlength, t_afterinit, false);
+  const double endnucabund = decaypath.branchproduct * calculate_decaychain(top_initabund, decaypath.lambdas,
+                                                                            decaypathlength, t_afterinit, false);
 
   const double endecay = get_decaypath_lastnucdecayenergy(decaypathindex);
 
@@ -1111,13 +1111,11 @@ void free_decaypath_energy_per_mass() {
 // infinity
 auto get_global_etot_tmodel_tinf() -> double {
   double etot_tinf = 0.;
-  const auto num_decaypaths = get_num_decaypaths();
-  for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
-    const int z_top = decaypaths[decaypathindex].z[0];
-    const int a_top = decaypaths[decaypathindex].a[0];
-
-    etot_tinf += (decaypaths[decaypathindex].branchproduct * grid::get_totmassnuclide_tmodel(z_top, a_top) /
-                  nucmass(z_top, a_top) * get_decaypath_lastnucdecayenergy(decaypathindex));
+  for (const auto& decaypath : decaypaths) {
+    const int z_top = decaypath.z[0];
+    const int a_top = decaypath.a[0];
+    etot_tinf += (decaypath.branchproduct * grid::get_totmassnuclide_tmodel(z_top, a_top) / nucmass(z_top, a_top) *
+                  get_decaypath_lastnucdecayenergy(decaypath));
   }
   assert_always(std::isfinite(etot_tinf));
   assert_always(etot_tinf > 0.);
