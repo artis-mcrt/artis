@@ -1,6 +1,6 @@
 b65007ef75f1eaf1a242c7b3119086c7  absorption.out
 897316929176464ebc9ad085f31e7284  bflist.out
-c35c17b1fa6597beed9d1787107cb94d  deposition.out
+bee33b665bbf8b00451b39b17eefd6db  deposition.out
 4a4ddd952ca87310ba2de8db2cb484ef  emission.out
 321ece2a7759b37a7da621cd7a4eee90  emissiontrue.out
 c86ea849b030440983336e0196a17e0e  gamma_light_curve.out
@@ -19,10 +19,10 @@ fe2d77fbf7e478917674ac96bf469ae8  packets00_0002.out
 2327b91c5c312f0a15f606db5ad91399  spec.out
 08554f9e23fd23e3d6d2c75e507c3bc3  spec_res.out
 a351f1711fecd60c023d0ba7332092db  timesteps.out
-b76ecee60ee0be3689e832ed44f3fb66  job1/estimators_0000.out
-7553d9dcdef36dc876098442188fa793  job1/estimators_0001.out
-d27919da1dd60d768383a19f3bed6a01  job1/estimators_0002.out
-dad5cc79107d615acb4f108aa3aedf9f  job1/estimators_0003.out
+8dd80ff35cb7a9a1e21b96ba95a6b253  job1/estimators_0000.out
+d564c1d5b6bb779eb270be734647bf40  job1/estimators_0001.out
+5006414a2b823a46b4e840b733fa8b55  job1/estimators_0002.out
+693add731fe947c636c8ee6230a8941e  job1/estimators_0003.out
 b65007ef75f1eaf1a242c7b3119086c7  speclc_angle_res/absorption_res_00.out
 b65007ef75f1eaf1a242c7b3119086c7  speclc_angle_res/absorption_res_01.out
 b65007ef75f1eaf1a242c7b3119086c7  speclc_angle_res/absorption_res_02.out

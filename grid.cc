@@ -2229,9 +2229,8 @@ void init_grid(const int my_rank) {
   // Calculate the critical opacity at which opacity_case 3 switches from a
   // regime proportional to the density to a regime independent of the density
   // This is done by solving for tau_sobolev == 1
-  // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(28, 56) * 3000e-8 * globals::timesteps[m].mid;
-  globals::rho_crit =
-      ME * CLIGHT * decay::nucmass(28, 56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
+  // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/(56 * MH) * 3000e-8 * globals::timesteps[m].mid;
+  globals::rho_crit = ME * CLIGHT * 56 * MH / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
   printlnlog("grid_init: rho_crit = {:g} [g/cm3]", globals::rho_crit);
 
   if (get_model_type() == GRID_TYPE) {
