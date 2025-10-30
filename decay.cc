@@ -460,7 +460,7 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
 // are assumed to start with zero abundance)
 // note: first and last can be nuclide can be the same if num_nuclides==1, reducing to simple decay formula
 //
-// timediff:           time elapsed since firstinitabund was true [seconds]
+// timediff:           time elapsed for decays [seconds]
 // numnuclides:        number of items in lambdas to use
 // lambdas:            array of 1/(mean lifetime) for nuc[0]..nuc[num_nuclides-1]  [seconds^-1]
 // useexpansionfactor: if true, return a modified 'abundance' at the end of the chain, with a weighting factor
