@@ -473,7 +473,7 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::vect
   assert_testmodeonly(std::ssize(lambdas) >= num_nuclides);
 
   double lambdaproduct = 1.;
-  for (int j = 0; j < num_nuclides - 1; j++) {
+  for (int j = 0; j < (num_nuclides - 1); j++) {
     lambdaproduct *= lambdas[j];
   }
 
