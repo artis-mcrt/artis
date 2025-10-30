@@ -575,8 +575,8 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
 
   // count the number of chain-top nuclei that haven't decayed past the end of the chain
   auto lambdas = std::vector<double>(decaypath.lambdas);
-  // treat the end nuclide as stable to find out how many got produced
-  lambdas.back() = 0.;
+  // treat the end nuclide as stable to count how many got produced
+  lambdas[decaypathlength - 1] = 0.;
 
   const double abund_endsink = calculate_decaychain(top_initabund, lambdas, decaypathlength, t_afterinit, false);
   const double ndecays_remaining = decaypath.branchproduct * (top_initabund - abund_endsink);
@@ -980,8 +980,8 @@ auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(const int nonemptym
 
     const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top) / nucmass(nucindex_top);
     auto lambdas = std::vector<double>(decaypath.lambdas);
-    // treat the end nuclide as stable to find out how many got produced
-    lambdas.back() = 0.;
+    // treat the end nuclide as stable to count how many got produced
+    lambdas[decaypathlength - 1] = 0.;
 
     const double chain_endecay =
         (decaypath.branchproduct *
