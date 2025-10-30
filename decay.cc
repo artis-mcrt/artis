@@ -461,16 +461,14 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
 // note: first and last can be nuclide can be the same if num_nuclides==1, reducing to simple decay formula
 //
 // timediff:           time elapsed for decays [seconds]
-// numnuclides:        number of items in lambdas to use
 // lambdas:            array of 1/(mean lifetime) for nuc[0]..nuc[num_nuclides-1]  [seconds^-1]
 // useexpansionfactor: if true, return a modified 'abundance' at the end of the chain, with a weighting factor
 //                          accounting for adiabatic loss from expansion since the decays occurred
 //                          (This is needed to get the initial temperature)
-constexpr auto calculate_decaychain(const double firstinitabund, const std::vector<double>& lambdas,
-                                    const int num_nuclides, const double timediff, const bool useexpansionfactor)
-    -> double {
+constexpr auto calculate_decaychain(const double firstinitabund, const std::span<const double> lambdas,
+                                    const double timediff, const bool useexpansionfactor) -> double {
+  const int num_nuclides = static_cast<int>(lambdas.size());
   assert_testmodeonly(num_nuclides >= 1);
-  assert_testmodeonly(std::ssize(lambdas) >= num_nuclides);
 
   double lambdaproduct = 1.;
   for (int j = 0; j < (num_nuclides - 1); j++) {
@@ -533,7 +531,6 @@ auto get_nuc_massfrac(const int nonemptymgi, const int nucindex, const double ti
       continue;
     }
 
-    const int decaypathlength = get_decaypathlength(decaypath);
     auto lambdas = std::vector<double>(decaypath.lambdas);
     if (z == 2 && a == 4) {
       // treat the end nuclide as stable He4
@@ -541,7 +538,7 @@ auto get_nuc_massfrac(const int nonemptymgi, const int nucindex, const double ti
     }
 
     const double massfraccontrib =
-        (decaypath.branchproduct * calculate_decaychain(top_initabund, lambdas, decaypathlength, t_afterinit, false) *
+        (decaypath.branchproduct * calculate_decaychain(top_initabund, lambdas, t_afterinit, false) *
          nucmass(nucindex));
     nuctotal += massfraccontrib;
   }
@@ -579,7 +576,7 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
   // treat the end nuclide as stable to count how many got produced
   lambdas[decaypathlength - 1] = 0.;
 
-  const double abund_endsink = calculate_decaychain(top_initabund, lambdas, decaypathlength, t_afterinit, false);
+  const double abund_endsink = calculate_decaychain(top_initabund, lambdas, t_afterinit, false);
   const double ndecays_remaining = decaypath.branchproduct * (top_initabund - abund_endsink);
   // TODO ensure non-negative due to numerical precision?
 
@@ -672,13 +669,12 @@ auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypa
 
   const double t_afterinit = time - grid::get_t_model();
 
-  const int decaypathlength = get_decaypathlength(decaypathindex);
+  const auto lambdas = std::span{decaypath.lambdas}.first(decaypath.lambdas.size() - 1);  // exclude the decay daughter
 
-  // contribution to the end nuclide abundance from the top of chain (could be a length-one chain Z,A_top = Z,A_end
-  // so contribution would be from init abundance only)
+  // contribution to the end nuclide abundance from the top of chain (could be a length-one chain
+  // Z,A_top = Z,A_end so contribution would be from init abundance only)
   const double decayingnucabund =
-      decaypath.branchproduct *
-      calculate_decaychain(top_initabund, decaypath.lambdas, decaypathlength - 1, t_afterinit, false);
+      decaypath.branchproduct * calculate_decaychain(top_initabund, lambdas, t_afterinit, false);
 
   const double endecay = get_decaypath_lastnucdecayenergy(decaypathindex);
 
@@ -988,8 +984,7 @@ auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(const int nonemptym
     lambdas[decaypathlength - 1] = 0.;
 
     const double chain_endecay =
-        (decaypath.branchproduct *
-         calculate_decaychain(top_initabund, lambdas, decaypathlength, tstart - grid::get_t_model(), true) *
+        (decaypath.branchproduct * calculate_decaychain(top_initabund, lambdas, tstart - grid::get_t_model(), true) *
          get_decaypath_lastnucdecayenergy(decaypath));
 
     tot_endecay += chain_endecay;
