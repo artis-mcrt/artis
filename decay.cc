@@ -647,8 +647,11 @@ auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypa
   return chainendecay;
 }
 
-// total decay power per mass [erg/s/g] for a given decaypath
-auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int nonemptymgi, const double time) -> double {
+// Get the total decay power per mass [erg/s/g] for a given decaypath
+// We only count the power from the last decay in the chain to avoid double counting of decay energy (all sub paths are
+// handled separately)
+[[nodiscard]] auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int nonemptymgi,
+                                                      const double time) -> double {
   // only decays at the end of the chain contributed from the initial abundance of the top of the chain are counted
   // (these can be can be same for a chain of length one)
 
@@ -662,7 +665,7 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int none
     return 0.;
   }
 
-  const int nucindex_end = decaypath.nucindex[get_decaypathlength(decaypathindex) - 1];
+  const int nucindex_end = decaypath.nucindex[get_decaypathlength(decaypathindex) - 2];
 
   const double t_afterinit = time - grid::get_t_model();
 
@@ -1257,7 +1260,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
     assert_always(pkt.e_cmf >= 0);
   }
 
-  // final decaying nuclide at the end of the chain
+  // final decaying nuclide at the end of the chain (one before the end, which is the daughter of the last decay)
   const int pathlength = get_decaypathlength(decaypathindex);
   const int nucindex = decaypaths[decaypathindex].nucindex[pathlength - 2];
   const int decaytype = decaypaths[decaypathindex].decaytypes[pathlength - 2];
