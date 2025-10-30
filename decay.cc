@@ -380,6 +380,8 @@ void find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
     assert_always(std::all_of(decaypath.nucindex.cbegin(), decaypath.nucindex.cend() - 1,
                               [](const auto nucindex) { return get_meanlife(nucindex) > 0.; }));
 
+    assert_always(decaypath.decaytypes.back() == DECAYTYPE_NONE);
+
     // convert mean lifetimes to decay constants
     decaypath.lambdas.resize(decaypath.nucindex.size(), -1.);
     std::ranges::transform(decaypath.nucindex, decaypath.lambdas.begin(), [](const auto nucindex) {
