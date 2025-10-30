@@ -479,20 +479,21 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::vect
 
   double sum = 0;
   for (int j = 0; j < num_nuclides; j++) {
+    const auto lambda_j = lambdas[j];
     double denominator = 1.;
     for (int p = 0; p < num_nuclides; p++) {
       if (p != j) {
-        denominator *= (lambdas[p] - lambdas[j]);
+        denominator *= (lambdas[p] - lambda_j);
       }
     }
 
     if (!useexpansionfactor) {
       // get abundance output
-      sum += exp(-lambdas[j] * timediff) / denominator;
+      sum += exp(-lambda_j * timediff) / denominator;
     } else {
-      if (lambdas[j] > 0.) {
+      if (lambda_j > 0.) {
         const double sumtermtop =
-            ((1 + 1 / lambdas[j] / timediff) * exp(-timediff * lambdas[j])) - (1. / lambdas[j] / timediff);
+            ((1 + 1 / lambda_j / timediff) * exp(-timediff * lambda_j)) - (1. / lambda_j / timediff);
         sum += sumtermtop / denominator;
       }
     }
