@@ -349,7 +349,6 @@ void find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
           })) {
         continue;
       }
-      const auto test = std::vector<int>{1, 2, 3, 4};
 
       decaypaths.push_back({.z = {z},
                             .a = {a},
