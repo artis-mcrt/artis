@@ -668,7 +668,7 @@ auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypa
     return 0.;
   }
 
-  const int nucindex_end = decaypath.nucindex[get_decaypathlength(decaypathindex) - 2];
+  const int lastdecay_nucindex = decaypath.nucindex[get_decaypathlength(decaypathindex) - 2];
 
   const double t_afterinit = time - grid::get_t_model();
 
@@ -682,7 +682,7 @@ auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypa
 
   const double endecay = get_decaypath_lastnucdecayenergy(decaypathindex);
 
-  const double decaypower = endecay * decayingnucabund / get_meanlife(nucindex_end) / nucmass(nucindex_top);
+  const double decaypower = endecay * decayingnucabund / get_meanlife(lastdecay_nucindex) / nucmass(nucindex_top);
 
   assert_always(decaypower >= 0.);
   assert_always(std::isfinite(decaypower));
@@ -1263,17 +1263,15 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
     assert_always(pkt.e_cmf >= 0);
   }
 
+  pkt.type = TYPE_RADIOACTIVE_PELLET;
+
   // final decaying nuclide at the end of the chain (one before the end, which is the daughter of the last decay)
   const int pathlength = get_decaypathlength(decaypathindex);
-  const int nucindex = decaypaths[decaypathindex].nucindex[pathlength - 2];
-  const int decaytype = decaypaths[decaypathindex].decaytypes[pathlength - 2];
+  pkt.pellet_nucindex = decaypaths[decaypathindex].nucindex[pathlength - 2];
+  pkt.pellet_decaytype = decaypaths[decaypathindex].decaytypes[pathlength - 2];
 
-  pkt.type = TYPE_RADIOACTIVE_PELLET;
-  pkt.pellet_nucindex = nucindex;
-  pkt.pellet_decaytype = decaytype;
-
-  const auto engamma = nucdecayenergygamma(nucindex);
-  const auto enparticle = nucdecayenergyparticle(nucindex, decaytype);
+  const auto engamma = nucdecayenergygamma(pkt.pellet_nucindex);
+  const auto enparticle = nucdecayenergyparticle(pkt.pellet_nucindex, pkt.pellet_decaytype);
 
   pkt.originated_from_particlenotgamma = (rng_uniform() >= engamma / (engamma + enparticle));
   if (pkt.originated_from_particlenotgamma) {
