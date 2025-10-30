@@ -486,8 +486,8 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::vect
       }
     }
 
-    if (!useexpansionfactor)  // abundance output
-    {
+    if (!useexpansionfactor) {
+      // get abundance output
       sum += exp(-lambdas[j] * timediff) / denominator;
     } else {
       if (lambdas[j] > 0.) {
