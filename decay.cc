@@ -359,7 +359,7 @@ void find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
     // chains are sorted by mass number, then atomic number, then length
     const int d1_length = get_decaypathlength(d1);
     const int d2_length = get_decaypathlength(d2);
-    // -1 to ignore last item, which keeps bit-identical results as before when when final daughter nuclide was not
+    // -1 to ignore last item, which keeps bit-identical results as before when final daughter nuclide was not included
     // TODO: it would probably be better to sort by all items in reverse order
     const int smallestpathlength = std::min(d1_length, d2_length) - 1;
     for (int i = 0; i < smallestpathlength; i++) {
