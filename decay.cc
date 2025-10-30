@@ -63,7 +63,6 @@ struct Nuclide {
   std::array<double, decaytypes::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
 };
 
-// check if (z_parent, a_parent) is a parent of (z, a)
 [[nodiscard]] constexpr auto decay_daughter_z_a(const int z_parent, const int a_parent, const int decaytype)
     -> std::tuple<int, int> {
   assert_always(decaytype >= 0);
@@ -335,6 +334,7 @@ void find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
         }
       }
       // skip path if it doesn't start from a nuclide in the custom or standard input lists
+      // i.e. the first nuclide will have zero initial abundance anyway
       if (!is_custom_nuclide && !std::ranges::any_of(standard_nuclides, [z, a](const auto& stdnuc) {
             return (z == stdnuc.z) && (a == stdnuc.a);
           })) {
@@ -359,6 +359,8 @@ void find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
     // chains are sorted by mass number, then atomic number, then length
     const int d1_length = get_decaypathlength(d1);
     const int d2_length = get_decaypathlength(d2);
+    // -1 to ignore last item, which keeps bit-identical results as before when when final daughter nuclide was not
+    // TODO: it would probably be better to sort by all items in reverse order
     const int smallestpathlength = std::min(d1_length, d2_length) - 1;
     for (int i = 0; i < smallestpathlength; i++) {
       if (d1.a[i] != d2.a[i]) {
