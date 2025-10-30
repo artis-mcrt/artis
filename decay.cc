@@ -947,8 +947,11 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
       [](const int maxlen, const auto& decaypath) { return std::max(maxlen, get_decaypathlength(decaypath)); });
 
   printlnlog("Number of decay paths: {} (max length {})", get_num_decaypaths(), maxdecaypathlength);
-  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
-    printout_decaypath(decaypathindex);
+  constexpr bool print_decaypaths = false;
+  if (print_decaypaths) {
+    for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
+      printout_decaypath(decaypathindex);
+    }
   }
 
   // Read in data for gamma ray lines and make a list of them in energy order.
