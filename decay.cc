@@ -359,7 +359,7 @@ void find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
     // chains are sorted by mass number, then atomic number, then length
     const int d1_length = get_decaypathlength(d1);
     const int d2_length = get_decaypathlength(d2);
-    const int smallestpathlength = std::min(d1_length, d2_length);
+    const int smallestpathlength = std::min(d1_length, d2_length) - 1;
     for (int i = 0; i < smallestpathlength; i++) {
       if (d1.a[i] != d2.a[i]) {
         return d1.a[i] < d2.a[i];
