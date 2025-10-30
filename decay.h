@@ -7,7 +7,6 @@
 #include <string>
 #include <vector>
 
-#include "constants.h"
 #include "packet.h"
 
 namespace decay {
@@ -50,7 +49,6 @@ void output_nuc_abundances(std::ostream& estimators_file, int nonemptymgi, doubl
 void setup_radioactive_pellet(double e_cmf_per_packet, int nonemptymgi, Packet& pkt);
 void cleanup();
 
-[[nodiscard]] auto constexpr nucmass(int /*z*/, int a) -> double { return a * MH; }
 }  // namespace decay
 
 #endif  // DECAY_H
