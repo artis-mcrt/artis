@@ -207,10 +207,6 @@ void printout_nuclidemeanlife(const int z, const int a) {
 
 [[nodiscard]] auto get_num_decaypaths() -> int { return static_cast<int>(decaypaths.size()); }
 
-[[nodiscard]] auto get_decaypathlength(const DecayPath& dpath) -> int {
-  return static_cast<int>(dpath.decaytypes.size());
-}
-
 // return the product of all branching factors in the decay path
 [[nodiscard]] auto calculate_decaypath_branchproduct(const DecayPath& decaypath) -> double {
   double branchprod = 1.;
