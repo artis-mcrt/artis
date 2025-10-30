@@ -1250,7 +1250,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
 
   pkt.type = TYPE_RADIOACTIVE_PELLET;
 
-  // final decaying nuclide at the end of the chain (one before the end, which is the daughter of the last decay)
+  // final decaying nuclide in the chain (one before the end, which is the daughter of the last decay)
   const auto pathlength = decaypaths[decaypathindex].nucindex.size();
   pkt.pellet_nucindex = decaypaths[decaypathindex].nucindex[pathlength - 2];
   pkt.pellet_decaytype = decaypaths[decaypathindex].decaytypes[pathlength - 2];
