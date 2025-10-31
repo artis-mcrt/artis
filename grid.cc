@@ -1648,9 +1648,7 @@ void set_model_type(const GridType model_type_value) { model_type = model_type_v
 
 // get the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
 auto get_modelinitnucmassfrac(const int modelgridindex, const int nucindex) -> float {
-  const ptrdiff_t num_nuclides = decay::get_num_nuclides();
-
-  return initnucmassfrac_allcells[(modelgridindex * num_nuclides) + nucindex];
+  return initnucmassfrac_allcells[(modelgridindex * decay::get_num_nuclides()) + nucindex];
 }
 
 auto get_otherstable_initabund(const std::ptrdiff_t nonemptymgi, const int element) -> float {
