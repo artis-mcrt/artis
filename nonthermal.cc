@@ -798,8 +798,8 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
 }
 
 auto xs_ionisation_lotz(const double en_erg, const collionrow& colliondata_ion, const int electronsinshell) -> double {
-  const double ionpot_ev = colliondata_ion.ionpot_ev;
-  if (en_erg < (ionpot_ev * EV)) {
+  const double ionpot = colliondata_ion.ionpot_ev * EV;
+  if (en_erg < ionpot) {
     return 0.;
   }
   // const double gamma = (en_erg / (ME * std::pow(CLIGHT, 2))) + 1;
@@ -813,11 +813,10 @@ auto xs_ionisation_lotz(const double en_erg, const collionrow& colliondata_ion, 
     return 0.;
   }
 
-  const double p = colliondata_ion.ionpot_ev * EV;
-
-  if (en_erg > p) {
-    const double part_sigma_shell = (electronsinshell / p *
-                                     (std::log(std::pow(beta, 2) * ME * std::pow(CLIGHT, 2) / 2.0 / p) -
+  if (en_erg > ionpot) {
+    // Equation 3.38 of Axelrod (1980) attributed to Lotz (1967)
+    const double part_sigma_shell = (electronsinshell / ionpot *
+                                     (std::log(std::pow(beta, 2) * ME * std::pow(CLIGHT, 2) / 2.0 / ionpot) -
                                       std::log10(1 - std::pow(beta, 2)) - std::pow(beta, 2)));
     if (part_sigma_shell > 0.) {
       constexpr double Aconst = 1.33e-14 * EV * EV;
