@@ -63,7 +63,6 @@ struct Nuclide {
   std::array<double, decaytypes::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
 };
 
-// check if (z_parent, a_parent) is a parent of (z, a)
 [[nodiscard]] constexpr auto decay_daughter_z_a(const int z_parent, const int a_parent, const int decaytype)
     -> std::tuple<int, int> {
   assert_always(decaytype >= 0);
@@ -101,13 +100,6 @@ struct DecayPath {
   std::vector<double> lambdas;
   double branchproduct{
       0.};  // product of all branching factors along the path set by calculate_decaypath_branchproduct()
-
-  [[nodiscard]] auto final_daughter_z() const -> int {
-    return std::get<0>(decay_daughter_z_a(z.back(), a.back(), decaytypes.back()));
-  }
-  [[nodiscard]] auto final_daughter_a() const -> int {
-    return std::get<1>(decay_daughter_z_a(z.back(), a.back(), decaytypes.back()));
-  }
 };
 
 std::vector<Nuclide> nuclides;
@@ -215,26 +207,21 @@ void printout_nuclidemeanlife(const int z, const int a) {
 
 [[nodiscard]] auto get_num_decaypaths() -> int { return static_cast<int>(decaypaths.size()); }
 
-[[nodiscard]] auto get_decaypathlength(const DecayPath& dpath) -> int {
-  return static_cast<int>(dpath.decaytypes.size());
-}
-[[nodiscard]] auto get_decaypathlength(const int decaypathindex) -> int {
-  return get_decaypathlength(decaypaths[decaypathindex]);
-}
-
 // return the product of all branching factors in the decay path
 [[nodiscard]] auto calculate_decaypath_branchproduct(const DecayPath& decaypath) -> double {
   double branchprod = 1.;
-  const auto decaypathlength = get_decaypathlength(decaypath);
-  for (int i = 0; i < decaypathlength; i++) {
-    branchprod = branchprod * get_nuc_decaybranchprob(decaypath.nucindex[i], decaypath.decaytypes[i]);
+  for (auto i = 0zU; i < decaypath.nucindex.size() - 1; i++) {
+    branchprod *= get_nuc_decaybranchprob(decaypath.nucindex[i], decaypath.decaytypes[i]);
   }
   return branchprod;
 }
 
 // a decaypath's energy is the decay energy of the last nuclide and decaytype in the chain
 [[nodiscard]] auto get_decaypath_lastnucdecayenergy(const DecayPath& dpath) -> double {
-  return nucdecayenergy(dpath.nucindex.back(), dpath.decaytypes.back());
+  const auto secondlastindex = dpath.nucindex.size() - 2;
+  assert_testmodeonly(dpath.decaytypes[secondlastindex] != DECAYTYPE_NONE);
+  assert_testmodeonly(dpath.decaytypes.back() == DECAYTYPE_NONE);
+  return nucdecayenergy(dpath.nucindex[secondlastindex], dpath.decaytypes[secondlastindex]);
 }
 
 [[nodiscard]] auto get_decaypath_lastnucdecayenergy(const int decaypathindex) -> double {
@@ -277,12 +264,6 @@ void printout_decaypath(const int decaypathindex) {
     }
   }
 
-  // if the last nuclide is unstable, print its daughter nucleus
-  if (decaypath.decaytypes.back() != DECAYTYPE_NONE) {
-    printout_nuclidename(decaypath.final_daughter_z(), decaypath.final_daughter_a());
-    printout_nuclidemeanlife(decaypath.final_daughter_z(), decaypath.final_daughter_a());
-  }
-
   printlnlog("");
 }
 
@@ -291,18 +272,19 @@ void printout_decaypath(const int decaypathindex) {
 void extend_lastdecaypath() {
   const int startdecaypathindex = static_cast<int>(decaypaths.size() - 1);
 
-  const int daughter_z = decaypaths[startdecaypathindex].final_daughter_z();
-  const int daughter_a = decaypaths[startdecaypathindex].final_daughter_a();
-  const int daughter_nucindex = get_nucindex(daughter_z, daughter_a);
-  if ((get_meanlife(daughter_nucindex) <= 0.)) {
+  const int end_nucindex = decaypaths[startdecaypathindex].nucindex.back();
+  if ((get_meanlife(end_nucindex) <= 0.)) {
     // daughter is stable: no extension possible
     return;
   }
-  for (enum decaytypes dectypeindex2 : all_decaytypes) {
-    if (get_nuc_decaybranchprob(daughter_nucindex, dectypeindex2) == 0.) {
+  const int prev_end_z = decaypaths[startdecaypathindex].z.back();
+  const int prev_end_a = decaypaths[startdecaypathindex].a.back();
+  for (const auto decaytypeindex : all_decaytypes) {
+    if (get_nuc_decaybranchprob(end_nucindex, decaytypeindex) == 0.) {
       continue;
     }
 
+    const auto [daughter_z, daughter_a] = decay_daughter_z_a(prev_end_z, prev_end_a, decaytypeindex);
     // check for nuclide in existing path, which would indicate a loop
     for (const auto [z, a] : std::views::zip(decaypaths[startdecaypathindex].z, decaypaths[startdecaypathindex].a)) {
       if (z == daughter_z && a == daughter_a) {
@@ -310,13 +292,13 @@ void extend_lastdecaypath() {
         std::abort();
       }
     }
-
+    const auto daughter_nucindex = get_nucindex(daughter_z, daughter_a);
     decaypaths.push_back(decaypaths[startdecaypathindex]);
-
     decaypaths.back().z.push_back(daughter_z);
     decaypaths.back().a.push_back(daughter_a);
     decaypaths.back().nucindex.push_back(daughter_nucindex);
-    decaypaths.back().decaytypes.push_back(dectypeindex2);
+    decaypaths.back().decaytypes.back() = decaytypeindex;  // replace the DECAYTYPE_NONE at end with this decay type
+    decaypaths.back().decaytypes.push_back(DECAYTYPE_NONE);  // add new DECAYTYPE_NONE at end
 
     extend_lastdecaypath();
   }
@@ -344,16 +326,19 @@ void find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
         }
       }
       // skip path if it doesn't start from a nuclide in the custom or standard input lists
+      // i.e. the first nuclide will have zero initial abundance anyway
       if (!is_custom_nuclide && !std::ranges::any_of(standard_nuclides, [z, a](const auto& stdnuc) {
             return (z == stdnuc.z) && (a == stdnuc.a);
           })) {
         continue;
       }
 
-      decaypaths.push_back({.z = {z},
-                            .a = {a},
-                            .nucindex = {startnucindex},
-                            .decaytypes = {decaytype},
+      const auto [daughter_z, daughter_a] = decay_daughter_z_a(z, a, decaytype);
+
+      decaypaths.push_back({.z = {z, daughter_z},
+                            .a = {a, daughter_a},
+                            .nucindex = {startnucindex, get_nucindex(daughter_z, daughter_a)},
+                            .decaytypes = {decaytype, DECAYTYPE_NONE},
                             .lambdas = {},
                             .branchproduct = 0.});
 
@@ -364,10 +349,12 @@ void find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
   std::ranges::SORT_OR_STABLE_SORT(decaypaths, [](const DecayPath& d1, const DecayPath& d2) {
     // true if d1 < d2
     // chains are sorted by mass number, then atomic number, then length
-    const int d1_length = get_decaypathlength(d1);
-    const int d2_length = get_decaypathlength(d2);
-    const int smallestpathlength = std::min(d1_length, d2_length);
-    for (int i = 0; i < smallestpathlength; i++) {
+    const auto d1_length = std::ssize(d1.z);
+    const auto d2_length = std::ssize(d2.z);
+    // -1 to ignore last item, which keeps bit-identical results as before when final daughter nuclide was not included
+    // TODO: it would probably be better to sort by all items in reverse order
+    const auto smallestpathlength = std::min(d1_length, d2_length) - 1;
+    for (auto i = 0z; i < smallestpathlength; i++) {
       if (d1.a[i] != d2.a[i]) {
         return d1.a[i] < d2.a[i];
       }
@@ -385,6 +372,8 @@ void find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
     assert_always(std::all_of(decaypath.nucindex.cbegin(), decaypath.nucindex.cend() - 1,
                               [](const auto nucindex) { return get_meanlife(nucindex) > 0.; }));
 
+    assert_always(decaypath.decaytypes.back() == DECAYTYPE_NONE);
+
     // convert mean lifetimes to decay constants
     decaypath.lambdas.resize(decaypath.nucindex.size(), -1.);
     std::ranges::transform(decaypath.nucindex, decaypath.lambdas.begin(), [](const auto nucindex) {
@@ -393,9 +382,6 @@ void find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
       const double lambda = (meanlife > 0.) ? 1. / meanlife : 0.;
       return lambda;
     });
-
-    // the nuclide one past the end of the path is a used as a sink, so treat it as stable (even if it's not)
-    decaypath.lambdas.push_back(0.);
 
     decaypath.branchproduct = calculate_decaypath_branchproduct(decaypath);
   }
@@ -427,7 +413,7 @@ void filter_unused_nuclides(const std::vector<int>& custom_zlist, const std::vec
       }
 
       // return true if nuc is the final daughter of a decay path
-      return (decaypath.final_daughter_z() == nuc.z && decaypath.final_daughter_a() == nuc.a);
+      return (decaypath.z.back() == nuc.z && decaypath.a.back() == nuc.a);
     });
 
     if (in_any_decaypath) {
@@ -452,9 +438,9 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
   // rejection method. draw random times with the right distribution until they are within the correct range.
   while (tdecay <= tdecaymin || tdecay >= tdecaymax) {
     tdecay = t_model;  // can't decay before initial model snapshot time
-
-    for (const int nucindex : decaypaths[decaypathindex].nucindex) {
-      tdecay += -get_meanlife(nucindex) * std::log(static_cast<double>(rng_uniform_pos()));
+    const auto maxlength = std::ssize(decaypaths[decaypathindex].nucindex) - 1;
+    for (auto i = 0z; i < maxlength; i++) {
+      tdecay -= get_meanlife(decaypaths[decaypathindex].nucindex[i]) * std::log(static_cast<double>(rng_uniform_pos()));
     }
   }
   return tdecay;
@@ -465,39 +451,38 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
 // are assumed to start with zero abundance)
 // note: first and last can be nuclide can be the same if num_nuclides==1, reducing to simple decay formula
 //
-// timediff:           time elapsed since firstinitabund was true [seconds]
-// numnuclides:        number of items in lambdas to use
+// timediff:           time elapsed for decays [seconds]
 // lambdas:            array of 1/(mean lifetime) for nuc[0]..nuc[num_nuclides-1]  [seconds^-1]
 // useexpansionfactor: if true, return a modified 'abundance' at the end of the chain, with a weighting factor
 //                          accounting for adiabatic loss from expansion since the decays occurred
 //                          (This is needed to get the initial temperature)
-constexpr auto calculate_decaychain(const double firstinitabund, const std::vector<double>& lambdas,
-                                    const int num_nuclides, const double timediff, const bool useexpansionfactor)
-    -> double {
+constexpr auto calculate_decaychain(const double firstinitabund, const std::span<const double> lambdas,
+                                    const double timediff, const bool useexpansionfactor) -> double {
+  const int num_nuclides = static_cast<int>(lambdas.size());
   assert_testmodeonly(num_nuclides >= 1);
-  assert_testmodeonly(std::ssize(lambdas) >= num_nuclides);
 
   double lambdaproduct = 1.;
-  for (int j = 0; j < num_nuclides - 1; j++) {
+  for (int j = 0; j < (num_nuclides - 1); j++) {
     lambdaproduct *= lambdas[j];
   }
 
   double sum = 0;
   for (int j = 0; j < num_nuclides; j++) {
+    const auto lambda_j = lambdas[j];
     double denominator = 1.;
     for (int p = 0; p < num_nuclides; p++) {
       if (p != j) {
-        denominator *= (lambdas[p] - lambdas[j]);
+        denominator *= (lambdas[p] - lambda_j);
       }
     }
 
-    if (!useexpansionfactor)  // abundance output
-    {
-      sum += exp(-lambdas[j] * timediff) / denominator;
+    if (!useexpansionfactor) {
+      // get abundance output
+      sum += exp(-lambda_j * timediff) / denominator;
     } else {
-      if (lambdas[j] > 0.) {
+      if (lambda_j > 0.) {
         const double sumtermtop =
-            ((1 + 1 / lambdas[j] / timediff) * exp(-timediff * lambdas[j])) - (1. / lambdas[j] / timediff);
+            ((1 + 1 / lambda_j / timediff) * exp(-timediff * lambda_j)) - (1. / lambda_j / timediff);
         sum += sumtermtop / denominator;
       }
     }
@@ -521,10 +506,10 @@ auto get_nuc_massfrac(const int nonemptymgi, const int nucindex, const double ti
 
   double nuctotal = 0.;  // abundance or decay rate, depending on mode parameter
   for (const auto& decaypath : decaypaths) {
-    const auto last_decaytype = decaypath.decaytypes.back();
+    const auto last_decaytype = decaypath.decaytypes[decaypath.nucindex.size() - 2];
     // match 4He abundance to alpha decay of any nucleus (no continue), otherwise check daughter nuclide matches
     if (z != 2 || a != 4 || last_decaytype != decaytypes::DECAYTYPE_ALPHA) {
-      if (decaypath.final_daughter_z() != z || decaypath.final_daughter_a() != a) {
+      if (decaypath.z.back() != z || decaypath.a.back() != a) {
         continue;
       }
     }
@@ -537,20 +522,15 @@ auto get_nuc_massfrac(const int nonemptymgi, const int nucindex, const double ti
       continue;
     }
 
-    const int decaypathlength = get_decaypathlength(decaypath);
-    auto lambdas = decaypath.lambdas;
-    if (nuc_is_stable) {
-      // stable sink at end
-      assert_testmodeonly(lambdas.back() == 0.);
-    } else {
-      // replace last lambda with that of the nuclide we're calculating
-      assert_testmodeonly(std::ssize(lambdas) == decaypathlength + 1);
-      lambdas.back() = lambda;
+    auto lambdas = std::vector<double>(decaypath.lambdas);
+    if (z == 2 && a == 4) {
+      // treat the end nuclide as stable He4
+      lambdas.back() = 0.;
     }
 
     const double massfraccontrib =
-        (decaypath.branchproduct *
-         calculate_decaychain(top_initabund, lambdas, decaypathlength + 1, t_afterinit, false) * nucmass(nucindex));
+        (decaypath.branchproduct * calculate_decaychain(top_initabund, lambdas, t_afterinit, false) *
+         nucmass(nucindex));
     nuctotal += massfraccontrib;
   }
 
@@ -578,15 +558,16 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
   }
   assert_testmodeonly(top_initabund >= 0.);
 
-  const int decaypathlength = get_decaypathlength(decaypathindex);
-
   const double t_afterinit = time - grid::get_t_model();
 
   // count the number of chain-top nuclei that haven't decayed past the end of the chain
+  auto lambdas = std::vector<double>(decaypath.lambdas);
+  // treat the end nuclide as stable to count how many got produced
+  lambdas.back() = 0.;
 
-  const double abund_endplusone =
-      calculate_decaychain(top_initabund, decaypath.lambdas, decaypathlength + 1, t_afterinit, false);
-  const double ndecays_remaining = decaypath.branchproduct * (top_initabund - abund_endplusone);
+  const double abund_endsink = calculate_decaychain(top_initabund, lambdas, t_afterinit, false);
+  const double ndecays_remaining = decaypath.branchproduct * (top_initabund - abund_endsink);
+  // TODO ensure non-negative due to numerical precision?
 
   const double endecay = ndecays_remaining * get_decaypath_lastnucdecayenergy(decaypathindex);
 
@@ -655,8 +636,11 @@ auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypa
   return chainendecay;
 }
 
-// total decay power per mass [erg/s/g] for a given decaypath
-auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int nonemptymgi, const double time) -> double {
+// Get the total decay power per mass [erg/s/g] for a given decaypath
+// We only count the power from the last decay in the chain to avoid double counting of decay energy (all sub paths are
+// handled separately)
+[[nodiscard]] auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int nonemptymgi,
+                                                      const double time) -> double {
   // only decays at the end of the chain contributed from the initial abundance of the top of the chain are counted
   // (these can be can be same for a chain of length one)
 
@@ -670,20 +654,20 @@ auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int none
     return 0.;
   }
 
-  const int nucindex_end = decaypath.nucindex[get_decaypathlength(decaypathindex) - 1];
+  const int lastdecay_nucindex = decaypath.nucindex[decaypath.nucindex.size() - 2];
 
   const double t_afterinit = time - grid::get_t_model();
 
-  const int decaypathlength = get_decaypathlength(decaypathindex);
+  const auto lambdas = std::span{decaypath.lambdas}.first(decaypath.lambdas.size() - 1);  // exclude the decay daughter
 
-  // contribution to the end nuclide abundance from the top of chain (could be a length-one chain Z,A_top = Z,A_end
-  // so contribution would be from init abundance only)
-  const double endnucabund = decaypath.branchproduct * calculate_decaychain(top_initabund, decaypath.lambdas,
-                                                                            decaypathlength, t_afterinit, false);
+  // contribution to the end nuclide abundance from the top of chain (could be a length-one chain
+  // Z,A_top = Z,A_end so contribution would be from init abundance only)
+  const double decayingnucabund =
+      decaypath.branchproduct * calculate_decaychain(top_initabund, lambdas, t_afterinit, false);
 
   const double endecay = get_decaypath_lastnucdecayenergy(decaypathindex);
 
-  const double decaypower = endecay * endnucabund / get_meanlife(nucindex_end) / nucmass(nucindex_top);
+  const double decaypower = endecay * decayingnucabund / get_meanlife(lastdecay_nucindex) / nucmass(nucindex_top);
 
   assert_always(decaypower >= 0.);
   assert_always(std::isfinite(decaypower));
@@ -943,11 +927,17 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
 
   printlnlog("Number of nuclides: {}", get_num_nuclides());
 
-  const int maxdecaypathlength = std::accumulate(
-      decaypaths.cbegin(), decaypaths.cend(), 0,
-      [](const int maxlen, const auto& decaypath) { return std::max(maxlen, get_decaypathlength(decaypath)); });
+  const int maxdecaypathlength = std::ranges::fold_left(decaypaths, 0zU, [](const auto maxlen, const auto& decaypath) {
+    return std::max(maxlen, decaypath.nucindex.size());
+  });
 
   printlnlog("Number of decay paths: {} (max length {})", get_num_decaypaths(), maxdecaypathlength);
+  constexpr bool print_decaypaths = false;
+  if (print_decaypaths) {
+    for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
+      printout_decaypath(decaypathindex);
+    }
+  }
 
   // Read in data for gamma ray lines and make a list of them in energy order.
   gammapkt::init_gamma_data();
@@ -973,16 +963,16 @@ auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(const int nonemptym
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double tot_endecay = 0.;
   for (const auto& decaypath : decaypaths) {
-    const int decaypathlength = get_decaypathlength(decaypath);
-
     const int nucindex_top = decaypath.nucindex[0];
 
     const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top) / nucmass(nucindex_top);
+    auto lambdas = std::vector<double>(decaypath.lambdas);
+    // treat the end nuclide as stable to count how many got produced
+    lambdas.back() = 0.;
 
-    const double chain_endecay = (decaypath.branchproduct *
-                                  calculate_decaychain(top_initabund, decaypath.lambdas, decaypathlength + 1,
-                                                       tstart - grid::get_t_model(), true) *
-                                  get_decaypath_lastnucdecayenergy(decaypath));
+    const double chain_endecay =
+        (decaypath.branchproduct * calculate_decaychain(top_initabund, lambdas, tstart - grid::get_t_model(), true) *
+         get_decaypath_lastnucdecayenergy(decaypath));
 
     tot_endecay += chain_endecay;
   }
@@ -1258,17 +1248,15 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
     assert_always(pkt.e_cmf >= 0);
   }
 
-  // final decaying nuclide at the end of the chain
-  const int pathlength = get_decaypathlength(decaypathindex);
-  const int nucindex = decaypaths[decaypathindex].nucindex[pathlength - 1];
-  const int decaytype = decaypaths[decaypathindex].decaytypes[pathlength - 1];
-
   pkt.type = TYPE_RADIOACTIVE_PELLET;
-  pkt.pellet_nucindex = nucindex;
-  pkt.pellet_decaytype = decaytype;
 
-  const auto engamma = nucdecayenergygamma(nucindex);
-  const auto enparticle = nucdecayenergyparticle(nucindex, decaytype);
+  // final decaying nuclide in the chain (one before the end, which is the daughter of the last decay)
+  const auto pathlength = decaypaths[decaypathindex].nucindex.size();
+  pkt.pellet_nucindex = decaypaths[decaypathindex].nucindex[pathlength - 2];
+  pkt.pellet_decaytype = decaypaths[decaypathindex].decaytypes[pathlength - 2];
+
+  const auto engamma = nucdecayenergygamma(pkt.pellet_nucindex);
+  const auto enparticle = nucdecayenergyparticle(pkt.pellet_nucindex, pkt.pellet_decaytype);
 
   pkt.originated_from_particlenotgamma = (rng_uniform() >= engamma / (engamma + enparticle));
   if (pkt.originated_from_particlenotgamma) {
