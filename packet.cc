@@ -32,8 +32,17 @@
 namespace {
 
 // Place pellet n with energy e_cmf_per_packet in cell m
-void place_pellet(const double e_cmf_per_packet, const int cellindex, const int pktnumber, Packet& pkt) {
+void place_pellet(const double e_cmf_per_packet, const std::span<const double> en_cumulative, const int pktnumber,
+                  Packet& pkt) {
+  const auto etot_simtime = en_cumulative.back();
+  const double targetval = rng_uniform() * etot_simtime;
+
   // First choose a position for the pellet. In the cell.
+  // first i such that en_cumulative[i] > targetval
+  const int cellindex = static_cast<int>(std::ranges::upper_bound(en_cumulative, targetval) - en_cumulative.begin());
+  assert_always(cellindex < grid::ngrid);
+
+  pkt = Packet{};
   pkt.where = cellindex;
   pkt.number = pktnumber;  // record the packets number for debugging
   pkt.prop_time = globals::tmin;
@@ -112,15 +121,15 @@ void packet_init(std::span<Packet> pkt)
   double etot_simtime = 0.;
   for (int m = 0; m < grid::ngrid; m++) {
     const int mgi = grid::get_propcell_modelgridindex(m);
-    if (mgi < grid::get_npts_model() && grid::get_numpropcells(mgi) > 0)  // some grid cells are empty
-    {
+    // some grid cells are empty
+    if (mgi < grid::get_npts_model() && grid::get_numpropcells(mgi) > 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
-      double q = decay::get_modelcell_simtime_endecay_per_mass(nonemptymgi);
-      if constexpr (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) {
-        q += grid::get_initenergyq(mgi);
-      }
+      const double decay_en_per_mass = decay::get_modelcell_simtime_endecay_per_mass(nonemptymgi);
+      const auto initial_en_per_mass =
+          (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? grid::get_initenergyq(mgi) : 0.;
 
-      etot_simtime += grid::get_propcell_volume_tmin(m) * grid::get_rho_tmin(mgi) * q;
+      etot_simtime +=
+          grid::get_propcell_volume_tmin(m) * grid::get_rho_tmin(mgi) * (decay_en_per_mass + initial_en_per_mass);
     }
     en_cumulative[m] = etot_simtime;
   }
@@ -137,16 +146,8 @@ void packet_init(std::span<Packet> pkt)
 
   printlnlog("Placing pellets...");
   const auto allpkts = std::ranges::iota_view{0, globals::npkts};
-  std::for_each(allpkts.begin(), allpkts.end(), [&, etot_simtime, e_cmf_per_packet](const int n) {
-    pkt[n] = Packet{};
-    const double targetval = rng_uniform() * etot_simtime;
-
-    // first i such that en_cumulative[i] > targetval
-    const int cellindex = static_cast<int>(std::ranges::upper_bound(en_cumulative, targetval) - en_cumulative.cbegin());
-    assert_always(cellindex < grid::ngrid);
-
-    place_pellet(e_cmf_per_packet, cellindex, n, pkt[n]);
-  });
+  std::ranges::for_each(
+      allpkts, [&, e_cmf_per_packet](const int n) { place_pellet(e_cmf_per_packet, en_cumulative, n, pkt[n]); });
 
   decay::free_decaypath_energy_per_mass();  // will no longer be needed after packets are set up
 
