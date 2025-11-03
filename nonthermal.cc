@@ -2288,7 +2288,7 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const in
   return ratecoeffperdeposition * deposition_rate_density;
 }
 
-__host__ __device__ void do_ntalpha_deposit(Packet& pkt) {
+__host__ __device__ void do_ntalpha_fisprod_deposit(Packet& pkt) {
   // if ionisation by alpha particles is found to be important for the ionisation state, we could do a separate
   // Spencer-Fano solution. For now, just treat alpha deposition as pure heating (even though the alpha deposition rate
   // was calculated from the sum of ionisation and plasma heating)

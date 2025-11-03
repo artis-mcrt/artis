@@ -37,7 +37,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
   const auto priortype = pkt.type;
   const double ts = pkt.prop_time;
   const auto deposit_type =
-      (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? TYPE_NTALPHA_DEPOSITED : TYPE_NTLEPTON_DEPOSITED;
+      (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? TYPE_NTALPHA_FISPROD_DEPOSITED : TYPE_NTLEPTON_DEPOSITED;
 
   if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
     // absorption happens
@@ -179,6 +179,9 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
       } else if (pkt.pellet_decaytype == decay::DECAYTYPE_ALPHA) {
         atomicadd(globals::timesteps[nts].alpha_emission, pkt.e_cmf);
         pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_ALPHA;
+      } else if (pkt.pellet_decaytype == decay::DECAYTYPE_SPONTFISSION) {
+        atomicadd(globals::timesteps[nts].spfission_dep_discrete, pkt.e_cmf);
+        pkt.type = TYPE_NTALPHA_FISPROD_DEPOSITED;
       } else if constexpr (TESTMODE) {
         printlnlog("ERROR: pellet marked as particle emission is for decaytype {} != any of (alpha, beta+, beta-)",
                    pkt.pellet_decaytype);
@@ -248,8 +251,8 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
       break;
     }
 
-    case TYPE_NTALPHA_DEPOSITED: {
-      nonthermal::do_ntalpha_deposit(pkt);
+    case TYPE_NTALPHA_FISPROD_DEPOSITED: {
+      nonthermal::do_ntalpha_fisprod_deposit(pkt);
       break;
     }
 

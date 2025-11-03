@@ -111,6 +111,7 @@ void write_deposition_file() {
   globals::timesteps[nts].eps_alpha_ana_power = 0.;
   globals::timesteps[nts].qdot_betaminus = 0.;
   globals::timesteps[nts].qdot_alpha = 0.;
+  globals::timesteps[nts].qdot_spfission = 0.;
   globals::timesteps[nts].qdot_total = 0.;
 
   for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
@@ -123,6 +124,8 @@ void write_deposition_file() {
         cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_BETAMINUS);
     globals::timesteps[nts].eps_alpha_ana_power +=
         cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_ALPHA);
+    globals::timesteps[nts].eps_spfission_ana_power +=
+        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_SPONTFISSION);
 
     mtot += cellmass;
 
@@ -134,6 +137,8 @@ void write_deposition_file() {
         globals::timesteps[nts].qdot_betaminus += qdot_cell;
       } else if (decaytype == decay::DECAYTYPE_ALPHA) {
         globals::timesteps[nts].qdot_alpha += qdot_cell;
+      } else if (decaytype == decay::DECAYTYPE_SPONTFISSION) {
+        globals::timesteps[nts].qdot_spfission += qdot_cell;
       }
     }
   }
@@ -142,8 +147,10 @@ void write_deposition_file() {
   MPI_Allreduce_safe(globals::timesteps[nts].eps_positron_ana_power, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce_safe(globals::timesteps[nts].eps_electron_ana_power, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce_safe(globals::timesteps[nts].eps_alpha_ana_power, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].eps_spfission_ana_power, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce_safe(globals::timesteps[nts].qdot_betaminus, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce_safe(globals::timesteps[nts].qdot_alpha, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(globals::timesteps[nts].qdot_spfission, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce_safe(globals::timesteps[nts].qdot_total, MPI_SUM, MPI_COMM_WORLD);
 
   MPI_Allreduce_safe(mtot, MPI_SUM, MPI_COMM_WORLD);
@@ -153,8 +160,19 @@ void write_deposition_file() {
     auto dep_file = fstream_required("deposition.out.tmp", std::ios::out | std::ios::trunc);
     dep_file << "#ts tmid_days tmid_s total_dep_Lsun gammadep_discrete_Lsun gammadep_Lsun positrondep_Lsun "
                 "eps_positron_ana_Lsun elecdep_Lsun eps_elec_Lsun eps_elec_ana_Lsun alphadep_Lsun eps_alpha_Lsun "
-                "eps_alpha_ana_Lsun eps_gamma_Lsun Qdot_betaminus_ana_erg/s/g Qdotalpha_ana_erg/s/g eps_erg/s/g "
-                "Qdot_ana_erg/s/g positrondep_discrete_Lsun elecdep_discrete_Lsun alphadep_discrete_Lsun\n";
+                "eps_alpha_ana_Lsun";
+    if (DECAY_SPONTFISSION_ON) {
+      dep_file << " eps_spfission_ana_Lsun";
+    }
+    dep_file << " eps_gamma_Lsun Qdot_betaminus_ana_erg/s/g Qdotalpha_ana_erg/s/g";
+    if (DECAY_SPONTFISSION_ON) {
+      dep_file << " Qdotspfission_ana_erg/s/g";
+    }
+    dep_file << " eps_erg/s/g Qdot_ana_erg/s/g positrondep_discrete_Lsun elecdep_discrete_Lsun alphadep_discrete_Lsun";
+    if (DECAY_SPONTFISSION_ON) {
+      dep_file << " spfission_dep_discrete_Lsun";
+    }
+    dep_file << '\n';
 
     for (int i = 0; i <= nts; i++) {
       const double t_mid = globals::timesteps[i].mid;
@@ -166,23 +184,34 @@ void write_deposition_file() {
                                   globals::timesteps[i].electron_emission + globals::timesteps[i].alpha_emission) /
                                  mtot / t_width;
 
-      dep_file << i << ' ' << t_mid / DAY << ' ' << t_mid << ' ' << total_dep / t_width / LSUN << ' '
-               << globals::timesteps[i].gamma_dep_discrete / t_width / LSUN << ' '
-               << globals::timesteps[i].gamma_dep / t_width / LSUN << ' '
-               << globals::timesteps[i].positron_dep / t_width / LSUN << ' '
-               << globals::timesteps[i].eps_positron_ana_power / LSUN << ' '
-               << globals::timesteps[i].electron_dep / t_width / LSUN << ' '
-               << globals::timesteps[i].electron_emission / t_width / LSUN << ' '
-               << globals::timesteps[i].eps_electron_ana_power / LSUN << ' '
-               << globals::timesteps[i].alpha_dep / t_width / LSUN << ' '
-               << globals::timesteps[i].alpha_emission / t_width / LSUN << ' '
-               << globals::timesteps[i].eps_alpha_ana_power / LSUN << ' '
-               << globals::timesteps[i].gamma_emission / t_width / LSUN << ' '
-               << globals::timesteps[i].qdot_betaminus / mtot << ' ' << globals::timesteps[i].qdot_alpha / mtot << ' '
-               << epsilon_tot << ' ' << globals::timesteps[i].qdot_total / mtot << ' '
-               << globals::timesteps[i].positron_dep_discrete / t_width / LSUN << ' '
-               << globals::timesteps[i].electron_dep_discrete / t_width / LSUN << ' '
-               << globals::timesteps[i].alpha_dep_discrete / t_width / LSUN << '\n';
+      dep_file << i << ' ' << t_mid / DAY << ' ' << t_mid;
+      dep_file << ' ' << total_dep / t_width / LSUN << ' ' << globals::timesteps[i].gamma_dep_discrete / t_width / LSUN;
+      dep_file << ' ' << globals::timesteps[i].gamma_dep / t_width / LSUN;
+      dep_file << ' ' << globals::timesteps[i].positron_dep / t_width / LSUN;
+      dep_file << ' ' << globals::timesteps[i].eps_positron_ana_power / LSUN;
+      dep_file << ' ' << globals::timesteps[i].electron_dep / t_width / LSUN;
+      dep_file << ' ' << globals::timesteps[i].electron_emission / t_width / LSUN;
+      dep_file << ' ' << globals::timesteps[i].eps_electron_ana_power / LSUN;
+      dep_file << ' ' << globals::timesteps[i].alpha_dep / t_width / LSUN;
+      dep_file << ' ' << globals::timesteps[i].alpha_emission / t_width / LSUN;
+      dep_file << ' ' << globals::timesteps[i].eps_alpha_ana_power / LSUN;
+      if (DECAY_SPONTFISSION_ON) {
+        dep_file << ' ' << globals::timesteps[i].eps_spfission_ana_power / LSUN;
+      }
+      dep_file << ' ' << globals::timesteps[i].gamma_emission / t_width / LSUN;
+      dep_file << ' ' << globals::timesteps[i].qdot_betaminus / mtot;
+      dep_file << ' ' << globals::timesteps[i].qdot_alpha / mtot;
+      if (DECAY_SPONTFISSION_ON) {
+        dep_file << ' ' << globals::timesteps[i].qdot_spfission / mtot;
+      }
+      dep_file << ' ' << epsilon_tot << ' ' << globals::timesteps[i].qdot_total / mtot;
+      dep_file << ' ' << globals::timesteps[i].positron_dep_discrete / t_width / LSUN;
+      dep_file << ' ' << globals::timesteps[i].electron_dep_discrete / t_width / LSUN;
+      dep_file << ' ' << globals::timesteps[i].alpha_dep_discrete / t_width / LSUN;
+      if (DECAY_SPONTFISSION_ON) {
+        dep_file << ' ' << globals::timesteps[i].spfission_dep_discrete / t_width / LSUN;
+      }
+      dep_file << '\n';
     }
     dep_file.close();
 
