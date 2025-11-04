@@ -936,6 +936,8 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
         nuclides.back().branchprobs[DECAYTYPE_SPONTFISSION] = 1.;
         nuclides.back().endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
         nuclides.back().endecay_fission = q_fission_mev * MEV;  // will be overwritten if we have fission product data
+        printlnlog("  added spontaneous fission nuclide: (Z={}){}{} meanlife {} days", z_in, get_elname(z_in), a_in,
+                   tau_sec / 86400.0);
       }
 
       auto ffission_products = fstream_required("fissionproducts_GEF_100keV.txt", std::ios::in);
@@ -1008,13 +1010,31 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
     assert_always(!seen_z_a.contains({nuc.z, nuc.a}));  // duplicate nuclide detected
     seen_z_a.insert({nuc.z, nuc.a});
 
-    const auto prob_sum = std::ranges::fold_left(nuc.branchprobs, 0.0, std::plus{});
-    if (prob_sum > 0.) {
+    const auto branchprob_sum = std::ranges::fold_left(nuc.branchprobs, 0.0, std::plus{});
+    if (branchprob_sum > 0.) {
       assert_always(nuc.meanlife > 0.);  // unstable nuclide has decay modes
-      assert_always(std::abs(prob_sum - 1.) < 1e-3);  // branching ratios sum to 100%
+      assert_always(std::abs(branchprob_sum - 1.) < 1e-3);  // branching ratios sum to 100%
     } else {
       assert_always(nuc.meanlife < 0.);  // stable nuclide has no decay modes
     }
+
+    if (nuc.branchprobs[DECAYTYPE_BETAPLUS] > 0.) {
+      assert_always(nuc.endecay_positron >= 0.);
+      assert_always(nuc.endecay_q[DECAYTYPE_BETAPLUS] >= 0.);
+    }
+    if (nuc.branchprobs[DECAYTYPE_BETAMINUS] > 0.) {
+      assert_always(nuc.endecay_electron >= 0.);
+      assert_always(nuc.endecay_q[DECAYTYPE_BETAMINUS] >= 0.);
+    }
+    if (nuc.branchprobs[DECAYTYPE_ALPHA] > 0.) {
+      assert_always(nuc.endecay_alpha >= 0.);
+      assert_always(nuc.endecay_q[DECAYTYPE_ALPHA] >= 0.);
+    }
+    if (nuc.branchprobs[DECAYTYPE_SPONTFISSION] > 0.) {
+      assert_always(nuc.endecay_fission >= 0.);
+      assert_always(nuc.endecay_q[DECAYTYPE_SPONTFISSION] >= 0.);
+    }
+    assert_always(nuc.endecay_gamma >= 0.);
   }
 
   printlnlog("Number of nuclides before filtering: {}", get_num_nuclides());
