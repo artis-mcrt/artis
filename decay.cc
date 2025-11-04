@@ -673,7 +673,7 @@ auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypa
   const int nucindex_top = decaypath.nucindex[0];
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-  const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top);
+  const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top) / nucmass(nucindex_top);
   if (top_initabund <= 0.) {
     return 0.;
   }
@@ -690,7 +690,7 @@ auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypa
 
   const int lastdecay_nucindex = decaypath.nucindex[decaypath.nucindex.size() - 2];
 
-  const double decaypower = endecay * decayingnucabund / get_meanlife(lastdecay_nucindex) / nucmass(nucindex_top);
+  const double decaypower = endecay * decayingnucabund / get_meanlife(lastdecay_nucindex);
 
   assert_always(decaypower >= 0.);
   assert_always(std::isfinite(decaypower));
@@ -1077,17 +1077,18 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
 // accounting for the photon energy loss due to expansion between time of decays and tstart (equation 18 of Lucy 2005)
 auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(const int nonemptymgi, const double tstart) -> double {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+  const double t_afterinit = tstart - grid::get_t_model();
   double tot_endecay = 0.;
   for (const auto& decaypath : decaypaths) {
     const int nucindex_top = decaypath.nucindex[0];
 
     const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top) / nucmass(nucindex_top);
     auto lambdas = decaypath.lambdas;
-    // treat the end nuclide as stable to count how many got produced
+    // treat the end nuclide as stable to count how many got produced by the chain
     lambdas[lambdas.size() - 1] = 0.;
 
     const double chain_endecay =
-        (decaypath.branchproduct * calculate_decaychain(top_initabund, lambdas, tstart - grid::get_t_model(), true) *
+        (decaypath.branchproduct * calculate_decaychain(top_initabund, lambdas, t_afterinit, true) *
          get_decaypath_lastdecayenergy(decaypath));
 
     tot_endecay += chain_endecay;
