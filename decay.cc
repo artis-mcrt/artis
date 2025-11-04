@@ -937,15 +937,15 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
 
       auto ffission_products = fstream_required("fissionproducts_GEF_100keV.txt", std::ios::in);
       while (get_noncommentline(ffission_products, line)) {
-        int z_in = -1;
-        int a_in = -1;
-        assert_always(std::stringstream(line) >> z_in >> a_in);
+        int z_parent = -1;
+        int a_parent = -1;
+        assert_always(std::stringstream(line) >> z_parent >> a_parent);
         get_noncommentline(ffission_products, line);
         double num_neutrons = 0;
         int tablesize = 0;
         double q_fission_mev = 0.;
         assert_always(std::stringstream(line) >> num_neutrons >> tablesize >> q_fission_mev);
-        const int nucindex = get_nucindex_or_neg_one(z_in, a_in);
+        const int nucindex = get_nucindex_or_neg_one(z_parent, a_parent);
         const bool keep_table = (nucindex >= 0) && (nuclides[nucindex].branchprobs[DECAYTYPE_SPONTFISSION] > 0.);
         if (keep_table) {
           nuclides[nucindex].endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
