@@ -920,7 +920,7 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
         double q_fission_mev = 0.;
         double e_gamma_mev = 0.;
         double e_1_mev = 0.;
-        double e_2_mev = 0.;  // what is this?
+        double e_2_mev = 0.;
         double m1 = 0.;
         double m2 = 0.;
         double z1 = 0.;
