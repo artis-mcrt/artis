@@ -952,7 +952,7 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
         const bool keep_table = (nucindex >= 0) && (nuclides[nucindex].branchprobs[DECAYTYPE_SPONTFISSION] > 0.);
         if (keep_table) {
           nuclides[nucindex].endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
-          assert_always(nuclides[nucindex].endecay_fission > 0.);
+          nuclides[nucindex].endecay_fission = q_fission_mev * MEV;
           nuclides[nucindex].fission_daughters_z_a_prob.clear();
           nuclides[nucindex].fission_daughters_z_a_prob.reserve(tablesize);
         }
