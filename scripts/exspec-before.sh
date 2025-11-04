@@ -19,4 +19,9 @@ find . -maxdepth 1 -name '*.txt.zst' -exec zstd -d -v -T0 --rm {} \;
 find . -maxdepth 1 -name '*.txt.xz' -exec xz -d -v -T0 {} \;
 find . -maxdepth 1 -name '*.txt.gz' -exec gzip -d -v {} \;
 
-find data/ -name '*.txt.zst' -exec zstd -d -v -T0 --rm {} \;
+# if data folder exists, unzip files there too
+if [[ -d data/ ]]; then
+    find data/ -name '*.txt.zst' -exec zstd -d -v -T0 --rm {} \;
+    find data/ -name '*.txt.xz' -exec xz -d -v -T0 {} \;
+    find data/ -name '*.txt.gz' -exec gzip -d -v {} \;
+fi
