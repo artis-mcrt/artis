@@ -10,18 +10,20 @@
 #include "packet.h"
 
 namespace decay {
+
 enum decaytypes {
   DECAYTYPE_ALPHA = 0,
   DECAYTYPE_ELECTRONCAPTURE = 1,
   DECAYTYPE_BETAPLUS = 2,
   DECAYTYPE_BETAMINUS = 3,
   DECAYTYPE_NONE = 4,
-  DECAYTYPE_COUNT = 5,
+  DECAYTYPE_SPONTFISSION = 5,
+  DECAYTYPE_COUNT = 6,
 };
 
-constexpr std::array<enum decaytypes, 5> all_decaytypes = {
+constexpr std::array<enum decaytypes, 5> all_decaytypes{
     decaytypes::DECAYTYPE_ALPHA, decaytypes::DECAYTYPE_ELECTRONCAPTURE, decaytypes::DECAYTYPE_BETAPLUS,
-    decaytypes::DECAYTYPE_BETAMINUS, decaytypes::DECAYTYPE_NONE};
+    decaytypes::DECAYTYPE_BETAMINUS, decaytypes::DECAYTYPE_SPONTFISSION};
 
 void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>& custom_alist);
 [[nodiscard]] auto get_nucstring_z(const std::string& strnuc) -> int;

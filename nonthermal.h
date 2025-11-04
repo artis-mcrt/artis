@@ -22,7 +22,7 @@ void calculate_deposition_rate_density(int nonemptymgi, int timestep, HeatingCoo
 
 [[gnu::pure]] [[nodiscard]] auto nt_excitation_ratecoeff(int nonemptymgi, int lowerlevel, int upperlevel,
                                                          int alltransindex) -> double;
-void do_ntalpha_deposit(Packet& pkt);
+void do_ntalpha_fisprod_deposit(Packet& pkt);
 void do_ntlepton_deposit(Packet& pkt);
 void write_restart_data(FILE* gridsave_file);
 void read_restart_data(FILE* gridsave_file);

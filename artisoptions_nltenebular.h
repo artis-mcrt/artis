@@ -168,5 +168,7 @@ constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::INSTANT;
 
 constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
 
+constexpr bool DECAY_SPONTFISSION_ON = false;
+
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
