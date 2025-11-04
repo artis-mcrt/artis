@@ -9,6 +9,7 @@
 #include <cstring>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <numbers>
 #include <numeric>
@@ -904,6 +905,14 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
   for (const auto& nuc : nuclides) {
     assert_always(!seen_z_a.contains({nuc.z, nuc.a}));  // duplicate nuclide detected
     seen_z_a.insert({nuc.z, nuc.a});
+
+    const auto prob_sum = std::ranges::fold_left(nuc.branchprobs, 0.0, std::plus{});
+    if (prob_sum > 0.) {
+      assert_always(nuc.meanlife > 0.);  // unstable nuclide has decay modes
+      assert_always(std::abs(prob_sum - 1.) < 1e-3);  // branching ratios sum to 100%
+    } else {
+      assert_always(nuc.meanlife < 0.);  // stable nuclide has no decay modes
+    }
   }
 
   printlnlog("Number of nuclides before filtering: {}", get_num_nuclides());
