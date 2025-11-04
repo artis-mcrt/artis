@@ -113,8 +113,9 @@ std::vector<DecayPath> decaypaths;
       return {DecayDaughter{.z = z_parent + 1, .a = a_parent, .probability = 1.}};  // lose a neutron, gain a proton
     }
     case decaytypes::DECAYTYPE_SPONTFISSION: {
-      assert_always(!nuclides[get_nucindex(z_parent, a_parent)].fission_daughters_z_a_prob.empty());
-      return nuclides[get_nucindex(z_parent, a_parent)].fission_daughters_z_a_prob;
+      const auto nucindex = get_nucindex(z_parent, a_parent);
+      assert_always(!nuclides[nucindex].fission_daughters_z_a_prob.empty());
+      return nuclides[nucindex].fission_daughters_z_a_prob;
     }
     case decaytypes::DECAYTYPE_NONE: {
       return {DecayDaughter{.z = -1, .a = -1, .probability = 0.}};  // no daughter
