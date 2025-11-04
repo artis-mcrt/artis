@@ -109,6 +109,7 @@ void write_deposition_file() {
   globals::timesteps[nts].eps_positron_ana_power = 0.;
   globals::timesteps[nts].eps_electron_ana_power = 0.;
   globals::timesteps[nts].eps_alpha_ana_power = 0.;
+  globals::timesteps[nts].eps_spfission_ana_power = 0.;
   globals::timesteps[nts].qdot_betaminus = 0.;
   globals::timesteps[nts].qdot_alpha = 0.;
   globals::timesteps[nts].qdot_spfission = 0.;
