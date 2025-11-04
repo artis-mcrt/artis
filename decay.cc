@@ -964,7 +964,8 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
             double probability = 0.;
             assert_always(std::stringstream(line) >> daughter_a >> daughter_z >> probability_before_neutron_emission >>
                           probability);
-            nuclides[nucindex].fission_daughters_z_a_prob.emplace_back({.z = daughter_z, .a = daughter_a, .probability = probability});
+            nuclides[nucindex].fission_daughters_z_a_prob.push_back(
+                {.z = daughter_z, .a = daughter_a, .probability = probability});
             daughter_prob_sum += probability;
           }
         }
