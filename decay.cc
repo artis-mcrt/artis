@@ -241,6 +241,8 @@ void printout_nuclidemeanlife(const int z, const int a) {
   assert_testmodeonly(decaypath.decaytypes[secondlastindex] != DECAYTYPE_NONE);
   assert_testmodeonly(decaypath.lambdas[secondlastindex] > 0.);
   assert_testmodeonly(decaypath.decaytypes.back() == DECAYTYPE_NONE);
+  // Normalize decay energy by decay_daughters_probsum to properly distribute energy among probabilistic fission product outcomes.
+  // This adjustment ensures that, for fission events with multiple possible daughters, the total decay energy is correctly apportioned according to branching probabilities.
   return nucdecayenergy(decaypath.nucindex[secondlastindex], decaypath.decaytypes[secondlastindex]) /
          nuclides[decaypath.nucindex[secondlastindex]].decay_daughters_probsum;
 }
