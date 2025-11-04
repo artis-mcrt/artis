@@ -198,33 +198,36 @@ jobs:
 
             - name: Compile nebular mode
               run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode OPENMP=ON
               run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
               if: matrix.compiler.name != 'nvc++'
               run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
               if: matrix.compiler.name == 'nvc++'
               run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile all remaining option files
               run: |
-                  find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nebular.h" -exec sh -c 'cp -v -p {} artisoptions.h && make sn3d' \;
+                  for file in $(find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nltenebular.h"); do
+                      cp -v -p "$file" artisoptions.h
+                      make sn3d
+                  done
 
     mac-clang:
         runs-on: macos-26
@@ -261,38 +264,41 @@ jobs:
                   make clean
                   make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: Apple Clang Compile  classic mode OPENMP=ON
+            - name: Apple Clang Compile classic mode OPENMP=ON
               run: |
                   make clean
                   make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Apple Clang Compile classic mode STDPAR=ON
               run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Apple Clang Compile nebular mode
               run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Apple Clang Compile nebular mode OPENMP=ON
               run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Apple Clang Compile nebular mode STDPAR=ON
               run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Apple Clang Compile all remaining option files
               run: |
-                  find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nebular.h" -exec sh -c 'cp -v -p {} artisoptions.h && make sn3d' \;
+                  for file in $(find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nltenebular.h"); do
+                      cp -v -p "$file" artisoptions.h
+                      make sn3d
+                  done
 
             - name: Install LLVM
               run: |
@@ -322,22 +328,25 @@ jobs:
 
             - name: LLVM Clang Compile nebular mode
               run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: LLVM Clang Compile nebular mode OPENMP=ON
               run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: LLVM Clang Compile nebular mode STDPAR=ON
               run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: LLVM Clang Compile all remaining option files
               run: |
-                  find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nebular.h" -exec sh -c 'cp -v -p {} artisoptions.h && make sn3d' \;
+                  for file in $(find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nltenebular.h"); do
+                      cp -v -p "$file" artisoptions.h
+                      make sn3d
+                  done
