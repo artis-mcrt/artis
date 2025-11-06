@@ -155,12 +155,22 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
 
   // power densities in erg / s / cm^3. 'ana' means analytical at t_mid, i.e. the rates calculated from the nuclear
   // abundances and decay data, not from Monte Carlo events
-  estimators_file << std::format("emission_ana: gamma {:11.5e} positron {:11.5e} electron {:11.5e} alpha {:11.5e}\n",
+  estimators_file << std::format("emission_ana: gamma {:11.5e} positron {:11.5e} electron {:11.5e} alpha {:11.5e}",
                                  heatingcoolingrates.eps_gamma_ana, heatingcoolingrates.eps_positron_ana,
                                  heatingcoolingrates.eps_electron_ana, heatingcoolingrates.eps_alpha_ana);
-  estimators_file << std::format("deposition: gamma {:11.5e} positron {:11.5e} electron {:11.5e} alpha {:11.5e}\n",
+  if constexpr (DECAY_SPONTFISSION_ON) {
+    estimators_file << std::format(" spfission {:11.5e}", heatingcoolingrates.eps_spfission_ana);
+  }
+  estimators_file << '\n';
+
+  estimators_file << std::format("deposition: gamma {:11.5e} positron {:11.5e} electron {:11.5e} alpha {:11.5e}",
                                  heatingcoolingrates.dep_gamma, heatingcoolingrates.dep_positron,
                                  heatingcoolingrates.dep_electron, heatingcoolingrates.dep_alpha);
+  if constexpr (DECAY_SPONTFISSION_ON) {
+    estimators_file << std::format(" spfission {:11.5e}", heatingcoolingrates.dep_spfission);
+  }
+  estimators_file << '\n';
+
   estimators_file << std::format(
       "heating: ff {:11.5e} bf {:11.5e} coll {:11.5e}       dep {:11.5e} heating_dep/total_dep {:.3f}\n",
       heatingcoolingrates.heating_ff, heatingcoolingrates.heating_bf, heatingcoolingrates.heating_collisional,

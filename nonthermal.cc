@@ -2132,6 +2132,9 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
   heatingcoolingrates.eps_alpha_ana =
       rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_ALPHA);
 
+  heatingcoolingrates.eps_spfission_ana =
+      rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_SPONTFISSION);
+
   if (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
     heatingcoolingrates.dep_positron = heatingcoolingrates.eps_positron_ana;
     heatingcoolingrates.dep_electron = heatingcoolingrates.eps_electron_ana;
@@ -2141,6 +2144,9 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
     heatingcoolingrates.dep_electron = globals::dep_estimator_electron[nonemptymgi];
     heatingcoolingrates.dep_alpha = globals::dep_estimator_alpha[nonemptymgi];
   }
+
+  // spontaneous fission contribution is always treated as instant deposition
+  heatingcoolingrates.dep_spfission = heatingcoolingrates.eps_spfission_ana;
 
   deposition_rate_density_all_cells[nonemptymgi] =
       (heatingcoolingrates.dep_gamma + heatingcoolingrates.dep_positron + heatingcoolingrates.dep_electron);

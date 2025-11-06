@@ -17,11 +17,13 @@ struct HeatingCoolingRates {
   double dep_positron{0};
   double dep_electron{0};
   double dep_alpha{0};
+  double dep_spfission{0};
   // analytic rates at the middle of the timestep (t_mid)
   double eps_gamma_ana{0};
   double eps_positron_ana{0};
   double eps_electron_ana{0};
   double eps_alpha_ana{0};
+  double eps_spfission_ana{0};
 };
 
 void call_T_e_finder(int nonemptymgi, double t_current, double T_min, double T_max,
