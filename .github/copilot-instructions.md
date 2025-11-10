@@ -91,7 +91,7 @@ mpirun -np 1 ./exspec
 **CRITICAL**: Always run complete validation scenarios after making changes:
 
 1. **Build validation**: Verify both executables build successfully
-2. **Basic functionality**: Run at least one test case end-to-end  
+2. **Basic functionality**: Run at least one test case end-to-end
 3. **Code formatting**: Run `clang-format` on modified .cc/.h files
 4. **Scientific validation**: Check that simulation produces expected output files:
    - `estimators*.out` - Main estimator output
@@ -142,7 +142,7 @@ Choose appropriate artisoptions template for your simulation:
 ### Test Cases Available
 CI tests 12 different scenarios - examples:
 - `classicmode_1d_3dgrid` - Simple 1D classic mode (good for testing)
-- `kilonova_1d_1dgrid` - 1D kilonova simulation  
+- `kilonova_1d_1dgrid` - 1D kilonova simulation
 - `nebular_1d_3dgrid` - NLTE nebular phase simulation
 
 ## Troubleshooting
@@ -153,7 +153,7 @@ CI tests 12 different scenarios - examples:
 3. **CMake C++23 errors**: Use Makefile instead of CMake
 4. **Cast function type warnings**: Normal with some MPI versions, can be ignored
 
-### Common Runtime Issues  
+### Common Runtime Issues
 1. **"artis.pid exists"**: Delete `artis.pid` file if stale
 2. **Missing input files**: Use test setup scripts to get proper inputs
 3. **MPI errors**: Ensure proper MPI flags (`--oversubscribe --mca mpi_yield_when_idle 1`)
