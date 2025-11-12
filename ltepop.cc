@@ -401,10 +401,11 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
   }
 
   const auto T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(nonemptymgi) : grid::get_Te(nonemptymgi);
+  const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
 
-  const double E_aboveground = epsilon(element, ion, level) - epsilon(element, ion, 0);
+  const double E_aboveground = epsilon(ionuniquelevelindexstart + level) - epsilon(ionuniquelevelindexstart);
 
-  return (nnground * stat_weight(element, ion, level) / stat_weight(element, ion, 0) *
+  return (nnground * stat_weight(ionuniquelevelindexstart + level) / stat_weight(ionuniquelevelindexstart) *
           exp(-E_aboveground / KB / T_exc));
 }
 
