@@ -31,7 +31,8 @@ constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
 constexpr bool SINGLE_LEVEL_TOP_ION;
 
 // if false, read from file or autodetect
-constexpr bool single_ground_level;
+// this only affects the recombrates scaling, since rates are given per ground multiplet population.
+constexpr bool SINGLE_GROUND_LEVEL;
 
 // Add any missing collisional transitions between the lower n levels and all other levels (or disable by returning zero)
 // This can prevent fully disconnected levels, whose NLTE populations cannot be determined

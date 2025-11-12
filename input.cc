@@ -1551,7 +1551,7 @@ void read_atomicdata_files() {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       if (globals::elements[element].ions[ion].nlevels_groundterm <= 0) {
-        if (single_ground_level) {
+        if (SINGLE_GROUND_LEVEL) {
           globals::elements[element].ions[ion].nlevels_groundterm = 1;
         } else {
           globals::elements[element].ions[ion].nlevels_groundterm = calculate_nlevels_groundterm(element, ion);
