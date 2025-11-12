@@ -691,28 +691,28 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
 }
 
 void nltepop_matrix_normalise(const int nonemptymgi, const int element, gsl_matrix* rate_matrix,
-                              std::span<double> pop_norm_factors, const int first_ion_used, const int nions_used) {
+                              std::span<double> pop_normfactors, const int first_ion_used, const int nions_used) {
   const size_t nlte_dimension = rate_matrix->size1;
-  assert_always(pop_norm_factors.size() == nlte_dimension);
+  assert_always(pop_normfactors.size() == nlte_dimension);
   assert_always(rate_matrix->size2 == nlte_dimension);
 
   for (size_t column = 0; column < nlte_dimension; column++) {
     const auto [ion, level] = get_ion_level_of_nlte_vector_index(column, element, first_ion_used, nions_used);
 
-    pop_norm_factors[column] = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
+    pop_normfactors[column] = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
 
     if (level_isinsuperlevel(element, ion, level)) {
       // levels in the superlevel get combined together
       for (int dummylevel = level + 1; dummylevel < get_nlevels(element, ion); dummylevel++) {
         if (level_isinsuperlevel(element, ion, dummylevel)) {
-          pop_norm_factors[column] += calculate_levelpop_boltzmann(nonemptymgi, element, ion, dummylevel);
+          pop_normfactors[column] += calculate_levelpop_boltzmann(nonemptymgi, element, ion, dummylevel);
         }
       }
     }
 
     // apply the normalisation factor to this column in the rate_matrix
     gsl_vector_view column_view = gsl_matrix_column(rate_matrix, column);
-    gsl_vector_scale(&column_view.vector, pop_norm_factors[column]);
+    gsl_vector_scale(&column_view.vector, pop_normfactors[column]);
   }
 }
 
@@ -867,7 +867,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   return true;
 }
 
-// solve rate_matrix * x = balance_vector, so that popvec[i] = x[i] * pop_norm_factors[i]
+// solve rate_matrix * x = balance_vector, so that popvec[i] = x[i] * pop_normfactors[i]
 // return true if the solution is successful, or false if the matrix is singular, contains negative or inverted
 // populations.
 [[nodiscard]] auto nltepop_matrix_solve(const int element, const int nonemptymgi, const gsl_matrix* rate_matrix,
@@ -1156,14 +1156,14 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
     // calculate the normalisation factors and apply them to the matrix
     // columns and balance vector elements
-    THREADLOCALONHOST std::vector<double> pop_norm_factors;
-    pop_norm_factors.reserve(max_nlte_dimension);
-    pop_norm_factors.resize(nlte_dimension);
-    std::ranges::fill(pop_norm_factors, 1.0);
-    nltepop_matrix_normalise(nonemptymgi, element, &rate_matrix, pop_norm_factors, first_ion_used, nions_used);
+    THREADLOCALONHOST std::vector<double> pop_normfactors;
+    pop_normfactors.reserve(max_nlte_dimension);
+    pop_normfactors.resize(nlte_dimension);
+    std::ranges::fill(pop_normfactors, 1.0);
+    nltepop_matrix_normalise(nonemptymgi, element, &rate_matrix, pop_normfactors, first_ion_used, nions_used);
 
     matrix_solve_success = nltepop_matrix_solve(element, nonemptymgi, &rate_matrix, balance_vector, popvec,
-                                                pop_norm_factors, max_nlte_dimension, first_ion_used, nions_used);
+                                                pop_normfactors, max_nlte_dimension, first_ion_used, nions_used);
 
     matrix_solve_required = false;  // will be set to true if we need to retry with a different ion range
     if (matrix_solve_success) {
