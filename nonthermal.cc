@@ -48,7 +48,7 @@ namespace nonthermal {
 namespace {
 
 // minimum number fraction of the total population to include in SF solution
-constexpr double minionfraction = 1.e-8;
+constexpr double MIN_ION_OVER_NNTOT = 1.e-8;
 
 // minimum deposition rate density (eV/s/cm^3) to solve SF equation
 constexpr double MINDEPRATE = 0.;
@@ -63,11 +63,11 @@ constexpr std::array<std::string, 28> shellnames{"K ", "L1", "L2", "L3", "M1", "
 std::vector<std::vector<double>> elements_electron_binding;
 std::vector<std::vector<int>> allions_shell_occupancies;
 
-struct collionrow {
+struct ShellParams {
   int Z{-1};
   int ionstage{-1};
-  int n = -1;
-  int l = -1;
+  int n{-1};
+  int l{-1};
   double ionpot_ev{NAN};
   double A{NAN};
   double B{NAN};
@@ -84,13 +84,13 @@ struct collionrow {
   float en_auger_ev{NAN};
   float n_auger_elec_avg{NAN};
 
-  collionrow() {
+  ShellParams() {
     std::ranges::fill(prob_num_auger, 0.);
     prob_num_auger[0] = 1.;
   }
 };
 
-std::vector<collionrow> colliondata;
+std::vector<ShellParams> colliondata;
 
 static_assert(SF_EMIN > 0.);
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
@@ -617,7 +617,7 @@ void read_collion_data() {
   assert_always(colliondatacount >= 0);
 
   for (int i = 0; i < colliondatacount; i++) {
-    collionrow collionrow{};
+    ShellParams collionrow{};
     int nelec = -1;
     get_noncommentline(cifile, line);
     assert_always(std::istringstream{line} >> collionrow.Z >> nelec >> collionrow.n >> collionrow.l >>
@@ -651,7 +651,7 @@ void read_collion_data() {
       if (nbound <= 0) {
         continue;
       }
-      const bool any_data_matched = std::ranges::any_of(colliondata, [Z, ionstage](const collionrow& collionrow) {
+      const bool any_data_matched = std::ranges::any_of(colliondata, [Z, ionstage](const ShellParams& collionrow) {
         return collionrow.Z == Z && collionrow.ionstage == ionstage;
       });
       if (!any_data_matched) {
@@ -679,7 +679,7 @@ void read_collion_data() {
             assert_always(enbinding > 0);
           }
           const double p = std::max(ionpot, enbinding);
-          collionrow collionrow{};
+          ShellParams collionrow{};
           collionrow.Z = Z;
           collionrow.ionstage = ionstage;
           collionrow.n = -1;
@@ -704,7 +704,7 @@ void read_collion_data() {
     }
   }
   colliondata.shrink_to_fit();
-  std::ranges::stable_sort(colliondata, [](const collionrow& a, const collionrow& b) {
+  std::ranges::stable_sort(colliondata, [](const ShellParams& a, const ShellParams& b) {
     return std::tie(a.Z, a.ionstage, a.ionpot_ev, a.n, a.l) < std::tie(b.Z, b.ionstage, b.ionpot_ev, b.n, b.l);
   });
 
@@ -797,7 +797,7 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
   // return yfunc[index];
 }
 
-auto xs_ionisation_lotz(const double en_erg, const collionrow& colliondata_ion, const int electronsinshell) -> double {
+auto xs_ionisation_lotz(const double en_erg, const ShellParams& colliondata_ion, const int electronsinshell) -> double {
   const double ionpot = colliondata_ion.ionpot_ev * EV;
   if (en_erg < ionpot) {
     return 0.;
@@ -829,7 +829,7 @@ auto xs_ionisation_lotz(const double en_erg, const collionrow& colliondata_ion, 
   return 0.;
 }
 
-auto get_xs_ionisation_vector_lotz(std::array<double, SFPTS>& xs_vec, const collionrow& colliondata_ion) -> int {
+auto get_xs_ionisation_vector_lotz(std::array<double, SFPTS>& xs_vec, const ShellParams& colliondata_ion) -> int {
   const int element = get_elementindex(colliondata_ion.Z);
   const int ion = colliondata_ion.ionstage - get_ionstage(element, 0);
   const int shellindex = -colliondata_ion.l;
@@ -848,7 +848,7 @@ auto get_xs_ionisation_vector_lotz(std::array<double, SFPTS>& xs_vec, const coll
 
 // xs_vec will be set with impact ionisation cross sections [cm2] for E > ionpot_ev (and zeros below this energy)
 // returns the index of the first energy point >= ionpot_ev
-auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const collionrow& colliondata_ion) -> int {
+auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellParams& colliondata_ion) -> int {
   const double A = colliondata_ion.A;
   if (A < 0) {
     return get_xs_ionisation_vector_lotz(xs_vec, colliondata_ion);
@@ -967,7 +967,7 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
 // energy and ionisation_potential should be in eV
 // fitting formula of Younger 1981
 // called Q_i(E) in KF92 equation 7
-constexpr auto xs_impactionisation(const double energy_ev, const collionrow& colliondata_ion) -> double {
+constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& colliondata_ion) -> double {
   const double ionpot_ev = colliondata_ion.ionpot_ev;
   const double u = energy_ev / ionpot_ev;
 
@@ -1008,7 +1008,7 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
       const int ionstage = get_ionstage(element, ion);
       const double nnion = get_nnion(nonemptymgi, element, ion);
 
-      if (nnion < minionfraction * tot_nion) {  // skip negligible ions
+      if (nnion < MIN_ION_OVER_NNTOT * tot_nion) {  // skip negligible ions
         continue;
       }
 
@@ -1167,7 +1167,7 @@ auto get_oneoverw(const int element, const int ion, const int nonemptymgi) -> do
 
 // the fraction of deposited energy that goes into ionising electrons in a particular shell
 auto calculate_nt_frac_ionisation_shell(const int nonemptymgi, const int element, const int ion,
-                                        const collionrow& collionrow, const std::array<double, SFPTS>& yfunc)
+                                        const ShellParams& collionrow, const std::array<double, SFPTS>& yfunc)
     -> double {
   const double nnion = get_nnion(nonemptymgi, element, ion);
   const double ionpot_ev = collionrow.ionpot_ev;
@@ -1595,7 +1595,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
       if (!enable_sfexcitation) {
         nlevels = -1;  // disable all excitations
       }
-      const bool above_minionfraction = (nnion >= minionfraction * get_nnion_tot(nonemptymgi));
+      const bool above_minionfraction = (nnion >= MIN_ION_OVER_NNTOT * get_nnion_tot(nonemptymgi));
 
       for (int lower = 0; lower < nlevels; lower++) {
         const auto uniquelevelindex = get_uniquelevelindex(element, ion, lower);
@@ -2478,7 +2478,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
         const double nnion = get_nnion(nonemptymgi, element, ion);
 
         // skip negligible ions
-        if (nnion < minionfraction * get_nnion_tot(nonemptymgi)) {
+        if (nnion < MIN_ION_OVER_NNTOT * get_nnion_tot(nonemptymgi)) {
           continue;
         }
 
