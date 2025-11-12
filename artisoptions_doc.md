@@ -28,7 +28,7 @@ constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
 
 // Only include a single level for the highest ion stage
-constexpr bool single_level_top_ion;
+constexpr bool SINGLE_LEVEL_TOP_ION;
 
 // if false, read from file or autodetect
 constexpr bool single_ground_level;

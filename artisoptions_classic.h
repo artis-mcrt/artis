@@ -23,7 +23,7 @@ constexpr bool LTEPOP_EXCITATION_USE_TJ = true;
 
 constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }
 
-constexpr bool single_level_top_ion = true;
+constexpr bool SINGLE_LEVEL_TOP_ION = true;
 
 constexpr bool single_ground_level = true;
 

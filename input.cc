@@ -140,7 +140,7 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
                   globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] == 1);
     globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] = 1;
 
-    if (single_level_top_ion && (upperion == get_nions(element) - 1)) {
+    if (SINGLE_LEVEL_TOP_ION && (upperion == get_nions(element) - 1)) {
       // top ion has only one level, so send it to that level
       upperlevel = 0;
     }
@@ -152,7 +152,7 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
     assert_always(std::stringstream(phixsline) >> in_nphixstargets);
     assert_always(in_nphixstargets > 0);
     // read in a table of target states and probabilities and store them
-    if (!single_level_top_ion || upperion < get_nions(element) - 1)  // in case the top ion has nlevelsmax = 1
+    if (!SINGLE_LEVEL_TOP_ION || upperion < get_nions(element) - 1)  // in case the top ion has nlevelsmax = 1
     {
       assert_always(globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] == 0 ||
                     globals::alllevels.nphixstargets[lowerionlower_uniquelevelindex] == in_nphixstargets);
@@ -1242,7 +1242,7 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
       printlnlog("adata.txt: Z {} ionstage {} nlevels_in_file {}", adata_Z_in, adata_ionstage_in, nlevels_in_file);
 
       // optionally limit the top ion to one level and no transitions
-      const int nlevelslimit = (single_level_top_ion && ion == (nions - 1)) ? 1 : nlevelsmax_readin[element];
+      const int nlevelslimit = (SINGLE_LEVEL_TOP_ION && ion == (nions - 1)) ? 1 : nlevelsmax_readin[element];
       const int nlevelskept = (nlevelslimit < 0) ? nlevels_in_file : std::min(nlevelslimit, nlevels_in_file);
 
       if (nlevels_in_file > nlevelskept) {
@@ -1323,7 +1323,7 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
 void read_atomicdata_files() {
   auto nlevelsmax_readin = read_compositiondata();
 
-  printlnlog("single_level_top_ion: {}", single_level_top_ion ? "true" : "false");
+  printlnlog("SINGLE_LEVEL_TOP_ION: {}", SINGLE_LEVEL_TOP_ION ? "true" : "false");
 
   std::vector<TempEnergyLevel> temp_alllevels;
   std::vector<TempLineTransitionInput> temp_linelist;

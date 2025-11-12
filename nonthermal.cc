@@ -996,7 +996,7 @@ constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& co
 // not valid for energy > SF_EMIN
 auto N_e(const int nonemptymgi, const double energy, const std::array<double, SFPTS>& yfunc) -> double {
   const double energy_ev = energy / EV;
-  const double tot_nion = get_nnion_tot(nonemptymgi);
+  const double nnion_tot = get_nnion_tot(nonemptymgi);
   double N_e = 0.;
 
   for (int element = 0; element < get_nelements(); element++) {
@@ -1008,7 +1008,7 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
       const int ionstage = get_ionstage(element, ion);
       const double nnion = get_nnion(nonemptymgi, element, ion);
 
-      if (nnion < MIN_ION_OVER_NNTOT * tot_nion) {  // skip negligible ions
+      if (nnion < MIN_ION_OVER_NNTOT * nnion_tot) {  // skip negligible ions
         continue;
       }
 
