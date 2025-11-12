@@ -286,9 +286,6 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
 
 [[gnu::pure]] [[nodiscard]] __host__ __device__ inline auto epsilon(const int element, const int ion, const int level)
     -> double {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
   return epsilon(get_uniquelevelindex(element, ion, level));
 }
 
