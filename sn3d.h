@@ -402,8 +402,12 @@ inline auto GET_MPI_TYPE() -> MPI_Datatype {
     return MPI_FLOAT;
   } else if constexpr (std::is_same_v<T, double>) {
     return MPI_DOUBLE;
-  } else if constexpr (std::is_same_v<T, int>) {
-    return MPI_INT;
+  } else if constexpr (std::is_same_v<T, std::int8_t>) {
+    return MPI_INT8_T;
+  } else if constexpr (std::is_same_v<T, std::int16_t>) {
+    return MPI_INT16_T;
+  } else if constexpr (std::is_same_v<T, std::int32_t>) {
+    return MPI_INT32_T;
   } else if constexpr (std::is_same_v<T, std::int64_t>) {
     return MPI_INT64_T;
   } else if constexpr (std::is_same_v<T, bool>) {
