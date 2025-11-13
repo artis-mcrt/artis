@@ -188,10 +188,8 @@ auto read_ratecoeff_dat(FILE* ratecoeff_file) -> bool {
             assert_always(fscanf(ratecoeff_file, "%la %la %la %la\n", &in_alpha_sp, &in_bfcooling_coeff,
                                  &in_corrphotoioncoeff, &in_bfheating_coeff) == 4);
 
-            // assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
             spontrecombcoeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] = in_alpha_sp;
 
-            // assert_always(std::isfinite(bfcooling_coeff) && bfcooling_coeff >= 0);
             bfcooling_coeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] = in_bfcooling_coeff;
 
             if constexpr (USE_LUT_PHOTOION) {
@@ -389,7 +387,9 @@ void precalculate_rate_coefficient_integrals() {
             int status = 0;
             const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
 
-            const double sfac = calculate_sahafact(statw_lower, statw_upper, T_e, E_threshold);
+            const double sahafact = calculate_sahafact(statw_lower, statw_upper, T_e, E_threshold);
+            assert_always(sahafact >= 0.);
+            assert_always(std::isfinite(sahafact));
 
             assert_always(!get_phixs_table(element, ion, level).empty());
             // the threshold of the first target gives nu of the first phixstable point
@@ -405,13 +405,13 @@ void precalculate_rate_coefficient_integrals() {
             if (status != 0 && (status != 18 || (error / alpha_sp) > epsrelwarning)) {
               printlnlog("alpha_sp integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status, alpha_sp, error);
             }
-            alpha_sp *= FOURPI * sfac * phixstargetprobability;
+            alpha_sp *= FOURPI * sahafact * phixstargetprobability;
 
             if (!std::isfinite(alpha_sp) || alpha_sp < 0) {
               printlnlog(
                   "WARNING: alpha_sp was negative or non-finite for level {} Te {:g}. alpha_sp {:g} sfac {:g} "
                   "phixstargetindex {} phixstargetprobability {:g}",
-                  level, T_e, alpha_sp, sfac, phixstargetindex, phixstargetprobability);
+                  level, T_e, alpha_sp, sahafact, phixstargetindex, phixstargetprobability);
               alpha_sp = 0;
             }
             spontrecombcoeffs[bflutindex] = alpha_sp;
@@ -463,12 +463,12 @@ void precalculate_rate_coefficient_integrals() {
               printlnlog("bfcooling_coeff integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status,
                          this_bfcooling_coeff, error);
             }
-            this_bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
+            this_bfcooling_coeff *= FOURPI * sahafact * phixstargetprobability;
             if (!std::isfinite(this_bfcooling_coeff) || this_bfcooling_coeff < 0) {
               printlnlog(
                   "WARNING: bfcooling_coeff was negative or non-finite for level {} Te {:g}. bfcooling_coeff {:g} sfac "
                   "{:g} phixstargetindex {} phixstargetprobability {:g}",
-                  level, T_e, this_bfcooling_coeff, sfac, phixstargetindex, phixstargetprobability);
+                  level, T_e, this_bfcooling_coeff, sahafact, phixstargetindex, phixstargetprobability);
               this_bfcooling_coeff = 0;
             }
             bfcooling_coeffs[bflutindex] = this_bfcooling_coeff;
