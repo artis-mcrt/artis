@@ -774,10 +774,8 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   constexpr double epsrelwarning = 1e-1;
   constexpr double epsabs = 0.;
 
-  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-
-  const double E_threshold = get_phixs_threshold(uniquelevelindex, phixstargetindex);
-  const double nu_threshold = ONEOVERH * E_threshold;
+  const auto loweruniquelevelindex = get_uniquelevelindex(element, ion, level);
+  const double nu_threshold = ONEOVERH * get_phixs_threshold(loweruniquelevelindex, phixstargetindex);
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
   const auto T_e = grid::get_Te(nonemptymgi);
@@ -786,13 +784,14 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   const double departure_ratio = 0.;  // zero the stimulated recomb contribution
 #else
   // stimulated recombination is negative photoionisation
-  const double nnlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex)
+  const double nnlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, loweruniquelevelindex)
                                        : calculate_levelpop(nonemptymgi, element, ion, level);
   const double nne = grid::get_nne(nonemptymgi);
-  const int upperionlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
-  const double sf = calculate_sahafact(stat_weight(element, ion, level), stat_weight(element, ion + 1, upperionlevel),
-                                       T_e, H * nu_threshold);
-  const double nnupperionlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upperionlevel)
+  const int upperionlevel = get_phixsupperlevel(loweruniquelevelindex, phixstargetindex);
+  const auto upperuniquelevelindex = get_uniquelevelindex(element, ion + 1, upperionlevel);
+  const double sf =
+      calculate_sahafact(stat_weight(loweruniquelevelindex), stat_weight(upperuniquelevelindex), T_e, H * nu_threshold);
+  const double nnupperionlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, upperuniquelevelindex)
                                                : calculate_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
   double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.;  // put that to phixslist
   if (!std::isfinite(departure_ratio)) {
@@ -802,7 +801,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   const auto intparas = GSLIntegralParasGammaCorr{
       .nu_edge = nu_threshold,
       .departure_ratio = departure_ratio,
-      .photoion_xs = get_phixs_table(uniquelevelindex),
+      .photoion_xs = get_phixs_table(loweruniquelevelindex),
       .T_e = T_e,
       .nonemptymgi = nonemptymgi,
   };
@@ -832,7 +831,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   }
 #endif
 
-  gammacorr *= FOURPI * get_phixsprobability(uniquelevelindex, phixstargetindex);
+  gammacorr *= FOURPI * get_phixsprobability(loweruniquelevelindex, phixstargetindex);
 
   return gammacorr;
 }
