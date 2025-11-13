@@ -676,6 +676,7 @@ void macroatom_close_file() {
       const double sf = calculate_sahafact(statw_lower, statw_upper, T_e, epsilon_trans);
 
       const double C = nne * nne * sf * 1.55e13 * std::pow(T_e, -0.5) * g * sigma_bf * std::exp(-fac1) / fac1;
+      assert_testmodeonly(std::isfinite(C));
 
       return C;
     }
