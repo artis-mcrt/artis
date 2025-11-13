@@ -181,8 +181,9 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
   processrates[MA_ACTION_INTERNALUPHIGHERNT] = sum_up_highernt;
   processrates[MA_ACTION_INTERNALUPHIGHER] = sum_up_higher;
 
-  // a level cannot have all zero transition rates
-  assert_always(std::ranges::fold_left(processrates, 0.0, std::plus<>{}) > 0.0);
+  const auto rate_total = std::ranges::fold_left(processrates, 0.0, std::plus<>{});
+  // a level cannot have all zero or non-finite transition rates
+  assert_always(rate_total > 0.0 && std::isfinite(rate_total));
 
   return processrates;
 }
