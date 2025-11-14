@@ -51,7 +51,7 @@ def main() -> None:
 
         print("  contains gamma or non-escaped packets, should filter this file.")
         if not args.f:
-            print("  (not filtering. Use -f to confirm filtering)")
+            print("  (not filtering. Use -f to confirm filtering and --rm to remove original files)")
             continue
 
         fileout_rpkt = Path(
