@@ -54,7 +54,7 @@ void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
     const auto R = A_ul * beta;
     return R;
   }
-  return 0.;
+  return A_ul;
 }
 
 #endif  // MACROATOM_H
