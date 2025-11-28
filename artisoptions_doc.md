@@ -1,4 +1,8 @@
 ```
+// Enable/ disable compatibility mode for the old big_gf-4 atomic data set. Removes restrictive checks for transition data
+#undef BIG_GF4_LEGACY_COMPAT
+
+
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS;
 

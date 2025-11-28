@@ -7,6 +7,8 @@
 
 #include "constants.h"
 
+#undef BIG_GF4_LEGACY_COMPAT
+
 constexpr int MPKTS = 100000;
 
 constexpr auto GRID_TYPE = GridType::CARTESIAN3D;

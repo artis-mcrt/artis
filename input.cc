@@ -460,10 +460,15 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
     }
     const int lower = lower_in - groundstate_index_in;
     const int upper = upper_in - groundstate_index_in;
+#ifdef BIG_GF4_LEGACY_COMPAT
+    assert_always(lower >= 0);
+    assert_always(upper >= 0);
+#else
     assert_always(lower >= 0);
     assert_always(upper > lower);
     assert_always(lower >= prev_lower);
     assert_always(upper >= prev_upper || lower > prev_lower);
+#endif  // BIG_GF4_LEGACY_COMPAT
 
     // this entire block can be removed if we don't want to add in extra collisonal
     // transitions between levels
