@@ -1,5 +1,5 @@
 ```
-// Enable/ disable compatibility mode for the old big_gf-4 atomic data set. Removes restrictive checks for transition data
+// Enable/disable compatibility mode for the old big_gf-4 atomic data set. Removes restrictive checks for transition data.
 #undef BIG_GF4_LEGACY_COMPAT
 
 
