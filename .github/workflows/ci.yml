@@ -91,6 +91,14 @@ jobs:
                   path: tests/atomicdata_classic.tar.xz
                   key: tests/atomicdata_classic.tar.xz
 
+            - name: Cache test atomic data nltephotospheric
+              if: ${{ startsWith(matrix.testname, 'nltephotospheric') }}
+              uses: actions/cache@v4
+              id: cache-testatomicdata-nltephotospheric
+              with:
+                  path: tests/atomicdata_hefeconi_fe_i_to_vii.tar.xz
+                  key: tests/atomicdata_hefeconi_fe_i_to_vii.tar.xz
+
             - name: Download/extract test data
               working-directory: tests/
               run: |
