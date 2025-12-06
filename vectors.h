@@ -172,8 +172,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 
   // Angle resolved case: need to work out the correct angle bin
   const double costheta = dot(dir, syn_dir);
-  const int costhetabin = static_cast<int>((costheta + 1.0) * NPHIBINS / 2.0);
-  assert_testmodeonly(costhetabin < NCOSTHETABINS);
+  const int costhetabin = std::clamp(static_cast<int>((costheta + 1.0) * NPHIBINS / 2.0), 0, NCOSTHETABINS - 1);
 
   const auto vec1 = cross_prod(dir, syn_dir);
 
@@ -185,11 +184,11 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 
   // with phi defined according to y = cos(theta) * sin(phi), the
   // phibins are in decreasing phi order (i.e. the upper side of bin zero 0 is 2pi)
-  const int phibin = static_cast<int>((testphi > 0 ? acos(cosphi) : acos(cosphi) + PI) / 2. / PI * NPHIBINS);
+  const int phibin = std::clamp(static_cast<int>((testphi > 0 ? acos(cosphi) : acos(cosphi) + PI) / 2. / PI * NPHIBINS),
+                                0, NPHIBINS - 1);
 
-  assert_testmodeonly(phibin >= 0);
-  assert_testmodeonly(phibin < NPHIBINS);
   const int na = static_cast<int>((costhetabin * NPHIBINS) + phibin);
+  assert_always(na >= 0);
   assert_always(na < MABINS);
 
   return na;
