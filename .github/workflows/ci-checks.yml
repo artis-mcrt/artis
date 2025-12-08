@@ -12,7 +12,7 @@ jobs:
     clang-format:
         runs-on: ubuntu-24.04
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v6
 
             - name: Run clang-format style check
               uses: jidicula/clang-format-action@v4.16.0
@@ -24,7 +24,7 @@ jobs:
         name: clang-tidy and cppcheck
         runs-on: macos-26
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v6
 
             - name: Set up Python
               uses: actions/setup-python@v6
@@ -83,7 +83,7 @@ jobs:
         runs-on: ubuntu-24.04
         name: Ubuntu ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v6
 
             - name: Show CPU type and core count
               id: cpu-count
@@ -233,7 +233,7 @@ jobs:
         runs-on: macos-26
         name: Apple Clang and LLVM Clang
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v6
 
             - name: Show CPU Core Count
               id: cpu-count
