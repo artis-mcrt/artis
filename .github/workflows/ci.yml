@@ -68,7 +68,7 @@ jobs:
             # we still need to make sure that the same file is being generated though, so generate it for classicmode_1d
             - name: Cache ratecoeff.dat
               if: ${{ startsWith(matrix.testname, 'classicmode_3d') }}
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
                   key: tests/${{ matrix.testname }}_testrun/ratecoeff.dat-${{ github.run_id }}
@@ -77,7 +77,7 @@ jobs:
 
             - name: Cache test atomic data
               if: ${{ !startsWith(matrix.testname, 'classicmode') }}
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
@@ -85,7 +85,7 @@ jobs:
 
             - name: Cache test atomic data classic
               if: ${{ startsWith(matrix.testname, 'classicmode') }}
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               id: cache-testatomicdata-classic
               with:
                   path: tests/atomicdata_classic.tar.xz
@@ -93,7 +93,7 @@ jobs:
 
             - name: Cache test atomic data nltephotospheric
               if: ${{ startsWith(matrix.testname, 'nltephotospheric') }}
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               id: cache-testatomicdata-nltephotospheric
               with:
                   path: tests/atomicdata_hefeconi_fe_i_to_vii.tar.xz
