@@ -14,6 +14,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <numbers>
 #include <optional>
 #include <span>
 #include <sstream>
@@ -2581,10 +2582,11 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   assert_always((snext == -99) || ((snext >= 0) && (snext < grid::ngrid)));
 
   const double maxsdist = (GRID_TYPE == GridType::CARTESIAN3D)
-                              ? globals::rmax * tstart / globals::tmin
+                              ? std::numbers::sqrt3 * globals::rmax * (tstart + distance / CLIGHT_PROP) / globals::tmin
                               : 2 * globals::rmax * (tstart + distance / CLIGHT_PROP) / globals::tmin;
 
-  assert_always(distance >= 0. && distance <= maxsdist);
+  assert_always(distance >= 0.);
+  assert_always(distance <= maxsdist);
 
   if (distance > globals::max_path_step) {
     return {globals::max_path_step, cellindex};
