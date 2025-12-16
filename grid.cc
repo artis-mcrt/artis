@@ -277,9 +277,8 @@ void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int 
   set_elem_abundance(nonemptymgi, element, static_cast<float>(isofracsum + massfrac_untrackedstable));
 }
 
-void allocate_nonemptycells_composition_cooling()
-// Initialise composition dependent cell data for the given cell
-{
+void allocate_nonemptycells_composition_cooling() {
+  // Initialise composition dependent cell data for the given cell
   const ptrdiff_t nonempty_npts_model_ptrdifft = get_nonempty_npts_model();
   const auto nelements = get_nelements();
 
@@ -556,10 +555,10 @@ void read_abundances() {
     // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
     double normfactor = 0.;
     std::array<float, 150> elem_abundances_in{};
+    std::ranges::fill(elem_abundances_in, 0.);
     double abund_in = 0.;
     for (int elem_z_index = 0; elem_z_index < std::ssize(elem_abundances_in); elem_z_index++) {
       const int atomic_number = elem_z_index + 1;
-      elem_abundances_in[elem_z_index] = 0.;
       if (!(ssline >> abund_in)) {
         // at least one element (hydrogen) should have been specified for nonempty cells
         assert_always(atomic_number > 1 || get_numpropcells(mgi) == 0);
