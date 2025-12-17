@@ -1331,7 +1331,7 @@ template <BoundaryType boundarytype, size_t S1>
   }
 
   if (GRID_TYPE == GridType::SPHERICAL1D) {
-    const int modelgridindex = get_propcell_modelgridindex(cellindex);
+    const int modelgridindex = cellindex;
     const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
     return (vout_model[modelgridindex] - v_inner) * globals::tmin;
   }
