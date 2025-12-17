@@ -466,7 +466,6 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
     if (lower >= nlevelskept || upper >= nlevelskept) {
       continue;
     }
-    assert_always(!existingtransitions.contains({lower, upper}));
     existingtransitions.insert({lower, upper});
 
     if (prev_lower < nlevels_requiretransitions) {
