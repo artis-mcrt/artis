@@ -431,8 +431,6 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
   // will be autodetected from first table row. old format had an index column and no collstr or forbidden columns
   bool oldtransitionformat = false;
   std::set<std::tuple<int, int>> existingtransitions{};
-  int prev_upper = -1;
-  int prev_lower = 0;
   for (int i = 0; i < ion_transition_count_in_file; i++) {
     int lower_in = -1;
     int upper_in = -1;
@@ -467,46 +465,30 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
       continue;
     }
     existingtransitions.insert({lower, upper});
-
-    if (prev_lower < nlevels_requiretransitions) {
-      assert_always(prev_lower >= 0);
-      int stoplevel = 0;
-      if (lower == prev_lower && upper > prev_upper + 1) {
-        // same lower level, but some upper levels were skipped over
-        stoplevel = upper - 1;
-        if (stoplevel >= nlevelskept) {
-          stoplevel = nlevelskept - 1;
-        }
-      } else if ((lower > prev_lower) && prev_upper < (nlevelskept - 1)) {
-        // we've moved onto another lower level, but the previous one was missing some required transitions
-        stoplevel = nlevelskept - 1;
-      } else {
-        stoplevel = -1;
-      }
-
-      for (int tmplevel = prev_upper + 1; tmplevel <= stoplevel; tmplevel++) {
-        if (tmplevel == prev_lower) {
-          continue;
-        }
-        assert_always(tmplevel >= 0);
-        assert_always(tmplevel > prev_lower);
-        assert_always(!existingtransitions.contains({prev_lower, tmplevel}));
-        existingtransitions.insert({prev_lower, tmplevel});
-        iontransitiontable.push_back(
-            {.lower = prev_lower, .upper = tmplevel, .A = 0., .coll_str = -2., .forbidden = true});
-      }
-    }
-
     iontransitiontable.push_back(
         {.lower = lower, .upper = upper, .A = A, .coll_str = coll_str, .forbidden = (intforbidden == 1)});
-    prev_lower = lower;
-    prev_upper = upper;
   }
 
   std::ranges::sort(iontransitiontable, std::less<>{},
                     [](const IonTransitionsInput& t) { return std::tie(t.lower, t.upper); });
 
   assert_always(nlevels_requiretransitions <= nlevelskept);
+
+  const auto old_transitioncount = std::ssize(iontransitiontable);
+  for (int lower = 0; lower < nlevels_requiretransitions; lower++) {
+    for (int upper = lower + 1; upper < nlevelskept; upper++) {
+      if (!existingtransitions.contains({lower, upper})) {
+        existingtransitions.insert({lower, upper});
+        iontransitiontable.push_back({.lower = lower, .upper = upper, .A = 0., .coll_str = -2., .forbidden = true});
+      }
+    }
+  }
+  const auto added_transitions = std::ssize(iontransitiontable) - old_transitioncount;
+  if (added_transitions > 0) {
+    printlnlog("[info] added {} missing transitions with A=0 to iontransitiontable", added_transitions);
+    std::ranges::sort(iontransitiontable, std::less<>{},
+                      [](const IonTransitionsInput& t) { return std::tie(t.lower, t.upper); });
+  }
 }
 
 void add_transitions_to_unsorted_linelist(const int element, const int ion,
@@ -1302,13 +1284,6 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
                  ion_transition_count_in_file);
       assert_always(ion_transition_count_in_file >= 0);
 
-      // first nlevels_requiretransitions levels will be collisionally
-      // coupled to the first nlevels_requiretransitions_upperlevels levels (assumed forbidden)
-      // use 0 to disable adding extra transitions
-
-      const int nlevels_requiretransitions =
-          std::min(nlevelskept, NLEVELS_REQUIRETRANSITIONS(atomicnumber, adata_ionstage_in));
-
       // load transition table for the current ion to temporary memory
       if (nlevelskept <= 1) {
         // we will not read in any transitions, just skip past these lines in the file
@@ -1316,6 +1291,11 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
           assert_always(getline(ftransitiondata, line));
         }
       } else {
+        // first nlevels_requiretransitions levels will be fully connected with higher levels
+        // by addition of forbidden collisional transitions for any missing transitions
+        const int nlevels_requiretransitions =
+            std::min(nlevelskept, NLEVELS_REQUIRETRANSITIONS(atomicnumber, adata_ionstage_in));
+
         read_ion_transitions(ftransitiondata, ion_transition_count_in_file, iontransitiontable,
                              nlevels_requiretransitions, nlevelskept);
         add_transitions_to_unsorted_linelist(element, ion, iontransitiontable, temp_linelist, temp_alltranslist,
