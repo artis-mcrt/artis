@@ -1920,23 +1920,25 @@ void read_ejecta_model() {
       ssline.clear();
       ssline.str(line);
 
-      if (ssline >> cellnumberin >> vout_kmps >> log_rho) {
-        if (mgi == 0) {
-          first_cellindex = cellnumberin;
-          printlnlog("first_cellindex {}", first_cellindex);
-        }
-        assert_always(cellnumberin == mgi + first_cellindex);
-
-        vout_model[mgi] = vout_kmps * 1.e5;
-
-        const auto rho_tmin = static_cast<float>(pow(10., log_rho) * pow(t_model / globals::tmin, 3));
-        set_rho_tmin(mgi, rho_tmin);
-      } else {
+      if (!(ssline >> cellnumberin >> vout_kmps >> log_rho)) {
         printlnlog("Unexpected number of values in model.txt");
         printlnlog("line: {}", line);
         assert_always(false);
       }
-      read_model_radioabundances(fmodel, ssline, mgi, true, colnames, nucindexlist, one_line_per_cell);
+
+      if (mgi == 0) {
+        first_cellindex = cellnumberin;
+        printlnlog("first_cellindex {}", first_cellindex);
+      }
+      assert_always(cellnumberin == mgi + first_cellindex);
+
+      vout_model[mgi] = vout_kmps * 1.e5;
+
+      const auto rho_tmin =
+          static_cast<float>(log_rho > -90 ? pow(10., log_rho) * pow(t_model / globals::tmin, 3) : 0.);
+      set_rho_tmin(mgi, rho_tmin);
+      const bool keepcell = (rho_tmin > 0);
+      read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
 
       mgi += 1;
       if (mgi == get_npts_model()) {
