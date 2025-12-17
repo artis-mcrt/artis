@@ -1929,7 +1929,8 @@ void read_ejecta_model() {
 
         vout_model[mgi] = vout_kmps * 1.e5;
 
-        const auto rho_tmin = static_cast<float>(pow(10., log_rho) * pow(t_model / globals::tmin, 3));
+        const auto rho_tmin =
+            log_rho > -90 ? static_cast<float>(pow(10., log_rho) * pow(t_model / globals::tmin, 3)) : 0.;
         set_rho_tmin(mgi, rho_tmin);
       } else {
         printlnlog("Unexpected number of values in model.txt");
