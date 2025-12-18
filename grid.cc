@@ -172,6 +172,7 @@ void read_possible_yefile() {
   }
 }
 
+// return the inner radius (or equivalent) of a propagation cell at time tmin
 auto get_cell_r_inner(const int cellindex) -> double {
   if (GRID_TYPE == GridType::SPHERICAL1D) {
     return get_cellcoordmin(cellindex, 0);
@@ -1153,22 +1154,32 @@ auto get_grid_type_name(const GridType gridtype) -> std::string {
 // xyz)
 auto get_poscoordpointnum(const double pos, const double time, const int axis) -> int {
   if (GRID_TYPE == GridType::CARTESIAN3D) {
-    return static_cast<int>((pos / time + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
+    const auto idx = static_cast<int>((pos / time + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
+    assert_always(idx >= 0);
+    assert_always(idx < ncoordgrid[axis]);
+    return idx;
   }
 
   if (GRID_TYPE == GridType::CYLINDRICAL2D) {
     if (axis == 0) {
-      return static_cast<int>(pos / time / globals::vmax * ncoordgrid[axis]);
+      const auto n_rcyl = static_cast<int>(pos / time / globals::vmax * ncoordgrid[axis]);
+      assert_always(n_rcyl >= 0);
+      assert_always(n_rcyl < ncoordgrid[axis]);
+      return n_rcyl;
     }
     if (axis == 1) {
-      return static_cast<int>((pos / time + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
+      const auto n_z = static_cast<int>((pos / time + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
+      assert_always(n_z >= 0);
+      assert_always(n_z < ncoordgrid[axis]);
+      return n_z;
     }
-    assert_always(false);
   }
 
   if (GRID_TYPE == GridType::SPHERICAL1D) {
+    // radial spacing is non-uniform, so we have to do a search
+    const auto trat = time / globals::tmin;
     for (int n_r = 0; n_r < ncoordgrid[0]; n_r++) {
-      if ((pos >= grid::get_cellcoordmin(n_r, 0)) && (pos < grid::get_cellcoordmax(n_r, 0))) {
+      if ((pos < grid::get_cellcoordmax(n_r, 0) * trat) && (pos >= grid::get_cellcoordmin(n_r, 0) * trat)) {
         return n_r;
       }
     }
@@ -2331,14 +2342,20 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
+    if (std::abs(posgridcoords[d]) > (globals::vmax * time)) {
+      // outside grid
+      return -99;
+    }
     cellindex += get_coordcellindexincrement(d) * get_poscoordpointnum(posgridcoords[d], time, d);
   }
+  assert_always(cellindex >= 0);
+  assert_always(cellindex < ngrid);
 
   // do a check that the position is within the cell
   const double trat = time / globals::tmin;
   for (int n = 0; n < get_ndim(GRID_TYPE); n++) {
-    assert_always(posgridcoords[n] >= grid::get_cellcoordmin(cellindex, n) * trat);
-    assert_always(posgridcoords[n] <= grid::get_cellcoordmax(cellindex, n) * trat);
+    assert_always(posgridcoords[n] >= ((grid::get_cellcoordmin(cellindex, n) * trat) - 10));
+    assert_always(posgridcoords[n] <= ((grid::get_cellcoordmax(cellindex, n) * trat) + 10));
   }
   return cellindex;
 }
@@ -2370,7 +2387,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
     return _cellcoordmax;
   }();
 
-  if constexpr (TESTMODE) {
+  {
     for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
       // pos_component_vel_relative_to_flow is constant along a ray with a given direction in Cartesian coordinates, but
       // for non-Cartesian coordinates, we still need to check at the current position whether the packet is
@@ -2403,7 +2420,18 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
         printout(" delta %g\n", delta);
 
         printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
-        assert_always(false);
+
+        const auto snext = grid::get_cellindex_from_pos(pos, tstart);
+        if ((grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1) &&
+             pos_component_vel_relative_to_flow) ||
+            (grid::get_cellcoordpointnum(cellindex, d) == 0 && !pos_component_vel_relative_to_flow) || (snext < 0)) {
+          printout("[warning] escaping packet\n");
+          return {0., -99};
+        }
+        printout("[warning] swapping packet cellindex from %d to %d, which has cellcoordmin %g, cellcoordmax %g\n",
+                 cellindex, snext, get_cellcoordmin(snext, d) / globals::tmin * tstart,
+                 get_cellcoordmax(snext, d) / globals::tmin * tstart);
+        return {0., snext};
       }
     }
   }
