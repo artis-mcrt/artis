@@ -443,7 +443,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       grid::thick_allcells[nonemptymgi] = 1;
     }
 
-    printlnlog("mgi {} thick_allcells: {} (during grid update)", mgi, grid::thick_allcells[nonemptymgi]);
+    printlnlog("mgi {} thick: {} (during grid update)", mgi, grid::thick_allcells[nonemptymgi]);
 
     for (int element = 0; element < get_nelements(); element++) {
       calculate_cellpartfuncts(nonemptymgi, element);
