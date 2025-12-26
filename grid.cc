@@ -2513,9 +2513,9 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 
     // handle Z boundaries as Cartesian
 
-    if ((pktvelgridcoord[1] * tstart) > pktposgridcoord[1]) {
+    if (pktvelgridcoord[1] > (cellcoordmax[1] / globals::tmin)) {
       const double t_zcoordmaxboundary = ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
-                                          ((cellcoordmax[1]) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
+                                          (cellcoordmax[1] - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
                                          tstart;
       const double d_coordmaxboundary_z = CLIGHT_PROP * t_zcoordmaxboundary;
 
@@ -2525,7 +2525,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
                     ? -99
                     : cellindex + grid::get_coordcellindexincrement(1);
       }
-    } else {
+    } else if (pktvelgridcoord[1] < (grid::get_cellcoordmin(cellindex, 1) / globals::tmin)) {
       const double t_zcoordminboundary =
           ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
            ((grid::get_cellcoordmin(cellindex, 1)) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
@@ -2553,7 +2553,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
     // boundary, regardless of direction.
 
     for (int d = 0; d < 3; d++) {
-      if ((pktvelgridcoord[d] * tstart) > pktposgridcoord[d]) {
+      if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {
         const double t_coordmaxboundary = ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
                                            (cellcoordmax[d] - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
                                           tstart;
@@ -2566,11 +2566,12 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
                       ? -99
                       : cellindex + grid::get_coordcellindexincrement(d);
         }
-      } else {
+      } else if (pktvelgridcoord[d] < (grid::get_cellcoordmin(cellindex, d) / globals::tmin)) {
         const double t_coordminboundary =
             ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
              (grid::get_cellcoordmin(cellindex, d) - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
             tstart;
+
         const double d_coordminboundary = CLIGHT_PROP * t_coordminboundary;
 
         // lower d coordinate of the current cell
