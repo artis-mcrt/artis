@@ -114,6 +114,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
     pkt.prop_time = t_new;
     // pkt.e_cmf *= ts / t_new;
+    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.where);
   }
 
   // contribute to the trajectory integrated deposition estimator
@@ -159,6 +160,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
     // It won't decay in this timestep, so just need to move it on with the flow.
     pkt.pos = vec_scale(pkt.pos, t2 / ts);
     pkt.prop_time = t2;
+    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.where);
 
     // That's all that needs to be done for the inactive pellet.
   } else if (tdecay > ts) {
@@ -167,6 +169,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
 
     pkt.prop_time = tdecay;
     pkt.pos = vec_scale(pkt.pos, tdecay / ts);
+    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.where);
 
     if (pkt.originated_from_particlenotgamma) {
       // decay to non-thermal particle
