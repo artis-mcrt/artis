@@ -122,10 +122,10 @@ void read_decaydata() {
     // look in the current folder
     const std::string filename = std::format("{}{}_lines.txt", strelname, a);
 
-    if (std::ifstream(filename)) {
-      read_gamma_spectrum(nucindex, filename);
-    } else if (std::ifstream("data/" + filename)) {
+    if (std::filesystem::exists("data/" + filename)) {
       read_gamma_spectrum(nucindex, "data/" + filename);
+    } else if (std::filesystem::exists(filename)) {
+      read_gamma_spectrum(nucindex, filename);
     } else if (decay::nucdecayenergygamma(nucindex) > 0.) {
       assert_always(z != 28 || a != 56);  // Ni-56 must have a gamma spectrum
       assert_always(z != 27 || a != 56);  // Co-56 must have a gamma spectrum
