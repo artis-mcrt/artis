@@ -94,16 +94,15 @@ void set_trivial_gamma_spectrum(const int nucindex) {
 }
 
 void read_decaydata() {
-  // migrate from old filename
-  if (!std::filesystem::exists("ni56_lines.txt") && std::filesystem::exists("ni_lines.txt")) {
-    printlnlog("Moving ni_lines.txt to ni56_lines.txt");
-    std::rename("ni_lines.txt", "ni56_lines.txt");
+  // migrate from old filenames that didn't specify the nuclide mass number
+  if (!std::filesystem::exists("gamma_ni56.txt") && std::filesystem::exists("ni_lines.txt")) {
+    printlnlog("Moving ni_lines.txt to gamma_ni56.txt");
+    std::rename("ni_lines.txt", "gamma_ni56.txt");
   }
 
-  // migrate from old filename
-  if (!std::filesystem::exists("co56_lines.txt") && std::filesystem::exists("co_lines.txt")) {
-    printlnlog("Moving co_lines.txt to co56_lines.txt");
-    std::rename("co_lines.txt", "co56_lines.txt");
+  if (!std::filesystem::exists("gamma_co56.txt") && std::filesystem::exists("co_lines.txt")) {
+    printlnlog("Moving co_lines.txt to gamma_co56.txt");
+    std::rename("co_lines.txt", "gamma_co56.txt");
   }
 
   gamma_spectra.resize(decay::get_num_nuclides(), {});
@@ -122,7 +121,7 @@ void read_decaydata() {
     const auto striso = std::format("{}{}", strelname, a);
 
     // search in order of preference
-    const std::array<std::string, 4> searchpaths = {
+    const std::array<const std::string, 4> searchpaths = {
         std::format("data/gamma_{}.txt", striso), std::format("gamma_{}.txt", striso),
         std::format("data/{}_lines.txt", striso), std::format("{}_lines.txt", striso)};
 
