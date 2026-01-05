@@ -22,7 +22,7 @@ git clone --branch release https://github.com/artis-mcrt/artis.git
 cd artis
 ```
 
-To compile and run artis, you require a recent C++ compiler (gcc, clang, or nvc++), the GNU Scientific Library, and an MPI library with a wrapper command `mpicxx'. Typically these are made available on an HPC system by running module or spack commands. For systems we use frequently, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules to load.
+To compile and run artis, you require a recent C++ compiler (g++, LLVM Clang, Apple Clang, or nvc++), the GNU Scientific Library, and an MPI library with a wrapper command `mpicxx'. Typically these are made available on an HPC system by running module or spack commands. For systems we use frequently, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules to load.
 
 With the requirements met, select an options preset and compile with `make'. For example:
 ```sh
