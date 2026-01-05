@@ -120,10 +120,10 @@ void read_decaydata() {
 
     const auto striso = std::format("{}{}", strelname, a);
 
-    // search in order of preference
+    // look in the current folder first, then in the data/ subfolder
     const std::array<const std::string, 4> searchpaths = {
-        std::format("data/gamma_{}.txt", striso), std::format("gamma_{}.txt", striso),
-        std::format("data/{}_lines.txt", striso), std::format("{}_lines.txt", striso)};
+        std::format("gamma_{}.txt", striso), std::format("{}_lines.txt", striso),
+        std::format("data/gamma_{}.txt", striso), std::format("data/{}_lines.txt", striso)};
 
     bool tablefound = false;
     for (const auto& filepath : searchpaths) {
