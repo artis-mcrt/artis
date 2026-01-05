@@ -119,14 +119,23 @@ void read_decaydata() {
     auto strelname = decay::get_elname(z);
     std::ranges::transform(strelname, strelname.begin(), [](unsigned char c) { return std::tolower(c); });
 
-    // look in the current folder
-    const std::string filename = std::format("{}{}_lines.txt", strelname, a);
+    const auto striso = std::format("{}{}", strelname, a);
 
-    if (std::filesystem::exists("data/" + filename)) {
-      read_gamma_spectrum(nucindex, "data/" + filename);
-    } else if (std::filesystem::exists(filename)) {
-      read_gamma_spectrum(nucindex, filename);
-    } else if (decay::nucdecayenergygamma(nucindex) > 0.) {
+    // search in order of preference
+    const std::array<std::string, 4> searchpaths = {
+        std::format("data/gammalines_{}.txt", striso), std::format("gammalines_{}.txt", striso),
+        std::format("data/{}_lines.txt", striso), std::format("{}_lines.txt", striso)};
+
+    bool tablefound = false;
+    for (const auto& filepath : searchpaths) {
+      if (std::filesystem::exists(filepath)) {
+        tablefound = true;
+        read_gamma_spectrum(nucindex, filepath);
+        break;
+      }
+    }
+
+    if (!tablefound && decay::nucdecayenergygamma(nucindex) > 0.) {
       assert_always(z != 28 || a != 56);  // Ni-56 must have a gamma spectrum
       assert_always(z != 27 || a != 56);  // Co-56 must have a gamma spectrum
       assert_always(z != 23 || a != 48);  // V-48 must have a gamma spectrum
