@@ -8,13 +8,13 @@
 The code is modern C++23 and scales to thousands of CPU cores across multiple node using MPI with shared memory windows on each node. Experimental support is also provided for OpenMP and C++ standard parallelism (for multicore CPU and upcoming GPU targets).
 
 ## Why is this code available?
-The ARTIS source code is available because it forms part of the method used to obtain published scientific results. Those interested in understanding the numerical techniques (in greater detail than the published descriptions) now have access to this code. We anticipate that some developers might find our code useful when building similar simulation codes, and in this case we ask that authors of any derivative works acknowledge and cite the ARTIS collaboration. This is in addition to the legal requirements of attribution and preservation of copyright notices on any substantial copies under the BSD 3-Clause licence.
+The ARTIS source code is available because it forms part of the method used to obtain published scientific results. Those interested in understanding the numerical techniques in greater detail than the published descriptions have full access to the underlying code. We anticipate that some developers might find our code useful when building similar simulation codes, and in this case we ask that authors of any derivative works acknowledge and cite the ARTIS collaboration. This is in addition to the legal requirements of attribution and preservation of copyright notices on any substantial copies under the BSD 3-Clause licence.
 
 ## Can you help me to run the code?
 We do not have the resources to support users of the code outside our team of direct collaborators.
 
 ## Installation of release version for production runs on Linux
-Within the model folder, it's recommended to keep the full source code and Git metadata for future reference.
+We recommended that you retain the full source code and Git version metadata within each simulation folder  for future reference (i.e. don't just copy the executables).
 
 Clone the source code repository from the release branch:
 ```sh
@@ -22,19 +22,17 @@ git clone --branch release https://github.com/artis-mcrt/artis.git
 cd artis
 ```
 
-To compile and run artis, you will need a recent C++ compiler, the GNU Scientific Library, and an MPI library with the wrapper command `mpicxx'. Typically this would be done by running module or spack commands. For HPC systems we use frequently, look at the top of the relevant SLURM script in scripts/artis-*.sh for compatible modules to load.
+To compile and run artis, you require a recent C++ compiler (gcc, clang, or nvc++), the GNU Scientific Library, and an MPI library with a wrapper command `mpicxx'. Typically these are made available on an HPC system by running module or spack commands. For systems we use frequently, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules to load.
 
-With these requirements met, select an options preset and compile with `make'. For example:
+With the requirements met, select an options preset and compile with `make'. For example:
 ```sh
 ln -s artisoptions_classic.h artisoptions.h
 make
 ```
-You likely want to change the number of packets per rank in the artis options using an editor, e.g.:
-```sh
-vim artisoptions.h
-```
 
-Move up a level the model folder and symlink the executables and data folder:
+You will likely want to change the number of packets per rank (MPKTS), and the GRID_TYPE (SPHERICAL1D, CYLINDRICAL2D, or CARTESIAN3D) using a text editor. A CARTESIAN3D grid can be used with any 1D, 2D, or 3D input model (as was historically done) but there will be a loss of accuracy due to the mismatch between model cells and propagation cells.
+
+Next, go up to the model folder and symlink the executables and data folder:
 ```sh
 cd ..
 ln -s artis/sn3d
