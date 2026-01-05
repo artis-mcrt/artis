@@ -13,8 +13,42 @@ The ARTIS source code is available because it forms part of the method used to o
 ## Can you help me to run the code?
 We do not have the resources to support users of the code outside our team of direct collaborators.
 
-## Installation and development
-Clone the source code repository:
+## Installation of release version for production runs on Linux
+Within the model folder, it's recommended to keep the full source code and Git metadata for future reference.
+
+Clone the source code repository from the release branch:
+```sh
+git clone --branch release https://github.com/artis-mcrt/artis.git
+cd artis
+```
+
+To compile and run artis, you will need a recent C++ compiler, the GNU Scientific Library, and an MPI library with the wrapper command `mpicxx'. Typically this would be done by running module or spack commands. For HPC systems we use frequently, look at the top of the relevant SLURM script in scripts/artis-*.sh for compatible modules to load.
+
+With these requirements met, select an options preset and compile with `make'. For example:
+```sh
+ln -s artisoptions_classic.h artisoptions.h
+make
+```
+You likely want to change the number of packets per rank in the artis options using an editor, e.g.:
+```sh
+vim artisoptions.h
+```
+
+Move up a level the model folder and symlink the executables and data folder:
+```sh
+cd ..
+ln -s artis/sn3d
+ln -s artis/exspec
+ln -s artis/data
+```
+
+The next steps are to ensure a full set of snapshot files (model.txt and abundances.txt) and an atomic database are present, and configure the timesteps in input.txt. Then, queue the relevant job script, with a command such as:
+```sh
+sbatch artis/scripts/artis-juwels.sh
+```
+
+## Development
+Clone the source code repository and checkout the default branch:
 ```sh
 git clone https://github.com/artis-mcrt/artis.git
 cd artis
