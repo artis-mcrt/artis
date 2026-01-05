@@ -123,7 +123,7 @@ void read_decaydata() {
 
     // search in order of preference
     const std::array<std::string, 4> searchpaths = {
-        std::format("data/gammalines_{}.txt", striso), std::format("gammalines_{}.txt", striso),
+        std::format("data/gamma_{}.txt", striso), std::format("gamma_{}.txt", striso),
         std::format("data/{}_lines.txt", striso), std::format("{}_lines.txt", striso)};
 
     bool tablefound = false;
