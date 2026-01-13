@@ -110,8 +110,11 @@ auto integrator(auto params, const double a, const double b, const double epsrel
   result = simpson_integrator<func_integrand>(params, a, b, samplecount);
   *abserr = 0.;
 
-#else
-#ifdef BOOST_OFF
+#elif defined(USE_BOOST) && USE_BOOST
+  // Boost's Gauss-Kronrod integrator
+  *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
+      [&](double x) { return func_integrand(x, &params); }, a, b, 15, epsrel, abserr);
+  return ((*abserr / std::abs(*result)) > epsrel ? 1 : 0);
 
   // GSL's QAG adaptive integrator
   constexpr auto key = []() {
