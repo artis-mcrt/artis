@@ -836,7 +836,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   return gammacorr;
 }
 
-// get the number of levels that make up at least fraction of the ion population of minpopfrac
+// get the number of lowest levels that make up at least a fraction of minpopfrac of the ion population
 auto get_nlevels_important(const int nonemptymgi, const int element, const int ion, const bool assume_lte,
                            const float T_e, const double minpopfrac) -> std::tuple<int, double> {
   assert_always(minpopfrac >= 0. && minpopfrac <= 1.);
