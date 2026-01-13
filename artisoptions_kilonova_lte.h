@@ -134,8 +134,6 @@ constexpr double CONTINUUM_NU_INTEGRAL_ACCURACY = 1e-3;
 
 constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 
-constexpr double IONGAMMA_POPFRAC_LEVELS_INCLUDED = 0.999;
-
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = true;
 
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = true;

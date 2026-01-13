@@ -225,10 +225,6 @@ constexpr double CONTINUUM_NU_INTEGRAL_ACCURACY;
 
 constexpr double RATECOEFF_INTEGRAL_ACCURACY;
 
-// when calculating ion ionisation rate coefficient (for estimator files), contribute the lowest n levels that
-// make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
-constexpr double IONGAMMA_POPFRAC_LEVELS_INCLUDED;
-
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 
 // when converting mass fraction to a number density, use a mean atomic mass

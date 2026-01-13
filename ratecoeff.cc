@@ -836,14 +836,14 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   return gammacorr;
 }
 
-// get the number of levels that make up a fraction of the ion population
-// of at least IONGAMMA_POPFRAC_LEVELS_INCLUDED
+// get the number of levels that make up at least fraction of the ion population of minpopfrac
 auto get_nlevels_important(const int nonemptymgi, const int element, const int ion, const bool assume_lte,
-                           const float T_e) -> std::tuple<int, double> {
+                           const float T_e, const double minpopfrac) -> std::tuple<int, double> {
+  assert_always(minpopfrac >= 0. && minpopfrac <= 1.);
   // get the stored ion population for comparison with the cumulative sum of level pops
   const double nnion_real = get_nnion(nonemptymgi, element, ion);
 
-  if (IONGAMMA_POPFRAC_LEVELS_INCLUDED >= 1.) {
+  if (minpopfrac >= 1.) {
     return {get_nlevels(element, ion), nnion_real};
   }
 
@@ -869,7 +869,7 @@ auto get_nlevels_important(const int nonemptymgi, const int element, const int i
     }
     nnlevelsum += nnlowerlevel;
     nlevels_important = lower + 1;
-    if ((nnlevelsum / nnion_real) >= IONGAMMA_POPFRAC_LEVELS_INCLUDED) {
+    if ((nnlevelsum / nnion_real) >= minpopfrac) {
       break;
     }
   }
@@ -1335,7 +1335,8 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
 
   const auto nne = grid::get_nne(nonemptymgi);
 
-  const auto [nlevels_important, nnlowerion] = get_nlevels_important(nonemptymgi, element, lowerion, assume_lte, T_e);
+  const auto [nlevels_important, nnlowerion] =
+      get_nlevels_important(nonemptymgi, element, lowerion, assume_lte, T_e, 0.999);
 
   if (nnlowerion <= 0.) {
     return 0.;
