@@ -252,11 +252,14 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
     printlnlog("ERROR: Cannot open file with empty filename.");
     std::abort();
   }
-  const std::string datafolderfilename = "data/" + filename;
-  if (mode == std::ios::in && std::filesystem::exists(datafolderfilename)) {
-    return fstream_required(datafolderfilename, mode);
-  }
+
   auto file = std::fstream(filename, mode);
+  for (const std::string datadir : {"data/", "artis/data/"}) {
+    if (!file.is_open() && (mode == std::ios::in)) {
+      const std::string datafolderfilename = datadir + filename;
+      file = std::fstream(datafolderfilename, mode);
+    }
+  }
   if (!file.is_open()) {
     printlnlog("ERROR: Could not open file '{}'", filename);
     std::abort();
