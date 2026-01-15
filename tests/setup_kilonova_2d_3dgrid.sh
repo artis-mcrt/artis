@@ -12,7 +12,7 @@ tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 
 rsync -av kilonova_2d_3dgrid_inputfiles/ $runfolder/
 
-cp ../data/* $runfolder/
+ln -s ../../data/ $runfolder
 
 cp ../artisoptions_kilonova_lte.h $runfolder/artisoptions.h
 

@@ -16,7 +16,7 @@ rsync -av kilonova_2d_3dgrid_inputfiles/ $runfolder/
 # for the checksum files
 rsync -av --ignore-times kilonova_2d_2dgrid_inputfiles/ $runfolder/
 
-cp ../data/* $runfolder/
+ln -s ../../data/ $runfolder
 
 cp ../artisoptions_kilonova_lte.h $runfolder/artisoptions.h
 
