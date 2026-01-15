@@ -228,12 +228,16 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
 
 [[nodiscard]] inline auto fopen_required(const std::string& filename, std::span<const char> mode) -> FILE* {
   // look in the data folder first
-  const std::string datafolderfilename = "data/" + filename;
-  if (mode[0] == 'r' && std::filesystem::exists(datafolderfilename)) {
-    return fopen_required(datafolderfilename, mode);
-  }
 
   auto* file = std::fopen(filename.c_str(), mode.data());
+
+  for (const std::string datadir : {"data/", "artis/data/"}) {
+    if (file == nullptr && mode[0] == 'r') {
+      const std::string datafolderfilename = datadir + filename;
+      file = std::fopen(datafolderfilename.c_str(), mode.data());
+    }
+  }
+
   if (file == nullptr) {
     printlnlog("ERROR: Could not open file '{}' for mode '{}'.", filename, mode.data());
     std::abort();
