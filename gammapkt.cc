@@ -106,7 +106,7 @@ void read_decaydata() {
   }
 
   gamma_spectra.resize(decay::get_num_nuclides(), {});
-
+  int tables_found = 0;
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     gamma_spectra[nucindex].clear();
     const int z = decay::get_nuc_z(nucindex);
@@ -129,6 +129,7 @@ void read_decaydata() {
     for (const auto& filepath : searchpaths) {
       if (std::filesystem::exists(filepath)) {
         tablefound = true;
+        tables_found++;
         read_gamma_spectrum(nucindex, filepath);
         break;
       }
@@ -151,6 +152,8 @@ void read_decaydata() {
   if (decay::nuc_exists(25, 52)) {
     decay::set_nucdecayenergygamma(decay::get_nucindex(25, 52), 3.415 * MEV);  // Mn52
   }
+
+  printlnlog("read gamma-ray table files for {} nuclides", tables_found);
 }
 
 // construct an energy ordered gamma ray line list.
