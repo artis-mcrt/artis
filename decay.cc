@@ -207,6 +207,7 @@ void printout_nuclidemeanlife(const int z, const int a) {
     }
     default: {
       assert_always(false);
+      return 0.;
     }
   }
 }
