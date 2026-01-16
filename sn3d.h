@@ -264,10 +264,11 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
   }
 
   if ((mode == std::ios::in) && !file.is_open()) {
-    for (auto datadir : datafolders) {
+    for (const auto datadir : datafolders) {
       const auto datafolderfilename = std::string(std::format("{}{}", datadir, filename));
-      if (std::filesystem::exists(datafolderfilename)) {
-        return std::fstream(datafolderfilename.c_str(), mode);
+      auto file2 = std::fstream(datafolderfilename.c_str(), mode);
+      if (file2.is_open()) {
+        return file;
       }
     }
   }
