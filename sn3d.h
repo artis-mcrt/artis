@@ -230,7 +230,7 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
   auto* file = std::fopen(filename.c_str(), mode.data());
 
   if (mode[0] == 'r' && file == nullptr) {
-    for (const auto& datadir : datafolders | std::views::drop(1)) {
+    for (const auto& datadir : datafolders) {
       const std::string datafolderfilename = std::string(datadir) + filename;
       file = std::fopen(datafolderfilename.c_str(), mode.data());
       if (file != nullptr) {
@@ -252,29 +252,28 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
                                                [](FILE* fp) -> int { return std::fclose(fp); });
 }
 
-[[nodiscard]] inline auto fstream_required(const std::string& filename, std::ios_base::openmode mode) -> std::fstream {
+[[nodiscard]] inline auto fstream_required(const std::string filename, std::ios_base::openmode mode) -> std::fstream {
   if (filename.empty()) {
     printlnlog("ERROR: Cannot open file with empty filename.");
     std::abort();
   }
 
-  auto file = std::fstream(filename, mode);
+  auto file = std::fstream(std::string(filename), mode);
+  if (file.is_open()) {
+    return file;
+  }
 
   if ((mode == std::ios::in) && !file.is_open()) {
-    for (const auto& datadir : datafolders) {
-      const std::string datafolderfilename = std::string(datadir) + filename;
-      file = std::fstream(datafolderfilename, mode);
-      if (file.is_open()) {
-        return file;
+    for (auto datadir : datafolders) {
+      const auto datafolderfilename = std::string(std::format("{}{}", datadir, filename));
+      if (std::filesystem::exists(datafolderfilename)) {
+        return std::fstream(datafolderfilename.c_str(), mode);
       }
     }
   }
 
-  if (!file.is_open()) {
-    printlnlog("ERROR: Could not open file '{}'", filename);
-    std::abort();
-  }
-  return file;
+  printlnlog("ERROR: Could not open file '{}'", filename);
+  std::abort();
 }
 
 #include "globals.h"
