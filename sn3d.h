@@ -227,8 +227,6 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
 }
 
 [[nodiscard]] inline auto fopen_required(const std::string& filename, std::span<const char> mode) -> FILE* {
-  // look in the data folder first
-
   auto* file = std::fopen(filename.c_str(), mode.data());
   constexpr std::array<std::string_view, 2> datafolders = {"data/", "artis/data/"};
 
