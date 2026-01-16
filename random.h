@@ -135,7 +135,7 @@ class Xoshiro128PP {
 
 template <class Gen>
 constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> float {
-  using generated_type = typename Gen::result_type;
+  using generated_type = Gen::result_type;
 
   constexpr generated_type prng_min = Gen::min();
   constexpr generated_type prng_max = Gen::max();
@@ -166,7 +166,6 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
 #ifdef GPU_ON
 inline thread_local auto rng{utlrandom::generators::Xoshiro128PP{}};
 #else
-#include <limits>
 #include <random>
 inline thread_local auto rng{std::mt19937{std::random_device{}()}};
 #endif
