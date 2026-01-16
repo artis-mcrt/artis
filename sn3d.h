@@ -268,7 +268,7 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
       auto datafolderfilename = std::string(datadir) + filename;
       auto file2 = std::fstream(datafolderfilename.c_str(), mode);
       if (file2.is_open()) {
-        return file;
+        return file2;
       }
     }
   }
