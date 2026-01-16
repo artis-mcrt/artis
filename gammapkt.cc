@@ -135,9 +135,6 @@ void read_decaydata() {
           break;
         }
       }
-      if (tablefound) {
-        break;
-      }
     }
 
     if (!tablefound && decay::nucdecayenergygamma(nucindex) > 0.) {
