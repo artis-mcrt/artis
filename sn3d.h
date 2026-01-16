@@ -227,24 +227,24 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
 }
 
 [[nodiscard]] inline auto fopen_required(const std::string& filename, std::span<const char> mode) -> FILE* {
-  auto* file = std::fopen(filename.c_str(), mode.data());
-
-  if (mode[0] == 'r' && file == nullptr) {
+  if (mode[0] == 'r') {
+    // search data folders in order to find file to read
     for (const auto& datadir : datafolders) {
       const std::string datafolderfilename = std::string(datadir) + filename;
-      file = std::fopen(datafolderfilename.c_str(), mode.data());
+      auto* file = std::fopen(datafolderfilename.c_str(), mode.data());
       if (file != nullptr) {
         return file;
       }
     }
+  } else {
+    auto* file = std::fopen(filename.c_str(), mode.data());
+    if (file != nullptr) {
+      return file;
+    }
   }
 
-  if (file == nullptr) {
-    printlnlog("ERROR: Could not open file '{}' for mode '{}'.", filename, mode.data());
-    std::abort();
-  }
-
-  return file;
+  printlnlog("ERROR: Could not open file '{}' for mode '{}'.", filename, mode.data());
+  std::abort();
 }
 
 [[nodiscard]] inline auto fopen_required_uniqueptr(const std::string& filename, std::span<const char> mode) {
@@ -258,18 +258,20 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
     std::abort();
   }
 
-  auto file = std::fstream(std::string(filename), mode);
-  if (file.is_open()) {
-    return file;
-  }
-
   if (mode == std::ios::in) {
+    // search data folders in order to find file to read
     for (const auto& datadir : datafolders) {
       auto datafolderfilename = std::string(datadir) + filename;
       auto file2 = std::fstream(datafolderfilename.c_str(), mode);
       if (file2.is_open()) {
         return file2;
       }
+    }
+  } else {
+    // don't prepend data folders when writing
+    auto file = std::fstream(std::string(filename), mode);
+    if (file.is_open()) {
+      return file;
     }
   }
 
