@@ -76,7 +76,7 @@ void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);
     return (nu_trans - nu_cmf) / dnu_on_dl;
   }
 
-  return CLIGHT * prop_time * (nu_cmf / nu_trans - 1);
+  return CLIGHT * prop_time * ((nu_cmf / nu_trans) - 1);
 }
 
 // find the next transition lineindex redder than nu_cmf

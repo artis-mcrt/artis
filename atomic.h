@@ -211,7 +211,7 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
     // classic mode: no interpolation
     if (nu == nu_edge) {
       sigma_bf = photoion_xs[0];
-    } else if (nu <= nu_edge * (1 + globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS)) {
+    } else if (nu <= nu_edge * (1 + (globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS))) {
       const int i = static_cast<int>((nu - nu_edge) / (globals::NPHIXSNUINCREMENT * nu_edge));
       sigma_bf = photoion_xs[i];
     } else {
@@ -219,12 +219,12 @@ __host__ __device__ inline auto get_nphixstargets(const int element, const int i
       // which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
       // so far the highest grid point, otherwise the cross-section is not continuous
       sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] *
-                                    pow(nu_edge * (1 + globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS) / nu, 3));
+                                    pow(nu_edge * (1 + (globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS)) / nu, 3));
     }
     return sigma_bf;
   }
 
-  const double ireal = (nu / nu_edge - 1.0) / globals::NPHIXSNUINCREMENT;
+  const double ireal = ((nu / nu_edge) - 1.0) / globals::NPHIXSNUINCREMENT;
   const int i = static_cast<int>(ireal);
 
   if (i < 0) {
