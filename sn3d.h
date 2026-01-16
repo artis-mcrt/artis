@@ -230,10 +230,11 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
   // look in the data folder first
 
   auto* file = std::fopen(filename.c_str(), mode.data());
+  constexpr std::array<std::string_view, 2> datafolders = {"data/", "artis/data/"};
 
-  for (const std::string datadir : {"data/", "artis/data/"}) {
+  for (const auto datadir : datafolders) {
     if (file == nullptr && mode[0] == 'r') {
-      const std::string datafolderfilename = datadir + filename;
+      const std::string datafolderfilename = std::string(datadir) + std::string(filename);
       file = std::fopen(datafolderfilename.c_str(), mode.data());
     }
   }
@@ -258,9 +259,11 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
   }
 
   auto file = std::fstream(filename, mode);
-  for (const std::string datadir : {"data/", "artis/data/"}) {
+  constexpr std::array<std::string_view, 2> datafolders = {"data/", "artis/data/"};
+
+  for (const auto datadir : datafolders) {
     if (!file.is_open() && (mode == std::ios::in)) {
-      const std::string datafolderfilename = datadir + filename;
+      const std::string datafolderfilename = std::string(datadir) + std::string(filename);
       file = std::fstream(datafolderfilename, mode);
     }
   }
