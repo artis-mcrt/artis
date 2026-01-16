@@ -46,7 +46,7 @@ Checks: [
 WarningsAsErrors: '*,-clang-diagnostic-unused-function'
 FormatStyle: file
 ExtraArgs: [-std=c++23]
-HeaderFilterRegex: '.*'
+# HeaderFilterRegex: '.*'
 ExcludeHeaderFilterRegex: '^/opt/homebrew/include/.*'
 CheckOptions:
     - key: bugprone-reserved-identifier.AllowedIdentifiers
