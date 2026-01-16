@@ -228,12 +228,14 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
 
 [[nodiscard]] inline auto fopen_required(const std::string& filename, std::span<const char> mode) -> FILE* {
   auto* file = std::fopen(filename.c_str(), mode.data());
-  constexpr std::array<std::string_view, 2> datafolders = {"data/", "artis/data/"};
 
-  for (const auto datadir : datafolders) {
-    if (file == nullptr && mode[0] == 'r') {
+  if (mode[0] == 'r' && file == nullptr) {
+    for (const auto datadir : datafolders) {
       const std::string datafolderfilename = std::string(datadir) + filename;
       file = std::fopen(datafolderfilename.c_str(), mode.data());
+      if (file != nullptr) {
+        return file;
+      }
     }
   }
 
@@ -257,14 +259,17 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
   }
 
   auto file = std::fstream(filename, mode);
-  constexpr std::array<std::string_view, 2> datafolders = {"data/", "artis/data/"};
 
-  for (const auto datadir : datafolders) {
-    if (!file.is_open() && (mode == std::ios::in)) {
+  if ((mode == std::ios::in) && !file.is_open()) {
+    for (const auto datadir : datafolders) {
       const std::string datafolderfilename = std::string(datadir) + filename;
       file = std::fstream(datafolderfilename, mode);
+      if (file.is_open()) {
+        return file;
+      }
     }
   }
+
   if (!file.is_open()) {
     printlnlog("ERROR: Could not open file '{}'", filename);
     std::abort();
