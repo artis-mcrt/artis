@@ -269,7 +269,7 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
     }
   } else {
     // don't prepend data folders when writing
-    auto file = std::fstream(std::string(filename), mode);
+    auto file = std::fstream(filename, mode);
     if (file.is_open()) {
       return file;
     }
