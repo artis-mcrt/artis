@@ -262,9 +262,9 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
     // search data folders in order to find file to read
     for (const auto& datadir : datafolders) {
       auto datafolderfilename = std::string(datadir) + filename;
-      auto file2 = std::fstream(datafolderfilename.c_str(), mode);
-      if (file2.is_open()) {
-        return file2;
+      auto file = std::fstream(datafolderfilename.c_str(), mode);
+      if (file.is_open()) {
+        return file;
       }
     }
   } else {
