@@ -227,19 +227,24 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
 }
 
 [[nodiscard]] inline auto fopen_required(const std::string& filename, std::span<const char> mode) -> FILE* {
-  // look in the data folder first
-  const std::string datafolderfilename = "data/" + filename;
-  if (mode[0] == 'r' && std::filesystem::exists(datafolderfilename)) {
-    return fopen_required(datafolderfilename, mode);
+  if (mode[0] == 'r') {
+    // search data folders in order to find file to read
+    for (const auto& datadir : datafolders) {
+      const std::string datafolderfilename = std::string(datadir) + filename;
+      auto* file = std::fopen(datafolderfilename.c_str(), mode.data());
+      if (file != nullptr) {
+        return file;
+      }
+    }
+  } else {
+    auto* file = std::fopen(filename.c_str(), mode.data());
+    if (file != nullptr) {
+      return file;
+    }
   }
 
-  auto* file = std::fopen(filename.c_str(), mode.data());
-  if (file == nullptr) {
-    printlnlog("ERROR: Could not open file '{}' for mode '{}'.", filename, mode.data());
-    std::abort();
-  }
-
-  return file;
+  printlnlog("ERROR: Could not open file '{}' for mode '{}'.", filename, mode.data());
+  std::abort();
 }
 
 [[nodiscard]] inline auto fopen_required_uniqueptr(const std::string& filename, std::span<const char> mode) {
@@ -252,16 +257,26 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
     printlnlog("ERROR: Cannot open file with empty filename.");
     std::abort();
   }
-  const std::string datafolderfilename = "data/" + filename;
-  if (mode == std::ios::in && std::filesystem::exists(datafolderfilename)) {
-    return fstream_required(datafolderfilename, mode);
+
+  if (mode == std::ios::in) {
+    // search data folders in order to find file to read
+    for (const auto& datadir : datafolders) {
+      auto datafolderfilename = std::string(datadir) + filename;
+      auto file = std::fstream(datafolderfilename.c_str(), mode);
+      if (file.is_open()) {
+        return file;
+      }
+    }
+  } else {
+    // don't prepend data folders when writing
+    auto file = std::fstream(filename, mode);
+    if (file.is_open()) {
+      return file;
+    }
   }
-  auto file = std::fstream(filename, mode);
-  if (!file.is_open()) {
-    printlnlog("ERROR: Could not open file '{}'", filename);
-    std::abort();
-  }
-  return file;
+
+  printlnlog("ERROR: Could not open file '{}'", filename);
+  std::abort();
 }
 
 #include "globals.h"

@@ -67,4 +67,6 @@ constexpr Vec3d syn_dir{0., 0., 1.};  // vector defining the theta=0 direction
 
 constexpr std::string_view outdir_resfiles{"speclc_angle_res/"};
 
+constexpr std::array<std::string_view, 3> datafolders = {"./", "data/", "artis/data/"};
+
 #endif

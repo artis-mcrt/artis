@@ -121,16 +121,21 @@ void read_decaydata() {
     const auto striso = std::format("{}{}", strelname, a);
 
     // look in the current folder first, then in the data/ subfolder
-    const std::array<const std::string, 4> searchpaths = {
-        std::format("gamma_{}.txt", striso), std::format("{}_lines.txt", striso),
-        std::format("data/gamma_{}.txt", striso), std::format("data/{}_lines.txt", striso)};
+    const auto filenames =
+        std::array<const std::string, 2>{std::format("gamma_{}.txt", striso), std::format("{}_lines.txt", striso)};
 
     bool tablefound = false;
-    for (const auto& filepath : searchpaths) {
-      if (std::filesystem::exists(filepath)) {
-        tablefound = true;
-        tables_found++;
-        read_gamma_spectrum(nucindex, filepath);
+    for (const auto& datadir : datafolders) {
+      for (const auto& filename : filenames) {
+        const auto filepath = std::format("{}{}", datadir, filename);
+        if (std::filesystem::exists(filepath)) {
+          tablefound = true;
+          tables_found++;
+          read_gamma_spectrum(nucindex, filepath);
+          break;
+        }
+      }
+      if (tablefound) {
         break;
       }
     }
