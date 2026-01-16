@@ -430,7 +430,9 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
 
   // will be autodetected from first table row. old format had an index column and no collstr or forbidden columns
   bool oldtransitionformat = false;
-  std::set<std::tuple<int, int>> existingtransitions{};
+  static std::set<std::tuple<int, int>> existingtransitions{};
+  existingtransitions.clear();
+
   for (int i = 0; i < ion_transition_count_in_file; i++) {
     int lower_in = -1;
     int upper_in = -1;
