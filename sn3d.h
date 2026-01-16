@@ -252,7 +252,7 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
                                                [](FILE* fp) -> int { return std::fclose(fp); });
 }
 
-[[nodiscard]] inline auto fstream_required(const std::string filename, std::ios_base::openmode mode) -> std::fstream {
+[[nodiscard]] inline auto fstream_required(const std::string& filename, std::ios_base::openmode mode) -> std::fstream {
   if (filename.empty()) {
     printlnlog("ERROR: Cannot open file with empty filename.");
     std::abort();
