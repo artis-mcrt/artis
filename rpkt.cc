@@ -484,9 +484,9 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
 #pragma clang unsafe_buffer_usage begin
     // NOLINTBEGIN(*-pointer-arithmetic)
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
-    const auto allcontindex = std::upper_bound(phixslist.chi_bf_sum.get() + phixslist.allcontbegin,
-                                               phixslist.chi_bf_sum.get() + phixslist.allcontend - 1, chi_bf_rand) -
-                              phixslist.chi_bf_sum.get();
+    const auto allcontindex = std::upper_bound(phixslist.chi_bf_sum.data() + phixslist.allcontbegin,
+                                               phixslist.chi_bf_sum.data() + phixslist.allcontend - 1, chi_bf_rand) -
+                              phixslist.chi_bf_sum.data();
     // NOLINTEND(*-pointer-arithmetic)
 #pragma clang unsafe_buffer_usage end
     assert_always(allcontindex < phixslist.allcontend);
@@ -626,15 +626,17 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     // for empty cells no physical event occurs. The packets just propagate.
     edist = std::numeric_limits<double>::max();
     pkt.next_trans = -1;  // skip over lines and search for line list position on the next non-empty cell
-  } else if (thickcell) { [[unlikely]] {
-    // In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
+  } else if (thickcell) {
+    [[unlikely]] {
+      // In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
-    const double chi_grey = grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) *
-                            calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+      const double chi_grey = grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) *
+                              calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-    edist = tau_rnd / chi_grey;
-    pkt.next_trans = -1;
-  } } else {
+      edist = tau_rnd / chi_grey;
+      pkt.next_trans = -1;
+    }
+  } else {
     calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, nonemptymgi);
 
     // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
@@ -646,9 +648,9 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
 
     std::tie(edist, pkt.next_trans, event_is_boundbound) =
         EXPANSIONOPACITIES_ON ? get_possible_event_expansion_opacity(nonemptymgi, pkt, chi_rpkt_cont, pktmastate,
-                                                                       tau_rnd, nu_cmf_abort, dnu_on_dl, doppler)
-                                : get_possible_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, abort_dist,
-                                                     nu_cmf_abort, dnu_on_dl, doppler, globals::linelist);
+                                                                     tau_rnd, nu_cmf_abort, dnu_on_dl, doppler)
+                              : get_possible_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, abort_dist,
+                                                   nu_cmf_abort, dnu_on_dl, doppler, globals::linelist);
   }
   assert_always(edist >= 0);
 
@@ -756,12 +758,12 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu) -> double {
 // get bound-free opacity
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
 auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixslist& phixslist) -> double {
-  assert_always(!USECELLHISTANDUPDATEPHIXSLIST || !(phixslist.chi_bf_sum.get() == nullptr));
+  assert_always(!USECELLHISTANDUPDATEPHIXSLIST || !(phixslist.chi_bf_sum.empty()));
 
   double chi_bf_sum = 0.;
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-      std::fill_n(phixslist.groundcont_gamma_contr.get(), globals::nbfcontinua_ground, 0.);
+      std::ranges::fill(phixslist.groundcont_gamma_contr, 0.);
     }
   }
 
@@ -971,7 +973,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
     chi_escat = SIGMA_T * nne;
 
     // Third contribution: bound-free absorption
-    chi_bf = chi_rpkt_cont.phixslist.chi_bf_sum == nullptr
+    chi_bf = chi_rpkt_cont.phixslist.chi_bf_sum.empty()
                  ? calculate_chi_bf_gammacontr<false>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist)
                  : calculate_chi_bf_gammacontr<true>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist);
 

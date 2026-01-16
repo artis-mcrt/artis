@@ -18,21 +18,32 @@
 
 struct Phixslist {
   // NOLINTBEGIN(*-avoid-c-arrays)
-  std::unique_ptr<double[]> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or USE_LUT_BFHEATING = true
-  std::unique_ptr<double[]> chi_bf_sum;
-  std::unique_ptr<double[]> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
+  std::span<double> groundcont_gamma_contr{};
+  std::span<double> chi_bf_sum{};
+  std::span<double> gamma_contr{};
   int allcontend{-1};
   int allcontbegin{0};
   int bfestimend{-1};
   int bfestimbegin{0};
 
+#pragma clang unsafe_buffer_usage begin
   constexpr Phixslist(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
-      : groundcont_gamma_contr{std::make_unique<double[]>(nbfcontinua_ground)},
-        chi_bf_sum{std::make_unique<double[]>(nbfcontinua)},
-        gamma_contr{std::make_unique<double[]>(bfestimcount)} {}
-  // NOLINTEND(*-avoid-c-arrays)
+      : _groundcont_gamma_contr{std::make_unique<double[]>(nbfcontinua_ground)},
+        _chi_bf_sum{std::make_unique<double[]>(nbfcontinua)},
+        _gamma_contr{std::make_unique<double[]>(bfestimcount)} {
+    groundcont_gamma_contr = {_groundcont_gamma_contr.get(), static_cast<std::size_t>(nbfcontinua_ground)};
+    chi_bf_sum = {_chi_bf_sum.get(), static_cast<std::size_t>(nbfcontinua)};
+    gamma_contr = {_gamma_contr.get(), static_cast<std::size_t>(bfestimcount)};
+  }
+#pragma clang unsafe_buffer_usage end
 
   constexpr Phixslist() = default;
+
+ private:
+  std::unique_ptr<double[]> _groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or USE_LUT_BFHEATING = true
+  std::unique_ptr<double[]> _chi_bf_sum;
+  std::unique_ptr<double[]> _gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
+  // NOLINTEND(*-avoid-c-arrays)
 };
 
 struct Rpkt_continuum_absorptioncoeffs {
