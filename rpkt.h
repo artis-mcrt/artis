@@ -18,9 +18,9 @@
 
 struct Phixslist {
   // NOLINTBEGIN(*-avoid-c-arrays)
-  std::span<double> groundcont_gamma_contr{};
-  std::span<double> chi_bf_sum{};
-  std::span<double> gamma_contr{};
+  std::span<double> groundcont_gamma_contr;
+  std::span<double> chi_bf_sum;
+  std::span<double> gamma_contr;
   int allcontend{-1};
   int allcontbegin{0};
   int bfestimend{-1};
