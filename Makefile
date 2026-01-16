@@ -57,7 +57,7 @@ else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 # 	CXXFLAGS += -Wsuggest-attribute=pure -Wsuggest-attribute=const
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := NVHPC
-	CXX_STD := c++26
+	CXX_STD := c++23
 else
 	$(warning Unknown compiler)
 	COMPILER_NAME := unknown
