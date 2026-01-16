@@ -16,8 +16,9 @@
 #include "packet.h"
 #include "sn3d.h"
 
-struct Phixslist {
+class Phixslist {
   // NOLINTBEGIN(*-avoid-c-arrays)
+ public:
   std::span<double> groundcont_gamma_contr;
   std::span<double> chi_bf_sum;
   std::span<double> gamma_contr;
