@@ -19,8 +19,12 @@
 class Phixslist {
   // NOLINTBEGIN(*-avoid-c-arrays)
  public:
+  // for either USE_LUT_PHOTOION = true or USE_LUT_BFHEATING = true. Size =
+  // nbfcontinua_ground
   std::span<double> groundcont_gamma_contr;
+  // cumulative sum of all bound-free continua absorption coefficients. Size = nbfcontinua
   std::span<double> chi_bf_sum;
+  // needed for DETAILED_BF_ESTIMATORS_ON. Size = bfestimcount
   std::span<double> gamma_contr;
   int allcontend{-1};
   int allcontbegin{0};
@@ -41,9 +45,12 @@ class Phixslist {
   constexpr Phixslist() = default;
 
  private:
-  std::unique_ptr<double[]> _groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or USE_LUT_BFHEATING = true
+  // unique ptrs are used instead of vectors for nvc++ compatibility,
+  // since std::bad_alloc exceptions are not supported on device
+  // (still true as of NVC++ 25.11)
+  std::unique_ptr<double[]> _groundcont_gamma_contr;
   std::unique_ptr<double[]> _chi_bf_sum;
-  std::unique_ptr<double[]> _gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
+  std::unique_ptr<double[]> _gamma_contr;
   // NOLINTEND(*-avoid-c-arrays)
 };
 
