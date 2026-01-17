@@ -133,10 +133,10 @@ void add_to_vpkt_grid(const Packet& vpkt, const Vec3d& vel, const int wlbin, con
   // Rotate velocity into projected area seen by the observer (see notes)
   else {
     // Rotate velocity from (x,y,z) to (n_obs,ref1,ref2) so that x correspond to n_obs (see notes)
-    vref1 = (-obs[1] * vel[0]) + ((obs[0] + obs[2] * obs[2] / (1 + obs[0])) * vel[1]) -
+    vref1 = (-obs[1] * vel[0]) + ((obs[0] + (obs[2] * obs[2] / (1 + obs[0]))) * vel[1]) -
             (obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[2]);
     vref2 = (-obs[2] * vel[0]) - (obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[1]) +
-            ((obs[0] + obs[1] * obs[1] / (1 + obs[0])) * vel[2]);
+            ((obs[0] + (obs[1] * obs[1] / (1 + obs[0]))) * vel[2]);
   }
 
   // Outside the grid
@@ -212,10 +212,10 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
     const double mu = dot(old_dir_cmf, obs_cmf);
 
-    pn = 3. / (16. * PI) * (1 + pow(mu, 2.) + (pow(mu, 2.) - 1) * Qold);
+    pn = 3. / (16. * PI) * (1 + pow(mu, 2.) + ((pow(mu, 2.) - 1) * Qold));
 
-    const double Inew = 0.75 * ((mu * mu + 1.0) + Qold * (mu * mu - 1.0));
-    const double Qnew = (0.75 * ((mu * mu - 1.0) + Qold * (mu * mu + 1.0))) / Inew;
+    const double Inew = 0.75 * (((mu * mu) + 1.0) + (Qold * ((mu * mu) - 1.0)));
+    const double Qnew = (0.75 * (((mu * mu) - 1.0) + (Qold * ((mu * mu) + 1.0)))) / Inew;
     const double Unew = (1.5 * mu * Uold) / Inew;
 
     // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame
@@ -327,7 +327,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
         const auto n_u = calculate_levelpop(nonemptymgi, element, ion, upper);
         const auto n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
-        const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line);
+        const double tau_line = std::max(0., ((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_line);
 
         // Check on the element to exclude (or -1 for no line opacity)
         const int anumber = get_atomicnumber(element);
@@ -425,9 +425,9 @@ void init_vspecpol() {
   }
 
   for (int m = 0; m < VMNUBINS; m++) {
-    lower_freq_vspec[m] = static_cast<float>(std::exp(log(VSPEC_NUMIN) + (m * (dlognu_vspec))));
+    lower_freq_vspec[m] = static_cast<float>(std::exp(log(VSPEC_NUMIN) + (m * dlognu_vspec)));
     delta_freq_vspec[m] =
-        static_cast<float>(std::exp(log(VSPEC_NUMIN) + ((m + 1) * (dlognu_vspec))) - lower_freq_vspec[m]);
+        static_cast<float>(std::exp(log(VSPEC_NUMIN) + ((m + 1) * dlognu_vspec)) - lower_freq_vspec[m]);
   }
 
   // start by setting up the time and frequency bins.
@@ -435,9 +435,9 @@ void init_vspecpol() {
   // step sizes first.
   for (int n = 0; n < VMTBINS; n++) {
     for (int ind_comb = 0; ind_comb < indexmax; ind_comb++) {
-      vspecpol[n][ind_comb].lower_time = static_cast<float>(std::exp(log(VSPEC_TIMEMIN) + (n * (dlogt_vspec))));
-      vspecpol[n][ind_comb].delta_t = static_cast<float>(std::exp(log(VSPEC_TIMEMIN) + ((n + 1) * (dlogt_vspec))) -
-                                                         vspecpol[n][ind_comb].lower_time);
+      vspecpol[n][ind_comb].lower_time = static_cast<float>(std::exp(log(VSPEC_TIMEMIN) + (n * dlogt_vspec)));
+      vspecpol[n][ind_comb].delta_t =
+          static_cast<float>(std::exp(log(VSPEC_TIMEMIN) + ((n + 1) * dlogt_vspec)) - vspecpol[n][ind_comb].lower_time);
 
       for (auto& flux : vspecpol[n][ind_comb].flux) {
         flux.i = 0.;
@@ -536,7 +536,7 @@ void init_vpkt_grid() {
       vgrid[n][m].flux.resize(Nrange_grid, {});
 
       for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
-        vgrid[n][m].flux[wlbin].resize(Nobs, {0., 0., 0.});
+        vgrid[n][m].flux[wlbin].resize(Nobs, {.i = 0., .q = 0., .u = 0.});
       }
     }
   }
@@ -743,7 +743,7 @@ void read_vpktparameterfile() {
   int in_vgrid_on = 0;
   assert_always(fscanf(input_file, "%d \n", &in_vgrid_on) == 1);
   vgrid_on = in_vgrid_on != 0;
-  printlnlog("vpkt.txt: velocity grid map {}", (vgrid_on) ? "ENABLED" : "DISABLED");
+  printlnlog("vpkt.txt: velocity grid map {}", vgrid_on ? "ENABLED" : "DISABLED");
 
   if (vgrid_on) {
     double tmin_grid_in_days{NAN};

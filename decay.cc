@@ -510,7 +510,7 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
     } else {
       if (lambda_j > 0.) {
         const double sumtermtop =
-            ((1 + 1 / lambda_j / timediff) * exp(-timediff * lambda_j)) - (1. / lambda_j / timediff);
+            ((1 + (1 / lambda_j / timediff)) * exp(-timediff * lambda_j)) - (1. / lambda_j / timediff);
         sum += sumtermtop / denominator;
       }
     }

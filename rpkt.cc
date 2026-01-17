@@ -626,14 +626,16 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     // for empty cells no physical event occurs. The packets just propagate.
     edist = std::numeric_limits<double>::max();
     pkt.next_trans = -1;  // skip over lines and search for line list position on the next non-empty cell
-  } else if (thickcell) [[unlikely]] {
-    // In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
+  } else if (thickcell) {
+    [[unlikely]] {
+      // In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
-    const double chi_grey = grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) *
-                            calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+      const double chi_grey = grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) *
+                              calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-    edist = tau_rnd / chi_grey;
-    pkt.next_trans = -1;
+      edist = tau_rnd / chi_grey;
+      pkt.next_trans = -1;
+    }
   } else {
     calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, nonemptymgi);
 

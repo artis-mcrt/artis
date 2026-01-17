@@ -865,9 +865,9 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
 
   for (int i = startindex; i < SFPTS; i++) {
     const double u = engrid(i) / ionpot_ev;
-    const double xs_ioniz = 1e-14 *
-                            (A * (1 - 1 / u) + B * std::pow((1 - (1 / u)), 2) + C * std::log(u) + D * std::log(u) / u) /
-                            (u * std::pow(ionpot_ev, 2));
+    const double xs_ioniz =
+        1e-14 * ((A * (1 - (1 / u))) + (B * std::pow((1 - (1 / u)), 2)) + (C * std::log(u)) + (D * std::log(u) / u)) /
+        (u * std::pow(ionpot_ev, 2));
     xs_vec[i] = xs_ioniz;
   }
 
@@ -987,7 +987,7 @@ constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& co
   const double C = colliondata_ion.C;
   const double D = colliondata_ion.D;
 
-  return 1e-14 * (A * (1 - 1 / u) + B * std::pow((1 - (1 / u)), 2) + C * std::log(u) + D * std::log(u) / u) /
+  return 1e-14 * ((A * (1 - (1 / u))) + (B * std::pow((1 - (1 / u)), 2)) + (C * std::log(u)) + (D * std::log(u) / u)) /
          (u * std::pow(ionpot_ev, 2));
 }
 

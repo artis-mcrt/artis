@@ -108,7 +108,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     if (t_absorb <= t2) {
       pkt.type = deposit_type;
     } else {
-      pkt.nu_cmf = (particle_en - endot * (t_new - ts)) / H;
+      pkt.nu_cmf = (particle_en - (endot * (t_new - ts))) / H;
     }
 
     pkt.pos = vec_scale(pkt.pos, t_new / ts);

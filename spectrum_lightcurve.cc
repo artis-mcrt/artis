@@ -486,9 +486,9 @@ void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, co
       (spectra.fluxalltimesteps.empty() || (do_emission_absorption && spectra.absorptionalltimesteps.empty()));
 
   for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
-    spectra.lower_freq[nnu] = static_cast<float>(std::exp(log(nu_min) + (nnu * (dlognu))));
+    spectra.lower_freq[nnu] = static_cast<float>(std::exp(log(nu_min) + (nnu * dlognu)));
     spectra.delta_freq[nnu] =
-        static_cast<float>(std::exp(log(nu_min) + ((nnu + 1) * (dlognu))) - spectra.lower_freq[nnu]);
+        static_cast<float>(std::exp(log(nu_min) + ((nnu + 1) * dlognu)) - spectra.lower_freq[nnu]);
   }
 
   if (spectra.fluxalltimesteps.empty()) {

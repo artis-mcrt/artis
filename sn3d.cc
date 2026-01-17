@@ -917,7 +917,7 @@ auto main(int argc, char* argv[]) -> int {
     linestat_file.close();
   }
 
-  if ((globals::ntimesteps > globals::timestep_finish) || (terminate_early)) {
+  if ((globals::ntimesteps > globals::timestep_finish) || terminate_early) {
     printlnlog("RESTART_NEEDED to continue model");
   } else {
     printlnlog("No need for restart");

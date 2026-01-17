@@ -414,7 +414,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
     if (globals::opacity_case == 3) {
       const auto kappagrey =
-          static_cast<float>(globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1) *
+          static_cast<float>(globals::opcase3_normal * ((0.9 * grid::get_ffegrp(mgi)) + 0.1) *
                              (rho > globals::rho_crit ? globals::rho_crit / grid::get_rho(nonemptymgi) : 1.));
       grid::set_kappagrey(nonemptymgi, kappagrey);
     }

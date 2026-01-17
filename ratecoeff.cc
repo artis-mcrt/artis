@@ -318,7 +318,7 @@ auto approx_bfheating_integrand_gsl(const double nu, void* const voidparas) -> d
   const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
   // Precalculation for T_e=T_R and W=1
-  const double x = sigma_bf * (1 - nu_edge / nu) * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
+  const double x = sigma_bf * (1 - (nu_edge / nu)) * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
 
   return x;
 }
@@ -977,7 +977,7 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
 #endif
 
   const double nuoffset =
-      (alpha_sp != alpha_sp_old) ? (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu : 0.;
+      (alpha_sp != alpha_sp_old) ? ((total_alpha_sp * zrand) - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu : 0.;
   const double nu_lower = nu_threshold + ((i - 1) * deltanu) + nuoffset;
 
   assert_testmodeonly(std::isfinite(nu_lower));
@@ -1225,7 +1225,7 @@ __host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion,
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   const auto allphisxtargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
   double gammacorr =
-      (use_cellcache) ? globals::cellcache[cellcacheslotid].allphixstargets_corrphotoioncoeff[allphisxtargetindex] : -1;
+      use_cellcache ? globals::cellcache[cellcacheslotid].allphixstargets_corrphotoioncoeff[allphisxtargetindex] : -1;
 
   if (!use_cellcache || gammacorr < 0) {
     if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {

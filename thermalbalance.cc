@@ -52,7 +52,7 @@ auto integrand_bfheatingcoeff_custom_radfield(const double nu, void* const voidp
 
   const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
-  return sigma_bf * (1 - nu_edge / nu) * radfield::radfield(nu, nonemptymgi) * (1 - exp(-HOVERKB * nu / T_R));
+  return sigma_bf * (1 - (nu_edge / nu)) * radfield::radfield(nu, nonemptymgi) * (1 - exp(-HOVERKB * nu / T_R));
 }
 
 auto calculate_bfheatingcoeff(const int element, const int ion, const int level, const int phixstargetindex,

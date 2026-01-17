@@ -584,12 +584,13 @@ void macroatom_close_file() {
   const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * einstein_A;
   const double B_lu = upper_statweight / statweight_lower * B_ul;
 
-  const double tau_sobolev = (B_lu * nnlevel_lower - B_ul * nnlevel_upper) * HCLIGHTOVERFOURPI * t_current;
+  const double tau_sobolev = ((B_lu * nnlevel_lower) - (B_ul * nnlevel_upper)) * HCLIGHTOVERFOURPI * t_current;
 
   if (tau_sobolev > 1e-100) {
     const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
 
-    const double R_over_J_nu = nnlevel_lower > 0. ? (B_lu - B_ul * nnlevel_upper / nnlevel_lower) * beta : B_lu * beta;
+    const double R_over_J_nu =
+        nnlevel_lower > 0. ? (B_lu - (B_ul * nnlevel_upper / nnlevel_lower)) * beta : B_lu * beta;
 
     if (DETAILED_LINE_ESTIMATORS_ON && !globals::lte_iteration) {
       // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate

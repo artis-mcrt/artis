@@ -155,8 +155,8 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
         const double pop = [&]() {
           if constexpr (BFCOOLING_USELEVELPOPNOTIONPOP) {
             const int upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
-            return (update_cellcache_contribs) ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upperlevel)
-                                               : calculate_levelpop(nonemptymgi, element, ion + 1, upperlevel);
+            return update_cellcache_contribs ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upperlevel)
+                                             : calculate_levelpop(nonemptymgi, element, ion + 1, upperlevel);
           }
           return nnupperion;
         }();
@@ -227,7 +227,7 @@ auto sample_planck_analytic(const double T) -> double {
   double prev_partintegral = 0.;
   double part_integral = 0.;
   double bin_nu_lower = NU_MIN_R;
-  for (auto i = 1z; i < nubins; i++) {
+  for (auto i = 1Z; i < nubins; i++) {
     bin_nu_lower = NU_MIN_R + ((i - 1) * delta_nu);
     const double nu_upper = NU_MIN_R + (i * delta_nu);
     prev_partintegral = part_integral;
@@ -301,7 +301,7 @@ void setup_coolinglist() {
   const auto temp_coolinglist_type = MPI_shared_malloc_span<CoolingType>(ncoolingterms);
   const auto temp_coolinglist_level = MPI_shared_malloc_span<int>(ncoolingterms);
   const auto temp_coolinglist_upperlevel = MPI_shared_malloc_span<int>(ncoolingterms);
-  const size_t mem_usage_coolinglist = ncoolingterms * (sizeof(CoolingType) + 2 * sizeof(int));
+  const size_t mem_usage_coolinglist = ncoolingterms * (sizeof(CoolingType) + (2 * sizeof(int)));
   printlnlog("[info] mem_usage: coolinglist occupies {:.3f} MB", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0;  // cooling list index

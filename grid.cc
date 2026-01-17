@@ -384,7 +384,7 @@ void allocate_nonemptymodelcells() {
   kappagrey_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
   grey_depth_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
   thick_allcells = MPI_shared_malloc_span<int>(nonempty_npts_model, 0);
-  const auto modelgrid_mem_usage = nonempty_npts_model * (sizeof(float) * 9 + sizeof(double) + sizeof(int));
+  const auto modelgrid_mem_usage = nonempty_npts_model * ((sizeof(float) * 9) + sizeof(double) + sizeof(int));
   printlnlog(
       "[info] mem_usage: the modelgrid properties (temperatures and electron densities) occupies {:.3f} MB (node "
       "shared memory)",
@@ -498,7 +498,7 @@ void map_2dmodelto3dgrid()
     // 2D grid is uniform so rcyl and z indices can be calculated with no lookup
     const int n_rcyl = static_cast<int>(rcylindrical / globals::tmin / globals::vmax * ncoord_model[0]);
     const int n_z =
-        static_cast<int>((pos_mid[2] / globals::tmin + globals::vmax) / (2 * globals::vmax) * ncoord_model[1]);
+        static_cast<int>(((pos_mid[2] / globals::tmin) + globals::vmax) / (2 * globals::vmax) * ncoord_model[1]);
 
     if (n_rcyl >= 0 && n_rcyl < ncoord_model[0] && n_z >= 0 && n_z < ncoord_model[1]) {
       const int mgi = (n_z * ncoord_model[0]) + n_rcyl;
@@ -1132,7 +1132,7 @@ void setup_grid_cylindrical_2d() {
     const int n_z = get_cellcoordpointnum(cellindex, 1);
 
     propcell_pos_min[cellindex] = {n_rcyl * globals::rmax / ncoord_model[0],
-                                   globals::rmax * (-1 + n_z * 2. / ncoord_model[1]), 0.};
+                                   globals::rmax * (-1 + (n_z * 2. / ncoord_model[1])), 0.};
   }
 }
 
@@ -1154,7 +1154,7 @@ auto get_grid_type_name(const GridType gridtype) -> std::string {
 // xyz)
 auto get_poscoordpointnum(const double pos, const double time, const int axis) -> int {
   if (GRID_TYPE == GridType::CARTESIAN3D) {
-    const auto idx = static_cast<int>((pos / time + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
+    const auto idx = static_cast<int>(((pos / time) + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
     assert_always(idx >= 0);
     assert_always(idx < ncoordgrid[axis]);
     return idx;
@@ -1168,7 +1168,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
       return n_rcyl;
     }
     if (axis == 1) {
-      const auto n_z = static_cast<int>((pos / time + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
+      const auto n_z = static_cast<int>(((pos / time) + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
       assert_always(n_z >= 0);
       assert_always(n_z < ncoordgrid[axis]);
       return n_z;
@@ -1217,8 +1217,9 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
   if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
     // xy plane radial velocity
     // z velocity
-    return std::array<double, 2>{(pos_xyz[0] * dir_xyz[0] + pos_xyz[1] * dir_xyz[1]) / pktposgridcoord[0] * CLIGHT_PROP,
-                                 dir_xyz[2] * CLIGHT_PROP};
+    return std::array<double, 2>{
+        ((pos_xyz[0] * dir_xyz[0]) + (pos_xyz[1] * dir_xyz[1])) / pktposgridcoord[0] * CLIGHT_PROP,
+        dir_xyz[2] * CLIGHT_PROP};
   }
   if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
     // the only coordinate is radius from the origin
@@ -1244,7 +1245,7 @@ template <BoundaryType boundarytype, size_t S1>
   // quadratic equation for intersection of ray with sphere
   // a*d^2 + b*d + c = 0
   const double a = dot(dir, dir) - pow(shellradiuststart / tstart / speed, 2);
-  const double b = 2 * (dot(dir, pos) - pow(shellradiuststart, 2) / tstart / speed);
+  const double b = 2 * (dot(dir, pos) - (pow(shellradiuststart, 2) / tstart / speed));
   const double c = dot(pos, pos) - pow(shellradiuststart, 2);
 
   const double discriminant = pow(b, 2) - (4 * a * c);
@@ -1298,11 +1299,11 @@ template <BoundaryType boundarytype, size_t S1>
 
 #if (TESTMODE)
     if (dist1 >= 0) {
-      const double shellradiusfinal1 = shellradiuststart / tstart * (tstart + dist1 / speed);
+      const double shellradiusfinal1 = shellradiuststart / tstart * (tstart + (dist1 / speed));
       assert_testmodeonly(fabs((vec_len(posfinal1) / shellradiusfinal1) - 1.) < 1e-3);
     }
     if (dist2 >= 0) {
-      const double shellradiusfinal2 = shellradiuststart / tstart * (tstart + dist2 / speed);
+      const double shellradiusfinal2 = shellradiuststart / tstart * (tstart + (dist2 / speed));
       assert_testmodeonly(fabs((vec_len(posfinal2) / shellradiusfinal2) - 1.) < 1e-3);
     }
 #endif
@@ -1993,7 +1994,7 @@ void read_ejecta_model() {
       const double pos_r_cyl_mid = (n_rcyl + 0.5) * globals::vmax * t_model / ncoord_model[0];
       assert_always(fabs((cell_r_in / pos_r_cyl_mid) - 1) < 1e-3);
       const int n_z = (mgi / ncoord_model[0]);
-      const double pos_z_mid = globals::vmax * t_model * (-1 + 2 * (n_z + 0.5) / ncoord_model[1]);
+      const double pos_z_mid = globals::vmax * t_model * (-1 + (2 * (n_z + 0.5) / ncoord_model[1]));
       assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
 
       if (rho_tmodel < 0) {
@@ -2610,9 +2611,10 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 
   assert_always((snext == -99) || ((snext >= 0) && (snext < grid::ngrid)));
 
-  const double maxsdist = (GRID_TYPE == GridType::CARTESIAN3D)
-                              ? std::numbers::sqrt3 * globals::rmax * (tstart + distance / CLIGHT_PROP) / globals::tmin
-                              : 2 * globals::rmax * (tstart + distance / CLIGHT_PROP) / globals::tmin;
+  const double maxsdist =
+      (GRID_TYPE == GridType::CARTESIAN3D)
+          ? std::numbers::sqrt3 * globals::rmax * (tstart + (distance / CLIGHT_PROP)) / globals::tmin
+          : 2 * globals::rmax * (tstart + (distance / CLIGHT_PROP)) / globals::tmin;
 
   assert_always(distance >= 0.);
   assert_always(distance <= maxsdist);

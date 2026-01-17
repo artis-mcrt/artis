@@ -412,7 +412,7 @@ void compton_scatter(Packet& pkt) {
   } else {
     // energy loss of the gamma becomes energy of the electron (needed to calculate time-dependent thermalisation rate)
     if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
-      pkt.nu_cmf = pkt.nu_cmf * (1 - 1 / f);
+      pkt.nu_cmf = pkt.nu_cmf * (1 - (1 / f));
       pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS;
     } else {
       pkt.type = TYPE_NTLEPTON_DEPOSITED;

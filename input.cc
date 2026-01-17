@@ -225,7 +225,7 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
     gsl_spline* spline = gsl_spline_alloc(gsl_interp_linear, nphixspoints_inputtable);
     gsl_spline_init(spline, nugrid_in.data(), phixs_in.data(), nphixspoints_inputtable);
     for (int i = 1; i < globals::NPHIXSPOINTS; i++) {
-      const double nu = nu_edge * (1. + i * globals::NPHIXSNUINCREMENT);
+      const double nu = nu_edge * (1. + (i * globals::NPHIXSNUINCREMENT));
       if (nu > nu_max) {
         levelphixstable[i] = static_cast<float>(phixs_in[nphixspoints_inputtable - 1] * pow(nu_max / nu, 3));
       } else {
@@ -1413,7 +1413,7 @@ void read_atomicdata_files() {
     return downtranscount + uptranscount;
   }();
   printlnlog("[info] mem_usage: transition lists occupy {:.3f} MB (node shared memory)",
-             updowntranscount * (2 * sizeof(int) + 3 * sizeof(float) + sizeof(bool)) / 1024. / 1024.);
+             updowntranscount * ((2 * sizeof(int)) + (3 * sizeof(float)) + sizeof(bool)) / 1024. / 1024.);
 
   // create a shared all transitions list and then copy data across, freeing the local copy
   MPI_Barrier(globals::mpi_comm_node);
@@ -1477,9 +1477,9 @@ void read_atomicdata_files() {
   globals::linelist.lowerlevelindex = linelist_lowerlevelindex;
 
   const double linelist_mem_MB =
-      (globals::nlines * sizeof(double)  // nu
-       + globals::nlines * sizeof(float)  // einstein_A
-       + globals::nlines * sizeof(int) * 4  // elementindex, ionindex, upperlevelindex, lowerlevelindex
+      ((globals::nlines * sizeof(double))  // nu
+       + (globals::nlines * sizeof(float))  // einstein_A
+       + (globals::nlines * sizeof(int) * 4)  // elementindex, ionindex, upperlevelindex, lowerlevelindex
        ) /
       1024. / 1024;
 
@@ -1602,7 +1602,7 @@ void setup_cellcache() {
       }
     }
     mem_usage_cellcache +=
-        (get_includedlevels() * (2 * sizeof(double) + sizeof(int))) + (allphixstargetcount * sizeof(double) * 2);
+        (get_includedlevels() * ((2 * sizeof(double)) + sizeof(int))) + (allphixstargetcount * sizeof(double) * 2);
 
     assert_always(chtransblocksize <= std::numeric_limits<int>::max());
     mem_usage_cellcache += chtransblocksize * sizeof(double);
@@ -1856,8 +1856,8 @@ void read_parameterfile(int rank) {
   // Multi-threaded runs (OpenMP or stdpar) are not reproducible due to accumulation to shared memory, so the seed is
   // randomly generated
   const auto tid = get_thread_num();
-  auto rngseed =
-      (tid == 0) ? pre_zseed + static_cast<std::int64_t>(13 * (rank * get_max_threads() + tid)) : get_rng_random_seed();
+  auto rngseed = (tid == 0) ? pre_zseed + static_cast<std::int64_t>(13 * ((rank * get_max_threads()) + tid))
+                            : get_rng_random_seed();
 
   rng_seed(rngseed);
   printlnlog("rank {}: thread {} has rngseed {}", rank, tid, rngseed);
@@ -2058,7 +2058,7 @@ void update_parameterfile(const int nts) {
         const int commentstart = 25;
 
         // truncate any existing comment on the line
-        if (line.find('#') != std::string::npos) {
+        if (line.contains('#')) {
           line.resize(line.find('#'));
         }
 
