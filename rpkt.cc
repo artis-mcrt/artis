@@ -101,7 +101,7 @@ template <bool USECELLCACHE>
                                   : calculate_levelpop(nonemptymgi, globals::linelist.elementindex[lineindex],
                                                        globals::linelist.ionindex[lineindex],
                                                        globals::linelist.upperlevelindex[lineindex]);
-  return std::max((B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current, 0.);
+  return std::max(((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_current, 0.);
 }
 
 // find any line or continuum interaction occuring before frequency decreases to nu_cmf_abort at distance abort_dist
@@ -345,7 +345,7 @@ void electron_scatter_rpkt(Packet& pkt) {
       // with -i1. Here, instead, we calculate the angle in the clockwise direction from 0 to 2PI.
       // For instance, the i1 angle in Fig.2 of Bulla+2015 corresponds to 2PI-i1 here.
       // NB2: the i1 and i2 angles computed in the code (before and after scattering) are instead as in Bulla+2015
-      p = (mu + 1) + ((mu - 1) * (cos(2 * phisc) * Qi + sin(2 * phisc) * Ui));
+      p = (mu + 1) + ((mu - 1) * ((cos(2 * phisc) * Qi) + (sin(2 * phisc) * Ui)));
 
       // generate a number between 0 and the maximum of the previous function (2)
       x = 2. * rng_uniform();
@@ -363,10 +363,10 @@ void electron_scatter_rpkt(Packet& pkt) {
 
   if (fabs(old_dir_cmf[2]) < 0.99999) {
     new_dir_cmf[0] = (sin(tsc) / sqrt(1. - pow(old_dir_cmf[2], 2.)) *
-                      (old_dir_cmf[1] * sin(phisc) - old_dir_cmf[0] * old_dir_cmf[2] * cos(phisc))) +
+                      ((old_dir_cmf[1] * sin(phisc)) - (old_dir_cmf[0] * old_dir_cmf[2] * cos(phisc)))) +
                      (old_dir_cmf[0] * cos(tsc));
     new_dir_cmf[1] = (sin(tsc) / sqrt(1 - pow(old_dir_cmf[2], 2.)) *
-                      (-old_dir_cmf[0] * sin(phisc) - old_dir_cmf[1] * old_dir_cmf[2] * cos(phisc))) +
+                      ((-old_dir_cmf[0] * sin(phisc)) - (old_dir_cmf[1] * old_dir_cmf[2] * cos(phisc)))) +
                      (old_dir_cmf[1] * cos(tsc));
     new_dir_cmf[2] = (sin(tsc) * cos(phisc) * sqrt(1 - pow(old_dir_cmf[2], 2.))) + (old_dir_cmf[2] * cos(tsc));
   } else {
@@ -392,8 +392,8 @@ void electron_scatter_rpkt(Packet& pkt) {
 
   const double mu = dot(old_dir_cmf, new_dir_cmf);
 
-  const double Inew = 0.75 * ((mu * mu + 1.0) + Qold * (mu * mu - 1.0));
-  const double Qnew = (0.75 * ((mu * mu - 1.0) + Qold * (mu * mu + 1.0))) / Inew;
+  const double Inew = 0.75 * (((mu * mu) + 1.0) + (Qold * ((mu * mu) - 1.0)));
+  const double Qnew = (0.75 * (((mu * mu) - 1.0) + (Qold * ((mu * mu) + 1.0)))) / Inew;
   const double Unew = (1.5 * mu * Uold) / Inew;
 
   // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
@@ -484,9 +484,9 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
 #pragma clang unsafe_buffer_usage begin
     // NOLINTBEGIN(*-pointer-arithmetic)
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
-    const auto allcontindex = std::upper_bound(phixslist.chi_bf_sum.get() + phixslist.allcontbegin,
-                                               phixslist.chi_bf_sum.get() + phixslist.allcontend - 1, chi_bf_rand) -
-                              phixslist.chi_bf_sum.get();
+    const auto allcontindex = std::upper_bound(phixslist.chi_bf_sum.data() + phixslist.allcontbegin,
+                                               phixslist.chi_bf_sum.data() + phixslist.allcontend - 1, chi_bf_rand) -
+                              phixslist.chi_bf_sum.data();
     // NOLINTEND(*-pointer-arithmetic)
 #pragma clang unsafe_buffer_usage end
     assert_always(allcontindex < phixslist.allcontend);
@@ -645,10 +645,10 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
     std::tie(edist, pkt.next_trans, event_is_boundbound) =
-        (EXPANSIONOPACITIES_ON) ? get_possible_event_expansion_opacity(nonemptymgi, pkt, chi_rpkt_cont, pktmastate,
-                                                                       tau_rnd, nu_cmf_abort, dnu_on_dl, doppler)
-                                : get_possible_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, abort_dist,
-                                                     nu_cmf_abort, dnu_on_dl, doppler, globals::linelist);
+        EXPANSIONOPACITIES_ON ? get_possible_event_expansion_opacity(nonemptymgi, pkt, chi_rpkt_cont, pktmastate,
+                                                                     tau_rnd, nu_cmf_abort, dnu_on_dl, doppler)
+                              : get_possible_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, abort_dist,
+                                                   nu_cmf_abort, dnu_on_dl, doppler, globals::linelist);
   }
   assert_always(edist >= 0);
 
@@ -756,12 +756,12 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu) -> double {
 // get bound-free opacity
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
 auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixslist& phixslist) -> double {
-  assert_always(!USECELLHISTANDUPDATEPHIXSLIST || !(phixslist.chi_bf_sum.get() == nullptr));
+  assert_always(!USECELLHISTANDUPDATEPHIXSLIST || !(phixslist.chi_bf_sum.empty()));
 
   double chi_bf_sum = 0.;
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-      std::fill_n(phixslist.groundcont_gamma_contr.get(), globals::nbfcontinua_ground, 0.);
+      std::ranges::fill(phixslist.groundcont_gamma_contr, 0.);
     }
   }
 
@@ -971,7 +971,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
     chi_escat = SIGMA_T * nne;
 
     // Third contribution: bound-free absorption
-    chi_bf = chi_rpkt_cont.phixslist.chi_bf_sum == nullptr
+    chi_bf = chi_rpkt_cont.phixslist.chi_bf_sum.empty()
                  ? calculate_chi_bf_gammacontr<false>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist)
                  : calculate_chi_bf_gammacontr<true>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist);
 
@@ -1030,7 +1030,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
 
   double kappa_planck_cumulative = 0.;
 
-  for (auto binindex = 0z; binindex < expopac_nbins; binindex++) {
+  for (auto binindex = 0Z; binindex < expopac_nbins; binindex++) {
     double bin_linesum = 0.;
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
 

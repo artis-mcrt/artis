@@ -10,8 +10,7 @@ Checks: [
         -bugprone-exception-escape,
         -bugprone-implicit-widening-of-multiplication-result,
         -boost-use-ranges,
-        -cert-dcl03-c,
-        -cert-dcl50-cpp,
+        -cert-dcl*,
         -cert-err33-c,
         -cert-err34-c,
         -cert-err58-cpp,
@@ -20,7 +19,9 @@ Checks: [
         -cppcoreguidelines-avoid-non-const-global-variables,
         -cppcoreguidelines-macro-usage,
         -cppcoreguidelines-narrowing-conversions,  # alias for bugprone-narrowing-conversions
+        -cppcoreguidelines-non-private-member-variables-in-classes,
         -cppcoreguidelines-owning-memory,
+        -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
         -cppcoreguidelines-pro-bounds-constant-array-index,
         -cppcoreguidelines-pro-type-cstyle-cast,
         -cppcoreguidelines-pro-type-vararg,
@@ -31,6 +32,8 @@ Checks: [
         -hicpp-vararg,
         -hicpp-no-array-decay,
         -llvmlibc-*,
+        -llvm-use-ranges,
+        -llvm-header-guard,
         -llvm-prefer-static-over-anonymous-namespace,
         -misc-no-recursion,
         -misc-non-private-member-variables-in-classes,
@@ -44,6 +47,8 @@ Checks: [
 WarningsAsErrors: '*,-clang-diagnostic-unused-function'
 FormatStyle: file
 ExtraArgs: [-std=c++23]
+# HeaderFilterRegex: '.*'
+ExcludeHeaderFilterRegex: '^/opt/homebrew/include/.*'
 CheckOptions:
     - key: bugprone-reserved-identifier.AllowedIdentifiers
       value: '__host__;__device__'

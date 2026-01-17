@@ -64,9 +64,9 @@ constexpr int RADFIELDBINCOUNT = 256;
 
 constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
 
-constexpr double nu_lower_first_initial = (CLIGHT / (40000e-8));
-constexpr double nu_upper_last_initial = (CLIGHT / (1085e-8));
-constexpr double nu_upper_superbin = (CLIGHT / (10e-8));
+constexpr double nu_lower_first_initial = (CLIGHT / 40000e-8);
+constexpr double nu_upper_last_initial = (CLIGHT / 1085e-8);
+constexpr double nu_upper_superbin = (CLIGHT / 10e-8);
 
 constexpr double T_R_min = 500;
 constexpr double T_R_max = 250000;

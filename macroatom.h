@@ -47,7 +47,7 @@ void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
   const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
   const double B_lu = upperstatweight / lowerstatweight * B_ul;
 
-  const double tau_sobolev = (B_lu * nnlevellower - B_ul * nnlevelupper) * HCLIGHTOVERFOURPI * t_current;
+  const double tau_sobolev = ((B_lu * nnlevellower) - (B_ul * nnlevelupper)) * HCLIGHTOVERFOURPI * t_current;
 
   if (tau_sobolev > 1e-100) {
     const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));

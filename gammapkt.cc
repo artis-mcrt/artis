@@ -195,7 +195,7 @@ void init_gamma_linelist() {
   assert_always(gammalinelist.is_open());
   gammalinelist << "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability\n";
 
-  for (auto i = 0z; i < total_lines; i++) {
+  for (auto i = 0Z; i < total_lines; i++) {
     const int nucindex = allnuc_gamma_line_list[i].nucindex;
     const int index = allnuc_gamma_line_list[i].nucgammaindex;
     gammalinelist << static_cast<int>(i) << ' ' << allnuc_gamma_line_list[i].nucindex << ' '
@@ -946,7 +946,7 @@ void init_gamma_data() {
 
   const double zrand = rng_uniform();
   double runtot = 0.;
-  for (auto n = 0z; n < std::ssize(gamma_spectra[nucindex]); n++) {
+  for (auto n = 0Z; n < std::ssize(gamma_spectra[nucindex]); n++) {
     runtot += gamma_spectra[nucindex][n].probability * gamma_spectra[nucindex][n].energy / E_gamma;
     if (zrand <= runtot) {
       return gamma_spectra[nucindex][n].energy / H;

@@ -277,7 +277,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
   auto phixsfile = fstream_required(phixsdata_filenames[phixs_file_version], std::ios::in);
   std::string phixsline;
   std::istringstream ssline;
-  auto mem_usage_phixs = 0zU;
+  auto mem_usage_phixs = 0ZU;
 
   if (phixs_file_version == 1 && phixs_file_version_exists[2]) {
     printlnlog(
@@ -1384,7 +1384,7 @@ void read_atomicdata_files() {
   globals::alllevels.bflist_start = MPI_shared_malloc_span<int>(nlevels, -1);
   if (globals::rank_in_node == 0) {
     int chtransindex = 0;
-    for (auto i = 0zU; i < temp_alllevels.size(); i++) {
+    for (auto i = 0ZU; i < temp_alllevels.size(); i++) {
       alllevels_alltrans_startdown[i] = temp_alllevels[i].alltrans_startdown;
       alllevels_ndowntrans[i] = temp_alllevels[i].ndowntrans;
       alllevels_nuptrans[i] = temp_alllevels[i].nuptrans;
@@ -1560,7 +1560,7 @@ void setup_cellcache() {
   globals::cellcache.resize(num_cellcache_slots);
 
   for (int cellcachenum = 0; cellcachenum < num_cellcache_slots; cellcachenum++) {
-    auto mem_usage_cellcache = 0zU;
+    auto mem_usage_cellcache = 0ZU;
     mem_usage_cellcache += sizeof(globals::CellCache);
 
     printlnlog("[info] input: initializing cellcache for thread {} ...", cellcachenum);
@@ -1575,8 +1575,8 @@ void setup_cellcache() {
     printlnlog("[info] mem_usage: cellcache coolinglist contribs for thread {} occupies {:.3f} MB", cellcachenum,
                ncoolingterms * sizeof(double) / 1024. / 1024.);
 
-    auto allphixstargetcount = 0zU;
-    auto chtransblocksize = 0zU;
+    auto allphixstargetcount = 0ZU;
+    auto chtransblocksize = 0ZU;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {

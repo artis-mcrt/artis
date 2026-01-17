@@ -18,7 +18,7 @@
 template <size_t VECDIM>
 [[gnu::pure]] [[nodiscard]] constexpr auto vec_len(const std::array<double, VECDIM>& vec) -> double {
   double squaredlen = 0.;
-  for (auto i = 0zU; i < VECDIM; i++) {
+  for (auto i = 0ZU; i < VECDIM; i++) {
     squaredlen += vec[i] * vec[i];
   }
   return std::sqrt(squaredlen);
@@ -37,7 +37,7 @@ template <size_t VECDIM>
 [[gnu::pure]] [[nodiscard]] constexpr auto dot(const std::array<double, VECDIM>& x, const std::array<double, VECDIM>& y)
     -> double {
   double sum = 0.;
-  for (auto i = 0zU; i < VECDIM; i++) {
+  for (auto i = 0ZU; i < VECDIM; i++) {
     sum += x[i] * y[i];
   }
   return sum;
@@ -259,7 +259,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   const double gamma_rel = 1. / (sqrt(1 - vsqr));
 
   const auto e_par =
-      Vec3d{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr), dot(e_rf, beta) * beta[2] / (vsqr)};
+      Vec3d{dot(e_rf, beta) * beta[0] / vsqr, dot(e_rf, beta) * beta[1] / vsqr, dot(e_rf, beta) * beta[2] / vsqr};
 
   const auto e_perp = Vec3d{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
 
@@ -306,7 +306,7 @@ constexpr auto frame_transform(const Vec3d& n_rf, double* Q, double* U, const Ve
     } else if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) {
       rot_angle = (PI + acos(fabs(cos2rot_angle))) / 2.;
     } else if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) {
-      rot_angle = (2. * PI - acos(fabs(cos2rot_angle))) / 2.;
+      rot_angle = ((2. * PI) - acos(fabs(cos2rot_angle))) / 2.;
     } else if (cos2rot_angle == 0) {
       rot_angle = 0.25 * PI;
       if (U0 < 0) {

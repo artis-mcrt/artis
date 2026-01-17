@@ -166,7 +166,7 @@ constexpr void md5_init(MD5_CTX* ctx) {
 }
 
 constexpr void md5_update(MD5_CTX* ctx, std::span<const BYTE> data) {
-  auto i = 0zU;
+  auto i = 0ZU;
 
   for (i = 0; i < data.size(); ++i) {
     ctx->data[ctx->datalen] = data[i];
@@ -180,7 +180,7 @@ constexpr void md5_update(MD5_CTX* ctx, std::span<const BYTE> data) {
 }
 
 constexpr void md5_final(MD5_CTX* ctx, std::span<BYTE, MD5_BLOCK_SIZE> hash) {
-  auto i = 0zU;
+  auto i = 0ZU;
 
   i = ctx->datalen;
 

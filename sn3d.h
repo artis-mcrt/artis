@@ -453,7 +453,7 @@ inline void MPI_Allreduce_safe(R&& data, Op&& op, Comm&& comm) {
   const auto nchunks = (std::ssize(dataspan) / MPI_COUNT_MAX) + ((std::ssize(dataspan) % MPI_COUNT_MAX) == 0 ? 0 : 1);
   assert_always(nchunks >= 1);
   std::ptrdiff_t items_processed{0};
-  for (auto chunk = 0z; chunk < nchunks; chunk++) {
+  for (auto chunk = 0Z; chunk < nchunks; chunk++) {
     const auto [chunkstart, chunksize] = get_range_chunk(std::ssize(dataspan), nchunks, chunk);
     assert_always(chunksize > 0);
     const auto chunk_span = dataspan.subspan(chunkstart, chunksize);
@@ -481,7 +481,7 @@ inline void MPI_Bcast_safe(R&& data, const int root, Comm&& comm) {
   }
   assert_always(dataspan.data() != nullptr);
   assert_always(comm != MPI_COMM_NULL);
-  using value_t = typename std::ranges::range_value_t<R>;
+  using value_t = std::ranges::range_value_t<R>;
 
   const auto mpi_datatype = GET_MPI_TYPE<value_t>();
   // if we're transferring bytes, then we need multiply the array count by the byte size of the type
@@ -494,7 +494,7 @@ inline void MPI_Bcast_safe(R&& data, const int root, Comm&& comm) {
       (datasize_mpitype / MPI_COUNT_MAX_MPITYPE) + ((datasize_mpitype % MPI_COUNT_MAX_MPITYPE) == 0 ? 0 : 1);
   assert_always(nchunks >= 1);
   std::ptrdiff_t items_processed{0};
-  for (auto chunk = 0z; chunk < nchunks; chunk++) {
+  for (auto chunk = 0Z; chunk < nchunks; chunk++) {
     const auto [chunkstart, chunksize] = get_range_chunk(std::ssize(dataspan), nchunks, chunk);
     assert_always(chunksize > 0);
     const auto chunk_span = dataspan.subspan(chunkstart, chunksize);
@@ -536,7 +536,7 @@ inline void MPI_Reduce_safe(R&& data, Op&& op, const int root, Comm&& comm) {
   const auto nchunks = (std::ssize(dataspan) / MPI_COUNT_MAX) + ((std::ssize(dataspan) % MPI_COUNT_MAX) == 0 ? 0 : 1);
   assert_always(nchunks >= 1);
   std::ptrdiff_t items_processed{0};
-  for (auto chunk = 0z; chunk < nchunks; chunk++) {
+  for (auto chunk = 0Z; chunk < nchunks; chunk++) {
     const auto [nstart, chunksize] = get_range_chunk(std::ssize(dataspan), nchunks, chunk);
     assert_always(chunksize > 0);
     const auto chunk_span = dataspan.subspan(nstart, chunksize);
