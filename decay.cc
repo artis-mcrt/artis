@@ -1044,7 +1044,7 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
 
   printlnlog("Number of nuclides: {}", get_num_nuclides());
 
-  const int maxdecaypathlength = std::ranges::fold_left(decaypaths, 0zU, [](const auto maxlen, const auto& decaypath) {
+  const int maxdecaypathlength = std::ranges::fold_left(decaypaths, 0ZU, [](const auto maxlen, const auto& decaypath) {
     return std::max(maxlen, decaypath.nucindex.size());
   });
 
