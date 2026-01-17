@@ -938,7 +938,7 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
   }
   const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
-  for (auto nonemptymgi = 0z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
+  for (auto nonemptymgi = 0Z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
     if (grid::thick_allcells[nonemptymgi] == 1) {
       continue;
     }
@@ -1196,7 +1196,7 @@ void read_restart_data(FILE* gridsave_file) {
     assert_always(fscanf(gridsave_file, "%d\n", &gridsave_nbfestim_in) == 1);
     assert_always(gridsave_nbfestim_in == bfestimcount);
 
-    for (auto nonemptymgi = 0z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
       int nonemptymgi_in = 0;
       assert_always(fscanf(gridsave_file, "%d\n", &nonemptymgi_in) == 1);
       assert_always(nonemptymgi_in == nonemptymgi);
@@ -1226,7 +1226,7 @@ void read_restart_data(FILE* gridsave_file) {
     }
   }
 
-  for (auto nonemptymgi = 0z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+  for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     int nonemptymgi_in = 0;
     assert_always(fscanf(gridsave_file, "%d %la\n", &nonemptymgi_in, &J_normfactor[nonemptymgi]) == 2);
     assert_always(nonemptymgi_in == nonemptymgi);

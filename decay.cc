@@ -346,7 +346,7 @@ auto find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
         continue;
       }
       bool is_custom_nuclide = false;
-      for (auto i = 0z; i < std::ssize(custom_zlist); i++) {
+      for (auto i = 0Z; i < std::ssize(custom_zlist); i++) {
         if ((z == custom_zlist[i]) && (a == custom_alist[i])) {
           is_custom_nuclide = true;
           break;
@@ -382,7 +382,7 @@ auto find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
     // -1 to ignore last item, which keeps bit-identical results as before when final daughter nuclide was not included
     // TODO: it would probably be better to sort by all items in reverse order
     const auto smallestpathlength = std::min(d1_length, d2_length) - 1;
-    for (auto i = 0z; i < smallestpathlength; i++) {
+    for (auto i = 0Z; i < smallestpathlength; i++) {
       if (d1.a[i] != d2.a[i]) {
         return d1.a[i] < d2.a[i];
       }
@@ -467,7 +467,7 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
   while (tdecay <= tdecaymin || tdecay >= tdecaymax) {
     tdecay = t_model;  // can't decay before initial model snapshot time
     const auto maxlength = std::ssize(decaypaths[decaypathindex].nucindex) - 1;
-    for (auto i = 0z; i < maxlength; i++) {
+    for (auto i = 0Z; i < maxlength; i++) {
       tdecay -= get_meanlife(decaypaths[decaypathindex].nucindex[i]) * std::log(static_cast<double>(rng_uniform_pos()));
     }
   }
@@ -777,7 +777,7 @@ auto get_nucstring_z(const std::string& strnuc) -> int {
 // convert something like Ni56 to integer 56
 auto get_nucstring_a(const std::string& strnuc) -> int {
   // find first digit character
-  auto i = 0zU;
+  auto i = 0ZU;
   for (; i < strnuc.length(); i++) {
     if (isdigit(strnuc[i]) != 0) {
       break;
@@ -838,7 +838,7 @@ void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>&
   // any nuclides in the custom list that are not in the standard list need beta and alpha decay data
 
   bool use_custom_nuclides = false;
-  for (auto i = 0z; i < std::ssize(custom_zlist); i++) {
+  for (auto i = 0Z; i < std::ssize(custom_zlist); i++) {
     if (custom_zlist[i] < 0 || custom_alist[i] < 0) {
       continue;
     }
