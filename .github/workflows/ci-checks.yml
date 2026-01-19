@@ -148,7 +148,7 @@ jobs:
 
             - name: Install nvc++
               if: matrix.compiler.name == 'nvc++'
-              uses: fortran-lang/setup-fortran@v1.8.0
+              uses: fortran-lang/setup-fortran@v1.8.1
               with:
                   compiler: nvidia-hpc
                   version: ${{ matrix.compiler.ver }}
