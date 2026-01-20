@@ -44,7 +44,7 @@ enum eventcounters {
   COUNTER_COUNT = 33,
 };
 
-void increment(enum eventcounters);
+void increment(enum eventcounters i);
 
 void pkt_action_counters_reset();
 

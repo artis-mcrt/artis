@@ -391,9 +391,9 @@ template <typename T>
   MPI_Win mpiwin{MPI_WIN_NULL};
   T* ptr{};
 
-  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &ptr, &mpiwin) ==
-                MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &ptr) == MPI_SUCCESS);
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                        static_cast<void*>(&ptr), &mpiwin) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, static_cast<void*>(&ptr)) == MPI_SUCCESS);
   assert_always(ptr != nullptr);
 #pragma clang unsafe_buffer_usage begin
   const auto newspan = std::span<T>(ptr, num_allranks);
@@ -436,9 +436,9 @@ inline auto GET_MPI_TYPE() -> MPI_Datatype {
 constexpr std::ptrdiff_t MPI_COUNT_MAX = std::numeric_limits<int>::max();
 
 // these wrappers add type, bounds, and overflow safety to the MPI calls
-template <typename R, typename Op, typename Comm>
+template <typename R>
   requires std::ranges::random_access_range<R>
-inline void MPI_Allreduce_safe(R&& data, Op&& op, Comm&& comm) {
+inline void MPI_Allreduce_safe(R&& data, MPI_Op op, MPI_Comm comm) {
   auto dataspan = std::span{std::forward<R>(data)};
   if (dataspan.empty()) {
     return;
@@ -459,22 +459,22 @@ inline void MPI_Allreduce_safe(R&& data, Op&& op, Comm&& comm) {
     const auto chunk_span = dataspan.subspan(chunkstart, chunksize);
     const auto int_chunksize = static_cast<int>(chunk_span.size());
     assert_always(std::cmp_equal(int_chunksize, chunksize));
-    assert_always(MPI_Allreduce(MPI_IN_PLACE, chunk_span.data(), int_chunksize, mpi_datatype, std::forward<Op>(op),
-                                std::forward<Comm>(comm)) == MPI_SUCCESS);
+    assert_always(MPI_Allreduce(MPI_IN_PLACE, static_cast<void*>(chunk_span.data()), int_chunksize, mpi_datatype, op,
+                                comm) == MPI_SUCCESS);
     items_processed += chunksize;
   }
   assert_always(items_processed == std::ssize(dataspan));
 }
 
-template <typename T, typename Op, typename Comm>
+template <typename T>
   requires(!std::ranges::random_access_range<T>)
-inline void MPI_Allreduce_safe(T& data, Op&& op, Comm&& comm) {
-  MPI_Allreduce_safe(std::span{&data, 1}, std::forward<Op>(op), std::forward<Comm>(comm));
+inline void MPI_Allreduce_safe(T& data, MPI_Op op, MPI_Comm comm) {
+  MPI_Allreduce_safe(std::span{&data, 1}, op, comm);
 }
 
-template <typename R, typename Comm>
+template <typename R>
   requires std::ranges::random_access_range<R>
-inline void MPI_Bcast_safe(R&& data, const int root, Comm&& comm) {
+inline void MPI_Bcast_safe(R&& data, const int root, MPI_Comm comm) {
   auto dataspan = std::span{std::forward<R>(data)};
   if (dataspan.empty()) {
     return;
@@ -502,22 +502,21 @@ inline void MPI_Bcast_safe(R&& data, const int root, Comm&& comm) {
     assert_always(chunksize_mpitype <= MPI_COUNT_MAX);
     const auto int_chunksize_mpitype = static_cast<int>(chunksize_mpitype);
     assert_always(std::cmp_equal(int_chunksize_mpitype, chunksize_mpitype));
-    assert_always(MPI_Bcast(chunk_span.data(), int_chunksize_mpitype, mpi_datatype, root, std::forward<Comm>(comm)) ==
-                  MPI_SUCCESS);
+    assert_always(MPI_Bcast(chunk_span.data(), int_chunksize_mpitype, mpi_datatype, root, comm) == MPI_SUCCESS);
     items_processed += chunksize;
   }
   assert_always(items_processed == std::ssize(dataspan));
 }
 
-template <typename T, typename Comm>
+template <typename T>
   requires(!std::ranges::random_access_range<T>)
-inline void MPI_Bcast_safe(T& data, const int root, Comm&& comm) {
-  MPI_Bcast_safe(std::span{&data, 1}, root, std::forward<Comm>(comm));
+inline void MPI_Bcast_safe(T& data, const int root, MPI_Comm comm) {
+  MPI_Bcast_safe(std::span{&data, 1}, root, comm);
 }
 
-template <typename R, typename Op, typename Comm>
+template <typename R>
   requires std::ranges::random_access_range<R>
-inline void MPI_Reduce_safe(R&& data, Op&& op, const int root, Comm&& comm) {
+inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) {
   auto dataspan = std::span{std::forward<R>(data)};
   if (dataspan.empty()) {
     return;
@@ -527,7 +526,7 @@ inline void MPI_Reduce_safe(R&& data, Op&& op, const int root, Comm&& comm) {
   assert_always(comm != MPI_COMM_NULL);
 
   int my_rank{-1};
-  assert_always(MPI_Comm_rank(std::forward<Comm>(comm), &my_rank) == MPI_SUCCESS);
+  assert_always(MPI_Comm_rank(comm, &my_rank) == MPI_SUCCESS);
   assert_always(my_rank >= 0);
 
   const auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
@@ -543,7 +542,7 @@ inline void MPI_Reduce_safe(R&& data, Op&& op, const int root, Comm&& comm) {
     const auto int_chunksize = static_cast<int>(chunk_span.size());
     assert_always(std::cmp_equal(int_chunksize, chunksize));
     assert_always(MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : chunk_span.data(), chunk_span.data(), int_chunksize,
-                             mpi_datatype, std::forward<Op>(op), root, std::forward<Comm>(comm)) == MPI_SUCCESS);
+                             mpi_datatype, op, root, comm) == MPI_SUCCESS);
 
     items_processed += chunksize;
   }

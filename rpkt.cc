@@ -581,7 +581,7 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
 
       if constexpr (USE_LUT_BFHEATING) {
         atomicadd(globals::bfheatingestimator[ionestimindex],
-                  chi_rpkt_cont.phixslist.groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
+                  chi_rpkt_cont.phixslist.groundcont_gamma_contr[i] * distance_e_cmf * (1. - (nu_edge / nu_cmf)));
       }
     }
   }

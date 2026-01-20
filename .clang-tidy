@@ -6,9 +6,12 @@ Checks: [
         -android-*,
         -altera-*,
         -bugprone-casting-through-void,
+        -bugprone-dynamic-static-initializers,
         -bugprone-easily-swappable-parameters,
         -bugprone-exception-escape,
         -bugprone-implicit-widening-of-multiplication-result,
+        -bugprone-throwing-static-initialization,
+        -bugprone-unchecked-string-to-number-conversion,  # todo: replace with safer conversion functions
         -boost-use-ranges,
         -cert-dcl*,
         -cert-err33-c,
@@ -37,6 +40,7 @@ Checks: [
         -llvm-prefer-static-over-anonymous-namespace,
         -misc-no-recursion,
         -misc-non-private-member-variables-in-classes,
+        -modernize-avoid-variadic-functions,
         -modernize-use-ranges, # things like sort and for_each don't support parallel execution policies yet (C++26 will?)
         -modernize-use-std-print, # replace printout macro with a function when we want to autofix to use std::format gcc >=13
         -performance-enum-size,

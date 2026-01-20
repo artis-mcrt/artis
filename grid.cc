@@ -1083,7 +1083,7 @@ void setup_grid_cartesian_3d() {
       propcell_pos_min[n][axis] = -globals::rmax + (2 * nxyz[axis] * globals::rmax / ncoordgrid[axis]);
     }
 
-    assert_always(n == (nxyz[2] * ncoordgrid[1] * ncoordgrid[2]) + (nxyz[1] * ncoordgrid[0] + nxyz[0]));
+    assert_always(n == ((nxyz[2] * ncoordgrid[1]) * ncoordgrid[2]) + ((nxyz[1] * ncoordgrid[0]) + nxyz[0]));
 
     nxyz[0]++;  // increment x coordinate
     if (nxyz[0] == ncoordgrid[0]) {

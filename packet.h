@@ -8,6 +8,7 @@
 #include "constants.h"
 
 enum packet_type : int {
+  TYPE_NONE = 0,
   TYPE_ESCAPE = 32,
   TYPE_RADIOACTIVE_PELLET = 100,
   TYPE_GAMMA = 10,
