@@ -146,8 +146,8 @@ inline auto apply_clumping(const float val, const float oneoverfv) -> float {
   return val;
 }
 
-// Applies the clumping factor to val if microclumping is being used
-inline double apply_clumping(const double val, const float fv) { return apply_clumping(val, fv, 1); }
+// Applies the clumping factor to `val` if microclumping is being used
+inline double apply_clumping(const double val, const float oneoverfv) { return apply_clumping(val, oneoverfv, 1); }
 
 }  // namespace grid
 
