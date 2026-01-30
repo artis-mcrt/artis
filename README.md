@@ -8,13 +8,13 @@
 The code is modern C++23 and scales to thousands of CPU cores across multiple node using MPI with shared memory windows on each node. Experimental support is also provided for OpenMP and C++ standard parallelism (for multicore CPU and upcoming GPU targets).
 
 ## Why is this code available?
-The ARTIS source code is available because it forms part of the method used to obtain published scientific results. Those interested in understanding the numerical techniques in greater detail than the published descriptions have full access to the underlying code. We anticipate that some developers might find our code useful when building similar simulation codes, and in this case we ask that authors of any derivative works acknowledge and cite the ARTIS collaboration. This is in addition to the legal requirements of attribution and preservation of copyright notices on any substantial copies under the BSD 3-Clause licence.
+The ARTIS code forms part of the method used to obtain published scientific results. Those interested in understanding the numerical techniques in greater detail than the published descriptions have full access to the underlying code. We anticipate that some developers building similar simulation codes might find our code useful, and in this case we ask that authors of any derivative works acknowledge and cite the ARTIS collaboration. This is in addition to the legal requirements of attribution and preservation of copyright notices on any substantial copies under the BSD 3-Clause licence.
 
 ## Can you help me to run the code?
 We do not have the resources to support users of the code outside our team of direct collaborators.
 
 ## Installation of release version for production runs on Linux
-We recommended that you retain the full source code and Git version metadata within each simulation folder  for future reference (i.e. don't just copy the executables).
+We recommended that you retain the full source code and Git version metadata within each simulation folder for future reference (i.e. don't just copy the executables).
 
 Clone the source code repository from the release branch:
 ```sh
@@ -22,9 +22,9 @@ git clone --branch release https://github.com/artis-mcrt/artis.git
 cd artis
 ```
 
-To compile and run artis, you require a recent C++ compiler (g++, LLVM Clang, Apple Clang, or nvc++), the GNU Scientific Library, and an MPI library with a wrapper command `mpicxx'. Typically these are made available on an HPC system by running module or spack commands. For systems we use frequently, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules to load.
+To compile and run artis, you will need a recent C++ compiler (g++, LLVM Clang, Apple Clang, or nvc++), the GNU Scientific Library, and an MPI library with a wrapper command `mpicxx'. Typically these are made available on HPC systems using module or spack commands. For systems that we use, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules specifications.
 
-With the requirements met, select an options preset and compile with `make'. For example:
+Next, select an options preset and compile with `make'. For example:
 ```sh
 ln -s artisoptions_classic.h artisoptions.h
 make
@@ -40,7 +40,7 @@ ln -s artis/exspec
 ln -s artis/data
 ```
 
-The next steps are to ensure a full set of snapshot files (model.txt and abundances.txt) and an atomic database are present, and configure the timesteps in input.txt. Then, queue the relevant job script, with a command such as:
+The next steps are to ensure a full set of snapshot files (model.txt and abundances.txt) and an atomic database are present, and to configure the timesteps in input.txt. Then, queue the relevant job script with a command such as:
 ```sh
 sbatch artis/scripts/artis-juwels.sh
 ```
@@ -51,7 +51,7 @@ Clone the source code repository and checkout the default branch:
 git clone https://github.com/artis-mcrt/artis.git
 cd artis
 ```
-For macOS, it's recommend that you install homebrew llvm to get clang-format, clang-tidy, clangd language server and the clang C++ compiler.
+On macOS, it's recommend that you install homebrew llvm to get clang-format, clang-tidy, clangd language server, and the clang C++ compiler.
 ```sh
 brew install llvm
 ```
