@@ -780,10 +780,10 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     const auto population = popvec[index];
 
     if constexpr (!STRICT_POPULATION_CHECKING) {
-      if (population < 0.0) {
+      if (population < 0.0 || !std::isfinite(population)) {
         printlnlog(
-            "  WARNING: NLTE solver gave negative population to index {} (Z={} ionstage {} level {}), pop = {:g}. "
-            "Replacing with LTE pop of {:g}",
+            "  WARNING: NLTE solver gave negative/non-finite population to index {} (Z={} ionstage {} level {}), pop = "
+            "{:g}. Replacing with LTE pop of {:g}",
             index, get_atomicnumber(element), ionstage, level, population, pop_normfactors[index]);
         popvec[index] = pop_normfactors[index];
       }
@@ -798,9 +798,11 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
         return false;
       }
 
-      if (population < 0.0) {
-        printlog("  WARNING: NLTE solver gave negative population for index {} (Z={} ionstage {} level {}), pop = {:g}",
-                 index, get_atomicnumber(element), ionstage, level, population);
+      if (population < 0.0 || !std::isfinite(population)) {
+        printlog(
+            "  WARNING: NLTE solver gave negative/non-finite population for index {} (Z={} ionstage {} level {}), pop "
+            "= {:g}",
+            index, get_atomicnumber(element), ionstage, level, population);
         if (population < -MINPOP) {
           printlnlog(
               "  WARNING: negative pop = {:g} less than -MINPOP (-{:g}) unlikely a rounding error to zero so returning "
