@@ -244,7 +244,6 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     const auto sys_time_start_nltepops = std::time(nullptr);
     // fractional difference between previous and current iteration's (nne or max(ground state
     // population change))
-    double fracdiff_nne = 0.;
     for (int element = 0; element < get_nelements(); element++) {
       if (get_nions(element) > 0 && elem_has_nlte_levels(element)) {
         solve_nlte_pops_element(element, nonemptymgi, nts, nlte_iter);
@@ -255,7 +254,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
     const double nne_prev = grid::get_nne(nonemptymgi);
     calculate_ion_balance_nne(nonemptymgi);  // sets nne
-    fracdiff_nne = fabs((grid::get_nne(nonemptymgi) / nne_prev) - 1);
+    const auto fracdiff_nne = fabs((grid::get_nne(nonemptymgi) / nne_prev) - 1);
     printlnlog(
         "NLTE solver cell {} timestep {} iteration {}: time spent on: Spencer-Fano {}s, T_e {}s, NLTE populations {}s",
         mgi, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
