@@ -197,6 +197,12 @@ else
     $(error bad value for STATICGSL option. Should be ON or OFF)
 endif
 
+
+ifeq ($(USEBOOST),ON)
+	CXXFLAGS += -DUSEBOOST=true
+	BUILD_DIR := $(BUILD_DIR)_boost
+endif
+
 # Use GSL inline functions
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 

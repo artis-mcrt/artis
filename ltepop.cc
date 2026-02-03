@@ -1,8 +1,15 @@
 #include "ltepop.h"
 
+#if defined(USEBOOST) && USEBOOST
+#pragma clang unsafe_buffer_usage begin
+#include <boost/assert/source_location.hpp>
+#include <boost/math/tools/toms748_solve.hpp>
+#pragma clang unsafe_buffer_usage end
+#else
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
+#endif
 
 #include <algorithm>
 #include <cmath>
@@ -103,11 +110,7 @@ struct nneSolutionParas {
 
 // assume a value for nne and then calculate the resulting nne
 // the difference between the assumed and calculated nne is returned
-auto nne_solution_f(const double nne_assumed, void* const voidparas) -> double {
-  const auto* paras = static_cast<const nneSolutionParas*>(voidparas);
-  const int nonemptymgi = paras->nonemptymgi;
-  const bool force_saha = paras->force_saha;
-
+auto nne_solution_f(const double nne_assumed, const int nonemptymgi, const bool force_saha) -> double {
   double nne_after = 0.;  // the resulting nne after setting the ion balance with nne_assumed
   for (int element = 0; element < get_nelements(); element++) {
     const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
@@ -132,6 +135,11 @@ auto nne_solution_f(const double nne_assumed, void* const voidparas) -> double {
   nne_after = std::max(MINPOP, nne_after);
 
   return nne_after - nne_assumed;
+}
+
+auto nne_solution_f(const double nne_assumed, void* const voidparas) -> double {
+  const auto* paras = static_cast<const nneSolutionParas*>(voidparas);
+  return nne_solution_f(nne_assumed, paras->nonemptymgi, paras->force_saha);
 }
 
 // return population and whether the population came from the nlte solver
@@ -256,17 +264,16 @@ void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
 auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_lte) -> float {
   // Search solution for nne in [nne_lo,nne_hi]
 
-  nneSolutionParas paras = {.nonemptymgi = nonemptymgi, .force_saha = force_lte};
-  gsl_function f = {.function = &nne_solution_f, .params = &paras};
+  const auto f_nne = [nonemptymgi, force_lte](const double nne) { return nne_solution_f(nne, nonemptymgi, force_lte); };
 
   double nne_lo = 0.;  // MINPOP;
-  if (nne_solution_f(nne_lo, f.params) * nne_solution_f(nne_hi, f.params) > 0) {
+  if (f_nne(nne_lo) * f_nne(nne_hi) > 0) {
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi,
              grid::get_TR(nonemptymgi), grid::get_Te(nonemptymgi), grid::get_W(nonemptymgi),
              grid::get_rho(nonemptymgi));
-    printout("nne@x_lo %g\n", nne_solution_f(nne_lo, f.params));
-    printout("nne@x_hi %g\n", nne_solution_f(nne_hi, f.params));
+    printout("nne@x_lo %g\n", f_nne(nne_lo));
+    printout("nne@x_hi %g\n", f_nne(nne_hi));
 
     for (int element = 0; element < get_nelements(); element++) {
       printout("modelgridindex %d, element %d, uppermost_ion is %d\n", modelgridindex, element,
@@ -281,15 +288,26 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
     }
   }
 
-  double nne_solution = 0.;
+  constexpr double fractional_accuracy = 1e-3;
+  constexpr auto maxit = 50U;
 
+#if defined(USEBOOST) && USEBOOST
+  // use TOMS 748 solver from Boost
+  boost::uintmax_t iter = maxit;
+  auto result = boost::math::tools::toms748_solve(f_nne, nne_lo, nne_hi, ftol<fractional_accuracy>, iter);
+  const double nne_solution = 0.5 * (result.first + result.second);
+  if (iter >= maxit) {
+    printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations", iter + 1);
+  }
+#else
   gsl_root_fsolver* solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
 
+  nneSolutionParas paras = {.nonemptymgi = nonemptymgi, .force_saha = force_lte};
+  gsl_function f = {.function = &nne_solution_f, .params = &paras};
   gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
-  constexpr int maxit = 50;
-  constexpr double fractional_accuracy = 1e-3;
   int status = GSL_CONTINUE;
-  int iter = 0;
+  auto iter = 0U;
+  double nne_solution = 0.;
   for (iter = 0; iter <= maxit; iter++) {
     gsl_root_fsolver_iterate(solver);
     nne_solution = gsl_root_fsolver_root(solver);
@@ -305,6 +323,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
   }
 
   gsl_root_fsolver_free(solver);
+#endif
 
   return static_cast<float>(std::max(MINPOP, nne_solution));
 }
