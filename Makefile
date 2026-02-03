@@ -141,11 +141,6 @@ else
   $(error bad value for STDPAR option. Should be ON or OFF)
 endif
 
-ifneq ($(STDPAR),ON)
-	# triggers errors for the onedpl headers
-	CXXFLAGS += -Wundef
-endif
-
 ifeq ($(shell uname -s),Darwin)
 # 	macOS
 
