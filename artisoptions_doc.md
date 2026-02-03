@@ -1,4 +1,4 @@
-```
+```c++
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS;
 
