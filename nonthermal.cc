@@ -196,6 +196,8 @@ constexpr auto uppertriangular(const int i, const int j) -> int {
 }
 
 constexpr void decompactify_triangular_matrix(std::vector<double>& matrix) {
+  // the indices work in decreasing order because we're working in-place and
+  // don't want to overwrite data that we still need to read
   for (int i = SFPTS - 1; i > 0; i--) {
     const int rowoffset = uppertriangular(i, 0);
     for (int j = SFPTS - 1; j >= i; j--) {
@@ -395,20 +397,20 @@ void read_binding_energies() {
                                             nt_solution[nonemptymgi].frac_excitations_list_size);
 }
 
-[[nodiscard]] auto get_cell_ion_data(const ptrdiff_t nonemptymgi) {
+[[nodiscard]] auto get_cell_allions_data(const ptrdiff_t nonemptymgi) {
   return ion_data_all_cells.subspan(nonemptymgi * get_includedions(), get_includedions());
 }
 
 auto get_auger_probability(const ptrdiff_t nonemptymgi, const int element, const int ion, const int naugerelec) {
   assert_always(naugerelec <= NT_MAX_AUGER_ELECTRONS);
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  return get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[naugerelec];
+  return get_cell_allions_data(nonemptymgi)[uniqueionindex].prob_num_auger[naugerelec];
 }
 
 auto get_ion_auger_enfrac(const ptrdiff_t nonemptymgi, const int element, const int ion, const int naugerelec) {
   assert_always(naugerelec <= NT_MAX_AUGER_ELECTRONS);
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  return get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[naugerelec];
+  return get_cell_allions_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[naugerelec];
 }
 
 void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
@@ -531,9 +533,8 @@ void read_auger_data() {
               Z, ionstage, shellnum, n, l, ionpot_ev, en_auger_ev_total_nocorrection, en_auger_ev, epsilon_e3,
               n_auger_elec_avg);
 
-          double prob_sum = 0.;
+          const double prob_sum = std::ranges::fold_left(prob_num_auger, 0.0, std::plus<>());
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-            prob_sum += prob_num_auger[a];
             printlog(" {}: {:4.2f}", a, prob_num_auger[a]);
           }
           assert_always(fabs(prob_sum - 1.0) < 0.001);
@@ -551,12 +552,11 @@ void read_auger_data() {
           collionrow.n_auger_elec_avg =
               static_cast<float>((oldweight * collionrow.n_auger_elec_avg) + (newweight * n_auger_elec_avg));
 
-          prob_sum = 0.;
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
             collionrow.prob_num_auger[a] = (oldweight * collionrow.prob_num_auger[a]) + (newweight * prob_num_auger[a]);
-            prob_sum += collionrow.prob_num_auger[a];
           }
-          assert_always(fabs(prob_sum - 1.0) < 0.001);
+          const double prob_sum_final = std::ranges::fold_left(collionrow.prob_num_auger, 0.0, std::plus<>());
+          assert_always(fabs(prob_sum_final - 1.0) < 0.001);
 
           if (found_existing_data) {
             printlog("  same NL shell already has data from another X-ray shell. New g-weighted values: P(n_Auger)");
@@ -585,7 +585,8 @@ auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
   const auto& binding_energies = elements_electron_binding.at(get_atomicnumber(element) - 1);
 
   double total = 0.;
-  for (int shellindex = 0; shellindex < std::ssize(shells_q); shellindex++) {
+  const auto num_shells = std::ssize(shells_q);
+  for (int shellindex = 0; shellindex < num_shells; shellindex++) {
     const int electronsinshell = shells_q[shellindex];
 
     if (electronsinshell <= 0) {
@@ -663,7 +664,8 @@ void read_collion_data() {
         // get the approximate shell occupancy if we don't have the data file
         const auto& shells_q = allions_shell_occupancies[get_uniqueionindex(element, ion)];
         int electron_count = 0;
-        for (int shellindex = 0; shellindex < std::ssize(shells_q); shellindex++) {
+        const auto num_shells = std::ssize(shells_q);
+        for (int shellindex = 0; shellindex < num_shells; shellindex++) {
           const int electronsinshell = shells_q.at(shellindex);
 
           electron_count += electronsinshell;
@@ -737,13 +739,13 @@ auto get_possible_nt_excitation_count() -> int {
 
 void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
   for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
-    auto& ion_data = get_cell_ion_data(nonemptymgi)[uniqueionindex];
-    ion_data.eff_ionpot = 0.;
+    auto& celliondata = get_cell_allions_data(nonemptymgi)[uniqueionindex];
+    celliondata.eff_ionpot = 0.;
 
-    std::ranges::fill(get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger, 0.);
-    std::ranges::fill(get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger, 0.);
-    ion_data.prob_num_auger[0] = 1.;
-    ion_data.ionenfrac_num_auger[0] = 1.;
+    std::ranges::fill(celliondata.prob_num_auger, 0.);
+    celliondata.prob_num_auger[0] = 1.;
+    std::ranges::fill(celliondata.ionenfrac_num_auger, 0.);
+    celliondata.ionenfrac_num_auger[0] = 1.;
 
     const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
     assert_always(fabs(get_auger_probability(nonemptymgi, element, ion, 0) - 1.0) < 1e-3);
@@ -1236,11 +1238,10 @@ auto calculate_nt_ionisation_ratecoeff(const int nonemptymgi, const int element,
   return yscalefactor * y_xs_de;
 }
 
+// Kozma & Fransson 1992 equation 12, except modified to be a sum over all shells of an ion.
+// the result is in [erg]
 void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, const int ion,
-                                      const std::array<double, SFPTS>& yfunc)
-// Kozma & Fransson 1992 equation 12, except modified to be a sum over all shells of an ion
-// the result is in ergs
-{
+                                      const std::array<double, SFPTS>& yfunc) {
   const int Z = get_atomicnumber(element);
   const int ionstage = get_ionstage(element, ion);
   const int uniqueionindex = get_uniqueionindex(element, ion);
@@ -1257,7 +1258,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
 
   std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionise_over_ionpot_sum{};
   std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionise_sum{};
-  auto& celliondata = get_cell_ion_data(nonemptymgi)[uniqueionindex];
+  auto& celliondata = get_cell_allions_data(nonemptymgi)[uniqueionindex];
   std::ranges::fill(celliondata.prob_num_auger, 0.);
   std::ranges::fill(celliondata.ionenfrac_num_auger, 0.);
 
@@ -1329,7 +1330,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
     if (!std::isfinite(eff_ionpot)) {
       eff_ionpot = 0.;
     }
-    get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot = static_cast<float>(eff_ionpot);
+    celliondata.eff_ionpot = static_cast<float>(eff_ionpot);
   } else {
     printlnlog("WARNING! No matching subshells in NT impact ionisation cross section data for Z={} ionstage {}.",
                get_atomicnumber(element), get_ionstage(element, ion));
@@ -1337,15 +1338,14 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
         "-> Defaulting to work function approximation and ionisation energy is not accounted for in Spencer-Fano "
         "solution.");
 
-    get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot =
-        static_cast<float>(1. / get_oneoverw(element, ion, nonemptymgi));
+    celliondata.eff_ionpot = static_cast<float>(1. / get_oneoverw(element, ion, nonemptymgi));
   }
 }
 
 // get the effective ion potential from the stored value
 // a value of 0. should be treated as invalid
 auto get_eff_ionpot(const int nonemptymgi, const int element, const int ion) {
-  return get_cell_ion_data(nonemptymgi)[get_uniqueionindex(element, ion)].eff_ionpot;
+  return get_cell_allions_data(nonemptymgi)[get_uniqueionindex(element, ion)].eff_ionpot;
   // OR
   // return calculate_eff_ionpot(modelgridindex, element, ion);
 }
@@ -1580,11 +1580,11 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
 
       // do not ionise the top ion
       if (ion < nions - 1) {
-        get_cell_ion_data(nonemptymgi)[uniqueionindex].fracdep_ionisation_ion = frac_ionisation_ion;
+        get_cell_allions_data(nonemptymgi)[uniqueionindex].fracdep_ionisation_ion = frac_ionisation_ion;
 
         frac_ionisation_total += frac_ionisation_ion;
       } else {
-        get_cell_ion_data(nonemptymgi)[uniqueionindex].fracdep_ionisation_ion = 0.;
+        get_cell_allions_data(nonemptymgi)[uniqueionindex].fracdep_ionisation_ion = 0.;
       }
       printlnlog("    frac_ionisation: {:g} ({} subshells)", frac_ionisation_ion, matching_subshell_count);
 
@@ -2095,10 +2095,8 @@ void init() {
   }
   MPI_Barrier(globals::mpi_comm_node);
 
-  double sourceintegral = 0.;  // integral of S(e) dE
-  for (int s = 0; s < SFPTS; s++) {
-    sourceintegral += sourcevec(s) * DELTA_E;
-  }
+  const double sourceintegral = std::ranges::fold_left(
+      std::views::iota(0, SFPTS), 0.0, [](double sum, int s) { return sum + (sourcevec(s) * DELTA_E); });
 
   printlnlog("E_init: {:14.7e} eV/s/cm3", E_init_ev);
   printlnlog("source function integral: {:14.7e}", sourceintegral);
@@ -2186,7 +2184,7 @@ __host__ __device__ auto nt_ionisation_upperion_probability(const int nonemptymg
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
     const int numaugerelec = upperion - lowerion - 1;  // number of Auger electrons to go from lowerin to upper ion
     const int uniqueionindex = get_uniqueionindex(element, lowerion);
-    const auto& cell_ion_data = get_cell_ion_data(nonemptymgi)[uniqueionindex];
+    const auto& cell_ion_data = get_cell_allions_data(nonemptymgi)[uniqueionindex];
     if (numaugerelec < NT_MAX_AUGER_ELECTRONS) {
       if (energyweighted) {
         return cell_ion_data.ionenfrac_num_auger[numaugerelec];
@@ -2462,8 +2460,10 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   // sfmatrix will be a compacted upper triangular matrix during construction and then expanded into a full matrix (with
   // lots of zeros) just before the solver is called
   THREADLOCALONHOST std::vector<double> sfmatrix(SFPTS * SFPTS);
+  // while we are filling the matrix, we only need to fill the upper triangular part in a compacted form (to reduce
+  // cache misses). Later when we go to solve it, we will expand it back to a full square matrix with zeros in the lower
+  // triangle
   std::fill_n(sfmatrix.begin(), SFPTS * (SFPTS + 1) / 2, 0.);
-
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++) {
     sfmatrix[uppertriangular(i, i)] += electron_loss_rate(engrid(i) * EV, nne) / EV;
@@ -2530,12 +2530,12 @@ void write_restart_data(FILE* gridsave_file) {
               nt_solution[nonemptymgi].frac_excitation);
 
       for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
-        fprintf(gridsave_file, "%la ", get_cell_ion_data(nonemptymgi)[uniqueionindex].fracdep_ionisation_ion);
-        fprintf(gridsave_file, "%a ", get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot);
+        const auto& celliondata = get_cell_allions_data(nonemptymgi)[uniqueionindex];
+        fprintf(gridsave_file, "%la ", celliondata.fracdep_ionisation_ion);
+        fprintf(gridsave_file, "%a ", celliondata.eff_ionpot);
 
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          fprintf(gridsave_file, "%a %a ", get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[a],
-                  get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[a]);
+          fprintf(gridsave_file, "%a %a ", celliondata.prob_num_auger[a], celliondata.ionenfrac_num_auger[a]);
         }
       }
 
@@ -2582,14 +2582,13 @@ void read_restart_data(FILE* gridsave_file) {
                            &nt_solution[nonemptymgi].frac_excitation) == 4);
 
       for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
-        assert_always(
-            fscanf(gridsave_file, "%la ", &get_cell_ion_data(nonemptymgi)[uniqueionindex].fracdep_ionisation_ion) == 1);
-        assert_always(fscanf(gridsave_file, "%a ", &get_cell_ion_data(nonemptymgi)[uniqueionindex].eff_ionpot) == 1);
+        auto& celliondata = get_cell_allions_data(nonemptymgi)[uniqueionindex];
+        assert_always(fscanf(gridsave_file, "%la ", &celliondata.fracdep_ionisation_ion) == 1);
+        assert_always(fscanf(gridsave_file, "%a ", &celliondata.eff_ionpot) == 1);
 
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          assert_always(fscanf(gridsave_file, "%a %a ",
-                               &get_cell_ion_data(nonemptymgi)[uniqueionindex].prob_num_auger[a],
-                               &get_cell_ion_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[a]) == 2);
+          assert_always(fscanf(gridsave_file, "%a %a ", &celliondata.prob_num_auger[a],
+                               &celliondata.ionenfrac_num_auger[a]) == 2);
         }
       }
 
@@ -2624,8 +2623,7 @@ void nt_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root_node_id) {
 
       MPI_Bcast_safe(get_cell_ntexcitations(nonemptymgi), root_node_id, globals::mpi_comm_internode);
 
-      const auto ion_data = get_cell_ion_data(nonemptymgi);
-      MPI_Bcast_safe(ion_data, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(get_cell_allions_data(nonemptymgi), root_node_id, globals::mpi_comm_internode);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
