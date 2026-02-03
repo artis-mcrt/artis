@@ -15,10 +15,15 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_integration.h>
+#if defined(USEBOOST) && USEBOOST
+#include <boost/assert/source_location.hpp>
+#include <boost/math/tools/toms748_solve.hpp>
+#else
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
+#endif
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_debye.h>
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
@@ -274,11 +279,7 @@ auto planck_integral(const double T_R, const double nu_lower, const double nu_up
 
 // difference between the average nu and the average nu of a Planck function
 // at temperature T_R, in the frequency range corresponding to a bin
-auto delta_nu_bar(const double T_R, void* const paras) -> double {
-  const auto* params = static_cast<const GSLTempSolverParams*>(paras);
-  const auto nonemptymgi = params->nonemptymgi;
-  const int binindex = params->binindex;
-
+auto delta_nu_bar(const double T_R, const int nonemptymgi, const int binindex) -> double {
   const double nu_lower = get_bin_nu_lower(binindex);
   const double nu_upper = get_bin_nu_upper(binindex);
   const double nu_bar_estimator = get_bin_nu_bar(nonemptymgi, binindex);
@@ -313,16 +314,19 @@ auto delta_nu_bar(const double T_R, void* const paras) -> double {
   return delta_nu_bar;
 }
 
-auto find_T_R(const int nonemptymgi, const int binindex) -> float {
-  float T_R = 0.;
+auto delta_nu_bar(const double T_R, void* const voidparas) -> double {  // cppcheck-suppress constParameterPointer
+  const auto* const params = static_cast<const GSLTempSolverParams*>(voidparas);
+  return delta_nu_bar(T_R, params->nonemptymgi, params->binindex);
+}
 
-  GSLTempSolverParams paras{};
-  paras.nonemptymgi = nonemptymgi;
-  paras.binindex = binindex;
+auto find_T_R(const int nonemptymgi, const int binindex) -> float {
+  const auto f_deltanubar = [nonemptymgi, binindex](const double T_R) {
+    return delta_nu_bar(T_R, nonemptymgi, binindex);
+  };
 
   // Check whether the equation has a root in [T_min,T_max]
-  double delta_nu_bar_min = delta_nu_bar(T_R_min, &paras);
-  double delta_nu_bar_max = delta_nu_bar(T_R_max, &paras);
+  double delta_nu_bar_min = f_deltanubar(T_R_min);
+  double delta_nu_bar_max = f_deltanubar(T_R_max);
 
   if (!std::isfinite(delta_nu_bar_min) || !std::isfinite(delta_nu_bar_max)) {
     delta_nu_bar_max = delta_nu_bar_min = -1;
@@ -331,23 +335,33 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
   if (delta_nu_bar_min * delta_nu_bar_max < 0) {
     // If there is a root in the interval, solve for T_R
 
-    const double epsrel = 1e-4;
-    const double epsabs = 0.;
-    const int maxit = 100;
-
+    constexpr double epsrel = 1e-4;
+    const auto maxit = 100U;
+#if defined(USEBOOST) && USEBOOST
+    // use TOMS 748 solver from Boost
+    boost::uintmax_t iteration_num = maxit;
+    auto result = boost::math::tools::toms748_solve(f_deltanubar, T_R_min, T_R_max, ftol<epsrel>, iteration_num);
+    const auto T_R_solution = static_cast<float>(0.5 * (result.first + result.second));
+    if (iteration_num >= maxit) {
+      printlnlog("[warning] find_T_R: T_R did not converge within {} iterations.", iteration_num);
+    }
+    return T_R_solution;
+#else
+    GSLTempSolverParams paras{.nonemptymgi = nonemptymgi, .binindex = binindex};
     gsl_function find_T_R_f = {.function = &delta_nu_bar, .params = &paras};
 
     // one dimensional gsl root solver, bracketing type
     gsl_root_fsolver* T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
     gsl_root_fsolver_set(T_R_solver, &find_T_R_f, T_R_min, T_R_max);
     int status = 0;
-    for (int iteration_num = 0; iteration_num <= maxit; iteration_num++) {
+    float T_R_solution = 0.;
+    for (auto iteration_num = 0U; iteration_num <= maxit; iteration_num++) {
       gsl_root_fsolver_iterate(T_R_solver);
-      T_R = static_cast<float>(gsl_root_fsolver_root(T_R_solver));
+      T_R_solution = static_cast<float>(gsl_root_fsolver_root(T_R_solver));
 
       const double T_R_lower = gsl_root_fsolver_x_lower(T_R_solver);
       const double T_R_upper = gsl_root_fsolver_x_upper(T_R_solver);
-      status = gsl_root_test_interval(T_R_lower, T_R_upper, epsabs, epsrel);
+      status = gsl_root_test_interval(T_R_lower, T_R_upper, 0., epsrel);
 
       if (status != GSL_CONTINUE) {
         break;
@@ -359,19 +373,20 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
     }
 
     gsl_root_fsolver_free(T_R_solver);
+    return T_R_solution;
+#endif
   } else if (delta_nu_bar_max < 0) {
     // Thermal balance equation always negative ===> T_R = T_min
     // Calculate the rates again at this T_e to print them to file
     printlnlog("find_T_R: cell {} bin {:4} no solution in interval, clamping to T_R_max={:g}",
                grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_max);
-    T_R = T_R_max;
+    return T_R_max;
   } else {
     printlnlog("find_T_R: cell {} bin {:4} no solution in interval, clamping to T_R_min={:g}",
                grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_min);
-    T_R = T_R_min;
+    return T_R_min;
   }
 
-  return T_R;
 }  // namespace radfield
 
 void set_params_fullspec(const int nonemptymgi, const int timestep) {

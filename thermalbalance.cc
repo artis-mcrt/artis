@@ -4,13 +4,17 @@
 #include <boost/assert/source_location.hpp>
 #include <boost/math/tools/toms748_solve.hpp>
 #pragma clang unsafe_buffer_usage end
+
+#if !USE_SIMPSON_INTEGRATOR
+#include <gsl/gsl_errno.h>
+#endif
 #else
+#include <gsl/gsl_errno.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 #endif
 
 #if !USE_SIMPSON_INTEGRATOR
-#include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
 #endif
 
@@ -294,7 +298,12 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
                      HeatingCoolingRates& heatingcoolingrates, const std::vector<double>& bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::get_Te(nonemptymgi);
-  printlog("Finding T_e in cell {} at timestep {}...", modelgridindex, globals::timestep);
+#if defined(USEBOOST) && USEBOOST
+  constexpr auto method = "boost toms748_solve";
+#else
+  constexpr auto method = "gsl brent";
+#endif
+  printlog("Finding T_e in cell {} at timestep {} [{}]...", modelgridindex, globals::timestep, method);
 
   const auto f_T_e = [&](double T_e) -> double {
     return T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs);
@@ -326,7 +335,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
         printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations. interval [{:g}, {:g}]",
                    iternum, result.first, result.second);
       } else {
-        printlnlog("after {} iterations, T_e = {:g} K, interval [{:g}, {:g}]", iternum + 1, T_e, result.first,
+        printlnlog("after {} iterations, T_e = {:g} K, interval [{:g}, {:g}]", iternum, T_e, result.first,
                    result.second);
       }
     }

@@ -198,7 +198,7 @@ else
 endif
 
 
-ifeq ($(USEBOOST),ON)
+ifeq ($(BOOST),ON)
 	CXXFLAGS += -DUSEBOOST=true
 	BUILD_DIR := $(BUILD_DIR)_boost
 endif

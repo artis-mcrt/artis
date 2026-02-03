@@ -297,7 +297,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
   auto result = boost::math::tools::toms748_solve(f_nne, nne_lo, nne_hi, ftol<fractional_accuracy>, iter);
   const double nne_solution = 0.5 * (result.first + result.second);
   if (iter >= maxit) {
-    printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations", iter + 1);
+    printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations", iter);
   }
 #else
   gsl_root_fsolver* solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
