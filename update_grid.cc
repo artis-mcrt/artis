@@ -201,7 +201,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   calculate_bfheatingcoeffs(nonemptymgi, bfheatingcoeffs);
   printlnlog("took {} seconds", std::time(nullptr) - sys_time_start_calculate_bfheatingcoeffs);
 
-  const double convergence_tolerance = 0.04;
+  constexpr double nne_reltol = 0.04;
+  constexpr double T_e_reltol = 0.04;
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++) {
     const auto sys_time_start_spencerfano = std::time(nullptr);
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
@@ -256,24 +257,25 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     calculate_ion_balance_nne(nonemptymgi);  // sets nne
     const auto fracdiff_nne = fabs((grid::get_nne(nonemptymgi) / nne_prev) - 1);
     printlnlog(
-        "NLTE solver cell {} timestep {} iteration {}: time spent on: Spencer-Fano {}s, T_e {}s, NLTE populations {}s",
+        "NLTE solver mgi {} timestep {} iteration {}: time spent on: Spencer-Fano {}s, T_e {}s, NLTE populations {}s",
         mgi, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
     printlnlog(
-        "NLTE (Spencer-Fano/Te/pops) solver cell {} timestep {} iteration {}: prev_iter nne {:g}, new nne is {:g}, "
+        "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: prev_iter nne {:e}, new nne is {:e}, "
         "fracdiff {:g}, prev T_e {:g} new T_e {:g} fracdiff {:g}",
         mgi, nts, nlte_iter, nne_prev, grid::get_nne(nonemptymgi), fracdiff_nne, prev_T_e, grid::get_Te(nonemptymgi),
         fracdiff_T_e);
-
-    if (fracdiff_nne <= convergence_tolerance && fracdiff_T_e <= convergence_tolerance) {
+    if (fracdiff_nne <= nne_reltol && fracdiff_T_e <= T_e_reltol) {
       printlnlog(
-          "NLTE (Spencer-Fano/Te/pops) solver nne converged to tolerance {:g} <= {:g} and T_e to tolerance {:g} <= "
-          "{:g} after {} iterations.",
-          fracdiff_nne, convergence_tolerance, fracdiff_T_e, convergence_tolerance, nlte_iter + 1);
+          "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: nne converged to tolerance {:g} <= {:g} "
+          "and T_e to tolerance {:g} <= {:g}",
+          mgi, nts, nlte_iter, fracdiff_nne, nne_reltol, fracdiff_T_e, T_e_reltol);
       break;
     }
     if (nlte_iter == NLTEITER) {
-      printlnlog("WARNING: NLTE solver failed to converge after {} iterations. Keeping solution from last iteration",
-                 nlte_iter + 1);
+      printlnlog(
+          "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: failed to converge... Keeping solution "
+          "from last iteration",
+          mgi, nts, nlte_iter);
     }
   }
 }
