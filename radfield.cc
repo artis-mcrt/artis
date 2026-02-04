@@ -23,8 +23,6 @@
 #include <gsl/gsl_roots.h>
 #endif
 #include <gsl/gsl_errno.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_sf_debye.h>
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
@@ -257,7 +255,8 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
   }
 }
 
-auto planck_integral(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu) -> double {
+auto calculate_planck_integral(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
+    -> double {
   double integral = 0.;
 
   double error = 0.;
@@ -266,8 +265,7 @@ auto planck_integral(const double T_R, const double nu_lower, const double nu_up
 
   const GSL_PlanckIntegralParas intparas = {.T_R = T_R, .times_nu = times_nu};
 
-  const int status = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsabs, epsrel, GSL_INTEG_GAUSS61,
-                                                      &integral, &error);
+  const int status = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsabs, epsrel, &integral, &error);
   if (status != 0) {
     printlnlog("planck_integral integrator status {}, GSL_FAILURE= {}. Integral value {:g}, setting to zero.", status,
                static_cast<int>(GSL_FAILURE), integral);
@@ -284,31 +282,17 @@ auto delta_nu_bar(const double T_R, const int nonemptymgi, const int binindex) -
   const double nu_upper = get_bin_nu_upper(binindex);
   const double nu_bar_estimator = get_bin_nu_bar(nonemptymgi, binindex);
 
-  const double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
-  const double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
-  const double nu_bar_planck_T_R = nu_times_planck_numerical / planck_integral_numerical;
-
-  // double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, true);
-  // double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, false);
-  // double nu_bar_planck = nu_times_planck_integral / planck_integral_result;
-
-  // if (!std::isfinite(nu_bar_planck)) {
-  //   double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
-  //   double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
-  //   double nu_bar_planck_numerical = nu_times_planck_numerical / planck_integral_numerical;
-
-  //   printout("planck_integral_analytic is %g. Replacing with numerical result of %g.\n", nu_bar_planck,
-  //            nu_bar_planck_numerical);
-  //   nu_bar_planck = nu_bar_planck_numerical;
-  // }
+  const double nu_planck_integral = calculate_planck_integral(T_R, nu_lower, nu_upper, true);
+  const double planck_integral = calculate_planck_integral(T_R, nu_lower, nu_upper, false);
+  const double nu_bar_planck_T_R = nu_planck_integral / planck_integral;
 
   const double delta_nu_bar = nu_bar_planck_T_R - nu_bar_estimator;
 
   if (!std::isfinite(delta_nu_bar)) {
     printlnlog(
-        "delta_nu_bar is {:g}. nu_bar_planck_T_R {:g} nu_times_planck_numerical {:g} planck_integral_numerical {:g} "
+        "delta_nu_bar is {:g}. nu_bar_planck_T_R {:g} nu_times_planck_integral {:g} planck_integral {:g} "
         "nu_bar_estimator {:g}",
-        delta_nu_bar, nu_bar_planck_T_R, nu_times_planck_numerical, planck_integral_numerical, nu_bar_estimator);
+        delta_nu_bar, nu_bar_planck_T_R, nu_planck_integral, planck_integral, nu_bar_estimator);
   }
 
   return delta_nu_bar;
@@ -809,44 +793,6 @@ __host__ __device__ auto radfield(const double nu, const int nonemptymgi) -> dou
   return dbb(nu, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
 }
 
-// return the integral of nu^3 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
-// or if times_nu is true, the integral of nu^4 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
-auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
-    -> double {
-  double integral = 0.;
-
-  if (times_nu) {
-    const double debye_upper = gsl_sf_debye_4(HOVERKB * nu_upper / T_R) * pow(nu_upper, 4);
-    const double debye_lower = gsl_sf_debye_4(HOVERKB * nu_lower / T_R) * pow(nu_lower, 4);
-    integral = TWOHOVERCLIGHTSQUARED * (debye_upper - debye_lower) * T_R / HOVERKB / 4.;
-  } else {
-    const double debye_upper = gsl_sf_debye_3(HOVERKB * nu_upper / T_R) * pow(nu_upper, 3);
-    const double debye_lower = gsl_sf_debye_3(HOVERKB * nu_lower / T_R) * pow(nu_lower, 3);
-    integral = TWOHOVERCLIGHTSQUARED * (debye_upper - debye_lower) * T_R / HOVERKB / 3.;
-
-    if (integral == 0.) {
-      // double upperexp = exp(HOVERKB * nu_upper / T_R);
-      // double upperint = - pow(nu_upper,4) / 4
-      //                   + pow(nu_upper,3) * log(1 - upperexp) / HOVERKB
-      //                   + 3 * pow(nu_upper,2) * polylog(2,upperexp) / pow(HOVERKB,2)
-      //                   - 6 * nu_upper * polylog(3,upperexp) / pow(HOVERKB,3)
-      //                   + 6 * polylog(4,upperexp) / pow(HOVERKB,4);
-      // double lowerexp = exp(HOVERKB * nu_lower / T_R);
-      // double lowerint = - pow(nu_lower,4) / 4
-      //                   + pow(nu_lower,3) * log(1 - lowerexp) / HOVERKB
-      //                   + 3 * pow(nu_lower,2) * polylog(2,lowerexp) / pow(HOVERKB,2)
-      //                   - 6 * nu_lower * polylog(3,lowerexp) / pow(HOVERKB,3)
-      //                   + 6 * polylog(4,lowerexp) / pow(HOVERKB,4);
-      // double integral2 = TWOHOVERCLIGHTSQUARED * (upperint - lowerint);
-
-      // printlnlog("planck_integral_analytic is zero. debye_upper {:g} debye_lower {:g}. Test alternative {:g}",
-      //            debye_upper, debye_lower, integral2);
-    }
-  }
-
-  return integral;
-}
-
 // finds the best fitting W and temperature parameters in each spectral bin using J and nuJ
 void fit_parameters(const int nonemptymgi, const int timestep) {
   set_params_fullspec(nonemptymgi, timestep);
@@ -886,7 +832,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
             T_R_bin = T_e;
           }
 
-          double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, false);
+          double planck_integral_result = calculate_planck_integral(T_R_bin, nu_lower, nu_upper, false);
           //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower,
           //          nu_upper, planck_integral_result);
 
@@ -896,7 +842,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
             //            printout("T_R_bin %g, nu_lower %g, nu_upper %g\n", T_R_bin, nu_lower, nu_upper);
             printlnlog("W {:g} too high, trying setting T_R of bin {} to {:g}. J_bin {:g} planck_integral {:g}", W_bin,
                        binindex, T_R_max, J_bin, planck_integral_result);
-            planck_integral_result = planck_integral(T_R_max, nu_lower, nu_upper, false);
+            planck_integral_result = calculate_planck_integral(T_R_max, nu_lower, nu_upper, false);
             W_bin = static_cast<float>(J_bin / planck_integral_result);
             if (W_bin > 1e4) {
               printlnlog("W still very high, W={:g}. Zeroing bin...", W_bin);
@@ -1017,9 +963,8 @@ void titer_nuJ(const int nonemptymgi) {
 }
 #endif
 
-void reduce_estimators()
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
-{
+void reduce_estimators() {
   MPI_Allreduce_safe(J, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce_safe(nuJ, MPI_SUM, MPI_COMM_WORLD);
 

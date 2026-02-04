@@ -7,11 +7,19 @@
 #include "sn3d.h"
 
 #if !USE_SIMPSON_INTEGRATOR
+
+#if defined(USEBOOST) && USEBOOST
+#pragma clang unsafe_buffer_usage begin
+#include <boost/math/quadrature/gauss_kronrod.hpp>
+#pragma clang unsafe_buffer_usage end
+#else
+
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_math.h>
 
 #include "constants.h"
+#endif
 #endif
 
 void ratecoefficients_init();
@@ -75,10 +83,9 @@ constexpr auto simpson_integrator(auto& params, const double a, const double b, 
 
   return integral;
 }
-
-template <double func_integrand(double, void* const)>
-auto integrator(auto params, const double a, const double b, const double epsabs, const double epsrel, const int key,
-                double* result, double* abserr) -> int {
+template <double func_integrand(double, void* const), int GKNPOINTS = 61>
+auto integrator(auto params, const double a, const double b, const double epsabs, const double epsrel, double* result,
+                double* abserr) -> int {
   if constexpr (USE_SIMPSON_INTEGRATOR) {
     // need an odd number for Simpson rule
     const int samplecount = (std::max(1, static_cast<int>((b / a) / globals::NPHIXSNUINCREMENT)) * 4) + 1;
@@ -86,13 +93,44 @@ auto integrator(auto params, const double a, const double b, const double epsabs
     *result = simpson_integrator<func_integrand>(params, a, b, samplecount);
     *abserr = 0.;
     return 0;
+
   } else {
+#if defined(USEBOOST) && USEBOOST
+
+    *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
+        [&](double x) { return func_integrand(x, &params); }, a, b, 5, epsrel);
+    return 0;
+
+#else
+    constexpr auto key = []() {
+      switch (GKNPOINTS) {
+        case 15:
+          return GSL_INTEG_GAUSS15;
+        case 21:
+          return GSL_INTEG_GAUSS21;
+        case 31:
+          return GSL_INTEG_GAUSS31;
+        case 41:
+          return GSL_INTEG_GAUSS41;
+        case 51:
+          return GSL_INTEG_GAUSS51;
+        case 61:
+          return GSL_INTEG_GAUSS61;
+        default:
+          return -127;
+      }
+    }();
+    static_assert(key >= 0, "Unsupported GKPOINTS value");
+
     gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
     const auto gslfunc = gsl_function{.function = func_integrand, .params = &params};
     const auto status =
         gsl_integration_qag(&gslfunc, a, b, epsabs, epsrel, GSLWSIZE, key, gslworkspace.get(), result, abserr);
     gsl_set_error_handler(previous_handler);
+
     return status;
+
+#endif
   }
 }
 

@@ -14,10 +14,6 @@
 #include <gsl/gsl_roots.h>
 #endif
 
-#if !USE_SIMPSON_INTEGRATOR
-#include <gsl/gsl_integration.h>
-#endif
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -88,8 +84,8 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
 
   double bfheating = 0.;
 
-  const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(
-      intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &bfheating, &error);
+  const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsabs,
+                                                                          epsrel, &bfheating, &error);
 
 #if !USE_SIMPSON_INTEGRATOR
   if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning)) {

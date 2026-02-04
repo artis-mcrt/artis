@@ -15,9 +15,6 @@
 #include <tuple>
 
 #pragma clang unsafe_buffer_usage begin
-#if !USE_SIMPSON_INTEGRATOR
-#include <gsl/gsl_integration.h>
-#endif
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
@@ -394,9 +391,8 @@ void precalculate_rate_coefficient_integrals() {
             // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
             double alpha_sp = 0.;
 
-            status =
-                integrator<alpha_sp_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
-                                                   GSL_INTEG_GAUSS61, &alpha_sp, &error);
+            status = integrator<alpha_sp_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0,
+                                                        RATECOEFF_INTEGRAL_ACCURACY, &alpha_sp, &error);
             if (status != 0 && (status != 18 || (error / alpha_sp) > epsrelwarning)) {
               printlnlog("alpha_sp integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status, alpha_sp, error);
             }
@@ -415,8 +411,7 @@ void precalculate_rate_coefficient_integrals() {
               double gammacorr = 0.;
 
               status = integrator<gammacorr_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0,
-                                                           RATECOEFF_INTEGRAL_ACCURACY, GSL_INTEG_GAUSS61, &gammacorr,
-                                                           &error);
+                                                           RATECOEFF_INTEGRAL_ACCURACY, &gammacorr, &error);
               if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
                 printlnlog("gammacorr integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status, gammacorr,
                            error);
@@ -433,9 +428,8 @@ void precalculate_rate_coefficient_integrals() {
             if constexpr (USE_LUT_BFHEATING) {
               double this_bfheating_coeff = 0.;
 
-              status = integrator<approx_bfheating_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0,
-                                                                  RATECOEFF_INTEGRAL_ACCURACY, GSL_INTEG_GAUSS61,
-                                                                  &this_bfheating_coeff, &error);
+              status = integrator<approx_bfheating_integrand_gsl>(
+                  intparas, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY, &this_bfheating_coeff, &error);
 
               if (status != 0 && (status != 18 || (error / this_bfheating_coeff) > epsrelwarning)) {
                 printlnlog("bfheating_coeff integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status,
@@ -452,8 +446,7 @@ void precalculate_rate_coefficient_integrals() {
             double this_bfcooling_coeff = 0.;
 
             status = integrator<bfcooling_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0,
-                                                         RATECOEFF_INTEGRAL_ACCURACY, GSL_INTEG_GAUSS61,
-                                                         &this_bfcooling_coeff, &error);
+                                                         RATECOEFF_INTEGRAL_ACCURACY, &this_bfcooling_coeff, &error);
             if (status != 0 && (status != 18 || (error / this_bfcooling_coeff) > epsrelwarning)) {
               printlnlog("bfcooling_coeff integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status,
                          this_bfcooling_coeff, error);
@@ -721,7 +714,7 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
   double stimrecombcoeff = 0.;
 
   integrator<integrand_stimrecombination_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsabs, epsrel,
-                                                          GSL_INTEG_GAUSS61, &stimrecombcoeff, &error);
+                                                          &stimrecombcoeff, &error);
 
   stimrecombcoeff *= FOURPI * sf * get_phixsprobability(element, lowerion, level, phixstargetindex);
 
@@ -794,8 +787,8 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   double error = 0.;
 
   double gammacorr = 0.;
-  const int status = integrator<integrand_corrphotoioncoeff_custom_radfield>(
-      intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &gammacorr, &error);
+  const int status = integrator<integrand_corrphotoioncoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs,
+                                                                             epsabs, epsrel, &gammacorr, &error);
 
 #if !USE_SIMPSON_INTEGRATOR
   if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
@@ -927,8 +920,8 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
   double error{NAN};
 
   double total_alpha_sp = 0.;
-  integrator<alpha_sp_E_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY,
-                                       GSL_INTEG_GAUSS31, &total_alpha_sp, &error);
+  integrator<alpha_sp_E_integrand_gsl, 31>(intparas, nu_threshold, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY,
+                                           &total_alpha_sp, &error);
 
   double alpha_sp_old = total_alpha_sp;
   double alpha_sp = total_alpha_sp;
@@ -939,8 +932,8 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
     const double xlow = nu_threshold + (i * deltanu);
 
     // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
-    integrator<alpha_sp_E_integrand_gsl>(intparas, xlow, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY,
-                                         GSL_INTEG_GAUSS31, &alpha_sp, &error);
+    integrator<alpha_sp_E_integrand_gsl, 31>(intparas, xlow, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY, &alpha_sp,
+                                             &error);
 
     if (zrand >= alpha_sp / total_alpha_sp) {
       break;
