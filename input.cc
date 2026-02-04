@@ -382,27 +382,27 @@ constexpr auto downtranslevelstart(const int level) {
 }
 
 void read_ion_levels(std::istream& adata, const int element, const int ion, const int nions, const int nlevels,
-                     int nlevelsmax, const double energyoffset, const double ionpot,
+                     int nlevelsmax, const double energyoffset_ev, const double ionpot_ev,
                      std::vector<TempEnergyLevel>& temp_alllevels) {
   std::string line;
   static std::istringstream ssline;
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in = 0;
-    double levelenergy{NAN};
+    double levelenergy_ev{NAN};
     float statweight{NAN};
     int ntransitions = 0;
     assert_always(get_noncommentline(adata, line));
     ssline.clear();
     ssline.str(line);
-    assert_always(ssline >> levelindex_in >> levelenergy >> statweight >> ntransitions);
+    assert_always(ssline >> levelindex_in >> levelenergy_ev >> statweight >> ntransitions);
     assert_always(levelindex_in == level + groundstate_index_in);
 
     if (level < nlevelsmax) {
       assert_always(statweight > 0.);
-      const double currentlevelenergy = (energyoffset + levelenergy) * EV;
+      const double levelepsilon = (energyoffset_ev + levelenergy_ev) * EV;
       assert_always(std::ssize(temp_alllevels) == get_ionuniquelevelindexstart(element, ion) + level);
       temp_alllevels.push_back({
-          .epsilon = currentlevelenergy,
+          .epsilon = levelepsilon,
           .ndowntrans = 0,
           .nuptrans = 0,
           .stat_weight = statweight,
@@ -412,7 +412,7 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
       // is below the ionisation potential and the level doesn't
       // belong to the topmost ion included.
       // Rate coefficients are only available for ionising levels.
-      if (levelenergy < ionpot && ion < nions - 1) {
+      if (levelenergy_ev < ionpot_ev && ion < nions - 1) {
         globals::elements[element].ions[ion].nlevels_ionising++;
       }
     }
@@ -1201,14 +1201,14 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
     // energy scale for the current element (all level energies are stored relative to
     // the ground level of the neutral ion)
     const auto atomicnumber = globals::elements[element].anumber;
-    double energyoffset = 0.;
-    double ionpot = 0.;
+    double energyoffset_ev = 0.;
+    double ionpot_ev = 0.;
     const auto nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       const int ionstage = globals::elements[element].lowest_ionstage + ion;
       // calculate the current levels ground level energy
-      assert_always(ionpot >= 0);
-      energyoffset += ionpot;
+      assert_always(ionpot_ev >= 0);
+      energyoffset_ev += ionpot_ev;
 
       // read information for the elements next ionstage
       int adata_Z_in = -1;
@@ -1218,8 +1218,8 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
       while (adata_Z_in != atomicnumber || adata_ionstage_in != ionstage) {
         // skip over this ion block
         if (adata_Z_in == atomicnumber) {
-          printlnlog("increasing energyoffset by ionpot {:g}", ionpot);
-          energyoffset += ionpot;
+          printlnlog("increasing energyoffset by ionpot {:g}", ionpot_ev);
+          energyoffset_ev += ionpot_ev;
         }
         for (int i = 0; i < nlevels_in_file; i++) {
           std::getline(adata, line);
@@ -1228,7 +1228,7 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
         assert_always(get_noncommentline(adata, line));
         ssline.clear();
         ssline.str(line);
-        assert_always(ssline >> adata_Z_in >> adata_ionstage_in >> nlevels_in_file >> ionpot);
+        assert_always(ssline >> adata_Z_in >> adata_ionstage_in >> nlevels_in_file >> ionpot_ev);
       }
 
       printlnlog("adata.txt: Z {} ionstage {} nlevels_in_file {}", adata_Z_in, adata_ionstage_in, nlevels_in_file);
@@ -1253,12 +1253,13 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
           .nlevels_groundterm = -1,
           .uniquelevelindexstart = uniquelevelindex,
           .groundcontindex = -1,
-          .ionpot = ionpot * EV,
+          .ionpot = ionpot_ev * EV,
       };
 
       assert_always(std::ssize(temp_alllevels) == uniquelevelindex);
 
-      read_ion_levels(adata, element, ion, nions, nlevels_in_file, nlevelskept, energyoffset, ionpot, temp_alllevels);
+      read_ion_levels(adata, element, ion, nions, nlevels_in_file, nlevelskept, energyoffset_ev, ionpot_ev,
+                      temp_alllevels);
       uniquelevelindex += get_nlevels(element, ion);
 
       if (ion < nions - 1) {
