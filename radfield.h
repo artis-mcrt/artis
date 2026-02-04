@@ -38,9 +38,6 @@ void read_restart_data(FILE* gridsave_file);
 void normalise_bf_estimators(int nts, int nts_prev, int titer, double deltat);
 [[nodiscard]] auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int nonemptymgi)
     -> double;
-[[nodiscard]] auto integrate(const gsl_function* f, double nu_a, double nu_b, double epsabs, double epsrel,
-                             size_t limit, int key, gsl_integration_workspace* workspace, double* result,
-                             double* abserr) -> int;
 
 // get J_nu [ergs/s/sr/cm2/Hz] for a dilute black body with temperature T and dilution factor W
 [[gnu::const]] [[nodiscard]] constexpr auto dbb(const double nu, const double T, const double W) -> double {
