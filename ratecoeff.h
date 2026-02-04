@@ -105,7 +105,7 @@ auto integrator(auto params, const double a, const double b, const double epsabs
     constexpr auto key = []() {
       static_assert(GKNPOINTS == 15 || GKNPOINTS == 21 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 ||
                         GKNPOINTS == 61,
-                    "Unsupported GKPOINTS value");
+                    "Unsupported GKNPOINTS value");
       switch (GKNPOINTS) {
         case 15:
           return GSL_INTEG_GAUSS15;
@@ -121,7 +121,7 @@ auto integrator(auto params, const double a, const double b, const double epsabs
           return GSL_INTEG_GAUSS61;
       }
     }();
-    static_assert(key >= 0, "Unsupported GKPOINTS value");
+    static_assert(key >= 0, "Unsupported GKNPOINTS value");
 
     gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
     const auto gslfunc = gsl_function{.function = func_integrand, .params = &params};
