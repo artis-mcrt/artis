@@ -67,7 +67,6 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   double error = 0.;
   const double epsrel = 1e-3;
   const double epsrelwarning = 1e-1;
-  const double epsabs = 0.;
 
   const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
 
@@ -81,8 +80,8 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
 
   double bfheating = 0.;
 
-  const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsabs,
-                                                                          epsrel, &bfheating, &error);
+  const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsrel,
+                                                                          &bfheating, &error);
 
 #if !USE_SIMPSON_INTEGRATOR
   if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning)) {

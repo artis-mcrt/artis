@@ -261,11 +261,10 @@ auto calculate_planck_integral(const double T_R, const double nu_lower, const do
 
   double error = 0.;
   const double epsrel = 1e-10;
-  const double epsabs = 0.;
 
   const GSL_PlanckIntegralParas intparas = {.T_R = T_R, .times_nu = times_nu};
 
-  const int status = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsabs, epsrel, &integral, &error);
+  const int status = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsrel, &integral, &error);
   if (status != 0) {
     printlnlog("planck_integral integrator status {}, GSL_FAILURE= {}. Integral value {:g}, setting to zero.", status,
                static_cast<int>(GSL_FAILURE), integral);
