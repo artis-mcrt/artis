@@ -557,7 +557,7 @@ constexpr void resize_exactly(std::vector<T>& vec, const size_t size) {
 }
 
 template <double fractional_accuracy>
-inline auto ftol(const double& a, const double& b) -> bool {
+inline auto ftol(const double a, const double b) -> bool {
   return std::abs(a - b) <= (fractional_accuracy * std::min(std::abs(a), std::abs(b)));
 }
 
