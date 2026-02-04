@@ -13,7 +13,7 @@ The ARTIS code forms part of the method used to obtain published scientific resu
 ## Can you help me to run the code?
 We do not have the resources to support users of the code outside our team of direct collaborators.
 
-## Installation of release version for production runs on Linux
+## Setting up production runs on Linux
 We recommended that you retain the full source code and Git version metadata within each simulation folder for future reference (i.e. don't just copy the executables).
 
 Clone the source code repository from the release branch:
@@ -45,26 +45,72 @@ The next steps are to ensure a full set of snapshot files (model.txt and abundan
 sbatch artis/scripts/artis-juwels.sh
 ```
 
-## Development
+## Setting up for development
 Clone the source code repository and checkout the default branch:
 ```sh
 git clone https://github.com/artis-mcrt/artis.git
 cd artis
 ```
-On macOS, it's recommend that you install homebrew llvm to get clang-format, clang-tidy, clangd language server, and the clang C++ compiler.
+On macOS, it's recommend that you install homebrew llvm to get clang-format, clang-tidy, clangd language server, and the clang C++ compiler. You can install this and other dependencies with:
 ```sh
-brew install llvm
-```
-Install an MPI library that provides an mpicxx command, e.g., on macOS:
-```sh
-brew install open-mpi
+brew install llvm open-mpi gsl prek
 ```
 Install the pre-commit hooks:
 ```sh
-pip install prek
 prek install
 ```
 For editing, the clangd language server is recommended (e.g., with the [VS Code plugin](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)).
+
+### Running
+sn3d will not write to the standard output (unless a crash occurs) but each MPI rank n will produce a log file called output_n-0.txt. A local run might look something like this:
+```bash
+mpirun -np 8 ./sn3d&
+tail -f output_0-0.txt
+```
+Press Ctrl+C to stop following the log file.
+
+## Input files
+### input.txt
+Run-time configuration with:
+- number of timesteps
+- the start and end time in days
+- number of pure LTE timesteps,
+- optically-thick condition that switches cells to a grey opacity treatment.
+
+### model.txt
+Grid parameters, cell densities and nuclear composition.
+
+### abundances.txt
+Per-cell elemental mass fractions (in case the set of isotopic abundances in model.txt is not complete).
+
+### adata.txt
+One block per ion consisting of:
+
+Header:<br/>
+`[atomic number] [ionisation stage] [level count] [ionisation energy in eV]`
+
+Level count rows of:<br/>
+`[level index] [energy in eV] [statistical weight] [level transition count] [level name or description]`
+
+### transitiondata.txt
+One block per ion consisting of:
+
+Header:<br/>
+`[atomic number] [ionisation stage] [transition count]`
+
+Transition count rows of:<br/>
+`[lower level index] [upper level index] [A value] [collision strength] [forbidden flag]`
+
+In case the collision strength is not available, it will be -1.0 for permitted and -2.0 for forbidden transitions.
+
+### compositiondata.txt
+Sets a filter on the elements, ion stages, and energy levels that are read in from atomic data files.
+
+### phixsdata.txt or phixsdata_v2.txt
+Photoionisation cross sections in v1 format (arbitrary energy tables) or v2 format (regularly spaced energy grid).
+
+### gamma_*.txt
+Gamma decay spectra containing energies [MeV] and probabilities.
 
 ## License
 
