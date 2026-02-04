@@ -1,12 +1,12 @@
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
+#include "sn3d.h"
 
+#if USE_SIMPSON_INTEGRATOR
 #include <algorithm>
 
 #include "globals.h"
-#include "sn3d.h"
-
-#if !USE_SIMPSON_INTEGRATOR
+#else
 
 #if defined(USEBOOST) && USEBOOST
 #pragma clang unsafe_buffer_usage begin
