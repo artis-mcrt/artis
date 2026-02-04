@@ -365,13 +365,11 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
     printlnlog("find_T_R: cell {} bin {:4} no solution in interval, clamping to T_R_max={:g}",
                grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_max);
     return T_R_max;
-  } else {
-    printlnlog("find_T_R: cell {} bin {:4} no solution in interval, clamping to T_R_min={:g}",
-               grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_min);
-    return T_R_min;
   }
-
-}  // namespace radfield
+  printlnlog("find_T_R: cell {} bin {:4} no solution in interval, clamping to T_R_min={:g}",
+             grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_min);
+  return T_R_min;
+}
 
 void set_params_fullspec(const int nonemptymgi, const int timestep) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
