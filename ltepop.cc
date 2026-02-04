@@ -137,7 +137,8 @@ auto nne_solution_f(const double nne_assumed, const int nonemptymgi, const bool 
   return nne_after - nne_assumed;
 }
 
-auto nne_solution_f(const double nne_assumed, void* const voidparas) -> double {
+auto nne_solution_f(const double nne_assumed, void* const voidparas)  // cppcheck-suppress constParameterPointer
+    -> double {
   const auto* paras = static_cast<const nneSolutionParas*>(voidparas);
   return nne_solution_f(nne_assumed, paras->nonemptymgi, paras->force_saha);
 }
