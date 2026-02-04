@@ -41,7 +41,6 @@ void normalise_bf_estimators(int nts, int nts_prev, int titer, double deltat);
 [[nodiscard]] auto integrate(const gsl_function* f, double nu_a, double nu_b, double epsabs, double epsrel,
                              size_t limit, int key, gsl_integration_workspace* workspace, double* result,
                              double* abserr) -> int;
-auto planck_integral_analytic(double T_R, double nu_lower, double nu_upper, bool times_nu) -> double;
 
 // get J_nu [ergs/s/sr/cm2/Hz] for a dilute black body with temperature T and dilution factor W
 [[gnu::const]] [[nodiscard]] constexpr auto dbb(const double nu, const double T, const double W) -> double {

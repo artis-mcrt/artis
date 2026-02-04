@@ -216,33 +216,6 @@ void set_ncoolingterms() {
   }
 }
 
-// return a randomly chosen frequency according to the Planck distribution of temperature T using an analytic method.
-// More testing of this function is needed.
-auto sample_planck_analytic(const double T) -> double {
-  constexpr ptrdiff_t nubins = 500;
-  const auto delta_nu = (NU_MAX_R - NU_MIN_R) / (nubins - 1);
-  const auto integral_total = radfield::planck_integral_analytic(T, NU_MIN_R, NU_MAX_R, false);
-
-  const double rand_partintegral = rng_uniform() * integral_total;
-  double prev_partintegral = 0.;
-  double part_integral = 0.;
-  double bin_nu_lower = NU_MIN_R;
-  for (auto i = 1Z; i < nubins; i++) {
-    bin_nu_lower = NU_MIN_R + ((i - 1) * delta_nu);
-    const double nu_upper = NU_MIN_R + (i * delta_nu);
-    prev_partintegral = part_integral;
-    part_integral = radfield::planck_integral_analytic(T, NU_MIN_R, nu_upper, false);
-    if (rand_partintegral >= part_integral) {
-      break;
-    }
-  }
-
-  // use a linear interpolation for the frequency within the bin
-  const double nuoffset = (rand_partintegral - prev_partintegral) / (part_integral - prev_partintegral) * delta_nu;
-
-  return bin_nu_lower + nuoffset;
-}
-
 // return a randomly chosen frequency according to the Planck distribution of temperature T using a Monte Carlo method
 auto sample_planck_montecarlo(const double T) -> double {
   const double nu_peak = 5.879e10 * T;
@@ -383,8 +356,6 @@ __host__ __device__ void do_kpkt_blackbody(Packet& pkt) {
     pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
   } else {
     pkt.nu_cmf = sample_planck_montecarlo(grid::get_Te(nonemptymgi));
-    // TODO: is this alternative method faster or more accurate or neither?
-    // pkt.nu_cmf = sample_planck_analytic(grid::get_Te(nonemptymgi));
   }
 
   assert_always(std::isfinite(pkt.nu_cmf));
