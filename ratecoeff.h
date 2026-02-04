@@ -98,7 +98,7 @@ auto integrator(auto params, const double a, const double b, const double epsrel
 #if defined(USEBOOST) && USEBOOST
 
     *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
-        [&](double x) { return func_integrand(x, &params); }, a, b, 5, epsrel);
+        [&](double x) { return func_integrand(x, &params); }, a, b, 5, epsrel, abserr);
     return 0;
 
 #else
