@@ -4,10 +4,6 @@
 #include <boost/assert/source_location.hpp>
 #include <boost/math/tools/toms748_solve.hpp>
 #pragma clang unsafe_buffer_usage end
-
-#if !USE_SIMPSON_INTEGRATOR
-#include <gsl/gsl_errno.h>
-#endif
 #else
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_math.h>
