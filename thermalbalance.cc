@@ -1,14 +1,15 @@
 #include "thermalbalance.h"
-#if defined(USEBOOST) && USEBOOST
+
 #pragma clang unsafe_buffer_usage begin
+#if defined(USEBOOST) && USEBOOST
 #include <boost/assert/source_location.hpp>
 #include <boost/math/tools/toms748_solve.hpp>
-#pragma clang unsafe_buffer_usage end
 #else
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 #endif
+#pragma clang unsafe_buffer_usage end
 
 #include <algorithm>
 #include <cmath>
