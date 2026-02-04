@@ -909,16 +909,8 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   int s = 0;  // sign of the transformation
   assert_always(gsl_linalg_LU_decomp(&rate_matrix_LU_decomp, &p, &s) == GSL_SUCCESS);
 
-#if !USE_SIMPSON_INTEGRATOR
-  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-#endif
-
   // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
   gsl_linalg_LU_solve(&rate_matrix_LU_decomp, &p, &gsl_balance_vector, &x);
-
-#if !USE_SIMPSON_INTEGRATOR
-  gsl_set_error_handler(previous_handler);
-#endif
 
   constexpr double TOLERANCE = 1e-40;
   THREADLOCALONHOST std::vector<double> vec_work;

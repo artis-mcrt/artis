@@ -15,7 +15,6 @@
 #include <tuple>
 
 #pragma clang unsafe_buffer_usage begin
-#include <gsl/gsl_errno.h>
 #if !USE_SIMPSON_INTEGRATOR
 #include <gsl/gsl_integration.h>
 #endif
@@ -355,10 +354,6 @@ void precalculate_rate_coefficient_integrals() {
       const int nlevels = get_nlevels_ionising(element, ion);
       printlnlog("Performing rate integrals for Z = {}, ionstage {}...", atomic_number, ionstage);
 
-#if !USE_SIMPSON_INTEGRATOR
-      gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-#endif
-
       for (int level = 0; level < nlevels; level++) {
         if ((level > 0) && (level % 50 == 0)) {
           printlnlog("  completed up to level {} of {}", level, nlevels);
@@ -475,9 +470,6 @@ void precalculate_rate_coefficient_integrals() {
           }
         }
       }
-#if !USE_SIMPSON_INTEGRATOR
-      gsl_set_error_handler(previous_handler);
-#endif
     }
   }
 }
@@ -726,17 +718,10 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
 
   double error = 0.;
 
-#if !USE_SIMPSON_INTEGRATOR
-  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-#endif
   double stimrecombcoeff = 0.;
 
   integrator<integrand_stimrecombination_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsabs, epsrel,
                                                           GSL_INTEG_GAUSS61, &stimrecombcoeff, &error);
-
-#if !USE_SIMPSON_INTEGRATOR
-  gsl_set_error_handler(previous_handler);
-#endif
 
   stimrecombcoeff *= FOURPI * sf * get_phixsprobability(element, lowerion, level, phixstargetindex);
 
@@ -808,17 +793,11 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
 
   double error = 0.;
 
-#if !USE_SIMPSON_INTEGRATOR
-  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-#endif
-
   double gammacorr = 0.;
   const int status = integrator<integrand_corrphotoioncoeff_custom_radfield>(
       intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &gammacorr, &error);
 
 #if !USE_SIMPSON_INTEGRATOR
-  gsl_set_error_handler(previous_handler);
-
   if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
     printlnlog(
         "corrphotoioncoeff gsl integrator warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
@@ -947,10 +926,6 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
   const double deltanu = (nu_max_phixs - nu_threshold) / npieces;
   double error{NAN};
 
-#if !USE_SIMPSON_INTEGRATOR
-  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-#endif
-
   double total_alpha_sp = 0.;
   integrator<alpha_sp_E_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY,
                                        GSL_INTEG_GAUSS31, &total_alpha_sp, &error);
@@ -971,10 +946,6 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
       break;
     }
   }
-
-#if !USE_SIMPSON_INTEGRATOR
-  gsl_set_error_handler(previous_handler);
-#endif
 
   const double nuoffset =
       (alpha_sp != alpha_sp_old) ? ((total_alpha_sp * zrand) - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu : 0.;

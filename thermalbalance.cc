@@ -74,10 +74,6 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
 
   double bfheating = 0.;
 
-#if !USE_SIMPSON_INTEGRATOR
-  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-#endif
-
   const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(
       intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &bfheating, &error);
 
@@ -89,8 +85,6 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
         status, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion), level,
         phixstargetindex, bfheating, error);
   }
-
-  gsl_set_error_handler(previous_handler);
 #endif
 
   bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);

@@ -261,10 +261,6 @@ auto planck_integral(const double T_R, const double nu_lower, const double nu_up
 
   const GSL_PlanckIntegralParas intparas = {.T_R = T_R, .times_nu = times_nu};
 
-#if !USE_SIMPSON_INTEGRATOR
-  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-#endif
-
   const int status = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsabs, epsrel, GSL_INTEG_GAUSS61,
                                                       &integral, &error);
   if (status != 0) {
@@ -272,10 +268,6 @@ auto planck_integral(const double T_R, const double nu_lower, const double nu_up
                static_cast<int>(GSL_FAILURE), integral);
     integral = 0.;
   }
-
-#if !USE_SIMPSON_INTEGRATOR
-  gsl_set_error_handler(previous_handler);
-#endif
 
   return integral;
 }

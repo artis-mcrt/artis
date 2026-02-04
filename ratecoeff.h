@@ -7,6 +7,7 @@
 #include "sn3d.h"
 
 #if !USE_SIMPSON_INTEGRATOR
+#include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_math.h>
 
@@ -77,7 +78,7 @@ constexpr auto simpson_integrator(auto& params, const double a, const double b, 
 
 template <double func_integrand(double, void* const)>
 auto integrator(auto params, const double a, const double b, const double epsabs, const double epsrel, const int key,
-                double* result, double* abserr) {
+                double* result, double* abserr) -> int {
   if constexpr (USE_SIMPSON_INTEGRATOR) {
     // need an odd number for Simpson rule
     const int samplecount = (std::max(1, static_cast<int>((b / a) / globals::NPHIXSNUINCREMENT)) * 4) + 1;
@@ -86,8 +87,12 @@ auto integrator(auto params, const double a, const double b, const double epsabs
     *abserr = 0.;
     return 0;
   } else {
-    const auto F = gsl_function{.function = func_integrand, .params = &params};
-    return gsl_integration_qag(&F, a, b, epsabs, epsrel, GSLWSIZE, key, gslworkspace.get(), result, abserr);
+    gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+    const auto gslfunc = gsl_function{.function = func_integrand, .params = &params};
+    const auto status =
+        gsl_integration_qag(&gslfunc, a, b, epsabs, epsrel, GSLWSIZE, key, gslworkspace.get(), result, abserr);
+    gsl_set_error_handler(previous_handler);
+    return status;
   }
 }
 
