@@ -103,6 +103,9 @@ auto integrator(auto params, const double a, const double b, const double epsabs
 
 #else
     constexpr auto key = []() {
+      static_assert(GKNPOINTS == 15 || GKNPOINTS == 21 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 ||
+                        GKNPOINTS == 61,
+                    "Unsupported GKPOINTS value");
       switch (GKNPOINTS) {
         case 15:
           return GSL_INTEG_GAUSS15;
@@ -114,10 +117,8 @@ auto integrator(auto params, const double a, const double b, const double epsabs
           return GSL_INTEG_GAUSS41;
         case 51:
           return GSL_INTEG_GAUSS51;
-        case 61:
-          return GSL_INTEG_GAUSS61;
         default:
-          return -127;
+          return GSL_INTEG_GAUSS61;
       }
     }();
     static_assert(key >= 0, "Unsupported GKPOINTS value");
