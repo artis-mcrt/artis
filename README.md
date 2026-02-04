@@ -53,7 +53,7 @@ cd artis
 ```
 On macOS, it's recommend that you install homebrew llvm to get clang-format, clang-tidy, clangd language server, and the clang C++ compiler. You can install this and other dependencies with:
 ```sh
-brew install llvm open-mpi gsl prek
+brew install llvm open-mpi gsl boost prek
 ```
 Install the pre-commit hooks:
 ```sh
