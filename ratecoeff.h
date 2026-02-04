@@ -93,8 +93,7 @@ auto integrator(auto params, const double a, const double b, const double epsrel
   *result = simpson_integrator<func_integrand>(params, a, b, samplecount);
   *abserr = 0.;
   return 0;
-}
-else {
+
 #elif defined(USEBOOST) && USEBOOST
 
   *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
