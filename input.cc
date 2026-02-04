@@ -27,8 +27,6 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
-#include <gsl/gsl_interp.h>
-#include <gsl/gsl_spline.h>
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
@@ -221,19 +219,23 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
     // Now interpolate these cross-sections
     levelphixstable[0] = static_cast<float>(phixs_in[0]);
 
-    gsl_interp_accel* acc = gsl_interp_accel_alloc();
-    gsl_spline* spline = gsl_spline_alloc(gsl_interp_linear, nphixspoints_inputtable);
-    gsl_spline_init(spline, nugrid_in.data(), phixs_in.data(), nphixspoints_inputtable);
     for (int i = 1; i < globals::NPHIXSPOINTS; i++) {
       const double nu = nu_edge * (1. + (i * globals::NPHIXSNUINCREMENT));
-      if (nu > nu_max) {
+      if (nu >= nu_max) {
         levelphixstable[i] = static_cast<float>(phixs_in[nphixspoints_inputtable - 1] * pow(nu_max / nu, 3));
       } else {
-        levelphixstable[i] = static_cast<float>(gsl_spline_eval(spline, nu, acc));
+        assert_always(nu >= nugrid_in[0]);
+        const auto index_above =
+            static_cast<std::ptrdiff_t>(std::ranges::upper_bound(nugrid_in, nu) - nugrid_in.begin());
+        assert_always(index_above < nphixspoints_inputtable);
+        const auto index_below = index_above - 1;
+        assert_always(index_below >= 0);
+        const auto phixs_interp = static_cast<float>(
+            std::lerp(phixs_in[index_below], phixs_in[index_above],
+                      (nu - nugrid_in[index_below]) / (nugrid_in[index_above] - nugrid_in[index_below])));
+        levelphixstable[i] = phixs_interp;
       }
     }
-    gsl_spline_free(spline);
-    gsl_interp_accel_free(acc);
   } else {
     for (int i = 0; i < globals::NPHIXSPOINTS; i++) {
       float phixs{NAN};
