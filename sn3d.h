@@ -86,6 +86,10 @@ inline tm timebuf{};
 #define USE_SIMPSON_INTEGRATOR false
 #endif
 
+#ifndef USE_BOOST
+#define USE_BOOST false
+#endif
+
 inline thread_local auto gslworkspace =
     std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace*)>{
         USE_SIMPSON_INTEGRATOR ? nullptr : gsl_integration_workspace_alloc(GSLWSIZE),
@@ -554,6 +558,11 @@ constexpr void resize_exactly(std::vector<T>& vec, const size_t size) {
   // just resizing can (only with libstdc++?) allocate a larger capacity than needed
   vec.reserve(size);
   vec.resize(size);
+}
+
+template <double fractional_accuracy>
+inline auto ftol(const double a, const double b) -> bool {
+  return std::abs(a - b) <= (fractional_accuracy * std::min(std::abs(a), std::abs(b)));
 }
 
 #endif  // SN3D_H

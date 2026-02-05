@@ -15,11 +15,14 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
+#if defined(USE_BOOST) && USE_BOOST
+#include <boost/assert/source_location.hpp>
+#include <boost/math/tools/toms748_solve.hpp>
+#else
 #include <gsl/gsl_errno.h>
-#include <gsl/gsl_integration.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
-#include <gsl/gsl_sf_debye.h>
+#endif
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
@@ -252,20 +255,18 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
   }
 }
 
-auto planck_integral(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu) -> double {
+auto calculate_planck_integral(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
+    -> double {
   double integral = 0.;
 
   double error = 0.;
   const double epsrel = 1e-10;
-  const double epsabs = 0.;
 
   const GSL_PlanckIntegralParas intparas = {.T_R = T_R, .times_nu = times_nu};
 
-  const int status = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsabs, epsrel, GSL_INTEG_GAUSS61,
-                                                      &integral, &error);
+  const int status = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsrel, &integral, &error);
   if (status != 0) {
-    printlnlog("planck_integral integrator status {}, GSL_FAILURE= {}. Integral value {:g}, setting to zero.", status,
-               static_cast<int>(GSL_FAILURE), integral);
+    printlnlog("planck_integral integrator status {}. Integral value {:g}, setting to zero.", status, integral);
     integral = 0.;
   }
 
@@ -274,55 +275,40 @@ auto planck_integral(const double T_R, const double nu_lower, const double nu_up
 
 // difference between the average nu and the average nu of a Planck function
 // at temperature T_R, in the frequency range corresponding to a bin
-auto delta_nu_bar(const double T_R, void* const paras) -> double {
-  const auto* params = static_cast<const GSLTempSolverParams*>(paras);
-  const auto nonemptymgi = params->nonemptymgi;
-  const int binindex = params->binindex;
-
+auto delta_nu_bar(const double T_R, const int nonemptymgi, const int binindex) -> double {
   const double nu_lower = get_bin_nu_lower(binindex);
   const double nu_upper = get_bin_nu_upper(binindex);
   const double nu_bar_estimator = get_bin_nu_bar(nonemptymgi, binindex);
 
-  const double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
-  const double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
-  const double nu_bar_planck_T_R = nu_times_planck_numerical / planck_integral_numerical;
-
-  // double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, true);
-  // double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, false);
-  // double nu_bar_planck = nu_times_planck_integral / planck_integral_result;
-
-  // if (!std::isfinite(nu_bar_planck)) {
-  //   double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
-  //   double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
-  //   double nu_bar_planck_numerical = nu_times_planck_numerical / planck_integral_numerical;
-
-  //   printout("planck_integral_analytic is %g. Replacing with numerical result of %g.\n", nu_bar_planck,
-  //            nu_bar_planck_numerical);
-  //   nu_bar_planck = nu_bar_planck_numerical;
-  // }
+  const double nu_planck_integral = calculate_planck_integral(T_R, nu_lower, nu_upper, true);
+  const double planck_integral = calculate_planck_integral(T_R, nu_lower, nu_upper, false);
+  const double nu_bar_planck_T_R = nu_planck_integral / planck_integral;
 
   const double delta_nu_bar = nu_bar_planck_T_R - nu_bar_estimator;
 
   if (!std::isfinite(delta_nu_bar)) {
     printlnlog(
-        "delta_nu_bar is {:g}. nu_bar_planck_T_R {:g} nu_times_planck_numerical {:g} planck_integral_numerical {:g} "
+        "delta_nu_bar is {:g}. nu_bar_planck_T_R {:g} nu_times_planck_integral {:g} planck_integral {:g} "
         "nu_bar_estimator {:g}",
-        delta_nu_bar, nu_bar_planck_T_R, nu_times_planck_numerical, planck_integral_numerical, nu_bar_estimator);
+        delta_nu_bar, nu_bar_planck_T_R, nu_planck_integral, planck_integral, nu_bar_estimator);
   }
 
   return delta_nu_bar;
 }
 
-auto find_T_R(const int nonemptymgi, const int binindex) -> float {
-  float T_R = 0.;
+auto delta_nu_bar(const double T_R, void* const voidparas) -> double {  // cppcheck-suppress constParameterPointer
+  const auto* const params = static_cast<const GSLTempSolverParams*>(voidparas);
+  return delta_nu_bar(T_R, params->nonemptymgi, params->binindex);
+}
 
-  GSLTempSolverParams paras{};
-  paras.nonemptymgi = nonemptymgi;
-  paras.binindex = binindex;
+auto find_T_R(const int nonemptymgi, const int binindex) -> float {
+  const auto f_deltanubar = [nonemptymgi, binindex](const double T_R) {
+    return delta_nu_bar(T_R, nonemptymgi, binindex);
+  };
 
   // Check whether the equation has a root in [T_min,T_max]
-  double delta_nu_bar_min = delta_nu_bar(T_R_min, &paras);
-  double delta_nu_bar_max = delta_nu_bar(T_R_max, &paras);
+  double delta_nu_bar_min = f_deltanubar(T_R_min);
+  double delta_nu_bar_max = f_deltanubar(T_R_max);
 
   if (!std::isfinite(delta_nu_bar_min) || !std::isfinite(delta_nu_bar_max)) {
     delta_nu_bar_max = delta_nu_bar_min = -1;
@@ -331,23 +317,33 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
   if (delta_nu_bar_min * delta_nu_bar_max < 0) {
     // If there is a root in the interval, solve for T_R
 
-    const double epsrel = 1e-4;
-    const double epsabs = 0.;
-    const int maxit = 100;
-
+    constexpr double epsrel = 1e-4;
+    const auto maxit = 100U;
+#if defined(USE_BOOST) && USE_BOOST
+    // use TOMS 748 solver from Boost
+    boost::uintmax_t iteration_num = maxit;
+    auto result = boost::math::tools::toms748_solve(f_deltanubar, T_R_min, T_R_max, ftol<epsrel>, iteration_num);
+    const auto T_R_solution = static_cast<float>(0.5 * (result.first + result.second));
+    if (iteration_num >= maxit) {
+      printlnlog("[warning] find_T_R: T_R did not converge within {} iterations.", iteration_num);
+    }
+    return T_R_solution;
+#else
+    GSLTempSolverParams paras{.nonemptymgi = nonemptymgi, .binindex = binindex};
     gsl_function find_T_R_f = {.function = &delta_nu_bar, .params = &paras};
 
     // one dimensional gsl root solver, bracketing type
     gsl_root_fsolver* T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
     gsl_root_fsolver_set(T_R_solver, &find_T_R_f, T_R_min, T_R_max);
     int status = 0;
-    for (int iteration_num = 0; iteration_num <= maxit; iteration_num++) {
+    float T_R_solution = 0.;
+    for (auto iteration_num = 0U; iteration_num <= maxit; iteration_num++) {
       gsl_root_fsolver_iterate(T_R_solver);
-      T_R = static_cast<float>(gsl_root_fsolver_root(T_R_solver));
+      T_R_solution = static_cast<float>(gsl_root_fsolver_root(T_R_solver));
 
       const double T_R_lower = gsl_root_fsolver_x_lower(T_R_solver);
       const double T_R_upper = gsl_root_fsolver_x_upper(T_R_solver);
-      status = gsl_root_test_interval(T_R_lower, T_R_upper, epsabs, epsrel);
+      status = gsl_root_test_interval(T_R_lower, T_R_upper, 0., epsrel);
 
       if (status != GSL_CONTINUE) {
         break;
@@ -359,20 +355,19 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
     }
 
     gsl_root_fsolver_free(T_R_solver);
+    return T_R_solution;
+#endif
   } else if (delta_nu_bar_max < 0) {
     // Thermal balance equation always negative ===> T_R = T_min
     // Calculate the rates again at this T_e to print them to file
     printlnlog("find_T_R: cell {} bin {:4} no solution in interval, clamping to T_R_max={:g}",
                grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_max);
-    T_R = T_R_max;
-  } else {
-    printlnlog("find_T_R: cell {} bin {:4} no solution in interval, clamping to T_R_min={:g}",
-               grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_min);
-    T_R = T_R_min;
+    return T_R_max;
   }
-
-  return T_R;
-}  // namespace radfield
+  printlnlog("find_T_R: cell {} bin {:4} no solution in interval, clamping to T_R_min={:g}",
+             grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_min);
+  return T_R_min;
+}
 
 void set_params_fullspec(const int nonemptymgi, const int timestep) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -794,44 +789,6 @@ __host__ __device__ auto radfield(const double nu, const int nonemptymgi) -> dou
   return dbb(nu, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
 }
 
-// return the integral of nu^3 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
-// or if times_nu is true, the integral of nu^4 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
-auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
-    -> double {
-  double integral = 0.;
-
-  if (times_nu) {
-    const double debye_upper = gsl_sf_debye_4(HOVERKB * nu_upper / T_R) * pow(nu_upper, 4);
-    const double debye_lower = gsl_sf_debye_4(HOVERKB * nu_lower / T_R) * pow(nu_lower, 4);
-    integral = TWOHOVERCLIGHTSQUARED * (debye_upper - debye_lower) * T_R / HOVERKB / 4.;
-  } else {
-    const double debye_upper = gsl_sf_debye_3(HOVERKB * nu_upper / T_R) * pow(nu_upper, 3);
-    const double debye_lower = gsl_sf_debye_3(HOVERKB * nu_lower / T_R) * pow(nu_lower, 3);
-    integral = TWOHOVERCLIGHTSQUARED * (debye_upper - debye_lower) * T_R / HOVERKB / 3.;
-
-    if (integral == 0.) {
-      // double upperexp = exp(HOVERKB * nu_upper / T_R);
-      // double upperint = - pow(nu_upper,4) / 4
-      //                   + pow(nu_upper,3) * log(1 - upperexp) / HOVERKB
-      //                   + 3 * pow(nu_upper,2) * polylog(2,upperexp) / pow(HOVERKB,2)
-      //                   - 6 * nu_upper * polylog(3,upperexp) / pow(HOVERKB,3)
-      //                   + 6 * polylog(4,upperexp) / pow(HOVERKB,4);
-      // double lowerexp = exp(HOVERKB * nu_lower / T_R);
-      // double lowerint = - pow(nu_lower,4) / 4
-      //                   + pow(nu_lower,3) * log(1 - lowerexp) / HOVERKB
-      //                   + 3 * pow(nu_lower,2) * polylog(2,lowerexp) / pow(HOVERKB,2)
-      //                   - 6 * nu_lower * polylog(3,lowerexp) / pow(HOVERKB,3)
-      //                   + 6 * polylog(4,lowerexp) / pow(HOVERKB,4);
-      // double integral2 = TWOHOVERCLIGHTSQUARED * (upperint - lowerint);
-
-      // printlnlog("planck_integral_analytic is zero. debye_upper {:g} debye_lower {:g}. Test alternative {:g}",
-      //            debye_upper, debye_lower, integral2);
-    }
-  }
-
-  return integral;
-}
-
 // finds the best fitting W and temperature parameters in each spectral bin using J and nuJ
 void fit_parameters(const int nonemptymgi, const int timestep) {
   set_params_fullspec(nonemptymgi, timestep);
@@ -871,7 +828,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
             T_R_bin = T_e;
           }
 
-          double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, false);
+          double planck_integral_result = calculate_planck_integral(T_R_bin, nu_lower, nu_upper, false);
           //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower,
           //          nu_upper, planck_integral_result);
 
@@ -881,7 +838,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
             //            printout("T_R_bin %g, nu_lower %g, nu_upper %g\n", T_R_bin, nu_lower, nu_upper);
             printlnlog("W {:g} too high, trying setting T_R of bin {} to {:g}. J_bin {:g} planck_integral {:g}", W_bin,
                        binindex, T_R_max, J_bin, planck_integral_result);
-            planck_integral_result = planck_integral(T_R_max, nu_lower, nu_upper, false);
+            planck_integral_result = calculate_planck_integral(T_R_max, nu_lower, nu_upper, false);
             W_bin = static_cast<float>(J_bin / planck_integral_result);
             if (W_bin > 1e4) {
               printlnlog("W still very high, W={:g}. Zeroing bin...", W_bin);
@@ -1002,9 +959,8 @@ void titer_nuJ(const int nonemptymgi) {
 }
 #endif
 
-void reduce_estimators()
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
-{
+void reduce_estimators() {
   MPI_Allreduce_safe(J, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce_safe(nuJ, MPI_SUM, MPI_COMM_WORLD);
 

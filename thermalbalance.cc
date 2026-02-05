@@ -1,12 +1,19 @@
 #include "thermalbalance.h"
 
+#pragma clang unsafe_buffer_usage begin
+#if defined(USE_BOOST) && USE_BOOST
+#include <boost/assert/source_location.hpp>
+#include <boost/math/tools/toms748_solve.hpp>
+#else
 #include <gsl/gsl_errno.h>
-#include <gsl/gsl_integration.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
+#endif
+#pragma clang unsafe_buffer_usage end
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <ranges>
 #include <span>
 #include <vector>
@@ -41,9 +48,8 @@ struct BFHeatingIntegralParams {
   std::span<const float> photoion_xs;
 };
 
-auto integrand_bfheatingcoeff_custom_radfield(const double nu, void* const voidparas) -> double
-// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
-{
+// Integrand to calculate the rate coefficient for bfheating.
+auto integrand_bfheatingcoeff_custom_radfield(const double nu, void* const voidparas) -> double {
   const auto* const params = static_cast<const BFHeatingIntegralParams*>(voidparas);
 
   const int nonemptymgi = params->nonemptymgi;
@@ -59,8 +65,6 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
                               const int nonemptymgi) -> double {
   double error = 0.;
   const double epsrel = 1e-3;
-  const double epsrelwarning = 1e-1;
-  const double epsabs = 0.;
 
   const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
 
@@ -74,11 +78,11 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
 
   double bfheating = 0.;
 
-  const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(
-      intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &bfheating, &error);
+  const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(  // cppcheck-suppress unreadVariable
+      intparas, nu_threshold, nu_max_phixs, epsrel, &bfheating, &error);
 
 #if !USE_SIMPSON_INTEGRATOR
-  if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning)) {
+  if (status != 0 && (status != 18 || (error / bfheating) > 0.1)) {
     printlnlog(
         "bf_heating integrator gsl warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
         "integral {:g} error {:g}",
@@ -167,13 +171,12 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 }
 
 // Thermal balance equation on which we have to iterate to get T_e
-auto T_e_eqn_heating_minus_cooling(const double T_e, void* const paras) -> double {
-  const auto* const params = static_cast<const TeSolutionParams*>(paras);
+
+auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const double t_current,
+                                   HeatingCoolingRates& heatingcoolingrates, const std::vector<double>& bfheatingcoeffs)
+    -> double {
   const auto fT_e = static_cast<float>(T_e);
 
-  const auto nonemptymgi = params->nonemptymgi;
-  const double t_current = params->t_current;
-  auto& heatingcoolingrates = *params->heatingcoolingrates;
   if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
     if (std::abs((T_e / grid::get_Te(nonemptymgi)) - 1.) > 0.1) {
       grid::set_Te(nonemptymgi, fT_e);
@@ -200,7 +203,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void* const paras) -> doubl
 
   // Then calculate heating and cooling rates
   kpkt::calculate_cooling_rates(nonemptymgi, &heatingcoolingrates);
-  calculate_heating_rates(nonemptymgi, fT_e, nne, heatingcoolingrates, *params->bfheatingcoeffs);
+  calculate_heating_rates(nonemptymgi, fT_e, nne, heatingcoolingrates, bfheatingcoeffs);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(nonemptymgi);
   const auto ntlepton_dep = nonthermal::get_deposition_rate_density(nonemptymgi);
@@ -225,6 +228,12 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void* const paras) -> doubl
                                    heatingcoolingrates.cooling_collisional + heatingcoolingrates.cooling_adiabatic;
 
   return total_heating_rate - total_coolingrate;
+}
+auto T_e_eqn_heating_minus_cooling(const double T_e, void* const paras)  // cppcheck-suppress constParameterPointer
+    -> double {
+  const auto* const params = static_cast<const TeSolutionParams*>(paras);
+  return T_e_eqn_heating_minus_cooling(T_e, params->nonemptymgi, params->t_current, *params->heatingcoolingrates,
+                                       *params->bfheatingcoeffs);
 }
 
 }  // anonymous namespace
@@ -279,17 +288,19 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
                      HeatingCoolingRates& heatingcoolingrates, const std::vector<double>& bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::get_Te(nonemptymgi);
-  printlog("Finding T_e in cell {} at timestep {}...", modelgridindex, globals::timestep);
+#if defined(USE_BOOST) && USE_BOOST
+  constexpr auto method = "boost toms748_solve";
+#else
+  constexpr auto method = "gsl brent";
+#endif
+  printlog("Finding T_e in cell {} at timestep {} [{}]...", modelgridindex, globals::timestep, method);
 
-  TeSolutionParams paras = {.t_current = t_current,
-                            .nonemptymgi = nonemptymgi,
-                            .heatingcoolingrates = &heatingcoolingrates,
-                            .bfheatingcoeffs = &bfheatingcoeffs};
+  const auto f_T_e = [&](double T_e) -> double {
+    return T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs);
+  };
 
-  gsl_function find_T_e_f = {.function = &T_e_eqn_heating_minus_cooling, .params = &paras};
-
-  double thermalmin = T_e_eqn_heating_minus_cooling(T_min, find_T_e_f.params);
-  double thermalmax = T_e_eqn_heating_minus_cooling(T_max, find_T_e_f.params);
+  double thermalmin = f_T_e(T_min);
+  double thermalmax = f_T_e(T_max);
 
   if (!std::isfinite(thermalmin) || !std::isfinite(thermalmax)) {
     printlnlog(
@@ -302,34 +313,58 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
   double T_e{NAN};
   // Check whether the thermal balance equation has a root in [T_min,T_max]
   if (thermalmin * thermalmax < 0) {
+    const auto maxit = 100U;
     // If it has, then solve for the root T_e
-
-    // one-dimensional gsl root solver, bracketing type
-    gsl_root_fsolver* T_e_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
-
-    gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
-    const int maxit = 100;
-    int status = 0;
-    for (int iternum = 0; iternum < maxit; iternum++) {
-      gsl_root_fsolver_iterate(T_e_solver);
-      T_e = gsl_root_fsolver_root(T_e_solver);
-      const double T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
-      const double T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
-      status = gsl_root_test_interval(T_e_min, T_e_max, 0, TEMPERATURE_SOLVER_ACCURACY);
-      // printlnlog("iter {}, T_e interval [{:g}, {:g}], guess {:g}, status {}", iternum, T_e_min, T_e_max, T_e,
-      // status);
-      if (status != GSL_CONTINUE) {
-        printlnlog("after {} iterations, T_e = {:g} K, interval [{:g}, {:g}]", iternum + 1, T_e, T_e_min, T_e_max);
-        break;
+#if defined(USE_BOOST) && USE_BOOST
+    {
+      // use TOMS 748 solver from Boost
+      boost::uintmax_t iternum = maxit;
+      auto result = boost::math::tools::toms748_solve(f_T_e, T_min, T_max, ftol<TEMPERATURE_SOLVER_ACCURACY>, iternum);
+      T_e = 0.5 * (result.first + result.second);
+      if (iternum >= maxit) {
+        printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations. interval [{:g}, {:g}]",
+                   iternum, result.first, result.second);
+      } else {
+        printlnlog("after {} iterations, T_e = {:g} K, interval [{:g}, {:g}]", iternum, T_e, result.first,
+                   result.second);
       }
     }
+#else
+    {
+      TeSolutionParams paras = {.t_current = t_current,
+                                .nonemptymgi = nonemptymgi,
+                                .heatingcoolingrates = &heatingcoolingrates,
+                                .bfheatingcoeffs = &bfheatingcoeffs};
 
-    if (status == GSL_CONTINUE) {
-      printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations", maxit);
+      gsl_function find_T_e_f = {.function = &T_e_eqn_heating_minus_cooling, .params = &paras};
+      // one-dimensional GSL Brent root solver, bracketing type
+      gsl_root_fsolver* T_e_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
+
+      gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
+      int status = 0;
+      for (auto iternum = 0U; iternum < maxit; iternum++) {
+        gsl_root_fsolver_iterate(T_e_solver);
+        T_e = gsl_root_fsolver_root(T_e_solver);
+        const double T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
+        const double T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
+        status = gsl_root_test_interval(T_e_min, T_e_max, 0, TEMPERATURE_SOLVER_ACCURACY);
+        // printlnlog("iter {}, T_e interval [{:g}, {:g}], guess {:g}, status {}", iternum, T_e_min, T_e_max, T_e,
+        // status);
+        if (status != GSL_CONTINUE) {
+          printlnlog("after {} iterations, T_e = {:g} K, interval [{:g}, {:g}]", iternum + 1, T_e, T_e_min, T_e_max);
+          break;
+        }
+      }
+
+      if (status == GSL_CONTINUE) {
+        printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations", maxit);
+      }
+
+      gsl_root_fsolver_free(T_e_solver);
     }
-
-    gsl_root_fsolver_free(T_e_solver);
+#endif
   }
+
   // Quick solver style: works if we can assume that there is either one or no
   // solution on [MINTEMP.MAXTEMP] (check that by doing a plot of heating-cooling vs. T_e)
   else if (thermalmax < 0) {
@@ -362,5 +397,5 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
 
   // this call with make sure heating/cooling rates and populations are updated for the final T_e
   // in case T_e got modified after the T_e solver finished
-  T_e_eqn_heating_minus_cooling(T_e, find_T_e_f.params);
+  f_T_e(T_e);
 }
