@@ -16,7 +16,6 @@
 
 #pragma clang unsafe_buffer_usage begin
 #if defined(USE_BOOST) && USE_BOOST
-#include <boost/assert/source_location.hpp>
 #include <boost/math/tools/toms748_solve.hpp>
 #else
 #include <gsl/gsl_errno.h>
@@ -321,7 +320,7 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
     const auto maxit = 100U;
 #if defined(USE_BOOST) && USE_BOOST
     // use TOMS 748 solver from Boost
-    boost::uintmax_t iteration_num = maxit;
+    uintmax_t iteration_num = maxit;
     auto result = boost::math::tools::toms748_solve(f_deltanubar, T_R_min, T_R_max, ftol<epsrel>, iteration_num);
     const auto T_R_solution = static_cast<float>(0.5 * (result.first + result.second));
     if (iteration_num >= maxit) {

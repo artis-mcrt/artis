@@ -2,7 +2,6 @@
 
 #pragma clang unsafe_buffer_usage begin
 #if defined(USE_BOOST) && USE_BOOST
-#include <boost/assert/source_location.hpp>
 #include <boost/math/tools/toms748_solve.hpp>
 #else
 #include <gsl/gsl_errno.h>
@@ -294,7 +293,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 
 #if defined(USE_BOOST) && USE_BOOST
   // use TOMS 748 solver from Boost
-  boost::uintmax_t iter = maxit;
+  uintmax_t iter = maxit;
   auto result = boost::math::tools::toms748_solve(f_nne, nne_lo, nne_hi, ftol<fractional_accuracy>, iter);
   const double nne_solution = 0.5 * (result.first + result.second);
   if (iter >= maxit) {

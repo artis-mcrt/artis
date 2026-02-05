@@ -2,7 +2,6 @@
 
 #pragma clang unsafe_buffer_usage begin
 #if defined(USE_BOOST) && USE_BOOST
-#include <boost/assert/source_location.hpp>
 #include <boost/math/tools/toms748_solve.hpp>
 #else
 #include <gsl/gsl_errno.h>
@@ -318,7 +317,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
 #if defined(USE_BOOST) && USE_BOOST
     {
       // use TOMS 748 solver from Boost
-      boost::uintmax_t iternum = maxit;
+      uintmax_t iternum = maxit;
       auto result = boost::math::tools::toms748_solve(f_T_e, T_min, T_max, ftol<TEMPERATURE_SOLVER_ACCURACY>, iternum);
       T_e = 0.5 * (result.first + result.second);
       if (iternum >= maxit) {
