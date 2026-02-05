@@ -78,18 +78,18 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
 
   double bfheating = 0.;
 
-  const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(  // cppcheck-suppress unreadVariable
-      intparas, nu_threshold, nu_max_phixs, epsrel, &bfheating, &error);
+  const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsrel,
+                                                                          &bfheating, &error);
 
-#if !USE_SIMPSON_INTEGRATOR
   if (status != 0 && (status != 18 || (error / bfheating) > 0.1)) {
+#if !USE_SIMPSON_INTEGRATOR
     printlnlog(
         "bf_heating integrator gsl warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
         "integral {:g} error {:g}",
         status, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion), level,
         phixstargetindex, bfheating, error);
-  }
 #endif
+  }
 
   bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
 

@@ -782,20 +782,20 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   double error = 0.;
 
   double gammacorr = 0.;
-  const int status = integrator<integrand_corrphotoioncoeff_custom_radfield>(  // cppcheck-suppress unreadVariable
-      intparas, nu_threshold, nu_max_phixs, epsrel, &gammacorr, &error);
-#if !USE_SIMPSON_INTEGRATOR
+  const int status = integrator<integrand_corrphotoioncoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs,
+                                                                             epsrel, &gammacorr, &error);
   if (status != 0 && (status != 18 || (error / gammacorr) > 0.1)) {
+#if !USE_SIMPSON_INTEGRATOR
     printlnlog(
         "corrphotoioncoeff integrator warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
         "integral {:g} error {:g}",
         status, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion), level,
         phixstargetindex, gammacorr, error);
+#endif
     if (!std::isfinite(gammacorr)) {
       gammacorr = 0.;
     }
   }
-#endif
 
   gammacorr *= FOURPI * get_phixsprobability(loweruniquelevelindex, phixstargetindex);
 
