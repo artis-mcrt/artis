@@ -787,7 +787,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   double gammacorr = 0.;
   const int status = integrator<integrand_corrphotoioncoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs,
                                                                              epsrel, &gammacorr, &error);
-
+#if !USE_SIMPSON_INTEGRATOR
   if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
     printlnlog(
         "corrphotoioncoeff gsl integrator warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
@@ -798,6 +798,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
       gammacorr = 0.;
     }
   }
+#endif
 
   gammacorr *= FOURPI * get_phixsprobability(loweruniquelevelindex, phixstargetindex);
 
