@@ -6,7 +6,7 @@ runfolder=nltephotospheric_dynamic_ion_range_1d_1dgrid_testrun
 
 mkdir -p $runfolder
 
-if [ ! -f atomicdata_hefeconi_fe_I_to_VII.tar.xz ]; then curl --insecure -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_hefeconi_fe_i_to_vii.tar.xz; fi
+if [ ! -f atomicdata_hefeconi_fe_i_to_vii.tar.xz ]; then curl --insecure -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_hefeconi_fe_i_to_vii.tar.xz; fi
 
 tar -xf atomicdata_hefeconi_fe_i_to_vii.tar.xz --directory $runfolder
 
