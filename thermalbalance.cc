@@ -48,9 +48,8 @@ struct BFHeatingIntegralParams {
   std::span<const float> photoion_xs;
 };
 
-auto integrand_bfheatingcoeff_custom_radfield(const double nu, void* const voidparas) -> double
-// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
-{
+// Integrand to calculate the rate coefficient for bfheating.
+auto integrand_bfheatingcoeff_custom_radfield(const double nu, void* const voidparas) -> double {
   const auto* const params = static_cast<const BFHeatingIntegralParams*>(voidparas);
 
   const int nonemptymgi = params->nonemptymgi;
@@ -333,14 +332,13 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
     }
 #else
     {
-      // use GSL Brent solver
       TeSolutionParams paras = {.t_current = t_current,
                                 .nonemptymgi = nonemptymgi,
                                 .heatingcoolingrates = &heatingcoolingrates,
                                 .bfheatingcoeffs = &bfheatingcoeffs};
 
       gsl_function find_T_e_f = {.function = &T_e_eqn_heating_minus_cooling, .params = &paras};
-      // one-dimensional gsl root solver, bracketing type
+      // one-dimensional GSL Brent root solver, bracketing type
       gsl_root_fsolver* T_e_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
 
       gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
