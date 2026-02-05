@@ -69,6 +69,14 @@ tail -f output_0-0.txt
 ```
 Press Ctrl+C to stop following the log file.
 
+## make options
+- TESTMODE=ON: Enable additional assertions and compile with address sanitizer.
+- FASTMATH=OFF: Don't use compiler transformations that affect round-off-level results.
+- BOOST=ON: Replace some GSL calls with Boost library calls
+- MAX_NODE_SIZE=N: Artificially limit MPI node size to N ranks. Useful for testing or preventing MPI shared memory windows from crossing CPU sockets.
+- REPRODUCIBLE=ON: Use stable sorts and disable FASTMATH.
+- GPU=ON: Required to compile for GPUs. Avoids incompatible GSL and std::random calls.
+
 ## Input files
 ### input.txt
 Run-time configuration with:
