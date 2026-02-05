@@ -86,6 +86,10 @@ inline tm timebuf{};
 #define USE_SIMPSON_INTEGRATOR false
 #endif
 
+#ifndef USE_BOOST
+#define USE_BOOST false
+#endif
+
 inline thread_local auto gslworkspace =
     std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace*)>{
         USE_SIMPSON_INTEGRATOR ? nullptr : gsl_integration_workspace_alloc(GSLWSIZE),

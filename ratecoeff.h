@@ -8,7 +8,7 @@
 #include "globals.h"
 #else
 
-#if defined(USEBOOST) && USEBOOST
+#if defined(USE_BOOST) && USE_BOOST
 #pragma clang unsafe_buffer_usage begin
 #include <boost/math/quadrature/gauss_kronrod.hpp>
 #pragma clang unsafe_buffer_usage end
@@ -86,51 +86,51 @@ constexpr auto simpson_integrator(auto& params, const double a, const double b, 
 template <double func_integrand(double, void* const), int GKNPOINTS = 61>
 auto integrator(auto params, const double a, const double b, const double epsrel, double* result, double* abserr)
     -> int {
-#if USE_SIMPSON_INTEGRATOR
-  // need an odd number for Simpson rule
-  const int samplecount = (std::max(1, static_cast<int>((b / a) / globals::NPHIXSNUINCREMENT)) * 4) + 1;
+  if constexpr (USE_SIMPSON_INTEGRATOR) {
+    // need an odd number for Simpson rule
+    const int samplecount = (std::max(1, static_cast<int>((b / a) / globals::NPHIXSNUINCREMENT)) * 4) + 1;
 
-  *result = simpson_integrator<func_integrand>(params, a, b, samplecount);
-  *abserr = 0.;
-  return 0;
+    *result = simpson_integrator<func_integrand>(params, a, b, samplecount);
+    *abserr = 0.;
+    return 0;
 
-#elif defined(USEBOOST) && USEBOOST
-
-  *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
-      [&](double x) { return func_integrand(x, &params); }, a, b, 5, epsrel, abserr);
-  return 0;
+  } else {
+#if defined(USE_BOOST) && USE_BOOST
+    *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
+        [&](double x) { return func_integrand(x, &params); }, a, b, 5, epsrel, abserr);
+    return (*abserr / std::abs(*result)) > epsrel;
 
 #else
-  constexpr auto key = []() {
-    static_assert(
-        GKNPOINTS == 15 || GKNPOINTS == 21 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 || GKNPOINTS == 61,
-        "Unsupported GKNPOINTS value");
-    switch (GKNPOINTS) {
-      case 15:
-        return GSL_INTEG_GAUSS15;
-      case 21:
-        return GSL_INTEG_GAUSS21;
-      case 31:
-        return GSL_INTEG_GAUSS31;
-      case 41:
-        return GSL_INTEG_GAUSS41;
-      case 51:
-        return GSL_INTEG_GAUSS51;
-      default:
-        return GSL_INTEG_GAUSS61;
-    }
-  }();
-  static_assert(key >= 0, "Unsupported GKNPOINTS value");
+    constexpr auto key = []() {
+      static_assert(GKNPOINTS == 15 || GKNPOINTS == 21 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 ||
+                        GKNPOINTS == 61,
+                    "Unsupported GKNPOINTS value");
+      switch (GKNPOINTS) {
+        case 15:
+          return GSL_INTEG_GAUSS15;
+        case 21:
+          return GSL_INTEG_GAUSS21;
+        case 31:
+          return GSL_INTEG_GAUSS31;
+        case 41:
+          return GSL_INTEG_GAUSS41;
+        case 51:
+          return GSL_INTEG_GAUSS51;
+        default:
+          return GSL_INTEG_GAUSS61;
+      }
+    }();
+    static_assert(key >= 0, "Unsupported GKNPOINTS value");
 
-  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-  const auto gslfunc = gsl_function{.function = func_integrand, .params = &params};
-  const auto status =
-      gsl_integration_qag(&gslfunc, a, b, 0., epsrel, GSLWSIZE, key, gslworkspace.get(), result, abserr);
-  gsl_set_error_handler(previous_handler);
+    gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+    const auto gslfunc = gsl_function{.function = func_integrand, .params = &params};
+    const auto status =
+        gsl_integration_qag(&gslfunc, a, b, 0., epsrel, GSLWSIZE, key, gslworkspace.get(), result, abserr);
+    gsl_set_error_handler(previous_handler);
 
-  return status;
-
+    return status;
 #endif
+  }
 }
 
 #endif  // RATECOEFF_H

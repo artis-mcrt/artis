@@ -1,7 +1,7 @@
 #include "ltepop.h"
 
 #pragma clang unsafe_buffer_usage begin
-#if defined(USEBOOST) && USEBOOST
+#if defined(USE_BOOST) && USE_BOOST
 #include <boost/assert/source_location.hpp>
 #include <boost/math/tools/toms748_solve.hpp>
 #else
@@ -292,7 +292,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
   constexpr double fractional_accuracy = 1e-3;
   constexpr auto maxit = 50U;
 
-#if defined(USEBOOST) && USEBOOST
+#if defined(USE_BOOST) && USE_BOOST
   // use TOMS 748 solver from Boost
   boost::uintmax_t iter = maxit;
   auto result = boost::math::tools::toms748_solve(f_nne, nne_lo, nne_hi, ftol<fractional_accuracy>, iter);

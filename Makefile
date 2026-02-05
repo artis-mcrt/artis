@@ -199,7 +199,7 @@ endif
 
 
 ifeq ($(BOOST),ON)
-	CXXFLAGS += -DUSEBOOST=true
+	CXXFLAGS += -DUSE_BOOST=true
 	BUILD_DIR := $(BUILD_DIR)_boost
 endif
 
