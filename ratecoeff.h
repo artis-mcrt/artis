@@ -95,6 +95,8 @@ auto integrator(auto params, const double a, const double b, const double epsrel
     return 0;
 
   } else {
+    static_assert(GKNPOINTS == 15 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 || GKNPOINTS == 61,
+                  "Unsupported GKNPOINTS value");
 #if !USE_SIMPSON_INTEGRATOR && defined(USE_BOOST) && USE_BOOST
     *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
         [&](double x) { return func_integrand(x, &params); }, a, b, 5, epsrel, abserr);
@@ -102,9 +104,6 @@ auto integrator(auto params, const double a, const double b, const double epsrel
 
 #elif !USE_SIMPSON_INTEGRATOR
     constexpr auto key = []() {
-      static_assert(GKNPOINTS == 15 || GKNPOINTS == 21 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 ||
-                        GKNPOINTS == 61,
-                    "Unsupported GKNPOINTS value");
       switch (GKNPOINTS) {
         case 15:
           return GSL_INTEG_GAUSS15;
