@@ -785,7 +785,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   const int status = integrator<integrand_corrphotoioncoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs,
                                                                              epsrel, &gammacorr, &error);
   if (status != 0 && (status != 18 || (error / gammacorr) > 0.1)) {
-#if !USE_SIMPSON_INTEGRATOR
+#ifndef GPU_ON
     printlnlog(
         "corrphotoioncoeff integrator warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
         "integral {:g} error {:g}",

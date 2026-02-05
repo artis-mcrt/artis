@@ -1,25 +1,27 @@
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
+
 #include "sn3d.h"
 
-#if USE_SIMPSON_INTEGRATOR
+#ifdef USE_SIMPSON_INTEGRATOR
 #include <algorithm>
 
 #include "globals.h"
-#else
 
-#if defined(USE_BOOST) && USE_BOOST
+#elifdef USE_BOOST
+
 #pragma clang unsafe_buffer_usage begin
 #include <boost/math/quadrature/gauss_kronrod.hpp>
 #pragma clang unsafe_buffer_usage end
+
 #else
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_math.h>
 
-#include "constants.h"
-#endif
+#include <cstddef>
+#include <memory>
 #endif
 
 void ratecoefficients_init();
@@ -83,53 +85,54 @@ constexpr auto simpson_integrator(auto& params, const double a, const double b, 
 
   return integral;
 }
+
 template <double func_integrand(double, void* const), int GKNPOINTS = 61>
 auto integrator(auto params, const double a, const double b, const double epsrel, double* result, double* abserr)
     -> int {
-  if constexpr (USE_SIMPSON_INTEGRATOR) {
-    // need an odd number for Simpson rule
-    const int samplecount = (std::max(1, static_cast<int>((b / a) / globals::NPHIXSNUINCREMENT)) * 4) + 1;
+  static_assert(GKNPOINTS == 15 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 || GKNPOINTS == 61,
+                "Unsupported GKNPOINTS value");
 
-    *result = simpson_integrator<func_integrand>(params, a, b, samplecount);
-    *abserr = 0.;
-    return 0;
+#ifdef USE_SIMPSON_INTEGRATOR
+  // need an odd number for Simpson rule
+  const int samplecount = (std::max(1, static_cast<int>((b / a) / globals::NPHIXSNUINCREMENT)) * 4) + 1;
 
-  } else {
-    static_assert(GKNPOINTS == 15 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 || GKNPOINTS == 61,
-                  "Unsupported GKNPOINTS value");
-#if !USE_SIMPSON_INTEGRATOR && defined(USE_BOOST) && USE_BOOST
-    *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
-        [&](double x) { return func_integrand(x, &params); }, a, b, 15, epsrel, abserr);
-    return ((*abserr / std::abs(*result)) > epsrel ? 1 : 0);
+  *result = simpson_integrator<func_integrand>(params, a, b, samplecount);
+  *abserr = 0.;
+  return 0;
 
-#elif !USE_SIMPSON_INTEGRATOR
-    constexpr auto key = []() {
-      switch (GKNPOINTS) {
-        case 15:
-          return GSL_INTEG_GAUSS15;
-        case 21:
-          return GSL_INTEG_GAUSS21;
-        case 31:
-          return GSL_INTEG_GAUSS31;
-        case 41:
-          return GSL_INTEG_GAUSS41;
-        case 51:
-          return GSL_INTEG_GAUSS51;
-        default:
-          return GSL_INTEG_GAUSS61;
-      }
-    }();
-    static_assert(key >= 0, "Unsupported GKNPOINTS value");
+#elifdef USE_BOOST
+  // Boost's Gauss-Kronrod integrator
+  *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
+      [&](double x) { return func_integrand(x, &params); }, a, b, 15, epsrel, abserr);
+  return ((*abserr / std::abs(*result)) > epsrel ? 1 : 0);
 
-    gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-    const auto gslfunc = gsl_function{.function = func_integrand, .params = &params};
-    const auto status =
-        gsl_integration_qag(&gslfunc, a, b, 0., epsrel, GSLWSIZE, key, gslworkspace.get(), result, abserr);
-    gsl_set_error_handler(previous_handler);
+#else
+  // GSL's QAG adaptive integrator
+  constexpr auto key = []() {
+    switch (GKNPOINTS) {
+      case 15:
+        return GSL_INTEG_GAUSS15;
+      case 21:
+        return GSL_INTEG_GAUSS21;
+      case 31:
+        return GSL_INTEG_GAUSS31;
+      case 41:
+        return GSL_INTEG_GAUSS41;
+      case 51:
+        return GSL_INTEG_GAUSS51;
+      default:
+        return GSL_INTEG_GAUSS61;
+    }
+  }();
 
-    return status;
+  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+  const auto gslfunc = gsl_function{.function = func_integrand, .params = &params};
+  const auto status =
+      gsl_integration_qag(&gslfunc, a, b, 0., epsrel, GSLWSIZE, key, gslworkspace.get(), result, abserr);
+  gsl_set_error_handler(previous_handler);
+
+  return status;
 #endif
-  }
 }
 
 #endif  // RATECOEFF_H

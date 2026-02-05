@@ -1,7 +1,7 @@
 #include "thermalbalance.h"
 
 #pragma clang unsafe_buffer_usage begin
-#if defined(USE_BOOST) && USE_BOOST
+#ifdef USE_BOOST
 #include <boost/math/tools/toms748_solve.hpp>
 #else
 #include <gsl/gsl_errno.h>
@@ -81,7 +81,7 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
                                                                           &bfheating, &error);
 
   if (status != 0 && (status != 18 || (error / bfheating) > 0.1)) {
-#if !USE_SIMPSON_INTEGRATOR
+#ifndef GPU_ON
     printlnlog(
         "bf_heating integrator gsl warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
         "integral {:g} error {:g}",
@@ -287,7 +287,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
                      HeatingCoolingRates& heatingcoolingrates, const std::vector<double>& bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::get_Te(nonemptymgi);
-#if defined(USE_BOOST) && USE_BOOST
+#ifdef USE_BOOST
   constexpr auto method = "boost toms748_solve";
 #else
   constexpr auto method = "gsl brent";
@@ -314,7 +314,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
   if (thermalmin * thermalmax < 0) {
     const auto maxit = 100U;
     // If it has, then solve for the root T_e
-#if defined(USE_BOOST) && USE_BOOST
+#ifdef USE_BOOST
     {
       // use TOMS 748 solver from Boost
       uintmax_t iternum = maxit;

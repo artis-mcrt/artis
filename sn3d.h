@@ -1,7 +1,6 @@
 #ifndef SN3D_H
 #define SN3D_H
 
-#include <gsl/gsl_integration.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -82,22 +81,15 @@ inline std::string outputlinestr = {};
 inline bool outputstartofline = true;
 inline tm timebuf{};
 
-#ifndef USE_SIMPSON_INTEGRATOR
-#define USE_SIMPSON_INTEGRATOR false
-#endif
-
 #ifndef USE_BOOST
-#define USE_BOOST false
-#endif
+#include <gsl/gsl_integration.h>
+constexpr size_t GSLWSIZE = 16384;  // GSL integration workspace size
 
 inline thread_local auto gslworkspace =
     std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace*)>{
-        USE_SIMPSON_INTEGRATOR ? nullptr : gsl_integration_workspace_alloc(GSLWSIZE),
-        [](gsl_integration_workspace* const w) -> void {
-          if (!USE_SIMPSON_INTEGRATOR) {
-            gsl_integration_workspace_free(w);
-          }
-        }};
+        gsl_integration_workspace_alloc(GSLWSIZE),
+        [](gsl_integration_workspace* const w) -> void { gsl_integration_workspace_free(w); }};
+#endif
 
 #ifdef _OPENMP
 

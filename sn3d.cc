@@ -756,8 +756,6 @@ auto main(int argc, char* argv[]) -> int {
 
   printlnlog("time at start {}", real_time_start);
 
-  printlnlog("integration method is {}", USE_SIMPSON_INTEGRATOR ? "Simpson rule" : "GSL qag");
-
 #ifdef WALLTIMELIMITSECONDS
   int walltimelimitseconds = WALLTIMELIMITSECONDS;
 #else

@@ -71,7 +71,7 @@ ifneq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -Wunused-macros -Werror -Wno-unknown-pragmas -Wno-error=cast-function-type -MD -MP -Wno-unused-function
 endif
 
-# CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR=true
+# CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR
 
 # profile-guided optimisation
 # generate profile:
@@ -82,7 +82,7 @@ endif
 # CXXFLAGS += -fprofile-use="profdataraw"
 
 ifeq ($(GPU),ON)
-	CXXFLAGS += -DGPU_ON=true -DUSE_SIMPSON_INTEGRATOR=true
+	CXXFLAGS += -DGPU_ON -DUSE_SIMPSON_INTEGRATOR -DBOOST_MATH_NO_EXCEPTIONS -DBOOST_NO_IOSTREAM
 	BUILD_DIR := $(BUILD_DIR)_gpu
 else ifeq ($(GPU),OFF)
 else ifeq ($(GPU),)
@@ -199,7 +199,7 @@ endif
 
 
 ifeq ($(BOOST),ON)
-	CXXFLAGS += -DUSE_BOOST=true -DBOOST_MATH_STANDALONE
+	CXXFLAGS += -DUSE_BOOST -DBOOST_MATH_STANDALONE
 	BUILD_DIR := $(BUILD_DIR)_boost
 endif
 
