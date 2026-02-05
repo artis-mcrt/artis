@@ -746,7 +746,6 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void* const vo
 auto calculate_corrphotoioncoeff_integral(const int element, const int ion, const int level, const int phixstargetindex,
                                           const int nonemptymgi) -> double {
   constexpr double epsrel = 1e-3;
-  constexpr double epsrelwarning = 1e-1;
 
   const auto loweruniquelevelindex = get_uniquelevelindex(element, ion, level);
   const double nu_threshold = ONEOVERH * get_phixs_threshold(loweruniquelevelindex, phixstargetindex);
@@ -783,10 +782,10 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   double error = 0.;
 
   double gammacorr = 0.;
-  const int status = integrator<integrand_corrphotoioncoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs,
-                                                                             epsrel, &gammacorr, &error);
+  const int status = integrator<integrand_corrphotoioncoeff_custom_radfield>(  // cppcheck-suppress unreadVariable
+      intparas, nu_threshold, nu_max_phixs, epsrel, &gammacorr, &error);
 #if !USE_SIMPSON_INTEGRATOR
-  if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
+  if (status != 0 && (status != 18 || (error / gammacorr) > 0.1)) {
     printlnlog(
         "corrphotoioncoeff integrator warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
         "integral {:g} error {:g}",
