@@ -65,7 +65,6 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
                               const int nonemptymgi) -> double {
   double error = 0.;
   const double epsrel = 1e-3;
-  const double epsrelwarning = 1e-1;
 
   const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
 
@@ -79,11 +78,11 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
 
   double bfheating = 0.;
 
-  const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsrel,
-                                                                          &bfheating, &error);
+  const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(  // cppcheck-suppress unreadVariable
+      intparas, nu_threshold, nu_max_phixs, epsrel, &bfheating, &error);
 
 #if !USE_SIMPSON_INTEGRATOR
-  if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning)) {
+  if (status != 0 && (status != 18 || (error / bfheating) > 0.1)) {
     printlnlog(
         "bf_heating integrator gsl warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
         "integral {:g} error {:g}",
