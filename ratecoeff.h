@@ -99,7 +99,7 @@ auto integrator(auto params, const double a, const double b, const double epsrel
                   "Unsupported GKNPOINTS value");
 #if !USE_SIMPSON_INTEGRATOR && defined(USE_BOOST) && USE_BOOST
     *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
-        [&](double x) { return func_integrand(x, &params); }, a, b, 5, epsrel, abserr);
+        [&](double x) { return func_integrand(x, &params); }, a, b, 15, epsrel, abserr);
     return ((*abserr / std::abs(*result)) > epsrel ? 1 : 0);
 
 #elif !USE_SIMPSON_INTEGRATOR
