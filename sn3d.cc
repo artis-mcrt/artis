@@ -756,6 +756,18 @@ auto main(int argc, char* argv[]) -> int {
 
   printlnlog("time at start {}", real_time_start);
 
+#ifdef USE_SIMPSON_INTEGRATOR
+  const auto* integrator_name{"Simpson rule"};
+#else
+#ifdef USE_BOOST
+  const auto* integrator_name{"Boost qag adaptive integrator"};
+#else
+  const auto* integrator_name{"GSL qag adaptive integrator"};
+#endif
+#endif
+
+  printlnlog("integration method is {}", integrator_name);
+
 #ifdef WALLTIMELIMITSECONDS
   int walltimelimitseconds = WALLTIMELIMITSECONDS;
 #else
