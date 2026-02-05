@@ -720,10 +720,8 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
   return stimrecombcoeff;
 }
 
-auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void* const voidparas) -> double
-// Integrand to calculate the rate coefficient for photoionisation
-// using gsl integrators. Corrected for stimulated recombination.
-{
+// Integrand to calculate the rate coefficient for photoionisation. Corrected for stimulated recombination.
+auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void* const voidparas) -> double {
   const GSLIntegralParasGammaCorr* const params = static_cast<GSLIntegralParasGammaCorr*>(voidparas);
   const int nonemptymgi = params->nonemptymgi;
 
@@ -790,7 +788,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
 #if !USE_SIMPSON_INTEGRATOR
   if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
     printlnlog(
-        "corrphotoioncoeff gsl integrator warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
+        "corrphotoioncoeff integrator warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
         "integral {:g} error {:g}",
         status, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion), level,
         phixstargetindex, gammacorr, error);
@@ -1068,8 +1066,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
 }
 
 // Precalculates the rate coefficients for stimulated and spontaneous
-// recombination and photoionisation on a given temperature grid using
-// libgsl integrators.
+// recombination and photoionisation on a given temperature grid using integration.
 // NB: with the nebular approximation they only depend on T_e, T_R and W.
 // W is easily factored out. For stimulated recombination we must assume
 // T_e = T_R for this precalculation.
