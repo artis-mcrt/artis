@@ -100,7 +100,8 @@ auto integrator(auto params, const double a, const double b, const double epsrel
   *abserr = 0.;
   return 0;
 
-#elifdef USE_BOOST
+#else
+#ifdef USE_BOOST
   // Boost's Gauss-Kronrod integrator
   *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
       [&](double x) { return func_integrand(x, &params); }, a, b, 15, epsrel, abserr);
@@ -132,6 +133,7 @@ auto integrator(auto params, const double a, const double b, const double epsrel
   gsl_set_error_handler(previous_handler);
 
   return status;
+#endif
 #endif
 }
 
