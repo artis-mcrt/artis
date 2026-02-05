@@ -19,10 +19,10 @@
 #include <boost/assert/source_location.hpp>
 #include <boost/math/tools/toms748_solve.hpp>
 #else
+#include <gsl/gsl_errno.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 #endif
-#include <gsl/gsl_errno.h>
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
@@ -266,8 +266,7 @@ auto calculate_planck_integral(const double T_R, const double nu_lower, const do
 
   const int status = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsrel, &integral, &error);
   if (status != 0) {
-    printlnlog("planck_integral integrator status {}, GSL_FAILURE= {}. Integral value {:g}, setting to zero.", status,
-               static_cast<int>(GSL_FAILURE), integral);
+    printlnlog("planck_integral integrator status {}. Integral value {:g}, setting to zero.", status, integral);
     integral = 0.;
   }
 
