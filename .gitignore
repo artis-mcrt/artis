@@ -19,3 +19,6 @@ compile_commands.json
 *.dSYM/
 .cache
 *.log
+boost*.tar.gz
+math-boost*/
+boost*/

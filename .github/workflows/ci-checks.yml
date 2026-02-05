@@ -92,6 +92,13 @@ jobs:
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
+            - name: Install boost headers
+              if: matrix.compiler.name == 'nvc++'
+              run: |
+                  wget https://github.com/boostorg/math/archive/refs/tags/boost-1.90.0.tar.gz
+                  tar -zxf boost-1.90.0.tar.gz
+                  echo "CXXFLAGS=-I${{ github.workspace }}/math-boost-1.90.0/include $CXXFLAGS" >> $GITHUB_ENV
+
             - name: Cache gcc build
               id: cache-gcc
               if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
