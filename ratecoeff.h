@@ -95,13 +95,12 @@ auto integrator(auto params, const double a, const double b, const double epsrel
     return 0;
 
   } else {
-#if !USE_SIMPSON_INTEGRATOR
-#if defined(USE_BOOST) && USE_BOOST
+#if !USE_SIMPSON_INTEGRATOR && defined(USE_BOOST) && USE_BOOST
     *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
         [&](double x) { return func_integrand(x, &params); }, a, b, 5, epsrel, abserr);
-    return (*abserr / std::abs(*result)) > epsrel;
+    return ((*abserr / std::abs(*result)) > epsrel ? 1 : 0);
 
-#else
+#elif !USE_SIMPSON_INTEGRATOR
     constexpr auto key = []() {
       static_assert(GKNPOINTS == 15 || GKNPOINTS == 21 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 ||
                         GKNPOINTS == 61,
@@ -130,7 +129,6 @@ auto integrator(auto params, const double a, const double b, const double epsrel
     gsl_set_error_handler(previous_handler);
 
     return status;
-#endif
 #endif
   }
 }
