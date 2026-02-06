@@ -934,7 +934,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       gsl_linalg_LU_refine(rate_matrix, &rate_matrix_LU_decomp, &p, &gsl_balance_vector, &x, &gsl_work_vector);
     }
 
-    gsl_vector_memcpy(&gsl_vec_residual, &gsl_balance_vector);
+    std::ranges::copy(balance_vector, vec_residual.begin());
     gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, &x, -1.0, &gsl_vec_residual);  // calculate Ax - b = residual
     const double error = fabs(gsl_vector_get(
         &gsl_vec_residual, gsl_blas_idamax(&gsl_vec_residual)));  // value of the largest absolute residual
