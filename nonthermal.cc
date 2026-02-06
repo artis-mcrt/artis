@@ -1200,9 +1200,7 @@ auto calculate_nt_ionisation_ratecoeff(const int nonemptymgi, const int element,
                                        const bool assumeshellpotentialisvalence, const std::array<double, SFPTS>& yfunc)
     -> double {
   std::array<double, SFPTS> cross_section_vec{};
-  auto gsl_cross_section_vec = gsl_vector_view_array(cross_section_vec.data(), SFPTS).vector;
   std::array<double, SFPTS> cross_section_vec_allshells{};
-  auto gsl_cross_section_vec_allshells = gsl_vector_view_array(cross_section_vec_allshells.data(), SFPTS).vector;
 
   const int Z = get_atomicnumber(element);
   const int ionstage = get_ionstage(element, ion);
@@ -1222,10 +1220,14 @@ auto calculate_nt_ionisation_ratecoeff(const int nonemptymgi, const int element,
         assert_always(ionpot_shell >= ionpot_valence);
 
         // boost the ionisation rate by assuming shell vacancy energy is used to eject valence electrons
-        gsl_vector_scale(&gsl_cross_section_vec, ionpot_shell / ionpot_valence);
+        for (int i = 0; i < SFPTS; i++) {
+          cross_section_vec[i] *= ionpot_shell / ionpot_valence;
+        }
       }
 
-      gsl_vector_add(&gsl_cross_section_vec_allshells, &gsl_cross_section_vec);
+      for (int i = 0; i < SFPTS; i++) {
+        cross_section_vec_allshells[i] += cross_section_vec[i];
+      }
     }
   }
 
