@@ -1961,41 +1961,32 @@ void sfmatrix_add_ionisation(std::vector<double>& sfmatrixuppertri, const int Z,
 // Multiply y by energy interval [eV] to get non-thermal electron number flux. y(E) * dE is the flux of electrons with
 // energy in the range (E, E + dE) in units of particles/cm2/s. y has units of particles/cm2/s/eV
 auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, SFPTS> {
-  std::array<size_t, SFPTS> vec_permutation{};
+  THREADLOCALONHOST std::array<double, SFPTS> yvec_arr{};
+
+  auto gsl_yvec = gsl_vector_view_array(yvec_arr.data(), SFPTS).vector;
+  const auto gsl_rhsvec = gsl_vector_const_view_array(rhsvec.data(), SFPTS).vector;
+
+  THREADLOCALONHOST std::array<size_t, SFPTS> vec_permutation{};
   gsl_permutation p{.size = SFPTS, .data = vec_permutation.data()};
   gsl_permutation_init(&p);
 
   const auto gsl_sfmatrix = gsl_matrix_const_view_array(sfmatrix.data(), SFPTS, SFPTS).matrix;
 
-  // sfmatrix must be in upper triangular form
+  // sfmatrix is already in upper triangular form
   const auto& gsl_sfmatrix_LU = gsl_sfmatrix;
-
-  // if the matrix is not upper triangular, then do a decomposition
-  // make a copy of the matrix for the LU decomp
-  // std::array<double, SFPTS> sfmatrix_LU{};
-  // auto gsl_sfmatrix_LU = gsl_matrix_view_array(sfmatrix_LU.data(), SFPTS, SFPTS).matrix;
-  // gsl_matrix_memcpy(&gsl_sfmatrix_LU, &gsl_sfmatrix);
-  // int s{};  // sign of the transformation
-  // gsl_linalg_LU_decomp(&gsl_sfmatrix_LU, &p, &s);
-
-  std::array<double, SFPTS> yvec_arr{};
-  auto gsl_yvec = gsl_vector_view_array(yvec_arr.data(), SFPTS).vector;
-
-  const auto gsl_rhsvec = gsl_vector_const_view_array(rhsvec.data(), SFPTS).vector;
 
   // solve matrix equation: sf_matrix * y_vec = rhsvec for yvec
   gsl_linalg_LU_solve(&gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec);
 
   // refine the solution
 
-  double error_best = -1.;
-  std::array<double, SFPTS> yvec_best{};
-  auto gsl_yvec_best = gsl_vector_view_array(yvec_best.data(), SFPTS).vector;
-  std::array<double, SFPTS> work_vector{};
+  THREADLOCALONHOST std::array<double, SFPTS> yvec_best{};
+  THREADLOCALONHOST std::array<double, SFPTS> work_vector{};
+  THREADLOCALONHOST std::array<double, SFPTS> residual_vector{};
   auto gsl_work_vector = gsl_vector_view_array(work_vector.data(), SFPTS).vector;
-  std::array<double, SFPTS> residual_vector{};
   auto gsl_residual_vector = gsl_vector_view_array(residual_vector.data(), SFPTS).vector;
 
+  double error_best = -1.;
   int iteration = 0;
   for (iteration = 0; iteration < 10; iteration++) {
     if (iteration > 0) {
@@ -2004,14 +1995,14 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
     }
 
     // calculate Ax - b = residual
-    gsl_vector_memcpy(&gsl_residual_vector, &gsl_rhsvec);
+    std::ranges::copy(rhsvec, residual_vector.begin());
     gsl_blas_dgemv(CblasNoTrans, 1.0, &gsl_sfmatrix, &gsl_yvec, -1.0, &gsl_residual_vector);
 
     // value of the largest absolute residual
     const double error = fabs(gsl_vector_get(&gsl_residual_vector, gsl_blas_idamax(&gsl_residual_vector)));
 
     if (error < error_best || error_best < 0.) {
-      gsl_vector_memcpy(&gsl_yvec_best, &gsl_yvec);
+      std::ranges::copy(yvec_arr, yvec_best.begin());
       error_best = error;
     }
   }
@@ -2021,7 +2012,7 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
           "  SF solver LU_refine: After {} iterations, best solution vector has a max residual of {:g} (WARNING)",
           iteration, error_best);
     }
-    gsl_vector_memcpy(&gsl_yvec, &gsl_yvec_best);
+    std::ranges::copy(yvec_best, yvec_arr.begin());
   }
 
   if (gsl_vector_isnonneg(&gsl_yvec) == 0) {
