@@ -19,12 +19,17 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
+#ifdef USE_EIGEN
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#else
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cblas.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_vector_double.h>
+#endif
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
@@ -1963,7 +1968,21 @@ void sfmatrix_add_ionisation(std::vector<double>& sfmatrixuppertri, const int Z,
 // Multiply y by energy interval [eV] to get non-thermal electron number flux. y(E) * dE is the flux of electrons with
 // energy in the range (E, E + dE) in units of particles/cm2/s. y has units of particles/cm2/s/eV
 auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, SFPTS> {
+  // solve the matrix-vector equation sfmatrix * yvec = rhsvec for yvec
+
   THREADLOCALONHOST std::array<double, SFPTS> yvec_arr{};
+
+#ifdef USE_EIGEN
+
+  const Eigen::Map<const Eigen::Vector<double, SFPTS>> eigen_rhsvec{rhsvec.data()};
+  const Eigen::Map<const Eigen::Matrix<double, SFPTS, SFPTS, Eigen::RowMajor>> eigen_sfmatrix{sfmatrix.data()};
+  assert_testmodeonly(eigen_sfmatrix.isUpperTriangular());
+
+  auto eigen_sfmatrix_LU = eigen_sfmatrix.triangularView<Eigen::Upper>();
+  Eigen::Map<Eigen::Vector<double, SFPTS>> eigen_yvec{yvec_arr.data()};
+  eigen_yvec = eigen_sfmatrix_LU.solve(eigen_rhsvec);
+
+#else
 
   auto gsl_yvec = gsl_vector_view_array(yvec_arr.data(), SFPTS).vector;
   const auto gsl_rhsvec = gsl_vector_const_view_array(rhsvec.data(), SFPTS).vector;
@@ -1980,46 +1999,53 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
   // solve matrix equation: sf_matrix * y_vec = rhsvec for yvec
   gsl_linalg_LU_solve(&gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec);
 
+#endif
+
   // refine the solution
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_best{};
-  THREADLOCALONHOST std::array<double, SFPTS> work_vector{};
   THREADLOCALONHOST std::array<double, SFPTS> residual_vector{};
-  auto gsl_work_vector = gsl_vector_view_array(work_vector.data(), SFPTS).vector;
+#ifdef USE_EIGEN
+  Eigen::Map<Eigen::Vector<double, SFPTS>> eigen_residual_vector(residual_vector.data(), SFPTS);
+#else
   auto gsl_residual_vector = gsl_vector_view_array(residual_vector.data(), SFPTS).vector;
+#endif
 
   double error_best = -1.;
   int iteration = 0;
   for (iteration = 0; iteration < 10; iteration++) {
+#ifdef USE_EIGEN
     if (iteration > 0) {
-      gsl_linalg_LU_refine(&gsl_sfmatrix, &gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec,
-                           &gsl_work_vector);  // first argument must be original matrix
+      eigen_yvec += eigen_sfmatrix_LU.solve(eigen_residual_vector);
     }
-
-    // calculate Ax - b = residual
+    eigen_residual_vector = eigen_rhsvec - eigen_sfmatrix * eigen_yvec;
+    const double error = eigen_residual_vector.cwiseAbs().maxCoeff();
+#else
+    if (iteration > 0) {
+      gsl_linalg_LU_refine(&gsl_sfmatrix, &gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec, &gsl_residual_vector);
+    }
+    // residual = sfmatrix * yvec - rhsvec
     std::ranges::copy(rhsvec, residual_vector.begin());
     gsl_blas_dgemv(CblasNoTrans, 1.0, &gsl_sfmatrix, &gsl_yvec, -1.0, &gsl_residual_vector);
-
-    // value of the largest absolute residual
+    // error is the largest absolute residual element
     const double error = fabs(gsl_vector_get(&gsl_residual_vector, gsl_blas_idamax(&gsl_residual_vector)));
+#endif
 
     if (error < error_best || error_best < 0.) {
       std::ranges::copy(yvec_arr, yvec_best.begin());
       error_best = error;
     }
+    // printlnlog("  SF solver LU_refine: After {} iterations, solution vector has a max residual of {:g}", iteration,
+    //            error);
   }
   if (error_best >= 0.) {
-    if (error_best > 1e-10) {
-      printlnlog(
-          "  SF solver LU_refine: After {} iterations, best solution vector has a max residual of {:g} (WARNING)",
-          iteration, error_best);
-    }
+    printlnlog("  SF solver LU_refine: After {} iterations, best solution vector has a max residual of {:g}", iteration,
+               error_best);
     std::ranges::copy(yvec_best, yvec_arr.begin());
   }
 
-  if (gsl_vector_isnonneg(&gsl_yvec) == 0) {
-    printlnlog("solve_sfmatrix: WARNING: y function goes negative!");
-  }
+  assert_always(std::ranges::all_of(yvec_arr, [](double y) { return y >= 0.; }));
+
   return yvec_arr;
 }
 
