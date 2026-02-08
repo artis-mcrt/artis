@@ -179,28 +179,43 @@ else
 
 endif
 
-# GSL (GNU Scientific Library)
-CXXFLAGS += $(shell pkg-config --cflags gsl)
-
-ifeq ($(STATICGSL),)
-	# default to dynamic linking
-	STATICGSL := OFF
-endif
-
-ifeq ($(STATICGSL),ON)
-	gsllibdir := $(shell pkg-config --variable=libdir gsl)
-	gsl_objects = $(gsllibdir)/libgsl.a $(gsllibdir)/libgslcblas.a
-	BUILD_DIR := $(BUILD_DIR)_staticgsl
-else ifeq ($(STATICGSL),OFF)
-	LDFLAGS += $(shell pkg-config --libs gsl)
-else
-    $(error bad value for STATICGSL option. Should be ON or OFF)
-endif
-
 
 ifeq ($(BOOST),ON)
 	CXXFLAGS += -DUSE_BOOST -DBOOST_MATH_STANDALONE
 	BUILD_DIR := $(BUILD_DIR)_boost
+endif
+
+ifeq ($(EIGEN),ON)
+	CXXFLAGS += -DUSE_EIGEN $(shell pkg-config --cflags eigen3)
+	BUILD_DIR := $(BUILD_DIR)_eigen
+endif
+
+GSL := ON
+ifeq ($(BOOST),ON)
+	ifeq ($(EIGEN),ON)
+		GSL := OFF
+	endif
+endif
+
+ifeq ($(GSL),ON)
+	BUILD_DIR := $(BUILD_DIR)_gsl
+	# GSL (GNU Scientific Library)
+	CXXFLAGS += $(shell pkg-config --cflags gsl)
+
+	ifeq ($(STATICGSL),)
+		# default to dynamic linking
+		STATICGSL := OFF
+	endif
+
+	ifeq ($(STATICGSL),ON)
+		gsllibdir := $(shell pkg-config --variable=libdir gsl)
+		gsl_objects = $(gsllibdir)/libgsl.a $(gsllibdir)/libgslcblas.a
+		BUILD_DIR := $(BUILD_DIR)_staticgsl
+	else ifeq ($(STATICGSL),OFF)
+		LDFLAGS += $(shell pkg-config --libs gsl)
+	else
+		$(error bad value for STATICGSL option. Should be ON or OFF)
+	endif
 endif
 
 # Use GSL inline functions
