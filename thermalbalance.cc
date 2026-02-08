@@ -298,27 +298,28 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
     return T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs);
   };
 
-  double thermalmin = f_T_e(T_min);
-  double thermalmax = f_T_e(T_max);
+  const double f_T_min = f_T_e(T_min);
+  const double f_T_max = f_T_e(T_max);
 
-  if (!std::isfinite(thermalmin) || !std::isfinite(thermalmax)) {
+  const bool invalid_values = (!std::isfinite(f_T_min) || !std::isfinite(f_T_max));
+  if (invalid_values) {
     printlnlog(
         "[abort request] call_T_e_finder: non-finite results in modelcell {} (T_R={:g}, W={:g}). T_e forced to be "
         "MINTEMP",
         modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
-    thermalmax = thermalmin = -1;
   }
 
   double T_e{NAN};
   // Check whether the thermal balance equation has a root in [T_min,T_max]
-  if (thermalmin * thermalmax < 0) {
+  if (!invalid_values && f_T_min * f_T_max < 0) {
     const auto maxit = 100U;
     // If it has, then solve for the root T_e
 #ifdef USE_BOOST
     {
       // use TOMS 748 solver from Boost
       uintmax_t iternum = maxit;
-      auto result = boost::math::tools::toms748_solve(f_T_e, T_min, T_max, ftol<TEMPERATURE_SOLVER_ACCURACY>, iternum);
+      auto result = boost::math::tools::toms748_solve(f_T_e, T_min, T_max, f_T_min, f_T_max,
+                                                      ftol<TEMPERATURE_SOLVER_ACCURACY>, iternum);
       T_e = 0.5 * (result.first + result.second);
       if (iternum >= maxit) {
         printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations. interval [{:g}, {:g}]",
@@ -366,7 +367,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
 
   // Quick solver style: works if we can assume that there is either one or no
   // solution on [MINTEMP.MAXTEMP] (check that by doing a plot of heating-cooling vs. T_e)
-  else if (thermalmax < 0) {
+  else if (invalid_values || f_T_max < 0) {
     // Thermal balance equation always negative ===> T_e = T_min
     T_e = MINTEMP;
     printlnlog(

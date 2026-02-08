@@ -306,14 +306,12 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
   };
 
   // Check whether the equation has a root in [T_min,T_max]
-  double delta_nu_bar_min = f_deltanubar(T_R_min);
-  double delta_nu_bar_max = f_deltanubar(T_R_max);
+  const double f_Tmin = f_deltanubar(T_R_min);
+  const double f_Tmax = f_deltanubar(T_R_max);
 
-  if (!std::isfinite(delta_nu_bar_min) || !std::isfinite(delta_nu_bar_max)) {
-    delta_nu_bar_max = delta_nu_bar_min = -1;
-  }
+  const bool invalid_values = (!std::isfinite(f_Tmin) || !std::isfinite(f_Tmax));
 
-  if (delta_nu_bar_min * delta_nu_bar_max < 0) {
+  if (!invalid_values && f_Tmin * f_Tmax < 0) {
     // If there is a root in the interval, solve for T_R
 
     constexpr double epsrel = 1e-4;
@@ -321,7 +319,8 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
 #ifdef USE_BOOST
     // use TOMS 748 solver from Boost
     uintmax_t iteration_num = maxit;
-    auto result = boost::math::tools::toms748_solve(f_deltanubar, T_R_min, T_R_max, ftol<epsrel>, iteration_num);
+    auto result =
+        boost::math::tools::toms748_solve(f_deltanubar, T_R_min, T_R_max, f_Tmin, f_Tmax, ftol<epsrel>, iteration_num);
     const auto T_R_solution = static_cast<float>(0.5 * (result.first + result.second));
     if (iteration_num >= maxit) {
       printlnlog("[warning] find_T_R: T_R did not converge within {} iterations.", iteration_num);
@@ -356,9 +355,8 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
     gsl_root_fsolver_free(T_R_solver);
     return T_R_solution;
 #endif
-  } else if (delta_nu_bar_max < 0) {
-    // Thermal balance equation always negative ===> T_R = T_min
-    // Calculate the rates again at this T_e to print them to file
+  } else if (invalid_values || f_Tmax < 0) {
+    // delta_nu_bar always negative, so the solution is above T_R_max
     printlnlog("find_T_R: cell {} bin {:4} no solution in interval, clamping to T_R_max={:g}",
                grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_max);
     return T_R_max;

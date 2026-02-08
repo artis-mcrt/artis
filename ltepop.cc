@@ -266,14 +266,16 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 
   const auto f_nne = [nonemptymgi, force_lte](const double nne) { return nne_solution_f(nne, nonemptymgi, force_lte); };
 
-  double nne_lo = 0.;  // MINPOP;
-  if (f_nne(nne_lo) * f_nne(nne_hi) > 0) {
+  double nne_low = 0.;
+  const auto f_nne_low = f_nne(nne_low);
+  const auto f_nne_hi = f_nne(nne_hi);
+  if (f_nne_low * f_nne_hi > 0) {
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi,
+    printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_low, nne_hi,
              grid::get_TR(nonemptymgi), grid::get_Te(nonemptymgi), grid::get_W(nonemptymgi),
              grid::get_rho(nonemptymgi));
-    printout("nne@x_lo %g\n", f_nne(nne_lo));
-    printout("nne@x_hi %g\n", f_nne(nne_hi));
+    printout("nne@x_lo %g\n", f_nne_low);
+    printout("nne@x_hi %g\n", f_nne_hi);
 
     for (int element = 0; element < get_nelements(); element++) {
       printout("modelgridindex %d, element %d, uppermost_ion is %d\n", modelgridindex, element,
@@ -294,7 +296,8 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 #ifdef USE_BOOST
   // use TOMS 748 solver from Boost
   uintmax_t iter = maxit;
-  auto result = boost::math::tools::toms748_solve(f_nne, nne_lo, nne_hi, ftol<fractional_accuracy>, iter);
+  auto result =
+      boost::math::tools::toms748_solve(f_nne, nne_low, nne_hi, f_nne_low, f_nne_hi, ftol<fractional_accuracy>, iter);
   const double nne_solution = 0.5 * (result.first + result.second);
   if (iter >= maxit) {
     printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations", iter);
@@ -304,16 +307,16 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
 
   nneSolutionParas paras = {.nonemptymgi = nonemptymgi, .force_saha = force_lte};
   gsl_function f = {.function = &nne_solution_f, .params = &paras};
-  gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
+  gsl_root_fsolver_set(solver, &f, nne_low, nne_hi);
   int status = GSL_CONTINUE;
   auto iter = 0U;
   double nne_solution = 0.;
   for (iter = 0; iter <= maxit; iter++) {
     gsl_root_fsolver_iterate(solver);
     nne_solution = gsl_root_fsolver_root(solver);
-    nne_lo = gsl_root_fsolver_x_lower(solver);
+    nne_low = gsl_root_fsolver_x_lower(solver);
     nne_hi = gsl_root_fsolver_x_upper(solver);
-    status = gsl_root_test_interval(nne_lo, nne_hi, 0, fractional_accuracy);
+    status = gsl_root_test_interval(nne_low, nne_hi, 0, fractional_accuracy);
     if (status != GSL_CONTINUE) {
       break;
     }
