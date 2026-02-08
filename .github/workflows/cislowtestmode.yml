@@ -15,6 +15,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+    showconcurrencygroupname:
+        name: Show concurrency group name
+        runs-on: ubuntu-latest
+        steps:
+            - run: |
+                echo "Concurrency group: ${{ github.workflow }}-${{ github.ref_protected && github.run_id || github.ref }}"
+
     citestmode:
         name: testmode ON
         uses: ./.github/workflows/ci.yml
