@@ -2004,10 +2004,10 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
   // refine the solution
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_best{};
-  THREADLOCALONHOST std::array<double, SFPTS> residual_vec{};
 #ifdef EIGEN_ON
-  auto eigen_residual_vec = Eigen::Map<Eigen::Vector<double, SFPTS>>{residual_vec.data(), SFPTS};
+  THREADLOCALONHOST Eigen::Vector<double, SFPTS> eigen_residual_vec{};
 #else
+  THREADLOCALONHOST std::array<double, SFPTS> residual_vec{};
   auto gsl_residual_vec = gsl_vector_view_array(residual_vec.data(), SFPTS).vector;
 #endif
 
