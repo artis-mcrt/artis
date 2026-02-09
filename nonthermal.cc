@@ -2022,6 +2022,7 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
     const double error = eigen_residual_vec.cwiseAbs().maxCoeff();
 #else
     if (iteration > 0) {
+      // use gsl_vec_residual as the temporary work vector
       gsl_linalg_LU_refine(&gsl_sfmatrix, &gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec, &gsl_residual_vec);
     }
     // residual = sfmatrix * yvec - rhsvec
