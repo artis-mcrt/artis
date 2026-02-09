@@ -1193,7 +1193,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
               (index >= index_ion_ground && index <= index_ion_toplevel) ? 1.0 : 0.0;
         }
 
-        balance_vector[get_nlte_vector_index(element, ion, index_ion_ground, first_ion_used)] = nnion;
+        balance_vector[index_ion_ground] = nnion;
       }
     }
 
