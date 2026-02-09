@@ -907,20 +907,24 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   vec_x.reserve(max_nlte_dimension);
   vec_x.resize(nlte_dimension);
 
-  THREADLOCALONHOST std::vector<double> rate_matrix_LU_decomp;
-  rate_matrix_LU_decomp.reserve(max_nlte_dimension * max_nlte_dimension);
-  rate_matrix_LU_decomp.resize(rate_matrix.size());
-
 #ifdef EIGEN_ON
-  auto eigen_vec_x = Eigen::Map<Eigen::VectorXd>(vec_x.data(), nlte_dimension);
-  const auto eigen_balance_vector = Eigen::Map<const Eigen::VectorXd>(balance_vector.data(), nlte_dimension);
+  auto eigen_vec_x = Eigen::Map<Eigen::VectorX<double>>(vec_x.data(), nlte_dimension);
+  const auto eigen_balance_vector = Eigen::Map<const Eigen::VectorX<double>>(balance_vector.data(), nlte_dimension);
 
   const auto eigen_rate_matrix =
       Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
           rate_matrix.data(), nlte_dimension, nlte_dimension);
-  const auto rate_matrix_lu = Eigen::PartialPivLU<Eigen::MatrixXd>{eigen_rate_matrix};
-  eigen_vec_x = rate_matrix_lu.solve(eigen_balance_vector);
+
+  THREADLOCALONHOST Eigen::PartialPivLU<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
+      eigen_rate_matrix_lu;
+
+  eigen_rate_matrix_lu = eigen_rate_matrix.partialPivLu();
+  eigen_vec_x = eigen_rate_matrix_lu.solve(eigen_balance_vector);
 #else
+
+  THREADLOCALONHOST std::vector<double> rate_matrix_LU_decomp;
+  rate_matrix_LU_decomp.reserve(max_nlte_dimension * max_nlte_dimension);
+  rate_matrix_LU_decomp.resize(rate_matrix.size());
 
   // make a copy of the rate matrix for the LU decomp call as gsl_linalg_LU_decomp modifies the input matrix
   std::ranges::copy(rate_matrix, rate_matrix_LU_decomp.begin());
@@ -956,7 +960,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   vec_residual.resize(nlte_dimension);
 
 #ifdef EIGEN_ON
-  auto eigen_vec_residual = Eigen::Map<Eigen::Vector<double, SFPTS>>(vec_residual.data(), nlte_dimension);
+  auto eigen_vec_residual = Eigen::Map<Eigen::VectorX<double>>(vec_residual.data(), nlte_dimension);
 #else
   auto gsl_vec_residual = gsl_vector_view_array(vec_residual.data(), nlte_dimension).vector;
 #endif
@@ -965,7 +969,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   for (iteration = 0; iteration < 10; iteration++) {
 #ifdef EIGEN_ON
     if (iteration > 0) {
-      eigen_vec_x += rate_matrix_lu.solve(eigen_vec_residual);
+      eigen_vec_x += eigen_rate_matrix_lu.solve(eigen_vec_residual);
     }
     eigen_vec_residual = eigen_balance_vector - eigen_rate_matrix * eigen_vec_x;
     const double error = eigen_vec_residual.cwiseAbs().maxCoeff();
@@ -988,19 +992,21 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       std::ranges::copy(vec_x, vec_x_best.begin());
       error_best = error;
     }
+    // printlnlog("  NLTE pops LU_refine: After {} iterations, solution vector has a max residual of {:g}", iteration,
+    //            error);
     if (error < 1e-40) {
       break;
     }
   }
-  if (error_best >= 0.) {
-    if (error_best > 1e-8) {
-      printlnlog(
-          "  NLTE solver matrix LU_refine: After {} iterations, best solution vector has a max residual of {:g} "
-          "(WARNING!)",
-          iteration, error_best);
-    }
 
-    std::ranges::copy(vec_x_best, vec_x.begin());
+  assert_always(error_best >= 0.);
+  std::ranges::copy(vec_x_best, vec_x.begin());
+
+  if (error_best > 1e-8) {
+    printlnlog(
+        "  NLTE solver matrix LU_refine: After {} iterations, best solution vector has a max residual of {:g} "
+        "(WARNING!)",
+        iteration, error_best);
   }
 
   // get the unnormalised populations from the x solution vector and the normalisation factors
