@@ -366,6 +366,35 @@ static void titer_average_estimators(const int nonemptymgi) {
 }
 #endif
 
+void setup_clumping_factors_for_timestep(int nts) {  // todo: maybe other arguments as well
+  const auto numcells = grid::get_npts_model();
+#ifdef READ_CLUMPING_FACTORS_FROM_FILE
+  auto fclump = fstream_required("clumping-factors.txt", std::ios::in);
+  float fv_in = 0.;
+  fclump.seekg(nts * numcells * (2 + 6 + 5));  // %f.6e (x.xxxxxxe-xx)
+
+  int nonemptymgi = 0;
+  for (int i = 0; i < numcells; i++) {
+    fclump >> fv_in;
+    if (grid::check_mgi_is_nonempty(i, nonemptymgi)) {
+      grid::set_oneoverfv(nonemptymgi, 1.F / fv_in);
+    }
+  }
+
+  fclump.close();
+#else
+  int nonemptymgi = 0;
+  for (int i = 0; i < numcells; i++) {
+    if (grid::check_mgi_is_nonempty(i, nonemptymgi)) {
+      // TODO: figure out the arguments to clumping_factor
+      grid::set_oneoverfv(nonemptymgi, clumping_factor(1., 1.));
+    }
+  }
+#endif
+}
+}
+
+// TODO: Check if we need to use the clumping factors in this function
 void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, const int titer, const double tratmid,
                       const double deltat, HeatingCoolingRates& heatingcoolingrates) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
