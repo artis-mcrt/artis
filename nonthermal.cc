@@ -2004,11 +2004,11 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
   // refine the solution
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_best{};
-  THREADLOCALONHOST std::array<double, SFPTS> residual_vector{};
+  THREADLOCALONHOST std::array<double, SFPTS> residual_vec{};
 #ifdef EIGEN_ON
-  Eigen::Map<Eigen::Vector<double, SFPTS>> eigen_residual_vector(residual_vector.data(), SFPTS);
+  auto eigen_residual_vec = Eigen::Map<Eigen::Vector<double, SFPTS>>{residual_vec.data(), SFPTS};
 #else
-  auto gsl_residual_vector = gsl_vector_view_array(residual_vector.data(), SFPTS).vector;
+  auto gsl_residual_vec = gsl_vector_view_array(residual_vec.data(), SFPTS).vector;
 #endif
 
   double error_best = -1.;
@@ -2016,19 +2016,19 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
   for (iteration = 0; iteration < 10; iteration++) {
 #ifdef EIGEN_ON
     if (iteration > 0) {
-      eigen_yvec += eigen_sfmatrix_LU.solve(eigen_residual_vector);
+      eigen_yvec += eigen_sfmatrix_LU.solve(eigen_residual_vec);
     }
-    eigen_residual_vector = eigen_rhsvec - eigen_sfmatrix * eigen_yvec;
-    const double error = eigen_residual_vector.cwiseAbs().maxCoeff();
+    eigen_residual_vec = eigen_rhsvec - eigen_sfmatrix * eigen_yvec;
+    const double error = eigen_residual_vec.cwiseAbs().maxCoeff();
 #else
     if (iteration > 0) {
-      gsl_linalg_LU_refine(&gsl_sfmatrix, &gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec, &gsl_residual_vector);
+      gsl_linalg_LU_refine(&gsl_sfmatrix, &gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec, &gsl_residual_vec);
     }
     // residual = sfmatrix * yvec - rhsvec
-    std::ranges::copy(rhsvec, residual_vector.begin());
-    gsl_blas_dgemv(CblasNoTrans, 1.0, &gsl_sfmatrix, &gsl_yvec, -1.0, &gsl_residual_vector);
+    std::ranges::copy(rhsvec, residual_vec.begin());
+    gsl_blas_dgemv(CblasNoTrans, 1.0, &gsl_sfmatrix, &gsl_yvec, -1.0, &gsl_residual_vec);
     // error is the largest absolute residual element
-    const double error = fabs(gsl_vector_get(&gsl_residual_vector, gsl_blas_idamax(&gsl_residual_vector)));
+    const double error = fabs(gsl_vector_get(&gsl_residual_vec, gsl_blas_idamax(&gsl_residual_vec)));
 #endif
 
     if (error < error_best || error_best < 0.) {
