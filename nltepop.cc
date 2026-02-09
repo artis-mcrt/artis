@@ -934,8 +934,8 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   auto gsl_rate_matrix = gsl_matrix_const_view_array(rate_matrix.data(), nlte_dimension, nlte_dimension).matrix;
 
   THREADLOCALONHOST std::vector<size_t> vec_permutation;
-  vec_permutation.reserve(max_nlte_dimension * max_nlte_dimension);
-  vec_permutation.resize(nlte_dimension * nlte_dimension);
+  vec_permutation.reserve(max_nlte_dimension);
+  vec_permutation.resize(nlte_dimension);
   gsl_permutation_struct p{.size = nlte_dimension, .data = vec_permutation.data()};
   gsl_permutation_init(&p);
 
