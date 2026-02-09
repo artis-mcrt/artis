@@ -11,7 +11,7 @@ on:
 concurrency:
   # Use github.run_id on main or develop branch (unlimited concurrency)
   # Use github.ref otherwise, so that it's unique per branch or PR
-  group: ${{ github.workflow }}-${{ github.ref_protected && github.run_id || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref_name == 'develop' && github.run_id || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - run: |
-                echo "Concurrency group: ${{ github.workflow }}-${{ github.ref_protected && github.run_id || github.ref }}"
+                echo "Concurrency group: ${{ github.workflow }}-${{ github.ref_name == 'develop' && github.run_id || github.ref }}"
 
     citestmode:
         name: testmode ON
