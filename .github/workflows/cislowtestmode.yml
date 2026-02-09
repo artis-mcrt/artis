@@ -9,8 +9,8 @@ on:
     workflow_dispatch:
 
 concurrency:
-  # Use github.run_id on main or develop branch (unlimited concurrency)
-  # Use github.ref otherwise, so that it's unique per branch or PR
+  # unlimited concurrency on develop branch ()
+  # Otherwise use the ref name (branch or tag) as concurrency group, so that only one workflow runs per branch or tag at a time
   group: ${{ github.workflow }}-${{ github.ref_name == 'develop' && github.run_id || github.ref }}
   cancel-in-progress: false
 
