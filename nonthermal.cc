@@ -2039,10 +2039,13 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
     // printlnlog("  SF solver LU_refine: After {} iterations, solution vector has a max residual of {:g}", iteration,
     //            error);
   }
-  if (error_best >= 0.) {
+
+  assert_always(error_best >= 0.);
+  std::ranges::copy(yvec_best, yvec_arr.begin());
+
+  if (error_best > 1e-10) {
     printlnlog("  SF solver LU_refine: After {} iterations, best solution vector has a max residual of {:g}", iteration,
                error_best);
-    std::ranges::copy(yvec_best, yvec_arr.begin());
   }
 
   assert_always(std::ranges::all_of(yvec_arr, [](double y) { return y >= 0.; }));
