@@ -16,6 +16,10 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
+#ifdef EIGEN_ON
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#else
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cblas.h>
 #include <gsl/gsl_errno.h>
@@ -23,6 +27,7 @@
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_vector_double.h>
+#endif
 #pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
@@ -906,6 +911,17 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   rate_matrix_LU_decomp.reserve(max_nlte_dimension * max_nlte_dimension);
   rate_matrix_LU_decomp.resize(rate_matrix.size());
 
+#ifdef EIGEN_ON
+  auto eigen_vec_x = Eigen::Map<Eigen::VectorXd>(vec_x.data(), nlte_dimension);
+  const auto eigen_balance_vector = Eigen::Map<const Eigen::VectorXd>(balance_vector.data(), nlte_dimension);
+
+  const auto eigen_rate_matrix =
+      Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
+          rate_matrix.data(), nlte_dimension, nlte_dimension);
+  const auto rate_matrix_lu = Eigen::PartialPivLU<Eigen::MatrixXd>{eigen_rate_matrix};
+  eigen_vec_x = rate_matrix_lu.solve(eigen_balance_vector);
+#else
+
   // make a copy of the rate matrix for the LU decomp call as gsl_linalg_LU_decomp modifies the input matrix
   std::ranges::copy(rate_matrix, rate_matrix_LU_decomp.begin());
   auto gsl_rate_matrix_LU_decomp =
@@ -926,6 +942,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
   // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
   gsl_linalg_LU_solve(&gsl_rate_matrix_LU_decomp, &p, &gsl_balance_vector, &gsl_x);
+#endif
 
   double error_best = -1.;
 
@@ -937,10 +954,22 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   THREADLOCALONHOST std::vector<double> vec_residual;
   vec_residual.reserve(max_nlte_dimension);
   vec_residual.resize(nlte_dimension);
-  gsl_vector gsl_vec_residual = gsl_vector_view_array(vec_residual.data(), nlte_dimension).vector;
+
+#ifdef EIGEN_ON
+  auto eigen_vec_residual = Eigen::Map<Eigen::Vector<double, SFPTS>>(vec_residual.data(), nlte_dimension);
+#else
+  auto gsl_vec_residual = gsl_vector_view_array(vec_residual.data(), nlte_dimension).vector;
+#endif
 
   int iteration = 0;
   for (iteration = 0; iteration < 10; iteration++) {
+#ifdef EIGEN_ON
+    if (iteration > 0) {
+      eigen_vec_x += rate_matrix_lu.solve(eigen_vec_residual);
+    }
+    eigen_vec_residual = eigen_balance_vector - eigen_rate_matrix * eigen_vec_x;
+    const double error = eigen_vec_residual.cwiseAbs().maxCoeff();
+#else
     if (iteration > 0) {
       // use gsl_vec_residual as the temporary work vector
       gsl_linalg_LU_refine(&gsl_rate_matrix, &gsl_rate_matrix_LU_decomp, &p, &gsl_balance_vector, &gsl_x,
@@ -950,8 +979,10 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     std::ranges::copy(balance_vector, vec_residual.begin());
     gsl_blas_dgemv(CblasNoTrans, 1.0, &gsl_rate_matrix, &gsl_x, -1.0,
                    &gsl_vec_residual);  // calculate Ax - b = residual
+
     const double error = fabs(gsl_vector_get(
         &gsl_vec_residual, gsl_blas_idamax(&gsl_vec_residual)));  // value of the largest absolute residual
+#endif
 
     if (error < error_best || error_best < 0.) {
       std::ranges::copy(vec_x, vec_x_best.begin());
