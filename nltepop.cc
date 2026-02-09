@@ -974,7 +974,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
   // get the unnormalised populations from the x solution vector and the normalisation factors
   for (auto i = 0ZU; i < nlte_dimension; i++) {
-    popvec[i] = gsl_vector_get(&gsl_x, i) * pop_normfactors[i];
+    popvec[i] = vec_x[i] * pop_normfactors[i];
   }
 
   return solution_pops_are_valid(nonemptymgi, element, popvec, pop_normfactors, first_ion_used, nions_used);
