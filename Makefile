@@ -181,12 +181,12 @@ endif
 
 
 ifeq ($(BOOST),ON)
-	CXXFLAGS += -DUSE_BOOST -DBOOST_MATH_STANDALONE
+	CXXFLAGS += -DBOOST_ON -DBOOST_MATH_STANDALONE
 	BUILD_DIR := $(BUILD_DIR)_boost
 endif
 
 ifeq ($(EIGEN),ON)
-	CXXFLAGS += -DUSE_EIGEN $(shell pkg-config --cflags eigen3)
+	CXXFLAGS += -DEIGEN_ON $(shell pkg-config --cflags eigen3)
 	BUILD_DIR := $(BUILD_DIR)_eigen
 endif
 

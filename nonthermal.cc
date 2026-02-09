@@ -19,7 +19,7 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
-#ifdef USE_EIGEN
+#ifdef EIGEN_ON
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #else
@@ -1972,7 +1972,7 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_arr{};
 
-#ifdef USE_EIGEN
+#ifdef EIGEN_ON
 
   const Eigen::Map<const Eigen::Vector<double, SFPTS>> eigen_rhsvec{rhsvec.data()};
   const Eigen::Map<const Eigen::Matrix<double, SFPTS, SFPTS, Eigen::RowMajor>> eigen_sfmatrix{sfmatrix.data()};
@@ -2005,7 +2005,7 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_best{};
   THREADLOCALONHOST std::array<double, SFPTS> residual_vector{};
-#ifdef USE_EIGEN
+#ifdef EIGEN_ON
   Eigen::Map<Eigen::Vector<double, SFPTS>> eigen_residual_vector(residual_vector.data(), SFPTS);
 #else
   auto gsl_residual_vector = gsl_vector_view_array(residual_vector.data(), SFPTS).vector;
@@ -2014,7 +2014,7 @@ auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, S
   double error_best = -1.;
   int iteration = 0;
   for (iteration = 0; iteration < 10; iteration++) {
-#ifdef USE_EIGEN
+#ifdef EIGEN_ON
     if (iteration > 0) {
       eigen_yvec += eigen_sfmatrix_LU.solve(eigen_residual_vector);
     }

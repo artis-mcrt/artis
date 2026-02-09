@@ -81,7 +81,7 @@ inline std::string outputlinestr = {};
 inline bool outputstartofline = true;
 inline tm timebuf{};
 
-#ifndef USE_BOOST
+#ifndef BOOST_ON
 #include <gsl/gsl_integration.h>
 constexpr size_t GSLWSIZE = 16384;  // GSL integration workspace size
 
