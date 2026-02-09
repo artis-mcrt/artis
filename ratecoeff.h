@@ -8,7 +8,7 @@
 
 #include "globals.h"
 
-#elifdef USE_BOOST
+#elifdef BOOST_ON
 
 #pragma clang unsafe_buffer_usage begin
 #include <boost/math/quadrature/gauss_kronrod.hpp>
@@ -101,7 +101,7 @@ auto integrator(auto params, const double a, const double b, const double epsrel
   return 0;
 
 #else
-#ifdef USE_BOOST
+#ifdef BOOST_ON
   // Boost's Gauss-Kronrod integrator
   *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
       [&](double x) { return func_integrand(x, &params); }, a, b, 15, epsrel, abserr);

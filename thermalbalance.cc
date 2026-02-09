@@ -1,7 +1,7 @@
 #include "thermalbalance.h"
 
 #pragma clang unsafe_buffer_usage begin
-#ifdef USE_BOOST
+#ifdef BOOST_ON
 #include <boost/math/tools/toms748_solve.hpp>
 #else
 #include <gsl/gsl_errno.h>
@@ -287,7 +287,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
                      HeatingCoolingRates& heatingcoolingrates, const std::vector<double>& bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::get_Te(nonemptymgi);
-#ifdef USE_BOOST
+#ifdef BOOST_ON
   constexpr auto method = "boost toms748_solve";
 #else
   constexpr auto method = "gsl brent";
@@ -314,7 +314,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
   if (!invalid_values && f_T_min * f_T_max < 0) {
     const auto maxit = 100U;
     // If it has, then solve for the root T_e
-#ifdef USE_BOOST
+#ifdef BOOST_ON
     {
       // use TOMS 748 solver from Boost
       uintmax_t iternum = maxit;

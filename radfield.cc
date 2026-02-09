@@ -15,7 +15,7 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
-#ifdef USE_BOOST
+#ifdef BOOST_ON
 #include <boost/math/tools/toms748_solve.hpp>
 #else
 #include <gsl/gsl_errno.h>
@@ -316,7 +316,7 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
 
     constexpr double epsrel = 1e-4;
     const auto maxit = 100U;
-#ifdef USE_BOOST
+#ifdef BOOST_ON
     // use TOMS 748 solver from Boost
     uintmax_t iteration_num = maxit;
     auto result =

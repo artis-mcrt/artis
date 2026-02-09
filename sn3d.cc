@@ -759,7 +759,7 @@ auto main(int argc, char* argv[]) -> int {
 #ifdef USE_SIMPSON_INTEGRATOR
   const auto* integrator_name{"Simpson rule"};
 #else
-#ifdef USE_BOOST
+#ifdef BOOST_ON
   const auto* integrator_name{"Boost qag adaptive integrator"};
 #else
   const auto* integrator_name{"GSL qag adaptive integrator"};
