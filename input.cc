@@ -878,21 +878,25 @@ void setup_phixs_list() {
     auto allcont_index_in_groundphixslist = MPI_shared_malloc_span<int>(nbfcontinua);
     auto allcont_bfestimindex = MPI_shared_malloc_span<int>(nbfcontinua);
     if (globals::rank_in_node == 0) {
-      for (int i = 0; i < std::ssize(temp_bfestim_nu_edge); i++) {
-        bfestim_nu_edge[i] = temp_bfestim_nu_edge[i];
-      }
-      for (int i = 0; i < nbfcontinua; i++) {
-        allcont_nu_edge[i] = allcont[i].nu_edge;
-        allcont_element[i] = allcont[i].element;
-        allcont_ion[i] = allcont[i].ion;
-        allcont_level[i] = allcont[i].level;
-        allcont_phixstargetindex[i] = allcont[i].phixstargetindex;
-        allcont_upperlevel[i] = allcont[i].upperlevel;
-        allcont_uniquelevelindex[i] = allcont[i].uniquelevelindex;
-        allcont_probability[i] = allcont[i].probability;
-        allcont_index_in_groundphixslist[i] = allcont[i].index_in_groundphixslist;
-        allcont_bfestimindex[i] = allcont[i].bfestimindex;
-      }
+      std::ranges::copy(temp_bfestim_nu_edge, bfestim_nu_edge.begin());
+      std::ranges::copy(allcont | std::views::transform(&TempPhotoionTransitionInput::nu_edge),
+                        allcont_nu_edge.begin());
+      std::ranges::copy(allcont | std::views::transform(&TempPhotoionTransitionInput::element),
+                        allcont_element.begin());
+      std::ranges::copy(allcont | std::views::transform(&TempPhotoionTransitionInput::ion), allcont_ion.begin());
+      std::ranges::copy(allcont | std::views::transform(&TempPhotoionTransitionInput::level), allcont_level.begin());
+      std::ranges::copy(allcont | std::views::transform(&TempPhotoionTransitionInput::phixstargetindex),
+                        allcont_phixstargetindex.begin());
+      std::ranges::copy(allcont | std::views::transform(&TempPhotoionTransitionInput::upperlevel),
+                        allcont_upperlevel.begin());
+      std::ranges::copy(allcont | std::views::transform(&TempPhotoionTransitionInput::uniquelevelindex),
+                        allcont_uniquelevelindex.begin());
+      std::ranges::copy(allcont | std::views::transform(&TempPhotoionTransitionInput::probability),
+                        allcont_probability.begin());
+      std::ranges::copy(allcont | std::views::transform(&TempPhotoionTransitionInput::index_in_groundphixslist),
+                        allcont_index_in_groundphixslist.begin());
+      std::ranges::copy(allcont | std::views::transform(&TempPhotoionTransitionInput::bfestimindex),
+                        allcont_bfestimindex.begin());
     }
     MPI_Barrier(globals::mpi_comm_node);
     globals::bfestim_nu_edge = bfestim_nu_edge;
@@ -1089,10 +1093,10 @@ void read_phixs_data() {
     if (globals::rank_in_node == 0) {
       std::copy_n(tmpallphixs.cbegin(), tmpallphixs.size(), globals::allphixs.data());
 
-      for (int i = 0; i < std::ssize(tmpallphixstargets); i++) {
-        allphixstargets_levelindex[i] = tmpallphixstargets[i].levelindex;
-        allphixstargets_probability[i] = tmpallphixstargets[i].probability;
-      }
+      std::ranges::copy(tmpallphixstargets | std::views::transform(&PhotoionTarget::levelindex),
+                        allphixstargets_levelindex.begin());
+      std::ranges::copy(tmpallphixstargets | std::views::transform(&PhotoionTarget::probability),
+                        allphixstargets_probability.begin());
     }
 
     MPI_Barrier(globals::mpi_comm_node);
@@ -1430,14 +1434,18 @@ void read_atomicdata_files() {
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_alltranslist) == updowntranscount);
-    for (int t = 0; t < updowntranscount; t++) {
-      alltrans_lineindex[t] = temp_alltranslist[t].lineindex;
-      alltrans_targetlevelindex[t] = temp_alltranslist[t].targetlevelindex;
-      alltrans_einstein_A[t] = temp_alltranslist[t].einstein_A;
-      alltrans_coll_str[t] = temp_alltranslist[t].coll_str;
-      alltrans_osc_strength[t] = temp_alltranslist[t].osc_strength;
-      alltrans_forbidden[t] = temp_alltranslist[t].forbidden;
-    }
+    std::ranges::copy(temp_alltranslist | std::views::transform(&TempAllTransInput::lineindex),
+                      alltrans_lineindex.begin());
+    std::ranges::copy(temp_alltranslist | std::views::transform(&TempAllTransInput::targetlevelindex),
+                      alltrans_targetlevelindex.begin());
+    std::ranges::copy(temp_alltranslist | std::views::transform(&TempAllTransInput::einstein_A),
+                      alltrans_einstein_A.begin());
+    std::ranges::copy(temp_alltranslist | std::views::transform(&TempAllTransInput::coll_str),
+                      alltrans_coll_str.begin());
+    std::ranges::copy(temp_alltranslist | std::views::transform(&TempAllTransInput::osc_strength),
+                      alltrans_osc_strength.begin());
+    std::ranges::copy(temp_alltranslist | std::views::transform(&TempAllTransInput::forbidden),
+                      alltrans_forbidden.begin());
   }
   temp_alltranslist.clear();
   temp_alltranslist.shrink_to_fit();
@@ -1459,14 +1467,17 @@ void read_atomicdata_files() {
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_linelist) == globals::nlines);
-    for (int t = 0; t < globals::nlines; t++) {
-      linelist_nu[t] = temp_linelist[t].nu;
-      linelist_einstein_A[t] = temp_linelist[t].einstein_A;
-      linelist_elementindex[t] = temp_linelist[t].elementindex;
-      linelist_ionindex[t] = temp_linelist[t].ionindex;
-      linelist_upperlevelindex[t] = temp_linelist[t].upperlevelindex;
-      linelist_lowerlevelindex[t] = temp_linelist[t].lowerlevelindex;
-    }
+    std::ranges::copy(temp_linelist | std::views::transform(&TempLineTransitionInput::nu), linelist_nu.begin());
+    std::ranges::copy(temp_linelist | std::views::transform(&TempLineTransitionInput::einstein_A),
+                      linelist_einstein_A.begin());
+    std::ranges::copy(temp_linelist | std::views::transform(&TempLineTransitionInput::elementindex),
+                      linelist_elementindex.begin());
+    std::ranges::copy(temp_linelist | std::views::transform(&TempLineTransitionInput::ionindex),
+                      linelist_ionindex.begin());
+    std::ranges::copy(temp_linelist | std::views::transform(&TempLineTransitionInput::upperlevelindex),
+                      linelist_upperlevelindex.begin());
+    std::ranges::copy(temp_linelist | std::views::transform(&TempLineTransitionInput::lowerlevelindex),
+                      linelist_lowerlevelindex.begin());
   }
   temp_linelist.clear();
   temp_linelist.shrink_to_fit();
