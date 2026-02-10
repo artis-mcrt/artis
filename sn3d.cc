@@ -756,17 +756,31 @@ auto main(int argc, char* argv[]) -> int {
 
   printlnlog("time at start {}", real_time_start);
 
+  printlog("Integration method is: ");
+
 #ifdef USE_SIMPSON_INTEGRATOR
-  const auto* integrator_name{"Simpson rule"};
+  printlnlog("Simpson rule");
 #else
 #ifdef BOOST_ON
-  const auto* integrator_name{"Boost qag adaptive integrator"};
+  printlnlog("Boost qag adaptive integrator");
 #else
-  const auto* integrator_name{"GSL qag adaptive integrator"};
+  printlnlog("GSL qag adaptive integrator");
 #endif
 #endif
 
-  printlnlog("integration method is {}", integrator_name);
+  printlnlog("Root finding method is: ");
+
+#ifdef BOOST_ON
+  printlnlog("Boost toms748_solve");
+#else
+  printlnlog("GSL Brent");
+#endif
+
+#ifdef EIGEN_ON
+  printlnlog("Linear algebra solvers are from Eigen");
+#else
+  printlnlog("Linear algebra solvers are from GSL");
+#endif
 
 #ifdef WALLTIMELIMITSECONDS
   int walltimelimitseconds = WALLTIMELIMITSECONDS;
