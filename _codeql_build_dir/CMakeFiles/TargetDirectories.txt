@@ -1,4 +1,0 @@
-/home/runner/work/artis/artis/_codeql_build_dir/CMakeFiles/sn3d.dir
-/home/runner/work/artis/artis/_codeql_build_dir/CMakeFiles/exspec.dir
-/home/runner/work/artis/artis/_codeql_build_dir/CMakeFiles/edit_cache.dir
-/home/runner/work/artis/artis/_codeql_build_dir/CMakeFiles/rebuild_cache.dir
