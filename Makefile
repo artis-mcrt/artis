@@ -203,8 +203,8 @@ ifeq ($(GSL),ON)
 	CXXFLAGS += $(shell pkg-config --cflags gsl)
 
 	ifeq ($(STATICGSL),)
-		# default to dynamic linking
-		STATICGSL := OFF
+		# default to static linking
+		STATICGSL := ON
 	endif
 
 	ifeq ($(STATICGSL),ON)
