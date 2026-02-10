@@ -210,7 +210,6 @@ ifeq ($(GSL),ON)
 	ifeq ($(STATICGSL),ON)
 		gsllibdir := $(shell pkg-config --variable=libdir gsl)
 		gsl_objects = $(gsllibdir)/libgsl.a $(gsllibdir)/libgslcblas.a
-		BUILD_DIR := $(BUILD_DIR)_staticgsl
 	else ifeq ($(STATICGSL),OFF)
 		LDFLAGS += $(shell pkg-config --libs gsl)
 	else
