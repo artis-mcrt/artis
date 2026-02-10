@@ -186,7 +186,7 @@ ifeq ($(BOOST),ON)
 endif
 
 ifeq ($(EIGEN),ON)
-	CXXFLAGS += -DEIGEN_ON $(shell pkg-config --cflags eigen3)
+	CXXFLAGS += -DEIGEN_ON $(shell pkg-config --cflags eigen3 | sed 's/-I/-isystem /g')
 	BUILD_DIR := $(BUILD_DIR)_eigen
 endif
 
