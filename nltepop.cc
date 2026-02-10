@@ -918,7 +918,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   THREADLOCALONHOST Eigen::PartialPivLU<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
       eigen_rate_matrix_lu;
 
-  eigen_rate_matrix_lu = eigen_rate_matrix.partialPivLu();
+  eigen_rate_matrix_lu.compute(eigen_rate_matrix);
   eigen_vec_x = eigen_rate_matrix_lu.solve(eigen_balance_vector);
 #else
 
