@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <span>
 #include <string>
-#include <vector>
 
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
@@ -98,7 +97,7 @@ void write_partial_lightcurve_spectra(int nts, std::span<const Packet> pkts);
 void add_to_lc_res(const Packet& pkt, int dirbin, std::span<double> light_curve_lum,
                    std::span<double> light_curve_lumcmf);
 
-void write_light_curve(const std::string& lc_filename, int dirbin, const std::vector<double>& light_curve_lum,
-                       const std::vector<double>& light_curve_lumcmf, int numtimesteps);
+void write_light_curve(const std::string& lc_filename, int dirbin, std::span<const double> light_curve_lum,
+                       std::span<const double> light_curve_lumcmf, int numtimesteps);
 
 #endif  // SPECTRUM_H

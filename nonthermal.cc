@@ -200,7 +200,7 @@ constexpr auto uppertriangular(const int i, const int j) -> int {
   return (SFPTS * i) - (i * (i + 1) / 2) + j;
 }
 
-constexpr void decompactify_triangular_matrix(std::vector<double>& matrix) {
+constexpr void decompactify_triangular_matrix(std::span<double> matrix) {
   // the indices work in decreasing order because we're working in-place and
   // don't want to overwrite data that we still need to read
   for (int i = SFPTS - 1; i > 0; i--) {
@@ -1804,7 +1804,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
              nt_solution[nonemptymgi].frac_heating);
 }
 
-void sfmatrix_add_excitation(std::vector<double>& sfmatrixuppertri, const int nonemptymgi, const int element,
+void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonemptymgi, const int element,
                              const int ion) {
   // excitation terms
 
@@ -1858,7 +1858,7 @@ void sfmatrix_add_excitation(std::vector<double>& sfmatrixuppertri, const int no
   });
 }
 
-void sfmatrix_add_ionisation(std::vector<double>& sfmatrixuppertri, const int Z, const int ionstage, const double nnion)
+void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, const int ionstage, const double nnion)
 // add the ionisation terms to the Spencer-Fano matrix
 {
   std::array<double, SFPTS> vec_xs_ionisation{};
@@ -1967,7 +1967,7 @@ void sfmatrix_add_ionisation(std::vector<double>& sfmatrixuppertri, const int Z,
 // solve the Spencer-Fano matrix equation and return the y vector (samples of the Spencer-Fano solution function).
 // Multiply y by energy interval [eV] to get non-thermal electron number flux. y(E) * dE is the flux of electrons with
 // energy in the range (E, E + dE) in units of particles/cm2/s. y has units of particles/cm2/s/eV
-auto sfmatrix_solve(const std::vector<double>& sfmatrix) -> std::array<double, SFPTS> {
+auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double, SFPTS> {
   // solve the matrix-vector equation sfmatrix * yvec = rhsvec for yvec
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_arr{};

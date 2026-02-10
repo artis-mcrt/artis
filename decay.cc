@@ -331,7 +331,7 @@ void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
   }
 }
 
-auto find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int>& custom_alist,
+auto find_decaypaths(const std::span<const int> custom_zlist, const std::span<const int> custom_alist,
                      const std::vector<Nuclide>& standard_nuclides) -> std::vector<DecayPath> {
   std::vector<DecayPath> localdecaypaths;
   for (int startnucindex = 0; startnucindex < get_num_nuclides(); startnucindex++) {
@@ -417,7 +417,7 @@ auto find_decaypaths(const std::vector<int>& custom_zlist, const std::vector<int
 }
 
 // remove nuclides that are not a standard or custom input-specified nuclide, or connected to these by decays
-void filter_unused_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>& custom_alist,
+void filter_unused_nuclides(const std::span<const int> custom_zlist, const std::span<const int> custom_alist,
                             const std::vector<Nuclide>& standard_nuclides) {
   std::erase_if(nuclides, [&](const auto& nuc) {
     // keep nucleus if it is in the standard list
@@ -793,7 +793,7 @@ auto get_nucstring_a(const std::string& strnuc) -> int {
 }
 
 // add all nuclides and decays, and later trim any irrelevant ones (not connected to input-specified nuclei)
-void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>& custom_alist) {
+void init_nuclides(const std::span<const int> custom_zlist, const std::span<const int> custom_alist) {
   assert_always(custom_zlist.size() == custom_alist.size());
 
   // Ni57

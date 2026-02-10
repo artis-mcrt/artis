@@ -104,7 +104,7 @@ struct RateMatrices {
     std::ranges::fill(autoion, 0.);
   }
 
-  [[nodiscard]] auto get_summed_rate_matrix() -> std::vector<double>& {
+  [[nodiscard]] auto get_summed_rate_matrix() -> std::span<double> {
     // sum the matrices for each transition type to get a total rate matrix
     assert_always(summed_rates.size() == rad_bb.size());
     assert_always(summed_rates.size() == coll_bb.size());
@@ -651,7 +651,7 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
 
 // Add autoionisation and inverse (i.e. collisional capture part of di-el)
 void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element, const int ion,
-                                       const std::vector<double>& s_renorm, RateMatrices& rate_matrices,
+                                       const std::span<const double> s_renorm, RateMatrices& rate_matrices,
                                        const int first_ion_used, const int nions_used) {
   if (get_nlevels_autoion(element, ion) == 0) {
     return;  // no autoionising levels for this ion
@@ -1169,7 +1169,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     // replace the zeroth row of the matrix and balance vector with the normalisation
     // constraint (sum of levelpops = total element population)
 
-    auto& rate_matrix = rate_matrices.get_summed_rate_matrix();
+    auto rate_matrix = rate_matrices.get_summed_rate_matrix();
     std::ranges::fill(std::span{rate_matrix}.first(nlte_dimension), 1.0);
 
     THREADLOCALONHOST std::vector<double> balance_vector;

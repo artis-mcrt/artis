@@ -673,8 +673,8 @@ void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkt
              do_emission_absorption ? "emission/absorption " : "", std::time(nullptr) - time_func_start);
 }
 
-void write_light_curve(const std::string& lc_filename, const int dirbin, const std::vector<double>& light_curve_lum,
-                       const std::vector<double>& light_curve_lumcmf, const int numtimesteps) {
+void write_light_curve(const std::string& lc_filename, const int dirbin, const std::span<const double> light_curve_lum,
+                       const std::span<const double> light_curve_lumcmf, const int numtimesteps) {
   if (globals::node_id != 0 || globals::rank_in_node != 0) {
     return;
   }

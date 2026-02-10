@@ -37,7 +37,7 @@ struct TeSolutionParams {
   double t_current;
   int nonemptymgi;
   HeatingCoolingRates* heatingcoolingrates;
-  const std::vector<double>* bfheatingcoeffs;
+  std::span<const double> bfheatingcoeffs;
 };
 
 struct BFHeatingIntegralParams {
@@ -126,7 +126,7 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
 // Calculate the heating rates for a given cell. Results are returned via the elements of the heatingrates data
 // structure.
 void calculate_heating_rates(const int nonemptymgi, const float T_e, const float nne,
-                             HeatingCoolingRates& heatingcoolingrates, const std::vector<double>& bfheatingcoeffs) {
+                             HeatingCoolingRates& heatingcoolingrates, const std::span<const double> bfheatingcoeffs) {
   double C_deexc = 0.;
 
   // double C_recomb = 0.;
@@ -172,8 +172,8 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 // Thermal balance equation on which we have to iterate to get T_e
 
 auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const double t_current,
-                                   HeatingCoolingRates& heatingcoolingrates, const std::vector<double>& bfheatingcoeffs)
-    -> double {
+                                   HeatingCoolingRates& heatingcoolingrates,
+                                   const std::span<const double> bfheatingcoeffs) -> double {
   const auto fT_e = static_cast<float>(T_e);
 
   if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
@@ -232,14 +232,14 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void* const paras)  // cppc
     -> double {
   const auto* const params = static_cast<const TeSolutionParams*>(paras);
   return T_e_eqn_heating_minus_cooling(T_e, params->nonemptymgi, params->t_current, *params->heatingcoolingrates,
-                                       *params->bfheatingcoeffs);
+                                       params->bfheatingcoeffs);
 }
 
 }  // anonymous namespace
 
 // depends only the radiation field - no dependence on T_e or populations
-void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double>& bfheatingcoeffs) {
-  bfheatingcoeffs.resize(get_includedlevels());
+void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeffs) {
+  assert_always(std::ssize(bfheatingcoeffs) == get_includedlevels());
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(nonemptymgi, element) <= minelfrac && !USE_LUT_BFHEATING) {
@@ -284,7 +284,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double>& bfheatingco
 }
 
 void call_T_e_finder(const int nonemptymgi, const double t_current, const double T_min, const double T_max,
-                     HeatingCoolingRates& heatingcoolingrates, const std::vector<double>& bfheatingcoeffs) {
+                     HeatingCoolingRates& heatingcoolingrates, const std::span<const double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::get_Te(nonemptymgi);
 #ifdef BOOST_ON
@@ -334,7 +334,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
       TeSolutionParams paras = {.t_current = t_current,
                                 .nonemptymgi = nonemptymgi,
                                 .heatingcoolingrates = &heatingcoolingrates,
-                                .bfheatingcoeffs = &bfheatingcoeffs};
+                                .bfheatingcoeffs = bfheatingcoeffs};
 
       gsl_function find_T_e_f = {.function = &T_e_eqn_heating_minus_cooling, .params = &paras};
       // one-dimensional GSL Brent root solver, bracketing type

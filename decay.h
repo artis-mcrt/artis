@@ -4,8 +4,8 @@
 #include <array>
 #include <cstddef>
 #include <ostream>
+#include <span>
 #include <string>
-#include <vector>
 
 #include "packet.h"
 
@@ -25,7 +25,7 @@ constexpr std::array<enum decaytypes, 5> all_decaytypes{
     decaytypes::DECAYTYPE_ALPHA, decaytypes::DECAYTYPE_ELECTRONCAPTURE, decaytypes::DECAYTYPE_BETAPLUS,
     decaytypes::DECAYTYPE_BETAMINUS, decaytypes::DECAYTYPE_SPONTFISSION};
 
-void init_nuclides(const std::vector<int>& custom_zlist, const std::vector<int>& custom_alist);
+void init_nuclides(std::span<const int> custom_zlist, std::span<const int> custom_alist);
 [[nodiscard]] auto get_nucstring_z(const std::string& strnuc) -> int;
 [[nodiscard]] auto get_nucstring_a(const std::string& strnuc) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_num_nuclides() -> ptrdiff_t;

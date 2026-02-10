@@ -1,7 +1,7 @@
 #ifndef THERMALBALANCE_H
 #define THERMALBALANCE_H
 
-#include <vector>
+#include <span>
 
 struct HeatingCoolingRates {
   double cooling_collisional{0};
@@ -27,7 +27,7 @@ struct HeatingCoolingRates {
 };
 
 void call_T_e_finder(int nonemptymgi, double t_current, double T_min, double T_max,
-                     HeatingCoolingRates& heatingcoolingrates, const std::vector<double>& bfheatingcoeffs);
-void calculate_bfheatingcoeffs(int nonemptymgi, std::vector<double>& bfheatingcoeffs);
+                     HeatingCoolingRates& heatingcoolingrates, std::span<const double> bfheatingcoeffs);
+void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeffs);
 
 #endif  // THERMALBALANCE_H

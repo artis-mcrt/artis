@@ -768,7 +768,7 @@ auto main(int argc, char* argv[]) -> int {
 #endif
 #endif
 
-  printlnlog("Root finding method is: ");
+  printlog("Root finding method is: ");
 
 #ifdef BOOST_ON
   printlnlog("Boost toms748_solve");

@@ -496,13 +496,13 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
 }
 
 void add_transitions_to_unsorted_linelist(const int element, const int ion,
-                                          const std::vector<IonTransitionsInput>& iontransitiontable,
+                                          const std::span<const IonTransitionsInput> iontransitiontable,
                                           std::vector<TempLineTransitionInput>& temp_linelist,
                                           std::vector<TempAllTransInput>& temp_alltranslist,
-                                          std::vector<TempEnergyLevel>& temp_alllevels) {
+                                          std::span<TempEnergyLevel> temp_alllevels) {
   const auto nlevels = get_nlevels(element, ion);
   auto ion_levels = std::span{temp_alllevels}.subspan(get_ionuniquelevelindexstart(element, ion), nlevels);
-  static std::vector<int> iondowntranstmplineindices;
+  THREADLOCALONHOST std::vector<int> iondowntranstmplineindices;
   iondowntranstmplineindices.resize(downtranslevelstart(nlevels));
 
   const int nlines_initial = globals::nlines;
