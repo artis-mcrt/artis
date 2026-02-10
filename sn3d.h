@@ -81,16 +81,6 @@ inline std::string outputlinestr = {};
 inline bool outputstartofline = true;
 inline tm timebuf{};
 
-#ifndef BOOST_ON
-#include <gsl/gsl_integration.h>
-constexpr size_t GSLWSIZE = 16384;  // GSL integration workspace size
-
-inline thread_local auto gslworkspace =
-    std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace*)>{
-        gsl_integration_workspace_alloc(GSLWSIZE),
-        [](gsl_integration_workspace* const w) -> void { gsl_integration_workspace_free(w); }};
-#endif
-
 #ifdef _OPENMP
 
 #ifndef GPU_ON
@@ -215,12 +205,6 @@ constexpr void atomicadd(T& var, U&& val) {
 #define atomicadd(var, val) var += (val);
 
 #endif
-
-inline void gsl_error_handler_printout(const char* reason, const char* file, int line, int gsl_errno) {
-  if (gsl_errno != 18) {  // something other than roundoff error
-    printlnlog("WARNING: gsl ({}:{}): {} (Error code {})", file, line, reason, gsl_errno);
-  }
-}
 
 [[nodiscard]] inline auto fopen_required(const std::string& filename, std::span<const char> mode) -> FILE* {
   if (mode[0] == 'r') {

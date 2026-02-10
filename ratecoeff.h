@@ -22,6 +22,18 @@
 
 #include <cstddef>
 #include <memory>
+
+constexpr size_t GSLWSIZE = 16384;  // GSL integration workspace size
+inline thread_local auto gslworkspace =
+    std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace*)>{
+        gsl_integration_workspace_alloc(GSLWSIZE),
+        [](gsl_integration_workspace* const w) -> void { gsl_integration_workspace_free(w); }};
+
+inline void gsl_error_handler_printout(const char* reason, const char* file, int line, int gsl_errno) {
+  if (gsl_errno != GSL_EROUND) {
+    printlnlog("WARNING: gsl ({}:{}): {} (Error code {})", file, line, reason, gsl_errno);
+  }
+}
 #endif
 
 void ratecoefficients_init();
