@@ -71,8 +71,10 @@ Press Ctrl+C to stop following the log file.
 
 ## make options
 - TESTMODE=ON: Enable additional assertions and compile with address sanitizer.
-- FASTMATH=OFF: Don't use compiler transformations that affect round-off-level results.
-- BOOST=ON: Replace some GSL calls with Boost library calls
+- FASTMATH=OFF: Don't enable compiler transformations that affect round-off-level results (e.g. a*(b+c).
+- BOOST=ON: Use Boost library (not GSL) for root finding (classic nne solver, T_e, and binned radfield) and adaptive integration.
+- EIGEN=ON: Use Eigen library (not GSL) for matrix-vector solving (Spencer-Fano and NLTE pops).
+- BOOST=ON EIGEN=ON: Do not use GSL at all.
 - MAX_NODE_SIZE=N: Artificially limit MPI node size to N ranks. Useful for testing or preventing MPI shared memory windows from crossing CPU sockets.
 - REPRODUCIBLE=ON: Use stable sorts and disable FASTMATH.
 - GPU=ON: Required to compile for GPUs. Avoids incompatible GSL and std::random calls.
