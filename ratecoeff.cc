@@ -914,7 +914,7 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
   double error{NAN};
 
   double total_alpha_sp = 0.;
-  integrator<alpha_sp_E_integrand_gsl, 31>(intparas, nu_threshold, nu_max_phixs, CONTINUUM_NU_INTEGRAL_ACCURACY,
+  integrator<alpha_sp_E_integrand_gsl, 31>(intparas, nu_threshold, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY,
                                            &total_alpha_sp, &error);
 
   double alpha_sp_old = total_alpha_sp;
@@ -926,7 +926,7 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
     const double xlow = nu_threshold + (i * deltanu);
 
     // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
-    integrator<alpha_sp_E_integrand_gsl, 31>(intparas, xlow, nu_max_phixs, CONTINUUM_NU_INTEGRAL_ACCURACY, &alpha_sp,
+    integrator<alpha_sp_E_integrand_gsl, 31>(intparas, xlow, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &alpha_sp,
                                              &error);
 
     if (zrand >= alpha_sp / total_alpha_sp) {

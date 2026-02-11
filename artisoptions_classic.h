@@ -130,8 +130,6 @@ constexpr bool NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE = false;
 
 constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-2;
 
-constexpr double CONTINUUM_NU_INTEGRAL_ACCURACY = 1e-2;
-
 constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-2;
 
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
