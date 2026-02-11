@@ -11,6 +11,8 @@ module load gsl/2.8/gcc-14.1.0
 module load compilers/gcc/14.1.0
 module load mpi/openmpi/5.0.3/gcc-14.1.0
 module load apps/python3/3.12.4/gcc-14.1.0
+# for compiling, you should also load these header-only libraries (make BOOST=ON EIGEN=ON), but they aren't needed for running:
+# module load boost/1.85.0+gcc14.1.0 libs/eigen/3.4.0/gcc-14.1.0
 
 module list
 

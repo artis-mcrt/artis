@@ -22,6 +22,8 @@ module load gnu_comp
 module load gsl
 module load openmpi
 module load python
+# for compiling, you should also load these header-only libraries (make BOOST=ON), but they aren't needed for running:
+# module load boost
 
 module list
 

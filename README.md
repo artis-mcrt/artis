@@ -22,7 +22,7 @@ git clone --branch release https://github.com/artis-mcrt/artis.git
 cd artis
 ```
 
-To compile and run artis, you will need a recent C++ compiler (g++, LLVM Clang, Apple Clang, or nvc++), the GNU Scientific Library, and an MPI library with a wrapper command `mpicxx'. Typically these are made available on HPC systems using module or spack commands. For systems that we use, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules specifications.
+To compile and run artis, you will need a recent C++ compiler (g++, LLVM Clang, Apple Clang, or nvc++), the GNU Scientific Library (or Boost and Eigen headers), and an MPI library with a wrapper command `mpicxx'. Typically these are made available on HPC systems using module or spack commands. For systems that we use, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules specifications.
 
 Next, select an options preset and compile with `make'. For example:
 ```sh
@@ -53,7 +53,7 @@ cd artis
 ```
 On macOS, it's recommend that you install homebrew llvm to get clang-format, clang-tidy, clangd language server, and the clang C++ compiler. You can install this and other dependencies with:
 ```sh
-brew install llvm open-mpi gsl boost prek
+brew install llvm open-mpi gsl boost eigen prek
 ```
 Install the pre-commit hooks:
 ```sh
