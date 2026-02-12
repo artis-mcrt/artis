@@ -48,7 +48,7 @@ jobs:
                   echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
                   echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
 
-                  brew install openmpi gsl cppcheck || true
+                  brew install openmpi gsl boost eigen cppcheck || true
                   python3 -m pip install compiledb
 
             - name: Generate compile_commands.json
@@ -91,13 +91,6 @@ jobs:
                   g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
-
-            - name: Install boost headers
-              if: matrix.compiler.name == 'nvc++'
-              run: |
-                  wget https://github.com/boostorg/math/archive/refs/tags/boost-1.90.0.tar.gz
-                  tar -zxf boost-1.90.0.tar.gz
-                  echo "CXXFLAGS=-I${{ github.workspace }}/math-boost-1.90.0/include $CXXFLAGS" >> $GITHUB_ENV
 
             - name: Cache gcc build
               id: cache-gcc
@@ -166,9 +159,16 @@ jobs:
                   echo "CXX=nvc++" >> $GITHUB_ENV
                   echo "OMPI_CXX=nvc++" >> $GITHUB_ENV
 
-            - name: Install GSL
+            - name: Install boost-math headers
               run: |
-                  sudo apt install libgsl-dev
+                  wget https://github.com/boostorg/math/archive/refs/tags/boost-1.90.0.tar.gz
+                  tar -zxf boost-1.90.0.tar.gz
+                  echo "CPATH=${{ github.workspace }}/math-boost-1.90.0/include:$CPATH" >> $GITHUB_ENV
+
+            - name: Install GSL and Eigen
+              run: |
+                  sudo apt-get update
+                  sudo apt install -y libgsl-dev libeigen3-dev
 
             - name: Install TBB
               if: matrix.compiler.name == 'gcc'
@@ -208,6 +208,12 @@ jobs:
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode boost+eigen
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make -j${{ steps.cpu-count.outputs.count}} BOOST=ON EIGEN=ON sn3d exspec
 
             - name: Compile nebular mode OPENMP=ON
               run: |
@@ -252,10 +258,11 @@ jobs:
               with:
                   xcode-version: 'latest-stable'
 
-            - name: Install dependencies
+            - name: Install GSL, Boost, Eigen, and OpenMPI
               run: |
                   brew update
-                  brew install gsl openmpi || true
+                  brew install gsl boost eigen openmpi || true
+                  echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
 
             - name: Install OpenMP
               run: |
@@ -338,6 +345,12 @@ jobs:
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: LLVM Clang Compile nebular mode boost+eigen
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make -j${{ steps.cpu-count.outputs.count}} BOOST=ON EIGEN=ON sn3d exspec
 
             - name: LLVM Clang Compile nebular mode OPENMP=ON
               run: |
