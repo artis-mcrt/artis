@@ -9,6 +9,7 @@
 #include "globals.h"
 
 #elifdef BOOST_ON
+#include <cstdlib>
 
 #pragma clang unsafe_buffer_usage begin
 #include <boost/math/quadrature/gauss_kronrod.hpp>
