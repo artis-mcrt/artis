@@ -49,13 +49,18 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: Install GSL and OpenMPI
+            - name: Install boost-math headers
+              run: |
+                  wget https://github.com/boostorg/math/archive/refs/tags/boost-1.90.0.tar.gz
+                  tar -zxf boost-1.90.0.tar.gz
+                  echo "CPATH=${{ github.workspace }}/math-boost-1.90.0/include:$CPATH" >> $GITHUB_ENV
+
+            - name: Install Eigen and OpenMPI
               run: |
                   echo "CXX=g++-14" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-14" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt install -y libgsl-dev
-                  sudo apt install -y openmpi-bin libopenmpi-dev
+                  sudo apt install -y libeigen3-dev openmpi-bin libopenmpi-dev
 
             - name: Show CPU type and core count
               id: cpu-count
@@ -111,7 +116,7 @@ jobs:
 
             - name: Compile
               run: |
-                  make REPRODUCIBLE=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+                  make REPRODUCIBLE=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF BOOST=ON EIGEN=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
                   cp sn3d tests/${{ matrix.testname }}_testrun/
                   cp exspec tests/${{ matrix.testname }}_testrun/
 
