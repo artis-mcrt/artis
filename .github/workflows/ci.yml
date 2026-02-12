@@ -55,13 +55,12 @@ jobs:
                   tar -zxf boost-1.90.0.tar.gz
                   echo "CPATH=${{ github.workspace }}/math-boost-1.90.0/include:$CPATH" >> $GITHUB_ENV
 
-            - name: Install GSL, Eigen, and OpenMPI
+            - name: Install Eigen and OpenMPI
               run: |
                   echo "CXX=g++-14" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-14" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt install -y libgsl-dev libeigen3-dev
-                  sudo apt install -y openmpi-bin libopenmpi-dev
+                  sudo apt install -y libeigen3-dev openmpi-bin libopenmpi-dev
 
             - name: Show CPU type and core count
               id: cpu-count
