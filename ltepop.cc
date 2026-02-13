@@ -265,16 +265,16 @@ void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
 }
 
 auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_lte) -> float {
-  // Search solution for nne in [nne_lo,nne_hi]
+  // search for nne solution in [0.,nne_max]
 
   const auto f_nne = [nonemptymgi, force_lte](const double nne) { return nne_solution_f(nne, nonemptymgi, force_lte); };
 
-  const double nne_min = 0.;
+  constexpr double nne_min = 0.;
   const auto f_nne_min = f_nne(nne_min);
   const auto f_nne_max = f_nne(nne_max);
   if (f_nne_min * f_nne_max > 0) {
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_min, nne_max,
+    printout("n, nne_min, nne_max, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_min, nne_max,
              grid::get_TR(nonemptymgi), grid::get_Te(nonemptymgi), grid::get_W(nonemptymgi),
              grid::get_rho(nonemptymgi));
     printout("nne(nne_min) %g\n", f_nne_min);
