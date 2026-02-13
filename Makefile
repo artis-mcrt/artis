@@ -179,22 +179,20 @@ else
 
 endif
 
-
-ifeq ($(BOOST),ON)
+# default to GSL off unless we need it (boost or eigen disabled)
+GSL := OFF
+ifeq ($(BOOST),OFF)
+	GSL := ON
+else
 	CXXFLAGS += -DBOOST_ON -DBOOST_MATH_STANDALONE
 	BUILD_DIR := $(BUILD_DIR)_boost
 endif
 
-ifeq ($(EIGEN),ON)
-	CXXFLAGS += -DEIGEN_ON $(shell pkg-config --cflags eigen3 | sed 's/-I/-isystem /g')
+ifeq ($(EIGEN),OFF)
+	GSL := ON
+else
+	CXXFLAGS += -DEIGEN_ON
 	BUILD_DIR := $(BUILD_DIR)_eigen
-endif
-
-GSL := ON
-ifeq ($(BOOST),ON)
-	ifeq ($(EIGEN),ON)
-		GSL := OFF
-	endif
 endif
 
 ifeq ($(GSL),ON)
