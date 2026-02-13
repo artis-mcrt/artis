@@ -32,11 +32,6 @@
 
 namespace {
 
-struct nneSolutionParas {
-  int nonemptymgi;
-  bool force_saha;
-};
-
 // use Saha equation for LTE ionisation balance
 [[gnu::pure]] [[nodiscard]] auto phi_saha(const int element, const int ion, const int nonemptymgi) -> double {
   const int uniqueionindex = get_uniqueionindex(element, ion);
@@ -138,6 +133,11 @@ auto nne_solution_f(const double nne_assumed, const int nonemptymgi, const bool 
 }
 
 #ifdef BOOST_OFF
+struct nneSolutionParas {
+  int nonemptymgi;
+  bool force_saha;
+};
+
 auto nne_solution_f(const double nne_assumed, void* const voidparas)  // cppcheck-suppress constParameterPointer
     -> double {
   const auto* paras = static_cast<const nneSolutionParas*>(voidparas);
