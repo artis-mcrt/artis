@@ -11,8 +11,7 @@
 ##SBATCH --mail-user=luke.shingles@gmail.com
 
 module load env/release/2024.1 gompi/2024a zstd GSL git Python
-# for compiling, you should also load these header-only libraries (make BOOST=ON EIGEN=ON), but they aren't needed for running:
-# module load Boost Eigen
+
 module list
 
 cd $SLURM_SUBMIT_DIR

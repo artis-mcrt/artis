@@ -10,9 +10,6 @@ export APPTAINER_CONFIGDIR=/tmp/$USER
 eval `spack load --sh openmpi%gcc target=x86_64`
 eval `spack load --sh gsl%gcc target=x86_64`
 eval `spack load --sh gcc target=x86_64`
-# for compiling, you should also load these header-only libraries (make BOOST=ON EIGEN=ON), but they aren't needed for running:
-# eval `spack load --sh eigen target=x86_64`
-# eval `spack load --sh boost target=zen2`
 
 export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
 
