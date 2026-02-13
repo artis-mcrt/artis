@@ -48,7 +48,7 @@ jobs:
                   echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
                   echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
 
-                  brew install openmpi gsl boost eigen cppcheck || true
+                  brew install openmpi gsl cppcheck || true
                   python3 -m pip install compiledb
 
             - name: Generate compile_commands.json
@@ -203,11 +203,11 @@ jobs:
                   make clean
                   make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: Compile nebular mode boost+eigen
+            - name: Compile nebular mode BOOST=OFF EIGEN=OFF
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make -j${{ steps.cpu-count.outputs.count}} BOOST=ON EIGEN=ON sn3d exspec
+                  make -j${{ steps.cpu-count.outputs.count}} BOOST=OFF EIGEN=OFF sn3d exspec
 
             - name: Compile nebular mode OPENMP=ON
               run: |
@@ -252,11 +252,10 @@ jobs:
               with:
                   xcode-version: 'latest-stable'
 
-            - name: Install GSL, Boost, Eigen, and OpenMPI
+            - name: Install GSL and OpenMPI
               run: |
                   brew update
-                  brew install gsl boost eigen openmpi || true
-                  echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
+                  brew install gsl openmpi || true
 
             - name: Install OpenMP
               run: |

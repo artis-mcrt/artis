@@ -110,7 +110,7 @@ jobs:
 
             - name: Compile
               run: |
-                  make REPRODUCIBLE=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF BOOST=ON EIGEN=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+                  make REPRODUCIBLE=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
                   cp sn3d tests/${{ matrix.testname }}_testrun/
                   cp exspec tests/${{ matrix.testname }}_testrun/
 
