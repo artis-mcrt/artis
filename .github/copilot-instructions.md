@@ -122,14 +122,13 @@ pre-commit run --all-files
 ├── scripts/            # Utility scripts (mostly for HPC environments)
 ├── .github/workflows/  # CI configuration
 ├── Makefile           # Primary build system
-├── CMakeLists.txt     # Alternative build system (less reliable)
 └── README.md          # Basic project information
 ```
 
 ### Important Files
 - **Main executables**: `sn3d.cc` (simulation), `exspec.cc` (spectrum extraction)
 - **Configuration**: `artisoptions.h` (must be copied from a template)
-- **Build**: `Makefile` (primary), `CMakeLists.txt` (backup)
+- **Build**: `Makefile` (primary)
 - **Core modules**: `grid.*, packet.*, radfield.*, nltepop.*`
 
 ### Configuration Templates
@@ -137,7 +136,6 @@ Choose appropriate artisoptions template for your simulation:
 - `artisoptions_classic.h` - Classic mode simulations
 - `artisoptions_nltenebular.h` - NLTE nebular phase
 - `artisoptions_kilonova_lte.h` - Kilonova simulations in LTE
-- `artisoptions_nltenebular_dynamic_ion_range.h` - NLTE with dynamic ion ranges
 
 ### Test Cases Available
 CI tests 12 different scenarios - examples:
