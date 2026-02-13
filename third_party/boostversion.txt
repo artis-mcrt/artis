@@ -8,4 +8,4 @@ https://github.com/boostorg/math/releases
 The source URL will be like:
 https://github.com/boostorg/math/archive/refs/tags/boost-1.90.0.tar.gz
 
-Extract somewhere and copy the include/ dir contents to artis/boost/ (keeping this extra version.txt file).
+Extract somewhere and copy the include/ dir contents to artis/third_party/boost/
