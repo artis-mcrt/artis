@@ -68,7 +68,7 @@ $(info detected compiler is $(COMPILER_NAME) major version $(COMPILER_VERSION_NU
 CXXFLAGS += -std=$(CXX_STD) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party
 
 ifneq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -Wunused-macros -Werror -Wno-unknown-pragmas -Wno-error=cast-function-type -MD -MP -Wno-unused-function
+	CXXFLAGS += -Wunused-macros -Werror -Wextra-semi -Wno-unknown-pragmas -Wno-error=cast-function-type -MD -MP -Wno-unused-function
 endif
 
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR
