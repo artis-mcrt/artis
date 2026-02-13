@@ -182,23 +182,25 @@ endif
 # default to GSL off unless we need it (boost or eigen disabled)
 GSL := OFF
 ifeq ($(BOOST),OFF)
+	CXXFLAGS += -DBOOST_OFF
 	GSL := ON
+	BUILD_DIR := $(BUILD_DIR)_boostoff
 else
-	CXXFLAGS += -DBOOST_ON -DBOOST_MATH_STANDALONE
-	BUILD_DIR := $(BUILD_DIR)_boost
+	CXXFLAGS += -DBOOST_MATH_STANDALONE
 endif
 
 ifeq ($(EIGEN),OFF)
+	CXXFLAGS += -DEIGEN_OFF
 	GSL := ON
+	BUILD_DIR := $(BUILD_DIR)_eigenoff
 else
-	CXXFLAGS += -DEIGEN_ON
-	BUILD_DIR := $(BUILD_DIR)_eigen
 endif
 
 ifeq ($(GSL),ON)
-	BUILD_DIR := $(BUILD_DIR)_gsl
 	# GSL (GNU Scientific Library)
 	CXXFLAGS += $(shell pkg-config --cflags gsl)
+	# Use GSL inline functions
+	CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 	ifeq ($(STATICGSL),)
 		# default to static linking
@@ -215,8 +217,6 @@ ifeq ($(GSL),ON)
 	endif
 endif
 
-# Use GSL inline functions
-CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifneq ($(MAX_NODE_SIZE),)
 	CXXFLAGS += -DMAX_NODE_SIZE=$(MAX_NODE_SIZE)

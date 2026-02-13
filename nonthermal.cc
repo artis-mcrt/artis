@@ -19,16 +19,16 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
-#ifdef EIGEN_ON
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#else
+#ifdef EIGEN_OFF
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cblas.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_vector_double.h>
+#else
+#include <Eigen/Core>
+#include <Eigen/Dense>
 #endif
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
@@ -1972,17 +1972,7 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_arr{};
 
-#ifdef EIGEN_ON
-
-  const Eigen::Map<const Eigen::Vector<double, SFPTS>> eigen_rhsvec{rhsvec.data()};
-  const Eigen::Map<const Eigen::Matrix<double, SFPTS, SFPTS, Eigen::RowMajor>> eigen_sfmatrix{sfmatrix.data()};
-  assert_testmodeonly(eigen_sfmatrix.isUpperTriangular());
-
-  auto eigen_sfmatrix_LU = eigen_sfmatrix.triangularView<Eigen::Upper>();
-  Eigen::Map<Eigen::Vector<double, SFPTS>> eigen_yvec{yvec_arr.data()};
-  eigen_yvec = eigen_sfmatrix_LU.solve(eigen_rhsvec);
-
-#else
+#ifdef EIGEN_OFF
 
   auto gsl_yvec = gsl_vector_view_array(yvec_arr.data(), SFPTS).vector;
   const auto gsl_rhsvec = gsl_vector_const_view_array(rhsvec.data(), SFPTS).vector;
@@ -1999,28 +1989,32 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
   // solve matrix equation: sf_matrix * y_vec = rhsvec for yvec
   gsl_linalg_LU_solve(&gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec);
 
+#else
+
+  const Eigen::Map<const Eigen::Vector<double, SFPTS>> eigen_rhsvec{rhsvec.data()};
+  const Eigen::Map<const Eigen::Matrix<double, SFPTS, SFPTS, Eigen::RowMajor>> eigen_sfmatrix{sfmatrix.data()};
+  assert_testmodeonly(eigen_sfmatrix.isUpperTriangular());
+
+  auto eigen_sfmatrix_LU = eigen_sfmatrix.triangularView<Eigen::Upper>();
+  Eigen::Map<Eigen::Vector<double, SFPTS>> eigen_yvec{yvec_arr.data()};
+  eigen_yvec = eigen_sfmatrix_LU.solve(eigen_rhsvec);
+
 #endif
 
   // refine the solution
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_best{};
-#ifdef EIGEN_ON
-  THREADLOCALONHOST Eigen::Vector<double, SFPTS> eigen_residual_vec{};
-#else
+#ifdef EIGEN_OFF
   THREADLOCALONHOST std::array<double, SFPTS> residual_vec{};
   auto gsl_residual_vec = gsl_vector_view_array(residual_vec.data(), SFPTS).vector;
+#else
+  THREADLOCALONHOST Eigen::Vector<double, SFPTS> eigen_residual_vec{};
 #endif
 
   double error_best = -1.;
   int iteration = 0;
   for (iteration = 0; iteration < 10; iteration++) {
-#ifdef EIGEN_ON
-    if (iteration > 0) {
-      eigen_yvec += eigen_sfmatrix_LU.solve(eigen_residual_vec);
-    }
-    eigen_residual_vec = eigen_rhsvec - eigen_sfmatrix * eigen_yvec;
-    const double error = eigen_residual_vec.cwiseAbs().maxCoeff();
-#else
+#ifdef EIGEN_OFF
     if (iteration > 0) {
       // use gsl_vec_residual as the temporary work vector
       gsl_linalg_LU_refine(&gsl_sfmatrix, &gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec, &gsl_residual_vec);
@@ -2030,6 +2024,12 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
     gsl_blas_dgemv(CblasNoTrans, 1.0, &gsl_sfmatrix, &gsl_yvec, -1.0, &gsl_residual_vec);
     // error is the largest absolute residual element
     const double error = fabs(gsl_vector_get(&gsl_residual_vec, gsl_blas_idamax(&gsl_residual_vec)));
+#else
+    if (iteration > 0) {
+      eigen_yvec += eigen_sfmatrix_LU.solve(eigen_residual_vec);
+    }
+    eigen_residual_vec = eigen_rhsvec - eigen_sfmatrix * eigen_yvec;
+    const double error = eigen_residual_vec.cwiseAbs().maxCoeff();
 #endif
 
     if (error < error_best || error_best < 0.) {
