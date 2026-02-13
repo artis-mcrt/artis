@@ -1,5 +1,12 @@
 #include "thermalbalance.h"
 
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <ranges>
+#include <span>
+#include <vector>
+
 #pragma clang unsafe_buffer_usage begin
 #ifdef BOOST_OFF
 #include <gsl/gsl_errno.h>
@@ -7,15 +14,9 @@
 #include <gsl/gsl_roots.h>
 #else
 #include <boost/math/tools/toms748_solve.hpp>
+#include <cstdint>
 #endif
 #pragma clang unsafe_buffer_usage end
-
-#include <algorithm>
-#include <cmath>
-#include <cstddef>
-#include <ranges>
-#include <span>
-#include <vector>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -228,12 +229,15 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
 
   return total_heating_rate - total_coolingrate;
 }
+
+#ifdef BOOST_OFF
 auto T_e_eqn_heating_minus_cooling(const double T_e, void* const paras)  // cppcheck-suppress constParameterPointer
     -> double {
   const auto* const params = static_cast<const TeSolutionParams*>(paras);
   return T_e_eqn_heating_minus_cooling(T_e, params->nonemptymgi, params->t_current, *params->heatingcoolingrates,
                                        params->bfheatingcoeffs);
 }
+#endif
 
 }  // anonymous namespace
 
