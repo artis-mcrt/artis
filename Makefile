@@ -246,7 +246,7 @@ endif
 
 ifeq ($(OPTIMIZE),OFF)
 	BUILD_DIR := $(BUILD_DIR)_optimizeoff
-	CXXFLAGS += -O0
+	CXXFLAGS += -O0 -DEIGEN_FAST_MATH=0
 else
 	CXXFLAGS += -O3
 
@@ -258,6 +258,7 @@ else
 
 	ifeq ($(FASTMATH),OFF)
 		BUILD_DIR := $(BUILD_DIR)_nofastmath
+		CXXFLAGS += -DEIGEN_FAST_MATH=0
 	else
 		ifeq ($(COMPILER_NAME),NVHPC)
 			CXXFLAGS += -fast
