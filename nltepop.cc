@@ -16,10 +16,7 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
-#ifdef EIGEN_ON
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#else
+#ifdef EIGEN_OFF
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cblas.h>
 #include <gsl/gsl_errno.h>
@@ -27,6 +24,9 @@
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_vector_double.h>
+#else
+#include <Eigen/Core>
+#include <Eigen/Dense>
 #endif
 #pragma clang unsafe_buffer_usage end
 
@@ -907,20 +907,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   vec_x.reserve(max_nlte_dimension);
   vec_x.resize(nlte_dimension);
 
-#ifdef EIGEN_ON
-  auto eigen_vec_x = Eigen::Map<Eigen::VectorX<double>>(vec_x.data(), nlte_dimension);
-  const auto eigen_balance_vector = Eigen::Map<const Eigen::VectorX<double>>(balance_vector.data(), nlte_dimension);
-
-  const auto eigen_rate_matrix =
-      Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
-          rate_matrix.data(), nlte_dimension, nlte_dimension);
-
-  THREADLOCALONHOST Eigen::PartialPivLU<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
-      eigen_rate_matrix_lu;
-
-  eigen_rate_matrix_lu.compute(eigen_rate_matrix);
-  eigen_vec_x = eigen_rate_matrix_lu.solve(eigen_balance_vector);
-#else
+#ifdef EIGEN_OFF
 
   THREADLOCALONHOST std::vector<double> rate_matrix_LU_decomp;
   rate_matrix_LU_decomp.reserve(max_nlte_dimension * max_nlte_dimension);
@@ -946,6 +933,22 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
   // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
   gsl_linalg_LU_solve(&gsl_rate_matrix_LU_decomp, &p, &gsl_balance_vector, &gsl_x);
+
+#else
+
+  auto eigen_vec_x = Eigen::Map<Eigen::VectorX<double> >(vec_x.data(), nlte_dimension);
+  const auto eigen_balance_vector = Eigen::Map<const Eigen::VectorX<double> >(balance_vector.data(), nlte_dimension);
+
+  const auto eigen_rate_matrix =
+      Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >(
+          rate_matrix.data(), nlte_dimension, nlte_dimension);
+
+  THREADLOCALONHOST Eigen::PartialPivLU<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >
+      eigen_rate_matrix_lu;
+
+  eigen_rate_matrix_lu.compute(eigen_rate_matrix);
+  eigen_vec_x = eigen_rate_matrix_lu.solve(eigen_balance_vector);
+
 #endif
 
   double error_best = -1.;
@@ -959,21 +962,15 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   vec_residual.reserve(max_nlte_dimension);
   vec_residual.resize(nlte_dimension);
 
-#ifdef EIGEN_ON
-  auto eigen_vec_residual = Eigen::Map<Eigen::VectorX<double>>(vec_residual.data(), nlte_dimension);
-#else
+#ifdef EIGEN_OFF
   auto gsl_vec_residual = gsl_vector_view_array(vec_residual.data(), nlte_dimension).vector;
+#else
+  auto eigen_vec_residual = Eigen::Map<Eigen::VectorX<double> >(vec_residual.data(), nlte_dimension);
 #endif
 
   int iteration = 0;
   for (iteration = 0; iteration < 10; iteration++) {
-#ifdef EIGEN_ON
-    if (iteration > 0) {
-      eigen_vec_x += eigen_rate_matrix_lu.solve(eigen_vec_residual);
-    }
-    eigen_vec_residual = eigen_balance_vector - eigen_rate_matrix * eigen_vec_x;
-    const double error = eigen_vec_residual.cwiseAbs().maxCoeff();
-#else
+#ifdef EIGEN_OFF
     if (iteration > 0) {
       // use gsl_vec_residual as the temporary work vector
       gsl_linalg_LU_refine(&gsl_rate_matrix, &gsl_rate_matrix_LU_decomp, &p, &gsl_balance_vector, &gsl_x,
@@ -986,6 +983,12 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
     const double error = fabs(gsl_vector_get(
         &gsl_vec_residual, gsl_blas_idamax(&gsl_vec_residual)));  // value of the largest absolute residual
+#else
+    if (iteration > 0) {
+      eigen_vec_x += eigen_rate_matrix_lu.solve(eigen_vec_residual);
+    }
+    eigen_vec_residual = eigen_balance_vector - eigen_rate_matrix * eigen_vec_x;
+    const double error = eigen_vec_residual.cwiseAbs().maxCoeff();
 #endif
 
     if (error < error_best || error_best < 0.) {

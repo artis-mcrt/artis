@@ -22,7 +22,7 @@ git clone --branch release https://github.com/artis-mcrt/artis.git
 cd artis
 ```
 
-To compile and run artis, you will need a recent C++ compiler (g++, LLVM Clang, Apple Clang, or nvc++), the GNU Scientific Library (or Boost and Eigen headers), and an MPI library with a wrapper command `mpicxx'. Typically these are made available on HPC systems using module or spack commands. For systems that we use, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules specifications.
+To compile and run artis, you will need a recent C++ compiler (g++, LLVM Clang, Apple Clang, or nvc++), and an MPI library with a wrapper command `mpicxx'. Typically these are made available on HPC systems using module or spack commands. For systems that we use, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules specifications.
 
 Next, select an options preset and compile with `make'. For example:
 ```sh
@@ -53,7 +53,7 @@ cd artis
 ```
 On macOS, it's recommend that you install homebrew llvm to get clang-format, clang-tidy, clangd language server, and the clang C++ compiler. You can install this and other dependencies with:
 ```sh
-brew install llvm open-mpi gsl boost eigen prek
+brew install llvm open-mpi gsl prek
 ```
 Install the pre-commit hooks:
 ```sh
@@ -72,9 +72,8 @@ Press Ctrl+C to stop following the log file.
 ## make options
 - TESTMODE=ON: Enable additional assertions and compile with address sanitizer.
 - FASTMATH=OFF: Don't enable compiler transformations that affect round-off-level results (e.g. a*(b+c).
-- BOOST=ON: Use Boost library (not GSL) for root finding (classic nne solver, T_e, and binned radfield) and adaptive integration.
-- EIGEN=ON: Use Eigen library (not GSL) for matrix-vector solving (Spencer-Fano and NLTE pops).
-- BOOST=ON EIGEN=ON: Do not use GSL at all.
+- BOOST=OFF: Use GSL (not Boost) for root finding (classic nne solver, T_e, and binned radfield) and adaptive integration.
+- EIGEN=OFF: Use GSL (not Eigen) for matrix-vector solving (Spencer-Fano and NLTE pops).
 - MAX_NODE_SIZE=N: Artificially limit MPI node size to N ranks. Useful for testing or preventing MPI shared memory windows from crossing CPU sockets.
 - REPRODUCIBLE=ON: Use stable sorts and disable FASTMATH.
 - GPU=ON: Required to compile for GPUs. Avoids incompatible GSL and std::random calls.

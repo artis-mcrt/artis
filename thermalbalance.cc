@@ -1,21 +1,22 @@
 #include "thermalbalance.h"
 
-#pragma clang unsafe_buffer_usage begin
-#ifdef BOOST_ON
-#include <boost/math/tools/toms748_solve.hpp>
-#else
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_roots.h>
-#endif
-#pragma clang unsafe_buffer_usage end
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <ranges>
 #include <span>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#ifdef BOOST_OFF
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_roots.h>
+#else
+#include <boost/math/tools/toms748_solve.hpp>
+#include <cstdint>
+#endif
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -32,13 +33,6 @@
 #include "sn3d.h"
 
 namespace {
-
-struct TeSolutionParams {
-  double t_current;
-  int nonemptymgi;
-  HeatingCoolingRates* heatingcoolingrates;
-  std::span<const double> bfheatingcoeffs;
-};
 
 struct BFHeatingIntegralParams {
   double nu_edge;
@@ -228,12 +222,22 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
 
   return total_heating_rate - total_coolingrate;
 }
+
+#ifdef BOOST_OFF
+struct TeSolutionParams {
+  double t_current;
+  int nonemptymgi;
+  HeatingCoolingRates* heatingcoolingrates;
+  std::span<const double> bfheatingcoeffs;
+};
+
 auto T_e_eqn_heating_minus_cooling(const double T_e, void* const paras)  // cppcheck-suppress constParameterPointer
     -> double {
   const auto* const params = static_cast<const TeSolutionParams*>(paras);
   return T_e_eqn_heating_minus_cooling(T_e, params->nonemptymgi, params->t_current, *params->heatingcoolingrates,
                                        params->bfheatingcoeffs);
 }
+#endif
 
 }  // anonymous namespace
 
@@ -287,10 +291,10 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
                      HeatingCoolingRates& heatingcoolingrates, const std::span<const double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::get_Te(nonemptymgi);
-#ifdef BOOST_ON
-  constexpr auto method = "boost toms748_solve";
-#else
+#ifdef BOOST_OFF
   constexpr auto method = "gsl brent";
+#else
+  constexpr auto method = "boost toms748_solve";
 #endif
   printlog("Finding T_e in cell {} at timestep {} [{}]...", modelgridindex, globals::timestep, method);
 
@@ -314,59 +318,52 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
   if (!invalid_values && f_T_min * f_T_max < 0) {
     const auto maxit = 100U;
     // If it has, then solve for the root T_e
-#ifdef BOOST_ON
-    {
-      // use TOMS 748 solver from Boost
-      uintmax_t iternum = maxit;
-      auto result = boost::math::tools::toms748_solve(f_T_e, T_min, T_max, f_T_min, f_T_max,
-                                                      ftol<TEMPERATURE_SOLVER_ACCURACY>, iternum);
-      T_e = 0.5 * (result.first + result.second);
-      if (iternum >= maxit) {
-        printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations. interval [{:g}, {:g}]",
-                   iternum, result.first, result.second);
-      } else {
-        printlnlog("after {} iterations, T_e = {:g} K, interval [{:g}, {:g}]", iternum, T_e, result.first,
-                   result.second);
+#ifdef BOOST_OFF
+    TeSolutionParams paras = {.t_current = t_current,
+                              .nonemptymgi = nonemptymgi,
+                              .heatingcoolingrates = &heatingcoolingrates,
+                              .bfheatingcoeffs = bfheatingcoeffs};
+
+    gsl_function find_T_e_f = {.function = &T_e_eqn_heating_minus_cooling, .params = &paras};
+    // one-dimensional GSL Brent root solver, bracketing type
+    gsl_root_fsolver* T_e_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
+
+    gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
+    int status = 0;
+    for (auto iternum = 0U; iternum < maxit; iternum++) {
+      gsl_root_fsolver_iterate(T_e_solver);
+      T_e = gsl_root_fsolver_root(T_e_solver);
+      const double T_e_lower = gsl_root_fsolver_x_lower(T_e_solver);
+      const double T_e_upper = gsl_root_fsolver_x_upper(T_e_solver);
+      status = gsl_root_test_interval(T_e_lower, T_e_upper, 0, TEMPERATURE_SOLVER_ACCURACY);
+      // printlnlog("iter {}, T_e interval [{:g}, {:g}], guess {:g}, status {}", iternum, T_e_lower, T_e_upper, T_e,
+      // status);
+      if (status != GSL_CONTINUE) {
+        printlnlog("after {} iterations, T_e = {:g} K, interval [{:g}, {:g}]", iternum + 1, T_e, T_e_lower, T_e_upper);
+        break;
       }
     }
+
+    if (status == GSL_CONTINUE) {
+      printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations", maxit);
+    }
+
+    gsl_root_fsolver_free(T_e_solver);
 #else
-    {
-      TeSolutionParams paras = {.t_current = t_current,
-                                .nonemptymgi = nonemptymgi,
-                                .heatingcoolingrates = &heatingcoolingrates,
-                                .bfheatingcoeffs = bfheatingcoeffs};
-
-      gsl_function find_T_e_f = {.function = &T_e_eqn_heating_minus_cooling, .params = &paras};
-      // one-dimensional GSL Brent root solver, bracketing type
-      gsl_root_fsolver* T_e_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
-
-      gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
-      int status = 0;
-      for (auto iternum = 0U; iternum < maxit; iternum++) {
-        gsl_root_fsolver_iterate(T_e_solver);
-        T_e = gsl_root_fsolver_root(T_e_solver);
-        const double T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
-        const double T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
-        status = gsl_root_test_interval(T_e_min, T_e_max, 0, TEMPERATURE_SOLVER_ACCURACY);
-        // printlnlog("iter {}, T_e interval [{:g}, {:g}], guess {:g}, status {}", iternum, T_e_min, T_e_max, T_e,
-        // status);
-        if (status != GSL_CONTINUE) {
-          printlnlog("after {} iterations, T_e = {:g} K, interval [{:g}, {:g}]", iternum + 1, T_e, T_e_min, T_e_max);
-          break;
-        }
-      }
-
-      if (status == GSL_CONTINUE) {
-        printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations", maxit);
-      }
-
-      gsl_root_fsolver_free(T_e_solver);
+    // use TOMS 748 solver from Boost
+    uintmax_t iternum = maxit;
+    auto result = boost::math::tools::toms748_solve(f_T_e, T_min, T_max, f_T_min, f_T_max,
+                                                    ftol<TEMPERATURE_SOLVER_ACCURACY>, iternum);
+    T_e = 0.5 * (result.first + result.second);
+    if (iternum >= maxit) {
+      printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations. interval [{:g}, {:g}]", iternum,
+                 result.first, result.second);
+    } else {
+      printlnlog("after {} iterations, T_e = {:g} K, interval [{:g}, {:g}]", iternum, T_e, result.first, result.second);
     }
 #endif
   }
 
-  // Quick solver style: works if we can assume that there is either one or no
-  // solution on [MINTEMP.MAXTEMP] (check that by doing a plot of heating-cooling vs. T_e)
   else if (invalid_values || f_T_max < 0) {
     // Thermal balance equation always negative ===> T_e = T_min
     T_e = MINTEMP;

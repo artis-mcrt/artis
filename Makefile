@@ -65,7 +65,7 @@ endif
 
 $(info detected compiler is $(COMPILER_NAME) major version $(COMPILER_VERSION_NUMBER_MAJOR))
 
-CXXFLAGS += -std=$(CXX_STD) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow
+CXXFLAGS += -std=$(CXX_STD) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party
 
 ifneq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -Wunused-macros -Werror -Wno-unknown-pragmas -Wno-error=cast-function-type -MD -MP -Wno-unused-function
@@ -179,28 +179,28 @@ else
 
 endif
 
-
-ifeq ($(BOOST),ON)
-	CXXFLAGS += -DBOOST_ON -DBOOST_MATH_STANDALONE
-	BUILD_DIR := $(BUILD_DIR)_boost
+# default to GSL off unless we need it (boost or eigen disabled)
+GSL := OFF
+ifeq ($(BOOST),OFF)
+	CXXFLAGS += -DBOOST_OFF
+	GSL := ON
+	BUILD_DIR := $(BUILD_DIR)_boostoff
+else
+	CXXFLAGS += -DBOOST_MATH_STANDALONE
 endif
 
-ifeq ($(EIGEN),ON)
-	CXXFLAGS += -DEIGEN_ON $(shell pkg-config --cflags eigen3 | sed 's/-I/-isystem /g')
-	BUILD_DIR := $(BUILD_DIR)_eigen
-endif
-
-GSL := ON
-ifeq ($(BOOST),ON)
-	ifeq ($(EIGEN),ON)
-		GSL := OFF
-	endif
+ifeq ($(EIGEN),OFF)
+	CXXFLAGS += -DEIGEN_OFF
+	GSL := ON
+	BUILD_DIR := $(BUILD_DIR)_eigenoff
+else
 endif
 
 ifeq ($(GSL),ON)
-	BUILD_DIR := $(BUILD_DIR)_gsl
 	# GSL (GNU Scientific Library)
 	CXXFLAGS += $(shell pkg-config --cflags gsl)
+	# Use GSL inline functions
+	CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 	ifeq ($(STATICGSL),)
 		# default to static linking
@@ -217,8 +217,6 @@ ifeq ($(GSL),ON)
 	endif
 endif
 
-# Use GSL inline functions
-CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifneq ($(MAX_NODE_SIZE),)
 	CXXFLAGS += -DMAX_NODE_SIZE=$(MAX_NODE_SIZE)
@@ -240,8 +238,10 @@ ifeq ($(TESTMODE),ON)
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
-	# skip GSL range checking for better performance
-	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF
+	CXXFLAGS += -DTESTMODE=false
+	ifeq ($(GSL),ON)
+		CXXFLAGS += -DGSL_RANGE_CHECK_OFF
+	endif
 endif
 
 ifeq ($(OPTIMIZE),OFF)

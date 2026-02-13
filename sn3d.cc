@@ -761,25 +761,24 @@ auto main(int argc, char* argv[]) -> int {
 #ifdef USE_SIMPSON_INTEGRATOR
   printlnlog("Simpson rule");
 #else
-#ifdef BOOST_ON
-  printlnlog("Boost qag adaptive integrator");
-#else
+#ifdef BOOST_OFF
   printlnlog("GSL qag adaptive integrator");
+#else
+  printlnlog("Boost qag adaptive integrator");
 #endif
 #endif
 
   printlog("Root finding method is: ");
-
-#ifdef BOOST_ON
-  printlnlog("Boost toms748_solve");
-#else
+#ifdef BOOST_OFF
   printlnlog("GSL Brent");
+#else
+  printlnlog("Boost toms748_solve");
 #endif
 
-#ifdef EIGEN_ON
-  printlnlog("Linear algebra solvers are from Eigen");
-#else
+#ifdef EIGEN_OFF
   printlnlog("Linear algebra solvers are from GSL");
+#else
+  printlnlog("Linear algebra solvers are from Eigen");
 #endif
 
 #ifdef WALLTIMELIMITSECONDS

@@ -8,14 +8,7 @@
 
 #include "globals.h"
 
-#elifdef BOOST_ON
-#include <cstdlib>
-
-#pragma clang unsafe_buffer_usage begin
-#include <boost/math/quadrature/gauss_kronrod.hpp>
-#pragma clang unsafe_buffer_usage end
-
-#else
+#elifdef BOOST_OFF
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
@@ -35,6 +28,14 @@ inline void gsl_error_handler_printout(const char* reason, const char* file, int
     printlnlog("WARNING: gsl ({}:{}): {} (Error code {})", file, line, reason, gsl_errno);
   }
 }
+
+#else
+#include <cstdlib>
+
+#pragma clang unsafe_buffer_usage begin
+#include <boost/math/quadrature/gauss_kronrod.hpp>
+#pragma clang unsafe_buffer_usage end
+
 #endif
 
 void ratecoefficients_init();
@@ -114,13 +115,8 @@ auto integrator(auto params, const double a, const double b, const double epsrel
   return 0;
 
 #else
-#ifdef BOOST_ON
-  // Boost's Gauss-Kronrod integrator
-  *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
-      [&](double x) { return func_integrand(x, &params); }, a, b, 15, epsrel, abserr);
-  return ((*abserr / std::abs(*result)) > epsrel ? 1 : 0);
+#ifdef BOOST_OFF
 
-#else
   // GSL's QAG adaptive integrator
   constexpr auto key = []() {
     switch (GKNPOINTS) {
@@ -146,6 +142,14 @@ auto integrator(auto params, const double a, const double b, const double epsrel
   gsl_set_error_handler(previous_handler);
 
   return status;
+
+#else
+
+  // Boost's Gauss-Kronrod integrator
+  *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
+      [&](double x) { return func_integrand(x, &params); }, a, b, 15, epsrel, abserr);
+  return ((*abserr / std::abs(*result)) > epsrel ? 1 : 0);
+
 #endif
 #endif
 }

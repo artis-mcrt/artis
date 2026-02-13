@@ -1,12 +1,13 @@
 #include "ltepop.h"
 
 #pragma clang unsafe_buffer_usage begin
-#ifdef BOOST_ON
-#include <boost/math/tools/toms748_solve.hpp>
-#else
+#ifdef BOOST_OFF
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
+#else
+#include <boost/math/tools/toms748_solve.hpp>
+#include <cstdint>
 #endif
 #pragma clang unsafe_buffer_usage end
 
@@ -30,11 +31,6 @@
 #include "sn3d.h"
 
 namespace {
-
-struct nneSolutionParas {
-  int nonemptymgi;
-  bool force_saha;
-};
 
 // use Saha equation for LTE ionisation balance
 [[gnu::pure]] [[nodiscard]] auto phi_saha(const int element, const int ion, const int nonemptymgi) -> double {
@@ -136,11 +132,18 @@ auto nne_solution_f(const double nne_assumed, const int nonemptymgi, const bool 
   return nne_after - nne_assumed;
 }
 
+#ifdef BOOST_OFF
+struct nneSolutionParas {
+  int nonemptymgi;
+  bool force_saha;
+};
+
 auto nne_solution_f(const double nne_assumed, void* const voidparas)  // cppcheck-suppress constParameterPointer
     -> double {
   const auto* paras = static_cast<const nneSolutionParas*>(voidparas);
   return nne_solution_f(nne_assumed, paras->nonemptymgi, paras->force_saha);
 }
+#endif
 
 // return population and whether the population came from the nlte solver
 auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const int ion, const int level)
@@ -261,21 +264,21 @@ void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
   }
 }
 
-auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_lte) -> float {
-  // Search solution for nne in [nne_lo,nne_hi]
+auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_lte) -> float {
+  // search for nne solution in [0.,nne_max]
 
   const auto f_nne = [nonemptymgi, force_lte](const double nne) { return nne_solution_f(nne, nonemptymgi, force_lte); };
 
-  double nne_low = 0.;
-  const auto f_nne_low = f_nne(nne_low);
-  const auto f_nne_hi = f_nne(nne_hi);
-  if (f_nne_low * f_nne_hi > 0) {
+  constexpr double nne_min = 0.;
+  const auto f_nne_min = f_nne(nne_min);
+  const auto f_nne_max = f_nne(nne_max);
+  if (f_nne_min * f_nne_max > 0) {
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_low, nne_hi,
+    printout("n, nne_min, nne_max, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_min, nne_max,
              grid::get_TR(nonemptymgi), grid::get_Te(nonemptymgi), grid::get_W(nonemptymgi),
              grid::get_rho(nonemptymgi));
-    printout("nne@x_lo %g\n", f_nne_low);
-    printout("nne@x_hi %g\n", f_nne_hi);
+    printout("nne(nne_min) %g\n", f_nne_min);
+    printout("nne(nne_max) %g\n", f_nne_max);
 
     for (int element = 0; element < get_nelements(); element++) {
       printout("modelgridindex %d, element %d, uppermost_ion is %d\n", modelgridindex, element,
@@ -293,30 +296,22 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
   constexpr double fractional_accuracy = 1e-3;
   constexpr auto maxit = 50U;
 
-#ifdef BOOST_ON
-  // use TOMS 748 solver from Boost
-  uintmax_t iter = maxit;
-  auto result =
-      boost::math::tools::toms748_solve(f_nne, nne_low, nne_hi, f_nne_low, f_nne_hi, ftol<fractional_accuracy>, iter);
-  const double nne_solution = 0.5 * (result.first + result.second);
-  if (iter >= maxit) {
-    printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations", iter);
-  }
-#else
+#ifdef BOOST_OFF
+
   gsl_root_fsolver* solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
 
   nneSolutionParas paras = {.nonemptymgi = nonemptymgi, .force_saha = force_lte};
   gsl_function f = {.function = &nne_solution_f, .params = &paras};
-  gsl_root_fsolver_set(solver, &f, nne_low, nne_hi);
+  gsl_root_fsolver_set(solver, &f, nne_min, nne_max);
   int status = GSL_CONTINUE;
   auto iter = 0U;
   double nne_solution = 0.;
   for (iter = 0; iter <= maxit; iter++) {
     gsl_root_fsolver_iterate(solver);
     nne_solution = gsl_root_fsolver_root(solver);
-    nne_low = gsl_root_fsolver_x_lower(solver);
-    nne_hi = gsl_root_fsolver_x_upper(solver);
-    status = gsl_root_test_interval(nne_low, nne_hi, 0, fractional_accuracy);
+    const auto nne_lower = gsl_root_fsolver_x_lower(solver);
+    const auto nne_upper = gsl_root_fsolver_x_upper(solver);
+    status = gsl_root_test_interval(nne_lower, nne_upper, 0, fractional_accuracy);
     if (status != GSL_CONTINUE) {
       break;
     }
@@ -326,6 +321,18 @@ auto find_converged_nne(const int nonemptymgi, double nne_hi, const bool force_l
   }
 
   gsl_root_fsolver_free(solver);
+
+#else
+
+  // use TOMS 748 solver from Boost
+  uintmax_t iter = maxit;
+  auto result =
+      boost::math::tools::toms748_solve(f_nne, nne_min, nne_max, f_nne_min, f_nne_max, ftol<fractional_accuracy>, iter);
+  const double nne_solution = 0.5 * (result.first + result.second);
+  if (iter >= maxit) {
+    printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations", iter);
+  }
+
 #endif
 
   return static_cast<float>(std::max(MINPOP, nne_solution));
@@ -504,12 +511,12 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
 auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
   const bool force_saha = globals::lte_iteration || grid::thick_allcells[nonemptymgi] == 1;
 
-  const double nne_hi = grid::get_rho(nonemptymgi) / MH;
+  const double nne_max = grid::get_rho(nonemptymgi) / MH;
 
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
-      const auto uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_saha);
+      const auto uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_max, force_saha);
       grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
 
       only_lowest_ionstage = only_lowest_ionstage && (uppermost_ion <= 0);
@@ -521,7 +528,7 @@ auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
   if (only_lowest_ionstage) {
     set_groundlevelpops_neutral(nonemptymgi);
   } else {
-    const auto nne_solution = find_converged_nne(nonemptymgi, nne_hi, force_saha);
+    const auto nne_solution = find_converged_nne(nonemptymgi, nne_max, force_saha);
     grid::set_nne(nonemptymgi, nne_solution);
 
     for (int element = 0; element < get_nelements(); element++) {

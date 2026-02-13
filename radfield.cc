@@ -15,12 +15,13 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
-#ifdef BOOST_ON
-#include <boost/math/tools/toms748_solve.hpp>
-#else
+#ifdef BOOST_OFF
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
+#else
+#include <boost/math/tools/toms748_solve.hpp>
+#include <cstdint>
 #endif
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
@@ -316,17 +317,8 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
 
     constexpr double epsrel = 1e-4;
     const auto maxit = 100U;
-#ifdef BOOST_ON
-    // use TOMS 748 solver from Boost
-    uintmax_t iteration_num = maxit;
-    auto result =
-        boost::math::tools::toms748_solve(f_deltanubar, T_R_min, T_R_max, f_Tmin, f_Tmax, ftol<epsrel>, iteration_num);
-    const auto T_R_solution = static_cast<float>(0.5 * (result.first + result.second));
-    if (iteration_num >= maxit) {
-      printlnlog("[warning] find_T_R: T_R did not converge within {} iterations.", iteration_num);
-    }
-    return T_R_solution;
-#else
+#ifdef BOOST_OFF
+
     GSLTempSolverParams paras{.nonemptymgi = nonemptymgi, .binindex = binindex};
     gsl_function find_T_R_f = {.function = &delta_nu_bar, .params = &paras};
 
@@ -354,6 +346,19 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
 
     gsl_root_fsolver_free(T_R_solver);
     return T_R_solution;
+
+#else
+
+    // use TOMS 748 solver from Boost
+    uintmax_t iteration_num = maxit;
+    auto result =
+        boost::math::tools::toms748_solve(f_deltanubar, T_R_min, T_R_max, f_Tmin, f_Tmax, ftol<epsrel>, iteration_num);
+    const auto T_R_solution = static_cast<float>(0.5 * (result.first + result.second));
+    if (iteration_num >= maxit) {
+      printlnlog("[warning] find_T_R: T_R did not converge within {} iterations.", iteration_num);
+    }
+    return T_R_solution;
+
 #endif
   } else if (invalid_values || f_Tmax < 0) {
     // delta_nu_bar always negative, so the solution is above T_R_max

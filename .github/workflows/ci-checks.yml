@@ -48,7 +48,7 @@ jobs:
                   echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
                   echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
 
-                  brew install openmpi gsl boost eigen cppcheck || true
+                  brew install openmpi gsl cppcheck || true
                   python3 -m pip install compiledb
 
             - name: Generate compile_commands.json
@@ -65,7 +65,7 @@ jobs:
             - name: Run cppcheck
               run: |
                   cppcheck --version
-                  cppcheck --force --error-exitcode=1 --language=c++ --enable=all --inconclusive --inline-suppr --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --suppress=knownArgument --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=useStlAlgorithm --check-level=exhaustive .
+                  cppcheck --force --error-exitcode=1 --language=c++ -i third_party --enable=all --inconclusive --inline-suppr --suppress=knownConditionTrueFalse --suppress=constParameterCallback --suppress=redundantAssignment --suppress=knownArgument --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=useStlAlgorithm --check-level=exhaustive .
 
     compile:
         strategy:
@@ -159,12 +159,6 @@ jobs:
                   echo "CXX=nvc++" >> $GITHUB_ENV
                   echo "OMPI_CXX=nvc++" >> $GITHUB_ENV
 
-            - name: Install boost-math headers
-              run: |
-                  wget https://github.com/boostorg/math/archive/refs/tags/boost-1.90.0.tar.gz
-                  tar -zxf boost-1.90.0.tar.gz
-                  echo "CPATH=${{ github.workspace }}/math-boost-1.90.0/include:$CPATH" >> $GITHUB_ENV
-
             - name: Install GSL and Eigen
               run: |
                   sudo apt-get update
@@ -209,11 +203,11 @@ jobs:
                   make clean
                   make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: Compile nebular mode boost+eigen
+            - name: Compile nebular mode BOOST=OFF EIGEN=OFF
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make -j${{ steps.cpu-count.outputs.count}} BOOST=ON EIGEN=ON sn3d exspec
+                  make -j${{ steps.cpu-count.outputs.count}} BOOST=OFF EIGEN=OFF sn3d exspec
 
             - name: Compile nebular mode OPENMP=ON
               run: |
@@ -258,11 +252,10 @@ jobs:
               with:
                   xcode-version: 'latest-stable'
 
-            - name: Install GSL, Boost, Eigen, and OpenMPI
+            - name: Install GSL and OpenMPI
               run: |
                   brew update
-                  brew install gsl boost eigen openmpi || true
-                  echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
+                  brew install gsl openmpi || true
 
             - name: Install OpenMP
               run: |
