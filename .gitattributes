@@ -4,6 +4,7 @@
 # these files require LF (Unix-style) line-endings
 *.cc text eol=lf linguist-language=C++
 *.h text eol=lf linguist-language=C++
+*.hpp text eol=lf linguist-language=C++
 *.sh text eol=lf
 *.txt text eol=lf
 * text eol=lf
