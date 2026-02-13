@@ -372,10 +372,6 @@ void read_binding_energies() {
 
   std::vector<std::vector<int>> elements_neutral_shells_q;
   if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
-    if (!binding_en_newformat) {
-      printlnlog(
-          "NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE is true, but could not find binding_energies_lotz_tab1and2.txt");
-    }
     assert_always(binding_en_newformat);
     elements_neutral_shells_q = read_shell_configs();
   }
