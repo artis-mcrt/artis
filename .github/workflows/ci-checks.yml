@@ -159,10 +159,10 @@ jobs:
                   echo "CXX=nvc++" >> $GITHUB_ENV
                   echo "OMPI_CXX=nvc++" >> $GITHUB_ENV
 
-            - name: Install GSL and Eigen
+            - name: Install GSL
               run: |
                   sudo apt-get update
-                  sudo apt install -y libgsl-dev libeigen3-dev
+                  sudo apt install -y libgsl-dev
 
             - name: Install TBB
               if: matrix.compiler.name == 'gcc'

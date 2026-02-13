@@ -49,12 +49,12 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: Install Eigen and OpenMPI
+            - name: Install EOpenMPI
               run: |
                   echo "CXX=g++-14" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-14" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt install -y libeigen3-dev openmpi-bin libopenmpi-dev
+                  sudo apt install -y openmpi-bin libopenmpi-dev
 
             - name: Show CPU type and core count
               id: cpu-count
