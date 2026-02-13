@@ -34,13 +34,6 @@
 
 namespace {
 
-struct TeSolutionParams {
-  double t_current;
-  int nonemptymgi;
-  HeatingCoolingRates* heatingcoolingrates;
-  std::span<const double> bfheatingcoeffs;
-};
-
 struct BFHeatingIntegralParams {
   double nu_edge;
   int nonemptymgi;
@@ -231,6 +224,13 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
 }
 
 #ifdef BOOST_OFF
+struct TeSolutionParams {
+  double t_current;
+  int nonemptymgi;
+  HeatingCoolingRates* heatingcoolingrates;
+  std::span<const double> bfheatingcoeffs;
+};
+
 auto T_e_eqn_heating_minus_cooling(const double T_e, void* const paras)  // cppcheck-suppress constParameterPointer
     -> double {
   const auto* const params = static_cast<const TeSolutionParams*>(paras);
