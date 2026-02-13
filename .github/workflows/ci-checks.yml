@@ -159,12 +159,6 @@ jobs:
                   echo "CXX=nvc++" >> $GITHUB_ENV
                   echo "OMPI_CXX=nvc++" >> $GITHUB_ENV
 
-            - name: Install boost-math headers
-              run: |
-                  wget https://github.com/boostorg/math/archive/refs/tags/boost-1.90.0.tar.gz
-                  tar -zxf boost-1.90.0.tar.gz
-                  echo "CPATH=${{ github.workspace }}/math-boost-1.90.0/include:$CPATH" >> $GITHUB_ENV
-
             - name: Install GSL and Eigen
               run: |
                   sudo apt-get update

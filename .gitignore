@@ -20,5 +20,3 @@ compile_commands.json
 .cache
 *.log
 boost*.tar.gz
-math-boost*/
-boost*/

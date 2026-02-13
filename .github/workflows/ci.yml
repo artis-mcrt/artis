@@ -49,12 +49,6 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: Install boost-math headers
-              run: |
-                  wget https://github.com/boostorg/math/archive/refs/tags/boost-1.90.0.tar.gz
-                  tar -zxf boost-1.90.0.tar.gz
-                  echo "CPATH=${{ github.workspace }}/math-boost-1.90.0/include:$CPATH" >> $GITHUB_ENV
-
             - name: Install Eigen and OpenMPI
               run: |
                   echo "CXX=g++-14" >> $GITHUB_ENV
