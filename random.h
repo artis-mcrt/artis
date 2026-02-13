@@ -18,7 +18,7 @@ template <class T>
   requires(std::is_integral_v<T> && sizeof(T) <= 8)
 [[nodiscard]] constexpr auto _crush_to_uint32(T value) -> std::uint32_t {
   if constexpr (sizeof(value) <= 4) {
-    return std::uint32_t(value);
+    return static_cast<std::uint32_t>(value);
   } else {
     std::uint64_t res = value;
     res *= 0xbc2ad017d719504d;

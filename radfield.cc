@@ -107,11 +107,6 @@ struct GSL_PlanckIntegralParas {
   bool times_nu;
 };
 
-struct GSLTempSolverParams {
-  int nonemptymgi;
-  int binindex;
-};
-
 std::fstream radfieldfile;
 
 constexpr auto get_bin_nu_upper(const int binindex) -> double {
@@ -296,10 +291,17 @@ auto delta_nu_bar(const double T_R, const int nonemptymgi, const int binindex) -
   return delta_nu_bar;
 }
 
+#ifdef BOOST_OFF
+struct GSLTempSolverParams {
+  int nonemptymgi;
+  int binindex;
+};
+
 auto delta_nu_bar(const double T_R, void* const voidparas) -> double {  // cppcheck-suppress constParameterPointer
   const auto* const params = static_cast<const GSLTempSolverParams*>(voidparas);
   return delta_nu_bar(T_R, params->nonemptymgi, params->binindex);
 }
+#endif
 
 auto find_T_R(const int nonemptymgi, const int binindex) -> float {
   const auto f_deltanubar = [nonemptymgi, binindex](const double T_R) {

@@ -349,7 +349,7 @@ void electron_scatter_rpkt(Packet& pkt) {
 
       // generate a number between 0 and the maximum of the previous function (2)
       x = 2. * rng_uniform();
-    };
+    }
   } else {
     // Assume isotropic scattering
     const double zrand = rng_uniform();

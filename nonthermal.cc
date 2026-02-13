@@ -125,7 +125,7 @@ constexpr auto sourcevec(const int index) {
   // or put all of the source into one point at SF_EMAX
   // return (index < SFPTS - 1) ? 0. : 1. / DELTA_E;
   // so that E_init_ev = SF_EMAX;
-};
+}
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
 // This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.

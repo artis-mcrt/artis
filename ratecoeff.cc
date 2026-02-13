@@ -53,13 +53,11 @@ struct GSLIntegralParasGammaCorr {
   int nonemptymgi;
 };
 
-std::string adatafile_hash;
-std::string compositionfile_hash;
-std::array<std::string, 3> phixsfile_hash;
-
 // Try to read in the precalculated rate coefficients from file (checking whether current atomic data matches)
 // return true if successful or false otherwise
-auto read_ratecoeff_dat(FILE* ratecoeff_file) -> bool {
+auto read_ratecoeff_dat(FILE* ratecoeff_file, const std::string& adatafile_hash,
+                        const std::string& compositionfile_hash, const std::span<const std::string, 3> phixsfile_hash)
+    -> bool {
   auto adatafile_hash_in = std::array<char, 33>("UNKNOWN");
   if (fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in.data()) != 1) {
     return false;
@@ -214,7 +212,8 @@ auto read_ratecoeff_dat(FILE* ratecoeff_file) -> bool {
   return true;
 }
 
-void write_ratecoeff_dat() {
+void write_ratecoeff_dat(const std::string& adatafile_hash, const std::string& compositionfile_hash,
+                         const std::span<const std::string, 3> phixsfile_hash) {
   auto ratecoeff_file = fstream_required("ratecoeff.dat", std::ios::out | std::ios::trunc);
   ratecoeff_file << std::hexfloat;
   ratecoeff_file << adatafile_hash << '\n';
@@ -1073,8 +1072,9 @@ void ratecoefficients_init() {
   // Determine the temperature grids gridsize
   T_step_log = (log(MAXTEMP) - log(MINTEMP)) / (TABLESIZE - 1.);
 
-  adatafile_hash = md5_file("adata.txt");
-  compositionfile_hash = md5_file("compositiondata.txt");
+  auto adatafile_hash = md5_file("adata.txt");
+  auto compositionfile_hash = md5_file("compositiondata.txt");
+  std::array<std::string, 3> phixsfile_hash;
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
       phixsfile_hash[phixsver] = md5_file(phixsdata_filenames[phixsver]);
@@ -1086,7 +1086,7 @@ void ratecoefficients_init() {
   if (globals::rank_in_node == 0) {
     FILE* ratecoeff_file = fopen("ratecoeff.dat", "r");
     if (ratecoeff_file != nullptr) {
-      ratecoeff_match = read_ratecoeff_dat(ratecoeff_file);
+      ratecoeff_match = read_ratecoeff_dat(ratecoeff_file, adatafile_hash, compositionfile_hash, phixsfile_hash);
       if (!ratecoeff_match) {
         printlnlog("[info] ratecoefficients_init: ratecoeff.dat does not match current simulation. Recalculating...");
       }
@@ -1107,7 +1107,7 @@ void ratecoefficients_init() {
     MPI_Barrier(MPI_COMM_WORLD);
 
     if (globals::my_rank == 0) {
-      write_ratecoeff_dat();
+      write_ratecoeff_dat(adatafile_hash, compositionfile_hash, phixsfile_hash);
     }
   }
 
