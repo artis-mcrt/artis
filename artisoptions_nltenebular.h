@@ -23,6 +23,7 @@ constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
   }
   return 80;
 }
+
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
 
 constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }
@@ -89,17 +90,17 @@ constexpr bool USE_LUT_PHOTOION = false;
 
 constexpr bool USE_LUT_BFHEATING = false;
 
-constexpr bool STRICT_POPULATION_CHECKING = false;
+constexpr bool STRICT_POPULATION_CHECKING = true;
 
-constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE = false;
+constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE = true;
 
-constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL = 1000.;
+constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL = 50.;
 
-constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 10.;
+constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 2.;
 
 constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION = 1e-9;
 
-constexpr bool NLTEPOP_FAILURE_USE_FIND_UPPERMOST_ION_FOR_LTE_RESET = false;
+constexpr bool NLTEPOP_FAILURE_USE_FIND_UPPERMOST_ION_FOR_LTE_RESET = true;
 
 #define SEPARATE_STIMRECOMB false
 
