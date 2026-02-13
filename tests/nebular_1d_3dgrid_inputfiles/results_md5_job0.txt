@@ -18,10 +18,10 @@ bc8a2796431c3f1f7f7c135fbbe5529a  spec.out
 8e7163982f1aa938dc1505478b8c60d1  timesteps.out
 732e7e229a63e2923cffb74c06d16600  job0/estimators_0000.out
 6b48373a3a242f90c2f0f10649f33ee4  job0/estimators_0001.out
-f3a2d857872bf01253a7dc3c92e24158  job0/estimators_0002.out
+c71b0ef796d2be7932d6d623b4da87ed  job0/estimators_0002.out
 c2e1efc0e92f3c1f4b8f963fd3f3f4cf  job0/nlte_0000.out
-2fc9911205548a5615ea3a001051cf68  job0/nlte_0001.out
-de1f9462d64b00dcd721f167fd4484e4  job0/nlte_0002.out
-1788eaf8eca5613157eddaad59e92ee2  job0/radfield_0000.out
+68e2bb2a84ed84a95ce813d9552f7b32  job0/nlte_0001.out
+9d81ce4c92ab236428d6ecfe1c4a4ee0  job0/nlte_0002.out
+ac60c16e3f4ed6c29ceac0f2a04fcba6  job0/radfield_0000.out
 7c8dc028f7c36bc8df4f95228e42c42e  job0/radfield_0001.out
 6084cf6de004775742076608d3fdd492  job0/radfield_0002.out
