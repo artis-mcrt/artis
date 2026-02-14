@@ -9,19 +9,19 @@ on:
     workflow_dispatch:
 
 jobs:
-    clang-format:
-        runs-on: ubuntu-24.04
-        steps:
-            - uses: actions/checkout@v6
+    # clang-format:
+    #     runs-on: ubuntu-24.04
+    #     steps:
+    #         - uses: actions/checkout@v6
 
-            - name: Run clang-format style check
-              uses: jidicula/clang-format-action@v4.16.0
-              with:
-                  clang-format-version: '21'
-                  check-path: .
+    #         - name: Run clang-format style check
+    #           uses: jidicula/clang-format-action@v4.16.0
+    #           with:
+    #               clang-format-version: '21'
+    #               check-path: .
 
     clang-tidy-cppcheck:
-        name: clang-tidy and cppcheck
+        name: clang-format, clang-tidy, and cppcheck
         runs-on: macos-26
         steps:
             - uses: actions/checkout@v6
@@ -48,7 +48,7 @@ jobs:
                   echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
                   echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
 
-                  brew install openmpi gsl cppcheck || true
+                  brew install openmpi gsl cppcheck prek || true
                   python3 -m pip install compiledb
 
             - name: Generate compile_commands.json
@@ -56,6 +56,10 @@ jobs:
                   cp artisoptions_nltenebular.h artisoptions.h
                   make clean
                   python3 -m compiledb -n --full-path make TESTMODE=ON
+
+            - name: Run pre-commit hooks
+              run: |
+                    prek run --all-files
 
             - name: Run clang-tidy
               run: |
