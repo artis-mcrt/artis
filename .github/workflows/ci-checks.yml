@@ -48,7 +48,7 @@ jobs:
                   echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
                   echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
 
-                  brew install openmpi gsl cppcheck prek || true
+                  brew install openmpi gsl cppcheck || true
                   python3 -m pip install compiledb
 
             - name: Generate compile_commands.json
@@ -58,8 +58,7 @@ jobs:
                   python3 -m compiledb -n --full-path make TESTMODE=ON
 
             - name: Run pre-commit hooks
-              run: |
-                    prek run --all-files
+              uses: j178/prek-action@v1
 
             - name: Run clang-tidy
               run: |
