@@ -391,8 +391,8 @@ void setup_clumping_factors_for_timestep(int nts) {  // todo: maybe other argume
   int nonemptymgi = 0;
   for (int i = 0; i < numcells; i++) {
     if (grid::check_mgi_is_nonempty(i, nonemptymgi)) {
-      double tratmid = globals::timesteps[nts].mid / globals::tmin;
-      double rad_vel = grid::get_modelcell_mean_radial_vel(i, tratmid);
+      const double tratmid = globals::timesteps[nts].mid / globals::tmin;
+      const double rad_vel = grid::get_modelcell_mean_radial_vel(i, tratmid);
       grid::set_oneoverfv(nonemptymgi, clumping_factor(tratmid, rad_vel));
     }
   }
