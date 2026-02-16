@@ -6,7 +6,11 @@
 #include <cstdlib>
 #include <ctime>
 #include <format>
-#include <ostream>
+
+#ifdef READ_CLUMPING_FACTORS_FROM_FILE
+#include <fstream>
+#endif
+#include <iostream>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
