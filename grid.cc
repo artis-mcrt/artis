@@ -1489,6 +1489,11 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
   return modelgrid_input[modelgridindex].initial_radial_pos_sum * tratmid / assoc_cells;
 }
 
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_modelcell_mean_radial_vel(const int modelgridindex,
+                                                                                   const double tratmid) -> double {
+  return get_modelcell_mean_radial_pos(modelgridindex, tratmid) / tratmid;
+}
+
 // mass fraction of an element (all isotopes combined)
 [[gnu::pure]] [[nodiscard]] auto get_elem_abundance(const std::ptrdiff_t nonemptymgi, const int element) -> float {
   const auto massfrac = elem_massfracs_allcells[(nonemptymgi * get_nelements()) + element];

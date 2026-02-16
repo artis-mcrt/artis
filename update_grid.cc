@@ -10,6 +10,7 @@
 #ifdef READ_CLUMPING_FACTORS_FROM_FILE
 #include <fstream>
 #endif
+
 #include <iostream>
 #include <vector>
 
@@ -390,8 +391,9 @@ void setup_clumping_factors_for_timestep(int nts) {  // todo: maybe other argume
   int nonemptymgi = 0;
   for (int i = 0; i < numcells; i++) {
     if (grid::check_mgi_is_nonempty(i, nonemptymgi)) {
-      // TODO: figure out the arguments to clumping_factor
-      grid::set_oneoverfv(nonemptymgi, clumping_factor(1., 1.));
+      double tratmid = globals::timesteps[nts].mid / globals::tmin;
+      double rad_vel = grid::get_modelcell_mean_radial_vel(i, tratmid);
+      grid::set_oneoverfv(nonemptymgi, clumping_factor(tratmid, rad_vel));
     }
   }
 #endif

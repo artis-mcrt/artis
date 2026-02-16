@@ -55,6 +55,7 @@ void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion)
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ffegrp(int modelgridindex) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_pos(int modelgridindex, double tratmid)
     -> double;
+[[gnu::pure]] [[nodiscard]] auto get_modelcell_mean_radial_vel(int modegridindex, double tratmid) -> double;
 void set_elem_abundance(std::ptrdiff_t nonemptymgi, int element, float newabundance);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(std::ptrdiff_t nonemptymgi, int element) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_initenergyq(int modelgridindex) -> double;

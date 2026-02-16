@@ -2,6 +2,8 @@
 #define ARTISOPTIONS_H
 // NOLINTBEGIN(modernize*,misc-unused-parameters)
 
+#include <sys/unistd.h>
+
 #include <cstdlib>
 #include <optional>
 
@@ -158,6 +160,10 @@ constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::INSTANT;
 constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
 
 constexpr bool DECAY_SPONTFISSION_ON = false;
+
+constexpr bool USE_MICROCLUMPING = false;
+
+constexpr float clumping_factor(double tratmid, double rad_vel) { return 1.; }
 
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H

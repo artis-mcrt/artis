@@ -262,4 +262,9 @@ constexpr bool USE_XCOM_GAMMAPHOTOION;
 // use fissiondecays.txt and fissionproducts_GEF_100keV.txt to handle spontaneous fission decays
 constexpr bool DECAY_SPONTFISSION_ON = false;
 
+// TODO: explain where clumping factors are actually used
+constexpr bool USE_MICROCLUMPING;
+
+// TODO: figure out the arguments to this function
+constexpr float clumping_factor(double tratmid, double rad_vel) { return 1.; }
 ```
