@@ -392,7 +392,6 @@ void setup_clumping_factors_for_timestep(int nts) {  // todo: maybe other argume
   }
 #endif
 }
-}
 
 // TODO: Check if we need to use the clumping factors in this function
 void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, const int titer, const double tratmid,
