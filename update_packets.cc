@@ -183,6 +183,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
         atomicadd(globals::timesteps[nts].alpha_emission, pkt.e_cmf);
         pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_ALPHA;
       } else if (pkt.pellet_decaytype == decay::DECAYTYPE_SPONTFISSION) {
+        assert_testmodeonly(DECAY_SPONTFISSION_ON);
         atomicadd(globals::timesteps[nts].spfission_dep_discrete, pkt.e_cmf);
         pkt.type = TYPE_NTALPHA_FISPROD_DEPOSITED;
       } else if constexpr (TESTMODE) {
