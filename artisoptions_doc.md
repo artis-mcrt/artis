@@ -131,27 +131,21 @@ constexpr bool STRICT_POPULATION_CHECKING = false;
 // of the ions in the element. This option provides functionality to strip the top/bottom ions progressively
 // from elements (provided they have small populations) when the NLTE fails before retrying the solution
 // to determine if a successful solution can be obtained with this reduced range of ions.
-constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE = false;
+constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE;
 
 // Controls by what factor the populations of a level have to be inverted relative to the ground to result
 // in a NLTE solver fail being returned
-constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL = 1000.;
+constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL;
 
 // Controls by what factor the populations of a level have to be inverted relative to print out a warning
 // that the level is inverted
-constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 10.;
+constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING;
 
 // Controls the highest ratio the population a level can have relative to the total population of the element
 // for the ion to still be removed from the NLTE solution when using the NLTE_LIMIT_ION_STAGES_AFTER_FAILURE
 // functionality. The ratio of the nlte ground populations, each nlte excited population and the superlevel
 // population are all individually checked.
-constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION = 1e-9;
-
-// If set_element_pops_lte is called when NLTE solver fails the uppermost_ion used in set_groundlevelpops
-// is the one in set in memory based on the NLTE phi factors. In rare cases this can result in partition
-// function overflows. This option recalls find_uppermost_ion so the uppermost_ion used is based on the
-// correct LTE phi factors instead.
-constexpr bool NLTEPOP_FAILURE_USE_FIND_UPPERMOST_ION_FOR_LTE_RESET = false;
+constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION;
 
 // if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
 #define SEPARATE_STIMRECOMB false

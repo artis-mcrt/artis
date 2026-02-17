@@ -753,13 +753,11 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   // set_groundlevelpops uses uppermost_ion. Previously, this was set based on the NLTE phi factors. Therefore we need
   // to call find_uppermost_ion with force_saha = true so the uppermost ion used in set_groundlevelpops is changed to
   // the one based on the correct LTE phi factors instead
-  if (NLTEPOP_FAILURE_USE_FIND_UPPERMOST_ION_FOR_LTE_RESET) {
-    printlnlog("NLTEPOP_FAILURE_USE_FIND_UPPERMOST_ION_FOR_LTE_RESET for element {}", element);
-    const double nne_hi = grid::get_rho(nonemptymgi) / MH;
-    const bool force_saha = true;
-    const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_saha);
-    grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
-  }
+  printlnlog("[warning] NLTEPOP setting element Z={} level pops to Boltzmann", get_atomicnumber(element));
+  const double nne_hi = grid::get_rho(nonemptymgi) / MH;
+  const bool force_saha = true;
+  const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_saha);
+  grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
   set_groundlevelpops(nonemptymgi, element, grid::get_nne(nonemptymgi), true);
 }
 
