@@ -178,11 +178,13 @@ void write_deposition_file() {
     for (int i = 0; i <= nts; i++) {
       const double t_mid = globals::timesteps[i].mid;
       const double t_width = globals::timesteps[i].width;
-      const double total_dep = (globals::timesteps[i].gamma_dep + globals::timesteps[i].positron_dep +
-                                globals::timesteps[i].electron_dep + globals::timesteps[i].alpha_dep);
+      const double total_dep =
+          (globals::timesteps[i].gamma_dep + globals::timesteps[i].positron_dep + globals::timesteps[i].electron_dep +
+           globals::timesteps[i].alpha_dep + globals::timesteps[i].spfission_dep_discrete);
 
       const double epsilon_tot = (globals::timesteps[i].gamma_emission + globals::timesteps[i].positron_emission +
-                                  globals::timesteps[i].electron_emission + globals::timesteps[i].alpha_emission) /
+                                  globals::timesteps[i].electron_emission + globals::timesteps[i].alpha_emission +
+                                  globals::timesteps[i].spfission_dep_discrete) /
                                  mtot / t_width;
 
       dep_file << i << ' ' << t_mid / DAY << ' ' << t_mid;
