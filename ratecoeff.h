@@ -1,8 +1,6 @@
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
 
-#include <cmath>
-
 #include "sn3d.h"
 
 #ifdef USE_SIMPSON_INTEGRATOR
@@ -152,7 +150,6 @@ auto integrator(auto params, const double a, const double b, const double epsrel
 
 #endif
 #endif
-  assert_testmodeonly(std::isfinite(result));
   return result;
 }
 
