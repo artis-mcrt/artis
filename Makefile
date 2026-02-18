@@ -33,7 +33,7 @@ CXX_STD := c++26
 
 ifneq '' '$(findstring HIP version,$(COMPILER_VERSION))'
 	COMPILER_NAME := HIPCC
-	CXXFLAGS += -Wno-macro-redefined
+	CXXFLAGS += -Wno-macro-redefined -Wno-unused-command-line-argument
 else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := CLANG
 	CXXFLAGS += -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call -fsafe-buffer-usage-suggestions -Wno-unneeded-internal-declaration
