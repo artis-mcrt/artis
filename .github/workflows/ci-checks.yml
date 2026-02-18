@@ -398,7 +398,8 @@ jobs:
               run: |
                   sudo apt-get update
                   sudo apt-get install -y libopenmpi-dev openmpi-bin
-                  sudo apt-get install  -y git
+                  sudo apt-get install -y git
+                  ls -al
 
             - name: Compile classic mode STDPAR=ON GPU=ON
               run: |
@@ -406,10 +407,8 @@ jobs:
                   make clean
                   make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: Compile classic mode
+            - name: Compile nebular mode STDPAR=ON GPU=ON
               run: |
-                  ls -al
-                  git status
-                  cp -v -p artisoptions_classic.h artisoptions.h
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
