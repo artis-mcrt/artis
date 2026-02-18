@@ -345,7 +345,6 @@ auto bfcooling_integrand_gsl(const double nu, void* const voidparas) -> double {
 
 void precalculate_rate_coefficient_integrals() {
   // target fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
-  const double epsrelwarning = 1e-2;  // fractional error to emit a warning
 
   // Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < get_nelements(); element++) {
@@ -384,7 +383,6 @@ void precalculate_rate_coefficient_integrals() {
           for (int iter = 0; iter < TABLESIZE; iter++) {
             const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
             double error{NAN};
-            int status = 0;
             const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
 
             const double sahafact = calculate_sahafact(statw_lower, statw_upper, T_e, E_threshold);
@@ -399,11 +397,8 @@ void precalculate_rate_coefficient_integrals() {
             // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
             double alpha_sp = 0.;
 
-            status = integrator<alpha_sp_integrand_gsl>(intparas, nu_threshold, nu_max_phixs,
-                                                        RATECOEFF_INTEGRAL_ACCURACY, &alpha_sp, &error);
-            if (status != 0 && (status != 18 || (error / alpha_sp) > epsrelwarning)) {
-              printlnlog("alpha_sp integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status, alpha_sp, error);
-            }
+            integrator<alpha_sp_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY,
+                                               &alpha_sp, &error);
             alpha_sp *= FOURPI * sahafact * phixstargetprobability;
 
             if (!std::isfinite(alpha_sp) || alpha_sp < 0) {
@@ -418,12 +413,8 @@ void precalculate_rate_coefficient_integrals() {
             if constexpr (USE_LUT_PHOTOION) {
               double gammacorr = 0.;
 
-              status = integrator<gammacorr_integrand_gsl>(intparas, nu_threshold, nu_max_phixs,
-                                                           RATECOEFF_INTEGRAL_ACCURACY, &gammacorr, &error);
-              if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
-                printlnlog("gammacorr integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status, gammacorr,
-                           error);
-              }
+              integrator<gammacorr_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY,
+                                                  &gammacorr, &error);
               gammacorr *= FOURPI * phixstargetprobability;
               assert_always(gammacorr >= 0);
               if (gammacorr < 0) {
@@ -436,13 +427,9 @@ void precalculate_rate_coefficient_integrals() {
             if constexpr (USE_LUT_BFHEATING) {
               double this_bfheating_coeff = 0.;
 
-              status = integrator<approx_bfheating_integrand_gsl>(
-                  intparas, nu_threshold, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &this_bfheating_coeff, &error);
+              integrator<approx_bfheating_integrand_gsl>(intparas, nu_threshold, nu_max_phixs,
+                                                         RATECOEFF_INTEGRAL_ACCURACY, &this_bfheating_coeff, &error);
 
-              if (status != 0 && (status != 18 || (error / this_bfheating_coeff) > epsrelwarning)) {
-                printlnlog("bfheating_coeff integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status,
-                           this_bfheating_coeff, error);
-              }
               this_bfheating_coeff *= FOURPI * phixstargetprobability;
               if (this_bfheating_coeff < 0) {
                 printlnlog("WARNING: bfheating_coeff was negative for level {}", level);
@@ -453,12 +440,8 @@ void precalculate_rate_coefficient_integrals() {
 
             double this_bfcooling_coeff = 0.;
 
-            status = integrator<bfcooling_integrand_gsl>(intparas, nu_threshold, nu_max_phixs,
-                                                         RATECOEFF_INTEGRAL_ACCURACY, &this_bfcooling_coeff, &error);
-            if (status != 0 && (status != 18 || (error / this_bfcooling_coeff) > epsrelwarning)) {
-              printlnlog("bfcooling_coeff integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status,
-                         this_bfcooling_coeff, error);
-            }
+            integrator<bfcooling_integrand_gsl>(intparas, nu_threshold, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY,
+                                                &this_bfcooling_coeff, &error);
             this_bfcooling_coeff *= FOURPI * sahafact * phixstargetprobability;
             if (!std::isfinite(this_bfcooling_coeff) || this_bfcooling_coeff < 0) {
               printlnlog(
@@ -795,19 +778,10 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   double error = 0.;
 
   double gammacorr = 0.;
-  const int status = integrator<integrand_corrphotoioncoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs,
-                                                                             epsrel, &gammacorr, &error);
-  if (status != 0 && (status != 18 || (error / gammacorr) > 0.1)) {
-#ifndef GPU_ON
-    printlnlog(
-        "corrphotoioncoeff integrator warning {}. modelgridindex {} Z={} ionstage {} lower {} phixstargetindex {} "
-        "integral {:g} error {:g}",
-        status, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion), level,
-        phixstargetindex, gammacorr, error);
-#endif
-    if (!std::isfinite(gammacorr)) {
-      gammacorr = 0.;
-    }
+  integrator<integrand_corrphotoioncoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsrel, &gammacorr,
+                                                          &error);
+  if (!std::isfinite(gammacorr)) {
+    return 0.;
   }
 
   gammacorr *= FOURPI * get_phixsprobability(loweruniquelevelindex, phixstargetindex);

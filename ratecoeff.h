@@ -101,8 +101,7 @@ constexpr auto simpson_integrator(auto& params, const double a, const double b, 
 }
 
 template <double func_integrand(double, void* const), int GKNPOINTS = 61>
-auto integrator(auto params, const double a, const double b, const double epsrel, double* result, double* abserr)
-    -> int {
+void integrator(auto params, const double a, const double b, const double epsrel, double* result, double* abserr) {
   static_assert(GKNPOINTS == 15 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 || GKNPOINTS == 61,
                 "Unsupported GKNPOINTS value");
 
@@ -117,6 +116,7 @@ auto integrator(auto params, const double a, const double b, const double epsrel
 #else
 #ifdef BOOST_OFF
 
+  constexpr double epsrelwarning = 1e-2;  // fractional error to emit a warning
   // GSL's QAG adaptive integrator
   constexpr auto key = []() {
     switch (GKNPOINTS) {
@@ -140,15 +140,16 @@ auto integrator(auto params, const double a, const double b, const double epsrel
   const auto status =
       gsl_integration_qag(&gslfunc, a, b, 0., epsrel, GSLWSIZE, key, gslworkspace.get(), result, abserr);
   gsl_set_error_handler(previous_handler);
-
-  return status;
+  if (status != 0 && (status != 18 || (*abserr / std::abs(*result)) > epsrelwarning)) {
+    printlnlog("[warning] integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status, *result, *abserr);
+  }
 
 #else
 
   // Boost's Gauss-Kronrod integrator
   *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
       [&](double x) { return func_integrand(x, &params); }, a, b, 15, epsrel, abserr);
-  return ((*abserr / std::abs(*result)) > epsrel ? 1 : 0);
+  assert_testmodeonly((*abserr / std::abs(*result)) <= epsrel);
 
 #endif
 #endif
