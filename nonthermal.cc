@@ -970,7 +970,7 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
 // energy and ionisation_potential should be in eV
 // fitting formula of Younger 1981
 // called Q_i(E) in KF92 equation 7
-constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& colliondata_ion) -> double {
+auto xs_impactionisation(const double energy_ev, const ShellParams& colliondata_ion) -> double {
   const double ionpot_ev = colliondata_ion.ionpot_ev;
   const double u = energy_ev / ionpot_ev;
 
