@@ -366,3 +366,47 @@ jobs:
                       cp -v -p "$file" artisoptions.h
                       make sn3d
                   done
+
+    amd-rocm-hipcc:
+        runs-on: ubuntu-24.04
+        name: AMD ROCm hipcc
+        container:
+            image: rocm/dev-ubuntu-24.04:latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Show CPU type and core count
+              id: cpu-count
+              run: |
+                  g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
+                  python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
+                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
+
+            - name: Set MPI host compiler to hipcc
+              run: |
+                  hipcc --version
+                  echo "CXX=hipcc" >> $GITHUB_ENV
+                  echo "OMPI_CXX=hipcc" >> $GITHUB_ENV
+
+            - name: Install OpenMPI
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y libopenmpi-dev openmpi-bin
+
+            - name: Compile classic mode
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile classic mode STDPAR=ON
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile classic mode STDPAR=ON GPU=ON
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
