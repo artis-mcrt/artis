@@ -53,11 +53,12 @@ cd artis
 ```
 On macOS, it's recommend that you install homebrew llvm to get clang-format, clang-tidy, clangd language server, and the clang C++ compiler. You can install this and other dependencies with:
 ```sh
-brew install llvm open-mpi gsl prek
+brew install llvm open-mpi gsl prek compiledb
 ```
-Install the pre-commit hooks:
+Install the pre-commit hooks and generate a compilation database for clang tools:
 ```sh
 prek install
+make clean && compiledb -n make TESTMODE=ON
 ```
 For editing, the clangd language server is recommended (e.g., with the [VS Code plugin](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)).
 
