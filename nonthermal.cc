@@ -912,8 +912,8 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
 
 // collisional excitation cross section in cm^2
 // energies are in erg
-constexpr auto xs_excitation(const int element, const int ion, const int lower, const int uptransindex,
-                             const double epsilon_trans, const double lowerstatweight, const double energy) -> double {
+auto xs_excitation(const int element, const int ion, const int lower, const int uptransindex,
+                   const double epsilon_trans, const double lowerstatweight, const double energy) -> double {
   if (energy < epsilon_trans) {
     return 0.;
   }
@@ -947,7 +947,7 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
 // energy is in ergs
 // nne is the thermal electron density [cm^-3]
 // return value has units of erg/cm
-constexpr auto electron_loss_rate(const double energy, const double nne) -> double {
+auto electron_loss_rate(const double energy, const double nne) -> double {
   if (energy <= 0.) {
     return 0;
   }
