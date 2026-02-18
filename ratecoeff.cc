@@ -45,6 +45,12 @@ std::span<double> corrphotoioncoeffs{};  // for USE_LUT_PHOTOION = true
 std::span<double> bfcooling_coeffs{};
 std::span<double> bfheating_coeffs{};  // for USE_LUT_BFHEATING = true
 
+struct GSLIntegrationParas {
+  double nu_edge;
+  float T_e;
+  std::span<const float> photoion_xs;
+};
+
 struct GSLIntegralParasGammaCorr {
   double nu_edge;
   double departure_ratio;
@@ -258,10 +264,13 @@ void write_ratecoeff_dat(const std::string& adatafile_hash, const std::string& c
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
 auto alpha_sp_integrand_gsl(const double nu, void* const voidparas) -> double {
-  const auto* const params = static_cast<const GSLIntegrationParas*>(voidparas);
+  const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
+  const auto& nu_edge = params.nu_edge;
+  const auto& T = params.T_e;
+  const auto& photoion_xs = params.photoion_xs;
 
-  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
-  const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 2) * exp(-HOVERKB * nu / params->T);
+  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
+  const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 2) * exp(-HOVERKB * nu / T);
   // in formula this looks like
   // x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
 
@@ -271,12 +280,12 @@ auto alpha_sp_integrand_gsl(const double nu, void* const voidparas) -> double {
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
 auto alpha_sp_E_integrand_gsl(const double nu, void* const voidparas) -> double {
-  const auto* const params = static_cast<const GSLIntegrationParas*>(voidparas);
+  const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
+  const auto& nu_edge = params.nu_edge;
+  const auto& T = params.T_e;
+  const auto& photoion_xs = params.photoion_xs;
 
-  const float T = params->T;
-  const double nu_edge = params->nu_edge;
-
-  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 3) / nu_edge * exp(-HOVERKB * nu / T);
   // in formula this looks like
   // x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
@@ -287,12 +296,12 @@ auto alpha_sp_E_integrand_gsl(const double nu, void* const voidparas) -> double 
 
 // Integrand to calculate the rate coefficient for photoionisation corrected for stimulated recombination.
 auto gammacorr_integrand_gsl(const double nu, void* const voidparas) -> double {
-  const auto* const params = static_cast<const GSLIntegrationParas*>(voidparas);
+  const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
+  const auto& nu_edge = params.nu_edge;
+  const auto& T = params.T_e;
+  const auto& photoion_xs = params.photoion_xs;
 
-  const float T = params->T;
-  const double nu_edge = params->nu_edge;
-
-  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
   // Dependence on dilution factor W is linear. This allows to set it here to
   // 1. and scale to its actual value later on.
@@ -305,12 +314,12 @@ auto gammacorr_integrand_gsl(const double nu, void* const voidparas) -> double {
 // formula. The radiation fields dependence on W is taken into account by multiplying
 // the resulting expression with the correct W later on.
 auto approx_bfheating_integrand_gsl(const double nu, void* const voidparas) -> double {
-  const auto* const params = static_cast<const GSLIntegrationParas*>(voidparas);
+  const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
+  const auto& nu_edge = params.nu_edge;
+  const auto& T = params.T_e;
+  const auto& photoion_xs = params.photoion_xs;
 
-  const float T = params->T;
-  const double nu_edge = params->nu_edge;
-
-  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
   // Precalculation for T_e=T_R and W=1
   const double x = sigma_bf * (1 - (nu_edge / nu)) * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
@@ -323,12 +332,12 @@ auto approx_bfheating_integrand_gsl(const double nu, void* const voidparas) -> d
 // formula. The radiation fields dependence on W is taken into account by multiplying
 // the resulting expression with the correct W later on.
 auto bfcooling_integrand_gsl(const double nu, void* const voidparas) -> double {
-  const auto* const params = static_cast<const GSLIntegrationParas*>(voidparas);
+  const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
+  const auto& nu_edge = params.nu_edge;
+  const auto& T = params.T_e;
+  const auto& photoion_xs = params.photoion_xs;
 
-  const float T = params->T;
-  const double nu_edge = params->nu_edge;
-
-  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
   // return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED * pow(nu,3) * exp(-HOVERKB*nu/T);
   return sigma_bf * (nu - nu_edge) * TWOHOVERCLIGHTSQUARED * nu * nu * exp(-HOVERKB * nu / T);
@@ -385,7 +394,7 @@ void precalculate_rate_coefficient_integrals() {
             assert_always(!get_phixs_table(element, ion, level).empty());
             // the threshold of the first target gives nu of the first phixstable point
             const GSLIntegrationParas intparas = {
-                .nu_edge = nu_threshold, .T = T_e, .photoion_xs = get_phixs_table(element, ion, level)};
+                .nu_edge = nu_threshold, .T_e = T_e, .photoion_xs = get_phixs_table(element, ion, level)};
 
             // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
             double alpha_sp = 0.;
@@ -674,11 +683,13 @@ void precalculate_ion_alpha_sp() {
 }
 
 auto integrand_stimrecombination_custom_radfield(const double nu, void* const voidparas) -> double {
-  const auto* const params = static_cast<const GSLIntegralParasGammaCorr*>(voidparas);
-  const int nonemptymgi = params->nonemptymgi;
-  const float T_e = params->T_e;
+  const auto& params = *(static_cast<const GSLIntegralParasGammaCorr*>(voidparas));
+  const auto& nu_edge = params.nu_edge;
+  const auto& photoion_xs = params.photoion_xs;
+  const auto& T_e = params.T_e;
+  const auto& nonemptymgi = params.nonemptymgi;
 
-  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
   const double Jnu = radfield::radfield(nu, nonemptymgi);
 
@@ -721,20 +732,23 @@ auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, c
 
 // Integrand to calculate the rate coefficient for photoionisation. Corrected for stimulated recombination.
 auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void* const voidparas) -> double {
-  const GSLIntegralParasGammaCorr* const params = static_cast<GSLIntegralParasGammaCorr*>(voidparas);
-  const int nonemptymgi = params->nonemptymgi;
+  const auto& params = *(static_cast<const GSLIntegralParasGammaCorr*>(voidparas));
+  const auto& nu_edge = params.nu_edge;
+  const auto& departure_ratio = params.departure_ratio;
+  const auto& photoion_xs = params.photoion_xs;
+  const auto& T_e = params.T_e;
+  const auto& nonemptymgi = params.nonemptymgi;
 
 #if (SEPARATE_STIMRECOMB)
   const double corrfactor = 1.;
 #else
-  const float T_e = params->T_e;
-  double corrfactor = 1. - (params->departure_ratio * exp(-HOVERKB * nu / T_e));
+  double corrfactor = 1. - (departure_ratio * exp(-HOVERKB * nu / T_e));
   if (corrfactor < 0) {
     corrfactor = 0.;
   }
 #endif
 
-  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
   const double Jnu = radfield::radfield(nu, nonemptymgi);
 
@@ -905,7 +919,7 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
   const int npieces = globals::NPHIXSPOINTS;
 
   const GSLIntegrationParas intparas = {
-      .nu_edge = nu_threshold, .T = T_e, .photoion_xs = get_phixs_table(lower_uniquelevelindex)};
+      .nu_edge = nu_threshold, .T_e = T_e, .photoion_xs = get_phixs_table(lower_uniquelevelindex)};
 
   const double zrand = 1. - rng_uniform();  // Make sure that 0 < zrand <= 1
 
