@@ -15,12 +15,6 @@
 
 #include "artisoptions.h"
 
-struct GSLIntegrationParas {
-  double nu_edge;
-  float T;
-  std::span<const float> photoion_xs;
-};
-
 enum ma_action {
   // Radiative deexcitation rate from this level.
   MA_ACTION_RADDEEXC = 0,

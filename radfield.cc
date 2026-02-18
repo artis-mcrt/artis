@@ -206,12 +206,13 @@ auto get_bin_T_R(const std::ptrdiff_t nonemptymgi, const int binindex) -> float 
 }
 
 constexpr auto gsl_integrand_planck(const double nu, void* const voidparas) -> double {
-  const auto* paras = static_cast<const GSL_PlanckIntegralParas*>(voidparas);
-  const auto T_R = paras->T_R;
+  const auto& params = *(static_cast<const GSL_PlanckIntegralParas*>(voidparas));
+  const auto& T_R = params.T_R;
+  const auto& times_nu = params.times_nu;
 
   double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
 
-  if (paras->times_nu) {
+  if (times_nu) {
     integrand *= nu;
   }
 

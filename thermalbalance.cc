@@ -43,13 +43,13 @@ struct BFHeatingIntegralParams {
 
 // Integrand to calculate the rate coefficient for bfheating.
 auto integrand_bfheatingcoeff_custom_radfield(const double nu, void* const voidparas) -> double {
-  const auto* const params = static_cast<const BFHeatingIntegralParams*>(voidparas);
+  const auto& params = *(static_cast<const BFHeatingIntegralParams*>(voidparas));
+  const auto& nu_edge = params.nu_edge;
+  const auto& nonemptymgi = params.nonemptymgi;
+  const auto& T_R = params.T_R;
+  const auto& photoion_xs = params.photoion_xs;
 
-  const int nonemptymgi = params->nonemptymgi;
-  const double nu_edge = params->nu_edge;
-  const float T_R = params->T_R;
-
-  const float sigma_bf = photoionisation_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
   return sigma_bf * (1 - (nu_edge / nu)) * radfield::radfield(nu, nonemptymgi) * (1 - exp(-HOVERKB * nu / T_R));
 }
