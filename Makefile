@@ -33,12 +33,12 @@ CXX_STD := c++26
 
 ifneq '' '$(findstring HIP version,$(COMPILER_VERSION))'
 	COMPILER_NAME := HIPCC
+	CXX_STD := c++23
 	CXXFLAGS += -Wno-macro-redefined -Wno-unused-command-line-argument
 else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := CLANG
 	CXXFLAGS += -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call -fsafe-buffer-usage-suggestions -Wno-unneeded-internal-declaration
 	LDFLAGS += -Wno-unused-command-line-argument
-	CXX_STD := c++23
 
 	ifeq '' '$(findstring Apple,$(COMPILER_VERSION))'
 		ifeq ($(if $(shell command -v lld),'true','false'), 'true')
