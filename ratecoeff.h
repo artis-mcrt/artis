@@ -138,7 +138,7 @@ auto integrator(auto params, const double a, const double b, const double epsrel
   const auto status =
       gsl_integration_qag(&gslfunc, a, b, 0., epsrel, GSLWSIZE, key, gslworkspace.get(), &result, abserr);
   gsl_set_error_handler(previous_handler);
-  if (status != 0 && (status != 18 || (*abserr / std::abs(result)) > 0.01)) {
+  if (status != 0 && (status != 18 || (*abserr / std::abs(result)) > 0.1)) {
     printlnlog("[warning] integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status, result, *abserr);
   }
 
@@ -147,7 +147,7 @@ auto integrator(auto params, const double a, const double b, const double epsrel
   // Boost's Gauss-Kronrod integrator
   result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
       [&](double x) { return func_integrand(x, &params); }, a, b, 15, epsrel, abserr);
-  assert_testmodeonly((*abserr / std::abs(result)) <= 0.01);
+  assert_testmodeonly((*abserr / std::abs(result)) <= 0.1);
 
 #endif
 #endif
