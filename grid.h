@@ -80,9 +80,9 @@ void init_grid(int my_rank);
 [[gnu::pure]] [[nodiscard]] auto get_elem_abundance(std::ptrdiff_t nonemptymgi, int element) -> float;
 void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanweight);
 [[gnu::pure]] [[nodiscard]] auto get_electronfrac(int nonemptymgi) -> double;
-[[gnu::pure]] [[nodiscard]] auto get_numpropcells(int modelgridindex) -> int;
-[[gnu::pure]] [[nodiscard]] auto get_nonemptymgi_of_mgi(int mgi) -> int;
-[[gnu::pure]] [[nodiscard]] auto get_mgi_of_nonemptymgi(std::ptrdiff_t nonemptymgi) -> int;
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_numpropcells(int modelgridindex) -> int;
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nonemptymgi_of_mgi(int mgi) -> int;
+[[gnu::pure]] [[nodiscard]] auto __host__ __device__ get_mgi_of_nonemptymgi(std::ptrdiff_t nonemptymgi) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_model_type() -> GridType;
 void set_model_type(GridType model_type_value);
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_npts_model() -> int;
@@ -98,8 +98,8 @@ void write_grid_restart_data(int timestep);
 [[gnu::pure]] [[nodiscard]] auto get_ndo(int rank) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_ndo_nonempty(int rank) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_totmassnuclide_tmodel(int z, int a) -> double;
-[[nodiscard]] auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
-    -> std::tuple<double, int>;
+[[nodiscard]] __host__ __device__ auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart,
+                                                         int cellindex) -> std::tuple<double, int>;
 
 void calculate_kappagrey();
 
