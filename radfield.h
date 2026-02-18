@@ -37,7 +37,7 @@ void normalise_bf_estimators(int nts, int nts_prev, int titer, double deltat);
     -> double;
 
 // get J_nu [ergs/s/sr/cm2/Hz] for a dilute black body with temperature T and dilution factor W
-[[gnu::const]] [[nodiscard]] constexpr auto dbb(const double nu, const double T, const double W) -> double {
+[[gnu::const]] [[nodiscard]] inline auto dbb(const double nu, const double T, const double W) -> double {
   return W * TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / std::expm1(HOVERKB * nu / T);
 }
 
