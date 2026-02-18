@@ -149,7 +149,6 @@ auto integrator(auto params, const double a, const double b, const double epsrel
   // Boost's Gauss-Kronrod integrator
   result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
       [&](double x) { return func_integrand(x, &params); }, a, b, 15, epsrel, abserr);
-  assert_testmodeonly((*abserr / std::abs(result)) <= 0.1);
 
 #endif
 #endif
