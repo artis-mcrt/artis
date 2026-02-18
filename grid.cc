@@ -1191,7 +1191,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 
 // Convert a position in Cartesian xyz to the grid coordinate system (which might the same, or 2D cylindrical or 1D
 // spherical)
-[[nodiscard]] constexpr auto get_gridcoords_from_xyz(const Vec3d& pos_xyz) {
+[[nodiscard]] auto get_gridcoords_from_xyz(const Vec3d& pos_xyz) {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return pos_xyz;
   }
