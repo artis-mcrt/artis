@@ -388,10 +388,11 @@ jobs:
                   echo "CXX=hipcc" >> $GITHUB_ENV
                   echo "OMPI_CXX=hipcc" >> $GITHUB_ENV
 
-            - name: Install OpenMPI
+            - name: Install OpenMPI and git
               run: |
                   sudo apt-get update
                   sudo apt-get install -y libopenmpi-dev openmpi-bin
+                  sudo apt-get install  -y git
 
             - name: Compile classic mode
               run: |
