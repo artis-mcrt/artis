@@ -30,7 +30,10 @@ COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpversion -dumpfullversion)
 COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -f1 -d.)
 $(info $(COMPILER_VERSION))
 CXX_STD := c++26
-ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
+
+ifneq '' '$(findstring HIP version,$(COMPILER_VERSION))'
+	COMPILER_NAME := HIPCC
+else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := CLANG
 	CXXFLAGS += -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call -fsafe-buffer-usage-suggestions -Wno-unneeded-internal-declaration
 	LDFLAGS += -Wno-unused-command-line-argument
@@ -125,6 +128,12 @@ ifeq ($(STDPAR),ON)
 			CXXFLAGS += -gpu=cc80
 		else
 			CXXFLAGS += -stdpar=multicore
+		endif
+  else ifeq ($(COMPILER_NAME),HIPCC)
+		CXXFLAGS += --hipstdpar --hipstdpar-interpose-alloc
+		ifeq ($(GPU),ON)
+			# MI300
+			CXXFLAGS += -gpu-arch=--offload-arch=gfx942
 		endif
   else ifeq ($(COMPILER_NAME),CLANG)
 		CXXFLAGS += -fexperimental-library
