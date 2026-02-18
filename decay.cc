@@ -749,11 +749,9 @@ auto write_nuclides_list() {
 [[nodiscard]] auto nuc_exists(const int z, const int a) -> bool { return get_nucindex_or_neg_one(z, a) >= 0; }
 
 // average energy per decay in the form of gamma rays [erg]
-[[nodiscard]] __host__ __device__ auto nucdecayenergygamma(const int nucindex) -> double {
-  return nuclides[nucindex].endecay_gamma;
-}
+[[nodiscard]] auto nucdecayenergygamma(const int nucindex) -> double { return nuclides[nucindex].endecay_gamma; }
 
-[[nodiscard]] __host__ __device__ auto nucdecayenergygamma(const int z, const int a) -> double {
+[[nodiscard]] auto nucdecayenergygamma(const int z, const int a) -> double {
   return nucdecayenergygamma(get_nucindex(z, a));
 }
 
