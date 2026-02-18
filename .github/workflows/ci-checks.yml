@@ -392,6 +392,7 @@ jobs:
                   hipconfig --version
                   echo "CXX=hipcc" >> $GITHUB_ENV
                   echo "OMPI_CXX=hipcc" >> $GITHUB_ENV
+                  echo "ROCM_PATH=/opt/rocm-7.2.0" >> $GITHUB_ENV
 
             - name: Install OpenMPI and git
               run: |
