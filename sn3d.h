@@ -30,12 +30,14 @@
 #include <utility>
 #include <vector>
 
-#ifndef __host__
+// #ifndef __host__
+// #define __host__
+// #endif
+// #ifndef __device__
+// #define __device__
+// #endif
 #define __host__
-#endif
-#ifndef __device__
 #define __device__
-#endif
 
 #ifdef STACKTRACE_ON
 #include <stacktrace>
