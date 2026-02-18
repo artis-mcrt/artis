@@ -135,7 +135,7 @@ ifeq ($(STDPAR),ON)
 		CXXFLAGS += -fexperimental-library
 		ifeq ($(GPU),ON)
 			# MI300
-			CXXFLAGS += --offload-arch=gfx942 -fgpu-rdc --hipstdpar --hipstdpar-interpose-alloc --expt-relaxed-constexpr --hipstdpar-path=/opt/rocm-7.2.0/include/thrust/system/hip/hipstdpar/ --hipstdpar-thrust-path=/opt/rocm-7.2.0/include --hipstdpar-prim-path=/opt/rocm-7.2.0/include/hipstdpar/prim/
+			CXXFLAGS += --offload-arch=gfx942 -fgpu-rdc --hipstdpar --hipstdpar-interpose-alloc --hipstdpar-path=/opt/rocm-7.2.0/include/thrust/system/hip/hipstdpar/ --hipstdpar-thrust-path=/opt/rocm-7.2.0/include --hipstdpar-prim-path=/opt/rocm-7.2.0/include/hipstdpar/prim/
 		endif
   else ifeq ($(COMPILER_NAME),CLANG)
 		CXXFLAGS += -fexperimental-library
