@@ -65,7 +65,7 @@
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
-#ifdef __NVCOMPILER_CUDA_ARCH__
+#if defined(__NVCOMPILER_CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #define THREADLOCALONHOST
 #else
 #define THREADLOCALONHOST thread_local static
