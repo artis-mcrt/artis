@@ -39,7 +39,7 @@ void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
 
 // radiative deexcitation rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
-[[gnu::const]] [[nodiscard]] constexpr auto rad_deexcitation_ratecoeff(
+[[gnu::const]] [[nodiscard]] inline auto rad_deexcitation_ratecoeff(
     const double epsilon_trans, const float A_ul, const double upperstatweight, const double lowerstatweight,
     const double nnlevelupper, const double nnlevellower, const double t_current) -> double {
   const double nu_trans = epsilon_trans / H;
