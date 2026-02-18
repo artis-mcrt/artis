@@ -101,18 +101,16 @@ constexpr auto simpson_integrator(auto& params, const double a, const double b, 
 }
 
 template <double func_integrand(double, void* const), int GKNPOINTS = 61>
-auto integrator(auto params, const double a, const double b, const double epsrel, double* result, double* abserr)
-    -> int {
+auto integrator(auto params, const double a, const double b, const double epsrel, double* abserr) -> double {
   static_assert(GKNPOINTS == 15 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 || GKNPOINTS == 61,
                 "Unsupported GKNPOINTS value");
-
+  double result{0.};
 #ifdef USE_SIMPSON_INTEGRATOR
   // need an odd number for Simpson rule
   const int samplecount = (std::max(1, static_cast<int>((b / a) / globals::NPHIXSNUINCREMENT)) * 4) + 1;
 
-  *result = simpson_integrator<func_integrand>(params, a, b, samplecount);
+  result = simpson_integrator<func_integrand>(params, a, b, samplecount);
   *abserr = 0.;
-  return 0;
 
 #else
 #ifdef BOOST_OFF
@@ -138,20 +136,21 @@ auto integrator(auto params, const double a, const double b, const double epsrel
   gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
   const auto gslfunc = gsl_function{.function = func_integrand, .params = &params};
   const auto status =
-      gsl_integration_qag(&gslfunc, a, b, 0., epsrel, GSLWSIZE, key, gslworkspace.get(), result, abserr);
+      gsl_integration_qag(&gslfunc, a, b, 0., epsrel, GSLWSIZE, key, gslworkspace.get(), &result, abserr);
   gsl_set_error_handler(previous_handler);
-
-  return status;
+  if (status != 0 && (status != 18 || (*abserr / std::abs(result)) > 0.1)) {
+    printlnlog("[warning] integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status, result, *abserr);
+  }
 
 #else
 
   // Boost's Gauss-Kronrod integrator
-  *result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
+  result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
       [&](double x) { return func_integrand(x, &params); }, a, b, 15, epsrel, abserr);
-  return ((*abserr / std::abs(*result)) > epsrel ? 1 : 0);
 
 #endif
 #endif
+  return result;
 }
 
 #endif  // RATECOEFF_H
