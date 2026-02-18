@@ -395,10 +395,8 @@ void precalculate_rate_coefficient_integrals() {
                 .nu_edge = nu_threshold, .T_e = T_e, .photoion_xs = get_phixs_table(element, ion, level)};
 
             // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
-            double alpha_sp = 0.;
-
-            alpha_sp = integrator<alpha_sp_integrand_gsl>(intparas, nu_threshold, nu_max_phixs,
-                                                          RATECOEFF_INTEGRAL_ACCURACY, &error);
+            auto alpha_sp = integrator<alpha_sp_integrand_gsl>(intparas, nu_threshold, nu_max_phixs,
+                                                               RATECOEFF_INTEGRAL_ACCURACY, &error);
             alpha_sp *= FOURPI * sahafact * phixstargetprobability;
 
             if (!std::isfinite(alpha_sp) || alpha_sp < 0) {
@@ -411,10 +409,8 @@ void precalculate_rate_coefficient_integrals() {
             spontrecombcoeffs[bflutindex] = alpha_sp;
 
             if constexpr (USE_LUT_PHOTOION) {
-              double gammacorr = 0.;
-
-              gammacorr = integrator<gammacorr_integrand_gsl>(intparas, nu_threshold, nu_max_phixs,
-                                                              RATECOEFF_INTEGRAL_ACCURACY, &error);
+              auto gammacorr = integrator<gammacorr_integrand_gsl>(intparas, nu_threshold, nu_max_phixs,
+                                                                   RATECOEFF_INTEGRAL_ACCURACY, &error);
               gammacorr *= FOURPI * phixstargetprobability;
               assert_always(gammacorr >= 0);
               if (gammacorr < 0) {
@@ -425,10 +421,8 @@ void precalculate_rate_coefficient_integrals() {
             }
 
             if constexpr (USE_LUT_BFHEATING) {
-              double this_bfheating_coeff = 0.;
-
-              this_bfheating_coeff = integrator<approx_bfheating_integrand_gsl>(intparas, nu_threshold, nu_max_phixs,
-                                                                                RATECOEFF_INTEGRAL_ACCURACY, &error);
+              auto this_bfheating_coeff = integrator<approx_bfheating_integrand_gsl>(
+                  intparas, nu_threshold, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
 
               this_bfheating_coeff *= FOURPI * phixstargetprobability;
               if (this_bfheating_coeff < 0) {
@@ -438,10 +432,8 @@ void precalculate_rate_coefficient_integrals() {
               bfheating_coeffs[bflutindex] = this_bfheating_coeff;
             }
 
-            double this_bfcooling_coeff = 0.;
-
-            this_bfcooling_coeff = integrator<bfcooling_integrand_gsl>(intparas, nu_threshold, nu_max_phixs,
-                                                                       RATECOEFF_INTEGRAL_ACCURACY, &error);
+            auto this_bfcooling_coeff = integrator<bfcooling_integrand_gsl>(intparas, nu_threshold, nu_max_phixs,
+                                                                            RATECOEFF_INTEGRAL_ACCURACY, &error);
             this_bfcooling_coeff *= FOURPI * sahafact * phixstargetprobability;
             if (!std::isfinite(this_bfcooling_coeff) || this_bfcooling_coeff < 0) {
               printlnlog(
