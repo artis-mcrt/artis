@@ -38,6 +38,7 @@ else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := CLANG
 	CXXFLAGS += -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call -fsafe-buffer-usage-suggestions -Wno-unneeded-internal-declaration
 	LDFLAGS += -Wno-unused-command-line-argument
+	CXX_STD := c++23
 
 	ifeq '' '$(findstring Apple,$(COMPILER_VERSION))'
 		ifeq ($(if $(shell command -v lld),'true','false'), 'true')
