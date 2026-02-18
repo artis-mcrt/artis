@@ -69,10 +69,8 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
                                             .T_R = grid::get_TR(nonemptymgi),
                                             .photoion_xs = get_phixs_table(element, ion, level)};
 
-  double bfheating = 0.;
-
-  integrator<integrand_bfheatingcoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsrel, &bfheating,
-                                                       &error);
+  auto bfheating =
+      integrator<integrand_bfheatingcoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsrel, &error);
 
   bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
 

@@ -253,16 +253,12 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
 
 auto calculate_planck_integral(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
     -> double {
-  double integral = 0.;
-
   double error = 0.;
   const double epsrel = 1e-10;
 
   const GSL_PlanckIntegralParas intparas = {.T_R = T_R, .times_nu = times_nu};
 
-  integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsrel, &integral, &error);
-
-  return integral;
+  return integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsrel, &error);
 }
 
 // difference between the average nu and the average nu of a Planck function
