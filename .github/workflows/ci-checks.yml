@@ -388,8 +388,8 @@ jobs:
             - name: Set MPI host compiler to hipcc
               run: |
                   hipcc --version
+                  echo "hipconfig:"
                   hipconfig --version
-                  find /opt/rocm-7.2.0 -name "hipstdpar_lib.hpp"
                   echo "CXX=hipcc" >> $GITHUB_ENV
                   echo "OMPI_CXX=hipcc" >> $GITHUB_ENV
 
