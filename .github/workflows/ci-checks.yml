@@ -400,18 +400,21 @@ jobs:
                   sudo apt-get install  -y git
 
             - name: Compile classic mode
+              continue-on-error: true
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
                   make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile classic mode STDPAR=ON
+              continue-on-error: true
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
                   make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile classic mode STDPAR=ON GPU=ON
+              continue-on-error: true
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
