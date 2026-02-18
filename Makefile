@@ -132,7 +132,7 @@ ifeq ($(STDPAR),ON)
 			CXXFLAGS += -stdpar=multicore
 		endif
   else ifeq ($(COMPILER_NAME),HIPCC)
-		CXXFLAGS += --hipstdpar --hipstdpar-interpose-alloc --hipstdpar-path=/opt/rocm-7.2.0/include/thrust/system/hip/hipstdpar/ --hipstdpar-thrust-path=/opt/rocm-7.2.0/include
+		CXXFLAGS += --hipstdpar --hipstdpar-interpose-alloc --hipstdpar-path=/opt/rocm-7.2.0/include/thrust/system/hip/hipstdpar/ --hipstdpar-thrust-path=/opt/rocm-7.2.0/include --hipstdpar-prim-path=/opt/rocm-7.2.0/include/hipstdpar/prim/
 		ifeq ($(GPU),ON)
 			# MI300
 			CXXFLAGS += -gpu-arch=--offload-arch=gfx942 -fgpu-rdc
