@@ -15,7 +15,7 @@ else
 endif
 
 ifeq ($(REPRODUCIBLE),ON)
-	CXXFLAGS += -DREPRODUCIBLE=true -ffp-contract=off
+	CXXFLAGS += -DREPRODUCIBLE=true -ffp-contract=off -DEIGEN_DONT_VECTORIZE
 	BUILD_DIR := $(BUILD_DIR)_reproducible
 	FASTMATH := OFF
 else ifeq ($(REPRODUCIBLE),OFF)
@@ -96,10 +96,10 @@ else
 endif
 
 ifeq ($(OPENMP),ON)
-  ifeq ($(STDPAR),ON)
-    $(error cannot combine OPENMP and STDPAR)
-  endif
-  BUILD_DIR := $(BUILD_DIR)_openmp
+	ifeq ($(STDPAR),ON)
+		$(error cannot combine OPENMP and STDPAR)
+	endif
+	BUILD_DIR := $(BUILD_DIR)_openmp
 
 	ifeq ($(COMPILER_NAME),NVHPC)
 		ifeq ($(GPU),ON)
@@ -122,30 +122,30 @@ else
 endif
 
 ifeq ($(STDPAR),ON)
-  CXXFLAGS += -DSTDPAR_ON=true
-  BUILD_DIR := $(BUILD_DIR)_stdpar
+	CXXFLAGS += -DSTDPAR_ON=true
+	BUILD_DIR := $(BUILD_DIR)_stdpar
 
-  ifeq ($(COMPILER_NAME),NVHPC)
+	ifeq ($(COMPILER_NAME),NVHPC)
 		ifeq ($(GPU),ON)
 			CXXFLAGS += -stdpar=gpu -gpu=mem:unified
 			CXXFLAGS += -gpu=cc80,rdc
 		else
 			CXXFLAGS += -stdpar=multicore
 		endif
-  else ifeq ($(COMPILER_NAME),HIPCC)
+	else ifeq ($(COMPILER_NAME),HIPCC)
 		CXXFLAGS += -fexperimental-library
 		ifeq ($(GPU),ON)
 			# MI300
 			CXXFLAGS += --offload-arch=gfx942 -fgpu-rdc --hipstdpar
 		endif
-  else ifeq ($(COMPILER_NAME),CLANG)
+	else ifeq ($(COMPILER_NAME),CLANG)
 		CXXFLAGS += -fexperimental-library
 		# LDFLAGS += -ltbb
 		# LDFLAGS += -Xlinker -debug_snapshot
 
-  else ifeq ($(COMPILER_NAME),GCC)
+	else ifeq ($(COMPILER_NAME),GCC)
 		LDFLAGS += -ltbb
-  endif
+	endif
 
 else ifeq ($(STDPAR),OFF)
 else ifeq ($(STDPAR),)
@@ -191,7 +191,7 @@ else
 
 endif
 
-# default to GSL off unless we need it (boost or eigen disabled)
+# default to gsl off unless boost or eigen are off
 GSL := OFF
 ifeq ($(BOOST),OFF)
 	CXXFLAGS += -DBOOST_OFF
@@ -249,7 +249,6 @@ ifeq ($(TESTMODE),ON)
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
-	CXXFLAGS += -DTESTMODE=false
 	ifeq ($(GSL),ON)
 		CXXFLAGS += -DGSL_RANGE_CHECK_OFF
 	endif

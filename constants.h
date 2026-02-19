@@ -67,6 +67,10 @@ constexpr std::string_view outdir_resfiles{"speclc_angle_res/"};
 
 constexpr std::array<std::string_view, 3> datafolders = {"./", "data/", "artis/data/"};
 
+#ifndef TESTMODE
+#define TESTMODE false
+#endif
+
 #if defined(__NVCOMPILER_CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #define THREADLOCALONHOST
 #else
