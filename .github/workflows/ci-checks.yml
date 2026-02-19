@@ -366,16 +366,24 @@ jobs:
                     fetch-depth: 0
 
             - name: Compile classic mode STDPAR=ON GPU=ON
+              continue-on-error: true
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
                   make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
+              continue-on-error: true
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
     nvidia-nvhpc:
         name: NVIDIA NVHPC nvc++
@@ -406,14 +414,12 @@ jobs:
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
             - name: Compile classic mode STDPAR=ON GPU=ON
-              continue-on-error: true
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
                   make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
-              continue-on-error: true
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
