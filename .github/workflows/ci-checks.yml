@@ -416,3 +416,9 @@ jobs:
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode STDPAR=ON
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
