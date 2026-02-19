@@ -249,7 +249,6 @@ ifeq ($(TESTMODE),ON)
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
-	CXXFLAGS += -DTESTMODE=false
 	ifeq ($(GSL),ON)
 		CXXFLAGS += -DGSL_RANGE_CHECK_OFF
 	endif
