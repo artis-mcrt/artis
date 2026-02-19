@@ -879,7 +879,8 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
 
 // distribution of secondary electron energies for primary electron with energy e_p
 // Opal, Peterson, & Beaty (1971)
-[[nodiscard]] auto Psecondary(const double e_p, const double epsilon, const double I, const double J) -> double {
+[[nodiscard]] constexpr auto Psecondary(const double e_p, const double epsilon, const double I, const double J)
+    -> double {
   const double e_s = epsilon - I;
 
   if (e_p <= I || e_s < 0.) {
@@ -889,7 +890,7 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
   assert_testmodeonly(e_p >= I);
   assert_testmodeonly(e_s >= 0);
   assert_testmodeonly(std::isfinite(std::atan((e_p - I) / 2 / J)));
-  return 1 / (J * std::atan((e_p - I) / 2 / J) * (1 + std::pow(e_s / J, 2)));
+  return 1 / (J * std::atan((e_p - I) / 2 / J) * (1 + pow2(e_s / J)));
 }
 
 [[nodiscard]] constexpr auto get_J(const int Z, const int ionstage, const double ionpot_ev) -> double {
