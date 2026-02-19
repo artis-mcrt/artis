@@ -49,7 +49,7 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: Install EOpenMPI
+            - name: Install Open MPI
               run: |
                   echo "CXX=g++-14" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-14" >> $GITHUB_ENV
