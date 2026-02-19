@@ -67,27 +67,20 @@ constexpr std::string_view outdir_resfiles{"speclc_angle_res/"};
 
 constexpr std::array<std::string_view, 3> datafolders = {"./", "data/", "artis/data/"};
 
-#ifndef GPU_ON
+#ifdef GPU_ON
+constexpr auto pow2(auto x) { return x * x; }
+constexpr auto pow3(auto x) { return x * x * x; }
+constexpr auto pow4(auto x) { return x * x * x * x; }
+
+#else
 #include <cmath>
 
 #define __host__
 #define __device__
-#endif
 
-constexpr auto pow2(double x) -> double {
-#ifdef GPU_ON
-  return x * x;
-#else
-  return std::pow(x, 2);
-#endif
-}
+constexpr auto pow2(auto x) { return std::pow(x, 2); }
+constexpr auto pow3(auto x) { return std::pow(x, 3); }
+constexpr auto pow4(auto x) { return std::pow(x, 4); }
 
-constexpr auto pow3(double x) -> double {
-#ifdef GPU_ON
-  return x * x * x;
-#else
-  return std::pow(x, 3);
 #endif
-}
-
 #endif
