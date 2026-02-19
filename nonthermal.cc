@@ -923,7 +923,7 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
   if (globals::alltrans.coll_str[alltransindex] >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
-    return std::pow(H_ionpot / energy, 2) / lowerstatweight * globals::alltrans.coll_str[alltransindex] * PI *
+    return pow2(H_ionpot / energy) / lowerstatweight * globals::alltrans.coll_str[alltransindex] * PI *
            A_naught_squared;
   }
   if (!globals::alltrans.forbidden[alltransindex]) {
@@ -955,7 +955,7 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
   // normally set to 1.0, but Shingles et al. (2021) boosted this to increase heating
   constexpr double boostfactor = 1.;
 
-  const double omegap = std::sqrt(4 * PI * nne * std::pow(QE, 2) / ME);
+  const double omegap = std::sqrt(4 * PI * nne * pow2(QE) / ME);
   const double zetae = H * omegap / 2 / PI;
   if (energy > 14 * EV) {
     return boostfactor * nne * 2 * PI * pow4(QE) / energy * std::log(2 * energy / zetae);
