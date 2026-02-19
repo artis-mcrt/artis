@@ -56,7 +56,6 @@ class Phixslist {
 
 struct Rpkt_continuum_absorptioncoeffs {
   double nu{-1.};  // frequency at which opacity was calculated
-  double total{0.};
   double ffescat{0.};
   double ffheat{0.};
   double bf{0.};
@@ -68,6 +67,7 @@ struct Rpkt_continuum_absorptioncoeffs {
       : phixslist{nbfcontinua_ground, nbfcontinua, bfestimcount} {}
 
   constexpr Rpkt_continuum_absorptioncoeffs() = default;
+  [[nodiscard]] constexpr auto total() const { return ffescat + bf + ffheat; }
 };
 
 DEVICE_FUNC void do_rpkt(Packet& pkt, double t2);
