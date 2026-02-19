@@ -1599,7 +1599,7 @@ void set_model_type(const GridType model_type_value) { model_type = model_type_v
 }
 
 // number of model grid cells
-[[gnu::pure]] [[nodiscard]] auto get_nonempty_npts_model() -> int {
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nonempty_npts_model() -> int {
   assert_testmodeonly(nonempty_npts_model > 0);
   return static_cast<int>(nonempty_npts_model);
 }
