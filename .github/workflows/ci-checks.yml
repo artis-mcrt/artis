@@ -336,7 +336,7 @@ jobs:
         runs-on: ubuntu-24.04
         name: AMD ROCm hipcc
         container:
-            image: rocm/dev-ubuntu-24.04:7.2
+            image: rocm/dev-ubuntu-24.04:7.2-complete
         steps:
             - name: Show CPU type and core count
               id: cpu-count
