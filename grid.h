@@ -60,7 +60,7 @@ void set_elem_abundance(std::ptrdiff_t nonemptymgi, int element, float newabunda
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_elem_numberdens(std::ptrdiff_t nonemptymgi, int element)
     -> double;
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_initenergyq(int modelgridindex) -> double;
-[[gnu::pure]] [[nodiscard]] auto get_kappagrey(int nonemptymgi) -> float;
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_kappagrey(int nonemptymgi) -> float;
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_Te(int nonemptymgi) -> float;
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_TR(int nonemptymgi) -> float;
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_TJ(int nonemptymgi) -> float;
