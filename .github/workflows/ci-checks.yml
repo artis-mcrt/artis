@@ -79,7 +79,6 @@ jobs:
                         {name: gcc, ver: 14},
                         {name: gcc, ver: 15},
                         {name: clang, ver: 21},
-                        {name: nvc++, ver: '26.1'},
                     ]
             fail-fast: false
 
@@ -149,19 +148,6 @@ jobs:
                   echo "OMPI_CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
                   echo "LDFLAGS=-L/usr/lib/llvm-${{ matrix.compiler.ver }}/lib" >> $GITHUB_ENV
 
-            - name: Install nvc++
-              if: matrix.compiler.name == 'nvc++'
-              uses: fortran-lang/setup-fortran@v1.8.1
-              with:
-                  compiler: nvidia-hpc
-                  version: ${{ matrix.compiler.ver }}
-
-            - name: Set nvc++ as compiler
-              if: matrix.compiler.name == 'nvc++'
-              run: |
-                  echo "CXX=nvc++" >> $GITHUB_ENV
-                  echo "OMPI_CXX=nvc++" >> $GITHUB_ENV
-
             - name: Install GSL
               run: |
                   sudo apt-get update
@@ -175,13 +161,6 @@ jobs:
             - name: Install OpenMPI
               run: |
                   sudo apt install -y openmpi-bin libopenmpi-dev
-
-            - name: Compile classic mode STDPAR=ON GPU=ON
-              if: matrix.compiler.name == 'nvc++'
-              run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
-                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile classic mode
               run: |
@@ -219,18 +198,10 @@ jobs:
                   make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
-              if: matrix.compiler.name != 'nvc++'
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
-
-            - name: Compile nebular mode STDPAR=ON GPU=ON
-              if: matrix.compiler.name == 'nvc++'
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile all remaining option files
               run: |
