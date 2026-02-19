@@ -164,7 +164,7 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
 }  // namespace utlrandom
 
 #ifdef GPU_ON
-inline THREADLOCALONHOST auto rng{utlrandom::generators::Xoshiro128PP{}};
+inline thread_local auto rng{utlrandom::generators::Xoshiro128PP{}};
 #else
 #include <random>
 inline thread_local auto rng{std::mt19937{std::random_device{}()}};
