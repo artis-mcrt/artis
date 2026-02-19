@@ -1,6 +1,9 @@
-#include <cstddef>
 #ifndef STATS_H
 #define STATS_H
+
+#include <cstddef>
+
+#include "constants.h"
 
 namespace stats {
 // number of ion stats counters that should be divided by the ion populations
@@ -44,7 +47,7 @@ enum eventcounters {
   COUNTER_COUNT = 33,
 };
 
-void increment(enum eventcounters i);
+__host__ __device__ void increment(enum eventcounters i);
 
 void pkt_action_counters_reset();
 
