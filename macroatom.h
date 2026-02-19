@@ -5,11 +5,12 @@
 
 #include "constants.h"
 #include "packet.h"
+#include "sn3d.h"
 
 void macroatom_open_file(int my_rank);
 void macroatom_close_file();
 
-void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
+__host__ __device__ void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
 
 [[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, double upper_statweight, double einstein_A,
                                                           double epsilon_trans, double nnlevel_lower,
