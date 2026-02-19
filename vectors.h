@@ -91,7 +91,7 @@ template <size_t VECDIM>
 
   const double ndotv_on_c = dot(dir_rf, vel_rf) / CLIGHT;
   const double dopplerfactorsq = USE_RELATIVISTIC_DOPPLER_SHIFT
-                                     ? std::pow(1. - ndotv_on_c, 2) / (1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED))
+                                     ? pow2(1. - ndotv_on_c) / (1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED))
                                      : (1. - (2 * ndotv_on_c));
 
   assert_testmodeonly(std::isfinite(dopplerfactorsq));
