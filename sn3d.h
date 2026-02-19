@@ -56,12 +56,6 @@
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
-#if defined(__NVCOMPILER_CUDA_ARCH__) || defined(__AMDGCN__) || defined(GPU_ON)
-#define THREADLOCALONHOST
-#else
-#define THREADLOCALONHOST thread_local static
-#endif
-
 #include "constants.h"
 
 constexpr int cellcacheslotid = 0;
