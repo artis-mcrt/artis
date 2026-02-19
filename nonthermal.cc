@@ -969,7 +969,7 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
 // energy and ionisation_potential should be in eV
 // fitting formula of Younger 1981
 // called Q_i(E) in KF92 equation 7
-auto xs_impactionisation(const double energy_ev, const ShellParams& colliondata_ion) -> double {
+constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& colliondata_ion) -> double {
   const double ionpot_ev = colliondata_ion.ionpot_ev;
   const double u = energy_ev / ionpot_ev;
 
@@ -989,8 +989,8 @@ auto xs_impactionisation(const double energy_ev, const ShellParams& colliondata_
   const double C = colliondata_ion.C;
   const double D = colliondata_ion.D;
 
-  return 1e-14 * ((A * (1 - (1 / u))) + (B * std::pow((1 - (1 / u)), 2)) + (C * std::log(u)) + (D * std::log(u) / u)) /
-         (u * std::pow(ionpot_ev, 2));
+  return 1e-14 * ((A * (1 - (1 / u))) + (B * pow2((1 - (1 / u)))) + (C * std::log(u)) + (D * std::log(u) / u)) /
+         (u * pow2(ionpot_ev));
 }
 
 // Kozma & Fransson equation 6.
