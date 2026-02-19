@@ -1191,13 +1191,13 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 
 // Convert a position in Cartesian xyz to the grid coordinate system (which might the same, or 2D cylindrical or 1D
 // spherical)
-[[nodiscard]] auto get_gridcoords_from_xyz(const Vec3d& pos_xyz) {
+[[nodiscard]] constexpr auto get_gridcoords_from_xyz(const Vec3d& pos_xyz) {
   if constexpr (GRID_TYPE == GridType::CARTESIAN3D) {
     return pos_xyz;
   }
 
   if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
-    return std::array<double, 2>{std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2]};
+    return std::array<double, 2>{std::sqrt(pow2(pos_xyz[0]) + pow2(pos_xyz[1])), pos_xyz[2]};
   }
 
   if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
