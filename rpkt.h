@@ -56,7 +56,6 @@ class Phixslist {
 
 struct Rpkt_continuum_absorptioncoeffs {
   double nu{-1.};  // frequency at which opacity was calculated
-  double total{0.};
   double ffescat{0.};
   double ffheat{0.};
   double bf{0.};
@@ -68,12 +67,13 @@ struct Rpkt_continuum_absorptioncoeffs {
       : phixslist{nbfcontinua_ground, nbfcontinua, bfestimcount} {}
 
   constexpr Rpkt_continuum_absorptioncoeffs() = default;
+  [[nodiscard]] constexpr auto total() const { return ffescat + bf + ffheat; }
 };
 
-void do_rpkt(Packet& pkt, double t2);
-void emit_rpkt(Packet& pkt);
+DEVICE_FUNC void do_rpkt(Packet& pkt, double t2);
+DEVICE_FUNC void emit_rpkt(Packet& pkt);
 void calculate_chi_rpkt_cont(double nu_cmf, Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont, int nonemptymgi);
-[[nodiscard]] auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
+[[nodiscard]] DEVICE_FUNC auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
 void allocate_expansionopacities();
 void calculate_expansion_opacities(int nonemptymgi);
 void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);

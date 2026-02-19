@@ -800,7 +800,8 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
   // return yfunc[index];
 }
 
-auto xs_ionisation_lotz(const double en_erg, const ShellParams& colliondata_ion, const int electronsinshell) -> double {
+constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& colliondata_ion, const int electronsinshell)
+    -> double {
   const double ionpot = colliondata_ion.ionpot_ev * EV;
   if (en_erg < ionpot) {
     return 0.;
@@ -818,12 +819,12 @@ auto xs_ionisation_lotz(const double en_erg, const ShellParams& colliondata_ion,
 
   if (en_erg > ionpot) {
     // Equation 3.38 of Axelrod (1980) attributed to Lotz (1967)
-    const double part_sigma_shell = (electronsinshell / ionpot *
-                                     (std::log(std::pow(beta, 2) * ME * std::pow(CLIGHT, 2) / 2.0 / ionpot) -
-                                      std::log10(1 - std::pow(beta, 2)) - std::pow(beta, 2)));
+    const double part_sigma_shell =
+        (electronsinshell / ionpot *
+         (std::log(pow2(beta) * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log10(1 - pow2(beta)) - pow2(beta)));
     if (part_sigma_shell > 0.) {
       constexpr double Aconst = 1.33e-14 * EV * EV;
-      const double sigma = 2 * Aconst / std::pow(beta, 2) / ME / std::pow(CLIGHT, 2) * part_sigma_shell;
+      const double sigma = 2 * Aconst / pow2(beta) / ME / pow2(CLIGHT) * part_sigma_shell;
       assert_always(sigma >= 0);
       return sigma;
     }
@@ -890,7 +891,7 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
   assert_testmodeonly(e_p >= I);
   assert_testmodeonly(e_s >= 0);
   assert_testmodeonly(std::isfinite(std::atan((e_p - I) / 2 / J)));
-  return 1 / (J * std::atan((e_p - I) / 2 / J) * (1 + std::pow(e_s / J, 2)));
+  return 1 / (J * std::atan((e_p - I) / 2 / J) * (1 + pow2(e_s / J)));
 }
 
 [[nodiscard]] constexpr auto get_J(const int Z, const int ionstage, const double ionpot_ev) -> double {
@@ -924,7 +925,7 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
   if (globals::alltrans.coll_str[alltransindex] >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
-    return std::pow(H_ionpot / energy, 2) / lowerstatweight * globals::alltrans.coll_str[alltransindex] * PI *
+    return pow2(H_ionpot / energy) / lowerstatweight * globals::alltrans.coll_str[alltransindex] * PI *
            A_naught_squared;
   }
   if (!globals::alltrans.forbidden[alltransindex]) {
@@ -938,7 +939,7 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
 
     constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
-    return prefactor * A_naught_squared * std::pow(H_ionpot / epsilon_trans, 2) *
+    return prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) *
            globals::alltrans.osc_strength[alltransindex] * g_bar / U;
   }
   return 0.;
@@ -956,14 +957,13 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
   // normally set to 1.0, but Shingles et al. (2021) boosted this to increase heating
   constexpr double boostfactor = 1.;
 
-  const double omegap = std::sqrt(4 * PI * nne * std::pow(QE, 2) / ME);
+  const double omegap = std::sqrt(4 * PI * nne * pow2(QE) / ME);
   const double zetae = H * omegap / 2 / PI;
   if (energy > 14 * EV) {
-    return boostfactor * nne * 2 * PI * std::pow(QE, 4) / energy * std::log(2 * energy / zetae);
+    return boostfactor * nne * 2 * PI * pow4(QE) / energy * std::log(2 * energy / zetae);
   }
   const double v = std::sqrt(2 * energy / ME);
-  return boostfactor * nne * 2 * PI * std::pow(QE, 4) / energy *
-         std::log(ME * std::pow(v, 3) / (EULERGAMMA * std::pow(QE, 2) * omegap));
+  return boostfactor * nne * 2 * PI * pow4(QE) / energy * std::log(ME * pow3(v) / (EULERGAMMA * pow2(QE) * omegap));
 }
 
 // impact ionisation cross section in cm^2
@@ -990,8 +990,8 @@ constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& co
   const double C = colliondata_ion.C;
   const double D = colliondata_ion.D;
 
-  return 1e-14 * ((A * (1 - (1 / u))) + (B * std::pow((1 - (1 / u)), 2)) + (C * std::log(u)) + (D * std::log(u) / u)) /
-         (u * std::pow(ionpot_ev, 2));
+  return 1e-14 * ((A * (1 - (1 / u))) + (B * pow2((1 - (1 / u)))) + (C * std::log(u)) + (D * std::log(u) / u)) /
+         (u * pow2(ionpot_ev));
 }
 
 // Kozma & Fransson equation 6.
@@ -2170,7 +2170,7 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
 }
 
 // get non-thermal deposition rate density in erg / s / cm^3 previously stored by calculate_deposition_rate_density()
-__host__ __device__ auto get_deposition_rate_density(const int nonemptymgi) -> double {
+DEVICE_FUNC auto get_deposition_rate_density(const int nonemptymgi) -> double {
   assert_always(deposition_rate_density_all_cells[nonemptymgi] >= 0);
   return deposition_rate_density_all_cells[nonemptymgi];
 }
@@ -2194,9 +2194,8 @@ auto get_nt_frac_heating(const int nonemptymgi) -> float {
   return frac_heating;
 }
 
-__host__ __device__ auto nt_ionisation_upperion_probability(const int nonemptymgi, const int element,
-                                                            const int lowerion, const int upperion,
-                                                            const bool energyweighted) -> double {
+DEVICE_FUNC auto nt_ionisation_upperion_probability(const int nonemptymgi, const int element, const int lowerion,
+                                                    const int upperion, const bool energyweighted) -> double {
   assert_always(upperion > lowerion);
   assert_always(upperion < get_nions(element));
   assert_always(upperion <= nt_ionisation_maxupperion(element, lowerion));
@@ -2232,7 +2231,7 @@ __host__ __device__ auto nt_ionisation_upperion_probability(const int nonemptymg
   return (upperion == lowerion + 1) ? 1.0 : 0.;
 }
 
-__host__ __device__ auto nt_ionisation_maxupperion(const int element, const int lowerion) -> int {
+DEVICE_FUNC auto nt_ionisation_maxupperion(const int element, const int lowerion) -> int {
   const int nions = get_nions(element);
   assert_always(lowerion < nions - 1);
   int maxupper = lowerion + 1;
@@ -2246,8 +2245,8 @@ __host__ __device__ auto nt_ionisation_maxupperion(const int element, const int 
   return maxupper;
 }
 
-__host__ __device__ auto nt_random_upperion(const int nonemptymgi, const int element, const int lowerion,
-                                            const bool energyweighted) -> int {
+DEVICE_FUNC auto nt_random_upperion(const int nonemptymgi, const int element, const int lowerion,
+                                    const bool energyweighted) -> int {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
     const double zrand = rng_uniform();
@@ -2267,7 +2266,7 @@ __host__ __device__ auto nt_random_upperion(const int nonemptymgi, const int ele
   return lowerion + 1;
 }
 
-__host__ __device__ auto nt_ionisation_ratecoeff(const int nonemptymgi, const int element, const int ion) -> double {
+DEVICE_FUNC auto nt_ionisation_ratecoeff(const int nonemptymgi, const int element, const int ion) -> double {
   assert_always(NT_ON);
 
   if (NT_SOLVE_SPENCERFANO) {
@@ -2285,8 +2284,8 @@ __host__ __device__ auto nt_ionisation_ratecoeff(const int nonemptymgi, const in
   return nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion);
 }
 
-__host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const int lowerlevel, const int upperlevel,
-                                                 const int alltransindex) -> double {
+DEVICE_FUNC auto nt_excitation_ratecoeff(const int nonemptymgi, const int lowerlevel, const int upperlevel,
+                                         const int alltransindex) -> double {
   if constexpr (!NT_EXCITATION_ON) {
     return 0.;
   }
@@ -2311,7 +2310,7 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const in
   return ratecoeffperdeposition * deposition_rate_density;
 }
 
-__host__ __device__ void do_ntalpha_fisprod_deposit(Packet& pkt) {
+DEVICE_FUNC void do_ntalpha_fisprod_deposit(Packet& pkt) {
   // if ionisation by alpha particles is found to be important for the ionisation state, we could do a separate
   // Spencer-Fano solution. For now, just treat alpha deposition as pure heating (even though the alpha deposition rate
   // was calculated from the sum of ionisation and plasma heating)
@@ -2320,7 +2319,7 @@ __host__ __device__ void do_ntalpha_fisprod_deposit(Packet& pkt) {
   stats::increment(stats::COUNTER_NT_STAT_TO_KPKT);
 }
 
-__host__ __device__ void do_ntlepton_deposit(Packet& pkt) {
+DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
   atomicadd(nt_energy_deposited, pkt.e_cmf);
 
   const int modelgridindex = grid::get_propcell_modelgridindex(pkt.where);

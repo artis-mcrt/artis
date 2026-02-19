@@ -9,19 +9,8 @@ on:
     workflow_dispatch:
 
 jobs:
-    # clang-format:
-    #     runs-on: ubuntu-24.04
-    #     steps:
-    #         - uses: actions/checkout@v6
-
-    #         - name: Run clang-format style check
-    #           uses: jidicula/clang-format-action@v4.16.0
-    #           with:
-    #               clang-format-version: '21'
-    #               check-path: .
-
     clang-tidy-cppcheck:
-        name: clang-format, clang-tidy, and cppcheck
+        name: Format and lint
         runs-on: macos-26
         steps:
             - uses: actions/checkout@v6
@@ -79,7 +68,6 @@ jobs:
                         {name: gcc, ver: 14},
                         {name: gcc, ver: 15},
                         {name: clang, ver: 21},
-                        {name: nvc++, ver: '26.1'},
                     ]
             fail-fast: false
 
@@ -149,19 +137,6 @@ jobs:
                   echo "OMPI_CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
                   echo "LDFLAGS=-L/usr/lib/llvm-${{ matrix.compiler.ver }}/lib" >> $GITHUB_ENV
 
-            - name: Install nvc++
-              if: matrix.compiler.name == 'nvc++'
-              uses: fortran-lang/setup-fortran@v1.8.1
-              with:
-                  compiler: nvidia-hpc
-                  version: ${{ matrix.compiler.ver }}
-
-            - name: Set nvc++ as compiler
-              if: matrix.compiler.name == 'nvc++'
-              run: |
-                  echo "CXX=nvc++" >> $GITHUB_ENV
-                  echo "OMPI_CXX=nvc++" >> $GITHUB_ENV
-
             - name: Install GSL
               run: |
                   sudo apt-get update
@@ -172,16 +147,9 @@ jobs:
               run: |
                   sudo apt install libtbb-dev
 
-            - name: Install OpenMPI
+            - name: Install Open MPI
               run: |
                   sudo apt install -y openmpi-bin libopenmpi-dev
-
-            - name: Compile classic mode STDPAR=ON GPU=ON
-              if: matrix.compiler.name == 'nvc++'
-              run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
-                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile classic mode
               run: |
@@ -219,18 +187,10 @@ jobs:
                   make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
-              if: matrix.compiler.name != 'nvc++'
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
-
-            - name: Compile nebular mode STDPAR=ON GPU=ON
-              if: matrix.compiler.name == 'nvc++'
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile all remaining option files
               run: |
@@ -255,10 +215,10 @@ jobs:
               with:
                   xcode-version: 'latest-stable'
 
-            - name: Install GSL and OpenMPI
+            - name: Install Open MPI
               run: |
                   brew update
-                  brew install gsl openmpi || true
+                  brew install openmpi || true
 
             - name: Install OpenMP
               run: |
@@ -342,12 +302,6 @@ jobs:
                   make clean
                   make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: LLVM Clang Compile nebular mode boost+eigen
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make -j${{ steps.cpu-count.outputs.count}} BOOST=ON EIGEN=ON sn3d exspec
-
             - name: LLVM Clang Compile nebular mode OPENMP=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
@@ -366,3 +320,105 @@ jobs:
                       cp -v -p "$file" artisoptions.h
                       make sn3d
                   done
+
+    amd-rocm-hipcc:
+        runs-on: ubuntu-24.04
+        name: AMD ROCm hipcc
+        container:
+            image: rocm/dev-ubuntu-24.04:7.2-complete
+        steps:
+            - name: Show CPU type and core count
+              id: cpu-count
+              run: |
+                  g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
+                  python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
+                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
+
+            - name: Set MPI compiler to hipcc
+              run: |
+                  hipcc --version
+                  hipconfig
+                  echo "CXX=hipcc" >> $GITHUB_ENV
+                  echo "OMPI_CXX=hipcc" >> $GITHUB_ENV
+                  echo "ROCM_PATH=$(hipconfig --rocmpath)" >> $GITHUB_ENV
+
+            - name: Install Open MPI and git
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y libopenmpi-dev openmpi-bin
+                  sudo apt-get install -y git
+                  git config --global --add safe.directory /__w/artis/artis
+
+            - uses: actions/checkout@v6
+              with:
+                    fetch-depth: 0
+
+            - name: Compile classic mode STDPAR=ON GPU=ON
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode STDPAR=ON GPU=ON
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+    nvidia-nvhpc:
+        name: NVIDIA NVHPC nvc++
+        runs-on: ubuntu-24.04
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Show CPU type and core count
+              id: cpu-count
+              run: |
+                  g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
+                  python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
+                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
+
+            - name: Install nvc++
+              uses: fortran-lang/setup-fortran@v1.8.1
+              with:
+                  compiler: nvidia-hpc
+                  version: 26.1
+
+            - name: Set nvc++ as compiler
+              run: |
+                  echo "CXX=nvc++" >> $GITHUB_ENV
+                  echo "OMPI_CXX=nvc++" >> $GITHUB_ENV
+
+            - name: Install Open MPI
+              run: |
+                  sudo apt install -y openmpi-bin libopenmpi-dev
+
+            - name: Compile classic mode STDPAR=ON GPU=ON
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode STDPAR=ON GPU=ON
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode STDPAR=ON
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec

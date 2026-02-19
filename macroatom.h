@@ -9,7 +9,7 @@
 void macroatom_open_file(int my_rank);
 void macroatom_close_file();
 
-void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
+DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
 
 [[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, double upper_statweight, double einstein_A,
                                                           double epsilon_trans, double nnlevel_lower,
@@ -44,7 +44,7 @@ void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
     const double nnlevelupper, const double nnlevellower, const double t_current) -> double {
   const double nu_trans = epsilon_trans / H;
 
-  const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(nu_trans) * A_ul;
   const double B_lu = upperstatweight / lowerstatweight * B_ul;
 
   const double tau_sobolev = ((B_lu * nnlevellower) - (B_ul * nnlevelupper)) * HCLIGHTOVERFOURPI * t_current;

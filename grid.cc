@@ -114,7 +114,7 @@ constexpr auto get_ndim(const GridType gridtype) -> int {
   }
 }
 
-[[nodiscard]] __host__ __device__ constexpr auto get_coordlabel(const GridType gridtype, const int axis) -> char {
+[[nodiscard]] DEVICE_FUNC constexpr auto get_coordlabel(const GridType gridtype, const int axis) -> char {
   assert_always(axis >= 0 && axis < get_ndim(gridtype));
   switch (gridtype) {
     case GridType::CARTESIAN3D:
@@ -1197,7 +1197,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
   }
 
   if constexpr (GRID_TYPE == GridType::CYLINDRICAL2D) {
-    return std::array<double, 2>{std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2)), pos_xyz[2]};
+    return std::array<double, 2>{std::sqrt(pow2(pos_xyz[0]) + pow2(pos_xyz[1])), pos_xyz[2]};
   }
 
   if constexpr (GRID_TYPE == GridType::SPHERICAL1D) {
@@ -1244,11 +1244,11 @@ template <BoundaryType boundarytype, size_t S1>
 
   // quadratic equation for intersection of ray with sphere
   // a*d^2 + b*d + c = 0
-  const double a = dot(dir, dir) - pow(shellradiuststart / tstart / speed, 2);
-  const double b = 2 * (dot(dir, pos) - (pow(shellradiuststart, 2) / tstart / speed));
-  const double c = dot(pos, pos) - pow(shellradiuststart, 2);
+  const double a = dot(dir, dir) - pow2(shellradiuststart / tstart / speed);
+  const double b = 2 * (dot(dir, pos) - (pow2(shellradiuststart) / tstart / speed));
+  const double c = dot(pos, pos) - pow2(shellradiuststart);
 
-  const double discriminant = pow(b, 2) - (4 * a * c);
+  const double discriminant = pow2(b) - (4 * a * c);
 
   if (discriminant < 0) {
     // no intersection
@@ -1405,7 +1405,7 @@ template <BoundaryType boundarytype, size_t S1>
 
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_cellcoordmin(const int cellindex, const int axis) -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmin(const int cellindex, const int axis) -> double {
   return propcell_pos_min[cellindex][axis];
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
@@ -1465,30 +1465,30 @@ template <BoundaryType boundarytype, size_t S1>
 
 auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[modelgridindex].rhoinit; }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_rho(const std::ptrdiff_t nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_rho(const std::ptrdiff_t nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return rho_allcells[nonemptymgi];
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nne(const int nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nne(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return nne_allcells[nonemptymgi];
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nnetot(const int nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nnetot(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return nnetot_allcells[nonemptymgi];
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_ffegrp(const int modelgridindex) -> float {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ffegrp(const int modelgridindex) -> float {
   return modelgrid_input[modelgridindex].ffegrp;
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_modelcell_mean_radial_pos(const int modelgridindex,
-                                                                                   const double tratmid) -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_pos(const int modelgridindex,
+                                                                           const double tratmid) -> double {
   const int assoc_cells = grid::get_numpropcells(modelgridindex);
   return modelgrid_input[modelgridindex].initial_radial_pos_sum * tratmid / assoc_cells;
 }
@@ -1506,33 +1506,33 @@ void set_elem_abundance(const ptrdiff_t nonemptymgi, const int element, const fl
 }
 
 // mass fraction of an element (all isotopes combined)
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_elem_numberdens(const ptrdiff_t nonemptymgi, const int element)
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(const ptrdiff_t nonemptymgi, const int element)
     -> double {
   return get_elem_abundance(nonemptymgi, element) /
          static_cast<double>(grid::get_element_meanweight(nonemptymgi, element)) * grid::get_rho(nonemptymgi);
 }
 
-__host__ __device__ auto get_kappagrey(const int nonemptymgi) -> float { return kappagrey_allcells[nonemptymgi]; }
+DEVICE_FUNC auto get_kappagrey(const int nonemptymgi) -> float { return kappagrey_allcells[nonemptymgi]; }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_Te(const int nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_Te(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return Te_allcells[nonemptymgi];
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_TR(const int nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_TR(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return TR_allcells[nonemptymgi];
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_TJ(const int nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_TJ(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return TJ_allcells[nonemptymgi];
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_W(const int nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_W(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
   return W_allcells[nonemptymgi];
@@ -1592,7 +1592,7 @@ auto get_model_type() -> GridType { return model_type; }
 
 void set_model_type(const GridType model_type_value) { model_type = model_type_value; }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_npts_model() -> int
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_npts_model() -> int
 // number of model grid cells
 {
   assert_testmodeonly(npts_model > 0);
@@ -1600,18 +1600,18 @@ void set_model_type(const GridType model_type_value) { model_type = model_type_v
 }
 
 // number of model grid cells
-[[gnu::pure]] [[nodiscard]] auto get_nonempty_npts_model() -> int {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonempty_npts_model() -> int {
   assert_testmodeonly(nonempty_npts_model > 0);
   return static_cast<int>(nonempty_npts_model);
 }
 
 // get time at which model input densities are defined
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_t_model() -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_t_model() -> double {
   assert_testmodeonly(t_model > 0.);
   return t_model;
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_propcell_modelgridindex(const int cellindex) -> int {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_propcell_modelgridindex(const int cellindex) -> int {
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
   const auto mgi = propcell_mgi[cellindex];
@@ -1620,7 +1620,7 @@ void set_model_type(const GridType model_type_value) { model_type = model_type_v
   return mgi;
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_propcell_nonemptymgi(const int cellindex) -> int {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_propcell_nonemptymgi(const int cellindex) -> int {
   const auto nonemptymgi = propcell_nonemptymgi[cellindex];
   assert_testmodeonly(nonemptymgi >= -1);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
@@ -1628,13 +1628,13 @@ void set_model_type(const GridType model_type_value) { model_type = model_type_v
 }
 
 // number of propagation cells associated with each modelgrid cell
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_numpropcells(const int modelgridindex) -> int {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_numpropcells(const int modelgridindex) -> int {
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid_numpropcells[modelgridindex];
 }
 
 // get the index in the list of non-empty cells for a given model grid cell
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nonemptymgi_of_mgi(const int mgi) -> int {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonemptymgi_of_mgi(const int mgi) -> int {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
   assert_testmodeonly(mgi < get_npts_model());
 
@@ -1647,7 +1647,7 @@ void set_model_type(const GridType model_type_value) { model_type = model_type_v
 }
 
 // get the index in the list of non-empty cells for a given model grid cell
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_mgi_of_nonemptymgi(const ptrdiff_t nonemptymgi) -> int {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_mgi_of_nonemptymgi(const ptrdiff_t nonemptymgi) -> int {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
@@ -1695,7 +1695,7 @@ auto get_electronfrac(const int nonemptymgi) -> double {
 }
 
 // q: energy in the model at tmin per gram to use with USE_MODEL_INITIAL_ENERGY option [erg/g]
-__host__ __device__ auto get_initenergyq(const int modelgridindex) -> double {
+DEVICE_FUNC auto get_initenergyq(const int modelgridindex) -> double {
   return modelgrid_input[modelgridindex].initenergyq;
 }
 
@@ -2339,7 +2339,7 @@ void init_grid(const int my_rank) {
 auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totmassnuclide[decay::get_nucindex(z, a)]; }
 
 // identify the cell index from an (x,y,z) position and a time.
-[[nodiscard]] __host__ __device__ auto get_cellindex_from_pos(const Vec3d& pos, const double time) -> int {
+[[nodiscard]] DEVICE_FUNC auto get_cellindex_from_pos(const Vec3d& pos, const double time) -> int {
   auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
   for (int d = 0; d < get_ndim(GRID_TYPE); d++) {
@@ -2362,8 +2362,8 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 }
 
 // compute distance to a cell boundary.
-[[nodiscard]] __host__ __device__ auto boundary_distance(const Vec3d& dir, const Vec3d& pos, const double tstart,
-                                                         const int cellindex) -> std::tuple<double, int> {
+[[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, const double tstart,
+                                                 const int cellindex) -> std::tuple<double, int> {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {
       return {0., -99};

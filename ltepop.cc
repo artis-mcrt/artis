@@ -340,8 +340,8 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
 
 }  // anonymous namespace
 
-[[nodiscard]] __host__ __device__ auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi,
-                                                          const bool force_saha) -> int {
+[[nodiscard]] DEVICE_FUNC auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi,
+                                                  const bool force_saha) -> int {
   const int nions = get_nions(element);
   if (nions == 0) {
     return -1;
@@ -438,8 +438,8 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
           exp(-E_aboveground / KB / T_exc));
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto calculate_levelpop(const int nonemptymgi, const int element,
-                                                                        const int ion, const int level) -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto calculate_levelpop(const int nonemptymgi, const int element, const int ion,
+                                                                const int level) -> double {
   const auto [nn, skipminpop] = calculate_levelpop_nominpop(nonemptymgi, element, ion, level);
   if (!skipminpop && nn < MINPOP) {
     if (grid::get_elem_abundance(nonemptymgi, element) > 0) {

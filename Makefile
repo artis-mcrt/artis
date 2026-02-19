@@ -30,7 +30,12 @@ COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpversion -dumpfullversion)
 COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -f1 -d.)
 $(info $(COMPILER_VERSION))
 CXX_STD := c++26
-ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
+
+ifneq '' '$(findstring HIP version,$(COMPILER_VERSION))'
+	COMPILER_NAME := HIPCC
+	CXX_STD := c++23
+	CXXFLAGS += -Wno-macro-redefined -Wno-unused-command-line-argument
+else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := CLANG
 	CXXFLAGS += -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call -fsafe-buffer-usage-suggestions -Wno-unneeded-internal-declaration
 	LDFLAGS += -Wno-unused-command-line-argument
@@ -99,6 +104,7 @@ ifeq ($(OPENMP),ON)
 	ifeq ($(COMPILER_NAME),NVHPC)
 		ifeq ($(GPU),ON)
 			CXXFLAGS += -mp=gpu -gpu=mem:unified
+			CXXFLAGS += -gpu=cc80,rdc
 		else
 			CXXFLAGS += -mp
 		endif
@@ -122,9 +128,15 @@ ifeq ($(STDPAR),ON)
   ifeq ($(COMPILER_NAME),NVHPC)
 		ifeq ($(GPU),ON)
 			CXXFLAGS += -stdpar=gpu -gpu=mem:unified
-			CXXFLAGS += -gpu=cc80
+			CXXFLAGS += -gpu=cc80,rdc
 		else
 			CXXFLAGS += -stdpar=multicore
+		endif
+  else ifeq ($(COMPILER_NAME),HIPCC)
+		CXXFLAGS += -fexperimental-library
+		ifeq ($(GPU),ON)
+			# MI300
+			CXXFLAGS += --offload-arch=gfx942 -fgpu-rdc --hipstdpar
 		endif
   else ifeq ($(COMPILER_NAME),CLANG)
 		CXXFLAGS += -fexperimental-library
@@ -216,7 +228,6 @@ ifeq ($(GSL),ON)
 		$(error bad value for STATICGSL option. Should be ON or OFF)
 	endif
 endif
-
 
 ifneq ($(MAX_NODE_SIZE),)
 	CXXFLAGS += -DMAX_NODE_SIZE=$(MAX_NODE_SIZE)

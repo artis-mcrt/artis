@@ -30,13 +30,6 @@
 #include <utility>
 #include <vector>
 
-#ifndef __host__
-#define __host__
-#endif
-#ifndef __device__
-#define __device__
-#endif
-
 #ifdef STACKTRACE_ON
 #include <stacktrace>
 #define STACKTRACEIFSUPPORTED << std::stacktrace::current()
@@ -62,12 +55,6 @@
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
-
-#ifdef __NVCOMPILER_CUDA_ARCH__
-#define THREADLOCALONHOST
-#else
-#define THREADLOCALONHOST thread_local static
-#endif
 
 #include "constants.h"
 

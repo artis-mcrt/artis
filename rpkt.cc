@@ -117,7 +117,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_con
   auto prop_time = pkt.prop_time;
   auto next_trans = pkt.next_trans;
 
-  const double chi_cont = chi_rpkt_cont.total * doppler;
+  const double chi_cont = chi_rpkt_cont.total() * doppler;
   double tau = 0.;  // optical depth along path
   double dist = 0.;  // position on path
   while (true) {
@@ -244,7 +244,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
     const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
     const auto binedgedist = get_linedistance(prop_time, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
-    const double chi_cont = chi_rpkt_cont.total * doppler;
+    const double chi_cont = chi_rpkt_cont.total() * doppler;
     // const auto chi_cont = 0.;
     double chi_bb_expansionopac = 0.;
     if (binindex >= 0) {
@@ -431,7 +431,7 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
   const double nu = pkt.nu_cmf;
 
   const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  const double chi_cont = chi_rpkt_cont.total * dopplerfactor;
+  const double chi_cont = chi_rpkt_cont.total() * dopplerfactor;
   const double chi_escatter = chi_rpkt_cont.ffescat * dopplerfactor;
   const double chi_ff = chi_rpkt_cont.ffheat * dopplerfactor;
   const double chi_bf = chi_rpkt_cont.bf * dopplerfactor;
@@ -627,15 +627,13 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     edist = std::numeric_limits<double>::max();
     pkt.next_trans = -1;  // skip over lines and search for line list position on the next non-empty cell
   } else if (thickcell) {
-    [[unlikely]] {
-      // In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
+    // In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
-      const double chi_grey = grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) *
-                              calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+    const double chi_grey = grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) *
+                            calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-      edist = tau_rnd / chi_grey;
-      pkt.next_trans = -1;
-    }
+    edist = tau_rnd / chi_grey;
+    pkt.next_trans = -1;
   } else {
     calculate_chi_rpkt_cont(pkt.nu_cmf, chi_rpkt_cont, nonemptymgi);
 
@@ -898,7 +896,7 @@ void allocate_expansionopacities() {
 }
 
 // return a randomly chosen frequency with a distribution of Planck function times the expansion opacity
-__host__ __device__ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double {
+DEVICE_FUNC auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double {
   assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value());
 
   const std::span<const double> kappa_planck_bins =
@@ -918,7 +916,7 @@ __host__ __device__ auto sample_planck_times_expansion_opacity(const int nonempt
   return nu;
 }
 
-__host__ __device__ void do_rpkt(Packet& pkt, const double t2) {
+DEVICE_FUNC void do_rpkt(Packet& pkt, const double t2) {
   while (do_rpkt_step(pkt, t2)) {
     {
     }
@@ -926,7 +924,7 @@ __host__ __device__ void do_rpkt(Packet& pkt, const double t2) {
 }
 
 // make the packet an r-pkt and set further flags
-__host__ __device__ void emit_rpkt(Packet& pkt) {
+DEVICE_FUNC void emit_rpkt(Packet& pkt) {
   pkt.type = TYPE_RPKT;
 
   // Need to assign a new direction. Assume isotropic emission in the cmf
@@ -963,41 +961,28 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
 
   const auto nne = grid::get_nne(nonemptymgi);
 
-  double chi_escat = 0.;
   // free-free absorption
-  const double chi_ff = calculate_chi_ffheating(nonemptymgi, nu_cmf);
-  double chi_bf = 0.;
+  chi_rpkt_cont.ffheat = calculate_chi_ffheating(nonemptymgi, nu_cmf);
 
   if (globals::opacity_case >= 4) {
+    [[likely]]
     // First contribution: Thomson scattering on free electrons
-    chi_escat = SIGMA_T * nne;
+    chi_rpkt_cont.ffescat = SIGMA_T * nne;
 
     // Third contribution: bound-free absorption
-    chi_bf = chi_rpkt_cont.phixslist.chi_bf_sum.empty()
-                 ? calculate_chi_bf_gammacontr<false>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist)
-                 : calculate_chi_bf_gammacontr<true>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist);
+    chi_rpkt_cont.bf = chi_rpkt_cont.phixslist.chi_bf_sum.empty()
+                           ? calculate_chi_bf_gammacontr<false>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist)
+                           : calculate_chi_bf_gammacontr<true>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist);
 
   } else {
     // in the other cases chi_grey is an mass absorption coefficient
-    // therefore use the mass density
-    // sigma = SIGMA_T * nne;
-
-    chi_escat = 0.;
-    // chi_ff = 0.9*sigma;
-    // sigma *= 0.1;
-
-    chi_bf = 0.;
+    chi_rpkt_cont.ffescat = 0.;
+    chi_rpkt_cont.bf = 0.;
   }
 
   chi_rpkt_cont.nonemptymgi = nonemptymgi;
   chi_rpkt_cont.timestep = globals::timestep;
   chi_rpkt_cont.nu = nu_cmf;
-  chi_rpkt_cont.ffescat = chi_escat;
-  chi_rpkt_cont.bf = chi_bf;
-  chi_rpkt_cont.ffheat = chi_ff;
-  chi_rpkt_cont.total = chi_rpkt_cont.ffescat + chi_rpkt_cont.bf + chi_rpkt_cont.ffheat;
-
-  assert_always(std::isfinite(chi_rpkt_cont.total));
 }
 
 void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node_id) {

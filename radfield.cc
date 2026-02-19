@@ -210,7 +210,7 @@ constexpr auto gsl_integrand_planck(const double nu, void* const voidparas) -> d
   const auto& T_R = params.T_R;
   const auto& times_nu = params.times_nu;
 
-  double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
+  double integrand = TWOHOVERCLIGHTSQUARED * pow3(nu) / (std::expm1(HOVERKB * nu / T_R));
 
   if (times_nu) {
     integrand *= nu;
@@ -726,9 +726,9 @@ void zero_estimators() {
   }
 }
 
-__host__ __device__ void update_estimators(const ptrdiff_t nonemptymgi, const double distance_e_cmf,
-                                           const double nu_cmf, const double doppler_nucmf_on_nurf,
-                                           const Phixslist& phixslist, const bool thickcell) {
+DEVICE_FUNC void update_estimators(const ptrdiff_t nonemptymgi, const double distance_e_cmf, const double nu_cmf,
+                                   const double doppler_nucmf_on_nurf, const Phixslist& phixslist,
+                                   const bool thickcell) {
   if (distance_e_cmf == 0) {
     return;
   }
@@ -756,7 +756,7 @@ __host__ __device__ void update_estimators(const ptrdiff_t nonemptymgi, const do
   }
 }
 
-__host__ __device__ void update_lineestimator(const int nonemptymgi, const int lineindex, const double increment) {
+DEVICE_FUNC void update_lineestimator(const int nonemptymgi, const int lineindex, const double increment) {
   if constexpr (!DETAILED_LINE_ESTIMATORS_ON) {
     return;
   }
@@ -769,7 +769,7 @@ __host__ __device__ void update_lineestimator(const int nonemptymgi, const int l
 }
 
 // mean intensity J_nu [ergs/s/sr/cm2/Hz]
-__host__ __device__ auto radfield(const double nu, const int nonemptymgi) -> double {
+DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP) {
       const int binindex = select_bin(nu);
@@ -899,8 +899,8 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
   }
 }
 
-__host__ __device__ auto get_bfrate_estimator(const int element, const int lowerion, const int lower,
-                                              const int phixstargetindex, const int nonemptymgi) -> double {
+DEVICE_FUNC auto get_bfrate_estimator(const int element, const int lowerion, const int lower,
+                                      const int phixstargetindex, const int nonemptymgi) -> double {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {

@@ -1560,7 +1560,7 @@ void setup_cellcache() {
 
   // const int num_cellcache_slots = get_max_threads();
   const int num_cellcache_slots = 1;
-  globals::cellcache.resize(num_cellcache_slots);
+  resize_exactly(globals::cellcache, num_cellcache_slots);
 
   for (int cellcachenum = 0; cellcachenum < num_cellcache_slots; cellcachenum++) {
     auto mem_usage_cellcache = 0ZU;

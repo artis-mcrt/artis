@@ -79,8 +79,9 @@ template <size_t VECDIM>
 //   dir_rf: the rest frame direction (unit vector) of light propagation
 //   prop_time: the propagation time of the packet
 // returns: the ratio f = (nu_cmf / nu_rf) ^ 2
-[[gnu::pure]] [[nodiscard]] constexpr auto doppler_squared_nucmf_on_nurf(const Vec3d& pos_rf, const Vec3d& dir_rf,
-                                                                         const double prop_time) -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC constexpr auto doppler_squared_nucmf_on_nurf(const Vec3d& pos_rf,
+                                                                                     const Vec3d& dir_rf,
+                                                                                     const double prop_time) -> double {
   // velocity of the comoving frame relative to the rest frame
   const auto vel_rf = get_velocity(pos_rf, prop_time);
 
@@ -89,7 +90,7 @@ template <size_t VECDIM>
 
   const double ndotv_on_c = dot(dir_rf, vel_rf) / CLIGHT;
   const double dopplerfactorsq = USE_RELATIVISTIC_DOPPLER_SHIFT
-                                     ? std::pow(1. - ndotv_on_c, 2) / (1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED))
+                                     ? pow2(1. - ndotv_on_c) / (1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED))
                                      : (1. - (2 * ndotv_on_c));
 
   assert_testmodeonly(std::isfinite(dopplerfactorsq));
@@ -104,8 +105,8 @@ template <size_t VECDIM>
 //   dir_rf: the rest frame direction (unit vector) of light propagation
 //   prop_time: the propagation time of the packet
 // returns: the ratio f = nu_cmf / nu_rf
-[[nodiscard]] constexpr auto calculate_doppler_nucmf_on_nurf(const Vec3d& pos_rf, const Vec3d& dir_rf,
-                                                             const double prop_time) -> double {
+[[nodiscard]] DEVICE_FUNC constexpr auto calculate_doppler_nucmf_on_nurf(const Vec3d& pos_rf, const Vec3d& dir_rf,
+                                                                         const double prop_time) -> double {
   // velocity of the comoving frame relative to the rest frame
   const auto vel_rf = get_velocity(pos_rf, prop_time);
 
@@ -195,7 +196,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 }
 
 // Assuming isotropic distribution, get a random direction vector
-[[nodiscard]] inline auto get_rand_isotropic_unitvec() -> Vec3d {
+[[nodiscard]] DEVICE_FUNC inline auto get_rand_isotropic_unitvec() -> Vec3d {
   const double costheta = -1 + (2. * rng_uniform());
 
   const double phi = rng_uniform() * 2 * PI;

@@ -14,10 +14,10 @@ void zero_estimators();
 void init(int my_rank, int ndo_nonempty);
 void initialise_prev_titer_photoionestimators();
 void close_file();
-void update_estimators(ptrdiff_t nonemptymgi, double distance_e_cmf, double nu_cmf, double doppler_nucmf_on_nurf,
-                       const Phixslist& phixslist, bool thickcell);
-void update_lineestimator(int nonemptymgi, int lineindex, double increment);
-[[gnu::pure]] [[nodiscard]] auto radfield(double nu, int nonemptymgi) -> double;
+DEVICE_FUNC void update_estimators(ptrdiff_t nonemptymgi, double distance_e_cmf, double nu_cmf,
+                                   double doppler_nucmf_on_nurf, const Phixslist& phixslist, bool thickcell);
+DEVICE_FUNC void update_lineestimator(int nonemptymgi, int lineindex, double increment);
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto radfield(double nu, int nonemptymgi) -> double;
 void fit_parameters(int nonemptymgi, int timestep);
 void set_J_normfactor(int nonemptymgi, double normfactor);
 void normalise_J(int nonemptymgi, double estimator_normfactor_over4pi);
@@ -33,12 +33,12 @@ void do_MPI_Bcast(ptrdiff_t nonemptymgi, int root, int root_node_id);
 void write_restart_data(FILE* gridsave_file);
 void read_restart_data(FILE* gridsave_file);
 void normalise_bf_estimators(int nts, int nts_prev, int titer, double deltat);
-[[nodiscard]] auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int nonemptymgi)
-    -> double;
+[[nodiscard]] DEVICE_FUNC auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex,
+                                                    int nonemptymgi) -> double;
 
 // get J_nu [ergs/s/sr/cm2/Hz] for a dilute black body with temperature T and dilution factor W
 [[gnu::const]] [[nodiscard]] constexpr auto dbb(const double nu, const double T, const double W) -> double {
-  return W * TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / std::expm1(HOVERKB * nu / T);
+  return W * TWOHOVERCLIGHTSQUARED * pow3(nu) / std::expm1(HOVERKB * nu / T);
 }
 
 }  // namespace radfield
