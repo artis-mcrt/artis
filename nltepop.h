@@ -3,11 +3,16 @@
 
 #include <cstdio>
 
+#include "sn3d.h"
+
 void solve_nlte_pops_element(int element, int nonemptymgi, int timestep, int nlte_iter);
-[[gnu::pure]] [[nodiscard]] auto superlevel_boltzmann(int nonemptymgi, int element, int ion, int level) -> double;
-[[gnu::pure]] [[nodiscard]] auto get_nlte_levelpop_over_rho(int nonemptymgi, int element, int ion, int level) -> double;
-[[gnu::pure]] [[nodiscard]] auto get_nlte_superlevelpop_over_rho_over_slpartfunc(int nonemptymgi, int element, int ion)
-    -> double;
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto superlevel_boltzmann(int nonemptymgi, int element, int ion,
+                                                                          int level) -> double;
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nlte_levelpop_over_rho(int nonemptymgi, int element, int ion,
+                                                                                int level) -> double;
+[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nlte_superlevelpop_over_rho_over_slpartfunc(int nonemptymgi,
+                                                                                                     int element,
+                                                                                                     int ion) -> double;
 void nltepop_write_to_file(int nonemptymgi, int timestep);
 void nltepop_open_file(int my_rank);
 void nltepop_write_restart_data(FILE* restart_file);
