@@ -1,8 +1,8 @@
 #ifndef GAMMAPKT_H
 #define GAMMAPKT_H
 
+#include "constants.h"
 #include "packet.h"
-#include "sn3d.h"
 
 namespace gammapkt {
 void init_gamma_data();
