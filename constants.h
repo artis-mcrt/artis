@@ -66,12 +66,13 @@ constexpr Vec3d syn_dir{0., 0., 1.};  // vector defining the theta=0 direction
 constexpr std::string_view outdir_resfiles{"speclc_angle_res/"};
 
 constexpr std::array<std::string_view, 3> datafolders = {"./", "data/", "artis/data/"};
-#ifndef __HIP_DEVICE_COMPILE__
+
+#ifndef GPU_ON
 #include <cmath>
 #endif
 
 constexpr auto pow2(double x) -> double {
-#ifdef __HIP_DEVICE_COMPILE__
+#ifdef GPU_ON
   return x * x;
 #else
   return std::pow(x, 2);
