@@ -898,7 +898,7 @@ void allocate_expansionopacities() {
 }
 
 // return a randomly chosen frequency with a distribution of Planck function times the expansion opacity
-__host__ __device__ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double {
+DEVICE_FUNC auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double {
   assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value());
 
   const std::span<const double> kappa_planck_bins =
@@ -918,7 +918,7 @@ __host__ __device__ auto sample_planck_times_expansion_opacity(const int nonempt
   return nu;
 }
 
-__host__ __device__ void do_rpkt(Packet& pkt, const double t2) {
+DEVICE_FUNC void do_rpkt(Packet& pkt, const double t2) {
   while (do_rpkt_step(pkt, t2)) {
     {
     }
@@ -926,7 +926,7 @@ __host__ __device__ void do_rpkt(Packet& pkt, const double t2) {
 }
 
 // make the packet an r-pkt and set further flags
-__host__ __device__ void emit_rpkt(Packet& pkt) {
+DEVICE_FUNC void emit_rpkt(Packet& pkt) {
   pkt.type = TYPE_RPKT;
 
   // Need to assign a new direction. Assume isotropic emission in the cmf

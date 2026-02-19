@@ -47,7 +47,7 @@ enum eventcounters {
   COUNTER_COUNT = 33,
 };
 
-__host__ __device__ void increment(enum eventcounters i);
+DEVICE_FUNC void increment(enum eventcounters i);
 
 void pkt_action_counters_reset();
 

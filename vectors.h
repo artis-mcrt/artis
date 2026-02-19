@@ -79,10 +79,9 @@ template <size_t VECDIM>
 //   dir_rf: the rest frame direction (unit vector) of light propagation
 //   prop_time: the propagation time of the packet
 // returns: the ratio f = (nu_cmf / nu_rf) ^ 2
-[[gnu::pure]] [[nodiscard]] __host__ __device__ constexpr auto doppler_squared_nucmf_on_nurf(const Vec3d& pos_rf,
-                                                                                             const Vec3d& dir_rf,
-                                                                                             const double prop_time)
-    -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC constexpr auto doppler_squared_nucmf_on_nurf(const Vec3d& pos_rf,
+                                                                                     const Vec3d& dir_rf,
+                                                                                     const double prop_time) -> double {
   // velocity of the comoving frame relative to the rest frame
   const auto vel_rf = get_velocity(pos_rf, prop_time);
 
@@ -106,9 +105,8 @@ template <size_t VECDIM>
 //   dir_rf: the rest frame direction (unit vector) of light propagation
 //   prop_time: the propagation time of the packet
 // returns: the ratio f = nu_cmf / nu_rf
-[[nodiscard]] __host__ __device__ constexpr auto calculate_doppler_nucmf_on_nurf(const Vec3d& pos_rf,
-                                                                                 const Vec3d& dir_rf,
-                                                                                 const double prop_time) -> double {
+[[nodiscard]] DEVICE_FUNC constexpr auto calculate_doppler_nucmf_on_nurf(const Vec3d& pos_rf, const Vec3d& dir_rf,
+                                                                         const double prop_time) -> double {
   // velocity of the comoving frame relative to the rest frame
   const auto vel_rf = get_velocity(pos_rf, prop_time);
 
@@ -198,7 +196,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 }
 
 // Assuming isotropic distribution, get a random direction vector
-[[nodiscard]] __host__ __device__ inline auto get_rand_isotropic_unitvec() -> Vec3d {
+[[nodiscard]] DEVICE_FUNC inline auto get_rand_isotropic_unitvec() -> Vec3d {
   const double costheta = -1 + (2. * rng_uniform());
 
   const double phi = rng_uniform() * 2 * PI;

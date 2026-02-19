@@ -349,7 +349,7 @@ void setup_coolinglist() {
 }
 
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
-__host__ __device__ void do_kpkt_blackbody(Packet& pkt) {
+DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
 
   if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() && grid::thick_allcells[nonemptymgi] != 1) {
@@ -371,7 +371,7 @@ __host__ __device__ void do_kpkt_blackbody(Packet& pkt) {
 }
 
 // handle a k-packet (kinetic energy of the free electrons)
-__host__ __device__ void do_kpkt(Packet& pkt, const double t2, const int nts) {
+DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const double deltat =
       (nts < n_kpktdiffusion_timesteps) ? kpktdiffusion_timescale * globals::timesteps[nts].width : 0.;
 

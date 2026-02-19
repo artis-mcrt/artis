@@ -22,7 +22,7 @@ std::array<ptrdiff_t, COUNTER_COUNT> eventstats{};
 
 }  // anonymous namespace
 
-__host__ __device__ void increment(enum eventcounters i) {
+DEVICE_FUNC void increment(enum eventcounters i) {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < COUNTER_COUNT);
   atomicadd(eventstats[i], 1Z);

@@ -1326,7 +1326,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 }
 
 // Get a Boltzman factor for a level within the super level (combined Non-LTE level)
-__host__ __device__ auto superlevel_boltzmann(const int nonemptymgi, const int element, const int ion, const int level)
+DEVICE_FUNC auto superlevel_boltzmann(const int nonemptymgi, const int element, const int ion, const int level)
     -> double {
   assert_testmodeonly(level_isinsuperlevel(element, ion, level));
   const int level_superlevel_start = get_nlevels_excited_nlte(element, ion) + 1;
@@ -1467,17 +1467,16 @@ void nltepop_read_restart_data(FILE* restart_file) {
   }
 }
 
-__host__ __device__ auto get_nlte_levelpop_over_rho(const int nonemptymgi, const int element, const int ion,
-                                                    const int level) -> double {
+DEVICE_FUNC auto get_nlte_levelpop_over_rho(const int nonemptymgi, const int element, const int ion, const int level)
+    -> double {
   assert_testmodeonly(level > 0);  // ground state is stored separately
   assert_testmodeonly(level <= get_nlevels_excited_nlte(element, ion));
   return grid::nltepops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) +
                                  get_allnltelevelsindexstart(element, ion) + level - 1];
 }
 
-[[nodiscard]] __host__ __device__ auto get_nlte_superlevelpop_over_rho_over_slpartfunc(const int nonemptymgi,
-                                                                                       const int element, const int ion)
-    -> double {
+[[nodiscard]] DEVICE_FUNC auto get_nlte_superlevelpop_over_rho_over_slpartfunc(const int nonemptymgi, const int element,
+                                                                               const int ion) -> double {
   assert_testmodeonly(ion_has_superlevel(element, ion));
   const int sl_nlte_index = get_allnltelevelsindexstart(element, ion) + get_nlevels_excited_nlte(element, ion);
   return grid::nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + sl_nlte_index];

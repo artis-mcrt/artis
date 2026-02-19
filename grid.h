@@ -45,26 +45,25 @@ void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion)
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_assocvolume_tmin(int modelgridindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(int cellindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_cellcoordmax(int cellindex, int axis) -> double;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_cellcoordmin(int cellindex, int axis) -> double;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmin(int cellindex, int axis) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_cellcoordpointnum(int cellindex, int axis) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_cellradialposmid(int cellindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_coordcellindexincrement(int axis) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_rho_tmin(int modelgridindex) -> float;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_rho(std::ptrdiff_t nonemptymgi) -> float;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nne(int nonemptymgi) -> float;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nnetot(int nonemptymgi) -> float;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_ffegrp(int modelgridindex) -> float;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_modelcell_mean_radial_pos(int modelgridindex, double tratmid)
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_rho(std::ptrdiff_t nonemptymgi) -> float;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nne(int nonemptymgi) -> float;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nnetot(int nonemptymgi) -> float;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ffegrp(int modelgridindex) -> float;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_pos(int modelgridindex, double tratmid)
     -> double;
 void set_elem_abundance(std::ptrdiff_t nonemptymgi, int element, float newabundance);
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_elem_numberdens(std::ptrdiff_t nonemptymgi, int element)
-    -> double;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_initenergyq(int modelgridindex) -> double;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_kappagrey(int nonemptymgi) -> float;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_Te(int nonemptymgi) -> float;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_TR(int nonemptymgi) -> float;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_TJ(int nonemptymgi) -> float;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_W(int nonemptymgi) -> float;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(std::ptrdiff_t nonemptymgi, int element) -> double;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_initenergyq(int modelgridindex) -> double;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_kappagrey(int nonemptymgi) -> float;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_Te(int nonemptymgi) -> float;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_TR(int nonemptymgi) -> float;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_TJ(int nonemptymgi) -> float;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_W(int nonemptymgi) -> float;
 void set_nne(int nonemptymgi, float nne);
 void set_nnetot(int nonemptymgi);
 void set_kappagrey(int nonemptymgi, float kappagrey);
@@ -80,17 +79,17 @@ void init_grid(int my_rank);
 [[gnu::pure]] [[nodiscard]] auto get_elem_abundance(std::ptrdiff_t nonemptymgi, int element) -> float;
 void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanweight);
 [[gnu::pure]] [[nodiscard]] auto get_electronfrac(int nonemptymgi) -> double;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_numpropcells(int modelgridindex) -> int;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nonemptymgi_of_mgi(int mgi) -> int;
-[[gnu::pure]] [[nodiscard]] auto __host__ __device__ get_mgi_of_nonemptymgi(std::ptrdiff_t nonemptymgi) -> int;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_numpropcells(int modelgridindex) -> int;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonemptymgi_of_mgi(int mgi) -> int;
+[[gnu::pure]] [[nodiscard]] auto DEVICE_FUNC get_mgi_of_nonemptymgi(std::ptrdiff_t nonemptymgi) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_model_type() -> GridType;
 void set_model_type(GridType model_type_value);
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_npts_model() -> int;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_nonempty_npts_model() -> int;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_t_model() -> double;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_propcell_modelgridindex(int cellindex) -> int;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_propcell_nonemptymgi(int cellindex) -> int;
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_cellindex_from_pos(const Vec3d& pos, double time) -> int;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_npts_model() -> int;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonempty_npts_model() -> int;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_t_model() -> double;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_propcell_modelgridindex(int cellindex) -> int;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_propcell_nonemptymgi(int cellindex) -> int;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellindex_from_pos(const Vec3d& pos, double time) -> int;
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);
 [[gnu::pure]] [[nodiscard]] auto get_nstart(int rank) -> int;
@@ -98,8 +97,8 @@ void write_grid_restart_data(int timestep);
 [[gnu::pure]] [[nodiscard]] auto get_ndo(int rank) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_ndo_nonempty(int rank) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_totmassnuclide_tmodel(int z, int a) -> double;
-[[nodiscard]] __host__ __device__ auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart,
-                                                         int cellindex) -> std::tuple<double, int>;
+[[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
+    -> std::tuple<double, int>;
 
 void calculate_kappagrey();
 

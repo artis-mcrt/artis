@@ -2168,7 +2168,7 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
 }
 
 // get non-thermal deposition rate density in erg / s / cm^3 previously stored by calculate_deposition_rate_density()
-__host__ __device__ auto get_deposition_rate_density(const int nonemptymgi) -> double {
+DEVICE_FUNC auto get_deposition_rate_density(const int nonemptymgi) -> double {
   assert_always(deposition_rate_density_all_cells[nonemptymgi] >= 0);
   return deposition_rate_density_all_cells[nonemptymgi];
 }
@@ -2192,9 +2192,8 @@ auto get_nt_frac_heating(const int nonemptymgi) -> float {
   return frac_heating;
 }
 
-__host__ __device__ auto nt_ionisation_upperion_probability(const int nonemptymgi, const int element,
-                                                            const int lowerion, const int upperion,
-                                                            const bool energyweighted) -> double {
+DEVICE_FUNC auto nt_ionisation_upperion_probability(const int nonemptymgi, const int element, const int lowerion,
+                                                    const int upperion, const bool energyweighted) -> double {
   assert_always(upperion > lowerion);
   assert_always(upperion < get_nions(element));
   assert_always(upperion <= nt_ionisation_maxupperion(element, lowerion));
@@ -2230,7 +2229,7 @@ __host__ __device__ auto nt_ionisation_upperion_probability(const int nonemptymg
   return (upperion == lowerion + 1) ? 1.0 : 0.;
 }
 
-__host__ __device__ auto nt_ionisation_maxupperion(const int element, const int lowerion) -> int {
+DEVICE_FUNC auto nt_ionisation_maxupperion(const int element, const int lowerion) -> int {
   const int nions = get_nions(element);
   assert_always(lowerion < nions - 1);
   int maxupper = lowerion + 1;
@@ -2244,8 +2243,8 @@ __host__ __device__ auto nt_ionisation_maxupperion(const int element, const int 
   return maxupper;
 }
 
-__host__ __device__ auto nt_random_upperion(const int nonemptymgi, const int element, const int lowerion,
-                                            const bool energyweighted) -> int {
+DEVICE_FUNC auto nt_random_upperion(const int nonemptymgi, const int element, const int lowerion,
+                                    const bool energyweighted) -> int {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
     const double zrand = rng_uniform();
@@ -2265,7 +2264,7 @@ __host__ __device__ auto nt_random_upperion(const int nonemptymgi, const int ele
   return lowerion + 1;
 }
 
-__host__ __device__ auto nt_ionisation_ratecoeff(const int nonemptymgi, const int element, const int ion) -> double {
+DEVICE_FUNC auto nt_ionisation_ratecoeff(const int nonemptymgi, const int element, const int ion) -> double {
   assert_always(NT_ON);
 
   if (NT_SOLVE_SPENCERFANO) {
@@ -2283,8 +2282,8 @@ __host__ __device__ auto nt_ionisation_ratecoeff(const int nonemptymgi, const in
   return nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion);
 }
 
-__host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const int lowerlevel, const int upperlevel,
-                                                 const int alltransindex) -> double {
+DEVICE_FUNC auto nt_excitation_ratecoeff(const int nonemptymgi, const int lowerlevel, const int upperlevel,
+                                         const int alltransindex) -> double {
   if constexpr (!NT_EXCITATION_ON) {
     return 0.;
   }
@@ -2309,7 +2308,7 @@ __host__ __device__ auto nt_excitation_ratecoeff(const int nonemptymgi, const in
   return ratecoeffperdeposition * deposition_rate_density;
 }
 
-__host__ __device__ void do_ntalpha_fisprod_deposit(Packet& pkt) {
+DEVICE_FUNC void do_ntalpha_fisprod_deposit(Packet& pkt) {
   // if ionisation by alpha particles is found to be important for the ionisation state, we could do a separate
   // Spencer-Fano solution. For now, just treat alpha deposition as pure heating (even though the alpha deposition rate
   // was calculated from the sum of ionisation and plasma heating)
@@ -2318,7 +2317,7 @@ __host__ __device__ void do_ntalpha_fisprod_deposit(Packet& pkt) {
   stats::increment(stats::COUNTER_NT_STAT_TO_KPKT);
 }
 
-__host__ __device__ void do_ntlepton_deposit(Packet& pkt) {
+DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
   atomicadd(nt_energy_deposited, pkt.e_cmf);
 
   const int modelgridindex = grid::get_propcell_modelgridindex(pkt.where);

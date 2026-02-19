@@ -870,8 +870,8 @@ void setup_photoion_luts() {
       mem_usage_photoionluts / 1024. / 1024.);
 }
 
-__host__ __device__ auto select_continuum_nu(int element, const int lowerion, const int lower, const int upperionlevel,
-                                             float T_e) -> double {
+DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int lower, const int upperionlevel,
+                                     float T_e) -> double {
   const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
   const int phixstargetindex = get_phixtargetindex(lower_uniquelevelindex, upperionlevel);
   const double E_threshold = get_phixs_threshold(lower_uniquelevelindex, phixstargetindex);
@@ -918,7 +918,7 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
 }
 
 // Get an ion's rate coefficient for spontaneous recombination in LTE
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_ion_spontrecombcoeff(const int uniqueionindex, const float T_e)
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ion_spontrecombcoeff(const int uniqueionindex, const float T_e)
     -> double {
   const int lowerindex = std::floor(std::log(T_e / MINTEMP) / T_step_log);
   assert_testmodeonly(lowerindex >= 0);
@@ -936,9 +936,8 @@ __host__ __device__ auto select_continuum_nu(int element, const int lowerion, co
 }
 
 // Return a level's rate coefficient for spontaneous recombination in LTE
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_spontrecombcoeff(const int uniquelevelindex,
-                                                                          const int phixstargetindex, float T_e)
-    -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_spontrecombcoeff(const int uniquelevelindex,
+                                                                  const int phixstargetindex, float T_e) -> double {
   double alpha_sp{NAN};
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   assert_always(lowerindex >= 0);
@@ -1131,8 +1130,8 @@ auto get_stimrecombcoeff(int element, const int lowerion, const int level, const
   return stimrecombcoeff;
 }
 
-__host__ __device__ auto get_bfcoolingcoeff(const int element, const int lowerion, const int lowerionlevel,
-                                            const int phixstargetindex, const float T_e) -> double {
+DEVICE_FUNC auto get_bfcoolingcoeff(const int element, const int lowerion, const int lowerionlevel,
+                                    const int phixstargetindex, const float T_e) -> double {
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   const auto uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerionlevel);
   if (lowerindex < TABLESIZE - 1) {
@@ -1149,8 +1148,8 @@ __host__ __device__ auto get_bfcoolingcoeff(const int element, const int lowerio
 }
 
 // Return the photoionisation rate coefficient (corrected for stimulated emission)
-__host__ __device__ auto get_corrphotoioncoeff(const int element, const int ion, const int level,
-                                               const int phixstargetindex, const int nonemptymgi) -> double {
+DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const int level, const int phixstargetindex,
+                                       const int nonemptymgi) -> double {
   // The correction factor for stimulated emission in gammacorr is set to its
   // LTE value. Because the T_e dependence of gammacorr is weak, this correction
   // correction may be evaluated at T_R!
@@ -1336,9 +1335,8 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
   return gamma_ion;
 }
 
-__host__ __device__ auto get_bfheatingcoeff_ana(const int element, const int ion, const int level,
-                                                const int phixstargetindex, const double T_R, const double W)
-    -> double {
+DEVICE_FUNC auto get_bfheatingcoeff_ana(const int element, const int ion, const int level, const int phixstargetindex,
+                                        const double T_R, const double W) -> double {
   // The correction factor for stimulated emission in gammacorr is set to its
   // LTE value. Because the T_e dependence of gammacorr is weak, this correction
   // correction may be evaluated at T_R!

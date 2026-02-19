@@ -958,7 +958,7 @@ void init_gamma_data() {
 }
 
 // convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
-__host__ __device__ void pellet_gamma_decay(Packet& pkt) {
+DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
   // Start by getting the position of the pellet at the point of decay. Pellet
   // is moving with the matter.
 
@@ -998,7 +998,7 @@ __host__ __device__ void pellet_gamma_decay(Packet& pkt) {
   pkt.stokes = {1., 0., 0.};
 }
 
-__host__ __device__ void do_gamma(Packet& pkt, const int nts, const double t2) {
+DEVICE_FUNC void do_gamma(Packet& pkt, const int nts, const double t2) {
   if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
     transport_gamma(pkt, t2);
   } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
