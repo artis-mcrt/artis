@@ -9,6 +9,7 @@
 #include <tuple>
 
 #include "artisoptions.h"
+#include "constants.h"
 #include "globals.h"
 #include "grid.h"
 #include "sn3d.h"
