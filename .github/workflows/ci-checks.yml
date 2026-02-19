@@ -9,19 +9,8 @@ on:
     workflow_dispatch:
 
 jobs:
-    # clang-format:
-    #     runs-on: ubuntu-24.04
-    #     steps:
-    #         - uses: actions/checkout@v6
-
-    #         - name: Run clang-format style check
-    #           uses: jidicula/clang-format-action@v4.16.0
-    #           with:
-    #               clang-format-version: '21'
-    #               check-path: .
-
     clang-tidy-cppcheck:
-        name: clang-format, clang-tidy, and cppcheck
+        name: Format and lint
         runs-on: macos-26
         steps:
             - uses: actions/checkout@v6
@@ -345,14 +334,13 @@ jobs:
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
-            - name: Set MPI host compiler to hipcc
+            - name: Set MPI compiler to hipcc
               run: |
                   hipcc --version
-                  echo "hipconfig:"
-                  hipconfig --version
+                  hipconfig
                   echo "CXX=hipcc" >> $GITHUB_ENV
                   echo "OMPI_CXX=hipcc" >> $GITHUB_ENV
-                  echo "ROCM_PATH=/opt/rocm-7.2.0" >> $GITHUB_ENV
+                  echo "ROCM_PATH=$(hipconfig --rocmpath)" >> $GITHUB_ENV
 
             - name: Install Open MPI and git
               run: |
@@ -366,14 +354,12 @@ jobs:
                     fetch-depth: 0
 
             - name: Compile classic mode STDPAR=ON GPU=ON
-              continue-on-error: true
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
                   make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
-              continue-on-error: true
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
