@@ -1234,20 +1234,21 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 // returns -1 if there are no forward intersections (or if the intersection
 // is tangential to the shell)
 template <BoundaryType boundarytype, size_t S1>
-[[gnu::pure]] [[nodiscard]] auto expanding_shell_intersection(const std::array<double, S1>& pos,
-                                                              const std::array<double, S1>& dir, const double speed,
-                                                              const double shellradiuststart, const double tstart)
-    -> double {
+[[gnu::pure]] [[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, S1>& pos,
+                                                                        const std::array<double, S1>& dir,
+                                                                        const double speed,
+                                                                        const double shellradiuststart,
+                                                                        const double tstart) -> double {
   static_assert(S1 == 2 || S1 == 3);
   assert_testmodeonly(shellradiuststart > 0);
 
   // quadratic equation for intersection of ray with sphere
   // a*d^2 + b*d + c = 0
-  const double a = dot(dir, dir) - pow(shellradiuststart / tstart / speed, 2);
-  const double b = 2 * (dot(dir, pos) - (pow(shellradiuststart, 2) / tstart / speed));
-  const double c = dot(pos, pos) - pow(shellradiuststart, 2);
+  const double a = dot(dir, dir) - pow2(shellradiuststart / tstart / speed);
+  const double b = 2 * (dot(dir, pos) - (pow2(shellradiuststart) / tstart / speed));
+  const double c = dot(pos, pos) - pow2(shellradiuststart);
 
-  const double discriminant = pow(b, 2) - (4 * a * c);
+  const double discriminant = pow2(b) - (4 * a * c);
 
   if (discriminant < 0) {
     // no intersection
