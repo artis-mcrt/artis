@@ -101,19 +101,19 @@ ifeq ($(OPENMP),ON)
   endif
   BUILD_DIR := $(BUILD_DIR)_openmp
 
-	ifeq ($(COMPILER_NAME),NVHPC)
-		ifeq ($(GPU),ON)
-			CXXFLAGS += -mp=gpu -gpu=mem:unified
-			CXXFLAGS += -gpu=cc80,rdc
-		else
-			CXXFLAGS += -mp
-		endif
-	else ifeq ($(COMPILER_NAME),CLANG)
-		CXXFLAGS += -Xpreprocessor -fopenmp
-		LDFLAGS += -lomp
-	else ifeq ($(COMPILER_NAME),GCC)
-		CXXFLAGS += -fopenmp
+  ifeq ($(COMPILER_NAME),NVHPC)
+	ifeq ($(GPU),ON)
+		CXXFLAGS += -mp=gpu -gpu=mem:unified
+		CXXFLAGS += -gpu=cc80,rdc
+	else
+		CXXFLAGS += -mp
 	endif
+  else ifeq ($(COMPILER_NAME),CLANG)
+	CXXFLAGS += -Xpreprocessor -fopenmp
+	LDFLAGS += -lomp
+  else ifeq ($(COMPILER_NAME),GCC)
+	CXXFLAGS += -fopenmp
+  endif
 
 else ifeq ($(OPENMP),OFF)
 else ifeq ($(OPENMP),)
