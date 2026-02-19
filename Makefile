@@ -191,7 +191,7 @@ else
 
 endif
 
-# default to GSL off unless we need it (boost or eigen disabled)
+# default to gsl off unless boost or eigen are off
 GSL := OFF
 ifeq ($(BOOST),OFF)
 	CXXFLAGS += -DBOOST_OFF
