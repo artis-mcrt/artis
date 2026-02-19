@@ -232,10 +232,10 @@ void write_specpol_param(std::ostream& specpol_file, std::ostream& emissionpol_f
 
 void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Packet> pkts,
                                              const bool do_emission_absorption, const int dirbin) {
-  THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
-  THREADLOCALONHOST std::vector<double> rpkt_light_curve_lumcmf;
-  THREADLOCALONHOST std::vector<double> gamma_light_curve_lum;
-  THREADLOCALONHOST std::vector<double> gamma_light_curve_lumcmf;
+  thread_local static std::vector<double> rpkt_light_curve_lum;
+  thread_local static std::vector<double> rpkt_light_curve_lumcmf;
+  thread_local static std::vector<double> gamma_light_curve_lum;
+  thread_local static std::vector<double> gamma_light_curve_lumcmf;
   resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
   resize_exactly(rpkt_light_curve_lumcmf, globals::ntimesteps);
   resize_exactly(gamma_light_curve_lum, globals::ntimesteps);
