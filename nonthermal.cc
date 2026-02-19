@@ -912,8 +912,8 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
 
 // collisional excitation cross section in cm^2
 // energies are in erg
-auto xs_excitation(const int element, const int ion, const int lower, const int uptransindex,
-                   const double epsilon_trans, const double lowerstatweight, const double energy) -> double {
+constexpr auto xs_excitation(const int element, const int ion, const int lower, const int uptransindex,
+                             const double epsilon_trans, const double lowerstatweight, const double energy) -> double {
   if (energy < epsilon_trans) {
     return 0.;
   }
@@ -937,7 +937,7 @@ auto xs_excitation(const int element, const int ion, const int lower, const int 
 
     constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
-    return prefactor * A_naught_squared * std::pow(H_ionpot / epsilon_trans, 2) *
+    return prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) *
            globals::alltrans.osc_strength[alltransindex] * g_bar / U;
   }
   return 0.;
@@ -947,7 +947,7 @@ auto xs_excitation(const int element, const int ion, const int lower, const int 
 // energy is in ergs
 // nne is the thermal electron density [cm^-3]
 // return value has units of erg/cm
-auto electron_loss_rate(const double energy, const double nne) -> double {
+constexpr auto electron_loss_rate(const double energy, const double nne) -> double {
   if (energy <= 0.) {
     return 0;
   }
@@ -958,11 +958,10 @@ auto electron_loss_rate(const double energy, const double nne) -> double {
   const double omegap = std::sqrt(4 * PI * nne * std::pow(QE, 2) / ME);
   const double zetae = H * omegap / 2 / PI;
   if (energy > 14 * EV) {
-    return boostfactor * nne * 2 * PI * std::pow(QE, 4) / energy * std::log(2 * energy / zetae);
+    return boostfactor * nne * 2 * PI * pow4(QE) / energy * std::log(2 * energy / zetae);
   }
   const double v = std::sqrt(2 * energy / ME);
-  return boostfactor * nne * 2 * PI * std::pow(QE, 4) / energy *
-         std::log(ME * std::pow(v, 3) / (EULERGAMMA * std::pow(QE, 2) * omegap));
+  return boostfactor * nne * 2 * PI * pow4(QE) / energy * std::log(ME * pow3(v) / (EULERGAMMA * pow2(QE) * omegap));
 }
 
 // impact ionisation cross section in cm^2
