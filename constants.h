@@ -79,4 +79,12 @@ constexpr auto pow2(double x) -> double {
 #endif
 }
 
+constexpr auto pow3(double x) -> double {
+#ifdef GPU_ON
+  return x * x * x;
+#else
+  return std::pow(x, 3);
+#endif
+}
+
 #endif
