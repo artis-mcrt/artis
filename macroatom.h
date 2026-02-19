@@ -5,7 +5,6 @@
 
 #include "constants.h"
 #include "packet.h"
-#include "sn3d.h"
 
 void macroatom_open_file(int my_rank);
 void macroatom_close_file();

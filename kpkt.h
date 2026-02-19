@@ -5,9 +5,9 @@
 #include <span>
 
 #include "atomic.h"
+#include "constants.h"
 #include "globals.h"
 #include "packet.h"
-#include "sn3d.h"
 #include "thermalbalance.h"
 
 constexpr double COOLING_UNDEFINED = -99;

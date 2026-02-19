@@ -4,8 +4,8 @@
 #include <cstddef>
 #include <cstdio>
 
+#include "constants.h"
 #include "packet.h"
-#include "sn3d.h"
 #include "thermalbalance.h"
 
 namespace nonthermal {

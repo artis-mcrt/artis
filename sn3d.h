@@ -30,13 +30,6 @@
 #include <utility>
 #include <vector>
 
-#ifndef __host__
-#define __host__
-#endif
-#ifndef __device__
-#define __device__
-#endif
-
 #ifdef STACKTRACE_ON
 #include <stacktrace>
 #define STACKTRACEIFSUPPORTED << std::stacktrace::current()

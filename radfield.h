@@ -7,7 +7,6 @@
 
 #include "constants.h"
 #include "rpkt.h"
-#include "sn3d.h"
 
 namespace radfield {
 

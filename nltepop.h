@@ -3,7 +3,7 @@
 
 #include <cstdio>
 
-#include "sn3d.h"
+#include "constants.h"
 
 void solve_nlte_pops_element(int element, int nonemptymgi, int timestep, int nlte_iter);
 [[gnu::pure]] [[nodiscard]] __host__ __device__ auto superlevel_boltzmann(int nonemptymgi, int element, int ion,

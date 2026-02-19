@@ -69,6 +69,9 @@ constexpr std::array<std::string_view, 3> datafolders = {"./", "data/", "artis/d
 
 #ifndef GPU_ON
 #include <cmath>
+
+#define __host__
+#define __device__
 #endif
 
 constexpr auto pow2(double x) -> double {
