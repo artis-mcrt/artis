@@ -342,12 +342,6 @@ jobs:
                   make clean
                   make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: LLVM Clang Compile nebular mode boost+eigen
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make -j${{ steps.cpu-count.outputs.count}} BOOST=ON EIGEN=ON sn3d exspec
-
             - name: LLVM Clang Compile nebular mode OPENMP=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
@@ -407,6 +401,48 @@ jobs:
                   make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+    nvidia-nvhpc:
+        name: nvidia nvc++
+        runs-on: ubuntu-24.04
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Show CPU type and core count
+              id: cpu-count
+              run: |
+                  g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
+                  python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
+                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
+
+            - name: Install nvc++
+              uses: fortran-lang/setup-fortran@v1.8.1
+              with:
+                  compiler: nvidia-hpc
+                  version: 26.1
+
+            - name: Set nvc++ as compiler
+              run: |
+                  echo "CXX=nvc++" >> $GITHUB_ENV
+                  echo "OMPI_CXX=nvc++" >> $GITHUB_ENV
+
+            - name: Install OpenMPI
+              run: |
+                  sudo apt install -y openmpi-bin libopenmpi-dev
+
+            - name: Compile classic mode STDPAR=ON GPU=ON
+              if: matrix.compiler.name == 'nvc++'
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode STDPAR=ON GPU=ON
+              if: matrix.compiler.name == 'nvc++'
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
