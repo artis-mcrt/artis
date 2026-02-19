@@ -378,7 +378,7 @@ jobs:
                   make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
     nvidia-nvhpc:
-        name: nvidia nvc++
+        name: NVIDIA NVHPC nvc++
         runs-on: ubuntu-24.04
         steps:
             - uses: actions/checkout@v6
@@ -406,14 +406,12 @@ jobs:
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
             - name: Compile classic mode STDPAR=ON GPU=ON
-              if: matrix.compiler.name == 'nvc++'
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
                   make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
-              if: matrix.compiler.name == 'nvc++'
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
