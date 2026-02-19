@@ -16,8 +16,14 @@
     },
     "editor.formatOnSave": true,
     "editor.formatOnType": true,
+    "files.exclude": {
+        "**/third_party": true
+    },
     "files.eol": "\n",
     "files.insertFinalNewline": true,
     "files.trimFinalNewlines": true,
-    "files.trimTrailingWhitespace": true
+    "files.trimTrailingWhitespace": true,
+    "search.exclude": {
+        "**/third_party": true
+    }
 }
