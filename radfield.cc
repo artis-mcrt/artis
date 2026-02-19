@@ -210,7 +210,7 @@ constexpr auto gsl_integrand_planck(const double nu, void* const voidparas) -> d
   const auto& T_R = params.T_R;
   const auto& times_nu = params.times_nu;
 
-  double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
+  double integrand = TWOHOVERCLIGHTSQUARED * pow3(nu) / (std::expm1(HOVERKB * nu / T_R));
 
   if (times_nu) {
     integrand *= nu;
