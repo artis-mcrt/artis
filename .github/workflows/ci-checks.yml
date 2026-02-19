@@ -158,7 +158,7 @@ jobs:
               run: |
                   sudo apt install libtbb-dev
 
-            - name: Install OpenMPI
+            - name: Install Open MPI
               run: |
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
@@ -226,10 +226,10 @@ jobs:
               with:
                   xcode-version: 'latest-stable'
 
-            - name: Install GSL and OpenMPI
+            - name: Install Open MPI
               run: |
                   brew update
-                  brew install gsl openmpi || true
+                  brew install openmpi || true
 
             - name: Install OpenMP
               run: |
@@ -354,7 +354,7 @@ jobs:
                   echo "OMPI_CXX=hipcc" >> $GITHUB_ENV
                   echo "ROCM_PATH=/opt/rocm-7.2.0" >> $GITHUB_ENV
 
-            - name: Install OpenMPI and git
+            - name: Install Open MPI and git
               run: |
                   sudo apt-get update
                   sudo apt-get install -y libopenmpi-dev openmpi-bin
@@ -401,7 +401,7 @@ jobs:
                   echo "CXX=nvc++" >> $GITHUB_ENV
                   echo "OMPI_CXX=nvc++" >> $GITHUB_ENV
 
-            - name: Install OpenMPI
+            - name: Install Open MPI
               run: |
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
