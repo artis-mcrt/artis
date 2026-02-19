@@ -122,30 +122,30 @@ else
 endif
 
 ifeq ($(STDPAR),ON)
-  CXXFLAGS += -DSTDPAR_ON=true
-  BUILD_DIR := $(BUILD_DIR)_stdpar
+	CXXFLAGS += -DSTDPAR_ON=true
+	BUILD_DIR := $(BUILD_DIR)_stdpar
 
-  ifeq ($(COMPILER_NAME),NVHPC)
+	ifeq ($(COMPILER_NAME),NVHPC)
 		ifeq ($(GPU),ON)
 			CXXFLAGS += -stdpar=gpu -gpu=mem:unified
 			CXXFLAGS += -gpu=cc80,rdc
 		else
 			CXXFLAGS += -stdpar=multicore
 		endif
-  else ifeq ($(COMPILER_NAME),HIPCC)
+	else ifeq ($(COMPILER_NAME),HIPCC)
 		CXXFLAGS += -fexperimental-library
 		ifeq ($(GPU),ON)
 			# MI300
 			CXXFLAGS += --offload-arch=gfx942 -fgpu-rdc --hipstdpar
 		endif
-  else ifeq ($(COMPILER_NAME),CLANG)
+	else ifeq ($(COMPILER_NAME),CLANG)
 		CXXFLAGS += -fexperimental-library
 		# LDFLAGS += -ltbb
 		# LDFLAGS += -Xlinker -debug_snapshot
 
-  else ifeq ($(COMPILER_NAME),GCC)
+	else ifeq ($(COMPILER_NAME),GCC)
 		LDFLAGS += -ltbb
-  endif
+	endif
 
 else ifeq ($(STDPAR),OFF)
 else ifeq ($(STDPAR),)
