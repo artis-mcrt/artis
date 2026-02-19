@@ -1,6 +1,7 @@
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
 
+#include "constants.h"
 #include "sn3d.h"
 
 #ifdef USE_SIMPSON_INTEGRATOR
@@ -42,18 +43,20 @@ void ratecoefficients_init();
 
 void setup_photoion_luts();
 
-[[nodiscard]] auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e) -> double;
-[[nodiscard]] auto get_spontrecombcoeff(int uniquelevelindex, int phixstargetindex, float T_e) -> double;
+[[nodiscard]] __host__ __device__ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel,
+                                                           float T_e) -> double;
+[[nodiscard]] __host__ __device__ auto get_spontrecombcoeff(int uniquelevelindex, int phixstargetindex, float T_e)
+    -> double;
 [[nodiscard]] auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int nonemptymgi)
     -> double;
 
-[[nodiscard]] auto get_bfcoolingcoeff(int element, int lowerion, int lowerionlevel, int phixstargetindex, float T_e)
-    -> double;
-[[nodiscard]] auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T_R, double W)
-    -> double;
+[[nodiscard]] __host__ __device__ auto get_bfcoolingcoeff(int element, int lowerion, int lowerionlevel,
+                                                          int phixstargetindex, float T_e) -> double;
+[[nodiscard]] __host__ __device__ auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex,
+                                                              double T_R, double W) -> double;
 
-[[nodiscard]] auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int nonemptymgi)
-    -> double;
+[[nodiscard]] __host__ __device__ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex,
+                                                             int nonemptymgi) -> double;
 [[nodiscard]] auto get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int nonemptymgi)
     -> double;
 
