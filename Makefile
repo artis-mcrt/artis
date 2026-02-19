@@ -15,7 +15,7 @@ else
 endif
 
 ifeq ($(REPRODUCIBLE),ON)
-	CXXFLAGS += -DREPRODUCIBLE=true -ffp-contract=off
+	CXXFLAGS += -DREPRODUCIBLE=true -ffp-contract=off -DEIGEN_DONT_VECTORIZE
 	BUILD_DIR := $(BUILD_DIR)_reproducible
 	FASTMATH := OFF
 else ifeq ($(REPRODUCIBLE),OFF)
