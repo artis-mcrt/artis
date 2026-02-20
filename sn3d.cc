@@ -489,7 +489,7 @@ void save_grid_and_packets(const int nts, std::span<const Packet> packets) {
 
     const auto timenow = std::time(nullptr);
 
-    printlnlog("time after write temporary packets file {} (took {}s, waited {}s, total {}s)", timenow,
+    printlnlog("timestep {}: finished writing temporary packets file (took {}, waited {}, total {} seconds)", nts,
                time_write_packets_finished_thisrank - time_write_packets_file_start,
                timenow - time_write_packets_finished_thisrank, timenow - time_write_packets_file_start);
 
