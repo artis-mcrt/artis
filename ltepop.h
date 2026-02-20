@@ -31,27 +31,21 @@ void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_sah
   assert_testmodeonly(std::isfinite(sahafact));
   return sahafact;
 }
-[[gnu::pure]] [[nodiscard]] inline auto get_cellcache_levelpop(const int nonemptymgi, const int uniquelevelindex)
-    -> double {
+
+[[gnu::pure]] [[nodiscard]] inline DEVICE_FUNC auto get_cellcache_levelpop(const int nonemptymgi,
+                                                                           const int uniquelevelindex) -> double {
   assert_testmodeonly(use_cellcache);
   assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
+
   const auto nn = globals::cellcache[cellcacheslotid].alllevels_pops[uniquelevelindex];
-
   assert_testmodeonly(nn >= 0.);
-
   return nn;
 }
 
 // Calculate the population of a level from either LTE or NLTE information
-[[gnu::pure]] [[nodiscard]] inline auto get_cellcache_levelpop(const int nonemptymgi, const int element, const int ion,
-                                                               const int level) -> double {
-  assert_testmodeonly(use_cellcache);
-  assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
-  const auto nn = globals::cellcache[cellcacheslotid].alllevels_pops[get_uniquelevelindex(element, ion, level)];
-
-  assert_testmodeonly(nn >= 0.);
-
-  return nn;
+[[gnu::pure]] [[nodiscard]] inline DEVICE_FUNC auto get_cellcache_levelpop(const int nonemptymgi, const int element,
+                                                                           const int ion, const int level) -> double {
+  return get_cellcache_levelpop(nonemptymgi, get_uniquelevelindex(element, ion, level));
 }
 
 // Return the given ions groundlevel population for modelgridindex which was precalculated
@@ -60,6 +54,7 @@ void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_sah
                                                                        const int ion) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
+
   const double nn = grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
                                                        get_uniqueionindex(element, ion)];
   if (nn < MINPOP) {
