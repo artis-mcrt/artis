@@ -753,7 +753,8 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   // set_groundlevelpops uses uppermost_ion. Previously, this was set based on the NLTE phi factors. Therefore we need
   // to call find_uppermost_ion with force_saha = true so the uppermost ion used in set_groundlevelpops is changed to
   // the one based on the correct LTE phi factors instead
-  printlnlog("[warning] NLTEPOP setting element Z={} level pops to Boltzmann", get_atomicnumber(element));
+  printlnlog("  WARNING: NLTEPOP setting element Z={} level pops to Boltzmann with existing ion balance",
+             get_atomicnumber(element));
   const double nne_hi = grid::get_rho(nonemptymgi) / MH;
   const bool force_saha = true;
   const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_saha);
@@ -813,7 +814,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       }
 
       if (population < 0.0 || !std::isfinite(population)) {
-        printlog(
+        printlnlog(
             "  WARNING: NLTE solver gave negative/non-finite population for index {} (Z={} ionstage {} level {}), pop "
             "= {:g}",
             index, get_atomicnumber(element), ionstage, level, population);
@@ -1036,9 +1037,10 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
   if (ground_pop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
     // ground pop relative to the element population must not exceed the limit
     printlnlog(
-        "  WARNING: {} ion ground state population too large to remove ion (ground_pop / nnelement ({:g}/{:g}) > "
-        "({:g}) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)",
-        ionname, ground_pop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+        "  WARNING: {} ion ground state population too large to remove ion (ground_pop / nnelement) = ({}/{}) = {} "
+        "> {}",
+        ionname, ground_pop, nnelement, ground_pop / nnelement,
+        NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
 
     return false;
   }
@@ -1053,7 +1055,7 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
     if (levelpop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
       printlnlog(
           "  WARNING: {} ion excited state (level {}) population too large to remove ion (nlte_excited_pop_bottom_ion "
-          "/ nnelement ({:g}/{:g}) > ({:g}) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)",
+          "/ nnelement) = ({}/{}) > ({}))",
           ionname, level, levelpop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
       return false;
     }
