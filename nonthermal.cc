@@ -1148,10 +1148,11 @@ auto get_nt_frac_excitation(const int nonemptymgi) -> float {
   return frac_excitation;
 }
 
-// compute the work per ion pair for doing the NT ionisation calculation.
+// compute the approximate work per ion pair without using the Spencer-Fano equation
 // Makes use of EXTREMELY SIMPLE approximations - high energy limits only (can be used as an alternative to the
 // Spencer-Fano solver)
-auto get_oneoverw(const int element, const int ion, const int nonemptymgi) -> double {
+// Luke (2026-02-20): This is so far from the Spencer-Fano eff_ionpot that I think there is a mistake in the calculation
+auto get_oneoverw_approx_axelrod(const int element, const int ion, const int nonemptymgi) -> double {
   // Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec).
   // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
   // denominator is extremely simplified. Need to get the mean Z value.
@@ -1163,9 +1164,8 @@ auto get_oneoverw(const int element, const int ion, const int nonemptymgi) -> do
 
   const double binding = get_sum_q_over_binding_energy(element, ion);
   constexpr double Aconst = 1.33e-14 * EV * EV;
-  const double oneoverW = Aconst * binding / Zbar / (2 * PI * std::pow(QE, 4));
 
-  return oneoverW;
+  return Aconst * binding / Zbar / (2 * PI * std::pow(QE, 4));
 }
 
 // the fraction of deposited energy that goes into ionising electrons in a particular shell
@@ -1190,7 +1190,7 @@ auto nt_ionisation_ratecoeff_wfapprox(const int nonemptymgi, const int element, 
   // to get the non-thermal ionisation rate we need to divide the energy deposited
   // per unit volume per unit time in the grid cell (sum of terms above)
   // by the total ion number density and the "work per ion pair"
-  return deposition_rate_density / get_nnion_tot(nonemptymgi) * get_oneoverw(element, ion, nonemptymgi);
+  return deposition_rate_density / get_nnion_tot(nonemptymgi) * get_oneoverw_approx_axelrod(element, ion, nonemptymgi);
 }
 
 // Integrate the ionisation cross section over the electron degradation function to get the ionisation rate
@@ -1341,7 +1341,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
         "-> Defaulting to work function approximation and ionisation energy is not accounted for in Spencer-Fano "
         "solution.");
 
-    celliondata.eff_ionpot = static_cast<float>(1. / get_oneoverw(element, ion, nonemptymgi));
+    celliondata.eff_ionpot = static_cast<float>(1. / get_oneoverw_approx_axelrod(element, ion, nonemptymgi));
   }
 }
 
@@ -1646,17 +1646,20 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
         frac_excitation_ion = 0.;
       }
       frac_excitation_total += frac_excitation_ion;
-      printlnlog("    workfn:       {:9.2f} eV", (1. / get_oneoverw(element, ion, nonemptymgi)) / EV);
+      printlnlog("    approxworkfn: {:9.2f} eV  (without using the Spencer-Fano solution)",
+                 (1. / get_oneoverw_approx_axelrod(element, ion, nonemptymgi)) / EV);
       printlnlog("    eff_ionpot:   {:9.2f} eV  (always use valence potential is {})",
                  get_eff_ionpot(nonemptymgi, element, ion) / EV, (NT_USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
 
-      printlnlog("    workfn approx Gamma:     {:9.3e}", nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion));
+      printlnlog("    approxworkfn Gamma:      {:9.3e}", nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion));
 
-      printlnlog("    SF integral Gamma:       {:9.3e}",
-                 calculate_nt_ionisation_ratecoeff(nonemptymgi, element, ion, false, yfunc));
-
-      printlnlog("    SF integral(I=Iv) Gamma: {:9.3e}  (if always use valence potential)",
-                 calculate_nt_ionisation_ratecoeff(nonemptymgi, element, ion, true, yfunc));
+      if constexpr (NT_USE_VALENCE_IONPOTENTIAL) {
+        printlnlog("    SF integral Gamma:       {:9.3e} (alternative if NT_USE_VALENCE_IONPOTENTIAL was disabled)",
+                   calculate_nt_ionisation_ratecoeff(nonemptymgi, element, ion, false, yfunc));
+      } else {
+        printlnlog("    SF integral(I=Iv) Gamma: {:9.3e}  (alternative if NT_USE_VALENCE_IONPOTENTIAL was enabled)",
+                   calculate_nt_ionisation_ratecoeff(nonemptymgi, element, ion, true, yfunc));
+      }
 
       printlnlog("    ARTIS using Gamma:       {:9.3e}", nt_ionisation_ratecoeff(nonemptymgi, element, ion));
 
