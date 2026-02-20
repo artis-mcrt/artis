@@ -724,7 +724,16 @@ void nltepop_matrix_normalise(const int nonemptymgi, const int element, std::spa
         }
       }
     }
+    if (!std::isfinite(pop_normfactors[column]) || pop_normfactors[column] <= 0.) {
+      printlnlog(
+          "  WARNING: Boltzmann population for Z={} ionstage {} level {} is non-finite or negative ({}). Setting to "
+          "MINPOP",
+          get_atomicnumber(element), get_ionstage(element, ion), level, pop_normfactors[column]);
+      pop_normfactors[column] = MINPOP;
+    }
+  }
 
+  for (auto column = 0; column < nlte_dimension; column++) {
     for (auto row = 0; row < nlte_dimension; row++) {
       rate_matrix[(row * nlte_dimension) + column] *= pop_normfactors[column];
     }
