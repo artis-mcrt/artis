@@ -592,7 +592,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   const auto my_rank = globals::my_rank;
   const auto sys_time_start_update_grid = std::time(nullptr);
 
-  printlnlog("timestep {}: time before update grid {} (tstart + {}) simtime ts_mid {:g} days", nts,
+  printlnlog("timestep {}: time before update grid {} (tstart + {} seconds) simtime ts_mid {:g} days", nts,
              sys_time_start_update_grid, sys_time_start_update_grid - real_time_start,
              globals::timesteps[nts].mid / DAY);
 
@@ -668,11 +668,12 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   printlnlog("max_path_step {:g}", globals::max_path_step);
 
   const auto time_update_grid_end_thisrank = std::time(nullptr);
-  printlnlog("finished update grid on this rank at time {}", time_update_grid_end_thisrank);
+  printlnlog("timestep {}: finished update grid for rank {} (took {} seconds)", nts, my_rank,
+             time_update_grid_end_thisrank - sys_time_start_update_grid);
 
   MPI_Barrier(MPI_COMM_WORLD);
-  printlnlog("timestep {}: time after update grid for all processes {} (rank {} took {}s, waited {}s, total {}s)", nts,
-             std::time(nullptr), my_rank, time_update_grid_end_thisrank - sys_time_start_update_grid,
+  printlnlog("timestep {}: time after update grid on all processes (rank {} took {}, waited {}, total {} seconds)", nts,
+             my_rank, time_update_grid_end_thisrank - sys_time_start_update_grid,
              std::time(nullptr) - time_update_grid_end_thisrank, std::time(nullptr) - sys_time_start_update_grid);
 }
 
