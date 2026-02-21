@@ -762,13 +762,11 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   // set_groundlevelpops uses uppermost_ion. Previously, this was set based on the NLTE phi factors. Therefore we need
   // to call find_uppermost_ion with force_saha = true so the uppermost ion used in set_groundlevelpops is changed to
   // the one based on the correct LTE phi factors instead
-  printlnlog("  WARNING: NLTEPOP setting element Z={} level pops to Boltzmann with existing ion balance",
-             get_atomicnumber(element));
+  printlnlog("  WARNING: NLTEPOP setting element Z={} level pops to LTE", get_atomicnumber(element));
   const double nne_hi = grid::get_rho(nonemptymgi) / MH;
-  const bool force_saha = true;
-  const int uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_hi, force_saha);
-  grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
-  set_groundlevelpops(nonemptymgi, element, grid::get_nne(nonemptymgi), true);
+  constexpr bool force_saha = true;
+  grid::set_elements_uppermost_ion(nonemptymgi, element, find_uppermost_ion(nonemptymgi, element, nne_hi, force_saha));
+  set_groundlevelpops(nonemptymgi, element, grid::get_nne(nonemptymgi), force_saha);
 }
 
 [[nodiscard]] auto lumatrix_is_singular(const std::span<const double> LU_matrix, const int element,
@@ -851,7 +849,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
           if (inversion_factor > STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING) {
             printlog(
-                "[debug] WARNING: pop inversion greater than factor {:g}: (g_pop {:g})/(e_pop {:g}) = {:g} is less "
+                " WARNING: pop inversion greater than factor {:g}: (g_pop {:g})/(e_pop {:g}) = {:g} is less "
                 "than (g_sw {:g})/(e_sw {:g}) = {:g} for index {} Z={} ionstage {} level {} (factor {:g} inversion) - ",
                 STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING, ground_pop, population,
                 ground_pop / population, statweight_ground, statweight, statweight_ground / statweight, index,
@@ -873,7 +871,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
           if (inversion_factor > STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING) {
             assert_testmodeonly(ion_has_superlevel(element, ion));
             printlog(
-                "[debug] WARNING: superlevel pop inversion greater than factor {:g}: (g_pop {:g})/(SL_first_level_pop "
+                " WARNING: superlevel pop inversion greater than factor {:g}: (g_pop {:g})/(SL_first_level_pop "
                 "{:g}) = {:g} is less than (g_sw {:g})/(SL_first_level_sw {:g}) = {:g} for index {} Z={} ionstage {} "
                 "level {} (factor {:g} inversion) - ",
                 STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING, ground_pop, sublevel_pop,
