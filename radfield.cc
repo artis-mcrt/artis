@@ -812,39 +812,34 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
       const double J_bin = get_bin_J(nonemptymgi, binindex);
       float T_R_bin = -1.;
       float W_bin = -1.;
-      const int contribcount = get_bin_contribcount(nonemptymgi, binindex);
 
-      if (contribcount > 0) {
-        {
-          T_R_bin = find_T_R(nonemptymgi, binindex);
+      if (J_bin > 0) {
+        T_R_bin = find_T_R(nonemptymgi, binindex);
 
-          if (binindex == RADFIELDBINCOUNT - 1) {
-            const auto T_e = grid::get_Te(nonemptymgi);
-            printlnlog("    replacing bin {} T_R {:7.1f} with cell T_e = {:7.1f}", binindex,
-                       get_bin_T_R(nonemptymgi, binindex), T_e);
-            T_R_bin = T_e;
-          }
+        if (binindex == RADFIELDBINCOUNT - 1) {
+          const auto T_e = grid::get_Te(nonemptymgi);
+          printlnlog("    replacing bin {} T_R {:7.1f} with cell T_e = {:7.1f}", binindex,
+                     get_bin_T_R(nonemptymgi, binindex), T_e);
+          T_R_bin = T_e;
+        }
 
-          double planck_integral_result = calculate_planck_integral(T_R_bin, nu_lower, nu_upper, false);
-          //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower,
-          //          nu_upper, planck_integral_result);
+        double planck_integral_result = calculate_planck_integral(T_R_bin, nu_lower, nu_upper, false);
 
+        W_bin = static_cast<float>(J_bin / planck_integral_result);
+
+        if (W_bin > 1e4) {
+          //            printout("T_R_bin %g, nu_lower %g, nu_upper %g\n", T_R_bin, nu_lower, nu_upper);
+          printlnlog("W {:g} too high, trying setting T_R of bin {} to {:g}. J_bin {:g} planck_integral {:g}", W_bin,
+                     binindex, T_R_max, J_bin, planck_integral_result);
+          planck_integral_result = calculate_planck_integral(T_R_max, nu_lower, nu_upper, false);
           W_bin = static_cast<float>(J_bin / planck_integral_result);
-
           if (W_bin > 1e4) {
-            //            printout("T_R_bin %g, nu_lower %g, nu_upper %g\n", T_R_bin, nu_lower, nu_upper);
-            printlnlog("W {:g} too high, trying setting T_R of bin {} to {:g}. J_bin {:g} planck_integral {:g}", W_bin,
-                       binindex, T_R_max, J_bin, planck_integral_result);
-            planck_integral_result = calculate_planck_integral(T_R_max, nu_lower, nu_upper, false);
-            W_bin = static_cast<float>(J_bin / planck_integral_result);
-            if (W_bin > 1e4) {
-              printlnlog("W still very high, W={:g}. Zeroing bin...", W_bin);
-              T_R_bin = -99.;
-              W_bin = 0.;
-            } else {
-              printlnlog("new W is {:g}. Continuing with this value", W_bin);
-              T_R_bin = T_R_max;
-            }
+            printlnlog("W still very high, W={:g}. Zeroing bin...", W_bin);
+            T_R_bin = -99.;
+            W_bin = 0.;
+          } else {
+            printlnlog("new W is {:g}. Continuing with this value", W_bin);
+            T_R_bin = T_R_max;
           }
         }
       } else {
