@@ -592,9 +592,8 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   const auto my_rank = globals::my_rank;
   const auto sys_time_start_update_grid = std::time(nullptr);
 
-  printlnlog("timestep {}: time before update grid {} (tstart + {} seconds) simtime ts_mid {:g} days", nts,
-             sys_time_start_update_grid, sys_time_start_update_grid - real_time_start,
-             globals::timesteps[nts].mid / DAY);
+  printlnlog("timestep {}: time before update grid (tstartup + {} seconds) simtime ts_mid {:g} days", nts,
+             sys_time_start_update_grid - real_time_start, globals::timesteps[nts].mid / DAY);
 
   globals::lte_iteration = (globals::timestep < globals::num_lte_timesteps);
   printlnlog("lte_iteration {}", globals::lte_iteration ? 1 : 0);
