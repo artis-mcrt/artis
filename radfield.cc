@@ -435,7 +435,6 @@ void write_to_file(const int nonemptymgi, const int timestep) {
       float T_R = 0.;
       float W = 0.;
       double J_nu_bar = 0.;
-      int contribcount = 0;
 
       const bool skipoutput = false;
 
@@ -462,8 +461,7 @@ void write_to_file(const int nonemptymgi, const int timestep) {
         J_out = -1.;
         T_R = -1.;
         W = -1.;
-        J_nu_bar = prev_Jb_lu_normed[nonemptymgi][jblueindex].value,
-        contribcount = prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount;
+        J_nu_bar = prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
       }
 
       if (!skipoutput) {
