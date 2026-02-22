@@ -882,11 +882,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 void allocate_expansionopacities() {
   const auto nonempty_npts_model = grid::get_nonempty_npts_model();
 
-  assert_always(expansionopacities.data() == nullptr);
+  assert_always(expansionopacities.empty());
   std::tie(expansionopacities, win_expansionopacities) =
       MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * expopac_nbins);
 
-  assert_always(expansionopacity_planck_cumulative.data() == nullptr);
+  assert_always(expansionopacity_planck_cumulative.empty());
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
     std::tie(expansionopacity_planck_cumulative, win_expansionopacity_planck_cumulative) =
         MPI_shared_malloc_span_keepwin<double>(nonempty_npts_model * expopac_nbins);

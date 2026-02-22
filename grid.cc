@@ -373,7 +373,7 @@ void allocate_nonemptymodelcells() {
     }
   }
 
-  assert_always(rho_allcells.data() == nullptr);
+  assert_always(rho_allcells.empty());
   rho_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
   Te_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
   TJ_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
@@ -1904,7 +1904,7 @@ void read_ejecta_model() {
 
   set_model_type(detected_dim.value());
 
-  assert_always(modelgrid_input.data() == nullptr);
+  assert_always(modelgrid_input.empty());
   modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model + 1, ModelGridCellInput{});
   modelgrid_numpropcells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
