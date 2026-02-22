@@ -770,11 +770,9 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.begin());
 
   // require that nu > nu_edge * last_phixs_nuovernuedge, which can exclude some low-nu edges
-  const int allcontbegin = std::distance(
-      allcont_nu_edge.begin(),
-      std::ranges::lower_bound(allcont_nu_edge.first(allcontend), nu, [](const double nu_edge, const double nu_cmf) {
-        return nu_edge * last_phixs_nuovernuedge < nu_cmf;
-      }));
+  const auto allcontbegin =
+      static_cast<int>(std::ranges::lower_bound(allcont_nu_edge.first(allcontend), nu / last_phixs_nuovernuedge) -
+                       allcont_nu_edge.begin());
 
   assert_testmodeonly(allcontbegin >= 0);
   assert_testmodeonly(allcontend <= globals::nbfcontinua);
