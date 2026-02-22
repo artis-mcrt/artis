@@ -122,8 +122,8 @@ inline std::vector<int> acounter{};
 
 inline int nprocs_exspec{1};
 
-inline double gamma_kappagrey{};  // set to -ve for proper treatment. If positive, then
-                                  // gamma_rays are treated as grey with this opacity.
+inline double gamma_kappagrey{-1};  // set to -ve for proper treatment. If positive, then
+                                    // gamma_rays are treated as grey with this opacity.
 
 constexpr double GREY_OP = 0.1;
 
@@ -288,7 +288,6 @@ inline int node_id{-1};
 inline bool mpi_finalized{false};  // set to true after MPI_Finalize
 
 inline constexpr int npkts = MPKTS;
-inline int nesc{0};
 
 inline double vmax;
 inline double rmax;

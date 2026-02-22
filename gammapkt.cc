@@ -418,7 +418,7 @@ void compton_scatter(Packet& pkt) {
       pkt.type = TYPE_NTLEPTON_DEPOSITED;
     }
     pkt.absorptiontype = -3;
-    stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
+    stats::increment(stats::Counter::NT_STAT_FROM_GAMMA);
   }
 }
 
@@ -649,7 +649,7 @@ void pair_prod(Packet& pkt) {
 
     // nu_cmf stays the same as the gamma energy becomes the kinetic energy of the electron
     pkt.absorptiontype = -5;
-    stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
+    stats::increment(stats::Counter::NT_STAT_FROM_GAMMA);
   } else {
     // The energy goes into emission at 511 keV.
     pkt.nu_cmf = 0.511 * MEV / H;
@@ -759,7 +759,7 @@ void transport_gamma(Packet& pkt, const double t2) {
       }
 
       pkt.absorptiontype = -4;
-      stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
+      stats::increment(stats::Counter::NT_STAT_FROM_GAMMA);
     } else {
       // It's a pair production
       pair_prod(pkt);

@@ -10,7 +10,6 @@
 #include "constants.h"
 #include "globals.h"
 #include "packet.h"
-#include "sn3d.h"
 #include "stats.h"
 
 namespace grid {
@@ -114,9 +113,9 @@ inline void change_cell(Packet& pkt, const int snext)
     pkt.escape_type = pkt.type;
     pkt.escape_time = static_cast<float>(pkt.prop_time);
     pkt.type = TYPE_ESCAPE;
-    atomicadd(globals::nesc, 1);
+    stats::increment(stats::Counter::PKTESCAPES);
 
-    stats::increment(stats::COUNTER_CELLCROSSINGS);
+    stats::increment(stats::Counter::CELLCROSSINGS);
   }
 }
 
