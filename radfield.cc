@@ -51,12 +51,10 @@ struct RadFieldBinSolution {
 struct RadFieldBins {
   std::vector<double> J_raw;
   std::vector<double> nuJ_raw;
-  std::vector<int> contribcount;
 
   void resize(const ptrdiff_t nonempty_npts_model) {
     resize_exactly(J_raw, nonempty_npts_model * RADFIELDBINCOUNT);
     resize_exactly(nuJ_raw, nonempty_npts_model * RADFIELDBINCOUNT);
-    resize_exactly(contribcount, nonempty_npts_model * RADFIELDBINCOUNT);
   }
 };
 
@@ -191,10 +189,6 @@ auto get_bin_nu_bar(const std::ptrdiff_t nonemptymgi, const int binindex) -> dou
   const double nuJ_sum = get_bin_nuJ(nonemptymgi, binindex);
   const double J_sum = get_bin_J(nonemptymgi, binindex);
   return nuJ_sum / J_sum;
-}
-
-auto get_bin_contribcount(const std::ptrdiff_t nonemptymgi, const int binindex) -> int {
-  return radfieldbins.contribcount[(nonemptymgi * RADFIELDBINCOUNT) + binindex];
 }
 
 auto get_bin_W(const std::ptrdiff_t nonemptymgi, const int binindex) -> float {
@@ -433,11 +427,6 @@ void write_to_file(const int nonemptymgi, const int timestep) {
   {
 #endif
 
-    int totalcontribs = 0;
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      totalcontribs += get_bin_contribcount(nonemptymgi, binindex);
-    }
-
     for (int binindex = -1 - detailed_linecount; binindex < RADFIELDBINCOUNT; binindex++) {
       double nu_lower = 0.;
       double nu_upper = 0.;
@@ -446,7 +435,6 @@ void write_to_file(const int nonemptymgi, const int timestep) {
       float T_R = 0.;
       float W = 0.;
       double J_nu_bar = 0.;
-      int contribcount = 0;
 
       const bool skipoutput = false;
 
@@ -458,13 +446,11 @@ void write_to_file(const int nonemptymgi, const int timestep) {
         T_R = get_bin_T_R(nonemptymgi, binindex);
         W = get_bin_W(nonemptymgi, binindex);
         J_nu_bar = J_out / (nu_upper - nu_lower);
-        contribcount = get_bin_contribcount(nonemptymgi, binindex);
       } else if (binindex == -1) {  // bin -1 is the full spectrum fit
         nuJ_out = nuJ[nonemptymgi];
         J_out = J[nonemptymgi];
         T_R = grid::get_TR(nonemptymgi);
         W = grid::get_W(nonemptymgi);
-        contribcount = totalcontribs;
       } else {  // use binindex < -1 for detailed line Jb_lu estimators
         const int jblueindex = -2 - binindex;  // -2 is the first detailed line, -3 is the second, etc
         const int lineindex = detailed_lineindices[jblueindex];
@@ -475,14 +461,12 @@ void write_to_file(const int nonemptymgi, const int timestep) {
         J_out = -1.;
         T_R = -1.;
         W = -1.;
-        J_nu_bar = prev_Jb_lu_normed[nonemptymgi][jblueindex].value,
-        contribcount = prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount;
+        J_nu_bar = prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
       }
 
       if (!skipoutput) {
-        radfieldfile << std::format("{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:d} {:.1f} {:.5e}\n", timestep,
-                                    modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar,
-                                    contribcount, T_R, W);
+        radfieldfile << std::format("{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:.1f} {:.5e}\n", timestep,
+                                    modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, T_R, W);
       }
     }
     radfieldfile.flush();
@@ -716,7 +700,6 @@ void zero_estimators() {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     std::ranges::fill(radfieldbins.J_raw, 0.0);
     std::ranges::fill(radfieldbins.nuJ_raw, 0.0);
-    std::ranges::fill(radfieldbins.contribcount, 0);
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
@@ -751,7 +734,6 @@ DEVICE_FUNC void update_estimators(const ptrdiff_t nonemptymgi, const double dis
       const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
       atomicadd(radfieldbins.J_raw[mgibinindex], distance_e_cmf);
       atomicadd(radfieldbins.nuJ_raw[mgibinindex], distance_e_cmf * nu_cmf);
-      atomicadd(radfieldbins.contribcount[mgibinindex], 1);
     }
   }
 }
@@ -974,7 +956,6 @@ void reduce_estimators() {
 
     MPI_Allreduce_safe(radfieldbins.J_raw, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce_safe(radfieldbins.nuJ_raw, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce_safe(radfieldbins.contribcount, MPI_SUM, MPI_COMM_WORLD);
 
     const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
     printlnlog(" (took {} s)", duration_reduction);
@@ -1064,9 +1045,8 @@ void write_restart_data(FILE* gridsave_file) {
     if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
         const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
-        fprintf(gridsave_file, "%la %la %a %a %d\n", radfieldbins.J_raw[mgibinindex], radfieldbins.nuJ_raw[mgibinindex],
-                radfieldbin_solutions_W[mgibinindex], radfieldbin_solutions_T_R[mgibinindex],
-                radfieldbins.contribcount[mgibinindex]);
+        fprintf(gridsave_file, "%la %la %a %a\n", radfieldbins.J_raw[mgibinindex], radfieldbins.nuJ_raw[mgibinindex],
+                radfieldbin_solutions_W[mgibinindex], radfieldbin_solutions_T_R[mgibinindex]);
       }
     }
 
@@ -1176,9 +1156,8 @@ void read_restart_data(FILE* gridsave_file) {
         const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
         float W = 0;
         float T_R = 0;
-        assert_always(fscanf(gridsave_file, "%la %la %a %a %d\n", &radfieldbins.J_raw[mgibinindex],
-                             &radfieldbins.nuJ_raw[mgibinindex], &W, &T_R,
-                             &radfieldbins.contribcount[mgibinindex]) == 5);
+        assert_always(fscanf(gridsave_file, "%la %la %a %a\n", &radfieldbins.J_raw[mgibinindex],
+                             &radfieldbins.nuJ_raw[mgibinindex], &W, &T_R) == 4);
         if (globals::rank_in_node == 0) {
           radfieldbin_solutions_W[mgibinindex] = W;
           radfieldbin_solutions_T_R[mgibinindex] = T_R;

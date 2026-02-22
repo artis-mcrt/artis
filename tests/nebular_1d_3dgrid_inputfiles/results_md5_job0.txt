@@ -22,6 +22,6 @@ bc8a2796431c3f1f7f7c135fbbe5529a  spec.out
 c2e1efc0e92f3c1f4b8f963fd3f3f4cf  job0/nlte_0000.out
 8c5d1e59986222515b1f62cb78e97964  job0/nlte_0001.out
 129e5c3feb1427d41d38bd2bd66b107b  job0/nlte_0002.out
-ac60c16e3f4ed6c29ceac0f2a04fcba6  job0/radfield_0000.out
-7c8dc028f7c36bc8df4f95228e42c42e  job0/radfield_0001.out
-6084cf6de004775742076608d3fdd492  job0/radfield_0002.out
+0159346ed178470fe31722c07efd6990  job0/radfield_0000.out
+89e95c19441f166a2daa989fd75e234d  job0/radfield_0001.out
+495c1390f4cd64543406c3ab1e7b75e3  job0/radfield_0002.out
