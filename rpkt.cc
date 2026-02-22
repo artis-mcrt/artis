@@ -742,8 +742,6 @@ auto get_chi_ff_nnionpart(const int nonemptymgi) -> double {
 // calculate the free-free absorption (to kpkt heating) coefficient [cm^-1]
 // = kappa(free-free) * nne
 auto calculate_chi_ffheating(const int nonemptymgi, const double nu) -> double {
-  assert_always(nu > 0.);
-
   const auto nne = grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
   const double chi_ff = get_chi_ff_nnionpart(nonemptymgi) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
