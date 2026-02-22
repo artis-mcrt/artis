@@ -23,6 +23,6 @@ c93ece861849cfd7122542fc93de22e2  job1/estimators_0001.out
 5b7de7970cccf833855b01b14b0e2766  job1/nlte_0000.out
 fc992566eab328c4ca80efb07606de2f  job1/nlte_0001.out
 0fcce370c183295c568bded11ec23f44  job1/nlte_0002.out
-3bdd2ada7e32d85ec52157668fc2c70d  job1/radfield_0000.out
-0830ab6bdfbc38f57ccc162c22d69e1d  job1/radfield_0001.out
-29913d8ad948d51c7602caba23b50a3f  job1/radfield_0002.out
+21a293aeac846271e33415a696838963  job1/radfield_0000.out
+5b38c7113e0b893c8204d1be83bc1c57  job1/radfield_0001.out
+b6c208a82f14412240fa28c4a63e6168  job1/radfield_0002.out
