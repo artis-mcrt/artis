@@ -440,12 +440,12 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
   // chi_bf/chi_cont
 
   const auto chi_rnd = rng_uniform() * chi_cont;
+  stats::increment(stats::Counter::INTERACTIONS);
 
   if (chi_rnd < chi_escatter) {
     // electron scattering occurs
     // in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
     // but with different direction
-    stats::increment(stats::Counter::INTERACTIONS);
     pkt.nscatterings += 1;
     stats::increment(stats::Counter::ESCOUNTER);
 
@@ -454,7 +454,6 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
       vpkt::call_estimators(pkt, TYPE_RPKT);
     }
 
-    // pkt.nu_cmf = 3.7474058e+14;
     electron_scatter_rpkt(pkt);
 
     // Electron scattering does not modify the last emission flag
@@ -465,7 +464,6 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
   } else if (chi_rnd < chi_escatter + chi_ff) {
     // ff: transform to k-pkt
     stats::increment(stats::Counter::K_STAT_FROM_FF);
-    stats::increment(stats::Counter::INTERACTIONS);
     pkt.type = TYPE_KPKT;
     pkt.absorptiontype = -1;
   } else if (chi_rnd < chi_escatter + chi_ff + chi_bf) {
@@ -476,7 +474,7 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
     pkt.absorptiontype = -2;
 
     const double chi_bf_inrest = chi_rpkt_cont.bf;
-    assert_always(phixslist.chi_bf_sum[phixslist.allcontend - 1] == chi_bf_inrest);
+    assert_testmodeonly(phixslist.chi_bf_sum[phixslist.allcontend - 1] == chi_bf_inrest);
 
     // Determine in which continuum the bf-absorption occurs
     const double chi_bf_rand = rng_uniform() * chi_bf_inrest;
@@ -484,12 +482,12 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
 #pragma clang unsafe_buffer_usage begin
     // NOLINTBEGIN(*-pointer-arithmetic)
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
-    const auto allcontindex = std::upper_bound(phixslist.chi_bf_sum.data() + phixslist.allcontbegin,
-                                               phixslist.chi_bf_sum.data() + phixslist.allcontend - 1, chi_bf_rand) -
-                              phixslist.chi_bf_sum.data();
+    const auto allcontindex = std::upper_bound(phixslist.chi_bf_sum.begin() + phixslist.allcontbegin,
+                                               phixslist.chi_bf_sum.begin() + phixslist.allcontend - 1, chi_bf_rand) -
+                              phixslist.chi_bf_sum.begin();
     // NOLINTEND(*-pointer-arithmetic)
 #pragma clang unsafe_buffer_usage end
-    assert_always(allcontindex < phixslist.allcontend);
+    assert_testmodeonly(allcontindex < phixslist.allcontend);
 
     const double nu_edge = globals::allcont_nu_edge[allcontindex];
     const int element = globals::allcont_element[allcontindex];
@@ -500,15 +498,14 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
     // decide whether we go to ionisation energy or to the thermal pool
     if (rng_uniform() < nu_edge / nu) {
       stats::increment(stats::Counter::MA_STAT_ACTIVATION_BF);
-      stats::increment(stats::Counter::INTERACTIONS);
 
-      const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-
-      do_macroatom(pkt, {.element = element, .ion = ion + 1, .level = upper, .activatingline = -99});
+      do_macroatom(pkt, {.element = element,
+                         .ion = ion + 1,
+                         .level = get_phixsupperlevel(element, ion, level, phixstargetindex),
+                         .activatingline = -99});
     } else {
       // transform to k-pkt
       stats::increment(stats::Counter::K_STAT_FROM_BF);
-      stats::increment(stats::Counter::INTERACTIONS);
       pkt.type = TYPE_KPKT;
     }
   } else {
