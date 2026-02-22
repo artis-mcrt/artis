@@ -211,7 +211,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
     pkt.e_cmf *= tdecay / globals::tmin;
     pkt.type = TYPE_PRE_KPKT;
     pkt.absorptiontype = -7;
-    stats::increment(stats::COUNTER_K_STAT_FROM_EARLIERDECAY);
+    stats::increment(stats::Counters::K_STAT_FROM_EARLIERDECAY);
 
     pkt.prop_time = globals::tmin;
   } else if constexpr (TESTMODE) {
@@ -359,7 +359,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
 
     const int count_pktupdates = static_cast<int>(std::ranges::count_if(
         packets, [ts_end](const auto& pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
-    const auto updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
+    const auto updatecellcounter_beforepass = stats::get_counter(stats::Counters::UPDATECELL);
     std::ptrdiff_t packetgroupstart = 0;
 
     for (auto& pkt : packets) {
@@ -380,7 +380,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
 #pragma omp critical(cellchange)
 #endif
           {
-            stats::increment(stats::COUNTER_UPDATECELL);
+            stats::increment(stats::Counters::UPDATECELL);
             cellcache_change_cell(nonemptymgi);
           }
           packetgroupstart = pktindex;
@@ -395,7 +395,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
     timestepcomplete = std::ranges::all_of(
         packets, [ts_end](const auto& pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
 
-    const auto cellcacheresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
+    const auto cellcacheresets = stats::get_counter(stats::Counters::UPDATECELL) - updatecellcounter_beforepass;
     printlnlog("  update_packets timestep {} pass {:3d}: packetsupdated {:7d} cellcacheresets {:7d} (took {}s)", nts,
                passnumber, count_pktupdates, cellcacheresets, std::time(nullptr) - sys_time_start_pass);
 

@@ -445,9 +445,9 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
     // electron scattering occurs
     // in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
     // but with different direction
-    stats::increment(stats::COUNTER_INTERACTIONS);
+    stats::increment(stats::Counters::INTERACTIONS);
     pkt.nscatterings += 1;
-    stats::increment(stats::COUNTER_ESCOUNTER);
+    stats::increment(stats::Counters::ESCOUNTER);
 
     // generate a virtual packet
     if constexpr (VPKT_ON) {
@@ -464,8 +464,8 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
 
   } else if (chi_rnd < chi_escatter + chi_ff) {
     // ff: transform to k-pkt
-    stats::increment(stats::COUNTER_K_STAT_FROM_FF);
-    stats::increment(stats::COUNTER_INTERACTIONS);
+    stats::increment(stats::Counters::K_STAT_FROM_FF);
+    stats::increment(stats::Counters::INTERACTIONS);
     pkt.type = TYPE_KPKT;
     pkt.absorptiontype = -1;
   } else if (chi_rnd < chi_escatter + chi_ff + chi_bf) {
@@ -499,16 +499,16 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
 
     // decide whether we go to ionisation energy or to the thermal pool
     if (rng_uniform() < nu_edge / nu) {
-      stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BF);
-      stats::increment(stats::COUNTER_INTERACTIONS);
+      stats::increment(stats::Counters::MA_STAT_ACTIVATION_BF);
+      stats::increment(stats::Counters::INTERACTIONS);
 
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
       do_macroatom(pkt, {.element = element, .ion = ion + 1, .level = upper, .activatingline = -99});
     } else {
       // transform to k-pkt
-      stats::increment(stats::COUNTER_K_STAT_FROM_BF);
-      stats::increment(stats::COUNTER_INTERACTIONS);
+      stats::increment(stats::Counters::K_STAT_FROM_BF);
+      stats::increment(stats::Counters::INTERACTIONS);
       pkt.type = TYPE_KPKT;
     }
   } else {
@@ -518,8 +518,8 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
 
 // handle bound-bound transition and activate macro-atom in corresponding upper-level
 void rpkt_event_boundbound(Packet& pkt, const MacroAtomState& pktmastate) {
-  stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BB);
-  stats::increment(stats::COUNTER_INTERACTIONS);
+  stats::increment(stats::Counters::MA_STAT_ACTIVATION_BB);
+  stats::increment(stats::Counters::INTERACTIONS);
 
   pkt.absorptiontype = pktmastate.activatingline;
   pkt.absorptionfreq = pkt.nu_rf;
@@ -534,9 +534,9 @@ void rpkt_event_boundbound(Packet& pkt, const MacroAtomState& pktmastate) {
 // Handle r-packet interaction in thick cell (grey opacity).
 // The packet stays an RPKT of same nu_cmf as before (coherent scattering) but with a different direction.
 void rpkt_event_thickcell(Packet& pkt) {
-  stats::increment(stats::COUNTER_INTERACTIONS);
+  stats::increment(stats::Counters::INTERACTIONS);
   pkt.nscatterings += 1;
-  stats::increment(stats::COUNTER_ESCOUNTER);
+  stats::increment(stats::Counters::ESCOUNTER);
 
   emit_rpkt(pkt);
   // Electron scattering does not modify the last emission flag but it updates the last emission position

@@ -204,7 +204,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   const auto lineindex = globals::alltrans.lineindex[alltrans_startdown + downtransindex];
 
   if (lineindex == activatingline) {
-    stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
+    stats::increment(stats::Counters::RESONANCESCATTERINGS);
   }
 
   if constexpr (RECORD_LINESTAT) {
@@ -220,11 +220,11 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   pkt.nu_cmf = epsilon_trans / H;
 
   if (activatingline >= 0) {
-    stats::increment((oldnucmf < pkt.nu_cmf) ? stats::COUNTER_UPSCATTER : stats::COUNTER_DOWNSCATTER);
+    stats::increment((oldnucmf < pkt.nu_cmf) ? stats::Counters::UPSCATTER : stats::Counters::DOWNSCATTER);
   }
 
-  stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_BB);
-  stats::increment(stats::COUNTER_INTERACTIONS);
+  stats::increment(stats::Counters::MA_STAT_DEACTIVATION_BB);
+  stats::increment(stats::Counters::INTERACTIONS);
 
   // emit the rpkt in a random direction
   emit_rpkt(pkt);
@@ -268,8 +268,8 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
 
   pkt.nu_cmf = select_continuum_nu(element, upperion - 1, lowerionlevel, upperionlevel, T_e);
 
-  stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_FB);
-  stats::increment(stats::COUNTER_INTERACTIONS);
+  stats::increment(stats::Counters::MA_STAT_DEACTIVATION_FB);
+  stats::increment(stats::Counters::INTERACTIONS);
 
   // Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
   emit_rpkt(pkt);
@@ -411,8 +411,8 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       case MA_ACTION_COLDEEXC: {
         // collisional deexcitation of macro atom => convert the packet into a k-packet
 
-        stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC);
-        stats::increment(stats::COUNTER_INTERACTIONS);
+        stats::increment(stats::Counters::MA_STAT_DEACTIVATION_COLLDEEXC);
+        stats::increment(stats::Counters::INTERACTIONS);
 
         pkt.type = TYPE_KPKT;
         end_packet = true;
@@ -423,7 +423,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       }
 
       case MA_ACTION_INTERNALDOWNSAME: {
-        stats::increment(stats::COUNTER_INTERACTIONS);
+        stats::increment(stats::Counters::INTERACTIONS);
         // Randomly select the occurring transition
         const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNSAME];
 
@@ -448,8 +448,8 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
 
       case MA_ACTION_COLRECOMB: {
         // collisional recombination of macro atom => convert the packet into a k-packet
-        stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLRECOMB);
-        stats::increment(stats::COUNTER_INTERACTIONS);
+        stats::increment(stats::Counters::MA_STAT_DEACTIVATION_COLLRECOMB);
+        stats::increment(stats::Counters::INTERACTIONS);
 
         pkt.type = TYPE_KPKT;
         end_packet = true;
@@ -460,8 +460,8 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       }
 
       case MA_ACTION_INTERNALDOWNLOWER: {
-        stats::increment(stats::COUNTER_INTERACTIONS);
-        stats::increment(stats::COUNTER_MA_STAT_INTERNALDOWNLOWER);
+        stats::increment(stats::Counters::INTERACTIONS);
+        stats::increment(stats::Counters::MA_STAT_INTERNALDOWNLOWER);
 
         // Randomly select the occurring transition
         const double targetrate = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNLOWER];
@@ -490,7 +490,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       }
 
       case MA_ACTION_INTERNALUPSAME: {
-        stats::increment(stats::COUNTER_INTERACTIONS);
+        stats::increment(stats::Counters::INTERACTIONS);
 
         // randomly select the occurring transition
         const auto sum_internal_up_same_exceptlast = get_sum_internal_up_same_exceptlast(uniquelevelindex);
@@ -509,9 +509,9 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       }
 
       case MA_ACTION_INTERNALUPHIGHER: {
-        stats::increment(stats::COUNTER_INTERACTIONS);
+        stats::increment(stats::Counters::INTERACTIONS);
 
-        stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHER);
+        stats::increment(stats::Counters::MA_STAT_INTERNALUPHIGHER);
 
         level = do_macroatom_ionisation(nonemptymgi, element, ion, level, epsilon_current,
                                         processrates[MA_ACTION_INTERNALUPHIGHER]);
@@ -521,11 +521,11 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       }
 
       case MA_ACTION_INTERNALUPHIGHERNT: {
-        stats::increment(stats::COUNTER_INTERACTIONS);
+        stats::increment(stats::Counters::INTERACTIONS);
 
         ion = nonthermal::nt_random_upperion(nonemptymgi, element, ion, false);
         level = 0;
-        stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHERNT);
+        stats::increment(stats::Counters::MA_STAT_INTERNALUPHIGHERNT);
 
         break;
       }
