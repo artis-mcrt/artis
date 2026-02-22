@@ -19,11 +19,11 @@ namespace stats {
 
 namespace {
 
-std::array<ptrdiff_t, static_cast<size_t>(Counters::COUNT)> eventstats{};
+std::array<ptrdiff_t, static_cast<size_t>(Counter::COUNT)> eventstats{};
 
 }  // anonymous namespace
 
-DEVICE_FUNC void increment(const Counters i) { atomicadd(eventstats[std::to_underlying(i)], 1Z); }
+DEVICE_FUNC void increment(const Counter i) { atomicadd(eventstats[std::to_underlying(i)], 1Z); }
 
 void pkt_action_counters_reset() {
   std::ranges::fill(eventstats, 0);
@@ -31,10 +31,10 @@ void pkt_action_counters_reset() {
   nonthermal::reset_stats();
 }
 
-auto get_counter(const Counters i) -> ptrdiff_t { return eventstats[std::to_underlying(i)]; }
+auto get_counter(const Counter i) -> ptrdiff_t { return eventstats[std::to_underlying(i)]; }
 
 void pkt_action_counters_printout(const int nts) {
-  const double meaninteractions = static_cast<double>(get_counter(Counters::INTERACTIONS)) / globals::npkts;
+  const double meaninteractions = static_cast<double>(get_counter(Counter::INTERACTIONS)) / globals::npkts;
   printlnlog("timestep {}: mean number of interactions per packet = {:g}", nts, meaninteractions);
 
   const double deltat = globals::timesteps[nts].width;
@@ -43,47 +43,45 @@ void pkt_action_counters_printout(const int nts) {
     modelvolume += grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
   }
 
-  printlnlog("timestep {}: ma_stat_activation_collexc = {}", nts, get_counter(Counters::MA_STAT_ACTIVATION_COLLEXC));
-  printlnlog("timestep {}: ma_stat_activation_collion = {}", nts, get_counter(Counters::MA_STAT_ACTIVATION_COLLION));
-  printlnlog("timestep {}: ma_stat_activation_ntcollexc = {}", nts,
-             get_counter(Counters::MA_STAT_ACTIVATION_NTCOLLEXC));
-  printlnlog("timestep {}: ma_stat_activation_ntcollion = {}", nts,
-             get_counter(Counters::MA_STAT_ACTIVATION_NTCOLLION));
-  printlnlog("timestep {}: ma_stat_activation_bb = {}", nts, get_counter(Counters::MA_STAT_ACTIVATION_BB));
-  printlnlog("timestep {}: ma_stat_activation_bf = {}", nts, get_counter(Counters::MA_STAT_ACTIVATION_BF));
-  printlnlog("timestep {}: ma_stat_activation_fb = {}", nts, get_counter(Counters::MA_STAT_ACTIVATION_FB));
+  printlnlog("timestep {}: ma_stat_activation_collexc = {}", nts, get_counter(Counter::MA_STAT_ACTIVATION_COLLEXC));
+  printlnlog("timestep {}: ma_stat_activation_collion = {}", nts, get_counter(Counter::MA_STAT_ACTIVATION_COLLION));
+  printlnlog("timestep {}: ma_stat_activation_ntcollexc = {}", nts, get_counter(Counter::MA_STAT_ACTIVATION_NTCOLLEXC));
+  printlnlog("timestep {}: ma_stat_activation_ntcollion = {}", nts, get_counter(Counter::MA_STAT_ACTIVATION_NTCOLLION));
+  printlnlog("timestep {}: ma_stat_activation_bb = {}", nts, get_counter(Counter::MA_STAT_ACTIVATION_BB));
+  printlnlog("timestep {}: ma_stat_activation_bf = {}", nts, get_counter(Counter::MA_STAT_ACTIVATION_BF));
+  printlnlog("timestep {}: ma_stat_activation_fb = {}", nts, get_counter(Counter::MA_STAT_ACTIVATION_FB));
   printlnlog("timestep {}: ma_stat_deactivation_colldeexc = {}", nts,
-             get_counter(Counters::MA_STAT_DEACTIVATION_COLLDEEXC));
+             get_counter(Counter::MA_STAT_DEACTIVATION_COLLDEEXC));
   printlnlog("timestep {}: ma_stat_deactivation_collrecomb = {}", nts,
-             get_counter(Counters::MA_STAT_DEACTIVATION_COLLRECOMB));
-  printlnlog("timestep {}: ma_stat_deactivation_bb = {}", nts, get_counter(Counters::MA_STAT_DEACTIVATION_BB));
-  printlnlog("timestep {}: ma_stat_deactivation_fb = {}", nts, get_counter(Counters::MA_STAT_DEACTIVATION_FB));
-  printlnlog("timestep {}: ma_stat_internaluphigher = {}", nts, get_counter(Counters::MA_STAT_INTERNALUPHIGHER));
-  printlnlog("timestep {}: ma_stat_internaluphighernt = {}", nts, get_counter(Counters::MA_STAT_INTERNALUPHIGHERNT));
-  printlnlog("timestep {}: ma_stat_internaldownlower = {}", nts, get_counter(Counters::MA_STAT_INTERNALDOWNLOWER));
+             get_counter(Counter::MA_STAT_DEACTIVATION_COLLRECOMB));
+  printlnlog("timestep {}: ma_stat_deactivation_bb = {}", nts, get_counter(Counter::MA_STAT_DEACTIVATION_BB));
+  printlnlog("timestep {}: ma_stat_deactivation_fb = {}", nts, get_counter(Counter::MA_STAT_DEACTIVATION_FB));
+  printlnlog("timestep {}: ma_stat_internaluphigher = {}", nts, get_counter(Counter::MA_STAT_INTERNALUPHIGHER));
+  printlnlog("timestep {}: ma_stat_internaluphighernt = {}", nts, get_counter(Counter::MA_STAT_INTERNALUPHIGHERNT));
+  printlnlog("timestep {}: ma_stat_internaldownlower = {}", nts, get_counter(Counter::MA_STAT_INTERNALDOWNLOWER));
 
-  printlnlog("timestep {}: k_stat_to_ma_collexc = {}", nts, get_counter(Counters::K_STAT_TO_MA_COLLEXC));
-  printlnlog("timestep {}: k_stat_to_ma_collion = {}", nts, get_counter(Counters::K_STAT_TO_MA_COLLION));
-  printlnlog("timestep {}: k_stat_to_r_ff = {}", nts, get_counter(Counters::K_STAT_TO_R_FF));
-  printlnlog("timestep {}: k_stat_to_r_fb = {}", nts, get_counter(Counters::K_STAT_TO_R_FB));
-  printlnlog("timestep {}: k_stat_to_r_bb = {}", nts, get_counter(Counters::K_STAT_TO_R_BB));
-  printlnlog("timestep {}: k_stat_from_ff = {}", nts, get_counter(Counters::K_STAT_FROM_FF));
-  printlnlog("timestep {}: k_stat_from_bf = {}", nts, get_counter(Counters::K_STAT_FROM_BF));
-  printlnlog("timestep {}: k_stat_from_earlierdecay = {}", nts, get_counter(Counters::K_STAT_FROM_EARLIERDECAY));
+  printlnlog("timestep {}: k_stat_to_ma_collexc = {}", nts, get_counter(Counter::K_STAT_TO_MA_COLLEXC));
+  printlnlog("timestep {}: k_stat_to_ma_collion = {}", nts, get_counter(Counter::K_STAT_TO_MA_COLLION));
+  printlnlog("timestep {}: k_stat_to_r_ff = {}", nts, get_counter(Counter::K_STAT_TO_R_FF));
+  printlnlog("timestep {}: k_stat_to_r_fb = {}", nts, get_counter(Counter::K_STAT_TO_R_FB));
+  printlnlog("timestep {}: k_stat_to_r_bb = {}", nts, get_counter(Counter::K_STAT_TO_R_BB));
+  printlnlog("timestep {}: k_stat_from_ff = {}", nts, get_counter(Counter::K_STAT_FROM_FF));
+  printlnlog("timestep {}: k_stat_from_bf = {}", nts, get_counter(Counter::K_STAT_FROM_BF));
+  printlnlog("timestep {}: k_stat_from_earlierdecay = {}", nts, get_counter(Counter::K_STAT_FROM_EARLIERDECAY));
 
-  printlnlog("timestep {}: nt_stat_from_gamma = {}", nts, get_counter(Counters::NT_STAT_FROM_GAMMA));
-  printlnlog("timestep {}: nt_stat_to_ionisation = {}", nts, get_counter(Counters::NT_STAT_TO_IONISATION));
-  printlnlog("timestep {}: nt_stat_to_excitation = {}", nts, get_counter(Counters::NT_STAT_TO_EXCITATION));
-  printlnlog("timestep {}: nt_stat_to_kpkt = {}", nts, get_counter(Counters::NT_STAT_TO_KPKT));
+  printlnlog("timestep {}: nt_stat_from_gamma = {}", nts, get_counter(Counter::NT_STAT_FROM_GAMMA));
+  printlnlog("timestep {}: nt_stat_to_ionisation = {}", nts, get_counter(Counter::NT_STAT_TO_IONISATION));
+  printlnlog("timestep {}: nt_stat_to_excitation = {}", nts, get_counter(Counter::NT_STAT_TO_EXCITATION));
+  printlnlog("timestep {}: nt_stat_to_kpkt = {}", nts, get_counter(Counter::NT_STAT_TO_KPKT));
   nonthermal::print_stats(modelvolume, deltat);
 
-  printlnlog("timestep {}: escounter = {}", nts, get_counter(Counters::ESCOUNTER));
-  printlnlog("timestep {}: cellcrossing  = {}", nts, get_counter(Counters::CELLCROSSINGS));
-  printlnlog("timestep {}: updatecellcounter  = {}", nts, get_counter(Counters::UPDATECELL));
-  printlnlog("timestep {}: resonancescatterings  = {}", nts, get_counter(Counters::RESONANCESCATTERINGS));
+  printlnlog("timestep {}: escounter = {}", nts, get_counter(Counter::ESCOUNTER));
+  printlnlog("timestep {}: cellcrossing  = {}", nts, get_counter(Counter::CELLCROSSINGS));
+  printlnlog("timestep {}: updatecellcounter  = {}", nts, get_counter(Counter::UPDATECELL));
+  printlnlog("timestep {}: resonancescatterings  = {}", nts, get_counter(Counter::RESONANCESCATTERINGS));
 
-  printlnlog("timestep {}: upscatterings  = {}", nts, get_counter(Counters::UPSCATTER));
-  printlnlog("timestep {}: downscatterings  = {}", nts, get_counter(Counters::DOWNSCATTER));
+  printlnlog("timestep {}: upscatterings  = {}", nts, get_counter(Counter::UPSCATTER));
+  printlnlog("timestep {}: downscatterings  = {}", nts, get_counter(Counter::DOWNSCATTER));
 }
 
 }  // namespace stats

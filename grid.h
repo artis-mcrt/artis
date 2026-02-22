@@ -113,9 +113,9 @@ inline void change_cell(Packet& pkt, const int snext)
     pkt.escape_type = pkt.type;
     pkt.escape_time = static_cast<float>(pkt.prop_time);
     pkt.type = TYPE_ESCAPE;
-    stats::increment(stats::Counters::PKTESCAPES);
+    stats::increment(stats::Counter::PKTESCAPES);
 
-    stats::increment(stats::Counters::CELLCROSSINGS);
+    stats::increment(stats::Counter::CELLCROSSINGS);
   }
 }
 

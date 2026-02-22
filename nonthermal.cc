@@ -2319,7 +2319,7 @@ DEVICE_FUNC void do_ntalpha_fisprod_deposit(Packet& pkt) {
   // was calculated from the sum of ionisation and plasma heating)
   atomicadd(nt_energy_deposited, pkt.e_cmf);
   pkt.type = TYPE_KPKT;
-  stats::increment(stats::Counters::NT_STAT_TO_KPKT);
+  stats::increment(stats::Counter::NT_STAT_TO_KPKT);
 }
 
 DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
@@ -2348,12 +2348,12 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
       const int upperion = nt_random_upperion(nonemptymgi, element, lowerion, true);
       // const int upperion = lowerion + 1;
 
-      stats::increment(stats::Counters::MA_STAT_ACTIVATION_NTCOLLION);
-      stats::increment(stats::Counters::INTERACTIONS);
+      stats::increment(stats::Counter::MA_STAT_ACTIVATION_NTCOLLION);
+      stats::increment(stats::Counter::INTERACTIONS);
       pkt.trueemissiontype = EMTYPE_NOTSET;
       pkt.trueem_pos = {NAN, NAN, NAN};
 
-      stats::increment(stats::Counters::NT_STAT_TO_IONISATION);
+      stats::increment(stats::Counter::NT_STAT_TO_IONISATION);
 
       do_macroatom(pkt, {.element = element, .ion = upperion, .level = 0, .activatingline = -99});
       return;
@@ -2373,12 +2373,12 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
           const int ion = globals::linelist.ionindex[lineindex];
           const int upper = globals::linelist.upperlevelindex[lineindex];
 
-          stats::increment(stats::Counters::MA_STAT_ACTIVATION_NTCOLLEXC);
-          stats::increment(stats::Counters::INTERACTIONS);
+          stats::increment(stats::Counter::MA_STAT_ACTIVATION_NTCOLLEXC);
+          stats::increment(stats::Counter::INTERACTIONS);
           pkt.trueemissiontype = EMTYPE_NOTSET;
           pkt.trueem_pos = {NAN, NAN, NAN};
 
-          stats::increment(stats::Counters::NT_STAT_TO_EXCITATION);
+          stats::increment(stats::Counter::NT_STAT_TO_EXCITATION);
 
           do_macroatom(pkt, {.element = element, .ion = ion, .level = upper, .activatingline = -99});
           return;
@@ -2391,7 +2391,7 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
   }
 
   pkt.type = TYPE_KPKT;
-  stats::increment(stats::Counters::NT_STAT_TO_KPKT);
+  stats::increment(stats::Counter::NT_STAT_TO_KPKT);
 }
 
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution

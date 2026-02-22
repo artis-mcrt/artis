@@ -8,7 +8,7 @@
 namespace stats {
 
 // global statistics (all cells combined)
-enum class Counters {
+enum class Counter {
   MA_STAT_ACTIVATION_COLLEXC = 0,
   MA_STAT_ACTIVATION_COLLION = 1,
   MA_STAT_ACTIVATION_NTCOLLEXC = 2,
@@ -46,11 +46,11 @@ enum class Counters {
   COUNT = 34,
 };
 
-DEVICE_FUNC void increment(enum Counters i);
+DEVICE_FUNC void increment(Counter i);
 
 void pkt_action_counters_reset();
 
-[[nodiscard]] auto get_counter(enum Counters i) -> ptrdiff_t;
+[[nodiscard]] auto get_counter(Counter i) -> ptrdiff_t;
 
 void pkt_action_counters_printout(int nts);
 
