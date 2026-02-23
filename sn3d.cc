@@ -901,6 +901,8 @@ auto main(int argc, char* argv[]) -> int {
   // initialise or read in virtual packet spectra
   vpkt::init(globals::timestep, my_rank, globals::simulation_continued_from_saved);
 
+  setup_cellcache();
+
   while (globals::timestep < globals::timestep_finish && !terminate_early) {
     MPI_Barrier(MPI_COMM_WORLD);
 
