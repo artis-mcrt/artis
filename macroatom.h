@@ -17,11 +17,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
                                                           int alltransindex, double t_current) -> double;
 
 [[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(float T_e, float nne, int element, int upperion,
-                                                             int upperionlevel, int lowerionlevel, int nonemptymgi)
-    -> double;
-
-[[gnu::pure]] [[nodiscard]] auto stim_recombination_ratecoeff(float nne, int element, int upperion, int upper,
-                                                              int lower, int nonemptymgi) -> double;
+                                                             int upperionlevel, int lowerionlevel) -> double;
 
 [[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upper,
                                                              int lower, double epsilon_trans) -> double;

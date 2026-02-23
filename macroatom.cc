@@ -146,7 +146,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
       const double epsilon_target = epsilon(lowerionuniquelevelindexstart + lower);
       const double epsilon_trans = epsilon_current - epsilon_target;
 
-      const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, nonemptymgi);
+      const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower);
       const double C = col_recombination_ratecoeff(T_e, nne, element, ion, level, lower, epsilon_trans);
 
       sum_internal_down_lower += (R + C) * epsilon_target;
@@ -251,8 +251,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   int lowerionlevel = -1;
   for (int tmp_lowerionlevel = 0; tmp_lowerionlevel < nlevels; tmp_lowerionlevel++) {
     const double epsilon_trans = epsilon_current - epsilon(element, upperion - 1, tmp_lowerionlevel);
-    const double R =
-        rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, tmp_lowerionlevel, nonemptymgi);
+    const double R = rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, tmp_lowerionlevel);
 
     rate += R * epsilon_trans;
 
@@ -473,7 +472,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         for (int tmp_lower = 0; tmp_lower < nlevels; tmp_lower++) {
           const double epsilon_target = epsilon(lowerionuniquelevelindexstart + tmp_lower);
           const double epsilon_trans = epsilon_current - epsilon_target;
-          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, tmp_lower, nonemptymgi);
+          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, tmp_lower);
           const double C = col_recombination_ratecoeff(T_e, nne, element, ion, level, tmp_lower, epsilon_trans);
           rate += (R + C) * epsilon_target;
           if (rate > targetrate) {
@@ -614,7 +613,7 @@ void macroatom_close_file() {
 // multiply by upper level population to get a rate per second
 [[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(const float T_e, const float nne, const int element,
                                                              const int upperion, const int upperionlevel,
-                                                             const int lowerionlevel, const int nonemptymgi) -> double {
+                                                             const int lowerionlevel) -> double {
   // it's faster to only check this condition outside this function than to check it for every level
   assert_testmodeonly(upperionlevel <= get_maxrecombininglevel(element, upperion));
 
@@ -626,29 +625,7 @@ void macroatom_close_file() {
       const auto R_spont = nne * get_spontrecombcoeff(lowerionlower_uniquelevelindex, phixstargetindex, T_e);
       assert_testmodeonly(std::isfinite(R_spont));
 
-      if constexpr (SEPARATE_STIMRECOMB) {
-        const auto R_stimb = nne * get_stimrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, nonemptymgi);
-        assert_testmodeonly(std::isfinite(R_stimb));
-        return R_spont + R_stimb;
-      }
-
       return R_spont;
-    }
-  }
-
-  return 0.;
-}
-
-[[gnu::pure]] [[nodiscard]] auto stim_recombination_ratecoeff(const float nne, const int element, const int upperion,
-                                                              const int upper, const int lower, const int nonemptymgi)
-    -> double {
-  if constexpr (SEPARATE_STIMRECOMB) {
-    const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
-    for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-      if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {
-        const double R = nne * get_stimrecombcoeff(element, upperion - 1, lower, phixstargetindex, nonemptymgi);
-        return R;
-      }
     }
   }
 

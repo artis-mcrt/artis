@@ -272,7 +272,6 @@ struct CellCache {
   std::vector<bool> allcont_keep;
   double chi_ff_nnionpart{-1};
   std::vector<double> allphixstargets_corrphotoioncoeff;
-  std::vector<double> allphixstargets_stimrecombcoeff;
 };
 inline std::vector<CellCache> cellcache{};
 

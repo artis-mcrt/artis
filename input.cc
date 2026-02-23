@@ -1600,12 +1600,9 @@ void setup_cellcache() {
 
     if (allphixstargetcount > 0) {
       resize_exactly(globals::cellcache[cellcachenum].allphixstargets_corrphotoioncoeff, allphixstargetcount);
-      if constexpr (SEPARATE_STIMRECOMB) {
-        resize_exactly(globals::cellcache[cellcachenum].allphixstargets_stimrecombcoeff, allphixstargetcount);
-      }
     }
     mem_usage_cellcache +=
-        (get_includedlevels() * ((2 * sizeof(double)) + sizeof(int))) + (allphixstargetcount * sizeof(double) * 2);
+        (get_includedlevels() * ((2 * sizeof(double)) + sizeof(int))) + (allphixstargetcount * sizeof(double));
 
     assert_always(chtransblocksize <= std::numeric_limits<int>::max());
     mem_usage_cellcache += chtransblocksize * sizeof(double);

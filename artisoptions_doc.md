@@ -147,9 +147,6 @@ constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING;
 // population are all individually checked.
 constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION;
 
-// if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
-#define SEPARATE_STIMRECOMB false
-
 // ** End of radiation field model options **
 
 // ** Start of non-thermal solution options **
