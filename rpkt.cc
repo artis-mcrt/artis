@@ -972,7 +972,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   chi_rpkt_cont.nu = nu_cmf;
 }
 
-// specialize templates with true and false:
+// specialize calculate_chi_rpkt_cont templates with true and false:
 template void calculate_chi_rpkt_cont<true>(const double nu_cmf, Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont,
                                             const int nonemptymgi);
 template void calculate_chi_rpkt_cont<false>(const double nu_cmf, Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont,
