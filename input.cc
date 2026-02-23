@@ -896,16 +896,16 @@ void setup_phixs_list() {
     }
     MPI_Barrier(globals::mpi_comm_node);
     globals::bfestim_nu_edge = bfestim_nu_edge;
-    globals::allcont_nu_edge = allcont_nu_edge;
-    globals::allcont_element = allcont_element;
-    globals::allcont_ion = allcont_ion;
-    globals::allcont_level = allcont_level;
-    globals::allcont_phixstargetindex = allcont_phixstargetindex;
-    globals::allcont_upperlevel = allcont_upperlevel;
-    globals::allcont_uniquelevelindex = allcont_uniquelevelindex;
-    globals::allcont_probability = allcont_probability;
-    globals::allcont_index_in_groundphixslist = allcont_index_in_groundphixslist;
-    globals::allcont_bfestimindex = allcont_bfestimindex;
+    globals::allcont.nu_edge = allcont_nu_edge;
+    globals::allcont.element = allcont_element;
+    globals::allcont.ion = allcont_ion;
+    globals::allcont.level = allcont_level;
+    globals::allcont.phixstargetindex = allcont_phixstargetindex;
+    globals::allcont.upperlevel = allcont_upperlevel;
+    globals::allcont.uniquelevelindex = allcont_uniquelevelindex;
+    globals::allcont.probability = allcont_probability;
+    globals::allcont.index_in_groundphixslist = allcont_index_in_groundphixslist;
+    globals::allcont.bfestimindex = allcont_bfestimindex;
 
     setup_photoion_luts();
   }
