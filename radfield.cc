@@ -235,9 +235,7 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
       std::distance(globals::bfestim_nu_edge.begin(),
                     std::ranges::lower_bound(
                         globals::bfestim_nu_edge.subspan(phixslist.bfestimbegin, bfestimend - phixslist.bfestimbegin),
-                        nu_cmf, [](const double nu_edge, const double find_nu_cmf) {
-                          return nu_edge * last_phixs_nuovernuedge < find_nu_cmf;
-                        }));
+                        nu_cmf / last_phixs_nuovernuedge));
 
   for (auto bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
     atomicadd(bfrate_raw[(nonemptymgi * bfestimcount) + bfestimindex],
