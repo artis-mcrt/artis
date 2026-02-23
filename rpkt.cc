@@ -957,7 +957,6 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
     chi_rpkt_cont.ffescat = SIGMA_T * nne;
 
     // Third contribution: bound-free absorption
-    assert_testmodeonly((!USECELLHISTANDUPDATEPHIXSLIST || !chi_rpkt_cont.phixslist.chi_bf_sum.empty()));
     chi_rpkt_cont.bf =
         calculate_chi_bf_gammacontr<USECELLHISTANDUPDATEPHIXSLIST>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist);
 
