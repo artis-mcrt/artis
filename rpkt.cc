@@ -489,11 +489,11 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
 #pragma clang unsafe_buffer_usage end
     assert_testmodeonly(allcontindex < phixslist.allcontend);
 
-    const double nu_edge = globals::allcont_nu_edge[allcontindex];
-    const int element = globals::allcont_element[allcontindex];
-    const int ion = globals::allcont_ion[allcontindex];
-    const int level = globals::allcont_level[allcontindex];
-    const int phixstargetindex = globals::allcont_phixstargetindex[allcontindex];
+    const double nu_edge = globals::allcont.nu_edge[allcontindex];
+    const int element = globals::allcont.element[allcontindex];
+    const int ion = globals::allcont.ion[allcontindex];
+    const int level = globals::allcont.level[allcontindex];
+    const int phixstargetindex = globals::allcont.phixstargetindex[allcontindex];
 
     // decide whether we go to ionisation energy or to the thermal pool
     if (rng_uniform() < nu_edge / nu) {
@@ -763,7 +763,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
   const auto nnetot = grid::get_nnetot(nonemptymgi);
-  const auto& allcont_nu_edge = globals::allcont_nu_edge;
+  const auto& allcont_nu_edge = globals::allcont.nu_edge;
 
   // The phixslist is sorted by nu_edge in ascending order, so if nu < allcont[i].nu_edge then no absorption in any of
   // the remaining continua is possible. so set their kappas to zero and break
@@ -791,15 +791,15 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   }
 
   // const ref these so that the compiler knows they don't change in the loop (and shortens the names)
-  const auto& allcont_element = globals::allcont_element;
-  const auto& allcont_ion = globals::allcont_ion;
-  const auto& allcont_level = globals::allcont_level;
-  const auto& allcont_bfestimindex = globals::allcont_bfestimindex;
-  const auto& allcont_upperlevel = globals::allcont_upperlevel;
-  const auto& allcont_uniquelevelindex = globals::allcont_uniquelevelindex;
-  const auto& allcont_index_in_groundphixslist = globals::allcont_index_in_groundphixslist;
-  const auto& allcont_probability = globals::allcont_probability;
-  const auto& allcont_phixstargetindex = globals::allcont_phixstargetindex;
+  const auto& allcont_element = globals::allcont.element;
+  const auto& allcont_ion = globals::allcont.ion;
+  const auto& allcont_level = globals::allcont.level;
+  const auto& allcont_bfestimindex = globals::allcont.bfestimindex;
+  const auto& allcont_upperlevel = globals::allcont.upperlevel;
+  const auto& allcont_uniquelevelindex = globals::allcont.uniquelevelindex;
+  const auto& allcont_index_in_groundphixslist = globals::allcont.index_in_groundphixslist;
+  const auto& allcont_probability = globals::allcont.probability;
+  const auto& allcont_phixstargetindex = globals::allcont.phixstargetindex;
 
   for (int i = allcontbegin; i < allcontend; i++) {
     const int element = allcont_element[i];

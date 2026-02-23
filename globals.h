@@ -236,16 +236,19 @@ inline std::vector<BFListEntry> bflist;
 
 inline std::span<const double> bfestim_nu_edge{};
 
-inline std::span<const double> allcont_nu_edge{};
-inline std::span<const int> allcont_element{};
-inline std::span<const int> allcont_ion{};
-inline std::span<const int> allcont_level{};
-inline std::span<const int> allcont_phixstargetindex{};
-inline std::span<const int> allcont_upperlevel{};
-inline std::span<const int> allcont_uniquelevelindex{};
-inline std::span<const double> allcont_probability{};
-inline std::span<const int> allcont_index_in_groundphixslist{};
-inline std::span<const int> allcont_bfestimindex{};
+struct AllCont {
+  std::span<const double> nu_edge;
+  std::span<const int> element;
+  std::span<const int> ion;
+  std::span<const int> level;
+  std::span<const int> phixstargetindex;
+  std::span<const int> upperlevel;
+  std::span<const int> uniquelevelindex;
+  std::span<const double> probability;
+  std::span<const int> index_in_groundphixslist;
+  std::span<const int> bfestimindex;
+};
+inline AllCont allcont{};
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
 inline std::span<const double> groundcont_nu_edge{};
