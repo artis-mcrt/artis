@@ -248,7 +248,7 @@ struct AllCont {
   std::span<const int> index_in_groundphixslist;
   std::span<const int> bfestimindex;
 };
-inline AllCont allcont;
+inline AllCont allcont{};
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
 inline std::span<const double> groundcont_nu_edge{};
