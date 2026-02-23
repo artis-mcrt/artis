@@ -55,7 +55,7 @@ void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion)
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ffegrp(int modelgridindex) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_pos(int modelgridindex, double tratmid)
     -> double;
-[[gnu::pure]] [[nodiscard]] auto get_modelcell_mean_radial_vel(int modegridindex, double tratmid) -> double;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_vel(int modegridindex, double tratmid) -> double;
 void set_elem_abundance(std::ptrdiff_t nonemptymgi, int element, float newabundance);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(std::ptrdiff_t nonemptymgi, int element) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_initenergyq(int modelgridindex) -> double;
@@ -82,6 +82,7 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_numpropcells(int modelgridindex) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonemptymgi_of_mgi(int mgi) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_mgi_of_nonemptymgi(std::ptrdiff_t nonemptymgi) -> int;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto check_mgi_is_nonempty(int mgi, int& nonemptymgi) -> bool;
 [[gnu::pure]] [[nodiscard]] auto get_model_type() -> GridType;
 void set_model_type(GridType model_type_value);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_npts_model() -> int;

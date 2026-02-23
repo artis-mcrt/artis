@@ -1473,6 +1473,17 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
   return nne_allcells[nonemptymgi];
 }
 
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_oneoverfv(const int nonemptymgi) -> float {
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
+
+  if constexpr (USE_MICROCLUMPING) {
+    return oneoverfv_allcells[nonemptymgi];
+  }
+
+  return 1.;
+}
+
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nnetot(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
@@ -1489,8 +1500,8 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
   return modelgrid_input[modelgridindex].initial_radial_pos_sum * tratmid / assoc_cells;
 }
 
-[[gnu::pure]] [[nodiscard]] __host__ __device__ auto get_modelcell_mean_radial_vel(const int modelgridindex,
-                                                                                   const double tratmid) -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_vel(const int modelgridindex,
+                                                                           const double tratmid) -> double {
   return get_modelcell_mean_radial_pos(modelgridindex, tratmid) / tratmid;
 }
 
@@ -1647,6 +1658,18 @@ void set_model_type(const GridType model_type_value) { model_type = model_type_v
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
 
   return nonemptymgi;
+}
+
+// Check if cell with index `mgi` is a non-empty cell
+// If the cell is non-empty will return `true` and `nonemptymgi` will be set accordingly, otherwise returns `false` and
+// `nonemptymgi` is set to -1
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto check_mgi_is_nonempty(const int mgi, int& nonemptymgi) -> bool {
+  assert_testmodeonly(get_nonempty_npts_model() > 0);
+  assert_testmodeonly(mgi >= 0);
+  assert_testmodeonly(mgi < get_npts_model());
+
+  nonemptymgi = nonemptymgi_of_mgi[mgi];
+  return nonemptymgi >= 0;
 }
 
 // get the index in the list of non-empty cells for a given model grid cell
