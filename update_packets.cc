@@ -8,6 +8,9 @@
 #include <span>
 #include <tuple>
 
+#include "atomic.h"
+#include "ltepop.h"
+
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
@@ -25,7 +28,6 @@
 #include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
-#include "update_grid.h"
 #include "vectors.h"
 
 namespace {
@@ -336,6 +338,56 @@ void do_cell_packet_updates(std::span<Packet> packets, const int nts, const doub
 #endif
 }
 
+// fill the cellcache with values for the current cell, or invalidate by calling with nonemptymgi = -1
+void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi) {
+  // All entries of the cellcache stack must be flagged as empty at the
+  // onset of the new timestep by calling with nonemptymgi = -1
+
+  cacheslot.nonemptymgi = nonemptymgi;
+  cacheslot.chi_ff_nnionpart = -1.;
+
+  const int nelements = get_nelements();
+  for (int element = 0; element < nelements; element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      cacheslot.cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
+    }
+
+    if (nonemptymgi >= 0) {
+      for (int ion = 0; ion < nions; ion++) {
+        const int nlevels = get_nlevels(element, ion);
+        const auto uniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (int level = 0; level < nlevels; level++) {
+          cacheslot.alllevels_pops[uniquelevelindexstart + level] =
+              calculate_levelpop(nonemptymgi, element, ion, level);
+        }
+      }
+    }
+  }
+
+  std::ranges::fill(cacheslot.allphixstargets_corrphotoioncoeff, -99.);
+
+  for (int uniquelevelindex = 0; uniquelevelindex < std::ssize(cacheslot.alllevels_maprocessrates);
+       uniquelevelindex++) {
+    cacheslot.alllevels_maprocessrates[uniquelevelindex][0] = -99.;
+  }
+
+  if (nonemptymgi >= 0) {
+    std::ranges::fill(cacheslot.allcont_departureratios, -1.);
+
+    const auto nnetot = grid::get_nnetot(nonemptymgi);
+    for (int i = 0; i < globals::nbfcontinua; i++) {
+      const auto nnlevel = globals::cellcache[cellcacheslotid].alllevels_pops[globals::allcont.uniquelevelindex[i]];
+      cacheslot.allcont_nnlevel[i] = nnlevel;
+      cacheslot.allcont_keep[i] = nnlevel > 0 && keep_this_cont(globals::allcont.element[i], globals::allcont.ion[i],
+                                                                globals::allcont.level[i], nonemptymgi, nnetot);
+    }
+  }
+}
+
 }  // anonymous namespace
 
 // Move and update packets during the current timestep (nts)
@@ -350,6 +402,9 @@ void update_packets(const int nts, std::span<Packet> packets) {
 
   const auto time_update_packets_start = std::time(nullptr);
   printlnlog("timestep {}: start update_packets at time {}", nts, time_update_packets_start);
+  // invalidate the cellcache for the first packet update pass. It will be updated to the correct cell as packets are
+  // processed.
+  cellcache_change_cell(globals::cellcache[cellcacheslotid], -1);
   bool timestepcomplete = false;
   int passnumber = 0;
   while (!timestepcomplete) {
@@ -381,7 +436,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
 #endif
           {
             stats::increment(stats::Counter::UPDATECELL);
-            cellcache_change_cell(nonemptymgi);
+            cellcache_change_cell(globals::cellcache[cellcacheslotid], nonemptymgi);
           }
           packetgroupstart = pktindex;
         }
