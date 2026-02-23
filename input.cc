@@ -1602,7 +1602,7 @@ void setup_cellcache() {
       resize_exactly(globals::cellcache[cellcachenum].allphixstargets_corrphotoioncoeff, allphixstargetcount);
     }
     mem_usage_cellcache +=
-        (get_includedlevels() * ((2 * sizeof(double)) + sizeof(int))) + (allphixstargetcount * sizeof(double) * 2);
+        (get_includedlevels() * ((2 * sizeof(double)) + sizeof(int))) + (allphixstargetcount * sizeof(double));
 
     assert_always(chtransblocksize <= std::numeric_limits<int>::max());
     mem_usage_cellcache += chtransblocksize * sizeof(double);
