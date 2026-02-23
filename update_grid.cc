@@ -616,11 +616,6 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   // nts_prev is the previous timestep, unless this is timestep zero
   const double deltat = globals::timesteps[nts_prev].width;
 
-  cellcache_change_cell(-1);
-
-  // Do not use values which are saved in the cellcache within update_grid
-  use_cellcache = false;
-
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     radfield::normalise_bf_estimators(nts, nts_prev, titer, deltat);
   }
@@ -659,10 +654,6 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
     }
   }
 
-  // Now after all the relevant tasks of update_grid have been finished activate
-  // the use of the cellcache for what follows (update_packets)
-  use_cellcache = true;
-
   globals::max_path_step = std::min(1.e35, globals::rmax / 10.);
   printlnlog("max_path_step {:g}", globals::max_path_step);
 
@@ -674,59 +665,4 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   printlnlog("timestep {}: time after update grid on all processes (rank {} took {}, waited {}, total {} seconds)", nts,
              my_rank, time_update_grid_end_thisrank - sys_time_start_update_grid,
              std::time(nullptr) - time_update_grid_end_thisrank, std::time(nullptr) - sys_time_start_update_grid);
-}
-
-void cellcache_change_cell(const int nonemptymgi) {
-  // All entries of the cellcache stack must be flagged as empty at the
-  // onset of the new timestep. Also, boundary crossing?
-  // Calculate the level populations for this cell, and flag the other entries
-  // as empty.
-  auto& cacheslot = globals::cellcache[cellcacheslotid];
-  if (nonemptymgi == cacheslot.nonemptymgi) {
-    return;
-  }
-
-  cacheslot.nonemptymgi = nonemptymgi;
-  cacheslot.chi_ff_nnionpart = -1.;
-
-  const int nelements = get_nelements();
-  for (int element = 0; element < nelements; element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      cacheslot.cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
-    }
-
-    if (nonemptymgi >= 0) {
-      for (int ion = 0; ion < nions; ion++) {
-        const int nlevels = get_nlevels(element, ion);
-        const auto uniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-        for (int level = 0; level < nlevels; level++) {
-          cacheslot.alllevels_pops[uniquelevelindexstart + level] =
-              calculate_levelpop(nonemptymgi, element, ion, level);
-        }
-      }
-    }
-  }
-
-  std::ranges::fill(cacheslot.allphixstargets_corrphotoioncoeff, -99.);
-
-  for (int uniquelevelindex = 0; uniquelevelindex < std::ssize(cacheslot.alllevels_maprocessrates);
-       uniquelevelindex++) {
-    cacheslot.alllevels_maprocessrates[uniquelevelindex][0] = -99.;
-  }
-
-  if (nonemptymgi >= 0) {
-    std::ranges::fill(cacheslot.allcont_departureratios, -1.);
-
-    const auto nnetot = grid::get_nnetot(nonemptymgi);
-    for (int i = 0; i < globals::nbfcontinua; i++) {
-      const auto nnlevel = globals::cellcache[cellcacheslotid].alllevels_pops[globals::allcont.uniquelevelindex[i]];
-      cacheslot.allcont_nnlevel[i] = nnlevel;
-      cacheslot.allcont_keep[i] = nnlevel > 0 && keep_this_cont(globals::allcont.element[i], globals::allcont.ion[i],
-                                                                globals::allcont.level[i], nonemptymgi, nnetot);
-    }
-  }
 }

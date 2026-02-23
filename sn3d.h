@@ -59,7 +59,6 @@
 #include "constants.h"
 
 constexpr int cellcacheslotid = 0;
-inline bool use_cellcache = false;
 
 extern std::fstream output_file;
 

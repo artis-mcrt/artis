@@ -582,7 +582,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
       const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
 
       // photoionisation and collisional ionisation
-      const double R_ionisation = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi);
+      const double R_ionisation = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, false);
       const double C_ionisation =
           col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
