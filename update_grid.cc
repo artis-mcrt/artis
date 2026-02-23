@@ -618,9 +618,6 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 
   cellcache_change_cell(-1);
 
-  // Do not use values which are saved in the cellcache within update_grid
-  use_cellcache = false;
-
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     radfield::normalise_bf_estimators(nts, nts_prev, titer, deltat);
   }
@@ -658,10 +655,6 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
       }
     }
   }
-
-  // Now after all the relevant tasks of update_grid have been finished activate
-  // the use of the cellcache for what follows (update_packets)
-  use_cellcache = true;
 
   globals::max_path_step = std::min(1.e35, globals::rmax / 10.);
   printlnlog("max_path_step {:g}", globals::max_path_step);

@@ -172,7 +172,7 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       const double epsilon_trans = get_phixs_threshold(uniquelevelindex, phixstargetindex);
 
-      const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi);
+      const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, true);
       const double C = col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
       sum_up_higher += (R + C) * epsilon_current;
@@ -295,7 +295,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   const int nphixstargets = get_nphixstargets(uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
-    const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi);
+    const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, true);
     const double C = col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
     rate += (R + C) * epsilon_current;
     if (rate > targetrate) {

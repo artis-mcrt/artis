@@ -34,7 +34,6 @@ void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_sah
 
 [[gnu::pure]] [[nodiscard]] inline DEVICE_FUNC auto get_cellcache_levelpop(const int nonemptymgi,
                                                                            const int uniquelevelindex) -> double {
-  assert_testmodeonly(use_cellcache);
   assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
 
   const auto nn = globals::cellcache[cellcacheslotid].alllevels_pops[uniquelevelindex];

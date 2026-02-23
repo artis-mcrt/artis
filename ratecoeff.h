@@ -53,7 +53,7 @@ void setup_photoion_luts();
                                                       double W) -> double;
 
 [[nodiscard]] DEVICE_FUNC auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex,
-                                                     int nonemptymgi) -> double;
+                                                     int nonemptymgi, bool use_cellcache) -> double;
 [[nodiscard]] auto get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int nonemptymgi)
     -> double;
 
