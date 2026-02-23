@@ -1840,7 +1840,7 @@ void read_parameterfile(int rank) {
   std::istringstream{line} >> pre_zseed;
 
   if (pre_zseed > 0) {
-    printlnlog("input.txt specified random number seed is {}\n", pre_zseed);
+    printlnlog("input.txt specified random number seed is {}", pre_zseed);
   } else {
     pre_zseed = get_rng_random_seed();
     // broadcast randomly-generated seed from rank 0 to all ranks
