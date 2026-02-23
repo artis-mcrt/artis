@@ -32,6 +32,15 @@ void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_sah
   return sahafact;
 }
 
+// Calculate Saha factor divided exp(E_threshold / k_B * T)
+[[gnu::const]] [[nodiscard]] constexpr auto calculate_sahafact_over_e_to_hnuoverkt(const double g_lower,
+                                                                                   const double g_upper, const double T)
+    -> double {
+  const double result = SAHACONST * g_lower / g_upper * std::pow(T, -1.5);
+  assert_testmodeonly(std::isfinite(result));
+  return result;
+}
+
 [[gnu::pure]] [[nodiscard]] inline DEVICE_FUNC auto get_cellcache_levelpop(const int nonemptymgi,
                                                                            const int uniquelevelindex) -> double {
   assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
