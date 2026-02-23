@@ -1473,7 +1473,7 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
   return nne_allcells[nonemptymgi];
 }
 
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_oneoverfv(const int nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] auto get_oneoverfv(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
 
