@@ -657,52 +657,6 @@ void precalculate_ion_alpha_sp() {
   MPI_Barrier(globals::mpi_comm_node);
 }
 
-auto integrand_stimrecombination_custom_radfield(const double nu, void* const voidparas) -> double {
-  const auto& params = *(static_cast<const GSLIntegralParasGammaCorr*>(voidparas));
-  const auto& nu_edge = params.nu_edge;
-  const auto& photoion_xs = params.photoion_xs;
-  const auto& T_e = params.T_e;
-  const auto& nonemptymgi = params.nonemptymgi;
-
-  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
-
-  const double Jnu = radfield::radfield(nu, nonemptymgi);
-
-  // TODO: MK thesis page 41, use population ratios and Te?
-  return ONEOVERH * sigma_bf / nu * Jnu * exp(-HOVERKB * nu / T_e);
-}
-
-auto calculate_stimrecombcoeff_integral(const int element, const int lowerion, const int level,
-                                        const int phixstargetindex, const int nonemptymgi) -> double {
-  const double epsrel = 1e-3;
-
-  const double E_threshold = get_phixs_threshold(element, lowerion, level, phixstargetindex);
-  const double nu_threshold = ONEOVERH * E_threshold;
-  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
-
-  const auto T_e = grid::get_Te(nonemptymgi);
-  const auto intparas = GSLIntegralParasGammaCorr{
-      .nu_edge = nu_threshold,
-      .departure_ratio = 1.,  // not used, but must be set to something
-      .photoion_xs = get_phixs_table(element, lowerion, level),
-      .T_e = T_e,
-      .nonemptymgi = nonemptymgi,
-  };
-
-  const int upperionlevel = get_phixsupperlevel(element, lowerion, level, phixstargetindex);
-  const double sf = calculate_sahafact(stat_weight(element, lowerion, level),
-                                       stat_weight(element, lowerion + 1, upperionlevel), T_e, H * nu_threshold);
-
-  double error = 0.;
-
-  auto stimrecombcoeff =
-      integrator<integrand_stimrecombination_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsrel, &error);
-
-  stimrecombcoeff *= FOURPI * sf * get_phixsprobability(element, lowerion, level, phixstargetindex);
-
-  return stimrecombcoeff;
-}
-
 // Integrand to calculate the rate coefficient for photoionisation. Corrected for stimulated recombination.
 auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void* const voidparas) -> double {
   const auto& params = *(static_cast<const GSLIntegralParasGammaCorr*>(voidparas));
@@ -711,15 +665,10 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void* const vo
   const auto& photoion_xs = params.photoion_xs;
   const auto& T_e = params.T_e;
   const auto& nonemptymgi = params.nonemptymgi;
-
-#if (SEPARATE_STIMRECOMB)
-  const double corrfactor = 1.;
-#else
   double corrfactor = 1. - (departure_ratio * exp(-HOVERKB * nu / T_e));
   if (corrfactor < 0) {
     corrfactor = 0.;
   }
-#endif
 
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
@@ -739,9 +688,6 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
 
   const auto T_e = grid::get_Te(nonemptymgi);
 
-#if SEPARATE_STIMRECOMB
-  const double departure_ratio = 0.;  // zero the stimulated recomb contribution
-#else
   // stimulated recombination is negative photoionisation
   const double nnlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, loweruniquelevelindex)
                                        : calculate_levelpop(nonemptymgi, element, ion, level);
@@ -756,7 +702,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   if (!std::isfinite(departure_ratio)) {
     departure_ratio = 0.;
   }
-#endif
+
   const auto intparas = GSLIntegralParasGammaCorr{
       .nu_edge = nu_threshold,
       .departure_ratio = departure_ratio,
@@ -1025,7 +971,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
         const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
         recomb_coeff += col_recombination_ratecoeff(T_e, nne, element, upperion, upper, lower, epsilon_trans);
       } else {
-        recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower, nonemptymgi);
+        recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower);
       }
 
       const double alpha_level = recomb_coeff / nne;
@@ -1102,32 +1048,6 @@ auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, cons
   const double T_R = grid::get_TR(nonemptymgi);
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   return W * interpolate_corrphotoioncoeff(uniquelevelindex, phixstargetindex, T_R);
-}
-
-// Returns the stimulated recombination rate coefficient. multiply by upper level population and nne to get rate
-auto get_stimrecombcoeff(int element, const int lowerion, const int level, const int phixstargetindex,
-                         const int nonemptymgi) -> double {
-  double stimrecombcoeff = -1.;
-#if (SEPARATE_STIMRECOMB)
-  if (use_cellcache) {
-    const auto uniquelevelindex = get_uniquelevelindex(element, lowerion, level);
-    const auto allphixstargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
-    stimrecombcoeff = globals::cellcache[cellcacheslotid].allphixstargets_stimrecombcoeff[allphixstargetindex];
-  }
-#endif
-
-  if (!use_cellcache || stimrecombcoeff < 0) {
-    stimrecombcoeff = calculate_stimrecombcoeff_integral(element, lowerion, level, phixstargetindex, nonemptymgi);
-
-#if (SEPARATE_STIMRECOMB)
-    if (use_cellcache) {
-      globals::cellcache[cellcacheslotid].allphixstargets_stimrecombcoeff[allphixstargetindex] = stimrecombcoeff;
-    }
-#endif
-  }
-  assert_always(std::isfinite(stimrecombcoeff));
-
-  return stimrecombcoeff;
 }
 
 DEVICE_FUNC auto get_bfcoolingcoeff(const int element, const int lowerion, const int lowerionlevel,

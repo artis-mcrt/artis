@@ -46,8 +46,6 @@ void setup_photoion_luts();
 [[nodiscard]] DEVICE_FUNC auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e)
     -> double;
 [[nodiscard]] DEVICE_FUNC auto get_spontrecombcoeff(int uniquelevelindex, int phixstargetindex, float T_e) -> double;
-[[nodiscard]] auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int nonemptymgi)
-    -> double;
 
 [[nodiscard]] DEVICE_FUNC auto get_bfcoolingcoeff(int element, int lowerion, int lowerionlevel, int phixstargetindex,
                                                   float T_e) -> double;

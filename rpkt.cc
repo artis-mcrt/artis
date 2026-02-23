@@ -825,24 +825,22 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
             photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, nu);
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
-        if constexpr (!SEPARATE_STIMRECOMB) {
-          double departure_ratio = globals::cellcache[cellcacheslotid].allcont_departureratios[i];
-          if (!USECELLHISTANDUPDATEPHIXSLIST || departure_ratio < 0) {
-            const int upper = allcont_upperlevel[i];
-            const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
-                                               ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upper)
-                                               : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
-            const double sf = calculate_sahafact(stat_weight(element, ion, level), stat_weight(element, ion + 1, upper),
-                                                 T_e, H * nu_edge);
-            departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
-            if (USECELLHISTANDUPDATEPHIXSLIST) {
-              globals::cellcache[cellcacheslotid].allcont_departureratios[i] = departure_ratio;
-            }
+        double departure_ratio = globals::cellcache[cellcacheslotid].allcont_departureratios[i];
+        if (!USECELLHISTANDUPDATEPHIXSLIST || departure_ratio < 0) {
+          const int upper = allcont_upperlevel[i];
+          const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
+                                             ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upper)
+                                             : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
+          const double sf = calculate_sahafact(stat_weight(element, ion, level), stat_weight(element, ion + 1, upper),
+                                               T_e, H * nu_edge);
+          departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
+          if (USECELLHISTANDUPDATEPHIXSLIST) {
+            globals::cellcache[cellcacheslotid].allcont_departureratios[i] = departure_ratio;
           }
-
-          const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
-          corrfactor = std::max(0., 1 - stimfactor);  // photoionisation minus stimulated recombination
         }
+
+        const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
+        corrfactor = std::max(0., 1 - stimfactor);  // photoionisation minus stimulated recombination
 
         sigma_contr = sigma_bf * allcont_probability[i] * corrfactor;
 

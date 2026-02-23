@@ -597,7 +597,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
 
       // recombination
       if (upper <= maxrecombininglevel) {
-        const double R_recomb = rad_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, nonemptymgi);
+        const double R_recomb = rad_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level);
         const double C_recomb = col_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, epsilon_trans);
 
         const auto matrix_index_upper_upper = (upper_index * nlte_dimension) + upper_index;

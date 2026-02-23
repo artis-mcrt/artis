@@ -1600,9 +1600,6 @@ void setup_cellcache() {
 
     if (allphixstargetcount > 0) {
       resize_exactly(globals::cellcache[cellcachenum].allphixstargets_corrphotoioncoeff, allphixstargetcount);
-      if constexpr (SEPARATE_STIMRECOMB) {
-        resize_exactly(globals::cellcache[cellcachenum].allphixstargets_stimrecombcoeff, allphixstargetcount);
-      }
     }
     mem_usage_cellcache +=
         (get_includedlevels() * ((2 * sizeof(double)) + sizeof(int))) + (allphixstargetcount * sizeof(double) * 2);
