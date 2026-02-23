@@ -675,9 +675,6 @@ void cellcache_change_cell(const int nonemptymgi) {
   // Calculate the level populations for this cell, and flag the other entries
   // as empty.
   auto& cacheslot = globals::cellcache[cellcacheslotid];
-  if (nonemptymgi == cacheslot.nonemptymgi) {
-    return;
-  }
 
   cacheslot.nonemptymgi = nonemptymgi;
   cacheslot.chi_ff_nnionpart = -1.;
