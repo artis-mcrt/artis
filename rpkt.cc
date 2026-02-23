@@ -754,10 +754,8 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   assert_always(!USECELLHISTANDUPDATEPHIXSLIST || !(phixslist.chi_bf_sum.empty()));
 
   double chi_bf_sum = 0.;
-  if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-    if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-      std::ranges::fill(phixslist.groundcont_gamma_contr, 0.);
-    }
+  if constexpr (USECELLHISTANDUPDATEPHIXSLIST && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
+    std::ranges::fill(phixslist.groundcont_gamma_contr, 0.);
   }
 
   const auto T_e = grid::get_Te(nonemptymgi);
@@ -809,8 +807,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
         (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) ? allcont_bfestimindex[i] : -1;
     double sigma_contr = 0.;
 
-    // The bf process happens only if the current cell contains
-    // the involved atomic species
+    // The bf process happens only if the current cell contains the involved atomic species
     const bool should_keep_this_cont = USECELLHISTANDUPDATEPHIXSLIST
                                            ? globals::cellcache[cellcacheslotid].allcont_keep[i]
                                            : keep_this_cont(element, ion, level, nonemptymgi, nnetot);
