@@ -390,6 +390,7 @@ void precalculate_rate_coefficient_integrals() {
             assert_always(sahafact >= 0.);
             assert_always(std::isfinite(sahafact));
             assert_always(sahafact_modified >= 0.);
+            assert_always(std::isfinite(sahafact_modified));
 
             assert_always(!get_phixs_table(element, ion, level).empty());
             // the threshold of the first target gives nu of the first phixstable point
