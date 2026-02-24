@@ -386,11 +386,10 @@ void precalculate_rate_coefficient_integrals() {
             const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
 
             const double sahafact = calculate_sahafact(statw_lower, statw_upper, T_e, E_threshold);
-            // const double sahafact_modified = calculate_sahafact_over_e_to_hnuoverkt(statw_lower, statw_upper, T_e);
             const double sahafact_modified = SAHACONST * statw_lower / statw_upper * std::pow(T_e, -1.5);
-            // TODO: asserts and that
             assert_always(sahafact >= 0.);
-            // assert_always(std::isfinite(sahafact));
+            assert_always(std::isfinite(sahafact));
+            assert_always(sahafact_modified >= 0.);
 
             assert_always(!get_phixs_table(element, ion, level).empty());
             // the threshold of the first target gives nu of the first phixstable point
