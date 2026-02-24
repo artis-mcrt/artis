@@ -24,6 +24,7 @@ void calculate_cellpartfuncts(int nonemptymgi, int element);
     -> std::vector<double>;
 void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_saha);
 
+// TODO: remove these functions once implementation is done
 // calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 [[gnu::const]] [[nodiscard]] constexpr auto calculate_sahafact(const double g_lower, const double g_upper,
                                                                const double T, const double E_threshold) -> double {
