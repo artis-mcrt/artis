@@ -403,9 +403,9 @@ void precalculate_rate_coefficient_integrals() {
 
             if (!std::isfinite(alpha_sp) || alpha_sp < 0) {
               printlnlog(
-                  "WARNING: alpha_sp was negative or non-finite for level {} Te {:g}. alpha_sp {:g} sfac {:g} "
+                  "WARNING: alpha_sp was negative or non-finite for level {} Te {:g}. alpha_sp {:g} sfac_mod {:g} "
                   "phixstargetindex {} phixstargetprobability {:g}",
-                  level, T_e, alpha_sp, sahafact, phixstargetindex, phixstargetprobability);
+                  level, T_e, alpha_sp, sahafact_modified, phixstargetindex, phixstargetprobability);
               alpha_sp = 0;
             }
             spontrecombcoeffs[bflutindex] = alpha_sp;
