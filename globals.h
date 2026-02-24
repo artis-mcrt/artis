@@ -1,7 +1,6 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#include <array>
 #include <cmath>
 #include <cstddef>
 #include <deque>
@@ -264,7 +263,7 @@ struct CellCache {
   int nonemptymgi{-1};  // non-empty model grid index for this cache slot
   std::vector<double> cooling_contrib;  // Cooling contributions by the different processes.
   std::vector<double> alllevels_pops;
-  std::vector<std::array<double, MA_ACTION_COUNT>> alllevels_maprocessrates;  // rates for macroatom processes
+  std::vector<double> alllevels_maprocessrates;  // rates for macroatom processes
   std::vector<double> allmacroatomictransitions;  // cumulative macroatom transition rates for all levels
   std::vector<double> allcont_departureratios;
   std::vector<double> allcont_nnlevel;

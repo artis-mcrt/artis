@@ -2051,7 +2051,7 @@ void setup_cellcache() {
       }
     }
     resize_exactly(cacheslot.alllevels_pops, get_includedlevels());
-    resize_exactly(cacheslot.alllevels_maprocessrates, get_includedlevels());
+    resize_exactly(cacheslot.alllevels_maprocessrates, get_includedlevels() * MA_ACTION_COUNT);
 
     if (allphixstargetcount > 0) {
       resize_exactly(cacheslot.allphixstargets_corrphotoioncoeff, allphixstargetcount);
@@ -2065,8 +2065,8 @@ void setup_cellcache() {
       resize_exactly(cacheslot.allmacroatomictransitions, chtransblocksize);
     }
 
-    for (auto& alllevels_maprocessrates : cacheslot.alllevels_maprocessrates) {
-      alllevels_maprocessrates[0] = -99.;
+    for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
+      cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
     }
 
     assert_always(globals::nbfcontinua >= 0);

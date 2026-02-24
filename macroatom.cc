@@ -57,11 +57,10 @@ std::fstream macroatom_file;
       globals::alllevels.matransblock_start[uniquelevelindex], get_ndowntrans(uniquelevelindex) - 1);
 }
 
-auto calculate_macroatom_transitionrates(const int nonemptymgi, const int element, const int ion, const int level,
-                                         const int ionuniquelevelindexstart, const double t_mid,
-                                         const globals::AllTransitions& alltrans) {
-  auto processrates = std::array<double, MA_ACTION_COUNT>{};
-
+void calculate_macroatom_transitionrates(std::span<double> levelrates, const int nonemptymgi, const int element,
+                                         const int ion, const int level, const int ionuniquelevelindexstart,
+                                         const double t_mid, const globals::AllTransitions& alltrans) {
+  assert_testmodeonly(std::ssize(levelrates) == MA_ACTION_COUNT);
   const auto uniquelevelindex = ionuniquelevelindexstart + level;
 
   const auto transblock = std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions};
@@ -103,9 +102,9 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     arr_sum_epstrans_rad_deexc[i] = sum_raddeexc;
     arr_sum_internal_down_same[i] = sum_internal_down_same;
   }
-  processrates[MA_ACTION_RADDEEXC] = sum_raddeexc;
-  processrates[MA_ACTION_COLDEEXC] = sum_coldeexc;
-  processrates[MA_ACTION_INTERNALDOWNSAME] = sum_internal_down_same;
+  levelrates[MA_ACTION_RADDEEXC] = sum_raddeexc;
+  levelrates[MA_ACTION_COLDEEXC] = sum_coldeexc;
+  levelrates[MA_ACTION_INTERNALDOWNSAME] = sum_internal_down_same;
 
   // Calculate sum for upward internal transitions
   // transitions within the current ionisation stage
@@ -129,9 +128,9 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
     sum_internal_up_same += (R + C + NT) * epsilon_current;
     arr_sum_internal_up_same[ii] = sum_internal_up_same;
   }
-  processrates[MA_ACTION_INTERNALUPSAME] = sum_internal_up_same;
+  levelrates[MA_ACTION_INTERNALUPSAME] = sum_internal_up_same;
 
-  assert_always(std::isfinite(processrates[MA_ACTION_INTERNALUPSAME]));
+  assert_always(std::isfinite(levelrates[MA_ACTION_INTERNALUPSAME]));
 
   // Downward transitions to lower ionisation stages:
   // radiative/collisional recombination and internal downward jumps
@@ -155,9 +154,9 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
       sum_colrecomb += C * epsilon_trans;
     }
   }
-  processrates[MA_ACTION_INTERNALDOWNLOWER] = sum_internal_down_lower;
-  processrates[MA_ACTION_RADRECOMB] = sum_radrecomb;
-  processrates[MA_ACTION_COLRECOMB] = sum_colrecomb;
+  levelrates[MA_ACTION_INTERNALDOWNLOWER] = sum_internal_down_lower;
+  levelrates[MA_ACTION_RADRECOMB] = sum_radrecomb;
+  levelrates[MA_ACTION_COLRECOMB] = sum_colrecomb;
 
   // Transitions to higher ionisation stages
   double sum_up_highernt = 0.;
@@ -178,14 +177,12 @@ auto calculate_macroatom_transitionrates(const int nonemptymgi, const int elemen
       sum_up_higher += (R + C) * epsilon_current;
     }
   }
-  processrates[MA_ACTION_INTERNALUPHIGHERNT] = sum_up_highernt;
-  processrates[MA_ACTION_INTERNALUPHIGHER] = sum_up_higher;
+  levelrates[MA_ACTION_INTERNALUPHIGHERNT] = sum_up_highernt;
+  levelrates[MA_ACTION_INTERNALUPHIGHER] = sum_up_higher;
 
-  const auto rate_total = std::ranges::fold_left(processrates, 0.0, std::plus<>{});
+  const auto rate_total = std::ranges::fold_left(levelrates, 0.0, std::plus<>{});
   // a level cannot have all zero or non-finite transition rates
   assert_always(rate_total > 0.0 && std::isfinite(rate_total));
-
-  return processrates;
 }
 
 // radiative deexcitation
@@ -363,7 +360,8 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
     const int uniquelevelindex = ionuniquelevelindexstart + level;
 
     const double epsilon_current = epsilon(uniquelevelindex);
-    auto& processrates = globals::cellcache[cellcacheslotid].alllevels_maprocessrates[uniquelevelindex];
+    auto levelrates = std::span{globals::cellcache[cellcacheslotid].alllevels_maprocessrates}.subspan(
+        uniquelevelindex * MA_ACTION_COUNT, MA_ACTION_COUNT);
     {
 #if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
       const auto lock = std::lock_guard<std::mutex>(globals::mutex_cellcachemacroatom[uniquelevelindex]);
@@ -372,15 +370,15 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
 
       // If there are no precalculated rates available then calculate them
-      if (processrates[0] < 0.) {
-        processrates = calculate_macroatom_transitionrates(nonemptymgi, element, ion, level, ionuniquelevelindexstart,
-                                                           t_mid, globals::alltrans);
+      if (levelrates[0] < 0.) {
+        calculate_macroatom_transitionrates(levelrates, nonemptymgi, element, ion, level, ionuniquelevelindexstart,
+                                            t_mid, globals::alltrans);
       }
     }
 
     // select transition according to probabilities
     std::array<double, MA_ACTION_COUNT> cumulative_transitions{};
-    std::partial_sum(processrates.cbegin(), processrates.cend(), cumulative_transitions.begin());
+    std::partial_sum(levelrates.begin(), levelrates.end(), cumulative_transitions.begin());
 
     const double randomrate = rng_uniform() * cumulative_transitions[MA_ACTION_COUNT - 1];
 
@@ -393,7 +391,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
         do_macroatom_raddeexcitation(pkt, ionuniquelevelindexstart, uniquelevelindex, activatingline, epsilon_current,
-                                     processrates[MA_ACTION_RADDEEXC]);
+                                     levelrates[MA_ACTION_RADDEEXC]);
 
         if constexpr (LOG_MACROATOM) {
           macroatom_file << std::format(
@@ -424,7 +422,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       case MA_ACTION_INTERNALDOWNSAME: {
         stats::increment(stats::Counter::INTERACTIONS);
         // Randomly select the occurring transition
-        const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNSAME];
+        const double targetval = rng_uniform() * levelrates[MA_ACTION_INTERNALDOWNSAME];
 
         // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
         const auto sum_internal_down_same_exceptlast = get_sum_internal_down_same_exceptlast(uniquelevelindex);
@@ -439,7 +437,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       case MA_ACTION_RADRECOMB: {
         // Radiative recombination of MA: emitt a continuum-rpkt
 
-        level = do_macroatom_radrecomb(pkt, nonemptymgi, element, ion, level, processrates[MA_ACTION_RADRECOMB]);
+        level = do_macroatom_radrecomb(pkt, nonemptymgi, element, ion, level, levelrates[MA_ACTION_RADRECOMB]);
         ion -= 1;
         end_packet = true;
         break;
@@ -463,7 +461,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         stats::increment(stats::Counter::MA_STAT_INTERNALDOWNLOWER);
 
         // Randomly select the occurring transition
-        const double targetrate = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNLOWER];
+        const double targetrate = rng_uniform() * levelrates[MA_ACTION_INTERNALDOWNLOWER];
         double rate = 0.;
 
         const int nlevels = get_nlevels_ionising(element, ion - 1);
@@ -494,7 +492,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         // randomly select the occurring transition
         const auto sum_internal_up_same_exceptlast = get_sum_internal_up_same_exceptlast(uniquelevelindex);
 
-        const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALUPSAME];
+        const double targetval = rng_uniform() * levelrates[MA_ACTION_INTERNALUPSAME];
 
         // first sum_internal_up_same[i] such that sum_internal_up_same[i] > targetval
         const auto uptransindex = std::ranges::upper_bound(sum_internal_up_same_exceptlast, targetval) -
@@ -513,7 +511,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         stats::increment(stats::Counter::MA_STAT_INTERNALUPHIGHER);
 
         level = do_macroatom_ionisation(nonemptymgi, element, ion, level, epsilon_current,
-                                        processrates[MA_ACTION_INTERNALUPHIGHER]);
+                                        levelrates[MA_ACTION_INTERNALUPHIGHER]);
         ion += 1;
 
         break;

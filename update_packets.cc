@@ -381,9 +381,8 @@ void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi)
 
   std::ranges::fill(cacheslot.allphixstargets_corrphotoioncoeff, -99.);
 
-  for (int uniquelevelindex = 0; uniquelevelindex < std::ssize(cacheslot.alllevels_maprocessrates);
-       uniquelevelindex++) {
-    cacheslot.alllevels_maprocessrates[uniquelevelindex][0] = -99.;
+  for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
+    cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
   }
 
   std::ranges::fill(cacheslot.allcont_departureratios, -1.);
