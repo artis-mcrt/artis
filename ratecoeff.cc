@@ -387,7 +387,7 @@ void precalculate_rate_coefficient_integrals() {
 
             const double sahafact = calculate_sahafact(statw_lower, statw_upper, T_e, E_threshold);
             // const double sahafact_modified = calculate_sahafact_over_e_to_hnuoverkt(statw_lower, statw_upper, T_e);
-            const double sahafact_modified = SAHACONST * g_lower / g_upper * std::pow(T, -1.5);
+            const double sahafact_modified = SAHACONST * statw_lower / statw_upper * std::pow(T_e, -1.5);
             // TODO: asserts and that
             assert_always(sahafact >= 0.);
             // assert_always(std::isfinite(sahafact));
