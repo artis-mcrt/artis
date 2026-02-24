@@ -270,7 +270,7 @@ auto alpha_sp_integrand(const double nu, void* const voidparas) -> double {
   const auto& photoion_xs = params.photoion_xs;
 
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge - nu);
-  const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu_edge - nu, 2) * exp(-HOVERKB * (nu_edge - nu) / T);
+  const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu_edge - nu, 2) * exp(HOVERKB * nu / T);
   // in formula this looks like
   // x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
 
