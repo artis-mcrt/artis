@@ -271,8 +271,7 @@ auto alpha_sp_integrand(const double nu, void* const voidparas) -> double {
 
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge - nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu_edge - nu, 2) * exp(HOVERKB * nu / T);
-  // with the substitution u = nu_edge - nu (integration variable 'nu' here is u), the formula looks like
-  // x = sigma_bf/H/(nu_edge - nu) * 2*H*pow(nu_edge - nu,3)/pow(CLIGHT,2) * exp(-H*(nu_edge - nu)/KB/T);
+  // with the substitution u = nu_edge - nu (integration variable 'nu' here is u)
 
   // set contributions from Lyman continuum artificially to zero to overcome it's large opacity
   return x;
@@ -398,9 +397,9 @@ void precalculate_rate_coefficient_integrals() {
                 .nu_edge = nu_threshold, .T_e = T_e, .photoion_xs = get_phixs_table(element, ion, level)};
 
             // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
-            auto alpha_sp = integrator<alpha_sp_integrand>(intparas, nu_threshold - nu_max_phixs, 0,
+            auto alpha_sp = FOURPI * sahafact_modified * phixstargetprobability *
+                            integrator<alpha_sp_integrand>(intparas, nu_threshold - nu_max_phixs, 0,
                                                            RATECOEFF_INTEGRAL_ACCURACY, &error);
-            alpha_sp *= FOURPI * sahafact_modified * phixstargetprobability;
 
             if (!std::isfinite(alpha_sp) || alpha_sp < 0) {
               printlnlog(
