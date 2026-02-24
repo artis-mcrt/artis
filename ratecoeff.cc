@@ -271,8 +271,8 @@ auto alpha_sp_integrand(const double nu, void* const voidparas) -> double {
 
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge - nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu_edge - nu, 2) * exp(HOVERKB * nu / T);
-  // in formula this looks like
-  // x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
+  // with the substitution u = nu_edge - nu (integration variable 'nu' here is u), the formula looks like
+  // x = sigma_bf/H/(nu_edge - nu) * 2*H*pow(nu_edge - nu,3)/pow(CLIGHT,2) * exp(-H*(nu_edge - nu)/KB/T);
 
   // set contributions from Lyman continuum artificially to zero to overcome it's large opacity
   return x;
