@@ -397,17 +397,11 @@ void precalculate_rate_coefficient_integrals() {
                 .nu_edge = nu_threshold, .T_e = T_e, .photoion_xs = get_phixs_table(element, ion, level)};
 
             // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
-            auto alpha_sp = FOURPI * sahafact_modified * phixstargetprobability *
-                            integrator<alpha_sp_integrand>(intparas, nu_threshold - nu_max_phixs, 0,
-                                                           RATECOEFF_INTEGRAL_ACCURACY, &error);
+            const auto alpha_sp = FOURPI * sahafact_modified * phixstargetprobability *
+                                  integrator<alpha_sp_integrand>(intparas, nu_threshold - nu_max_phixs, 0,
+                                                                 RATECOEFF_INTEGRAL_ACCURACY, &error);
 
-            if (!std::isfinite(alpha_sp) || alpha_sp < 0) {
-              printlnlog(
-                  "WARNING: alpha_sp was negative or non-finite for level {} Te {:g}. alpha_sp {:g} sfac_mod {:g} "
-                  "phixstargetindex {} phixstargetprobability {:g}",
-                  level, T_e, alpha_sp, sahafact_modified, phixstargetindex, phixstargetprobability);
-              alpha_sp = 0;
-            }
+            assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
             spontrecombcoeffs[bflutindex] = alpha_sp;
 
             if constexpr (USE_LUT_PHOTOION) {
