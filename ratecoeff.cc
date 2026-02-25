@@ -263,15 +263,16 @@ void write_ratecoeff_dat(const std::string& adatafile_hash, const std::string& c
 }
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
-auto alpha_sp_integrand(const double nu, void* const voidparas) -> double {
+auto alpha_sp_integrand(const double nu_edge_minus_nu, void* const voidparas) -> double {
   const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
   const auto& nu_edge = params.nu_edge;
   const auto& T = params.T_e;
   const auto& photoion_xs = params.photoion_xs;
 
-  const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge - nu);
-  const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu_edge - nu, 2) * exp(HOVERKB * nu / T);
-  // with the substitution u = nu_edge - nu (integration variable 'nu' here is u)
+  const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge - nu_edge_minus_nu);
+  const double x =
+      TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu_edge - nu_edge_minus_nu, 2) * exp(HOVERKB * nu_edge_minus_nu / T);
+  // with the substitution u = nu_edge - nu (integration variable 'nu_edge_minus_nu' here is u)
 
   // set contributions from Lyman continuum artificially to zero to overcome it's large opacity
   return x;
