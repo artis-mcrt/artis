@@ -64,6 +64,8 @@ else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := NVHPC
 	CXX_STD := c++23
+	# to use the pixi installed libstdc++
+# 	CXXFLAGS += --gcc-toolchain=$(PWD)/.pixi/envs/default/bin -Wl,-rpath,$(PWD)/.pixi/envs/default/lib
 else
 	$(warning Unknown compiler)
 	COMPILER_NAME := unknown
