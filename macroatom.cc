@@ -171,7 +171,7 @@ void calculate_macroatom_transitionrates(std::span<double> levelrates, const int
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       const double epsilon_trans = get_phixs_threshold(uniquelevelindex, phixstargetindex);
 
-      const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, true, oneoverfv);
+      const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, true);
       const double C =
           col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, oneoverfv);
 
