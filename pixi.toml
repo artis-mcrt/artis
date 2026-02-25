@@ -1,0 +1,16 @@
+[workspace]
+channels = ["conda-forge"]
+name = "artis"
+platforms = ["linux-64", "osx-arm64"]
+version = "0.1.0"
+
+[tasks.make]
+cmd = "make --check-symlink-times --jobs=$(nproc --all)"
+
+[dependencies]
+gcc = ">=15.1.0"
+gxx = ">=15.1.0"
+openmpi = ">=5.0.8"
+
+[activation.env]
+OMPI_CXX = "g++"
