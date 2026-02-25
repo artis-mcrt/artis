@@ -63,17 +63,6 @@ jobs:
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
-            # cache this for classicmode_3d because the super low integration tolerance makes generation of the file very slow
-            # we still need to make sure that the same file is being generated though, so generate it for classicmode_1d
-            - name: Cache ratecoeff.dat
-              if: ${{ startsWith(matrix.testname, 'classicmode_3d') }}
-              uses: actions/cache@v5
-              with:
-                  path: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
-                  key: tests/${{ matrix.testname }}_testrun/ratecoeff.dat-${{ github.run_id }}
-                  restore-keys: |
-                      tests/${{ matrix.testname }}_testrun/ratecoeff.dat-
-
             - name: Cache test atomic data
               if: ${{ !startsWith(matrix.testname, 'classicmode') }}
               uses: actions/cache@v5
