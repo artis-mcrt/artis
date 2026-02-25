@@ -301,7 +301,7 @@ auto compare_packet_order(const Packet& p1, const Packet& p2) -> bool {
   if (!esc1 && esc2) {
     return true;
   }
-  if (esc1) {
+  if (esc1 && !esc2) {
     return false;
   }
 
