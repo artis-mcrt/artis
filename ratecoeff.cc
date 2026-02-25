@@ -331,16 +331,17 @@ auto approx_bfheating_integrand(const double nu, void* const voidparas) -> doubl
 // on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 // formula. The radiation fields dependence on W is taken into account by multiplying
 // the resulting expression with the correct W later on.
-auto bfcooling_integrand(const double nu, void* const voidparas) -> double {
+auto bfcooling_integrand(const double nu_edge_minus_nu, void* const voidparas) -> double {
   const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
   const auto& nu_edge = params.nu_edge;
   const auto& T = params.T_e;
   const auto& photoion_xs = params.photoion_xs;
 
-  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge - nu_edge_minus_nu);
 
   // return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED * pow(nu,3) * exp(-HOVERKB*nu/T);
-  return sigma_bf * (nu - nu_edge) * TWOHOVERCLIGHTSQUARED * nu * nu * exp(-HOVERKB * nu / T);
+  return sigma_bf * nu_edge_minus_nu * TWOHOVERCLIGHTSQUARED * (nu_edge - nu_edge_minus_nu) *
+         (nu_edge - nu_edge_minus_nu) * exp(HOVERKB * nu_edge_minus_nu / T);
 }
 
 void precalculate_rate_coefficient_integrals() {
@@ -381,10 +382,7 @@ void precalculate_rate_coefficient_integrals() {
             double error{NAN};
             const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
 
-            const double sahafact = calculate_sahafact(statw_lower, statw_upper, T_e, E_threshold);
             const double sahafact_modified = SAHACONST * statw_lower / statw_upper * std::pow(T_e, -1.5);
-            assert_always(sahafact >= 0.);
-            assert_always(std::isfinite(sahafact));
             assert_always(sahafact_modified >= 0.);
             assert_always(std::isfinite(sahafact_modified));
 
@@ -425,16 +423,11 @@ void precalculate_rate_coefficient_integrals() {
               bfheating_coeffs[bflutindex] = this_bfheating_coeff;
             }
 
-            auto this_bfcooling_coeff = integrator<bfcooling_integrand>(intparas, nu_threshold, nu_max_phixs,
-                                                                        RATECOEFF_INTEGRAL_ACCURACY, &error);
-            this_bfcooling_coeff *= FOURPI * sahafact * phixstargetprobability;
-            if (!std::isfinite(this_bfcooling_coeff) || this_bfcooling_coeff < 0) {
-              printlnlog(
-                  "WARNING: bfcooling_coeff was negative or non-finite for level {} Te {:g}. bfcooling_coeff {:g} sfac "
-                  "{:g} phixstargetindex {} phixstargetprobability {:g}",
-                  level, T_e, this_bfcooling_coeff, sahafact, phixstargetindex, phixstargetprobability);
-              this_bfcooling_coeff = 0;
-            }
+            const auto this_bfcooling_coeff = FOURPI * sahafact_modified * phixstargetprobability *
+                                              integrator<bfcooling_integrand>(intparas, 0, nu_threshold - nu_max_phixs,
+                                                                              RATECOEFF_INTEGRAL_ACCURACY, &error);
+
+            assert_always(std::isfinite(this_bfcooling_coeff) && this_bfcooling_coeff >= 0);
             bfcooling_coeffs[bflutindex] = this_bfcooling_coeff;
           }
         }
