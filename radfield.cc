@@ -874,8 +874,9 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
   }
 }
 
-DEVICE_FUNC auto get_bfrate_estimator(const int element, const int lowerion, const int lower,
-                                      const int phixstargetindex, const int nonemptymgi) -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_bfrate_estimator(const int element, const int lowerion,
+                                                                  const int lower, const int phixstargetindex,
+                                                                  const int nonemptymgi) -> double {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {
