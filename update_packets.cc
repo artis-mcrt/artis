@@ -291,18 +291,25 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
   }
 }
 
-auto compare_packet_order(const Packet& p1, const Packet& p2) -> bool {
+auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_end) -> bool {
   // return true if packet p1 goes before p2
 
-  // move escaped packets to the end of the list for better performance
-  const bool esc1 = (p1.type == TYPE_ESCAPE);
-  const bool esc2 = (p2.type == TYPE_ESCAPE);
+  // first order by whether the packet has reached the end of the timestep or escaped (both of which mean it won't be
+  // updated anymore by update_packets in this timestep)
+  const auto fn_prop_status = [ts_end](const Packet& pkt) {
+    if (pkt.type == TYPE_ESCAPE) {
+      return 2;
+    }
+    if (pkt.prop_time >= ts_end) {
+      return 1;
+    }
+    return 0;
+  };
 
-  if (!esc1 && esc2) {
-    return true;
-  }
-  if (esc1 && !esc2) {
-    return false;
+  const auto propstatus1 = fn_prop_status(p1);
+  const auto propstatus2 = fn_prop_status(p2);
+  if (propstatus1 != propstatus2) {
+    return propstatus1 < propstatus2;
   }
 
   // for both non-escaped packets, order by descending cell density
@@ -404,7 +411,8 @@ void update_packets(const int nts, std::span<Packet> packets) {
   while (!timestepcomplete) {
     const auto sys_time_start_pass = std::time(nullptr);
 
-    std::ranges::SORT_OR_STABLE_SORT(packets, compare_packet_order);
+    std::ranges::SORT_OR_STABLE_SORT(
+        packets, [ts_end](const Packet& p1, const Packet& p2) { return compare_packet_order(p1, p2, ts_end); });
 
     const int count_pktupdates = static_cast<int>(std::ranges::count_if(
         packets, [ts_end](const auto& pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
