@@ -291,16 +291,16 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
   }
 }
 
-enum class PropStatus { Active, Complete, Escaped };
+enum class PacketPropStatus { Active = 0, Complete = 1, Escaped = 2 };
 
-constexpr auto get_prop_status(const Packet& pkt, const double ts_end) {
+constexpr auto get_prop_status(const Packet& pkt, const double ts_end) -> PacketPropStatus {
   if (pkt.type == TYPE_ESCAPE) {
-    return PropStatus::Escaped;
+    return PacketPropStatus::Escaped;
   }
   if (pkt.prop_time >= ts_end) {
-    return PropStatus::Complete;
+    return PacketPropStatus::Complete;
   }
-  return PropStatus::Active;
+  return PacketPropStatus::Active;
 }
 
 auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_end) -> bool {
@@ -317,7 +317,7 @@ auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_en
 
   // if both packets are in the same non-active state (escaped or already at/after ts_end),
   // their relative order is irrelevant for this timestep, so avoid the expensive density ordering
-  if (propstatus1 != PropStatus::Active) {
+  if (propstatus1 != PacketPropStatus::Active) {
     return false;
   }
 
@@ -428,9 +428,9 @@ void update_packets(const int nts, std::span<Packet> packets) {
     const auto updatecellcounter_beforepass = stats::get_counter(stats::Counter::UPDATECELL);
     std::ptrdiff_t packetgroupstart = 0;
 
-    for (auto& pkt : packets) {
-      const auto pktindex = &pkt - packets.data();
-      if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
+    for (int pktindex = 0; pktindex < std::ssize(packets); pktindex++) {
+      const auto& pkt = packets[pktindex];
+      if (get_prop_status(pkt, ts_end) == PacketPropStatus::Active) {
         const int mgi = grid::get_propcell_modelgridindex(pkt.where);
         const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
         const bool cellcache_change_cell_required =
