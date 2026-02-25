@@ -312,7 +312,13 @@ auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_en
     return propstatus1 < propstatus2;
   }
 
-  // for both non-escaped packets, order by descending cell density
+  // if both packets are in the same non-active state (escaped or already at/after ts_end),
+  // their relative order is irrelevant for this timestep, so avoid the expensive density ordering
+  if (propstatus1 != 0) {
+    return false;
+  }
+
+  // for both active packets, order by descending cell density
   const int mgi1 = grid::get_propcell_modelgridindex(p1.where);
   const int mgi2 = grid::get_propcell_modelgridindex(p2.where);
   const auto rho1 = mgi1 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi1)) : 0.0;
