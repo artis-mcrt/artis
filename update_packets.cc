@@ -291,23 +291,24 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
   }
 }
 
+constexpr auto fn_prop_status(const Packet& pkt, const double ts_end) {
+  if (pkt.type == TYPE_ESCAPE) {
+    return 2;
+  }
+  if (pkt.prop_time >= ts_end) {
+    return 1;
+  }
+  return 0;
+}
+
 auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_end) -> bool {
   // return true if packet p1 goes before p2
 
   // first order by whether the packet has reached the end of the timestep or escaped (both of which mean it won't be
   // updated anymore by update_packets in this timestep)
-  const auto fn_prop_status = [ts_end](const Packet& pkt) {
-    if (pkt.type == TYPE_ESCAPE) {
-      return 2;
-    }
-    if (pkt.prop_time >= ts_end) {
-      return 1;
-    }
-    return 0;
-  };
 
-  const auto propstatus1 = fn_prop_status(p1);
-  const auto propstatus2 = fn_prop_status(p2);
+  const auto propstatus1 = fn_prop_status(p1, ts_end);
+  const auto propstatus2 = fn_prop_status(p2, ts_end);
   if (propstatus1 != propstatus2) {
     return propstatus1 < propstatus2;
   }
