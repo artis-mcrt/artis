@@ -171,8 +171,9 @@ void calculate_macroatom_transitionrates(std::span<double> levelrates, const int
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       const double epsilon_trans = get_phixs_threshold(uniquelevelindex, phixstargetindex);
 
-      const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, true);
-      const double C = col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+      const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, true, oneoverfv);
+      const double C =
+          col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, oneoverfv);
 
       sum_up_higher += (R + C) * epsilon_current;
     }
@@ -248,7 +249,8 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   int lowerionlevel = -1;
   for (int tmp_lowerionlevel = 0; tmp_lowerionlevel < nlevels; tmp_lowerionlevel++) {
     const double epsilon_trans = epsilon_current - epsilon(element, upperion - 1, tmp_lowerionlevel);
-    const double R = rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, tmp_lowerionlevel);
+    const double R =
+        rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, tmp_lowerionlevel, oneoverfv);
 
     rate += R * epsilon_trans;
 
@@ -293,7 +295,8 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
     const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, true);
-    const double C = col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+    const double C =
+        col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, oneoverfv);
     rate += (R + C) * epsilon_current;
     if (rate > targetrate) {
       // set the macroatom's new state
@@ -470,8 +473,9 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         for (int tmp_lower = 0; tmp_lower < nlevels; tmp_lower++) {
           const double epsilon_target = epsilon(lowerionuniquelevelindexstart + tmp_lower);
           const double epsilon_trans = epsilon_current - epsilon_target;
-          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, tmp_lower);
-          const double C = col_recombination_ratecoeff(T_e, nne, element, ion, level, tmp_lower, epsilon_trans);
+          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, tmp_lower, oneoverfv);
+          const double C =
+              col_recombination_ratecoeff(T_e, nne, element, ion, level, tmp_lower, epsilon_trans, oneoverfv);
           rate += (R + C) * epsilon_target;
           if (rate > targetrate) {
             lower = tmp_lower;
