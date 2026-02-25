@@ -291,8 +291,8 @@ void init_xcom_photoion_data() {
     count++;
   }
 
-  assert_always(ftry >= 1.);
-  assert_always(ftry <= ((2 * xx) + 1.));
+  assert_testmodeonly(ftry >= 1.);
+  assert_testmodeonly(ftry <= ((2 * xx) + 1.));
   return ftry;
 }
 
@@ -304,7 +304,7 @@ auto thomson_angle() -> double {
 
   const double mu = (1 / t_coeff) - t_coeff;
 
-  assert_always(fabs(mu) <= 1);
+  assert_testmodeonly(fabs(mu) <= 1);
 
   return mu;
 }
