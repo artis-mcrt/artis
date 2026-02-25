@@ -426,9 +426,9 @@ void update_packets(const int nts, std::span<Packet> packets) {
     const int count_pktupdates = static_cast<int>(std::ranges::count_if(
         packets, [ts_end](const auto& pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
     const auto updatecellcounter_beforepass = stats::get_counter(stats::Counter::UPDATECELL);
-    std::ptrdiff_t packetgroupstart = 0;
+    auto packetgroupstart = 0Z;
 
-    for (int pktindex = 0; pktindex < std::ssize(packets); pktindex++) {
+    for (auto pktindex = 0Z; pktindex < std::ssize(packets); pktindex++) {
       const auto& pkt = packets[pktindex];
       if (get_prop_status(pkt, ts_end) == PacketPropStatus::UpdateRequired) {
         const int mgi = grid::get_propcell_modelgridindex(pkt.where);
