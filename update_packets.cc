@@ -291,14 +291,16 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
   }
 }
 
-constexpr auto fn_prop_status(const Packet& pkt, const double ts_end) {
+enum class PropStatus { Active, Complete, Escaped };
+
+constexpr auto get_prop_status(const Packet& pkt, const double ts_end) {
   if (pkt.type == TYPE_ESCAPE) {
-    return 2;
+    return PropStatus::Escaped;
   }
   if (pkt.prop_time >= ts_end) {
-    return 1;
+    return PropStatus::Complete;
   }
-  return 0;
+  return PropStatus::Active;
 }
 
 auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_end) -> bool {
@@ -307,15 +309,15 @@ auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_en
   // first order by whether the packet has reached the end of the timestep or escaped (both of which mean it won't be
   // updated anymore by update_packets in this timestep)
 
-  const auto propstatus1 = fn_prop_status(p1, ts_end);
-  const auto propstatus2 = fn_prop_status(p2, ts_end);
+  const auto propstatus1 = get_prop_status(p1, ts_end);
+  const auto propstatus2 = get_prop_status(p2, ts_end);
   if (propstatus1 != propstatus2) {
     return propstatus1 < propstatus2;
   }
 
   // if both packets are in the same non-active state (escaped or already at/after ts_end),
   // their relative order is irrelevant for this timestep, so avoid the expensive density ordering
-  if (propstatus1 != 0) {
+  if (propstatus1 != PropStatus::Active) {
     return false;
   }
 
