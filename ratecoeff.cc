@@ -359,10 +359,6 @@ void precalculate_rate_coefficient_integrals() {
       printlnlog("Performing rate integrals for Z = {}, ionstage {}...", atomic_number, ionstage);
 
       for (int level = 0; level < nlevels; level++) {
-        if ((level > 0) && (level % 50 == 0)) {
-          printlnlog("  completed up to level {} of {}", level, nlevels);
-        }
-
         // coefficients are stored in node shared memory, so divide up the work on the node
         if ((level % globals::node_nprocs) != globals::rank_in_node) {
           continue;
