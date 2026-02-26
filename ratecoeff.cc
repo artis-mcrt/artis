@@ -340,8 +340,8 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, void* const voidparas) -
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge - nu_minus_nu_edge);
 
   // return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED * pow(nu,3) * exp(-HOVERKB*nu/T);
-  return sigma_bf * -nu_minus_nu_edge * TWOHOVERCLIGHTSQUARED * (nu_edge + nu_minus_nu_edge) *
-         (nu_edge + nu_minus_nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T);
+  return sigma_bf * nu_minus_nu_edge * TWOHOVERCLIGHTSQUARED * (nu_minus_nu_edge - nu_edge) *
+         (nu_minus_nu_edge - nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T);
 }
 
 void precalculate_rate_coefficient_integrals() {
@@ -424,7 +424,7 @@ void precalculate_rate_coefficient_integrals() {
             }
 
             const auto this_bfcooling_coeff = FOURPI * sahafact_modified * phixstargetprobability *
-                                              integrator<bfcooling_integrand>(intparas, 0, nu_threshold - nu_max_phixs,
+                                              integrator<bfcooling_integrand>(intparas, 0, nu_max_phixs - nu_threshold,
                                                                               RATECOEFF_INTEGRAL_ACCURACY, &error);
 
             assert_always(std::isfinite(this_bfcooling_coeff) && this_bfcooling_coeff >= 0);
