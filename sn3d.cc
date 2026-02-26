@@ -401,7 +401,7 @@ void write_temp_packetsfile(const int timestep, const int my_rank, std::span<con
 
   bool write_success = false;
   while (!write_success) {
-    printlog("Writing {}...", filename);
+    printlog("timestep {}: writing {}...", timestep, filename);
     FILE* packets_file = fopen(filename.c_str(), "wb");
     if (packets_file == nullptr) {
       printlnlog("ERROR: Could not open file '{}' for mode 'wb'.", filename);
@@ -419,24 +419,6 @@ void write_temp_packetsfile(const int timestep, const int my_rank, std::span<con
     if (write_success) {
       printlnlog("done");
     }
-  }
-}
-
-void remove_temp_packetsfile(const int timestep, const int my_rank) {
-  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
-
-  if (std::filesystem::exists(filename)) {
-    std::filesystem::remove(filename);
-    printlnlog("Deleted {}", filename);
-  }
-}
-
-void remove_grid_restart_data(const int timestep) {
-  const auto filename = std::format("gridsave_ts{}.tmp", timestep);
-
-  if (std::filesystem::exists(filename)) {
-    std::filesystem::remove(filename);
-    printlnlog("Deleted {}", filename);
   }
 }
 
@@ -476,7 +458,6 @@ void save_grid_and_packets(const int nts, std::span<const Packet> packets) {
   bool write_successful = false;
   while (!write_successful) {
     const auto time_write_packets_file_start = std::time(nullptr);
-    printlnlog("time before write temporary packets file {}", time_write_packets_file_start);
 
     // save packet state at start of current timestep (before propagation)
     write_temp_packetsfile(nts, globals::my_rank, packets);
@@ -522,11 +503,20 @@ void save_grid_and_packets(const int nts, std::span<const Packet> packets) {
     MPI_Barrier(MPI_COMM_WORLD);
 
     if (my_rank == 0) {
-      remove_grid_restart_data(nts - 1);
+      const auto filename_prev_gridsave = std::format("gridsave_ts{}.tmp", nts - 1);
+      if (std::filesystem::exists(filename_prev_gridsave)) {
+        std::filesystem::remove(filename_prev_gridsave);
+        printlnlog("deleted {}", filename_prev_gridsave);
+      }
     }
 
     // delete temp packets files from previous timestep now that all restart data for the new timestep is available
-    remove_temp_packetsfile(nts - 1, my_rank);
+    const auto filename_prev_packetstmp = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, nts - 1);
+    if (std::filesystem::exists(filename_prev_packetstmp)) {
+      std::filesystem::remove(filename_prev_packetstmp);
+      printlnlog("deleted {}", filename_prev_packetstmp);
+    }
+
     vpkt::remove_temp_vpkt_file(nts - 1, my_rank);
   }
 }
