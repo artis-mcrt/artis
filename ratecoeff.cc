@@ -331,17 +331,17 @@ auto approx_bfheating_integrand(const double nu, void* const voidparas) -> doubl
 // on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 // formula. The radiation fields dependence on W is taken into account by multiplying
 // the resulting expression with the correct W later on.
-auto bfcooling_integrand(const double nu_edge_minus_nu, void* const voidparas) -> double {
+auto bfcooling_integrand(const double nu_minus_nu_edge, void* const voidparas) -> double {
   const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
   const auto& nu_edge = params.nu_edge;
   const auto& T = params.T_e;
   const auto& photoion_xs = params.photoion_xs;
 
-  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge - nu_edge_minus_nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge - nu_minus_nu_edge);
 
   // return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED * pow(nu,3) * exp(-HOVERKB*nu/T);
-  return sigma_bf * nu_edge_minus_nu * TWOHOVERCLIGHTSQUARED * (nu_edge - nu_edge_minus_nu) *
-         (nu_edge - nu_edge_minus_nu) * exp(HOVERKB * nu_edge_minus_nu / T);
+  return sigma_bf * -nu_minus_nu_edge * TWOHOVERCLIGHTSQUARED * (nu_edge + nu_minus_nu_edge) *
+         (nu_edge + nu_minus_nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T);
 }
 
 void precalculate_rate_coefficient_integrals() {
