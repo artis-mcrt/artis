@@ -337,11 +337,11 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, void* const voidparas) -
   const auto& T = params.T_e;
   const auto& photoion_xs = params.photoion_xs;
 
-  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge - nu_minus_nu_edge);
+  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
 
   // return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED * pow(nu,3) * exp(-HOVERKB*nu/T);
-  return sigma_bf * nu_minus_nu_edge * TWOHOVERCLIGHTSQUARED * (nu_minus_nu_edge - nu_edge) *
-         (nu_minus_nu_edge - nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T);
+  return sigma_bf * nu_minus_nu_edge * TWOHOVERCLIGHTSQUARED * (nu_minus_nu_edge + nu_edge) *
+         (nu_minus_nu_edge + nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T);
 }
 
 void precalculate_rate_coefficient_integrals() {
