@@ -269,7 +269,7 @@ auto alpha_sp_integrand(const double nu_minus_nu_edge, void* const voidparas) ->
   const auto& T = params.T_e;
   const auto& photoion_xs = params.photoion_xs;
 
-  const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge - nu_minus_nu_edge);
+  const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
   const double x =
       TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu_edge + nu_minus_nu_edge, 2) * exp(-HOVERKB * nu_minus_nu_edge / T);
   // with the substitution u = nu_edge - nu (integration variable 'nu_edge_minus_nu' here is u)
