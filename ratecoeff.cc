@@ -263,15 +263,15 @@ void write_ratecoeff_dat(const std::string& adatafile_hash, const std::string& c
 }
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
-auto alpha_sp_integrand(const double nu_edge_minus_nu, void* const voidparas) -> double {
+auto alpha_sp_integrand(const double nu_minus_nu_edge, void* const voidparas) -> double {
   const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
   const auto& nu_edge = params.nu_edge;
   const auto& T = params.T_e;
   const auto& photoion_xs = params.photoion_xs;
 
-  const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge - nu_edge_minus_nu);
+  const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge - nu_minus_nu_edge);
   const double x =
-      TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu_edge - nu_edge_minus_nu, 2) * exp(HOVERKB * nu_edge_minus_nu / T);
+      TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu_edge + nu_minus_nu_edge, 2) * exp(-HOVERKB * nu_minus_nu_edge / T);
   // with the substitution u = nu_edge - nu (integration variable 'nu_edge_minus_nu' here is u)
 
   // set contributions from Lyman continuum artificially to zero to overcome it's large opacity
@@ -393,7 +393,7 @@ void precalculate_rate_coefficient_integrals() {
 
             // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
             const auto alpha_sp = FOURPI * sahafact_modified * phixstargetprobability *
-                                  integrator<alpha_sp_integrand>(intparas, nu_threshold - nu_max_phixs, 0,
+                                  integrator<alpha_sp_integrand>(intparas, 0, nu_max_phixs - nu_threshold,
                                                                  RATECOEFF_INTEGRAL_ACCURACY, &error);
 
             assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
