@@ -51,7 +51,7 @@ struct GSLIntegrationParas {
 
 struct GSLIntegralParasGammaCorr {
   double nu_edge;
-  double departure_ratio;
+  double modified_departure_ratio;
   std::span<const float> photoion_xs;
   float T_e;
   int nonemptymgi;
