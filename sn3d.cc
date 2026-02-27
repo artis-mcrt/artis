@@ -33,7 +33,6 @@
 #include "input.h"
 #include "kpkt.h"
 #include "macroatom.h"
-#include "md5.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "packet.h"
