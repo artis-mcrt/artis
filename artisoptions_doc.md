@@ -17,12 +17,7 @@ constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE;
 constexpr int NLTEITER;
 
 // Specify how many levels will be treated in full NLTE, not including the ground state or the superlevel.
-constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
-  if (element_z < 20) {
-    return 100;
-  }
-  return 200;
-}
+constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage);
 
 // Use TJ radiation density temperature for Boltzmann excitation formula instead of electron temperature Te
 // This is default on for classic (with Boltmann factor level pops), and off for nebularnlte, where it affects the superlevel sublevel populations
