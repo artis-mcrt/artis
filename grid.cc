@@ -513,8 +513,7 @@ void map_2dmodelto3dgrid() {
   }
 }
 
-// mgi and cellindex are interchangeable in this mode (except for empty cells that are associated with mgi ==
-// get_npts_model())
+// here mgi and cellindex are interchangeable (except for empty cells that are associated with mgi == -1)
 void map_modeltogrid_direct() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = (modelgrid_input[cellindex].rhoinit > 0) ? cellindex : -1;
