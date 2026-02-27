@@ -250,9 +250,6 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
             if constexpr (!USE_LUT_BFHEATING) {
               bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, nonemptymgi);
             } else {
-              // The correction factor for stimulated emission in gammacorr is set to its
-              // LTE value. Because the T_e dependence of gammacorr is weak, this correction
-              // correction may be evaluated at T_R!
               const double T_R = grid::get_TR(nonemptymgi);
               const double W = grid::get_W(nonemptymgi);
               bfheatingcoeff += get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
