@@ -1961,15 +1961,14 @@ void read_parameterfile(int rank) {
   }
 
   if (USE_LUT_PHOTOION) {
-    printlnlog(
-        "Corrphotoioncoeff is calculated from LTE lookup tables (ratecoeff.dat) and corrphotoionrenorm estimator.");
+    printlnlog("Corrphotoioncoeff is calculated from LTE values and corrphotoionrenorm estimator.");
   } else {
     printlnlog(
         "Corrphotoioncoeff is calculated from the radiation field at each timestep in each modelgrid cell (no LUT).");
   }
 
   if (USE_ION_BFHEATING_ESTIMATORS) {
-    printlnlog("bfheating coefficients are calculated from bfheatingestimator values.");
+    printlnlog("bfheating coefficients are calculated from LTE values and bfheatingestimator.");
   } else {
     printlnlog("bfheating coefficients are calculated directly from the radiation field without bfheatingestimator.");
   }

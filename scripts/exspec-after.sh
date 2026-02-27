@@ -28,7 +28,6 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
   # do maxdepth 1 first in case job gets killed during run folder compression
   find . -maxdepth 1 -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
   find . -maxdepth 1 -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
-  find . -maxdepth 1 -name 'ratecoeff.dat' -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
 
   find packets/ -name 'packets*.out' -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
 
