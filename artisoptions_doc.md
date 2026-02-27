@@ -2,7 +2,8 @@
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS;
 
-constexpr auto GRID_TYPE = {GridType::CARTESIAN3D, GridType::CYLINDRICAL2D, GridType::SPHERICAL1D}
+// set to GridType:: CARTESIAN3D, CYLINDRICAL2D, or SPHERICAL1D
+constexpr GridType GRID_TYPE;
 
 // for GridType::CARTESIAN3D, set the dimensions. This will have no effect with a 3D model.txt since they will be set to match the input
 constexpr int CUBOID_NCOORDGRID_X;
@@ -233,10 +234,10 @@ constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END;
 // thermalisation scheme for non-thermal particles (positrons, electrons, alphas). ThermalisationScheme::INSTANT
 // instantly deposits all particle energy. ThermalisationScheme::DETAILED uses time-dependent Monte Carlo transport.
 // ThermalisationScheme::BARNES, WOLLAEGER, GUTTMAN use analytic thermalisation efficiency functions.
-constexpr auto PARTICLE_THERMALISATION_SCHEME;
+constexpr ThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
 
 // thermalisation scheme for gamma-ray photons. ThermalisationScheme::DETAILED uses full gamma-ray transport.
-constexpr auto GAMMA_THERMALISATION_SCHEME;
+constexpr ThermalisationScheme GAMMA_THERMALISATION_SCHEME;
 
 // Options for different types of timestep set-ups, only one of these can be true at one time. The hybrid timestep
 // schemes that switch between log and fixed require a transition time from one scheme to the other as well as the
@@ -244,8 +245,7 @@ constexpr auto GAMMA_THERMALISATION_SCHEME;
 // values that would give the same number or more more fixed timesteps than the total number of timesteps in the
 // simulation. The times are set in days.
 
-
-constexpr auto TIMESTEP_SIZE_METHOD;
+constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD;
 
 constexpr double FIXED_TIMESTEP_WIDTH;
 
