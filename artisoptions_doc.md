@@ -113,7 +113,7 @@ constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP;
 // instead of dynamically integrating photoionisation rates for the exact radiation field
 constexpr bool USE_LUT_PHOTOION;
 
-// as above for bound-free heating
+// enable per-ion bound-free heating estimators and associated renormalisation
 constexpr bool USE_ION_BFHEATING_ESTIMATORS;
 
 // Previously the NLTE solver only checked if level populations were negative and replaced these populations
