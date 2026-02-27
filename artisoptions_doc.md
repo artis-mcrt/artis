@@ -20,7 +20,7 @@ constexpr int NLTEITER;
 constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage);
 
 // Use TJ radiation density temperature for Boltzmann excitation formula instead of electron temperature Te
-// This is default on for classic (with Boltmann factor level pops), and off for nebularnlte, where it affects the superlevel sublevel populations
+// This is default on for classic (with Boltzmann factor level pops), and off for nebularnlte, where it affects the superlevel sublevel populations
 constexpr bool LTEPOP_EXCITATION_USE_TJ;
 
 // force Saha ionisation balance for a given element (contraint applied to NLTE population solver and classic phi function)
@@ -109,7 +109,7 @@ constexpr bool DETAILED_LINE_ESTIMATORS_ON;
 constexpr bool DETAILED_BF_ESTIMATORS_ON;
 
 // select which bf-continua are tracked in the detailed estimators (only used when DETAILED_BF_ESTIMATORS_ON is true)
-constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return true; }
+constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level);
 
 // if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP;
@@ -228,7 +228,7 @@ constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END;
 
 // thermalisation scheme for non-thermal particles (positrons, electrons, alphas). ThermalisationScheme::INSTANT
 // instantly deposits all particle energy. ThermalisationScheme::DETAILED uses time-dependent Monte Carlo transport.
-// ThermalisationScheme::BARNES, WOLLAEGER, GUTTMAN use analytic thermalisation efficiency functions.
+// ThermalisationScheme::BARNES, and WOLLAEGER use analytic thermalisation efficiency functions.
 constexpr ThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
 
 // thermalisation scheme for gamma-ray photons. ThermalisationScheme::DETAILED uses full gamma-ray transport.
