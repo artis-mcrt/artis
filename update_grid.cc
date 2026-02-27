@@ -349,8 +349,8 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
         // get_bfheating in the remaining part of update_grid. Later on it's reset and new
         // contributions are added up.
 
-        const double bfheatingcoeff_ana = calculate_bfheatingcoeff(element, ion, 0, 0, nonemptymgi);
-        globals::bfheatingestimator[ionestimindex] /= bfheatingcoeff_ana;
+        const double bfheatingcoeff_ground = calculate_bfheatingcoeff(element, ion, 0, 0, nonemptymgi);
+        globals::bfheatingestimator[ionestimindex] /= bfheatingcoeff_ground;
 
         assert_always(std::isfinite(globals::bfheatingestimator[ionestimindex]));
       }
