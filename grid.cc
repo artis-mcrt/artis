@@ -323,10 +323,9 @@ void allocate_nonemptymodelcells() {
         modelgrid_input[mgi].initial_radial_pos_sum =
             static_cast<float>(modelgrid_input[mgi].initial_radial_pos_sum + radial_pos_mid);
       }
-      if (get_model_type() == GridType::CARTESIAN3D) {
-        assert_always(get_rho_tmin(mgi) > 0);
-        assert_always(modelgrid_numpropcells[mgi] == 1);
-      }
+      assert_always(get_rho_tmin(mgi) > 0);
+      // with direct mapping, there must be exactly one propagation cell per non-empty model cell
+      assert_always(get_model_type() != GRID_TYPE || modelgrid_numpropcells[mgi] == 1);
     }
   }
 
