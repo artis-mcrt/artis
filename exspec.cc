@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdlib>
 #include <ctime>
@@ -32,15 +33,27 @@ std::fstream output_file;
 
 namespace {
 
-void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets, Spectra& rpkt_spectra,
-                  Spectra& stokes_i, Spectra& stokes_q, Spectra& stokes_u, Spectra& gamma_spectra) {
-  std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
-  std::vector<double> rpkt_light_curve_lumcmf(globals::ntimesteps, 0.);
-  std::vector<double> gamma_light_curve_lum(globals::ntimesteps, 0.);
-  std::vector<double> gamma_light_curve_lumcmf(globals::ntimesteps, 0.);
+void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets) {
+  THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
+  resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
+  std::ranges::fill(rpkt_light_curve_lum, 0.);
+  THREADLOCALONHOST std::vector<double> rpkt_light_curve_lumcmf;
+  resize_exactly(rpkt_light_curve_lumcmf, globals::ntimesteps);
+  std::ranges::fill(rpkt_light_curve_lumcmf, 0.);
+  THREADLOCALONHOST std::vector<double> gamma_light_curve_lum;
+  resize_exactly(gamma_light_curve_lum, globals::ntimesteps);
+  std::ranges::fill(gamma_light_curve_lum, 0.);
+  THREADLOCALONHOST std::vector<double> gamma_light_curve_lumcmf;
+  resize_exactly(gamma_light_curve_lumcmf, globals::ntimesteps);
+  std::ranges::fill(gamma_light_curve_lumcmf, 0.);
 
+  THREADLOCALONHOST Spectra rpkt_spectra;
   // Set up the spectrum grid and initialise the bins to zero.
   init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, true);
+
+  THREADLOCALONHOST Spectra stokes_i;
+  THREADLOCALONHOST Spectra stokes_q;
+  THREADLOCALONHOST Spectra stokes_u;
 
   if constexpr (POL_ON) {
     init_spectra(stokes_i, NU_MIN_R, NU_MAX_R, true);
@@ -48,9 +61,11 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     init_spectra(stokes_u, NU_MIN_R, NU_MAX_R, true);
   }
 
-  const double nu_min_gamma = 0.05 * MEV / H;
-  const double nu_max_gamma = 4. * MEV / H;
+  constexpr double nu_min_gamma = 0.05 * MEV / H;
+  constexpr double nu_max_gamma = 4. * MEV / H;
+  THREADLOCALONHOST Spectra gamma_spectra;
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
+
   assert_always(globals::nprocs_exspec > 0);
   for (int p = 0; p < globals::nprocs_exspec; p++) {
     auto pkts_start = pkts.subspan(load_allrank_packets ? p * globals::npkts : 0, globals::npkts);
@@ -204,20 +219,12 @@ auto main(int argc, char* argv[]) -> int {
 
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
 
-  Spectra rpkt_spectra;
-
-  Spectra stokes_i;
-  Spectra stokes_q;
-  Spectra stokes_u;
-
-  Spectra gamma_spectra;
-
   setup_timesteps();
 
   const int dirbinend = (grid::get_model_type() == GridType::SPHERICAL1D) ? 0 : MABINS;
   // a is the escape direction angle bin
   for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
-    do_angle_bin(dirbin, pkts, load_allrank_packets, rpkt_spectra, stokes_i, stokes_q, stokes_u, gamma_spectra);
+    do_angle_bin(dirbin, pkts, load_allrank_packets);
   }
 
   decay::cleanup();
