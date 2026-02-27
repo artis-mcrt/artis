@@ -210,8 +210,8 @@ void set_ffegrp(const int modelgridindex, float x) {
 void set_propcell_modelgridindex(const int cellindex, const int new_modelgridindex) {
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
-  assert_testmodeonly(new_modelgridindex >= 0);
-  assert_testmodeonly(new_modelgridindex <= get_npts_model());
+  assert_testmodeonly(new_modelgridindex >= -1);
+  assert_testmodeonly(new_modelgridindex < get_npts_model());
   propcell_mgi[cellindex] = new_modelgridindex;
 }
 
@@ -301,7 +301,7 @@ void allocate_nonemptymodelcells() {
   // Determine the number of simulation cells associated with the model cells
   std::ranges::fill(modelgrid_numpropcells, 0);
   if (globals::rank_in_node == 0) {
-    for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++) {
+    for (int mgi = 0; mgi < get_npts_model(); mgi++) {
       modelgrid_input[mgi].initial_radial_pos_sum = 0.;
     }
   }
@@ -312,21 +312,22 @@ void allocate_nonemptymodelcells() {
 
     if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
       // for 1D models, the final shell outer v should already be at vmax
-      assert_always(model_type != GridType::SPHERICAL1D || propcell_mgi[cellindex] == get_npts_model());
-      set_propcell_modelgridindex(cellindex, get_npts_model());
+      assert_always(model_type != GridType::SPHERICAL1D || propcell_mgi[cellindex] < 0);
+      set_propcell_modelgridindex(cellindex, -1);
     }
 
     const int mgi = get_propcell_modelgridindex(cellindex);
-    assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (get_rho_tmin(mgi) > 0) || (mgi == get_npts_model()));
-
-    modelgrid_numpropcells[mgi] += 1;
-    if (globals::rank_in_node == 0) {
-      modelgrid_input[mgi].initial_radial_pos_sum =
-          static_cast<float>(modelgrid_input[mgi].initial_radial_pos_sum + radial_pos_mid);
+    if (mgi >= 0) {
+      modelgrid_numpropcells[mgi] += 1;
+      if (globals::rank_in_node == 0) {
+        modelgrid_input[mgi].initial_radial_pos_sum =
+            static_cast<float>(modelgrid_input[mgi].initial_radial_pos_sum + radial_pos_mid);
+      }
+      if (get_model_type() == GridType::CARTESIAN3D) {
+        assert_always(get_rho_tmin(mgi) > 0);
+        assert_always(modelgrid_numpropcells[mgi] == 1);
+      }
     }
-
-    assert_always(!(get_model_type() == GridType::CARTESIAN3D) || (modelgrid_numpropcells[mgi] == 1) ||
-                  (mgi == get_npts_model()));
   }
 
   MPI_Barrier(globals::mpi_comm_node);
@@ -366,7 +367,7 @@ void allocate_nonemptymodelcells() {
   MPI_Barrier(MPI_COMM_WORLD);
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = get_propcell_modelgridindex(cellindex);
-    if (mgi >= get_npts_model()) {
+    if (mgi < 0) {
       propcell_nonemptymgi[cellindex] = -1;
     } else {
       propcell_nonemptymgi[cellindex] = get_nonemptymgi_of_mgi(mgi);
@@ -465,9 +466,8 @@ void allocate_nonemptymodelcells() {
       get_nonempty_npts_model() * globals::total_nlte_levels * sizeof(double) / 1024. / 1024.);
 }
 
-void map_1dmodelto3dgrid()
 // Map 1D spherical model grid onto 3D Cartesian propagation grid
-{
+void map_1dmodelto3dgrid() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const double cellvmid = get_cellradialposmid(cellindex) / globals::tmin;
     const int mgi = static_cast<int>(std::ranges::lower_bound(vout_model, cellvmid) - vout_model.begin());
@@ -479,14 +479,13 @@ void map_1dmodelto3dgrid()
     } else {
       // corner cells outside of the outermost model shell are empty
       // and so are any shells with zero density
-      set_propcell_modelgridindex(cellindex, get_npts_model());
+      set_propcell_modelgridindex(cellindex, -1);
     }
   }
 }
 
-void map_2dmodelto3dgrid()
 // Map 2D cylindrical model onto 3D Cartesia propagation grid
-{
+void map_2dmodelto3dgrid() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     // map to 3D Cartesian grid
     const auto pos_mid = Vec3d{get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex, 0)),
@@ -506,10 +505,10 @@ void map_2dmodelto3dgrid()
       if (modelgrid_input[mgi].rhoinit > 0) {
         set_propcell_modelgridindex(cellindex, mgi);
       } else {
-        set_propcell_modelgridindex(cellindex, get_npts_model());
+        set_propcell_modelgridindex(cellindex, -1);
       }
     } else {
-      set_propcell_modelgridindex(cellindex, get_npts_model());
+      set_propcell_modelgridindex(cellindex, -1);
     }
   }
 }
@@ -518,7 +517,7 @@ void map_2dmodelto3dgrid()
 // get_npts_model())
 void map_modeltogrid_direct() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    const int mgi = (modelgrid_input[cellindex].rhoinit > 0) ? cellindex : get_npts_model();
+    const int mgi = (modelgrid_input[cellindex].rhoinit > 0) ? cellindex : -1;
     set_propcell_modelgridindex(cellindex, mgi);
   }
 }
@@ -1614,8 +1613,9 @@ void set_model_type(const GridType model_type_value) { model_type = model_type_v
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
   const auto mgi = propcell_mgi[cellindex];
-  assert_testmodeonly(mgi >= 0);
-  assert_testmodeonly(mgi < (get_npts_model() + 1));
+  // can return -1 for empty cells, but if not empty then should be a valid modelgridindex
+  assert_testmodeonly(mgi >= -1);
+  assert_testmodeonly(mgi < get_npts_model());
   return mgi;
 }
 
@@ -2270,7 +2270,7 @@ void init_grid(const int my_rank) {
     assert_always(grid_file.is_open());
     for (int cellindex = 0; cellindex < ngrid; cellindex++) {
       const int mgi = get_propcell_modelgridindex(cellindex);
-      if (mgi != get_npts_model()) {
+      if (mgi >= 0) {
         grid_file << cellindex << ' ' << mgi << '\n';  // write only non-empty cells to grid file
       }
     }

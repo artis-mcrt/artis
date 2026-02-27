@@ -119,19 +119,19 @@ void packet_init(std::span<Packet> pkt)
   auto en_cumulative = std::vector<double>(grid::ngrid);
 
   double etot_simtime = 0.;
-  for (int m = 0; m < grid::ngrid; m++) {
-    const int mgi = grid::get_propcell_modelgridindex(m);
+  for (int propcellindex = 0; propcellindex < grid::ngrid; propcellindex++) {
+    const int mgi = grid::get_propcell_modelgridindex(propcellindex);
     // some grid cells are empty
-    if (mgi < grid::get_npts_model() && grid::get_numpropcells(mgi) > 0) {
+    if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       const double decay_en_per_mass = decay::get_modelcell_simtime_endecay_per_mass(nonemptymgi);
       const auto initial_en_per_mass =
           (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? grid::get_initenergyq(mgi) : 0.;
 
-      etot_simtime +=
-          grid::get_propcell_volume_tmin(m) * grid::get_rho_tmin(mgi) * (decay_en_per_mass + initial_en_per_mass);
+      etot_simtime += grid::get_propcell_volume_tmin(propcellindex) * grid::get_rho_tmin(mgi) *
+                      (decay_en_per_mass + initial_en_per_mass);
     }
-    en_cumulative[m] = etot_simtime;
+    en_cumulative[propcellindex] = etot_simtime;
   }
   assert_always(etot_simtime > 0);
 

@@ -311,7 +311,7 @@ auto get_packet_cellcachenonemptymgi(const Packet& pkt) -> std::optional<int> {
     return {};  // these types do not use the cell cache
   }
   const auto mgi = grid::get_propcell_modelgridindex(pkt.where);
-  if (mgi >= grid::get_npts_model()) {
+  if (mgi < 0) {
     return {};  // for empty cell, no cell cache required
   }
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
