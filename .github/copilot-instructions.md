@@ -1,6 +1,6 @@
 # ARTIS Radiative Transfer Code
 
-ARTIS is a 3D radiative transfer code for Type Ia supernovae using Monte Carlo methods with indivisible energy packets. The code is written in modern C++20/23 and scales to thousands of CPU cores across multiple nodes using MPI with shared memory windows.
+ARTIS is a 3D radiative transfer code for Type Ia supernovae using Monte Carlo methods with indivisible energy packets. The code is written in modern C++23 and scales to thousands of CPU cores across multiple nodes using MPI with shared memory windows.
 
 Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
 
@@ -10,13 +10,12 @@ Always reference these instructions first and fallback to search or bash command
 Install required dependencies:
 ```bash
 sudo apt-get update
-sudo apt install -y libgsl-dev openmpi-bin libopenmpi-dev
+sudo apt install -y openmpi-bin libopenmpi-dev
 ```
 
 Verify installations:
 ```bash
 mpicxx --version  # Should show Open MPI version
-gsl-config --version  # Should show GSL version (tested with 2.7.1)
 python3 --version  # Should show Python 3.x
 clang-format --version  # Should show clang-format (for code formatting)
 ```
@@ -41,27 +40,10 @@ make REPRODUCIBLE=ON TESTMODE=OFF MAX_NODE_SIZE=2 FASTMATH=OFF -j$(nproc) sn3d e
 # Build time: ~30 seconds. NEVER CANCEL. Set timeout to 90+ seconds.
 ```
 
-**CMake build system (NOT RECOMMENDED - has C++23/26 compatibility issues):**
-```bash
-cmake -B build_cmake -S .
-cmake --build build_cmake -j$(nproc)
-# May fail with std::ranges::fold_left errors on GCC 13
-```
-
 **Verification**: After building, check executables exist:
 ```bash
 ls -la sn3d exspec  # Should show symlinks to build/x86_64/ executables
 ```
-
-### Build Options and Configuration
-The Makefile supports many options:
-- `TESTMODE=ON/OFF` - Enable sanitizers and debug checks
-- `REPRODUCIBLE=ON/OFF` - Enable reproducible builds (disables fastmath)
-- `OPENMP=ON/OFF` - Enable OpenMP parallelization
-- `STDPAR=ON/OFF` - Enable C++ standard parallelism
-- `GPU=ON/OFF` - Enable GPU support
-- `FASTMATH=ON/OFF` - Enable/disable fast math optimizations
-- `OPTIMIZE=ON/OFF` - Enable/disable optimization
 
 ### Running Tests
 **NEVER CANCEL test runs - they can take 120+ minutes in CI environments.**
@@ -165,7 +147,6 @@ CI tests 12 different scenarios - examples:
 ## Key Principles
 - **NEVER CANCEL long-running builds or simulations** - set appropriate timeouts
 - **Always validate changes** with at least one complete test scenario
-- **Use Makefile** as the primary build system over CMake
 - **Test with MPI** even for development (single process: `mpirun -np 1`)
 - **Check artisoptions.h** is properly configured for your simulation mode
 - **Scientific output validation** is critical - check MD5 sums when available
