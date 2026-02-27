@@ -246,7 +246,7 @@ constexpr auto md5_test() -> bool {
   return (bytes_to_hex(hashbytes) == "4b0cff9625b0501c7b9ccc6569113ddf");
 }
 
-#ifdef __cpp_lib_constexpr_string
+#if __cplusplus >= 202302L
 static_assert(md5_test(), "MD5 test failed!");
 #endif
 
