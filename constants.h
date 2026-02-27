@@ -6,6 +6,10 @@
 #include <numbers>
 #include <string_view>
 
+[[gnu::const]] constexpr auto pow2(auto x) { return x * x; }
+[[gnu::const]] constexpr auto pow3(auto x) { return x * x * x; }
+[[gnu::const]] constexpr auto pow4(auto x) { return pow2(x) * pow2(x); }
+
 // fundamental constants
 
 constexpr double CLIGHT = 2.99792458e+10;  // Speed of light [cm/s]
@@ -33,17 +37,16 @@ constexpr double EULERGAMMA = std::numbers::egamma;
 
 // numerical constants
 
-constexpr double CLIGHTSQUARED = 8.9875518e+20;  // Speed of light squared [cm^2/s^2]
-constexpr double TWOOVERCLIGHTSQUARED = 2.2253001e-21;
-constexpr double TWOHOVERCLIGHTSQUARED = 1.4745007e-47;
-constexpr double CLIGHTSQUAREDOVERTWOH = 6.7819570e+46;
+constexpr double CLIGHTSQUARED = pow2(CLIGHT);  // Speed of light squared [cm^2/s^2]
+constexpr double TWOOVERCLIGHTSQUARED = 2 / CLIGHTSQUARED;
+constexpr double TWOHOVERCLIGHTSQUARED = 2 * H / CLIGHTSQUARED;
+constexpr double CLIGHTSQUAREDOVERTWOH = CLIGHTSQUARED / (2 * H);
 
-constexpr double ONEOVERH = 1.509188961e+26;
-constexpr double HOVERKB = 4.799243681748932e-11;
-constexpr double FOURPI = 1.256637061600000e+01;
-constexpr double ONEOVER4PI = 7.957747153555701e-02;
-constexpr double HCLIGHTOVERFOURPI = 1.580764662876770e-17;
-constexpr double OSCSTRENGTHCONVERSION = 1.3473837e+21;
+constexpr double ONEOVERH = 1.0 / H;
+constexpr double HOVERKB = H / KB;
+constexpr double FOURPI = 4 * PI;
+constexpr double ONEOVER4PI = 1 / (4 * PI);
+constexpr double HCLIGHTOVERFOURPI = H * CLIGHT / FOURPI;
 
 constexpr double H_ionpot = 13.5979996 * EV;
 
@@ -79,19 +82,8 @@ constexpr std::array<std::string_view, 3> datafolders = {"./", "data/", "artis/d
 
 #ifdef GPU_ON
 #define DEVICE_FUNC __host__ __device__
-
-constexpr auto pow2(auto x) { return x * x; }
-constexpr auto pow3(auto x) { return x * x * x; }
-constexpr auto pow4(auto x) { return x * x * x * x; }
-
 #else
-#include <cmath>
-
 #define DEVICE_FUNC
-
-constexpr auto pow2(auto x) { return std::pow(x, 2); }
-constexpr auto pow3(auto x) { return std::pow(x, 3); }
-constexpr auto pow4(auto x) { return std::pow(x, 4); }
-
 #endif
+
 #endif
