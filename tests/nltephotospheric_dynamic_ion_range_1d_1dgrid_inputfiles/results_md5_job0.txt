@@ -3,10 +3,10 @@ c19a7bda729842c067cc2b27d0caab91  bflist.out
 d39aaf9be49ea5a3c33b6def6f17d084  deposition.out
 910e6e4c779a2ffe2647e09a60bf39fd  emission.out
 910e6e4c779a2ffe2647e09a60bf39fd  emissiontrue.out
-450baa493ef24fa64cc44365af8431ea  gamma_light_curve.out
+ea93edba8172bf36d66c474d0332a828  gamma_light_curve.out
 20dadbc26e8f98511b3a587798c9e190  gammalinelist.out
 d2ed89cf19b1081d3becebf5c22c763a  grid.out
-ebf3b53c763f5fd50b527f70ffc0fe18  light_curve.out
+1c91d8d7935d54fea6b2c41355bd3191  light_curve.out
 b0ff69821d6e0597457ed9866a8fb88c  linestat.out
 25a9dd224aa09e3ac10e091ad673223d  modelgridrankassignments.out
 71f968bc58f3151bb6e39bc3b2b8902e  nuclides.out
