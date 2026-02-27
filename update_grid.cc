@@ -302,15 +302,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
         globals::corrphotoionrenorm[ionestimindex] =
             globals::gammaestimator[ionestimindex] / get_corrphotoioncoeff_ana(element, ion, 0, 0, nonemptymgi);
 
-        if (!std::isfinite(globals::corrphotoionrenorm[ionestimindex])) {
-          const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-          printlog(
-              "[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / "
-              "get_corrphotoioncoeff_ana({},{},{},{},{})={:g}/{:g}",
-              element, ion, 0, 0, mgi, globals::gammaestimator[ionestimindex],
-              get_corrphotoioncoeff_ana(element, ion, 0, 0, nonemptymgi));
-          std::abort();
-        }
+        assert_always(std::isfinite(globals::corrphotoionrenorm[ionestimindex]));
       }
 
       // 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm
