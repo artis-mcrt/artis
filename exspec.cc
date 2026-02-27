@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdlib>
 #include <ctime>
@@ -33,20 +34,26 @@ std::fstream output_file;
 namespace {
 
 void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets) {
-  std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
-  std::vector<double> rpkt_light_curve_lumcmf(globals::ntimesteps, 0.);
-  std::vector<double> gamma_light_curve_lum(globals::ntimesteps, 0.);
-  std::vector<double> gamma_light_curve_lumcmf(globals::ntimesteps, 0.);
+  THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
+  resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
+  std::ranges::fill(rpkt_light_curve_lum, 0.);
+  THREADLOCALONHOST std::vector<double> rpkt_light_curve_lumcmf;
+  resize_exactly(rpkt_light_curve_lumcmf, globals::ntimesteps);
+  std::ranges::fill(rpkt_light_curve_lumcmf, 0.);
+  THREADLOCALONHOST std::vector<double> gamma_light_curve_lum;
+  resize_exactly(gamma_light_curve_lum, globals::ntimesteps);
+  std::ranges::fill(gamma_light_curve_lum, 0.);
+  THREADLOCALONHOST std::vector<double> gamma_light_curve_lumcmf;
+  resize_exactly(gamma_light_curve_lumcmf, globals::ntimesteps);
+  std::ranges::fill(gamma_light_curve_lumcmf, 0.);
+
   THREADLOCALONHOST Spectra rpkt_spectra;
+  // Set up the spectrum grid and initialise the bins to zero.
+  init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, true);
 
   THREADLOCALONHOST Spectra stokes_i;
   THREADLOCALONHOST Spectra stokes_q;
   THREADLOCALONHOST Spectra stokes_u;
-
-  THREADLOCALONHOST Spectra gamma_spectra;
-
-  // Set up the spectrum grid and initialise the bins to zero.
-  init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, true);
 
   if constexpr (POL_ON) {
     init_spectra(stokes_i, NU_MIN_R, NU_MAX_R, true);
@@ -54,9 +61,11 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     init_spectra(stokes_u, NU_MIN_R, NU_MAX_R, true);
   }
 
-  const double nu_min_gamma = 0.05 * MEV / H;
-  const double nu_max_gamma = 4. * MEV / H;
+  constexpr double nu_min_gamma = 0.05 * MEV / H;
+  constexpr double nu_max_gamma = 4. * MEV / H;
+  THREADLOCALONHOST Spectra gamma_spectra;
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
+
   assert_always(globals::nprocs_exspec > 0);
   for (int p = 0; p < globals::nprocs_exspec; p++) {
     auto pkts_start = pkts.subspan(load_allrank_packets ? p * globals::npkts : 0, globals::npkts);
