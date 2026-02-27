@@ -1969,11 +1969,9 @@ void read_parameterfile(int rank) {
   }
 
   if (USE_ION_BFHEATING_ESTIMATORS) {
-    printlnlog("bfheating coefficients are calculated from LTE lookup tables (ratecoeff.dat) and bfheatingestimator.");
+    printlnlog("bfheating coefficients are calculated from bfheatingestimator values.");
   } else {
-    printlnlog(
-        "bfheating coefficients are calculated from the radiation field at each timestep in each modelgrid cell (no "
-        "LUT).");
+    printlnlog("bfheating coefficients are calculated directly from the radiation field without bfheatingestimator.");
   }
 
   // Set up initial grey approximation?
