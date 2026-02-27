@@ -1,7 +1,6 @@
 #include "ratecoeff.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -26,7 +25,6 @@
 #include "input.h"
 #include "ltepop.h"
 #include "macroatom.h"
-#include "md5.h"
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"
@@ -35,7 +33,7 @@
 namespace {
 constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 
-double T_step_log{};
+const double T_step_log = (std::log(MAXTEMP) - std::log(MINTEMP)) / (TABLESIZE - 1.);
 
 std::span<const float> ion_alpha_sp;  // size is nincludedions * TABLESIZE
                                       //
@@ -58,199 +56,6 @@ struct GSLIntegralParasGammaCorr {
   float T_e;
   int nonemptymgi;
 };
-
-// Try to read in the precalculated rate coefficients from file (checking whether current atomic data matches)
-// return true if successful or false otherwise
-auto read_ratecoeff_dat(FILE* ratecoeff_file, const std::string& adatafile_hash,
-                        const std::string& compositionfile_hash, const std::span<const std::string, 3> phixsfile_hash)
-    -> bool {
-  auto adatafile_hash_in = std::array<char, 33>("UNKNOWN");
-  if (fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in.data()) != 1) {
-    return false;
-  }
-  printlog("ratecoeff.dat: MD5 adata.txt = {} ", adatafile_hash_in.data());
-  if (strcmp(adatafile_hash.c_str(), adatafile_hash_in.data()) == 0) {
-    printlnlog("(pass)");
-  } else {
-    printlnlog("MISMATCH: MD5 adata.txt = {}", adatafile_hash);
-    return false;
-  }
-
-  auto compositionfile_hash_in = std::array<char, 33>("UNKNOWN");
-  if (fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in.data()) != 1) {
-    return false;
-  }
-  printlog("ratecoeff.dat: MD5 compositiondata.txt {} ", compositionfile_hash_in.data());
-  if (strcmp(compositionfile_hash.c_str(), compositionfile_hash_in.data()) == 0) {
-    printlnlog("(pass)");
-  } else {
-    printlnlog("\nMISMATCH: MD5 compositiondata.txt = {}", compositionfile_hash);
-    return false;
-  }
-
-  for (int phixsver = 1; phixsver <= 2; phixsver++) {
-    if (phixs_file_version_exists[phixsver]) {
-      auto phixsfile_hash_in = std::array<char, 33>("UNKNOWN");
-      if (fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in.data()) != 1) {
-        return false;
-      }
-      printlog("ratecoeff.dat: MD5 {} = {} ", phixsdata_filenames[phixsver], phixsfile_hash_in.data());
-      if (strcmp(phixsfile_hash[phixsver].data(), phixsfile_hash_in.data()) == 0) {
-        printlnlog("(pass)");
-      } else {
-        printlnlog("\nMISMATCH: MD5 {} = {}", phixsdata_filenames[phixsver], phixsfile_hash[phixsver]);
-        return false;
-      }
-    }
-  }
-
-  double in_T_min = -1.;
-  double in_T_max = -1.;
-  int in_tablesize = -1;
-  int in_nlines = -1;
-  int in_nbfcontinua = -1;
-  double in_ratecoeff_integral_accuracy = -1.;
-  const int items_read = fscanf(ratecoeff_file, "%la %la %d %d %d %la\n", &in_T_min, &in_T_max, &in_tablesize,
-                                &in_nlines, &in_nbfcontinua, &in_ratecoeff_integral_accuracy);
-  if (items_read != 6) {
-    printlnlog("\nMISMATCH: error reading header line");
-    return false;
-  }
-  printlog(
-      "ratecoeff.dat: Tmin {:g} Tmax {:g} TABLESIZE {} nlines {} nbfcontinua {} in_ratecoeff_integral_accuracy {:g} ",
-      in_T_min, in_T_max, in_tablesize, in_nlines, in_nbfcontinua, in_ratecoeff_integral_accuracy);
-
-  if (in_T_min != MINTEMP) {
-    printlnlog("\nMISMATCH: this simulation has MINTEMP {:g}", MINTEMP);
-    return false;
-  }
-  if (in_T_max != MAXTEMP) {
-    printlnlog("\nMISMATCH: this simulation has MAXTEMP {:g}", MAXTEMP);
-    return false;
-  }
-  if (in_tablesize != TABLESIZE) {
-    printlnlog("\nMISMATCH: this simulation has TABLESIZE {}", TABLESIZE);
-    return false;
-  }
-  if (in_nlines != globals::nlines) {
-    printlnlog("\nMISMATCH: this simulation has nlines {}", globals::nlines);
-    return false;
-  }
-  if (in_nbfcontinua != globals::nbfcontinua) {
-    printlnlog("\nMISMATCH: this simulation has nbfcontinua {}", globals::nbfcontinua);
-    return false;
-  }
-  if (in_ratecoeff_integral_accuracy != RATECOEFF_INTEGRAL_ACCURACY) {
-    printlnlog("\nMISMATCH: this simulation has RATECOEFF_INTEGRAL_ACCURACY {:g}", RATECOEFF_INTEGRAL_ACCURACY);
-    return false;
-  }
-  printlnlog("(pass)");
-
-  // this is redundant if the adata and composition data matches, consider removing
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      int in_element = 0;
-      int in_ionstage = 0;
-      int in_levels = 0;
-      int in_ionisinglevels = 0;
-      assert_always(
-          fscanf(ratecoeff_file, "%d %d %d %d\n", &in_element, &in_ionstage, &in_levels, &in_ionisinglevels) == 4);
-      const int nlevels = get_nlevels(element, ion);
-      const int ionisinglevels = get_nlevels_ionising(element, ion);
-      if (get_atomicnumber(element) != in_element || get_ionstage(element, ion) != in_ionstage ||
-          nlevels != in_levels || ionisinglevels != in_ionisinglevels) {
-        printlnlog(
-            "Levels or ionising levels count mismatch! element {} {} ionstage {} {} nlevels {} {} ionisinglevels {} {}",
-            get_atomicnumber(element), in_element, get_ionstage(element, ion), in_ionstage, nlevels, in_levels,
-            ionisinglevels, in_ionisinglevels);
-        return false;
-      }
-    }
-  }
-
-  printlnlog("Existing ratecoeff.dat is valid. Reading this file...");
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element) - 1;
-    for (int ion = 0; ion < nions; ion++) {
-      // nlevels = get_nlevels(element,ion);
-      const int nlevels = get_nlevels_ionising(element, ion);  // number of ionising levels associated with current ion
-      for (int level = 0; level < nlevels; level++) {
-        // Loop over the phixs target states
-        const int nphixstargets = get_nphixstargets(element, ion, level);
-        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          // Loop over the temperature grid
-          for (int iter = 0; iter < TABLESIZE; iter++) {
-            double in_alpha_sp{NAN};
-            double in_bfcooling_coeff{NAN};
-            double in_corrphotoioncoeff{NAN};
-            double in_bfheating_coeff{NAN};
-            assert_always(fscanf(ratecoeff_file, "%la %la %la %la\n", &in_alpha_sp, &in_bfcooling_coeff,
-                                 &in_corrphotoioncoeff, &in_bfheating_coeff) == 4);
-
-            spontrecombcoeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] = in_alpha_sp;
-
-            bfcooling_coeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] = in_bfcooling_coeff;
-
-            if constexpr (USE_LUT_PHOTOION) {
-              if (in_corrphotoioncoeff >= 0) {
-                corrphotoioncoeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] = in_corrphotoioncoeff;
-              } else {
-                printlnlog(
-                    "ERROR: USE_LUT_PHOTOION is on, but there are no corrphotoioncoeff values in ratecoeff file");
-                std::abort();
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return true;
-}
-
-void write_ratecoeff_dat(const std::string& adatafile_hash, const std::string& compositionfile_hash,
-                         const std::span<const std::string, 3> phixsfile_hash) {
-  auto ratecoeff_file = fstream_required("ratecoeff.dat", std::ios::out | std::ios::trunc);
-  ratecoeff_file << std::hexfloat;
-  ratecoeff_file << adatafile_hash << '\n';
-  ratecoeff_file << compositionfile_hash << '\n';
-  for (int phixsver = 1; phixsver <= 2; phixsver++) {
-    if (phixs_file_version_exists[phixsver]) {
-      ratecoeff_file << phixsfile_hash[phixsver] << '\n';
-    }
-  }
-  ratecoeff_file << MINTEMP << ' ' << MAXTEMP << ' ' << TABLESIZE << ' ' << globals::nlines << ' '
-                 << globals::nbfcontinua << ' ' << RATECOEFF_INTEGRAL_ACCURACY << '\n';
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      ratecoeff_file << get_atomicnumber(element) << ' ' << get_ionstage(element, ion) << ' '
-                     << get_nlevels(element, ion) << ' ' << get_nlevels_ionising(element, ion) << '\n';
-    }
-  }
-
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element) - 1;
-    for (int ion = 0; ion < nions; ion++) {
-      // nlevels = get_nlevels(element,ion);
-      const int nlevels = get_nlevels_ionising(element, ion);
-      for (int level = 0; level < nlevels; level++) {
-        // Loop over the phixs targets
-        const auto nphixstargets = get_nphixstargets(element, ion, level);
-        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          // Loop over the temperature grid
-          for (int iter = 0; iter < TABLESIZE; iter++) {
-            const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
-
-            ratecoeff_file << spontrecombcoeffs[bflutindex] << ' ' << bfcooling_coeffs[bflutindex] << ' '
-                           << (USE_LUT_PHOTOION ? corrphotoioncoeffs[bflutindex] : -1) << ' ' << -1 << '\n';
-          }
-        }
-      }
-    }
-  }
-}
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
 auto alpha_sp_integrand(const double nu_minus_nu_edge, void* const voidparas) -> double {
@@ -315,7 +120,8 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, void* const voidparas) -
 }
 
 void precalculate_rate_coefficient_integrals() {
-  // target fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
+  // we're writing to shared memory, so we need to synchronise
+  MPI_Barrier(globals::mpi_comm_node);
 
   // Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < get_nelements(); element++) {
@@ -391,6 +197,8 @@ void precalculate_rate_coefficient_integrals() {
       }
     }
   }
+
+  MPI_Barrier(globals::mpi_comm_node);
 }
 
 // multiply the cross sections associated with a level by some factor and
@@ -919,47 +727,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
 // W is easily factored out. For stimulated recombination we must assume
 // T_e = T_R for this precalculation.
 void ratecoefficients_init() {
-  // Determine the temperature grids gridsize
-  T_step_log = (log(MAXTEMP) - log(MINTEMP)) / (TABLESIZE - 1.);
-
-  auto adatafile_hash = md5_file("adata.txt");
-  auto compositionfile_hash = md5_file("compositiondata.txt");
-  std::array<std::string, 3> phixsfile_hash;
-  for (int phixsver = 1; phixsver <= 2; phixsver++) {
-    if (phixs_file_version_exists[phixsver]) {
-      phixsfile_hash[phixsver] = md5_file(phixsdata_filenames[phixsver]);
-    }
-  }
-
-  // Check if we need to calculate the ratecoefficients or if we were able to read them from file
-  bool ratecoeff_match = false;
-  if (globals::rank_in_node == 0) {
-    FILE* ratecoeff_file = fopen("ratecoeff.dat", "r");
-    if (ratecoeff_file != nullptr) {
-      ratecoeff_match = read_ratecoeff_dat(ratecoeff_file, adatafile_hash, compositionfile_hash, phixsfile_hash);
-      if (!ratecoeff_match) {
-        printlnlog("[info] ratecoefficients_init: ratecoeff.dat does not match current simulation. Recalculating...");
-      }
-      fclose(ratecoeff_file);
-    } else {
-      printlnlog("[info] ratecoefficients_init: ratecoeff.dat file not found. Creating a new one...");
-    }
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-  // all node-rank 0 should agree, but to be sure,
-  // world rank 0 will decide if we need to regenerate rate coefficient tables
-  MPI_Bcast_safe(ratecoeff_match, 0, MPI_COMM_WORLD);
-
-  if (!ratecoeff_match) {
-    precalculate_rate_coefficient_integrals();
-
-    // And the master process writes them to file in a serial operation
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    if (globals::my_rank == 0) {
-      write_ratecoeff_dat(adatafile_hash, compositionfile_hash, phixsfile_hash);
-    }
-  }
+  precalculate_rate_coefficient_integrals();
 
   read_recombrate_file();
 
