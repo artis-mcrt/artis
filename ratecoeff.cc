@@ -51,7 +51,7 @@ struct GSLIntegrationParas {
 
 struct GSLIntegralParasGammaCorr {
   double nu_edge;
-  double modified_departure_ratio;
+  double modified_departure_ratio;  // nnupperionlevel / nnlevel * nne * (sahafact / exp(E_threshold / KB / T))
   std::span<const float> photoion_xs;
   float T_e;
   int nonemptymgi;
@@ -158,9 +158,9 @@ void precalculate_rate_coefficient_integrals() {
             double error{NAN};
             const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
 
-            const double sahafact_modified = SAHACONST * statw_lower / statw_upper * std::pow(T_e, -1.5);
-            assert_always(sahafact_modified >= 0.);
-            assert_always(std::isfinite(sahafact_modified));
+            const double modified_sahafact = calculate_modified_sahafact(statw_lower, statw_upper, T_e);
+            assert_always(modified_sahafact >= 0.);
+            assert_always(std::isfinite(modified_sahafact));
 
             assert_always(!get_phixs_table(element, ion, level).empty());
             // the threshold of the first target gives nu of the first phixstable point
@@ -168,7 +168,7 @@ void precalculate_rate_coefficient_integrals() {
                 .nu_edge = nu_threshold, .T_e = T_e, .photoion_xs = get_phixs_table(element, ion, level)};
 
             // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
-            const auto alpha_sp = FOURPI * sahafact_modified * phixstargetprobability *
+            const auto alpha_sp = FOURPI * modified_sahafact * phixstargetprobability *
                                   integrator<alpha_sp_integrand>(intparas, 0, nu_max_phixs - nu_threshold,
                                                                  RATECOEFF_INTEGRAL_ACCURACY, &error);
 
