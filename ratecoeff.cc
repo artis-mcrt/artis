@@ -26,7 +26,6 @@
 #include "input.h"
 #include "ltepop.h"
 #include "macroatom.h"
-#include "md5.h"
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"
@@ -35,7 +34,7 @@
 namespace {
 constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 
-double T_step_log{};
+const double T_step_log = (std::log(MAXTEMP) - std::log(MINTEMP)) / (TABLESIZE - 1.);
 
 std::span<const float> ion_alpha_sp;  // size is nincludedions * TABLESIZE
                                       //
@@ -122,7 +121,8 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, void* const voidparas) -
 }
 
 void precalculate_rate_coefficient_integrals() {
-  // target fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
+  // we're writing to shared memory, so we need to synchronise
+  MPI_Barrier(globals::mpi_comm_node);
 
   // Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < get_nelements(); element++) {
@@ -198,6 +198,8 @@ void precalculate_rate_coefficient_integrals() {
       }
     }
   }
+
+  MPI_Barrier(globals::mpi_comm_node);
 }
 
 // multiply the cross sections associated with a level by some factor and
@@ -726,24 +728,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
 // W is easily factored out. For stimulated recombination we must assume
 // T_e = T_R for this precalculation.
 void ratecoefficients_init() {
-  // Determine the temperature grids gridsize
-  T_step_log = (log(MAXTEMP) - log(MINTEMP)) / (TABLESIZE - 1.);
-
-  auto adatafile_hash = md5_file("adata.txt");
-  auto compositionfile_hash = md5_file("compositiondata.txt");
-  std::array<std::string, 3> phixsfile_hash;
-  for (int phixsver = 1; phixsver <= 2; phixsver++) {
-    if (phixs_file_version_exists[phixsver]) {
-      phixsfile_hash[phixsver] = md5_file(phixsdata_filenames[phixsver]);
-    }
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  // all node-rank 0 should agree, but to be sure,
-  // world rank 0 will decide if we need to regenerate rate coefficient tables
   precalculate_rate_coefficient_integrals();
-
-  MPI_Barrier(MPI_COMM_WORLD);
 
   read_recombrate_file();
 
