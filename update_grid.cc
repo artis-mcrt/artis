@@ -353,14 +353,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
             get_bfheatingcoeff_ana(element, ion, 0, 0, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
         globals::bfheatingestimator[ionestimindex] = globals::bfheatingestimator[ionestimindex] / bfheatingcoeff_ana;
 
-        if (!std::isfinite(globals::bfheatingestimator[ionestimindex])) {
-          const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-          printlog(
-              "[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / "
-              "get_bfheatingcoeff_ana({},{},{},{},{})={:g}/{:g}",
-              element, ion, 0, 0, mgi, globals::bfheatingestimator[ionestimindex], bfheatingcoeff_ana);
-          std::abort();
-        }
+        assert_always(std::isfinite(globals::bfheatingestimator[ionestimindex]));
       }
     }
   }
