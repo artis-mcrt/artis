@@ -426,7 +426,7 @@ void compton_scatter(Packet& pkt) {
 [[nodiscard]] auto get_chi_photo_electric_cmf(const int cellindex, const double nu_cmf) -> double {
   const int mgi = grid::get_propcell_modelgridindex(cellindex);
 
-  if (mgi >= grid::get_npts_model()) {
+  if (mgi < 0) {
     return 0.;  // empty cell
   }
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
@@ -519,7 +519,7 @@ void compton_scatter(Packet& pkt) {
     return 0.;
   }
   const int mgi = grid::get_propcell_modelgridindex(cellindex);
-  if (mgi >= grid::get_npts_model()) {
+  if (mgi < 0) {
     return 0.;  // empty cell
   }
 
@@ -820,7 +820,7 @@ void wollaeger_thermalisation(Packet& pkt) {
     const auto [sdist, snext] = grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where);
     const double s_cont = sdist * t_current * t_current * t_current / std::pow(pkt_copy.prop_time, 3);
     const int mgi = grid::get_propcell_modelgridindex(pkt_copy.where);
-    if (mgi != grid::get_npts_model()) {
+    if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       tau += grid::get_rho(nonemptymgi) * s_cont * mean_gamma_opac;  // contribution to the integral
     }
@@ -882,7 +882,7 @@ void guttman_thermalisation(Packet& pkt) {
           grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where);
       const double s_cont = sdist * std::pow(t, 3.) / std::pow(pkt_copy.prop_time, 3.);
       const int mgi = grid::get_propcell_modelgridindex(pkt_copy.where);
-      if (mgi != grid::get_npts_model()) {
+      if (mgi >= 0) {
         column_densities[i] += grid::get_rho_tmin(mgi) * s_cont;  // contribution to the integral
       }
       // move packet copy now

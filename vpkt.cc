@@ -255,7 +255,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
     const auto [sdist, snext] = grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where);
     const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
-    if (mgi == grid::get_npts_model()) {
+    if (mgi < 0) {
       vpkt.next_trans = -1;
     } else {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
@@ -355,7 +355,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
     end_packet = (vpkt.type == TYPE_ESCAPE);
 
     mgi = grid::get_propcell_modelgridindex(vpkt.where);
-    if (mgi < grid::get_npts_model()) {
+    if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
       // kill vpkt with pass through a thick cell
