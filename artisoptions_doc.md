@@ -25,11 +25,11 @@ constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
 }
 
 // Use TJ radiation density temperature for Boltzmann excitation formula instead of electron temperature Te
-// This is default on for classic, and off for nebularnlte, where it affects the super-level
-constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
+// This is default on for classic (with Boltmann factor level pops), and off for nebularnlte, where it affects the superlevel sublevel populations
+constexpr bool LTEPOP_EXCITATION_USE_TJ;
 
-// force Saha ion balance for a given element instead of solving NLTE populations
-constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }
+// force Saha ionisation balance for a given element (contraint applied to NLTE population solver and classic phi function)
+constexpr bool FORCE_SAHA_ION_BALANCE(int element_z);
 
 // Only include a single level for the highest ion stage
 constexpr bool SINGLE_LEVEL_TOP_ION;
