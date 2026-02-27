@@ -350,7 +350,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
         // contributions are added up.
 
         const double bfheatingcoeff_ana = calculate_bfheatingcoeff(element, ion, 0, 0, nonemptymgi);
-        globals::bfheatingestimator[ionestimindex] = globals::bfheatingestimator[ionestimindex] / bfheatingcoeff_ana;
+        globals::bfheatingestimator[ionestimindex] /= bfheatingcoeff_ana;
 
         assert_always(std::isfinite(globals::bfheatingestimator[ionestimindex]));
       }
