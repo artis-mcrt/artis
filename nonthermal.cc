@@ -2137,8 +2137,8 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
   const double tmid = globals::timesteps[timestep].mid;
   const double rho = grid::get_rho(nonemptymgi);
 
-  // if INSTANT_PARTICLE_DEPOSITION, use the analytic rate at t_mid since it will have no Monte Carlo noise (although
-  // strictly, it should be an integral from the timestep start to the end)
+  // if PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT, use the analytic rate at t_mid since it will
+  // have no Monte Carlo noise (although strictly, it should be an integral from the timestep start to the end)
   // with time-dependent deposition, we don't have an analytic rate, so we use the Monte Carlo rate
 
   heatingcoolingrates.eps_gamma_ana = rho * decay::get_gamma_emission_rate(nonemptymgi, tmid);

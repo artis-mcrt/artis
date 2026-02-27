@@ -2,7 +2,8 @@
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS;
 
-constexpr auto GRID_TYPE = {GridType::CARTESIAN3D, GridType::CYLINDRICAL2D, GridType::SPHERICAL1D}
+// set to GridType:: CARTESIAN3D, CYLINDRICAL2D, or SPHERICAL1D
+constexpr GridType GRID_TYPE;
 
 // for GridType::CARTESIAN3D, set the dimensions. This will have no effect with a 3D model.txt since they will be set to match the input
 constexpr int CUBOID_NCOORDGRID_X;
@@ -16,16 +17,14 @@ constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE;
 constexpr int NLTEITER;
 
 // Specify how many levels will be treated in full NLTE, not including the ground state or the superlevel.
-constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
-  if (element_z < 20) {
-    return 100;
-  }
-  return 200;
-}
+constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage);
 
 // Use TJ radiation density temperature for Boltzmann excitation formula instead of electron temperature Te
-// This is default on for classic, and off for nebularnlte, where it affects the super-level
-constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
+// This is default on for classic (with Boltmann factor level pops), and off for nebularnlte, where it affects the superlevel sublevel populations
+constexpr bool LTEPOP_EXCITATION_USE_TJ;
+
+// force Saha ionisation balance for a given element (contraint applied to NLTE population solver and classic phi function)
+constexpr bool FORCE_SAHA_ION_BALANCE(int element_z);
 
 // Only include a single level for the highest ion stage
 constexpr bool SINGLE_LEVEL_TOP_ION;
@@ -74,6 +73,9 @@ constexpr bool POL_ON;
 // Polarisation for virtual packets
 constexpr bool VPKT_ON;
 
+// write virtual packet per-direction contributions to vpkt_contrib.out files
+constexpr bool VPKT_WRITE_CONTRIBS;
+
 constexpr double MINPOP;
 
 constexpr double NU_MIN_R;  // lower frequency boundary for UVOIR spectra and BB sampling
@@ -105,6 +107,9 @@ constexpr bool DETAILED_LINE_ESTIMATORS_ON;
 
 // store detailed bound-free rate estimators
 constexpr bool DETAILED_BF_ESTIMATORS_ON;
+
+// select which bf-continua are tracked in the detailed estimators (only used when DETAILED_BF_ESTIMATORS_ON is true)
+constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return true; }
 
 // if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP;
@@ -221,7 +226,13 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
 
 constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END;
 
-constexpr bool INSTANT_PARTICLE_DEPOSITION;
+// thermalisation scheme for non-thermal particles (positrons, electrons, alphas). ThermalisationScheme::INSTANT
+// instantly deposits all particle energy. ThermalisationScheme::DETAILED uses time-dependent Monte Carlo transport.
+// ThermalisationScheme::BARNES, WOLLAEGER, GUTTMAN use analytic thermalisation efficiency functions.
+constexpr ThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
+
+// thermalisation scheme for gamma-ray photons. ThermalisationScheme::DETAILED uses full gamma-ray transport.
+constexpr ThermalisationScheme GAMMA_THERMALISATION_SCHEME;
 
 // Options for different types of timestep set-ups, only one of these can be true at one time. The hybrid timestep
 // schemes that switch between log and fixed require a transition time from one scheme to the other as well as the
@@ -229,8 +240,7 @@ constexpr bool INSTANT_PARTICLE_DEPOSITION;
 // values that would give the same number or more more fixed timesteps than the total number of timesteps in the
 // simulation. The times are set in days.
 
-
-constexpr enum class timestepsizemethods TIMESTEP_SIZE_METHOD;
+constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD;
 
 constexpr double FIXED_TIMESTEP_WIDTH;
 
