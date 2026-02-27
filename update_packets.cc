@@ -399,7 +399,8 @@ void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi)
 
 void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Packet> packets, const int nts,
                                    const double ts_end) {
-  if (cellcache_nonemptymgi >= 0) {
+  if (cellcache_nonemptymgi >= 0 &&
+      globals::cellcache[cellcacheslotid].nonemptymgi != cellcache_nonemptymgi) {
     cellcache_change_cell(globals::cellcache[cellcacheslotid], cellcache_nonemptymgi);
   }
 
