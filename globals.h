@@ -249,7 +249,7 @@ struct AllCont {
 };
 inline AllCont allcont{};
 
-// for either USE_LUT_PHOTOION = true or !USE_ION_BFHEATING_ESTIMATORS = false
+// Used when USE_LUT_PHOTOION or USE_ION_BFHEATING_ESTIMATORS is enabled
 inline std::span<const double> groundcont_nu_edge{};
 inline std::span<const int> groundcont_element{};
 inline std::span<const int> groundcont_ion{};
