@@ -1833,11 +1833,8 @@ void calculate_kappagrey() {
       }
 
       set_kappagrey(nonemptymgi, static_cast<float>(kappa));
-    } else if (get_rho_tmin(mgi) == 0.) {
+    } else {
       set_kappagrey(nonemptymgi, 0.);
-    } else if (get_rho_tmin(mgi) < 0.) {
-      printlnlog("Error: negative density. Abort.");
-      assert_always(false);
     }
 
     check1 = check1 + (get_kappagrey(nonemptymgi) * get_rho_tmin(mgi));
