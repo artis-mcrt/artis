@@ -1,12 +1,15 @@
 #include "update_packets.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
 #include <ctime>
+#include <optional>
 #include <span>
 #include <tuple>
+#include <vector>
 
 #include "atomic.h"
 #include "ltepop.h"
@@ -287,56 +290,72 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
   }
 }
 
-auto compare_packet_order(const Packet& p1, const Packet& p2) -> bool {
+constexpr auto packetprop_update_required(const Packet& pkt, const double ts_end) -> bool {
+  if (pkt.type == TYPE_ESCAPE) {
+    return false;
+  }
+  return pkt.prop_time < ts_end;
+}
+
+// Return the nonemptymgi for the cell cache if required (non-empty, non-thick cell),
+// otherwise return an empty std::optional to indicate that no cell cache is used
+auto get_packet_cellcachenonemptymgi(const Packet& pkt) -> std::optional<int> {
+  constexpr auto nocache_packettypes = std::array<packet_type, 7>{TYPE_RADIOACTIVE_PELLET,
+                                                                  TYPE_GAMMA,
+                                                                  TYPE_PRE_KPKT,
+                                                                  TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS,
+                                                                  TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS,
+                                                                  TYPE_NONTHERMAL_PREDEPOSIT_ALPHA,
+                                                                  TYPE_NTALPHA_FISPROD_DEPOSITED};
+  if (std::ranges::find(nocache_packettypes, pkt.type) != nocache_packettypes.end()) {
+    return {};  // these types do not use the cell cache
+  }
+  const auto mgi = grid::get_propcell_modelgridindex(pkt.where);
+  if (mgi >= grid::get_npts_model()) {
+    return {};  // for empty cell, no cell cache required
+  }
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+  if (grid::thick_allcells[nonemptymgi] == 1) {
+    return {};  // for thick cell, no cell cache required
+  }
+  return {nonemptymgi};
+}
+
+auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_end) -> bool {
   // return true if packet p1 goes before p2
 
-  // move escaped packets to the end of the list for better performance
-  const bool esc1 = (p1.type == TYPE_ESCAPE);
-  const bool esc2 = (p2.type == TYPE_ESCAPE);
+  // first order by whether the packet has reached the end of the timestep or escaped (both of which mean it won't be
+  // updated anymore by update_packets in this timestep)
 
-  if (!esc1 && esc2) {
+  const auto pktactive1 = packetprop_update_required(p1, ts_end);
+  const auto pktactive2 = packetprop_update_required(p2, ts_end);
+  // if one packet is active and the other is not, then the active one goes first
+  if (pktactive1 && !pktactive2) {
     return true;
   }
-  if (esc1) {
+  if (!pktactive1 && pktactive2) {
+    return false;
+  }
+  if (!pktactive1 && !pktactive2) {
+    // both are inactive - order doesn't matter
     return false;
   }
 
-  // for both non-escaped packets, order by descending cell density
-  const int mgi1 = grid::get_propcell_modelgridindex(p1.where);
-  const int mgi2 = grid::get_propcell_modelgridindex(p2.where);
-  const auto rho1 = mgi1 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi1)) : 0.0;
-  const auto rho2 = mgi2 < grid::get_npts_model() ? grid::get_rho(grid::get_nonemptymgi_of_mgi(mgi2)) : 0.0;
+  // all packets in empty or thick cells can be grouped together since they don't use the cell cache
+  const int cellcachenonemptymgi1 = get_packet_cellcachenonemptymgi(p1).value_or(-1);
+  const int cellcachenonemptymgi2 = get_packet_cellcachenonemptymgi(p2).value_or(-1);
+  const auto rho1 = cellcachenonemptymgi1 >= 0 ? grid::get_rho(cellcachenonemptymgi1) : 0.0;
+  const auto rho2 = cellcachenonemptymgi2 >= 0 ? grid::get_rho(cellcachenonemptymgi2) : 0.0;
 
-  return std::tie(rho2, mgi1, p1.type, p2.nu_cmf) < std::tie(rho1, mgi2, p2.type, p1.nu_cmf);
-}
-
-void do_cell_packet_updates(std::span<Packet> packets, const int nts, const double ts_end) {
-  auto update_packet = [ts_end, nts](auto& pkt) {
-    const int mgi = grid::get_propcell_modelgridindex(pkt.where);
-    int newmgi = mgi;
-    while (pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE && (newmgi == mgi || newmgi == grid::get_npts_model())) {
-      do_packet(pkt, ts_end, nts);
-      newmgi = grid::get_propcell_modelgridindex(pkt.where);
-    }
-  };
-
-#if defined(STDPAR_ON) || !defined(_OPENMP)
-  std::for_each(EXEC_PAR packets.begin(), packets.end(), update_packet);
-#else
-#ifdef GPU_ON
-#pragma omp target teams distribute parallel for
-#else
-#pragma omp parallel for schedule(nonmonotonic : dynamic)
-#endif
-  for (auto i = 0Z; i < std::ssize(packets); i++) {
-    update_packet(packets[i]);
-  }
-#endif
+  // rho 1 and 2 are swapped here since we want higher density cells to come first
+  return std::tie(rho2, cellcachenonemptymgi1, p1.type, p2.nu_cmf) <
+         std::tie(rho1, cellcachenonemptymgi2, p2.type, p1.nu_cmf);
 }
 
 // fill the cellcache with values for the current cell
 void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi) {
   assert_always(nonemptymgi >= 0);
+  stats::increment(stats::Counter::UPDATECELL);
 
   cacheslot.nonemptymgi = nonemptymgi;
   cacheslot.chi_ff_nnionpart = -1.;
@@ -378,6 +397,34 @@ void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi)
   }
 }
 
+void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Packet> packets, const int nts,
+                                   const double ts_end) {
+  if (cellcache_nonemptymgi >= 0 &&
+      globals::cellcache[cellcacheslotid].nonemptymgi != cellcache_nonemptymgi) {
+    cellcache_change_cell(globals::cellcache[cellcacheslotid], cellcache_nonemptymgi);
+  }
+
+  auto update_packet = [cellcache_nonemptymgi, ts_end, nts](auto& pkt) {
+    while (packetprop_update_required(pkt, ts_end) &&
+           (get_packet_cellcachenonemptymgi(pkt).value_or(cellcache_nonemptymgi) == cellcache_nonemptymgi)) {
+      do_packet(pkt, ts_end, nts);
+    }
+  };
+
+#if defined(STDPAR_ON) || !defined(_OPENMP)
+  std::for_each(EXEC_PAR packets.begin(), packets.end(), update_packet);
+#else
+#ifdef GPU_ON
+#pragma omp target teams distribute parallel for
+#else
+#pragma omp parallel for schedule(nonmonotonic : dynamic)
+#endif
+  for (auto i = 0Z; i < std::ssize(packets); i++) {
+    update_packet(packets[i]);
+  }
+#endif
+}
+
 }  // anonymous namespace
 
 // Move and update packets during the current timestep (nts)
@@ -392,57 +439,57 @@ void update_packets(const int nts, std::span<Packet> packets) {
 
   const auto time_update_packets_start = std::time(nullptr);
   printlnlog("timestep {}: start update_packets at time {}", nts, time_update_packets_start);
-  // invalidate the cellcache for the first packet update pass. It will be updated to the correct cell as packets are
-  // processed.
-  globals::cellcache[cellcacheslotid].nonemptymgi = -1;
-  bool timestepcomplete = false;
+  // first group will probably be the -1 no-cache required group, so -2 triggers the first update
+  globals::cellcache[cellcacheslotid].nonemptymgi = -2;
+  int prevpkt_cellcache_nonemptymgi = -2;
   int passnumber = 0;
-  while (!timestepcomplete) {
+  while (true) {
     const auto sys_time_start_pass = std::time(nullptr);
 
-    std::ranges::SORT_OR_STABLE_SORT(packets, compare_packet_order);
+    std::ranges::SORT_OR_STABLE_SORT(
+        packets, [ts_end](const Packet& p1, const Packet& p2) { return compare_packet_order(p1, p2, ts_end); });
 
-    const int count_pktupdates = static_cast<int>(std::ranges::count_if(
-        packets, [ts_end](const auto& pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
+    static std::vector<std::tuple<int, std::span<Packet>>> packet_groups;
+    packet_groups.clear();
+    auto pass_packets_updated{0Z};
     const auto updatecellcounter_beforepass = stats::get_counter(stats::Counter::UPDATECELL);
-    std::ptrdiff_t packetgroupstart = 0;
-
-    for (auto& pkt : packets) {
-      const auto pktindex = &pkt - packets.data();
-      if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
-        const int mgi = grid::get_propcell_modelgridindex(pkt.where);
-        const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
-        const bool cellcache_change_cell_required =
-            (nonemptymgi >= 0 && globals::cellcache[cellcacheslotid].nonemptymgi != nonemptymgi &&
-             grid::thick_allcells[nonemptymgi] != 1);
-
-        if (cellcache_change_cell_required) {
-          if (packetgroupstart != pktindex) {
-            do_cell_packet_updates(packets.subspan(packetgroupstart, pktindex - packetgroupstart), nts, ts_end);
-          }
-
-#ifdef _OPENMP
-#pragma omp critical(cellchange)
-#endif
-          {
-            stats::increment(stats::Counter::UPDATECELL);
-            cellcache_change_cell(globals::cellcache[cellcacheslotid], nonemptymgi);
-          }
-          packetgroupstart = pktindex;
-        }
+    auto packetgroupstart{0Z};
+    // because of the sort, we don't need to check the entire packet list
+    auto pktindex = 0Z;
+    for (; pktindex < std::ssize(packets); pktindex++) {
+      const auto& pkt = packets[pktindex];
+      if (!packetprop_update_required(pkt, ts_end)) {
+        // due to the sorting, all following packets will also not require updating, so can break out of the loop
+        break;
       }
+      const auto cellcache_nonemptymgi = get_packet_cellcachenonemptymgi(pkt).value_or(-1);
+      if (cellcache_nonemptymgi != prevpkt_cellcache_nonemptymgi && packetgroupstart != pktindex) {
+        packet_groups.emplace_back(prevpkt_cellcache_nonemptymgi,
+                                   packets.subspan(packetgroupstart, pktindex - packetgroupstart));
+        packetgroupstart = pktindex;
+      }
+      prevpkt_cellcache_nonemptymgi = cellcache_nonemptymgi;
     }
-    const auto packets_remaining = packets.subspan(packetgroupstart);
-    if (!packets_remaining.empty()) {
-      do_cell_packet_updates(packets_remaining, nts, ts_end);
+    if (packetgroupstart != pktindex) {
+      // finish the last group of packets that needed updating
+      packet_groups.emplace_back(prevpkt_cellcache_nonemptymgi,
+                                 packets.subspan(packetgroupstart, pktindex - packetgroupstart));
+    }
+    if (packet_groups.empty()) {
+      // if no packets needed updating, then this timestep is complete
+      break;
     }
 
-    timestepcomplete = std::ranges::all_of(
-        packets, [ts_end](const auto& pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
+    // process the packets grouped by their required cell cache, which should minimise the number of times we need to
+    // change the cell cache during the packet updates
+    for (auto [cellcache_nonemptymgi, grouppackets] : packet_groups) {
+      update_packet_cellcache_group(cellcache_nonemptymgi, grouppackets, nts, ts_end);
+      pass_packets_updated += std::ssize(grouppackets);
+    }
 
     const auto cellcacheresets = stats::get_counter(stats::Counter::UPDATECELL) - updatecellcounter_beforepass;
     printlnlog("  update_packets timestep {} pass {:3d}: packetsupdated {:7d} cellcacheresets {:7d} (took {}s)", nts,
-               passnumber, count_pktupdates, cellcacheresets, std::time(nullptr) - sys_time_start_pass);
+               passnumber, pass_packets_updated, cellcacheresets, std::time(nullptr) - sys_time_start_pass);
 
     passnumber++;
   }
