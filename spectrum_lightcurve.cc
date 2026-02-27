@@ -293,8 +293,8 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (dirbin == -1) {
-    write_light_curve("light_curve.out", dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
-    write_light_curve("gamma_light_curve.out", dirbin, gamma_light_curve_lum, gamma_light_curve_lumcmf, numtimesteps);
+    write_light_curve("light_curve.out", rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
+    write_light_curve("gamma_light_curve.out", gamma_light_curve_lum, gamma_light_curve_lumcmf, numtimesteps);
     write_spectra("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, numtimesteps);
   } else {
     if (globals::my_rank == 0 && !std::filesystem::exists(outdir_resfiles)) {
@@ -302,8 +302,8 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
     }
     MPI_Barrier(MPI_COMM_WORLD);
 
-    write_light_curve(std::format("{}light_curve_res_{:02d}.out", outdir_resfiles, dirbin), dirbin,
-                      rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
+    write_light_curve(std::format("{}light_curve_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_light_curve_lum,
+                      rpkt_light_curve_lumcmf, numtimesteps);
     write_spectra(std::format("{}spec_res_{:02d}.out", outdir_resfiles, dirbin),
                   std::format("{}emission_res_{:02d}.out", outdir_resfiles, dirbin),
                   std::format("{}emissiontrue_res_{:02d}.out", outdir_resfiles, dirbin),
@@ -674,7 +674,7 @@ void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkt
              do_emission_absorption ? "emission/absorption " : "", std::time(nullptr) - time_func_start);
 }
 
-void write_light_curve(const std::string& lc_filename, const int dirbin, const std::span<const double> light_curve_lum,
+void write_light_curve(const std::string& lc_filename, const std::span<const double> light_curve_lum,
                        const std::span<const double> light_curve_lumcmf, const int numtimesteps) {
   if (globals::node_id != 0 || globals::rank_in_node != 0) {
     return;
@@ -687,15 +687,6 @@ void write_light_curve(const std::string& lc_filename, const int dirbin, const s
   for (int nts = 0; nts < numtimesteps; nts++) {
     lc_file << globals::timesteps[nts].mid / DAY << ' ' << light_curve_lum[nts] / LSUN << ' '
             << light_curve_lumcmf[nts] / LSUN << '\n';
-  }
-
-  if (dirbin == -1) {
-    // Now print out the gamma ray deposition rate in the same file.
-    for (int m = 0; m < numtimesteps; m++) {
-      lc_file << globals::timesteps[m].mid / DAY << ' '
-              << globals::timesteps[m].gamma_dep / LSUN / globals::timesteps[m].width << ' '
-              << globals::timesteps[m].cmf_lum / globals::timesteps[m].width / LSUN << '\n';
-    }
   }
 }
 
