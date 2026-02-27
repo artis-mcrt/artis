@@ -1633,6 +1633,7 @@ void set_model_type(const GridType model_type_value) { model_type = model_type_v
 // get the index in the list of non-empty cells for a given model grid cell
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonemptymgi_of_mgi(const int mgi) -> int {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
+  assert_testmodeonly(mgi >= 0);
   assert_testmodeonly(mgi < get_npts_model());
 
   const int nonemptymgi = nonemptymgi_of_mgi[mgi];
