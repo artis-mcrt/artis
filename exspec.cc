@@ -103,9 +103,8 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
 
   if (a == -1) {
     // angle-averaged spectra and light curves
-    write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
-    write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf,
-                      globals::ntimesteps);
+    write_light_curve("light_curve.out", rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
+    write_light_curve("gamma_light_curve.out", gamma_light_curve_lum, gamma_light_curve_lumcmf, globals::ntimesteps);
 
     write_spectra("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntimesteps);
 
@@ -123,7 +122,7 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     if (!std::filesystem::exists(outdir_resfiles)) {
       std::filesystem::create_directory(outdir_resfiles);
     }
-    write_light_curve(std::format("{}light_curve_res_{:02d}.out", outdir_resfiles, a), a, rpkt_light_curve_lum,
+    write_light_curve(std::format("{}light_curve_res_{:02d}.out", outdir_resfiles, a), rpkt_light_curve_lum,
                       rpkt_light_curve_lumcmf, globals::ntimesteps);
     write_spectra(std::format("{}spec_res_{:02d}.out", outdir_resfiles, a),
                   std::format("{}emission_res_{:02d}.out", outdir_resfiles, a),
