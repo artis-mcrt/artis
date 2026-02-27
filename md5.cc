@@ -246,7 +246,7 @@ constexpr auto md5_test() -> bool {
   return (bytes_to_hex(hashbytes) == "4b0cff9625b0501c7b9ccc6569113ddf");
 }
 
-#if (defined(__clang__) && __clang_major__ >= 21) || defined(__GNUC__)
+#ifndef __HIP_PLATFORM_AMD__
 static_assert(md5_test(), "MD5 test failed!");
 #endif
 
