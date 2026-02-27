@@ -51,10 +51,6 @@ auto integrand_bfheatingcoeff(const double nu, void* const voidparas) -> double 
 
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
-  // The correction factor for stimulated emission in gammacorr is set to its
-  // LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  // may be evaluated at T_R!
-
   return sigma_bf * (1 - (nu_edge / nu)) * radfield::radfield(nu, nonemptymgi) * (1 - exp(-HOVERKB * nu / T_R));
 }
 
