@@ -641,17 +641,16 @@ void macroatom_close_file() {
     if (get_phixsupperlevel(lowerionlower_uniquelevelindex, phixstargetindex) == upper) {
       // Seaton approximation: Mihalas (1978), eq.5-79, p.134
 
-      const double fac1 = epsilon_trans / KB / T_e;
-
       // select gaunt factor according to ionic charge
       const double g = gaunt_factor(get_ionstage(element, upperion - 1));
 
       const double sigma_bf = (get_phixs_table(lowerionlower_uniquelevelindex)[0] *
                                get_phixsprobability(lowerionlower_uniquelevelindex, phixstargetindex));
       const double statw_upper = stat_weight(element, upperion, upper);
-      const double sf = calculate_sahafact(statw_lower, statw_upper, T_e, epsilon_trans);
+      const double modified_sahafact = calculate_modified_sahafact(statw_lower, statw_upper, T_e);
 
-      const double C = nne * nne * sf * 1.55e13 * std::pow(T_e, -0.5) * g * sigma_bf * std::exp(-fac1) / fac1;
+      const double C =
+          nne * nne * modified_sahafact * 1.55e13 * std::pow(T_e, -0.5) * g * sigma_bf * KB * T_e / epsilon_trans;
       assert_testmodeonly(std::isfinite(C));
 
       return C;
