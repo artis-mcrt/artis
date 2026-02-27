@@ -23,7 +23,6 @@ input.cc
 kpkt.cc
 ltepop.cc
 macroatom.cc
-md5.cc
 nltepop.cc
 nonthermal.cc
 packet.cc
@@ -47,7 +46,6 @@ input.cc
 kpkt.cc
 ltepop.cc
 macroatom.cc
-md5.cc
 nltepop.cc
 nonthermal.cc
 packet.cc
