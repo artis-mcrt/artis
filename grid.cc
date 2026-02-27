@@ -483,7 +483,7 @@ void map_1dmodelto3dgrid() {
   }
 }
 
-// Map 2D cylindrical model onto 3D Cartesia propagation grid
+// Map 2D cylindrical model onto 3D Cartesian propagation grid
 void map_2dmodelto3dgrid() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     // map to 3D Cartesian grid
