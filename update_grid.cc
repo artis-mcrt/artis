@@ -346,8 +346,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
         globals::bfheatingestimator_save[ionestimindex] = globals::bfheatingestimator[ionestimindex];
 #endif
         // Now convert bfheatingestimator into the bfheating renormalisation coefficient used in
-        // get_bfheating in the remaining part of update_grid. Later on it's reset and new
-        // contributions are added up.
+        // for the remaining part of update_grid. At the start of the next update_packets, it will be reset
 
         const double bfheatingcoeff_ground = calculate_bfheatingcoeff(element, ion, 0, 0, nonemptymgi);
         globals::bfheatingestimator[ionestimindex] /= bfheatingcoeff_ground;
