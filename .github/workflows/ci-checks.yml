@@ -365,11 +365,12 @@ jobs:
                   make clean
                   make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-            - name: Compile nebular mode
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+            # incompatible with constexpr md5 test in md5.cc
+            # - name: Compile nebular mode
+            #   run: |
+            #       cp -v -p artisoptions_nltenebular.h artisoptions.h
+            #       make clean
+            #       make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
     nvidia-nvhpc:
         name: NVIDIA NVHPC nvc++
