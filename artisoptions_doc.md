@@ -27,6 +27,9 @@ constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
 // This is default on for classic, and off for nebularnlte, where it affects the super-level
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
 
+// force Saha ion balance for a given element instead of solving NLTE populations
+constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }
+
 // Only include a single level for the highest ion stage
 constexpr bool SINGLE_LEVEL_TOP_ION;
 
@@ -74,6 +77,9 @@ constexpr bool POL_ON;
 // Polarisation for virtual packets
 constexpr bool VPKT_ON;
 
+// write virtual packet per-direction contributions to vpkt_contrib.out files
+constexpr bool VPKT_WRITE_CONTRIBS;
+
 constexpr double MINPOP;
 
 constexpr double NU_MIN_R;  // lower frequency boundary for UVOIR spectra and BB sampling
@@ -105,6 +111,9 @@ constexpr bool DETAILED_LINE_ESTIMATORS_ON;
 
 // store detailed bound-free rate estimators
 constexpr bool DETAILED_BF_ESTIMATORS_ON;
+
+// select which bf-continua are tracked in the detailed estimators (only used when DETAILED_BF_ESTIMATORS_ON is true)
+constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return true; }
 
 // if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP;
@@ -221,7 +230,13 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
 
 constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END;
 
-constexpr bool INSTANT_PARTICLE_DEPOSITION;
+// thermalisation scheme for non-thermal particles (positrons, electrons, alphas). ThermalisationScheme::INSTANT
+// instantly deposits all particle energy. ThermalisationScheme::DETAILED uses time-dependent Monte Carlo transport.
+// ThermalisationScheme::BARNES, WOLLAEGER, GUTTMAN use analytic thermalisation efficiency functions.
+constexpr auto PARTICLE_THERMALISATION_SCHEME;
+
+// thermalisation scheme for gamma-ray photons. ThermalisationScheme::DETAILED uses full gamma-ray transport.
+constexpr auto GAMMA_THERMALISATION_SCHEME;
 
 // Options for different types of timestep set-ups, only one of these can be true at one time. The hybrid timestep
 // schemes that switch between log and fixed require a transition time from one scheme to the other as well as the
@@ -230,7 +245,7 @@ constexpr bool INSTANT_PARTICLE_DEPOSITION;
 // simulation. The times are set in days.
 
 
-constexpr enum class timestepsizemethods TIMESTEP_SIZE_METHOD;
+constexpr auto TIMESTEP_SIZE_METHOD;
 
 constexpr double FIXED_TIMESTEP_WIDTH;
 
