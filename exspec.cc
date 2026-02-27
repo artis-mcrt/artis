@@ -32,12 +32,18 @@ std::fstream output_file;
 
 namespace {
 
-void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets, Spectra& rpkt_spectra,
-                  Spectra& stokes_i, Spectra& stokes_q, Spectra& stokes_u, Spectra& gamma_spectra) {
+void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets) {
   std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
   std::vector<double> rpkt_light_curve_lumcmf(globals::ntimesteps, 0.);
   std::vector<double> gamma_light_curve_lum(globals::ntimesteps, 0.);
   std::vector<double> gamma_light_curve_lumcmf(globals::ntimesteps, 0.);
+  THREADLOCALONHOST Spectra rpkt_spectra;
+
+  THREADLOCALONHOST Spectra stokes_i;
+  THREADLOCALONHOST Spectra stokes_q;
+  THREADLOCALONHOST Spectra stokes_u;
+
+  THREADLOCALONHOST Spectra gamma_spectra;
 
   // Set up the spectrum grid and initialise the bins to zero.
   init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, true);
@@ -204,20 +210,12 @@ auto main(int argc, char* argv[]) -> int {
 
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
 
-  Spectra rpkt_spectra;
-
-  Spectra stokes_i;
-  Spectra stokes_q;
-  Spectra stokes_u;
-
-  Spectra gamma_spectra;
-
   setup_timesteps();
 
   const int dirbinend = (grid::get_model_type() == GridType::SPHERICAL1D) ? 0 : MABINS;
   // a is the escape direction angle bin
   for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
-    do_angle_bin(dirbin, pkts, load_allrank_packets, rpkt_spectra, stokes_i, stokes_q, stokes_u, gamma_spectra);
+    do_angle_bin(dirbin, pkts, load_allrank_packets);
   }
 
   decay::cleanup();
