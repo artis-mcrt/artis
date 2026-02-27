@@ -114,7 +114,7 @@ constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP;
 constexpr bool USE_LUT_PHOTOION;
 
 // as above for bound-free heating
-constexpr bool USE_LUT_BFHEATING;
+constexpr bool USE_ION_BFHEATING_ESTIMATORS;
 
 // Previously the NLTE solver only checked if level populations were negative and replaced these populations
 // with the LTE population. However this can cause numerical problems (e.g. when the ground populations is very

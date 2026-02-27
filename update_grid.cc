@@ -336,7 +336,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
         globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
       }
 
-      if constexpr (USE_LUT_BFHEATING) {
+      if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
         globals::bfheatingestimator[ionestimindex] *= estimator_normfactor;
 #ifdef DO_TITER
         if (globals::bfheatingestimator_save[ionestimindex] >= 0) {

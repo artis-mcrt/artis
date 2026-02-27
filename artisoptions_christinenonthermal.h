@@ -86,7 +86,7 @@ constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return 
 
 constexpr bool USE_LUT_PHOTOION = false;
 
-constexpr bool USE_LUT_BFHEATING = false;
+constexpr bool USE_ION_BFHEATING_ESTIMATORS = false;
 
 constexpr bool STRICT_POPULATION_CHECKING = false;
 

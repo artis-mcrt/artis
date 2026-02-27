@@ -81,7 +81,7 @@ constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
 
 constexpr bool USE_LUT_PHOTOION = true;
 
-constexpr bool USE_LUT_BFHEATING = true;
+constexpr bool USE_ION_BFHEATING_ESTIMATORS = true;
 
 constexpr bool STRICT_POPULATION_CHECKING = false;
 

@@ -685,7 +685,7 @@ auto search_groundphixslist(const double nu_edge, const int element_in, const in
 // continuum return -1.
 // NB: groundphixslist must be in ascending order.
 {
-  assert_always((USE_LUT_PHOTOION || USE_LUT_BFHEATING));
+  assert_always((USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS));
 
   if (nu_edge < globals::groundcont_nu_edge[0]) {
     return -1;
@@ -815,7 +815,7 @@ void setup_phixs_list() {
           assert_always(allcontindex < std::ssize(allcont));
 
           int index_in_groundphixslist = -1;
-          if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
+          if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
             const double nu_edge_target0 = get_phixs_threshold(uniquelevelindex, 0) / H;
             index_in_groundphixslist = search_groundphixslist(nu_edge_target0, element, ion, level);
 
@@ -1968,7 +1968,7 @@ void read_parameterfile(int rank) {
         "Corrphotoioncoeff is calculated from the radiation field at each timestep in each modelgrid cell (no LUT).");
   }
 
-  if (USE_LUT_BFHEATING) {
+  if (USE_ION_BFHEATING_ESTIMATORS) {
     printlnlog("bfheating coefficients are calculated from LTE lookup tables (ratecoeff.dat) and bfheatingestimator.");
   } else {
     printlnlog(

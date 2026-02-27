@@ -562,7 +562,7 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
   // ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
   atomicadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.ffheat);
 
-  if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
+  if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
       const double nu_edge = globals::groundcont_nu_edge[i];
       if (nu_cmf <= nu_edge) {
@@ -576,7 +576,7 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
                   chi_rpkt_cont.phixslist.groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
       }
 
-      if constexpr (USE_LUT_BFHEATING) {
+      if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
         atomicadd(globals::bfheatingestimator[ionestimindex],
                   chi_rpkt_cont.phixslist.groundcont_gamma_contr[i] * distance_e_cmf * (1. - (nu_edge / nu_cmf)));
       }
@@ -754,7 +754,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   double chi_bf_sum = 0.;
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     assert_testmodeonly(std::ssize(phixslist.chi_bf_sum) == globals::nbfcontinua);
-    if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
+    if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
       std::ranges::fill(phixslist.groundcont_gamma_contr, 0.);
     }
   }
@@ -842,7 +842,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
         sigma_contr = sigma_bf * allcont_probability[i] * corrfactor;
 
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-          if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && level == 0 && allcont_phixstargetindex[i] == 0) {
+          if ((USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) && level == 0 && allcont_phixstargetindex[i] == 0) {
             phixslist.groundcont_gamma_contr[allcont_index_in_groundphixslist[i]] = sigma_contr;
           }
         }

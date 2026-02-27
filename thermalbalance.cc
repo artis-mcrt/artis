@@ -237,7 +237,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
   assert_always(std::ssize(bfheatingcoeffs) == get_includedlevels());
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
-    if (grid::get_elem_abundance(nonemptymgi, element) <= minelfrac && !USE_LUT_BFHEATING) {
+    if (grid::get_elem_abundance(nonemptymgi, element) <= minelfrac && !USE_ION_BFHEATING_ESTIMATORS) {
       printlog("skipping Z={} X={:g}, ", get_atomicnumber(element), grid::get_elem_abundance(nonemptymgi, element));
     }
 
@@ -247,14 +247,14 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
       const auto levels = std::ranges::iota_view{0, nlevels};
       std::for_each(EXEC_PAR levels.begin(), levels.end(), [&](const int level) {
         double bfheatingcoeff = 0.;
-        if (grid::get_elem_abundance(nonemptymgi, element) > minelfrac || USE_LUT_BFHEATING) {
+        if (grid::get_elem_abundance(nonemptymgi, element) > minelfrac || USE_ION_BFHEATING_ESTIMATORS) {
           const auto nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, nonemptymgi);
           }
           assert_always(std::isfinite(bfheatingcoeff));
 
-          if constexpr (USE_LUT_BFHEATING) {
+          if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
             const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
             const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
             if (index_in_groundlevelcontestimator >= 0) {

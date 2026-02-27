@@ -341,7 +341,7 @@ void mpi_reduce_estimators(const int nts) {
       MPI_Allreduce_safe(globals::gammaestimator, MPI_SUM, MPI_COMM_WORLD);
     }
 
-    if constexpr (USE_LUT_BFHEATING) {
+    if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Allreduce_safe(globals::bfheatingestimator, MPI_SUM, MPI_COMM_WORLD);
     }
@@ -534,7 +534,7 @@ void zero_estimators() {
     }
   }
 
-  if constexpr (USE_LUT_BFHEATING) {
+  if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
     if (globals::nbfcontinua_ground > 0) {
       std::ranges::fill(globals::bfheatingestimator, 0.);
     }
