@@ -42,7 +42,7 @@ struct BFHeatingIntegralParams {
 };
 
 // Integrand to calculate the rate coefficient for bfheating.
-auto integrand_bfheatingcoeff_custom_radfield(const double nu, void* const voidparas) -> double {
+auto integrand_bfheatingcoeff(const double nu, void* const voidparas) -> double {
   const auto& params = *(static_cast<const BFHeatingIntegralParams*>(voidparas));
   const auto& nu_edge = params.nu_edge;
   const auto& nonemptymgi = params.nonemptymgi;
@@ -51,30 +51,11 @@ auto integrand_bfheatingcoeff_custom_radfield(const double nu, void* const voidp
 
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
+  // The correction factor for stimulated emission in gammacorr is set to its
+  // LTE value. Because the T_e dependence of gammacorr is weak, this correction
+  // correction may be evaluated at T_R!
+
   return sigma_bf * (1 - (nu_edge / nu)) * radfield::radfield(nu, nonemptymgi) * (1 - exp(-HOVERKB * nu / T_R));
-}
-
-auto calculate_bfheatingcoeff(const int element, const int ion, const int level, const int phixstargetindex,
-                              const int nonemptymgi) -> double {
-  double error = 0.;
-  const double epsrel = 1e-3;
-
-  const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
-
-  const double nu_threshold = ONEOVERH * E_threshold;
-  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
-
-  const BFHeatingIntegralParams intparas = {.nu_edge = nu_threshold,
-                                            .nonemptymgi = nonemptymgi,
-                                            .T_R = grid::get_TR(nonemptymgi),
-                                            .photoion_xs = get_phixs_table(element, ion, level)};
-
-  auto bfheating =
-      integrator<integrand_bfheatingcoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsrel, &error);
-
-  bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
-
-  return bfheating;
 }
 
 auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const float T_e,
@@ -229,6 +210,28 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, void* const paras)  // cppc
 
 }  // anonymous namespace
 
+auto calculate_bfheatingcoeff(const int element, const int ion, const int level, const int phixstargetindex,
+                              const int nonemptymgi) -> double {
+  double error = 0.;
+  const double epsrel = 1e-3;
+
+  const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+
+  const double nu_threshold = ONEOVERH * E_threshold;
+  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
+
+  const BFHeatingIntegralParams intparas = {.nu_edge = nu_threshold,
+                                            .nonemptymgi = nonemptymgi,
+                                            .T_R = grid::get_TR(nonemptymgi),
+                                            .photoion_xs = get_phixs_table(element, ion, level)};
+
+  auto bfheating = integrator<integrand_bfheatingcoeff>(intparas, nu_threshold, nu_max_phixs, epsrel, &error);
+
+  bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+
+  return bfheating;
+}
+
 // depends only the radiation field - no dependence on T_e or populations
 void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeffs) {
   assert_always(std::ssize(bfheatingcoeffs) == get_includedlevels());
@@ -247,13 +250,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
         if (grid::get_elem_abundance(nonemptymgi, element) > minelfrac || USE_LUT_BFHEATING) {
           const auto nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            if constexpr (!USE_LUT_BFHEATING) {
-              bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, nonemptymgi);
-            } else {
-              const double T_R = grid::get_TR(nonemptymgi);
-              const double W = grid::get_W(nonemptymgi);
-              bfheatingcoeff += get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
-            }
+            bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, nonemptymgi);
           }
           assert_always(std::isfinite(bfheatingcoeff));
 
