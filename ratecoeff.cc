@@ -33,6 +33,7 @@
 #include "sn3d.h"
 
 namespace {
+constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 
 double T_step_log{};
 
@@ -43,7 +44,6 @@ std::span<const float> ion_alpha_sp;  // size is nincludedions * TABLESIZE
 std::span<double> spontrecombcoeffs{};  // indexed by get_bflutindex()
 std::span<double> corrphotoioncoeffs{};  // for USE_LUT_PHOTOION = true
 std::span<double> bfcooling_coeffs{};
-std::span<double> bfheating_coeffs{};  // for USE_LUT_BFHEATING = true
 
 struct GSLIntegrationParas {
   double nu_edge;
@@ -201,15 +201,6 @@ auto read_ratecoeff_dat(FILE* ratecoeff_file, const std::string& adatafile_hash,
                 std::abort();
               }
             }
-            if constexpr (USE_LUT_BFHEATING) {
-              if (in_bfheating_coeff >= 0) {
-                bfheating_coeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] = in_bfheating_coeff;
-              } else {
-                printlnlog(
-                    "ERROR: USE_LUT_BFHEATING is on, but there are no bfheating_coeff values in the ratecoeff file");
-                std::abort();
-              }
-            }
           }
         }
       }
@@ -253,8 +244,7 @@ void write_ratecoeff_dat(const std::string& adatafile_hash, const std::string& c
             const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
 
             ratecoeff_file << spontrecombcoeffs[bflutindex] << ' ' << bfcooling_coeffs[bflutindex] << ' '
-                           << (USE_LUT_PHOTOION ? corrphotoioncoeffs[bflutindex] : -1) << ' '
-                           << (USE_LUT_BFHEATING ? bfheating_coeffs[bflutindex] : -1) << '\n';
+                           << (USE_LUT_PHOTOION ? corrphotoioncoeffs[bflutindex] : -1) << ' ' << -1 << '\n';
           }
         }
       }
@@ -300,32 +290,14 @@ auto gammacorr_integrand(const double nu, void* const voidparas) -> double {
 
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
-  // Dependence on dilution factor W is linear. This allows to set it here to
-  // 1. and scale to its actual value later on.
-  // Assumption T_e = T_R makes n_kappa/n_i * (n_i/n_kappa)* = 1
-  return sigma_bf * ONEOVERH / nu * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
-}
-
-// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
-// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
-// formula. The radiation fields dependence on W is taken into account by multiplying
-// the resulting expression with the correct W later on.
-auto approx_bfheating_integrand(const double nu, void* const voidparas) -> double {
-  const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
-  const auto& nu_edge = params.nu_edge;
-  const auto& T = params.T_e;
-  const auto& photoion_xs = params.photoion_xs;
-
-  const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
-
   // The correction factor for stimulated emission in gammacorr is set to its
   // LTE value. Because the T_e dependence of gammacorr is weak, this correction
   // correction may be evaluated at T_R!
 
-  // Precalculation for T_e=T_R and W=1
-  const double x = sigma_bf * (1 - (nu_edge / nu)) * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
-
-  return x;
+  // Dependence on dilution factor W is linear. This allows to set it here to
+  // 1. and scale to its actual value later on.
+  // Assumption T_e = T_R makes n_kappa/n_i * (n_i/n_kappa)* = 1
+  return sigma_bf * ONEOVERH / nu * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
 }
 
 // Integrand to precalculate the bound-free cooling rate coefficient
@@ -408,19 +380,6 @@ void precalculate_rate_coefficient_integrals() {
               }
               corrphotoioncoeffs[bflutindex] = gammacorr;
             }
-
-            if constexpr (USE_LUT_BFHEATING) {
-              auto this_bfheating_coeff = integrator<approx_bfheating_integrand>(intparas, nu_threshold, nu_max_phixs,
-                                                                                 RATECOEFF_INTEGRAL_ACCURACY, &error);
-
-              this_bfheating_coeff *= FOURPI * phixstargetprobability;
-              if (this_bfheating_coeff < 0) {
-                printlnlog("WARNING: bfheating_coeff was negative for level {}", level);
-                this_bfheating_coeff = 0;
-              }
-              bfheating_coeffs[bflutindex] = this_bfheating_coeff;
-            }
-
             const auto this_bfcooling_coeff = FOURPI * sahafact_modified * phixstargetprobability *
                                               integrator<bfcooling_integrand>(intparas, 0, nu_max_phixs - nu_threshold,
                                                                               RATECOEFF_INTEGRAL_ACCURACY, &error);
@@ -459,10 +418,6 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
 
         if constexpr (USE_LUT_PHOTOION) {
           corrphotoioncoeffs[bflutindex] *= factor;
-        }
-
-        if constexpr (USE_LUT_BFHEATING) {
-          bfheating_coeffs[bflutindex] *= factor;
         }
 
         bfcooling_coeffs[bflutindex] *= factor;
@@ -647,6 +602,7 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void* const vo
   const auto& photoion_xs = params.photoion_xs;
   const auto& T_e = params.T_e;
   const auto& nonemptymgi = params.nonemptymgi;
+
   double corrfactor = 1. - (departure_ratio * exp(-HOVERKB * nu / T_e));
   if (corrfactor < 0) {
     corrfactor = 0.;
@@ -782,19 +738,11 @@ void setup_photoion_luts() {
     mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
   }
 
-  if constexpr (USE_LUT_BFHEATING) {
-    bfheating_coeffs = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua);
-    if (globals::rank_in_node == 0) {
-      std::ranges::fill(bfheating_coeffs, 0.);
-    }
-    mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
-  }
-
   bfcooling_coeffs = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua, 0.);
 
   printlnlog(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
-      "corrphotoioncoeff/bfheating if enabled) occupy {:.3f} MB",
+      "corrphotoioncoeff if USE_LUT_PHOTOION) occupy {:.3f} MB",
       mem_usage_photoionluts / 1024. / 1024.);
 }
 
@@ -1018,14 +966,10 @@ void ratecoefficients_init() {
   precalculate_ion_alpha_sp();
 }
 
+// Returns the (stimulated recombination corrected) photoionisation rate coefficient.
 auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex,
-                               const int nonemptymgi) -> double
-// Returns the for stimulated emission corrected photoionisation rate coefficient.
-{
+                               const int nonemptymgi) -> double {
   assert_always(USE_LUT_PHOTOION);
-  // The correction factor for stimulated emission in gammacorr is set to its
-  // LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  // correction may be evaluated at T_R!
   const double W = grid::get_W(nonemptymgi);
   const double T_R = grid::get_TR(nonemptymgi);
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
@@ -1052,9 +996,6 @@ DEVICE_FUNC auto get_bfcoolingcoeff(const int element, const int lowerion, const
 // Return the photoionisation rate coefficient (corrected for stimulated emission)
 DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const int level, const int phixstargetindex,
                                        const int nonemptymgi, const bool use_cellcache) -> double {
-  // The correction factor for stimulated emission in gammacorr is set to its
-  // LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  // correction may be evaluated at T_R!
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   const auto allphisxtargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
   double gammacorr =
@@ -1236,29 +1177,4 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
   }
 
   return gamma_ion;
-}
-
-DEVICE_FUNC auto get_bfheatingcoeff_ana(const int element, const int ion, const int level, const int phixstargetindex,
-                                        const double T_R, const double W) -> double {
-  // The correction factor for stimulated emission in gammacorr is set to its
-  // LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  // correction may be evaluated at T_R!
-  assert_always(USE_LUT_BFHEATING);
-  double bfheatingcoeff = 0.;
-
-  const int lowerindex = floor(log(T_R / MINTEMP) / T_step_log);
-  if (lowerindex < TABLESIZE - 1) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
-
-    const double f_upper = bfheating_coeffs[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
-    const double f_lower = bfheating_coeffs[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
-
-    bfheatingcoeff = (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_R - T_lower)));
-  } else {
-    bfheatingcoeff = bfheating_coeffs[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
-  }
-
-  return W * bfheatingcoeff;
 }

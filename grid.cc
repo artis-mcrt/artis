@@ -429,7 +429,7 @@ void allocate_nonemptymodelcells() {
 #endif
   }
 
-  if (USE_LUT_BFHEATING && ionestimsize > 0) {
+  if (USE_ION_BFHEATING_ESTIMATORS && ionestimsize > 0) {
     resize_exactly(globals::bfheatingestimator, ionestimcount);
     std::ranges::fill(globals::bfheatingestimator, 0.);
 #ifdef DO_TITER

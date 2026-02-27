@@ -81,7 +81,7 @@ constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
 
 constexpr bool USE_LUT_PHOTOION = true;
 
-constexpr bool USE_LUT_BFHEATING = true;
+constexpr bool USE_ION_BFHEATING_ESTIMATORS = true;
 
 constexpr bool STRICT_POPULATION_CHECKING = false;
 
@@ -125,8 +125,6 @@ constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
 constexpr bool NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE = false;
 
 constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-2;
-
-constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-2;
 
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
 

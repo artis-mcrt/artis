@@ -49,8 +49,6 @@ void setup_photoion_luts();
 
 [[nodiscard]] DEVICE_FUNC auto get_bfcoolingcoeff(int element, int lowerion, int lowerionlevel, int phixstargetindex,
                                                   float T_e) -> double;
-[[nodiscard]] DEVICE_FUNC auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T_R,
-                                                      double W) -> double;
 
 [[nodiscard]] DEVICE_FUNC auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex,
                                                      int nonemptymgi, bool use_cellcache) -> double;

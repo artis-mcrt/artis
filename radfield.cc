@@ -617,7 +617,7 @@ void initialise_prev_titer_photoionestimators() {
         if constexpr (USE_LUT_PHOTOION) {
           globals::gammaestimator_save[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] = -1.;
         }
-        if constexpr (USE_LUT_BFHEATING) {
+        if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
           globals::bfheatingestimator_save[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] = -1.;
         }
       }

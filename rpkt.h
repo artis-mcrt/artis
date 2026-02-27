@@ -19,7 +19,7 @@
 class Phixslist {
   // NOLINTBEGIN(*-avoid-c-arrays)
  public:
-  // for either USE_LUT_PHOTOION = true or USE_LUT_BFHEATING = true. Size =
+  // for either USE_LUT_PHOTOION = true or USE_ION_BFHEATING_ESTIMATORS = true. Size =
   // nbfcontinua_ground
   std::span<double> groundcont_gamma_contr;
   // cumulative sum of all bound-free continua absorption coefficients. Size = nbfcontinua

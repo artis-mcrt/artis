@@ -28,6 +28,7 @@ struct HeatingCoolingRates {
 
 void call_T_e_finder(int nonemptymgi, double t_current, double T_min, double T_max,
                      HeatingCoolingRates& heatingcoolingrates, std::span<const double> bfheatingcoeffs);
+auto calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int nonemptymgi) -> double;
 void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeffs);
 
 #endif  // THERMALBALANCE_H

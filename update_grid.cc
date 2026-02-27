@@ -336,7 +336,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
         globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
       }
 
-      if constexpr (USE_LUT_BFHEATING) {
+      if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
         globals::bfheatingestimator[ionestimindex] *= estimator_normfactor;
 #ifdef DO_TITER
         if (globals::bfheatingestimator_save[ionestimindex] >= 0) {
@@ -346,12 +346,10 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
         globals::bfheatingestimator_save[ionestimindex] = globals::bfheatingestimator[ionestimindex];
 #endif
         // Now convert bfheatingestimator into the bfheating renormalisation coefficient used in
-        // get_bfheating in the remaining part of update_grid. Later on it's reset and new
-        // contributions are added up.
+        // for the remaining part of update_grid. At the start of the next update_packets, it will be reset
 
-        const double bfheatingcoeff_ana =
-            get_bfheatingcoeff_ana(element, ion, 0, 0, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
-        globals::bfheatingestimator[ionestimindex] = globals::bfheatingestimator[ionestimindex] / bfheatingcoeff_ana;
+        const double bfheatingcoeff_ground = calculate_bfheatingcoeff(element, ion, 0, 0, nonemptymgi);
+        globals::bfheatingestimator[ionestimindex] /= bfheatingcoeff_ground;
 
         assert_always(std::isfinite(globals::bfheatingestimator[ionestimindex]));
       }

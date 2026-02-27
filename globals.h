@@ -104,7 +104,7 @@ inline MPI_Win win_corrphotoionrenorm{MPI_WIN_NULL};
 
 inline std::vector<double> gammaestimator;
 
-// for USE_LUT_BFHEATING = true
+// for USE_ION_BFHEATING_ESTIMATORS = true
 inline std::vector<double> bfheatingestimator{};
 
 inline std::vector<double> ffheatingestimator{};
@@ -249,7 +249,7 @@ struct AllCont {
 };
 inline AllCont allcont{};
 
-// for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
+// Used when USE_LUT_PHOTOION or USE_ION_BFHEATING_ESTIMATORS is enabled
 inline std::span<const double> groundcont_nu_edge{};
 inline std::span<const int> groundcont_element{};
 inline std::span<const int> groundcont_ion{};
