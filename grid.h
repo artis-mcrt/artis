@@ -101,12 +101,12 @@ void write_grid_restart_data(int timestep);
 
 void calculate_kappagrey();
 
-inline void change_cell(Packet& pkt, const int snext)
 // Routine to take a packet across a boundary.
-{
+inline void change_cell(Packet& pkt, const int snext) {
   if (snext >= 0) {
     // Just need to update "where".
     pkt.where = snext;
+    stats::increment(stats::Counter::CELLCROSSINGS);
   } else {
     // Then the packet is exiting the grid. We need to record
     // where and at what time it leaves the grid.
@@ -114,8 +114,6 @@ inline void change_cell(Packet& pkt, const int snext)
     pkt.escape_time = static_cast<float>(pkt.prop_time);
     pkt.type = TYPE_ESCAPE;
     stats::increment(stats::Counter::PKTESCAPES);
-
-    stats::increment(stats::Counter::CELLCROSSINGS);
   }
 }
 
