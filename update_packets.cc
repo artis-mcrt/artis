@@ -1,6 +1,7 @@
 #include "update_packets.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
@@ -299,7 +300,14 @@ constexpr auto packetprop_update_required(const Packet& pkt, const double ts_end
 // Return the nonemptymgi for the cell cache if required (non-empty, non-thick cell),
 // otherwise return an empty std::optional to indicate that no cell cache is used
 auto get_packet_cellcachenonemptymgi(const Packet& pkt) -> std::optional<int> {
-  if (pkt.type == TYPE_RADIOACTIVE_PELLET || pkt.type == TYPE_GAMMA) {
+  constexpr auto nocache_packettypes = std::array<packet_type, 7>{TYPE_RADIOACTIVE_PELLET,
+                                                                  TYPE_GAMMA,
+                                                                  TYPE_PRE_KPKT,
+                                                                  TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS,
+                                                                  TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS,
+                                                                  TYPE_NONTHERMAL_PREDEPOSIT_ALPHA,
+                                                                  TYPE_NTALPHA_FISPROD_DEPOSITED};
+  if (std::ranges::find(nocache_packettypes, pkt.type) != nocache_packettypes.end()) {
     return {};  // these types do not use the cell cache
   }
   const auto mgi = grid::get_propcell_modelgridindex(pkt.where);
