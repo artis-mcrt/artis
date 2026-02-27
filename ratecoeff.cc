@@ -33,6 +33,7 @@
 #include "sn3d.h"
 
 namespace {
+constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 
 double T_step_log{};
 

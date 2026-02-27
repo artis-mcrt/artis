@@ -212,8 +212,6 @@ constexpr bool NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE = false;
 
 constexpr double TEMPERATURE_SOLVER_ACCURACY;
 
-constexpr double RATECOEFF_INTEGRAL_ACCURACY;
-
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 
 // when converting mass fraction to a number density, use a mean atomic mass
