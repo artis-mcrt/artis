@@ -327,10 +327,7 @@ auto approx_bfheating_integrand(const double nu, void* const voidparas) -> doubl
   return x;
 }
 
-// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
-// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
-// formula. The radiation fields dependence on W is taken into account by multiplying
-// the resulting expression with the correct W later on.
+// Integrand to precalculate the bound-free cooling rate coefficient
 auto bfcooling_integrand(const double nu_minus_nu_edge, void* const voidparas) -> double {
   const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
   const auto& nu_edge = params.nu_edge;
