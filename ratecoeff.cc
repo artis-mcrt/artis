@@ -263,18 +263,18 @@ void write_ratecoeff_dat(const std::string& adatafile_hash, const std::string& c
 }
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
-auto alpha_sp_integrand(const double nu_edge_minus_nu, void* const voidparas) -> double {
+auto alpha_sp_integrand(const double nu_minus_nu_edge, void* const voidparas) -> double {
   const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
   const auto& nu_edge = params.nu_edge;
   const auto& T = params.T_e;
   const auto& photoion_xs = params.photoion_xs;
 
-  const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge - nu_edge_minus_nu);
+  const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
   const double x =
-      TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu_edge - nu_edge_minus_nu, 2) * exp(HOVERKB * nu_edge_minus_nu / T);
-  // with the substitution u = nu_edge - nu (integration variable 'nu_edge_minus_nu' here is u)
+      TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu_edge + nu_minus_nu_edge, 2) * exp(-HOVERKB * nu_minus_nu_edge / T);
+  // the variable of integration has been changed from nu to nu_edge_minus_nu = nu - nu_edge
+  // to get a cancellation with part of the saha factor
 
-  // set contributions from Lyman continuum artificially to zero to overcome it's large opacity
   return x;
 }
 
@@ -287,10 +287,7 @@ auto alpha_sp_E_integrand(const double nu, void* const voidparas) -> double {
 
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 3) / nu_edge * exp(-HOVERKB * nu / T);
-  // in formula this looks like
-  // x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
 
-  // set contributions from Lyman continuum artificially to zero to overcome it's large opacity
   return x;
 }
 
@@ -327,20 +324,18 @@ auto approx_bfheating_integrand(const double nu, void* const voidparas) -> doubl
   return x;
 }
 
-// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
-// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
-// formula. The radiation fields dependence on W is taken into account by multiplying
-// the resulting expression with the correct W later on.
-auto bfcooling_integrand(const double nu, void* const voidparas) -> double {
+// Integrand to precalculate the bound-free cooling rate coefficient
+auto bfcooling_integrand(const double nu_minus_nu_edge, void* const voidparas) -> double {
   const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
   const auto& nu_edge = params.nu_edge;
   const auto& T = params.T_e;
   const auto& photoion_xs = params.photoion_xs;
 
-  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
 
   // return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED * pow(nu,3) * exp(-HOVERKB*nu/T);
-  return sigma_bf * (nu - nu_edge) * TWOHOVERCLIGHTSQUARED * nu * nu * exp(-HOVERKB * nu / T);
+  return sigma_bf * nu_minus_nu_edge * TWOHOVERCLIGHTSQUARED * (nu_minus_nu_edge + nu_edge) *
+         (nu_minus_nu_edge + nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T);
 }
 
 void precalculate_rate_coefficient_integrals() {
@@ -381,10 +376,7 @@ void precalculate_rate_coefficient_integrals() {
             double error{NAN};
             const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
 
-            const double sahafact = calculate_sahafact(statw_lower, statw_upper, T_e, E_threshold);
             const double sahafact_modified = SAHACONST * statw_lower / statw_upper * std::pow(T_e, -1.5);
-            assert_always(sahafact >= 0.);
-            assert_always(std::isfinite(sahafact));
             assert_always(sahafact_modified >= 0.);
             assert_always(std::isfinite(sahafact_modified));
 
@@ -395,7 +387,7 @@ void precalculate_rate_coefficient_integrals() {
 
             // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
             const auto alpha_sp = FOURPI * sahafact_modified * phixstargetprobability *
-                                  integrator<alpha_sp_integrand>(intparas, nu_threshold - nu_max_phixs, 0,
+                                  integrator<alpha_sp_integrand>(intparas, 0, nu_max_phixs - nu_threshold,
                                                                  RATECOEFF_INTEGRAL_ACCURACY, &error);
 
             assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
@@ -425,16 +417,11 @@ void precalculate_rate_coefficient_integrals() {
               bfheating_coeffs[bflutindex] = this_bfheating_coeff;
             }
 
-            auto this_bfcooling_coeff = integrator<bfcooling_integrand>(intparas, nu_threshold, nu_max_phixs,
-                                                                        RATECOEFF_INTEGRAL_ACCURACY, &error);
-            this_bfcooling_coeff *= FOURPI * sahafact * phixstargetprobability;
-            if (!std::isfinite(this_bfcooling_coeff) || this_bfcooling_coeff < 0) {
-              printlnlog(
-                  "WARNING: bfcooling_coeff was negative or non-finite for level {} Te {:g}. bfcooling_coeff {:g} sfac "
-                  "{:g} phixstargetindex {} phixstargetprobability {:g}",
-                  level, T_e, this_bfcooling_coeff, sahafact, phixstargetindex, phixstargetprobability);
-              this_bfcooling_coeff = 0;
-            }
+            const auto this_bfcooling_coeff = FOURPI * sahafact_modified * phixstargetprobability *
+                                              integrator<bfcooling_integrand>(intparas, 0, nu_max_phixs - nu_threshold,
+                                                                              RATECOEFF_INTEGRAL_ACCURACY, &error);
+
+            assert_always(std::isfinite(this_bfcooling_coeff) && this_bfcooling_coeff >= 0);
             bfcooling_coeffs[bflutindex] = this_bfcooling_coeff;
           }
         }
