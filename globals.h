@@ -87,7 +87,6 @@ struct TimeStep {
   double qdot_alpha{0.};  // energy generation from alpha decays (including neutrinos) [erg/s/g]
   double qdot_spfission{0.};  // energy generation from spontaneous fission decays (including neutrinos) [erg/s/g]
   double qdot_total{0.};  // energy generation from all decays (including neutrinos) [erg/s/g]
-  double cmf_lum{0.};  // cmf luminosity light curve [erg]
   int pellet_decays{0};  // Number of pellets that decay in this time step.
 };
 inline std::vector<TimeStep> timesteps;
