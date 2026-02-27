@@ -179,6 +179,17 @@ constexpr void md5_update(MD5_CTX* ctx, std::span<const BYTE> data) {
   }
 }
 
+constexpr auto bytes_to_hex(std::span<const BYTE, MD5_BLOCK_SIZE> hashbytes) -> std::string {
+  std::string hashout(2 * MD5_BLOCK_SIZE, '0');
+  constexpr std::array<const BYTE, 16> hex_chars = {'0', '1', '2', '3', '4', '5', '6', '7',
+                                                    '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+  for (int j = 0; j < MD5_BLOCK_SIZE; j++) {
+    hashout[2 * j] = hex_chars[(static_cast<unsigned>(hashbytes[j]) >> 4) & 0xf];
+    hashout[(2 * j) + 1] = hex_chars[static_cast<unsigned>(hashbytes[j]) & 0xf];
+  }
+  return hashout;
+}
+
 constexpr void md5_final(MD5_CTX* ctx, std::span<BYTE, MD5_BLOCK_SIZE> hash) {
   auto i = 0ZU;
 
@@ -221,6 +232,22 @@ constexpr void md5_final(MD5_CTX* ctx, std::span<BYTE, MD5_BLOCK_SIZE> hash) {
   }
 }
 
+constexpr auto md5_test() -> bool {
+  MD5_CTX ctx;
+  md5_init(&ctx);
+
+  constexpr auto buffer = std::array<BYTE, 17>{"md5 test string\n"};
+
+  md5_update(&ctx, std::span{buffer}.first(sizeof(buffer) - 1));
+
+  std::array<BYTE, MD5_BLOCK_SIZE> hashbytes{};
+  md5_final(&ctx, hashbytes);
+
+  return (bytes_to_hex(hashbytes) == "4b0cff9625b0501c7b9ccc6569113ddf");
+}
+
+static_assert(md5_test(), "MD5 test failed!");
+
 }  // anonymous namespace
 
 // added by Luke Shingles
@@ -246,28 +273,5 @@ auto md5_file(const std::string& filename) -> std::string {
   std::array<BYTE, MD5_BLOCK_SIZE> hashbytes{};
   md5_final(&ctx, hashbytes);
 
-  std::string hashout(2 * MD5_BLOCK_SIZE, '0');  // Initialize with zeros
-  for (int j = 0; j < MD5_BLOCK_SIZE; j++) {
-    snprintf(&hashout[2 * j], (2 * MD5_BLOCK_SIZE) + 1 - (2 * j), "%02x", hashbytes[j]);
-  }
-
-  return hashout;
-}
-
-void md5_test() {
-  MD5_CTX ctx;
-  md5_init(&ctx);
-
-  constexpr auto buffer = std::array<BYTE, 17>{"md5 test string\n"};
-
-  md5_update(&ctx, std::span{buffer}.first(sizeof(buffer) - 1));
-
-  std::array<BYTE, MD5_BLOCK_SIZE> hashbytes{};
-  md5_final(&ctx, hashbytes);
-
-  std::string hashout(2 * MD5_BLOCK_SIZE, '0');  // Initialize with zeros
-  for (int j = 0; j < MD5_BLOCK_SIZE; j++) {
-    snprintf(&hashout[2 * j], (2 * MD5_BLOCK_SIZE) + 1 - (2 * j), "%02x", hashbytes[j]);
-  }
-  assert_always(hashout == "4b0cff9625b0501c7b9ccc6569113ddf");
+  return bytes_to_hex(hashbytes);
 }
