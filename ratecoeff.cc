@@ -290,6 +290,10 @@ auto gammacorr_integrand(const double nu, void* const voidparas) -> double {
 
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
+  // The correction factor for stimulated emission in gammacorr is set to its
+  // LTE value. Because the T_e dependence of gammacorr is weak, this correction
+  // correction may be evaluated at T_R!
+
   // Dependence on dilution factor W is linear. This allows to set it here to
   // 1. and scale to its actual value later on.
   // Assumption T_e = T_R makes n_kappa/n_i * (n_i/n_kappa)* = 1
@@ -598,6 +602,7 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void* const vo
   const auto& photoion_xs = params.photoion_xs;
   const auto& T_e = params.T_e;
   const auto& nonemptymgi = params.nonemptymgi;
+
   double corrfactor = 1. - (departure_ratio * exp(-HOVERKB * nu / T_e));
   if (corrfactor < 0) {
     corrfactor = 0.;
@@ -961,14 +966,10 @@ void ratecoefficients_init() {
   precalculate_ion_alpha_sp();
 }
 
+// Returns the (stimulated recombination corrected) photoionisation rate coefficient.
 auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex,
-                               const int nonemptymgi) -> double
-// Returns the for stimulated emission corrected photoionisation rate coefficient.
-{
+                               const int nonemptymgi) -> double {
   assert_always(USE_LUT_PHOTOION);
-  // The correction factor for stimulated emission in gammacorr is set to its
-  // LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  // correction may be evaluated at T_R!
   const double W = grid::get_W(nonemptymgi);
   const double T_R = grid::get_TR(nonemptymgi);
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
@@ -995,9 +996,6 @@ DEVICE_FUNC auto get_bfcoolingcoeff(const int element, const int lowerion, const
 // Return the photoionisation rate coefficient (corrected for stimulated emission)
 DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const int level, const int phixstargetindex,
                                        const int nonemptymgi, const bool use_cellcache) -> double {
-  // The correction factor for stimulated emission in gammacorr is set to its
-  // LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  // correction may be evaluated at T_R!
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   const auto allphisxtargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
   double gammacorr =
