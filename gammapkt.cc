@@ -171,38 +171,41 @@ void init_gamma_linelist() {
       gamma_spectra, 0, [](const ptrdiff_t sum, const auto& lines) { return sum + std::ssize(lines); });
   printlnlog("total gamma-ray lines {}", total_lines);
 
-  struct NucGammaLine {
-    int nucindex;  // is it a Ni56, Co56, a fake line, etc
-    int nucgammaindex;  // which of the lines of that nuclide is it
-    double energy;  // in erg
-  };
-  std::vector<NucGammaLine> allnuc_gamma_line_list;
-  allnuc_gamma_line_list.reserve(total_lines);
+  if (globals::my_rank == 0) {
+    struct NucGammaLine {
+      int nucindex;  // is it a Ni56, Co56, a fake line, etc
+      int nucgammaindex;  // which of the lines of that nuclide is it
+      double energy;  // in erg
+    };
+    std::vector<NucGammaLine> allnuc_gamma_line_list;
+    allnuc_gamma_line_list.reserve(total_lines);
 
-  for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-    for (int j = 0; j < std::ssize(gamma_spectra[nucindex]); j++) {
-      allnuc_gamma_line_list.push_back(
-          {.nucindex = nucindex, .nucgammaindex = j, .energy = gamma_spectra[nucindex][j].energy});
+    for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
+      for (int j = 0; j < std::ssize(gamma_spectra[nucindex]); j++) {
+        allnuc_gamma_line_list.push_back(
+            {.nucindex = nucindex, .nucgammaindex = j, .energy = gamma_spectra[nucindex][j].energy});
+      }
     }
-  }
 
-  assert_always(std::ssize(allnuc_gamma_line_list) == total_lines);
-  std::ranges::SORT_OR_STABLE_SORT(allnuc_gamma_line_list, [](const NucGammaLine& g1, const NucGammaLine& g2) {
-    return std::tie(g1.energy, g1.nucindex, g1.nucgammaindex) < std::tie(g2.energy, g2.nucindex, g2.nucgammaindex);
-  });
+    assert_always(std::ssize(allnuc_gamma_line_list) == total_lines);
+    std::ranges::SORT_OR_STABLE_SORT(allnuc_gamma_line_list, [](const NucGammaLine& g1, const NucGammaLine& g2) {
+      return std::tie(g1.energy, g1.nucindex, g1.nucgammaindex) < std::tie(g2.energy, g2.nucindex, g2.nucgammaindex);
+    });
 
-  auto gammalinelist = std::fstream("gammalinelist.out", std::ofstream::out | std::ofstream::trunc);
-  assert_always(gammalinelist.is_open());
-  gammalinelist << "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability\n";
+    auto gammalinelist = std::fstream("gammalinelist.out", std::ofstream::out | std::ofstream::trunc);
+    assert_always(gammalinelist.is_open());
+    gammalinelist << "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability\n";
 
-  for (auto i = 0Z; i < total_lines; i++) {
-    const int nucindex = allnuc_gamma_line_list[i].nucindex;
-    const int index = allnuc_gamma_line_list[i].nucgammaindex;
-    gammalinelist << static_cast<int>(i) << ' ' << allnuc_gamma_line_list[i].nucindex << ' '
-                  << decay::get_nuc_z(allnuc_gamma_line_list[i].nucindex) << ' '
-                  << decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex) << ' '
-                  << allnuc_gamma_line_list[i].nucgammaindex << ' ' << gamma_spectra[nucindex][index].energy / MEV
-                  << ' ' << gamma_spectra[nucindex][index].probability << '\n';
+    for (auto i = 0Z; i < total_lines; i++) {
+      const int nucindex = allnuc_gamma_line_list[i].nucindex;
+      const int index = allnuc_gamma_line_list[i].nucgammaindex;
+      gammalinelist << static_cast<int>(i) << ' ' << allnuc_gamma_line_list[i].nucindex << ' '
+                    << decay::get_nuc_z(allnuc_gamma_line_list[i].nucindex) << ' '
+                    << decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex) << ' '
+                    << allnuc_gamma_line_list[i].nucgammaindex << ' ' << gamma_spectra[nucindex][index].energy / MEV
+                    << ' ' << gamma_spectra[nucindex][index].probability << '\n';
+    }
+    printlnlog("Wrote combined gamma-ray line list to gammalinelist.out");
   }
 }
 
