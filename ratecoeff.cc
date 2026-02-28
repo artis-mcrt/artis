@@ -186,7 +186,7 @@ void precalculate_rate_coefficient_integrals() {
               }
               corrphotoioncoeffs[bflutindex] = gammacorr;
             }
-            const auto this_bfcooling_coeff = FOURPI * sahafact_modified * phixstargetprobability *
+            const auto this_bfcooling_coeff = FOURPI * modified_sahafact * phixstargetprobability *
                                               integrator<bfcooling_integrand>(intparas, 0, nu_max_phixs - nu_threshold,
                                                                               RATECOEFF_INTEGRAL_ACCURACY, &error);
 
