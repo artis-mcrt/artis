@@ -65,7 +65,8 @@ void read_gamma_spectrum(const int nucindex, const std::string& filename) {
   int nlines = 0;
   ssline >> nlines;
 
-  gamma_spectra[nucindex].resize(nlines, {});
+  gamma_spectra[nucindex].reserve(nlines);
+  gamma_spectra[nucindex].clear();
 
   double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++) {
@@ -75,8 +76,7 @@ void read_gamma_spectrum(const int nucindex, const std::string& filename) {
     ssline.clear();
     ssline.str(line);
     assert_always(ssline >> en_mev >> prob);
-    gamma_spectra[nucindex][n].energy = en_mev * MEV;
-    gamma_spectra[nucindex][n].probability = prob;
+    gamma_spectra[nucindex].push_back({.energy = en_mev * MEV, .probability = prob});
     E_gamma_avg += en_mev * MEV * prob;
   }
 
