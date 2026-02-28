@@ -649,8 +649,10 @@ void macroatom_close_file() {
       const double statw_upper = stat_weight(element, upperion, upper);
       const double modified_sahafact = SAHACONST * statw_lower / statw_upper * std::pow(T_e, -1.5);
 
+      // Expanded and simplified from
+      // nne * nne * sf * 1.55e13 * std::pow(T_e, -0.5) * g * sigma_bf * std::exp(-fac1) / fac1
       const double C =
-          nne * nne * modified_sahafact * 1.55e13 * std::pow(T_e, -0.5) * g * sigma_bf * KB * T_e / epsilon_trans;
+          nne * nne * SAHACONST * statw_lower / statw_upper * 1.55e13 * g * sigma_bf * KB / T_e / epsilon_trans;
       assert_testmodeonly(std::isfinite(C));
 
       return C;
