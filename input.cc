@@ -1681,11 +1681,10 @@ void read_atomicdata() {
       }
 
       printlnlog(
-          "[input]    ionstage {}: {:4} levels ({} in groundterm, {:4} ionising) {:7} lines {:6} bf transitions "
-          "(epsilon_ground: {:7.2f} eV)",
-          get_ionstage(element, ion), get_nlevels(element, ion), get_nlevels_groundterm(element, ion),
-          get_nlevels_ionising(element, ion), ion_bbtransitions, ion_photoiontransitions,
-          epsilon(element, ion, 0) / EV);
+          "[input]    ionstage {}: {:4} levels ({:4} ionising) {:7} lines {:6} bf transitions ("
+          "epsilon_ground: {:7.2f} eV)",
+          get_ionstage(element, ion), get_nlevels(element, ion), get_nlevels_ionising(element, ion), ion_bbtransitions,
+          ion_photoiontransitions, epsilon(element, ion, 0) / EV);
 
       includedionisinglevels += get_nlevels_ionising(element, ion);
       includedphotoiontransitions += ion_photoiontransitions;
