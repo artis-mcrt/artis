@@ -2011,8 +2011,7 @@ void update_parameterfile(const int nts) {
 void setup_cellcache() {
   globals::mutex_cellcachemacroatom.resize(get_includedlevels());
 
-  assert_always(grid::get_nonempty_npts_model() > 1);
-  const int num_cellcache_slots = grid::get_nonempty_npts_model();
+  constexpr int num_cellcache_slots = 1;
   resize_exactly(globals::cellcache, num_cellcache_slots);
 
   auto mem_usage_cellcache = 0ZU;
