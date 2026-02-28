@@ -647,7 +647,7 @@ void macroatom_close_file() {
       const double sigma_bf = (get_phixs_table(lowerionlower_uniquelevelindex)[0] *
                                get_phixsprobability(lowerionlower_uniquelevelindex, phixstargetindex));
       const double statw_upper = stat_weight(element, upperion, upper);
-      const double modified_sahafact = calculate_modified_sahafact(statw_lower, statw_upper, T_e);
+      const double modified_sahafact = SAHACONST * statw_lower / statw_upper * std::pow(T_e, -1.5);
 
       const double C =
           nne * nne * modified_sahafact * 1.55e13 * std::pow(T_e, -0.5) * g * sigma_bf * KB * T_e / epsilon_trans;

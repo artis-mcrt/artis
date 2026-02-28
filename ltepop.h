@@ -32,14 +32,6 @@ void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_sah
   return sahafact;
 }
 
-// calculates saha factor in LTE multiplied by exp(-E_threshold / KB / T): Phi_level,ion,element =
-// nn_level,ion,element/(nne*nn_upper,ion+1,element)
-// avoids possible overflows when using the regular sahafact
-[[gnu::const]] [[nodiscard]] constexpr auto calculate_modified_sahafact(const double g_lower, const double g_upper,
-                                                                        const double T) -> double {
-  return SAHACONST * g_lower / g_upper * std::pow(T, -1.5);
-}
-
 [[gnu::pure]] [[nodiscard]] inline DEVICE_FUNC auto get_cellcache_levelpop(const int nonemptymgi,
                                                                            const int uniquelevelindex) -> double {
   assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
