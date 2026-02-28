@@ -822,21 +822,26 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
             photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, nu);
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
-        double departure_ratio = globals::cellcache[cellcacheslotid].allcont_departureratios[i];
-        if (!USECELLHISTANDUPDATEPHIXSLIST || departure_ratio < 0) {
+        // TODO: update name in cellcache
+        double modified_departure_ratio = globals::cellcache[cellcacheslotid].allcont_departureratios[i];
+
+        // TODO: I don't think this condition needs updating since the only difference between departure_ratio and
+        // modified_departure_ratio is a positive factor
+        if (!USECELLHISTANDUPDATEPHIXSLIST || modified_departure_ratio < 0) {
           const int upper = allcont_upperlevel[i];
           const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
                                              ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upper)
                                              : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
-          const double sf = calculate_sahafact(stat_weight(element, ion, level), stat_weight(element, ion + 1, upper),
-                                               T_e, H * nu_edge);
-          departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
+          const double modified_sahafact =
+              calculate_modified_sahafact(stat_weight(element, ion, level), stat_weight(element, ion + 1, upper), T_e);
+          modified_departure_ratio = nnupperionlevel / nnlevel * nne * modified_sahafact;  // put that to phixslist
           if (USECELLHISTANDUPDATEPHIXSLIST) {
-            globals::cellcache[cellcacheslotid].allcont_departureratios[i] = departure_ratio;
+            globals::cellcache[cellcacheslotid].allcont_departureratios[i] = modified_departure_ratio;
           }
         }
 
-        const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
+        const double stimfactor = modified_departure_ratio * exp(-HOVERKB * (nu - nu_edge) / T_e);
+        // TODO: I don't think any changes needed after this. Essentially just rearranging the previous expression
         corrfactor = std::max(0., 1 - stimfactor);  // photoionisation minus stimulated recombination
 
         sigma_contr = sigma_bf * allcont_probability[i] * corrfactor;
