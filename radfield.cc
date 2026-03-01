@@ -39,6 +39,8 @@ namespace radfield {
 
 namespace {
 
+constexpr bool planck_integrals_use_numerical_integration = false;
+
 std::vector<double> J_normfactor;
 
 struct RadFieldBinSolution {
@@ -245,7 +247,7 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
 
 // Computes the indefinite integral of the Planck function (except for the constant factors) from nu_high to infinity
 // J(x) = sum_{n=1}^inf e^{-nx} * (x^3/n + 3x^2/n^2 + 6x/n^3 + 6/n^4)
-auto planck_integral_nu_to_inf(const double nu) -> double {
+auto planck_integral_nu_to_inf(const double nu, const double precision) -> double {
   if (nu <= 0) {
     return 0.0;  // Avoid log/div errors for x=0
   }
@@ -254,8 +256,6 @@ auto planck_integral_nu_to_inf(const double nu) -> double {
   }
 
   double sum = 0.0;
-  constexpr double precision = 1e-25;
-
   for (int n = 1; n < 1000; ++n) {
     const double n2 = n * n;
     const double n3 = n2 * n;
@@ -273,7 +273,7 @@ auto planck_integral_nu_to_inf(const double nu) -> double {
 
 // Computes the indefinite integral for the nu-weighted Planck integral (except for the constant factors) from zero to
 // nu_high.
-auto nu_planck_integral_nu_to_inf(const double nu) -> double {
+auto nu_planck_integral_nu_to_inf(const double nu, const double precision) -> double {
   if (nu <= 0) {
     return 0.0;
   }
@@ -282,8 +282,6 @@ auto nu_planck_integral_nu_to_inf(const double nu) -> double {
   }
 
   double sum = 0.0;
-  constexpr double precision = 1e-25;
-
   for (int n = 1; n < 1000; ++n) {
     const auto n_val = static_cast<double>(n);
     const double n2 = n_val * n_val;
@@ -307,7 +305,8 @@ auto nu_planck_integral_nu_to_inf(const double nu) -> double {
 
 // Computes the definite integral of B_nu (or n * B_nu) from nu_low to nu_high at some temperature [K]
 // by using the series expansions for the indefinite integral from nu_low to nu=inf and evaluating at the limits.
-auto planck_integral_direct(double nu_low, double nu_high, double temperature, const bool times_nu) -> double {
+auto planck_integral_direct(double nu_low, double nu_high, double temperature, const bool times_nu,
+                            const double precision) -> double {
   if (temperature <= 0) {
     return 0.0;
   }
@@ -315,30 +314,30 @@ auto planck_integral_direct(double nu_low, double nu_high, double temperature, c
   const double x_low = (H * nu_low) / (KB * temperature);
   const double x_high = (H * nu_high) / (KB * temperature);
 
-  const double constant_factor = times_nu ? (2.0 * pow5(KB) * pow5(temperature)) / (pow4(H) * pow2(CLIGHT))
-                                          : (2.0 * pow4(KB) * pow4(temperature)) / (pow3(H) * pow2(CLIGHT));
+  if (times_nu) {
+    const double constant_factor = (2.0 * pow5(KB) * pow5(temperature)) / (pow4(H) * pow2(CLIGHT));
+    const auto low_to_inf = nu_planck_integral_nu_to_inf(x_low, precision);
+    const auto high_to_inf = nu_planck_integral_nu_to_inf(x_high, precision);
 
-  const double low_to_inf = times_nu ? nu_planck_integral_nu_to_inf(x_low) : planck_integral_nu_to_inf(x_low);
-  const double high_to_inf = times_nu ? nu_planck_integral_nu_to_inf(x_high) : planck_integral_nu_to_inf(x_high);
+    return constant_factor * (low_to_inf - high_to_inf);
+  }
+  const double constant_factor = (2.0 * pow4(KB) * pow4(temperature)) / (pow3(H) * pow2(CLIGHT));
+
+  const auto low_to_inf = planck_integral_nu_to_inf(x_low, precision);
+  const auto high_to_inf = planck_integral_nu_to_inf(x_high, precision);
 
   return constant_factor * (low_to_inf - high_to_inf);
 }
 
 auto calculate_planck_integral(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
     -> double {
-  double error = 0.;
-  const double epsrel = 1e-15;
-
-  const GSL_PlanckIntegralParas intparas = {.T_R = T_R, .times_nu = times_nu};
-
-  const auto integral = integrator<planck_integrand>(intparas, nu_lower, nu_upper, epsrel, &error);
-  const auto integral_direct = planck_integral_direct(nu_lower, nu_upper, T_R, times_nu);
-  if (!(std::abs(integral - integral_direct) / std::abs(integral_direct) < 1e-4)) {
-    printlnlog("compare times_nu {}: {} and {} fracdiff {}", times_nu, integral, integral_direct,
-               std::abs(integral - integral_direct) / std::abs(integral_direct));
+  if constexpr (planck_integrals_use_numerical_integration) {
+    double error = 0.;
+    const double epsrel = 1e-15;
+    const GSL_PlanckIntegralParas intparas = {.T_R = T_R, .times_nu = times_nu};
+    return integrator<planck_integrand>(intparas, nu_lower, nu_upper, epsrel, &error);
   }
-
-  return integral;
+  return planck_integral_direct(nu_lower, nu_upper, T_R, times_nu, 1e-25);
 }
 
 // difference between the average nu and the average nu of a Planck function
