@@ -244,7 +244,7 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
 }
 
 // Computes the indefinite integral factor J(x) = sum_{n=1}^inf e^{-nx} * (x^3/n + 3x^2/n^2 + 6x/n^3 + 6/n^4)
-auto planck_integral_sum(double x) -> double {
+auto planck_integral_sum(const double x) -> double {
   if (x <= 0) {
     return 0.0;  // Avoid log/div errors for x=0
   }
@@ -253,7 +253,7 @@ auto planck_integral_sum(double x) -> double {
   }
 
   double sum = 0.0;
-  const double precision = 1e-15;
+  constexpr double precision = 1e-15;
 
   for (int n = 1; n < 1000; ++n) {
     const double n2 = n * n;
@@ -271,7 +271,7 @@ auto planck_integral_sum(double x) -> double {
 }
 
 // Summation for the integral of x^4 / (e^x - 1)
-auto planck_nu_integral_sum(double x) -> double {
+auto planck_nu_integral_sum(const double x) -> double {
   if (x <= 0) {
     return 0.0;
   }
@@ -303,26 +303,8 @@ auto planck_nu_integral_sum(double x) -> double {
   return sum;
 }
 
-// Computes the definite integral of nu * B_nu from nu_low to nu_high
-auto integrate_nu_planck(double nu_low, double nu_high, double T) -> double {
-  if (T <= 0) {
-    return 0.0;
-  }
-
-  const double x_low = (H * nu_low) / (KB * T);
-  const double x_high = (H * nu_high) / (KB * T);
-
-  // Note: T^5 and H^4 for the nu*B_nu case
-  const double constant_factor = (2.0 * std::pow(KB, 5) * std::pow(T, 5)) / (std::pow(H, 4) * std::pow(CLIGHT, 2));
-
-  const double val_low = planck_nu_integral_sum(x_low);
-  const double val_high = planck_nu_integral_sum(x_high);
-
-  return constant_factor * (val_low - val_high);
-}
-
 // Computes the definite integral of B_nu from nu_low to nu_high at temperature T
-auto integrate_planck(double nu_low, double nu_high, double T) -> double {
+auto integrate_planck(double nu_low, double nu_high, double T, const bool times_nu) -> double {
   if (T <= 0) {
     return 0.0;
   }
@@ -330,10 +312,12 @@ auto integrate_planck(double nu_low, double nu_high, double T) -> double {
   const double x_low = (H * nu_low) / (KB * T);
   const double x_high = (H * nu_high) / (KB * T);
 
-  const double constant_factor = (2.0 * std::pow(KB, 4) * std::pow(T, 4)) / (std::pow(H, 3) * std::pow(CLIGHT, 2));
+  const double constant_factor =
+      times_nu ? (2.0 * std::pow(KB, 5) * std::pow(T, 5)) / (std::pow(H, 4) * std::pow(CLIGHT, 2))
+               : (2.0 * std::pow(KB, 4) * std::pow(T, 4)) / (std::pow(H, 3) * std::pow(CLIGHT, 2));
 
-  const double val_low = planck_integral_sum(x_low);
-  const double val_high = planck_integral_sum(x_high);
+  const double val_low = times_nu ? planck_nu_integral_sum(x_low) : planck_integral_sum(x_low);
+  const double val_high = times_nu ? planck_nu_integral_sum(x_high) : planck_integral_sum(x_high);
 
   // The indefinite integral was -sum, so Integral = (-sum_high) - (-sum_low) = sum_low - sum_high
   return constant_factor * (val_low - val_high);
@@ -342,16 +326,16 @@ auto integrate_planck(double nu_low, double nu_high, double T) -> double {
 auto calculate_planck_integral(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
     -> double {
   double error = 0.;
-  const double epsrel = 1e-10;
+  const double epsrel = 1e-15;
 
   const GSL_PlanckIntegralParas intparas = {.T_R = T_R, .times_nu = times_nu};
 
   const auto integral = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsrel, &error);
-  const auto integral_2 =
-      times_nu ? integrate_nu_planck(nu_lower, nu_upper, T_R) : integrate_planck(nu_lower, nu_upper, T_R);
-  assert_always((std::abs(integral - integral_2) / std::abs(integral_2) < 1e-4) ||
-                integral_2 < 1e-20);  // check that the two methods give similar results
-  // printlnlog("compare times_nu {}: {} and {}", times_nu, integral, integral_2);
+  const auto integral_2 = integrate_planck(
+      nu_lower, nu_upper, T_R, times_nu);  // use the summation method as a check on the numerical integration
+  if (!(std::abs(integral - integral_2) / std::abs(integral_2) < 1e-4)) {
+    printlnlog("compare times_nu {}: {} and {}", times_nu, integral, integral_2);
+  }
 
   return integral;
 }
