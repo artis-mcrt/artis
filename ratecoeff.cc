@@ -614,22 +614,9 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 
 // Return a level's rate coefficient for spontaneous recombination in LTE
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_spontrecombcoeff(const int uniquelevelindex,
-                                                                  const int phixstargetindex, float T_e) -> double {
-  double alpha_sp{NAN};
-  const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
-  assert_always(lowerindex >= 0);
-  if (lowerindex < (TABLESIZE - 1)) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
-
-    const double f_upper = spontrecombcoeffs[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
-    const double f_lower = spontrecombcoeffs[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
-    alpha_sp = (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower)));
-  } else {
-    alpha_sp = spontrecombcoeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
-  }
-  return alpha_sp;
+                                                                  const int phixstargetindex, const float T_e)
+    -> double {
+  return lerp_or_last(spontrecombcoeffs, uniquelevelindex, phixstargetindex, T_e);
 }
 
 // multiply by upper ion population (or ground population if per_groundmultipletpop is true) and nne to get a rate
