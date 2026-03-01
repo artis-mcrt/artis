@@ -99,11 +99,6 @@ std::vector<double> nuJ;  // after normalisation: [ergs/s/sr/cm2]
 std::vector<double> nuJ_reduced_save;
 #endif
 
-struct GSL_PlanckIntegralParas {
-  double T_R;
-  bool times_nu;
-};
-
 std::fstream radfieldfile;
 
 constexpr auto get_bin_nu_upper(const int binindex) -> double {
