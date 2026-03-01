@@ -302,8 +302,9 @@ auto nu_planck_integral_nu_to_inf(const double nu, const double epsrel) -> doubl
   return sum;
 }
 
-// Computes the definite integral of B_nu (or n * B_nu) from nu_low to nu_high at some temperature [K]
-// by using the series expansions for the indefinite integral from nu_low to nu=inf and evaluating at the limits.
+// Computes the definite integral of B_nu (or nu * B_nu, i.e. the nu-weighted Planck integral) from nu_low to nu_high
+// at some temperature [K] by using the series expansions for the indefinite integral from nu_low to nu=inf and
+// evaluating at the limits.
 auto planck_integral_direct(double nu_low, double nu_high, double temperature, const bool times_nu, const double epsrel)
     -> double {
   if (temperature <= 0) {
