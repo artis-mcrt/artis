@@ -243,12 +243,14 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
   }
 }
 
-// Computes the indefinite integral factor J(x) = sum_{n=1}^inf e^{-nx} * (x^3/n + 3x^2/n^2 + 6x/n^3 + 6/n^4)
-auto planck_integral_sum(const double x) -> double {
-  if (x <= 0) {
+// Computes the indefinite integral of the Planck function (except for the constant factors) from zero to nu_high.
+// J(x) = sum_{n=1}^inf e^{-nx} * (x^3/n + 3x^2/n^2 + 6x/n^3 + 6/n^4)
+
+auto planck_integral_sum(const double nu_high) -> double {
+  if (nu_high <= 0) {
     return 0.0;  // Avoid log/div errors for x=0
   }
-  if (x > 700) {
+  if (nu_high > 700) {
     return 0.0;  // e^-x underflows double precision anyway
   }
 
@@ -260,7 +262,8 @@ auto planck_integral_sum(const double x) -> double {
     const double n3 = n2 * n;
     const double n4 = n3 * n;
 
-    const double term = std::exp(-n * x) * ((x * x * x / n) + (3.0 * x * x / n2) + (6.0 * x / n3) + (6.0 / n4));
+    const double term = std::exp(-n * nu_high) * ((nu_high * nu_high * nu_high / n) + (3.0 * nu_high * nu_high / n2) +
+                                                  (6.0 * nu_high / n3) + (6.0 / n4));
     sum += term;
 
     if (term < sum * precision) {
@@ -270,12 +273,13 @@ auto planck_integral_sum(const double x) -> double {
   return sum;
 }
 
-// Summation for the integral of x^4 / (e^x - 1)
-auto planck_nu_integral_sum(const double x) -> double {
-  if (x <= 0) {
+// Computes the indefinite integral for the nu-weighted Planck integral (except for the constant factors) from zero to
+// nu_high.
+auto planck_nu_integral_sum(const double nu_high) -> double {
+  if (nu_high <= 0) {
     return 0.0;
   }
-  if (x > 700) {
+  if (nu_high > 700) {
     return 0.0;  // e^-x underflows double precision
   }
 
@@ -290,10 +294,10 @@ auto planck_nu_integral_sum(const double x) -> double {
     const double n5 = n4 * n_val;
 
     // Polynomial expansion for the 4th power
-    const double poly =
-        (std::pow(x, 4) / n_val) + (4.0 * std::pow(x, 3) / n2) + (12.0 * x * x / n3) + (24.0 * x / n4) + (24.0 / n5);
+    const double poly = (std::pow(nu_high, 4) / n_val) + (4.0 * std::pow(nu_high, 3) / n2) +
+                        (12.0 * nu_high * nu_high / n3) + (24.0 * nu_high / n4) + (24.0 / n5);
 
-    const double term = std::exp(-n_val * x) * poly;
+    const double term = std::exp(-n_val * nu_high) * poly;
     sum += term;
 
     if (term < sum * precision) {
