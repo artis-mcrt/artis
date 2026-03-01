@@ -246,9 +246,9 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
 }
 
 // Computes the integral of the Planck function (excluding the constant factors) across frequency nu to infinity
-auto planck_integral_nu_to_inf(const double nu, const double epsrel) -> double {
-  assert_testmodeonly(nu >= 0);
-  if (nu > 700) {
+auto planck_integral_x_to_inf(const double x, const double epsrel) -> double {
+  assert_testmodeonly(x >= 0);
+  if (x > 700) {
     return 0.0;  // e^-x underflows double precision anyway
   }
 
@@ -258,7 +258,7 @@ auto planck_integral_nu_to_inf(const double nu, const double epsrel) -> double {
     const double n3 = n2 * n;
     const double n4 = n3 * n;
 
-    const double term = std::exp(-n * nu) * ((pow3(nu) / n) + (3.0 * pow2(nu) / n2) + (6.0 * nu / n3) + (6.0 / n4));
+    const double term = std::exp(-n * x) * ((pow3(x) / n) + (3.0 * pow2(x) / n2) + (6.0 * x / n3) + (6.0 / n4));
     sum += term;
 
     if (term < sum * epsrel) {
@@ -268,27 +268,22 @@ auto planck_integral_nu_to_inf(const double nu, const double epsrel) -> double {
   return sum;
 }
 
-// Computes the integral for the nu-weighted Planck integral (excluding the constant factors) between frequency nu to
-// infinity
-auto nu_planck_integral_nu_to_inf(const double nu, const double epsrel) -> double {
-  assert_testmodeonly(nu >= 0);
-  if (nu > 700) {
+// Similar to planck_integral_x_to_inf except with an extra factor of nu in the integrand
+auto nu_planck_integral_x_to_inf(const double x, const double epsrel) -> double {
+  assert_testmodeonly(x >= 0);
+  if (x > 700) {
     return 0.0;  // e^-x underflows double precision
   }
 
   double sum = 0.0;
   for (int n = 1; n < 1000; ++n) {
-    const auto n_val = static_cast<double>(n);
-    const double n2 = n_val * n_val;
-    const double n3 = n2 * n_val;
-    const double n4 = n3 * n_val;
-    const double n5 = n4 * n_val;
+    const double n2 = n * n;
+    const double n3 = n2 * n;
+    const double n4 = n3 * n;
+    const double n5 = n4 * n;
 
-    // Polynomial expansion for the 4th power
-    const double poly =
-        (pow4(nu) / n_val) + (4.0 * pow3(nu) / n2) + (12.0 * pow2(nu) / n3) + (24.0 * nu / n4) + (24.0 / n5);
-
-    const double term = std::exp(-n_val * nu) * poly;
+    const double term = std::exp(-n * x) *
+                        ((pow4(x) / n) + (4.0 * pow3(x) / n2) + (12.0 * pow2(x) / n3) + (24.0 * x / n4) + (24.0 / n5));
     sum += term;
 
     if (term < sum * epsrel) {
@@ -298,9 +293,8 @@ auto nu_planck_integral_nu_to_inf(const double nu, const double epsrel) -> doubl
   return sum;
 }
 
-// Computes the definite integral of B_nu (or nu * B_nu, i.e. the nu-weighted Planck integral) from nu_low to nu_high
-// at some temperature [K] by using the series expansions for the indefinite integral from nu_low to nu=inf and
-// evaluating at the limits.
+// Computes the integral of the Planck function (or nu times the Planck function) across frequency nu from nu_low to
+// nu_high
 auto planck_integral_direct(double nu_low, double nu_high, double temperature, const bool times_nu, const double epsrel)
     -> double {
   if (temperature <= 0) {
@@ -312,15 +306,15 @@ auto planck_integral_direct(double nu_low, double nu_high, double temperature, c
 
   if (times_nu) {
     const double constant_factor = (2.0 * pow5(KB) * pow5(temperature)) / (pow4(H) * pow2(CLIGHT));
-    const auto low_to_inf = nu_planck_integral_nu_to_inf(x_low, epsrel);
-    const auto high_to_inf = nu_planck_integral_nu_to_inf(x_high, epsrel);
+    const auto low_to_inf = nu_planck_integral_x_to_inf(x_low, epsrel);
+    const auto high_to_inf = nu_planck_integral_x_to_inf(x_high, epsrel);
 
     return constant_factor * (low_to_inf - high_to_inf);
   }
   const double constant_factor = (2.0 * pow4(KB) * pow4(temperature)) / (pow3(H) * pow2(CLIGHT));
 
-  const auto low_to_inf = planck_integral_nu_to_inf(x_low, epsrel);
-  const auto high_to_inf = planck_integral_nu_to_inf(x_high, epsrel);
+  const auto low_to_inf = planck_integral_x_to_inf(x_low, epsrel);
+  const auto high_to_inf = planck_integral_x_to_inf(x_high, epsrel);
 
   return constant_factor * (low_to_inf - high_to_inf);
 }
