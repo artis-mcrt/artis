@@ -668,7 +668,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
       const double T_exc = T_e;
       const double E_level = epsilon(element, lowerion + 1, upper);
       const double E_ground = epsilon(element, lowerion + 1, 0);
-      const double nnground = (nonemptymgi >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
+      const double nnground = get_groundlevelpop(nonemptymgi, element, lowerion + 1);
 
       nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
@@ -683,7 +683,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
   }
 
   // this gets divided and cancelled out in the radiative case anyway
-  const auto nne = (nonemptymgi >= 0) ? grid::get_nne(nonemptymgi) : 1.F;
+  const auto nne = grid::get_nne(nonemptymgi);
   double alpha = 0.;
   const int maxrecombininglevel = get_maxrecombininglevel(element, lowerion + 1);
   for (int upper = 0; upper <= maxrecombininglevel; upper++) {
@@ -692,7 +692,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
       const double T_exc = T_e;
       const double E_level = epsilon(element, lowerion + 1, upper);
       const double E_ground = epsilon(element, lowerion + 1, 0);
-      const double nnground = (nonemptymgi >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
+      const double nnground = get_groundlevelpop(nonemptymgi, element, lowerion + 1);
 
       nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
