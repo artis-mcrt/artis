@@ -83,16 +83,15 @@ jobs:
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
-
-            - name: Install nvc++
+            - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
               if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
               uses: fortran-lang/setup-fortran@v1.8.1
               with:
-                  compiler: ${ matrix.compiler.name }
+                  compiler: ${{ matrix.compiler.name }}
                   version: ${{ matrix.compiler.ver }}
 
             - name: Add g++ symlink
-              if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
+              if: matrix.compiler.name == 'gcc' && matrix.compiler.ver < 15
               run: |
                   sudo update-alternatives --install /usr/bin/g++ g++ /opt/gcc-15/bin/g++ 100
                   sudo ln -s /opt/gcc-15/bin/g++ /usr/bin/g++-15
