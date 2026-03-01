@@ -511,8 +511,8 @@ auto get_nlevels_important(const int nonemptymgi, const int element, const int i
   return {nlevels_important, nnlevelsum};
 }
 
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto lerp_or_last(const auto& table, const int uniquelevelindex,
-                                                          const int phixstargetindex, auto T_e) -> double {
+[[nodiscard]] DEVICE_FUNC auto lerp_or_last(const auto& table, const int uniquelevelindex, const int phixstargetindex,
+                                            auto T_e) -> double {
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   assert_always(lowerindex >= 0);
   if (lowerindex < (TABLESIZE - 1)) {
@@ -526,6 +526,7 @@ auto get_nlevels_important(const int nonemptymgi, const int element, const int i
   }
   return table[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
 }
+
 auto interpolate_corrphotoioncoeff(const int uniquelevelindex, const int phixstargetindex, const double T) -> double {
   assert_always(USE_LUT_PHOTOION);
   return lerp_or_last(corrphotoioncoeffs, uniquelevelindex, phixstargetindex, T);
