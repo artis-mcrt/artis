@@ -7,7 +7,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
-#include <fstream>
 #include <functional>
 #include <ios>
 #include <numeric>
@@ -608,8 +607,7 @@ auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
 void read_collion_data() {
   printlnlog("Reading collisional ionisation data from collion.txt...");
 
-  auto cifile = std::fstream("collion.txt", std::ios::in);
-  assert_always(cifile.is_open());
+  auto cifile = fstream_required("collion.txt", std::ios::in);
   std::string line;
   get_noncommentline(cifile, line);
   std::istringstream ssline(line);
