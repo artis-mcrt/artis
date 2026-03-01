@@ -90,12 +90,6 @@ jobs:
                   compiler: ${{ matrix.compiler.name }}
                   version: ${{ matrix.compiler.ver }}
 
-            - name: Add g++ symlink
-              if: matrix.compiler.name == 'gcc' && matrix.compiler.ver < 15
-              run: |
-                  sudo update-alternatives --install /usr/bin/g++ g++ /opt/gcc-15/bin/g++ 100
-                  sudo ln -s /opt/gcc-15/bin/g++ /usr/bin/g++-15
-
             - name: Select GCC version as default C++ compiler
               if: matrix.compiler.name == 'gcc'
               run: |
