@@ -245,11 +245,9 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
   }
 }
 
-// Computes the indefinite integral of the Planck function (excluding the constant factors) from nu_high to infinity
+// Computes the integral of the Planck function (excluding the constant factors) across frequency nu to infinity
 auto planck_integral_nu_to_inf(const double nu, const double epsrel) -> double {
-  if (nu <= 0) {
-    return 0.0;  // Avoid log/div errors for x=0
-  }
+  assert_testmodeonly(nu >= 0);
   if (nu > 700) {
     return 0.0;  // e^-x underflows double precision anyway
   }
@@ -270,12 +268,10 @@ auto planck_integral_nu_to_inf(const double nu, const double epsrel) -> double {
   return sum;
 }
 
-// Computes the indefinite integral for the nu-weighted Planck integral (excluding the constant factors) from zero to
-// nu_high.
+// Computes the integral for the nu-weighted Planck integral (excluding the constant factors) between frequency nu to
+// infinity
 auto nu_planck_integral_nu_to_inf(const double nu, const double epsrel) -> double {
-  if (nu <= 0) {
-    return 0.0;
-  }
+  assert_testmodeonly(nu >= 0);
   if (nu > 700) {
     return 0.0;  // e^-x underflows double precision
   }
