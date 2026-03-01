@@ -513,8 +513,8 @@ auto get_nlevels_important(const int nonemptymgi, const int element, const int i
 
 template <typename T>
 [[nodiscard]] DEVICE_FUNC auto lerp_or_last(const std::span<T> table, const int uniquelevelindex,
-                                            const int phixstargetindex, auto T_e) -> double {
-  const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
+                                            const int phixstargetindex, auto temperature) -> double {
+  const int lowerindex = floor(log(temperature / MINTEMP) / T_step_log);
   assert_always(lowerindex >= 0);
   if (lowerindex < (TABLESIZE - 1)) {
     const int upperindex = lowerindex + 1;
@@ -523,7 +523,7 @@ template <typename T>
 
     const double f_upper = table[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
     const double f_lower = table[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
-    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower)));
+    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (temperature - T_lower)));
   }
   return table[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
 }
