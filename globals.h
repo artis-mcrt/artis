@@ -265,7 +265,7 @@ struct CellCache {
   std::vector<double> alllevels_pops;
   std::vector<double> alllevels_maprocessrates;  // rates for macroatom processes
   std::vector<double> allmacroatomictransitions;  // cumulative macroatom transition rates for all levels
-  std::vector<double> allcont_departureratios;
+  std::vector<double> allcont_modified_departureratios;
   std::vector<double> allcont_nnlevel;
   std::vector<bool> allcont_keep;
   double chi_ff_nnionpart{-1};

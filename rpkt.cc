@@ -822,8 +822,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
             photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, nu);
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
-        // TODO: update name in cellcache
-        double modified_departure_ratio = globals::cellcache[cellcacheslotid].allcont_departureratios[i];
+        double modified_departure_ratio = globals::cellcache[cellcacheslotid].allcont_modified_departureratios[i];
 
         // TODO: I don't think this condition needs updating since the only difference between departure_ratio and
         // modified_departure_ratio is a positive factor
@@ -836,12 +835,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
               calculate_modified_sahafact(stat_weight(element, ion, level), stat_weight(element, ion + 1, upper), T_e);
           modified_departure_ratio = nnupperionlevel / nnlevel * nne * modified_sahafact;  // put that to phixslist
           if (USECELLHISTANDUPDATEPHIXSLIST) {
-            globals::cellcache[cellcacheslotid].allcont_departureratios[i] = modified_departure_ratio;
+            globals::cellcache[cellcacheslotid].allcont_modified_departureratios[i] = modified_departure_ratio;
           }
         }
 
         const double stimfactor = modified_departure_ratio * exp(-HOVERKB * (nu - nu_edge) / T_e);
-        // TODO: I don't think any changes needed after this. Essentially just rearranging the previous expression
         corrfactor = std::max(0., 1 - stimfactor);  // photoionisation minus stimulated recombination
 
         sigma_contr = sigma_bf * allcont_probability[i] * corrfactor;
