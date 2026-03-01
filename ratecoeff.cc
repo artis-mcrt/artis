@@ -511,20 +511,24 @@ auto get_nlevels_important(const int nonemptymgi, const int element, const int i
   return {nlevels_important, nnlevelsum};
 }
 
-auto interpolate_corrphotoioncoeff(const int uniquelevelindex, const int phixstargetindex, const double T) -> double {
-  assert_always(USE_LUT_PHOTOION);
-  const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
-  if (lowerindex < TABLESIZE - 1) {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto lerp_or_last(const auto& table, const int uniquelevelindex,
+                                                          const int phixstargetindex, auto T_e) -> double {
+  const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
+  assert_always(lowerindex >= 0);
+  if (lowerindex < (TABLESIZE - 1)) {
     const int upperindex = lowerindex + 1;
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper = corrphotoioncoeffs[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
-    const double f_lower = corrphotoioncoeffs[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
-
-    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower)));
+    const double f_upper = table[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
+    const double f_lower = table[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
+    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower)));
   }
-  return corrphotoioncoeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
+  return table[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
+}
+auto interpolate_corrphotoioncoeff(const int uniquelevelindex, const int phixstargetindex, const double T) -> double {
+  assert_always(USE_LUT_PHOTOION);
+  return lerp_or_last(corrphotoioncoeffs, uniquelevelindex, phixstargetindex, T);
 }
 
 }  // anonymous namespace
