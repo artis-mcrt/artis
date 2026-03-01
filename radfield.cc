@@ -245,8 +245,10 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
   }
 }
 
-// Computes the integral of the Planck function (excluding the constant factors) across frequency nu to infinity
-auto planck_integral_x_to_inf(const double x, const double epsrel) -> double {
+// Series expansion used for computing the integral of the Planck function between x and infinity,
+// where x = H * nu / (KB * T_R). epsrel is the relative error for convergence of the sum, i.e. the termination
+// condition is term < sum * epsrel.
+auto partial_planck_integral_x_to_inf(const double x, const double epsrel) -> double {
   assert_testmodeonly(x >= 0);
   if (x > 700) {
     return 0.0;  // e^-x underflows double precision anyway
@@ -268,8 +270,8 @@ auto planck_integral_x_to_inf(const double x, const double epsrel) -> double {
   return sum;
 }
 
-// Similar to planck_integral_x_to_inf except with an extra factor of nu in the integrand
-auto nu_planck_integral_x_to_inf(const double x, const double epsrel) -> double {
+// Similar to partial_planck_integral_x_to_inf except with an extra factor of nu in the integrand
+auto partial_nu_planck_integral_x_to_inf(const double x, const double epsrel) -> double {
   assert_testmodeonly(x >= 0);
   if (x > 700) {
     return 0.0;  // e^-x underflows double precision
@@ -293,28 +295,30 @@ auto nu_planck_integral_x_to_inf(const double x, const double epsrel) -> double 
   return sum;
 }
 
-// Computes the integral of the Planck function (or nu times the Planck function) across frequency nu from nu_low to
-// nu_high
+// Computes the integral of the Planck function (or nu times the Planck function) between frequency nu=nu_low to
+// nu=nu_high. Units are ergs/s/sr/cm2 for the integral of the Planck function, and ergs/s2/sr/cm2 for the integral of
+// nu times the Planck function.
 auto planck_integral_direct(double nu_low, double nu_high, double temperature, const bool times_nu, const double epsrel)
     -> double {
   if (temperature <= 0) {
     return 0.0;
   }
 
+  // integration variable x = H * nu / (KB * T_R)
   const double x_low = (H * nu_low) / (KB * temperature);
   const double x_high = (H * nu_high) / (KB * temperature);
 
   if (times_nu) {
     const double constant_factor = (2.0 * pow5(KB) * pow5(temperature)) / (pow4(H) * pow2(CLIGHT));
-    const auto low_to_inf = nu_planck_integral_x_to_inf(x_low, epsrel);
-    const auto high_to_inf = nu_planck_integral_x_to_inf(x_high, epsrel);
+    const auto low_to_inf = partial_nu_planck_integral_x_to_inf(x_low, epsrel);
+    const auto high_to_inf = partial_nu_planck_integral_x_to_inf(x_high, epsrel);
 
     return constant_factor * (low_to_inf - high_to_inf);
   }
-  const double constant_factor = (2.0 * pow4(KB) * pow4(temperature)) / (pow3(H) * pow2(CLIGHT));
 
-  const auto low_to_inf = planck_integral_x_to_inf(x_low, epsrel);
-  const auto high_to_inf = planck_integral_x_to_inf(x_high, epsrel);
+  const double constant_factor = (2.0 * pow4(KB) * pow4(temperature)) / (pow3(H) * pow2(CLIGHT));
+  const auto low_to_inf = partial_planck_integral_x_to_inf(x_low, epsrel);
+  const auto high_to_inf = partial_planck_integral_x_to_inf(x_high, epsrel);
 
   return constant_factor * (low_to_inf - high_to_inf);
 }
