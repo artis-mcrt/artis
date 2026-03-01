@@ -243,6 +243,102 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
   }
 }
 
+// Computes the indefinite integral factor J(x) = sum_{n=1}^inf e^{-nx} * (x^3/n + 3x^2/n^2 + 6x/n^3 + 6/n^4)
+auto planck_integral_sum(double x) -> double {
+  if (x <= 0) {
+    return 0.0;  // Avoid log/div errors for x=0
+  }
+  if (x > 700) {
+    return 0.0;  // e^-x underflows double precision anyway
+  }
+
+  double sum = 0.0;
+  const double precision = 1e-15;
+
+  for (int n = 1; n < 1000; ++n) {
+    const double n2 = n * n;
+    const double n3 = n2 * n;
+    const double n4 = n3 * n;
+
+    const double term = std::exp(-n * x) * ((x * x * x / n) + (3.0 * x * x / n2) + (6.0 * x / n3) + (6.0 / n4));
+    sum += term;
+
+    if (term < sum * precision) {
+      break;  // Convergence check
+    }
+  }
+  return sum;
+}
+
+// Summation for the integral of x^4 / (e^x - 1)
+auto planck_nu_integral_sum(double x) -> double {
+  if (x <= 0) {
+    return 0.0;
+  }
+  if (x > 700) {
+    return 0.0;  // e^-x underflows double precision
+  }
+
+  double sum = 0.0;
+  constexpr double precision = 1e-15;
+
+  for (int n = 1; n < 1000; ++n) {
+    const auto n_val = static_cast<double>(n);
+    const double n2 = n_val * n_val;
+    const double n3 = n2 * n_val;
+    const double n4 = n3 * n_val;
+    const double n5 = n4 * n_val;
+
+    // Polynomial expansion for the 4th power
+    const double poly =
+        (std::pow(x, 4) / n_val) + (4.0 * std::pow(x, 3) / n2) + (12.0 * x * x / n3) + (24.0 * x / n4) + (24.0 / n5);
+
+    const double term = std::exp(-n_val * x) * poly;
+    sum += term;
+
+    if (term < sum * precision) {
+      break;
+    }
+  }
+  return sum;
+}
+
+// Computes the definite integral of nu * B_nu from nu_low to nu_high
+auto integrate_nu_planck(double nu_low, double nu_high, double T) -> double {
+  if (T <= 0) {
+    return 0.0;
+  }
+
+  const double x_low = (H * nu_low) / (KB * T);
+  const double x_high = (H * nu_high) / (KB * T);
+
+  // Note: T^5 and H^4 for the nu*B_nu case
+  const double constant_factor = (2.0 * std::pow(KB, 5) * std::pow(T, 5)) / (std::pow(H, 4) * std::pow(CLIGHT, 2));
+
+  const double val_low = planck_nu_integral_sum(x_low);
+  const double val_high = planck_nu_integral_sum(x_high);
+
+  return constant_factor * (val_low - val_high);
+}
+
+// Computes the definite integral of B_nu from nu_low to nu_high at temperature T
+auto integrate_planck(double nu_low, double nu_high, double T) -> double {
+  if (T <= 0) {
+    return 0.0;
+  }
+
+  const double x_low = (H * nu_low) / (KB * T);
+  const double x_high = (H * nu_high) / (KB * T);
+
+  const double constant_factor = (2.0 * std::pow(KB, 4) * std::pow(T, 4)) / (std::pow(H, 3) * std::pow(CLIGHT, 2));
+
+  const double val_low = planck_integral_sum(x_low);
+  const double val_high = planck_integral_sum(x_high);
+
+  // The indefinite integral was -sum, so Integral = (-sum_high) - (-sum_low) = sum_low - sum_high
+  return constant_factor * (val_low - val_high);
+}
+
 auto calculate_planck_integral(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
     -> double {
   double error = 0.;
@@ -250,7 +346,12 @@ auto calculate_planck_integral(const double T_R, const double nu_lower, const do
 
   const GSL_PlanckIntegralParas intparas = {.T_R = T_R, .times_nu = times_nu};
 
-  return integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsrel, &error);
+  const auto integral = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsrel, &error);
+  const auto integral_2 =
+      times_nu ? integrate_nu_planck(nu_lower, nu_upper, T_R) : integrate_planck(nu_lower, nu_upper, T_R);
+  printlnlog("compare times_nu {}: {} and {}", times_nu, integral, integral_2);
+
+  return integral;
 }
 
 // difference between the average nu and the average nu of a Planck function
