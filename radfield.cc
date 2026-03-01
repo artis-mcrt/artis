@@ -199,7 +199,7 @@ auto get_bin_T_R(const std::ptrdiff_t nonemptymgi, const int binindex) -> float 
   return radfieldbin_solutions_T_R[(nonemptymgi * RADFIELDBINCOUNT) + binindex];
 }
 
-constexpr auto gsl_integrand_planck(const double nu, void* const voidparas) -> double {
+constexpr auto planck_integrand(const double nu, void* const voidparas) -> double {
   const auto& params = *(static_cast<const GSL_PlanckIntegralParas*>(voidparas));
   const auto& T_R = params.T_R;
   const auto& times_nu = params.times_nu;
@@ -327,11 +327,11 @@ auto planck_integral_direct(double nu_low, double nu_high, double temperature, c
 auto calculate_planck_integral(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
     -> double {
   double error = 0.;
-  const double epsrel = 1e-25;
+  const double epsrel = 1e-15;
 
   const GSL_PlanckIntegralParas intparas = {.T_R = T_R, .times_nu = times_nu};
 
-  const auto integral = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsrel, &error);
+  const auto integral = integrator<planck_integrand>(intparas, nu_lower, nu_upper, epsrel, &error);
   const auto integral_direct = planck_integral_direct(nu_lower, nu_upper, T_R, times_nu);
   if (!(std::abs(integral - integral_direct) / std::abs(integral_direct) < 1e-4)) {
     printlnlog("compare times_nu {}: {} and {} fracdiff {}", times_nu, integral, integral_direct,
