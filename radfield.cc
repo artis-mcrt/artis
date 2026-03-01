@@ -245,9 +245,8 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
   }
 }
 
-// Computes the indefinite integral of the Planck function (except for the constant factors) from nu_high to infinity
-// J(x) = sum_{n=1}^inf e^{-nx} * (x^3/n + 3x^2/n^2 + 6x/n^3 + 6/n^4)
-auto planck_integral_nu_to_inf(const double nu, const double precision) -> double {
+// Computes the indefinite integral of the Planck function (excluding the constant factors) from nu_high to infinity
+auto planck_integral_nu_to_inf(const double nu, const double epsrel) -> double {
   if (nu <= 0) {
     return 0.0;  // Avoid log/div errors for x=0
   }
@@ -264,16 +263,16 @@ auto planck_integral_nu_to_inf(const double nu, const double precision) -> doubl
     const double term = std::exp(-n * nu) * ((pow3(nu) / n) + (3.0 * pow2(nu) / n2) + (6.0 * nu / n3) + (6.0 / n4));
     sum += term;
 
-    if (term < sum * precision) {
+    if (term < sum * epsrel) {
       break;  // Convergence check
     }
   }
   return sum;
 }
 
-// Computes the indefinite integral for the nu-weighted Planck integral (except for the constant factors) from zero to
+// Computes the indefinite integral for the nu-weighted Planck integral (excluding the constant factors) from zero to
 // nu_high.
-auto nu_planck_integral_nu_to_inf(const double nu, const double precision) -> double {
+auto nu_planck_integral_nu_to_inf(const double nu, const double epsrel) -> double {
   if (nu <= 0) {
     return 0.0;
   }
@@ -296,7 +295,7 @@ auto nu_planck_integral_nu_to_inf(const double nu, const double precision) -> do
     const double term = std::exp(-n_val * nu) * poly;
     sum += term;
 
-    if (term < sum * precision) {
+    if (term < sum * epsrel) {
       break;
     }
   }
@@ -305,8 +304,8 @@ auto nu_planck_integral_nu_to_inf(const double nu, const double precision) -> do
 
 // Computes the definite integral of B_nu (or n * B_nu) from nu_low to nu_high at some temperature [K]
 // by using the series expansions for the indefinite integral from nu_low to nu=inf and evaluating at the limits.
-auto planck_integral_direct(double nu_low, double nu_high, double temperature, const bool times_nu,
-                            const double precision) -> double {
+auto planck_integral_direct(double nu_low, double nu_high, double temperature, const bool times_nu, const double epsrel)
+    -> double {
   if (temperature <= 0) {
     return 0.0;
   }
@@ -316,15 +315,15 @@ auto planck_integral_direct(double nu_low, double nu_high, double temperature, c
 
   if (times_nu) {
     const double constant_factor = (2.0 * pow5(KB) * pow5(temperature)) / (pow4(H) * pow2(CLIGHT));
-    const auto low_to_inf = nu_planck_integral_nu_to_inf(x_low, precision);
-    const auto high_to_inf = nu_planck_integral_nu_to_inf(x_high, precision);
+    const auto low_to_inf = nu_planck_integral_nu_to_inf(x_low, epsrel);
+    const auto high_to_inf = nu_planck_integral_nu_to_inf(x_high, epsrel);
 
     return constant_factor * (low_to_inf - high_to_inf);
   }
   const double constant_factor = (2.0 * pow4(KB) * pow4(temperature)) / (pow3(H) * pow2(CLIGHT));
 
-  const auto low_to_inf = planck_integral_nu_to_inf(x_low, precision);
-  const auto high_to_inf = planck_integral_nu_to_inf(x_high, precision);
+  const auto low_to_inf = planck_integral_nu_to_inf(x_low, epsrel);
+  const auto high_to_inf = planck_integral_nu_to_inf(x_high, epsrel);
 
   return constant_factor * (low_to_inf - high_to_inf);
 }
@@ -337,7 +336,7 @@ auto calculate_planck_integral(const double T_R, const double nu_lower, const do
     const GSL_PlanckIntegralParas intparas = {.T_R = T_R, .times_nu = times_nu};
     return integrator<planck_integrand>(intparas, nu_lower, nu_upper, epsrel, &error);
   }
-  return planck_integral_direct(nu_lower, nu_upper, T_R, times_nu, 1e-25);
+  return planck_integral_direct(nu_lower, nu_upper, T_R, times_nu, 1e-15);
 }
 
 // difference between the average nu and the average nu of a Planck function
