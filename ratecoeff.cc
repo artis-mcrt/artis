@@ -511,8 +511,9 @@ auto get_nlevels_important(const int nonemptymgi, const int element, const int i
   return {nlevels_important, nnlevelsum};
 }
 
-[[nodiscard]] DEVICE_FUNC auto lerp_or_last(const auto& table, const int uniquelevelindex, const int phixstargetindex,
-                                            auto T_e) -> double {
+template <typename T>
+[[nodiscard]] DEVICE_FUNC auto lerp_or_last(const std::span<T> table, const int uniquelevelindex,
+                                            const int phixstargetindex, auto T_e) -> double {
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   assert_always(lowerindex >= 0);
   if (lowerindex < (TABLESIZE - 1)) {
