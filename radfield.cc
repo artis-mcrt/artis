@@ -237,16 +237,13 @@ auto partial_planck_integral_x_to_inf(const double x, const double epsrel) -> do
     return 0.0;  // e^-x underflows double precision anyway
   }
 
-  const double exp_minus_x = std::exp(-x);
-  double exp_minus_nx = 1.;
   double sum = 0.0;
   for (int n = 1; n < 1000; ++n) {
     const double n2 = n * n;
     const double n3 = n2 * n;
     const double n4 = n3 * n;
-    exp_minus_nx *= exp_minus_x;  // more efficient than std::exp(-n * x)
 
-    const double term = exp_minus_nx * ((pow3(x) / n) + (3.0 * pow2(x) / n2) + (6.0 * x / n3) + (6.0 / n4));
+    const double term = std::exp(-n * x) * ((pow3(x) / n) + (3.0 * pow2(x) / n2) + (6.0 * x / n3) + (6.0 / n4));
     sum += term;
 
     if (term < sum * epsrel) {
@@ -262,18 +259,16 @@ auto partial_nu_planck_integral_x_to_inf(const double x, const double epsrel) ->
   if (x > 700) {
     return 0.0;  // e^-x underflows double precision
   }
-  const double exp_minus_x = std::exp(-x);
-  double exp_minus_nx = 1.;
+
   double sum = 0.0;
   for (int n = 1; n < 1000; ++n) {
     const double n2 = n * n;
     const double n3 = n2 * n;
     const double n4 = n3 * n;
     const double n5 = n4 * n;
-    exp_minus_nx *= exp_minus_x;  // more efficient than std::exp(-n * x)
 
-    const double term =
-        exp_minus_nx * ((pow4(x) / n) + (4.0 * pow3(x) / n2) + (12.0 * pow2(x) / n3) + (24.0 * x / n4) + (24.0 / n5));
+    const double term = std::exp(-n * x) *
+                        ((pow4(x) / n) + (4.0 * pow3(x) / n2) + (12.0 * pow2(x) / n3) + (24.0 * x / n4) + (24.0 / n5));
     sum += term;
 
     if (term < sum * epsrel) {
