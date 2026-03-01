@@ -609,19 +609,7 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 // Get an ion's rate coefficient for spontaneous recombination in LTE
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ion_spontrecombcoeff(const int uniqueionindex, const float T_e)
     -> double {
-  const int lowerindex = std::floor(std::log(T_e / MINTEMP) / T_step_log);
-  assert_testmodeonly(lowerindex >= 0);
-  if (lowerindex < (TABLESIZE - 1)) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * std::exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * std::exp(upperindex * T_step_log);
-
-    const double f_upper = ion_alpha_sp[(uniqueionindex * TABLESIZE) + upperindex];
-    const double f_lower = ion_alpha_sp[(uniqueionindex * TABLESIZE) + lowerindex];
-
-    return f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
-  }
-  return ion_alpha_sp[(uniqueionindex * TABLESIZE) + TABLESIZE - 1];
+  return lerp_or_last(ion_alpha_sp, uniqueionindex, 0, T_e);
 }
 
 // Return a level's rate coefficient for spontaneous recombination in LTE
