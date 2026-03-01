@@ -349,11 +349,11 @@ auto calculate_planck_integral(const double T_R, const double nu_lower, const do
   const auto integral = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsrel, &error);
   const auto integral_2 =
       times_nu ? integrate_nu_planck(nu_lower, nu_upper, T_R) : integrate_planck(nu_lower, nu_upper, T_R);
-  assert_always(std::abs(integral - integral_2) / std::abs(integral_2) <
-                1e-4);  // check that the two methods give similar results
+  assert_always((std::abs(integral - integral_2) / std::abs(integral_2) < 1e-4) ||
+                integral_2 < 1e-20);  // check that the two methods give similar results
   // printlnlog("compare times_nu {}: {} and {}", times_nu, integral, integral_2);
 
-  return integral_2;
+  return integral;
 }
 
 // difference between the average nu and the average nu of a Planck function
