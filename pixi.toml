@@ -8,8 +8,11 @@ version = "0.1.0"
 cmd = "make --check-symlink-times --jobs=$(nproc --all)"
 
 [dependencies]
-gxx = ">=15.1.0"
 openmpi = ">=5.0.8"
+gxx = ">=15.1.0"
+# clangxx = ">=22.1.0"
+# lld = ">=22.1.0"
 
 [activation.env]
 OMPI_CXX = "g++"
+# OMPI_CXX = "clang++"
