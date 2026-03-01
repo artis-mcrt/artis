@@ -31,15 +31,12 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
-#include "ratecoeff.h"
 #include "rpkt.h"
 #include "sn3d.h"
 
 namespace radfield {
 
 namespace {
-
-constexpr bool planck_integrals_use_numerical_integration = false;
 
 std::vector<double> J_normfactor;
 
@@ -201,20 +198,6 @@ auto get_bin_T_R(const std::ptrdiff_t nonemptymgi, const int binindex) -> float 
   return radfieldbin_solutions_T_R[(nonemptymgi * RADFIELDBINCOUNT) + binindex];
 }
 
-constexpr auto planck_integrand(const double nu, void* const voidparas) -> double {
-  const auto& params = *(static_cast<const GSL_PlanckIntegralParas*>(voidparas));
-  const auto& T_R = params.T_R;
-  const auto& times_nu = params.times_nu;
-
-  double integrand = TWOHOVERCLIGHTSQUARED * pow3(nu) / (std::expm1(HOVERKB * nu / T_R));
-
-  if (times_nu) {
-    integrand *= nu;
-  }
-
-  return integrand;
-}
-
 void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cmf, const double nu_cmf,
                          const double doppler_nucmf_on_nurf, const Phixslist& phixslist) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
@@ -298,11 +281,12 @@ auto partial_nu_planck_integral_x_to_inf(const double x, const double epsrel) ->
 // Computes the integral of the Planck function (or nu times the Planck function) between frequency nu=nu_low to
 // nu=nu_high. Units are ergs/s/sr/cm2 for the integral of the Planck function, and ergs/s2/sr/cm2 for the integral of
 // nu times the Planck function.
-auto planck_integral_direct(double nu_low, double nu_high, double temperature, const bool times_nu, const double epsrel)
-    -> double {
+auto calculate_planck_integral(double temperature, double nu_low, double nu_high, const bool times_nu) -> double {
   if (temperature <= 0) {
     return 0.0;
   }
+
+  constexpr double epsrel = 1e-15;  // relative error for convergence of the series expansion
 
   // integration variable x = H * nu / (KB * T_R)
   const double x_low = (H * nu_low) / (KB * temperature);
@@ -321,17 +305,6 @@ auto planck_integral_direct(double nu_low, double nu_high, double temperature, c
   const auto high_to_inf = partial_planck_integral_x_to_inf(x_high, epsrel);
 
   return constant_factor * (low_to_inf - high_to_inf);
-}
-
-auto calculate_planck_integral(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
-    -> double {
-  if constexpr (planck_integrals_use_numerical_integration) {
-    double error = 0.;
-    const double epsrel = 1e-15;
-    const GSL_PlanckIntegralParas intparas = {.T_R = T_R, .times_nu = times_nu};
-    return integrator<planck_integrand>(intparas, nu_lower, nu_upper, epsrel, &error);
-  }
-  return planck_integral_direct(nu_lower, nu_upper, T_R, times_nu, 1e-15);
 }
 
 // difference between the average nu and the average nu of a Planck function
