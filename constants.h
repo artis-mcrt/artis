@@ -9,6 +9,7 @@
 [[gnu::const]] constexpr auto pow2(auto x) { return x * x; }
 [[gnu::const]] constexpr auto pow3(auto x) { return x * x * x; }
 [[gnu::const]] constexpr auto pow4(auto x) { return pow2(x) * pow2(x); }
+[[gnu::const]] constexpr auto pow5(auto x) { return pow4(x) * x; }
 
 // fundamental constants
 

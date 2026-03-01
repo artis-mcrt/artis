@@ -31,7 +31,6 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
-#include "ratecoeff.h"
 #include "rpkt.h"
 #include "sn3d.h"
 
@@ -99,11 +98,6 @@ std::vector<double> nuJ;  // after normalisation: [ergs/s/sr/cm2]
 #ifdef DO_TITER
 std::vector<double> nuJ_reduced_save;
 #endif
-
-struct GSL_PlanckIntegralParas {
-  double T_R;
-  bool times_nu;
-};
 
 std::fstream radfieldfile;
 
@@ -199,20 +193,6 @@ auto get_bin_T_R(const std::ptrdiff_t nonemptymgi, const int binindex) -> float 
   return radfieldbin_solutions_T_R[(nonemptymgi * RADFIELDBINCOUNT) + binindex];
 }
 
-constexpr auto gsl_integrand_planck(const double nu, void* const voidparas) -> double {
-  const auto& params = *(static_cast<const GSL_PlanckIntegralParas*>(voidparas));
-  const auto& T_R = params.T_R;
-  const auto& times_nu = params.times_nu;
-
-  double integrand = TWOHOVERCLIGHTSQUARED * pow3(nu) / (std::expm1(HOVERKB * nu / T_R));
-
-  if (times_nu) {
-    integrand *= nu;
-  }
-
-  return integrand;
-}
-
 void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cmf, const double nu_cmf,
                          const double doppler_nucmf_on_nurf, const Phixslist& phixslist) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
@@ -243,14 +223,83 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
   }
 }
 
-auto calculate_planck_integral(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
-    -> double {
-  double error = 0.;
-  const double epsrel = 1e-10;
+// Series expansion used for computing the integral of the Planck function between x and infinity,
+// where x = H * nu / (KB * T_R). epsrel is the relative error for convergence of the sum, i.e. the termination
+// condition is term < sum * epsrel.
+auto partial_planck_integral_x_to_inf(const double x, const double epsrel) -> double {
+  assert_testmodeonly(x >= 0);
+  if (x > 700) {
+    return 0.0;  // e^-x underflows double precision anyway
+  }
 
-  const GSL_PlanckIntegralParas intparas = {.T_R = T_R, .times_nu = times_nu};
+  double sum = 0.0;
+  for (int n = 1; n < 1000; ++n) {
+    const double n2 = n * n;
+    const double n3 = n2 * n;
+    const double n4 = n3 * n;
 
-  return integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsrel, &error);
+    const double term = std::exp(-n * x) * ((pow3(x) / n) + (3.0 * pow2(x) / n2) + (6.0 * x / n3) + (6.0 / n4));
+    sum += term;
+
+    if (term < sum * epsrel) {
+      break;  // Convergence check
+    }
+  }
+  return sum;
+}
+
+// Similar to partial_planck_integral_x_to_inf except with an extra factor of nu in the integrand
+auto partial_nu_planck_integral_x_to_inf(const double x, const double epsrel) -> double {
+  assert_testmodeonly(x >= 0);
+  if (x > 700) {
+    return 0.0;  // e^-x underflows double precision
+  }
+
+  double sum = 0.0;
+  for (int n = 1; n < 1000; ++n) {
+    const double n2 = n * n;
+    const double n3 = n2 * n;
+    const double n4 = n3 * n;
+    const double n5 = n4 * n;
+
+    const double term = std::exp(-n * x) *
+                        ((pow4(x) / n) + (4.0 * pow3(x) / n2) + (12.0 * pow2(x) / n3) + (24.0 * x / n4) + (24.0 / n5));
+    sum += term;
+
+    if (term < sum * epsrel) {
+      break;
+    }
+  }
+  return sum;
+}
+
+// Computes the integral of the Planck function (or nu times the Planck function) between frequency nu=nu_low to
+// nu=nu_high. Units are ergs/s/sr/cm2 for the integral of the Planck function, and ergs/s2/sr/cm2 for the integral of
+// nu times the Planck function.
+auto calculate_planck_integral(double temperature, double nu_low, double nu_high, const bool times_nu) -> double {
+  if (temperature <= 0) {
+    return 0.0;
+  }
+
+  constexpr double epsrel = 1e-15;  // relative error for convergence of the series expansion
+
+  // integration variable x = H * nu / (KB * T_R)
+  const double x_low = (H * nu_low) / (KB * temperature);
+  const double x_high = (H * nu_high) / (KB * temperature);
+
+  if (times_nu) {
+    const double constant_factor = (2.0 * pow5(KB) * pow5(temperature)) / (pow4(H) * pow2(CLIGHT));
+    const auto low_to_inf = partial_nu_planck_integral_x_to_inf(x_low, epsrel);
+    const auto high_to_inf = partial_nu_planck_integral_x_to_inf(x_high, epsrel);
+
+    return constant_factor * (low_to_inf - high_to_inf);
+  }
+
+  const double constant_factor = (2.0 * pow4(KB) * pow4(temperature)) / (pow3(H) * pow2(CLIGHT));
+  const auto low_to_inf = partial_planck_integral_x_to_inf(x_low, epsrel);
+  const auto high_to_inf = partial_planck_integral_x_to_inf(x_high, epsrel);
+
+  return constant_factor * (low_to_inf - high_to_inf);
 }
 
 // difference between the average nu and the average nu of a Planck function
