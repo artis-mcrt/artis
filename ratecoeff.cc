@@ -726,19 +726,7 @@ auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, cons
 
 DEVICE_FUNC auto get_bfcoolingcoeff(const int element, const int lowerion, const int lowerionlevel,
                                     const int phixstargetindex, const float T_e) -> double {
-  const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
-  const auto uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerionlevel);
-  if (lowerindex < TABLESIZE - 1) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
-
-    const double f_upper = bfcooling_coeffs[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
-    const double f_lower = bfcooling_coeffs[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
-
-    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower)));
-  }
-  return bfcooling_coeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
+  return lerp_or_last(bfcooling_coeffs, get_uniquelevelindex(element, lowerion, lowerionlevel), phixstargetindex, T_e);
 }
 
 // Return the photoionisation rate coefficient (corrected for stimulated emission)
