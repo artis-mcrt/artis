@@ -528,11 +528,6 @@ template <typename T>
   return table[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
 }
 
-auto interpolate_corrphotoioncoeff(const int uniquelevelindex, const int phixstargetindex, const double T) -> double {
-  assert_always(USE_LUT_PHOTOION);
-  return lerp_or_last(corrphotoioncoeffs, uniquelevelindex, phixstargetindex, T);
-}
-
 }  // anonymous namespace
 
 void setup_photoion_luts() {
@@ -722,7 +717,7 @@ auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, cons
   const double W = grid::get_W(nonemptymgi);
   const double T_R = grid::get_TR(nonemptymgi);
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-  return W * interpolate_corrphotoioncoeff(uniquelevelindex, phixstargetindex, T_R);
+  return W * lerp_or_last(corrphotoioncoeffs, uniquelevelindex, phixstargetindex, T_R);
 }
 
 DEVICE_FUNC auto get_bfcoolingcoeff(const int element, const int lowerion, const int lowerionlevel,
@@ -752,7 +747,7 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
         const double W = grid::get_W(nonemptymgi);
         const double T_R = grid::get_TR(nonemptymgi);
 
-        gammacorr = W * interpolate_corrphotoioncoeff(uniquelevelindex, phixstargetindex, T_R);
+        gammacorr = W * lerp_or_last(corrphotoioncoeffs, uniquelevelindex, phixstargetindex, T_R);
         const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
         if (index_in_groundlevelcontestimator >= 0) {
           gammacorr *= globals::corrphotoionrenorm[(nonemptymgi * globals::nbfcontinua_ground) +
