@@ -158,7 +158,7 @@ void precalculate_rate_coefficient_integrals() {
             double error{NAN};
             const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
 
-            const double modified_sahafact = calculate_modified_sahafact(statw_lower, statw_upper, T_e);
+            const double modified_sahafact = SAHACONST * statw_lower / statw_upper * std::pow(T_e, -1.5);
             assert_always(modified_sahafact >= 0.);
             assert_always(std::isfinite(modified_sahafact));
 
@@ -403,25 +403,25 @@ void precalculate_ion_alpha_sp() {
 }
 
 // Integrand to calculate the rate coefficient for photoionisation. Corrected for stimulated recombination.
-auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void* const voidparas) -> double {
+auto integrand_corrphotoioncoeff_custom_radfield(const double nu_minus_nu_edge, void* const voidparas) -> double {
   const auto& params = *(static_cast<const GSLIntegralParasGammaCorr*>(voidparas));
   const auto& nu_edge = params.nu_edge;
-  const auto& departure_ratio = params.departure_ratio;
+  const auto& modified_departure_ratio = params.modified_departure_ratio;
   const auto& photoion_xs = params.photoion_xs;
   const auto& T_e = params.T_e;
   const auto& nonemptymgi = params.nonemptymgi;
 
-  double corrfactor = 1. - (departure_ratio * exp(-HOVERKB * nu / T_e));
+  double corrfactor = 1. - (modified_departure_ratio * exp(-HOVERKB * nu_minus_nu_edge / T_e));
   if (corrfactor < 0) {
     corrfactor = 0.;
   }
 
-  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
+  const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
 
-  const double Jnu = radfield::radfield(nu, nonemptymgi);
+  const double Jnu = radfield::radfield(nu_minus_nu_edge + nu_edge, nonemptymgi);
 
   // TODO: MK thesis page 41, use population ratios and Te?
-  return ONEOVERH * sigma_bf / nu * Jnu * corrfactor;
+  return ONEOVERH * sigma_bf / (nu_minus_nu_edge + nu_edge) * Jnu * corrfactor;
 }
 
 auto calculate_corrphotoioncoeff_integral(const int element, const int ion, const int level, const int phixstargetindex,
@@ -440,18 +440,19 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   const double nne = grid::get_nne(nonemptymgi);
   const int upperionlevel = get_phixsupperlevel(loweruniquelevelindex, phixstargetindex);
   const auto upperuniquelevelindex = get_uniquelevelindex(element, ion + 1, upperionlevel);
-  const double sf =
-      calculate_sahafact(stat_weight(loweruniquelevelindex), stat_weight(upperuniquelevelindex), T_e, H * nu_threshold);
+  const double modified_sahafact =
+      SAHACONST * stat_weight(loweruniquelevelindex) / stat_weight(upperuniquelevelindex) * std::pow(T_e, -1.5);
   const double nnupperionlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, upperuniquelevelindex)
                                                : calculate_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
-  double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.;  // put that to phixslist
-  if (!std::isfinite(departure_ratio)) {
+  double modified_departure_ratio =
+      nnlevel > 0. ? nnupperionlevel / nnlevel * nne * modified_sahafact : 1.;  // put that to phixslist
+  if (!std::isfinite(modified_departure_ratio)) {
     departure_ratio = 0.;
   }
 
   const auto intparas = GSLIntegralParasGammaCorr{
       .nu_edge = nu_threshold,
-      .departure_ratio = departure_ratio,
+      .modified_departure_ratio = modified_departure_ratio,
       .photoion_xs = get_phixs_table(loweruniquelevelindex),
       .T_e = T_e,
       .nonemptymgi = nonemptymgi,
@@ -459,13 +460,10 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
 
   double error = 0.;
 
-  auto gammacorr =
-      integrator<integrand_corrphotoioncoeff_custom_radfield>(intparas, nu_threshold, nu_max_phixs, epsrel, &error);
-  if (!std::isfinite(gammacorr)) {
-    return 0.;
-  }
-
-  gammacorr *= FOURPI * get_phixsprobability(loweruniquelevelindex, phixstargetindex);
+  const auto gammacorr =
+      FOURPI * get_phixsprobability(loweruniquelevelindex, phixstargetindex) *
+      integrator<integrand_corrphotoioncoeff_custom_radfield>(intparas, 0, nu_max_phixs - nu_threshold, epsrel, &error);
+  assert_always(std::isfinite(gammacorr));
 
   return gammacorr;
 }
