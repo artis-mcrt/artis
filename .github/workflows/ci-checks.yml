@@ -85,7 +85,7 @@ jobs:
 
             - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
               if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
-              uses: fortran-lang/setup-fortran@v1.8.1
+              uses: fortran-lang/setup-fortran@v1.9.0
               with:
                   compiler: ${{ matrix.compiler.name }}
                   version: ${{ matrix.compiler.ver }}
@@ -358,7 +358,7 @@ jobs:
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
             - name: Install nvc++
-              uses: fortran-lang/setup-fortran@v1.8.1
+              uses: fortran-lang/setup-fortran@v1.9.0
               with:
                   compiler: nvidia-hpc
                   version: 26.1
