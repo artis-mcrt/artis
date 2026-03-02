@@ -66,6 +66,10 @@ else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	CXX_STD := c++23
 	# to use the pixi installed libstdc++
 # 	CXXFLAGS += --gcc-toolchain=$(PWD)/.pixi/envs/default -Wl,-rpath,$(PWD)/.pixi/envs/default/lib
+	ifneq (,$(shell hostname -A | grep .cosma.))
+		CXXFLAGS += --gcc-toolchain=/cosma/local/gcc/14.1.0/
+	endif
+
 else
 	$(warning Unknown compiler)
 	COMPILER_NAME := unknown
