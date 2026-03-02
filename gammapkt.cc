@@ -506,8 +506,8 @@ void compton_scatter(Packet& pkt) {
     const double log10_sigma_lower = log10(photoion_data[Z - 1][E_smaller_idx].sigma_xcom);
     const double log10_sigma_gtr = log10(photoion_data[Z - 1][E_gtr_idx].sigma_xcom);
     // interpolate or extrapolate, both linear in log10-log10 space
-    const double log10_intpol = log10_E_smaller + ((log10_sigma_gtr - log10_sigma_lower) /
-                                                   (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller));
+    const double log10_intpol = log10_sigma_lower + ((log10_sigma_gtr - log10_sigma_lower) /
+                                                     (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller));
     const double sigma_intpol = pow(10., log10_intpol);
     const double chi_cmf_contrib = sigma_intpol * n_i;
     assert_always(sigma_intpol >= 0.);
