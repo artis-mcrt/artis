@@ -843,13 +843,13 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
       float W_bin = -1.;
 
       if (J_bin > 0) {
-        T_R_bin = find_T_R(nonemptymgi, binindex);
-
         if (binindex == RADFIELDBINCOUNT - 1) {
           const auto T_e = grid::get_Te(nonemptymgi);
           printlnlog("    replacing bin {} T_R {:7.1f} with cell T_e = {:7.1f}", binindex,
                      get_bin_T_R(nonemptymgi, binindex), T_e);
           T_R_bin = T_e;
+        } else {
+          T_R_bin = find_T_R(nonemptymgi, binindex);
         }
 
         double planck_integral_result = calculate_planck_integral(T_R_bin, nu_lower, nu_upper, false);
