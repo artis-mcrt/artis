@@ -824,8 +824,6 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         double modified_departure_ratio = globals::cellcache[cellcacheslotid].allcont_modified_departureratios[i];
 
-        // TODO: I don't think this condition needs updating since the only difference between departure_ratio and
-        // modified_departure_ratio is a positive factor
         if (!USECELLHISTANDUPDATEPHIXSLIST || modified_departure_ratio < 0) {
           const int upper = allcont_upperlevel[i];
           const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
