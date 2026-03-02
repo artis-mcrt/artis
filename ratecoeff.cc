@@ -447,7 +447,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   double modified_departure_ratio =
       nnlevel > 0. ? nnupperionlevel / nnlevel * nne * modified_sahafact : 1.;  // put that to phixslist
   if (!std::isfinite(modified_departure_ratio)) {
-    departure_ratio = 0.;
+    modified_departure_ratio = 0.;
   }
 
   const auto intparas = GSLIntegralParasGammaCorr{
