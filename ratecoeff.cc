@@ -511,20 +511,21 @@ auto get_nlevels_important(const int nonemptymgi, const int element, const int i
   return {nlevels_important, nnlevelsum};
 }
 
-auto interpolate_corrphotoioncoeff(const int uniquelevelindex, const int phixstargetindex, const double T) -> double {
-  assert_always(USE_LUT_PHOTOION);
-  const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
-  if (lowerindex < TABLESIZE - 1) {
+template <typename T>
+[[nodiscard]] DEVICE_FUNC auto lerp_or_last(const std::span<T> table, const int uniquelevelindex,
+                                            const int phixstargetindex, auto temperature) -> double {
+  const int lowerindex = floor(log(temperature / MINTEMP) / T_step_log);
+  assert_always(lowerindex >= 0);
+  if (lowerindex < (TABLESIZE - 1)) {
     const int upperindex = lowerindex + 1;
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper = corrphotoioncoeffs[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
-    const double f_lower = corrphotoioncoeffs[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
-
-    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower)));
+    const double f_upper = table[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
+    const double f_lower = table[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
+    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (temperature - T_lower)));
   }
-  return corrphotoioncoeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
+  return table[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
 }
 
 }  // anonymous namespace
@@ -621,22 +622,9 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 
 // Return a level's rate coefficient for spontaneous recombination in LTE
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_spontrecombcoeff(const int uniquelevelindex,
-                                                                  const int phixstargetindex, float T_e) -> double {
-  double alpha_sp{NAN};
-  const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
-  assert_always(lowerindex >= 0);
-  if (lowerindex < (TABLESIZE - 1)) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
-
-    const double f_upper = spontrecombcoeffs[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
-    const double f_lower = spontrecombcoeffs[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
-    alpha_sp = (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower)));
-  } else {
-    alpha_sp = spontrecombcoeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
-  }
-  return alpha_sp;
+                                                                  const int phixstargetindex, const float T_e)
+    -> double {
+  return lerp_or_last(spontrecombcoeffs, uniquelevelindex, phixstargetindex, T_e);
 }
 
 // multiply by upper ion population (or ground population if per_groundmultipletpop is true) and nne to get a rate
@@ -741,24 +729,12 @@ auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, cons
   const double W = grid::get_W(nonemptymgi);
   const double T_R = grid::get_TR(nonemptymgi);
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-  return W * interpolate_corrphotoioncoeff(uniquelevelindex, phixstargetindex, T_R);
+  return W * lerp_or_last(corrphotoioncoeffs, uniquelevelindex, phixstargetindex, T_R);
 }
 
 DEVICE_FUNC auto get_bfcoolingcoeff(const int element, const int lowerion, const int lowerionlevel,
                                     const int phixstargetindex, const float T_e) -> double {
-  const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
-  const auto uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerionlevel);
-  if (lowerindex < TABLESIZE - 1) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
-
-    const double f_upper = bfcooling_coeffs[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
-    const double f_lower = bfcooling_coeffs[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
-
-    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower)));
-  }
-  return bfcooling_coeffs[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
+  return lerp_or_last(bfcooling_coeffs, get_uniquelevelindex(element, lowerion, lowerionlevel), phixstargetindex, T_e);
 }
 
 // Return the photoionisation rate coefficient (corrected for stimulated emission)
@@ -783,7 +759,7 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
         const double W = grid::get_W(nonemptymgi);
         const double T_R = grid::get_TR(nonemptymgi);
 
-        gammacorr = W * interpolate_corrphotoioncoeff(uniquelevelindex, phixstargetindex, T_R);
+        gammacorr = W * lerp_or_last(corrphotoioncoeffs, uniquelevelindex, phixstargetindex, T_R);
         const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
         if (index_in_groundlevelcontestimator >= 0) {
           gammacorr *= globals::corrphotoionrenorm[(nonemptymgi * globals::nbfcontinua_ground) +
