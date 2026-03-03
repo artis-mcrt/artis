@@ -69,11 +69,11 @@ constexpr int RADFIELDBINCOUNT = 256;
 
 constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
 
-constexpr double nu_lower_first_initial = (CLIGHT / 40000e-8);
+constexpr double RADFIELDBINS_NU_MIN = (CLIGHT / 40000e-8);
 
-constexpr double nu_upper_last_initial = (CLIGHT / 1085e-8);
+constexpr double RADFIELDBINS_NU_MAX = (CLIGHT / 1085e-8);
 
-constexpr double nu_upper_superbin = (CLIGHT / 10e-8);
+constexpr double RADFIELDBINS_T_E_SUPERBIN_NU_MAX = (CLIGHT / 10e-8);
 
 constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 

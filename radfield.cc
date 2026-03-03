@@ -41,6 +41,9 @@ namespace {
 constexpr double bins_T_R_min = 500;
 constexpr double bins_T_R_max = 250000;
 
+static_assert(RADFIELDBINS_T_E_SUPERBIN_NU_MAX >= RADFIELDBINS_NU_MAX,
+              "The T_e superbin upper boundary must be greater than or equal to the upper boundary of the other bins");
+
 std::vector<double> J_normfactor;
 
 struct RadFieldBinSolution {
@@ -61,7 +64,7 @@ struct RadFieldBins {
 };
 
 constexpr double radfieldbins_delta_nu =
-    (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
+    (RADFIELDBINS_NU_MAX - RADFIELDBINS_NU_MIN) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
 
 RadFieldBins radfieldbins;
 
@@ -108,9 +111,9 @@ constexpr auto get_bin_nu_upper(const int binindex) -> double {
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
   if (binindex == RADFIELDBINCOUNT - 1) {
-    return nu_upper_superbin;
+    return RADFIELDBINS_T_E_SUPERBIN_NU_MAX;
   }
-  return nu_lower_first_initial + ((binindex + 1) * radfieldbins_delta_nu);
+  return RADFIELDBINS_NU_MIN + ((binindex + 1) * radfieldbins_delta_nu);
 }
 
 constexpr auto get_bin_nu_lower(const int binindex) -> double {
@@ -120,24 +123,24 @@ constexpr auto get_bin_nu_lower(const int binindex) -> double {
   if (binindex > 0) {
     return get_bin_nu_upper(binindex - 1);
   }
-  return nu_lower_first_initial;
+  return RADFIELDBINS_NU_MIN;
 }
 
 // find the left-closed bin [nu_lower, nu_upper) that nu belongs to
 constexpr auto select_bin(const double nu) -> int {
-  if (nu < nu_lower_first_initial) {
+  if (nu < RADFIELDBINS_NU_MIN) {
     return -2;  // out of range, nu lower than lowest bin's lower boundary
   }
-  if (nu >= nu_upper_superbin) {
+  if (nu >= RADFIELDBINS_T_E_SUPERBIN_NU_MAX) {
     // out of range, nu higher than highest bin's upper boundary
     return -1;
   }
-  if (nu >= nu_upper_last_initial) {
+  if (nu >= RADFIELDBINS_NU_MAX) {
     // in the superbin. separate case because the delta_nu is different to the other bins
     return RADFIELDBINCOUNT - 1;
   }
 
-  const int binindex = static_cast<int>((nu - nu_lower_first_initial) / radfieldbins_delta_nu);
+  const int binindex = static_cast<int>((nu - RADFIELDBINS_NU_MIN) / radfieldbins_delta_nu);
 
   if (nu == get_bin_nu_upper(binindex)) {
     // exactly on the upper boundary of the bin, so add 1 to ensure we get the left-closed bin
@@ -592,8 +595,8 @@ void init(const int my_rank, const int ndo_nonempty) {
 
     printlnlog(
         "Initialising multibin radiation field with {} bins from ({:.2f} eV, {:6.1f} A) to ({:.2f} eV, {:6.1f} A)",
-        RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
-        H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
+        RADFIELDBINCOUNT, H * RADFIELDBINS_NU_MIN / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MIN,
+        H * RADFIELDBINS_NU_MAX / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MAX);
     if (ndo_nonempty > 0) {
       assert_always(!radfieldfile.is_open());
       radfieldfile = fstream_required(std::format("radfield_{:04d}.out", my_rank), std::ios::out | std::ios::trunc);
@@ -1068,7 +1071,7 @@ void write_restart_data(FILE* gridsave_file) {
   fprintf(gridsave_file, "%d\n", 30490824);  // special number marking the beginning of radfield data
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    fprintf(gridsave_file, "%d %la %la %la %la\n", RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial,
+    fprintf(gridsave_file, "%d %la %la %la %la\n", RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX,
             bins_T_R_min, bins_T_R_max);
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
@@ -1131,18 +1134,18 @@ void read_restart_data(FILE* gridsave_file) {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     double T_R_min_in{NAN};
     double T_R_max_in{NAN};
-    double nu_lower_first_initial_in{NAN};
-    double nu_upper_last_initial_in{NAN};
+    double RADFIELDBINS_NU_MIN_in{NAN};
+    double RADFIELDBINS_NU_MAX_in{NAN};
     int bincount_in = 0;
-    assert_always(fscanf(gridsave_file, "%d %la %la %la %la\n", &bincount_in, &nu_lower_first_initial_in,
-                         &nu_upper_last_initial_in, &T_R_min_in, &T_R_max_in) == 5);
+    assert_always(fscanf(gridsave_file, "%d %la %la %la %la\n", &bincount_in, &RADFIELDBINS_NU_MIN_in,
+                         &RADFIELDBINS_NU_MAX_in, &T_R_min_in, &T_R_max_in) == 5);
 
-    double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
+    double nu_lower_first_ratio = RADFIELDBINS_NU_MIN_in / RADFIELDBINS_NU_MIN;
     if (nu_lower_first_ratio > 1.0) {
       nu_lower_first_ratio = 1 / nu_lower_first_ratio;
     }
 
-    double nu_upper_last_ratio = nu_upper_last_initial_in / nu_upper_last_initial;
+    double nu_upper_last_ratio = RADFIELDBINS_NU_MAX_in / RADFIELDBINS_NU_MAX;
     if (nu_upper_last_ratio > 1.0) {
       nu_upper_last_ratio = 1 / nu_upper_last_ratio;
     }
@@ -1150,11 +1153,11 @@ void read_restart_data(FILE* gridsave_file) {
     if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != bins_T_R_min || T_R_max_in != bins_T_R_max ||
         nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999) {
       printlnlog(
-          "ERROR: gridsave file specifies {} bins, nu_lower_first_initial {:g} nu_upper_last_initial {:g} T_R_min "
+          "ERROR: gridsave file specifies {} bins, RADFIELDBINS_NU_MIN {:g} RADFIELDBINS_NU_MAX {:g} T_R_min "
           "{:g} T_R_max {:g}",
-          bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
-      printlnlog("require {} bins, nu_lower_first_initial {:g} nu_upper_last_initial {:g} T_R_min {:g} T_R_max {:g}",
-                 RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, bins_T_R_min, bins_T_R_max);
+          bincount_in, RADFIELDBINS_NU_MIN_in, RADFIELDBINS_NU_MAX_in, T_R_min_in, T_R_max_in);
+      printlnlog("require {} bins, RADFIELDBINS_NU_MIN {:g} RADFIELDBINS_NU_MAX {:g} T_R_min {:g} T_R_max {:g}",
+                 RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX, bins_T_R_min, bins_T_R_max);
       std::abort();
     }
 
