@@ -915,7 +915,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   for (auto i = 0U; i < nlte_dimension; i++) {
     // diagonal elements of LU matrix should be positive and finite
     const double& matrixelement = rate_matrix_LU_decomp[(i * nlte_dimension) + i];
-    if ((matrixelement <= 0.) || !std::isfinite(matrixelement)) {
+    if (std::abs(matrixelement) == 0. || !std::isfinite(matrixelement)) {
       const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
       if (!lumatrix_is_singular) {
         printlog("  ERROR: NLTE disconnected: Z={} ionstage {} level: ", get_atomicnumber(element),
@@ -956,7 +956,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   for (auto i = 0U; i < nlte_dimension; i++) {
     // diagonal elements of LU matrix should be positive and finite
     const double& matrixelement = eigen_rate_matrix_lu.matrixLU().diagonal()[i];
-    if ((matrixelement <= 0.) || !std::isfinite(matrixelement)) {
+    if (std::abs(matrixelement) == 0. || !std::isfinite(matrixelement)) {
       const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
       if (!lumatrix_is_singular) {
         printlog("ERROR: NLTE disconnected: Z={} ionstage {} level: ", get_atomicnumber(element),
