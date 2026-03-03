@@ -139,15 +139,16 @@ void precalculate_rate_coefficient_integrals() {
 
   // Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < get_nelements(); element++) {
+    const int atomic_number = get_atomicnumber(element);
+    printlog("Performing rate integrals for Z = {}: ion stages", atomic_number);
     const int nions = get_nions(element) - 1;
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
     for (int ion = 0; ion < nions; ion++) {
-      const int atomic_number = get_atomicnumber(element);
       const int ionstage = get_ionstage(element, ion);
+      printlog(" {}", ionstage);
       const int nlevels = get_nlevels_ionising(element, ion);
-      printlnlog("Performing rate integrals for Z = {}, ionstage {}...", atomic_number, ionstage);
 
       for (int level = 0; level < nlevels; level++) {
         // coefficients are stored in node shared memory, so divide up the work on the node
@@ -206,10 +207,11 @@ void precalculate_rate_coefficient_integrals() {
 
             assert_always(std::isfinite(this_bfcooling_coeff) && this_bfcooling_coeff >= 0);
             bfcooling_coeffs[bflutindex] = this_bfcooling_coeff;
-          }
-        }
-      }
-    }
+          }  // temperature loop
+        }  // phixstarget loop
+      }  // level loop
+    }  // ion loop
+    printlnlog("");
   }
 
   MPI_Barrier(globals::mpi_comm_node);
