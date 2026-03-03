@@ -302,9 +302,9 @@ auto calculate_planck_integral(double temperature, double nu_low, double nu_high
   return constant_factor * (low_to_inf - high_to_inf);
 }
 
-// difference between the average nu and the average nu of a Planck function
-// at temperature T_R, in the frequency range corresponding to a bin
-auto delta_nu_bar(const double T_R, const int nonemptymgi, const int binindex) -> double {
+// nu_bar_planck_minus_estimator = nu_bar_planck(T_R) - nu_bar_estimator, where nu_bar is the intensity-weighted mean
+// frequency in a bin, which is given by the ratio of nuJ and J estimators.
+auto nu_bar_planck_minus_estimator(const double T_R, const int nonemptymgi, const int binindex) -> double {
   const double nu_lower = get_bin_nu_lower(binindex);
   const double nu_upper = get_bin_nu_upper(binindex);
   const double nu_bar_estimator = get_bin_nu_bar(nonemptymgi, binindex);
@@ -337,9 +337,9 @@ auto delta_nu_bar(const double T_R, void* const voidparas) -> double {  // cppch
 }
 #endif
 
-auto find_T_R(const int nonemptymgi, const int binindex) -> float {
+auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
   const auto f_deltanubar = [nonemptymgi, binindex](const double T_R) {
-    return delta_nu_bar(T_R, nonemptymgi, binindex);
+    return nu_bar_planck_minus_estimator(T_R, nonemptymgi, binindex);
   };
 
   // Check whether the equation has a root in [T_min,T_max]
@@ -397,13 +397,9 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
 
 #endif
   } else if (invalid_values || f_Tmax < 0) {
-    // delta_nu_bar always negative, so the solution is above T_R_max
-    printlnlog("find_T_R: cell {} bin {:4} no solution in interval, clamping to T_R_max={:g}",
-               grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_max);
+    // nu_bar_planck_minus_estimator is always negative, so the solution is above T_R_max
     return T_R_max;
   }
-  printlnlog("find_T_R: cell {} bin {:4} no solution in interval, clamping to T_R_min={:g}",
-             grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_min);
   return T_R_min;
 }
 
@@ -825,9 +821,11 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       J_bin_sum += get_bin_J(nonemptymgi, binindex);
     }
+    const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-    printlnlog("radfield bins sum to J of {:g} ({:.1f}% of total J).", J_bin_sum, 100. * J_bin_sum / J[nonemptymgi]);
-    printlnlog("radfield: Finding parameters for {} bins...", RADFIELDBINCOUNT);
+    printlnlog(
+        "timestep {} cell {}: radfield bins sum to J of {:g} ({:.1f}% of total J). Finding parameters for {} bins...",
+        timestep, mgi, J_bin_sum, 100. * J_bin_sum / J[nonemptymgi], RADFIELDBINCOUNT);
 
     double J_bin_max = 0.;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
@@ -835,6 +833,8 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
       J_bin_max = std::max(J_bin_max, J_bin);
     }
 
+    int count_T_R_min = 0;
+    int count_T_R_max = 0;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       const double nu_lower = get_bin_nu_lower(binindex);
       const double nu_upper = get_bin_nu_upper(binindex);
@@ -849,17 +849,20 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
                      get_bin_T_R(nonemptymgi, binindex), T_e);
           T_R_bin = T_e;
         } else {
-          T_R_bin = find_T_R(nonemptymgi, binindex);
+          T_R_bin = find_bin_T_R(nonemptymgi, binindex);
+          if (T_R_bin <= T_R_min) {
+            count_T_R_min++;
+          } else if (T_R_bin >= T_R_max) {
+            count_T_R_max++;
+          }
         }
-
         double planck_integral_result = calculate_planck_integral(T_R_bin, nu_lower, nu_upper, false);
 
         W_bin = static_cast<float>(J_bin / planck_integral_result);
 
         if (W_bin > 1e4) {
-          //            printout("T_R_bin %g, nu_lower %g, nu_upper %g\n", T_R_bin, nu_lower, nu_upper);
-          printlnlog("W {:g} too high, trying setting T_R of bin {} to {:g}. J_bin {:g} planck_integral {:g}", W_bin,
-                     binindex, T_R_max, J_bin, planck_integral_result);
+          printlnlog("bin {} T_R {:7.1f} W {:g} too high, trying setting T_R to {:g}. J_bin {:g} planck_integral {:g}",
+                     binindex, T_R_bin, W_bin, T_R_max, J_bin, planck_integral_result);
           planck_integral_result = calculate_planck_integral(T_R_max, nu_lower, nu_upper, false);
           W_bin = static_cast<float>(J_bin / planck_integral_result);
           if (W_bin > 1e4) {
@@ -879,6 +882,13 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
       const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
       radfieldbin_solutions_T_R[mgibinindex] = T_R_bin;
       radfieldbin_solutions_W[mgibinindex] = W_bin;
+    }
+
+    if (count_T_R_min > 0 || count_T_R_max > 0) {
+      printlnlog(
+          "[warning] timestep {} cell {}: Some bin T_R values were clamped. {} bins at T_R=T_R_min={} and {} bins at "
+          "T_R=T_R_max={}",
+          timestep, mgi, count_T_R_min, T_R_min, count_T_R_max, T_R_max);
     }
 
     write_to_file(nonemptymgi, timestep);
@@ -1137,8 +1147,8 @@ void read_restart_data(FILE* gridsave_file) {
     if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != T_R_min || T_R_max_in != T_R_max ||
         nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999) {
       printlnlog(
-          "ERROR: gridsave file specifies {} bins, nu_lower_first_initial {:g} nu_upper_last_initial {:g} T_R_min {:g} "
-          "T_R_max {:g}",
+          "ERROR: gridsave file specifies {} bins, nu_lower_first_initial {:g} nu_upper_last_initial {:g} T_R_min "
+          "{:g} T_R_max {:g}",
           bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
       printlnlog("require {} bins, nu_lower_first_initial {:g} nu_upper_last_initial {:g} T_R_min {:g} T_R_max {:g}",
                  RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, T_R_min, T_R_max);
