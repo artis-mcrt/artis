@@ -38,6 +38,9 @@ namespace radfield {
 
 namespace {
 
+constexpr double bins_T_R_min = 500;
+constexpr double bins_T_R_max = 250000;
+
 std::vector<double> J_normfactor;
 
 struct RadFieldBinSolution {
@@ -343,8 +346,8 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
   };
 
   // Check whether the equation has a root in [T_min,T_max]
-  const double f_Tmin = f_deltanubar(T_R_min);
-  const double f_Tmax = f_deltanubar(T_R_max);
+  const double f_Tmin = f_deltanubar(bins_T_R_min);
+  const double f_Tmax = f_deltanubar(bins_T_R_max);
 
   const bool invalid_values = (!std::isfinite(f_Tmin) || !std::isfinite(f_Tmax));
 
@@ -387,8 +390,8 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
 
     // use TOMS 748 solver from Boost
     uintmax_t iteration_num = maxit;
-    auto result =
-        boost::math::tools::toms748_solve(f_deltanubar, T_R_min, T_R_max, f_Tmin, f_Tmax, ftol<epsrel>, iteration_num);
+    auto result = boost::math::tools::toms748_solve(f_deltanubar, bins_T_R_min, bins_T_R_max, f_Tmin, f_Tmax,
+                                                    ftol<epsrel>, iteration_num);
     const auto T_R_solution = static_cast<float>(0.5 * (result.first + result.second));
     if (iteration_num >= maxit) {
       printlnlog("[warning] find_T_R: T_R did not converge within {} iterations.", iteration_num);
@@ -398,9 +401,9 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
 #endif
   } else if (invalid_values || f_Tmax < 0) {
     // nu_bar_planck_minus_estimator is always negative, so the solution is above T_R_max
-    return T_R_max;
+    return bins_T_R_max;
   }
-  return T_R_min;
+  return bins_T_R_min;
 }
 
 void set_params_fullspec(const int nonemptymgi, const int timestep) {
@@ -850,9 +853,9 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
           T_R_bin = T_e;
         } else {
           T_R_bin = find_bin_T_R(nonemptymgi, binindex);
-          if (T_R_bin <= T_R_min) {
+          if (T_R_bin <= bins_T_R_min) {
             count_T_R_min++;
-          } else if (T_R_bin >= T_R_max) {
+          } else if (T_R_bin >= bins_T_R_max) {
             count_T_R_max++;
           }
         }
@@ -862,8 +865,8 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
 
         if (W_bin > 1e4) {
           printlnlog("bin {} T_R {:7.1f} W {:g} too high, trying setting T_R to {:g}. J_bin {:g} planck_integral {:g}",
-                     binindex, T_R_bin, W_bin, T_R_max, J_bin, planck_integral_result);
-          planck_integral_result = calculate_planck_integral(T_R_max, nu_lower, nu_upper, false);
+                     binindex, T_R_bin, W_bin, bins_T_R_max, J_bin, planck_integral_result);
+          planck_integral_result = calculate_planck_integral(bins_T_R_max, nu_lower, nu_upper, false);
           W_bin = static_cast<float>(J_bin / planck_integral_result);
           if (W_bin > 1e4) {
             printlnlog("W still very high, W={:g}. Zeroing bin...", W_bin);
@@ -871,7 +874,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
             W_bin = 0.;
           } else {
             printlnlog("new W is {:g}. Continuing with this value", W_bin);
-            T_R_bin = T_R_max;
+            T_R_bin = bins_T_R_max;
           }
         }
       } else {
@@ -888,7 +891,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
       printlnlog(
           "[warning] timestep {} cell {}: Some bin T_R values were clamped. {} bins at T_R=T_R_min={} and {} bins at "
           "T_R=T_R_max={}",
-          timestep, mgi, count_T_R_min, T_R_min, count_T_R_max, T_R_max);
+          timestep, mgi, count_T_R_min, bins_T_R_min, count_T_R_max, bins_T_R_max);
     }
 
     write_to_file(nonemptymgi, timestep);
@@ -1066,7 +1069,7 @@ void write_restart_data(FILE* gridsave_file) {
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     fprintf(gridsave_file, "%d %la %la %la %la\n", RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial,
-            T_R_min, T_R_max);
+            bins_T_R_min, bins_T_R_max);
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       fprintf(gridsave_file, "%d %la\n", binindex, get_bin_nu_upper(binindex));
@@ -1144,14 +1147,14 @@ void read_restart_data(FILE* gridsave_file) {
       nu_upper_last_ratio = 1 / nu_upper_last_ratio;
     }
 
-    if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != T_R_min || T_R_max_in != T_R_max ||
+    if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != bins_T_R_min || T_R_max_in != bins_T_R_max ||
         nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999) {
       printlnlog(
           "ERROR: gridsave file specifies {} bins, nu_lower_first_initial {:g} nu_upper_last_initial {:g} T_R_min "
           "{:g} T_R_max {:g}",
           bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
       printlnlog("require {} bins, nu_lower_first_initial {:g} nu_upper_last_initial {:g} T_R_min {:g} T_R_max {:g}",
-                 RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, T_R_min, T_R_max);
+                 RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, bins_T_R_min, bins_T_R_max);
       std::abort();
     }
 

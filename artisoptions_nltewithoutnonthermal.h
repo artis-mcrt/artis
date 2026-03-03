@@ -71,9 +71,6 @@ constexpr double nu_lower_first_initial = (CLIGHT / 40000e-8);
 constexpr double nu_upper_last_initial = (CLIGHT / 100e-8);
 constexpr double nu_upper_superbin = (CLIGHT / 10e-8);
 
-constexpr double T_R_min = 500;
-constexpr double T_R_max = 250000;
-
 constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
