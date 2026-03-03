@@ -1035,7 +1035,11 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     }
   }
 
-  assert_always(error_best >= 0.);
+  if (!(error_best >= 0.)) {
+    printlnlog("  ERROR: NLTE solver failed to find a solution with finite error for element Z={}",
+               get_atomicnumber(element));
+    return false;
+  }
   std::ranges::copy(vec_x_best, vec_x.begin());
 
   if (error_best > 1e-8) {
