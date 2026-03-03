@@ -38,6 +38,12 @@ namespace radfield {
 
 namespace {
 
+constexpr double bins_T_R_min = 500;
+constexpr double bins_T_R_max = 250000;
+
+static_assert(RADFIELDBINS_T_E_SUPERBIN_NU_MAX >= RADFIELDBINS_NU_MAX,
+              "The T_e superbin upper boundary must be greater than or equal to the upper boundary of the other bins");
+
 std::vector<double> J_normfactor;
 
 struct RadFieldBinSolution {
@@ -58,7 +64,7 @@ struct RadFieldBins {
 };
 
 constexpr double radfieldbins_delta_nu =
-    (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
+    (RADFIELDBINS_NU_MAX - RADFIELDBINS_NU_MIN) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
 
 RadFieldBins radfieldbins;
 
@@ -105,9 +111,9 @@ constexpr auto get_bin_nu_upper(const int binindex) -> double {
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
   if (binindex == RADFIELDBINCOUNT - 1) {
-    return nu_upper_superbin;
+    return RADFIELDBINS_T_E_SUPERBIN_NU_MAX;
   }
-  return nu_lower_first_initial + ((binindex + 1) * radfieldbins_delta_nu);
+  return RADFIELDBINS_NU_MIN + ((binindex + 1) * radfieldbins_delta_nu);
 }
 
 constexpr auto get_bin_nu_lower(const int binindex) -> double {
@@ -117,24 +123,24 @@ constexpr auto get_bin_nu_lower(const int binindex) -> double {
   if (binindex > 0) {
     return get_bin_nu_upper(binindex - 1);
   }
-  return nu_lower_first_initial;
+  return RADFIELDBINS_NU_MIN;
 }
 
 // find the left-closed bin [nu_lower, nu_upper) that nu belongs to
 constexpr auto select_bin(const double nu) -> int {
-  if (nu < nu_lower_first_initial) {
+  if (nu < RADFIELDBINS_NU_MIN) {
     return -2;  // out of range, nu lower than lowest bin's lower boundary
   }
-  if (nu >= nu_upper_superbin) {
+  if (nu >= RADFIELDBINS_T_E_SUPERBIN_NU_MAX) {
     // out of range, nu higher than highest bin's upper boundary
     return -1;
   }
-  if (nu >= nu_upper_last_initial) {
+  if (nu >= RADFIELDBINS_NU_MAX) {
     // in the superbin. separate case because the delta_nu is different to the other bins
     return RADFIELDBINCOUNT - 1;
   }
 
-  const int binindex = static_cast<int>((nu - nu_lower_first_initial) / radfieldbins_delta_nu);
+  const int binindex = static_cast<int>((nu - RADFIELDBINS_NU_MIN) / radfieldbins_delta_nu);
 
   if (nu == get_bin_nu_upper(binindex)) {
     // exactly on the upper boundary of the bin, so add 1 to ensure we get the left-closed bin
@@ -302,9 +308,9 @@ auto calculate_planck_integral(double temperature, double nu_low, double nu_high
   return constant_factor * (low_to_inf - high_to_inf);
 }
 
-// difference between the average nu and the average nu of a Planck function
-// at temperature T_R, in the frequency range corresponding to a bin
-auto delta_nu_bar(const double T_R, const int nonemptymgi, const int binindex) -> double {
+// nu_bar_planck_minus_estimator = nu_bar_planck(T_R) - nu_bar_estimator, where nu_bar is the intensity-weighted mean
+// frequency in a bin, which is given by the ratio of nuJ and J estimators.
+auto nu_bar_planck_minus_estimator(const double T_R, const int nonemptymgi, const int binindex) -> double {
   const double nu_lower = get_bin_nu_lower(binindex);
   const double nu_upper = get_bin_nu_upper(binindex);
   const double nu_bar_estimator = get_bin_nu_bar(nonemptymgi, binindex);
@@ -331,20 +337,21 @@ struct GSLTempSolverParams {
   int binindex;
 };
 
-auto delta_nu_bar(const double T_R, void* const voidparas) -> double {  // cppcheck-suppress constParameterPointer
+auto nu_bar_planck_minus_estimator(const double T_R, void* const voidparas)  // cppcheck-suppress constParameterPointer
+    -> double {
   const auto* const params = static_cast<const GSLTempSolverParams*>(voidparas);
-  return delta_nu_bar(T_R, params->nonemptymgi, params->binindex);
+  return nu_bar_planck_minus_estimator(T_R, params->nonemptymgi, params->binindex);
 }
 #endif
 
-auto find_T_R(const int nonemptymgi, const int binindex) -> float {
+auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
   const auto f_deltanubar = [nonemptymgi, binindex](const double T_R) {
-    return delta_nu_bar(T_R, nonemptymgi, binindex);
+    return nu_bar_planck_minus_estimator(T_R, nonemptymgi, binindex);
   };
 
   // Check whether the equation has a root in [T_min,T_max]
-  const double f_Tmin = f_deltanubar(T_R_min);
-  const double f_Tmax = f_deltanubar(T_R_max);
+  const double f_Tmin = f_deltanubar(bins_T_R_min);
+  const double f_Tmax = f_deltanubar(bins_T_R_max);
 
   const bool invalid_values = (!std::isfinite(f_Tmin) || !std::isfinite(f_Tmax));
 
@@ -356,11 +363,11 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
 #ifdef BOOST_OFF
 
     GSLTempSolverParams paras{.nonemptymgi = nonemptymgi, .binindex = binindex};
-    gsl_function find_T_R_f = {.function = &delta_nu_bar, .params = &paras};
+    gsl_function find_T_R_f = {.function = &nu_bar_planck_minus_estimator, .params = &paras};
 
     // one dimensional gsl root solver, bracketing type
     gsl_root_fsolver* T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
-    gsl_root_fsolver_set(T_R_solver, &find_T_R_f, T_R_min, T_R_max);
+    gsl_root_fsolver_set(T_R_solver, &find_T_R_f, bins_T_R_min, bins_T_R_max);
     int status = 0;
     float T_R_solution = 0.;
     for (auto iteration_num = 0U; iteration_num <= maxit; iteration_num++) {
@@ -377,7 +384,7 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
     }
 
     if (status == GSL_CONTINUE) {
-      printlnlog("[warning] find_T_R: T_R did not converge within {} iterations", maxit);
+      printlnlog("[warning] find_bin_T_R: T_R did not converge within {} iterations", maxit);
     }
 
     gsl_root_fsolver_free(T_R_solver);
@@ -387,24 +394,21 @@ auto find_T_R(const int nonemptymgi, const int binindex) -> float {
 
     // use TOMS 748 solver from Boost
     uintmax_t iteration_num = maxit;
-    auto result =
-        boost::math::tools::toms748_solve(f_deltanubar, T_R_min, T_R_max, f_Tmin, f_Tmax, ftol<epsrel>, iteration_num);
+    auto result = boost::math::tools::toms748_solve(f_deltanubar, bins_T_R_min, bins_T_R_max, f_Tmin, f_Tmax,
+                                                    ftol<epsrel>, iteration_num);
     const auto T_R_solution = static_cast<float>(0.5 * (result.first + result.second));
     if (iteration_num >= maxit) {
-      printlnlog("[warning] find_T_R: T_R did not converge within {} iterations.", iteration_num);
+      printlnlog("[warning] find_bin_T_R: T_R did not converge within {} iterations.", iteration_num);
     }
     return T_R_solution;
 
 #endif
   } else if (invalid_values || f_Tmax < 0) {
-    // delta_nu_bar always negative, so the solution is above T_R_max
-    printlnlog("find_T_R: cell {} bin {:4} no solution in interval, clamping to T_R_max={:g}",
-               grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_max);
-    return T_R_max;
+    // At T_R_max, nu_bar_planck_minus_estimator is negative or not finite, so any root lies above T_R_max; clamp to
+    // upper bound
+    return bins_T_R_max;
   }
-  printlnlog("find_T_R: cell {} bin {:4} no solution in interval, clamping to T_R_min={:g}",
-             grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, T_R_min);
-  return T_R_min;
+  return bins_T_R_min;
 }
 
 void set_params_fullspec(const int nonemptymgi, const int timestep) {
@@ -592,9 +596,11 @@ void init(const int my_rank, const int ndo_nonempty) {
     printlnlog("The multibin radiation field is being used from timestep {} onwards.", FIRST_NLTE_RADFIELD_TIMESTEP);
 
     printlnlog(
-        "Initialising multibin radiation field with {} bins from ({:.2f} eV, {:6.1f} A) to ({:.2f} eV, {:6.1f} A)",
-        RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
-        H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
+        "Initialising multibin radiation field with {} bins from ({:.2f} eV, {:6.1f} A) to ({:.2f} eV, {:6.1f} A) and "
+        "a T_e superbin up to ({:.2f} eV, {:6.1f} A).",
+        RADFIELDBINCOUNT - 1, H * RADFIELDBINS_NU_MIN / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MIN,
+        H * RADFIELDBINS_NU_MAX / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MAX, H * RADFIELDBINS_T_E_SUPERBIN_NU_MAX / EV,
+        1e8 * CLIGHT / RADFIELDBINS_T_E_SUPERBIN_NU_MAX);
     if (ndo_nonempty > 0) {
       assert_always(!radfieldfile.is_open());
       radfieldfile = fstream_required(std::format("radfield_{:04d}.out", my_rank), std::ios::out | std::ios::trunc);
@@ -825,9 +831,11 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       J_bin_sum += get_bin_J(nonemptymgi, binindex);
     }
+    const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-    printlnlog("radfield bins sum to J of {:g} ({:.1f}% of total J).", J_bin_sum, 100. * J_bin_sum / J[nonemptymgi]);
-    printlnlog("radfield: Finding parameters for {} bins...", RADFIELDBINCOUNT);
+    printlnlog(
+        "timestep {} cell {}: radfield bins sum to J of {:g} ({:.1f}% of total J). Finding parameters for {} bins...",
+        timestep, mgi, J_bin_sum, 100. * J_bin_sum / J[nonemptymgi], RADFIELDBINCOUNT);
 
     double J_bin_max = 0.;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
@@ -835,6 +843,8 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
       J_bin_max = std::max(J_bin_max, J_bin);
     }
 
+    int count_T_R_min = 0;
+    int count_T_R_max = 0;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       const double nu_lower = get_bin_nu_lower(binindex);
       const double nu_upper = get_bin_nu_upper(binindex);
@@ -844,31 +854,33 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
 
       if (J_bin > 0) {
         if (binindex == RADFIELDBINCOUNT - 1) {
-          const auto T_e = grid::get_Te(nonemptymgi);
-          printlnlog("    replacing bin {} T_R {:7.1f} with cell T_e = {:7.1f}", binindex,
-                     get_bin_T_R(nonemptymgi, binindex), T_e);
-          T_R_bin = T_e;
+          T_R_bin = grid::get_Te(nonemptymgi);
         } else {
-          T_R_bin = find_T_R(nonemptymgi, binindex);
+          T_R_bin = find_bin_T_R(nonemptymgi, binindex);
+          if (T_R_bin <= bins_T_R_min) {
+            count_T_R_min++;
+          } else if (T_R_bin >= bins_T_R_max) {
+            count_T_R_max++;
+          }
         }
-
         double planck_integral_result = calculate_planck_integral(T_R_bin, nu_lower, nu_upper, false);
 
         W_bin = static_cast<float>(J_bin / planck_integral_result);
 
-        if (W_bin > 1e4) {
-          //            printout("T_R_bin %g, nu_lower %g, nu_upper %g\n", T_R_bin, nu_lower, nu_upper);
-          printlnlog("W {:g} too high, trying setting T_R of bin {} to {:g}. J_bin {:g} planck_integral {:g}", W_bin,
-                     binindex, T_R_max, J_bin, planck_integral_result);
-          planck_integral_result = calculate_planck_integral(T_R_max, nu_lower, nu_upper, false);
+        if (W_bin > 1e4 || !std::isfinite(W_bin)) {
+          printlog(
+              "bin {} T_R {:7.1f} W {:g} too high or non-finite, trying setting T_R to {:g}. J_bin {:g} "
+              "planck_integral {:g}...",
+              binindex, T_R_bin, W_bin, bins_T_R_max, J_bin, planck_integral_result);
+          planck_integral_result = calculate_planck_integral(bins_T_R_max, nu_lower, nu_upper, false);
           W_bin = static_cast<float>(J_bin / planck_integral_result);
           if (W_bin > 1e4) {
             printlnlog("W still very high, W={:g}. Zeroing bin...", W_bin);
             T_R_bin = -99.;
             W_bin = 0.;
           } else {
-            printlnlog("new W is {:g}. Continuing with this value", W_bin);
-            T_R_bin = T_R_max;
+            printlnlog("new W is {:g}. Continuing...", W_bin);
+            T_R_bin = bins_T_R_max;
           }
         }
       } else {
@@ -879,6 +891,13 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
       const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
       radfieldbin_solutions_T_R[mgibinindex] = T_R_bin;
       radfieldbin_solutions_W[mgibinindex] = W_bin;
+    }
+
+    if (count_T_R_min > 0 || count_T_R_max > 0) {
+      printlnlog(
+          "[warning] timestep {} cell {}: Some bin T_R values were clamped. {} bins at T_R=T_R_min={} and {} bins at "
+          "T_R=T_R_max={}",
+          timestep, mgi, count_T_R_min, bins_T_R_min, count_T_R_max, bins_T_R_max);
     }
 
     write_to_file(nonemptymgi, timestep);
@@ -1055,8 +1074,8 @@ void write_restart_data(FILE* gridsave_file) {
   fprintf(gridsave_file, "%d\n", 30490824);  // special number marking the beginning of radfield data
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    fprintf(gridsave_file, "%d %la %la %la %la\n", RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial,
-            T_R_min, T_R_max);
+    fprintf(gridsave_file, "%d %la %la %la %la\n", RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX,
+            bins_T_R_min, bins_T_R_max);
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       fprintf(gridsave_file, "%d %la\n", binindex, get_bin_nu_upper(binindex));
@@ -1118,30 +1137,28 @@ void read_restart_data(FILE* gridsave_file) {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     double T_R_min_in{NAN};
     double T_R_max_in{NAN};
-    double nu_lower_first_initial_in{NAN};
-    double nu_upper_last_initial_in{NAN};
+    double nu_min_in{NAN};
+    double nu_max_in{NAN};
     int bincount_in = 0;
-    assert_always(fscanf(gridsave_file, "%d %la %la %la %la\n", &bincount_in, &nu_lower_first_initial_in,
-                         &nu_upper_last_initial_in, &T_R_min_in, &T_R_max_in) == 5);
+    assert_always(fscanf(gridsave_file, "%d %la %la %la %la\n", &bincount_in, &nu_min_in, &nu_max_in, &T_R_min_in,
+                         &T_R_max_in) == 5);
 
-    double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
+    double nu_lower_first_ratio = nu_min_in / RADFIELDBINS_NU_MIN;
     if (nu_lower_first_ratio > 1.0) {
       nu_lower_first_ratio = 1 / nu_lower_first_ratio;
     }
 
-    double nu_upper_last_ratio = nu_upper_last_initial_in / nu_upper_last_initial;
+    double nu_upper_last_ratio = nu_max_in / RADFIELDBINS_NU_MAX;
     if (nu_upper_last_ratio > 1.0) {
       nu_upper_last_ratio = 1 / nu_upper_last_ratio;
     }
 
-    if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != T_R_min || T_R_max_in != T_R_max ||
+    if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != bins_T_R_min || T_R_max_in != bins_T_R_max ||
         nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999) {
-      printlnlog(
-          "ERROR: gridsave file specifies {} bins, nu_lower_first_initial {:g} nu_upper_last_initial {:g} T_R_min {:g} "
-          "T_R_max {:g}",
-          bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
-      printlnlog("require {} bins, nu_lower_first_initial {:g} nu_upper_last_initial {:g} T_R_min {:g} T_R_max {:g}",
-                 RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, T_R_min, T_R_max);
+      printlnlog("ERROR: gridsave file specifies {} bins, nu_min {} nu_max {} T_R_min {} T_R_max {}", bincount_in,
+                 nu_min_in, nu_max_in, T_R_min_in, T_R_max_in);
+      printlnlog("require {} bins, RADFIELDBINS_NU_MIN {:g} RADFIELDBINS_NU_MAX {:g} T_R_min {:g} T_R_max {:g}",
+                 RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX, bins_T_R_min, bins_T_R_max);
       std::abort();
     }
 
