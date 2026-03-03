@@ -769,28 +769,6 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   set_groundlevelpops(nonemptymgi, element, grid::get_nne(nonemptymgi), force_saha);
 }
 
-[[nodiscard]] auto lumatrix_is_singular(const std::span<const double> LU_matrix, const int element,
-                                        const int first_ion_used, const int nions_used, const int nlte_dimension)
-    -> bool {
-  for (auto i = 0; i < nlte_dimension; i++) {
-    // diagonal elements of LU matrix should not be zero
-    // if they are, then the matrix is singular and the NLTE solution will fail
-    if (LU_matrix[(i * nlte_dimension) + i] == 0) {
-      const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
-      if (is_nlte(element, ion, level)) {
-        printlnlog("NLTE disconnected level: Z={} ionstage {} level {}", get_atomicnumber(element),
-                   get_ionstage(element, ion), level);
-      } else {
-        printlnlog("NLTE disconnected superlevel: Z={} ionstage {}", get_atomicnumber(element),
-                   get_ionstage(element, ion));
-      }
-      return true;
-    }
-  }
-
-  return false;
-}
-
 [[nodiscard]] auto solution_pops_are_valid(const int nonemptymgi, const int element, std::span<double> popvec,
                                            std::span<const double> pop_normfactors, const int first_ion_used,
                                            const int nions_used) -> bool {
@@ -903,10 +881,6 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   assert_always(pop_normfactors.size() == nlte_dimension);
   assert_always(rate_matrix.size() == (nlte_dimension * nlte_dimension));
   assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
-  if (lumatrix_is_singular(rate_matrix, element, first_ion_used, nions_used, nlte_dimension)) {
-    printlnlog("ERROR: NLTE matrix is singular for element Z={}!", get_atomicnumber(element));
-    return false;
-  }
 
   // solution vector for the matrix equation
   THREADLOCALONHOST std::vector<double> vec_x;
@@ -937,6 +911,24 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   int s = 0;  // sign of the transformation
   assert_always(gsl_linalg_LU_decomp(&gsl_rate_matrix_LU_decomp, &p, &s) == GSL_SUCCESS);
 
+  bool lumatrix_is_singular = false;
+  for (auto i = 0U; i < nlte_dimension; i++) {
+    // diagonal elements of LU matrix should be positive and finite
+    const double& matrixelement = rate_matrix_LU_decomp[(i * nlte_dimension) + i];
+    if ((matrixelement <= 0.) || !std::isfinite(matrixelement)) {
+      const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
+      printlnlog("ERROR: NLTE disconnected {}: Z={} ionstage {} level {}",
+                 is_nlte(element, ion, level) ? "level" : "superlevel", get_atomicnumber(element),
+                 get_ionstage(element, ion), level);
+
+      lumatrix_is_singular = true;
+    }
+  }
+  if (lumatrix_is_singular) {
+    printlnlog("ERROR: NLTE matrix is singular for element Z={}!", get_atomicnumber(element));
+    return false;
+  }
+
   // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
   gsl_linalg_LU_solve(&gsl_rate_matrix_LU_decomp, &p, &gsl_balance_vector, &gsl_x);
 
@@ -953,6 +945,24 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       eigen_rate_matrix_lu;
 
   eigen_rate_matrix_lu.compute(eigen_rate_matrix);
+  bool lumatrix_is_singular = false;
+  for (auto i = 0U; i < nlte_dimension; i++) {
+    // diagonal elements of LU matrix should be positive and finite
+    const double& matrixelement = eigen_rate_matrix_lu.matrixLU().diagonal()[i];
+    if ((matrixelement <= 0.) || !std::isfinite(matrixelement)) {
+      const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
+      printlnlog("ERROR: NLTE disconnected {}: Z={} ionstage {} level {}",
+                 is_nlte(element, ion, level) ? "level" : "superlevel", get_atomicnumber(element),
+                 get_ionstage(element, ion), level);
+
+      lumatrix_is_singular = true;
+    }
+  }
+  if (lumatrix_is_singular) {
+    printlnlog("ERROR: NLTE matrix is singular for element Z={}!", get_atomicnumber(element));
+    return false;
+  }
+
   eigen_vec_x = eigen_rate_matrix_lu.solve(eigen_balance_vector);
 
 #endif
