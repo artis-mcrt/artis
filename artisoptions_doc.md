@@ -95,9 +95,9 @@ constexpr int RADFIELDBINCOUNT;
 
 constexpr int FIRST_NLTE_RADFIELD_TIMESTEP;
 
-constexpr double nu_lower_first_initial;  // CLIGHT / ([lambda Angstroms]e-8)
-constexpr double nu_upper_last_initial;    // not including the very top super bin
-constexpr double nu_upper_superbin;          // very top end super bin
+constexpr double RADFIELDBINS_NU_MIN;  // CLIGHT / ([lambda Angstroms]e-8)
+constexpr double RADFIELDBINS_NU_MAX;    // not including the very top super bin
+constexpr double RADFIELDBINS_T_E_SUPERBIN_NU_MAX;          // very top end super bin
 
 constexpr double T_R_min;
 constexpr double T_R_max;
