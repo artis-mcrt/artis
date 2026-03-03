@@ -99,9 +99,6 @@ constexpr double RADFIELDBINS_NU_MIN;  // CLIGHT / ([lambda Angstroms]e-8)
 constexpr double RADFIELDBINS_NU_MAX;    // not including the very top super bin
 constexpr double RADFIELDBINS_T_E_SUPERBIN_NU_MAX;          // very top end super bin
 
-constexpr double T_R_min;
-constexpr double T_R_max;
-
 // store Jb_lu estimators for particular lines chosen in radfield::init()
 constexpr bool DETAILED_LINE_ESTIMATORS_ON;
 
