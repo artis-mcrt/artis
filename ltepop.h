@@ -24,14 +24,6 @@ void calculate_cellpartfuncts(int nonemptymgi, int element);
     -> std::vector<double>;
 void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_saha);
 
-// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
-[[gnu::const]] [[nodiscard]] constexpr auto calculate_sahafact(const double g_lower, const double g_upper,
-                                                               const double T, const double E_threshold) -> double {
-  const double sahafact = SAHACONST * g_lower / g_upper * std::pow(T, -1.5) * std::exp(E_threshold / KB / T);
-  assert_testmodeonly(std::isfinite(sahafact));
-  return sahafact;
-}
-
 [[gnu::pure]] [[nodiscard]] inline DEVICE_FUNC auto get_cellcache_levelpop(const int nonemptymgi,
                                                                            const int uniquelevelindex) -> double {
   assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);

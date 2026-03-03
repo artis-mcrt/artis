@@ -385,7 +385,7 @@ void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi)
     cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
   }
 
-  std::ranges::fill(cacheslot.allcont_departureratios, -1.);
+  std::ranges::fill(cacheslot.allcont_modified_departureratios, -1.);
 
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   for (int i = 0; i < globals::nbfcontinua; i++) {
