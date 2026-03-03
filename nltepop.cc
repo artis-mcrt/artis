@@ -913,7 +913,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
   bool lumatrix_is_singular = false;
   for (auto i = 0U; i < nlte_dimension; i++) {
-    // diagonal elements of LU matrix should be positive and finite
+    // diagonal elements of LU matrix must be non-zero and finite
     const double& matrixelement = rate_matrix_LU_decomp[(i * nlte_dimension) + i];
     if (matrixelement == 0. || !std::isfinite(matrixelement)) {
       const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
@@ -956,7 +956,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   eigen_rate_matrix_lu.compute(eigen_rate_matrix);
   bool lumatrix_is_singular = false;
   for (auto i = 0U; i < nlte_dimension; i++) {
-    // diagonal elements of LU matrix should be positive and finite
+    // diagonal elements of LU matrix must be non-zero and finite
     const double& matrixelement = eigen_rate_matrix_lu.matrixLU().diagonal()[i];
     if (matrixelement == 0. || !std::isfinite(matrixelement)) {
       const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
