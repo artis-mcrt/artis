@@ -918,13 +918,12 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     if (matrixelement == 0. || !std::isfinite(matrixelement)) {
       const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
       if (!lumatrix_is_singular) {
-        printlog("  ERROR: NLTE disconnected: Z={} ionstage {} level: ", get_atomicnumber(element),
-                 get_ionstage(element, ion));
+        printlog("ERROR: NLTE disconnected: Z={}", get_atomicnumber(element));
       }
       if (is_nlte(element, ion, level)) {
-        printlog(" {} ", level);
+        printlog(" ionstage {} level {}", get_atomicnumber(element), level);
       } else {
-        printlog("superlevel ");
+        printlog(" ionstage {} superlevel ", get_atomicnumber(element));
       }
 
       lumatrix_is_singular = true;
@@ -961,13 +960,12 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     if (matrixelement == 0. || !std::isfinite(matrixelement)) {
       const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
       if (!lumatrix_is_singular) {
-        printlog("ERROR: NLTE disconnected: Z={} ionstage {} level: ", get_atomicnumber(element),
-                 get_ionstage(element, ion));
+        printlog("ERROR: NLTE disconnected: Z={}", get_atomicnumber(element));
       }
       if (is_nlte(element, ion, level)) {
-        printlog(" {} ", level);
+        printlog(" ionstage {} level {}", get_atomicnumber(element), level);
       } else {
-        printlog("superlevel ");
+        printlog(" ionstage {} superlevel ", get_atomicnumber(element));
       }
 
       lumatrix_is_singular = true;
