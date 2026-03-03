@@ -995,6 +995,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     }
     eigen_vec_residual = eigen_balance_vector - eigen_rate_matrix * eigen_vec_x;
     const double error = eigen_vec_residual.cwiseAbs().maxCoeff();
+    assert_always(std::isfinite(error));
 #endif
 
     if (error < error_best || error_best < 0.) {
