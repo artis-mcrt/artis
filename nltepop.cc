@@ -943,10 +943,12 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
   auto eigen_vec_x = Eigen::Map<Eigen::VectorX<double> >(vec_x.data(), nlte_dimension);
   const auto eigen_balance_vector = Eigen::Map<const Eigen::VectorX<double> >(balance_vector.data(), nlte_dimension);
+  assert_always(eigen_balance_vector.allFinite());
 
   const auto eigen_rate_matrix =
       Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >(
           rate_matrix.data(), nlte_dimension, nlte_dimension);
+  assert_always(eigen_rate_matrix.allFinite());
 
   THREADLOCALONHOST Eigen::PartialPivLU<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >
       eigen_rate_matrix_lu;
@@ -978,6 +980,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   }
 
   eigen_vec_x = eigen_rate_matrix_lu.solve(eigen_balance_vector);
+  assert_always(eigen_vec_x.allFinite());
 
 #endif
 
