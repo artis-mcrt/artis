@@ -376,6 +376,7 @@ void read_recombrate_file() {
 void precalculate_ion_alpha_sp() {
   const auto temp_ion_alpha_sp = MPI_shared_malloc_span<float>(get_includedions() * TABLESIZE, 0.);
   if (globals::rank_in_node == 0) {
+    const auto nincludedions = get_includedions();
     for (int iter = 0; iter < TABLESIZE; iter++) {
       const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
       for (int element = 0; element < get_nelements(); element++) {
@@ -392,7 +393,7 @@ void precalculate_ion_alpha_sp() {
               zeta += zeta_level;
             }
           }
-          temp_ion_alpha_sp[(uniqueionindex * TABLESIZE) + iter] = static_cast<float>(zeta);
+          temp_ion_alpha_sp[(iter * nincludedions) + uniqueionindex] = static_cast<float>(zeta);
         }
       }
     }
@@ -605,17 +606,18 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
     -> double {
   const int lowerindex = std::floor(std::log(T_e / MINTEMP) / T_step_log);
   assert_testmodeonly(lowerindex >= 0);
+  const auto nincludedions = get_includedions();
   if (lowerindex < (TABLESIZE - 1)) {
     const int upperindex = lowerindex + 1;
     const double T_lower = MINTEMP * std::exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * std::exp(upperindex * T_step_log);
 
-    const double f_upper = ion_alpha_sp[(uniqueionindex * TABLESIZE) + upperindex];
-    const double f_lower = ion_alpha_sp[(uniqueionindex * TABLESIZE) + lowerindex];
+    const double f_upper = ion_alpha_sp[(upperindex * nincludedions) + uniqueionindex];
+    const double f_lower = ion_alpha_sp[(lowerindex * nincludedions) + uniqueionindex];
 
     return f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   }
-  return ion_alpha_sp[(uniqueionindex * TABLESIZE) + TABLESIZE - 1];
+  return ion_alpha_sp[((TABLESIZE - 1) * nincludedions) + uniqueionindex];
 }
 
 // Return a level's rate coefficient for spontaneous recombination in LTE
