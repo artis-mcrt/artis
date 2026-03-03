@@ -769,28 +769,6 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   set_groundlevelpops(nonemptymgi, element, grid::get_nne(nonemptymgi), force_saha);
 }
 
-[[nodiscard]] auto lumatrix_is_singular(const std::span<const double> LU_matrix, const int element,
-                                        const int first_ion_used, const int nions_used, const int nlte_dimension)
-    -> bool {
-  for (auto i = 0; i < nlte_dimension; i++) {
-    // diagonal elements of LU matrix should not be zero
-    // if they are, then the matrix is singular and the NLTE solution will fail
-    if (LU_matrix[(i * nlte_dimension) + i] == 0) {
-      const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
-      if (is_nlte(element, ion, level)) {
-        printlnlog("NLTE disconnected level: Z={} ionstage {} level {}", get_atomicnumber(element),
-                   get_ionstage(element, ion), level);
-      } else {
-        printlnlog("NLTE disconnected superlevel: Z={} ionstage {}", get_atomicnumber(element),
-                   get_ionstage(element, ion));
-      }
-      return true;
-    }
-  }
-
-  return false;
-}
-
 [[nodiscard]] auto solution_pops_are_valid(const int nonemptymgi, const int element, std::span<double> popvec,
                                            std::span<const double> pop_normfactors, const int first_ion_used,
                                            const int nions_used) -> bool {
@@ -903,10 +881,6 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   assert_always(pop_normfactors.size() == nlte_dimension);
   assert_always(rate_matrix.size() == (nlte_dimension * nlte_dimension));
   assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
-  if (lumatrix_is_singular(rate_matrix, element, first_ion_used, nions_used, nlte_dimension)) {
-    printlnlog("ERROR: NLTE matrix is singular for element Z={}!", get_atomicnumber(element));
-    return false;
-  }
 
   // solution vector for the matrix equation
   THREADLOCALONHOST std::vector<double> vec_x;
@@ -937,6 +911,30 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   int s = 0;  // sign of the transformation
   assert_always(gsl_linalg_LU_decomp(&gsl_rate_matrix_LU_decomp, &p, &s) == GSL_SUCCESS);
 
+  bool lumatrix_is_singular = false;
+  for (auto i = 0ZU; i < nlte_dimension; i++) {
+    // diagonal elements of LU matrix must be non-zero and finite
+    const double& matrixelement = rate_matrix_LU_decomp[(i * nlte_dimension) + i];
+    if (matrixelement == 0. || !std::isfinite(matrixelement)) {
+      const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
+      if (!lumatrix_is_singular) {
+        printlog("ERROR: NLTE disconnected: Z={}", get_atomicnumber(element));
+      }
+      if (is_nlte(element, ion, level)) {
+        printlog(" ionstage {} level {}", get_ionstage(element, ion), level);
+      } else {
+        printlog(" ionstage {} superlevel ", get_ionstage(element, ion));
+      }
+
+      lumatrix_is_singular = true;
+    }
+  }
+  if (lumatrix_is_singular) {
+    printlnlog("");
+    printlnlog("  ERROR: NLTE matrix is singular for element Z={}!", get_atomicnumber(element));
+    return false;
+  }
+
   // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
   gsl_linalg_LU_solve(&gsl_rate_matrix_LU_decomp, &p, &gsl_balance_vector, &gsl_x);
 
@@ -944,16 +942,43 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
   auto eigen_vec_x = Eigen::Map<Eigen::VectorX<double> >(vec_x.data(), nlte_dimension);
   const auto eigen_balance_vector = Eigen::Map<const Eigen::VectorX<double> >(balance_vector.data(), nlte_dimension);
+  assert_always(eigen_balance_vector.allFinite());
 
   const auto eigen_rate_matrix =
       Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >(
           rate_matrix.data(), nlte_dimension, nlte_dimension);
+  assert_always(eigen_rate_matrix.allFinite());
 
   THREADLOCALONHOST Eigen::PartialPivLU<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >
       eigen_rate_matrix_lu;
 
   eigen_rate_matrix_lu.compute(eigen_rate_matrix);
+  bool lumatrix_is_singular = false;
+  for (auto i = 0ZU; i < nlte_dimension; i++) {
+    // diagonal elements of LU matrix must be non-zero and finite
+    const double& matrixelement = eigen_rate_matrix_lu.matrixLU().diagonal()[i];
+    if (matrixelement == 0. || !std::isfinite(matrixelement)) {
+      const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
+      if (!lumatrix_is_singular) {
+        printlog("ERROR: NLTE disconnected: Z={}", get_atomicnumber(element));
+      }
+      if (is_nlte(element, ion, level)) {
+        printlog(" ionstage {} level {}", get_ionstage(element, ion), level);
+      } else {
+        printlog(" ionstage {} superlevel ", get_ionstage(element, ion));
+      }
+
+      lumatrix_is_singular = true;
+    }
+  }
+  if (lumatrix_is_singular) {
+    printlnlog("");
+    printlnlog("ERROR: NLTE matrix is singular for element Z={}!", get_atomicnumber(element));
+    return false;
+  }
+
   eigen_vec_x = eigen_rate_matrix_lu.solve(eigen_balance_vector);
+  assert_always(eigen_vec_x.allFinite());
 
 #endif
 
@@ -995,10 +1020,9 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     }
     eigen_vec_residual = eigen_balance_vector - eigen_rate_matrix * eigen_vec_x;
     const double error = eigen_vec_residual.cwiseAbs().maxCoeff();
-    assert_always(std::isfinite(error));
 #endif
 
-    if (error < error_best || error_best < 0.) {
+    if ((std::isfinite(error) && (error < error_best)) || error_best < 0.) {
       std::ranges::copy(vec_x, vec_x_best.begin());
       error_best = error;
     }
@@ -1009,7 +1033,11 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     }
   }
 
-  assert_always(error_best >= 0.);
+  if (!(error_best >= 0.)) {
+    printlnlog("  ERROR: NLTE solver failed to find a solution with finite error for element Z={}",
+               get_atomicnumber(element));
+    return false;
+  }
   std::ranges::copy(vec_x_best, vec_x.begin());
 
   if (error_best > 1e-8) {
