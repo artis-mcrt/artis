@@ -918,7 +918,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     if ((matrixelement <= 0.) || !std::isfinite(matrixelement)) {
       const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
       if (!lumatrix_is_singular) {
-        printlog("ERROR: NLTE disconnected: Z={} ionstage {} level: ", get_atomicnumber(element),
+        printlog("  ERROR: NLTE disconnected: Z={} ionstage {} level: ", get_atomicnumber(element),
                  get_ionstage(element, ion));
       }
       if (is_nlte(element, ion, level)) {
@@ -932,7 +932,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   }
   if (lumatrix_is_singular) {
     printlnlog("");
-    printlnlog("ERROR: NLTE matrix is singular for element Z={}!", get_atomicnumber(element));
+    printlnlog("  ERROR: NLTE matrix is singular for element Z={}!", get_atomicnumber(element));
     return false;
   }
 
