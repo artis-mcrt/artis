@@ -337,9 +337,10 @@ struct GSLTempSolverParams {
   int binindex;
 };
 
-auto delta_nu_bar(const double T_R, void* const voidparas) -> double {  // cppcheck-suppress constParameterPointer
+auto nu_bar_planck_minus_estimator(const double T_R, void* const voidparas)
+    -> double {  // cppcheck-suppress constParameterPointer
   const auto* const params = static_cast<const GSLTempSolverParams*>(voidparas);
-  return delta_nu_bar(T_R, params->nonemptymgi, params->binindex);
+  return nu_bar_planck_minus_estimator(T_R, params->nonemptymgi, params->binindex);
 }
 #endif
 
@@ -362,11 +363,11 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
 #ifdef BOOST_OFF
 
     GSLTempSolverParams paras{.nonemptymgi = nonemptymgi, .binindex = binindex};
-    gsl_function find_T_R_f = {.function = &delta_nu_bar, .params = &paras};
+    gsl_function find_T_R_f = {.function = &nu_bar_planck_minus_estimator, .params = &paras};
 
     // one dimensional gsl root solver, bracketing type
     gsl_root_fsolver* T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
-    gsl_root_fsolver_set(T_R_solver, &find_T_R_f, T_R_min, T_R_max);
+    gsl_root_fsolver_set(T_R_solver, &find_T_R_f, bins_T_R_min, bins_T_R_max);
     int status = 0;
     float T_R_solution = 0.;
     for (auto iteration_num = 0U; iteration_num <= maxit; iteration_num++) {
