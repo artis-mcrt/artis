@@ -1135,18 +1135,18 @@ void read_restart_data(FILE* gridsave_file) {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     double T_R_min_in{NAN};
     double T_R_max_in{NAN};
-    double RADFIELDBINS_NU_MIN_in{NAN};
-    double RADFIELDBINS_NU_MAX_in{NAN};
+    double nu_min_in{NAN};
+    double nu_max_in{NAN};
     int bincount_in = 0;
-    assert_always(fscanf(gridsave_file, "%d %la %la %la %la\n", &bincount_in, &RADFIELDBINS_NU_MIN_in,
-                         &RADFIELDBINS_NU_MAX_in, &T_R_min_in, &T_R_max_in) == 5);
+    assert_always(fscanf(gridsave_file, "%d %la %la %la %la\n", &bincount_in, &nu_min_in, &nu_max_in, &T_R_min_in,
+                         &T_R_max_in) == 5);
 
-    double nu_lower_first_ratio = RADFIELDBINS_NU_MIN_in / RADFIELDBINS_NU_MIN;
+    double nu_lower_first_ratio = nu_min_in / RADFIELDBINS_NU_MIN;
     if (nu_lower_first_ratio > 1.0) {
       nu_lower_first_ratio = 1 / nu_lower_first_ratio;
     }
 
-    double nu_upper_last_ratio = RADFIELDBINS_NU_MAX_in / RADFIELDBINS_NU_MAX;
+    double nu_upper_last_ratio = nu_max_in / RADFIELDBINS_NU_MAX;
     if (nu_upper_last_ratio > 1.0) {
       nu_upper_last_ratio = 1 / nu_upper_last_ratio;
     }
@@ -1156,7 +1156,7 @@ void read_restart_data(FILE* gridsave_file) {
       printlnlog(
           "ERROR: gridsave file specifies {} bins, RADFIELDBINS_NU_MIN {:g} RADFIELDBINS_NU_MAX {:g} T_R_min "
           "{:g} T_R_max {:g}",
-          bincount_in, RADFIELDBINS_NU_MIN_in, RADFIELDBINS_NU_MAX_in, T_R_min_in, T_R_max_in);
+          bincount_in, nu_min_in, nu_max_in, T_R_min_in, T_R_max_in);
       printlnlog("require {} bins, RADFIELDBINS_NU_MIN {:g} RADFIELDBINS_NU_MAX {:g} T_R_min {:g} T_R_max {:g}",
                  RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX, bins_T_R_min, bins_T_R_max);
       std::abort();
