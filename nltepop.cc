@@ -912,7 +912,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   assert_always(gsl_linalg_LU_decomp(&gsl_rate_matrix_LU_decomp, &p, &s) == GSL_SUCCESS);
 
   bool lumatrix_is_singular = false;
-  for (auto i = 0U; i < nlte_dimension; i++) {
+  for (auto i = 0ZU; i < nlte_dimension; i++) {
     // diagonal elements of LU matrix must be non-zero and finite
     const double& matrixelement = rate_matrix_LU_decomp[(i * nlte_dimension) + i];
     if (matrixelement == 0. || !std::isfinite(matrixelement)) {
@@ -955,7 +955,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
   eigen_rate_matrix_lu.compute(eigen_rate_matrix);
   bool lumatrix_is_singular = false;
-  for (auto i = 0U; i < nlte_dimension; i++) {
+  for (auto i = 0ZU; i < nlte_dimension; i++) {
     // diagonal elements of LU matrix must be non-zero and finite
     const double& matrixelement = eigen_rate_matrix_lu.matrixLU().diagonal()[i];
     if (matrixelement == 0. || !std::isfinite(matrixelement)) {
