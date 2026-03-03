@@ -921,9 +921,9 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
         printlog("ERROR: NLTE disconnected: Z={}", get_atomicnumber(element));
       }
       if (is_nlte(element, ion, level)) {
-        printlog(" ionstage {} level {}", get_atomicnumber(element), level);
+        printlog(" ionstage {} level {}", get_ionstage(element, ion), level);
       } else {
-        printlog(" ionstage {} superlevel ", get_atomicnumber(element));
+        printlog(" ionstage {} superlevel ", get_ionstage(element, ion));
       }
 
       lumatrix_is_singular = true;
@@ -963,9 +963,9 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
         printlog("ERROR: NLTE disconnected: Z={}", get_atomicnumber(element));
       }
       if (is_nlte(element, ion, level)) {
-        printlog(" ionstage {} level {}", get_atomicnumber(element), level);
+        printlog(" ionstage {} level {}", get_ionstage(element, ion), level);
       } else {
-        printlog(" ionstage {} superlevel ", get_atomicnumber(element));
+        printlog(" ionstage {} superlevel ", get_ionstage(element, ion));
       }
 
       lumatrix_is_singular = true;
