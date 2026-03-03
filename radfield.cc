@@ -337,8 +337,8 @@ struct GSLTempSolverParams {
   int binindex;
 };
 
-auto nu_bar_planck_minus_estimator(const double T_R, void* const voidparas)
-    -> double {  // cppcheck-suppress constParameterPointer
+auto nu_bar_planck_minus_estimator(const double T_R, void* const voidparas)  // cppcheck-suppress constParameterPointer
+    -> double {
   const auto* const params = static_cast<const GSLTempSolverParams*>(voidparas);
   return nu_bar_planck_minus_estimator(T_R, params->nonemptymgi, params->binindex);
 }
@@ -384,7 +384,7 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
     }
 
     if (status == GSL_CONTINUE) {
-      printlnlog("[warning] find_T_R: T_R did not converge within {} iterations", maxit);
+      printlnlog("[warning] find_bin_T_R: T_R did not converge within {} iterations", maxit);
     }
 
     gsl_root_fsolver_free(T_R_solver);
@@ -398,13 +398,14 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
                                                     ftol<epsrel>, iteration_num);
     const auto T_R_solution = static_cast<float>(0.5 * (result.first + result.second));
     if (iteration_num >= maxit) {
-      printlnlog("[warning] find_T_R: T_R did not converge within {} iterations.", iteration_num);
+      printlnlog("[warning] find_bin_T_R: T_R did not converge within {} iterations.", iteration_num);
     }
     return T_R_solution;
 
 #endif
   } else if (invalid_values || f_Tmax < 0) {
-    // nu_bar_planck_minus_estimator is always negative, so the solution is above T_R_max
+    // At T_R_max, nu_bar_planck_minus_estimator is negative or not finite, so any root lies above T_R_max; clamp to
+    // upper bound
     return bins_T_R_max;
   }
   return bins_T_R_min;
@@ -595,9 +596,11 @@ void init(const int my_rank, const int ndo_nonempty) {
     printlnlog("The multibin radiation field is being used from timestep {} onwards.", FIRST_NLTE_RADFIELD_TIMESTEP);
 
     printlnlog(
-        "Initialising multibin radiation field with {} bins from ({:.2f} eV, {:6.1f} A) to ({:.2f} eV, {:6.1f} A)",
-        RADFIELDBINCOUNT, H * RADFIELDBINS_NU_MIN / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MIN,
-        H * RADFIELDBINS_NU_MAX / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MAX);
+        "Initialising multibin radiation field with {} bins from ({:.2f} eV, {:6.1f} A) to ({:.2f} eV, {:6.1f} A) and "
+        "a T_e superbin up to ({:.2f} eV, {:6.1f} A).",
+        RADFIELDBINCOUNT - 1, H * RADFIELDBINS_NU_MIN / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MIN,
+        H * RADFIELDBINS_NU_MAX / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MAX, H * RADFIELDBINS_T_E_SUPERBIN_NU_MAX / EV,
+        1e8 * CLIGHT / RADFIELDBINS_T_E_SUPERBIN_NU_MAX);
     if (ndo_nonempty > 0) {
       assert_always(!radfieldfile.is_open());
       radfieldfile = fstream_required(std::format("radfield_{:04d}.out", my_rank), std::ios::out | std::ios::trunc);
@@ -851,10 +854,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
 
       if (J_bin > 0) {
         if (binindex == RADFIELDBINCOUNT - 1) {
-          const auto T_e = grid::get_Te(nonemptymgi);
-          printlnlog("    replacing bin {} T_R {:7.1f} with cell T_e = {:7.1f}", binindex,
-                     get_bin_T_R(nonemptymgi, binindex), T_e);
-          T_R_bin = T_e;
+          T_R_bin = grid::get_Te(nonemptymgi);
         } else {
           T_R_bin = find_bin_T_R(nonemptymgi, binindex);
           if (T_R_bin <= bins_T_R_min) {
@@ -867,9 +867,11 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
 
         W_bin = static_cast<float>(J_bin / planck_integral_result);
 
-        if (W_bin > 1e4) {
-          printlnlog("bin {} T_R {:7.1f} W {:g} too high, trying setting T_R to {:g}. J_bin {:g} planck_integral {:g}",
-                     binindex, T_R_bin, W_bin, bins_T_R_max, J_bin, planck_integral_result);
+        if (W_bin > 1e4 || !std::isfinite(W_bin)) {
+          printlog(
+              "bin {} T_R {:7.1f} W {:g} too high or non-finite, trying setting T_R to {:g}. J_bin {:g} "
+              "planck_integral {:g}...",
+              binindex, T_R_bin, W_bin, bins_T_R_max, J_bin, planck_integral_result);
           planck_integral_result = calculate_planck_integral(bins_T_R_max, nu_lower, nu_upper, false);
           W_bin = static_cast<float>(J_bin / planck_integral_result);
           if (W_bin > 1e4) {
@@ -877,7 +879,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
             T_R_bin = -99.;
             W_bin = 0.;
           } else {
-            printlnlog("new W is {:g}. Continuing with this value", W_bin);
+            printlnlog("new W is {:g}. Continuing...", W_bin);
             T_R_bin = bins_T_R_max;
           }
         }
@@ -1153,10 +1155,8 @@ void read_restart_data(FILE* gridsave_file) {
 
     if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != bins_T_R_min || T_R_max_in != bins_T_R_max ||
         nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999) {
-      printlnlog(
-          "ERROR: gridsave file specifies {} bins, RADFIELDBINS_NU_MIN {:g} RADFIELDBINS_NU_MAX {:g} T_R_min "
-          "{:g} T_R_max {:g}",
-          bincount_in, nu_min_in, nu_max_in, T_R_min_in, T_R_max_in);
+      printlnlog("ERROR: gridsave file specifies {} bins, nu_min {} nu_max {} T_R_min {} T_R_max {}", bincount_in,
+                 nu_min_in, nu_max_in, T_R_min_in, T_R_max_in);
       printlnlog("require {} bins, RADFIELDBINS_NU_MIN {:g} RADFIELDBINS_NU_MAX {:g} T_R_min {:g} T_R_max {:g}",
                  RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX, bins_T_R_min, bins_T_R_max);
       std::abort();
