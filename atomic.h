@@ -565,18 +565,4 @@ inline void set_nautoionuptrans(const int element, const int ion, const int leve
   return E_threshold;
 }
 
-[[gnu::pure]] [[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int uniquelevelindex,
-                                                       const int phixstargetindex) -> int {
-  const int contindex = globals::alllevels.bflist_start[uniquelevelindex] + phixstargetindex;
-  const int bflutindex = (temperatureindex * globals::nbfcontinua) + contindex;
-  assert_testmodeonly(bflutindex >= 0);
-  assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
-  return bflutindex;
-}
-
-[[gnu::pure]] [[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int element, const int ion,
-                                                       const int level, const int phixstargetindex) -> int {
-  return get_bflutindex(temperatureindex, get_uniquelevelindex(element, ion, level), phixstargetindex);
-}
-
 #endif  // ATOMIC_H
