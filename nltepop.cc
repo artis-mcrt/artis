@@ -917,14 +917,21 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     const double& matrixelement = rate_matrix_LU_decomp[(i * nlte_dimension) + i];
     if ((matrixelement <= 0.) || !std::isfinite(matrixelement)) {
       const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
-      printlnlog("ERROR: NLTE disconnected {}: Z={} ionstage {} level {}",
-                 is_nlte(element, ion, level) ? "level" : "superlevel", get_atomicnumber(element),
-                 get_ionstage(element, ion), level);
+      if (!lumatrix_is_singular) {
+        printlog("ERROR: NLTE disconnected: Z={} ionstage {} level: ", get_atomicnumber(element),
+                 get_ionstage(element, ion));
+      }
+      if (is_nlte(element, ion, level)) {
+        printlog(" {} ", level);
+      } else {
+        printlog("superlevel ");
+      }
 
       lumatrix_is_singular = true;
     }
   }
   if (lumatrix_is_singular) {
+    printlnlog("");
     printlnlog("ERROR: NLTE matrix is singular for element Z={}!", get_atomicnumber(element));
     return false;
   }
@@ -951,14 +958,21 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     const double& matrixelement = eigen_rate_matrix_lu.matrixLU().diagonal()[i];
     if ((matrixelement <= 0.) || !std::isfinite(matrixelement)) {
       const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
-      printlnlog("ERROR: NLTE disconnected {}: Z={} ionstage {} level {}",
-                 is_nlte(element, ion, level) ? "level" : "superlevel", get_atomicnumber(element),
-                 get_ionstage(element, ion), level);
+      if (!lumatrix_is_singular) {
+        printlog("ERROR: NLTE disconnected: Z={} ionstage {} level: ", get_atomicnumber(element),
+                 get_ionstage(element, ion));
+      }
+      if (is_nlte(element, ion, level)) {
+        printlog(" {} ", level);
+      } else {
+        printlog("superlevel ");
+      }
 
       lumatrix_is_singular = true;
     }
   }
   if (lumatrix_is_singular) {
+    printlnlog("");
     printlnlog("ERROR: NLTE matrix is singular for element Z={}!", get_atomicnumber(element));
     return false;
   }
