@@ -2068,7 +2068,7 @@ void setup_cellcache() {
     }
 
     assert_always(globals::nbfcontinua >= 0);
-    resize_exactly(cacheslot.allcont_departureratios, globals::nbfcontinua);
+    resize_exactly(cacheslot.allcont_modified_departureratios, globals::nbfcontinua);
     resize_exactly(cacheslot.allcont_nnlevel, globals::nbfcontinua);
     resize_exactly(cacheslot.allcont_keep, globals::nbfcontinua);
     mem_usage_cellcache += 2 * globals::nbfcontinua * sizeof(double);
