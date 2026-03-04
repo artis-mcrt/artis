@@ -823,7 +823,7 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
 auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, const int lowerion,
                                    const bool collisional_not_radiative, const bool force_bfintegral) -> double {
   assert_always(lowerion < get_nions(element) - 1);
-  // this option only make sense for radiative ionisation
+  // this option only makes sense for radiative ionisation
   assert_always(!collisional_not_radiative || (!force_bfintegral));
 
   const auto nne = grid::get_nne(nonemptymgi);
