@@ -11,7 +11,6 @@
 #include <span>
 #include <sstream>
 #include <string>
-#include <tuple>
 
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
@@ -485,47 +484,6 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   return gammacorr;
 }
 
-// get the number of lowest levels that make up at least a fraction of minpopfrac of the ion population
-auto get_nlevels_important(const int nonemptymgi, const int element, const int ion, const bool assume_lte,
-                           const float T_e, const double minpopfrac) -> std::tuple<int, double> {
-  assert_always(minpopfrac >= 0. && minpopfrac <= 1.);
-  // get the stored ion population for comparison with the cumulative sum of level pops
-  const double nnion_real = get_nnion(nonemptymgi, element, ion);
-
-  if (minpopfrac >= 1.) {
-    return {get_nlevels(element, ion), nnion_real};
-  }
-
-  double nnlevelsum = 0.;
-  int nlevels_important = get_nlevels_ionising(element, ion);  // levels needed to get majority of ion pop
-
-  // debug: treat all ionising levels as important
-  // *nnlevelsum_out = nnion_real;
-  // return nlevels_important;
-
-  for (int lower = 0; lower < get_nlevels_ionising(element, ion); lower++) {
-    double nnlowerlevel{NAN};
-    if (assume_lte) {
-      const double T_exc = T_e;  // remember, other parts of the code in LTE mode use TJ, not T_e
-      const double E_level = epsilon(element, ion, lower);
-      const double E_ground = epsilon(element, ion, 0);
-      const double nnground = get_groundlevelpop(nonemptymgi, element, ion);
-
-      nnlowerlevel = (nnground * stat_weight(element, ion, lower) / stat_weight(element, ion, 0) *
-                      exp(-(E_level - E_ground) / KB / T_exc));
-    } else {
-      nnlowerlevel = calculate_levelpop(nonemptymgi, element, ion, lower);
-    }
-    nnlevelsum += nnlowerlevel;
-    nlevels_important = lower + 1;
-    if ((nnlevelsum / nnion_real) >= minpopfrac) {
-      break;
-    }
-  }
-  assert_always(nlevels_important <= get_nlevels(element, ion));
-  return {nlevels_important, nnlevelsum};
-}
-
 template <typename T>
 [[nodiscard]] DEVICE_FUNC auto lerp_or_last(const std::span<T> table, const int uniquelevelindex,
                                             const int phixstargetindex, auto temperature) -> double {
@@ -862,61 +820,42 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
 
 // ionisation rate coefficient. multiply by the lower ion pop to get a rate.
 // Currently only used for the estimator output file, not the simulation
-auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const int element, const int lowerion,
-                                   const bool assume_lte, const bool collisional_not_radiative, const bool force_bfest,
-                                   const bool force_bfintegral) -> double {
+auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, const int lowerion,
+                                   const bool collisional_not_radiative, const bool force_bfintegral) -> double {
   assert_always(lowerion < get_nions(element) - 1);
-  assert_always(!force_bfest || !force_bfintegral);
+  // this option only make sense for radiative ionisation
+  assert_always(!collisional_not_radiative || (!force_bfintegral));
 
   const auto nne = grid::get_nne(nonemptymgi);
+  const auto T_e = grid::get_Te(nonemptymgi);
 
-  const auto [nlevels_important, nnlowerion] =
-      get_nlevels_important(nonemptymgi, element, lowerion, assume_lte, T_e, 0.999);
-
+  const auto nnlowerion = get_nnion(nonemptymgi, element, lowerion);
   if (nnlowerion <= 0.) {
     return 0.;
   }
 
-  double gamma_ion = 0.;
-  for (int lower = 0; lower < nlevels_important; lower++) {
-    double nnlowerlevel{NAN};
-    if (assume_lte) {
-      const double T_exc = T_e;
-      const double E_level = epsilon(element, lowerion, lower);
-      const double E_ground = epsilon(element, lowerion, 0);
-      const double nnground = get_groundlevelpop(nonemptymgi, element, lowerion);
-
-      nnlowerlevel = (nnground * stat_weight(element, lowerion, lower) / stat_weight(element, lowerion, 0) *
-                      exp(-(E_level - E_ground) / KB / T_exc));
-    } else {
-      nnlowerlevel = calculate_levelpop(nonemptymgi, element, lowerion, lower);
-    }
+  double ionisation_rate = 0.;  // rate per second
+  const auto nlevels = get_nlevels(element, lowerion);
+  for (int lower = 0; lower < nlevels; lower++) {
+    const auto nnlowerlevel = calculate_levelpop(nonemptymgi, element, lowerion, lower);
 
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lower); phixstargetindex++) {
       const int upper = get_phixsupperlevel(element, lowerion, lower, phixstargetindex);
 
-      double level_gamma_coeff = 0.;
       if (collisional_not_radiative) {
         const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-        level_gamma_coeff =
-            col_ionisation_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex, epsilon_trans);
-      } else if (!force_bfest && !force_bfintegral) {
-        // whatever ARTIS uses internally
-        level_gamma_coeff = get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, nonemptymgi, false);
-      } else {
-        if (force_bfest) {
-          level_gamma_coeff = radfield::get_bfrate_estimator(element, lowerion, lower, phixstargetindex, nonemptymgi);
-        }
-
-        if (force_bfintegral || (level_gamma_coeff < 0.)) {
-          level_gamma_coeff =
-              calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, nonemptymgi, false);
-        }
+        ionisation_rate += nnlowerlevel * col_ionisation_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex,
+                                                                   epsilon_trans);
+      } else if (!force_bfintegral) {
+        // whatever ARTIS uses internally, maybe using detailed bound-free estimators
+        ionisation_rate +=
+            nnlowerlevel * get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, nonemptymgi, false);
+      } else if (force_bfintegral) {
+        ionisation_rate += nnlowerlevel * calculate_corrphotoioncoeff_integral(element, lowerion, lower,
+                                                                               phixstargetindex, nonemptymgi, false);
       }
-
-      gamma_ion += level_gamma_coeff * nnlowerlevel / nnlowerion;
     }
   }
 
-  return gamma_ion;
+  return ionisation_rate / nnlowerion;
 }
