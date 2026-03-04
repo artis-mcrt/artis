@@ -59,7 +59,7 @@ void setup_photoion_luts();
 
 [[nodiscard]] auto calculate_iongamma_per_gspop(int nonemptymgi, int element, int ion) -> double;
 [[nodiscard]] auto calculate_iongamma_per_ionpop(int nonemptymgi, float T_e, int element, int lowerion, bool assume_lte,
-                                                 bool collisional_not_radiative, bool printdebug, bool force_bfest,
+                                                 bool collisional_not_radiative, bool force_bfest,
                                                  bool force_bfintegral) -> double;
 
 [[nodiscard]] auto calculate_ionrecombcoeff(int nonemptymgi, float T_e, int element, int upperion, bool assume_lte,

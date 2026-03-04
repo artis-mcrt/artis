@@ -863,8 +863,8 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
 // ionisation rate coefficient. multiply by the lower ion pop to get a rate.
 // Currently only used for the estimator output file, not the simulation
 auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const int element, const int lowerion,
-                                   const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
-                                   const bool force_bfest, const bool force_bfintegral) -> double {
+                                   const bool assume_lte, const bool collisional_not_radiative, const bool force_bfest,
+                                   const bool force_bfintegral) -> double {
   assert_always(lowerion < get_nions(element) - 1);
   assert_always(!force_bfest || !force_bfintegral);
 
@@ -878,7 +878,6 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
   }
 
   double gamma_ion = 0.;
-  double gamma_ion_used = 0.;
   for (int lower = 0; lower < nlevels_important; lower++) {
     double nnlowerlevel{NAN};
     if (assume_lte) {
@@ -896,44 +895,27 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lower); phixstargetindex++) {
       const int upper = get_phixsupperlevel(element, lowerion, lower, phixstargetindex);
 
-      double gamma_coeff_integral = 0.;
-      double gamma_coeff_bfest = 0.;
-      double gamma_coeff_used = 0.;
+      double level_gamma_coeff = 0.;
       if (collisional_not_radiative) {
         const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-        gamma_coeff_used +=
+        level_gamma_coeff =
             col_ionisation_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex, epsilon_trans);
-      } else {
+      } else if (!force_bfest && !force_bfintegral) {
         // whatever ARTIS uses internally
-        gamma_coeff_used = get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, nonemptymgi, false);
-
+        level_gamma_coeff = get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, nonemptymgi, false);
+      } else {
         if (force_bfest) {
-          gamma_coeff_bfest = radfield::get_bfrate_estimator(element, lowerion, lower, phixstargetindex, nonemptymgi);
+          level_gamma_coeff = radfield::get_bfrate_estimator(element, lowerion, lower, phixstargetindex, nonemptymgi);
         }
 
-        if (force_bfintegral) {
-          gamma_coeff_integral +=
+        if (force_bfintegral || (level_gamma_coeff < 0.)) {
+          level_gamma_coeff =
               calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, nonemptymgi, false);
         }
       }
 
-      const double gamma_ion_contribution_used = gamma_coeff_used * nnlowerlevel / nnlowerion;
-      const double gamma_ion_contribution_bfest = gamma_coeff_bfest * nnlowerlevel / nnlowerion;
-      const double gamma_ion_contribution_integral = gamma_coeff_integral * nnlowerlevel / nnlowerion;
-      gamma_ion_used += gamma_ion_contribution_used;
-      if (force_bfest) {
-        gamma_ion += gamma_ion_contribution_bfest;
-      } else if (force_bfintegral) {
-        gamma_ion += gamma_ion_contribution_integral;
-      } else {
-        gamma_ion += gamma_ion_contribution_used;
-      }
+      gamma_ion += level_gamma_coeff * nnlowerlevel / nnlowerion;
     }
-  }
-  if (printdebug) {
-    printlnlog("Gamma_R: Z={} ionstage {}->{} lower+1 [all] upper+1 [all] Gamma_used_ion {:7.2e}",
-               get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element, lowerion + 1),
-               gamma_ion_used);
   }
 
   return gamma_ion;

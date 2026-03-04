@@ -93,11 +93,9 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
         estimators_file << "              ";
       }
       for (int ion = 0; ion < nions - 1; ion++) {
-        // const bool printdebug_gammar = (get_atomicnumber(element) == 26 && get_ionstage(element, ion) == 2);
-        const bool printdebug_gammar = false;
-        estimators_file << std::format("  {}: {:9.3e}", get_ionstage(element, ion),
-                                       calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false,
-                                                                     printdebug_gammar, false, true));
+        estimators_file << std::format(
+            "  {}: {:9.3e}", get_ionstage(element, ion),
+            calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false, false, true));
       }
       estimators_file << '\n';
     }
@@ -108,12 +106,9 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
         estimators_file << "              ";
       }
       for (int ion = 0; ion < nions - 1; ion++) {
-        // const bool printdebug_gammar = ((get_atomicnumber(element) == 26 || get_atomicnumber(element) == 28) &&
-        // get_ionstage(element, ion) >= 2); const bool printdebug_gammar = (get_atomicnumber(element) >= 26);
-        const bool printdebug_gammar = false;
-        estimators_file << std::format("  {}: {:9.3e}", get_ionstage(element, ion),
-                                       calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false,
-                                                                     printdebug_gammar, true, false));
+        estimators_file << std::format(
+            "  {}: {:9.3e}", get_ionstage(element, ion),
+            calculate_iongamma_per_ionpop(nonemptymgi, T_e, element, ion, assume_lte, false, true, false));
       }
       estimators_file << '\n';
     }
