@@ -16,9 +16,9 @@ b0ff69821d6e0597457ed9866a8fb88c  linestat.out
 f545d540bc9ce5278fc0d079960e2cd7  packets00_0003.out
 1c7e44f71d56b9451b3ab10f158e65f0  spec.out
 cc34b452ecfeee0499dfb18f1f884818  timesteps.out
-b8d680da26474d61841d9e6223d694f2  job0/estimators_0000.out
-c4ec3fb9a85e4cb16e1e393be1a4fc33  job0/estimators_0001.out
-ed6992385362af93e037e2d46b048e2e  job0/estimators_0002.out
+3085fb91d1efbaec5943ff88bca37404  job0/estimators_0000.out
+8d980243a02393880d3426793de308a0  job0/estimators_0001.out
+4a62bf079ea3759e21df21b521185b2e  job0/estimators_0002.out
 3ba00936eff6bf7f457dd3f672bb52cf  job0/nlte_0000.out
 aeb7f28c2a34b2532e2f6d048094a3f3  job0/nlte_0001.out
 9ae43e0596c828e51a3650bc23bf1602  job0/nlte_0002.out

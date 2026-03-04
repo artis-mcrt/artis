@@ -23,10 +23,10 @@ c0138ff7e4fab0ee2bcabb2ca6c2f6b9  linestat.out
 7bd87d07a0b71c8f2c3927c74f6b925b  specpol.out
 0954a8357ac3f23c7935783acede1297  specpol_res.out
 bc01f046eab9bf3802149e0ff63d5069  timesteps.out
-44e29e21abc5b35396a9ae5fbf3081f2  job1/estimators_0000.out
-7203dd21db97d803ea4c26d3cdf03560  job1/estimators_0001.out
-4bb8828e1eaa20895f63d449c3bd6023  job1/estimators_0002.out
-2c48894f46e170634b474ed2f9f9552a  job1/estimators_0003.out
+70f139ea4c342ce13fc15cd5f998d263  job1/estimators_0000.out
+7ad3b53a339be2e1d1d780e783762d5e  job1/estimators_0001.out
+50082a3bc62947be3a4da651b4d9578a  job1/estimators_0002.out
+cf87852d702b35be35a55c1e1286befd  job1/estimators_0003.out
 48784321ae3519651182342c908b3587  speclc_angle_res/absorption_res_00.out
 8bbd14fb45bd5cf92a035dc8728cfeeb  speclc_angle_res/absorption_res_01.out
 899169816453c2756416a60d065f471e  speclc_angle_res/absorption_res_02.out
