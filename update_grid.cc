@@ -390,7 +390,7 @@ void setup_clumping_factors_for_timestep(int nts) {  // todo: maybe other argume
 #else
   int nonemptymgi = 0;
   for (int i = 0; i < numcells; i++) {
-    if (grid::check_mgi_is_nonempty(i, nonemptymgi)) {
+    if (i % globals::node_nprocs == globals::rank_in_node && grid::check_mgi_is_nonempty(i, nonemptymgi)) {
       const double tratmid = globals::timesteps[nts].mid / globals::tmin;
       const double rad_vel = grid::get_modelcell_mean_radial_vel(i, tratmid);
       grid::set_oneoverfv(nonemptymgi, clumping_factor(tratmid, rad_vel));
@@ -642,6 +642,8 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   std::ranges::fill(heatingcoolingrates_thisrankcells, HeatingCoolingRates{});
 
   if constexpr (USE_MICROCLUMPING) {
+    // Writing to shared memory, synchronise
+    MPI_Barrier(globals::mpi_comm_node);
     setup_clumping_factors_for_timestep(nts);
   }
 

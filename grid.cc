@@ -384,7 +384,11 @@ void allocate_nonemptymodelcells() {
   kappagrey_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
   grey_depth_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
   thick_allcells = MPI_shared_malloc_span<int>(nonempty_npts_model, 0);
-  const auto modelgrid_mem_usage = nonempty_npts_model * ((sizeof(float) * 9) + sizeof(double) + sizeof(int));
+  if constexpr (USE_MICROCLUMPING) {
+    oneoverfv_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
+  }
+  const auto modelgrid_mem_usage =
+      nonempty_npts_model * (sizeof(float) * (USE_MICROCLUMPING ? 10 : 9) + sizeof(double) + sizeof(int));
   printlnlog(
       "[info] mem_usage: the modelgrid properties (temperatures and electron densities) occupies {:.3f} MB (node "
       "shared memory)",
