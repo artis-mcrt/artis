@@ -835,8 +835,8 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, con
   }
 
   double ionisation_rate = 0.;  // rate per second
-  const auto nlevels = get_nlevels(element, lowerion);
-  for (int lower = 0; lower < nlevels; lower++) {
+  const auto nlevels_ionising = get_nlevels_ionising(element, lowerion);
+  for (int lower = 0; lower < nlevels_ionising; lower++) {
     const auto nnlowerlevel = calculate_levelpop(nonemptymgi, element, lowerion, lower);
 
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lower); phixstargetindex++) {
