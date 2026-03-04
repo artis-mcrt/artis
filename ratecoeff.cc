@@ -688,6 +688,8 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
 
   // this gets divided and cancelled out in the radiative case anyway
   const auto nne = (nonemptymgi >= 0) ? grid::get_nne(nonemptymgi) : 1.F;
+  const float oneoverfv =
+      (nonemptymgi >= 0) ? grid::get_oneoverfv(nonemptymgi) : 1.F;  // TODO: is this the correct way to do this?
   double alpha = 0.;
   const int maxrecombininglevel = get_maxrecombininglevel(element, lowerion + 1);
   for (int upper = 0; upper <= maxrecombininglevel; upper++) {
@@ -711,9 +713,10 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
       double recomb_coeff = 0.;
       if (collisional_not_radiative) {
         const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-        recomb_coeff += col_recombination_ratecoeff(T_e, nne, element, upperion, upper, lower, epsilon_trans);
+        recomb_coeff +=
+            col_recombination_ratecoeff(T_e, nne, element, upperion, upper, lower, epsilon_trans, oneoverfv);
       } else {
-        recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower);
+        recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower, oneoverfv);
       }
 
       const double alpha_level = recomb_coeff / nne;
@@ -803,6 +806,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
 
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
+  const float oneoverfv = grid::get_oneoverfv(nonemptymgi);
 
   for (int level = 0; level < get_nlevels(element, ion); level++) {
     const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
@@ -819,7 +823,9 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
 
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
 
-      if (nnlevel * col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) > 0) {
+      if (nnlevel *
+              col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, oneoverfv) >
+          0) {
         return false;
       }
     }
@@ -837,6 +843,7 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
 
   const auto T_e = grid::get_Te(nonemptymgi);
   const float nne = grid::get_nne(nonemptymgi);
+  const float oneoverfv = grid::get_oneoverfv(nonemptymgi);
 
   // const auto [nlevels_important, _] = get_nlevels_important(nonemptymgi, element, ion, false, T_e);
   const int nlevels_important = get_nlevels(element, ion);
@@ -852,7 +859,8 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
 
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
 
-      Col_ion += nnlevel * col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+      Col_ion +=
+          nnlevel * col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, oneoverfv);
     }
   }
   Gamma += Col_ion;
@@ -869,6 +877,7 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
   assert_always(!force_bfest || !force_bfintegral);
 
   const auto nne = grid::get_nne(nonemptymgi);
+  const float oneoverfv = grid::get_oneoverfv(nonemptymgi);
 
   const auto [nlevels_important, nnlowerion] =
       get_nlevels_important(nonemptymgi, element, lowerion, assume_lte, T_e, 0.999);
@@ -902,7 +911,7 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const float T_e, const
       if (collisional_not_radiative) {
         const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
         gamma_coeff_used +=
-            col_ionisation_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex, epsilon_trans);
+            col_ionisation_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex, epsilon_trans, oneoverfv);
       } else {
         // whatever ARTIS uses internally
         gamma_coeff_used = get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, nonemptymgi, false);

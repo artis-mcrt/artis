@@ -284,6 +284,10 @@ void mpi_communicate_grid_properties() {
                      globals::mpi_comm_internode);
       MPI_Bcast_safe(grid::thick_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
+      if constexpr (USE_MICROCLUMPING) {
+        MPI_Bcast_safe(grid::oneoverfv_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+                       globals::mpi_comm_internode);
+      }
 
       if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
         assert_always(globals::corrphotoionrenorm.data() != nullptr);

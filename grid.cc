@@ -1562,6 +1562,13 @@ void set_nne(const int nonemptymgi, const float nne) {
   nne_allcells[nonemptymgi] = nne;
 }
 
+void set_oneoverfv(const int nonemptymgi, const float oneoverfv) {
+  // std::cout << "Using the correct set_oneoverfv\n";
+  assert_testmodeonly(USE_MICROCLUMPING);
+  assert_always(0 < oneoverfv && oneoverfv <= 1);
+  oneoverfv_allcells[nonemptymgi] = oneoverfv;
+}
+
 // Calculate and set the total density of electrons (free and bound) in grid cell. These are targets for Compton
 // scattering of gamma rays
 void set_nnetot(const int nonemptymgi) {

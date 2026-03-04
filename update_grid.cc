@@ -641,6 +641,10 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   heatingcoolingrates_thisrankcells.resize(ndo_nonempty);
   std::ranges::fill(heatingcoolingrates_thisrankcells, HeatingCoolingRates{});
 
+  if constexpr (USE_MICROCLUMPING) {
+    setup_clumping_factors_for_timestep(nts);
+  }
+
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
 
 #ifdef _OPENMP

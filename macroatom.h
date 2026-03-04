@@ -21,18 +21,20 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
     -> double;
 
 [[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upper,
-                                                             int lower, double epsilon_trans) -> double;
+                                                             int lower, double epsilon_trans, float oneoverfv)
+    -> double;
 
 [[gnu::pure]] [[nodiscard]] auto col_ionisation_ratecoeff(float T_e, float nne, int element, int ion, int lower,
-                                                          int phixstargetindex, double epsilon_trans) -> double;
+                                                          int phixstargetindex, double epsilon_trans, float oneoverfv)
+    -> double;
 
 [[gnu::pure]] [[nodiscard]] auto col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans,
                                                             double upperstatweight, double lowerstatweight,
-                                                            int alltransindex) -> double;
+                                                            int alltransindex, float oneoverfv) -> double;
 
 [[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(float T_e, float nne, double upperstatweight,
                                                           int alltransindex, double epsilon_trans,
-                                                          double lowerstatweight) -> double;
+                                                          double lowerstatweight, float oneoverfv) -> double;
 
 // radiative deexcitation rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
