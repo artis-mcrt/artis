@@ -788,7 +788,6 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
 // ionisation rate coefficient. multiply by get_groundlevelpop to get a rate [s^-1]
 auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, const int ion) -> double {
   const int nions = get_nions(element);
-  double Gamma = 0.;
   if (ion >= nions - 1) {
     return 0.;
   }
@@ -796,26 +795,26 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
   const auto T_e = grid::get_Te(nonemptymgi);
   const float nne = grid::get_nne(nonemptymgi);
 
-  // const auto [nlevels_important, _] = get_nlevels_important(nonemptymgi, element, ion, false, T_e);
-  const int nlevels_important = get_nlevels(element, ion);
+  const int nlevels_ionising = get_nlevels_ionising(element, ion);
 
-  double Col_ion = 0.;
-  for (int level = 0; level < nlevels_important; level++) {
+  double ionisation_rate_rad = 0.;
+  double ionisation_rate_coll = 0.;
+  for (int level = 0; level < nlevels_ionising; level++) {
     const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
     const int nphixstargets = get_nphixstargets(element, ion, level);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-      Gamma += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, false);
+      ionisation_rate_rad += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, false);
 
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
 
-      Col_ion += nnlevel * col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+      ionisation_rate_coll +=
+          nnlevel * col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
     }
   }
-  Gamma += Col_ion;
-  Gamma /= get_groundlevelpop(nonemptymgi, element, ion);
-  return Gamma;
+  const auto ionisation_rate = (ionisation_rate_rad + ionisation_rate_coll);
+  return ionisation_rate / get_groundlevelpop(nonemptymgi, element, ion);
 }
 
 // ionisation rate coefficient. multiply by the lower ion pop to get a rate.
@@ -826,33 +825,33 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, con
   // this option only makes sense for radiative ionisation
   assert_always(!collisional_not_radiative || (!force_bfintegral));
 
-  const auto nne = grid::get_nne(nonemptymgi);
-  const auto T_e = grid::get_Te(nonemptymgi);
-
   const auto nnlowerion = get_nnion(nonemptymgi, element, lowerion);
   if (nnlowerion <= 0.) {
     return 0.;
   }
 
+  const auto nne = grid::get_nne(nonemptymgi);
+  const auto T_e = grid::get_Te(nonemptymgi);
+
   double ionisation_rate = 0.;  // rate per second
   const auto nlevels_ionising = get_nlevels_ionising(element, lowerion);
   for (int lower = 0; lower < nlevels_ionising; lower++) {
     const auto nnlowerlevel = calculate_levelpop(nonemptymgi, element, lowerion, lower);
-
-    for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lower); phixstargetindex++) {
-      const int upper = get_phixsupperlevel(element, lowerion, lower, phixstargetindex);
-
+    const auto nphixstargets = get_nphixstargets(element, lowerion, lower);
+    for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
       if (collisional_not_radiative) {
+        const int upper = get_phixsupperlevel(element, lowerion, lower, phixstargetindex);
         const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
         ionisation_rate += nnlowerlevel * col_ionisation_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex,
                                                                    epsilon_trans);
-      } else if (!force_bfintegral) {
+      } else if (force_bfintegral) {
+        // don't use any detailed bound-free estimators, even if they are on and available
+        ionisation_rate += nnlowerlevel * calculate_corrphotoioncoeff_integral(element, lowerion, lower,
+                                                                               phixstargetindex, nonemptymgi, false);
+      } else {
         // whatever ARTIS uses internally, maybe using detailed bound-free estimators
         ionisation_rate +=
             nnlowerlevel * get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, nonemptymgi, false);
-      } else if (force_bfintegral) {
-        ionisation_rate += nnlowerlevel * calculate_corrphotoioncoeff_integral(element, lowerion, lower,
-                                                                               phixstargetindex, nonemptymgi, false);
       }
     }
   }
