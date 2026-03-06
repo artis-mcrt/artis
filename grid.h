@@ -136,15 +136,6 @@ inline auto get_ejecta_kinetic_energy() {
   return E_kin;
 }
 
-// TODO: remove this function. i think it's not needed any more
-// Applies the clumping factor to `val` `pow` times if microclumping is being used
-inline auto apply_clumping(const float val, const float oneoverfv, const int pow) -> float {
-  if constexpr (USE_MICROCLUMPING) {
-    return val * std::pow(oneoverfv, pow);
-  }
-  return val;
-}
-
 // Applies the clumping factor to `val` if microclumping is being used
 inline auto apply_clumping(const float val, const float oneoverfv) -> float {
   if constexpr (USE_MICROCLUMPING) {
