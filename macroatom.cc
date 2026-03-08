@@ -361,7 +361,8 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
 
     {
 #if (defined(STDPAR_ON) || defined(_OPENMP)) && !defined(GPU_ON)
-      ScopedMutex lock{globals::cellcache[cellcacheslotid].allmacroatomictransitions_locks[uniquelevelindex]};
+      [[maybe_unused]] ScopedMutex lock{
+          globals::cellcache[cellcacheslotid].allmacroatomictransitions_locks[uniquelevelindex]};
 #endif
 
       assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
