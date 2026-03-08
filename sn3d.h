@@ -65,11 +65,10 @@ extern std::fstream output_file;
 
 inline std::array<char, 1024> outputlinebuf{};
 inline bool outputstartofline = true;
-inline tm timebuf{};
 
 #ifdef _OPENMP
 #ifndef GPU_ON
-#pragma omp threadprivate(output_file, outputlinebuf, outputstartofline, timebuf)
+#pragma omp threadprivate(output_file, outputlinebuf, outputstartofline)
 #endif
 #endif
 
@@ -100,6 +99,7 @@ inline auto printlnlog(std::string_view fmt, Args&&... args) -> void {
 inline void print_line_start() {
   if (outputstartofline) {
     const time_t now_time = time(nullptr);
+    THREADLOCALONHOST tm timebuf{};
     strftime(outputlinebuf.data(), 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
     output_file << outputlinebuf.data() << ' ';
   }
