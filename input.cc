@@ -2009,8 +2009,6 @@ void update_parameterfile(const int nts) {
 }
 
 void setup_cellcache() {
-  globals::mutex_cellcachemacroatom.resize(get_includedlevels());
-
   constexpr int num_cellcache_slots = 1;
   resize_exactly(globals::cellcache, num_cellcache_slots);
 
@@ -2020,6 +2018,9 @@ void setup_cellcache() {
     globals::CellCache& cacheslot = globals::cellcache[cellcachenum];
 
     cacheslot.nonemptymgi = -1;
+
+    cacheslot.mutex_macroatom_levels.resize(get_includedlevels());
+    cacheslot.mutex_coolingcontribs_ions.resize(get_includedions());
 
     const auto ncoolingterms = kpkt::ncoolingterms;
     mem_usage_cellcache += ncoolingterms * sizeof(double);

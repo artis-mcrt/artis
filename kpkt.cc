@@ -400,8 +400,14 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const std::span<double> ion_contribs =
       std::span{globals::cellcache[cellcacheslotid].cooling_contrib}.subspan(ionstart, ncoolingterms_ion);
 
-  if (ion_contribs[0] < 0.) {
-    calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ion_contribs, nullptr, nullptr, nullptr, nullptr);
+  {
+#if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
+    const auto lock = std::lock_guard<std::mutex>(globals::mutex_[mutex_coolingcontribs_ions[uniqueionindex]]);
+#endif
+
+    if (ion_contribs[0] < 0.) {
+      calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ion_contribs, nullptr, nullptr, nullptr, nullptr);
+    }
   }
   // subspan for this ion's region of the cumulative sum of cooling contributions
   const double C_ion_procsum = ion_contribs.back();
