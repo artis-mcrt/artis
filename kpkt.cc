@@ -395,6 +395,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   const int ionstart = get_coolinglistoffset(element, ion);
   const int ncoolingterms_ion = get_ncoolingterms_ion(element, ion);
+  assert_testmodeonly(ncoolingterms_ion > 0);
   // transition contribution list for this ion
   const std::span<double> ion_contribs =
       std::span{globals::cellcache[cellcacheslotid].cooling_contrib}.subspan(ionstart, ncoolingterms_ion);
@@ -403,7 +404,6 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 #if (defined(STDPAR_ON) || defined(_OPENMP)) && !defined(GPU_ON)
     ScopedMutex lock{globals::cellcache[cellcacheslotid].cooling_contrib_locks[uniqueionindex]};
 #endif
-
     if (ion_contribs[0] < 0.) {
       calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ion_contribs, nullptr, nullptr, nullptr, nullptr);
     }
@@ -411,6 +411,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   // subspan for this ion's region of the cumulative sum of cooling contributions
   const double C_ion_procsum = ion_contribs.back();
+  assert_testmodeonly(C_ion_procsum > 0.);
 
   // with the ion selected, we now select a level and transition type
 
