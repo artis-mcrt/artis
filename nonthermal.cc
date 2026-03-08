@@ -1093,24 +1093,24 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
   // second term
   frac_heating_Einit += SF_EMIN * get_y(yfunc, SF_EMIN) * (electron_loss_rate(SF_EMIN * EV, nne) / EV);
 
-  double N_e_contrib = 0.;
+  double N_e_contrib_Einit = 0.;
   // third term (integral from zero to SF_EMIN)
   constexpr int nsteps = (static_cast<int>(SF_EMIN / DELTA_E) + 1) * 10;
   static_assert(nsteps > 0);
   constexpr double delta_endash = SF_EMIN / nsteps;
   for (int j = 1; j < nsteps; j++) {
     const double endash = delta_endash * j;
-    N_e_contrib += N_e(nonemptymgi, endash * EV, yfunc) * endash * delta_endash;
+    N_e_contrib_Einit += N_e(nonemptymgi, endash * EV, yfunc) * endash * delta_endash;
   }
-  frac_heating_Einit += N_e_contrib;
-  printlnlog(" heating N_e contrib (en < EMIN) {:g} nsteps {}", N_e_contrib / E_init_ev, nsteps);
+  // there should not be more heating for E< EMIN than in the whole solution
+  assert_always(N_e_contrib_Einit < frac_heating_Einit);
+  frac_heating_Einit += N_e_contrib_Einit;
 
   const auto frac_heating = static_cast<float>(frac_heating_Einit / E_init_ev);
 
-  if (!std::isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0) {
-    printlnlog("WARNING: calculate_frac_heating: invalid result of {:g}. Setting to 1.0 instead", frac_heating);
-    return 1.;
-  }
+  assert_always(std::isfinite(frac_heating));
+  assert_always(frac_heating >= 0.);
+  assert_always(frac_heating <= 1.);
 
   return frac_heating;
 }
@@ -1515,7 +1515,6 @@ auto select_nt_ionisation(const int nonemptymgi) -> std::tuple<int, int> {
 
 void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool enable_sfexcitation,
                          const std::array<double, SFPTS>& yfunc) {
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
   const auto nntot = get_nnion_tot(nonemptymgi);
   const auto nnetot = grid::get_nnetot(nonemptymgi);
@@ -1710,10 +1709,6 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
     nt_solution[nonemptymgi].frac_excitations_list_size = static_cast<int>(std::ssize(tmp_excitation_list));
     std::ranges::copy(tmp_excitation_list, get_cell_ntexcitations(nonemptymgi).begin());
 
-    printlnlog("[info] mem_usage: non-thermal excitations for cell {} at this timestep occupy {:.3f} MB",
-               modelgridindex,
-               nt_solution[nonemptymgi].frac_excitations_list_size * sizeof(NonThermalExcitation) / 1024. / 1024.);
-
     const auto T_e = grid::get_Te(nonemptymgi);
     printlnlog("  Top non-thermal excitation fractions (total excitations = {}):",
                nt_solution[nonemptymgi].frac_excitations_list_size);
@@ -1780,7 +1775,6 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
   nt_solution[nonemptymgi].frac_excitation = static_cast<float>(frac_excitation_total);
   nt_solution[nonemptymgi].frac_ionisation = static_cast<float>(frac_ionisation_total);
 
-  printlnlog("  E_init:      {:9.2f} eV/s/cm^3", E_init_ev);
   printlnlog("  deposition:  {:9.2f} eV/s/cm^3", deposition_rate_density_ev);
   printlnlog("  nne:         {:9.3e} e-/cm^3", nne);
   printlnlog("  nnetot:      {:9.3e} e-/cm^3", nnetot);
