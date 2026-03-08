@@ -71,7 +71,7 @@ inline tm timebuf{};
 #ifdef _OPENMP
 
 #ifndef GPU_ON
-#pragma omp threadprivate(output_file, outputlinebuf, outputstartofline, timebuf)
+#pragma omp threadprivate(output_file, outputlinebuf, outputlinestr, outputstartofline, timebuf)
 #endif
 
 #endif
