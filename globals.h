@@ -282,8 +282,8 @@ struct CellCache {
   std::vector<bool> allcont_keep;
   double chi_ff_nnionpart{-1};
   std::vector<double> allphixstargets_corrphotoioncoeff;
-  std::vector<SpinMutex> mutex_macroatom_levels;
-  std::vector<SpinMutex> mutex_coolingcontribs_ions;
+  std::vector<SpinMutex> cooling_contrib_locks;
+  std::vector<SpinMutex> allmacroatomictransitions_locks;
 };
 inline std::vector<CellCache> cellcache{};
 

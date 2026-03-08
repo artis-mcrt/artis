@@ -401,7 +401,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
       std::span{globals::cellcache[cellcacheslotid].cooling_contrib}.subspan(ionstart, ncoolingterms_ion);
 
 #if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
-  globals::cellcache[cellcacheslotid].mutex_coolingcontribs_ions[uniqueionindex].lock();
+  globals::cellcache[cellcacheslotid].cooling_contrib_locks[uniqueionindex].lock();
 #endif
 
   if (ion_contribs[0] < 0.) {
@@ -409,7 +409,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   }
 
 #if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
-  globals::cellcache[cellcacheslotid].mutex_coolingcontribs_ions[uniqueionindex].unlock();
+  globals::cellcache[cellcacheslotid].cooling_contrib_locks[uniqueionindex].unlock();
 #endif
 
   // subspan for this ion's region of the cumulative sum of cooling contributions

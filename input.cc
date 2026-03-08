@@ -2019,8 +2019,8 @@ void setup_cellcache() {
 
     cacheslot.nonemptymgi = -1;
 
-    cacheslot.mutex_macroatom_levels.resize(get_includedlevels());
-    cacheslot.mutex_coolingcontribs_ions.resize(get_includedions());
+    cacheslot.cooling_contrib_locks.resize(get_includedlevels());
+    cacheslot.allmacroatomictransitions_locks.resize(get_includedions());
 
     const auto ncoolingterms = kpkt::ncoolingterms;
     mem_usage_cellcache += ncoolingterms * sizeof(double);

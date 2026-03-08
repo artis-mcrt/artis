@@ -364,7 +364,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         uniquelevelindex * MA_ACTION_COUNT, MA_ACTION_COUNT);
 
 #if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
-    globals::cellcache[cellcacheslotid].mutex_macroatom_levels[uniquelevelindex].lock();
+    globals::cellcache[cellcacheslotid].allmacroatomictransitions_locks[uniquelevelindex].lock();
 #endif
 
     assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
@@ -376,7 +376,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
     }
 
 #if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
-    globals::cellcache[cellcacheslotid].mutex_macroatom_levels[uniquelevelindex].unlock();
+    globals::cellcache[cellcacheslotid].allmacroatomictransitions_locks[uniquelevelindex].unlock();
 #endif
 
     // select transition according to probabilities
