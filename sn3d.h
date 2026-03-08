@@ -63,17 +63,14 @@ constexpr int cellcacheslotid = 0;
 
 extern std::fstream output_file;
 
-inline std::array<char, 1024> outputlinebuf = {};
-inline std::string outputlinestr = {};
+inline std::array<char, 1024> outputlinebuf{};
 inline bool outputstartofline = true;
 inline tm timebuf{};
 
 #ifdef _OPENMP
-
 #ifndef GPU_ON
-#pragma omp threadprivate(output_file, outputlinebuf, outputlinestr, outputstartofline, timebuf)
+#pragma omp threadprivate(output_file, outputlinebuf, outputstartofline, timebuf)
 #endif
-
 #endif
 
 #ifdef __NVCOMPILER_CUDA_ARCH__
@@ -124,7 +121,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* f
 template <typename... Args>
 inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) -> void {
   print_line_start();
-  outputlinestr = std::format(fmt, std::forward<Args>(args)...);
+  THREADLOCALONHOST auto outputlinestr = std::format(fmt, std::forward<Args>(args)...);
   outputstartofline = (outputlinestr.back() == '\n');
   output_file << outputlinestr;
   output_file.flush();
