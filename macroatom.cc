@@ -364,7 +364,8 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         uniquelevelindex * MA_ACTION_COUNT, MA_ACTION_COUNT);
     {
 #if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
-      const auto lock = std::lock_guard<std::mutex>(globals::mutex_cellcachemacroatom[uniquelevelindex]);
+      const auto lock =
+          std::lock_guard<std::mutex>(globals::cellcache[cellcacheslotid].mutex_macroatom_levels[uniquelevelindex]);
 #endif
 
       assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);

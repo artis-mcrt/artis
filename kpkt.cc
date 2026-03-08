@@ -402,7 +402,8 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   {
 #if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
-    const auto lock = std::lock_guard<std::mutex>(globals::mutex_[mutex_coolingcontribs_ions[uniqueionindex]]);
+    const auto lock =
+        std::lock_guard<std::mutex>(globals::cellcache[cellcacheslotid].mutex_coolingcontribs_ions[uniqueionindex]);
 #endif
 
     if (ion_contribs[0] < 0.) {
