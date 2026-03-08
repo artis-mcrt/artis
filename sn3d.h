@@ -523,16 +523,31 @@ inline auto ftol(const double a, const double b) -> bool {
   return std::abs(a - b) <= (fractional_accuracy * std::min(std::abs(a), std::abs(b)));
 }
 
-inline void mutex_lock(int& lock) {
-  while (std::atomic_ref<int>(lock).exchange(1, std::memory_order_acquire) == 1) {
-    std::atomic_ref<int>(lock).wait(1, std::memory_order_relaxed);
-    // blocks until lock != 1 (i.e., someone called unlock->notify)
-  }
-}
+class ScopedMutex {
+ private:
+  int* lock_;
 
-inline void mutex_unlock(int& lock) {
-  std::atomic_ref<int>(lock).store(0, std::memory_order_release);
-  std::atomic_ref<int>(lock).notify_one();  // wake one sleeping thread
-}
+  static void mutex_lock(int& lock) {
+    while (std::atomic_ref<int>(lock).exchange(1, std::memory_order_acquire) == 1) {
+      std::atomic_ref<int>(lock).wait(1, std::memory_order_relaxed);
+      // blocks until lock != 1 (i.e., someone called unlock->notify)
+    }
+  }
+
+  static void mutex_unlock(int& lock) {
+    std::atomic_ref<int>(lock).store(0, std::memory_order_release);
+    std::atomic_ref<int>(lock).notify_one();  // wake one sleeping thread
+  }
+
+ public:
+  explicit ScopedMutex(int& lock) : lock_(&lock) { mutex_lock(*lock_); }
+  ~ScopedMutex() { mutex_unlock(*lock_); }
+
+  // disable copying and moving to avoid accidentally sharing locks between threads
+  ScopedMutex(const ScopedMutex&) = delete;
+  auto operator=(const ScopedMutex&) -> ScopedMutex& = delete;
+  ScopedMutex(ScopedMutex&&) = delete;
+  auto operator=(ScopedMutex&&) -> ScopedMutex& = delete;
+};
 
 #endif  // SN3D_H
