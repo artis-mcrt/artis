@@ -2023,13 +2023,10 @@ void setup_cellcache() {
     std::ranges::fill(cacheslot.cooling_contrib_locks, 0);
     resize_exactly(cacheslot.allmacroatomictransitions_locks, get_includedlevels());
     std::ranges::fill(cacheslot.allmacroatomictransitions_locks, 0);
-    mem_usage_cellcache += get_includedions() * sizeof(int);
-    mem_usage_cellcache += get_includedlevels() * sizeof(int);
 
-    mem_usage_cellcache += cacheslot.cooling_contrib_locks.size()
-                            * sizeof(cacheslot.cooling_contrib_locks[0]);
-    mem_usage_cellcache += cacheslot.allmacroatomictransitions_locks.size()
-                            * sizeof(cacheslot.allmacroatomictransitions_locks[0]);
+    mem_usage_cellcache += cacheslot.cooling_contrib_locks.size() * sizeof(cacheslot.cooling_contrib_locks[0]);
+    mem_usage_cellcache +=
+        cacheslot.allmacroatomictransitions_locks.size() * sizeof(cacheslot.allmacroatomictransitions_locks[0]);
     const auto ncoolingterms = kpkt::ncoolingterms;
     mem_usage_cellcache += ncoolingterms * sizeof(double);
     resize_exactly(cacheslot.cooling_contrib, ncoolingterms);
