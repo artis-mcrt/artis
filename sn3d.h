@@ -121,7 +121,8 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* f
 template <typename... Args>
 inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) -> void {
   print_line_start();
-  THREADLOCALONHOST auto outputlinestr = std::format(fmt, std::forward<Args>(args)...);
+  THREADLOCALONHOST std::string outputlinestr;
+  outputlinestr = std::format(fmt, std::forward<Args>(args)...);
   outputstartofline = (outputlinestr.back() == '\n');
   output_file << outputlinestr;
   output_file.flush();
