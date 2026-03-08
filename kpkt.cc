@@ -52,7 +52,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
   const auto T_e = grid::get_Te(nonemptymgi);
 
   double C_ion = 0.;
-  int i = 0;  // NOLINT(misc-const-correctness)
+  [[maybe_unused]] int i = 0;  // NOLINT(misc-const-correctness)
 
   const int nionisinglevels = get_nlevels_ionising(element, ion);
   const double nncurrention = get_nnion(nonemptymgi, element, ion);
