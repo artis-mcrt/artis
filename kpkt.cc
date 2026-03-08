@@ -1,5 +1,7 @@
 #include "kpkt.h"
 
+#include <optional>
+
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
@@ -45,18 +47,14 @@ float kpktdiffusion_timescale{0.};
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
 template <bool update_cellcache_contribs>
-auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const int ion, const int indexionstart,
-                                 const int cellcacheslotid, double* const C_ff, double* const C_fb, double* const C_exc,
-                                 double* const C_ionisation) -> double {
+auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const int ion,
+                                 std::span<double> ion_contribs, double* const C_ff, double* const C_fb,
+                                 double* const C_exc, double* const C_ionisation) -> double {
   const auto nne = grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
 
-  if constexpr (update_cellcache_contribs) {
-    assert_always(indexionstart >= 0);
-  }
-
   double C_ion = 0.;
-  int i = indexionstart;  // NOLINT(misc-const-correctness)
+  int i = 0;  // NOLINT(misc-const-correctness)
 
   const int nionisinglevels = get_nlevels_ionising(element, ion);
   const double nncurrention = get_nnion(nonemptymgi, element, ion);
@@ -68,7 +66,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     C_ion += C_ff_ion;
 
     if constexpr (update_cellcache_contribs) {
-      globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
+      ion_contribs[i] = C_ion;
 
       assert_testmodeonly(coolinglist_type[i] == CoolingType::FREEFREE);
 
@@ -105,7 +103,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     }
     if constexpr (update_cellcache_contribs) {
       if (nuptrans > 0) {
-        globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
+        ion_contribs[i] = C_ion;
 
         assert_testmodeonly(coolinglist_type[i] == CoolingType::COLLEXC);
 
@@ -134,7 +132,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
 
         C_ion += C;
         if constexpr (update_cellcache_contribs) {
-          globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
+          ion_contribs[i] = C_ion;
 
           assert_testmodeonly(coolinglist_type[i] == CoolingType::COLLION);
           assert_testmodeonly(coolinglist_level[i] == level);
@@ -164,7 +162,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
         C_ion += C;
 
         if constexpr (update_cellcache_contribs) {
-          globals::cellcache[cellcacheslotid].cooling_contrib[i] = C_ion;
+          ion_contribs[i] = C_ion;
 
           assert_testmodeonly(coolinglist_type[i] == CoolingType::FREEBOUND);
           assert_testmodeonly(coolinglist_level[i] == level);
@@ -179,8 +177,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
   }
 
   if constexpr (update_cellcache_contribs) {
-    assert_testmodeonly(indexionstart == get_coolinglistoffset(element, ion));
-    assert_always(i == indexionstart + get_ncoolingterms_ion(element, ion));
+    assert_always(i == std::ssize(ion_contribs));
   }
 
   return C_ion;
@@ -242,8 +239,8 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
   double cumulative_cooling = 0.;
   for (int uniqueionindex = 0; uniqueionindex < nincludedions; uniqueionindex++) {
     const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
-    cumulative_cooling += calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, -1, cellcacheslotid, &C_ff_all,
-                                                             &C_fb_all, &C_exc_all, &C_ionisation_all);
+    cumulative_cooling += calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, {}, &C_ff_all, &C_fb_all,
+                                                             &C_exc_all, &C_ionisation_all);
     cellioncontribs[uniqueionindex] = cumulative_cooling;
   }
 
@@ -398,15 +395,15 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
 
   const int ionstart = get_coolinglistoffset(element, ion);
+  const int ncoolingterms_ion = get_ncoolingterms_ion(element, ion);
+  // transtion contribution list for this ion
+  const std::span<double> ion_contribs =
+      std::span{globals::cellcache[cellcacheslotid].cooling_contrib}.subspan(ionstart, ncoolingterms_ion);
 
   if (globals::cellcache[cellcacheslotid].cooling_contrib[ionstart] < 0.) {
-    calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ionstart, cellcacheslotid, nullptr, nullptr, nullptr,
-                                      nullptr);
+    calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ion_contribs, nullptr, nullptr, nullptr, nullptr);
   }
-  const int ncoolingterms_ion = get_ncoolingterms_ion(element, ion);
   // subspan for this ion's region of the cumulative sum of cooling contributions
-  const std::span<const double> ion_contribs =
-      std::span{globals::cellcache[cellcacheslotid].cooling_contrib}.subspan(ionstart, ncoolingterms_ion);
   const double C_ion_procsum = ion_contribs.back();
 
   // with the ion selected, we now select a level and transition type
