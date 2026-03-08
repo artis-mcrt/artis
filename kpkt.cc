@@ -68,7 +68,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     if constexpr (update_cellcache_contribs) {
       ion_contribs[i] = C_ion;
 
-      assert_testmodeonly(coolinglist_type[i] == CoolingType::FREEFREE);
+      assert_testmodeonly(coolinglist_type[get_coolinglistoffset(element, ion) + i] == CoolingType::FREEFREE);
 
       i++;
     } else {
@@ -105,7 +105,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
       if (nuptrans > 0) {
         ion_contribs[i] = C_ion;
 
-        assert_testmodeonly(coolinglist_type[i] == CoolingType::COLLEXC);
+        assert_testmodeonly(coolinglist_type[get_coolinglistoffset(element, ion) + i] == CoolingType::COLLEXC);
 
         i++;
       }
@@ -134,9 +134,9 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
         if constexpr (update_cellcache_contribs) {
           ion_contribs[i] = C_ion;
 
-          assert_testmodeonly(coolinglist_type[i] == CoolingType::COLLION);
-          assert_testmodeonly(coolinglist_level[i] == level);
-          assert_testmodeonly(coolinglist_upperlevel[i] == upper);
+          assert_testmodeonly(coolinglist_type[get_coolinglistoffset(element, ion) + i] == CoolingType::COLLION);
+          assert_testmodeonly(coolinglist_level[get_coolinglistoffset(element, ion) + i] == level);
+          assert_testmodeonly(coolinglist_upperlevel[get_coolinglistoffset(element, ion) + i] == upper);
 
           i++;
         } else {
@@ -164,9 +164,10 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
         if constexpr (update_cellcache_contribs) {
           ion_contribs[i] = C_ion;
 
-          assert_testmodeonly(coolinglist_type[i] == CoolingType::FREEBOUND);
-          assert_testmodeonly(coolinglist_level[i] == level);
-          assert_testmodeonly(coolinglist_upperlevel[i] == get_phixsupperlevel(uniquelevelindex, phixstargetindex));
+          assert_testmodeonly(coolinglist_type[get_coolinglistoffset(element, ion) + i] == CoolingType::FREEBOUND);
+          assert_testmodeonly(coolinglist_level[get_coolinglistoffset(element, ion) + i] == level);
+          assert_testmodeonly(coolinglist_upperlevel[get_coolinglistoffset(element, ion) + i] ==
+                              get_phixsupperlevel(uniquelevelindex, phixstargetindex));
 
           i++;
         } else {
