@@ -525,10 +525,14 @@ inline auto ftol(const double a, const double b) -> bool {
 
 inline void mutex_lock(int& lock) {
   while (std::atomic_ref<int>(lock).exchange(1, std::memory_order_acquire) == 1) {
-    ;  // spin
+    std::atomic_ref<int>(lock).wait(1, std::memory_order_relaxed);
+    // blocks until lock != 1 (i.e., someone called unlock->notify)
   }
 }
 
-inline void mutex_unlock(int& lock) { std::atomic_ref<int>(lock).store(0, std::memory_order_release); }
+inline void mutex_unlock(int& lock) {
+  std::atomic_ref<int>(lock).store(0, std::memory_order_release);
+  std::atomic_ref<int>(lock).notify_one();  // wake one sleeping thread
+}
 
 #endif  // SN3D_H
