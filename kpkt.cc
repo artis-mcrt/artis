@@ -400,7 +400,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const std::span<double> ion_contribs =
       std::span{globals::cellcache[cellcacheslotid].cooling_contrib}.subspan(ionstart, ncoolingterms_ion);
 
-  if (globals::cellcache[cellcacheslotid].cooling_contrib[ionstart] < 0.) {
+  if (ion_contribs[0] < 0.) {
     calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ion_contribs, nullptr, nullptr, nullptr, nullptr);
   }
   // subspan for this ion's region of the cumulative sum of cooling contributions
