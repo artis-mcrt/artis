@@ -362,20 +362,22 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
     const double epsilon_current = epsilon(uniquelevelindex);
     auto levelrates = std::span{globals::cellcache[cellcacheslotid].alllevels_maprocessrates}.subspan(
         uniquelevelindex * MA_ACTION_COUNT, MA_ACTION_COUNT);
-    {
+
 #if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
-      const auto lock =
-          std::lock_guard<std::mutex>(globals::cellcache[cellcacheslotid].mutex_macroatom_levels[uniquelevelindex]);
+    globals::cellcache[cellcacheslotid].mutex_macroatom_levels[uniquelevelindex].lock();
 #endif
 
-      assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
+    assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
 
-      // If there are no precalculated rates available then calculate them
-      if (levelrates[0] < 0.) {
-        calculate_macroatom_transitionrates(levelrates, nonemptymgi, element, ion, level, ionuniquelevelindexstart,
-                                            t_mid, globals::alltrans);
-      }
+    // If there are no precalculated rates available then calculate them
+    if (levelrates[0] < 0.) {
+      calculate_macroatom_transitionrates(levelrates, nonemptymgi, element, ion, level, ionuniquelevelindexstart, t_mid,
+                                          globals::alltrans);
     }
+
+#if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
+    globals::cellcache[cellcacheslotid].mutex_macroatom_levels[uniquelevelindex].unlock();
+#endif
 
     // select transition according to probabilities
     std::array<double, MA_ACTION_COUNT> cumulative_transitions{};

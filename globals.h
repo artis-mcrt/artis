@@ -1,10 +1,9 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#include <atomic>
 #include <cmath>
 #include <cstddef>
-#include <deque>
-#include <mutex>
 #include <span>
 #include <vector>
 
@@ -259,6 +258,19 @@ inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels
 inline int NPHIXSPOINTS{-1};  // number of photoionisation cross-section points per level
 inline double NPHIXSNUINCREMENT{-1};  // frequency increment between points as a fraction of nu_edge
 
+class SpinMutex {
+  bool locked{false};
+
+ public:
+  void lock() {
+    while (std::atomic_ref<bool>(locked).exchange(true, std::memory_order_acquire)) {
+      ;  // spin
+    }
+  }
+
+  void unlock() { std::atomic_ref<bool>(locked).store(false, std::memory_order_release); }
+};
+
 struct CellCache {
   int nonemptymgi{-1};  // non-empty model grid index for this cache slot
   std::vector<double> cooling_contrib;  // Cooling contributions by the different processes.
@@ -270,8 +282,8 @@ struct CellCache {
   std::vector<bool> allcont_keep;
   double chi_ff_nnionpart{-1};
   std::vector<double> allphixstargets_corrphotoioncoeff;
-  std::deque<std::mutex> mutex_macroatom_levels;
-  std::deque<std::mutex> mutex_coolingcontribs_ions;
+  std::vector<SpinMutex> mutex_macroatom_levels;
+  std::vector<SpinMutex> mutex_coolingcontribs_ions;
 };
 inline std::vector<CellCache> cellcache{};
 
