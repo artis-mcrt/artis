@@ -359,7 +359,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
     auto levelrates = std::span{globals::cellcache[cellcacheslotid].alllevels_maprocessrates}.subspan(
         uniquelevelindex * MA_ACTION_COUNT, MA_ACTION_COUNT);
 
-#if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
+#if (defined(STDPAR_ON) || defined(_OPENMP)) && !defined(GPU_ON)
     mutex_lock(globals::cellcache[cellcacheslotid].allmacroatomictransitions_locks[uniquelevelindex]);
 #endif
 
@@ -371,7 +371,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
                                           globals::alltrans);
     }
 
-#if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
+#if (defined(STDPAR_ON) || defined(_OPENMP)) && !defined(GPU_ON)
     mutex_unlock(globals::cellcache[cellcacheslotid].allmacroatomictransitions_locks[uniquelevelindex]);
 #endif
 
