@@ -402,7 +402,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   {
 #if (defined(STDPAR_ON) || defined(_OPENMP)) && !defined(GPU_ON)
-    ScopedMutex lock{globals::cellcache[cellcacheslotid].cooling_contrib_locks[uniqueionindex]};
+    [[maybe_unused]] ScopedMutex lock{globals::cellcache[cellcacheslotid].cooling_contrib_locks[uniqueionindex]};
 #endif
     if (ion_contribs[0] < 0.) {
       calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ion_contribs, nullptr, nullptr, nullptr, nullptr);
