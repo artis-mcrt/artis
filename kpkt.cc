@@ -395,7 +395,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   const int ionstart = get_coolinglistoffset(element, ion);
   const int ncoolingterms_ion = get_ncoolingterms_ion(element, ion);
-  // transtion contribution list for this ion
+  // transition contribution list for this ion
   const std::span<double> ion_contribs =
       std::span{globals::cellcache[cellcacheslotid].cooling_contrib}.subspan(ionstart, ncoolingterms_ion);
 
