@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cassert>
 #include <csignal>
 #include <cstdarg>
@@ -62,17 +63,13 @@ constexpr int cellcacheslotid = 0;
 
 extern std::fstream output_file;
 
-inline std::array<char, 1024> outputlinebuf = {};
-inline std::string outputlinestr = {};
+inline std::array<char, 1024> outputlinebuf{};
 inline bool outputstartofline = true;
-inline tm timebuf{};
 
 #ifdef _OPENMP
-
 #ifndef GPU_ON
-#pragma omp threadprivate(output_file, outputlinebuf, outputstartofline, timebuf)
+#pragma omp threadprivate(output_file, outputlinebuf, outputstartofline)
 #endif
-
 #endif
 
 #ifdef __NVCOMPILER_CUDA_ARCH__
@@ -102,6 +99,7 @@ inline auto printlnlog(std::string_view fmt, Args&&... args) -> void {
 inline void print_line_start() {
   if (outputstartofline) {
     const time_t now_time = time(nullptr);
+    THREADLOCALONHOST tm timebuf{};
     strftime(outputlinebuf.data(), 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
     output_file << outputlinebuf.data() << ' ';
   }
@@ -123,6 +121,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* f
 template <typename... Args>
 inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) -> void {
   print_line_start();
+  THREADLOCALONHOST std::string outputlinestr;
   outputlinestr = std::format(fmt, std::forward<Args>(args)...);
   outputstartofline = (outputlinestr.back() == '\n');
   output_file << outputlinestr;
@@ -176,7 +175,6 @@ inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) ->
 
 #elifdef STDPAR_ON
 
-#include <atomic>
 template <typename T, typename U>
 constexpr void atomicadd(T& var, U&& val) {
   std::atomic_ref<T>(var).fetch_add(std::forward<U>(val), std::memory_order_relaxed);
@@ -522,5 +520,32 @@ template <double fractional_accuracy>
 inline auto ftol(const double a, const double b) -> bool {
   return std::abs(a - b) <= (fractional_accuracy * std::min(std::abs(a), std::abs(b)));
 }
+
+class ScopedMutex {
+ private:
+  int* lock_;
+
+  static void mutex_lock(int& lock) {
+    while (std::atomic_ref<int>(lock).exchange(1, std::memory_order_acquire) == 1) {
+      std::atomic_ref<int>(lock).wait(1, std::memory_order_relaxed);
+      // blocks until lock != 1 (i.e., someone called unlock->notify)
+    }
+  }
+
+  static void mutex_unlock(int& lock) {
+    std::atomic_ref<int>(lock).store(0, std::memory_order_release);
+    std::atomic_ref<int>(lock).notify_one();  // wake one sleeping thread
+  }
+
+ public:
+  explicit ScopedMutex(int& lock) : lock_(&lock) { mutex_lock(*lock_); }
+  ~ScopedMutex() { mutex_unlock(*lock_); }
+
+  // disable copying and moving to avoid accidentally sharing locks between threads
+  ScopedMutex(const ScopedMutex&) = delete;
+  auto operator=(const ScopedMutex&) -> ScopedMutex& = delete;
+  ScopedMutex(ScopedMutex&&) = delete;
+  auto operator=(ScopedMutex&&) -> ScopedMutex& = delete;
+};
 
 #endif  // SN3D_H

@@ -3,8 +3,6 @@
 
 #include <cmath>
 #include <cstddef>
-#include <deque>
-#include <mutex>
 #include <span>
 #include <vector>
 
@@ -270,6 +268,8 @@ struct CellCache {
   std::vector<bool> allcont_keep;
   double chi_ff_nnionpart{-1};
   std::vector<double> allphixstargets_corrphotoioncoeff;
+  std::vector<int> cooling_contrib_locks;
+  std::vector<int> allmacroatomictransitions_locks;
 };
 inline std::vector<CellCache> cellcache{};
 
@@ -312,8 +312,6 @@ inline double cell_is_optically_thick;
 inline int num_grey_timesteps;
 inline int n_titer;
 inline bool lte_iteration;
-
-inline std::deque<std::mutex> mutex_cellcachemacroatom;
 
 inline void setup_mpi_vars() {
   MPI_Comm_rank(MPI_COMM_WORLD, &globals::my_rank);
