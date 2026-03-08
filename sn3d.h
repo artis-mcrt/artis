@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cassert>
 #include <csignal>
 #include <cstdarg>
@@ -176,7 +177,6 @@ inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) ->
 
 #elifdef STDPAR_ON
 
-#include <atomic>
 template <typename T, typename U>
 constexpr void atomicadd(T& var, U&& val) {
   std::atomic_ref<T>(var).fetch_add(std::forward<U>(val), std::memory_order_relaxed);
@@ -522,5 +522,13 @@ template <double fractional_accuracy>
 inline auto ftol(const double a, const double b) -> bool {
   return std::abs(a - b) <= (fractional_accuracy * std::min(std::abs(a), std::abs(b)));
 }
+
+inline void mutex_lock(int& lock) {
+  while (std::atomic_ref<int>(lock).exchange(1, std::memory_order_acquire) == 1) {
+    ;  // spin
+  }
+}
+
+inline void mutex_unlock(int& lock) { std::atomic_ref<int>(lock).store(0, std::memory_order_release); }
 
 #endif  // SN3D_H

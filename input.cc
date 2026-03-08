@@ -2019,8 +2019,10 @@ void setup_cellcache() {
 
     cacheslot.nonemptymgi = -1;
 
-    cacheslot.cooling_contrib_locks.resize(get_includedions());
-    cacheslot.allmacroatomictransitions_locks.resize(get_includedlevels());
+    resize_exactly(cacheslot.cooling_contrib_locks, get_includedions());
+    std::ranges::fill(cacheslot.cooling_contrib_locks, 0);
+    resize_exactly(cacheslot.allmacroatomictransitions_locks, get_includedlevels());
+    std::ranges::fill(cacheslot.allmacroatomictransitions_locks, 0);
 
     const auto ncoolingterms = kpkt::ncoolingterms;
     mem_usage_cellcache += ncoolingterms * sizeof(double);
