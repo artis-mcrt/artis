@@ -10,12 +10,8 @@
 #include <fstream>
 #include <functional>
 #include <ios>
-#include <span>
-
-#if defined(STDPAR_ON) || defined(_OPENMP_ON)
-#include <mutex>
-#endif
 #include <numeric>
+#include <span>
 
 #include "artisoptions.h"
 #include "atomic.h"
