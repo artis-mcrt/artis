@@ -712,6 +712,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
 auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool use_cellcache) -> double {
   const auto nne = grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
+  assert_testmodeonly(!use_cellcache || globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
   const auto chi_ff_nnionpart = use_cellcache ? globals::cellcache[cellcacheslotid].chi_ff_nnionpart
                                               : calculate_chi_ffheat_nnionpart(nonemptymgi);
 
