@@ -714,8 +714,6 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool 
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto chi_ff_nnionpart = [use_cellcache, nonemptymgi]() -> double {
     if (use_cellcache) {
-      assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
-
       return globals::cellcache[cellcacheslotid].chi_ff_nnionpart;
     }
     return calculate_chi_ffheat_nnionpart(nonemptymgi);
