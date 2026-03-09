@@ -2,7 +2,6 @@
 #define RPKT_H
 
 #include <algorithm>
-#include <cmath>
 #include <cstddef>
 #include <ctime>
 #include <functional>
@@ -161,23 +160,6 @@ void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);
     return grid::get_elem_abundance(nonemptymgi, element) > 0;
   }
   return ((get_nnion(nonemptymgi, element, ion) / nnetot > 1.e-6) || (level == 0));
-}
-
-inline auto calculate_chi_ffheat_nnionpart(const int nonemptymgi) -> double {
-  const double g_ff = 1;
-  double chi_ff_nnionpart = 0.;
-  const int nelements = get_nelements();
-  for (int element = 0; element < nelements; element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      const double nnion = get_nnion(nonemptymgi, element, ion);
-      const int ioncharge = get_ionstage(element, ion) - 1;
-      chi_ff_nnionpart += ioncharge * ioncharge * g_ff * nnion;
-    }
-  }
-  const auto T_e = grid::get_Te(nonemptymgi);
-
-  return chi_ff_nnionpart * 3.69255e8 / std::sqrt(T_e);
 }
 
 #endif  // RPKT_H
