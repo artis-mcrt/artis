@@ -358,7 +358,7 @@ void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi)
   stats::increment(stats::Counter::UPDATECELL);
 
   cacheslot.nonemptymgi = nonemptymgi;
-  cacheslot.chi_ff_nnionpart = -1.;
+  cacheslot.chi_ff_nnionpart = calculate_chi_ffheat_nnionpart(nonemptymgi);
 
   const int nelements = get_nelements();
   for (int element = 0; element < nelements; element++) {
