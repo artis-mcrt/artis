@@ -727,6 +727,7 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool 
   const double chi_ff = chi_ff_nnionpart * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
 
   assert_testmodeonly(std::isfinite(chi_ff));
+  assert_testmodeonly(chi_ff >= 0);
 
   return chi_ff;
 }
