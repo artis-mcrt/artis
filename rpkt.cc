@@ -707,23 +707,6 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
   assert_always(false);
 }
 
-auto calculate_chi_ffheat_nnionpart(const int nonemptymgi) -> double {
-  const double g_ff = 1;
-  double chi_ff_nnionpart = 0.;
-  const int nelements = get_nelements();
-  for (int element = 0; element < nelements; element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      const double nnion = get_nnion(nonemptymgi, element, ion);
-      const int ioncharge = get_ionstage(element, ion) - 1;
-      chi_ff_nnionpart += ioncharge * ioncharge * g_ff * nnion;
-    }
-  }
-  const auto T_e = grid::get_Te(nonemptymgi);
-
-  return chi_ff_nnionpart * 3.69255e8 / sqrt(T_e);
-}
-
 // calculate the free-free absorption (to kpkt heating) coefficient [cm^-1]
 // = kappa(free-free) * nne
 auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool use_cellcache) -> double {
@@ -867,6 +850,23 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 }
 
 }  // anonymous namespace
+
+auto calculate_chi_ffheat_nnionpart(const int nonemptymgi) -> double {
+  const double g_ff = 1;
+  double chi_ff_nnionpart = 0.;
+  const int nelements = get_nelements();
+  for (int element = 0; element < nelements; element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      const double nnion = get_nnion(nonemptymgi, element, ion);
+      const int ioncharge = get_ionstage(element, ion) - 1;
+      chi_ff_nnionpart += ioncharge * ioncharge * g_ff * nnion;
+    }
+  }
+  const auto T_e = grid::get_Te(nonemptymgi);
+
+  return chi_ff_nnionpart * 3.69255e8 / sqrt(T_e);
+}
 
 void allocate_expansionopacities() {
   const auto nonempty_npts_model = grid::get_nonempty_npts_model();
