@@ -716,10 +716,6 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool 
     if (use_cellcache) {
       assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
 
-      if (globals::cellcache[cellcacheslotid].chi_ff_nnionpart < 0.) {
-        globals::cellcache[cellcacheslotid].chi_ff_nnionpart = calculate_chi_ffheat_nnionpart(nonemptymgi);
-      }
-
       return globals::cellcache[cellcacheslotid].chi_ff_nnionpart;
     }
     return calculate_chi_ffheat_nnionpart(nonemptymgi);
