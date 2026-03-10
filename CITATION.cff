@@ -31,8 +31,8 @@ authors:
   - family-names: Leck
     given-names: Gerrit
 title: artis
-version: v2025.01.05
-date-released: 2026-05-05
+version: v2026.02.17
+date-released: 2026-02-17
 doi: 10.5281/zenodo.7728326
 license: "BSD-3-Clause"
 repository-code: 'https://github.com/artis-mcrt/artis'

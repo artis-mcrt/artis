@@ -82,6 +82,7 @@ extern template void calculate_chi_rpkt_cont<false>(double nu_cmf, Rpkt_continuu
 void allocate_expansionopacities();
 void calculate_expansion_opacities(int nonemptymgi);
 void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);
+auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 
 [[nodiscard]] constexpr auto get_linedistance(const double prop_time, const double nu_cmf, const double nu_trans,
                                               const double dnu_on_dl) -> double {

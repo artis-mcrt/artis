@@ -10,12 +10,8 @@
 #include <fstream>
 #include <functional>
 #include <ios>
-#include <span>
-
-#if defined(STDPAR_ON) || defined(_OPENMP_ON)
-#include <mutex>
-#endif
 #include <numeric>
+#include <span>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -371,9 +367,11 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
     const double epsilon_current = epsilon(uniquelevelindex);
     auto levelrates = std::span{globals::cellcache[cellcacheslotid].alllevels_maprocessrates}.subspan(
         uniquelevelindex * MA_ACTION_COUNT, MA_ACTION_COUNT);
+
     {
-#if (defined(STDPAR_ON) || defined(_OPENMP_ON)) && !defined(GPU_ON)
-      const auto lock = std::lock_guard<std::mutex>(globals::mutex_cellcachemacroatom[uniquelevelindex]);
+#if (defined(STDPAR_ON) || defined(_OPENMP)) && !defined(GPU_ON)
+      [[maybe_unused]] ScopedMutex lock{
+          globals::cellcache[cellcacheslotid].allmacroatomictransitions_locks[uniquelevelindex]};
 #endif
 
       assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
