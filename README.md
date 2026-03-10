@@ -5,12 +5,22 @@
 
 [ARTIS](https://github.com/artis-mcrt/artis) ([Sim 2007](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract); [Kromer & Sim 2009](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract)) is a 3D radiative transfer code for Type Ia supernovae using the Monte Carlo method with indivisible energy packets ([Lucy 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)). The latest version incorporates polarisation and virtual packets ([Bulla et al. 2015](https://ui.adsabs.harvard.edu/abs/2015MNRAS.450..967B/abstract)), non-LTE physics appropriate for the nebular phase of Type Ia supernovae ([Shingles et al. 2020](https://ui.adsabs.harvard.edu/abs/2020MNRAS.492.2029S/abstract)), and alpha- and beta-decays with time-dependent thermalisation ([Shingles et al. 2023](https://ui.adsabs.harvard.edu/abs/2023ApJ...954L..41S/abstract)).
 
-The code is modern C++23 and scales to thousands of CPU cores across multiple node using MPI with shared memory windows on each node. Experimental support is also provided for OpenMP and C++ standard parallelism (for multicore CPU and upcoming GPU targets).
+The code is modern C++23 and scales to thousands of CPU cores across multiple node using MPI with shared memory on each node. Experimental support is also provided for OpenMP and C++ standard parallelism (for multicore CPU and upcoming GPU targets).
 
-## Why is this code available?
-The ARTIS code forms part of the method used to obtain published scientific results. Those interested in understanding the numerical techniques in greater detail than the published descriptions have full access to the underlying code. We anticipate that some developers building similar simulation codes might find our code useful, and in this case we ask that authors of any derivative works acknowledge and cite the ARTIS collaboration. This is in addition to the legal requirements of attribution and preservation of copyright notices on any substantial copies under the BSD 3-Clause licence.
+## Citing ARTIS
+We maintain a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg) and [papers that use ARTIS with non-LTE enabled](https://ui.adsabs.harvard.edu/user/libraries/CX8fnPInSu2q1rAE4wWQrg).
 
-## Can you help me to run the code?
+If you use ARTIS, please cite it using the [DOI from Zenodo](https://zenodo.org/records/18670358).
+
+An early version of the code is described in [Sim (2007)](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract) and [Kromer & Sim (2009)](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract). For specific features, see:
+- Polarisation and virtual packets: [Bulla et al. (2015)](https://ui.adsabs.harvard.edu/abs/2015MNRAS.450..967B/abstract)
+- Non-LTE populations, multibin radiation field model, and the non-thermal solver: [Shingles et al. (2020)](https://ui.adsabs.harvard.edu/abs/2020MNRAS.492.2029S/abstract)
+- Alpha, beta, and fission decay, and time-dependent particle thermalisation for kilonovae: [Shingles et al. (2023)](https://ui.adsabs.harvard.edu/abs/2023ApJ...954L..41S/abstract).
+
+## Source code availability and license
+The ARTIS code forms part of the method used to obtain published scientific results. We anticipate that some developers building similar simulation codes might find our code useful, and in this case we ask that authors of any derivative works acknowledge and cite the ARTIS collaboration. This is in addition to the legal requirements of attribution and preservation of copyright notices on any substantial copies under the BSD 3-Clause license.
+
+## Can you help me to use the code?
 We do not have the resources to support users of the code outside our team of direct collaborators.
 
 ## Setting up production runs on Linux
@@ -22,7 +32,7 @@ git clone --branch release https://github.com/artis-mcrt/artis.git
 cd artis
 ```
 
-To compile and run artis, you will need a recent C++ compiler (g++, LLVM Clang, Apple Clang, or nvc++), and an MPI library with a wrapper command `mpicxx'. Typically these are made available on HPC systems using module or spack commands. For systems that we use, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules specifications.
+To compile and run artis, you will need a recent C++ compiler (g++, LLVM Clang, Apple Clang, or nvc++) and an MPI library that provides a wrapper command `mpicxx'. Typically, these are made available on HPC systems using module or spack commands. For systems that we use, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules specifications.
 
 Next, select an options preset and compile with `make'. For example:
 ```sh
@@ -71,13 +81,13 @@ tail -f output_0-0.txt
 Press Ctrl+C to stop following the log file.
 
 ## make options
-- TESTMODE=ON: Enable additional assertions and compile with address sanitizer.
-- FASTMATH=OFF: Don't enable compiler transformations that affect round-off-level results (e.g. a*(b+c).
-- BOOST=OFF: Use GSL (not Boost) for root finding (classic nne solver, T_e, and binned radfield) and adaptive integration.
+- TESTMODE=ON: Enable additional assertions and the address and undefined behaviour sanitizers.
+- FASTMATH=OFF: Don't enable compiler transformations that affect round-off-level results (e.g. a*(b\*c) = (a\*b)*c).
+- BOOST=OFF: Use GSL (not Boost) for root finding (classic n_e solver, T_e, and binned radfield) and adaptive integration.
 - EIGEN=OFF: Use GSL (not Eigen) for matrix-vector solving (Spencer-Fano and NLTE pops).
-- MAX_NODE_SIZE=N: Artificially limit MPI node size to N ranks. Useful for testing or preventing MPI shared memory windows from crossing CPU sockets.
+- MAX_NODE_SIZE=N: Artificially limit MPI node size to N ranks. Useful for testing and preventing MPI shared memory windows from crossing CPU sockets.
 - REPRODUCIBLE=ON: Use stable sorts and disable FASTMATH.
-- GPU=ON: Required to compile for GPUs. Avoids incompatible GSL and std::random calls.
+- GPU=ON: Required to compile for GPUs. Works around incompatible function calls and uses a Simpson-rule integrator in place of Gauss-Kronrod.
 
 ## Input files
 ### input.txt
