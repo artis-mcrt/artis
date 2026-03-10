@@ -104,7 +104,7 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
     -> std::tuple<double, int>;
 void set_oneoverfv(int nonemptymgi, float oneoverfv);
-[[gnu::pure]] [[nodiscard]] auto get_oneoverfv(int nonemptymgi) -> float;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_oneoverfv(int nonemptymgi) -> float;
 
 void calculate_kappagrey();
 
