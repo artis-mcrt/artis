@@ -285,7 +285,7 @@ void mpi_communicate_grid_properties() {
       MPI_Bcast_safe(grid::thick_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
       if constexpr (USE_MICROCLUMPING) {
-        MPI_Bcast_safe(grid::oneoverfv_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+        MPI_Bcast_safe(grid::clumpfactor_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                        globals::mpi_comm_internode);
       }
 

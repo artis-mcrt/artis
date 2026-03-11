@@ -50,7 +50,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
                                  double* const C_exc, double* const C_ionisation) -> double {
   const auto nne = grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
-  const float oneoverfv = grid::get_oneoverfv(nonemptymgi);
+  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
 
   double C_ion = 0.;
   [[maybe_unused]] int i = 0;  // NOLINT(misc-const-correctness)
@@ -94,7 +94,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
       const auto upper_statweight = stat_weight(ionuniquelevelindexstart + upper);
       const double C =
           nnlevel *
-          col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight, oneoverfv) *
+          col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight, clumpfactor) *
           epsilon_trans;
       C_ion += C;
       if constexpr (!update_cellcache_contribs) {
@@ -128,7 +128,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
         const double epsilon_trans = epsilon_upper - epsilon_current;
         const double C =
             nnlevel *
-            col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, oneoverfv) *
+            col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, clumpfactor) *
             epsilon_trans;
 
         C_ion += C;
@@ -486,7 +486,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   } else if (rndcoolingtype == CoolingType::COLLEXC) {
     // the k-packet activates a macro-atom due to collisional excitation
     const float nne = grid::get_nne(nonemptymgi);
-    const float oneoverfv = grid::get_oneoverfv(nonemptymgi);
+    const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
 
     // if the previous entry belongs to the same ion, then pick up the cumulative sum from
     // the previous entry, otherwise start from zero
@@ -510,7 +510,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
       const auto upper_statweight = stat_weight(upperuniquelevelindex);
       const double C =
           nnlevel *
-          col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight, oneoverfv) *
+          col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight, clumpfactor) *
           epsilon_trans;
       contrib += C;
       if (contrib > rndcool_ion_process) {

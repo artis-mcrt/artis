@@ -27,7 +27,7 @@ inline std::span<float> grey_depth_allcells;  // Grey optical depth to surface o
 inline std::span<int>
     thick_allcells;  // whether the cell is optically thick (1) or not (0), or (2) thick for vpkts only
 inline std::span<float>
-    oneoverfv_allcells;  // Reciprocal of the clumping factor (which is what we actually use in calculations)
+    clumpfactor_allcells;  // Reciprocal of the clumping factor (which is what we actually use in calculations)
 
 inline ptrdiff_t ngrid{0};
 
@@ -103,8 +103,8 @@ void write_grid_restart_data(int timestep);
 [[gnu::pure]] [[nodiscard]] auto get_totmassnuclide_tmodel(int z, int a) -> double;
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
     -> std::tuple<double, int>;
-void set_oneoverfv(int nonemptymgi, float oneoverfv);
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_oneoverfv(int nonemptymgi) -> float;
+void set_clumpfactor(int nonemptymgi, float clumpfactor);
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_clumpfactor(int nonemptymgi) -> float;
 
 void calculate_kappagrey();
 
@@ -137,9 +137,9 @@ inline auto get_ejecta_kinetic_energy() {
 }
 
 // Applies the clumping factor to `val` if microclumping is being used
-inline auto apply_clumping(const float val, const float oneoverfv) -> float {
+inline auto apply_clumping(const float val, const float clumpfactor) -> float {
   if constexpr (USE_MICROCLUMPING) {
-    return val * oneoverfv;
+    return val * clumpfactor;
   }
   return val;
 }

@@ -17,24 +17,24 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
                                                           int alltransindex, double t_current) -> double;
 
 [[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(float T_e, float nne, int element, int upperion,
-                                                             int upperionlevel, int lowerionlevel, float oneoverfv)
+                                                             int upperionlevel, int lowerionlevel, float clumpfactor)
     -> double;
 
 [[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upper,
-                                                             int lower, double epsilon_trans, float oneoverfv)
+                                                             int lower, double epsilon_trans, float clumpfactor)
     -> double;
 
 [[gnu::pure]] [[nodiscard]] auto col_ionisation_ratecoeff(float T_e, float nne, int element, int ion, int lower,
-                                                          int phixstargetindex, double epsilon_trans, float oneoverfv)
+                                                          int phixstargetindex, double epsilon_trans, float clumpfactor)
     -> double;
 
 [[gnu::pure]] [[nodiscard]] auto col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans,
                                                             double upperstatweight, double lowerstatweight,
-                                                            int alltransindex, float oneoverfv) -> double;
+                                                            int alltransindex, float clumpfactor) -> double;
 
 [[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(float T_e, float nne, double upperstatweight,
                                                           int alltransindex, double epsilon_trans,
-                                                          double lowerstatweight, float oneoverfv) -> double;
+                                                          double lowerstatweight, float clumpfactor) -> double;
 
 // radiative deexcitation rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second

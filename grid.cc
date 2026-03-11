@@ -385,7 +385,7 @@ void allocate_nonemptymodelcells() {
   grey_depth_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
   thick_allcells = MPI_shared_malloc_span<int>(nonempty_npts_model, 0);
   if constexpr (USE_MICROCLUMPING) {
-    oneoverfv_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
+    clumpfactor_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
   }
   const auto modelgrid_mem_usage =
       nonempty_npts_model * ((sizeof(float) * (USE_MICROCLUMPING ? 10 : 9)) + sizeof(double) + sizeof(int));
@@ -1477,12 +1477,12 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
   return nne_allcells[nonemptymgi];
 }
 
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_oneoverfv(const int nonemptymgi) -> float {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_clumpfactor(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
 
   if constexpr (USE_MICROCLUMPING) {
-    return oneoverfv_allcells[nonemptymgi];
+    return clumpfactor_allcells[nonemptymgi];
   }
 
   return 1.;
@@ -1566,11 +1566,11 @@ void set_nne(const int nonemptymgi, const float nne) {
   nne_allcells[nonemptymgi] = nne;
 }
 
-void set_oneoverfv(const int nonemptymgi, const float oneoverfv) {
-  // std::cout << "Using the correct set_oneoverfv\n";
+void set_clumpfactor(const int nonemptymgi, const float clumpfactor) {
+  // std::cout << "Using the correct set_clumpfactor\n";
   assert_testmodeonly(USE_MICROCLUMPING);
-  assert_always(0 < oneoverfv && oneoverfv <= 1);
-  oneoverfv_allcells[nonemptymgi] = oneoverfv;
+  assert_always(0 < clumpfactor && clumpfactor <= 1);
+  clumpfactor_allcells[nonemptymgi] = clumpfactor;
 }
 
 // Calculate and set the total density of electrons (free and bound) in grid cell. These are targets for Compton

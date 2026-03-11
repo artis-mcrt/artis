@@ -1518,7 +1518,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
   const auto nne = grid::get_nne(nonemptymgi);
   const auto nntot = get_nnion_tot(nonemptymgi);
   const auto nnetot = grid::get_nnetot(nonemptymgi);
-  const float oneoverfv = grid::get_oneoverfv(nonemptymgi);
+  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
 
   double frac_excitation_total = 0.;
   double frac_ionisation_total = 0.;
@@ -1741,7 +1741,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
             nnlevel_upper, statweight_lower, alltransindex, t_mid);
 
         const double collexc_ratecoeff = col_excitation_ratecoeff(T_e, nne, statweight_upper, alltransindex,
-                                                                  epsilon_trans, statweight_lower, oneoverfv);
+                                                                  epsilon_trans, statweight_lower, clumpfactor);
 
         const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
         const auto coll_str = globals::alltrans.coll_str[alltransindex];

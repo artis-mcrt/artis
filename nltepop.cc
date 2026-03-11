@@ -478,7 +478,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
                                    const int first_ion_used) {
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
-  const float oneoverfv = grid::get_oneoverfv(nonemptymgi);
+  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
   const int nlevels = get_nlevels(element, ion);
   const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
@@ -507,9 +507,9 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const double R = rad_deexcitation_ratecoeff(epsilon_trans, globals::alltrans.einstein_A[alltransindex],
                                                   statweight, lower_statweight, nnlevel, nnlevel_lower, t_mid) *
                        s_renorm[level];
-      const double C =
-          col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex, oneoverfv) *
-          s_renorm[level];
+      const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex,
+                                                  clumpfactor) *
+                       s_renorm[level];
 
       const int lower_index = get_nlte_vector_index(element, ion, lower, first_ion_used);
       const auto matrix_index_upper_upper = matrix_index_level_level;
@@ -539,7 +539,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
           s_renorm[level];
 
       const double C =
-          col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight, oneoverfv) *
+          col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight, clumpfactor) *
           s_renorm[level];
 
       const double NTC =
@@ -566,7 +566,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
   assert_always((ion + 1) < (nions_used + first_ion_used));  // can't ionise top ion stage
   const auto T_e = grid::get_Te(nonemptymgi);
   const float nne = grid::get_nne(nonemptymgi);
-  const float oneoverfv = grid::get_oneoverfv(nonemptymgi);
+  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
   const int nionisinglevels = get_nlevels_ionising(element, ion);
   const int maxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
@@ -587,7 +587,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
       // photoionisation and collisional ionisation
       const double R_ionisation = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, false);
       const double C_ionisation =
-          col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, oneoverfv);
+          col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, clumpfactor);
 
       const auto matrix_index_upper_lower = (upper_index * nlte_dimension) + lower_index;
 
@@ -600,9 +600,9 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
 
       // recombination
       if (upper <= maxrecombininglevel) {
-        const double R_recomb = rad_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, oneoverfv);
+        const double R_recomb = rad_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, clumpfactor);
         const double C_recomb =
-            col_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, epsilon_trans, oneoverfv);
+            col_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, epsilon_trans, clumpfactor);
 
         const auto matrix_index_upper_upper = (upper_index * nlte_dimension) + upper_index;
         const auto matrix_index_lower_upper = (lower_index * nlte_dimension) + upper_index;
@@ -665,8 +665,8 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
   const int max_ion_used = first_ion_used + nions_used - 1;
   assert_always(ion < max_ion_used);  // can't ionise top ion stage
   const auto T_e = grid::get_Te(nonemptymgi);
-  const float oneoverfv = grid::get_oneoverfv(nonemptymgi);
-  const float nne = grid::apply_clumping(grid::get_nne(nonemptymgi), oneoverfv);
+  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
+  const float nne = grid::apply_clumping(grid::get_nne(nonemptymgi), clumpfactor);
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
     const int level_index = get_nlte_vector_index(element, ion, level, first_ion_used);

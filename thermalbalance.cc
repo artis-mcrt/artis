@@ -55,7 +55,7 @@ auto integrand_bfheatingcoeff(const double nu, void* const voidparas) -> double 
 }
 
 auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const float T_e,
-                                const float nne, const float oneoverfv) -> double {
+                                const float nne, const float clumpfactor) -> double {
   double C_deexc = 0.;
   const int nlevels = get_nlevels(element, ion);
   const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
@@ -73,10 +73,10 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
       const int lower = globals::alltrans.targetlevelindex[alltransindex];
       const double epsilon_trans = epsilon_level - epsilon(ionuniquelevelindexstart + lower);
       const auto lower_statweight = stat_weight(ionuniquelevelindexstart + lower);
-      const double C =
-          nnlevel *
-          col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex, oneoverfv) *
-          epsilon_trans;
+      const double C = nnlevel *
+                       col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex,
+                                                  clumpfactor) *
+                       epsilon_trans;
       C_deexc += C;
     }
   }
@@ -85,7 +85,7 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
 
 // Calculate the heating rates for a given cell. Results are returned via the elements of the heatingrates data
 // structure.
-void calculate_heating_rates(const int nonemptymgi, const float T_e, const float nne, const float oneoverfv,
+void calculate_heating_rates(const int nonemptymgi, const float T_e, const float nne, const float clumpfactor,
                              HeatingCoolingRates& heatingcoolingrates, const std::span<const double> bfheatingcoeffs) {
   double C_deexc = 0.;
 
@@ -97,7 +97,7 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
     const int nions = get_nions(element);
     if constexpr (DIRECT_COL_HEAT) {
       for (int ion = 0; ion < nions; ion++) {
-        C_deexc += get_heating_ion_coll_deexc(nonemptymgi, element, ion, T_e, nne, oneoverfv);
+        C_deexc += get_heating_ion_coll_deexc(nonemptymgi, element, ion, T_e, nne, clumpfactor);
       }
     }
 
@@ -159,11 +159,11 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
 
   calculate_ion_balance_nne(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
-  const float oneoverfv = grid::get_oneoverfv(nonemptymgi);
+  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
 
   // Then calculate heating and cooling rates
   kpkt::calculate_cooling_rates(nonemptymgi, &heatingcoolingrates);
-  calculate_heating_rates(nonemptymgi, fT_e, nne, oneoverfv, heatingcoolingrates, bfheatingcoeffs);
+  calculate_heating_rates(nonemptymgi, fT_e, nne, clumpfactor, heatingcoolingrates, bfheatingcoeffs);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(nonemptymgi);
   const auto ntlepton_dep = nonthermal::get_deposition_rate_density(nonemptymgi);

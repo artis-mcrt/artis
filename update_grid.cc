@@ -373,7 +373,7 @@ void setup_clumping_factors_for_timestep(int nts) {  // todo: maybe other argume
   for (int i = 0; i < numcells; i++) {
     fclump >> fv_in;
     if (grid::check_mgi_is_nonempty(i, nonemptymgi)) {
-      grid::set_oneoverfv(nonemptymgi, 1.F / fv_in);
+      grid::set_clumpfactor(nonemptymgi, 1.F / fv_in);
     }
   }
 
@@ -384,13 +384,13 @@ void setup_clumping_factors_for_timestep(int nts) {  // todo: maybe other argume
   for (int i = 0; i < numcells; i++) {
     if (i % globals::node_nprocs == globals::rank_in_node && grid::check_mgi_is_nonempty(i, nonemptymgi)) {
       const double rad_vel = grid::get_modelcell_mean_radial_vel(i, tratmid);
-      grid::set_oneoverfv(nonemptymgi, clumping_factor(tratmid, rad_vel));
+      grid::set_clumpfactor(nonemptymgi, clumping_factor(tratmid, rad_vel));
     }
   }
 #endif
 }
 
-// TODO: Check if we need to use the clumping factors in this function
+// TODO: Check iclumpfactor to use the clumping factors in this function
 void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, const int titer, const double tratmid,
                       const double deltat, HeatingCoolingRates& heatingcoolingrates) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);

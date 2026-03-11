@@ -64,7 +64,7 @@ void calculate_macroatom_transitionrates(std::span<double> levelrates, const int
 
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
-  const float oneoverfv = grid::get_oneoverfv(nonemptymgi);
+  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
   const double epsilon_current = epsilon(uniquelevelindex);
   const double statweight = stat_weight(uniquelevelindex);
   const auto nnlevel = get_cellcache_levelpop(nonemptymgi, uniquelevelindex);
@@ -91,7 +91,7 @@ void calculate_macroatom_transitionrates(std::span<double> levelrates, const int
     const double R = rad_deexcitation_ratecoeff(epsilon_trans, A_ul, statweight, lower_statweight, nnlevel,
                                                 get_cellcache_levelpop(nonemptymgi, lower_uniquelevelindex), t_mid);
     const double C =
-        col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex, oneoverfv);
+        col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex, clumpfactor);
 
     sum_raddeexc += R * epsilon_trans;
     sum_coldeexc += C * epsilon_trans;
@@ -121,7 +121,7 @@ void calculate_macroatom_transitionrates(std::span<double> levelrates, const int
         nonemptymgi, upper_statweight, alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel,
         get_cellcache_levelpop(nonemptymgi, upper_uniquelevelindex), statweight, alltransindex, t_mid);
     const double C =
-        col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight, oneoverfv);
+        col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight, clumpfactor);
     const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex);
 
     sum_internal_up_same += (R + C + NT) * epsilon_current;
@@ -144,8 +144,8 @@ void calculate_macroatom_transitionrates(std::span<double> levelrates, const int
       const double epsilon_target = epsilon(lowerionuniquelevelindexstart + lower);
       const double epsilon_trans = epsilon_current - epsilon_target;
 
-      const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, oneoverfv);
-      const double C = col_recombination_ratecoeff(T_e, nne, element, ion, level, lower, epsilon_trans, oneoverfv);
+      const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, clumpfactor);
+      const double C = col_recombination_ratecoeff(T_e, nne, element, ion, level, lower, epsilon_trans, clumpfactor);
 
       sum_internal_down_lower += (R + C) * epsilon_target;
 
@@ -172,7 +172,7 @@ void calculate_macroatom_transitionrates(std::span<double> levelrates, const int
 
       const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, true);
       const double C =
-          col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, oneoverfv);
+          col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, clumpfactor);
 
       sum_up_higher += (R + C) * epsilon_current;
     }
@@ -240,7 +240,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
                                           const int upperionlevel, const double rad_recomb) -> int {
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
-  const float oneoverfv = grid::get_oneoverfv(nonemptymgi);
+  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
   const double epsilon_current = epsilon(element, upperion, upperionlevel);
   // Randomly select a continuum
   const double targetval = rng_uniform() * rad_recomb;
@@ -250,7 +250,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   for (int tmp_lowerionlevel = 0; tmp_lowerionlevel < nlevels; tmp_lowerionlevel++) {
     const double epsilon_trans = epsilon_current - epsilon(element, upperion - 1, tmp_lowerionlevel);
     const double R =
-        rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, tmp_lowerionlevel, oneoverfv);
+        rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, tmp_lowerionlevel, clumpfactor);
 
     rate += R * epsilon_trans;
 
@@ -286,7 +286,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
                                            const double epsilon_current, const double internal_up_higher) -> int {
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
-  const float oneoverfv = grid::get_oneoverfv(nonemptymgi);
+  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
 
   // Randomly select the occurring transition
   const double targetrate = rng_uniform() * internal_up_higher;
@@ -297,7 +297,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
     const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
     const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, true);
     const double C =
-        col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, oneoverfv);
+        col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, clumpfactor);
     rate += (R + C) * epsilon_current;
     if (rate > targetrate) {
       // set the macroatom's new state
@@ -330,7 +330,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
   const double t_mid = globals::timesteps[globals::timestep].mid;
 
   const auto nne = grid::get_nne(nonemptymgi);
-  const auto oneoverfv = grid::get_oneoverfv(nonemptymgi);
+  const auto clumpfactor = grid::get_clumpfactor(nonemptymgi);
 
   assert_testmodeonly(grid::thick_allcells[nonemptymgi] != 1);  // macroatom should not be used in thick cells
 
@@ -477,9 +477,9 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         for (int tmp_lower = 0; tmp_lower < nlevels; tmp_lower++) {
           const double epsilon_target = epsilon(lowerionuniquelevelindexstart + tmp_lower);
           const double epsilon_trans = epsilon_current - epsilon_target;
-          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, tmp_lower, oneoverfv);
+          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, tmp_lower, clumpfactor);
           const double C =
-              col_recombination_ratecoeff(T_e, nne, element, ion, level, tmp_lower, epsilon_trans, oneoverfv);
+              col_recombination_ratecoeff(T_e, nne, element, ion, level, tmp_lower, epsilon_trans, clumpfactor);
           rate += (R + C) * epsilon_target;
           if (rate > targetrate) {
             lower = tmp_lower;
@@ -619,11 +619,12 @@ void macroatom_close_file() {
 // multiply by upper level population to get a rate per second
 [[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(const float T_e, float nne, const int element,
                                                              const int upperion, const int upperionlevel,
-                                                             const int lowerionlevel, const float oneoverfv) -> double {
+                                                             const int lowerionlevel, const float clumpfactor)
+    -> double {
   // it's faster to only check this condition outside this function than to check it for every level
   assert_testmodeonly(upperionlevel <= get_maxrecombininglevel(element, upperion));
 
-  nne = grid::apply_clumping(nne, oneoverfv);
+  nne = grid::apply_clumping(nne, clumpfactor);
   const int lowerion = upperion - 1;
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerionlevel);
   const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
@@ -642,9 +643,9 @@ void macroatom_close_file() {
 // multiply by upper level population to get a rate per second
 [[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(const float T_e, float nne, const int element,
                                                              const int upperion, const int upper, const int lower,
-                                                             const double epsilon_trans, const float oneoverfv)
+                                                             const double epsilon_trans, const float clumpfactor)
     -> double {
-  nne = grid::apply_clumping(nne, oneoverfv);
+  nne = grid::apply_clumping(nne, clumpfactor);
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, upperion - 1, lower);
   const double statw_lower = stat_weight(lowerionlower_uniquelevelindex);
   const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
@@ -676,11 +677,12 @@ void macroatom_close_file() {
 // multiply by lower level population to get a rate per second
 [[gnu::pure]] [[nodiscard]] auto col_ionisation_ratecoeff(const float T_e, float nne, const int element, const int ion,
                                                           const int lower, const int phixstargetindex,
-                                                          const double epsilon_trans, const float oneoverfv) -> double {
+                                                          const double epsilon_trans, const float clumpfactor)
+    -> double {
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, lower));
 
-  nne = grid::apply_clumping(nne, oneoverfv);
+  nne = grid::apply_clumping(nne, clumpfactor);
 
   // Seaton approximation: Mihalas (1978), eq.5-79, p.134
 
@@ -700,8 +702,9 @@ void macroatom_close_file() {
 // multiply by upper level population to get a rate per second
 [[gnu::pure]] [[nodiscard]] auto col_deexcitation_ratecoeff(const float T_e, float nne, const double epsilon_trans,
                                                             const double upperstatweight, const double lowerstatweight,
-                                                            const int alltransindex, const float oneoverfv) -> double {
-  nne = grid::apply_clumping(nne, oneoverfv);
+                                                            const int alltransindex, const float clumpfactor)
+    -> double {
+  nne = grid::apply_clumping(nne, clumpfactor);
   const auto coll_strength = globals::alltrans.coll_str[alltransindex];
   if (coll_strength < 0) {
     if (!globals::alltrans.forbidden[alltransindex])  // alternative: (coll_strength > -1.5) i.e. to catch -1
@@ -748,9 +751,9 @@ void macroatom_close_file() {
 // multiply by lower level population to get a rate per second
 [[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(const float T_e, float nne, const double upperstatweight,
                                                           const int alltransindex, const double epsilon_trans,
-                                                          const double lowerstatweight, const float oneoverfv)
+                                                          const double lowerstatweight, const float clumpfactor)
     -> double {
-  nne = grid::apply_clumping(nne, oneoverfv);
+  nne = grid::apply_clumping(nne, clumpfactor);
   const auto coll_strength = globals::alltrans.coll_str[alltransindex];
   const double eoverkt = epsilon_trans / (KB * T_e);
 
