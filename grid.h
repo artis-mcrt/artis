@@ -84,7 +84,7 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_numpropcells(int modelgridindex) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonemptymgi_of_mgi(int mgi) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_mgi_of_nonemptymgi(std::ptrdiff_t nonemptymgi) -> int;
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto check_mgi_is_nonempty(int mgi, int& nonemptymgi) -> bool;
+[[nodiscard]] DEVICE_FUNC auto check_mgi_is_nonempty(int mgi, int& nonemptymgi) -> bool;
 [[gnu::pure]] [[nodiscard]] auto get_model_type() -> GridType;
 void set_model_type(GridType model_type_value);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_npts_model() -> int;

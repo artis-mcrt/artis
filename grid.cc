@@ -1678,7 +1678,7 @@ void set_model_type(const GridType model_type_value) { model_type = model_type_v
 // Check if cell with index `mgi` is a non-empty cell
 // If the cell is non-empty will return `true` and `nonemptymgi` will be set accordingly, otherwise returns `false` and
 // `nonemptymgi` is set to -1
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto check_mgi_is_nonempty(const int mgi, int& nonemptymgi) -> bool {
+[[nodiscard]] DEVICE_FUNC auto check_mgi_is_nonempty(const int mgi, int& nonemptymgi) -> bool {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
   assert_testmodeonly(mgi >= 0);
   assert_testmodeonly(mgi < get_npts_model());
