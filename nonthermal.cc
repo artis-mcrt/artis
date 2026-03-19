@@ -947,10 +947,12 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
 // energy is in ergs
 // nne is the thermal electron density [cm^-3]
 // return value has units of erg/cm
-constexpr auto electron_loss_rate(const double energy, const double nne) -> double {
+constexpr auto electron_loss_rate(const double energy, double nne, const double clumpfactor) -> double {
   if (energy <= 0.) {
     return 0;
   }
+
+  nne = grid::apply_clumping(nne, clumpfactor);
 
   // normally set to 1.0, but Shingles et al. (2021) boosted this to increase heating
   constexpr double boostfactor = 1.;
@@ -1082,16 +1084,17 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
   // frac_heating multiplied by E_init, which will be divided out at the end
   double frac_heating_Einit = 0.;
   const float nne = grid::get_nne(nonemptymgi);
+  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
 
   for (int i = 0; i < SFPTS; i++) {
     const double endash = engrid(i);
 
     // first term
-    frac_heating_Einit += yfunc[i] * (electron_loss_rate(endash * EV, nne) / EV) * DELTA_E;
+    frac_heating_Einit += yfunc[i] * (electron_loss_rate(endash * EV, nne, clumpfactor) / EV) * DELTA_E;
   }
 
   // second term
-  frac_heating_Einit += SF_EMIN * get_y(yfunc, SF_EMIN) * (electron_loss_rate(SF_EMIN * EV, nne) / EV);
+  frac_heating_Einit += SF_EMIN * get_y(yfunc, SF_EMIN) * (electron_loss_rate(SF_EMIN * EV, nne, clumpfactor) / EV);
 
   double N_e_contrib_Einit = 0.;
   // third term (integral from zero to SF_EMIN)
@@ -2424,6 +2427,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   const double nne_per_ion_last = nt_solution[nonemptymgi].nneperion_when_solved;
   const double nne_per_ion_fracdiff = fabs((nne_per_ion_last / nne_per_ion) - 1.);
   const int timestep_last_solved = nt_solution[nonemptymgi].timestep_last_solved;
+  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
 
   printlnlog(
       "Spencer-Fano solver at timestep {} (last solution was at timestep {}) nne/niontot = {:g}, at last solution was "
@@ -2480,7 +2484,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   std::fill_n(sfmatrix.begin(), SFPTS * (SFPTS + 1) / 2, 0.);
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++) {
-    sfmatrix[uppertriangular(i, i)] += electron_loss_rate(engrid(i) * EV, nne) / EV;
+    sfmatrix[uppertriangular(i, i)] += electron_loss_rate(engrid(i) * EV, nne, clumpfactor) / EV;
   }
 
   if (enable_sfexcitation || enable_sfionisation) {

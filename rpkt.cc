@@ -710,13 +710,13 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
 // calculate the free-free absorption (to kpkt heating) coefficient [cm^-1]
 // = kappa(free-free) * nne
 auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool use_cellcache) -> double {
-  const auto nne = grid::get_nne(nonemptymgi);
+  const auto clumpednne = grid::apply_clumping(grid::get_nne(nonemptymgi), grid::get_clumpfactor(nonemptymgi));
   const auto T_e = grid::get_Te(nonemptymgi);
   assert_testmodeonly(!use_cellcache || globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
   const auto chi_ff_nnionpart = use_cellcache ? globals::cellcache[cellcacheslotid].chi_ff_nnionpart
                                               : calculate_chi_ffheat_nnionpart(nonemptymgi);
 
-  const double chi_ff = chi_ff_nnionpart * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
+  const double chi_ff = chi_ff_nnionpart * pow(nu, -3) * clumpednne * (1 - exp(-HOVERKB * nu / T_e));
 
   assert_testmodeonly(std::isfinite(chi_ff));
   assert_testmodeonly(chi_ff >= 0);
@@ -940,7 +940,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
     return;
   }
 
-  const auto nne = grid::get_nne(nonemptymgi);
+  const auto clumpednne = grid::apply_clumping(grid::get_nne(nonemptymgi), grid::get_clumpfactor(nonemptymgi));
 
   // free-free absorption
   chi_rpkt_cont.ffheat = calculate_chi_ffheating(nonemptymgi, nu_cmf, USECELLHISTANDUPDATEPHIXSLIST);
@@ -948,7 +948,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   if (globals::opacity_case >= 4) {
     [[likely]]
     // First contribution: Thomson scattering on free electrons
-    chi_rpkt_cont.ffescat = SIGMA_T * nne;
+    chi_rpkt_cont.ffescat = SIGMA_T * clumpednne;
 
     // Third contribution: bound-free absorption
     chi_rpkt_cont.bf =

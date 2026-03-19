@@ -646,8 +646,9 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
 
   // this gets divided and cancelled out in the radiative case anyway
   const auto nne = (nonemptymgi >= 0) ? grid::get_nne(nonemptymgi) : 1.F;
-  const float clumpfactor =
-      (nonemptymgi >= 0) ? grid::get_clumpfactor(nonemptymgi) : 1.F;  // TODO: is this the correct way to do this?
+
+  // TODO: is this the correct way to do this? (Just checking that the cell is non-empty I think)
+  const float clumpfactor = (nonemptymgi >= 0) ? grid::get_clumpfactor(nonemptymgi) : 1.F;
   double alpha = 0.;
   const int maxrecombininglevel = get_maxrecombininglevel(element, lowerion + 1);
   for (int upper = 0; upper <= maxrecombininglevel; upper++) {

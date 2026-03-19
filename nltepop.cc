@@ -296,6 +296,7 @@ void print_element_rates_summary(const int element, const int modelgridindex, co
 
     for (int level = 0; (level < max_printed_levels) && (level < nlevels) && (level <= nlevels_nlte + 1); level++) {
       if (level == 0) {
+        // TODO: print clumping factor??
         printlnlog(
             "  modelgridindex {} timestep {} NLTE iteration {} Te {:g} nne {:g}: NLTE summary for Z={} ionstage {}:",
             modelgridindex, timestep, nlte_iter, grid::get_Te(nonemptymgi), grid::get_nne(nonemptymgi), atomic_number,
@@ -331,6 +332,7 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   const int selected_ionstage = get_ionstage(element, selected_ion);
   const auto selected_index = get_nlte_vector_index(element, selected_ion, selected_level, first_ion_used);
   const double pop_selectedlevel = popvec[selected_index];
+  // TODO: print clumping factor??
   printlnlog(
       "timestep {} cell {} Te {:g} nne {:g} NLTE level diagnostics for Z={} ionstage {} level {} rates into and out of "
       "this level",
@@ -666,7 +668,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
   assert_always(ion < max_ion_used);  // can't ionise top ion stage
   const auto T_e = grid::get_Te(nonemptymgi);
   const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
-  const float nne = grid::apply_clumping(grid::get_nne(nonemptymgi), clumpfactor);
+  const float clumpednne = grid::apply_clumping(grid::get_nne(nonemptymgi), clumpfactor);
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
     const int level_index = get_nlte_vector_index(element, ion, level, first_ion_used);
@@ -697,7 +699,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
       }
 
       // capture (which is an excitation process, and the first part of di-electronic recomb)
-      R = nne * A_a * statweight / stat_weight(element, target_ion, target_level) * SAHACONST * pow(T_e, -1.5) *
+      R = clumpednne * A_a * statweight / stat_weight(element, target_ion, target_level) * SAHACONST * pow(T_e, -1.5) *
           exp(-1. * epsilon_trans / KB / T_e);
       // renorm??
 
