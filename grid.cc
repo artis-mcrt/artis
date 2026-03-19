@@ -1504,9 +1504,13 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
   return modelgrid_input[modelgridindex].initial_radial_pos_sum * tratmid / assoc_cells;
 }
 
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_vel(const int modelgridindex,
-                                                                           const double tratmid) -> double {
-  return get_modelcell_mean_radial_pos(modelgridindex, tratmid) / tratmid;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_vel(const int modelgridindex) -> double {
+  // TODO: both versions give the same thing. uncommented one should give ever so slightly better performance
+
+  const int assoc_cells = grid::get_numpropcells(modelgridindex);
+  return modelgrid_input[modelgridindex].initial_radial_pos_sum / globals::tmin / assoc_cells;
+  // ---------------
+  // return get_modelcell_mean_radial_pos(modelgridindex, tratmid) / tmid;
 }
 
 // mass fraction of an element (all isotopes combined)

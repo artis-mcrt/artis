@@ -383,8 +383,8 @@ void setup_clumping_factors_for_timestep(int nts) {  // todo: maybe other argume
   const double tratmid = globals::timesteps[nts].mid / globals::tmin;
   for (int i = 0; i < numcells; i++) {
     if (i % globals::node_nprocs == globals::rank_in_node && grid::check_mgi_is_nonempty(i, nonemptymgi)) {
-      const double rad_vel = grid::get_modelcell_mean_radial_vel(i, tratmid);
-      grid::set_clumpfactor(nonemptymgi, clumping_factor(tratmid, rad_vel));
+      const double rad_vel = grid::get_modelcell_mean_radial_vel(i);
+      grid::set_clumpfactor(nonemptymgi, clumping_factor(tmid, rad_vel));
     }
   }
 #endif
