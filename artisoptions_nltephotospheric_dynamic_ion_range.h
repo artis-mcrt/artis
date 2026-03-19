@@ -2,8 +2,6 @@
 #define ARTISOPTIONS_H
 // NOLINTBEGIN(modernize*,misc-unused-parameters)
 
-#include <sys/unistd.h>
-
 #include <cstdlib>
 #include <optional>
 
