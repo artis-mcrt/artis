@@ -380,13 +380,26 @@ void setup_clumping_factors_for_timestep(int nts) {  // todo: maybe other argume
   fclump.close();
 #else
   int nonemptymgi = 0;
-  const double tratmid = globals::timesteps[nts].mid / globals::tmin;
+  const double tmid = globals::timesteps[nts].mid;
+  printlog("My nonemptymgis are ");  // temp
   for (int i = 0; i < numcells; i++) {
-    if (i % globals::node_nprocs == globals::rank_in_node && grid::check_mgi_is_nonempty(i, nonemptymgi)) {
+    if ((i % globals::node_nprocs) == globals::rank_in_node && grid::check_mgi_is_nonempty(i, nonemptymgi)) {
       const double rad_vel = grid::get_modelcell_mean_radial_vel(i);
       grid::set_clumpfactor(nonemptymgi, clumping_factor(tmid, rad_vel));
+      printlog("{} ", nonemptymgi);  // temp
     }
   }
+  printlnlog("");  // temp
+
+  ///////////// temp
+  printlog("My clumping factors are ");
+  for (int i = 0; i < numcells; i++) {
+    if (grid::check_mgi_is_nonempty(i, nonemptymgi)) {
+      printlog("{} ", grid::get_clumpfactor(nonemptymgi));
+    }
+  }
+  printlnlog("");
+  /////////////
 #endif
 }
 
@@ -636,6 +649,8 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
     // Writing to shared memory, synchronise
     MPI_Barrier(globals::mpi_comm_node);
     setup_clumping_factors_for_timestep(nts);
+    MPI_Barrier(MPI_COMM_WORLD);  // temp
+    assert_always(false);  // temp
   }
 
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
