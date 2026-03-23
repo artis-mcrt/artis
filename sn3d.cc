@@ -325,6 +325,40 @@ void mpi_communicate_grid_properties() {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+void normalise_deposition_estimators(int nts) {
+  const double dt = globals::timesteps[nts].width;
+  const auto nprocs = globals::nprocs;
+
+  globals::timesteps[nts].gamma_dep = 0.;
+  globals::timesteps[nts].positron_dep = 0.;
+  globals::timesteps[nts].electron_dep = 0.;
+  globals::timesteps[nts].alpha_dep = 0.;
+
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+
+    const double dV =
+        grid::get_modelcell_assocvolume_tmin(mgi) * std::pow(globals::timesteps[nts].mid / globals::tmin, 3);
+
+    // contribute the energy deposited (in erg) by each process in this cell to the timestep total
+    globals::timesteps[nts].gamma_dep += globals::dep_estimator_gamma[nonemptymgi] / nprocs;
+    globals::timesteps[nts].positron_dep += globals::dep_estimator_positron[nonemptymgi] / nprocs;
+    globals::timesteps[nts].electron_dep += globals::dep_estimator_electron[nonemptymgi] / nprocs;
+    globals::timesteps[nts].alpha_dep += globals::dep_estimator_alpha[nonemptymgi] / nprocs;
+
+    // normalise the estimators to units of erg/s/cm^3
+    const double estimator_normfactor = 1 / dV / dt / nprocs;
+
+    globals::dep_estimator_gamma[nonemptymgi] *= estimator_normfactor;
+    globals::dep_estimator_positron[nonemptymgi] *= estimator_normfactor;
+    globals::dep_estimator_electron[nonemptymgi] *= estimator_normfactor;
+    globals::dep_estimator_alpha[nonemptymgi] *= estimator_normfactor;
+
+    assert_testmodeonly(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
+    assert_testmodeonly(std::isfinite(globals::dep_estimator_gamma[nonemptymgi]));
+  }
+}
+
 void mpi_reduce_estimators(const int nts) {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
   radfield::reduce_estimators();
@@ -389,6 +423,11 @@ void mpi_reduce_estimators(const int nts) {
   globals::timesteps[nts].gamma_emission /= globals::nprocs;
 
   MPI_Barrier(MPI_COMM_WORLD);
+
+  // The estimators have been summed across all processes and distributed.
+  // They will now be normalised independently on all processes.
+
+  normalise_deposition_estimators(nts);
 }
 
 void write_temp_packetsfile(const int timestep, const int my_rank, std::span<const Packet> pkt) {
@@ -543,40 +582,6 @@ void zero_estimators() {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void normalise_deposition_estimators(int nts) {
-  const double dt = globals::timesteps[nts].width;
-  const auto nprocs = globals::nprocs;
-
-  globals::timesteps[nts].gamma_dep = 0.;
-  globals::timesteps[nts].positron_dep = 0.;
-  globals::timesteps[nts].electron_dep = 0.;
-  globals::timesteps[nts].alpha_dep = 0.;
-
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-
-    const double dV =
-        grid::get_modelcell_assocvolume_tmin(mgi) * std::pow(globals::timesteps[nts].mid / globals::tmin, 3);
-
-    // contribute the energy deposited (in erg) by each process in this cell to the timestep total
-    globals::timesteps[nts].gamma_dep += globals::dep_estimator_gamma[nonemptymgi] / nprocs;
-    globals::timesteps[nts].positron_dep += globals::dep_estimator_positron[nonemptymgi] / nprocs;
-    globals::timesteps[nts].electron_dep += globals::dep_estimator_electron[nonemptymgi] / nprocs;
-    globals::timesteps[nts].alpha_dep += globals::dep_estimator_alpha[nonemptymgi] / nprocs;
-
-    // normalise the estimators to units of erg/s/cm^3
-    const double estimator_normfactor = 1 / dV / dt / nprocs;
-
-    globals::dep_estimator_gamma[nonemptymgi] *= estimator_normfactor;
-    globals::dep_estimator_positron[nonemptymgi] *= estimator_normfactor;
-    globals::dep_estimator_electron[nonemptymgi] *= estimator_normfactor;
-    globals::dep_estimator_alpha[nonemptymgi] *= estimator_normfactor;
-
-    assert_testmodeonly(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
-    assert_testmodeonly(std::isfinite(globals::dep_estimator_gamma[nonemptymgi]));
-  }
-}
-
 auto do_timestep(const int nts, const int titer, std::span<Packet> packets, const int walltimelimitseconds) -> bool {
   bool do_this_full_loop = true;
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
@@ -638,11 +643,6 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 
     printlnlog("timestep {}: time after estimators have been communicated {} (took {} seconds)", nts,
                std::time(nullptr), std::time(nullptr) - time_communicate_estimators_start);
-
-    // The estimators have been summed across all processes and distributed.
-    // They will now be normalised independently on all processes.
-
-    normalise_deposition_estimators(nts);
 
     write_deposition_file();
 
