@@ -48,36 +48,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   pkt.prop_time = globals::tmin;
   pkt.originated_from_particlenotgamma = false;
 
-  const auto prop_gridtype = grid::get_propgridtype();
-  if (prop_gridtype == GridType::SPHERICAL1D) {
-    const double zrand = rng_uniform();
-    const double r_inner = grid::get_cellcoordmin(cellindex, 0);
-    const double r_outer = grid::get_cellcoordmax(cellindex, 0);
-    // use equal volume probability distribution to select radius
-    const double radius = pow((zrand * pow(r_inner, 3)) + ((1. - zrand) * pow(r_outer, 3)), 1 / 3.);
-    // assert_always(radius >= r_inner);
-    // assert_always(radius <= r_outer);
-
-    pkt.pos = vec_scale(get_rand_isotropic_unitvec(), radius);
-
-  } else if (prop_gridtype == GridType::CYLINDRICAL2D) {
-    const double zrand = rng_uniform_pos();
-    const double rcyl_inner = grid::get_cellcoordmin(cellindex, 0);
-    const double rcyl_outer = grid::get_cellcoordmax(cellindex, 0);
-    // use equal area probability distribution to select radius
-    const double rcyl_rand = std::sqrt((zrand * std::pow(rcyl_inner, 2)) + ((1. - zrand) * std::pow(rcyl_outer, 2)));
-    const double theta_rand = rng_uniform() * 2 * PI;
-    pkt.pos = {std::cos(theta_rand) * rcyl_rand, std::sin(theta_rand) * rcyl_rand,
-               grid::get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * grid::propcell_width_tmin(cellindex, 1))};
-
-  } else if (prop_gridtype == GridType::CARTESIAN3D) {
-    for (int axis = 0; axis < 3; axis++) {
-      pkt.pos[axis] =
-          grid::get_cellcoordmin(cellindex, axis) + (rng_uniform_pos() * grid::propcell_width_tmin(cellindex, axis));
-    }
-  } else {
-    assert_always(false);
-  }
+  pkt.pos = grid::get_propcell_random_position_tmin(cellindex);
 
   // ensure that the random position was inside the cell we selected
   assert_always(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == cellindex);

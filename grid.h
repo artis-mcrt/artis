@@ -6,7 +6,6 @@
 #include <span>
 #include <tuple>
 
-#include "artisoptions.h"
 #include "constants.h"
 #include "globals.h"
 #include "packet.h"
@@ -95,6 +94,7 @@ void write_grid_restart_data(int timestep);
 [[gnu::pure]] [[nodiscard]] auto get_ndo(int rank) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_ndo_nonempty(int rank) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_totmassnuclide_tmodel(int z, int a) -> double;
+[[nodiscard]] auto get_propcell_random_position_tmin(int cellindex) -> Vec3d;
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
     -> std::tuple<double, int>;
 
@@ -127,8 +127,6 @@ inline auto get_ejecta_kinetic_energy() {
 
   return E_kin;
 }
-
-[[gnu::pure]] DEVICE_FUNC inline auto get_propgridtype() -> GridType { return GRID_TYPE.value_or(get_modelgridtype()); }
 
 }  // namespace grid
 
