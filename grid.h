@@ -128,7 +128,7 @@ inline auto get_ejecta_kinetic_energy() {
   return E_kin;
 }
 
-DEVICE_FUNC inline auto get_propgridtype() -> GridType { return GRID_TYPE.value_or(get_modelgridtype()); }
+[[gnu::pure]] DEVICE_FUNC inline auto get_propgridtype() -> GridType { return GRID_TYPE.value_or(get_modelgridtype()); }
 
 }  // namespace grid
 
