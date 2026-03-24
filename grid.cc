@@ -1177,6 +1177,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
         assert_always(n_z < ncoordgrid[axis]);
         return n_z;
       }
+      break;
     }
 
     case GridType::SPHERICAL1D: {
@@ -1187,6 +1188,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
           return n_r;
         }
       }
+      break;
     }
   }
 
