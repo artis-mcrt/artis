@@ -1596,12 +1596,10 @@ void set_TJ(const int nonemptymgi, const float TJ) { TJ_allcells[nonemptymgi] = 
 
 void set_W(const int nonemptymgi, const float W) { W_allcells[nonemptymgi] = W; }
 
-auto get_modelgridtype() -> GridType {
+DEVICE_FUNC auto get_modelgridtype() -> GridType {
   assert_testmodeonly(model_type.has_value());
   return model_type.value();
 }
-
-void set_model_gridtype(const GridType model_type_value) { model_type = model_type_value; }
 
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_npts_model() -> int
 // number of model grid cells
@@ -1911,7 +1909,8 @@ void read_ejecta_model() {
     fmodel.seekg(pos_after_t_model);
   }
 
-  set_model_gridtype(detected_dim.value());
+  assert_always(detected_dim.has_value());
+  model_type = detected_dim;
 
   assert_always(modelgrid_input.empty());
   modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model + 1, ModelGridCellInput{});
