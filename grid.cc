@@ -1373,7 +1373,7 @@ template <BoundaryType boundarytype, size_t S1>
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 [[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(const int cellindex) -> double {
   if (get_prop_gridtype() == GridType::CARTESIAN3D) {
-    return (wid_init(cellindex, 0) * wid_init(cellindex, 0) * wid_init(cellindex, 0));
+    return wid_init(cellindex, 0) * wid_init(cellindex, 1) * wid_init(cellindex, 2);
   }
 
   // 2D and 1D with direct mapping to propagation cells
