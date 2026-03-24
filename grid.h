@@ -1,12 +1,12 @@
-#include <cmath>
-#include <cstddef>
-#include <span>
-
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
+#include <cmath>
+#include <cstddef>
+#include <span>
 #include <tuple>
 
+#include "artisoptions.h"
 #include "constants.h"
 #include "globals.h"
 #include "packet.h"
@@ -81,8 +81,8 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_numpropcells(int modelgridindex) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonemptymgi_of_mgi(int mgi) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_mgi_of_nonemptymgi(std::ptrdiff_t nonemptymgi) -> int;
-[[gnu::pure]] [[nodiscard]] auto get_model_type() -> GridType;
-void set_model_type(GridType model_type_value);
+[[gnu::pure]] [[nodiscard]] auto get_model_gridtype() -> GridType;
+void set_model_gridtype(GridType model_type_value);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_npts_model() -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonempty_npts_model() -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_t_model() -> double;
@@ -127,6 +127,12 @@ inline auto get_ejecta_kinetic_energy() {
   }
 
   return E_kin;
+}
+
+constexpr auto get_prop_gridtype() -> GridType {
+  // accessor method exists for future autodetection of grid type from input file, but for now just return the
+  // compile-time constant
+  return GRID_TYPE;
 }
 
 }  // namespace grid

@@ -661,7 +661,7 @@ void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkt
   // the emission resolved spectra are slow to generate, and require a lot of memory
   const bool do_emission_absorption = WRITE_EMISSIONABSORPTION_SPEC_AT_END && simulation_complete;
 
-  const bool multdimensional = grid::get_model_type() != GridType::SPHERICAL1D;
+  const bool multdimensional = grid::get_model_gridtype() != GridType::SPHERICAL1D;
   const int dirbinend = (multdimensional && simulation_complete) ? MABINS : 0;
 
   const auto time_func_start = std::time(nullptr);
