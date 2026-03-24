@@ -1716,8 +1716,6 @@ DEVICE_FUNC auto get_initenergyq(const int modelgridindex) -> double {
 auto get_cellradialposmid(const int cellindex) -> double {
   const auto prop_gridtype = get_propgridtype();
   if (prop_gridtype == GridType::SPHERICAL1D) {
-    // mid point radius
-    // return get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex, 0));
     // volume averaged mean radius is slightly complex for radial shells
     const double r_inner = grid::get_cellcoordmin(cellindex, 0);
     const double r_outer = r_inner + grid::propcell_width_tmin(cellindex, 0, prop_gridtype);
