@@ -47,7 +47,7 @@ jobs:
                   python3 -m compiledb -n --full-path make TESTMODE=ON
 
             - name: Run pre-commit hooks
-              uses: j178/prek-action@v1
+              uses: j178/prek-action@v2
 
             - name: Run clang-tidy
               run: |
