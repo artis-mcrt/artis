@@ -486,13 +486,11 @@ void map_1dmodelto3dgrid() {
 
 // Map 2D cylindrical model onto 3D Cartesian propagation grid
 void map_2dmodelto3dgrid() {
-  const auto propgridtype = get_propgridtype();
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     // map to 3D Cartesian grid
-    const auto pos_mid =
-        Vec3d{get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0, propgridtype)),
-              get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1, propgridtype)),
-              get_cellcoordmin(cellindex, 2) + (0.5 * propcell_width_tmin(cellindex, 2, propgridtype))};
+    const auto pos_mid = Vec3d{get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0)),
+                               get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1)),
+                               get_cellcoordmin(cellindex, 2) + (0.5 * propcell_width_tmin(cellindex, 2))};
 
     const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
 
@@ -1334,8 +1332,8 @@ template <BoundaryType boundarytype, size_t S1>
 
 // for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
 // for spherical grid get the radial extent (r_outer - r_inner) at time tmin
-[[gnu::pure]] [[nodiscard]] auto propcell_width_tmin(const int cellindex, const int axis, const GridType gridtype)
-    -> double {
+[[gnu::pure]] [[nodiscard]] auto propcell_width_tmin(const int cellindex, const int axis) -> double {
+  const auto gridtype = get_propgridtype();
   if (gridtype == GridType::CARTESIAN3D) {
     return 2 * globals::rmax / ncoordgrid[axis];
   }
@@ -1358,14 +1356,13 @@ template <BoundaryType boundarytype, size_t S1>
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
   const auto prop_gridtype = get_propgridtype();
   if (prop_gridtype == GridType::CARTESIAN3D) {
-    return (propcell_width_tmin(modelgridindex, 0, prop_gridtype) *
-            propcell_width_tmin(modelgridindex, 1, prop_gridtype) *
-            propcell_width_tmin(modelgridindex, 2, prop_gridtype)) *
+    return (propcell_width_tmin(modelgridindex, 0) * propcell_width_tmin(modelgridindex, 1) *
+            propcell_width_tmin(modelgridindex, 2)) *
            get_numpropcells(modelgridindex);
   }
 
   if (prop_gridtype == GridType::CYLINDRICAL2D) {
-    return propcell_width_tmin(modelgridindex, 1, prop_gridtype) * PI *
+    return propcell_width_tmin(modelgridindex, 1) * PI *
            (pow(get_cellcoordmax(modelgridindex, 0), 2) - pow(get_cellcoordmin(modelgridindex, 0), 2));
   }
 
@@ -1381,8 +1378,7 @@ template <BoundaryType boundarytype, size_t S1>
 [[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(const int cellindex) -> double {
   const auto prop_gridtype = get_propgridtype();
   if (prop_gridtype == GridType::CARTESIAN3D) {
-    return propcell_width_tmin(cellindex, 0, prop_gridtype) * propcell_width_tmin(cellindex, 1, prop_gridtype) *
-           propcell_width_tmin(cellindex, 2, prop_gridtype);
+    return propcell_width_tmin(cellindex, 0) * propcell_width_tmin(cellindex, 1) * propcell_width_tmin(cellindex, 2);
   }
 
   // 2D and 1D with direct mapping to propagation cells
@@ -1393,19 +1389,19 @@ template <BoundaryType boundarytype, size_t S1>
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 [[gnu::pure]] [[nodiscard]] auto get_cellcoordmax(const int cellindex, const int axis) -> double {
-  const auto gridtype = get_propgridtype();
-  if (gridtype == GridType::CARTESIAN3D) {
-    return grid::get_cellcoordmin(cellindex, axis) + grid::propcell_width_tmin(0, axis, gridtype);
+  const auto prop_gridtype = get_propgridtype();
+  if (prop_gridtype == GridType::CARTESIAN3D) {
+    return grid::get_cellcoordmin(cellindex, axis) + grid::propcell_width_tmin(0, axis);
   }
 
-  if (gridtype == GridType::CYLINDRICAL2D) {
+  if (prop_gridtype == GridType::CYLINDRICAL2D) {
     assert_testmodeonly(axis <= 1);
-    return grid::get_cellcoordmin(cellindex, axis) + grid::propcell_width_tmin(cellindex, axis, gridtype);
+    return grid::get_cellcoordmin(cellindex, axis) + grid::propcell_width_tmin(cellindex, axis);
   }
 
-  if (gridtype == GridType::SPHERICAL1D) {
+  if (prop_gridtype == GridType::SPHERICAL1D) {
     assert_testmodeonly(axis == 0);
-    return grid::get_cellcoordmin(cellindex, axis) + grid::propcell_width_tmin(cellindex, axis, gridtype);
+    return grid::get_cellcoordmin(cellindex, axis) + grid::propcell_width_tmin(cellindex, axis);
   }
 
   assert_always(false);
@@ -1716,20 +1712,20 @@ auto get_cellradialposmid(const int cellindex) -> double {
   if (prop_gridtype == GridType::SPHERICAL1D) {
     // volume averaged mean radius is slightly complex for radial shells
     const double r_inner = grid::get_cellcoordmin(cellindex, 0);
-    const double r_outer = r_inner + grid::propcell_width_tmin(cellindex, 0, prop_gridtype);
+    const double r_outer = r_inner + grid::propcell_width_tmin(cellindex, 0);
     return 3. / 4 * (pow(r_outer, 4.) - pow(r_inner, 4.)) / (pow(r_outer, 3) - pow(r_inner, 3.));
   }
 
   if (prop_gridtype == GridType::CYLINDRICAL2D) {
-    const double rcyl_mid = get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0, prop_gridtype));
-    const double z_mid = get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1, prop_gridtype));
+    const double rcyl_mid = get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0));
+    const double z_mid = get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1));
     return std::sqrt(std::pow(rcyl_mid, 2) + std::pow(z_mid, 2));
   }
 
   // cubic grid requires taking the length of the 3D position vector
   Vec3d dcen{};
   for (int axis = 0; axis < 3; axis++) {
-    dcen[axis] = get_cellcoordmin(cellindex, axis) + (0.5 * propcell_width_tmin(cellindex, axis, prop_gridtype));
+    dcen[axis] = get_cellcoordmin(cellindex, axis) + (0.5 * propcell_width_tmin(cellindex, axis));
   }
 
   return vec_len(dcen);

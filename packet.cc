@@ -68,13 +68,12 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
     const double rcyl_rand = std::sqrt((zrand * std::pow(rcyl_inner, 2)) + ((1. - zrand) * std::pow(rcyl_outer, 2)));
     const double theta_rand = rng_uniform() * 2 * PI;
     pkt.pos = {std::cos(theta_rand) * rcyl_rand, std::sin(theta_rand) * rcyl_rand,
-               grid::get_cellcoordmin(cellindex, 1) +
-                   (rng_uniform_pos() * grid::propcell_width_tmin(cellindex, 1, prop_gridtype))};
+               grid::get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * grid::propcell_width_tmin(cellindex, 1))};
 
   } else if (prop_gridtype == GridType::CARTESIAN3D) {
     for (int axis = 0; axis < 3; axis++) {
-      pkt.pos[axis] = grid::get_cellcoordmin(cellindex, axis) +
-                      (rng_uniform_pos() * grid::propcell_width_tmin(cellindex, axis, prop_gridtype));
+      pkt.pos[axis] =
+          grid::get_cellcoordmin(cellindex, axis) + (rng_uniform_pos() * grid::propcell_width_tmin(cellindex, axis));
     }
   } else {
     assert_always(false);
