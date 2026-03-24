@@ -1333,22 +1333,19 @@ template <BoundaryType boundarytype, size_t S1>
 // for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
 // for spherical grid get the radial extent (r_outer - r_inner) at time tmin
 [[gnu::pure]] [[nodiscard]] auto propcell_width_tmin(const int cellindex, const int axis) -> double {
-  const auto gridtype = get_propgridtype();
-  if (gridtype == GridType::CARTESIAN3D) {
-    return 2 * globals::rmax / ncoordgrid[axis];
-  }
+  switch (get_propgridtype()) {
+    case GridType::CARTESIAN3D:
+      return 2 * globals::rmax / ncoordgrid[axis];
 
-  if (gridtype == GridType::CYLINDRICAL2D) {
-    return (axis == 0) ? globals::rmax / ncoordgrid[axis] : 2 * globals::rmax / ncoordgrid[axis];
-  }
+    case GridType::CYLINDRICAL2D:
+      return (axis == 0) ? globals::rmax / ncoordgrid[axis] : 2 * globals::rmax / ncoordgrid[axis];
 
-  if (gridtype == GridType::SPHERICAL1D) {
-    const int modelgridindex = cellindex;
-    const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
-    return (vout_model[modelgridindex] - v_inner) * globals::tmin;
+    case GridType::SPHERICAL1D: {
+      const int modelgridindex = cellindex;
+      const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
+      return (vout_model[modelgridindex] - v_inner) * globals::tmin;
+    }
   }
-
-  assert_always(false);
 }
 
 // return the model cell volume (when mapped to the propagation cells) at globals::tmin
