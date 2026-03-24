@@ -211,7 +211,12 @@ auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> doub
   return NAN;
 }
 
-[[gnu::pure]] DEVICE_FUNC auto get_propgridtype() -> GridType { return GRID_TYPE.value_or(get_modelgridtype()); }
+[[gnu::pure]] DEVICE_FUNC auto get_propgridtype() -> GridType {
+  if (GRID_TYPE.has_value()) {
+    return GRID_TYPE.value();
+  }
+  return get_modelgridtype();
+}
 
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r
 // direction)
