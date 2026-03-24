@@ -1186,23 +1186,16 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
   return -1;
 }
 
-// Convert a position in Cartesian xyz to the grid coordinate system (which might the same, or 2D cylindrical or 1D
-// spherical)
+// Convert a position vector from Cartesian xyz to the grid coordinate system
 [[nodiscard]] constexpr auto get_gridcoords_from_xyz(const Vec3d& pos_xyz, const GridType gridtype) -> Vec3d {
-  if (gridtype == GridType::CARTESIAN3D) {
-    return pos_xyz;
+  switch (gridtype) {
+    case GridType::CARTESIAN3D:
+      return pos_xyz;
+    case GridType::CYLINDRICAL2D:
+      return {std::sqrt(pow2(pos_xyz[0]) + pow2(pos_xyz[1])), pos_xyz[2], NAN};
+    case GridType::SPHERICAL1D:
+      return {vec_len(pos_xyz), NAN, NAN};
   }
-
-  if (gridtype == GridType::CYLINDRICAL2D) {
-    return {std::sqrt(pow2(pos_xyz[0]) + pow2(pos_xyz[1])), pos_xyz[2], NAN};
-  }
-
-  if (gridtype == GridType::SPHERICAL1D) {
-    return {vec_len(pos_xyz), NAN, NAN};
-  }
-
-  assert_always(false);
-  return {NAN, NAN, NAN};
 }
 
 // get the velocity in the grid coordinate system from the xyz position and direction
