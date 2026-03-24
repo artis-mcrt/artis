@@ -1413,7 +1413,7 @@ template <BoundaryType boundarytype, size_t S1>
 
 // for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
 // for spherical grid get the radial extent (r_outer - r_inner) at time tmin
-[[gnu::pure]] [[nodiscard]] auto propcell_width_tmin(const int cellindex, const int axis) -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto propcell_width_tmin(const int cellindex, const int axis) -> double {
   switch (get_propgridtype()) {
     case GridType::CARTESIAN3D:
       return 2 * globals::rmax / ncoordgrid[axis];

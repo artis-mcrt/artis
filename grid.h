@@ -39,7 +39,7 @@ inline std::span<float> ion_partfuncts_allcells{};
 
 [[nodiscard]] auto get_elements_uppermost_ion(int nonemptymgi, int element) -> int;
 void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion);
-[[gnu::pure]] [[nodiscard]] auto propcell_width_tmin(int cellindex, int axis) -> double;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto propcell_width_tmin(int cellindex, int axis) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_assocvolume_tmin(int modelgridindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(int cellindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_cellradialposmid(int cellindex) -> double;
