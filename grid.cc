@@ -592,7 +592,7 @@ void map_modeltogrid_direct() {
   }
 }
 
-void read_abundances() {
+void read_elem_abundances() {
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
   printlog("reading abundances.txt...");
@@ -2321,7 +2321,7 @@ void init_grid(const int my_rank) {
 
   allocate_nonemptymodelcells();
   calculate_kappagrey();
-  read_abundances();
+  read_elem_abundances();
 
   const int ndo_nonempty = get_ndo_nonempty(my_rank);
 
