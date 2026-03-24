@@ -2341,9 +2341,11 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 
 // identify the cell index from an (x,y,z) position and a time.
 [[nodiscard]] DEVICE_FUNC auto get_cellindex_from_pos(const Vec3d& pos, const double time) -> int {
-  auto posgridcoords = get_gridcoords_from_xyz(pos, grid::get_prop_gridtype());
+  const auto prop_gridtype = get_prop_gridtype();
+  const auto ndim = get_ndim(prop_gridtype);
+  auto posgridcoords = get_gridcoords_from_xyz(pos, prop_gridtype);
   int cellindex = 0;
-  for (int d = 0; d < get_ndim(get_prop_gridtype()); d++) {
+  for (int d = 0; d < ndim; d++) {
     if (std::abs(posgridcoords[d]) > (globals::vmax * time)) {
       // outside grid
       return -99;
@@ -2355,7 +2357,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 
   // do a check that the position is within the cell
   const double trat = time / globals::tmin;
-  for (int n = 0; n < get_ndim(get_prop_gridtype()); n++) {
+  for (int n = 0; n < ndim; n++) {
     assert_always(posgridcoords[n] >= ((grid::get_cellcoordmin(cellindex, n) * trat) - 10));
     assert_always(posgridcoords[n] <= ((grid::get_cellcoordmax(cellindex, n) * trat) + 10));
   }
