@@ -220,7 +220,7 @@ auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> doub
 
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r
 // direction)
-[[gnu::pure]] [[nodiscard]] auto get_coordcellindexincrement(const int axis) -> int {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_coordcellindexincrement(const int axis) -> int {
   switch (axis) {
     case 0:
       return 1;
@@ -241,7 +241,7 @@ auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> doub
 }
 
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
-[[gnu::pure]] [[nodiscard]] auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
   const auto prop_gridtype = get_propgridtype();
   if (prop_gridtype == GridType::CARTESIAN3D || prop_gridtype == GridType::CYLINDRICAL2D) {
     switch (axis) {
