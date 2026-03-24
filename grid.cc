@@ -1156,34 +1156,36 @@ constexpr auto get_grid_type_name(const GridType gridtype) -> std::string {
 // Get the discrete index of the coordinate value (where pos must be position in grid coordinate system, not
 // necessarily xyz)
 auto get_poscoordpointnum(const double pos, const double time, const int axis) -> int {
-  if (get_propgridtype() == GridType::CARTESIAN3D) {
-    const auto idx = static_cast<int>(((pos / time) + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
-    assert_always(idx >= 0);
-    assert_always(idx < ncoordgrid[axis]);
-    return idx;
-  }
-
-  if (get_propgridtype() == GridType::CYLINDRICAL2D) {
-    if (axis == 0) {
-      const auto n_rcyl = static_cast<int>(pos / time / globals::vmax * ncoordgrid[axis]);
-      assert_always(n_rcyl >= 0);
-      assert_always(n_rcyl < ncoordgrid[axis]);
-      return n_rcyl;
+  switch (get_propgridtype()) {
+    case GridType::CARTESIAN3D: {
+      const auto idx = static_cast<int>(((pos / time) + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
+      assert_always(idx >= 0);
+      assert_always(idx < ncoordgrid[axis]);
+      return idx;
     }
-    if (axis == 1) {
-      const auto n_z = static_cast<int>(((pos / time) + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
-      assert_always(n_z >= 0);
-      assert_always(n_z < ncoordgrid[axis]);
-      return n_z;
-    }
-  }
 
-  if (get_propgridtype() == GridType::SPHERICAL1D) {
-    // radial spacing is non-uniform, so we have to do a search
-    const auto trat = time / globals::tmin;
-    for (int n_r = 0; n_r < ncoordgrid[0]; n_r++) {
-      if ((pos < grid::get_cellcoordmax(n_r, 0) * trat) && (pos >= grid::get_cellcoordmin(n_r, 0) * trat)) {
-        return n_r;
+    case GridType::CYLINDRICAL2D: {
+      if (axis == 0) {
+        const auto n_rcyl = static_cast<int>(pos / time / globals::vmax * ncoordgrid[axis]);
+        assert_always(n_rcyl >= 0);
+        assert_always(n_rcyl < ncoordgrid[axis]);
+        return n_rcyl;
+      }
+      if (axis == 1) {
+        const auto n_z = static_cast<int>(((pos / time) + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
+        assert_always(n_z >= 0);
+        assert_always(n_z < ncoordgrid[axis]);
+        return n_z;
+      }
+    }
+
+    case GridType::SPHERICAL1D: {
+      // radial spacing is non-uniform, so we have to do a search
+      const auto trat = time / globals::tmin;
+      for (int n_r = 0; n_r < ncoordgrid[0]; n_r++) {
+        if ((pos < grid::get_cellcoordmax(n_r, 0) * trat) && (pos >= grid::get_cellcoordmin(n_r, 0) * trat)) {
+          return n_r;
+        }
       }
     }
   }
