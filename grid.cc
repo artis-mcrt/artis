@@ -1226,6 +1226,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
   }
 
   assert_always(false);
+  return {NAN, NAN, NAN};
 }
 
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
