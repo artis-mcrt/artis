@@ -270,6 +270,7 @@ auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> doub
   }
 
   assert_always(false);
+  return -1;
 }
 
 void set_ffegrp(const int modelgridindex, float x) {
