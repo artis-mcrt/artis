@@ -45,7 +45,7 @@ namespace grid {
 
 namespace {
 
-std::array<int, 3> ncoordgrid{};  // propagation grid dimensions
+std::array<int, 3> ncoordgrid{0, 0, 0};  // propagation grid dimensions
 
 GridType model_type = GridType::AUTODETECT;
 ptrdiff_t npts_model = 0;  // number of model grid cells
@@ -1058,11 +1058,10 @@ void setup_grid_cartesian_3d() {
 
   // Set grid size for uniform xyz grid
   if (get_model_gridtype() == GridType::CARTESIAN3D) {
-    // if we used in a 3D ejecta model, the propagation grid must match the input grid exactly
     // in case the user specified a grid size, we should ensure that it matches
-    assert_always(ncoordgrid[0] == CUBOID_NCOORDGRID_X || CUBOID_NCOORDGRID_X < 0);
-    assert_always(ncoordgrid[1] == CUBOID_NCOORDGRID_Y || CUBOID_NCOORDGRID_Y < 0);
-    assert_always(ncoordgrid[2] == CUBOID_NCOORDGRID_Z || CUBOID_NCOORDGRID_Z < 0);
+    assert_always(ncoordgrid[0] > 0);
+    assert_always(ncoordgrid[1] > 0);
+    assert_always(ncoordgrid[2] > 0);
   } else {
     ncoordgrid = {CUBOID_NCOORDGRID_X, CUBOID_NCOORDGRID_Y, CUBOID_NCOORDGRID_Z};
   }
@@ -2015,9 +2014,11 @@ void read_ejecta_model() {
       std::abort();
     }
   } else if (get_model_gridtype() == GridType::CARTESIAN3D) {
-    ncoord_model[0] = static_cast<int>(round(pow(npts_0, 1 / 3.)));
+    ncoord_model[0] = static_cast<int>(round(std::cbrt(npts_model)));
     ncoord_model[1] = ncoord_model[0];
     ncoord_model[2] = ncoord_model[0];
+
+    assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_model);
     // for a 3D input model, the propagation cells will match the input cells exactly
     ncoordgrid = ncoord_model;
     ngrid = npts_model;
