@@ -1202,23 +1202,19 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 [[nodiscard]] constexpr auto get_gridcoords_vel_from_xyz_pos_dir(const Vec3d& pos_xyz, const Vec3d& dir_xyz,
                                                                  const std::span<const double> pktposgridcoord,
                                                                  const GridType gridtype) -> Vec3d {
-  if (gridtype == GridType::CARTESIAN3D) {
-    // keep xyz Cartesian coordinates
-    return Vec3d{dir_xyz[0] * CLIGHT_PROP, dir_xyz[1] * CLIGHT_PROP, dir_xyz[2] * CLIGHT_PROP};
+  switch (gridtype) {
+    case GridType::CARTESIAN3D:
+      return {dir_xyz[0] * CLIGHT_PROP, dir_xyz[1] * CLIGHT_PROP, dir_xyz[2] * CLIGHT_PROP};
+    case GridType::CYLINDRICAL2D: {
+      const double v_rcyl = ((pos_xyz[0] * dir_xyz[0]) + (pos_xyz[1] * dir_xyz[1])) / pktposgridcoord[0] * CLIGHT_PROP;
+      const double v_z = dir_xyz[2] * CLIGHT_PROP;
+      return {v_rcyl, v_z, NAN};
+    }
+    case GridType::SPHERICAL1D: {
+      const double v_radial = dot(pos_xyz, dir_xyz) / pktposgridcoord[0] * CLIGHT_PROP;
+      return {v_radial, NAN, NAN};
+    }
   }
-  if (gridtype == GridType::CYLINDRICAL2D) {
-    // xy plane radial velocity
-    // z velocity
-    return {((pos_xyz[0] * dir_xyz[0]) + (pos_xyz[1] * dir_xyz[1])) / pktposgridcoord[0] * CLIGHT_PROP,
-            dir_xyz[2] * CLIGHT_PROP, NAN};
-  }
-  if (gridtype == GridType::SPHERICAL1D) {
-    // the only coordinate is radius from the origin
-    return {dot(pos_xyz, dir_xyz) / pktposgridcoord[0] * CLIGHT_PROP, NAN, NAN};
-  }
-
-  assert_always(false);
-  return {NAN, NAN, NAN};
 }
 
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
