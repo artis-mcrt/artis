@@ -47,7 +47,7 @@ namespace {
 
 std::array<int, 3> ncoordgrid{0, 0, 0};  // propagation grid dimensions
 
-GridType model_type{};
+std::optional<GridType> model_type{};
 
 ptrdiff_t npts_model = 0;  // number of model grid cells
 ptrdiff_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
@@ -722,7 +722,7 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
   } else {
     // line is not a comment, so it must be the first line of data
     // add a default header for unlabelled columns
-    switch (model_type) {
+    switch (get_modelgridtype()) {
       case GridType::SPHERICAL1D:
         headerline = std::string("#inputcellid vel_r_max_kmps logrho");
         break;
@@ -732,8 +732,6 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
       case GridType::CARTESIAN3D:
         headerline = std::string("#inputcellid pos_x_min pos_y_min pos_z_min rho");
         break;
-      default:
-        assert_always(false);
     }
     headerline += std::string(" X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48");
   }
@@ -1598,7 +1596,10 @@ void set_TJ(const int nonemptymgi, const float TJ) { TJ_allcells[nonemptymgi] = 
 
 void set_W(const int nonemptymgi, const float W) { W_allcells[nonemptymgi] = W; }
 
-auto get_modelgridtype() -> GridType { return model_type; }
+auto get_modelgridtype() -> GridType {
+  assert_testmodeonly(model_type.has_value());
+  return model_type.value();
+}
 
 void set_model_gridtype(const GridType model_type_value) { model_type = model_type_value; }
 
