@@ -1139,7 +1139,7 @@ void setup_grid_cylindrical_2d() {
   }
 }
 
-auto get_grid_type_name(const GridType gridtype) -> std::string {
+constexpr auto get_grid_type_name(const GridType gridtype) -> std::string {
   switch (gridtype) {
     case GridType::SPHERICAL1D:
       return "spherical";
