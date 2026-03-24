@@ -1196,6 +1196,8 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
     case GridType::SPHERICAL1D:
       return {vec_len(pos_xyz), NAN, NAN};
   }
+  assert_always(false);
+  return {NAN, NAN, NAN};
 }
 
 // get the velocity in the grid coordinate system from the xyz position and direction
@@ -1215,6 +1217,8 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
       return {v_radial, NAN, NAN};
     }
   }
+  assert_always(false);
+  return {NAN, NAN, NAN};
 }
 
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
@@ -1335,6 +1339,8 @@ template <BoundaryType boundarytype, size_t S1>
       return (vout_model[modelgridindex] - v_inner) * globals::tmin;
     }
   }
+  assert_always(false);
+  return NAN;
 }
 
 // return the model cell volume (when mapped to the propagation cells) at globals::tmin
