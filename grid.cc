@@ -1058,6 +1058,7 @@ void setup_grid_cartesian_3d() {
 
   // Set grid size for uniform xyz grid
   if (get_model_gridtype() == GridType::CARTESIAN3D) {
+    // if we used in a 3D ejecta model, the propagation grid will match the input grid exactly
     // in case the user specified a grid size, we should ensure that it matches
     assert_always(ncoordgrid[0] > 0);
     assert_always(ncoordgrid[1] > 0);
