@@ -173,18 +173,18 @@ void read_possible_yefile() {
 }
 
 // return the inner radius (or equivalent) of a propagation cell at time tmin
-auto get_cell_r_inner(const int cellindex) -> double {
-  if (get_prop_gridtype() == GridType::SPHERICAL1D) {
+auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> double {
+  if (prop_gridtype == GridType::SPHERICAL1D) {
     return get_cellcoordmin(cellindex, 0);
   }
 
-  if (get_prop_gridtype() == GridType::CYLINDRICAL2D) {
+  if (prop_gridtype == GridType::CYLINDRICAL2D) {
     const auto rcyl_inner = get_cellcoordmin(cellindex, 0);
     const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 1)), std::abs(get_cellcoordmax(cellindex, 1)));
     return std::sqrt(std::pow(rcyl_inner, 2) + std::pow(z_inner, 2));
   }
 
-  if (get_prop_gridtype() == GridType::CARTESIAN3D) {
+  if (prop_gridtype == GridType::CARTESIAN3D) {
     const auto x_inner = std::min(std::abs(get_cellcoordmin(cellindex, 0)), std::abs(get_cellcoordmax(cellindex, 0)));
     const auto y_inner = std::min(std::abs(get_cellcoordmin(cellindex, 1)), std::abs(get_cellcoordmax(cellindex, 1)));
     const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 2)), std::abs(get_cellcoordmax(cellindex, 2)));
@@ -2365,8 +2365,9 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 // compute distance to a cell boundary.
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, const double tstart,
                                                  const int cellindex) -> std::tuple<double, int> {
+  const auto prop_gridtype = get_prop_gridtype();
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
-    if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {
+    if (get_cell_r_inner(cellindex, prop_gridtype) > globals::vmax * globals::tmin) {
       return {0., -99};
     }
   }
@@ -2374,23 +2375,22 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   // d is used to loop over the coordinate indices 0,1,2 for x,y,z
 
   // the following vector are in grid coordinates, so either x,y,z (3D) or r (1D), or r_xy, z (2D)
-  const auto prop_gridtype = get_prop_gridtype();
 
   const auto pktposgridcoord = get_gridcoords_from_xyz(pos, prop_gridtype);
 
   // dir * CLIGHT_PROP converted from xyz to grid coordinates
   const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord, prop_gridtype);
 
-  const auto cellcoordmax = [cellindex]() {
+  const auto cellcoordmax = [cellindex, prop_gridtype]() {
     auto _cellcoordmax = std::array<double, 3>{};  // position at time tmin
-    for (int d = 0; d < get_ndim(get_prop_gridtype()); d++) {
+    for (int d = 0; d < get_ndim(prop_gridtype); d++) {
       _cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
     }
     return _cellcoordmax;
   }();
 
   {
-    for (int d = 0; d < get_ndim(get_prop_gridtype()); d++) {
+    for (int d = 0; d < get_ndim(prop_gridtype); d++) {
       // pos_component_vel_relative_to_flow is constant along a ray with a given direction in Cartesian coordinates, but
       // for non-Cartesian coordinates, we still need to check at the current position whether the packet is
       // moving in the positive or negative direction in each grid coordinate direction relative to the homologous grid
@@ -2415,7 +2415,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
         printout(
             "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
             "cellcoordmin %g, cellcoordmax %g\n",
-            d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(get_prop_gridtype(), d), cellindex,
+            d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d), cellindex,
             pktvelgridcoord[d], pktposgridcoord[d], get_cellcoordmin(cellindex, d) / globals::tmin * tstart,
             cellcoordmax[d] / globals::tmin * tstart);
         printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart, tstart / globals::tmin);
@@ -2441,7 +2441,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   double distance = std::numeric_limits<double>::max();
   int snext{-1};
 
-  if (get_prop_gridtype() == GridType::SPHERICAL1D) {
+  if (prop_gridtype == GridType::SPHERICAL1D) {
     // the only coordinate is the radius from the origin
 
     const double speed = vec_len(dir) * CLIGHT_PROP;  // just in case dir is not normalised
@@ -2469,7 +2469,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
             (grid::get_cellcoordpointnum(cellindex, 0) == 0) ? -99 : cellindex - grid::get_coordcellindexincrement(0);
       }
     }
-  } else if (get_prop_gridtype() == GridType::CYLINDRICAL2D) {
+  } else if (prop_gridtype == GridType::CYLINDRICAL2D) {
     // coordinate 0 is cylindrical radius (distance from z=0 in x-y plane), coord 1 is z
 
     const std::array<double, 2> posnoz = {pos[0], pos[1]};
@@ -2546,7 +2546,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
       }
     }
 
-  } else if (get_prop_gridtype() == GridType::CARTESIAN3D) {
+  } else if (prop_gridtype == GridType::CARTESIAN3D) {
     // There are six possible boundary crossings. Each of the three
     // cartesian coordinates may be taken in turn. For x, the packet
     // trajectory is
@@ -2602,7 +2602,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
         printout("coord %d: initpos %g dir %g\n", d2, pos[d2], dir[d2]);
       }
       printout("|initpos| %g |dir| %g |pos.dir| %g\n", vec_len(pos), vec_len(dir), dot(pos, dir));
-      for (int d2 = 0; d2 < get_ndim(get_prop_gridtype()); d2++) {
+      for (int d2 = 0; d2 < get_ndim(prop_gridtype); d2++) {
         printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2,
                  grid::get_cellcoordmin(cellindex, d2) * tstart / globals::tmin,
                  cellcoordmax[d2] * tstart / globals::tmin);
@@ -2614,7 +2614,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   assert_always((snext == -99) || ((snext >= 0) && (snext < grid::ngrid)));
 
   const double maxsdist =
-      (get_prop_gridtype() == GridType::CARTESIAN3D)
+      (prop_gridtype == GridType::CARTESIAN3D)
           ? std::numbers::sqrt3 * globals::rmax * (tstart + (distance / CLIGHT_PROP)) / globals::tmin
           : 2 * globals::rmax * (tstart + (distance / CLIGHT_PROP)) / globals::tmin;
 
