@@ -1106,9 +1106,10 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
 
   const auto frac_heating = static_cast<float>(frac_heating_Einit / E_init_ev);
 
-  assert_always(std::isfinite(frac_heating));
-  assert_always(frac_heating >= 0.);
-  assert_always(frac_heating <= 1.);
+  if (!std::isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0) {
+    printlnlog("WARNING: calculate_frac_heating: invalid result of {:g}. Setting to 1.0 instead", frac_heating);
+    return 1.;
+  }
 
   return frac_heating;
 }
