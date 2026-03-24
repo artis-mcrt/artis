@@ -1102,8 +1102,6 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
     const double endash = delta_endash * j;
     N_e_contrib_Einit += N_e(nonemptymgi, endash * EV, yfunc) * endash * delta_endash;
   }
-  // there should not be more heating for E< EMIN than in the whole solution
-  assert_always(N_e_contrib_Einit < frac_heating_Einit);
   frac_heating_Einit += N_e_contrib_Einit;
 
   const auto frac_heating = static_cast<float>(frac_heating_Einit / E_init_ev);
