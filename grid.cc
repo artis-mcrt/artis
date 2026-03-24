@@ -1346,23 +1346,23 @@ template <BoundaryType boundarytype, size_t S1>
 // return the model cell volume (when mapped to the propagation cells) at globals::tmin
 // for a uniform cubic grid this is constant
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
-  const auto prop_gridtype = get_propgridtype();
-  if (prop_gridtype == GridType::CARTESIAN3D) {
-    return (propcell_width_tmin(modelgridindex, 0) * propcell_width_tmin(modelgridindex, 1) *
-            propcell_width_tmin(modelgridindex, 2)) *
-           get_numpropcells(modelgridindex);
-  }
+  switch (get_propgridtype()) {
+    case GridType::CARTESIAN3D:
+      return (propcell_width_tmin(modelgridindex, 0) * propcell_width_tmin(modelgridindex, 1) *
+              propcell_width_tmin(modelgridindex, 2)) *
+             get_numpropcells(modelgridindex);
 
-  if (prop_gridtype == GridType::CYLINDRICAL2D) {
-    return propcell_width_tmin(modelgridindex, 1) * PI *
-           (pow(get_cellcoordmax(modelgridindex, 0), 2) - pow(get_cellcoordmin(modelgridindex, 0), 2));
-  }
+    case GridType::CYLINDRICAL2D: {
+      return propcell_width_tmin(modelgridindex, 1) * PI *
+             (pow(get_cellcoordmax(modelgridindex, 0), 2) - pow(get_cellcoordmin(modelgridindex, 0), 2));
+    }
 
-  if (prop_gridtype == GridType::SPHERICAL1D) {
-    return 4. / 3. * PI * (pow(get_cellcoordmax(modelgridindex, 0), 3) - pow(get_cellcoordmin(modelgridindex, 0), 3));
+    case GridType::SPHERICAL1D: {
+      return 4. / 3. * PI * (pow(get_cellcoordmax(modelgridindex, 0), 3) - pow(get_cellcoordmin(modelgridindex, 0), 3));
+    }
   }
-
   assert_always(false);
+  return NAN;
 }
 
 // return the propagation cell volume at globals::tmin
