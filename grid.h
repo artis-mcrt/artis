@@ -41,7 +41,7 @@ inline std::span<float> ion_partfuncts_allcells{};
 
 [[nodiscard]] auto get_elements_uppermost_ion(int nonemptymgi, int element) -> int;
 void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion);
-[[gnu::pure]] [[nodiscard]] auto wid_init(int cellindex, int axis) -> double;
+[[gnu::pure]] [[nodiscard]] auto propcell_width_tmin(int cellindex, int axis, GridType gridtype) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_assocvolume_tmin(int modelgridindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(int cellindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_cellcoordmax(int cellindex, int axis) -> double;
@@ -82,7 +82,7 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_numpropcells(int modelgridindex) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonemptymgi_of_mgi(int mgi) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_mgi_of_nonemptymgi(std::ptrdiff_t nonemptymgi) -> int;
-[[gnu::pure]] [[nodiscard]] auto get_model_gridtype() -> GridType;
+[[gnu::pure]] [[nodiscard]] auto get_modelgridtype() -> GridType;
 void set_model_gridtype(GridType model_type_value);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_npts_model() -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonempty_npts_model() -> int;
@@ -130,10 +130,10 @@ inline auto get_ejecta_kinetic_energy() {
   return E_kin;
 }
 
-DEVICE_FUNC inline auto get_prop_gridtype() -> GridType {
+DEVICE_FUNC inline auto get_propgridtype() -> GridType {
   if (GRID_TYPE == GridType::AUTODETECT) {
-    assert_testmodeonly(grid::get_model_gridtype() != GridType::AUTODETECT);
-    return get_model_gridtype();
+    assert_testmodeonly(grid::get_modelgridtype() != GridType::AUTODETECT);
+    return get_modelgridtype();
   }
   return GRID_TYPE;
 }

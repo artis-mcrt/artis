@@ -48,7 +48,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   pkt.prop_time = globals::tmin;
   pkt.originated_from_particlenotgamma = false;
 
-  const auto prop_gridtype = grid::get_prop_gridtype();
+  const auto prop_gridtype = grid::get_propgridtype();
   if (prop_gridtype == GridType::SPHERICAL1D) {
     const double zrand = rng_uniform();
     const double r_inner = grid::get_cellcoordmin(cellindex, 0);
@@ -68,11 +68,13 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
     const double rcyl_rand = std::sqrt((zrand * std::pow(rcyl_inner, 2)) + ((1. - zrand) * std::pow(rcyl_outer, 2)));
     const double theta_rand = rng_uniform() * 2 * PI;
     pkt.pos = {std::cos(theta_rand) * rcyl_rand, std::sin(theta_rand) * rcyl_rand,
-               grid::get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * grid::wid_init(cellindex, 1))};
+               grid::get_cellcoordmin(cellindex, 1) +
+                   (rng_uniform_pos() * grid::propcell_width_tmin(cellindex, 1, prop_gridtype))};
 
   } else if (prop_gridtype == GridType::CARTESIAN3D) {
     for (int axis = 0; axis < 3; axis++) {
-      pkt.pos[axis] = grid::get_cellcoordmin(cellindex, axis) + (rng_uniform_pos() * grid::wid_init(cellindex, axis));
+      pkt.pos[axis] = grid::get_cellcoordmin(cellindex, axis) +
+                      (rng_uniform_pos() * grid::propcell_width_tmin(cellindex, axis, prop_gridtype));
     }
   } else {
     assert_always(false);

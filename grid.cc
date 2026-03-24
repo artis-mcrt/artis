@@ -325,7 +325,7 @@ void allocate_nonemptymodelcells() {
       }
       assert_always(get_rho_tmin(mgi) > 0);
       // with direct mapping, there must be exactly one propagation cell per non-empty model cell
-      assert_always(get_model_gridtype() != get_prop_gridtype() || modelgrid_numpropcells[mgi] == 1);
+      assert_always(get_modelgridtype() != get_propgridtype() || modelgrid_numpropcells[mgi] == 1);
     }
   }
 
@@ -485,11 +485,13 @@ void map_1dmodelto3dgrid() {
 
 // Map 2D cylindrical model onto 3D Cartesian propagation grid
 void map_2dmodelto3dgrid() {
+  const auto propgridtype = get_propgridtype();
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     // map to 3D Cartesian grid
-    const auto pos_mid = Vec3d{get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex, 0)),
-                               get_cellcoordmin(cellindex, 1) + (0.5 * wid_init(cellindex, 1)),
-                               get_cellcoordmin(cellindex, 2) + (0.5 * wid_init(cellindex, 2))};
+    const auto pos_mid =
+        Vec3d{get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0, propgridtype)),
+              get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1, propgridtype)),
+              get_cellcoordmin(cellindex, 2) + (0.5 * propcell_width_tmin(cellindex, 2, propgridtype))};
 
     const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
 
@@ -524,7 +526,7 @@ void read_abundances() {
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
   printlog("reading abundances.txt...");
-  const bool threedimensional = (get_model_gridtype() == GridType::CARTESIAN3D);
+  const bool threedimensional = (get_modelgridtype() == GridType::CARTESIAN3D);
 
   // Open the abundances file
   auto abundance_file = fstream_required("abundances.txt", std::ios::in);
@@ -621,12 +623,12 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
     } else if (token == "logrho") {
       // 1D models have log10(rho [g/cm3])
       assert_always(columnindex == 2);
-      assert_always(get_model_gridtype() == GridType::SPHERICAL1D);
+      assert_always(get_modelgridtype() == GridType::SPHERICAL1D);
     } else if (token == "rho") {
       // 2D and 3D models have rho [g/cm3]
-      assert_always(get_model_gridtype() != GridType::SPHERICAL1D);
-      assert_always((columnindex == 4 && get_model_gridtype() == GridType::CARTESIAN3D) ||
-                    (columnindex == 3 && get_model_gridtype() == GridType::CYLINDRICAL2D));
+      assert_always(get_modelgridtype() != GridType::SPHERICAL1D);
+      assert_always((columnindex == 4 && get_modelgridtype() == GridType::CARTESIAN3D) ||
+                    (columnindex == 3 && get_modelgridtype() == GridType::CYLINDRICAL2D));
       continue;
     } else if (token.starts_with("X_") && token != "X_Fegroup") {
       colnames.push_back(token);
@@ -782,17 +784,17 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
 }
 
 auto get_inputcellvolume(const int mgi) -> double {
-  if (get_model_gridtype() == GridType::SPHERICAL1D) {
+  if (get_modelgridtype() == GridType::SPHERICAL1D) {
     const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
     return (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
   }
-  if (get_model_gridtype() == GridType::CYLINDRICAL2D) {
+  if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
     const int n_r = mgi % ncoord_model[0];
     const double delta_rcyl = globals::vmax * t_model / ncoord_model[0];
     const double delta_z = 2. * globals::vmax * t_model / ncoord_model[1];
     return pow(globals::tmin / t_model, 3) * delta_z * PI * (pow((n_r + 1) * delta_rcyl, 2) - pow(n_r * delta_rcyl, 2));
   }
-  if (get_model_gridtype() == GridType::CARTESIAN3D) {
+  if (get_modelgridtype() == GridType::CARTESIAN3D) {
     // Assumes cells are cubes here - all same volume.
     return pow((2 * globals::vmax * globals::tmin), 3) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
   }
@@ -1057,7 +1059,7 @@ void setup_grid_cartesian_3d() {
   }
 
   // Set grid size for uniform xyz grid
-  if (get_model_gridtype() == GridType::CARTESIAN3D) {
+  if (get_modelgridtype() == GridType::CARTESIAN3D) {
     // if we used in a 3D ejecta model, the propagation grid will match the input grid exactly
     // in case the user specified a grid size, we should ensure that it matches
     assert_always(ncoordgrid[0] > 0);
@@ -1096,7 +1098,7 @@ void setup_grid_cartesian_3d() {
 }
 
 void setup_grid_spherical_1d() {
-  assert_always(get_model_gridtype() == GridType::SPHERICAL1D);
+  assert_always(get_modelgridtype() == GridType::SPHERICAL1D);
 
   ncoordgrid = {get_npts_model(), 1, 1};
 
@@ -1116,7 +1118,7 @@ void setup_grid_cylindrical_2d() {
   printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   assert_always(vmax_corner < CLIGHT);
 
-  assert_always(get_model_gridtype() == GridType::CYLINDRICAL2D);
+  assert_always(get_modelgridtype() == GridType::CYLINDRICAL2D);
 
   ncoordgrid = ncoord_model;
 
@@ -1151,14 +1153,14 @@ auto get_grid_type_name(const GridType gridtype) -> std::string {
 // Get the discrete index of the coordinate value (where pos must be position in grid coordinate system, not
 // necessarily xyz)
 auto get_poscoordpointnum(const double pos, const double time, const int axis) -> int {
-  if (get_prop_gridtype() == GridType::CARTESIAN3D) {
+  if (get_propgridtype() == GridType::CARTESIAN3D) {
     const auto idx = static_cast<int>(((pos / time) + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
     assert_always(idx >= 0);
     assert_always(idx < ncoordgrid[axis]);
     return idx;
   }
 
-  if (get_prop_gridtype() == GridType::CYLINDRICAL2D) {
+  if (get_propgridtype() == GridType::CYLINDRICAL2D) {
     if (axis == 0) {
       const auto n_rcyl = static_cast<int>(pos / time / globals::vmax * ncoordgrid[axis]);
       assert_always(n_rcyl >= 0);
@@ -1173,7 +1175,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
     }
   }
 
-  if (get_prop_gridtype() == GridType::SPHERICAL1D) {
+  if (get_propgridtype() == GridType::SPHERICAL1D) {
     // radial spacing is non-uniform, so we have to do a search
     const auto trat = time / globals::tmin;
     for (int n_r = 0; n_r < ncoordgrid[0]; n_r++) {
@@ -1333,16 +1335,17 @@ template <BoundaryType boundarytype, size_t S1>
 
 // for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
 // for spherical grid get the radial extent (r_outer - r_inner) at time tmin
-[[gnu::pure]] [[nodiscard]] auto wid_init(const int cellindex, const int axis) -> double {
-  if (get_prop_gridtype() == GridType::CARTESIAN3D) {
+[[gnu::pure]] [[nodiscard]] auto propcell_width_tmin(const int cellindex, const int axis, const GridType gridtype)
+    -> double {
+  if (gridtype == GridType::CARTESIAN3D) {
     return 2 * globals::rmax / ncoordgrid[axis];
   }
 
-  if (get_prop_gridtype() == GridType::CYLINDRICAL2D) {
+  if (gridtype == GridType::CYLINDRICAL2D) {
     return (axis == 0) ? globals::rmax / ncoordgrid[axis] : 2 * globals::rmax / ncoordgrid[axis];
   }
 
-  if (get_prop_gridtype() == GridType::SPHERICAL1D) {
+  if (gridtype == GridType::SPHERICAL1D) {
     const int modelgridindex = cellindex;
     const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
     return (vout_model[modelgridindex] - v_inner) * globals::tmin;
@@ -1354,17 +1357,20 @@ template <BoundaryType boundarytype, size_t S1>
 // return the model cell volume (when mapped to the propagation cells) at globals::tmin
 // for a uniform cubic grid this is constant
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
-  if (get_prop_gridtype() == GridType::CARTESIAN3D) {
-    return (wid_init(modelgridindex, 0) * wid_init(modelgridindex, 1) * wid_init(modelgridindex, 2)) *
+  const auto prop_gridtype = get_propgridtype();
+  if (prop_gridtype == GridType::CARTESIAN3D) {
+    return (propcell_width_tmin(modelgridindex, 0, prop_gridtype) *
+            propcell_width_tmin(modelgridindex, 1, prop_gridtype) *
+            propcell_width_tmin(modelgridindex, 2, prop_gridtype)) *
            get_numpropcells(modelgridindex);
   }
 
-  if (get_prop_gridtype() == GridType::CYLINDRICAL2D) {
-    return wid_init(modelgridindex, 1) * PI *
+  if (prop_gridtype == GridType::CYLINDRICAL2D) {
+    return propcell_width_tmin(modelgridindex, 1, prop_gridtype) * PI *
            (pow(get_cellcoordmax(modelgridindex, 0), 2) - pow(get_cellcoordmin(modelgridindex, 0), 2));
   }
 
-  if (get_prop_gridtype() == GridType::SPHERICAL1D) {
+  if (prop_gridtype == GridType::SPHERICAL1D) {
     return 4. / 3. * PI * (pow(get_cellcoordmax(modelgridindex, 0), 3) - pow(get_cellcoordmin(modelgridindex, 0), 3));
   }
 
@@ -1374,8 +1380,10 @@ template <BoundaryType boundarytype, size_t S1>
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 [[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(const int cellindex) -> double {
-  if (get_prop_gridtype() == GridType::CARTESIAN3D) {
-    return wid_init(cellindex, 0) * wid_init(cellindex, 1) * wid_init(cellindex, 2);
+  const auto prop_gridtype = get_propgridtype();
+  if (prop_gridtype == GridType::CARTESIAN3D) {
+    return propcell_width_tmin(cellindex, 0, prop_gridtype) * propcell_width_tmin(cellindex, 1, prop_gridtype) *
+           propcell_width_tmin(cellindex, 2, prop_gridtype);
   }
 
   // 2D and 1D with direct mapping to propagation cells
@@ -1386,18 +1394,19 @@ template <BoundaryType boundarytype, size_t S1>
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 [[gnu::pure]] [[nodiscard]] auto get_cellcoordmax(const int cellindex, const int axis) -> double {
-  if (get_prop_gridtype() == GridType::CARTESIAN3D) {
-    return grid::get_cellcoordmin(cellindex, axis) + grid::wid_init(0, axis);
+  const auto gridtype = get_propgridtype();
+  if (gridtype == GridType::CARTESIAN3D) {
+    return grid::get_cellcoordmin(cellindex, axis) + grid::propcell_width_tmin(0, axis, gridtype);
   }
 
-  if (get_prop_gridtype() == GridType::CYLINDRICAL2D) {
+  if (gridtype == GridType::CYLINDRICAL2D) {
     assert_testmodeonly(axis <= 1);
-    return grid::get_cellcoordmin(cellindex, axis) + grid::wid_init(cellindex, axis);
+    return grid::get_cellcoordmin(cellindex, axis) + grid::propcell_width_tmin(cellindex, axis, gridtype);
   }
 
-  if (get_prop_gridtype() == GridType::SPHERICAL1D) {
+  if (gridtype == GridType::SPHERICAL1D) {
     assert_testmodeonly(axis == 0);
-    return grid::get_cellcoordmin(cellindex, axis) + grid::wid_init(cellindex, axis);
+    return grid::get_cellcoordmin(cellindex, axis) + grid::propcell_width_tmin(cellindex, axis, gridtype);
   }
 
   assert_always(false);
@@ -1434,7 +1443,7 @@ template <BoundaryType boundarytype, size_t S1>
 
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
 [[gnu::pure]] [[nodiscard]] auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
-  if (get_prop_gridtype() == GridType::CARTESIAN3D || get_prop_gridtype() == GridType::CYLINDRICAL2D) {
+  if (get_propgridtype() == GridType::CARTESIAN3D || get_propgridtype() == GridType::CYLINDRICAL2D) {
     switch (axis) {
       // 3D Cartesian: increment x first, then y, then z
       // 2D Cylindrical: increment r first, then z
@@ -1456,7 +1465,7 @@ template <BoundaryType boundarytype, size_t S1>
     }
   }
 
-  if (get_prop_gridtype() == GridType::SPHERICAL1D) {
+  if (get_propgridtype() == GridType::SPHERICAL1D) {
     return cellindex;
   }
 
@@ -1588,7 +1597,7 @@ void set_TJ(const int nonemptymgi, const float TJ) { TJ_allcells[nonemptymgi] = 
 
 void set_W(const int nonemptymgi, const float W) { W_allcells[nonemptymgi] = W; }
 
-auto get_model_gridtype() -> GridType { return model_type; }
+auto get_modelgridtype() -> GridType { return model_type; }
 
 void set_model_gridtype(const GridType model_type_value) { model_type = model_type_value; }
 
@@ -1703,25 +1712,26 @@ DEVICE_FUNC auto get_initenergyq(const int modelgridindex) -> double {
 
 // get the radial distance from the origin to the centre of the cell at time tmin
 auto get_cellradialposmid(const int cellindex) -> double {
-  if (get_prop_gridtype() == GridType::SPHERICAL1D) {
+  const auto prop_gridtype = get_propgridtype();
+  if (prop_gridtype == GridType::SPHERICAL1D) {
     // mid point radius
     // return get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex, 0));
     // volume averaged mean radius is slightly complex for radial shells
     const double r_inner = grid::get_cellcoordmin(cellindex, 0);
-    const double r_outer = r_inner + grid::wid_init(cellindex, 0);
+    const double r_outer = r_inner + grid::propcell_width_tmin(cellindex, 0, prop_gridtype);
     return 3. / 4 * (pow(r_outer, 4.) - pow(r_inner, 4.)) / (pow(r_outer, 3) - pow(r_inner, 3.));
   }
 
-  if (get_prop_gridtype() == GridType::CYLINDRICAL2D) {
-    const double rcyl_mid = get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex, 0));
-    const double z_mid = get_cellcoordmin(cellindex, 1) + (0.5 * wid_init(cellindex, 1));
+  if (prop_gridtype == GridType::CYLINDRICAL2D) {
+    const double rcyl_mid = get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0, prop_gridtype));
+    const double z_mid = get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1, prop_gridtype));
     return std::sqrt(std::pow(rcyl_mid, 2) + std::pow(z_mid, 2));
   }
 
   // cubic grid requires taking the length of the 3D position vector
   Vec3d dcen{};
   for (int axis = 0; axis < 3; axis++) {
-    dcen[axis] = get_cellcoordmin(cellindex, axis) + (0.5 * wid_init(cellindex, axis));
+    dcen[axis] = get_cellcoordmin(cellindex, axis) + (0.5 * propcell_width_tmin(cellindex, axis, prop_gridtype));
   }
 
   return vec_len(dcen);
@@ -1908,7 +1918,7 @@ void read_ejecta_model() {
   modelgrid_numpropcells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 
-  if (get_model_gridtype() == GridType::SPHERICAL1D) {
+  if (get_modelgridtype() == GridType::SPHERICAL1D) {
     ncoord_model[0] = npts_0;
     ncoord_model[1] = 0;
     ncoord_model[2] = 0;
@@ -1963,7 +1973,7 @@ void read_ejecta_model() {
     }
 
     globals::vmax = vout_model[get_npts_model() - 1];
-  } else if (get_model_gridtype() == GridType::CYLINDRICAL2D) {
+  } else if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
     ncoord_model[0] = npts_0;
     ncoord_model[1] = npts_1;
     ncoord_model[2] = 0;
@@ -2014,7 +2024,7 @@ void read_ejecta_model() {
       printlnlog("ERROR in model.txt. Found {} only cells instead of {} expected.", mgi - 1, get_npts_model());
       std::abort();
     }
-  } else if (get_model_gridtype() == GridType::CARTESIAN3D) {
+  } else if (get_modelgridtype() == GridType::CARTESIAN3D) {
     ncoord_model[0] = static_cast<int>(round(std::cbrt(npts_model)));
     ncoord_model[1] = ncoord_model[0];
     ncoord_model[2] = ncoord_model[0];
@@ -2222,22 +2232,22 @@ void init_grid(const int my_rank) {
   // The cells will be ordered by x then y, then z. Call a routine that
   // sets up the initial positions and widths of the cells.
 
-  if (get_prop_gridtype() == GridType::CARTESIAN3D) {
+  if (get_propgridtype() == GridType::CARTESIAN3D) {
     setup_grid_cartesian_3d();
-  } else if (get_prop_gridtype() == GridType::CYLINDRICAL2D) {
+  } else if (get_propgridtype() == GridType::CYLINDRICAL2D) {
     setup_grid_cylindrical_2d();
-  } else if (get_prop_gridtype() == GridType::SPHERICAL1D) {
+  } else if (get_propgridtype() == GridType::SPHERICAL1D) {
     setup_grid_spherical_1d();
   } else {
     assert_always(false);
   }
   propcell_mgi.resize(ngrid, -1);
 
-  printlnlog("propagation grid: {}-dimensional {}", get_ndim(get_prop_gridtype()),
-             get_grid_type_name(get_prop_gridtype()));
+  printlnlog("propagation grid: {}-dimensional {}", get_ndim(get_propgridtype()),
+             get_grid_type_name(get_propgridtype()));
 
-  for (int d = 0; d < get_ndim(get_prop_gridtype()); d++) {
-    printlnlog("    coordinate {} '{}': cells have {} position values", d, get_coordlabel(get_prop_gridtype(), d),
+  for (int d = 0; d < get_ndim(get_propgridtype()); d++) {
+    printlnlog("    coordinate {} '{}': cells have {} position values", d, get_coordlabel(get_propgridtype(), d),
                ncoordgrid[d]);
   }
   printlnlog("    total propagation cells: {}", ngrid);
@@ -2251,19 +2261,19 @@ void init_grid(const int my_rank) {
   globals::rho_crit = ME * CLIGHT * 56 * MH / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
   printlnlog("grid_init: rho_crit = {:g} [g/cm3]", globals::rho_crit);
 
-  if (get_model_gridtype() == get_prop_gridtype()) {
-    if (get_model_gridtype() == GridType::CARTESIAN3D) {
+  if (get_modelgridtype() == get_propgridtype()) {
+    if (get_modelgridtype() == GridType::CARTESIAN3D) {
       assert_always(ncoord_model[0] == ncoordgrid[0]);
       assert_always(ncoord_model[1] == ncoordgrid[1]);
       assert_always(ncoord_model[2] == ncoordgrid[2]);
     }
 
     map_modeltogrid_direct();
-  } else if (get_model_gridtype() == GridType::SPHERICAL1D) {
-    assert_always(get_prop_gridtype() == GridType::CARTESIAN3D);
+  } else if (get_modelgridtype() == GridType::SPHERICAL1D) {
+    assert_always(get_propgridtype() == GridType::CARTESIAN3D);
     map_1dmodelto3dgrid();
-  } else if (get_model_gridtype() == GridType::CYLINDRICAL2D) {
-    assert_always(get_prop_gridtype() == GridType::CARTESIAN3D);
+  } else if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
+    assert_always(get_propgridtype() == GridType::CARTESIAN3D);
     map_2dmodelto3dgrid();
   } else {
     assert_always(false);
@@ -2301,7 +2311,7 @@ void init_grid(const int my_rank) {
   // when mapping 1D spherical or 2D cylindrical model onto cubic grid, scale up the
   // radioactive abundances to account for the missing masses in
   // the model cells that are not associated with any propagation cells
-  if (get_prop_gridtype() == GridType::CARTESIAN3D && get_model_gridtype() == GridType::SPHERICAL1D &&
+  if (get_propgridtype() == GridType::CARTESIAN3D && get_modelgridtype() == GridType::SPHERICAL1D &&
       globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
       if (totmassnuclide[nucindex] <= 0) {
@@ -2343,7 +2353,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 
 // identify the cell index from an (x,y,z) position and a time.
 [[nodiscard]] DEVICE_FUNC auto get_cellindex_from_pos(const Vec3d& pos, const double time) -> int {
-  const auto prop_gridtype = get_prop_gridtype();
+  const auto prop_gridtype = get_propgridtype();
   const auto ndim = get_ndim(prop_gridtype);
   auto posgridcoords = get_gridcoords_from_xyz(pos, prop_gridtype);
   int cellindex = 0;
@@ -2369,7 +2379,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 // compute distance to a cell boundary.
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, const double tstart,
                                                  const int cellindex) -> std::tuple<double, int> {
-  const auto prop_gridtype = get_prop_gridtype();
+  const auto prop_gridtype = get_propgridtype();
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     if (get_cell_r_inner(cellindex, prop_gridtype) > globals::vmax * globals::tmin) {
       return {0., -99};
