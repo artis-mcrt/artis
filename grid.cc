@@ -212,7 +212,7 @@ auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> doub
 }
 
 [[gnu::pure]] DEVICE_FUNC auto get_propgridtype() -> GridType {
-  if (GRID_TYPE.has_value()) {
+  if constexpr (GRID_TYPE.has_value()) {
     return GRID_TYPE.value();
   }
   return get_modelgridtype();
