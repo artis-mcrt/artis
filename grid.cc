@@ -1386,25 +1386,10 @@ template <BoundaryType boundarytype, size_t S1>
   return get_modelcell_assocvolume_tmin(mgi);
 }
 
-// get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
-// e.g., the minimum x position in xyz coords, or the minimum radius
+// get the maximum position value of a coordinate axis at globals::tmin (xyz or radial coords) of a propagation cell
+// e.g., the maximum x position in xyz coords, or the maximum radius in spherical 1D
 [[gnu::pure]] [[nodiscard]] auto get_cellcoordmax(const int cellindex, const int axis) -> double {
-  const auto prop_gridtype = get_propgridtype();
-  if (prop_gridtype == GridType::CARTESIAN3D) {
-    return grid::get_cellcoordmin(cellindex, axis) + grid::propcell_width_tmin(0, axis);
-  }
-
-  if (prop_gridtype == GridType::CYLINDRICAL2D) {
-    assert_testmodeonly(axis <= 1);
-    return grid::get_cellcoordmin(cellindex, axis) + grid::propcell_width_tmin(cellindex, axis);
-  }
-
-  if (prop_gridtype == GridType::SPHERICAL1D) {
-    assert_testmodeonly(axis == 0);
-    return grid::get_cellcoordmin(cellindex, axis) + grid::propcell_width_tmin(cellindex, axis);
-  }
-
-  assert_always(false);
+  return grid::get_cellcoordmin(cellindex, axis) + grid::propcell_width_tmin(cellindex, axis);
 }
 
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
